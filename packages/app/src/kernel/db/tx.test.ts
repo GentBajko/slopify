@@ -14,7 +14,7 @@ function rows(db: ReturnType<typeof openDb>): number {
 }
 
 describe("transact", () => {
-  it("refuses an asynchronous block rather than releasing before its writes land", () => {
+  it("refuses an asynchronous block rather than releasing before its writes land", async () => {
     const db = counted();
 
     expect(() =>
@@ -28,6 +28,10 @@ describe("transact", () => {
 
     expect(rows(db)).toBe(0);
     db.close();
+    // The orphaned block carries on and fails against the closed database. transact marks
+    // that rejection handled, so it does not reach the process as a fatal one; this test
+    // is what would report it if it did.
+    await Promise.resolve();
   });
 
   it("leaves no frame open when the block's own rollback cannot run", () => {

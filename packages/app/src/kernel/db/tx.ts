@@ -15,6 +15,10 @@ export function transact<T>(db: DatabaseSync, run: () => T): T {
     // awaited writes were still to come - and they would then land outside any
     // transaction. The frame is unwound below, which is the only safe answer.
     if (isThenable(result)) {
+      // Refusing the block orphans the promise it already started. Node treats an
+      // unhandled rejection as fatal, so it would take the process down and bury the
+      // error thrown here, which is the one that names the mistake.
+      void Promise.resolve(result).catch(() => {});
       throw new Error(
         "transact runs synchronous work only: an awaited write would land after the savepoint is released",
       );
@@ -43,7 +47,7 @@ function unwind(db: DatabaseSync, error: unknown): void {
   }
 }
 
-function isThenable(value: unknown): boolean {
+function isThenable(value: unknown): value is PromiseLike<unknown> {
   return (
     typeof value === "object" &&
     value !== null &&
