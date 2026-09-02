@@ -8,7 +8,8 @@ import type { Config } from "./kernel/config/index.js";
 import { openDb } from "./kernel/db/index.js";
 import { migrate } from "./kernel/db/migrate.js";
 import { ensureDirs, layout } from "./kernel/paths.js";
-import { boot, markInterruptedStages, reconcileStorage } from "./main.js";
+import { readVersion } from "./kernel/version.js";
+import { boot, markInterruptedStages, reconcileStorage, urlOf } from "./main.js";
 
 const clock: Clock = { now: () => new Date("2026-09-02T10:00:00.000Z") };
 
@@ -111,8 +112,8 @@ describe("boot", () => {
     }
   });
 
-  function config(dir: string): Config {
-    return { port: 4242, host: "127.0.0.1", dataDir: dir, open: false };
+  function config(dir: string, port = 0): Config {
+    return { port, host: "127.0.0.1", dataDir: dir, open: false };
   }
 
   it("creates the tree, migrates, and logs", async () => {
@@ -127,6 +128,30 @@ describe("boot", () => {
     const db = openDb(paths.db);
     expect(db.prepare("SELECT version FROM schema_migrations").all()).toEqual([{ version: 1 }]);
     db.close();
+  });
+
+  it("serves the HTTP app at the URL it returns and stops it again", async () => {
+    const { url, stop } = await boot(config(dataDir()));
+
+    const health = await fetch(`${url}/api/health`);
+    expect(health.status).toBe(200);
+    expect(health.headers.get("x-slopify-version")).toBe(readVersion());
+    await stop();
+
+    await expect(fetch(`${url}/api/health`)).rejects.toThrow();
+  });
+
+  it("releases the lock when the port is already taken", async () => {
+    const dir = dataDir();
+    const taken = await boot(config(dataDir()));
+    running.push(taken.stop);
+    const port = Number(new URL(taken.url).port);
+
+    await expect(boot(config(dir, port))).rejects.toThrow();
+
+    const second = await boot(config(dir));
+    running.push(second.stop);
+    expect(second.url).not.toBe("");
   });
 
   it("refuses a second instance on the same data directory", async () => {
@@ -145,5 +170,12 @@ describe("boot", () => {
     running.push(stop);
 
     expect(existsSync(paths.lock)).toBe(true);
+  });
+});
+
+describe("urlOf", () => {
+  it("brackets an IPv6 literal and leaves a name or IPv4 host alone", () => {
+    expect(urlOf("127.0.0.1", 4242)).toBe("http://127.0.0.1:4242");
+    expect(urlOf("::1", 4242)).toBe("http://[::1]:4242");
   });
 });
