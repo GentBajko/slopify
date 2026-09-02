@@ -210,6 +210,39 @@ export function runFfmpeg(run: RenderRun): Promise<void> {
   });
 }
 
+// The duration the plan is built from, and the one a test reads back off the finished
+// mp4. Taken from a full decode rather than the container header, because a provided
+// variable-bitrate mp3 can carry a header duration that is only an estimate.
+export async function probeDurationMs(
+  bin: string,
+  file: string,
+  signal: AbortSignal,
+): Promise<number> {
+  let last = 0;
+  await runFfmpeg({
+    bin,
+    args: [
+      "-hide_banner",
+      "-nostdin",
+      "-loglevel",
+      "error",
+      "-progress",
+      "pipe:1",
+      "-nostats",
+      "-i",
+      file,
+      "-f",
+      "null",
+      "-",
+    ],
+    signal,
+    onProgress: (elapsedMs: number): void => {
+      last = Math.max(last, elapsedMs);
+    },
+  });
+  return last;
+}
+
 function failure(
   code: number | null,
   signal: NodeJS.Signals | null,
