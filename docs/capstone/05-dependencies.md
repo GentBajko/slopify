@@ -34,7 +34,7 @@ paths_covered:
 | fflate | 0.8.3 installed | MIT | zip for "download all" (`logic/14` §Q116) | stack C13 |
 | ulid | 3.0.2 installed | MIT | entity IDs (architecture §Q19) | stack C10 |
 | @fastify/busboy | 3.2.2 installed | MIT | streaming `multipart/form-data` parser for staged uploads (build S3) | build S3, ladder rung 4 |
-| ffmpeg-static | 5.3 | GPL-3.0-or-later (binary shipped unlinked, notice in README) | bundled ffmpeg 6.1.1 per platform; `SLOPIFY_FFMPEG` override | architecture §Q26; stack C2 note |
+| ffmpeg-static | 5.3.0 installed | GPL-3.0-or-later (binary shipped unlinked, notice in README) | bundled ffmpeg per platform; `SLOPIFY_FFMPEG` override. The package's release tag reads `b6.1.1`, but the linux-x64 asset it fetches reports `ffmpeg version 7.0.2-static` (johnvansickle build), measured in build S4 - the "6.1.1" this row used to claim was never what shipped | architecture §Q26; stack C2 note |
 
 ## No dependency, by the ladder (stack C1, C2, C10, C11, C18)
 
