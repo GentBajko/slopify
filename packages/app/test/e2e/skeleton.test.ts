@@ -130,7 +130,7 @@ async function watch(url: string): Promise<Watcher> {
   };
 }
 
-async function started(): Promise<{ url: string; paths: Paths }> {
+async function started(): Promise<{ url: string; paths: Paths; stop: () => Promise<void> }> {
   const config: Config = {
     port: 0,
     host: "127.0.0.1",
@@ -139,7 +139,7 @@ async function started(): Promise<{ url: string; paths: Paths }> {
   };
   const { url, paths, stop } = await boot(config);
   running.push(stop);
-  return { url, paths };
+  return { url, paths, stop };
 }
 
 function draft(audio: string, images: readonly string[]): RunDraft {
@@ -254,5 +254,38 @@ describe("a project whose every stage is provided renders an mp4", () => {
     expect(download.headers.get("content-disposition")).toBe(
       'attachment; filename="rope-tricks-video.mp4"',
     );
+  }, 180_000);
+});
+
+describe("shutdown", () => {
+  it("stops accepting requests before it waits for the run it is aborting", async () => {
+    const { url, paths, stop } = await started();
+    const files = fixtures();
+    const audio = await stage(url, "audio", "body.mp3", files.audio);
+    const image = await stage(url, "images", "shot.png", files.images[0] ?? Buffer.alloc(0));
+    const first = await fetch(`${url}/api/projects`, {
+      method: "POST",
+      body: JSON.stringify(draft(audio, [image])),
+      headers: { "content-type": "application/json" },
+    });
+    const { project } = (await first.json()) as { project: { id: string } };
+
+    // stop() is not awaited: the second Play lands while the shutdown is in progress.
+    const stopping = stop();
+    running.length = 0;
+    const second = await fetch(`${url}/api/projects`, {
+      method: "POST",
+      body: JSON.stringify(draft(audio, [image])),
+      headers: { "content-type": "application/json" },
+    }).then(
+      (response) => response.status,
+      () => "refused" as const,
+    );
+    await stopping;
+
+    // The listener is closed first, so the request never reaches startRun; were it the
+    // other way round it would have spawned a render under a controller nobody aborts.
+    expect(second).toBe("refused");
+    expect(existsSync(join(paths.projects, project.id, "video.mp4"))).toBe(false);
   }, 180_000);
 });

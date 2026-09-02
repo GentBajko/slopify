@@ -68,10 +68,12 @@ export async function boot(config: Config): Promise<Boot> {
       url: urlOf(config.host, portOf(server) ?? config.port),
       stop: async (): Promise<void> => {
         try {
-          // Before the socket, so a stage cannot be writing to a database that is about
-          // to close; the render's child process is killed by the same abort.
-          await runner.abortAll();
+          // The listener goes first. Aborting the runner while the socket still accepted
+          // requests let a Play arriving during the await start a stage under a fresh
+          // controller nobody had aborted, which abortAll would then have waited out.
+          // Only once nothing new can arrive is the runner drained and the database shut.
           await close(server);
+          await runner.abortAll();
         } finally {
           log.write("info", "shutdown");
           open.close();
