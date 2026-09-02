@@ -61,10 +61,13 @@ export function projectRoutes(deps: AppDeps) {
         });
       }
 
-      const { project, stages } = startRun(storage, admitted.draft, {});
+      const { project } = startRun(storage, admitted.draft, {});
       // logic/04 step 6: the run starts only once the project is committed.
       deps.runner.tick(project.id);
-      return c.json({ project: summarise(project), stages }, 201);
+      // Read back after the tick, not from the rows startRun built: the runner has
+      // already claimed every eligible stage, and a body that paired status "running"
+      // with "video: pending" would contradict itself.
+      return c.json({ project: summarise(project), stages: stagesOf(deps.db, project.id) }, 201);
     })
     .get("/", (c) => c.json({ projects: listProjects(deps.db).map(summarise) }))
     .get("/:id", zValidator("param", idParam, onInvalid), (c) => {

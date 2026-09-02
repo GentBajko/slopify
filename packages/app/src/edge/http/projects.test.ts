@@ -40,8 +40,13 @@ function harness(): Harness {
     paths,
     hub: createHub({ ids, log }),
     runner: {
+      // The real runner claims every eligible stage inside tick, before the response is
+      // written; this fake does the one claim the skeleton run makes.
       tick: (projectId: string): void => {
         ticked.push(projectId);
+        db.prepare(
+          "UPDATE stages SET state = 'running' WHERE project_id = ? AND kind = 'video' AND state = 'pending'",
+        ).run(projectId);
       },
       settled: async (): Promise<void> => {},
       abortAll: async (): Promise<void> => {},
@@ -107,14 +112,16 @@ describe("POST /api/projects", () => {
       stages: Array<{ kind: string; state: string }>;
     };
     expect(created.project.title).toBe("Rope Tricks");
-    expect(created.project.status).toBe("pending");
+    // The status and the stages are read from the same moment: the runner has already
+    // claimed the video stage by the time the 201 is written.
+    expect(created.project.status).toBe("running");
     expect(created.stages.map((row) => `${row.kind}:${row.state}`)).toEqual([
       "research:skipped",
       "article:provided",
       "audio:provided",
       "images:provided",
       "thumbnail:skipped",
-      "video:pending",
+      "video:running",
     ]);
     expect(ticked).toEqual([created.project.id]);
   });
