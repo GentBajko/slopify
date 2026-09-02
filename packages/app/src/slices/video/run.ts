@@ -64,6 +64,7 @@ export async function renderVideo(deps: VideoDeps, context: StageContext): Promi
       bin: deps.ffmpeg,
       args: renderArgs(plan),
       signal: context.signal,
+      log: deps.log,
       onProgress: (elapsedMs: number): void => {
         const at = deps.clock.now().getTime();
         if (at - announced < progressIntervalMs) {
@@ -134,7 +135,8 @@ async function audio(
     return undefined;
   }
   const path = outputPath(deps.paths, output.projectId, output.path);
-  const durationMs = output.durationMs ?? (await probeDurationMs(deps.ffmpeg, path, signal));
+  const durationMs =
+    output.durationMs ?? (await probeDurationMs(deps.ffmpeg, path, signal, deps.log));
   if (output.durationMs === null) {
     // A provided file arrives with no duration; measuring it once is worth recording.
     deps.db.prepare("UPDATE outputs SET duration_ms = ? WHERE id = ?").run(durationMs, output.id);

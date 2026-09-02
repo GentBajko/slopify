@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import type { Log } from "../../kernel/log.js";
 import type { ImageSlot, RenderPlan } from "./plan.js";
 import { zoomBy, zoomFrom, zoomTo } from "./plan.js";
 
@@ -151,6 +152,7 @@ export interface RenderRun {
   readonly args: readonly string[];
   readonly signal: AbortSignal;
   readonly onProgress: (elapsedMs: number) => void;
+  readonly log: Log;
 }
 
 // ceiling: the last 20 lines of stderr are kept. logic/11 §Q89 shows the renderer's error
@@ -167,27 +169,48 @@ export function runFfmpeg(run: RenderRun): Promise<void> {
     const errors: string[] = [];
     let pending = "";
 
+    // A throw out of a stream listener is an uncaughtException, not a rejection: it would
+    // leave this promise unsettled forever while the child kept writing the output file.
+    // Reporting progress is advisory, so a caller that throws is logged and ignored.
+    const guarded = (what: string, work: () => void): void => {
+      try {
+        work();
+      } catch (error) {
+        run.log.write("warn", what, { detail: messageOf(error) });
+      }
+    };
+
+    const report = (line: string): void => {
+      const elapsed = progressMsOf(line);
+      if (elapsed !== undefined) {
+        guarded("video.progress", () => {
+          run.onProgress(elapsed);
+        });
+      }
+    };
+
     child.stdout.setEncoding("utf8");
     child.stdout.on("data", (chunk: string) => {
-      pending += chunk;
-      const lines = pending.split("\n");
-      pending = lines.pop() ?? "";
-      for (const line of lines) {
-        const elapsed = progressMsOf(line);
-        if (elapsed !== undefined) {
-          run.onProgress(elapsed);
+      guarded("video.progress.read", () => {
+        pending += chunk;
+        const lines = pending.split("\n");
+        pending = lines.pop() ?? "";
+        for (const line of lines) {
+          report(line);
         }
-      }
+      });
     });
 
     child.stderr.setEncoding("utf8");
     child.stderr.on("data", (chunk: string) => {
-      for (const line of chunk.split("\n")) {
-        if (line.trim() !== "") {
-          errors.push(line.trim());
+      guarded("video.stderr.read", () => {
+        for (const line of chunk.split("\n")) {
+          if (line.trim() !== "") {
+            errors.push(line.trim());
+          }
         }
-      }
-      errors.splice(0, Math.max(0, errors.length - stderrLines));
+        errors.splice(0, Math.max(0, errors.length - stderrLines));
+      });
     });
 
     const stop = (): void => {
@@ -201,6 +224,10 @@ export function runFfmpeg(run: RenderRun): Promise<void> {
     });
     child.on("close", (code: number | null, signal: NodeJS.Signals | null) => {
       run.signal.removeEventListener("abort", stop);
+      // ffmpeg's last progress block need not end in a newline, and probeDurationMs
+      // derives its whole answer from these lines, so the remainder is read before the
+      // promise settles.
+      report(pending);
       if (run.signal.aborted) {
         reject(new Error("the render was canceled"));
         return;
@@ -221,6 +248,7 @@ export async function probeDurationMs(
   bin: string,
   file: string,
   signal: AbortSignal,
+  log: Log,
 ): Promise<number> {
   let last = 0;
   await runFfmpeg({
@@ -240,11 +268,16 @@ export async function probeDurationMs(
       "-",
     ],
     signal,
+    log,
     onProgress: (elapsedMs: number): void => {
       last = Math.max(last, elapsedMs);
     },
   });
   return last;
+}
+
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function failure(

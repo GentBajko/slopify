@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { progressMsOf, renderArgs, resolveFfmpeg } from "./ffmpeg.js";
+import type { Log, LogLevel } from "../../kernel/log.js";
+import { progressMsOf, renderArgs, resolveFfmpeg, runFfmpeg } from "./ffmpeg.js";
 import type { PlanInput } from "./plan.js";
 import { planRender } from "./plan.js";
 
@@ -156,5 +157,103 @@ describe("progressMsOf", () => {
     expect(progressMsOf("out_time=00:00:05.933333")).toBeUndefined();
     expect(progressMsOf("progress=end")).toBeUndefined();
     expect(progressMsOf("")).toBeUndefined();
+  });
+});
+
+// runFfmpeg only needs a program that writes progress lines and exits, so these drive it
+// with node itself: deterministic, and no render to wait for.
+function recorder(): { log: Log; lines: string[] } {
+  const lines: string[] = [];
+  return {
+    log: {
+      write: (level: LogLevel, event: string, fields?: { detail?: string | undefined }): void => {
+        lines.push(`${level} ${event} ${fields?.detail ?? ""}`);
+      },
+    },
+    lines,
+  };
+}
+
+function script(body: string): { bin: string; args: string[] } {
+  return { bin: process.execPath, args: ["-e", body] };
+}
+
+describe("runFfmpeg", () => {
+  it("settles even when the progress callback throws, and says so in the log", async () => {
+    const { log, lines } = recorder();
+    const seen: number[] = [];
+
+    await runFfmpeg({
+      ...script('console.log("out_time_us=1000000\\nout_time_us=2000000")'),
+      signal: new AbortController().signal,
+      log,
+      onProgress: (elapsed): void => {
+        seen.push(elapsed);
+        throw new Error("the database is not open");
+      },
+    });
+
+    // Both lines were offered: one failure does not stop the ones after it.
+    expect(seen).toEqual([1000, 2000]);
+    expect(lines.filter((line) => line.includes("video.progress"))).toHaveLength(2);
+    expect(lines[0]).toContain("the database is not open");
+  });
+
+  it("reports the last progress line even when it arrived without a newline", async () => {
+    const { log } = recorder();
+    const seen: number[] = [];
+
+    await runFfmpeg({
+      ...script('process.stdout.write("out_time_us=1000000\\nout_time_us=2500000")'),
+      signal: new AbortController().signal,
+      log,
+      onProgress: (elapsed): void => {
+        seen.push(elapsed);
+      },
+    });
+
+    expect(seen).toEqual([1000, 2500]);
+  });
+
+  it("carries the last lines of stderr into the failure", async () => {
+    const { log } = recorder();
+
+    await expect(
+      runFfmpeg({
+        ...script('console.error("Error opening input file bad.png."); process.exit(3)'),
+        signal: new AbortController().signal,
+        log,
+        onProgress: (): void => {},
+      }),
+    ).rejects.toThrow("ffmpeg exited with code 3: Error opening input file bad.png.");
+  });
+
+  it("says the binary could not be started rather than hanging", async () => {
+    const { log } = recorder();
+
+    await expect(
+      runFfmpeg({
+        bin: "/nonexistent/ffmpeg",
+        args: [],
+        signal: new AbortController().signal,
+        log,
+        onProgress: (): void => {},
+      }),
+    ).rejects.toThrow(/could not be started/);
+  });
+
+  it("refuses before spawning anything when the signal has already fired", async () => {
+    const { log } = recorder();
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      runFfmpeg({
+        ...script("console.log('never')"),
+        signal: controller.signal,
+        log,
+        onProgress: (): void => {},
+      }),
+    ).rejects.toThrow(/canceled before it started/);
   });
 });
