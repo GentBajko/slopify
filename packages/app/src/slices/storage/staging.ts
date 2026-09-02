@@ -1,3 +1,4 @@
+import type { WriteStream } from "node:fs";
 import { createWriteStream, mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
@@ -134,9 +135,14 @@ export async function stageUpload(
     }
   }
 
+  const sink = createWriteStream(target, { mode: 0o600, flags: "wx" });
   try {
-    await pipeline(counted(), createWriteStream(target, { mode: 0o600, flags: "wx" }));
+    await pipeline(counted(), sink);
   } catch (error) {
+    // pipeline rejects the moment the source throws, which can be before the file the
+    // write stream is opening exists. Removing it first would leave the stray file the
+    // reconcile has to collect at the next boot, so the close is waited for.
+    await closed(sink);
     discard(deps, id, target, "staging.aborted");
     notify({
       type: "staging.failed",
@@ -262,6 +268,14 @@ function discard(deps: StorageDeps, id: string, target: string, event: string): 
     return;
   }
   deleteStagedFile(deps.db, id);
+}
+
+function closed(sink: WriteStream): Promise<void> {
+  return sink.closed
+    ? Promise.resolve()
+    : new Promise<void>((resolve) => {
+        sink.once("close", resolve);
+      });
 }
 
 function messageOf(error: unknown): string {
