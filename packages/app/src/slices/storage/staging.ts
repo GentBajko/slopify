@@ -1,9 +1,10 @@
-import { createWriteStream, mkdirSync, renameSync, rmSync } from "node:fs";
+import { createWriteStream, mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { pipeline } from "node:stream/promises";
 import { z } from "zod";
 import type { Clock } from "../../kernel/clock.js";
+import { transact } from "../../kernel/db/tx.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
@@ -192,13 +193,14 @@ export function attachStagedFile(deps: StorageDeps, input: AttachInput): AttachR
   };
   // The file already moved. If this fails the file is under projects/ with no row,
   // which is exactly what the boot reconcile collects.
-  deps.db.exec("BEGIN");
+  // A savepoint rather than BEGIN, so startRun can attach several files inside the one
+  // transaction that creates the project.
   try {
-    insertOutput(deps.db, output);
-    deleteStagedFile(deps.db, staged.id);
-    deps.db.exec("COMMIT");
+    transact(deps.db, () => {
+      insertOutput(deps.db, output);
+      deleteStagedFile(deps.db, staged.id);
+    });
   } catch (error) {
-    deps.db.exec("ROLLBACK");
     deps.log.write("error", "storage.attach", {
       projectId: input.projectId,
       detail: `${staged.id} → ${name}: ${messageOf(error)}`,
@@ -206,6 +208,40 @@ export function attachStagedFile(deps: StorageDeps, input: AttachInput): AttachR
     throw error;
   }
   return { ok: true, output };
+}
+
+export interface TextInput {
+  readonly projectId: string;
+  readonly stageKind: StageKind;
+  readonly role: OutputRole;
+  readonly text: string;
+}
+
+// logic/05 step 1: a stage set to Provide can carry pasted text instead of a file, and
+// the project holds it as an output like any other.
+// ceiling: the paste is stored as typed. logic/05 §Q37 also asks for markdown syntax to
+// be stripped for the narration source; that reduction belongs to the narration slice
+// that reads this file, and lands with it.
+export function storeText(deps: StorageDeps, input: TextInput): Output {
+  const name = outputFileName(input.role, 1, ".txt");
+  const target = outputPath(deps.paths, input.projectId, name);
+  const bytes = Buffer.from(input.text, "utf8");
+  mkdirSync(dirname(target), { recursive: true, mode: 0o700 });
+  writeFileSync(target, bytes, { mode: 0o600 });
+  const output: Output = {
+    id: deps.ids.next(),
+    projectId: input.projectId,
+    stageKind: input.stageKind,
+    role: input.role,
+    path: name,
+    originalFilename: null,
+    bytes: bytes.byteLength,
+    durationMs: null,
+    meta: {},
+    createdAt: deps.clock.now().toISOString(),
+  };
+  insertOutput(deps.db, output);
+  return output;
 }
 
 export function discardStagedFile(deps: StorageDeps, id: string): DiscardResult {
