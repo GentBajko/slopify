@@ -1,0 +1,17 @@
+CREATE TABLE projects (id TEXT PRIMARY KEY, title TEXT NOT NULL CHECK(length(title) <= 200), format TEXT NOT NULL CHECK(format IN ('16:9','9:16')), config TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE stages (id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE, kind TEXT NOT NULL CHECK(kind IN ('research','article','audio','images','thumbnail','video')), source TEXT NOT NULL, state TEXT NOT NULL CHECK(state IN ('pending','running','done','failed','canceled','provided','skipped')), failure_reason TEXT, attempt_count INTEGER NOT NULL DEFAULT 0, progress_current INTEGER, progress_total INTEGER, started_at TEXT, finished_at TEXT, UNIQUE(project_id, kind));
+CREATE TABLE attempts (id TEXT PRIMARY KEY, stage_id TEXT NOT NULL REFERENCES stages(id) ON DELETE CASCADE, piece_id TEXT, n INTEGER NOT NULL, started_at TEXT NOT NULL, ended_at TEXT, outcome TEXT, error_text TEXT);
+CREATE TABLE stage_pieces (id TEXT PRIMARY KEY, stage_id TEXT NOT NULL REFERENCES stages(id) ON DELETE CASCADE, kind TEXT NOT NULL, idx INTEGER NOT NULL, state TEXT NOT NULL, payload TEXT, UNIQUE(stage_id, kind, idx));
+CREATE TABLE outputs (id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE, stage_kind TEXT NOT NULL, role TEXT NOT NULL, path TEXT NOT NULL, original_filename TEXT, bytes INTEGER NOT NULL, duration_ms INTEGER, meta TEXT, created_at TEXT NOT NULL);
+CREATE INDEX outputs_project ON outputs(project_id, stage_kind);
+CREATE TABLE prompts (id TEXT PRIMARY KEY, kind TEXT NOT NULL CHECK(kind IN ('article','image','thumbnail')), name TEXT NOT NULL, body TEXT NOT NULL, slots TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE UNIQUE INDEX prompts_name ON prompts(kind, lower(name));
+CREATE TABLE entries (id TEXT PRIMARY KEY, category TEXT NOT NULL CHECK(category IN ('intro','outro')), mode TEXT NOT NULL CHECK(mode IN ('text','llm')), name TEXT NOT NULL, body TEXT NOT NULL, slots TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE UNIQUE INDEX entries_name ON entries(category, lower(name));
+CREATE TABLE provider_keys (provider TEXT PRIMARY KEY, key TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE voices (id TEXT PRIMARY KEY, provider TEXT NOT NULL, name TEXT NOT NULL, voice_id TEXT NOT NULL, UNIQUE(provider, voice_id));
+CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE staged_files (id TEXT PRIMARY KEY, stage_kind TEXT NOT NULL, path TEXT NOT NULL, original_filename TEXT NOT NULL, bytes INTEGER NOT NULL, state TEXT NOT NULL, created_at TEXT NOT NULL);
+CREATE TABLE telemetry_events (id TEXT PRIMARY KEY, type TEXT NOT NULL, payload TEXT NOT NULL, created_at TEXT NOT NULL, delivered_at TEXT);
+CREATE TABLE machine (machine_id TEXT PRIMARY KEY, notice_seen_at TEXT, app_version TEXT NOT NULL);
+CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);

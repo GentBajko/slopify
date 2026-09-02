@@ -15,6 +15,7 @@
     "dist"
   ],
   "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-migrations.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
