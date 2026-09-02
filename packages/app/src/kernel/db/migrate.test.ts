@@ -1,3 +1,6 @@
+import { mkdtempSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Clock } from "../clock.js";
 import { openDb } from "./index.js";
@@ -12,6 +15,21 @@ function names(db: ReturnType<typeof openDb>, type: "table" | "index"): string[]
     .map((row) => String(row.name))
     .sort();
 }
+
+describe("openDb", () => {
+  it("keeps the database and its WAL sidecars owner-only", () => {
+    const file = join(mkdtempSync(join(tmpdir(), "slopify-db-")), "slopify.db");
+
+    const db = openDb(file);
+    migrate(db, clock);
+
+    expect(db.prepare("PRAGMA journal_mode").get()).toEqual({ journal_mode: "wal" });
+    for (const path of [file, `${file}-wal`, `${file}-shm`]) {
+      expect(statSync(path).mode & 0o777).toBe(0o600);
+    }
+    db.close();
+  });
+});
 
 describe("migrate", () => {
   it("creates every table of the designed schema", () => {
