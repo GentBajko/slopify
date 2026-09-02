@@ -62,6 +62,27 @@ describe("the audio timeline", () => {
     expect(plan.totalSeconds).toBe(16);
   });
 
+  it("drops a gap too short to hold a frame", () => {
+    // 0.0004 s is under a frame at 30 fps: ffmpeg would be handed -t 0.000 and produce an
+    // anullsrc input with no samples that still counted in concat=n=.
+    const plan = planRender(
+      input({
+        gapSeconds: 0.0004,
+        intro: { path: "/p/i.mp3", seconds: 2 },
+        outro: { path: "/p/o.mp3", seconds: 4 },
+      }),
+    );
+
+    expect(shape(plan)).toEqual(["intro:2", "body:10", "outro:4"]);
+    expect(plan.gapSeconds).toBe(0.0004);
+  });
+
+  it("keeps a gap of exactly one frame", () => {
+    const plan = planRender(input({ gapSeconds: 1 / 30, intro: { path: "/p/i.mp3", seconds: 2 } }));
+
+    expect(plan.audio.map((segment) => segment.kind)).toEqual(["intro", "gap", "body"]);
+  });
+
   it("gives a silence gap no file to read", () => {
     const plan = planRender(input({ intro: { path: "/p/i.mp3", seconds: 2 } }));
     expect(plan.audio[1]).toEqual({ kind: "gap", path: null, seconds: 3 });

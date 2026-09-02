@@ -87,15 +87,19 @@ export function planRender(input: PlanInput): RenderPlan {
 function timeline(input: PlanInput): readonly AudioSegment[] {
   const segments: AudioSegment[] = [];
   const gap: AudioSegment = { kind: "gap", path: null, seconds: input.gapSeconds };
+  // A gap shorter than one frame is no gap. The renderer formats a segment's length to
+  // milliseconds, so anything under that would become `-t 0.000`: an anullsrc input with
+  // no samples that still had to be counted in the audio concat.
+  const audible = input.gapSeconds >= 1 / fps;
   if (input.intro !== undefined) {
     segments.push({ kind: "intro", path: input.intro.path, seconds: input.intro.seconds });
-    if (input.gapSeconds > 0) {
+    if (audible) {
       segments.push(gap);
     }
   }
   segments.push({ kind: "body", path: input.body.path, seconds: input.body.seconds });
   if (input.outro !== undefined) {
-    if (input.gapSeconds > 0) {
+    if (audible) {
       segments.push(gap);
     }
     segments.push({ kind: "outro", path: input.outro.path, seconds: input.outro.seconds });

@@ -96,6 +96,9 @@ export async function renderVideo(deps: VideoDeps, context: StageContext): Promi
   writeFileSync(params, `${JSON.stringify(recorded(plan, dir), null, 2)}\n`, { mode: 0o600 });
   store(deps, projectId, "render_params", "render.json", null);
   store(deps, projectId, "video", "video.mp4", totalMs);
+  // Written as well as emitted: a page opened after the render reads the row, and the
+  // throttled in-flight writes would have left it frozen short of the end.
+  setStageProgress(deps.db, context.stage.id, totalMs, totalMs);
   context.emit({
     type: "stage.progress",
     projectId,

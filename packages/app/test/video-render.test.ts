@@ -279,6 +279,11 @@ describe("the ffmpeg render", () => {
       current: 3000,
       total: 3000,
     });
+    // A page loaded after the render reads the row, not the events it missed, so the row
+    // has to agree with the last one that went out.
+    expect(harness.db.prepare("SELECT progress_current, progress_total FROM stages").get()).toEqual(
+      { progress_current: 3000, progress_total: 3000 },
+    );
   }, 180_000);
 
   it("zooms the first image in and the second one out", async () => {
