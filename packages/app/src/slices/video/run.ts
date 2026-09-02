@@ -82,6 +82,10 @@ export async function renderVideo(deps: VideoDeps, context: StageContext): Promi
         });
       },
     });
+    // logic/13 §Q113 protects an output that was already stored, not one that is about to
+    // be. A cancel landing between ffmpeg exiting and the rows below discards the render
+    // rather than reporting done to a page that pressed Cancel.
+    context.signal.throwIfAborted();
   } catch (error) {
     // logic/13 step 2: a partial render file is discarded, never kept or served.
     rmSync(target, { force: true });

@@ -326,9 +326,31 @@ describe("the ffmpeg render", () => {
       controller.abort();
     }, 150);
 
-    await expect(running).rejects.toThrow(/canceled/);
+    await expect(running).rejects.toThrow(/canceled|abort/i);
     expect(existsSync(join(harness.dir, "video.mp4"))).toBe(false);
+    // Nothing is stored for a render that was cancelled, whichever guard caught it.
+    expect(
+      harness.db.prepare("SELECT count(*) AS n FROM outputs WHERE stage_kind = 'video'").get(),
+    ).toEqual({ n: 0 });
   }, 180_000);
+
+  it("stores nothing when the cancel lands after ffmpeg has already exited", async () => {
+    const harness = fixture();
+    const controller = new AbortController();
+    // Aborted before renderVideo is entered: the render never gets to the point where
+    // logic/13 §Q113 would protect a stored output, so no row and no file may appear.
+    controller.abort();
+
+    await expect(renderVideo(deps(harness), context(controller.signal, []))).rejects.toThrow(
+      /canceled|abort/i,
+    );
+
+    expect(existsSync(join(harness.dir, "video.mp4"))).toBe(false);
+    expect(existsSync(join(harness.dir, "render.json"))).toBe(false);
+    expect(
+      harness.db.prepare("SELECT count(*) AS n FROM outputs WHERE stage_kind = 'video'").get(),
+    ).toEqual({ n: 0 });
+  }, 60_000);
 
   it("refuses to render a project whose audio decodes to nothing", async () => {
     const harness = fixture();

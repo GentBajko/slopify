@@ -208,6 +208,30 @@ describe("tick", () => {
     expect(stale.stateOf("research")).toBe("done");
   });
 
+  it("keeps a stage done when its output was stored in the same instant as the cancel", async () => {
+    // logic/13 §Q113: cancel never rolls back a stored output. The stage decides for
+    // itself whether it got far enough; the runner does not second-guess a clean resolve.
+    const finishesAnyway: StageRun = async (): Promise<void> => {
+      await new Promise((resolve) => setTimeout(resolve, 2));
+    };
+    const { runner, stages, events } = harness(
+      { video: finishesAnyway },
+      {
+        research: "skipped",
+        article: "provided",
+        audio: "provided",
+        images: "provided",
+        thumbnail: "skipped",
+      },
+    );
+
+    runner.tick("p1");
+    await runner.abortAll();
+
+    expect(stages.stateOf("video")).toBe("done");
+    expect(states(events)).toEqual(["video:running", "video:done"]);
+  });
+
   it("releases a dependent on provided and skipped exactly as on done", async () => {
     const { runner, stages } = harness(
       { video: ok },
@@ -394,6 +418,40 @@ describe("abortAll", () => {
     expect(started).not.toContain("video");
     expect(stages.stateOf("video")).toBe("pending");
     expect(stages.stateOf("thumbnail")).toBe("done");
+  });
+
+  it("resolves without waiting out a stage the shutdown never started", async () => {
+    let releaseAudio = (): void => {};
+    const audioDone = new Promise<void>((resolve) => {
+      releaseAudio = resolve;
+    });
+    const started: StageKind[] = [];
+    const waits: StageRun = ({ stage, signal }) =>
+      new Promise<void>((resolve, reject) => {
+        started.push(stage.kind);
+        if (stage.kind === "audio") {
+          void audioDone.then(resolve);
+          return;
+        }
+        signal.addEventListener("abort", () => {
+          reject(new Error("aborted"));
+        });
+      });
+    // A registry where every downstream stage would block forever if it ever started.
+    const { runner, stages } = harness(
+      { audio: waits, images: waits, thumbnail: waits, video: waits },
+      { research: "skipped", article: "provided", images: "provided", thumbnail: "skipped" },
+    );
+
+    runner.tick("p1");
+    const stopping = runner.abortAll();
+    releaseAudio();
+
+    // Without the barrier, audio's finally would have released video, whose controller
+    // abortAll had already passed, and this await would never return.
+    await expect(stopping).resolves.toBeUndefined();
+    expect(started).toEqual(["audio"]);
+    expect(stages.stateOf("video")).toBe("pending");
   });
 
   it("does nothing when no stage is running", async () => {
