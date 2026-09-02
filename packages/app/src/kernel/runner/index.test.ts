@@ -363,6 +363,39 @@ describe("abortAll", () => {
     expect(projectStates(events).at(-1)).toBe("canceled");
   });
 
+  it("never starts a stage that a sibling released as the shutdown landed", async () => {
+    let releaseThumbnail = (): void => {};
+    const finishes = new Promise<void>((resolve) => {
+      releaseThumbnail = resolve;
+    });
+    const started: StageKind[] = [];
+    const waits: StageRun = ({ stage, signal }) =>
+      new Promise<void>((resolve, reject) => {
+        started.push(stage.kind);
+        if (stage.kind === "thumbnail") {
+          void finishes.then(resolve);
+          return;
+        }
+        signal.addEventListener("abort", () => {
+          reject(new Error("aborted"));
+        });
+      });
+    const { runner, stages } = harness(
+      { audio: waits, images: waits, thumbnail: waits, video: waits },
+      { research: "skipped", article: "provided" },
+    );
+
+    runner.tick("p1");
+    const stopping = runner.abortAll();
+    // The thumbnail wins the race and completes cleanly; its finally ticks the project.
+    releaseThumbnail();
+    await stopping;
+
+    expect(started).not.toContain("video");
+    expect(stages.stateOf("video")).toBe("pending");
+    expect(stages.stateOf("thumbnail")).toBe("done");
+  });
+
   it("does nothing when no stage is running", async () => {
     const { runner } = harness({});
 

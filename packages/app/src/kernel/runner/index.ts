@@ -52,6 +52,7 @@ export function createRunner(deps: RunnerDeps): Runner {
   const inflight = new Map<string, Inflight>();
   const announced = new Map<string, ProjectState>();
   let count = 0;
+  let shuttingDown = false;
 
   const emitStage = (stage: RunnerStage, state: StageState, reason: string | null): void => {
     deps.emit(stage.projectId, {
@@ -164,6 +165,16 @@ export function createRunner(deps: RunnerDeps): Runner {
   }
 
   function tick(projectId: string): void {
+    // A stage that finished in the same instant as the shutdown would otherwise release
+    // its dependent, and abortAll would then be waiting on a render nobody asked for.
+    // The project's state still goes out, so an open page sees the run stop.
+    if (!shuttingDown) {
+      startEligible(projectId);
+    }
+    announce(projectId);
+  }
+
+  function startEligible(projectId: string): void {
     const stages = deps.stages.stagesOf(projectId);
     const stateOf = (kind: StageKind): StageState =>
       stages.find((stage) => stage.kind === kind)?.state ?? "pending";
@@ -180,7 +191,6 @@ export function createRunner(deps: RunnerDeps): Runner {
         start({ ...stage, state: "running" });
       }
     }
-    announce(projectId);
   }
 
   async function settled(): Promise<void> {
@@ -193,6 +203,7 @@ export function createRunner(deps: RunnerDeps): Runner {
     tick,
     settled,
     abortAll: async (): Promise<void> => {
+      shuttingDown = true;
       for (const entry of inflight.values()) {
         entry.controller.abort();
       }
