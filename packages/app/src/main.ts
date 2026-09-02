@@ -2,6 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import type { ServerType } from "@hono/node-server";
 import { serve } from "@hono/node-server";
+import ffmpegStatic from "ffmpeg-static";
 import type { Hono } from "hono";
 import { createHub } from "./edge/events/hub.js";
 import { createApp } from "./edge/http/app.js";
@@ -10,14 +11,20 @@ import { systemClock } from "./kernel/clock.js";
 import type { Config } from "./kernel/config/index.js";
 import { openDb } from "./kernel/db/index.js";
 import { migrate } from "./kernel/db/migrate.js";
+import type { Ids } from "./kernel/ids.js";
 import { ulidIds } from "./kernel/ids.js";
 import { acquireInstanceLock } from "./kernel/lock.js";
 import type { Log } from "./kernel/log.js";
 import { openLog } from "./kernel/log.js";
 import type { Paths } from "./kernel/paths.js";
 import { ensureDirs, layout } from "./kernel/paths.js";
+import type { Runner } from "./kernel/runner/index.js";
+import { createRunner } from "./kernel/runner/index.js";
 import { readVersion } from "./kernel/version.js";
+import { claimStage, finishStage, stagesOf } from "./slices/admission/repo.js";
 import { reconcileStorage } from "./slices/storage/reconcile.js";
+import { resolveFfmpeg } from "./slices/video/ffmpeg.js";
+import { renderVideo } from "./slices/video/run.js";
 
 export interface Boot {
   readonly paths: Paths;
@@ -42,10 +49,12 @@ export async function boot(config: Config): Promise<Boot> {
       detail: `interrupted stages ${interrupted}, orphan files ${reconciled.orphanFiles}, staged files ${reconciled.stagedFiles}`,
     });
     const hub = createHub({ ids, log });
+    const runner = wire(db, paths, clock, ids, log, hub);
     const app = createApp({
       db,
       paths,
       hub,
+      runner,
       clock,
       ids,
       log,
@@ -59,6 +68,9 @@ export async function boot(config: Config): Promise<Boot> {
       url: urlOf(config.host, portOf(server) ?? config.port),
       stop: async (): Promise<void> => {
         try {
+          // Before the socket, so a stage cannot be writing to a database that is about
+          // to close; the render's child process is killed by the same abort.
+          await runner.abortAll();
           await close(server);
         } finally {
           log.write("info", "shutdown");
@@ -72,6 +84,41 @@ export async function boot(config: Config): Promise<Boot> {
     lock.release();
     throw error;
   }
+}
+
+// The composition root: the runner is handed the stage implementations it may not
+// import, and each implementation is handed the dependencies it needs, closed over here
+// (03-conventions Dependency injection).
+function wire(
+  db: DatabaseSync,
+  paths: Paths,
+  clock: Clock,
+  ids: Ids,
+  log: Log,
+  hub: ReturnType<typeof createHub>,
+): Runner {
+  // Resolved once at boot rather than per render, so a machine with no usable binary
+  // fails at start with one message instead of on every project's last stage.
+  const ffmpeg = resolveFfmpeg(process.env, ffmpegStatic);
+  const video = { db, paths, ids, clock, log, ffmpeg };
+  return createRunner({
+    stages: {
+      stagesOf: (projectId) => stagesOf(db, projectId),
+      claim: (stageId) => claimStage(db, stageId, clock.now().toISOString()),
+      finish: (stageId, state, failureReason) =>
+        finishStage(db, stageId, state, failureReason, clock.now().toISOString()),
+    },
+    // Only the stages that exist. A pending stage with no entry here fails loudly with
+    // that sentence rather than waiting for a runner that will never call it.
+    runs: { video: (context) => renderVideo(video, context) },
+    emit: (projectId, event) => {
+      hub.emit(projectId, event);
+    },
+    emitRunningCount: (count) => {
+      hub.emitGlobal({ type: "running.count", count });
+    },
+    log,
+  });
 }
 
 function listen(app: Hono, config: Config, log: Log): Promise<ServerType> {

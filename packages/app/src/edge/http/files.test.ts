@@ -39,6 +39,11 @@ function harness(): Harness {
     paths,
     hub: createHub({ ids, log }),
     clock,
+    runner: {
+      tick: (): void => {},
+      settled: async (): Promise<void> => {},
+      abortAll: async (): Promise<void> => {},
+    },
     ids,
     log,
     version: "1.2.3",

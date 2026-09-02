@@ -13,15 +13,19 @@ const prescale = 4;
 const sampleRate = 44100;
 const channelLayout = "stereo";
 
+// `bundled` is ffmpeg-static's export. It is typed as unknown because the package is
+// CommonJS with `module.exports = <path or null>` while its shipped .d.ts declares an ES
+// default, which node16 resolution cannot map onto one another; narrowing here is
+// cheaper and more honest than overriding someone else's types.
 export function resolveFfmpeg(
   env: Readonly<Record<string, string | undefined>>,
-  bundled: string | null,
+  bundled: unknown,
 ): string {
   const override = env.SLOPIFY_FFMPEG?.trim();
   if (override !== undefined && override !== "") {
     return override;
   }
-  if (bundled !== null && bundled !== "") {
+  if (typeof bundled === "string" && bundled !== "") {
     return bundled;
   }
   // Never PATH: a Slopify that quietly rendered with whichever ffmpeg the machine

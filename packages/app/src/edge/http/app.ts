@@ -8,15 +8,18 @@ import type { Clock } from "../../kernel/clock.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
+import type { Runner } from "../../kernel/runner/index.js";
 import type { Hub } from "../events/hub.js";
 import { fileRoutes } from "./files.js";
 import { problem, problemFromError, titleOf } from "./problem.js";
+import { projectRoutes } from "./projects.js";
 import { stagingRoutes } from "./staging.js";
 
 export interface AppDeps {
   readonly db: DatabaseSync;
   readonly paths: Paths;
   readonly hub: Hub;
+  readonly runner: Runner;
   readonly clock: Clock;
   readonly ids: Ids;
   readonly log: Log;
@@ -41,7 +44,8 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
         uptimeMs: deps.clock.now().getTime() - startedAt,
       }),
     )
-    .route("/staging", stagingRoutes(deps));
+    .route("/staging", stagingRoutes(deps))
+    .route("/projects", projectRoutes(deps));
 }
 
 export function createApp(deps: AppDeps): Hono {

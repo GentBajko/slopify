@@ -127,7 +127,7 @@ describe("upload, attach, and download over a socket", () => {
       method: "POST",
       headers: { "content-type": "multipart/form-data; boundary=----slopifytest" },
       body: multipart(half, gate),
-      // @ts-expect-error duplex is required for a streamed body and is not in the DOM lib
+      // Required by fetch for a body that is a stream rather than a buffer.
       duplex: "half",
     });
 

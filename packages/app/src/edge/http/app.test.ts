@@ -74,6 +74,11 @@ function harness(
     paths,
     hub: wrap(hub),
     clock,
+    runner: {
+      tick: (): void => {},
+      settled: async (): Promise<void> => {},
+      abortAll: async (): Promise<void> => {},
+    },
     ids,
     log,
     version: "1.2.3",
@@ -143,7 +148,7 @@ describe("createApp", () => {
   it("answers an unknown API route with problem+json and the version header", async () => {
     const { app } = built();
 
-    const response = await app.request("/api/projects/p1");
+    const response = await app.request("/api/nothing/here");
 
     expect(response.status).toBe(404);
     expect(response.headers.get("content-type")).toBe("application/problem+json");
@@ -152,8 +157,8 @@ describe("createApp", () => {
       type: "about:blank",
       title: "Not Found",
       status: 404,
-      detail: "GET /api/projects/p1 is not a route of this API.",
-      instance: "/api/projects/p1",
+      detail: "GET /api/nothing/here is not a route of this API.",
+      instance: "/api/nothing/here",
     });
   });
 
