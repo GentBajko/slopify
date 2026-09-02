@@ -32,6 +32,23 @@ npm test
 `core.hooksPath` is local repository configuration and cannot be committed, so a
 fresh clone has to set it by hand or the pre-commit check will not run.
 
+## Video rendering
+
+The video is cut with ffmpeg. Slopify installs one through
+[`ffmpeg-static`](https://www.npmjs.com/package/ffmpeg-static), which fetches a
+platform binary at `npm install` time, and never falls back to an ffmpeg on your
+`PATH` — the binary that ships is the binary that is tested. To use a different
+build, point `SLOPIFY_FFMPEG` at it:
+
+```sh
+SLOPIFY_FFMPEG=/usr/bin/ffmpeg npx slopify@latest
+```
+
+That binary is a separate program Slopify runs as a child process. It is not
+linked into this code and is not distributed inside this package. It is licensed
+under the GPL-3.0-or-later, and its source and licence text ship beside it in
+`node_modules/ffmpeg-static/`.
+
 ## Licence
 
 MIT. See [LICENSE](./LICENSE).
