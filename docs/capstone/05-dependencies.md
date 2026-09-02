@@ -8,7 +8,7 @@ paths_covered:
   - "package-lock.json"
 ---
 
-> Prescriptive: written from the design and stack interviews, not from code. Every row cites `stack-interview.md §Q2` (the picks) and `§R1` (the research log, 2026-09-02) or an architecture entry. Version floors are the versions verified on npm that day; `build` pins exact versions in the lockfile.
+> Prescriptive: written from the design and stack interviews, not from code. Rows marked "installed" carry the version `build` actually resolved and locked; the rest are still floors. Every row cites `stack-interview.md §Q2` (the picks) and `§R1` (the research log, 2026-09-02) or an architecture entry. Version floors are the versions verified on npm that day; `build` pins exact versions in the lockfile.
 
 # Dependencies
 
@@ -17,7 +17,7 @@ paths_covered:
 | Package | Floor | Licence | Role | Decided |
 |---|---|---|---|---|
 | Node.js | 26 (`engines.node >= 26`) | MIT | runtime; LTS from October 2026 | architecture §Q4a |
-| typescript | 5.x current | Apache-2.0 | one language everywhere | architecture §Q4 |
+| typescript | 7.0.2 installed | Apache-2.0 | one language everywhere; `latest` resolves to the native (Go) compiler, not 5.x - typecheck-only role, `tsc --noEmit` and `tsc -p tsconfig.build.json` (build S0, S1) | architecture §Q4 |
 | hono | 4.13 | MIT | HTTP API, SSE (`streamSSE`), typed client (`hono/client`) | architecture §Q4, §Q12, §Q27 |
 | @hono/node-server | 2.1 | MIT | Node adapter for Hono | architecture §Q4 |
 | @hono/zod-validator | 0.9 | MIT | request validation at the edge | stack C3 |
@@ -32,7 +32,7 @@ paths_covered:
 | react-markdown | 10 | MIT | article display | stack C12 |
 | remark, strip-markdown | 15 / 6 | MIT | markdown → plain-text narration source (`logic/05` §Q37) | stack C12 |
 | fflate | 0.8 | MIT | zip for "download all" (`logic/14` §Q116) | stack C13 |
-| ulid | 3.0 | MIT | entity IDs (architecture §Q19) | stack C10 |
+| ulid | 3.0.2 installed | MIT | entity IDs (architecture §Q19) | stack C10 |
 | ffmpeg-static | 5.3 | GPL-3.0-or-later (binary shipped unlinked, notice in README) | bundled ffmpeg 6.1.1 per platform; `SLOPIFY_FFMPEG` override | architecture §Q26; stack C2 note |
 
 ## No dependency, by the ladder (stack C1, C2, C10, C11, C18)
@@ -56,11 +56,12 @@ paths_covered:
 |---|---|---|---|
 | vite | 8.2 | MIT | builds `packages/web` (stack C4) |
 | tsx | 4.23 | MIT | dev watch for `packages/app` (stack C4); `tsc` builds it |
-| vitest | 4.1 | MIT | test runner for every package (stack C8) |
+| vitest | 4.1.11 installed | MIT | test runner for every package (stack C8) |
 | @testing-library/react | 16.3 | MIT | component tests (stack C8) |
 | happy-dom | 20 | MIT | DOM for component tests (stack C8) |
-| @biomejs/biome | 2.5 | MIT OR Apache-2.0 | formatter and linter; `noRestrictedImports` patterns enforce kernel → slices → edge (stack C9; architecture §Q35) |
+| @biomejs/biome | 2.5.11 installed | MIT OR Apache-2.0 | formatter and linter; `noRestrictedImports` patterns enforce kernel → slices → edge (stack C9; architecture §Q35) |
 | GitHub Actions | hosted | n/a | lint, typecheck, test on Node 26; tag → `npm publish --provenance` (architecture §Q21; stack C19) |
+| @types/node | 26.4.1 installed | MIT | Node 26 type surface while the dev machine runs 24.3.0 (build S0) |
 | Dependabot | hosted | n/a | weekly updates; `npm audit` fails CI on high severity (architecture §Q24; stack C19) |
 | wrangler | current | MIT OR Apache-2.0 | deploys `packages/collector` and `packages/site` to Cloudflare (stack C17, C18) |
 
