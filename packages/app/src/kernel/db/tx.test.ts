@@ -14,6 +14,65 @@ function rows(db: ReturnType<typeof openDb>): number {
 }
 
 describe("transact", () => {
+  it("refuses an asynchronous block rather than releasing before its writes land", () => {
+    const db = counted();
+
+    expect(() =>
+      transact(db, async () => {
+        // Runs synchronously up to the first await, so this insert really happens.
+        db.exec("INSERT INTO t VALUES (1)");
+        await Promise.resolve();
+        db.exec("INSERT INTO t VALUES (2)");
+      }),
+    ).toThrow(/synchronous/);
+
+    expect(rows(db)).toBe(0);
+    db.close();
+  });
+
+  it("leaves no frame open when the block's own rollback cannot run", () => {
+    const db = counted();
+
+    // The inner block closes the savepoint out from under itself, so the unwind fails.
+    expect(() =>
+      transact(db, () => {
+        db.exec("INSERT INTO t VALUES (1)");
+        db.exec("RELEASE slopify");
+        throw new Error("the disk is full");
+      }),
+    ).toThrow(/could not be unwound/);
+
+    // The outer frame is gone with it: a later transaction commits and rolls back on its
+    // own, rather than riding on a frame that was left open.
+    expect(() =>
+      transact(db, () => {
+        db.exec("INSERT INTO t VALUES (2)");
+        throw new Error("no");
+      }),
+    ).toThrow("no");
+    transact(db, () => {
+      db.exec("INSERT INTO t VALUES (3)");
+    });
+    expect(rows(db)).toBe(2);
+    db.close();
+  });
+
+  it("keeps the original failure as the cause when the unwind also fails", () => {
+    const db = counted();
+
+    try {
+      transact(db, () => {
+        db.exec("RELEASE slopify");
+        throw new Error("the disk is full");
+      });
+      throw new Error("transact should have thrown");
+    } catch (error) {
+      expect((error as Error).message).toMatch(/could not be unwound/);
+      expect(((error as Error).cause as Error).message).toBe("the disk is full");
+    }
+    db.close();
+  });
+
   it("commits the writes and returns the block's value", () => {
     const db = counted();
 
