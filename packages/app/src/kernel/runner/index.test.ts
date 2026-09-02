@@ -364,6 +364,44 @@ describe("running.count", () => {
   });
 });
 
+describe("running.count", () => {
+  it("still returns to zero when the tick after a stage throws", async () => {
+    // stagesOf parses every row, so a schema surprise or a closed database throws out of
+    // tick. The tally is replayed to every page that opens later, so it must not stick.
+    const stages = store({ research: "skipped", article: "provided" });
+    let reads = 0;
+    const events: ProjectEvent[] = [];
+    const counts: number[] = [];
+    const runner = createRunner({
+      stages: {
+        ...stages,
+        stagesOf: (projectId) => {
+          reads += 1;
+          // The first tick reads twice (eligibility, then the project state); the read
+          // after that is the one the finishing stage's finally makes.
+          if (reads > 2) {
+            throw new Error("database is not open");
+          }
+          return stages.stagesOf(projectId);
+        },
+      },
+      runs: { audio: async (): Promise<void> => {}, images: ok, thumbnail: ok },
+      emit: (_projectId, event) => {
+        events.push(event);
+      },
+      emitRunningCount: (count) => {
+        counts.push(count);
+      },
+      log,
+    });
+
+    runner.tick("p1");
+    await runner.settled();
+
+    expect(counts).toEqual([1, 0]);
+  });
+});
+
 describe("abortAll", () => {
   it("cancels every stage in flight and waits for them to settle", async () => {
     const waits: StageRun = ({ signal }) =>

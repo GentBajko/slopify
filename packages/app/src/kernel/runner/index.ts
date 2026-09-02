@@ -150,10 +150,15 @@ export function createRunner(deps: RunnerDeps): Runner {
       .finally(() => {
         inflight.delete(stage.id);
         release();
-        // The next stage is claimed before the tally is read, so a fan-out handing over
-        // to the video stage never reports the project as briefly not running.
-        tick(stage.projectId);
-        retally();
+        try {
+          // The next stage is claimed before the tally is read, so a fan-out handing over
+          // to the video stage never reports the project as briefly not running.
+          tick(stage.projectId);
+        } finally {
+          // stagesOf parses rows and can throw. The tally is replayed to every page that
+          // opens afterwards, so it is read whether or not the tick got that far.
+          retally();
+        }
       })
       .catch((error: unknown) => {
         deps.log.write("error", "stage.execute", {
