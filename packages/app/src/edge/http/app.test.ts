@@ -5,8 +5,11 @@ import type { ServerType } from "@hono/node-server";
 import { serve } from "@hono/node-server";
 import { describe, expect, it, vi } from "vitest";
 import type { Clock } from "../../kernel/clock.js";
+import { openDb } from "../../kernel/db/index.js";
+import { migrate } from "../../kernel/db/migrate.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log, LogFields, LogLevel } from "../../kernel/log.js";
+import { ensureDirs, layout } from "../../kernel/paths.js";
 import type { Hub } from "../events/hub.js";
 import { createHub } from "../events/hub.js";
 import { createApp } from "./app.js";
@@ -61,7 +64,21 @@ function harness(
   };
   const ids = counter();
   const hub = createHub({ ids, log });
-  const app = createApp({ hub: wrap(hub), clock: ticking(), ids, log, version: "1.2.3", webDist });
+  const clock = ticking();
+  const paths = layout(mkdtempSync(join(tmpdir(), "slopify-app-")));
+  ensureDirs(paths, { mode: 0o700 });
+  const db = openDb(paths.db);
+  migrate(db, clock);
+  const app = createApp({
+    db,
+    paths,
+    hub: wrap(hub),
+    clock,
+    ids,
+    log,
+    version: "1.2.3",
+    webDist,
+  });
   return { app, hub, lines };
 }
 

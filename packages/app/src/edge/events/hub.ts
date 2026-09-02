@@ -1,7 +1,6 @@
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
-
-export type StageKind = "research" | "article" | "audio" | "images" | "thumbnail" | "video";
+import type { StageKind, StagingEvent } from "../../slices/storage/model.js";
 
 export type StageState =
   | "pending"
@@ -61,7 +60,9 @@ export type ProjectEvent =
   | ImageLandedEvent
   | ProjectStateEvent;
 
-export type GlobalEvent = RunningCountEvent;
+// A staged upload has no project yet, so its progress goes to every open page
+// (slices/storage/model.ts).
+export type GlobalEvent = RunningCountEvent | StagingEvent;
 
 export interface SseMessage {
   readonly event: string;

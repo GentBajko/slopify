@@ -21,6 +21,7 @@ const titles: Readonly<Record<number, string>> = {
   400: "Bad Request",
   404: "Not Found",
   409: "Conflict",
+  415: "Unsupported Media Type",
   500: "Internal Server Error",
 };
 
@@ -64,4 +65,33 @@ export function problemFromError(c: Context, error: Error, deps: ProblemDeps): R
 
 export function titleOf(status: number): string {
   return titles[status] ?? "Error";
+}
+
+export interface ValidationIssue {
+  readonly path: readonly PropertyKey[];
+  readonly message: string;
+}
+
+// The hook shape @hono/zod-validator calls, described structurally so this module
+// carries none of the validator's or the schema's generics.
+export function onInvalid(
+  result:
+    | { readonly success: true }
+    | { readonly success: false; readonly error: { readonly issues: readonly ValidationIssue[] } },
+  c: Context,
+): Response | undefined {
+  if (result.success) {
+    return undefined;
+  }
+  return problem(c, {
+    status: 400,
+    title: titleOf(400),
+    detail: "The request does not match this endpoint's schema.",
+    extensions: {
+      errors: result.error.issues.map((issue) => ({
+        path: issue.path.join("."),
+        message: issue.message,
+      })),
+    },
+  });
 }

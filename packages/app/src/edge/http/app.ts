@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import type { DatabaseSync } from "node:sqlite";
 import { serveStatic } from "@hono/node-server/serve-static";
 import type { Context } from "hono";
 import { Hono } from "hono";
@@ -6,10 +7,15 @@ import { streamSSE } from "hono/streaming";
 import type { Clock } from "../../kernel/clock.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
+import type { Paths } from "../../kernel/paths.js";
 import type { Hub } from "../events/hub.js";
+import { fileRoutes } from "./files.js";
 import { problem, problemFromError, titleOf } from "./problem.js";
+import { stagingRoutes } from "./staging.js";
 
 export interface AppDeps {
+  readonly db: DatabaseSync;
+  readonly paths: Paths;
   readonly hub: Hub;
   readonly clock: Clock;
   readonly ids: Ids;
@@ -27,13 +33,15 @@ const notBuilt =
   "Build the SPA with `npm run build` at the repository root.\n";
 
 function apiRoutes(deps: AppDeps, startedAt: number) {
-  return new Hono().get("/health", (c) =>
-    c.json({
-      status: "ok",
-      version: deps.version,
-      uptimeMs: deps.clock.now().getTime() - startedAt,
-    }),
-  );
+  return new Hono()
+    .get("/health", (c) =>
+      c.json({
+        status: "ok",
+        version: deps.version,
+        uptimeMs: deps.clock.now().getTime() - startedAt,
+      }),
+    )
+    .route("/staging", stagingRoutes(deps));
 }
 
 export function createApp(deps: AppDeps): Hono {
@@ -53,6 +61,8 @@ export function createApp(deps: AppDeps): Hono {
     .get("/api/events/projects/:id", (c) =>
       streamSSE(c, (stream) => deps.hub.subscribe(c.req.param("id"), stream, c.req.raw.signal)),
     )
+    // Files are served by URL, not through the API (02-models Boundaries).
+    .route("/", fileRoutes(deps))
     // The API answers for its whole prefix, so an unknown endpoint is a problem+json 404
     // rather than the SPA's index.html with a 200.
     .all("/api/*", missing);

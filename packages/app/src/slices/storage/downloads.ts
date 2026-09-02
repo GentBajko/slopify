@@ -24,7 +24,7 @@ export type DownloadResult =
   | { readonly ok: false; readonly reason: "unknown-project" | "unknown-asset" | "missing-file" };
 
 export type ImagesZipResult =
-  | { readonly ok: true; readonly filename: string; readonly bytes: Uint8Array }
+  | { readonly ok: true; readonly filename: string; readonly bytes: Uint8Array<ArrayBuffer> }
   | { readonly ok: false; readonly reason: "unknown-project" | "no-images" };
 
 const contentTypes: Readonly<Record<string, string>> = {

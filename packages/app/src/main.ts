@@ -43,6 +43,8 @@ export async function boot(config: Config): Promise<Boot> {
     });
     const hub = createHub({ ids, log });
     const app = createApp({
+      db,
+      paths,
       hub,
       clock,
       ids,
