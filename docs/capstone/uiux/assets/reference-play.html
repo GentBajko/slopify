@@ -1,0 +1,123 @@
+<!doctype html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><title>Slopify reference: Play + project rundown (control room)</title>
+<!-- Reference sample for build, saved at the user's request (uiux-interview.md Q19). The markdown chapters in docs/capstone/uiux/ are canonical; this file shows the committed tokens, the Play first viewport, and a project rundown mid-run, in both themes. Provider names are placeholders. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#141416;--panel:#1b1b1f;--panel2:#202026;--line:#2a2a30;--line2:#35353d;--ink:#e6e3dc;--ink2:#9a978f;--ink3:#8a887f;--accent:#9bcb4f;--accent-ink:#17200b;--accent-edge:#6d9333;--lamp-run:#9bcb4f;--lamp-halo:rgba(155,203,79,.18);--run-text:#9bcb4f;--red:#e86960;--amber:#e2a247;--done:#6f9a3a;--focus:#9bcb4f}
+[data-theme="light"]{--bg:#f4f2ec;--panel:#fbfaf7;--panel2:#eceae3;--line:#dad8d0;--line2:#c9c7be;--ink:#1c1c1e;--ink2:#5c5b56;--ink3:#6b6a64;--accent:#9bcb4f;--accent-ink:#17200b;--accent-edge:#6e9a33;--lamp-run:#5f8a2b;--lamp-halo:rgba(95,138,43,.18);--run-text:#3f6b1c;--red:#b8332c;--amber:#8f5e12;--done:#55673f;--focus:#5f8a2b}
+[data-theme="light"] .lamp{background:#dedcd4;box-shadow:inset 0 0 0 1px #c9c7be}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Barlow,system-ui,sans-serif}
+svg{display:block}
+.nav{display:flex;align-items:center;gap:28px;padding:0 28px;height:56px;border-bottom:1px solid var(--line);background:var(--panel)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:-.02em}
+.brand svg{width:26px;height:26px;color:var(--lamp-run);position:relative;top:3px}
+.nav a{color:var(--ink2);text-decoration:none;padding:18px 0;border-bottom:2px solid transparent}
+.nav a.on{color:var(--ink);border-color:var(--lamp-run)}
+.nav .sp{flex:1}
+.nav .lbl{color:var(--ink3)}
+.wrap{display:grid;grid-template-columns:1fr 420px;gap:24px;padding:24px 28px;max-width:1440px}
+.lbl{font-family:"Barlow Condensed",Barlow,sans-serif;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);font-weight:600}
+.state,.kwh,.cue h2{font-family:"Barlow Condensed",Barlow,sans-serif}
+.theme{margin-left:12px;border:1px solid var(--line2);border-radius:4px;padding:4px 8px;font-size:12px;color:var(--ink2);cursor:pointer;background:var(--panel2)}
+h1{font-size:18px;margin:0 0 4px;font-weight:700;letter-spacing:-.01em}
+.sub{color:var(--ink2);margin:0 0 16px}
+.rail{display:grid;grid-template-columns:14px 24px 110px auto 1fr;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--line);border-bottom:none;background:var(--panel)}
+.rail:first-of-type{border-radius:6px 6px 0 0}
+.rail:last-of-type{border-bottom:1px solid var(--line);border-radius:0 0 6px 6px}
+.rail svg{width:22px;height:22px;color:var(--ink2)}
+.rail .name{font-weight:600}
+.rail.muted .name,.rail.muted svg{color:var(--ink3)}
+.lamp{width:10px;height:10px;border-radius:50%;background:#2c2c33;box-shadow:inset 0 0 0 1px #3a3a42}
+.lamp.run{background:var(--lamp-run);box-shadow:0 0 0 3px var(--lamp-halo);animation:pulse 1.2s ease-in-out infinite}
+.lamp.done{background:var(--done)}
+.lamp.fail{background:var(--red)}
+.lamp.canc{background:var(--amber)}
+@keyframes pulse{50%{box-shadow:0 0 0 6px transparent}}
+@media (prefers-reduced-motion:reduce){.lamp.run{animation:none}}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:4px;overflow:hidden;font-size:12px}
+.seg span{padding:5px 10px;color:var(--ink2);border-right:1px solid var(--line2)}
+.seg span:last-child{border-right:none}
+.seg span.on{background:var(--panel2);color:var(--ink);box-shadow:inset 0 -2px 0 var(--lamp-run)}
+.ctl{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-self:end}
+.ctl .lbl{margin-left:6px}
+.sel{border:1px solid var(--line2);border-radius:4px;padding:5px 26px 5px 10px;background:var(--panel2);position:relative;font-size:13px;min-width:120px}
+.sel:after{content:"";position:absolute;right:10px;top:11px;width:6px;height:6px;border-right:1.5px solid var(--ink2);border-bottom:1.5px solid var(--ink2);transform:rotate(45deg)}
+.prompts{display:flex;gap:16px;flex-basis:100%;padding-left:4px}
+.pr{display:flex;align-items:center;gap:8px;font-size:13px}
+.chk{width:14px;height:14px;border:1px solid var(--line2);border-radius:3px;background:var(--panel2)}
+.chk.on{background:var(--accent);border-color:var(--accent)}
+.num{color:var(--ink2)} .num b{color:var(--ink);font-weight:600} .num.dim{color:var(--ink3)}
+.cue{border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:18px;position:sticky;top:24px;display:flex;flex-direction:column;gap:14px}
+.cue h2{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);margin:0;font-weight:600}
+.field label{display:block;margin-bottom:5px}
+.inp{border:1px solid var(--line2);border-radius:4px;background:var(--panel2);padding:7px 10px;font-size:13px}
+.inp.ph{color:var(--ink3)}
+.row{display:flex;gap:10px} .row>*{flex:1}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.kw{display:flex;flex-direction:column;gap:8px}
+.err .inp{border-color:var(--red)} .err .msg{color:var(--red);font-size:12px;margin-top:4px}
+.play{display:flex;align-items:center;justify-content:center;gap:12px;background:var(--accent);color:var(--accent-ink);border-radius:6px;padding:16px;font-weight:800;font-size:16px;letter-spacing:.02em;box-shadow:0 4px 0 var(--accent-edge);cursor:pointer;user-select:none}
+.play svg{width:22px;height:22px;color:var(--accent-ink);position:relative;top:2px}
+.play:active{transform:translateY(3px);box-shadow:0 1px 0 var(--accent-edge)}
+.rundown{margin:8px 28px 28px;max-width:1440px}
+.rd{border:1px solid var(--line);border-radius:6px;background:var(--panel);overflow:hidden}
+.rd .hd{display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.rd .hd .t{font-weight:700;font-size:16px}
+.rd .hd .st{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink2)}
+.rd .hd .cancel{border:1px solid var(--line2);border-radius:4px;padding:5px 10px;font-size:12px;color:var(--ink)}
+.rr{display:grid;grid-template-columns:14px 24px 110px 1fr auto;gap:14px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);position:relative}
+.rr:last-child{border-bottom:none}
+.rr svg{width:20px;height:20px;color:var(--ink2)}
+.rr .name{font-weight:600}
+.rr .what{color:var(--ink2);font-size:13px}
+.rr .state{font-size:11px;letter-spacing:.09em;text-transform:uppercase;font-weight:700}
+.rr .state.run{color:var(--run-text)} .rr .state.done{color:var(--done)} .rr .state.pend{color:var(--ink3)} .rr .state.fail{color:var(--red)}
+.meter{position:absolute;left:0;bottom:0;height:2px;background:var(--lamp-run);width:37%}
+.meter.full{width:100%;background:var(--done)}
+.errline{grid-column:2/6;font-size:12px;color:var(--red);background:rgba(224,86,79,.08);padding:6px 10px;border-radius:4px;display:flex;gap:12px;align-items:center}
+.errline .btn{margin-left:auto;border:1px solid var(--red);color:var(--ink);border-radius:4px;padding:3px 9px}
+.foot{padding:14px 28px;border-top:1px solid var(--line);color:var(--ink3);font-size:12px;display:flex;gap:18px}
+
+.wrap{grid-template-columns:1fr 480px}
+.kwsec{margin-top:6px}
+.kwh{display:flex;align-items:center;gap:12px;margin:4px 0 10px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);font-weight:700;justify-content:center}
+.kwh:before,.kwh:after{content:"";flex:1;height:1px;background:var(--line2)}
+.kwsplit{display:grid;grid-template-columns:1fr 1px 1fr;gap:0 16px;margin-top:6px}
+.kwsplit:before{content:"";grid-column:2;background:var(--line2);order:2}
+.kwcol:first-child{order:1}.kwcol:last-child{order:3}
+</style></head><body>
+<div class="nav"><div class="brand"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Slopify"><path fill="currentColor" fill-rule="evenodd" d="M 62 28 C 100 46, 118 60, 140 66 C 150 68, 152 80, 164 84 L 232 120 L 216 132 C 214.0 134.3, 208.3 141.7, 204.0 146.0 C 199.7 150.3, 194.0 154.7, 190.0 158.0 C 186.0 161.3, 182.3 162.3, 180.0 166.0 C 177.7 169.7, 176.3 175.0, 176.0 180.0 C 175.7 185.0, 179.0 191.0, 178.0 196.0 C 177.0 201.0, 174.0 207.3, 170.0 210.0 C 166.0 212.7, 158.0 213.7, 154.0 212.0 C 150.0 210.3, 147.3 204.3, 146.0 200.0 C 144.7 195.7, 147.0 189.7, 146.0 186.0 C 145.0 182.3, 143.0 178.7, 140.0 178.0 C 137.0 177.3, 131.3 179.0, 128.0 182.0 C 124.7 185.0, 121.3 190.7, 120.0 196.0 C 118.7 201.3, 121.3 208.0, 120.0 214.0 C 118.7 220.0, 115.7 228.3, 112.0 232.0 C 108.3 235.7, 102.3 237.0, 98.0 236.0 C 93.7 235.0, 88.3 230.7, 86.0 226.0 C 83.7 221.3, 84.0 213.3, 84.0 208.0 C 84.0 202.7, 86.7 197.3, 86.0 194.0 C 85.3 190.7, 82.7 187.7, 80.0 188.0 C 77.3 188.3, 72.7 193.3, 70.0 196.0 C 67.3 198.7, 65.3 202.3, 64.0 204.0 C 62.7 205.7, 62.3 205.7, 62.0 206.0 Q 56 118, 62 28 Z M 100 84 L 170 122 L 100 160 Z M 98 200 A 6 6 0 1 0 110 200 A 6 6 0 1 0 98 200 Z M 152 184 A 4 4 0 1 0 160 184 A 4 4 0 1 0 152 184 Z"/></svg>Slopify</div><a>Projects</a><a class="on">Play</a><a>Prompts</a><a>Intros &amp; Outros</a><a>Settings</a><a>Usage</a><span class="sp"></span><span class="lbl">2 running</span><button class="theme" onclick="var r=document.documentElement;r.dataset.theme=r.dataset.theme==='light'?'dark':'light'">Theme</button></div>
+<div class="wrap">
+ <div>
+  <h1>New run</h1><p class="sub">Six stages. Generate any of them, or provide the output yourself and the stage is skipped.</p>
+  <div class="rail"><span class="lamp"></span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="research"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg><span class="name">Research</span><div class="seg"><span class="">Off</span><span class="on">Generate</span><span class="">Provide</span></div><div class="ctl"><span class="lbl">Runs through the LLM, one agent per chapter</span></div></div><div class="rail"><span class="lamp"></span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="article"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 11h6"/><path d="M9 14h6"/><path d="M9 17h4"/></svg><span class="name">Article</span><div class="seg"><span class="on">Generate</span><span class="">Provide</span></div><div class="ctl"><label class="lbl">Article prompt</label><div class="sel">Documentary dossier</div></div></div><div class="rail"><span class="lamp"></span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="audio"><path d="M4 10v4"/><path d="M8 7v10"/><path d="M12 4v16"/><path d="M16 8v8"/><path d="M20 11v2"/></svg><span class="name">Audio</span><div class="seg"><span class="on">Generate</span><span class="">Provide</span></div><div class="ctl"><label class="lbl">TTS</label><div class="sel">ElevenLabs</div><label class="lbl">Voice</label><div class="sel">Narrator M</div><label class="lbl">Chunking</label><div class="seg"><span class="">Whole</span><span class="">Paragraph</span><span class="on">Every 500 words</span></div></div></div><div class="rail"><span class="lamp"></span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="images"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="M21 16l-4.5-4.5L7 20"/></svg><span class="name">Images</span><div class="seg"><span class="on">Generate</span><span class="">Provide</span></div><div class="ctl"><label class="lbl">Provider</label><div class="sel">fal.ai</div><label class="lbl">Model</label><div class="sel">flux-pro</div>
+<div class="prompts"><div class="pr"><span class="chk on"></span>Oil painting scenes <span class="num">× <b>8</b></span></div><div class="pr"><span class="chk on"></span>Map close-ups <span class="num">× <b>4</b></span></div><div class="pr"><span class="chk"></span>Portraits <span class="num dim">× 0</span></div></div></div></div><div class="rail"><span class="lamp"></span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="thumbnail"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M10 9v6l5-3z"/></svg><span class="name">Thumbnail</span><div class="seg"><span class="">Off</span><span class="">From prompt</span><span class="on">Prompt by LLM</span><span class="">Provide</span></div><div class="ctl"><label class="lbl">Thumbnail prompt</label><div class="sel">Bold title card</div></div></div><div class="rail muted"><span class="lamp"></span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="video"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 5v14"/><path d="M17 5v14"/><path d="M3 9.5h4M3 14.5h4M17 9.5h4M17 14.5h4"/></svg><span class="name">Video</span><div class="ctl"><span class="lbl">Rendered from the stages above · intro 0:07 · body · outro 0:05 · 3 s gaps</span></div></div>
+ </div>
+ <div class="cue">
+  <h2>Cue sheet</h2>
+  <div class="field"><label class="lbl">Video title</label><div class="inp">The Complete History of Vecna</div></div>
+  <div class="row"><div class="field"><label class="lbl">Format</label><div class="seg"><span class="on">16:9</span><span class="">9:16</span></div></div><div class="field"><label class="lbl">Intro</label><div class="sel">Cold open hook</div></div><div class="field"><label class="lbl">Outro</label><div class="sel">Subscribe sting</div></div></div>
+  <div class="row"><div class="field"><label class="lbl">LLM</label><div class="sel">OpenRouter</div></div><div class="field"><label class="lbl">Model</label><div class="sel">anthropic/claude-sonnet</div></div></div>
+  <div class="kwsec"><div class="kwh"><span>Common</span></div>
+   <div class="kw"><div class="field"><label class="lbl">topic</label><div class="inp">Vecna</div></div></div></div>
+  <div class="kwsplit">
+   <div class="kwcol"><div class="kwh"><span>Text</span></div><div class="kw"><div class="field"><label class="lbl">minWords</label><div class="inp">3000</div></div><div class="field err"><label class="lbl">maxWords</label><div class="inp ph">required</div><div class="msg">Fill maxWords to play</div></div></div></div>
+   <div class="kwcol"><div class="kwh"><span>Image</span></div><div class="kw"><div class="field"><label class="lbl">era</label><div class="inp">AD&amp;D 1e</div></div><div class="field"><label class="lbl">style</label><div class="inp">oil on canvas, cracked varnish</div></div></div></div>
+  </div>
+  <div class="play"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Slopify"><path fill="currentColor" fill-rule="evenodd" d="M 62 28 C 100 46, 118 60, 140 66 C 150 68, 152 80, 164 84 L 232 120 L 216 132 C 214.0 134.3, 208.3 141.7, 204.0 146.0 C 199.7 150.3, 194.0 154.7, 190.0 158.0 C 186.0 161.3, 182.3 162.3, 180.0 166.0 C 177.7 169.7, 176.3 175.0, 176.0 180.0 C 175.7 185.0, 179.0 191.0, 178.0 196.0 C 177.0 201.0, 174.0 207.3, 170.0 210.0 C 166.0 212.7, 158.0 213.7, 154.0 212.0 C 150.0 210.3, 147.3 204.3, 146.0 200.0 C 144.7 195.7, 147.0 189.7, 146.0 186.0 C 145.0 182.3, 143.0 178.7, 140.0 178.0 C 137.0 177.3, 131.3 179.0, 128.0 182.0 C 124.7 185.0, 121.3 190.7, 120.0 196.0 C 118.7 201.3, 121.3 208.0, 120.0 214.0 C 118.7 220.0, 115.7 228.3, 112.0 232.0 C 108.3 235.7, 102.3 237.0, 98.0 236.0 C 93.7 235.0, 88.3 230.7, 86.0 226.0 C 83.7 221.3, 84.0 213.3, 84.0 208.0 C 84.0 202.7, 86.7 197.3, 86.0 194.0 C 85.3 190.7, 82.7 187.7, 80.0 188.0 C 77.3 188.3, 72.7 193.3, 70.0 196.0 C 67.3 198.7, 65.3 202.3, 64.0 204.0 C 62.7 205.7, 62.3 205.7, 62.0 206.0 Q 56 118, 62 28 Z M 100 84 L 170 122 L 100 160 Z M 98 200 A 6 6 0 1 0 110 200 A 6 6 0 1 0 98 200 Z M 152 184 A 4 4 0 1 0 160 184 A 4 4 0 1 0 152 184 Z"/></svg>PLAY</div>
+ </div>
+</div>
+<div class="rundown">
+ <div class="lbl" style="margin-bottom:8px">Project rundown · sample of a run in progress</div>
+ <div class="rd">
+  <div class="hd"><span class="lamp run"></span><span class="t">Acererak, Explained</span><span class="what">Documentary dossier · 9:16 · started 21:14</span><span class="st">RUNNING <span class="cancel">Cancel</span></span></div>
+  <div class="rr"><span class="lamp done"></span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="research"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg><span class="name">Research</span><span class="what">7 chapters researched · 41 sources</span><span class="state done">Done</span><span class="meter full"></span></div>
+  <div class="rr"><span class="lamp done"></span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="article"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 11h6"/><path d="M9 14h6"/><path d="M9 17h4"/></svg><span class="name">Article</span><span class="what">3,412 words · sources and glossary split out</span><span class="state done">Done</span><span class="meter full"></span></div>
+  <div class="rr"><span class="lamp run"></span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="audio"><path d="M4 10v4"/><path d="M8 7v10"/><path d="M12 4v16"/><path d="M16 8v8"/><path d="M20 11v2"/></svg><span class="name">Audio</span><span class="what">Narrator M · chunk 3 of 8</span><span class="state run">Running</span><span class="meter"></span></div>
+  <div class="rr"><span class="lamp fail"></span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="images"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="M21 16l-4.5-4.5L7 20"/></svg><span class="name">Images</span><span class="what">Oil painting scenes 6 of 8 · Map close-ups 4 of 4</span><span class="state fail">Failed</span><div class="errline">fal.ai: 429 Too Many Requests after 4 attempts (2s, 8s, 30s, Retry-After 45s) <span class="btn">Retry stage</span></div></div>
+  <div class="rr"><span class="lamp"></span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="thumbnail"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M10 9v6l5-3z"/></svg><span class="name">Thumbnail</span><span class="what">Prompt by LLM · waiting for article</span><span class="state pend">Pending</span></div>
+  <div class="rr"><span class="lamp"></span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="video"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 5v14"/><path d="M17 5v14"/><path d="M3 9.5h4M3 14.5h4M17 9.5h4M17 14.5h4"/></svg><span class="name">Video</span><span class="what">Waits for audio, images, thumbnail</span><span class="state pend">Pending</span></div>
+ </div>
+</div>
+<div class="foot"><span>Free. Your keys, your machine.</span><span>Patreon</span><span>Buy Me a Coffee</span><span style="margin-left:auto">Anonymous usage stats: on</span></div>
+</body></html>

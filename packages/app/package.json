@@ -1,0 +1,20 @@
+{
+  "name": "slopify",
+  "version": "0.0.0",
+  "description": "Turn a prompt into a finished video, locally, with your own provider keys",
+  "license": "MIT",
+  "author": "Gent Bajko",
+  "type": "module",
+  "engines": {
+    "node": ">=26"
+  },
+  "bin": {
+    "slopify": "dist/edge/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}
