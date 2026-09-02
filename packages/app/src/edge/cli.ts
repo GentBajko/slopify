@@ -2,6 +2,7 @@
 import { parseArgs } from "node:util";
 import { configFrom } from "../kernel/config/index.js";
 import { boot } from "../main.js";
+import { openBrowser } from "./open-browser.js";
 
 const { values } = parseArgs({
   options: {
@@ -14,7 +15,8 @@ const { values } = parseArgs({
 
 try {
   const config = configFrom(values, process.env);
-  const { paths, stop } = await boot(config);
+  const { paths, url, stop } = await boot(config);
+  console.log(`Slopify is running at ${url}`);
   console.log(`Slopify data directory: ${paths.dataDir}`);
   console.log(`Database: ${paths.db}`);
   console.log(`Logs: ${paths.logs}`);
@@ -23,11 +25,12 @@ try {
       `WARNING: bound to ${config.host} - anyone who reaches this port controls the app and its keys (no login).`,
     );
   }
-  // S2 replaces this with the HTTP server handle. Until something else holds the event
-  // loop open the process would exit at once and drop the instance lock.
-  const keepAlive = setInterval(() => {}, 1 << 30);
+  if (config.open) {
+    openBrowser(url, (message) => {
+      console.warn(message);
+    });
+  }
   process.on("SIGINT", () => {
-    clearInterval(keepAlive);
     stop().then(
       () => process.exit(0),
       () => process.exit(1),
