@@ -1,5 +1,7 @@
-export const stageKinds = ["research", "article", "audio", "images", "thumbnail", "video"] as const;
-export type StageKind = (typeof stageKinds)[number];
+import type { StageKind } from "../../kernel/pipeline.js";
+
+export { stageKinds } from "../../kernel/pipeline.js";
+export type { StageKind };
 
 // The stages whose content arrives as a file. Research and article take pasted text
 // instead (logic/05 §Q37), and video is always generated (logic/01 step 5).

@@ -1,69 +1,26 @@
+import type {
+  ArticleDeltaEvent,
+  ImageLandedEvent,
+  ProjectEvent,
+  ProjectStateEvent,
+  RunningCountEvent,
+  StageProgressEvent,
+  StageStateEvent,
+} from "../../kernel/events.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
-import type { StageKind, StagingEvent } from "../../slices/storage/model.js";
+import type { StagingEvent } from "../../slices/storage/model.js";
 
-export type StageState =
-  | "pending"
-  | "running"
-  | "done"
-  | "failed"
-  | "canceled"
-  | "provided"
-  | "skipped";
-
-// logic/01 §Q9 names four project states and derives them in order: running if any
-// stage is running, else canceled, else failed, else done when video is done. A project
-// whose stages are all still pending matches none of them, and that window is real
-// between creating the project and the runner starting the first stage, so `pending` is
-// the fallback the derivation returns. Nothing stores it: status is always derived.
-export type ProjectState = "running" | "canceled" | "failed" | "done" | "pending";
-
-export interface StageStateEvent {
-  readonly type: "stage.state";
-  readonly projectId: string;
-  readonly stage: StageKind;
-  readonly state: StageState;
-  readonly failureReason?: string;
-}
-
-export interface StageProgressEvent {
-  readonly type: "stage.progress";
-  readonly projectId: string;
-  readonly stage: StageKind;
-  readonly current: number;
-  readonly total: number;
-}
-
-export interface ArticleDeltaEvent {
-  readonly type: "article.delta";
-  readonly projectId: string;
-  readonly text: string;
-}
-
-export interface ImageLandedEvent {
-  readonly type: "image.landed";
-  readonly projectId: string;
-  readonly outputId: string;
-  readonly index: number;
-}
-
-export interface ProjectStateEvent {
-  readonly type: "project.state";
-  readonly projectId: string;
-  readonly state: ProjectState;
-}
-
-export interface RunningCountEvent {
-  readonly type: "running.count";
-  readonly count: number;
-}
-
-export type ProjectEvent =
-  | StageStateEvent
-  | StageProgressEvent
-  | ArticleDeltaEvent
-  | ImageLandedEvent
-  | ProjectStateEvent;
+export type { ProjectState, StageState } from "../../kernel/pipeline.js";
+export type {
+  ArticleDeltaEvent,
+  ImageLandedEvent,
+  ProjectEvent,
+  ProjectStateEvent,
+  RunningCountEvent,
+  StageProgressEvent,
+  StageStateEvent,
+};
 
 // A staged upload has no project yet, so its progress goes to every open page
 // (slices/storage/model.ts).
