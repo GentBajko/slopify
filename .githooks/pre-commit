@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+
+exec npx --no-install biome check --staged --no-errors-on-unmatched
