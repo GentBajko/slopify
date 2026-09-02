@@ -2,7 +2,7 @@ import { transact } from "../../kernel/db/tx.js";
 import type { StageKind, StageState } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
 import type { StorageDeps } from "../storage/staging.js";
-import { attachStagedFile, storeText } from "../storage/staging.js";
+import { attachStagedFile, dropStagedSource, storeText } from "../storage/staging.js";
 import type { Project, RunConfig, RunDraft, Stage, StageSource } from "./model.js";
 import { insertProject, insertStage } from "./repo.js";
 
@@ -53,18 +53,30 @@ export function startRun(
     finishedAt: null,
   }));
 
+  // Filled inside the transaction, emptied after it. Every provided upload is copied into
+  // the project folder rather than moved, so a rollback leaves the staging files exactly
+  // as the form left them and the same Play can simply be pressed again.
+  const moved: string[] = [];
   transact(deps.db, () => {
     insertProject(deps.db, project);
     for (const stage of stages) {
       insertStage(deps.db, stage);
     }
-    attachProvided(deps, id, draft);
+    attachProvided(deps, id, draft, moved);
   });
+  for (const source of moved) {
+    dropStagedSource(deps, source);
+  }
 
   return { project, stages };
 }
 
-function attachProvided(deps: StorageDeps, projectId: string, draft: RunDraft): void {
+function attachProvided(
+  deps: StorageDeps,
+  projectId: string,
+  draft: RunDraft,
+  collected: string[],
+): void {
   const { sources, provided } = draft;
   if (sources.research === "provide" && provided.research !== undefined) {
     storeText(deps, {
@@ -83,15 +95,15 @@ function attachProvided(deps: StorageDeps, projectId: string, draft: RunDraft): 
     });
   }
   if (sources.audio === "provide") {
-    attach(deps, projectId, "audio", provided.audio, "audio_body");
+    attach(deps, projectId, "audio", provided.audio, "audio_body", collected);
   }
   if (sources.thumbnail === "provide") {
-    attach(deps, projectId, "thumbnail", provided.thumbnail, "thumbnail");
+    attach(deps, projectId, "thumbnail", provided.thumbnail, "thumbnail", collected);
   }
   if (sources.images === "provide") {
     // logic/05 §Q39: slideshow order is the order the user left the list in.
     for (const [index, stagedFileId] of (provided.images ?? []).entries()) {
-      attach(deps, projectId, "images", stagedFileId, "image", index + 1);
+      attach(deps, projectId, "images", stagedFileId, "image", collected, index + 1);
     }
   }
 }
@@ -102,6 +114,7 @@ function attach(
   kind: StageKind,
   stagedFileId: string | undefined,
   role: Parameters<typeof attachStagedFile>[1]["role"],
+  collected: string[],
   index?: number,
 ): void {
   if (stagedFileId === undefined) {
@@ -118,4 +131,5 @@ function attach(
     // the file went away between the check and the write.
     throw new Error(`the ${kind} stage's file could not be attached: ${result.reason}`);
   }
+  collected.push(result.stagedSource);
 }

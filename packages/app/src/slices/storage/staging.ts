@@ -1,5 +1,5 @@
 import type { WriteStream } from "node:fs";
-import { createWriteStream, mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, createWriteStream, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { pipeline } from "node:stream/promises";
@@ -53,7 +53,14 @@ export interface AttachInput {
 }
 
 export type AttachResult =
-  | { readonly ok: true; readonly output: Output }
+  | {
+      readonly ok: true;
+      readonly output: Output;
+      // The staging file the copy came from. It is still there: only the caller knows
+      // when its own transaction has committed, and until then the upload is the only
+      // copy that survives a rollback. Hand it to dropStagedSource afterwards.
+      readonly stagedSource: string;
+    }
   | { readonly ok: false; readonly reason: "unknown-staged-file" | "still-copying" };
 
 export type DiscardResult =
@@ -180,10 +187,14 @@ export function attachStagedFile(deps: StorageDeps, input: AttachInput): AttachR
   const index = input.index ?? 1;
   const name = outputFileName(input.role, index, extensionOf(staged.originalFilename));
   const target = outputPath(deps.paths, input.projectId, name);
+  const source = stagingPath(deps.paths, staged.path);
   mkdirSync(dirname(target), { recursive: true, mode: 0o700 });
-  // ceiling: rename assumes staging/ and projects/ share a filesystem, which they do
-  // inside one data directory; a separately mounted staging/ would need copy + unlink.
-  renameSync(stagingPath(deps.paths, staged.path), target);
+  // Copied, not renamed. A rename cannot be undone when the caller's transaction rolls
+  // back, so a run that failed on its fourth file would have left the first three with
+  // restored staged_files rows pointing at files that had already moved, and every retry
+  // of the same form would fail the same way. Copying also survives a staging directory
+  // mounted separately from projects/, which a rename cannot (EXDEV).
+  copyFileSync(source, target);
 
   const output: Output = {
     id: deps.ids.next(),
@@ -213,7 +224,18 @@ export function attachStagedFile(deps: StorageDeps, input: AttachInput): AttachR
     });
     throw error;
   }
-  return { ok: true, output };
+  return { ok: true, output, stagedSource: source };
+}
+
+// The other half of attachStagedFile: called once the transaction that attached the file
+// has committed. A failure here is not worth failing the run over, because the file is a
+// duplicate of one the project already holds and the next boot's reconcile clears it.
+export function dropStagedSource(deps: StorageDeps, source: string): void {
+  try {
+    rmSync(source, { force: true });
+  } catch (error) {
+    deps.log.write("warn", "staging.source", { detail: `${source}: ${messageOf(error)}` });
+  }
 }
 
 export interface TextInput {
@@ -224,7 +246,10 @@ export interface TextInput {
 }
 
 // logic/05 step 1: a stage set to Provide can carry pasted text instead of a file, and
-// the project holds it as an output like any other.
+// the project holds it as an output like any other. Unlike an attached upload this needs
+// no two-phase dance: the text came in on the request, so a rollback loses nothing the
+// caller cannot write again, and the file left under a project id that was rolled back
+// is an orphan the boot reconcile removes.
 // ceiling: the paste is stored as typed. logic/05 §Q37 also asks for markdown syntax to
 // be stripped for the narration source; that reduction belongs to the narration slice
 // that reads this file, and lands with it.

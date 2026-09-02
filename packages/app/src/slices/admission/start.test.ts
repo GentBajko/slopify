@@ -154,6 +154,63 @@ describe("startRun", () => {
     );
   });
 
+  it("leaves every staged upload in place when a later attach fails", async () => {
+    const storage = deps();
+    const audio = await upload(storage, "audio", "narration");
+    const first = await upload(storage, "images", "one");
+    const second = await upload(storage, "images", "two");
+
+    // The fourth attach fails, after three files have already been placed.
+    expect(() =>
+      startRun(
+        storage,
+        draft({ provided: { article: "x", audio, images: [first, second, "gone"] } }),
+        {},
+      ),
+    ).toThrow(/could not be attached/);
+
+    // Every staged row came back with the rollback, and every staged file is still on
+    // disk beside it, so pressing Play again works instead of failing forever.
+    expect(
+      storage.db
+        .prepare("SELECT id FROM staged_files ORDER BY created_at, id")
+        .all()
+        .map((row) => row.id),
+    ).toEqual([audio, first, second]);
+    for (const id of [audio, first, second]) {
+      expect(existsSync(join(storage.paths.staging, id))).toBe(true);
+    }
+
+    const retried = startRun(
+      storage,
+      draft({ provided: { article: "x", audio, images: [first, second] } }),
+      {},
+    );
+    expect(
+      readFileSync(join(storage.paths.projects, retried.project.id, "images", "001.bin"), "utf8"),
+    ).toBe("one");
+  });
+
+  it("removes a staged upload's source only once the run is committed", async () => {
+    const storage = deps();
+    const audio = await upload(storage, "audio", "narration");
+    const image = await upload(storage, "images", "one");
+
+    const { project } = startRun(
+      storage,
+      draft({ provided: { article: "x", audio, images: [image] } }),
+      {},
+    );
+
+    for (const id of [audio, image]) {
+      expect(existsSync(join(storage.paths.staging, id))).toBe(false);
+    }
+    expect(storage.db.prepare("SELECT count(*) AS n FROM staged_files").get()).toEqual({ n: 0 });
+    expect(readFileSync(join(storage.paths.projects, project.id, "audio-body.bin"), "utf8")).toBe(
+      "narration",
+    );
+  });
+
   it("writes nothing at all when one provided file has gone missing", async () => {
     const storage = deps();
     const audio = await upload(storage, "audio", "narration");
@@ -165,8 +222,8 @@ describe("startRun", () => {
     expect(storage.db.prepare("SELECT count(*) AS n FROM projects").get()).toEqual({ n: 0 });
     expect(storage.db.prepare("SELECT count(*) AS n FROM stages").get()).toEqual({ n: 0 });
     expect(storage.db.prepare("SELECT count(*) AS n FROM outputs").get()).toEqual({ n: 0 });
-    // The audio file moved before the rollback; the boot reconcile collects it, because
-    // no project row claims the folder it now sits in.
-    expect(existsSync(join(storage.paths.staging, audio))).toBe(false);
+    // The copy under the rolled-back project id is an orphan the boot reconcile collects;
+    // the staging original is untouched, so the same form can be submitted again.
+    expect(existsSync(join(storage.paths.staging, audio))).toBe(true);
   });
 });

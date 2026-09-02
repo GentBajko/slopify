@@ -13,7 +13,7 @@ import type { Paths } from "../src/kernel/paths.js";
 import { boot } from "../src/main.js";
 import type { StagedFile } from "../src/slices/storage/model.js";
 import type { StorageDeps } from "../src/slices/storage/staging.js";
-import { attachStagedFile } from "../src/slices/storage/staging.js";
+import { attachStagedFile, dropStagedSource } from "../src/slices/storage/staging.js";
 
 const log: Log = { write: (): void => {} };
 const open: Array<() => Promise<void>> = [];
@@ -90,6 +90,13 @@ describe("upload, attach, and download over a socket", () => {
         index: index + 1,
       });
       expect(attached.ok).toBe(true);
+      if (attached.ok) {
+        // The upload is copied, not moved; the caller drops the source once its own
+        // transaction has committed.
+        expect(existsSync(attached.stagedSource)).toBe(true);
+        dropStagedSource(deps, attached.stagedSource);
+        expect(existsSync(attached.stagedSource)).toBe(false);
+      }
     }
     expect((await (await fetch(`${url}/api/staging`)).json()) as unknown).toEqual({ files: [] });
 
@@ -155,14 +162,16 @@ describe("reconcile at the next boot", () => {
 
     const attached = await post(first.url, "images", "kept.png", "attached bytes");
     const abandoned = await post(first.url, "images", "never-used.png", "abandoned bytes");
-    expect(
-      attachStagedFile(storage(db, first.paths), {
-        stagedFileId: attached.id,
-        projectId: "p1",
-        role: "image",
-        index: 1,
-      }).ok,
-    ).toBe(true);
+    const moved = attachStagedFile(storage(db, first.paths), {
+      stagedFileId: attached.id,
+      projectId: "p1",
+      role: "image",
+      index: 1,
+    });
+    expect(moved.ok).toBe(true);
+    if (moved.ok) {
+      dropStagedSource(storage(db, first.paths), moved.stagedSource);
+    }
     const orphan = join(first.paths.projects, "p1", "images", "999.png");
     writeFileSync(orphan, "written but never recorded");
     db.close();

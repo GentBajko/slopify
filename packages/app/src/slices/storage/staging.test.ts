@@ -11,7 +11,7 @@ import { ensureDirs, layout } from "../../kernel/paths.js";
 import type { EmitStaging, StagingEvent } from "./model.js";
 import { outputsOf, stagedFileById, stagedFiles } from "./repo.js";
 import type { StorageDeps } from "./staging.js";
-import { attachStagedFile, discardStagedFile, stageUpload } from "./staging.js";
+import { attachStagedFile, discardStagedFile, dropStagedSource, stageUpload } from "./staging.js";
 
 interface Harness {
   readonly deps: StorageDeps;
@@ -196,7 +196,7 @@ describe("attachStagedFile", () => {
     return result.file.id;
   }
 
-  it("moves the file into the project folder and records it as an output", async () => {
+  it("copies the file into the project folder and records it as an output", async () => {
     const { deps } = harness();
     const id = await staged(deps, "Shot One.PNG");
 
@@ -209,6 +209,7 @@ describe("attachStagedFile", () => {
 
     expect(result).toEqual({
       ok: true,
+      stagedSource: join(deps.paths.staging, id),
       output: {
         id: "id2",
         projectId: "p1",
@@ -225,9 +226,33 @@ describe("attachStagedFile", () => {
     expect(readFileSync(join(deps.paths.projects, "p1", "images", "002.png"), "utf8")).toBe(
       "png bytes",
     );
-    expect(existsSync(join(deps.paths.staging, id))).toBe(false);
+    // The row is gone but the upload is not: only the caller knows when its transaction
+    // committed, and until then the staging file is the copy a rollback can fall back on.
+    expect(existsSync(join(deps.paths.staging, id))).toBe(true);
     expect(stagedFiles(deps.db)).toEqual([]);
     expect(outputsOf(deps.db, "p1")).toHaveLength(1);
+  });
+
+  it("drops the staged source once the caller says the run is committed", async () => {
+    const { deps } = harness();
+    const id = await staged(deps, "Shot One.PNG");
+    const result = attachStagedFile(deps, { stagedFileId: id, projectId: "p1", role: "image" });
+    if (!result.ok) {
+      throw new Error(result.reason);
+    }
+
+    dropStagedSource(deps, result.stagedSource);
+
+    expect(existsSync(join(deps.paths.staging, id))).toBe(false);
+  });
+
+  it("does not fail a committed run when the staged source cannot be removed", () => {
+    const { deps, lines } = harness();
+
+    expect(() => {
+      dropStagedSource(deps, join(deps.paths.staging, "never-existed"));
+    }).not.toThrow();
+    expect(lines.some((line) => line.includes("staging.source"))).toBe(false);
   });
 
   it("refuses a staged file it has never seen", () => {
