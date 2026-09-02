@@ -50,6 +50,10 @@ interface Inflight {
 
 export function createRunner(deps: RunnerDeps): Runner {
   const inflight = new Map<string, Inflight>();
+  // ceiling: one entry per project ticked since boot, never evicted, so it costs a few
+  // dozen bytes per project of a single user's local app and is emptied by any restart.
+  // Evicting on a terminal state would re-announce that state on the next tick of the
+  // same project, so the upgrade is to drop the entry when the project is deleted.
   const announced = new Map<string, ProjectState>();
   let count = 0;
   let shuttingDown = false;
