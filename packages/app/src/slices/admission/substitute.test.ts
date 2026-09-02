@@ -108,6 +108,18 @@ describe("render", () => {
     expect(render("{{a}} {{b}}", { a: "one" })).toBe("one {{b}}");
   });
 
+  it("does not read a slot's value off Object's prototype", () => {
+    // Slot names are user-authored and free-form (§Q19), so "constructor" and "toString"
+    // are ordinary names, not accessors into a prototype nobody asked about.
+    expect(render("{{constructor}}", {})).toBe("{{constructor}}");
+    expect(render("{{toString}}", {})).toBe("{{toString}}");
+    expect(render("{{hasOwnProperty}}", {})).toBe("{{hasOwnProperty}}");
+  });
+
+  it("substitutes a slot genuinely named after a prototype member", () => {
+    expect(render("{{constructor}}", { constructor: "the maker" })).toBe("the maker");
+  });
+
   it("leaves a malformed slot alone", () => {
     expect(render("{{a", { a: "one" })).toBe("{{a");
   });

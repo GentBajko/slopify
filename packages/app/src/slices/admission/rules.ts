@@ -122,7 +122,10 @@ function normalise(draft: RunDraft): RunDraft {
   if (sources.article === "provide") {
     sources.research = "off";
   }
-  const values: Record<string, string> = {};
+  // Prototype-free, because a slot name is user-authored: `{{constructor}}` would
+  // otherwise answer with Object rather than undefined and pass the "required" check, and
+  // a value posted under `__proto__` would run a setter instead of being stored.
+  const values = Object.create(null) as Record<string, string>;
   for (const [name, value] of Object.entries(draft.values)) {
     values[name] = value.trim();
   }
@@ -230,7 +233,7 @@ function checkValues(
   fields: FieldError[],
 ): void {
   for (const name of requiredSlots) {
-    const value = draft.values[name];
+    const value = Object.hasOwn(draft.values, name) ? draft.values[name] : undefined;
     if (value === undefined || value === "") {
       fields.push({ field: `values.${name}`, message: "This field is required." });
       continue;

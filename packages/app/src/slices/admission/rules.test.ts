@@ -333,6 +333,33 @@ describe("keyword values", () => {
     ).toEqual(["values.topic"]);
   });
 
+  it("asks for a slot named after a prototype member like any other", () => {
+    expect(fields(provided(), { requiredSlots: ["constructor", "toString"] })).toEqual([
+      "values.constructor",
+      "values.toString",
+    ]);
+  });
+
+  it("keeps a value posted under __proto__ as an ordinary slot", () => {
+    // JSON.parse makes __proto__ an own property, but assigning it onto a normal object
+    // runs the setter and drops it: the user's field would vanish without a word.
+    const posted = JSON.parse('{"__proto__": "sneaky", "topic": "rope"}') as Record<string, string>;
+    const result = admit({
+      draft: provided({ values: posted }),
+      staged: files,
+      requiredSlots: ["topic", "__proto__"],
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(Object.getPrototypeOf(result.draft.values)).toBeNull();
+      expect(Object.getOwnPropertyDescriptor(result.draft.values, "__proto__")?.value).toBe(
+        "sneaky",
+      );
+    }
+    expect(Object.getPrototypeOf({})).toBe(Object.prototype);
+  });
+
   it("ignores a value no selected body asks for", () => {
     expect(fields(provided({ values: { unused: "" } }))).toEqual([]);
   });

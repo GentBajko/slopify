@@ -84,7 +84,11 @@ export function collectFields(
 // was written; scenario 04 refuses the run before this can reach a provider.
 export function render(body: string, values: Readonly<Record<string, string>>): string {
   return body.replace(slot, (whole: string, inside: string): string => {
-    const value = values[inside.trim()];
+    // A slot name may be anything but a brace or a newline (§Q19), so "constructor" and
+    // "toString" are ordinary names; a plain lookup would answer them from Object's
+    // prototype and splice a function's source into a prompt bound for a provider.
+    const name = inside.trim();
+    const value = Object.hasOwn(values, name) ? values[name] : undefined;
     return value === undefined ? whole : value;
   });
 }
