@@ -63,6 +63,10 @@ interface Subscriber {
 export function createHub(deps: HubDeps): Hub {
   const projects = new Map<string, Set<Subscriber>>();
   const globals = new Set<Subscriber>();
+  // The tally a page needs before anything else happens. The runner emits it when it
+  // changes, so the newest one is kept here and replayed to whoever opens next; a page
+  // that loads mid-render would otherwise be told nothing is running.
+  let tally: RunningCountEvent = { type: "running.count", count: 0 };
 
   const send = (subscriber: Subscriber, event: ProjectEvent | GlobalEvent): void => {
     // writeSSE rejects on a socket that is already gone, asynchronously and long after
@@ -118,9 +122,7 @@ export function createHub(deps: HubDeps): Hub {
     subscribeGlobal: (stream: EventStream, signal: AbortSignal): Promise<void> => {
       const subscriber = join(globals, stream, signal, () => {});
       if (globals.has(subscriber)) {
-        // The tally a page needs before anything happens. It is 0 until the runner of
-        // step S4 owns the count; nothing else is emitted on this channel yet.
-        send(subscriber, { type: "running.count", count: 0 });
+        send(subscriber, tally);
       }
       return subscriber.done;
     },
@@ -132,6 +134,9 @@ export function createHub(deps: HubDeps): Hub {
     },
 
     emitGlobal: (event: GlobalEvent): void => {
+      if (event.type === "running.count") {
+        tally = event;
+      }
       for (const subscriber of globals) {
         send(subscriber, event);
       }

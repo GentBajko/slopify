@@ -74,6 +74,19 @@ describe("createHub", () => {
     ]);
   });
 
+  it("replays the newest tally to a page that opens while a project is running", async () => {
+    const { hub: h } = hub();
+    h.emitGlobal({ type: "running.count", count: 2 });
+    const { stream, written } = fakeStream();
+
+    void h.subscribeGlobal(stream, new AbortController().signal);
+    await Promise.resolve();
+
+    expect(written).toEqual([
+      { event: "running.count", data: '{"type":"running.count","count":2}', id: "id1" },
+    ]);
+  });
+
   it("delivers a project event only to that project's subscribers", async () => {
     const { hub: h } = hub();
     const mine = fakeStream();
