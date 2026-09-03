@@ -1,0 +1,8 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "slopify-site",
+  "compatibility_date": "2026-08-01",
+  // Static assets only: the page is four files and has no server side. The counters come
+  // from the collector Worker over CORS (logic/16 step 7).
+  "assets": { "directory": "./public" }
+}

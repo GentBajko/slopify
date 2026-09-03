@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Slopify: turn a prompt into a narrated slideshow video</title>
+    <meta
+      name="description"
+      content="A prompt and a few keywords in. A narrated slideshow video out. Your keys, your machine, free."
+    />
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script type="module" src="/main.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="masthead">
+      <a class="wordmark" href="/">
+        <span class="mark mark-inline" aria-hidden="true"></span>
+        <span>SLOPIFY</span>
+      </a>
+      <nav aria-label="Project">
+        <a href="https://github.com/gentbajko/slopify">GitHub</a>
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="hero">
+        <div class="hero-pitch">
+          <span class="mark mark-hero" aria-hidden="true"></span>
+          <h1>Slop, on schedule.</h1>
+          <p class="lede">
+            A prompt and a few keywords in. A narrated slideshow video out. Your keys, your
+            machine, free.
+          </p>
+          <div class="command">
+            <span class="engraved">Install</span>
+            <div class="command-plate">
+              <code>npx slopify@latest</code>
+              <button
+                class="key"
+                type="button"
+                aria-label="Copy install command"
+                data-copy="npx slopify@latest"
+              >
+                Copy
+              </button>
+            </div>
+            <span class="visually-hidden" role="status" data-copy-status></span>
+          </div>
+        </div>
+
+        <section class="tally" aria-labelledby="tally-title">
+          <h2 class="engraved" id="tally-title">Live</h2>
+          <!-- The board is not a live region: five numbers re-announcing themselves every
+               five seconds would talk over everything else on the page. The one thing a
+               screen reader is told is the status line below, when the numbers go away. -->
+          <dl class="tally-board">
+            <div class="tally-item">
+              <dt class="engraved">videos made</dt>
+              <dd data-counter="videos_made">&mdash;</dd>
+            </div>
+            <div class="tally-item">
+              <dt class="engraved">audio hours</dt>
+              <dd data-counter="audio_seconds">&mdash;</dd>
+            </div>
+            <div class="tally-item">
+              <dt class="engraved">images made</dt>
+              <dd data-counter="images_made">&mdash;</dd>
+            </div>
+            <div class="tally-item">
+              <dt class="engraved">tokens used</dt>
+              <dd data-counter="tokens_used">&mdash;</dd>
+            </div>
+            <div class="tally-item">
+              <dt class="engraved">installs</dt>
+              <dd data-counter="installs">&mdash;</dd>
+            </div>
+          </dl>
+          <p class="tally-status" role="status" data-tally-status>live stats unavailable</p>
+        </section>
+      </section>
+    </main>
+
+    <footer class="colophon">
+      <p>
+        Anonymous usage stats power the counters above; nothing you write ever leaves your
+        machine.
+      </p>
+    </footer>
+  </body>
+</html>

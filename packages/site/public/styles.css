@@ -1,0 +1,324 @@
+/* The tokens of uiux/02-system.md, verbatim. S23 fills in the remaining bands of
+   uiux/screens/01-marketing-page.md against these same values. */
+
+:root {
+  color-scheme: dark light;
+
+  --bg: #141416;
+  --panel: #1b1b1f;
+  --panel2: #202026;
+  --line: #2a2a30;
+  --line2: #35353d;
+  --ink: #e6e3dc;
+  --ink2: #9a978f;
+  --ink3: #8a887f;
+  --accent: #9bcb4f;
+  --accent-ink: #17200b;
+  --accent-edge: #6d9333;
+  --focus: #9bcb4f;
+
+  --radius-control: 4px;
+  --radius-sheet: 6px;
+  --step: 4px;
+
+  /* ceiling: the self-hosted @fontsource Barlow and Barlow Condensed faces land in S23
+     with the rest of the page; until then the stack falls back to the system UI face,
+     which keeps the metrics close enough not to relayout on arrival. */
+  --face: Barlow, ui-sans-serif, system-ui, sans-serif;
+  --face-engraved: "Barlow Condensed", Barlow, ui-sans-serif, system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f4f2ec;
+    --panel: #fbfaf7;
+    --panel2: #eceae3;
+    --line: #dad8d0;
+    --line2: #c9c7be;
+    --ink: #1c1c1e;
+    --ink2: #5c5b56;
+    --ink3: #6b6a64;
+    --focus: #5f8a2b;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--face);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+:where(a) {
+  color: var(--ink);
+  text-decoration-color: var(--line2);
+  text-underline-offset: 3px;
+}
+
+:where(a):hover {
+  text-decoration-color: var(--focus);
+}
+
+:where(a, button):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  left: calc(var(--step) * 4);
+  top: calc(var(--step) * -16);
+  z-index: 1;
+  padding: calc(var(--step) * 2) calc(var(--step) * 4);
+  background: var(--panel);
+  border: 1px solid var(--line2);
+  border-radius: var(--radius-control);
+  transition: top 150ms ease-out;
+}
+
+.skip-link:focus {
+  top: calc(var(--step) * 4);
+}
+
+.engraved {
+  font-family: var(--face-engraved);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink3);
+  margin: 0;
+}
+
+/* Masthead ---------------------------------------------------------------- */
+
+.masthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--step) * 4);
+  padding: calc(var(--step) * 3.5) calc(var(--step) * 4);
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  gap: calc(var(--step) * 2);
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+
+/* logo-mark.svg is drawn in currentColor, which an <img> element cannot inherit, so it
+   is painted as a mask filled with the accent instead. That also keeps one copy of the
+   artwork for both sizes. */
+.mark {
+  display: inline-block;
+  background-color: var(--accent);
+  -webkit-mask: url("/assets/logo-mark.svg") center / contain no-repeat;
+  mask: url("/assets/logo-mark.svg") center / contain no-repeat;
+}
+
+/* The goo reads as a descender only if the mark sits below the text baseline. */
+.mark-inline {
+  width: 26px;
+  height: 26px;
+  transform: translateY(3px);
+}
+
+.mark-hero {
+  width: 96px;
+  height: 96px;
+  margin-bottom: calc(var(--step) * 4);
+}
+
+.masthead nav {
+  font-family: var(--face-engraved);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+/* Hero -------------------------------------------------------------------- */
+
+.hero {
+  display: grid;
+  grid-template-columns: 60fr 40fr;
+  gap: calc(var(--step) * 12);
+  align-items: start;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: calc(var(--step) * 16) calc(var(--step) * 4) calc(var(--step) * 12);
+}
+
+h1 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.lede {
+  max-width: 65ch;
+  margin: calc(var(--step) * 3) 0 0;
+  color: var(--ink2);
+  font-size: 16px;
+}
+
+.command {
+  margin-top: calc(var(--step) * 8);
+}
+
+.command-plate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--step) * 4);
+  margin-top: calc(var(--step) * 2.5);
+  padding: calc(var(--step) * 3) calc(var(--step) * 3) calc(var(--step) * 3) calc(var(--step) * 4);
+  background: var(--panel2);
+  border: 1px solid var(--line2);
+  border-radius: var(--radius-sheet);
+}
+
+.command-plate code {
+  font-family: var(--face);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.key {
+  padding: calc(var(--step) * 2) calc(var(--step) * 5);
+  font-family: var(--face-engraved);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border: 0;
+  border-bottom: 3px solid var(--accent-edge);
+  border-radius: var(--radius-sheet);
+  cursor: pointer;
+}
+
+.key:active {
+  transform: translateY(3px);
+  border-bottom-width: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .key:active {
+    transform: none;
+  }
+}
+
+/* Tally board ------------------------------------------------------------- */
+
+.tally {
+  padding: calc(var(--step) * 4.5);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sheet);
+}
+
+.tally-board {
+  display: grid;
+  gap: calc(var(--step) * 4);
+  margin: calc(var(--step) * 2.5) 0 0;
+}
+
+.tally-item {
+  display: flex;
+  /* The value reads above its engraved label; the label comes first in the markup so a
+     screen reader hears what the number is before it hears the number. */
+  flex-direction: column-reverse;
+  gap: calc(var(--step));
+  padding-bottom: calc(var(--step) * 3);
+  border-bottom: 1px solid var(--line);
+}
+
+.tally-item:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.tally-item dd {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.tally-status {
+  margin: calc(var(--step) * 4) 0 0;
+  color: var(--ink2);
+  font-size: 13px;
+}
+
+.tally-status[hidden] {
+  display: none;
+}
+
+/* Colophon ---------------------------------------------------------------- */
+
+.colophon {
+  padding: calc(var(--step) * 6) calc(var(--step) * 4);
+  border-top: 1px solid var(--line);
+  color: var(--ink2);
+  font-size: 13px;
+}
+
+.colophon p {
+  max-width: 65ch;
+  margin: 0 auto;
+}
+
+/* Narrow ------------------------------------------------------------------ */
+
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: 1fr;
+    gap: calc(var(--step) * 8);
+    padding-top: calc(var(--step) * 8);
+  }
+
+  .tally-board {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .tally-item:last-child {
+    padding-bottom: calc(var(--step) * 3);
+    border-bottom: 1px solid var(--line);
+  }
+
+  h1 {
+    font-size: 24px;
+  }
+}
