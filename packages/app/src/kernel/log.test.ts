@@ -82,6 +82,27 @@ describe("openLog", () => {
     expect(JSON.parse(detail).detail).toContain("[redacted]");
   });
 
+  // Every prefix a provider in the catalogue issues, in values no provider ever handed
+  // out: only the shape matters, and a shape the redactor misses is a key in a log file.
+  it("redacts the prefixes this build's providers use", () => {
+    const dir = logsDir();
+    const log = openLog(dir, fixedClock("2026-09-02T10:00:00.000Z"));
+
+    log.write("error", "provider.error", {
+      detail: [
+        "sk-or-v1-000000000000000000",
+        "sk_1111111111111111111111",
+        "sk-proj-2222222222222222222",
+        "r8_3333333333333333333333",
+      ].join(" "),
+    });
+
+    const detail: unknown = JSON.parse(
+      readFileSync(join(dir, "slopify-2026-09-02.log"), "utf8"),
+    ).detail;
+    expect(detail).toBe("[redacted] [redacted] [redacted] [redacted]");
+  });
+
   it("keeps ordinary words that merely start with a key prefix", () => {
     const dir = logsDir();
     const log = openLog(dir, fixedClock("2026-09-02T10:00:00.000Z"));

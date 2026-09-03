@@ -14,10 +14,12 @@ export interface Log {
   readonly write: (level: LogLevel, event: string, fields?: LogFields) => void;
 }
 
-// ceiling: prefix matching, not a secret scanner. A provider whose key shape is not
-// listed here would slip through, which is why LogFields is a closed set of three
-// strings: no caller can hand this module an arbitrary payload to serialise.
-const keyLike = /\b(?:sk|rk|pk|hf|gsk|xai|nvapi)[-_][A-Za-z0-9_-]{16,}|\bAIza[A-Za-z0-9_-]{16,}/g;
+// ceiling: prefix matching, not a secret scanner. The prefixes cover the providers in
+// `slices/settings/model.ts`; fal.ai's `<uuid>:<hex>` form has no prefix to match on and
+// is the known gap. That is why LogFields is a closed set of three strings: no caller
+// can hand this module an arbitrary payload to serialise.
+const keyLike =
+  /\b(?:sk|rk|pk|hf|gsk|xai|nvapi|r8)[-_][A-Za-z0-9_-]{16,}|\bAIza[A-Za-z0-9_-]{16,}/g;
 const bearerLike = /\bBearer\s+[A-Za-z0-9._~+/=-]{8,}/gi;
 
 export function openLog(logsDir: string, clock: Clock): Log {
