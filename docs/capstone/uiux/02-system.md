@@ -61,7 +61,7 @@ Light theme:
 | `--accent` | #9BCB4F | fills only: Play key, mark; never text | fill with `--accent-ink` 8.9:1 |
 | `--lamp-run` / `--focus` | #5F8A2B | running lamp, active underline, focus ring, segmented-switch marker | 3.4:1 on controls (non-text floor 3:1) |
 | `--run-text` | #3F6B1C | RUNNING state word | 5.2:1 on controls |
-| `--done` | #55673F | done lamp and state word | 4.7:1 on controls |
+| `--done` | #55673F | done lamp and state word | 5.1:1 on controls (measured in build S22; the 4.7 this row claimed understated it) |
 | `--red` | #B8332C | failed | 4.9:1 on controls |
 | `--amber` | #8F5E12 | canceled | 4.6:1 on controls |
 | pending lamp | #DEDCD4 with a #C9C7BE ring | unlit | non-text |
