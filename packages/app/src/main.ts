@@ -4,6 +4,8 @@ import type { ServerType } from "@hono/node-server";
 import { serve } from "@hono/node-server";
 import ffmpegStatic from "ffmpeg-static";
 import type { Hono } from "hono";
+import { buildRegistry } from "./adapter-registry.js";
+import { nodeRunCli } from "./adapters/llm/run-cli.js";
 import { createHub } from "./edge/events/hub.js";
 import { createApp } from "./edge/http/app.js";
 import type { Clock } from "./kernel/clock.js";
@@ -18,10 +20,15 @@ import type { Log } from "./kernel/log.js";
 import { openLog } from "./kernel/log.js";
 import type { Paths } from "./kernel/paths.js";
 import { ensureDirs, layout } from "./kernel/paths.js";
+import type { Registry } from "./kernel/ports/registry.js";
+import { sqliteAttempts } from "./kernel/runner/attempt-repo.js";
 import type { Runner } from "./kernel/runner/index.js";
 import { createRunner } from "./kernel/runner/index.js";
+import type { ProviderDeps } from "./kernel/runner/providers.js";
+import { stageProviders } from "./kernel/runner/providers.js";
 import { readVersion } from "./kernel/version.js";
 import { claimStage, finishStage, stagesOf } from "./slices/admission/repo.js";
+import { runResearch } from "./slices/research/run.js";
 import { nodeCliProbe } from "./slices/settings/cli-status.js";
 import { reconcileStorage } from "./slices/storage/reconcile.js";
 import { collectorEndpoint, httpPostEvents } from "./slices/telemetry/collector-client.js";
@@ -72,7 +79,14 @@ export async function boot(config: Config): Promise<Boot> {
       },
       flushDelayMs,
     );
-    const runner = wire(db, paths, clock, ids, log, hub, telemetry, flusher);
+    const registry = buildRegistry({
+      db,
+      fetch: globalThis.fetch,
+      spawn: nodeRunCli,
+      clock,
+      probe: nodeCliProbe,
+    });
+    const runner = wire({ db, paths, clock, ids, log, hub, telemetry, flusher, registry });
     const app = createApp({
       db,
       paths,
@@ -124,20 +138,27 @@ export async function boot(config: Config): Promise<Boot> {
 // The composition root: the runner is handed the stage implementations it may not
 // import, and each implementation is handed the dependencies it needs, closed over here
 // (03-conventions Dependency injection).
-function wire(
-  db: DatabaseSync,
-  paths: Paths,
-  clock: Clock,
-  ids: Ids,
-  log: Log,
-  hub: ReturnType<typeof createHub>,
-  telemetry: TelemetryDeps,
-  flusher: Flusher,
-): Runner {
+interface Wiring {
+  readonly db: DatabaseSync;
+  readonly paths: Paths;
+  readonly clock: Clock;
+  readonly ids: Ids;
+  readonly log: Log;
+  readonly hub: ReturnType<typeof createHub>;
+  readonly telemetry: TelemetryDeps;
+  readonly flusher: Flusher;
+  readonly registry: Registry;
+}
+
+function wire({ db, paths, clock, ids, log, hub, telemetry, flusher, registry }: Wiring): Runner {
   // Resolved once at boot rather than per render, so a machine with no usable binary
   // fails at start with one message instead of on every project's last stage.
   const ffmpeg = resolveFfmpeg(process.env, ffmpegStatic);
   const video = { db, paths, ids, clock, log, ffmpeg };
+  const research = { db, paths, ids, clock, log };
+  // A stage slice is handed the wrapped calls, never the registry: every provider call
+  // it makes is already inside the retry policy (kernel/runner/providers.ts).
+  const providers: ProviderDeps = { registry, attempts: sqliteAttempts(db, ids), clock, log };
   return createRunner({
     stages: {
       stagesOf: (projectId) => stagesOf(db, projectId),
@@ -147,7 +168,10 @@ function wire(
     },
     // Only the stages that exist. A pending stage with no entry here fails loudly with
     // that sentence rather than waiting for a runner that will never call it.
-    runs: { video: (context) => renderVideo(video, context) },
+    runs: {
+      research: (context) => runResearch(research, context, stageProviders(providers, context)),
+      video: (context) => renderVideo(video, context),
+    },
     emit: (projectId, event) => {
       hub.emit(projectId, event);
       // logic/16 step 2: one event per stage that completes. The runner reports a stage

@@ -14,17 +14,23 @@ import type { StageContext } from "./index.js";
 // slice has nothing to call around: it cannot reach a provider except through the retry
 // policy. The linter holds the other half, forbidding `slices/**` to import `adapters/**`.
 
+export interface LlmAnswer {
+  readonly text: string;
+  readonly usage: Usage | null;
+  readonly finishReason: string | null;
+}
+
 export interface LlmCall {
   readonly provider: string;
   readonly model: string;
   readonly messages: readonly Message[];
   readonly webSearch?: boolean | undefined;
-}
-
-export interface LlmAnswer {
-  readonly text: string;
-  readonly usage: Usage | null;
-  readonly finishReason: string | null;
+  // `logic/06` §Q50 and §Q55, `logic/07` §Q61: an answer that arrived but is unusable -
+  // empty, or without the Sources list the instruction asked for - "counts as a failed
+  // attempt", so the check has to run inside the wrapper for the retry policy to cover
+  // it. It returns the sentence the stage would show rather than throwing, so a slice
+  // still never names a provider failure (03-conventions).
+  readonly check?: ((answer: LlmAnswer) => string | undefined) | undefined;
 }
 
 export interface TtsCall {
@@ -111,7 +117,14 @@ export function stageProviders(
             }
             onEvent?.(event);
           }
-          return { text, usage, finishReason };
+          const answer: LlmAnswer = { text, usage, finishReason };
+          const unusable = call.check?.(answer);
+          if (unusable !== undefined) {
+            // Thrown bare: the wrapper is the one place a failure is named, and it names
+            // this `other`, which is retried like any other bad answer.
+            throw new Error(unusable);
+          }
+          return answer;
         },
         { kind: "llm", streaming: port.capabilities.streams },
       );

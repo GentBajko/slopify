@@ -19,6 +19,10 @@ export interface FakeLlmOptions {
   readonly capabilities?: LlmCapabilities;
   readonly models?: readonly ModelInfo[];
   readonly deltas?: readonly string[];
+  // The deltas one request answers with, when the answer has to depend on what was
+  // asked: `logic/06` sends a planner call, one call per chapter and a synthesis call to
+  // the same adapter. The attempt number is 1-based, as `failOnAttempt`'s key is.
+  readonly reply?: ((req: LlmCompletion, attempt: number) => readonly string[]) | undefined;
   readonly usage?: Usage | null;
   readonly finishReason?: string | null;
   // Fake milliseconds spent on the injected clock before each delta: how a test drives
@@ -64,7 +68,7 @@ export function fakeLlm(options: FakeLlmOptions = {}): FakeLlm {
     if (failure !== undefined) {
       throw providerError(failure);
     }
-    for (const text of deltas) {
+    for (const text of options.reply?.(req, calls) ?? deltas) {
       if (gapMs > 0 && options.clock !== undefined) {
         await options.clock.sleep(gapMs, req.signal);
       }

@@ -238,6 +238,11 @@ export function dropStagedSource(deps: StorageDeps, source: string): void {
   }
 }
 
+// Writing text needs no staging channel: the progress events belong to uploads
+// (logic/05 §Q43). Named separately so a stage that only stores its own output - the
+// research notes of logic/06 step 4 - can call this without inventing an emitter.
+export type TextStoreDeps = Omit<StorageDeps, "emit">;
+
 export interface TextInput {
   readonly projectId: string;
   readonly stageKind: StageKind;
@@ -253,7 +258,7 @@ export interface TextInput {
 // ceiling: the paste is stored as typed. logic/05 §Q37 also asks for markdown syntax to
 // be stripped for the narration source; that reduction belongs to the narration slice
 // that reads this file, and lands with it.
-export function storeText(deps: StorageDeps, input: TextInput): Output {
+export function storeText(deps: TextStoreDeps, input: TextInput): Output {
   const name = outputFileName(input.role, 1, ".txt");
   const target = outputPath(deps.paths, input.projectId, name);
   const bytes = Buffer.from(input.text, "utf8");
