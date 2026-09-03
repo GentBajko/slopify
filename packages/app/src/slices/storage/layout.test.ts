@@ -42,26 +42,31 @@ describe("stagingPath", () => {
 
 describe("outputFileName", () => {
   it("names the fixed assets of logic/14 step 2 regardless of the uploaded name", () => {
-    expect(outputFileName("notes", 0, ".doc")).toBe("research.txt");
-    expect(outputFileName("article_md", 0, "")).toBe("article.md");
-    expect(outputFileName("article_txt", 0, "")).toBe("article.txt");
-    expect(outputFileName("sources", 0, "")).toBe("sources.txt");
-    expect(outputFileName("glossary", 0, "")).toBe("glossary.txt");
-    expect(outputFileName("render_params", 0, "")).toBe("render.json");
-    expect(outputFileName("instructions", 0, "")).toBe("instructions.txt");
-    expect(outputFileName("video", 0, ".mkv")).toBe("video.mp4");
+    expect(outputFileName("notes", 0, ".doc", "research")).toBe("research.txt");
+    expect(outputFileName("article_md", 0, "", "article")).toBe("article.md");
+    expect(outputFileName("article_txt", 0, "", "article")).toBe("article.txt");
+    expect(outputFileName("sources", 0, "", "article")).toBe("sources.txt");
+    expect(outputFileName("glossary", 0, "", "article")).toBe("glossary.txt");
+    expect(outputFileName("render_params", 0, "", "video")).toBe("render.json");
+    expect(outputFileName("video", 0, ".mkv", "video")).toBe("video.mp4");
+  });
+
+  // Two stages store what they sent, so the role alone would name one file twice.
+  it("names the sent instructions after the stage that sent them", () => {
+    expect(outputFileName("instructions", 0, "", "research")).toBe("instructions-research.txt");
+    expect(outputFileName("instructions", 0, "", "article")).toBe("instructions-article.txt");
   });
 
   it("keeps the extension of the assets whose format the provider or the user picks", () => {
-    expect(outputFileName("audio_body", 0, ".mp3")).toBe("audio-body.mp3");
-    expect(outputFileName("audio_intro", 0, ".wav")).toBe("audio-intro.wav");
-    expect(outputFileName("audio_outro", 0, ".m4a")).toBe("audio-outro.m4a");
-    expect(outputFileName("thumbnail", 0, ".jpg")).toBe("thumbnail.jpg");
+    expect(outputFileName("audio_body", 0, ".mp3", "audio")).toBe("audio-body.mp3");
+    expect(outputFileName("audio_intro", 0, ".wav", "audio")).toBe("audio-intro.wav");
+    expect(outputFileName("audio_outro", 0, ".m4a", "audio")).toBe("audio-outro.m4a");
+    expect(outputFileName("thumbnail", 0, ".jpg", "thumbnail")).toBe("thumbnail.jpg");
   });
 
   it("numbers images so slideshow order survives a directory listing", () => {
-    expect(outputFileName("image", 1, ".png")).toBe("images/001.png");
-    expect(outputFileName("image", 60, ".webp")).toBe("images/060.webp");
+    expect(outputFileName("image", 1, ".png", "images")).toBe("images/001.png");
+    expect(outputFileName("image", 60, ".webp", "images")).toBe("images/060.webp");
   });
 });
 

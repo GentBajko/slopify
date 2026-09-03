@@ -185,7 +185,12 @@ export function attachStagedFile(deps: StorageDeps, input: AttachInput): AttachR
   }
 
   const index = input.index ?? 1;
-  const name = outputFileName(input.role, index, extensionOf(staged.originalFilename));
+  const name = outputFileName(
+    input.role,
+    index,
+    extensionOf(staged.originalFilename),
+    staged.stageKind,
+  );
   const target = outputPath(deps.paths, input.projectId, name);
   const source = stagingPath(deps.paths, staged.path);
   mkdirSync(dirname(target), { recursive: true, mode: 0o700 });
@@ -259,7 +264,7 @@ export interface TextInput {
 // be stripped for the narration source; that reduction belongs to the narration slice
 // that reads this file, and lands with it.
 export function storeText(deps: TextStoreDeps, input: TextInput): Output {
-  const name = outputFileName(input.role, 1, ".txt");
+  const name = outputFileName(input.role, 1, ".txt", input.stageKind);
   const target = outputPath(deps.paths, input.projectId, name);
   const bytes = Buffer.from(input.text, "utf8");
   mkdirSync(dirname(target), { recursive: true, mode: 0o700 });

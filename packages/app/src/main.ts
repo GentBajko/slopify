@@ -28,6 +28,7 @@ import type { ProviderDeps } from "./kernel/runner/providers.js";
 import { stageProviders } from "./kernel/runner/providers.js";
 import { readVersion } from "./kernel/version.js";
 import { claimStage, finishStage, stagesOf } from "./slices/admission/repo.js";
+import { runArticle } from "./slices/article/run.js";
 import { runResearch } from "./slices/research/run.js";
 import { nodeCliProbe } from "./slices/settings/cli-status.js";
 import { reconcileStorage } from "./slices/storage/reconcile.js";
@@ -155,7 +156,9 @@ function wire({ db, paths, clock, ids, log, hub, telemetry, flusher, registry }:
   // fails at start with one message instead of on every project's last stage.
   const ffmpeg = resolveFfmpeg(process.env, ffmpegStatic);
   const video = { db, paths, ids, clock, log, ffmpeg };
-  const research = { db, paths, ids, clock, log };
+  // Research and the article write text into the same project folder from the same
+  // database handle, so they take the same five dependencies.
+  const writing = { db, paths, ids, clock, log };
   // A stage slice is handed the wrapped calls, never the registry: every provider call
   // it makes is already inside the retry policy (kernel/runner/providers.ts).
   const providers: ProviderDeps = { registry, attempts: sqliteAttempts(db, ids), clock, log };
@@ -169,7 +172,8 @@ function wire({ db, paths, clock, ids, log, hub, telemetry, flusher, registry }:
     // Only the stages that exist. A pending stage with no entry here fails loudly with
     // that sentence rather than waiting for a runner that will never call it.
     runs: {
-      research: (context) => runResearch(research, context, stageProviders(providers, context)),
+      research: (context) => runResearch(writing, context, stageProviders(providers, context)),
+      article: (context) => runArticle(writing, context, stageProviders(providers, context)),
       video: (context) => renderVideo(video, context),
     },
     emit: (projectId, event) => {

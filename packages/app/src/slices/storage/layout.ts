@@ -1,6 +1,6 @@
 import { extname, isAbsolute, relative, resolve } from "node:path";
 import type { Paths } from "../../kernel/paths.js";
-import type { OutputRole } from "./model.js";
+import type { OutputRole, StageKind } from "./model.js";
 
 export function projectDir(paths: Paths, projectId: string): string {
   return contained(paths.projects, projectId);
@@ -26,8 +26,16 @@ function contained(root: string, path: string): string {
 }
 
 // logic/14 step 2 fixes the names inside a project folder, so a provided file is
-// stored under the name its role dictates and keeps only its extension.
-export function outputFileName(role: OutputRole, index: number, extension: string): string {
+// stored under the name its role dictates and keeps only its extension. The stage is part
+// of the name for the one role more than one stage produces: research and the article each
+// store what they sent (logic/06 step 4, logic/07 step 4), and the project page offers
+// them per stage ("Show instructions", uiux/screens/08-project).
+export function outputFileName(
+  role: OutputRole,
+  index: number,
+  extension: string,
+  stageKind: StageKind,
+): string {
   switch (role) {
     case "notes":
       return "research.txt";
@@ -42,7 +50,7 @@ export function outputFileName(role: OutputRole, index: number, extension: strin
     case "render_params":
       return "render.json";
     case "instructions":
-      return "instructions.txt";
+      return `instructions-${stageKind}.txt`;
     case "video":
       return "video.mp4";
     case "audio_body":

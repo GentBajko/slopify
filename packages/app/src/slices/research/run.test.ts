@@ -218,7 +218,7 @@ describe("runResearch", () => {
     expect(outputs.map((output) => output.role).toSorted()).toEqual(["instructions", "notes"]);
     const notes = readFileSync(join(h.paths.projects, "p1", "research.txt"), "utf8");
     expect(notes).toBe("The whole story.\n\nSources\nhttps://example.test/all");
-    const sent = readFileSync(join(h.paths.projects, "p1", "instructions.txt"), "utf8");
+    const sent = readFileSync(join(h.paths.projects, "p1", "instructions-research.txt"), "utf8");
     expect(sent).toContain("=== Planner ===");
     expect(sent).toContain("=== Sub-agent: History ===");
     expect(sent).toContain("=== Sub-agent: Materials ===");
