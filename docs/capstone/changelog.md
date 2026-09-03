@@ -5,6 +5,16 @@ capstone_version: 5.2.0
 
 # Changelog
 
+## 2026-09-03 - the marketing page grows an install path
+key: site/install-steps
+- User: "we need to add npm i -g @gentbajko/slopify / slopify in the marketing page too as another option", after asking whether an alias could stand in for the npx command.
+- No alias was needed or added: the package already declares `bin: {slopify: dist/edge/cli.js}`, so a global install puts a real `slopify` on the path. That works in any shell, in a script, and on PowerShell where a bash alias does nothing, and it answers no prompt because nothing is fetched at run time. An alias would have been the weakest of the three routes and the one most likely to generate support questions.
+- `npx` stays the hero command: nothing to install is the right first impression. The global install sits under How to use as the line for anyone who will run it more than once, with `--yes` documented on the npx step for the prompt npm shows the first time.
+- A Node step was added ahead of both, since npm arrives with Node and neither command works without it. The four routes first went in as one run-on sentence, which the user called mixed, and are now one labelled row per platform - Windows, macOS, Linux - so a reader takes their own line rather than parsing all of them.
+- The two new copy buttons give up the accent fill. Green marks the one thing the page asks you to press, and three of them is none; they carry a `--line2` outline instead. The override had to move below `.key` in the file, because both are a single class and source order is what decides.
+- The copy status line said "Install command copied" whatever was pressed. With three buttons it now names the command it copied.
+- Verified after: 1446 tests across 135 files, lint clean on 409, typecheck clean; the rundown was rendered locally and read at each revision rather than reasoned about.
+
 ## 2026-09-03 - the support links move to the navbar
 key: web/navbar-support
 - User: "didn't I ask to put Github BMaC and Patreon on the navbar in every page on the app?" - and the earlier ask was "buttons like we did in the marketing page on every page of the app". The marketing page's placement is the masthead and it carries three links; they went into the app's footer and only two of them. Corrected: all three now sit in the app's top nav, right-aligned, in the masthead's own order, so every screen carries them. The footer goes back to its one line.

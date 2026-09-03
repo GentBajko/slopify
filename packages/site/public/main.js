@@ -159,7 +159,7 @@ export function wireCopy(root, clipboard) {
       label.textContent = "Copied";
       button.setAttribute("data-copied", "true");
       if (status !== null) {
-        status.textContent = "Install command copied";
+        status.textContent = `Copied: ${button.dataset.copy}`;
       }
       setTimeout(() => {
         label.textContent = "Copy";

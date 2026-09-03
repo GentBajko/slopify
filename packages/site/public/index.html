@@ -205,10 +205,77 @@
           <ol class="rundown">
             <li class="rundown-row">
               <span class="lamp" data-lamp="done" aria-hidden="true"></span>
+              <span class="engraved engraved-strong">Node</span>
+              <span>
+                <p class="step-line">
+                  Slopify needs Node 26 or newer. npm comes with it. Take whichever line is
+                  yours, or download it from <a href="https://nodejs.org">nodejs.org</a>.
+                </p>
+                <dl class="picks">
+                  <div class="pick">
+                    <dt class="engraved">Windows</dt>
+                    <dd>
+                      <code>winget install OpenJS.NodeJS</code>
+                      <button
+                        class="key key-small"
+                        type="button"
+                        data-copy="winget install OpenJS.NodeJS"
+                      >
+                        <span data-copy-label>Copy</span>
+                        <span class="visually-hidden"> the Windows command</span>
+                      </button>
+                    </dd>
+                  </div>
+                  <div class="pick">
+                    <dt class="engraved">macOS</dt>
+                    <dd>
+                      <code>brew install node</code>
+                      <button class="key key-small" type="button" data-copy="brew install node">
+                        <span data-copy-label>Copy</span>
+                        <span class="visually-hidden"> the macOS command</span>
+                      </button>
+                    </dd>
+                  </div>
+                  <div class="pick">
+                    <dt class="engraved">Linux</dt>
+                    <dd>
+                      <code>nvm install 26</code>
+                      <button class="key key-small" type="button" data-copy="nvm install 26">
+                        <span data-copy-label>Copy</span>
+                        <span class="visually-hidden"> the Linux command</span>
+                      </button>
+                    </dd>
+                  </div>
+                </dl>
+                <p class="step-line">
+                  Already have it? <code>node --version</code> says which.
+                </p>
+              </span>
+            </li>
+            <li class="rundown-row">
+              <span class="lamp" data-lamp="done" aria-hidden="true"></span>
               <span class="engraved engraved-strong">Run it</span>
               <span>
                 <code>npx @gentbajko/slopify@latest</code> starts the app and opens a browser at
                 <code>http://127.0.0.1:6969</code>. Node 26 or newer, nothing else to install.
+                Add <code>--yes</code> to skip the prompt npx shows the first time.
+              </span>
+            </li>
+            <li class="rundown-row">
+              <span class="lamp" data-lamp="done" aria-hidden="true"></span>
+              <span class="engraved engraved-strong">Or install it</span>
+              <span>
+                <span class="command command-inline">
+                  <code>npm i -g @gentbajko/slopify</code>
+                  <button class="key key-small" type="button" data-copy="npm i -g @gentbajko/slopify">
+                    <span data-copy-label>Copy</span>
+                    <span class="visually-hidden"> the install command</span>
+                  </button>
+                </span>
+                puts a <code>slopify</code> command on your path, so every run afterwards is
+                just <code>slopify</code>. It works the same in any shell and in a script, and
+                there is no prompt to answer. Update it with
+                <code>npm i -g @gentbajko/slopify@latest</code>.
               </span>
             </li>
             <li class="rundown-row">
