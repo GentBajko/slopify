@@ -3,7 +3,7 @@ import { Link, Outlet } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { eventsUrl } from "@/api";
 import { useApp } from "@/app-context";
-import mark from "@/assets/logo-mark.svg";
+import { Mark } from "@/components/glyph";
 import { FirstRunNotice } from "@/components/notice";
 import { VersionPrompt } from "@/components/version-prompt";
 import { subscribeGlobal } from "@/events";
@@ -45,16 +45,9 @@ export function Shell() {
           to="/"
           className="flex items-center gap-[10px] text-wordmark font-extrabold tracking-[-0.02em] text-ink"
         >
-          <span
-            aria-hidden="true"
-            className="relative top-[3px] block size-[26px] bg-lamp-run"
-            style={{
-              maskImage: `url(${mark})`,
-              maskSize: "contain",
-              maskRepeat: "no-repeat",
-              maskPosition: "center",
-            }}
-          />
+          {/* The mark sits 3 px below the text baseline so the goo reads as a
+              descender (uiux/02-system.md, Typography). */}
+          <Mark className="relative top-[3px] text-lamp-run" />
           Slopify
         </Link>
         {sections.map((section) => (

@@ -4,9 +4,8 @@ import { useNavigate } from "@tanstack/react-router";
 import { type KeyboardEvent, useId, useState } from "react";
 import { createProject, type UploadKind, uploadStaged } from "@/api";
 import { useApp } from "@/app-context";
-import mark from "@/assets/logo-mark.svg";
+import { Mark, StageGlyph } from "@/components/glyph";
 import { Rail, RailGroup } from "@/components/rail";
-import { StageGlyph } from "@/components/stage-glyph";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -382,16 +381,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
           disabled={blocker !== undefined || play.isPending}
           onClick={submit}
         >
-          <span
-            aria-hidden="true"
-            className="relative top-[2px] block size-[22px] bg-current"
-            style={{
-              maskImage: `url(${mark})`,
-              maskSize: "contain",
-              maskRepeat: "no-repeat",
-              maskPosition: "center",
-            }}
-          />
+          <Mark className="relative top-[2px] size-[22px]" />
           PLAY
         </Button>
       </aside>
