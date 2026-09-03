@@ -16,6 +16,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node scripts/copy-migrations.mjs",
+    "build:types": "tsc -p tsconfig.build.json --declaration --emitDeclarationOnly",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

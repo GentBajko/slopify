@@ -1,0 +1,168 @@
+@import "tailwindcss";
+
+/* Every value below is copied from docs/capstone/uiux/02-system.md. The dark theme is
+   the default from the use scene; the light theme overrides the same names so a utility
+   built on `var(--color-*)` never has to know which theme is on. `static` keeps the
+   whole palette in the output, because the overrides below name variables the utility
+   scan alone would not have kept. */
+@theme static {
+  --color-bg: #141416;
+  --color-panel: #1b1b1f;
+  --color-panel2: #202026;
+  --color-line: #2a2a30;
+  --color-line2: #35353d;
+  --color-ink: #e6e3dc;
+  --color-ink2: #9a978f;
+  --color-ink3: #8a887f;
+  --color-accent: #9bcb4f;
+  --color-accent-ink: #17200b;
+  --color-accent-edge: #6d9333;
+  --color-done: #6f9a3a;
+  --color-red: #e86960;
+  --color-red-tint: rgb(232 105 96 / 0.08);
+  --color-amber: #e2a247;
+  --color-lamp-run: #9bcb4f;
+  --color-lamp-halo: rgb(155 203 79 / 0.18);
+  --color-lamp-off: #2c2c33;
+  --color-lamp-ring: #3a3a42;
+  --color-run-text: #9bcb4f;
+  --color-focus: #9bcb4f;
+
+  --font-sans: "Barlow", system-ui, sans-serif;
+  --font-condensed: "Barlow Condensed", "Barlow", system-ui, sans-serif;
+
+  --text-label: 12px;
+  --text-label--line-height: 1.2;
+  --text-small: 13px;
+  --text-small--line-height: 1.45;
+  --text-body: 14px;
+  --text-body--line-height: 1.45;
+  --text-row: 16px;
+  --text-row--line-height: 1.35;
+  --text-title: 18px;
+  --text-title--line-height: 1.3;
+  --text-wordmark: 20px;
+  --text-wordmark--line-height: 1.2;
+  --text-counter: 32px;
+  --text-counter--line-height: 1.1;
+
+  /* Radius lock: 4 px on controls and inputs, 6 px on rails, sheets, dialogs, and the
+     Play key; nothing else. */
+  --radius-control: 4px;
+  --radius-panel: 6px;
+
+  --animate-lamp-pulse: lamp-pulse 1.2s ease-in-out infinite;
+  --animate-dialog-in: dialog-in 200ms ease-out;
+}
+
+/* The Settings override lands in S17; until then `data-theme` is only set by the two
+   selectors below, so `prefers-color-scheme` decides. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --color-bg: #f4f2ec;
+    --color-panel: #fbfaf7;
+    --color-panel2: #eceae3;
+    --color-line: #dad8d0;
+    --color-line2: #c9c7be;
+    --color-ink: #1c1c1e;
+    --color-ink2: #5c5b56;
+    --color-ink3: #6b6a64;
+    --color-accent-edge: #6e9a33;
+    --color-done: #55673f;
+    --color-red: #b8332c;
+    --color-red-tint: rgb(184 51 44 / 0.08);
+    --color-amber: #8f5e12;
+    --color-lamp-run: #5f8a2b;
+    --color-lamp-halo: rgb(95 138 43 / 0.18);
+    --color-lamp-off: #dedcd4;
+    --color-lamp-ring: #c9c7be;
+    --color-run-text: #3f6b1c;
+    --color-focus: #5f8a2b;
+  }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-bg: #f4f2ec;
+  --color-panel: #fbfaf7;
+  --color-panel2: #eceae3;
+  --color-line: #dad8d0;
+  --color-line2: #c9c7be;
+  --color-ink: #1c1c1e;
+  --color-ink2: #5c5b56;
+  --color-ink3: #6b6a64;
+  --color-accent-edge: #6e9a33;
+  --color-done: #55673f;
+  --color-red: #b8332c;
+  --color-red-tint: rgb(184 51 44 / 0.08);
+  --color-amber: #8f5e12;
+  --color-lamp-run: #5f8a2b;
+  --color-lamp-halo: rgb(95 138 43 / 0.18);
+  --color-lamp-off: #dedcd4;
+  --color-lamp-ring: #c9c7be;
+  --color-run-text: #3f6b1c;
+  --color-focus: #5f8a2b;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+@keyframes lamp-pulse {
+  50% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
+/* The dialog's fade and 4 px rise. The translate is part of the keyframe because the
+   content is centred with a transform of its own. */
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 4px));
+  }
+}
+
+/* Engraved labels: control names, section headers, state words. 11 px is never used. */
+@utility engraved {
+  font-family: var(--font-condensed);
+  font-size: var(--text-label);
+  line-height: var(--text-label--line-height);
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+  }
+
+  /* Focus is visible on every interactive element: 2 px in the focus colour, 2 px
+     offset. Declared once here so no component can forget it. */
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  [disabled],
+  [aria-disabled="true"] {
+    opacity: 0.45;
+    pointer-events: none;
+  }
+}
+
+/* Reduced motion collapses every effect: the pulse becomes a steady lamp, the press an
+   instant colour change, fades cuts. Each animated component carries `motion-reduce:`
+   beside the effect it owns, so motion stays in the leaf that made it rather than being
+   swept away globally with `!important`. */
