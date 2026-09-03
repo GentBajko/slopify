@@ -89,7 +89,7 @@ Slopify is free and always will be. If it is worth something to you:
 
 ## Working on it
 
-Requires Node 26 or newer (the CI pin is still 24 until Node 26 reaches GA).
+Requires Node 26 or newer, which is what CI runs.
 
 ```sh
 npm install

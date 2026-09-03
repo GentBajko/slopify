@@ -11,10 +11,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '24' # TODO: bump to 26 at GA (Oct 2026)
+          node-version: '26'
           cache: npm
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      # The build is the release artifact: it is what copies packages/web's output into
+      # the package that npm publishes, so a tag must never be the first time it runs.
+      - run: npm run build
       - run: npm audit --audit-level=high

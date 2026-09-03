@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+# id-token is what authenticates the publish and signs the provenance attestation:
+# the npmjs.com package must have this workflow registered as a trusted publisher,
+# because no NPM_TOKEN is set here.
 permissions:
   contents: read
   id-token: write
@@ -16,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '24' # TODO: bump to 26 at GA (Oct 2026)
+          node-version: '26'
           cache: npm
           registry-url: 'https://registry.npmjs.org'
       - run: npm ci
