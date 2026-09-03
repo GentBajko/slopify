@@ -21,7 +21,7 @@ export function UsageRoute() {
   const usage = useQuery(usageQuery(api));
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-6">
+    <div className="flex max-w-[1100px] flex-col gap-6">
       <div>
         <h1 className="mb-1 text-title font-bold tracking-[-0.01em]">Usage</h1>
         <p className="text-body text-ink2">

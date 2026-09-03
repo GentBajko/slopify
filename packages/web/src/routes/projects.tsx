@@ -22,7 +22,7 @@ import { keys, projectsQuery } from "@/queries";
 // One row of the rundown, and the same shape for a skeleton. Below 768 px the prompt and
 // the started time stack under the title (uiux/screens/07-projects.md, Narrow).
 const row =
-  "relative grid grid-cols-[10px_minmax(0,1fr)_auto_32px] items-center gap-x-[14px] gap-y-[4px] border-b border-line px-4 py-[14px] last:border-b-0 md:grid-cols-[10px_minmax(0,1fr)_140px_100px_32px]";
+  "relative grid grid-cols-[14px_minmax(0,1fr)_auto_32px] items-center gap-x-[14px] gap-y-[4px] border-b border-line px-4 py-[14px] last:border-b-0 md:grid-cols-[14px_minmax(0,1fr)_140px_100px_32px]";
 const timeCell =
   "col-start-2 row-start-2 text-small text-ink2 tabular-nums md:col-start-3 md:row-start-1";
 const wordCell = "col-start-3 row-start-1 justify-end md:col-start-4";
