@@ -29,6 +29,10 @@ export type StagedFileState = (typeof stagedFileStates)[number];
 
 export interface OutputMeta {
   readonly promptName?: string | undefined;
+  // logic/09 §Q76: an image is stored with the prompt text that made it, not only the
+  // name of the template it came from - the run's keyword values are already substituted
+  // in, and logic/10 §Q80 stores the LLM's own wording for the thumbnail the same way.
+  readonly prompt?: string | undefined;
   readonly index?: number | undefined;
   readonly provider?: string | undefined;
   readonly model?: string | undefined;

@@ -29,6 +29,7 @@ import { stageProviders } from "./kernel/runner/providers.js";
 import { readVersion } from "./kernel/version.js";
 import { claimStage, finishStage, stagesOf } from "./slices/admission/repo.js";
 import { runArticle } from "./slices/article/run.js";
+import { runImages } from "./slices/images/run.js";
 import { runNarration } from "./slices/narration/run.js";
 import { runResearch } from "./slices/research/run.js";
 import { nodeCliProbe } from "./slices/settings/cli-status.js";
@@ -38,6 +39,7 @@ import type { Flusher } from "./slices/telemetry/flush.js";
 import { createFlusher } from "./slices/telemetry/flush.js";
 import type { TelemetryDeps } from "./slices/telemetry/record.js";
 import { record } from "./slices/telemetry/record.js";
+import { runThumbnail } from "./slices/thumbnail/run.js";
 import { resolveFfmpeg } from "./slices/video/ffmpeg.js";
 import { renderVideo } from "./slices/video/run.js";
 
@@ -159,8 +161,8 @@ function wire({ db, paths, clock, ids, log, hub, telemetry, flusher, registry }:
   // The audio stage joins its chunks with the same binary the render uses, so it takes
   // the same six dependencies.
   const video = { db, paths, ids, clock, log, ffmpeg };
-  // Research and the article write text into the same project folder from the same
-  // database handle, so they take the same five dependencies.
+  // Research, the article, the images and the thumbnail all write into the same project
+  // folder from the same database handle, so they take the same five dependencies.
   const writing = { db, paths, ids, clock, log };
   // A stage slice is handed the wrapped calls, never the registry: every provider call
   // it makes is already inside the retry policy (kernel/runner/providers.ts).
@@ -178,6 +180,8 @@ function wire({ db, paths, clock, ids, log, hub, telemetry, flusher, registry }:
       research: (context) => runResearch(writing, context, stageProviders(providers, context)),
       article: (context) => runArticle(writing, context, stageProviders(providers, context)),
       audio: (context) => runNarration(video, context, stageProviders(providers, context)),
+      images: (context) => runImages(writing, context, stageProviders(providers, context)),
+      thumbnail: (context) => runThumbnail(writing, context, stageProviders(providers, context)),
       video: (context) => renderVideo(video, context),
     },
     emit: (projectId, event) => {
