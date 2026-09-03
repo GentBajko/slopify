@@ -58,6 +58,8 @@ function harness(): Harness {
     version: "1.2.3",
     webDist: join(paths.dataDir, "missing"),
     flushSoon: (): void => {},
+    // These routes never probe; the CLI status routes carry their own harness.
+    probe: () => Promise.resolve({ ran: false, stdout: "" }),
   });
   return { app, db, paths, events };
 }

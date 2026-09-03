@@ -9,10 +9,13 @@ import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
 import type { Runner } from "../../kernel/runner/index.js";
+import type { CliProbe } from "../../slices/settings/cli-status.js";
 import type { Hub } from "../events/hub.js";
 import { fileRoutes } from "./files.js";
 import { problem, problemFromError, titleOf } from "./problem.js";
 import { projectRoutes } from "./projects.js";
+import { providerRoutes } from "./providers.js";
+import { settingsRoutes } from "./settings.js";
 import { stagingRoutes } from "./staging.js";
 import { telemetryRoutes } from "./telemetry.js";
 
@@ -26,6 +29,9 @@ export interface AppDeps {
   readonly log: Log;
   readonly version: string;
   readonly webDist: string;
+  // Runs a local agent CLI to learn whether it is installed (`logic/02` §Q135). Handed
+  // in so a test can answer for both branches without depending on this machine's PATH.
+  readonly probe: CliProbe;
   // Asks the telemetry flusher for a delivery attempt. It returns at once and never
   // throws: nothing a route does may wait on the collector (logic/16 step 5).
   readonly flushSoon: () => void;
@@ -50,7 +56,9 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
     )
     .route("/staging", stagingRoutes(deps))
     .route("/projects", projectRoutes(deps))
-    .route("/telemetry", telemetryRoutes(deps));
+    .route("/telemetry", telemetryRoutes(deps))
+    .route("/settings", settingsRoutes(deps))
+    .route("/providers", providerRoutes(deps));
 }
 
 export function createApp(deps: AppDeps): Hono {

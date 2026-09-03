@@ -84,6 +84,8 @@ function harness(
     version: "1.2.3",
     webDist,
     flushSoon: (): void => {},
+    // These routes never probe; the CLI status routes carry their own harness.
+    probe: () => Promise.resolve({ ran: false, stdout: "" }),
   });
   return { app, hub, lines };
 }

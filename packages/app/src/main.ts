@@ -22,6 +22,7 @@ import type { Runner } from "./kernel/runner/index.js";
 import { createRunner } from "./kernel/runner/index.js";
 import { readVersion } from "./kernel/version.js";
 import { claimStage, finishStage, stagesOf } from "./slices/admission/repo.js";
+import { nodeCliProbe } from "./slices/settings/cli-status.js";
 import { reconcileStorage } from "./slices/storage/reconcile.js";
 import { collectorEndpoint, httpPostEvents } from "./slices/telemetry/collector-client.js";
 import type { Flusher } from "./slices/telemetry/flush.js";
@@ -83,6 +84,7 @@ export async function boot(config: Config): Promise<Boot> {
       version,
       webDist: fileURLToPath(new URL("../dist/web", import.meta.url)),
       flushSoon: flusher.soon,
+      probe: nodeCliProbe,
     });
     const server = await listen(app, config, log);
     // logic/16 step 5: whatever last run left queued goes out at start. Nothing waits for
