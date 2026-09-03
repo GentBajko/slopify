@@ -4,13 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import { DownloadIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import type { Components } from "react-markdown";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { fileUrl } from "@/api";
 import { useApp } from "@/app-context";
 import { cn } from "@/lib/utils";
 import { keys } from "@/queries";
 import { readOutputText } from "./api.js";
-import type { Block } from "./markdown.js";
-import { blocksOf } from "./markdown.js";
 
 // The furniture every stage body is made of: the indented frame under a rundown row, the
 // 75 ch prose measure, a download link, and the "Show instructions" toggle each stage
@@ -40,45 +41,117 @@ export function EngravedLabel({ children }: { readonly children: ReactNode }) {
   return <span className="engraved text-ink3">{children}</span>;
 }
 
-// 65-75 ch, which is the measure `uiux/02-system.md` locks for prose.
-export function Prose({ markdown }: { readonly markdown: string }) {
-  return <ProseBlocks blocks={blocksOf(markdown)} />;
+// `logic/07` writes the article as markdown and this page shows it as prose. The parser
+// is react-markdown, the pick `05-dependencies.md` records for article display; the
+// components below only give its output this project's type scale and colours. GFM is on
+// for the same reason `packages/app` turns it on for the narration source: without it a
+// `| Year | Event |` row survives as literal pipes.
+//
+// Six heading levels collapse onto the two prose sizes the scale has, and every one of
+// them renders as an `h3`: this sits inside a stage row, under the page's own `h1` and
+// the project title, so an article that opens with `#` may not claim to be the page.
+const article: Components = {
+  h1: ({ children }) => <Heading size="text-title">{children}</Heading>,
+  h2: ({ children }) => <Heading size="text-row">{children}</Heading>,
+  h3: ({ children }) => <Heading size="text-row">{children}</Heading>,
+  h4: ({ children }) => <Heading size="text-row">{children}</Heading>,
+  h5: ({ children }) => <Heading size="text-row">{children}</Heading>,
+  h6: ({ children }) => <Heading size="text-row">{children}</Heading>,
+  p: ({ children }) => <p className="m-0">{children}</p>,
+  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+  ul: ({ children }) => <ul className="m-0 flex list-disc flex-col gap-1 pl-5">{children}</ul>,
+  ol: ({ children }) => <ol className="m-0 flex list-decimal flex-col gap-1 pl-5">{children}</ol>,
+  li: ({ children }) => <li className="m-0">{children}</li>,
+  a: ({ children, href }) => (
+    <a
+      href={href}
+      className="rounded-control text-run-text underline underline-offset-[3px]"
+      // An article's links point off this machine, and this page is not their referrer.
+      target="_blank"
+      rel="noreferrer"
+    >
+      {children}
+    </a>
+  ),
+  code: ({ children }) => (
+    <code className="rounded-control bg-panel2 px-[4px] py-[1px] font-sans text-small">
+      {children}
+    </code>
+  ),
+  pre: ({ children }) => (
+    <pre className="m-0 overflow-x-auto rounded-control bg-panel2 p-[10px] font-sans text-small">
+      {children}
+    </pre>
+  ),
+  blockquote: ({ children }) => (
+    <blockquote className="m-0 flex flex-col gap-2 border-l-2 border-line2 pl-3 text-ink2">
+      {children}
+    </blockquote>
+  ),
+  hr: () => <hr className="my-2 border-line" />,
+  table: ({ children }) => (
+    <table className="w-full border-collapse text-left text-small">{children}</table>
+  ),
+  th: ({ children }) => (
+    <th className="engraved border-b border-line py-[6px] pr-4 text-left text-ink3">{children}</th>
+  ),
+  td: ({ children }) => (
+    <td className="border-b border-line py-[6px] pr-4 align-top">{children}</td>
+  ),
+};
+
+// The article's own title, typeset on the row that carries it: a heading's worth of
+// inline markup with no block of its own.
+const inline: Components = {
+  p: ({ children }) => <>{children}</>,
+  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+  a: ({ children }) => <>{children}</>,
+};
+
+function Heading({ size, children }: { readonly size: string; readonly children: ReactNode }) {
+  return <h3 className={cn("mt-2 font-bold tracking-[-0.01em]", size)}>{children}</h3>;
 }
 
-// For a caller that has already taken the article's title off the top.
-export function ProseBlocks({ blocks }: { readonly blocks: readonly Block[] }) {
+// 65-75 ch, which is the measure `uiux/02-system.md` locks for prose.
+export function Prose({ markdown }: { readonly markdown: string }) {
   return (
     <div className="flex max-w-[75ch] flex-col gap-2 text-pretty text-body text-ink">
-      {blocks.map((block, at) => {
-        const spans = block.spans.map((span, span_at) =>
-          span.bold ? (
-            // biome-ignore lint/suspicious/noArrayIndexKey: a rendered article has no ids of its own, and the blocks are only ever replaced wholesale.
-            <strong key={span_at} className="font-semibold">
-              {span.text}
-            </strong>
-          ) : (
-            // biome-ignore lint/suspicious/noArrayIndexKey: as above.
-            <span key={span_at}>{span.text}</span>
-          ),
-        );
-        if (block.kind === "heading") {
-          const size = block.level === 1 ? "text-title" : "text-row";
-          return (
-            // biome-ignore lint/suspicious/noArrayIndexKey: as above.
-            <h3 key={at} className={cn("mt-2 font-bold tracking-[-0.01em]", size)}>
-              {spans}
-            </h3>
-          );
-        }
-        return (
-          // biome-ignore lint/suspicious/noArrayIndexKey: as above.
-          <p key={at} className="m-0">
-            {spans}
-          </p>
-        );
-      })}
+      <Markdown remarkPlugins={[remarkGfm]} components={article}>
+        {markdown}
+      </Markdown>
     </div>
   );
+}
+
+export function InlineProse({ markdown }: { readonly markdown: string }) {
+  return (
+    <Markdown remarkPlugins={[remarkGfm]} components={inline}>
+      {markdown}
+    </Markdown>
+  );
+}
+
+// The article's own heading, so the body does not typeset it under the title line that
+// already shows it. Only the first line, and only when that line is an ATX heading: this
+// reads the source rather than parsing it, because a heading line is a line and the
+// markdown below it goes to react-markdown untouched.
+export interface Split {
+  // Markdown, not text: the caller typesets it with `InlineProse`. Undefined when the
+  // article opens with something other than a heading, and the caller falls back to the
+  // project's title.
+  readonly title: string | undefined;
+  readonly body: string;
+}
+
+const atxHeading = /^#{1,6}[ \t]+(.*?)[ \t]*#*[ \t]*(?:\r?\n|$)/;
+
+export function splitTitle(markdown: string): Split {
+  const opening = markdown.replace(/^[\s]*\n/, "");
+  const matched = atxHeading.exec(opening);
+  if (matched === null) {
+    return { title: undefined, body: markdown.trim() };
+  }
+  return { title: matched[1] ?? "", body: opening.slice(matched[0].length).trim() };
 }
 
 // A refused action, said where the press happened. `role="alert"` so it reaches a screen

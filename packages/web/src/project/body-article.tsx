@@ -7,13 +7,14 @@ import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { confirmationFor } from "./confirmations.js";
 import { ConfirmedButton } from "./controls.js";
-import { splitTitle } from "./markdown.js";
 import {
   ActionRow,
+  InlineProse,
   Instructions,
   OutputDownload,
-  ProseBlocks,
+  Prose,
   StageBody,
+  splitTitle,
   useOutputText,
 } from "./parts.js";
 
@@ -47,7 +48,9 @@ export function ArticleBody({ stage, project, outputs, actions, busy }: BodyProp
   return (
     <StageBody>
       <div className="flex flex-wrap items-baseline gap-[14px] text-small text-ink2">
-        <span className="text-row font-semibold text-ink">{title}</span>
+        <span className="text-row font-semibold text-ink">
+          <InlineProse markdown={title} />
+        </span>
         {sources === undefined ? null : <OutputDownload output={sources} label="Sources" />}
         {glossary === undefined ? null : <OutputDownload output={glossary} label="Glossary" />}
       </div>
@@ -55,7 +58,7 @@ export function ArticleBody({ stage, project, outputs, actions, busy }: BodyProp
       {stored.error === null ? null : <p className="text-body text-red">{stored.error.message}</p>}
 
       {draft === undefined ? (
-        <ProseBlocks blocks={split.body} />
+        <Prose markdown={split.body} />
       ) : (
         <>
           <label htmlFor="article-editor" className="engraved text-ink3">
