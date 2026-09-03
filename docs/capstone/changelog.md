@@ -5,6 +5,17 @@ capstone_version: 5.2.0
 
 # Changelog
 
+## 2026-09-03 - build: code (walking skeleton)
+key: build/code@Q3
+- Steps complete: S0 scaffold, S1 kernel and boot, S2 Hono edge and SSE, S3 storage slice, S4 admission/runner/video, S5 telemetry/collector/site, S6 web skeleton. The walking-skeleton slice runs: through a browser, a user dismisses the notice, pastes an article, uploads narration and three images, presses Play, watches the lamps reach done over SSE, plays the mp4 and downloads it byte-identical to the file on disk.
+- Source created: `packages/app/src/{kernel,edge,slices,main.ts}`, `packages/web/src`, `packages/collector/src`, `packages/site/public`, plus `.github/workflows/{ci,release}.yml`, `.githooks/pre-commit`, `biome.json` carrying the kernel -> slices -> edge boundary rule (proven to fire), `vitest.config.ts` projects.
+- Dependencies installed beyond the stack chapter's list: `@fastify/busboy` 3.2.2 (S3; the recorded rung-4 answer, Hono's `formData()`, buffers every part - measured +1586 MiB RSS on a 512 MiB upload, and `logic/05` §Q38 caps no upload size), and shadcn's own peers `radix-ui`, `clsx`, `tailwind-merge`, `class-variance-authority` (S6; installed by its generator, not a separate decision). Both recorded in `05-dependencies.md`.
+- Divergences from `implementation.md`: `layout()` lives in `kernel/paths.ts` alone rather than being duplicated in `slices/storage/layout.ts`; `kernel/{pipeline,events}.ts` and `kernel/db/tx.ts` were added so the runner could name the stage vocabulary without importing upward; the ffmpeg image chain gained `trim=end_frame=1,setpts=PTS-STARTPTS` because `zoompan`'s `d=N` emits N frames per input frame; `typescript@latest` resolved to 7.0.2 (the native compiler) rather than the 5.x the stack chapter assumed; `ffmpeg-static` 5.3.0 ships ffmpeg 7.0.2, not the 6.1.1 its release tag claims. Every one is recorded in `05-dependencies.md` or a `ceiling:` comment.
+- Verified: 456 tests across 48 files, `biome check` clean on 155 files, `tsc --noEmit` clean in all three packages, `npm run build` clean. The zoom rule of `logic/11` §Q85 was measured rather than eyeballed (a known-width rectangle reads 600 -> 690 px on image 1 and 544 -> 480 px on image 2, so 1.150 exactly, alternating).
+- A 9-defect review pass ran against S4 before anything landed on top: an unguarded progress callback that would have taken an uncaughtException and orphaned an ffmpeg child, file moves inside a rollback-able transaction, a shutdown path that was not a barrier, prototype keys bypassing slot validation. All fixed, with the one finding rejected on `logic/13` §Q113's authority (a stage whose output was stored in the same instant as a cancel stays `done`).
+- Deferred by the user, 2026-09-03: hovering a slopify.stream counter to reveal its top 5 models. The event payload already carries `provider` and `model`, so picking it up costs a `(counter, provider, model)` table in the collector and an `/aggregates` extension.
+- Remaining: S7-S24 (settings, attempt wrapper, library, provider adapters, the generate stages, re-runs and cancel, the full screens, the site, the release pipeline).
+
 ## 2026-09-02 - build: plan
 key: build/plan@Q3
 - Plan approved as drafted (Q1): `implementation.md`, written from R1's verified APIs and four review passes (coverage, order, sketches, full re-check).
