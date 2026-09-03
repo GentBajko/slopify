@@ -11,6 +11,7 @@ import type { Paths } from "../../kernel/paths.js";
 import type { Runner } from "../../kernel/runner/index.js";
 import type { CliProbe } from "../../slices/settings/cli-status.js";
 import type { Hub } from "../events/hub.js";
+import { actionRoutes } from "./actions.js";
 import { entryRoutes } from "./entries.js";
 import { fileRoutes } from "./files.js";
 import { problem, problemFromError, titleOf } from "./problem.js";
@@ -48,21 +49,26 @@ const notBuilt =
   "Build the SPA with `npm run build` at the repository root.\n";
 
 function apiRoutes(deps: AppDeps, startedAt: number) {
-  return new Hono()
-    .get("/health", (c) =>
-      c.json({
-        status: "ok",
-        version: deps.version,
-        uptimeMs: deps.clock.now().getTime() - startedAt,
-      }),
-    )
-    .route("/staging", stagingRoutes(deps))
-    .route("/projects", projectRoutes(deps))
-    .route("/prompts", promptRoutes(deps))
-    .route("/entries", entryRoutes(deps))
-    .route("/telemetry", telemetryRoutes(deps))
-    .route("/settings", settingsRoutes(deps))
-    .route("/providers", providerRoutes(deps));
+  return (
+    new Hono()
+      .get("/health", (c) =>
+        c.json({
+          status: "ok",
+          version: deps.version,
+          uptimeMs: deps.clock.now().getTime() - startedAt,
+        }),
+      )
+      .route("/staging", stagingRoutes(deps))
+      .route("/projects", projectRoutes(deps))
+      // The actions of `logic/12` and `logic/13` sit on the same prefix as the project
+      // itself; they are their own router because they are their own concern.
+      .route("/projects", actionRoutes(deps))
+      .route("/prompts", promptRoutes(deps))
+      .route("/entries", entryRoutes(deps))
+      .route("/telemetry", telemetryRoutes(deps))
+      .route("/settings", settingsRoutes(deps))
+      .route("/providers", providerRoutes(deps))
+  );
 }
 
 export function createApp(deps: AppDeps): Hono {
