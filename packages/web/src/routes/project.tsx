@@ -4,6 +4,7 @@ import { useApp } from "@/app-context";
 import { Rail, RailGroup } from "@/components/rail";
 import { StageBodyFor } from "@/project/bodies";
 import { ProjectHeader } from "@/project/header";
+import { RefusalLine } from "@/project/parts";
 import { StageRow } from "@/project/stage-row";
 import { useProjectActions } from "@/project/use-actions";
 import { useLiveProject } from "@/project/use-live";
@@ -44,18 +45,11 @@ export function ProjectRoute({ projectId }: { readonly projectId: string }) {
       <RailGroup>
         <ProjectHeader project={summary} prompts={prompts.data?.prompts} actions={actions} />
 
-        {actions.refusal === undefined ? null : (
-          // The server's own sentence for a refused action, unedited: "At least one image
-          // must remain, so the last one cannot be deleted." (`logic/09` §Q75).
-          <Rail className="justify-between gap-3 bg-red-tint py-[10px] text-small text-red">
-            <span role="alert">{actions.refusal}</span>
-            <button
-              type="button"
-              onClick={actions.dismissRefusal}
-              className="shrink-0 rounded-control px-2 text-ink2 hover:text-ink"
-            >
-              Dismiss
-            </button>
+        {actions.refusal === undefined || actions.refusal.stage !== undefined ? null : (
+          // A refused cancel belongs to the project, not to one stage; every other
+          // refusal is drawn under the row whose control was pressed.
+          <Rail className="py-[10px]">
+            <RefusalLine message={actions.refusal.message} onDismiss={actions.dismissRefusal} />
           </Rail>
         )}
 

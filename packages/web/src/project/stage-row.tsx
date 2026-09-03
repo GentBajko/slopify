@@ -7,6 +7,7 @@ import { StageGlyph } from "@/components/glyph";
 import { Lamp } from "@/components/lamp";
 import { Rail, RailMeter } from "@/components/rail";
 import { StateWord } from "@/components/state-word";
+import { RefusalLine } from "./parts.js";
 import { unreadyFor } from "./readiness.js";
 import { attempts, stageNames, summaryOf } from "./summary.js";
 import type { ProjectActions } from "./use-actions.js";
@@ -44,6 +45,7 @@ export function StageRow({
   readonly children: ReactNode;
 }) {
   const name = stageNames[stage.kind];
+  const refused = actions.refusal?.stage === stage.kind ? actions.refusal.message : undefined;
   const unready = unreadyFor(stage.kind, project.config, providers);
   const retryable = stage.state === "failed" || stage.state === "canceled";
 
@@ -76,6 +78,11 @@ export function StageRow({
           </p>
         ) : null}
       </Rail>
+      {refused === undefined ? null : (
+        <div className="px-4 pb-3 pl-[66px]">
+          <RefusalLine message={refused} onDismiss={actions.dismissRefusal} />
+        </div>
+      )}
       {opened.has(stage.state) ? children : null}
     </div>
   );

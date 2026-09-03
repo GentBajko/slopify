@@ -452,6 +452,10 @@ describe("the destructive actions", () => {
 
     const said = await screen.findByRole("alert");
     expect(said.textContent).toBe(refusal);
+    // Said where the press happened: inside the Images stage's own block, not at the top
+    // of a page the user has scrolled away from.
+    const block = said.closest("div.border-b") as HTMLElement;
+    expect(within(block).getByText("Images")).not.toBeNull();
   });
 
   it("confirms before regenerating an image", async () => {

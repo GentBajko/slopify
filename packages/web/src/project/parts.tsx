@@ -81,6 +81,31 @@ export function ProseBlocks({ blocks }: { readonly blocks: readonly Block[] }) {
   );
 }
 
+// A refused action, said where the press happened. `role="alert"` so it reaches a screen
+// reader without the focus having to move (`uiux/03-experience.md`, Error recovery).
+export function RefusalLine({
+  message,
+  onDismiss,
+}: {
+  readonly message: string;
+  readonly onDismiss: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-control bg-red-tint px-[10px] py-[6px] text-small text-red">
+      <span role="alert" className="min-w-0 break-words">
+        {message}
+      </span>
+      <button
+        type="button"
+        onClick={onDismiss}
+        className="ml-auto shrink-0 rounded-control px-2 text-ink2 hover:text-ink"
+      >
+        Dismiss
+      </button>
+    </div>
+  );
+}
+
 // `logic/14` §Q116 names the file the server sends; the anchor only has to ask for it.
 export function DownloadLink({
   projectId,

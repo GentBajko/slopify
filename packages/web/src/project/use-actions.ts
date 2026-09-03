@@ -26,41 +26,50 @@ export type Action =
   | Exclude<Destructive, { readonly kind: "discard-article" }>
   | { readonly kind: "retry"; readonly stage: StageKind };
 
+// A refused action, and where the user was standing when they asked for it. The sentence
+// is shown under that stage's own row rather than at the top of the page, because that is
+// where the press happened (`uiux/03-experience.md`, Error recovery).
+export interface Refusal {
+  // The server's own sentence, verbatim: "At least one image must remain, so the last one
+  // cannot be deleted." (`logic/09` §Q75).
+  readonly message: string;
+  // Undefined for a cancel, which belongs to the project rather than to one stage.
+  readonly stage: StageKind | undefined;
+}
+
 export interface ProjectActions {
   // `onDone` runs only when the server accepted the change. An editor closes on it, so a
   // refused save leaves the user's typing where it is (`uiux/03-experience.md`, Error
   // recovery: "an article edit in progress stays in the editor").
   readonly run: (action: Action, onDone?: () => void) => void;
   readonly pending: boolean;
-  // The server's own sentence for a refused action, verbatim: "At least one image must
-  // remain, so the last one cannot be deleted." (`logic/09` §Q75).
-  readonly refusal: string | undefined;
+  readonly refusal: Refusal | undefined;
   readonly dismissRefusal: () => void;
 }
 
 export function useProjectActions(projectId: string): ProjectActions {
   const { api } = useApp();
   const queryClient = useQueryClient();
-  const [refusal, setRefusal] = useState<string | undefined>(undefined);
+  const [refusal, setRefusal] = useState<Refusal | undefined>(undefined);
 
   const mutation = useMutation({
     mutationFn: (action: Action) => perform(api, projectId, action),
     onMutate: () => {
       setRefusal(undefined);
     },
-    onSuccess: (result) => {
+    onSuccess: (result, action) => {
       if (!result.ok) {
-        setRefusal(result.message);
+        setRefusal({ message: result.message, stage: stageOf(action) });
         return;
       }
       const { project, stages, outputs } = result.value;
       queryClient.setQueryData<ProjectBody>(keys.project(projectId), { project, stages, outputs });
       void queryClient.invalidateQueries({ queryKey: keys.projects });
     },
-    onError: (error: Error) => {
+    onError: (error: Error, action) => {
       // Nothing is swallowed: a fault reaches the same line a refusal does, because the
       // user's next move is the same either way.
-      setRefusal(error.message);
+      setRefusal({ message: error.message, stage: stageOf(action) });
     },
   });
 
@@ -80,6 +89,22 @@ export function useProjectActions(projectId: string): ProjectActions {
       setRefusal(undefined);
     },
   };
+}
+
+// Which row the sentence belongs under.
+function stageOf(action: Action): StageKind | undefined {
+  switch (action.kind) {
+    case "cancel":
+      return undefined;
+    case "retry":
+    case "rerun":
+      return action.stage;
+    case "save-article":
+      return "article";
+    case "delete-image":
+    case "regenerate-image":
+      return "images";
+  }
 }
 
 function perform(api: Api, projectId: string, action: Action): Promise<ActionResult> {
