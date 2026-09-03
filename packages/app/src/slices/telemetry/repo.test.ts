@@ -5,6 +5,7 @@ import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import type { TelemetryEvent } from "./model.js";
 import {
+  allTelemetryEvents,
   insertMachine,
   insertTelemetryEvent,
   machineOf,
@@ -81,6 +82,19 @@ describe("the telemetry queue", () => {
     markDelivered(db, [], "2026-09-02T11:00:00.000Z");
 
     expect(undeliveredEvents(db, 10).map((row) => row.id)).toEqual(["e1"]);
+  });
+
+  // logic/16 §Q132: the Usage page's totals are the sum of the whole log, delivered or
+  // not, which is the one reader that must not stop at the queue.
+  it("hands the whole log back whether or not it was delivered", () => {
+    const db = migrated();
+    insertTelemetryEvent(db, event("e1"));
+    insertTelemetryEvent(db, event("e2"));
+    markDelivered(db, ["e1"], "2026-09-02T11:00:00.000Z");
+
+    expect(allTelemetryEvents(db).map((row) => row.id)).toEqual(["e1", "e2"]);
+    expect(allTelemetryEvents(db)[0]?.deliveredAt).toBe("2026-09-02T11:00:00.000Z");
+    expect(undeliveredEvents(db, 10).map((row) => row.id)).toEqual(["e2"]);
   });
 
   it("keeps the first write when the same event id is inserted twice", () => {

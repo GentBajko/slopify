@@ -31,7 +31,12 @@ import { runResearch } from "../src/slices/research/run.js";
 import { outputsOf } from "../src/slices/storage/repo.js";
 import type { RecordEvent, TelemetryPayload } from "../src/slices/telemetry/model.js";
 import { record } from "../src/slices/telemetry/record.js";
-import { insertMachine, undeliveredEvents } from "../src/slices/telemetry/repo.js";
+import {
+  allTelemetryEvents,
+  insertMachine,
+  undeliveredEvents,
+} from "../src/slices/telemetry/repo.js";
+import { usageOf } from "../src/slices/telemetry/usage.js";
 import { runThumbnail } from "../src/slices/thumbnail/run.js";
 import { resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
 import { renderVideo } from "../src/slices/video/run.js";
@@ -403,6 +408,62 @@ describe("a whole pipeline against the fakes", () => {
         "tokensOut",
       ].toSorted(),
     );
+    h.db.close();
+  }, 180_000);
+
+  // §Q132's invariant: "Usage page totals equal the sum of the local event log". The
+  // numbers below are what the stages of the run above actually did, counted by hand.
+  it("adds up to the totals the Usage page serves", async () => {
+    const h = harness();
+    record(
+      { db: h.db, ids: { next: () => "created" }, clock: systemClock, log: silent, appVersion },
+      "project.created",
+      {},
+    );
+
+    await h.run();
+
+    const usage = usageOf({
+      events: allTelemetryEvents(h.db),
+      machineId: null,
+      appVersion,
+    });
+    const body = outputsOf(h.db, h.projectId).find((output) => output.role === "audio_body");
+    // Eight answered LLM calls: four for research, one for the article, one for each entry
+    // text and one for the thumbnail prompt.
+    const perCall = reportedUsage.inputTokens + reportedUsage.outputTokens;
+    expect(usage.counters).toEqual({
+      videosMade: 1,
+      audioSeconds: (body?.durationMs ?? 0) / 1000,
+      imagesMade: 2,
+      tokensUsed: perCall * 8,
+      projects: 1,
+    });
+    // Every token belongs to the one model that was asked, split across the two stages
+    // that asked it; the research stage asked four times, so it leads the table.
+    expect(usage.byStage).toEqual([
+      {
+        stage: "research",
+        provider: "fake-llm",
+        model: "fake-model",
+        tokensIn: reportedUsage.inputTokens * 4,
+        tokensOut: reportedUsage.outputTokens * 4,
+      },
+      {
+        stage: "article",
+        provider: "fake-llm",
+        model: "fake-model",
+        tokensIn: reportedUsage.inputTokens * 3,
+        tokensOut: reportedUsage.outputTokens * 3,
+      },
+      {
+        stage: "thumbnail",
+        provider: "fake-llm",
+        model: "fake-model",
+        tokensIn: reportedUsage.inputTokens,
+        tokensOut: reportedUsage.outputTokens,
+      },
+    ]);
     h.db.close();
   }, 180_000);
 

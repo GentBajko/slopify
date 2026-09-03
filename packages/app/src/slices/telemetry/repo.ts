@@ -35,6 +35,19 @@ export function undeliveredEvents(db: DatabaseSync, limit: number): TelemetryEve
     .map((row) => toEvent(eventRow.parse(row)));
 }
 
+// logic/16 step 6 and §Q132: the Usage page's totals are the sum of the whole local log,
+// delivered or not, and §Q134 keeps that log forever.
+//
+// ceiling: every row is read and folded in memory. One event per stage of one run is a
+// few dozen bytes and a machine would need a hundred thousand runs to make this cost a
+// page load; the upgrade is to sum the counters in SQL with json_extract.
+export function allTelemetryEvents(db: DatabaseSync): TelemetryEvent[] {
+  return db
+    .prepare("SELECT * FROM telemetry_events ORDER BY rowid")
+    .all()
+    .map((row) => toEvent(eventRow.parse(row)));
+}
+
 export function markDelivered(db: DatabaseSync, ids: readonly string[], at: string): void {
   if (ids.length === 0) {
     return;

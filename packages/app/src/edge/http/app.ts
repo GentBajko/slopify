@@ -21,6 +21,7 @@ import { providerRoutes } from "./providers.js";
 import { settingsRoutes } from "./settings.js";
 import { stagingRoutes } from "./staging.js";
 import { telemetryRoutes } from "./telemetry.js";
+import { usageRoutes } from "./usage.js";
 
 export interface AppDeps {
   readonly db: DatabaseSync;
@@ -66,6 +67,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/prompts", promptRoutes(deps))
       .route("/entries", entryRoutes(deps))
       .route("/telemetry", telemetryRoutes(deps))
+      .route("/usage", usageRoutes(deps))
       .route("/settings", settingsRoutes(deps))
       .route("/providers", providerRoutes(deps))
   );
