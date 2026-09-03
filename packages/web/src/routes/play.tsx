@@ -50,9 +50,14 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   // What the server marked when it refused the draft: a template deleted since it was
   // picked, or a rule the browser's copy could not see (`logic/15` step 4).
   const [refused, setRefused] = useState<readonly FieldError[]>([]);
+  // Whether the user has configured anything yet. A fresh form shows the hint over the
+  // key and nothing else; a form being filled marks the control the hint is naming
+  // (uiux/screens/06-play.md, Fresh vs Invalid field).
+  const [touched, setTouched] = useState(false);
 
   const update = (patch: Partial<PlayFormState>): void => {
     setForm((current) => ({ ...current, ...patch }));
+    setTouched(true);
     // A refusal stands until the form changes; the next press asks the server again.
     setRefused([]);
   };
@@ -79,15 +84,15 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     },
   });
 
-  // The refusal to put under one control: the field the hint is pointing at, plus every
-  // field the server named. Nothing else is marked, so a form nobody has typed in yet is
-  // not painted red (`logic/04` §Q29 with uiux/screens/06-play.md, States).
+  // The refusal to put under one control: every field the server named, and the one the
+  // hint is pointing at once the form has been touched. Nothing else, so a form nobody
+  // has configured yet is not painted red (`logic/04` §Q29 with uiux/screens/06-play.md).
   const problem = (field: string): string | undefined => {
     const named = refused.find((error) => error.field === field);
     if (named !== undefined) {
       return named.message;
     }
-    if (blocker?.field !== field || result.ok) {
+    if (!touched || blocker?.field !== field || result.ok) {
       return undefined;
     }
     return result.fields.find((error) => error.field === field)?.message;

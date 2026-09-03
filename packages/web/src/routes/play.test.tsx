@@ -176,6 +176,19 @@ describe("the Play key and its hint", () => {
     expect(playKey().getAttribute("aria-describedby")).toBe(hint.id);
   });
 
+  it("marks nothing on a form nobody has touched, and the named control once one is", async () => {
+    await mount();
+
+    expect(screen.getByLabelText("Article prompt").getAttribute("aria-invalid")).toBe("false");
+
+    // Naming the run leaves the article prompt the first missing item, and now that the
+    // user is configuring the run it is marked where it stands.
+    await userEvent.type(screen.getByLabelText("Video title"), "Rope Tricks");
+
+    expect(screen.getByLabelText("Article prompt").getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByText("Pick an article prompt.")).not.toBeNull();
+  });
+
   it("moves the hint to the next missing item as the form fills", async () => {
     await mount();
 
