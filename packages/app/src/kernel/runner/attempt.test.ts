@@ -196,6 +196,28 @@ describe("attempt", () => {
     expect(calls).toBe(1);
   });
 
+  // logic/02 §Q13: "the next attempt finds no key, fails immediately without retries".
+  it("stops when the provider has no key stored", async () => {
+    const h = harness();
+    let calls = 0;
+    const call: ProviderCall<string> = () => {
+      calls += 1;
+      return Promise.reject(
+        providerError({ kind: "missing_key", message: "no OpenRouter key is stored" }),
+      );
+    };
+
+    await expect(h.clock.settle(attempt(h.context, call, { kind: "llm" }))).rejects.toThrow(
+      "no OpenRouter key is stored",
+    );
+
+    expect(calls).toBe(1);
+    expect(h.attempts.rows).toHaveLength(1);
+    expect(h.attempts.rows[0]?.outcome).toBe("missing_key");
+    // No backoff was served: the clock never moved.
+    expect(h.clock.now().toISOString()).toBe("2026-09-02T10:00:00.000Z");
+  });
+
   // logic/02 §Q11: a bad key fails the call and the retry policy runs like any other.
   it("retries an auth failure like any other", async () => {
     const h = harness();

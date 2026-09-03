@@ -175,7 +175,11 @@ describe("openRouterLlm.complete", () => {
       },
       key: () => undefined,
     });
-    await expect(drain(port)).rejects.toThrow("no OpenRouter key is stored");
+    const error: unknown = await drain(port).catch((thrown: unknown) => thrown);
+    // `logic/02` §Q13: an absent key is terminal, so it carries the kind the wrapper does
+    // not retry rather than the `auth` kind a rejected key carries (§Q11).
+    expect(isProviderError(error) && error.fault.kind).toBe("missing_key");
+    expect(String(error)).toContain("no OpenRouter key is stored");
     expect(called).toBe(0);
   });
 

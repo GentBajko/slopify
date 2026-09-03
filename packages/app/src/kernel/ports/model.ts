@@ -19,6 +19,10 @@ export type Readiness =
 
 export const providerErrorKinds = [
   "auth",
+  // Distinct from `auth`, which is a key the provider rejected. `logic/02` §Q13 splits
+  // them: a bad key runs the whole retry policy (§Q11) and an absent one "fails
+  // immediately, without retries", so the wrapper needs two kinds to tell apart.
+  "missing_key",
   "rate_limit",
   "refusal",
   "unsupported",

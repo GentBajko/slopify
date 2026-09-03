@@ -50,8 +50,14 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["**/slices", "**/slices/**", "**/edge", "**/edge/**"],
-                    "message": "kernel is the bottom layer: it may not import slices or edge."
+                    "group": [
+                      "**/slices",
+                      "**/slices/**",
+                      "**/edge",
+                      "**/edge/**",
+                      "**/adapter-registry.js"
+                    ],
+                    "message": "kernel is the bottom layer: it may not import slices, edge or the composition root's adapter registry."
                   }
                 ]
               }
@@ -74,7 +80,12 @@
                     "message": "slices sit below edge: they may not import edge."
                   },
                   {
-                    "group": ["**/adapters", "**/adapters/**", "**/kernel/ports/registry.js"],
+                    "group": [
+                      "**/adapters",
+                      "**/adapters/**",
+                      "**/kernel/ports/registry.js",
+                      "**/adapter-registry.js"
+                    ],
                     "message": "a slice never holds a provider adapter or the registry that hands one out: it is handed the wrapped calls of kernel/runner/providers.ts, so every provider call goes through the attempt wrapper."
                   }
                 ]
@@ -99,6 +110,7 @@
                       "**/slices/**",
                       "**/edge",
                       "**/edge/**",
+                      "**/adapter-registry.js",
                       "**/kernel",
                       "**/kernel/**",
                       "!**/kernel/ports",

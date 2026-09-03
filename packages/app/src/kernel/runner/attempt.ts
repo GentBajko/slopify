@@ -25,7 +25,10 @@ export const timeoutMs: Readonly<Record<ProviderCallKind, number>> = {
 
 // `logic/09` §Q74 and `logic/06` §Q47: a refusal and an unsupported capability are the
 // provider's final answer. Retrying either would only spend the user's money again.
-const terminalKinds: readonly ProviderErrorKind[] = ["refusal", "unsupported"];
+// `logic/02` §Q13 adds the third: a key removed mid-run leaves nothing to call with, so
+// "the next attempt finds no key, fails immediately without retries" - unlike a key the
+// provider rejected, which is an `auth` failure and is retried like any other (§Q11).
+const terminalKinds: readonly ProviderErrorKind[] = ["refusal", "unsupported", "missing_key"];
 
 export type ProviderCallKind = "llm" | "tts" | "image";
 

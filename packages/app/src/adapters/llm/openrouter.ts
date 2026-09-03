@@ -153,9 +153,11 @@ export function openRouterLlm(deps: OpenRouterDeps): LlmPort {
 
 function headers(key: string | undefined): Record<string, string> {
   // `logic/02` §Q13: an attempt that finds no key fails rather than calling anonymously
-  // and being told off by the provider in words the user cannot act on.
+  // and being told off by the provider in words the user cannot act on. `missing_key`
+  // rather than `auth` because the same rule makes it terminal: there is nothing to
+  // retry until the user saves a key, and the wrapper is where that is decided.
   if (key === undefined || key === "") {
-    throw providerError({ kind: "auth", message: "no OpenRouter key is stored" });
+    throw providerError({ kind: "missing_key", message: "no OpenRouter key is stored" });
   }
   return { Authorization: `Bearer ${key}`, ...appHeaders };
 }
