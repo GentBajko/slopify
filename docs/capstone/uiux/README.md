@@ -6,7 +6,14 @@ source: uiux-interview.md (Q1-Q19)
 
 # Slopify UI/UX design
 
-Committed frontend design: direction, system, experience rules. `stack` honours `02-system.md`; `build` implemented the Implementation constraints. The per-screen chapters and the design assets were removed once the screens were built (see the ledger, 2026-09-03); the code in `packages/web/src/routes/` and `packages/web/src/play/` is now the description of every screen, and git history holds the chapters. Every decision traces to `../uiux-interview.md §Q<n>` or is marked "assumed" here.
+Committed frontend design: direction, system, experience rules. `stack` honours
+`02-system.md`; `build` implemented the Implementation constraints.
+
+Three chapters remain. The ten per-screen chapters and the design assets were removed
+on 2026-09-03 once every screen was built (see the ledger). `packages/web/src/routes/`
+and `packages/web/src/play/` now describe the screens, `packages/web/src/styles/index.css`
+carries the palette, and git history holds what was deleted. Every decision here traces
+to `../uiux-interview.md §Q<n>` or is listed under Assumed below.
 
 ## Chapters
 
@@ -20,16 +27,24 @@ Committed frontend design: direction, system, experience rules. `stack` honours 
 
 Design assets now live with the code that serves them: `packages/web/src/assets/` (the mark, the favicon, the six stage glyphs), `packages/web/public/` (`favicon.svg`, `app-icon.svg`), and `packages/site/public/assets/`. `uiux/` keeps no copies.
 
-## Assumed
+## Assumed, and what became of each
 
-Items invented to complete a chapter; confirm or strike before `build`.
+These were invented to complete a chapter rather than taken from an answer. `build`
+settled all of them by shipping them; each now has code to read instead of a claim to
+confirm.
 
-- 01: the headline "Slop, on schedule." and the 16-word subtext; the hero screenshot slot.
-- 03: the Appearance control lives in the Playback rail.
-- 08: stage bodies open when done and collapse when pending.
-- 09, 10: the whole compositions, since no mockup exists for them; the per-stage token table on 10.
-- System: the type scale (12 / 13 / 14 / 16 / 18 / 20 / 24 / 32 px), the light-theme values derived and contrast-checked here, the Lucide pick (§Q5, a two-way door).
-
-## Pre-flight (design-time), run before writing
-
-Design read declared with reasoned dials; mode per screen with Operate floored at Restrained; theme carries its use-scene sentence; contract blocks are decisions, alternates and the exit were offered; no banned face or palette (Barlow justified, no premium-consumer or AI-purple palette); calibration self-check passed; every mockup screen plus the two added ones has a chapter; every mockup state and every logic unhappy path surfacing on a screen has a styled treatment, empty, loading, and error included; every decision cites a §Q or is listed above; zero em-dashes and no eyebrow labels in any proposed copy.
+- The marketing headline "Slop, on schedule." and its subtext: live in
+  `packages/site/public/index.html`.
+- The hero slot on that page: **still open**, and now a video of a real run rather than
+  the screenshot originally assumed. `play-run.mp4`, its poster and its captions are
+  wired and absent.
+- The Appearance control sitting in the Playback rail: built that way in
+  `packages/web/src/routes/settings.tsx`.
+- Stage bodies opening when done and collapsing when pending: built that way in
+  `packages/web/src/project/`.
+- The Intros & Outros and Usage compositions, invented because no mockup covered them:
+  `packages/web/src/routes/entries.tsx` and `usage.tsx`.
+- The type scale, the derived light-theme values and the Lucide pick (§Q5, a two-way
+  door): all in `packages/web/src/styles/index.css`. The light values were measured
+  rather than trusted during `build`; one row of `02-system.md` was corrected as a
+  result, and no pair fails its floor.
