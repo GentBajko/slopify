@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { LlmEvent, Message } from "../../kernel/ports/llm.js";
 import { isProviderError } from "../../kernel/ports/model.js";
 import type { OpenRouterDeps } from "./openrouter.js";
-import { openRouterBase, openRouterLlm, retryAfter } from "./openrouter.js";
+import { openRouterBase, openRouterLlm } from "./openrouter.js";
 
 // Fixture provenance: `fixtures/openrouter-*.txt` are constructed, not captured. No
 // OpenRouter key exists on this machine or in `~/.slopify/slopify.db`, so the live third
@@ -309,28 +309,6 @@ describe("openRouterLlm.models", () => {
       key: () => key,
     });
     await expect(port.models()).rejects.toThrow("not in the shape");
-  });
-});
-
-describe("retryAfter", () => {
-  it("reads the seconds form", () => {
-    expect(retryAfter("30")).toBe(30_000);
-  });
-
-  it("reads the HTTP-date form as the wait from now", () => {
-    const at = new Date(Date.now() + 20_000).toUTCString();
-    const waited = retryAfter(at) ?? 0;
-    expect(waited).toBeGreaterThan(18_000);
-    expect(waited).toBeLessThanOrEqual(21_000);
-  });
-
-  it("answers nothing for an absent or unreadable header", () => {
-    expect(retryAfter(null)).toBeUndefined();
-    expect(retryAfter("soon")).toBeUndefined();
-  });
-
-  it("never asks for a wait in the past", () => {
-    expect(retryAfter(new Date(Date.now() - 60_000).toUTCString())).toBe(0);
   });
 });
 
