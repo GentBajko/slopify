@@ -48,6 +48,6 @@ Secrets never live in files in the repository. Configuration precedence: flag, t
 ## Developer workflow
 
 - CI on push and PR: lint and format check (Biome, with the boundary rule), typecheck, tests on Node 26; `npm audit` fails on high severity; Dependabot weekly.
-- Release: tag → CI publishes `@gentbajko/slopify` to npm with semantic versioning; the package contains the built SPA; rollback is users pinning `npx @gentbajko/slopify@<version>`. Collector and site deploy from `main` via the host's git integration.
+- Release: tag → CI publishes `@gentbajko/slopify` to npm with semantic versioning; the package contains the built SPA; rollback is users pinning `npx @gentbajko/slopify@<version>`. Collector and site do not deploy from a push: nothing in CI touches them. They go out when `npm run deploy` is run by hand, which is `wrangler deploy` for each; `npm run deploy:check` is the dry run.
 - Migrations: forward-only SQL files applied at app boot; a schema newer than the app refuses to start; never destructive within a minor version.
 - Commands per `05-dependencies.md`: Vitest for tests, `tsc --noEmit` for typecheck, Biome for lint and format; exact npm scripts are written by `build` and this chapter is refreshed by `map` once they exist.
