@@ -115,3 +115,11 @@ Project-specific additions:
 - Stage glyphs come from `docs/capstone/uiux/assets/` verbatim; they are not redrawn.
 - The wordmark is live text in Barlow 800 beside the mark, never a rasterised lockup.
 - `assets/reference-play.html` is a user-requested reference sample of the Play screen and a project rundown in both themes; the markdown chapters win where they disagree.
+
+## Binding visual reference
+
+`assets/reference-screens.html` (user, 2026-09-03: "this is exactly how the page has to look like") renders all ten screens in both themes from one token block, and outranks any prose in this chapter where the two disagree. Its `:root` / `[data-theme="light"]` custom properties are the authoritative palette; its `data-lamp`, `data-word`, `data-seg`, `data-nav`, `data-dis`, `data-pressed`, `data-err` and `data-ph` attribute rules are the authoritative state styling.
+
+One amendment the user made at the same time: the marketing page's hero still `<img src="assets/play-screen.png">` in the reference, but it ships as a **video** of a real run, not a still.
+
+`assets/reference-play.html` is the earlier single-screen study it supersedes.
