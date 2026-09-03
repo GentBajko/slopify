@@ -11,8 +11,7 @@ import { subscribeGlobal } from "@/events";
 import { keys } from "@/queries";
 
 // One top bar on every app screen, the active item underlined in the running-lamp colour
-// (uiux/03-experience.md). Usage is S20-S22 and has no route yet, so it is not offered as
-// a link that goes nowhere.
+// (uiux/03-experience.md), in the order the reference sheet puts them.
 // `exact: false` is a section that keeps an editor beneath it: Prompts stays lit while
 // 05 is open, and Intros & Outros while its own editor is.
 const sections = [
@@ -21,6 +20,7 @@ const sections = [
   { to: "/prompts", label: "Prompts", exact: false },
   { to: "/entries", label: "Intros & Outros", exact: false },
   { to: "/settings", label: "Settings", exact: true },
+  { to: "/usage", label: "Usage", exact: true },
 ] as const;
 
 export function Shell() {

@@ -11,6 +11,7 @@ import { ProjectsRoute } from "@/routes/projects";
 import { PromptEditorRoute } from "@/routes/prompt-editor";
 import { PromptsRoute } from "@/routes/prompts";
 import { SettingsRoute } from "@/routes/settings";
+import { UsageRoute } from "@/routes/usage";
 
 // A code-based route tree: a handful of screens need no file convention, and the
 // generated tree a plugin would write would be one more artefact to keep honest.
@@ -107,6 +108,12 @@ const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "settings",
   component: SettingsRoute,
+});
+
+const usageRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "usage",
+  component: UsageRoute,
 });
 
 function ProjectPage() {
@@ -208,6 +215,7 @@ const routeTree = rootRoute.addChildren({
   newEntryRoute,
   entryRoute,
   settingsRoute,
+  usageRoute,
 });
 
 export function createAppRouter() {

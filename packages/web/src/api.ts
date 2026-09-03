@@ -26,6 +26,7 @@ import type {
 } from "@app/slices/settings/model.js";
 import type { VoiceDraft } from "@app/slices/settings/voices.js";
 import type { Output, StagedFile } from "@app/slices/storage/model.js";
+import type { Usage } from "@app/slices/telemetry/usage.js";
 import { hc } from "hono/client";
 import type { Problem, SaveResult } from "./http.js";
 import { errorOf, failure, problemOf, read, saved } from "./http.js";
@@ -53,6 +54,7 @@ export type {
   SaveResult,
   Stage,
   StagedFile,
+  Usage,
   Voice,
   VoiceDraft,
 };
@@ -178,6 +180,12 @@ export async function discardStaged(api: Api, id: string): Promise<void> {
   if (!response.ok) {
     throw await failure(response);
   }
+}
+
+// 10 Usage: this install's own numbers, computed from the local event log alone
+// (`logic/16` step 6). Seconds of audio come back as seconds; the hours are the screen's.
+export async function readUsage(api: Api): Promise<Usage> {
+  return read<Usage>(await api.client.usage.$get());
 }
 
 export async function readNotice(api: Api): Promise<NoticeBody> {

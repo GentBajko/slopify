@@ -10,6 +10,7 @@ import {
   readAppSettings,
   readNotice,
   readProject,
+  readUsage,
 } from "./api.js";
 
 // One place names a cache key, so an SSE handler and the query it invalidates cannot
@@ -26,6 +27,7 @@ export const keys = {
   file: (projectId: string, outputId: string) => ["file", projectId, outputId] as const,
   staging: ["staging"] as const,
   notice: ["notice"] as const,
+  usage: ["usage"] as const,
   providers: ["providers"] as const,
   voices: ["voices"] as const,
   prompts: ["prompts"] as const,
@@ -47,6 +49,10 @@ export function stagingQuery(api: Api) {
 
 export function noticeQuery(api: Api) {
   return queryOptions({ queryKey: keys.notice, queryFn: () => readNotice(api) });
+}
+
+export function usageQuery(api: Api) {
+  return queryOptions({ queryKey: keys.usage, queryFn: () => readUsage(api) });
 }
 
 export function providersQuery(api: Api) {

@@ -89,6 +89,7 @@ function testRouter(ui: ReactNode) {
         path: "settings",
         component: nowhere,
       }),
+      usage: createRoute({ getParentRoute: () => rootRoute, path: "usage", component: nowhere }),
       project: createRoute({
         getParentRoute: () => rootRoute,
         path: "projects/$projectId",
