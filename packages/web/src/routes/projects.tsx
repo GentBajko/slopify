@@ -60,7 +60,7 @@ export function ProjectsRoute() {
                 <span className="text-small text-ink2">
                   {`${project.format} · ${startedAt(project.createdAt)}`}
                 </span>
-                <StateWord state={project.status} className="ml-auto" />
+                <StateWord state={project.status} announce={project.title} className="ml-auto" />
               </Link>
             </Rail>
           ))}

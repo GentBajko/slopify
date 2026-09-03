@@ -16,14 +16,25 @@ const tones: Readonly<Record<StageState, string>> = {
 
 export function StateWord({
   state,
+  announce,
   className,
 }: {
   readonly state: StageState;
+  // What a change is announced as: "Audio: running" (uiux/03-experience.md, accessibility
+  // floor). A row that can change state while the page is open passes its name.
+  readonly announce?: string;
   readonly className?: string;
 }) {
   return (
-    <span data-state={state} className={cn("engraved font-bold", tones[state], className)}>
-      {state}
+    <span className={cn("inline-flex items-center", className)}>
+      <span data-state={state} className={cn("engraved font-bold", tones[state])}>
+        {state}
+      </span>
+      {announce === undefined ? null : (
+        <span className="sr-only" role="status" aria-live="polite">
+          {`${announce}: ${state}`}
+        </span>
+      )}
     </span>
   );
 }

@@ -3,8 +3,8 @@ import { cn } from "@/lib/utils";
 import { StateWord } from "./state-word.js";
 
 // A lamp never conveys state alone: the state word is always rendered beside it
-// (uiux/02-system.md §Q18). `Lamp` is exported for the two places that already carry the
-// word themselves; everywhere else uses `StageLamp`.
+// (uiux/02-system.md §Q18). In a rundown row the two sit at opposite ends, so the row
+// composes `Lamp` and `StateWord` itself; `StageLamp` is the pair for everywhere else.
 const lit: Readonly<Record<StageState, string>> = {
   pending: "bg-lamp-off shadow-[inset_0_0_0_1px_var(--color-lamp-ring)]",
   running:
@@ -37,7 +37,6 @@ export function StageLamp({
   state,
   className,
 }: {
-  // What the announcement names: "Audio: running" (uiux/03-experience.md).
   readonly label: string;
   readonly state: StageState;
   readonly className?: string;
@@ -45,10 +44,7 @@ export function StageLamp({
   return (
     <span className={cn("inline-flex items-center gap-2", className)}>
       <Lamp state={state} />
-      <StateWord state={state} />
-      <span className="sr-only" role="status" aria-live="polite">
-        {`${label}: ${state}`}
-      </span>
+      <StateWord state={state} announce={label} />
     </span>
   );
 }

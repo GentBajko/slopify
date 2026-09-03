@@ -7,8 +7,9 @@ import { useEffect } from "react";
 import { eventsUrl, fileUrl } from "@/api";
 import { useApp } from "@/app-context";
 import { StageGlyph } from "@/components/glyph";
-import { Lamp, StageLamp } from "@/components/lamp";
+import { Lamp } from "@/components/lamp";
 import { Rail, RailGroup, RailMeter } from "@/components/rail";
+import { StateWord } from "@/components/state-word";
 import { subscribeProject } from "@/events";
 import { startedAt } from "@/lib/utils";
 import { keys, projectQuery } from "@/queries";
@@ -67,23 +68,19 @@ export function ProjectRoute({ projectId }: { readonly projectId: string }) {
 
   return (
     <div className="mx-auto max-w-[1440px]">
+      {/* The back link sits above a detail page's title (uiux/03-experience.md). */}
       <Link to="/" className="mb-1 block text-small text-ink2 hover:text-ink">
         &lt; Projects
       </Link>
-      <h1 className="mb-4 text-title font-bold tracking-[-0.01em]">{summary.title}</h1>
 
-      <RailGroup>
+      <RailGroup className="mt-2">
         <Rail className="bg-panel2">
           <Lamp state={summary.status} />
-          <span className="text-row font-bold">{summary.title}</span>
+          <h1 className="text-row font-bold">{summary.title}</h1>
           <span className="text-small text-ink2">
             {`${summary.format} · started ${startedAt(summary.createdAt)}`}
           </span>
-          <StageLamp
-            label="Project"
-            state={summary.status}
-            className="ml-auto [&>[data-lamp]]:hidden"
-          />
+          <StateWord state={summary.status} announce="Project" className="ml-auto" />
         </Rail>
 
         {stages.map((stage) => (
@@ -107,7 +104,7 @@ export function ProjectRoute({ projectId }: { readonly projectId: string }) {
             controls
             preload="metadata"
             src={fileUrl(api, projectId, "video")}
-            className="max-h-[720px] rounded-panel border border-line bg-black"
+            className="max-h-[720px] w-auto rounded-panel border border-line bg-black"
           />
           <p className="mt-[10px]">
             <a
@@ -133,15 +130,13 @@ function StageRow({
 }) {
   const running = stage.state === "running";
   return (
+    // The rundown's column order: lamp, glyph, name, summary, state word at the right.
     <Rail>
+      <Lamp state={stage.state} />
       <StageGlyph kind={stage.kind} className="text-ink2" />
       <span className="w-[110px] shrink-0 font-semibold">{stageNames[stage.kind]}</span>
       <span className="text-small text-ink2">{summaryOf(stage, outputs)}</span>
-      <StageLamp
-        label={stageNames[stage.kind]}
-        state={stage.state}
-        className="ml-auto flex-row-reverse"
-      />
+      <StateWord state={stage.state} announce={stageNames[stage.kind]} className="ml-auto" />
       {running && stage.progressTotal !== null ? (
         <RailMeter current={stage.progressCurrent ?? 0} total={stage.progressTotal} />
       ) : null}
