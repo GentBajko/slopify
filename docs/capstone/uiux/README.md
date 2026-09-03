@@ -6,7 +6,7 @@ source: uiux-interview.md (Q1-Q19)
 
 # Slopify UI/UX design
 
-Committed frontend design: direction, system, experience rules, one chapter per screen. `stack` honours `02-system.md`; `build` implements `screens/` and the Implementation constraints. Every decision traces to `../uiux-interview.md §Q<n>` or is marked "assumed" here.
+Committed frontend design: direction, system, experience rules. `stack` honours `02-system.md`; `build` implemented the Implementation constraints. The per-screen chapters and the design assets were removed once the screens were built (see the ledger, 2026-09-03); the code in `packages/web/src/routes/` and `packages/web/src/play/` is now the description of every screen, and git history holds the chapters. Every decision traces to `../uiux-interview.md §Q<n>` or is marked "assumed" here.
 
 ## Chapters
 
@@ -15,20 +15,10 @@ Committed frontend design: direction, system, experience rules, one chapter per 
 | [01-direction.md](01-direction.md) | all | all | Q1-Q14, Q19 |
 | [02-system.md](02-system.md) | all | all | Q5, Q7-Q9, Q15-Q17, Q19 |
 | [03-experience.md](03-experience.md) | all | 01, 02, 04, 12, 13 | Q4, Q18, Q19 |
-| [screens/01-marketing-page.md](screens/01-marketing-page.md) | mockup/01 | 16 | Q1, Q13, Q15, Q17, Q18 |
-| [screens/02-first-run-notice.md](screens/02-first-run-notice.md) | mockup/02 | 16 | Q4, Q13, Q18 |
-| [screens/03-settings.md](screens/03-settings.md) | mockup/03 | 02, 11 | Q13, Q17, Q18, Q19 |
-| [screens/04-prompts.md](screens/04-prompts.md) | mockup/04 | 03, 15 | Q13, Q18 |
-| [screens/05-prompt-editor.md](screens/05-prompt-editor.md) | mockup/05 | 03, 15 | Q13, Q15, Q18 |
-| [screens/06-play.md](screens/06-play.md) | mockup/06 | 02, 03, 04, 05, 08, 10 | Q13, Q14, Q17, Q18 |
-| [screens/07-projects.md](screens/07-projects.md) | mockup/07 | 01, 14 | Q13, Q18 |
-| [screens/08-project.md](screens/08-project.md) | mockup/08 | 01, 06-13 | Q13, Q17, Q18 |
-| [screens/09-intros-outros.md](screens/09-intros-outros.md) | none (logic §Q90-§Q98) | 07, 08, 15 | Q13, Q18 |
-| [screens/10-usage.md](screens/10-usage.md) | none (logic §Q119) | 16 | Q13, Q15, Q18 |
 
 ## Assets
 
-`assets/`: `logo-mark.svg` (the mark, evenodd, `currentColor`), `favicon.svg`, `app-icon.svg`, `stage-research.svg`, `stage-article.svg`, `stage-audio.svg`, `stage-images.svg`, `stage-thumbnail.svg`, `stage-video.svg` (§Q5-§Q9). `assets/reference-play.html` is a reference sample of the Play screen and a project rundown in both themes, saved at the user's request (§Q19) as a build-time reference; it is not a generated chapter and the markdown wins where they disagree.
+Design assets now live with the code that serves them: `packages/web/src/assets/` (the mark, the favicon, the six stage glyphs), `packages/web/public/` (`favicon.svg`, `app-icon.svg`), and `packages/site/public/assets/`. `uiux/` keeps no copies.
 
 ## Assumed
 

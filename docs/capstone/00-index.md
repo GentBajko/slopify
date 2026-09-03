@@ -59,12 +59,10 @@ Slopify: a self-hosted, single-user content pipeline (research → article → T
 | [mockup/06-play.md](mockup/06-play.md) | Screen: run configuration and play |
 | [mockup/07-projects.md](mockup/07-projects.md) | Screen: projects list |
 | [mockup/08-project.md](mockup/08-project.md) | Screen: project pipeline view |
-| [uiux/README.md](uiux/README.md) | UI/UX design index: chapters, screens, assets, assumed items |
+| [uiux/README.md](uiux/README.md) | UI/UX design index: direction, system, experience, assumed items |
 | [uiux/01-direction.md](uiux/01-direction.md) | Design read, mode map, the control-room direction contract |
 | [uiux/02-system.md](uiux/02-system.md) | Tokens: type, colour per theme, spacing, icons, motion, component library, implementation constraints |
 | [uiux/03-experience.md](uiux/03-experience.md) | Interaction rules every screen applies |
-| [uiux/screens/](uiux/screens/) | One design chapter per screen (01-10) |
-| [uiux/assets/](uiux/assets/) | Logo mark, favicon, app icon, stage glyphs, reference-play.html, reference-screens.html (all ten screens, both themes - the binding visual reference) |
 | [implementation.md](implementation.md) | The approved build plan: module layout, load-bearing code sketches, 25-step build order with verifications, coverage table |
 | [standards.md](standards.md) | Binding code standards the user set; outranks generic best practice |
 | [changelog.md](changelog.md) | Append-only ledger of every stage run and its decisions |

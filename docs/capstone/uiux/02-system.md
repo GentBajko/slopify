@@ -79,7 +79,7 @@ Theme switching (§Q19): `prefers-color-scheme` by default, overridden by the Se
 
 ## Iconography (§Q5, §Q9)
 
-Lucide, 24 px grid, 2 px stroke, round caps and joins, one weight everywhere. The six stage glyphs in `assets/stage-*.svg` follow the same grid and stroke so they sit in Lucide rows unnoticed; they carry no drip. Brand assets: `assets/logo-mark.svg` (evenodd, `currentColor`), `assets/favicon.svg`, `assets/app-icon.svg`. No emoji, no hand-rolled decorative SVG.
+Lucide, 24 px grid, 2 px stroke, round caps and joins, one weight everywhere. The six stage glyphs in `packages/web/src/assets/stage-*.svg` follow the same grid and stroke so they sit in Lucide rows unnoticed; they carry no drip. Brand assets: `packages/web/src/assets/logo-mark.svg` (evenodd, `currentColor`), `packages/web/public/favicon.svg`, `packages/web/public/app-icon.svg`. No emoji, no hand-rolled decorative SVG.
 
 ## Motion (§Q17, §Q18)
 
@@ -112,14 +112,11 @@ Project-specific additions:
 
 - Lamps never convey state alone; the state word is always rendered beside them (§Q18).
 - The accent is text only on the dark theme; on light it is a fill with `--accent-ink` text, and `--run-text` carries the running word.
-- Stage glyphs come from `docs/capstone/uiux/assets/` verbatim; they are not redrawn.
+- Stage glyphs come from `packages/web/src/assets/` verbatim; they are not redrawn.
 - The wordmark is live text in Barlow 800 beside the mark, never a rasterised lockup.
-- `assets/reference-play.html` is a user-requested reference sample of the Play screen and a project rundown in both themes; the markdown chapters win where they disagree.
 
 ## Binding visual reference
 
-`assets/reference-screens.html` (user, 2026-09-03: "this is exactly how the page has to look like") renders all ten screens in both themes from one token block, and outranks any prose in this chapter where the two disagree. Its `:root` / `[data-theme="light"]` custom properties are the authoritative palette; its `data-lamp`, `data-word`, `data-seg`, `data-nav`, `data-dis`, `data-pressed`, `data-err` and `data-ph` attribute rules are the authoritative state styling.
+The rendered ten-screen reference the user supplied on 2026-09-03 ("this is exactly how the page has to look like") governed every screen step and was removed with the rest of `assets/` once they were built. Its palette and its state styling live on as `packages/web/src/styles/index.css`'s `@theme` tokens and `[data-theme]` blocks, which were measured against it; git history holds the file.
 
-One amendment the user made at the same time: the marketing page's hero still `<img src="assets/play-screen.png">` in the reference, but it ships as a **video** of a real run, not a still.
-
-`assets/reference-play.html` is the earlier single-screen study it supersedes.
+One amendment the user made at the same time and which still stands: the marketing page's hero is a **video** of a real run, not the still the reference drew.

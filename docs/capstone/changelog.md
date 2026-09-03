@@ -5,6 +5,15 @@ capstone_version: 5.2.0
 
 # Changelog
 
+## 2026-09-03 - uiux: assets and screens removed
+key: uiux/purge@Q19
+- User, before publishing: "the assets and screens folders need to be purged. Assets have to stay in the app not docs."
+- Removed: `uiux/assets/` (logo-mark, favicon, six stage glyphs, `reference-play.html`, `reference-screens.html`) and `uiux/screens/` (the ten per-screen design chapters). Git history holds all of them.
+- Checked before removing: the eight SVGs the app uses are byte-identical copies already in `packages/web/src/assets/`, so nothing was lost. `app-icon.svg` existed only under `docs/` and was moved to `packages/web/public/app-icon.svg` rather than deleted. No source file imports anything from `docs/`; the 51 files that mention `uiux/screens/*` do so in comments citing the chapter a decision came from, and those citations are now pointers into history.
+- Repointed: `00-index.md` drops both companion rows; `uiux/README.md` drops the screens table and says where the assets now live; `02-system.md`'s icon section names `packages/web/src/assets/` and `packages/web/public/` instead of `assets/`, and its Binding visual reference section records that the reference governed every screen step and that its palette survives as `packages/web/src/styles/index.css`'s tokens.
+- `uiux/` keeps `01-direction.md`, `02-system.md`, `03-experience.md` and its README. `docs/` never shipped to npm (`files: ["dist"]`), so this is repository hygiene rather than a change to what is published.
+- Verified after: 1411 tests, lint, typecheck and build all clean; `packages/web/dist/` carries `app-icon.svg` and `favicon.svg`.
+
 ## 2026-09-03 - build: all steps complete
 key: build/all@Q3
 - Steps S7-S24 complete, closing the plan: settings and provider readiness, the ports and the attempt wrapper, the prompt library, nine provider adapters across three families, all six pipeline stages, re-runs and cancel, telemetry counters and `/api/usage`, all ten screens, the marketing site, and the release pipeline.
