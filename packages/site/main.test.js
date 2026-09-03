@@ -23,6 +23,11 @@ describe("counterText", () => {
     expect(counterText(live, "images_made")).toBe("98,765");
     expect(counterText(live, "installs")).toBe("876");
     expect(counterText(live, "tokens_used")).toBe("1.2B");
+    expect(counterText({ tokens_used: 1_200_000 }, "tokens_used")).toBe("1.2M");
+    expect(counterText({ tokens_used: 4_300 }, "tokens_used")).toBe("4.3K");
+    expect(counterText({ tokens_used: 2_500_000_000_000 }, "tokens_used")).toBe("2.5T");
+    expect(counterText({ tokens_used: 999 }, "tokens_used")).toBe("999");
+    expect(counterText({ tokens_used: 0 }, "tokens_used")).toBe("0");
     expect(counterText(live, "audio_seconds")).toBe("4,321");
   });
 

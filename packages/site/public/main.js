@@ -16,16 +16,34 @@ export const pollIntervalMs = 5_000;
 export const dash = "—";
 
 const grouped = new Intl.NumberFormat("en-GB");
-const compact = new Intl.NumberFormat("en-GB", { notation: "compact", maximumFractionDigits: 1 });
-const hours = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 });
+const oneDecimal = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 });
+
+// The suffixes are ours rather than Intl's compact notation. Measured on 2026-09-03, the
+// same en-GB locale gives "1.2B" under Node 24 and "1.2bn" under Chrome, and a counter
+// that reads differently depending on the visitor's browser is not a counter.
+const tiers = [
+  [1e12, "T"],
+  [1e9, "B"],
+  [1e6, "M"],
+  [1e3, "K"],
+];
 
 const formats = {
   videos_made: (value) => grouped.format(Math.round(value)),
-  audio_seconds: (value) => hours.format(value / 3600),
+  audio_seconds: (value) => oneDecimal.format(value / 3600),
   images_made: (value) => grouped.format(Math.round(value)),
-  tokens_used: (value) => compact.format(Math.round(value)),
+  tokens_used: compactNumber,
   installs: (value) => grouped.format(Math.round(value)),
 };
+
+function compactNumber(value) {
+  for (const [size, suffix] of tiers) {
+    if (value >= size) {
+      return `${oneDecimal.format(value / size)}${suffix}`;
+    }
+  }
+  return grouped.format(Math.round(value));
+}
 
 export function counterText(aggregates, key) {
   const format = formats[key];
