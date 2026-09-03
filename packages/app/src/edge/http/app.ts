@@ -11,9 +11,11 @@ import type { Paths } from "../../kernel/paths.js";
 import type { Runner } from "../../kernel/runner/index.js";
 import type { CliProbe } from "../../slices/settings/cli-status.js";
 import type { Hub } from "../events/hub.js";
+import { entryRoutes } from "./entries.js";
 import { fileRoutes } from "./files.js";
 import { problem, problemFromError, titleOf } from "./problem.js";
 import { projectRoutes } from "./projects.js";
+import { promptRoutes } from "./prompts.js";
 import { providerRoutes } from "./providers.js";
 import { settingsRoutes } from "./settings.js";
 import { stagingRoutes } from "./staging.js";
@@ -56,6 +58,8 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
     )
     .route("/staging", stagingRoutes(deps))
     .route("/projects", projectRoutes(deps))
+    .route("/prompts", promptRoutes(deps))
+    .route("/entries", entryRoutes(deps))
     .route("/telemetry", telemetryRoutes(deps))
     .route("/settings", settingsRoutes(deps))
     .route("/providers", providerRoutes(deps));
