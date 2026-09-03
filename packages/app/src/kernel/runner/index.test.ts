@@ -498,3 +498,131 @@ describe("abortAll", () => {
     await expect(runner.abortAll()).resolves.toBeUndefined();
   });
 });
+
+describe("abortProject", () => {
+  // `logic/13` D14: "other projects are untouched", so the barrier and the aborts are
+  // both per project and this store carries more than one.
+  interface Rows {
+    readonly store: StageStore;
+    readonly stateOf: (stageId: string) => StageState;
+  }
+
+  function rowsFor(
+    projects: readonly string[],
+    initial: Partial<Record<StageKind, StageState>> = {},
+  ): Rows {
+    const rows: RunnerStage[] = projects.flatMap((projectId) =>
+      stageKinds.map((kind) => ({
+        id: `${projectId}:${kind}`,
+        projectId,
+        kind,
+        state: initial[kind] ?? "pending",
+      })),
+    );
+    const replace = (id: string, state: StageState): void => {
+      const at = rows.findIndex((row) => row.id === id);
+      const row = rows[at];
+      if (row !== undefined) {
+        rows[at] = { ...row, state };
+      }
+    };
+    return {
+      store: {
+        stagesOf: (projectId) => rows.filter((row) => row.projectId === projectId),
+        claim: (stageId) => {
+          if (rows.find((row) => row.id === stageId)?.state !== "pending") {
+            return false;
+          }
+          replace(stageId, "running");
+          return true;
+        },
+        finish: (stageId, state) => {
+          replace(stageId, state);
+        },
+      },
+      stateOf: (stageId) => rows.find((row) => row.id === stageId)?.state ?? "pending",
+    };
+  }
+
+  function runnerOver(rows: Rows, runs: Partial<Record<StageKind, StageRun>>): Runner {
+    return createRunner({
+      stages: rows.store,
+      runs,
+      emit: (): void => {},
+      emitRunningCount: (): void => {},
+      log,
+    });
+  }
+
+  const ends: Partial<Record<StageKind, StageState>> = {
+    research: "skipped",
+    article: "provided",
+    audio: "provided",
+    images: "provided",
+    thumbnail: "skipped",
+  };
+
+  it("stops the project it names and leaves every other project running", async () => {
+    const rows = rowsFor(["p1", "p2"], ends);
+    const held: StageRun = ({ signal }) =>
+      new Promise<void>((_resolve, reject) => {
+        signal.addEventListener("abort", () => {
+          reject(new Error("aborted"));
+        });
+      });
+    const runner = runnerOver(rows, { video: held });
+
+    runner.tick("p1");
+    runner.tick("p2");
+    await runner.abortProject("p1");
+
+    expect(rows.stateOf("p1:video")).toBe("canceled");
+    expect(rows.stateOf("p2:video")).toBe("running");
+    await runner.abortAll();
+  });
+
+  // §Q113 with the barrier: the stage stays `done`, and the hand-over its own tick would
+  // have made must not start the video under a controller the cancel never touched.
+  it("keeps a stage that finished during the cancel done and starts no dependent", async () => {
+    const rows = rowsFor(["p1"], {
+      research: "skipped",
+      article: "provided",
+      thumbnail: "skipped",
+    });
+    const started: StageKind[] = [];
+    const finishes: StageRun = async ({ stage }): Promise<void> => {
+      started.push(stage.kind);
+      await new Promise((resolve) => setTimeout(resolve, 2));
+    };
+    const runner = runnerOver(rows, { audio: finishes, images: finishes, video: finishes });
+
+    runner.tick("p1");
+    await runner.abortProject("p1");
+
+    expect(rows.stateOf("p1:audio")).toBe("done");
+    expect(rows.stateOf("p1:images")).toBe("done");
+    expect(rows.stateOf("p1:video")).toBe("pending");
+    expect(started).toEqual(["audio", "images"]);
+  });
+
+  // §Q111: a canceled project never resumes on its own, but Retry does resume it - so the
+  // barrier is only up for as long as the cancel takes.
+  it("lets a later tick start the stage a retry made pending", async () => {
+    const rows = rowsFor(["p1"], ends);
+    const runner = runnerOver(rows, { video: ok });
+
+    await runner.abortProject("p1");
+    runner.tick("p1");
+    await runner.settled();
+
+    expect(rows.stateOf("p1:video")).toBe("done");
+  });
+
+  it("does nothing when the project has nothing in flight", async () => {
+    const rows = rowsFor(["p1"], ends);
+    const runner = runnerOver(rows, {});
+
+    await expect(runner.abortProject("p1")).resolves.toBeUndefined();
+    expect(rows.stateOf("p1:video")).toBe("pending");
+  });
+});

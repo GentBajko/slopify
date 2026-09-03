@@ -78,6 +78,7 @@ function harness(
     runner: {
       tick: (): void => {},
       settled: async (): Promise<void> => {},
+      abortProject: async (): Promise<void> => {},
       abortAll: async (): Promise<void> => {},
     },
     ids,

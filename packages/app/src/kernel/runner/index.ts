@@ -39,6 +39,9 @@ export interface RunnerDeps {
 export interface Runner {
   readonly tick: (projectId: string) => void;
   readonly settled: () => Promise<void>;
+  // `logic/13` step 1: abort every in-flight call of one project at once and wait for
+  // them to stop, leaving every other project running (§Q113, D14).
+  readonly abortProject: (projectId: string) => Promise<void>;
   readonly abortAll: () => Promise<void>;
 }
 
@@ -55,6 +58,12 @@ export function createRunner(deps: RunnerDeps): Runner {
   // Evicting on a terminal state would re-announce that state on the next tick of the
   // same project, so the upgrade is to drop the entry when the project is deleted.
   const announced = new Map<string, ProjectState>();
+  // The projects a cancel is walking through. It is a set rather than a flag because
+  // `logic/13` D14 leaves every other project untouched, and it is held for the whole of
+  // abortProject rather than for the abort call alone: a stage of this project that
+  // stores its output in the same instant as the cancel stays `done` (§Q113), and its
+  // hand-over to the next stage is exactly what must not happen.
+  const stopped = new Set<string>();
   let count = 0;
   let shuttingDown = false;
 
@@ -174,10 +183,11 @@ export function createRunner(deps: RunnerDeps): Runner {
   }
 
   function tick(projectId: string): void {
-    // A stage that finished in the same instant as the shutdown would otherwise release
-    // its dependent, and abortAll would then be waiting on a render nobody asked for.
-    // The project's state still goes out, so an open page sees the run stop.
-    if (!shuttingDown) {
+    // A stage that finished in the same instant as the shutdown or a cancel would
+    // otherwise release its dependent, and the abort would then be waiting on a render
+    // nobody asked for - or, worse, leaving one running under a controller nobody
+    // aborted. The project's state still goes out, so an open page sees the run stop.
+    if (!shuttingDown && !stopped.has(projectId)) {
       startEligible(projectId);
     }
     announce(projectId);
@@ -208,9 +218,39 @@ export function createRunner(deps: RunnerDeps): Runner {
     }
   }
 
+  async function settledOf(projectId: string): Promise<void> {
+    for (;;) {
+      const waiting = [...inflight.values()].filter((entry) => entry.projectId === projectId);
+      if (waiting.length === 0) {
+        return;
+      }
+      await Promise.all(waiting.map((entry) => entry.settled));
+    }
+  }
+
   return {
     tick,
     settled,
+    abortProject: async (projectId: string): Promise<void> => {
+      // Up before the first abort and down only once every stage of the project has
+      // stopped: in between, the tick each finishing stage fires starts nothing.
+      stopped.add(projectId);
+      try {
+        for (const entry of inflight.values()) {
+          if (entry.projectId === projectId) {
+            entry.controller.abort();
+          }
+        }
+        // §Q109's invariant: "no provider call of the project continues after cancel
+        // returns". Waiting here is what makes that true rather than hoped for.
+        await settledOf(projectId);
+      } finally {
+        stopped.delete(projectId);
+      }
+      // The last stage's own tick announced the project while the barrier was up and the
+      // rows may not all have been written yet; this is the state the user asked for.
+      announce(projectId);
+    },
     abortAll: async (): Promise<void> => {
       shuttingDown = true;
       for (const entry of inflight.values()) {

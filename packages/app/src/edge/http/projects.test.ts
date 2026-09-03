@@ -49,6 +49,7 @@ function harness(): Harness {
         ).run(projectId);
       },
       settled: async (): Promise<void> => {},
+      abortProject: async (): Promise<void> => {},
       abortAll: async (): Promise<void> => {},
     },
     clock,
