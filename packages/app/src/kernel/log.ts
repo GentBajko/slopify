@@ -44,6 +44,8 @@ export function openLog(logsDir: string, clock: Clock): Log {
   };
 }
 
-function redact(text: string): string {
+// Exported for the attempt wrapper: a provider's verbatim error is shown on the project
+// page and stored on the attempt, so it goes through the same filter as a log line.
+export function redact(text: string): string {
   return text.replace(bearerLike, "Bearer [redacted]").replace(keyLike, "[redacted]");
 }
