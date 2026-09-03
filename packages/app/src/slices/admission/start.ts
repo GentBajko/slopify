@@ -1,6 +1,7 @@
 import { transact } from "../../kernel/db/tx.js";
 import type { StageKind, StageState } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
+import { storeArticleText } from "../article/store.js";
 import type { StorageDeps } from "../storage/staging.js";
 import { attachStagedFile, dropStagedSource, storeText } from "../storage/staging.js";
 import type { Project, RunConfig, RunDraft, Stage, StageSource } from "./model.js";
@@ -87,12 +88,10 @@ function attachProvided(
     });
   }
   if (sources.article === "provide" && provided.article !== undefined) {
-    storeText(deps, {
-      projectId,
-      stageKind: "article",
-      role: "article_txt",
-      text: provided.article.trim(),
-    });
+    // logic/08 step 1: the end-matter split runs when the article becomes done *or
+    // provided*, so a pasted Sources Consulted list is cut into its own file here exactly
+    // as the article stage cuts a written one, and never reaches the narration.
+    storeArticleText(deps, { projectId, markdown: provided.article.trim() });
   }
   if (sources.audio === "provide") {
     attach(deps, projectId, "audio", provided.audio, "audio_body", collected);

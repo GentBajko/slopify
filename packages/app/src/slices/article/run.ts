@@ -16,8 +16,7 @@ import { outputsOf } from "../storage/repo.js";
 import { storeText } from "../storage/staging.js";
 import type { ArticleBrief, SentMessages } from "./continuation.js";
 import { writeArticle } from "./continuation.js";
-import { plainText } from "./plain.js";
-import { splitEndMatter } from "./split.js";
+import { storeArticleText } from "./store.js";
 
 // `logic/07`: one streamed call writes the article from the research notes and the
 // rendered prompt, its end matter is cut into files of its own, and the picked intro and
@@ -74,17 +73,9 @@ export async function runArticle(
 
   // Step 4: the markdown exactly as the model produced it, and the plain-text narration
   // source. §Q63 keeps the end matter out of the narration and beside the article instead.
-  const end = splitEndMatter(written.markdown);
   const store = { projectId, stageKind: "article" } as const;
   storeText(deps, { ...store, role: "article_md", text: written.markdown });
-  const narration = plainText(end.body);
-  storeText(deps, { ...store, role: "article_txt", text: narration });
-  if (end.sources.trim() !== "") {
-    storeText(deps, { ...store, role: "sources", text: end.sources });
-  }
-  if (end.glossary.trim() !== "") {
-    storeText(deps, { ...store, role: "glossary", text: end.glossary });
-  }
+  const narration = storeArticleText(deps, { projectId, markdown: written.markdown });
 
   const sent = [...written.sent];
   for (const [index, category] of categories.entries()) {
