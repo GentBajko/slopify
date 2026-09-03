@@ -6,6 +6,7 @@ import { join } from "node:path";
 import ffmpegStatic from "ffmpeg-static";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Config } from "../src/kernel/config/index.js";
+import { readVersion } from "../src/kernel/version.js";
 import { boot } from "../src/main.js";
 import type { RunDraft } from "../src/slices/admission/model.js";
 import { resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
@@ -185,12 +186,15 @@ describe("a run against a collector", () => {
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
     );
 
+    // Read rather than pinned: every release bumps it, and a literal here fails the
+    // suite on the version commit itself.
+    const appVersion = readVersion();
     expect(
       collector.received.map((event) => ({ type: event.type, payload: event.payload })),
     ).toEqual([
-      { type: "install", payload: { appVersion: "0.0.0" } },
-      { type: "project.created", payload: { appVersion: "0.0.0" } },
-      { type: "stage.completed", payload: { appVersion: "0.0.0", stage: "video" } },
+      { type: "install", payload: { appVersion } },
+      { type: "project.created", payload: { appVersion } },
+      { type: "stage.completed", payload: { appVersion, stage: "video" } },
     ]);
 
     for (const event of collector.received) {
