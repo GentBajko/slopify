@@ -1,5 +1,60 @@
-/* The tokens of uiux/02-system.md, verbatim. S23 fills in the remaining bands of
-   uiux/screens/01-marketing-page.md against these same values. */
+/* The tokens and the layout of uiux/assets/reference-screens.html, which the user gave as
+   the binding picture of this page. Where the prose chapters and the reference disagree,
+   the reference wins. */
+
+/* Barlow and Barlow Condensed, the latin subsets only, copied out of @fontsource at
+   build S23 and served from this origin. Self-hosted rather than fetched from Google's
+   CDN: a page whose whole claim is that nothing leaves your machine should not make a
+   third party watch you read it. The OFL text ships beside the files as required.
+   ceiling: latin only. A visitor whose name needs latin-ext or Vietnamese gets the
+   system UI face for those glyphs; the fix is copying two more subsets in. */
+@font-face {
+  font-family: Barlow;
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/assets/fonts/barlow-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: Barlow;
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/assets/fonts/barlow-latin-600-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: Barlow;
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/assets/fonts/barlow-latin-700-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: Barlow;
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("/assets/fonts/barlow-latin-800-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Barlow Condensed";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/assets/fonts/barlow-condensed-latin-600-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Barlow Condensed";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/assets/fonts/barlow-condensed-latin-700-normal.woff2") format("woff2");
+}
 
 :root {
   color-scheme: dark light;
@@ -16,14 +71,17 @@
   --accent-ink: #17200b;
   --accent-edge: #6d9333;
   --focus: #9bcb4f;
+  --lamp-run: #9bcb4f;
+  --lamp-off: #2c2c33;
+  --lamp-ring: #3a3a42;
+  --halo: rgb(155 203 79 / 18%);
+  --done: #6f9a3a;
+  --screen: #0b0b0d;
 
   --radius-control: 4px;
   --radius-sheet: 6px;
   --step: 4px;
 
-  /* ceiling: the self-hosted @fontsource Barlow and Barlow Condensed faces land in S23
-     with the rest of the page; until then the stack falls back to the system UI face,
-     which keeps the metrics close enough not to relayout on arrival. */
   --face: Barlow, ui-sans-serif, system-ui, sans-serif;
   --face-engraved: "Barlow Condensed", Barlow, ui-sans-serif, system-ui, sans-serif;
 }
@@ -38,7 +96,14 @@
     --ink: #1c1c1e;
     --ink2: #5c5b56;
     --ink3: #6b6a64;
+    --accent-edge: #6e9a33;
     --focus: #5f8a2b;
+    --lamp-run: #5f8a2b;
+    --lamp-off: #dedcd4;
+    --lamp-ring: #c9c7be;
+    --halo: rgb(95 138 43 / 18%);
+    --done: #55673f;
+    --screen: #1c1c1e;
   }
 }
 
@@ -67,9 +132,15 @@ body {
   text-decoration-color: var(--focus);
 }
 
-:where(a, button):focus-visible {
+:where(a, button, [tabindex]):focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
+}
+
+code {
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .visually-hidden {
@@ -99,9 +170,15 @@ body {
   top: calc(var(--step) * 4);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .skip-link {
+    transition: none;
+  }
+}
+
 .engraved {
   font-family: var(--face-engraved);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 12px;
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -109,22 +186,98 @@ body {
   margin: 0;
 }
 
+.engraved-strong {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.page {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 calc(var(--step) * 12);
+}
+
+/* Lamps ------------------------------------------------------------------- */
+
+/* Never on their own: the reference pairs every lamp with the state word beside it, so
+   the colour is a second reading of something already written down. */
+.lamp {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--lamp-off);
+  box-shadow: inset 0 0 0 1px var(--lamp-ring);
+}
+
+.lamp[data-lamp="run"] {
+  background: var(--lamp-run);
+  box-shadow: 0 0 0 3px var(--halo);
+  animation: lamp-pulse 1.2s ease-in-out infinite;
+}
+
+.lamp[data-lamp="done"] {
+  background: var(--done);
+  box-shadow: none;
+}
+
+@keyframes lamp-pulse {
+  50% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lamp[data-lamp="run"] {
+    animation: none;
+  }
+}
+
+/* Icons ------------------------------------------------------------------- */
+
+/* The service marks are single-colour silhouettes painted as masks, the same trick the
+   logo uses, so one file covers both themes and every size. */
+.glyph {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+.glyph-large {
+  width: 26px;
+  height: 26px;
+}
+
+.glyph-patreon,
+.glyph-coffee {
+  display: inline-block;
+  background-color: var(--lamp-run);
+}
+
+.glyph-patreon {
+  -webkit-mask: url("/assets/patreon.svg") center / contain no-repeat;
+  mask: url("/assets/patreon.svg") center / contain no-repeat;
+}
+
+.glyph-coffee {
+  -webkit-mask: url("/assets/buymeacoffee.svg") center / contain no-repeat;
+  mask: url("/assets/buymeacoffee.svg") center / contain no-repeat;
+}
+
 /* Masthead ---------------------------------------------------------------- */
 
 .masthead {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: calc(var(--step) * 4);
-  padding: calc(var(--step) * 3.5) calc(var(--step) * 4);
-  border-bottom: 1px solid var(--line);
-  background: var(--panel);
+  gap: calc(var(--step) * 6);
+  height: 64px;
 }
 
 .wordmark {
   display: inline-flex;
   align-items: baseline;
-  gap: calc(var(--step) * 2);
+  gap: calc(var(--step) * 2.5);
+  margin-right: auto;
   font-weight: 800;
   font-size: 20px;
   letter-spacing: -0.02em;
@@ -151,27 +304,44 @@ body {
 .mark-hero {
   width: 96px;
   height: 96px;
-  margin-bottom: calc(var(--step) * 4);
 }
 
-.masthead nav {
-  font-family: var(--face-engraved);
-  font-weight: 600;
-  font-size: 12px;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+.masthead-links {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--step) * 6);
+}
+
+.masthead-links a,
+.colophon-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--step) * 1.5);
+  color: var(--ink2);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.masthead-links a:hover,
+.colophon-links a:hover {
+  color: var(--ink);
 }
 
 /* Hero -------------------------------------------------------------------- */
 
 .hero {
   display: grid;
-  grid-template-columns: 60fr 40fr;
-  gap: calc(var(--step) * 12);
+  grid-template-columns: 3fr 2fr;
+  gap: calc(var(--step) * 14);
   align-items: start;
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: calc(var(--step) * 16) calc(var(--step) * 4) calc(var(--step) * 12);
+  padding: calc(var(--step) * 16) 0 calc(var(--step) * 18);
+}
+
+.hero-pitch {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--step) * 6);
+  max-width: 560px;
 }
 
 h1 {
@@ -179,93 +349,92 @@ h1 {
   font-size: 32px;
   font-weight: 800;
   letter-spacing: -0.02em;
-  line-height: 1.15;
+  line-height: 1.1;
 }
 
 .lede {
-  max-width: 65ch;
-  margin: calc(var(--step) * 3) 0 0;
+  max-width: 34ch;
+  margin: 0;
   color: var(--ink2);
-  font-size: 16px;
+  font-size: 18px;
+  text-wrap: pretty;
 }
 
 .command {
-  margin-top: calc(var(--step) * 8);
-}
-
-.command-plate {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: calc(var(--step) * 4);
-  margin-top: calc(var(--step) * 2.5);
-  padding: calc(var(--step) * 3) calc(var(--step) * 3) calc(var(--step) * 3) calc(var(--step) * 4);
-  background: var(--panel2);
-  border: 1px solid var(--line2);
-  border-radius: var(--radius-sheet);
-}
-
-.command-plate code {
-  font-family: var(--face);
-  font-weight: 600;
-  font-size: 16px;
-  color: var(--ink);
-}
-
-.key {
-  padding: calc(var(--step) * 2) calc(var(--step) * 5);
-  font-family: var(--face-engraved);
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--accent-ink);
-  background: var(--accent);
-  border: 0;
-  border-bottom: 3px solid var(--accent-edge);
-  border-radius: var(--radius-sheet);
-  cursor: pointer;
-}
-
-.key:active {
-  transform: translateY(3px);
-  border-bottom-width: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .key:active {
-    transform: none;
-  }
-}
-
-/* Tally board ------------------------------------------------------------- */
-
-.tally {
-  padding: calc(var(--step) * 4.5);
+  gap: calc(var(--step) * 3);
+  max-width: 440px;
+  margin-top: calc(var(--step) * 2);
+  padding: calc(var(--step) * 2.5) calc(var(--step) * 2.5) calc(var(--step) * 2.5)
+    calc(var(--step) * 4.5);
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius-sheet);
 }
 
+.command code {
+  flex: 1;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+}
+
+.key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--step) * 1.5);
+  min-width: 96px;
+  min-height: 32px;
+  padding: calc(var(--step) * 2) calc(var(--step) * 3.5);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border: 0;
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+
+.key-glyph {
+  width: 15px;
+  height: 15px;
+}
+
+.key-glyph-done,
+.key[data-copied] .key-glyph-copy {
+  display: none;
+}
+
+.key[data-copied] .key-glyph-done {
+  display: inline;
+}
+
+/* Tally board ------------------------------------------------------------- */
+
+.tally {
+  margin-top: calc(var(--step) * 3);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sheet);
+  overflow: hidden;
+}
+
 .tally-board {
-  display: grid;
-  gap: calc(var(--step) * 4);
-  margin: calc(var(--step) * 2.5) 0 0;
+  margin: 0;
 }
 
 .tally-item {
   display: flex;
-  /* The value reads above its engraved label; the label comes first in the markup so a
-     screen reader hears what the number is before it hears the number. */
-  flex-direction: column-reverse;
-  gap: calc(var(--step));
-  padding-bottom: calc(var(--step) * 3);
-  border-bottom: 1px solid var(--line);
-}
-
-.tally-item:last-child {
-  padding-bottom: 0;
-  border-bottom: 0;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--step) * 4);
+  /* The negative margin lands the first row's rule on the sheet's own border instead of
+     one pixel below it. */
+  margin-top: -1px;
+  padding: calc(var(--step) * 4) calc(var(--step) * 4.5);
+  border-top: 1px solid var(--line);
 }
 
 .tally-item dd {
@@ -273,52 +442,348 @@ h1 {
   font-size: 32px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  line-height: 1.1;
+  letter-spacing: -0.01em;
+  line-height: 1;
 }
 
-.tally-status {
-  margin: calc(var(--step) * 4) 0 0;
+/* Anything slower than about a second shows the final shape rather than a spinner
+   (uiux/03-experience). The bars are the row's own two boxes, emptied. */
+.tally[data-loading] .tally-item {
+  align-items: center;
+  padding-block: calc(var(--step) * 5.5);
+}
+
+.tally[data-loading] dt,
+.tally[data-loading] dd {
+  overflow: hidden;
+  color: transparent;
+  background: var(--panel2);
+  border-radius: var(--radius-control);
+}
+
+.tally[data-loading] dt {
+  width: 90px;
+  height: 10px;
+}
+
+.tally[data-loading] dd {
+  width: 140px;
+  height: 22px;
+}
+
+.tally-foot {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--step) * 2);
+  margin: 0;
+  padding: calc(var(--step) * 3) calc(var(--step) * 4.5);
+  background: var(--panel2);
+  border-top: 1px solid var(--line);
+  color: var(--ink2);
+  font-size: 12px;
+}
+
+/* Showcase ---------------------------------------------------------------- */
+
+.showcase {
+  padding-bottom: calc(var(--step) * 18);
+}
+
+.showcase-figure {
+  margin: 0;
+}
+
+.showcase-frame {
+  background: var(--screen);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sheet);
+  overflow: hidden;
+}
+
+.showcase-video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  background: var(--screen);
+}
+
+.showcase-caption {
+  margin: calc(var(--step) * 2.5) 0 0;
   color: var(--ink2);
   font-size: 13px;
 }
 
-.tally-status[hidden] {
-  display: none;
+.showcase-description {
+  max-width: 75ch;
+  margin: calc(var(--step) * 1.5) 0 0;
+  color: var(--ink3);
+  font-size: 13px;
+  text-wrap: pretty;
+}
+
+.support-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: calc(var(--step) * 3);
+  margin: calc(var(--step) * 7) 0 0;
+}
+
+.support-label {
+  margin-right: calc(var(--step));
+  color: var(--ink2);
+  font-size: 13px;
+}
+
+.support-key {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--step) * 2);
+  min-height: 32px;
+  padding: calc(var(--step) * 1.75) calc(var(--step) * 3.5);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--panel2);
+  border: 1px solid var(--line2);
+  border-radius: var(--radius-control);
+  text-decoration: none;
+}
+
+.support-key:hover {
+  border-color: var(--focus);
+}
+
+/* How to use and the options ---------------------------------------------- */
+
+.guide {
+  padding-bottom: calc(var(--step) * 18);
+}
+
+.guide h2 {
+  margin: 0 0 calc(var(--step) * 2.5);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.guide h3 {
+  margin: calc(var(--step) * 8) 0 calc(var(--step) * 2);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.guide-note {
+  max-width: 75ch;
+  margin: 0 0 calc(var(--step) * 2.5);
+  color: var(--ink2);
+  font-size: 13px;
+}
+
+.sheet,
+.rundown {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sheet);
+  overflow: hidden;
+}
+
+.rundown {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rundown-row {
+  display: grid;
+  grid-template-columns: 14px 110px 1fr;
+  gap: calc(var(--step) * 3.5);
+  align-items: baseline;
+  margin-top: -1px;
+  padding: calc(var(--step) * 3.5) calc(var(--step) * 4);
+  border-top: 1px solid var(--line);
+}
+
+.rundown-row .lamp {
+  position: relative;
+  top: 1px;
+}
+
+.rundown-row > span:last-child {
+  max-width: 75ch;
+  text-wrap: pretty;
+}
+
+.options {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.options th,
+.options td {
+  padding: calc(var(--step) * 3) calc(var(--step) * 4);
+  border-top: 1px solid var(--line);
+  vertical-align: top;
+  font-weight: 400;
+}
+
+.options thead th {
+  border-top: 0;
+}
+
+.options tbody th,
+.options tbody td:nth-child(2),
+.options tbody td:nth-child(3) {
+  white-space: nowrap;
+}
+
+.options-none {
+  color: var(--ink3);
+}
+
+/* Four columns need about 700 px before the sentence column starts wrapping every other
+   word, so below that each option becomes a card and the header row goes away. */
+@media (max-width: 700px) {
+  .options,
+  .options tbody,
+  .options tr,
+  .options th,
+  .options td {
+    display: block;
+  }
+
+  .options thead {
+    display: none;
+  }
+
+  .options tbody tr {
+    margin-top: -1px;
+    padding: calc(var(--step) * 3.5) calc(var(--step) * 4);
+    border-top: 1px solid var(--line);
+  }
+
+  .options th,
+  .options td {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    white-space: normal;
+  }
+
+  .options tbody th {
+    font-weight: 600;
+  }
+
+  .options td[data-label]::before {
+    content: attr(data-label) " ";
+    color: var(--ink3);
+  }
+
+  .options tbody td:last-child {
+    margin-top: calc(var(--step));
+  }
+}
+
+/* Free statement ---------------------------------------------------------- */
+
+.free {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: calc(var(--step) * 6);
+  padding: calc(var(--step) * 6) 0;
+  border-top: 1px solid var(--line);
+}
+
+.free-line {
+  margin: 0 auto 0 0;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.free-support {
+  margin: 0;
+  color: var(--ink2);
+  font-size: 13px;
+}
+
+.donate {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--step) * 1.5);
+  color: var(--ink);
+  font-size: 13px;
+  text-decoration: underline;
 }
 
 /* Colophon ---------------------------------------------------------------- */
 
 .colophon {
-  padding: calc(var(--step) * 6) calc(var(--step) * 4);
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: calc(var(--step) * 4.5);
+  padding: calc(var(--step) * 4.5) 0 calc(var(--step) * 10);
   border-top: 1px solid var(--line);
-  color: var(--ink2);
-  font-size: 13px;
+  color: var(--ink3);
+  font-size: 12px;
 }
 
 .colophon p {
-  max-width: 65ch;
-  margin: 0 auto;
+  max-width: 75ch;
+  margin: 0 auto 0 0;
+}
+
+.colophon-links {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: calc(var(--step) * 4.5);
+}
+
+.colophon-links .glyph {
+  width: 14px;
+  height: 14px;
 }
 
 /* Narrow ------------------------------------------------------------------ */
 
 @media (max-width: 900px) {
+  .page {
+    padding: 0 calc(var(--step) * 5);
+  }
+
   .hero {
     grid-template-columns: 1fr;
     gap: calc(var(--step) * 8);
-    padding-top: calc(var(--step) * 8);
+    padding: calc(var(--step) * 8) 0 calc(var(--step) * 12);
   }
 
-  .tally-board {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .tally-item:last-child {
-    padding-bottom: calc(var(--step) * 3);
-    border-bottom: 1px solid var(--line);
+  .tally {
+    margin-top: 0;
   }
 
   h1 {
     font-size: 24px;
+  }
+
+  .masthead {
+    height: auto;
+    flex-wrap: wrap;
+    gap: calc(var(--step) * 3) calc(var(--step) * 5);
+    padding: calc(var(--step) * 4) 0;
+  }
+
+  .rundown-row {
+    grid-template-columns: 14px 1fr;
+    row-gap: calc(var(--step));
+  }
+
+  .rundown-row > span:last-child {
+    grid-column: 2;
   }
 }

@@ -9,85 +9,332 @@
       content="A prompt and a few keywords in. A narrated slideshow video out. Your keys, your machine, free."
     />
     <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="/assets/fonts/barlow-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/styles.css" />
     <script type="module" src="/main.js"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
 
-    <header class="masthead">
-      <a class="wordmark" href="/">
-        <span class="mark mark-inline" aria-hidden="true"></span>
-        <span>SLOPIFY</span>
-      </a>
-      <nav aria-label="Project">
-        <a href="https://github.com/gentbajko/slopify">GitHub</a>
-      </nav>
-    </header>
+    <div class="page">
+      <header class="masthead">
+        <a class="wordmark" href="/">
+          <span class="mark mark-inline" aria-hidden="true"></span>
+          <span>Slopify</span>
+        </a>
+        <nav class="masthead-links" aria-label="Project and support">
+          <a href="https://github.com/gentbajko/slopify">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="glyph"
+              aria-hidden="true"
+            >
+              <path
+                d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"
+              ></path>
+              <path d="M9 18c-4.51 2-5-2-7-2"></path>
+            </svg>
+            GitHub
+          </a>
+          <!-- ceiling: PATREON_URL_PLACEHOLDER and BUY_ME_A_COFFEE_URL_PLACEHOLDER are the
+               only two unknowns on this page. The accounts exist as a decision, not as
+               URLs anybody has written down. Replace both strings everywhere they
+               appear once the pages are live: four hrefs each on this page and one line
+               each in the repository README. Inventing plausible ones would send money to
+               a stranger. -->
+          <a href="PATREON_URL_PLACEHOLDER">
+            <span class="glyph glyph-patreon" aria-hidden="true"></span>
+            Patreon
+          </a>
+          <a href="BUY_ME_A_COFFEE_URL_PLACEHOLDER">
+            <span class="glyph glyph-coffee" aria-hidden="true"></span>
+            Buy Me a Coffee
+          </a>
+        </nav>
+      </header>
 
-    <main id="main">
-      <section class="hero">
-        <div class="hero-pitch">
-          <span class="mark mark-hero" aria-hidden="true"></span>
-          <h1>Slop, on schedule.</h1>
-          <p class="lede">
-            A prompt and a few keywords in. A narrated slideshow video out. Your keys, your
-            machine, free.
-          </p>
-          <div class="command">
-            <span class="engraved">Install</span>
-            <div class="command-plate">
+      <main id="main">
+        <section class="hero">
+          <div class="hero-pitch">
+            <span class="mark mark-hero" aria-hidden="true"></span>
+            <h1>Slop, on schedule.</h1>
+            <p class="lede">
+              A prompt and a few keywords in. A narrated slideshow video out. Your keys, your
+              machine, free.
+            </p>
+            <div class="command">
               <code>npx slopify@latest</code>
-              <button
-                class="key"
-                type="button"
-                aria-label="Copy install command"
-                data-copy="npx slopify@latest"
-              >
-                Copy
+              <button class="key" type="button" data-copy="npx slopify@latest">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="key-glyph key-glyph-copy"
+                  aria-hidden="true"
+                >
+                  <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+                  <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+                </svg>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="key-glyph key-glyph-done"
+                  aria-hidden="true"
+                >
+                  <path d="M20 6 9 17l-5-5"></path>
+                </svg>
+                <span data-copy-label>Copy</span>
+                <span class="visually-hidden"> the install command</span>
               </button>
             </div>
             <span class="visually-hidden" role="status" data-copy-status></span>
           </div>
-        </div>
 
-        <section class="tally" aria-labelledby="tally-title">
-          <h2 class="engraved" id="tally-title">Live</h2>
-          <!-- The board is not a live region: five numbers re-announcing themselves every
-               five seconds would talk over everything else on the page. The one thing a
-               screen reader is told is the status line below, when the numbers go away. -->
-          <dl class="tally-board">
-            <div class="tally-item">
-              <dt class="engraved">videos made</dt>
-              <dd data-counter="videos_made">&mdash;</dd>
-            </div>
-            <div class="tally-item">
-              <dt class="engraved">audio hours</dt>
-              <dd data-counter="audio_seconds">&mdash;</dd>
-            </div>
-            <div class="tally-item">
-              <dt class="engraved">images made</dt>
-              <dd data-counter="images_made">&mdash;</dd>
-            </div>
-            <div class="tally-item">
-              <dt class="engraved">tokens used</dt>
-              <dd data-counter="tokens_used">&mdash;</dd>
-            </div>
-            <div class="tally-item">
-              <dt class="engraved">installs</dt>
-              <dd data-counter="installs">&mdash;</dd>
-            </div>
-          </dl>
-          <p class="tally-status" role="status" data-tally-status>live stats unavailable</p>
+          <section class="tally" aria-labelledby="tally-title" data-tally data-loading>
+            <h2 class="visually-hidden" id="tally-title">Live totals across every install</h2>
+            <!-- The board is not a live region: five numbers re-announcing themselves every
+                 five seconds would talk over everything else on the page. The one thing a
+                 screen reader is told is the status line below, when the numbers go away. -->
+            <dl class="tally-board">
+              <div class="tally-item">
+                <dt class="engraved">videos made</dt>
+                <dd data-counter="videos_made">&mdash;</dd>
+              </div>
+              <div class="tally-item">
+                <dt class="engraved">audio hours</dt>
+                <dd data-counter="audio_seconds">&mdash;</dd>
+              </div>
+              <div class="tally-item">
+                <dt class="engraved">images made</dt>
+                <dd data-counter="images_made">&mdash;</dd>
+              </div>
+              <div class="tally-item">
+                <dt class="engraved">tokens used</dt>
+                <dd data-counter="tokens_used">&mdash;</dd>
+              </div>
+              <div class="tally-item">
+                <dt class="engraved">installs</dt>
+                <dd data-counter="installs">&mdash;</dd>
+              </div>
+            </dl>
+            <!-- The foot ships dark and wordless: nothing has been asked of the collector
+                 yet when the page paints, and the first answer fills it in either way. -->
+            <p class="tally-foot">
+              <span class="lamp" data-tally-lamp aria-hidden="true"></span>
+              <span class="engraved engraved-strong" data-tally-word>Off</span>
+              <span role="status" data-tally-status></span>
+            </p>
+          </section>
         </section>
-      </section>
-    </main>
 
-    <footer class="colophon">
-      <p>
-        Anonymous usage stats power the counters above; nothing you write ever leaves your
-        machine.
-      </p>
-    </footer>
+        <section class="showcase" aria-labelledby="showcase-title">
+          <h2 class="visually-hidden" id="showcase-title">A run, recorded</h2>
+          <figure class="showcase-figure">
+            <div class="showcase-frame">
+              <!-- ceiling: the recording is the one asset this page is missing. Three
+                   files land together and no markup changes when they do:
+                   public/assets/play-run.mp4, its opening frame at
+                   public/assets/play-run-poster.png, and captions at
+                   public/assets/play-run.vtt (an empty cue list if the capture is
+                   silent). Until then the frame is deliberately empty. A still of the
+                   Play screen in its place would claim a run that never happened, which
+                   is the opposite of what the counters below are for. -->
+              <video
+                class="showcase-video"
+                controls
+                playsinline
+                preload="none"
+                width="1280"
+                height="720"
+                poster="/assets/play-run-poster.png"
+                aria-describedby="showcase-description"
+              >
+                <source src="/assets/play-run.mp4" type="video/mp4" />
+                <track kind="captions" src="/assets/play-run.vtt" srclang="en" label="English" />
+                <p>
+                  This browser cannot play the recording. The description below says what it
+                  shows.
+                </p>
+              </video>
+            </div>
+            <figcaption>
+              <p class="showcase-caption">
+                The Play screen. Six stage rails, one cue sheet, one key.
+              </p>
+              <p class="showcase-description" id="showcase-description">
+                The recording is one run from start to finish, with no narration and no cuts.
+                A prompt and three keywords go into the cue sheet, the green Play key is
+                pressed, and the six stage lamps light in order: research, article, audio,
+                images, thumbnail, video. Each lamp pulses while its stage runs and settles
+                when it finishes. The run ends on the project page with the finished mp4 and
+                its download links.
+              </p>
+            </figcaption>
+          </figure>
+          <p class="support-row">
+            <span class="support-label">Support the project</span>
+            <a class="support-key" href="PATREON_URL_PLACEHOLDER">
+              <span class="glyph glyph-large glyph-patreon" aria-hidden="true"></span>
+              Patreon
+            </a>
+            <a class="support-key" href="BUY_ME_A_COFFEE_URL_PLACEHOLDER">
+              <span class="glyph glyph-large glyph-coffee" aria-hidden="true"></span>
+              Buy Me a Coffee
+            </a>
+          </p>
+        </section>
+
+        <section class="guide" aria-labelledby="guide-title">
+          <h2 id="guide-title">How to use</h2>
+          <ol class="rundown">
+            <li class="rundown-row">
+              <span class="lamp" data-lamp="done" aria-hidden="true"></span>
+              <span class="engraved engraved-strong">Run it</span>
+              <span>
+                <code>npx slopify@latest</code> starts the app and opens a browser at
+                <code>http://127.0.0.1:4242</code>. Node 26 or newer, nothing else to install.
+              </span>
+            </li>
+            <li class="rundown-row">
+              <span class="lamp" data-lamp="done" aria-hidden="true"></span>
+              <span class="engraved engraved-strong">Keys</span>
+              <span>
+                Settings takes your own provider keys and voices. They are stored in
+                <code>~/.slopify/slopify.db</code> on your machine and are sent to the provider
+                you chose, nowhere else.
+              </span>
+            </li>
+            <li class="rundown-row">
+              <span class="lamp" data-lamp="done" aria-hidden="true"></span>
+              <span class="engraved engraved-strong">Prompts</span>
+              <span>
+                Prompts writes the article, image and thumbnail prompts once, with
+                <code>&#123;&#123;keywords&#125;&#125;</code> where the subject goes, and reuses them for every run.
+              </span>
+            </li>
+            <li class="rundown-row">
+              <span class="lamp" data-lamp="done" aria-hidden="true"></span>
+              <span class="engraved engraved-strong">Play</span>
+              <span>
+                Play is the cue sheet: pick the prompts, fill in the keywords, choose a voice
+                and a format, press the key. Any stage you would rather do yourself, you upload
+                instead, and that stage is skipped.
+              </span>
+            </li>
+            <li class="rundown-row">
+              <span class="lamp" data-lamp="done" aria-hidden="true"></span>
+              <span class="engraved engraved-strong">Project</span>
+              <span>
+                The project page shows the six stages as they run and holds the results: the
+                article, the narration, every image, the thumbnail and the mp4, each one
+                downloadable on its own or as a zip.
+              </span>
+            </li>
+          </ol>
+
+          <h3 id="options-title">Options</h3>
+          <p class="guide-note">
+            Every option is a flag or an environment variable of the same name. A flag beats
+            the variable, the variable beats the default.
+          </p>
+          <div class="sheet">
+            <!-- Below 700 px the cells stack into a card per option. The header row goes
+                 away with them, so the default value carries its own label there; the
+                 flag, the variable and the sentence read for themselves. -->
+            <table class="options">
+              <thead>
+                <tr>
+                  <th scope="col" class="engraved">flag</th>
+                  <th scope="col" class="engraved">variable</th>
+                  <th scope="col" class="engraved">default</th>
+                  <th scope="col" class="engraved">does</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row"><code>--port</code></th>
+                  <td><code>SLOPIFY_PORT</code></td>
+                  <td data-label="default"><code>4242</code></td>
+                  <td>The port the app listens on.</td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>--host</code></th>
+                  <td><code>SLOPIFY_HOST</code></td>
+                  <td data-label="default"><code>127.0.0.1</code></td>
+                  <td>
+                    The address it binds to. There is no login, so any other value prints a
+                    warning: whoever reaches the port controls the app and its keys.
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>--data-dir</code></th>
+                  <td><code>SLOPIFY_DATA_DIR</code></td>
+                  <td data-label="default"><code>~/.slopify</code></td>
+                  <td>Where the database, the projects, the staged uploads and the logs live.</td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>--no-open</code></th>
+                  <td><code>SLOPIFY_NO_OPEN</code></td>
+                  <td data-label="default">the browser opens</td>
+                  <td>Keeps the browser shut and prints the URL instead.</td>
+                </tr>
+                <tr>
+                  <th scope="row" class="options-none">no flag</th>
+                  <td><code>SLOPIFY_FFMPEG</code></td>
+                  <td data-label="default">the bundled binary</td>
+                  <td>
+                    Path to an ffmpeg to render with. Slopify never picks one off your
+                    <code>PATH</code>.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="free">
+          <p class="free-line">Free. Runs on your machine with your own keys.</p>
+          <p class="free-support">Support the project</p>
+          <a class="donate" href="PATREON_URL_PLACEHOLDER">
+            <span class="glyph glyph-patreon" aria-hidden="true"></span>
+            Patreon
+          </a>
+          <a class="donate" href="BUY_ME_A_COFFEE_URL_PLACEHOLDER">
+            <span class="glyph glyph-coffee" aria-hidden="true"></span>
+            Buy Me a Coffee
+          </a>
+        </section>
+      </main>
+
+      <footer class="colophon">
+        <p>
+          Anonymous usage stats power the counters above; nothing you write ever leaves your
+          machine.
+        </p>
+        <nav class="colophon-links" aria-label="Source and support">
+          <a href="https://github.com/gentbajko/slopify">GitHub</a>
+          <a href="PATREON_URL_PLACEHOLDER">
+            <span class="glyph glyph-patreon" aria-hidden="true"></span>
+            Patreon
+          </a>
+          <a href="BUY_ME_A_COFFEE_URL_PLACEHOLDER">
+            <span class="glyph glyph-coffee" aria-hidden="true"></span>
+            Buy Me a Coffee
+          </a>
+        </nav>
+      </footer>
+    </div>
   </body>
 </html>

@@ -1,7 +1,7 @@
 // Beside public/main.js rather than in it: everything inside public/ is uploaded to the
 // static host verbatim, and a test file is not part of the page.
 import { describe, expect, it } from "vitest";
-import { counterText, dash, paint, readAggregates } from "./public/main.js";
+import { counterText, dash, paint, readAggregates, tallyFoot } from "./public/main.js";
 
 const live = {
   installs: 876,
@@ -80,36 +80,92 @@ describe("readAggregates", () => {
   });
 });
 
-// A stand-in for the two DOM calls paint makes. The page itself is checked in a browser;
-// this pins the branch that decides between numbers and dashes.
+describe("tallyFoot", () => {
+  it("names the collector live when there are aggregates", () => {
+    expect(tallyFoot(live)).toEqual({ lamp: "run", word: "Live", note: "updates every 5 seconds" });
+  });
+
+  // logic/16 §Q133: the wording beside the dashes is fixed.
+  it("names it off with the recorded wording when there are none", () => {
+    expect(tallyFoot(null)).toEqual({ lamp: null, word: "Off", note: "live stats unavailable" });
+  });
+});
+
+// A stand-in for the handful of DOM calls paint makes. The page itself is checked in a
+// browser; this pins the branch that decides between numbers and dashes.
 function board(keys) {
   const counters = keys.map((key) => ({ dataset: { counter: key }, textContent: dash }));
-  const status = { hidden: false };
+  const lamp = {
+    attributes: { "data-loading": "" },
+    setAttribute(name, value) {
+      this.attributes[name] = value;
+    },
+    removeAttribute(name) {
+      delete this.attributes[name];
+    },
+  };
+  const sheet = { ...lamp, attributes: { "data-loading": "" } };
+  const word = { textContent: "Off" };
+  const note = { textContent: "" };
+  const nodes = {
+    "[data-tally]": sheet,
+    "[data-tally-lamp]": lamp,
+    "[data-tally-word]": word,
+    "[data-tally-status]": note,
+  };
   return {
     counters,
-    status,
+    sheet,
+    lamp,
+    word,
+    note,
     querySelectorAll: () => counters,
-    querySelector: () => status,
+    querySelector: (selector) => nodes[selector] ?? null,
   };
 }
 
 describe("paint", () => {
-  it("writes the numbers and hides the unavailable line", () => {
+  it("writes the numbers and lights the foot of the board", () => {
     const root = board(["videos_made", "installs"]);
 
     paint(root, live);
 
     expect(root.counters.map((node) => node.textContent)).toEqual(["12,345", "876"]);
-    expect(root.status.hidden).toBe(true);
+    expect(root.lamp.attributes["data-lamp"]).toBe("run");
+    expect(root.word.textContent).toBe("Live");
+    expect(root.note.textContent).toBe("updates every 5 seconds");
   });
 
-  it("writes dashes and shows the unavailable line when there is nothing to show", () => {
+  it("writes dashes and says so when there is nothing to show", () => {
     const root = board(["videos_made", "installs"]);
     paint(root, live);
 
     paint(root, null);
 
     expect(root.counters.map((node) => node.textContent)).toEqual([dash, dash]);
-    expect(root.status.hidden).toBe(false);
+    expect(root.lamp.attributes["data-lamp"]).toBeUndefined();
+    expect(root.word.textContent).toBe("Off");
+    expect(root.note.textContent).toBe("live stats unavailable");
+  });
+
+  // The skeleton ships in the markup so it is on screen before this module parses; the
+  // first painted answer, numbers or dashes, takes it away for good.
+  it.each([
+    ["numbers", live],
+    ["dashes", null],
+  ])("clears the loading skeleton once it has painted %s", (_label, aggregates) => {
+    const root = board(["videos_made"]);
+
+    paint(root, aggregates);
+
+    expect(root.sheet.attributes["data-loading"]).toBeUndefined();
+  });
+
+  it("leaves a board without a foot alone", () => {
+    const counters = [{ dataset: { counter: "installs" }, textContent: dash }];
+    const root = { querySelectorAll: () => counters, querySelector: () => null };
+
+    expect(() => paint(root, live)).not.toThrow();
+    expect(counters[0].textContent).toBe("876");
   });
 });

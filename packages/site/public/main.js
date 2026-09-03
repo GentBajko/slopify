@@ -74,6 +74,14 @@ export async function readAggregates(endpoint, fetcher) {
   }
 }
 
+// What the strip along the bottom of the board says. The lamp never carries the state on
+// its own (uiux/02-system): the word beside it says the same thing in text.
+export function tallyFoot(aggregates) {
+  return aggregates === null
+    ? { lamp: null, word: "Off", note: "live stats unavailable" }
+    : { lamp: "run", word: "Live", note: "updates every 5 seconds" };
+}
+
 export function paint(root, aggregates) {
   for (const node of root.querySelectorAll("[data-counter]")) {
     const next = counterText(aggregates, node.dataset.counter);
@@ -83,9 +91,29 @@ export function paint(root, aggregates) {
     node.textContent = next;
     fade(node);
   }
-  const status = root.querySelector("[data-tally-status]");
-  if (status !== null) {
-    status.hidden = aggregates !== null;
+
+  // The skeleton is markup rather than script, so it is on screen before this module has
+  // parsed. The first painted answer - numbers or dashes - takes it away for good.
+  root.querySelector("[data-tally]")?.removeAttribute("data-loading");
+
+  const foot = tallyFoot(aggregates);
+  const lamp = root.querySelector("[data-tally-lamp]");
+  if (lamp !== null) {
+    if (foot.lamp === null) {
+      lamp.removeAttribute("data-lamp");
+    } else {
+      lamp.setAttribute("data-lamp", foot.lamp);
+    }
+  }
+  write(root.querySelector("[data-tally-word]"), foot.word);
+  write(root.querySelector("[data-tally-status]"), foot.note);
+}
+
+// The note is a live region, so it is written only when it actually changes; assigning
+// the same sentence every five seconds would have a screen reader read it out again.
+function write(node, text) {
+  if (node !== null && node.textContent !== text) {
+    node.textContent = text;
   }
 }
 
@@ -113,6 +141,9 @@ export function poll(root, endpoint, fetcher) {
 
 export function wireCopy(root, clipboard) {
   for (const button of root.querySelectorAll("[data-copy]")) {
+    // The button carries two icons and a word; only the word is rewritten, so the check
+    // mark swapping in is left to CSS keyed off data-copied.
+    const label = button.querySelector("[data-copy-label]") ?? button;
     button.addEventListener("click", async () => {
       const status = root.querySelector("[data-copy-status]");
       try {
@@ -125,12 +156,14 @@ export function wireCopy(root, clipboard) {
         }
         return;
       }
-      button.textContent = "Copied";
+      label.textContent = "Copied";
+      button.setAttribute("data-copied", "true");
       if (status !== null) {
         status.textContent = "Install command copied";
       }
       setTimeout(() => {
-        button.textContent = "Copy";
+        label.textContent = "Copy";
+        button.removeAttribute("data-copied");
       }, 2_000);
     });
   }
