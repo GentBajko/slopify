@@ -116,9 +116,10 @@
                       "!**/kernel/ports",
                       "!**/kernel/ports/**",
                       "!**/kernel/clock.js",
+                      "!**/kernel/clock.fake.js",
                       "!**/kernel/log.js"
                     ],
-                    "message": "adapters may import only kernel/ports and kernel/{clock,log}."
+                    "message": "adapters may import only kernel/ports and kernel/{clock,log}, plus the clock's own double in a test."
                   }
                 ]
               }

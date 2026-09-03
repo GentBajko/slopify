@@ -1,0 +1,19 @@
+{
+  "id": "s7x2m4kqf9rj20ct1abcd0efgh",
+  "model": "black-forest-labs/flux-1.1-pro",
+  "input": {
+    "prompt": "a coil of manila rope on a weathered dock",
+    "aspect_ratio": "16:9",
+    "output_format": "png"
+  },
+  "output": null,
+  "status": "starting",
+  "error": null,
+  "logs": "",
+  "created_at": "2026-09-02T09:14:11.117Z",
+  "completed_at": null,
+  "urls": {
+    "get": "https://api.replicate.com/v1/predictions/s7x2m4kqf9rj20ct1abcd0efgh",
+    "cancel": "https://api.replicate.com/v1/predictions/s7x2m4kqf9rj20ct1abcd0efgh/cancel"
+  }
+}

@@ -1,4 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
+import { falImage } from "./adapters/image/fal.js";
+import { openAiImage } from "./adapters/image/openai.js";
+import { replicateImage } from "./adapters/image/replicate.js";
 import { claudeCodeLlm } from "./adapters/llm/claude-code.js";
 import { codexLlm } from "./adapters/llm/codex.js";
 import { openRouterLlm } from "./adapters/llm/openrouter.js";
@@ -56,7 +59,18 @@ export function buildRegistry(deps: RegistryDeps): Registry {
     ["openai-tts", openAiTts({ fetch: deps.fetch, key: keyOf("openai-tts") })],
     ["cartesia", cartesiaTts({ fetch: deps.fetch, key: keyOf("cartesia") })],
   ]);
-  const images = new Map<string, ImagePort>();
+  // `logic/09` and `logic/02` §Q15: three image providers behind one port, each handed
+  // the reader for its own key row. Replicate also takes the clock: `Prefer: wait` gives
+  // up after 60 s and the prediction has to be polled, and the wait is spent on the
+  // app's clock so a test never sits through one.
+  const images = new Map<string, ImagePort>([
+    ["fal", falImage({ fetch: deps.fetch, key: keyOf("fal") })],
+    [
+      "replicate",
+      replicateImage({ fetch: deps.fetch, key: keyOf("replicate"), clock: deps.clock }),
+    ],
+    ["openai-image", openAiImage({ fetch: deps.fetch, key: keyOf("openai-image") })],
+  ]);
 
   return {
     llm: (id: string): LlmPort => resolve(llms, "llm", id),

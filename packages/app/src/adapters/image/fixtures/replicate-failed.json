@@ -1,0 +1,12 @@
+{
+  "id": "s7x2m4kqf9rj20ct1abcd0efgh",
+  "model": "black-forest-labs/flux-1.1-pro",
+  "input": { "prompt": "a coil of manila rope on a weathered dock" },
+  "output": null,
+  "status": "failed",
+  "error": "CUDA out of memory on the worker",
+  "logs": "",
+  "created_at": "2026-09-02T09:14:11.117Z",
+  "completed_at": "2026-09-02T09:14:13.400Z",
+  "urls": { "get": "https://api.replicate.com/v1/predictions/s7x2m4kqf9rj20ct1abcd0efgh" }
+}

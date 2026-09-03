@@ -1,0 +1,8 @@
+{
+  "error": {
+    "message": "Rate limit reached for images per min. Limit: 5, Used: 5. Please try again in 12s.",
+    "type": "requests",
+    "param": null,
+    "code": "rate_limit_exceeded"
+  }
+}

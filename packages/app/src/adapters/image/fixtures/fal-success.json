@@ -1,0 +1,14 @@
+{
+  "images": [
+    {
+      "url": "https://v3.fal.media/files/koala/dTldnOpRSFVBvWiyfOeO1.png",
+      "width": 1280,
+      "height": 720,
+      "content_type": "image/png"
+    }
+  ],
+  "timings": { "inference": 1.84 },
+  "seed": 3618288513,
+  "has_nsfw_concepts": [false],
+  "prompt": "a coil of manila rope on a weathered dock"
+}

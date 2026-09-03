@@ -105,13 +105,59 @@ describe("buildRegistry", () => {
     db.close();
   });
 
+  it("resolves every image provider id to its own adapter", () => {
+    const db = migrated();
+    const built = registry(db);
+
+    expect(built.image("fal").id).toBe("fal");
+    expect(built.image("replicate").id).toBe("replicate");
+    expect(built.image("openai-image").id).toBe("openai-image");
+    db.close();
+  });
+
   it("throws for an id no adapter is built for", () => {
     const db = migrated();
     const built = registry(db);
 
     expect(() => built.llm("elevenlabs")).toThrow("no llm adapter is registered for elevenlabs");
     expect(() => built.tts("openrouter")).toThrow("no tts adapter is registered for openrouter");
-    expect(() => built.image("fal")).toThrow("no image adapter is registered for fal");
+    expect(() => built.image("openrouter")).toThrow(
+      "no image adapter is registered for openrouter",
+    );
+    db.close();
+  });
+
+  // `logic/02` invariant again, on the other side of the OpenAI split: the image row's key
+  // must never reach the speech endpoint, nor the TTS row's key the images endpoint.
+  it("hands each image adapter the key of its own provider row and no other", async () => {
+    const db = migrated();
+    const save = db.prepare(
+      "INSERT INTO provider_keys (provider, key, updated_at) VALUES (?, ?, '2026-09-02T10:00:00.000Z')",
+    );
+    save.run("fal", "fal-key");
+    save.run("replicate", "replicate-key");
+    save.run("openai-tts", "openai-tts-key");
+    save.run("openai-image", "openai-image-key");
+    const sent: string[] = [];
+    const built = registry(db, (_input, init) => {
+      sent.push(new Headers(init?.headers).get("authorization") ?? "");
+      // A 500 with no body: every adapter reports the status and none of them downloads.
+      return Promise.resolve(new Response("", { status: 500 }));
+    });
+
+    for (const id of ["fal", "replicate", "openai-image"]) {
+      await built
+        .image(id)
+        .generate({
+          model: "m",
+          prompt: "a rope",
+          aspect: "16:9",
+          signal: new AbortController().signal,
+        })
+        .catch(() => undefined);
+    }
+
+    expect(sent).toEqual(["Key fal-key", "Bearer replicate-key", "Bearer openai-image-key"]);
     db.close();
   });
 

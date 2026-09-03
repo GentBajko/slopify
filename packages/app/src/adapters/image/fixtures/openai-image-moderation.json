@@ -1,0 +1,8 @@
+{
+  "error": {
+    "message": "Your request was rejected as a result of our safety system. Your request may contain content that is not allowed by our safety system.",
+    "type": "image_generation_user_error",
+    "param": null,
+    "code": "moderation_blocked"
+  }
+}

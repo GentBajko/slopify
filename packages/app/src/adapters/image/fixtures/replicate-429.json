@@ -1,0 +1,6 @@
+{
+  "type": "https://replicate.com/docs/reference/http#too-many-requests",
+  "title": "Too Many Requests",
+  "detail": "Request was throttled. Expected available in 30 seconds.",
+  "status": 429
+}
