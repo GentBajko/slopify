@@ -1,0 +1,18 @@
+: OPENROUTER PROCESSING
+
+data: {"id":"gen-1757000000-abc","provider":"OpenAI","model":"openai/gpt-4o-mini","object":"chat.completion.chunk","created":1757000000,"choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+data: {"id":"gen-1757000000-abc","provider":"OpenAI","model":"openai/gpt-4o-mini","object":"chat.completion.chunk","created":1757000000,"choices":[{"index":0,"delta":{"content":"Server-Sent "},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+: OPENROUTER PROCESSING
+
+data: {"id":"gen-1757000000-abc","provider":"OpenAI","model":"openai/gpt-4o-mini","object":"chat.completion.chunk","created":1757000000,"choices":[{"index":0,"delta":{"content":"Events aré "},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+data: {"id":"gen-1757000000-abc","provider":"OpenAI","model":"openai/gpt-4o-mini","object":"chat.completion.chunk","created":1757000000,"choices":[{"index":0,"delta":{"content":"one-way 𝄞 push."},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+data: {"id":"gen-1757000000-abc","provider":"OpenAI","model":"openai/gpt-4o-mini","object":"chat.completion.chunk","created":1757000000,"choices":[{"index":0,"delta":{"content":""},"finish_reason":"stop","native_finish_reason":"stop","logprobs":null}]}
+
+data: {"id":"gen-1757000000-abc","provider":"OpenAI","model":"openai/gpt-4o-mini","object":"chat.completion.chunk","created":1757000000,"choices":[],"usage":{"prompt_tokens":14,"completion_tokens":23,"total_tokens":37,"cost":0.000041,"is_byok":false}}
+
+data: [DONE]
+

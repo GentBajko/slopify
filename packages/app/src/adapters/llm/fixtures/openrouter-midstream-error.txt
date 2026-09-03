@@ -1,0 +1,4 @@
+data: {"id":"gen-1757000000-abc","provider":"OpenAI","model":"openai/gpt-4o-mini","object":"chat.completion.chunk","created":1757000000,"choices":[{"index":0,"delta":{"role":"assistant","content":"Partial"},"finish_reason":null}]}
+
+data: {"error":{"code":429,"message":"Provider returned error","metadata":{"provider_name":"OpenAI"}}}
+

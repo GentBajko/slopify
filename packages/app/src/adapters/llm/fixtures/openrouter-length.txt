@@ -1,0 +1,8 @@
+data: {"id":"gen-1757000000-abc","provider":"OpenAI","model":"openai/gpt-4o-mini","object":"chat.completion.chunk","created":1757000000,"choices":[{"index":0,"delta":{"role":"assistant","content":"The first half"},"finish_reason":null}]}
+
+data: {"id":"gen-1757000000-abc","provider":"OpenAI","model":"openai/gpt-4o-mini","object":"chat.completion.chunk","created":1757000000,"choices":[{"index":0,"delta":{"content":""},"finish_reason":"length","native_finish_reason":"length"}]}
+
+data: {"id":"gen-1757000000-abc","provider":"OpenAI","model":"openai/gpt-4o-mini","object":"chat.completion.chunk","created":1757000000,"choices":[],"usage":{"prompt_tokens":9,"completion_tokens":4096,"total_tokens":4105}}
+
+data: [DONE]
+
