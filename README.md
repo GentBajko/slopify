@@ -79,13 +79,9 @@ data directory makes a fresh install with a new id.
 
 Slopify is free and always will be. If it is worth something to you:
 
-- Patreon: `PATREON_URL_PLACEHOLDER`
-- Buy Me a Coffee: `BUY_ME_A_COFFEE_URL_PLACEHOLDER`
+- [Patreon](https://www.patreon.com/cw/GentBajko)
+- [Buy Me a Coffee](https://buymeacoffee.com/gentbajko)
 
-<!-- ceiling: those two strings are placeholders, not URLs. No Patreon or Buy Me a
-     Coffee address has been recorded anywhere in this repository or its design docs,
-     and the same two placeholders carry four hrefs each in
-     packages/site/public/index.html. Replace all ten at once. -->
 
 ## Working on it
 
