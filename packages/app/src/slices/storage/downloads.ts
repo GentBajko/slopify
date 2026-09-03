@@ -3,6 +3,7 @@ import { extname } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { zipSync } from "fflate";
 import type { Paths } from "../../kernel/paths.js";
+import { assetOf } from "./asset-name.js";
 import { outputPath } from "./layout.js";
 import type { Output } from "./model.js";
 import { outputsOf, projectTitle } from "./repo.js";
@@ -59,18 +60,9 @@ export function slugOf(title: string): string {
   return slug === "" ? "project" : slug;
 }
 
-// An output's role is its asset name; images add their place in the slideshow, and the
-// instructions add their stage, those being the two roles a project holds more than one of
-// (logic/06 step 4 and logic/07 step 4 both store what the stage sent).
-export function assetOf(output: Output): string {
-  const asset = output.role.replaceAll("_", "-");
-  if (output.role === "instructions") {
-    return `${output.stageKind}-${asset}`;
-  }
-  return output.role === "image" && output.meta.index !== undefined
-    ? `${asset}-${output.meta.index}`
-    : asset;
-}
+// `assetOf` moved to asset-name.ts so the SPA can build the same URLs; it is still part
+// of this module's surface, because a download name is built from it.
+export { assetOf };
 
 // logic/14 §Q116: "single files as `<title-slug>-<asset>.<ext>`".
 export function downloadName(slug: string, output: Output): string {
