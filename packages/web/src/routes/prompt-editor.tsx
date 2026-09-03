@@ -9,13 +9,13 @@ import { useApp } from "@/app-context";
 import { ConfirmDialog } from "@/components/confirm";
 import { DetectedSlots } from "@/components/detected-slots";
 import { EditorActions } from "@/components/editor-actions";
-import { RailGroup } from "@/components/rail";
+import { backLink, EditorNotice, EditorSkeleton, sheet } from "@/components/editor-states";
+import { LabelledSwitch } from "@/components/labelled-switch";
 import { useLeaveWhenSaved } from "@/components/saved-tick";
 import { SlotBody } from "@/components/slot-body";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   bodyProblems,
   draftProblems,
@@ -25,8 +25,6 @@ import {
 } from "@/lib/draft-lint";
 import { kindOptions } from "@/lib/prompt-kinds";
 import { promptsQuery } from "@/queries";
-
-const sheet = "rounded-panel border border-line bg-panel p-[18px]";
 
 // One prompt: a name, a kind and a body whose `{{slots}}` are shown as they are typed
 // (uiux/screens/05-prompt-editor.md). Every rule the Save obeys is the shared lint of
@@ -49,7 +47,6 @@ export function PromptEditorRoute({
   const prompts = useQuery(promptsQuery(api));
   const nameId = useId();
   const nameErrorId = useId();
-  const kindLabelId = useId();
   const bodyId = useId();
   const lintId = useId();
   const hintId = useId();
@@ -116,7 +113,7 @@ export function PromptEditorRoute({
     return <Notice kind={draft.kind}>{prompts.error.message}</Notice>;
   }
   if (wanted !== undefined && rows === undefined) {
-    return <Skeleton />;
+    return <EditorSkeleton />;
   }
   if (wanted !== undefined && found === undefined) {
     return (
@@ -160,30 +157,16 @@ export function PromptEditorRoute({
                 </p>
               )}
             </div>
-            <div>
-              <Label id={kindLabelId} className="mb-[5px]">
-                Kind
-              </Label>
-              <ToggleGroup
-                type="single"
-                value={draft.kind}
-                aria-labelledby={kindLabelId}
-                onValueChange={(next) => {
-                  const picked = kindOptions.find((option) => option.value === next);
-                  if (picked !== undefined) {
-                    // §Q122: the kind may change after creation, and a name is only taken
-                    // within its own kind, so a collision under the old one is moot.
-                    edit({ ...draft, kind: picked.value }, "name");
-                  }
-                }}
-              >
-                {kindOptions.map((option) => (
-                  <ToggleGroupItem key={option.value} value={option.value}>
-                    {option.label}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-            </div>
+            {/* §Q122: the kind may change after creation, and a name is only taken
+                within its own kind, so a collision under the old one is moot. */}
+            <LabelledSwitch
+              label="Kind"
+              value={draft.kind}
+              options={kindOptions}
+              onPick={(next) => {
+                edit({ ...draft, kind: next }, "name");
+              }}
+            />
           </div>
 
           <div>
@@ -255,31 +238,14 @@ export function PromptEditorRoute({
 
 function Notice({ kind, children }: { readonly kind: PromptKind; readonly children: string }) {
   return (
-    <div className="mx-auto max-w-[1440px]">
-      <RailGroup>
-        <p className="px-4 py-[14px] text-body text-red">{children}</p>
-      </RailGroup>
-      <Link
-        to="/prompts"
-        search={{ kind }}
-        className="mt-[10px] inline-block text-small text-run-text underline"
-      >
-        Back to Prompts
-      </Link>
-    </div>
-  );
-}
-
-function Skeleton() {
-  return (
-    <div className="mx-auto grid max-w-[1440px] grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <div className={`${sheet} flex flex-col gap-[14px]`}>
-        <span className="h-8 w-64 rounded-control bg-panel2" />
-        <span className="h-[520px] rounded-control bg-panel2" />
-      </div>
-      <div className={`${sheet} flex flex-col gap-3`}>
-        <span className="h-3 w-28 rounded-control bg-panel2" />
-      </div>
-    </div>
+    <EditorNotice
+      back={
+        <Link to="/prompts" search={{ kind }} className={backLink}>
+          Back to Prompts
+        </Link>
+      }
+    >
+      {children}
+    </EditorNotice>
   );
 }

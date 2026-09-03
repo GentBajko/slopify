@@ -1,4 +1,4 @@
-import type { EntryCategory, EntryDraft, EntryMode } from "@app/slices/library/model.js";
+import type { EntryCategory, EntryDraft } from "@app/slices/library/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeftIcon } from "lucide-react";
@@ -9,13 +9,13 @@ import { useApp } from "@/app-context";
 import { ConfirmDialog } from "@/components/confirm";
 import { DetectedSlots } from "@/components/detected-slots";
 import { EditorActions } from "@/components/editor-actions";
-import { RailGroup } from "@/components/rail";
+import { backLink, EditorNotice, EditorSkeleton, sheet } from "@/components/editor-states";
+import { LabelledSwitch } from "@/components/labelled-switch";
 import { useLeaveWhenSaved } from "@/components/saved-tick";
 import { SlotBody } from "@/components/slot-body";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   bodyProblems,
   draftProblems,
@@ -23,36 +23,8 @@ import {
   nameProblems,
   slotNames,
 } from "@/lib/draft-lint";
-import { categoryOptions, modeOptions } from "@/lib/entry-options";
+import { categoryOptions, modeHint, modeOptions, noSlotsHint } from "@/lib/entry-options";
 import { entriesQuery } from "@/queries";
-
-const sheet = "rounded-panel border border-line bg-panel p-[18px]";
-
-// What each mode does with the body, said under the Mode switch
-// (uiux/screens/09-intros-outros.md, Composition). The distinction is `logic/07` step 5's:
-// a text entry is rendered per `logic/03` and narrated as it stands, while an LLM entry is
-// an instruction the article stage sends with the title, the keyword values and the
-// article, and it is the answer that gets narrated.
-function modeHint(mode: EntryMode): string {
-  switch (mode) {
-    case "text":
-      return "Text is narrated as written.";
-    case "llm":
-      return "LLM is an instruction whose answer is narrated.";
-  }
-}
-
-// Both modes hold `{{slots}}`: `logic/07` step 5 renders a text body per `logic/03` with
-// no call, and `logic/03` step 3 collects the picked intro's and outro's names whatever
-// the mode. Only what happens to the rendered body differs, so only that sentence does.
-function noSlotsHint(mode: EntryMode): string {
-  switch (mode) {
-    case "text":
-      return "No slots. This text is narrated as written.";
-    case "llm":
-      return "No slots. This instruction runs as written.";
-  }
-}
 
 // One intro or outro: a name, a category, a mode and a body whose `{{slots}}` are shown as
 // they are typed (uiux/screens/09-intros-outros.md). Every rule the Save obeys is the
@@ -75,8 +47,6 @@ export function EntryEditorRoute({
   const entries = useQuery(entriesQuery(api));
   const nameId = useId();
   const nameErrorId = useId();
-  const categoryLabelId = useId();
-  const modeLabelId = useId();
   const modeHintId = useId();
   const bodyId = useId();
   const lintId = useId();
@@ -145,7 +115,7 @@ export function EntryEditorRoute({
     return <Notice category={draft.category}>{entries.error.message}</Notice>;
   }
   if (wanted !== undefined && rows === undefined) {
-    return <Skeleton />;
+    return <EditorSkeleton />;
   }
   if (wanted !== undefined && found === undefined) {
     return (
@@ -191,54 +161,25 @@ export function EntryEditorRoute({
                 </p>
               )}
             </div>
-            <div>
-              <Label id={categoryLabelId} className="mb-[5px]">
-                Category
-              </Label>
-              <ToggleGroup
-                type="single"
-                value={draft.category}
-                aria-labelledby={categoryLabelId}
-                onValueChange={(next) => {
-                  const picked = categoryOptions.find((option) => option.value === next);
-                  if (picked !== undefined) {
-                    // §Q122: the category may change after creation, and a name is only
-                    // taken within its own category, so a collision under the old one is
-                    // moot.
-                    edit({ ...draft, category: picked.value }, "name");
-                  }
-                }}
-              >
-                {categoryOptions.map((option) => (
-                  <ToggleGroupItem key={option.value} value={option.value}>
-                    {option.label}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-            </div>
-            <div>
-              <Label id={modeLabelId} className="mb-[5px]">
-                Mode
-              </Label>
-              <ToggleGroup
-                type="single"
-                value={draft.mode}
-                aria-labelledby={modeLabelId}
-                aria-describedby={modeHintId}
-                onValueChange={(next) => {
-                  const picked = modeOptions.find((option) => option.value === next);
-                  if (picked !== undefined) {
-                    edit({ ...draft, mode: picked.value }, "mode");
-                  }
-                }}
-              >
-                {modeOptions.map((option) => (
-                  <ToggleGroupItem key={option.value} value={option.value}>
-                    {option.label}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-            </div>
+            {/* §Q122: the category may change after creation, and a name is only taken
+                within its own category, so a collision under the old one is moot. */}
+            <LabelledSwitch
+              label="Category"
+              value={draft.category}
+              options={categoryOptions}
+              onPick={(next) => {
+                edit({ ...draft, category: next }, "name");
+              }}
+            />
+            <LabelledSwitch
+              label="Mode"
+              value={draft.mode}
+              options={modeOptions}
+              describedBy={modeHintId}
+              onPick={(next) => {
+                edit({ ...draft, mode: next }, "mode");
+              }}
+            />
           </div>
           {/* The hint belongs under the Mode switch, which sits at the right end of the
               row, so the sentence is set flush right rather than under the Name field it
@@ -328,31 +269,14 @@ function Notice({
   readonly children: string;
 }) {
   return (
-    <div className="mx-auto max-w-[1440px]">
-      <RailGroup>
-        <p className="px-4 py-[14px] text-body text-red">{children}</p>
-      </RailGroup>
-      <Link
-        to="/entries"
-        search={{ category }}
-        className="mt-[10px] inline-block text-small text-run-text underline"
-      >
-        Back to Intros &amp; Outros
-      </Link>
-    </div>
-  );
-}
-
-function Skeleton() {
-  return (
-    <div className="mx-auto grid max-w-[1440px] grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <div className={`${sheet} flex flex-col gap-[14px]`}>
-        <span className="h-8 w-64 rounded-control bg-panel2" />
-        <span className="h-[520px] rounded-control bg-panel2" />
-      </div>
-      <div className={`${sheet} flex flex-col gap-3`}>
-        <span className="h-3 w-28 rounded-control bg-panel2" />
-      </div>
-    </div>
+    <EditorNotice
+      back={
+        <Link to="/entries" search={{ category }} className={backLink}>
+          Back to Intros &amp; Outros
+        </Link>
+      }
+    >
+      {children}
+    </EditorNotice>
   );
 }
