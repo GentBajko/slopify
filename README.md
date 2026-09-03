@@ -6,7 +6,7 @@ cuts the result together with ffmpeg. Everything runs on your machine against yo
 own provider keys, behind a local web UI.
 
 ```sh
-npx slopify@latest
+npx @gentbajko/slopify@latest
 ```
 
 The app serves its UI on `http://127.0.0.1:4242` and opens a browser at it. Node 26
@@ -43,7 +43,7 @@ There is no login. Binding to anything but `127.0.0.1` prints a warning at start
 and means it: whoever reaches that port controls the app and the keys in it.
 
 ```sh
-SLOPIFY_PORT=5000 SLOPIFY_NO_OPEN=1 npx slopify@latest
+SLOPIFY_PORT=5000 SLOPIFY_NO_OPEN=1 npx @gentbajko/slopify@latest
 ```
 
 ## ffmpeg and its licence
@@ -55,7 +55,7 @@ platform binary at `npm install` time, and never falls back to an ffmpeg on your
 another build to override it.
 
 ```sh
-SLOPIFY_FFMPEG=/usr/bin/ffmpeg npx slopify@latest
+SLOPIFY_FFMPEG=/usr/bin/ffmpeg npx @gentbajko/slopify@latest
 ```
 
 That binary is a separate program, run as a child process with an argument array. It

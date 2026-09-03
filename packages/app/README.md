@@ -3,7 +3,7 @@
 A prompt and a few keywords in. A narrated slideshow video out. Your keys, your machine, free.
 
 ```sh
-npx slopify@latest
+npx @gentbajko/slopify@latest
 ```
 
 That opens a browser at `http://127.0.0.1:4242`. Nothing to configure first; add
