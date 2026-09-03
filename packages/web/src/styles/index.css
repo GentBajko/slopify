@@ -27,6 +27,10 @@
   --color-lamp-ring: #3a3a42;
   --color-run-text: #9bcb4f;
   --color-focus: #9bcb4f;
+  /* Elevation is the dialog's alone: a shadow tinted toward the page hue, and the scrim
+     the overlay paints under it. */
+  --color-shadow: rgb(8 8 10 / 0.24);
+  --color-scrim: rgb(20 20 22 / 0.6);
 
   --font-sans: "Barlow", system-ui, sans-serif;
   --font-condensed: "Barlow Condensed", "Barlow", system-ui, sans-serif;
@@ -79,6 +83,8 @@
     --color-lamp-ring: #c9c7be;
     --color-run-text: #3f6b1c;
     --color-focus: #5f8a2b;
+    --color-shadow: rgb(60 55 40 / 0.12);
+    --color-scrim: rgb(60 58 50 / 0.45);
   }
 }
 
@@ -103,6 +109,8 @@
   --color-lamp-ring: #c9c7be;
   --color-run-text: #3f6b1c;
   --color-focus: #5f8a2b;
+  --color-shadow: rgb(60 55 40 / 0.12);
+  --color-scrim: rgb(60 58 50 / 0.45);
 }
 
 :root[data-theme="dark"] {
