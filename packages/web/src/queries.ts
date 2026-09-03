@@ -19,6 +19,11 @@ export const keys = {
   project: (id: string) => ["project", id] as const,
   // The text `article.delta` appends to. It is patched, never fetched.
   article: (id: string) => ["project", id, "article"] as const,
+  // One of a project's own files, read as text. The output's id is in the key rather than
+  // its asset name because `logic/12` §Q106 replaces an output rather than versioning it:
+  // an edited article is a new row, so the key changes and the new text is fetched without
+  // anything having to remember to invalidate the old one.
+  file: (projectId: string, outputId: string) => ["file", projectId, outputId] as const,
   staging: ["staging"] as const,
   notice: ["notice"] as const,
   providers: ["providers"] as const,

@@ -31,6 +31,9 @@
      the overlay paints under it. */
   --color-shadow: rgb(8 8 10 / 0.24);
   --color-scrim: rgb(20 20 22 / 0.6);
+  /* The unlit face of a player, darker than the page on both themes so a video with black
+     bars does not dissolve into the panel behind it (reference-screens.html --screen). */
+  --color-screen: #0b0b0d;
 
   --font-sans: "Barlow", system-ui, sans-serif;
   --font-condensed: "Barlow Condensed", "Barlow", system-ui, sans-serif;
@@ -87,6 +90,7 @@
     --color-focus: #5f8a2b;
     --color-shadow: rgb(60 55 40 / 0.12);
     --color-scrim: rgb(60 58 50 / 0.45);
+    --color-screen: #1c1c1e;
   }
 }
 
@@ -113,6 +117,7 @@
   --color-focus: #5f8a2b;
   --color-shadow: rgb(60 55 40 / 0.12);
   --color-scrim: rgb(60 58 50 / 0.45);
+  --color-screen: #1c1c1e;
 }
 
 :root[data-theme="dark"] {

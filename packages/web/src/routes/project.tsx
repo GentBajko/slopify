@@ -1,43 +1,26 @@
-import type { StageKind } from "@app/kernel/pipeline.js";
-import type { Stage } from "@app/slices/admission/model.js";
-import type { Output } from "@app/slices/storage/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { fileUrl } from "@/api";
 import { useApp } from "@/app-context";
-import { StageGlyph } from "@/components/glyph";
-import { Lamp } from "@/components/lamp";
-import { Rail, RailGroup, RailMeter } from "@/components/rail";
-import { StateWord } from "@/components/state-word";
-import { startedAt } from "@/lib/utils";
+import { Rail, RailGroup } from "@/components/rail";
+import { StageBodyFor } from "@/project/bodies";
+import { ProjectHeader } from "@/project/header";
+import { StageRow } from "@/project/stage-row";
+import { useProjectActions } from "@/project/use-actions";
 import { useLiveProject } from "@/project/use-live";
-import { keys, projectQuery } from "@/queries";
+import { projectQuery, promptsQuery, providersQuery } from "@/queries";
 
-const stageNames: Readonly<Record<StageKind, string>> = {
-  research: "Research",
-  article: "Article",
-  audio: "Audio",
-  images: "Images",
-  thumbnail: "Thumbnail",
-  video: "Video",
-};
-
-// The rundown: one row per stage with its lamp and state word, then the video
-// (uiux/screens/08-project.md). The per-stage bodies, the grids, the confirm dialogs and
-// the error lines are S21.
+// 08 Project page. The rundown - one row per stage with its lamp, its state word and the
+// body it opens into - plus the actions of `logic/12` and the cancel of `logic/13`. This
+// file is only the composition: what a row draws is `project/stage-row.tsx`, what a body
+// draws is `project/body-*.tsx`, and what an action does is `project/use-actions.ts`.
 export function ProjectRoute({ projectId }: { readonly projectId: string }) {
   const { api } = useApp();
   const project = useQuery(projectQuery(api, projectId));
+  const providers = useQuery(providersQuery(api));
+  const prompts = useQuery(promptsQuery(api));
+  const actions = useProjectActions(projectId);
 
   useLiveProject(projectId);
-
-  const streaming = useQuery({
-    queryKey: keys.article(projectId),
-    // The article arrives over SSE and is only ever patched into the cache, never
-    // fetched: this query exists to read and subscribe to it.
-    queryFn: (): string => "",
-    enabled: false,
-  });
 
   if (project.error !== null) {
     return <p className="text-body text-red">{project.error.message}</p>;
@@ -47,108 +30,59 @@ export function ProjectRoute({ projectId }: { readonly projectId: string }) {
   }
 
   const { project: summary, stages, outputs } = project.data;
-  const video = outputs.find((output) => output.role === "video");
+  // `logic/12` preconditions: no action is offered while a stage of the project is
+  // running, and the server refuses one that gets through anyway.
+  const busy = summary.status === "running" || actions.pending;
 
   return (
     <div className="mx-auto max-w-[1440px]">
       {/* The back link sits above a detail page's title (uiux/03-experience.md). */}
-      <Link to="/" className="mb-1 block text-small text-ink2 hover:text-ink">
+      <Link to="/" className="mb-[10px] block text-small text-ink2 hover:text-ink">
         &lt; Projects
       </Link>
 
-      <RailGroup className="mt-2">
-        <Rail className="bg-panel2">
-          <Lamp state={summary.status} />
-          <h1 className="text-row font-bold">{summary.title}</h1>
-          <span className="text-small text-ink2">
-            {`${summary.format} · started ${startedAt(summary.createdAt)}`}
-          </span>
-          <StateWord state={summary.status} announce="Project" className="ml-auto" />
-        </Rail>
+      <RailGroup>
+        <ProjectHeader project={summary} prompts={prompts.data?.prompts} actions={actions} />
+
+        {actions.refusal === undefined ? null : (
+          // The server's own sentence for a refused action, unedited: "At least one image
+          // must remain, so the last one cannot be deleted." (`logic/09` §Q75).
+          <Rail className="justify-between gap-3 bg-red-tint py-[10px] text-small text-red">
+            <span role="alert">{actions.refusal}</span>
+            <button
+              type="button"
+              onClick={actions.dismissRefusal}
+              className="shrink-0 rounded-control px-2 text-ink2 hover:text-ink"
+            >
+              Dismiss
+            </button>
+          </Rail>
+        )}
 
         {stages.map((stage) => (
-          <StageRow key={stage.id} stage={stage} outputs={outputs} />
+          <StageRow
+            key={stage.id}
+            stage={stage}
+            project={summary}
+            outputs={outputs}
+            providers={providers.data?.providers ?? []}
+            actions={actions}
+          >
+            <StageBodyFor
+              stage={stage}
+              project={summary}
+              outputs={outputs}
+              actions={actions}
+              busy={busy}
+            />
+          </StageRow>
         ))}
       </RailGroup>
-
-      {streaming.data === undefined || streaming.data === "" ? null : (
-        <section className="mt-6 max-w-[75ch] whitespace-pre-wrap text-body text-ink">
-          <h2 className="engraved mb-[10px] text-ink3">Article</h2>
-          {streaming.data}
-        </section>
-      )}
-
-      {video === undefined ? null : (
-        <section className="mt-6">
-          <h2 className="engraved mb-[10px] text-ink3">Video</h2>
-          {/* biome-ignore lint/a11y/useMediaCaption: the narration is the user's own
-              audio, and no caption track exists for it anywhere in the pipeline. */}
-          <video
-            controls
-            preload="metadata"
-            src={fileUrl(api, projectId, "video")}
-            className="max-h-[720px] w-auto rounded-panel border border-line bg-black"
-          />
-          <p className="mt-[10px]">
-            <a
-              href={fileUrl(api, projectId, "video")}
-              download
-              className="text-small text-run-text underline"
-            >
-              Download .mp4
-            </a>
-          </p>
-        </section>
-      )}
     </div>
   );
 }
 
-function StageRow({
-  stage,
-  outputs,
-}: {
-  readonly stage: Stage;
-  readonly outputs: readonly Output[];
-}) {
-  const running = stage.state === "running";
-  return (
-    // The rundown's column order: lamp, glyph, name, summary, state word at the right.
-    <Rail>
-      <Lamp state={stage.state} />
-      <StageGlyph kind={stage.kind} className="text-ink2" />
-      <span className="w-[110px] shrink-0 font-semibold">{stageNames[stage.kind]}</span>
-      <span className="text-small text-ink2">{summaryOf(stage, outputs)}</span>
-      <StateWord state={stage.state} announce={stageNames[stage.kind]} className="ml-auto" />
-      {running && stage.progressTotal !== null ? (
-        <RailMeter current={stage.progressCurrent ?? 0} total={stage.progressTotal} />
-      ) : null}
-    </Rail>
-  );
-}
-
-function summaryOf(stage: Stage, outputs: readonly Output[]): string {
-  if (stage.state === "failed") {
-    return stage.failureReason ?? "The stage failed.";
-  }
-  if (stage.state === "skipped") {
-    return "Not part of this run";
-  }
-  if (stage.state === "provided") {
-    const names = outputs
-      .filter((output) => output.stageKind === stage.kind)
-      .flatMap((output) => (output.originalFilename === null ? [] : [output.originalFilename]));
-    return names.length === 0 ? "Provided" : names.join(", ");
-  }
-  if (stage.state === "running" && stage.progressTotal !== null) {
-    return `${String(stage.progressCurrent ?? 0)} of ${String(stage.progressTotal)}`;
-  }
-  if (stage.state === "pending") {
-    return "Waits for the stages above";
-  }
-  return "";
-}
-
+// The final layout's shape, not a spinner (uiux/03-experience.md, Feedback thresholds).
 function SkeletonRundown() {
   return (
     <div className="mx-auto max-w-[1440px]">

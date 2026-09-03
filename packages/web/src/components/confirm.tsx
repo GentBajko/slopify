@@ -10,6 +10,7 @@ export function ConfirmDialog({
   title,
   consequence,
   verb,
+  dismiss = "Cancel",
   pending = false,
   onConfirm,
   onCancel,
@@ -18,6 +19,9 @@ export function ConfirmDialog({
   readonly title: string;
   readonly consequence: string;
   readonly verb: string;
+  // What the way out is called. It defaults to Cancel, and a dialog whose action is
+  // itself called Cancel names the other half instead ("Keep running").
+  readonly dismiss?: string;
   readonly pending?: boolean;
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
@@ -36,7 +40,7 @@ export function ConfirmDialog({
         <DialogDescription>{consequence}</DialogDescription>
         <div className="flex justify-end gap-[10px]">
           <Button autoFocus onClick={onCancel}>
-            Cancel
+            {dismiss}
           </Button>
           <Button variant="danger" disabled={pending} onClick={onConfirm}>
             {verb}
