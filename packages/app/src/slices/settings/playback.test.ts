@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
-import type { Clock } from "../../kernel/clock.js";
+import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import type { Log, LogFields, LogLevel } from "../../kernel/log.js";
@@ -9,7 +9,7 @@ import type { PlaybackDeps } from "./playback.js";
 import { readSettings, saveSettings } from "./playback.js";
 import { writeSetting } from "./repo.js";
 
-const clock: Clock = { now: () => new Date("2026-09-02T10:00:00.000Z") };
+const clock = fixedClock("2026-09-02T10:00:00.000Z");
 
 interface Harness {
   readonly deps: PlaybackDeps;

@@ -29,6 +29,7 @@ function harness(): Harness {
       ticks += 1;
       return new Date(Date.UTC(2026, 8, 2, 10, 0, ticks));
     },
+    sleep: (): Promise<void> => Promise.resolve(),
   };
   migrate(db, clock);
   db.exec("INSERT INTO projects VALUES ('p1','Hello World','16:9','{}','2026-09-01','2026-09-01')");

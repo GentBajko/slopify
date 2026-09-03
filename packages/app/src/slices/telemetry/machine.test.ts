@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
-import type { Clock } from "../../kernel/clock.js";
+import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import type { Ids } from "../../kernel/ids.js";
@@ -9,7 +9,7 @@ import { dismissNotice, noticeSeen } from "./machine.js";
 import type { TelemetryDeps } from "./record.js";
 import { undeliveredEvents } from "./repo.js";
 
-const clock: Clock = { now: () => new Date("2026-09-02T10:00:00.000Z") };
+const clock = fixedClock("2026-09-02T10:00:00.000Z");
 const log: Log = { write: (): void => {} };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 

@@ -37,6 +37,7 @@ function ticking(): Clock {
       ms += 500;
       return new Date(ms);
     },
+    sleep: (): Promise<void> => Promise.resolve(),
   };
 }
 

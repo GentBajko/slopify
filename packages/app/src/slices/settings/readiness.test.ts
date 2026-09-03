@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
-import type { Clock } from "../../kernel/clock.js";
+import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import type { CliProbe } from "./cli-status.js";
@@ -10,7 +10,7 @@ import { providerIds } from "./model.js";
 import type { ReadinessDeps } from "./readiness.js";
 import { providerStatuses } from "./readiness.js";
 
-const clock: Clock = { now: () => new Date("2026-09-02T10:00:00.000Z") };
+const clock = fixedClock("2026-09-02T10:00:00.000Z");
 const standIn = "unit-test-placeholder";
 
 const installed: CliProbe = (binary) => Promise.resolve({ ran: true, stdout: `${binary} 1.2.3` });

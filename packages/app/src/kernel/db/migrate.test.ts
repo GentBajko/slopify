@@ -2,11 +2,11 @@ import { mkdtempSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import type { Clock } from "../clock.js";
+import { fixedClock } from "../clock.fake.js";
 import { openDb } from "./index.js";
 import { migrate } from "./migrate.js";
 
-const clock: Clock = { now: () => new Date("2026-09-02T10:00:00.000Z") };
+const clock = fixedClock("2026-09-02T10:00:00.000Z");
 
 function names(db: ReturnType<typeof openDb>, type: "table" | "index"): string[] {
   return db

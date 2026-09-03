@@ -2,12 +2,8 @@ import { mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import type { Clock } from "./clock.js";
+import { fixedClock } from "./clock.fake.js";
 import { openLog } from "./log.js";
-
-function fixedClock(iso: string): Clock {
-  return { now: () => new Date(iso) };
-}
 
 function logsDir(): string {
   return mkdtempSync(join(tmpdir(), "slopify-log-"));
@@ -57,7 +53,7 @@ describe("openLog", () => {
   it("rotates daily", () => {
     const dir = logsDir();
     let iso = "2026-09-02T23:59:59.000Z";
-    const log = openLog(dir, { now: () => new Date(iso) });
+    const log = openLog(dir, { now: () => new Date(iso), sleep: () => Promise.resolve() });
 
     log.write("info", "before");
     iso = "2026-09-03T00:00:01.000Z";

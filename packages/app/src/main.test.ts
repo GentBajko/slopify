@@ -3,14 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
-import type { Clock } from "./kernel/clock.js";
+import { fixedClock } from "./kernel/clock.fake.js";
 import type { Config } from "./kernel/config/index.js";
 import { openDb } from "./kernel/db/index.js";
 import { migrate } from "./kernel/db/migrate.js";
 import { readVersion } from "./kernel/version.js";
 import { boot, markInterruptedStages, urlOf } from "./main.js";
 
-const clock: Clock = { now: () => new Date("2026-09-02T10:00:00.000Z") };
+const clock = fixedClock("2026-09-02T10:00:00.000Z");
 
 function migrated(): DatabaseSync {
   const db = openDb(":memory:");

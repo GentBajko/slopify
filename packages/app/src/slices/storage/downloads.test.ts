@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { unzipSync } from "fflate";
 import { describe, expect, it } from "vitest";
-import type { Clock } from "../../kernel/clock.js";
+import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import { ensureDirs, layout } from "../../kernel/paths.js";
@@ -12,7 +12,7 @@ import { assetOf, findDownload, imagesZip, slugOf } from "./downloads.js";
 import type { Output } from "./model.js";
 import { insertOutput } from "./repo.js";
 
-const clock: Clock = { now: () => new Date("2026-09-02T10:00:00.000Z") };
+const clock = fixedClock("2026-09-02T10:00:00.000Z");
 
 function harness(title = "A Very Short History of Rope"): DownloadDeps {
   const paths = layout(mkdtempSync(join(tmpdir(), "slopify-downloads-")));

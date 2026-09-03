@@ -4,7 +4,7 @@ import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { createHub } from "../../edge/events/hub.js";
-import type { Clock } from "../../kernel/clock.js";
+import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import type { Ids } from "../../kernel/ids.js";
@@ -14,7 +14,7 @@ import { ensureDirs, layout } from "../../kernel/paths.js";
 import type { GlobalEvent } from "../events/hub.js";
 import { createApp } from "./app.js";
 
-const clock: Clock = { now: () => new Date("2026-09-02T10:00:00.000Z") };
+const clock = fixedClock("2026-09-02T10:00:00.000Z");
 const log: Log = { write: (): void => {} };
 
 interface Harness {

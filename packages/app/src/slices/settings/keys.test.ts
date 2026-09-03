@@ -1,12 +1,12 @@
 import type { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
-import type { Clock } from "../../kernel/clock.js";
+import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import type { KeysDeps } from "./keys.js";
 import { keyForAttempt, removeProviderKey, saveProviderKey } from "./keys.js";
 
-const clock: Clock = { now: () => new Date("2026-09-02T10:00:00.000Z") };
+const clock = fixedClock("2026-09-02T10:00:00.000Z");
 
 // Not a key, and shaped so it cannot be mistaken for one: no provider prefix, no length.
 const standIn = "unit-test-placeholder";

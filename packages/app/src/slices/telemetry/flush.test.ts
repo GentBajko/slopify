@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { describe, expect, it, vi } from "vitest";
-import type { Clock } from "../../kernel/clock.js";
+import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import type { Log, LogFields, LogLevel } from "../../kernel/log.js";
@@ -9,7 +9,7 @@ import type { FlushDeps, Flusher } from "./flush.js";
 import { batchSize, createFlusher, flush } from "./flush.js";
 import { insertMachine, insertTelemetryEvent, undeliveredEvents } from "./repo.js";
 
-const clock: Clock = { now: () => new Date("2026-09-02T11:00:00.000Z") };
+const clock = fixedClock("2026-09-02T11:00:00.000Z");
 const machineId = "7b1f0d2e-0000-4000-8000-000000000000";
 
 interface Line {
