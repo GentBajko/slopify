@@ -9,7 +9,9 @@
     "lint": "biome check .",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "vitest run",
-    "build": "npm run build --workspace @slopify/web && npm run build --workspace @gentbajko/slopify"
+    "build": "npm run build --workspace @slopify/web && npm run build --workspace @gentbajko/slopify",
+    "deploy": "npm run deploy --workspace @slopify/collector && npm run deploy --workspace @slopify/site",
+    "deploy:check": "npm run deploy:check --workspace @slopify/collector && npm run deploy:check --workspace @slopify/site"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.11",
