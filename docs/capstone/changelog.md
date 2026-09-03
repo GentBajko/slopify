@@ -5,6 +5,17 @@ capstone_version: 5.2.0
 
 # Changelog
 
+## 2026-09-03 - the hero recording, and the WSL browser
+key: site/hero-and-wsl
+- The recording landed, so the one asset this page was missing is no longer missing: `play-run.mp4` (31.1 s, 1152x648, 16:9, 60 fps, 11.1 MB), its poster, and an empty `play-run.vtt` cue list. The capture carries no audio stream, which is what the figcaption already claimed and what makes the next line free.
+- User: "I would like an autoplay much more. And remove the controls from the player." Done, with three things that had to come with it. `muted` is not a preference - every browser refuses to autoplay audio, so without it the autoplay is silently blocked and the poster freezes instead; the silent capture makes it costless. `loop`, because a video with no controls that plays once can never be replayed. And `preload` moved from `none` to `metadata`, since a browser cannot autoplay what it has been told not to load.
+- Reduced motion was the one case where a looping video is the wrong answer, and the page already honours it for the counter fades. `main.js` now hands the controls back and holds the poster frame for those visitors, so the page does not contradict its own accessibility floor. It does nothing for anyone else and nothing when the video is absent, which was still true when it was written.
+- Checked rather than assumed: `moov` sits at byte 36 and `mdat` at 8481, so the file is already faststart and begins playing while it downloads - which matters for an 11 MB asset that now plays on arrival rather than on a click. The poster is 1152x648, the same frame size as the video.
+- The poster is now nearly invisible: with autoplay it shows for an instant, and only persists for reduced-motion visitors. It was cut at second 14 at the user's request.
+- WSL: the app opened a browser inside the distribution rather than the Windows one on screen. `process.platform` reads `linux` under WSL, so `openBrowser` took the `xdg-open` branch, and `wslview` is not installed by default. There is now a WSL check - `WSL_DISTRO_NAME` or `WSL_INTEROP` first, then `/proc/version`, because those variables are absent under `sudo` and in a shell a service started - and on WSL the opener crosses the interop boundary with `cmd.exe /c start`, reaching the Windows default browser.
+- Writing that test found a real weakness: the guard against an unreadable `/proc/version` sat in the reader rather than around the injected call, so `isWsl` could still throw and take down the boot. A browser that will not open is a nuisance, never a reason to fail startup.
+- Verified after: 1446 tests across 135 files, lint clean on 407, typecheck clean. `wrangler deploy --dry-run` reads 19 assets where it read 16.
+
 ## 2026-09-03 - the Nano Banana family, named as Google markets it
 key: adapters/google-image-names
 - User: "Why 3.1 flash? Latest is 3.8 flash and you did not include nano banana".

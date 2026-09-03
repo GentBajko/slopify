@@ -1,7 +1,14 @@
 // Beside public/main.js rather than in it: everything inside public/ is uploaded to the
 // static host verbatim, and a test file is not part of the page.
 import { describe, expect, it } from "vitest";
-import { counterText, dash, paint, readAggregates, tallyFoot } from "./public/main.js";
+import {
+  counterText,
+  dash,
+  paint,
+  readAggregates,
+  tallyFoot,
+  wireShowcase,
+} from "./public/main.js";
 
 const live = {
   installs: 876,
@@ -167,5 +174,60 @@ describe("paint", () => {
 
     expect(() => paint(root, live)).not.toThrow();
     expect(counters[0].textContent).toBe("876");
+  });
+});
+
+// The video autoplays and loops, which is the only thing on this page that moves unasked.
+// A stub stands in for the element because there is no DOM here: what matters is which
+// properties get set, not how a browser renders them.
+function videoStub() {
+  let paused = false;
+  return {
+    autoplay: true,
+    loop: true,
+    controls: false,
+    pause() {
+      paused = true;
+    },
+    get paused() {
+      return paused;
+    },
+  };
+}
+
+function rootWith(video, reduce) {
+  globalThis.matchMedia = (query) => ({
+    matches: reduce && query.includes("prefers-reduced-motion"),
+  });
+  return { querySelector: () => video };
+}
+
+describe("wireShowcase", () => {
+  it("holds the frame and gives the controls back under reduced motion", () => {
+    const video = videoStub();
+
+    wireShowcase(rootWith(video, true));
+
+    expect(video.autoplay).toBe(false);
+    expect(video.loop).toBe(false);
+    expect(video.controls).toBe(true);
+    // autoplay may already have started it before this module ran.
+    expect(video.paused).toBe(true);
+  });
+
+  it("leaves the video alone for everyone else", () => {
+    const video = videoStub();
+
+    wireShowcase(rootWith(video, false));
+
+    expect(video.autoplay).toBe(true);
+    expect(video.loop).toBe(true);
+    expect(video.controls).toBe(false);
+    expect(video.paused).toBe(false);
+  });
+
+  // The recording is not in the repository yet, and the page has to survive that.
+  it("does nothing when the page carries no video", () => {
+    expect(() => wireShowcase(rootWith(null, true))).not.toThrow();
   });
 });

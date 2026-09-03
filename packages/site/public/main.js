@@ -169,8 +169,25 @@ export function wireCopy(root, clipboard) {
   }
 }
 
+// The showcase video autoplays and loops, which is the one thing on this page that moves
+// without being asked. Reduced motion means exactly that, so it holds its poster frame and
+// gets its controls back - the recording is still the page's argument, it just waits to be
+// played. Nothing happens for anyone else, and nothing happens if the video is absent.
+export function wireShowcase(root) {
+  const video = root.querySelector(".showcase-video");
+  if (video === null || !reducedMotion()) {
+    return;
+  }
+  video.autoplay = false;
+  video.loop = false;
+  video.controls = true;
+  // autoplay may already have started it in the time before this module ran.
+  video.pause?.();
+}
+
 if (typeof document !== "undefined") {
   poll(document, collectorUrl, globalThis.fetch.bind(globalThis));
+  wireShowcase(document);
   wireCopy(
     document,
     globalThis.navigator?.clipboard ?? {

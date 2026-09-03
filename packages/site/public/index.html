@@ -139,17 +139,27 @@
             <div class="showcase-frame">
               <!-- ceiling: the recording is the one asset this page is missing. Three
                    files land together and no markup changes when they do:
-                   public/assets/play-run.mp4, its opening frame at
+                   public/assets/play-run.mp4, a frame of it at
                    public/assets/play-run-poster.png, and captions at
                    public/assets/play-run.vtt (an empty cue list if the capture is
                    silent). Until then the frame is deliberately empty. A still of the
                    Play screen in its place would claim a run that never happened, which
-                   is the opposite of what the counters below are for. -->
+                   is the opposite of what the counters below are for.
+
+                   It plays by itself, loops, and carries no controls: the run is the
+                   argument this page makes, so it should be running when you arrive.
+                   `muted` is not a preference - every browser refuses to autoplay audio,
+                   and the capture is silent anyway. `playsinline` stops iOS taking it
+                   fullscreen. main.js gives the controls back and holds the first frame
+                   for anyone who asked for reduced motion, which is the one case where a
+                   looping video is the wrong answer. -->
               <video
                 class="showcase-video"
-                controls
+                autoplay
+                muted
+                loop
                 playsinline
-                preload="none"
+                preload="metadata"
                 width="1280"
                 height="720"
                 poster="/assets/play-run-poster.png"
