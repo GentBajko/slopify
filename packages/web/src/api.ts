@@ -21,6 +21,8 @@ import type {
 import type { VoiceDraft } from "@app/slices/settings/voices.js";
 import type { Output, StagedFile } from "@app/slices/storage/model.js";
 import { hc } from "hono/client";
+import type { Problem, SaveResult } from "./http.js";
+import { errorOf, failure, problemOf, read, saved } from "./http.js";
 
 export type {
   Appearance,
@@ -31,6 +33,7 @@ export type {
   EntryMode,
   FieldError,
   Output,
+  Problem,
   Project,
   ProjectSummary,
   Prompt,
@@ -40,6 +43,7 @@ export type {
   ProviderId,
   ProviderStatus,
   RunDraft,
+  SaveResult,
   Stage,
   StagedFile,
   Voice,
@@ -95,15 +99,6 @@ export interface KeyStatusBody {
   readonly provider: ProviderId;
   readonly hasKey: boolean;
   readonly masked: string | null;
-}
-
-// RFC 9457 as `edge/http/problem.ts` writes it, with the `fields` extension member the
-// admission rules add (logic/04 §Q29).
-export interface Problem {
-  readonly title: string;
-  readonly status: number;
-  readonly detail?: string;
-  readonly fields?: readonly FieldError[];
 }
 
 export interface Api {
@@ -276,15 +271,6 @@ export async function listPrompts(api: Api): Promise<PromptListBody> {
   return read<PromptListBody>(await api.client.prompts.$get());
 }
 
-// A refused template is an expected outcome, so it comes back as a value carrying the
-// server's own `fields[]` for the editor to mark (03-standards, typed results). One type
-// for prompts and entries, because `logic/15` §Q121 gives them one rule set and
-// `edge/http/entries.ts` reuses the prompt routes' refusal mapping.
-export type SaveResult<T> =
-  | { readonly ok: true; readonly value: T }
-  | { readonly ok: false; readonly fields: readonly FieldError[] };
-
-// `id` undefined creates; anything else replaces (`logic/15` §Q125: a save overwrites).
 export async function savePrompt(
   api: Api,
   draft: PromptDraft,
@@ -329,54 +315,6 @@ export async function removeEntry(api: Api, id: string): Promise<void> {
   }
 }
 
-async function saved<T>(response: Response): Promise<SaveResult<T>> {
-  if (response.ok) {
-    return { ok: true, value: (await response.json()) as T };
-  }
-  const problem = await problemOf(response);
-  const fields = problem?.fields ?? [];
-  // 400 marks the lint that got past the editor, 409 the name the unique index refused
-  // (`logic/15` §Q122). Both name their fields; anything else is a fault and throws.
-  if ((response.status === 400 || response.status === 409) && fields.length > 0) {
-    return { ok: false, fields };
-  }
-  throw errorOf(response, problem);
-}
-
 export function eventsUrl(api: Api, path: string): string {
   return `${api.origin}/api/events/${path}`;
-}
-
-async function read<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    throw await failure(response);
-  }
-  return (await response.json()) as T;
-}
-
-// React Query's error channel is an Error, so an expected failure crosses into it as
-// one. The problem's own `detail` is the sentence the server wrote for the user; nothing
-// is invented here and nothing is swallowed.
-async function failure(response: Response): Promise<Error> {
-  return errorOf(response, await problemOf(response));
-}
-
-// Split from `failure` so a caller that already read the problem document to decide
-// whether the outcome was expected can still raise the same error for one that was not:
-// a response body may be read only once.
-function errorOf(response: Response, problem: Problem | undefined): Error {
-  if (problem === undefined) {
-    return new Error(`The app answered ${response.status} with no problem document.`);
-  }
-  const fields = problem.fields ?? [];
-  const listed = fields.map((field) => `${field.field}: ${field.message}`).join("; ");
-  const detail = problem.detail ?? problem.title;
-  return new Error(listed === "" ? detail : `${detail} ${listed}`);
-}
-
-async function problemOf(response: Response): Promise<Problem | undefined> {
-  if (!(response.headers.get("content-type") ?? "").includes("problem+json")) {
-    return undefined;
-  }
-  return (await response.json()) as Problem;
 }
