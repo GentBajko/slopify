@@ -31,6 +31,8 @@ import { runImages } from "../src/slices/images/run.js";
 import { runNarration } from "../src/slices/narration/run.js";
 import { deleteImage, editArticle } from "../src/slices/reruns/index.js";
 import { outputsOf } from "../src/slices/storage/repo.js";
+import type { Counted } from "../src/slices/telemetry/record.fake.js";
+import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 import { resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
 import { renderVideo } from "../src/slices/video/run.js";
 
@@ -104,6 +106,7 @@ interface Harness {
   readonly images: FakeImage;
   readonly renders: () => number;
   readonly settle: () => Promise<void>;
+  readonly counted: Counted;
 }
 
 function harness(): Harness {
@@ -119,7 +122,8 @@ function harness(): Harness {
       return `id${String(n)}`;
     },
   };
-  const deps = { db, paths, ids, clock: systemClock, log: silent };
+  const counted = recordingCounter();
+  const deps = { db, paths, ids, clock: systemClock, log: silent, count: counted.count };
   const draft: RunDraft = {
     title: "Rope Tricks",
     format: "16:9",
@@ -190,6 +194,7 @@ function harness(): Harness {
     projectId: project.id,
     runner,
     deps,
+    counted,
     tts,
     images,
     renders: () =>
@@ -255,6 +260,18 @@ describe("an edit and a delete on a finished project", () => {
     // §Q102: "ending in a fresh render".
     expect(h.renders()).toBe(2);
     expect(renderedImages(h)).toHaveLength(3);
+    // logic/16 step 3: "regenerations count again". The re-narration and the re-render
+    // are counted a second time; the images the edit left alone are counted once.
+    const counted = h.counted.events().map((one) => one.counters);
+    expect(counted.filter((one) => one.stage === "video")).toHaveLength(2);
+    expect(counted.filter((one) => one.stage === "audio" && one.segment === "body")).toHaveLength(
+      2,
+    );
+    expect(counted.filter((one) => one.stage === "images")).toEqual([
+      { stage: "images", provider: "fake-image", model: "fake-diffusion", images: 3 },
+    ]);
+    // §Q131: nothing here is a project delete, and the audio seconds only ever grow.
+    expect(counted.reduce((sum, one) => sum + (one.audioSeconds ?? 0), 0)).toBeGreaterThan(0);
   }, 180_000);
 
   // Step 5 with `logic/09` §Q75: one image leaves the set, the video is rebuilt without

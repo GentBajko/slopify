@@ -24,6 +24,9 @@ import type { StageContext } from "../src/kernel/runner/index.js";
 import { piecesOf } from "../src/kernel/runner/piece-repo.js";
 import { stageProviders } from "../src/kernel/runner/providers.js";
 import { nothingToNarrate, runNarration } from "../src/slices/narration/run.js";
+import type { RecordEvent } from "../src/slices/telemetry/model.js";
+import type { Counted } from "../src/slices/telemetry/record.fake.js";
+import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 import { probeDurationMs, resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
 
 // The audio stage against the real attempt wrapper and the real bundled ffmpeg, which is
@@ -108,7 +111,9 @@ interface Harness {
     readonly clock: Clock;
     readonly log: Log;
     readonly ffmpeg: string;
+    readonly count: RecordEvent;
   };
+  readonly counted: Counted;
   readonly context: StageContext;
 }
 
@@ -195,12 +200,14 @@ function harness(options: HarnessOptions = {}): Harness {
     },
   };
   const events: ProjectEvent[] = [];
+  const counted = recordingCounter();
   return {
     db,
     paths,
     dir,
     events,
-    deps: { db, paths, ids, clock, log: silent, ffmpeg },
+    counted,
+    deps: { db, paths, ids, clock, log: silent, ffmpeg, count: counted.count },
     context: {
       stage: { id: "s1", projectId: "p1", kind: "audio", state: "running" },
       signal: new AbortController().signal,
@@ -343,6 +350,18 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
     // §Q65's invariant: the body plus the two segments are the project's only audio
     // outputs. The chunks are files, not outputs.
     expect(rows).toHaveLength(3);
+    // logic/16 step 2: "audio per segment (body, intro, outro)", and step 3 takes the
+    // seconds from the duration that was measured rather than from the text. No model:
+    // the TTS port carries none, which is why the output row has none either.
+    expect(h.counted.events().map((one) => one.counters)).toEqual(
+      rows.map((row) => ({
+        stage: "audio",
+        segment:
+          row.role === "audio_body" ? "body" : row.role === "audio_intro" ? "intro" : "outro",
+        provider: "fake-tts",
+        audioSeconds: row.duration_ms / 1000,
+      })),
+    );
     h.db.close();
   }, 120_000);
 
@@ -363,6 +382,21 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
 
   // §Q66: "One chunk exhausts its retries → the whole stage fails; manual retry keeps
   // completed chunks and re-runs only failed or not-started ones, then concatenates."
+  // logic/16 step 2 puts the event on the unit completing, so a stage that never joined
+  // its body counted nothing - and §Q112's aborted calls have nothing to add either.
+  it("counts no audio for a stage that failed before it joined the body", async () => {
+    const beat = manualClock("2026-09-02T10:00:00.000Z");
+    const h = harness({ chunking: { mode: "paragraph" }, clock: beat });
+    const failing = fakeTts({
+      bytesFor: (req) => (req.text === paragraphs[1] ? throwOut() : [tones(req.text)]),
+    });
+
+    await expect(beat.settle(run(h, failing))).rejects.toThrow(/synthesiser is down/);
+
+    expect(h.counted.events()).toEqual([]);
+    h.db.close();
+  }, 120_000);
+
   it("fails the stage when one chunk exhausts its retries, keeping the chunks that landed", async () => {
     const beat = manualClock("2026-09-02T10:00:00.000Z");
     const h = harness({ chunking: { mode: "paragraph" }, clock: beat });

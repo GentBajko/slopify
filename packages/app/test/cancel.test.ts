@@ -24,6 +24,8 @@ import { cancelProject } from "../src/slices/cancel/index.js";
 import { runImages } from "../src/slices/images/run.js";
 import { retryStage } from "../src/slices/reruns/index.js";
 import { outputsOf } from "../src/slices/storage/repo.js";
+import type { Counted } from "../src/slices/telemetry/record.fake.js";
+import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 
 // `logic/13` through the real runner and the real images stage: what a cancel aborts,
 // what it keeps, and what a retry afterwards has left to do. No provider is called - the
@@ -43,6 +45,7 @@ interface Harness {
   readonly reruns: Parameters<typeof retryStage>[0];
   readonly use: (port: ImagePort) => void;
   readonly stateOf: (kind: StageKind) => StageState;
+  readonly counted: Counted;
 }
 
 function harness(images: number, port: ImagePort): Harness {
@@ -119,7 +122,8 @@ function harness(images: number, port: ImagePort): Harness {
     clock: systemClock,
     log: silent,
   };
-  const writing = { db, paths, ids, clock: systemClock, log: silent };
+  const counted = recordingCounter();
+  const writing = { db, paths, ids, clock: systemClock, log: silent, count: counted.count };
   let videoRuns = 0;
   const video: StageRun = async (): Promise<void> => {
     videoRuns += 1;
@@ -157,6 +161,7 @@ function harness(images: number, port: ImagePort): Harness {
         projectId,
       ),
     reruns: writing,
+    counted,
     use: (next: ImagePort): void => {
       current = next;
     },
@@ -240,6 +245,9 @@ describe("cancelling a run", () => {
     expect(canceled.map((one) => one.errorText)).toEqual([null, null]);
     // Nothing was retried: a cancel is not a failure.
     expect(attemptsOf(h.db, "s-images").every((one) => one.n === 1)).toBe(true);
+    // §Q112 through logic/16 step 3: the stage never completed, so it counted nothing -
+    // the two aborted calls least of all.
+    expect(h.counted.events()).toEqual([]);
   });
 
   // Step 5: "retry on a `canceled` stage resumes exactly like a `failed` one ... and the
@@ -288,6 +296,9 @@ describe("cancelling a run", () => {
     expect(h.stateOf("images")).toBe("done");
     // The cascade continues: the video the cancel held back renders once the stage is done.
     expect(h.videoRuns()).toBe(1);
+    // §Q112 again: the resumed run made two images and counted those two. The image the
+    // cancelled run had already stored is not made again, so it is not counted again.
+    expect(h.counted.events().map((one) => one.counters.images)).toEqual([2]);
     expect(derive(stagesOf(h.db, projectId))).toBe("done");
   });
 
@@ -327,6 +338,12 @@ describe("cancelling a run", () => {
     // images done - so only the cancel's own barrier keeps the render from starting.
     expect(h.stateOf("video")).toBe("pending");
     expect(h.videoRuns()).toBe(0);
+    // §Q112 reads from the other side here: the call completed before the abort took
+    // effect, the image is stored, and it is counted. The render never ran, so no video
+    // is counted.
+    expect(h.counted.events().map((one) => one.counters)).toEqual([
+      { stage: "images", provider: "fake-image", model: "fake-diffusion", images: 1 },
+    ]);
   });
 });
 

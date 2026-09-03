@@ -1,15 +1,41 @@
 import { z } from "zod";
 import type { StageKind } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
+import type { Usage } from "../../kernel/ports/llm.js";
 
 // logic/16 step 2: one install event, one per project created, one per stage completing.
 export const telemetryEventTypes = ["install", "project.created", "stage.completed"] as const;
 export type TelemetryEventType = (typeof telemetryEventTypes)[number];
 
-// logic/16 step 2 counts audio per segment, so a completed audio stage produces one event
-// per segment rather than one for the stage.
+// logic/16 step 2 counts finer than a stage: "one event per stage completing: research,
+// article, each intro/outro text, audio per segment (body, intro, outro), images,
+// thumbnail, video". The three that are not whole stages are named by `segment` beside
+// the stage that produced them - the article stage writes the intro and outro texts
+// (logic/07 step 5) and the audio stage narrates all three (logic/08 step 5) - so the
+// event type stays `stage.completed` and the pair (stage, segment) says which unit it is.
 export const audioSegments = ["body", "intro", "outro"] as const;
 export type AudioSegment = (typeof audioSegments)[number];
+
+// What a stage slice is handed instead of the telemetry module: one call, already inside
+// the swallow of `record`, so a slice can neither widen the payload nor fail a pipeline by
+// counting it. The composition root closes over the deps and the flusher (main.ts).
+export type RecordEvent = (type: TelemetryEventType, counters: TelemetryCounters) => void;
+
+// logic/16 step 3: "tokens in and out as the provider reports them, 0 when unreported".
+// Never estimated, so a provider that reports nothing adds nothing.
+export interface Tokens {
+  readonly tokensIn: number;
+  readonly tokensOut: number;
+}
+
+export const noTokens: Tokens = { tokensIn: 0, tokensOut: 0 };
+
+export function plusUsage(tokens: Tokens, usage: Usage | null): Tokens {
+  return {
+    tokensIn: tokens.tokensIn + (usage?.inputTokens ?? 0),
+    tokensOut: tokens.tokensOut + (usage?.outputTokens ?? 0),
+  };
+}
 
 // The whole privacy surface. logic/16 step 4 bars API keys, prompt bodies, keyword
 // values, titles, article and research text, files, filenames, OS, locale and hardware

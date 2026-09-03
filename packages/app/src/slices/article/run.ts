@@ -14,6 +14,8 @@ import type { EntryCategory } from "../library/model.js";
 import { outputPath } from "../storage/layout.js";
 import { outputsOf } from "../storage/repo.js";
 import { storeText } from "../storage/staging.js";
+import type { RecordEvent, Tokens } from "../telemetry/model.js";
+import { noTokens, plusUsage } from "../telemetry/model.js";
 import type { ArticleBrief, SentMessages } from "./continuation.js";
 import { writeArticle } from "./continuation.js";
 import { storeArticleText } from "./store.js";
@@ -28,6 +30,8 @@ export interface ArticleDeps {
   readonly ids: Ids;
   readonly clock: Clock;
   readonly log: Log;
+  // logic/16 step 2: one event for the article, one for each intro or outro text.
+  readonly count: RecordEvent;
 }
 
 // What the article stage leaves for `logic/08` to narrate: one `segment` piece per picked
@@ -37,6 +41,11 @@ export interface SegmentText {
   readonly name: string;
   readonly mode: EntryMode;
   readonly text: string;
+}
+
+// The segment plus what its call cost, which the piece it is stored on has no room for.
+interface WrittenSegment extends SegmentText {
+  readonly tokens: Tokens;
 }
 
 const categories: readonly EntryCategory[] = ["intro", "outro"];
@@ -76,6 +85,15 @@ export async function runArticle(
   const store = { projectId, stageKind: "article" } as const;
   storeText(deps, { ...store, role: "article_md", text: written.markdown });
   const narration = storeArticleText(deps, { projectId, markdown: written.markdown });
+  // logic/16 step 2 counts the article and each entry text as units of their own, so the
+  // article's own event goes out as soon as its text is stored, carrying the tokens of
+  // the first call and its continuations (logic/07 step 3).
+  deps.count("stage.completed", {
+    stage: "article",
+    provider: choice.provider,
+    model: choice.model,
+    ...written.tokens,
+  });
 
   const sent = [...written.sent];
   for (const [index, category] of categories.entries()) {
@@ -89,6 +107,15 @@ export async function runArticle(
     );
     if (segment !== undefined) {
       keepSegment(deps, context, segment, index + 1);
+      // "each intro/outro text" of logic/16 step 2, named by its segment. A text-mode
+      // entry is rendered rather than written (§Q98), so it made no call and names no
+      // provider; its tokens are the zero step 3 asks for rather than an estimate.
+      deps.count("stage.completed", {
+        stage: "article",
+        segment: category,
+        ...(segment.mode === "llm" ? { provider: choice.provider, model: choice.model } : {}),
+        ...segment.tokens,
+      });
     }
   }
 
@@ -111,7 +138,7 @@ async function writeSegment(
   category: EntryCategory,
   article: string,
   sent: SentMessages[],
-): Promise<SegmentText | undefined> {
+): Promise<WrittenSegment | undefined> {
   const picked = config[category];
   if (picked === undefined) {
     return undefined;
@@ -122,7 +149,7 @@ async function writeSegment(
   }
   const common = { category, name: picked.name, mode: picked.mode };
   if (picked.mode === "text") {
-    return { ...common, text: body };
+    return { ...common, text: body, tokens: noTokens };
   }
   const messages = segmentMessages(body, config, article);
   sent.push({ label: label(category), messages });
@@ -135,7 +162,7 @@ async function writeSegment(
     check: (given: LlmAnswer): string | undefined =>
       given.text.trim() === "" ? `the ${category} answered with nothing` : undefined,
   });
-  return { ...common, text: answer.text.trim() };
+  return { ...common, text: answer.text.trim(), tokens: plusUsage(noTokens, answer.usage) };
 }
 
 function segmentMessages(body: string, config: RunConfig, article: string): readonly Message[] {
@@ -170,7 +197,15 @@ function keepSegment(
   segment: SegmentText,
   idx: number,
 ): void {
-  const payload = JSON.stringify(segment);
+  // Written out rather than stringified whole: the caller hands in what the call cost as
+  // well, and the piece is `logic/08`'s to read - it carries the text to narrate, nothing
+  // about the model that wrote it.
+  const payload = JSON.stringify({
+    category: segment.category,
+    name: segment.name,
+    mode: segment.mode,
+    text: segment.text,
+  } satisfies SegmentText);
   const existing = piecesOf(deps.db, context.stage.id, "segment").find(
     (piece) => piece.idx === idx,
   );

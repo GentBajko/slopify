@@ -1,6 +1,8 @@
 import type { LlmEvent, Message } from "../../kernel/ports/llm.js";
 import type { LlmAnswer, StageProviders } from "../../kernel/runner/providers.js";
 import type { ProviderChoice } from "../admission/model.js";
+import type { Tokens } from "../telemetry/model.js";
+import { noTokens, plusUsage } from "../telemetry/model.js";
 
 // Steps 1 to 3 of `logic/07`: the one message the article is written from, the streamed
 // call that writes it, and the continuations that finish it when the model runs into its
@@ -23,6 +25,9 @@ export interface WrittenArticle {
   readonly markdown: string;
   // §Q57: the exact messages sent, in the order they were sent, for the project to store.
   readonly sent: readonly SentMessages[];
+  // logic/16 step 3: the article and its continuations are one unit, so their usage is
+  // summed here and counted once by the stage.
+  readonly tokens: Tokens;
 }
 
 // §Q59: "at most 3 continuations; still unfinished after the third is a failed attempt".
@@ -85,6 +90,7 @@ export async function writeArticle(
     stream,
   );
   const pieces = [answer.text];
+  let tokens = plusUsage(noTokens, answer.usage);
 
   for (let n = 1; truncated(answer) && n <= continuationLimit; n += 1) {
     const messages = continuationMessages(base, pieces.join(""));
@@ -102,9 +108,10 @@ export async function writeArticle(
       stream,
     );
     pieces.push(answer.text);
+    tokens = plusUsage(tokens, answer.usage);
   }
 
-  return { markdown: pieces.join(""), sent };
+  return { markdown: pieces.join(""), sent, tokens };
 }
 
 function truncated(answer: LlmAnswer): boolean {

@@ -19,6 +19,8 @@ import { insertPiece, piecesOf } from "../../kernel/runner/piece-repo.js";
 import type { LlmAnswer, LlmCall, StageProviders } from "../../kernel/runner/providers.js";
 import type { RunConfig } from "../admission/model.js";
 import { outputsOf } from "../storage/repo.js";
+import type { Counted } from "../telemetry/record.fake.js";
+import { recordingCounter } from "../telemetry/record.fake.js";
 import type { ArticleDeps, SegmentText } from "./run.js";
 import { runArticle } from "./run.js";
 
@@ -73,6 +75,7 @@ interface Harness {
   readonly context: StageContext;
   readonly events: readonly ProjectEvent[];
   readonly fileOf: (name: string) => string;
+  readonly counted: Counted;
 }
 
 function harness(over: Partial<RunConfig> = {}): Harness {
@@ -96,11 +99,13 @@ function harness(over: Partial<RunConfig> = {}): Harness {
     },
   };
   const events: ProjectEvent[] = [];
+  const counted = recordingCounter();
   return {
     db,
     paths,
     events,
-    deps: { db, paths, ids, clock, log: silent },
+    counted,
+    deps: { db, paths, ids, clock, log: silent, count: counted.count },
     fileOf: (name: string): string => readFileSync(join(paths.projects, "p1", name), "utf8"),
     context: {
       stage: { id: "s1", projectId: "p1", kind: "article", state: "running" },
@@ -257,6 +262,21 @@ describe("runArticle", () => {
     const segments = piecesOf(h.db, "s1", "segment");
     expect(segments.map((piece) => segmentOf(piece).text)).toEqual(["Welcome back.", "See you."]);
     expect(segments.map((piece) => piece.state)).toEqual(["done", "done"]);
+    // logic/16 step 2 still counts "each intro/outro text": a text-mode entry made no
+    // call, so its event names no provider and reports the zero of step 3 rather than an
+    // estimate. The whole payload is asserted, because what is absent is the point.
+    expect(h.counted.events().map((one) => one.counters)).toEqual([
+      // The double answers with no usage, which is step 3's "0 when unreported".
+      {
+        stage: "article",
+        provider: "openrouter",
+        model: "openai/gpt-5",
+        tokensIn: 0,
+        tokensOut: 0,
+      },
+      { stage: "article", segment: "intro", tokensIn: 0, tokensOut: 0 },
+      { stage: "article", segment: "outro", tokensIn: 0, tokensOut: 0 },
+    ]);
     h.db.close();
   });
 

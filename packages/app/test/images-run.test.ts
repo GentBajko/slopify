@@ -20,6 +20,9 @@ import type { StageContext } from "../src/kernel/runner/index.js";
 import { piecesOf } from "../src/kernel/runner/piece-repo.js";
 import { stageProviders } from "../src/kernel/runner/providers.js";
 import { runImages } from "../src/slices/images/run.js";
+import type { RecordEvent } from "../src/slices/telemetry/model.js";
+import type { Counted } from "../src/slices/telemetry/record.fake.js";
+import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 
 // The images stage against the real attempt wrapper and the real piece store, which is
 // what a unit test of the slice cannot show: a slice may not reach a registry or an
@@ -43,7 +46,9 @@ interface Harness {
     readonly ids: Ids;
     readonly clock: Clock;
     readonly log: Log;
+    readonly count: RecordEvent;
   };
+  readonly counted: Counted;
   readonly context: StageContext;
 }
 
@@ -105,13 +110,15 @@ function harness(options: HarnessOptions = {}): Harness {
     },
   };
   const events: ProjectEvent[] = [];
+  const counted = recordingCounter();
   return {
     db,
     paths,
     dir,
     clock,
     events,
-    deps: { db, paths, ids, clock, log: silent },
+    counted,
+    deps: { db, paths, ids, clock, log: silent, count: counted.count },
     context: {
       stage: { id: "s1", projectId: "p1", kind: "images", state: "running" },
       signal: new AbortController().signal,
@@ -195,6 +202,11 @@ describe("the images stage through the attempt wrapper", () => {
       "images/001.png",
       "images/002.png",
       "images/003.png",
+    ]);
+    // logic/16 steps 2 and 3: one event for the stage, carrying the images it stored
+    // under the provider and model that drew them. No tokens: an image call reports none.
+    expect(h.counted.events().map((one) => one.counters)).toEqual([
+      { stage: "images", provider: "fake-image", model: "fake-diffusion", images: 3 },
     ]);
   });
 
@@ -324,6 +336,9 @@ describe("the images stage through the attempt wrapper", () => {
       "images/002.png",
     ]);
     expect(slideshow(h.db)).toEqual(["images/001.png", "images/002.png", "images/003.png"]);
+    // logic/16 step 3: "images made (stored images)". The failed run counted nothing, and
+    // the resume counted only the one image it actually made - not the two it kept.
+    expect(h.counted.events().map((one) => one.counters.images)).toEqual([1]);
   });
 
   // §Q74: "no retries. The user edits the prompt and re-runs the stage."
@@ -386,5 +401,7 @@ describe("the images stage through the attempt wrapper", () => {
 
     expect(second.calls()).toBe(0);
     expect(imageRows(h.db)).toHaveLength(2);
+    // The second run made nothing, so it counted nothing; the first counted both.
+    expect(h.counted.events().map((one) => one.counters.images)).toEqual([2, 0]);
   });
 });

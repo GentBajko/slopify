@@ -21,6 +21,7 @@ import { startRun } from "../src/slices/admission/start.js";
 import { runNarration } from "../src/slices/narration/run.js";
 import type { StorageDeps } from "../src/slices/storage/staging.js";
 import { stageUpload } from "../src/slices/storage/staging.js";
+import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 import { resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
 
 // `logic/08` step 1: the end-matter split runs "when the article becomes `done` or
@@ -162,7 +163,7 @@ describe("a pasted article through Play and the audio stage", () => {
     const bytes = tone();
     const tts = fakeTts({ bytesFor: () => [bytes] });
     await runNarration(
-      { ...deps, ffmpeg },
+      { ...deps, ffmpeg, count: recordingCounter().count },
       context,
       stageProviders(
         {

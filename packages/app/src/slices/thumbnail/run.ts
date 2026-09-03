@@ -18,6 +18,8 @@ import { outputFileName, outputPath } from "../storage/layout.js";
 import type { Output } from "../storage/model.js";
 import { insertOutput, outputsOf } from "../storage/repo.js";
 import { storeText } from "../storage/staging.js";
+import type { RecordEvent, Tokens } from "../telemetry/model.js";
+import { noTokens, plusUsage } from "../telemetry/model.js";
 import type { ThumbnailBrief } from "./by-llm.js";
 import { thumbnailMessages, writtenPrompt } from "./by-llm.js";
 
@@ -32,6 +34,19 @@ export interface ThumbnailDeps {
   readonly ids: Ids;
   readonly clock: Clock;
   readonly log: Log;
+  // logic/16 step 2: one event when the thumbnail is made.
+  readonly count: RecordEvent;
+}
+
+// What `byLlm` spent, beside the prompt it came back with. A prompt kept from a previous
+// run cost this one nothing, which is what keeps §Q82's resume from counting twice.
+interface WrittenThumbnailPrompt {
+  readonly prompt: string;
+  // Absent only on the resume path of a run whose LLM row has gone; the event then names
+  // the image model that drew the thumbnail instead.
+  readonly provider?: string | undefined;
+  readonly model?: string | undefined;
+  readonly tokens: Tokens;
 }
 
 // The `prompt_written` sub-step of §Q82, persisted for resume: the prompt the LLM wrote
@@ -62,12 +77,24 @@ export async function runThumbnail(
     throw new Error("the run has no image provider or model");
   }
 
-  const prompt =
-    source === "from_prompt"
-      ? fromTemplate(project)
-      : await byLlm(deps, context, providers, project);
+  const written =
+    source === "from_prompt" ? undefined : await byLlm(deps, context, providers, project);
+  const prompt = written?.prompt ?? fromTemplate(project);
 
   await make(deps, context, providers, project, choice, prompt);
+  // logic/16 step 3 counts tokens "with provider and model names, per stage", and a
+  // payload names one provider. This stage can use two - the LLM that writes the prompt
+  // (`logic/10`) and the image model that draws it - so the event names the one whose
+  // usage it reports, because provider and model are shown beside the token columns on
+  // the Usage page. A thumbnail from a picked template makes no LLM call, so it names the
+  // image model that made it and reports the zero of step 3.
+  deps.count("stage.completed", {
+    stage: "thumbnail",
+    provider: written?.provider ?? choice.provider,
+    model: written?.model ?? choice.model,
+    ...(written?.tokens ?? noTokens),
+    thumbnails: 1,
+  });
   deps.log.write("info", "thumbnail.done", {
     projectId,
     stage: "thumbnail",
@@ -92,12 +119,18 @@ async function byLlm(
   context: StageContext,
   providers: StageProviders,
   project: Project,
-): Promise<string> {
+): Promise<WrittenThumbnailPrompt> {
   const kept = piecesOf(deps.db, context.stage.id, "prompt_written")[0];
-  if (kept !== undefined && kept.state === "done") {
-    return payloadOf(kept).prompt;
-  }
   const llm = project.config.llm;
+  if (kept !== undefined && kept.state === "done") {
+    // §Q82: the wording the user is looking at does not change under them. No call was
+    // made, so this run counts none - the run that wrote the prompt already did.
+    return {
+      prompt: payloadOf(kept).prompt,
+      ...(llm === undefined ? {} : named(llm)),
+      tokens: noTokens,
+    };
+  }
   if (llm === undefined) {
     // §Q81 makes the LLM row required when the thumbnail source is Prompt by LLM.
     throw new Error("the run has no LLM provider or model");
@@ -120,7 +153,11 @@ async function byLlm(
     role: "instructions",
     text: instructionsText(messages),
   });
-  return prompt;
+  return { prompt, ...named(llm), tokens: plusUsage(noTokens, answer.usage) };
+}
+
+function named(choice: ProviderChoice): { provider: string; model: string } {
+  return { provider: choice.provider, model: choice.model };
 }
 
 function brief(deps: ThumbnailDeps, project: Project): ThumbnailBrief {

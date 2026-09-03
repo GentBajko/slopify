@@ -18,6 +18,7 @@ import { entryCategories } from "../library/model.js";
 import { outputFileName, outputPath } from "../storage/layout.js";
 import type { Output, OutputRole } from "../storage/model.js";
 import { insertOutput, outputsOf } from "../storage/repo.js";
+import type { AudioSegment, RecordEvent } from "../telemetry/model.js";
 import { probeDurationMs } from "../video/ffmpeg.js";
 import { chunkNarration, defaultChunking } from "./chunk.js";
 import { joinNarration } from "./concat.js";
@@ -35,6 +36,8 @@ export interface NarrationDeps {
   readonly clock: Clock;
   readonly log: Log;
   readonly ffmpeg: string;
+  // logic/16 step 2: one event per narrated segment - body, intro, outro.
+  readonly count: RecordEvent;
 }
 
 // §Q67, verbatim: an empty narration source is an "immediate stage failure 'nothing to
@@ -230,6 +233,7 @@ async function storeBody(
   // landing between ffmpeg exiting and the row below leaves nothing recorded.
   context.signal.throwIfAborted();
   store(deps, projectId, "audio_body", name, durationMs, choice);
+  counted(deps, "body", durationMs, choice);
 }
 
 // Step 5: "each picked segment's text is one TTS request with the same provider and
@@ -274,7 +278,26 @@ async function speakSegments(
     );
     context.signal.throwIfAborted();
     store(deps, projectId, role, name, durationMs, choice);
+    counted(deps, segment.category, durationMs, choice);
   }
+}
+
+// logic/16 step 3: "audio seconds from the measured duration per segment". The measured
+// one, not the text's length: `logic/08` §Q68 puts the real duration on the row and
+// `logic/11` builds the timeline from it. No model is named because the TTS port carries
+// none - the same reason `store` above leaves it off the output row.
+function counted(
+  deps: NarrationDeps,
+  segment: AudioSegment,
+  durationMs: number,
+  choice: VoiceChoice,
+): void {
+  deps.count("stage.completed", {
+    stage: "audio",
+    segment,
+    provider: choice.provider,
+    audioSeconds: durationMs / 1000,
+  });
 }
 
 // Step 5: "k of N chunks narrated". Written as well as emitted, so a page opened mid-stage

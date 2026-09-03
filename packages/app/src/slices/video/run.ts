@@ -11,6 +11,7 @@ import { projectById, setStageProgress } from "../admission/repo.js";
 import { outputPath, projectDir } from "../storage/layout.js";
 import type { Output } from "../storage/model.js";
 import { deleteOutput, insertOutput, outputsOf } from "../storage/repo.js";
+import type { RecordEvent } from "../telemetry/model.js";
 import { probeDurationMs, renderArgs, runFfmpeg } from "./ffmpeg.js";
 import type { AudioInput, RenderPlan } from "./plan.js";
 import { planRender } from "./plan.js";
@@ -22,6 +23,8 @@ export interface VideoDeps {
   readonly clock: Clock;
   readonly log: Log;
   readonly ffmpeg: string;
+  // logic/16 step 2: one event per render that finished.
+  readonly count: RecordEvent;
 }
 
 // ceiling: progress is coalesced to one event per 500 ms, and the stage's progress
@@ -136,6 +139,10 @@ export async function renderVideo(deps: VideoDeps, context: StageContext): Promi
     current: totalMs,
     total: totalMs,
   });
+  // logic/16 step 3: "videos rendered (completed renders)". One event per swap, so a
+  // render that failed or was canceled counts nothing and a re-render counts again
+  // (scenario 12). No provider: ffmpeg is the machine's own, not a service.
+  deps.count("stage.completed", { stage: "video" });
 }
 
 // Written with project-relative paths, so the record of what was rendered can be read

@@ -37,6 +37,7 @@ import { reconcileStorage } from "./slices/storage/reconcile.js";
 import { collectorEndpoint, httpPostEvents } from "./slices/telemetry/collector-client.js";
 import type { Flusher } from "./slices/telemetry/flush.js";
 import { createFlusher } from "./slices/telemetry/flush.js";
+import type { RecordEvent } from "./slices/telemetry/model.js";
 import type { TelemetryDeps } from "./slices/telemetry/record.js";
 import { record } from "./slices/telemetry/record.js";
 import { runThumbnail } from "./slices/thumbnail/run.js";
@@ -158,12 +159,19 @@ function wire({ db, paths, clock, ids, log, hub, telemetry, flusher, registry }:
   // Resolved once at boot rather than per render, so a machine with no usable binary
   // fails at start with one message instead of on every project's last stage.
   const ffmpeg = resolveFfmpeg(process.env, ffmpegStatic);
+  // logic/16 steps 2 and 5: a stage counts what it did and the queue is flushed after
+  // each new event. `record` swallows its own failures, so this can neither fail a stage
+  // nor widen what leaves the machine - the payload allow-list is checked inside it.
+  const count: RecordEvent = (type, counters) => {
+    record(telemetry, type, counters);
+    flusher.soon();
+  };
   // The audio stage joins its chunks with the same binary the render uses, so it takes
-  // the same six dependencies.
-  const video = { db, paths, ids, clock, log, ffmpeg };
+  // the same seven dependencies.
+  const video = { db, paths, ids, clock, log, ffmpeg, count };
   // Research, the article, the images and the thumbnail all write into the same project
-  // folder from the same database handle, so they take the same five dependencies.
-  const writing = { db, paths, ids, clock, log };
+  // folder from the same database handle, so they take the same six dependencies.
+  const writing = { db, paths, ids, clock, log, count };
   // A stage slice is handed the wrapped calls, never the registry: every provider call
   // it makes is already inside the retry policy (kernel/runner/providers.ts).
   const providers: ProviderDeps = { registry, attempts: sqliteAttempts(db, ids), clock, log };
@@ -184,18 +192,16 @@ function wire({ db, paths, clock, ids, log, hub, telemetry, flusher, registry }:
       thumbnail: (context) => runThumbnail(writing, context, stageProviders(providers, context)),
       video: (context) => renderVideo(video, context),
     },
+    // logic/16 step 2 counts finer than a stage reaching `done` - each intro and outro
+    // text, each narrated segment - and its counters are the provider names, the token
+    // usage and the durations only the stage slice ever sees. Each slice therefore
+    // records its own units through `count` above, and the runner is left counting
+    // nothing: the kernel may not import a slice (03-conventions).
     emit: (projectId, event) => {
       hub.emit(projectId, event);
-      // logic/16 step 2: one event per stage that completes. The runner reports a stage
-      // reaching `done` here already, so the count is taken off that report rather than
-      // by handing the kernel a telemetry dependency it may not import.
-      if (event.type === "stage.state" && event.state === "done") {
-        record(telemetry, "stage.completed", { stage: event.stage });
-        flusher.soon();
-      }
     },
-    emitRunningCount: (count) => {
-      hub.emitGlobal({ type: "running.count", count });
+    emitRunningCount: (running) => {
+      hub.emitGlobal({ type: "running.count", count: running });
     },
     log,
   });

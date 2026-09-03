@@ -5,7 +5,7 @@ import { transact } from "../../kernel/db/tx.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
-import type { Message } from "../../kernel/ports/llm.js";
+import type { Message, Usage } from "../../kernel/ports/llm.js";
 import { isProviderError } from "../../kernel/ports/model.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StagePiece } from "../../kernel/runner/piece-repo.js";
@@ -14,6 +14,8 @@ import type { LlmAnswer, StageProviders } from "../../kernel/runner/providers.js
 import type { ProviderChoice } from "../admission/model.js";
 import { projectById, setStageProgress } from "../admission/repo.js";
 import { storeText } from "../storage/staging.js";
+import type { RecordEvent } from "../telemetry/model.js";
+import { noTokens, plusUsage } from "../telemetry/model.js";
 import type { ResearchBrief } from "./planner.js";
 import { chaptersFrom, plannerMessages, subAgentMessages } from "./planner.js";
 import type { Finding } from "./synthesis.js";
@@ -30,6 +32,8 @@ export interface ResearchDeps {
   readonly ids: Ids;
   readonly clock: Clock;
   readonly log: Log;
+  // logic/16 step 2: the stage records one event when it completes.
+  readonly count: RecordEvent;
 }
 
 // §Q47, verbatim: "the stage fails immediately with 'web research unsupported by this
@@ -78,8 +82,16 @@ async function research(
   choice: ProviderChoice,
   brief: ResearchBrief,
 ): Promise<void> {
-  const chapters = await plan(deps, context, providers, choice, brief);
-  const findings = await researchChapters(deps, context, providers, choice, brief, chapters);
+  // logic/16 step 3 counts tokens per stage, so the planner, every sub-agent and the
+  // synthesis add into one total. A call that was aborted or that failed never answers,
+  // so it adds nothing (§Q112); a provider that reports no usage adds zero, never an
+  // estimate (§Q131).
+  let tokens = noTokens;
+  const add = (usage: Usage | null): void => {
+    tokens = plusUsage(tokens, usage);
+  };
+  const chapters = await plan(deps, context, providers, choice, brief, add);
+  const findings = await researchChapters(deps, context, providers, choice, brief, chapters, add);
 
   const answer = await providers.llm({
     provider: choice.provider,
@@ -87,6 +99,7 @@ async function research(
     messages: synthesisMessages(brief, findings),
     check: (given: LlmAnswer): string | undefined => sourcedAnswer("the synthesis", given.text),
   });
+  add(answer.usage);
 
   const { projectId } = context.stage;
   // Step 4: the notes and every instruction sent are stored on the project. Each
@@ -97,6 +110,12 @@ async function research(
     stageKind: "research",
     role: "instructions",
     text: instructionsText(brief, findings),
+  });
+  deps.count("stage.completed", {
+    stage: "research",
+    provider: choice.provider,
+    model: choice.model,
+    ...tokens,
   });
   deps.log.write("info", "research.done", {
     projectId,
@@ -113,6 +132,7 @@ async function plan(
   providers: StageProviders,
   choice: ProviderChoice,
   brief: ResearchBrief,
+  add: (usage: Usage | null) => void,
 ): Promise<readonly StagePiece[]> {
   const existing = piecesOf(deps.db, context.stage.id, "chapter");
   if (existing.length > 0) {
@@ -126,6 +146,7 @@ async function plan(
     check: (given: LlmAnswer): string | undefined =>
       chaptersFrom(given.text).length === 0 ? "the planner named no chapters" : undefined,
   });
+  add(answer.usage);
   // §Q53: no cap on the count. The list is the prompt's own section guide as often as
   // not, and capping it would silently drop a section the article asks for.
   const planned: StagePiece[] = chaptersFrom(answer.text).map((title, index) => ({
@@ -154,6 +175,7 @@ async function researchChapters(
   choice: ProviderChoice,
   brief: ResearchBrief,
   chapters: readonly StagePiece[],
+  add: (usage: Usage | null) => void,
 ): Promise<readonly Finding[]> {
   const outline = chapters.map((piece) => payloadOf(piece).title);
   const total = chapters.length;
@@ -178,6 +200,7 @@ async function researchChapters(
           check: (given: LlmAnswer): string | undefined =>
             sourcedAnswer(`the researcher on "${kept.title}"`, given.text),
         });
+        add(answer.usage);
         const notes = answer.text.trim();
         setPiece(deps.db, piece.id, "done", JSON.stringify({ title: kept.title, notes }));
         done += 1;

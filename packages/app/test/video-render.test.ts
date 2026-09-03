@@ -13,6 +13,8 @@ import type { Log } from "../src/kernel/log.js";
 import type { Paths } from "../src/kernel/paths.js";
 import { ensureDirs, layout } from "../src/kernel/paths.js";
 import type { StageContext } from "../src/kernel/runner/index.js";
+import type { Counted } from "../src/slices/telemetry/record.fake.js";
+import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 import { resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
 import { renderVideo } from "../src/slices/video/run.js";
 
@@ -26,6 +28,7 @@ interface Fixture {
   readonly paths: Paths;
   readonly dir: string;
   readonly projectId: string;
+  readonly counted: Counted;
 }
 
 function ff(args: readonly string[]): string {
@@ -209,7 +212,7 @@ function fixture(options: FixtureOptions = {}): Fixture {
       `printf 'not an image' > ${JSON.stringify(join(dir, "article.txt"))}`,
     ]);
   }
-  return { db, paths, dir, projectId };
+  return { db, paths, dir, projectId, counted: recordingCounter() };
 }
 
 function context(signal: AbortSignal, events: unknown[]): StageContext {
@@ -230,6 +233,7 @@ function deps(harness: Fixture): Parameters<typeof renderVideo>[0] {
     clock: systemClock,
     log,
     ffmpeg,
+    count: harness.counted.count,
   };
 }
 
@@ -294,6 +298,11 @@ describe("the ffmpeg render", () => {
     expect(harness.db.prepare("SELECT progress_current, progress_total FROM stages").get()).toEqual(
       { progress_current: 3000, progress_total: 3000 },
     );
+    // logic/16 step 3: "videos rendered (completed renders)". One event, no provider:
+    // ffmpeg is the machine's own binary, not a service with a model name.
+    expect(harness.counted.events()).toEqual([
+      { type: "stage.completed", counters: { stage: "video" } },
+    ]);
   }, 180_000);
 
   it("zooms the first image in and the second one out", async () => {
@@ -330,6 +339,8 @@ describe("the ffmpeg render", () => {
     expect(
       harness.db.prepare("SELECT count(*) AS n FROM outputs WHERE role = 'video'").get(),
     ).toEqual({ n: 0 });
+    // A render that failed is not a completed render, so it counts nothing.
+    expect(harness.counted.events()).toEqual([]);
   }, 180_000);
 
   it("kills the render when the stage is canceled and leaves nothing behind", async () => {
@@ -343,6 +354,8 @@ describe("the ffmpeg render", () => {
 
     await expect(running).rejects.toThrow(/canceled|abort/i);
     expect(existsSync(join(harness.dir, "video.mp4"))).toBe(false);
+    // §Q112: the aborted render counts nothing either.
+    expect(harness.counted.events()).toEqual([]);
     // Nothing is stored for a render that was cancelled, whichever guard caught it.
     expect(
       harness.db.prepare("SELECT count(*) AS n FROM outputs WHERE stage_kind = 'video'").get(),
@@ -385,6 +398,8 @@ describe("the ffmpeg render", () => {
 
     expect(readFileSync(video)).toEqual(before);
     expect(readFileSync(join(harness.dir, "render.json"), "utf8")).toBe(params);
+    // Only the first render finished, so only the first was counted.
+    expect(harness.counted.events()).toHaveLength(1);
     expect(rowsOf(harness.db)).toEqual([
       { role: "render_params", path: "render.json" },
       { role: "video", path: "video.mp4" },
@@ -435,6 +450,8 @@ describe("the ffmpeg render", () => {
     ]);
     expect(idsOf(harness.db)).not.toEqual(firstIds);
     expect(existsSync(join(harness.dir, "video.part.mp4"))).toBe(false);
+    // Scenario 12: "regenerations count again", so the second render is a second event.
+    expect(harness.counted.events()).toHaveLength(2);
   }, 180_000);
 
   it("refuses to render a project whose audio decodes to nothing", async () => {

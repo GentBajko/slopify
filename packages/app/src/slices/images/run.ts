@@ -17,6 +17,7 @@ import { projectById, setStageProgress } from "../admission/repo.js";
 import { outputFileName, outputPath } from "../storage/layout.js";
 import type { Output } from "../storage/model.js";
 import { insertOutput, outputsOf } from "../storage/repo.js";
+import type { RecordEvent } from "../telemetry/model.js";
 
 // `logic/09`: every ticked image prompt is sent Number times as independent parallel
 // calls, each one a resumable piece so a failure re-runs only what is missing, and each
@@ -30,6 +31,8 @@ export interface ImagesDeps {
   readonly ids: Ids;
   readonly clock: Clock;
   readonly log: Log;
+  // logic/16 step 2: one event for the stage, carrying the images it made.
+  readonly count: RecordEvent;
 }
 
 // What an image piece carries between runs: what was asked for, and the file it came back
@@ -72,8 +75,22 @@ export async function runImages(
   }
   // Step 1: the run's own frame. The adapter turns it into whatever its provider spells
   // the closest supported size, and `logic/11` step 4 crops whatever is left over.
-  await sendAll(deps, context, providers, choice, pieces, project.format);
+  const made = await sendAll(deps, context, providers, choice, pieces, project.format);
 
+  // logic/16 step 3: "images made (stored images)". Only the ones this run stored, so a
+  // resume does not count an image the previous run made (§Q73) and a single regenerated
+  // image counts as one (§Q103, scenario 12: "regenerations count again").
+  //
+  // ceiling: a run that fails partway records nothing, so the images it did store are
+  // counted by no event and the resume counts only its own. logic/16 step 2 puts one
+  // event on the stage completing; the upgrade, if the drift ever matters, is an event
+  // per image.
+  deps.count("stage.completed", {
+    stage: "images",
+    provider: choice.provider,
+    model: choice.model,
+    images: made,
+  });
   deps.log.write("info", "images.done", {
     projectId,
     stage: "images",
@@ -134,7 +151,7 @@ async function sendAll(
   choice: ProviderChoice,
   pieces: readonly StagePiece[],
   format: Format,
-): Promise<void> {
+): Promise<number> {
   const { projectId } = context.stage;
   // Read once, before anything is written: a piece counts as landed only when its row and
   // its file both survived, and the parallel sends below each add one of each.
@@ -147,7 +164,7 @@ async function sendAll(
     pieces.map(async (piece): Promise<Outcome> => {
       const asked = payloadOf(piece);
       if (landed(deps, projectId, piece, stored)) {
-        return { ok: true };
+        return { ok: true, made: false };
       }
       setPiece(deps.db, piece.id, "running", piece.payload);
       try {
@@ -168,7 +185,7 @@ async function sendAll(
         // Step 3: the project page fills in as each one arrives.
         context.emit({ type: "image.landed", projectId, outputId: output.id, index: piece.idx });
         report(deps, context, done, total);
-        return { ok: true };
+        return { ok: true, made: true };
       } catch (error) {
         // A cancel is not this image failing: `logic/13` §Q112 counts an aborted call as
         // nothing, and the resume runs a `pending` image exactly as a failed one.
@@ -178,14 +195,19 @@ async function sendAll(
     }),
   );
 
+  let made = 0;
   for (const outcome of outcomes) {
     if (!outcome.ok) {
       throw outcome.error;
     }
+    made += outcome.made ? 1 : 0;
   }
+  return made;
 }
 
-type Outcome = { readonly ok: true } | { readonly ok: false; readonly error: unknown };
+type Outcome =
+  // `made` is false for an image a previous run had already stored and this one skipped.
+  { readonly ok: true; readonly made: boolean } | { readonly ok: false; readonly error: unknown };
 
 // An image counts as landed only when its row and its file are both still there: they are
 // written one after the other, the boot reconcile can remove a file whose row survived,

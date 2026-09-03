@@ -21,6 +21,9 @@ import type { StageContext } from "../src/kernel/runner/index.js";
 import { piecesOf } from "../src/kernel/runner/piece-repo.js";
 import { stageProviders } from "../src/kernel/runner/providers.js";
 import type { StageSource } from "../src/slices/admission/model.js";
+import type { RecordEvent } from "../src/slices/telemetry/model.js";
+import type { Counted } from "../src/slices/telemetry/record.fake.js";
+import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 import { runThumbnail } from "../src/slices/thumbnail/run.js";
 
 // The thumbnail stage against the real attempt wrapper and the real piece store: §Q82's
@@ -42,7 +45,9 @@ interface Harness {
     readonly ids: Ids;
     readonly clock: Clock;
     readonly log: Log;
+    readonly count: RecordEvent;
   };
+  readonly counted: Counted;
   readonly context: StageContext;
 }
 
@@ -96,11 +101,13 @@ function harness(source: StageSource, options: { article?: boolean } = {}): Harn
       return `t${String(n)}`;
     },
   };
+  const counted = recordingCounter();
   return {
     db,
     dir,
     clock,
-    deps: { db, paths, ids, clock, log: silent },
+    counted,
+    deps: { db, paths, ids, clock, log: silent, count: counted.count },
     context: {
       stage: { id: "s1", projectId: "p1", kind: "thumbnail", state: "running" },
       signal: new AbortController().signal,
@@ -170,6 +177,18 @@ describe("the thumbnail stage, from the picked prompt", () => {
     // §Q72: it is never in the slideshow, so it carries no slideshow index.
     expect(JSON.parse(thumbnails(h.db)[0]?.meta ?? "{}")).not.toHaveProperty("index");
     expect(readFileSync(join(h.dir, "thumbnail.png"))).toEqual(Buffer.from(pngBytes));
+    // logic/16 steps 2 and 3: one event, one thumbnail. No LLM was asked, so the event
+    // names the image model that drew it and reports the zero tokens of step 3.
+    expect(h.counted.events().map((one) => one.counters)).toEqual([
+      {
+        stage: "thumbnail",
+        provider: "fake-image",
+        model: "fake-diffusion",
+        tokensIn: 0,
+        tokensOut: 0,
+        thumbnails: 1,
+      },
+    ]);
   });
 
   // §Q74 through `logic/10` §Q82: the image call obeys scenario 09's rules.
@@ -182,6 +201,8 @@ describe("the thumbnail stage, from the picked prompt", () => {
     expect(refusing.calls()).toBe(1);
     expect(attemptsOf(h.db, "s1").map((row) => row.outcome)).toEqual(["refusal"]);
     expect(thumbnails(h.db)).toEqual([]);
+    // No thumbnail was made, so none was counted.
+    expect(h.counted.events()).toEqual([]);
   });
 });
 
@@ -245,6 +266,19 @@ describe("the thumbnail stage, with the prompt written by the LLM", () => {
     expect(second.calls()).toBe(0);
     expect(image.seen()[0]?.prompt).toBe("A weathered dock.");
     expect(piecesOf(h.db, "s1", "prompt_written")).toHaveLength(1);
+    // §Q82's resume through logic/16 step 3: the run that wrote the prompt paid for it and
+    // failed before the thumbnail existed, so it counted nothing; the resume made the
+    // thumbnail without a call, so it counts the thumbnail and no tokens.
+    expect(h.counted.events().map((one) => one.counters)).toEqual([
+      {
+        stage: "thumbnail",
+        provider: "fake-llm",
+        model: "fake-model",
+        tokensIn: 0,
+        tokensOut: 0,
+        thumbnails: 1,
+      },
+    ]);
     // One instructions file, not two: the second run never sent anything to store.
     expect(
       h.db.prepare("SELECT count(*) AS n FROM outputs WHERE role = 'instructions'").get(),
@@ -260,6 +294,18 @@ describe("the thumbnail stage, with the prompt written by the LLM", () => {
 
     expect(llm.calls()).toBe(2);
     expect(attemptsOf(h.db, "s1").map((row) => row.outcome)).toEqual(["other", "ok", "ok"]);
+    // Only the attempt that answered reports usage, so the failed one adds nothing: the
+    // fake reports 11 in and 22 out per answered call.
+    expect(h.counted.events().map((one) => one.counters)).toEqual([
+      {
+        stage: "thumbnail",
+        provider: "fake-llm",
+        model: "fake-model",
+        tokensIn: 11,
+        tokensOut: 22,
+        thumbnails: 1,
+      },
+    ]);
     expect(JSON.parse(piecesOf(h.db, "s1", "prompt_written")[0]?.payload ?? "{}")).toMatchObject({
       prompt: "A dock.",
     });

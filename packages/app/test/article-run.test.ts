@@ -22,6 +22,8 @@ import { piecesOf } from "../src/kernel/runner/piece-repo.js";
 import { stageProviders } from "../src/kernel/runner/providers.js";
 import type { ArticleDeps } from "../src/slices/article/run.js";
 import { runArticle } from "../src/slices/article/run.js";
+import type { Counted } from "../src/slices/telemetry/record.fake.js";
+import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 
 // The article stage against the real attempt wrapper: what `slices/article/run.test.ts`
 // cannot show, because a slice may not reach a registry or an adapter. Nothing here calls
@@ -55,6 +57,7 @@ interface Harness {
   readonly clock: ManualClock;
   readonly events: readonly ProjectEvent[];
   readonly deps: ArticleDeps;
+  readonly counted: Counted;
   readonly context: StageContext;
 }
 
@@ -80,12 +83,14 @@ function harness(): Harness {
     },
   };
   const events: ProjectEvent[] = [];
+  const counted = recordingCounter();
   return {
     db,
     paths,
     clock,
     events,
-    deps: { db, paths, ids, clock, log: silent },
+    counted,
+    deps: { db, paths, ids, clock, log: silent, count: counted.count },
     context: {
       stage: { id: "s1", projectId: "p1", kind: "article", state: "running" },
       signal: new AbortController().signal,
@@ -166,6 +171,28 @@ describe("the article stage through the attempt wrapper", () => {
     ]);
     const segments = piecesOf(h.db, "s1", "segment");
     expect(segments[0]?.payload).toContain("Rope holds worlds.");
+    // The piece carries the text to narrate and nothing about the model that wrote it.
+    expect(segments[0]?.payload).not.toContain("tokens");
+    // logic/16 step 2: the article is one unit and each intro or outro text is another,
+    // named by its segment. This run picked an intro in LLM mode and no outro, so there
+    // are two events; the fake reports 11 in and 22 out per call.
+    expect(h.counted.events().map((one) => one.counters)).toEqual([
+      {
+        stage: "article",
+        provider: "fake-llm",
+        model: "fake-model",
+        tokensIn: 11,
+        tokensOut: 22,
+      },
+      {
+        stage: "article",
+        segment: "intro",
+        provider: "fake-llm",
+        model: "fake-model",
+        tokensIn: 11,
+        tokensOut: 22,
+      },
+    ]);
     h.db.close();
   });
 

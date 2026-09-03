@@ -23,6 +23,9 @@ export interface FakeLlmOptions {
   // asked: `logic/06` sends a planner call, one call per chapter and a synthesis call to
   // the same adapter. The attempt number is 1-based, as `failOnAttempt`'s key is.
   readonly reply?: ((req: LlmCompletion, attempt: number) => readonly string[]) | undefined;
+  // `usage: null` is the provider that reports none (logic/16 §Q131), and it has to be
+  // tellable from the option not being given at all, so it is read with `in` rather than
+  // with `??`.
   readonly usage?: Usage | null;
   readonly finishReason?: string | null;
   // Fake milliseconds spent on the injected clock before each delta: how a test drives
@@ -38,6 +41,9 @@ export interface FakeLlmOptions {
   readonly webSearchUnsupported?: boolean;
 }
 
+// What a provider that does report usage reports, per call.
+export const reportedUsage: Usage = { inputTokens: 11, outputTokens: 22 };
+
 export interface FakeLlm extends LlmPort {
   readonly calls: () => number;
   readonly seen: () => readonly (readonly Message[])[];
@@ -49,6 +55,7 @@ export function fakeLlm(options: FakeLlmOptions = {}): FakeLlm {
     throw new Error("a fake LLM with a gap between deltas needs a clock to spend it on");
   }
   const deltas = options.deltas ?? ["Hello", " world"];
+  const usage: Usage | null = "usage" in options ? (options.usage ?? null) : reportedUsage;
   let calls = 0;
   const seen: (readonly Message[])[] = [];
 
@@ -77,7 +84,7 @@ export function fakeLlm(options: FakeLlmOptions = {}): FakeLlm {
     }
     yield {
       type: "done",
-      usage: options.usage ?? { inputTokens: 11, outputTokens: 22 },
+      usage,
       finishReason: options.finishReason ?? "stop",
     };
   }

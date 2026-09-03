@@ -17,6 +17,8 @@ import type { StageContext } from "../../kernel/runner/index.js";
 import { insertPiece, piecesOf } from "../../kernel/runner/piece-repo.js";
 import type { LlmAnswer, LlmCall, StageProviders } from "../../kernel/runner/providers.js";
 import { outputsOf } from "../storage/repo.js";
+import type { Counted } from "../telemetry/record.fake.js";
+import { recordingCounter } from "../telemetry/record.fake.js";
 import type { ResearchDeps } from "./run.js";
 import { runResearch, webResearchUnsupported } from "./run.js";
 
@@ -50,6 +52,7 @@ interface Harness {
   readonly paths: Paths;
   readonly context: StageContext;
   readonly events: readonly ProjectEvent[];
+  readonly counted: Counted;
 }
 
 function harness(over: Partial<typeof config> = {}): Harness {
@@ -73,11 +76,13 @@ function harness(over: Partial<typeof config> = {}): Harness {
     },
   };
   const events: ProjectEvent[] = [];
+  const counted = recordingCounter();
   return {
     db,
     paths,
     events,
-    deps: { db, paths, ids, clock, log: silent },
+    counted,
+    deps: { db, paths, ids, clock, log: silent, count: counted.count },
     context: {
       stage: { id: "s1", projectId: "p1", kind: "research", state: "running" },
       signal: new AbortController().signal,

@@ -23,6 +23,9 @@ import { piecesOf } from "../src/kernel/runner/piece-repo.js";
 import { stageProviders } from "../src/kernel/runner/providers.js";
 import { claimStage, finishStage, stagesOf } from "../src/slices/admission/repo.js";
 import { runResearch, webResearchUnsupported } from "../src/slices/research/run.js";
+import type { RecordEvent } from "../src/slices/telemetry/model.js";
+import type { Counted } from "../src/slices/telemetry/record.fake.js";
+import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 
 // The research stage against the real attempt wrapper: what `slices/research/run.test.ts`
 // cannot show, because a slice may not reach a registry or an adapter. Nothing here calls
@@ -60,7 +63,9 @@ interface Harness {
     readonly ids: Ids;
     readonly clock: ManualClock;
     readonly log: Log;
+    readonly count: RecordEvent;
   };
+  readonly counted: Counted;
   readonly context: StageContext;
 }
 
@@ -86,12 +91,14 @@ function harness(): Harness {
     },
   };
   const events: ProjectEvent[] = [];
+  const counted = recordingCounter();
   return {
     db,
     paths,
     clock,
     events,
-    deps: { db, paths, ids, clock, log: silent },
+    counted,
+    deps: { db, paths, ids, clock, log: silent, count: counted.count },
     context: {
       stage: { id: "s1", projectId: "p1", kind: "research", state: "running" },
       signal: new AbortController().signal,
@@ -178,6 +185,41 @@ describe("the research stage through the attempt wrapper", () => {
       "All of it.\n\nSources\nhttps://example.test/all",
     );
     expect(piecesOf(h.db, "s1", "chapter").map((piece) => piece.state)).toEqual(["done", "done"]);
+    // logic/16 steps 2 and 3: one event for the stage, carrying the tokens of all four
+    // calls under the provider and model that were asked. The fake reports 11 in and 22
+    // out per call.
+    expect(h.counted.events()).toEqual([
+      {
+        type: "stage.completed",
+        counters: {
+          stage: "research",
+          provider: "fake-llm",
+          model: "fake-model",
+          tokensIn: 44,
+          tokensOut: 88,
+        },
+      },
+    ]);
+    h.db.close();
+  });
+
+  // logic/16 step 3 with §Q131: "provider reports no token usage → 0 recorded, never
+  // estimated". The stage still records, so the Usage page shows the call happened.
+  it("records zero tokens for a provider that reports no usage", async () => {
+    const h = harness();
+    const llm = fakeLlm({ reply: script(() => good), usage: null });
+
+    await h.clock.settle(run(h, llm));
+
+    expect(h.counted.events().map((one) => one.counters)).toEqual([
+      {
+        stage: "research",
+        provider: "fake-llm",
+        model: "fake-model",
+        tokensIn: 0,
+        tokensOut: 0,
+      },
+    ]);
     h.db.close();
   });
 
@@ -195,6 +237,9 @@ describe("the research stage through the attempt wrapper", () => {
     const failing = Object.entries(counts).find(([, count]) => count === 4);
     expect(failing).toBeDefined();
     expect(Object.values(counts).toSorted()).toEqual([1, 1, 4]);
+    // The stage never completed, so it counted nothing: logic/16 step 2 puts one event on
+    // the stage completing, and a failed attempt reports no usage to add.
+    expect(h.counted.events()).toEqual([]);
     expect(h.clock.waits).toContain(2000);
     expect(h.clock.waits).toContain(8000);
     expect(h.clock.waits).toContain(30_000);
