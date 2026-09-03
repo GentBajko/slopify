@@ -57,10 +57,12 @@
 
   --animate-lamp-pulse: lamp-pulse 1.2s ease-in-out infinite;
   --animate-dialog-in: dialog-in 200ms ease-out;
+  --animate-tick-in: tick-in 150ms ease-out;
 }
 
-/* The Settings override lands in S17; until then `data-theme` is only set by the two
-   selectors below, so `prefers-color-scheme` decides. */
+/* `prefers-color-scheme` decides until Settings names a theme: the Appearance control
+   writes `data-theme` on the document element (components/theme.tsx) and System removes
+   it again, which is why the media query has to step aside for the dark override only. */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
     color-scheme: light;
@@ -120,6 +122,16 @@
 @keyframes lamp-pulse {
   50% {
     box-shadow: 0 0 0 6px transparent;
+  }
+}
+
+/* The Saved tick beside a Save button (uiux/screens/03-settings.md, Motion).
+   ceiling: the fade out is not animated - the tick is unmounted when its 2 s are up, and
+   a leaving transition needs the element kept mounted through it. A presence wrapper
+   around it is the upgrade if the cut ever reads as abrupt. */
+@keyframes tick-in {
+  from {
+    opacity: 0;
   }
 }
 

@@ -5,16 +5,18 @@ import { eventsUrl } from "@/api";
 import { useApp } from "@/app-context";
 import { Mark } from "@/components/glyph";
 import { FirstRunNotice } from "@/components/notice";
+import { AppearanceSkin } from "@/components/theme";
 import { VersionPrompt } from "@/components/version-prompt";
 import { subscribeGlobal } from "@/events";
 import { keys } from "@/queries";
 
 // One top bar on every app screen, the active item underlined in the running-lamp colour
-// (uiux/03-experience.md). Prompts, Intros & Outros, Settings and Usage are S17-S22 and
-// have no route yet, so they are not offered as links that go nowhere.
+// (uiux/03-experience.md). Prompts, Intros & Outros and Usage are S18-S22 and have no
+// route yet, so they are not offered as links that go nowhere.
 const sections = [
   { to: "/", label: "Projects" },
   { to: "/play", label: "Play" },
+  { to: "/settings", label: "Settings" },
 ] as const;
 
 export function Shell() {
@@ -77,6 +79,7 @@ export function Shell() {
         <span>Free. Your keys, your machine.</span>
       </footer>
 
+      <AppearanceSkin />
       <FirstRunNotice />
       <VersionPrompt
         reload={() => {

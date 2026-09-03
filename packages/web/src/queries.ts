@@ -1,6 +1,14 @@
 import { queryOptions } from "@tanstack/react-query";
 import type { Api } from "./api.js";
-import { listProjects, listStaged, readNotice, readProject } from "./api.js";
+import {
+  listProjects,
+  listProviders,
+  listStaged,
+  listVoices,
+  readAppSettings,
+  readNotice,
+  readProject,
+} from "./api.js";
 
 // One place names a cache key, so an SSE handler and the query it invalidates cannot
 // drift apart.
@@ -11,6 +19,9 @@ export const keys = {
   article: (id: string) => ["project", id, "article"] as const,
   staging: ["staging"] as const,
   notice: ["notice"] as const,
+  providers: ["providers"] as const,
+  voices: ["voices"] as const,
+  settings: ["settings"] as const,
 };
 
 export function projectsQuery(api: Api) {
@@ -27,4 +38,16 @@ export function stagingQuery(api: Api) {
 
 export function noticeQuery(api: Api) {
   return queryOptions({ queryKey: keys.notice, queryFn: () => readNotice(api) });
+}
+
+export function providersQuery(api: Api) {
+  return queryOptions({ queryKey: keys.providers, queryFn: () => listProviders(api) });
+}
+
+export function voicesQuery(api: Api) {
+  return queryOptions({ queryKey: keys.voices, queryFn: () => listVoices(api) });
+}
+
+export function settingsQuery(api: Api) {
+  return queryOptions({ queryKey: keys.settings, queryFn: () => readAppSettings(api) });
 }

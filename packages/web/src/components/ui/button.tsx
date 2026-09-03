@@ -15,6 +15,9 @@ const buttonVariants = cva(
           "rounded-control border border-line2 bg-panel2 text-ink hover:bg-panel2 hover:border-ink3",
         accent: "rounded-control border border-accent bg-transparent text-run-text hover:bg-panel2",
         ghost: "rounded-control text-ink2 hover:bg-panel2 hover:text-ink",
+        // The action verb of a confirm dialog: the red is the border, never the fill, so
+        // the label keeps --ink's contrast on both themes.
+        danger: "rounded-control border border-red bg-transparent text-ink hover:bg-panel2",
         // The focal moment of the app. The base shadow compresses on press; reduced
         // motion turns the 3 px travel into an instant colour change.
         play: "rounded-panel bg-accent text-accent-ink font-extrabold tracking-[0.02em] shadow-[0_4px_0_var(--color-accent-edge)] active:translate-y-[3px] active:shadow-[0_1px_0_var(--color-accent-edge)] motion-reduce:active:translate-y-0",

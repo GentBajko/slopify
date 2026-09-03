@@ -39,6 +39,12 @@ export function problemAnswer(detail: string, status = 400): Answer {
     });
 }
 
+// 204 and friends: a Response built with a body at those statuses throws, so the
+// no-content answers of the settings routes need their own helper.
+export function emptyAnswer(status = 204): Answer {
+  return () => new Response(null, { status, headers: { "X-Slopify-Version": testVersion } });
+}
+
 export function fakeFetch(routes: Readonly<Record<string, Answer>>): typeof fetch {
   return async (input, init) => {
     const request = new Request(input, init);
@@ -78,6 +84,11 @@ function testRouter(ui: ReactNode) {
     routeTree: rootRoute.addChildren({
       projects: createRoute({ getParentRoute: () => rootRoute, path: "/", component: nowhere }),
       play: createRoute({ getParentRoute: () => rootRoute, path: "play", component: nowhere }),
+      settings: createRoute({
+        getParentRoute: () => rootRoute,
+        path: "settings",
+        component: nowhere,
+      }),
       project: createRoute({
         getParentRoute: () => rootRoute,
         path: "projects/$projectId",

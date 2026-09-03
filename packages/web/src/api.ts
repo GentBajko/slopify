@@ -1,10 +1,34 @@
 import type { AppType } from "@app/edge/http/app.js";
 import type { Project, ProjectSummary, RunDraft, Stage } from "@app/slices/admission/model.js";
 import type { FieldError } from "@app/slices/admission/rules.js";
+import type {
+  Appearance,
+  AppSettings,
+  ProviderFamily,
+  ProviderId,
+  ProviderStatus,
+  Voice,
+} from "@app/slices/settings/model.js";
+import type { VoiceDraft } from "@app/slices/settings/voices.js";
 import type { Output, StagedFile } from "@app/slices/storage/model.js";
 import { hc } from "hono/client";
 
-export type { FieldError, Output, Project, ProjectSummary, RunDraft, Stage, StagedFile };
+export type {
+  Appearance,
+  AppSettings,
+  FieldError,
+  Output,
+  Project,
+  ProjectSummary,
+  ProviderFamily,
+  ProviderId,
+  ProviderStatus,
+  RunDraft,
+  Stage,
+  StagedFile,
+  Voice,
+  VoiceDraft,
+};
 
 export type ApiClient = ReturnType<typeof hc<AppType>>;
 
@@ -32,6 +56,19 @@ export interface StagingListBody {
 }
 export interface NoticeBody {
   readonly seen: boolean;
+}
+export interface ProviderListBody {
+  readonly providers: readonly ProviderStatus[];
+}
+export interface VoiceListBody {
+  readonly voices: readonly Voice[];
+}
+// What a save answers with: that a key is stored and the mask, never the value
+// (slices/settings/keys.ts).
+export interface KeyStatusBody {
+  readonly provider: ProviderId;
+  readonly hasKey: boolean;
+  readonly masked: string | null;
 }
 
 // RFC 9457 as `edge/http/problem.ts` writes it, with the `fields` extension member the
@@ -110,6 +147,98 @@ export function fileUrl(api: Api, projectId: string, asset: string): string {
   return `${api.origin}/files/${projectId}/${asset}`;
 }
 
+export async function listProviders(api: Api): Promise<ProviderListBody> {
+  return read<ProviderListBody>(await api.client.providers.$get());
+}
+
+// The key crosses this function and is never handed back: the answer carries `hasKey`
+// and the mask (`logic/02` invariants).
+export async function saveProviderKey(
+  api: Api,
+  provider: ProviderId,
+  key: string,
+): Promise<KeyStatusBody> {
+  return read<KeyStatusBody>(
+    await api.client.providers[":id"].key.$put({ param: { id: provider }, json: { key } }),
+  );
+}
+
+export async function removeProviderKey(api: Api, provider: ProviderId): Promise<void> {
+  const response = await api.client.providers[":id"].key.$delete({ param: { id: provider } });
+  if (!response.ok) {
+    throw await failure(response);
+  }
+}
+
+export async function readAppSettings(api: Api): Promise<AppSettings> {
+  return read<AppSettings>(await api.client.settings.$get());
+}
+
+export async function saveAppSettings(api: Api, settings: AppSettings): Promise<AppSettings> {
+  return read<AppSettings>(await api.client.settings.$put({ json: { ...settings } }));
+}
+
+export async function listVoices(api: Api): Promise<VoiceListBody> {
+  return read<VoiceListBody>(await api.client.settings.voices.$get());
+}
+
+// Which input a refused voice belongs under. The names are the fields the add form
+// draws, which are the names `edge/http/settings.ts` answers with.
+export type VoiceField = "name" | "provider" | "voiceId";
+
+export interface VoiceRefusal {
+  readonly field: VoiceField;
+  readonly message: string;
+}
+
+export type AddVoiceResult =
+  | { readonly ok: true; readonly voice: Voice }
+  | { readonly ok: false; readonly refusal: VoiceRefusal };
+
+// A refused voice is an expected outcome, not a fault, so it comes back as a value the
+// form can mark a field with (03-standards, typed results). Everything else still throws.
+export async function addVoice(api: Api, draft: VoiceDraft): Promise<AddVoiceResult> {
+  const response = await api.client.settings.voices.$post({
+    json: { provider: draft.provider, name: draft.name, voiceId: draft.voiceId },
+  });
+  if (response.ok) {
+    return { ok: true, voice: (await response.json()) as Voice };
+  }
+  const problem = await problemOf(response);
+  const refusal = refusalOf(response.status, problem);
+  if (refusal !== undefined) {
+    return { ok: false, refusal };
+  }
+  throw errorOf(response, problem);
+}
+
+export async function removeVoice(api: Api, id: string): Promise<void> {
+  const response = await api.client.settings.voices[":id"].$delete({ param: { id } });
+  if (!response.ok) {
+    throw await failure(response);
+  }
+}
+
+// `logic/02` §Q18: a duplicate voice ID is a conflict with a row that exists, and the
+// screen puts that sentence under the Voice ID input. A 400 names its own field.
+function refusalOf(status: number, problem: Problem | undefined): VoiceRefusal | undefined {
+  if (problem === undefined) {
+    return undefined;
+  }
+  if (status === 409) {
+    return { field: "voiceId", message: problem.detail ?? problem.title };
+  }
+  const named = problem.fields?.[0];
+  if (status === 400 && named !== undefined && isVoiceField(named.field)) {
+    return { field: named.field, message: named.message };
+  }
+  return undefined;
+}
+
+function isVoiceField(field: string): field is VoiceField {
+  return field === "name" || field === "provider" || field === "voiceId";
+}
+
 export function eventsUrl(api: Api, path: string): string {
   return `${api.origin}/api/events/${path}`;
 }
@@ -125,7 +254,13 @@ async function read<T>(response: Response): Promise<T> {
 // one. The problem's own `detail` is the sentence the server wrote for the user; nothing
 // is invented here and nothing is swallowed.
 async function failure(response: Response): Promise<Error> {
-  const problem = await problemOf(response);
+  return errorOf(response, await problemOf(response));
+}
+
+// Split from `failure` so a caller that already read the problem document to decide
+// whether the outcome was expected can still raise the same error for one that was not:
+// a response body may be read only once.
+function errorOf(response: Response, problem: Problem | undefined): Error {
   if (problem === undefined) {
     return new Error(`The app answered ${response.status} with no problem document.`);
   }

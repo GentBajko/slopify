@@ -3,9 +3,10 @@ import { Shell } from "@/components/shell";
 import { PlayRoute } from "@/routes/play";
 import { ProjectRoute } from "@/routes/project";
 import { ProjectsRoute } from "@/routes/projects";
+import { SettingsRoute } from "@/routes/settings";
 
-// A code-based route tree: three screens need no file convention, and the generated tree
-// a plugin would write would be one more artefact to keep honest.
+// A code-based route tree: a handful of screens need no file convention, and the
+// generated tree a plugin would write would be one more artefact to keep honest.
 const rootRoute = createRootRoute({ component: Shell });
 
 const projectsRoute = createRoute({
@@ -26,12 +27,23 @@ const projectRoute = createRoute({
   component: ProjectPage,
 });
 
+const settingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "settings",
+  component: SettingsRoute,
+});
+
 function ProjectPage() {
   const { projectId } = projectRoute.useParams();
   return <ProjectRoute projectId={projectId} />;
 }
 
-const routeTree = rootRoute.addChildren({ projectsRoute, playRoute, projectRoute });
+const routeTree = rootRoute.addChildren({
+  projectsRoute,
+  playRoute,
+  projectRoute,
+  settingsRoute,
+});
 
 export function createAppRouter() {
   return createRouter({ routeTree });
