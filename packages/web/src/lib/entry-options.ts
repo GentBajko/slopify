@@ -1,10 +1,9 @@
 import type { EntryCategory, EntryMode } from "@app/slices/library/model.js";
 import { entryCategories, entryModes } from "@app/slices/library/model.js";
 
-// The two segmented switches of 09 (uiux/screens/09-intros-outros.md), in the order the
-// reference sheet draws them, which is the order `slices/library/model.ts` declares them
-// in. `logic/15` step 1: an entry has a category and a mode, and both may change after
-// creation (§Q122).
+// The entry editor's two segmented switches, in the order `slices/library/model.ts`
+// declares them in. An entry has a category and a mode, and both may change after
+// creation.
 export const categoryOptions: readonly { readonly value: EntryCategory; readonly label: string }[] =
   entryCategories.map((value) => ({ value, label: categoryLabel(value) }));
 
@@ -29,11 +28,10 @@ export function modeLabel(mode: EntryMode): string {
   }
 }
 
-// What each mode does with the body, said under the Mode switch
-// (uiux/screens/09-intros-outros.md, Composition). The distinction is `logic/07` step 5's:
-// a text entry is rendered per `logic/03` and narrated as it stands, while an LLM entry is
-// an instruction the article stage sends with the title, the keyword values and the
-// article, and it is the answer that gets narrated.
+// What each mode does with the body, said under the Mode switch. A text entry is rendered
+// and narrated as it stands, while an LLM entry is an instruction the article stage sends
+// with the title, the keyword values and the article, and it is the answer that gets
+// narrated.
 export function modeHint(mode: EntryMode): string {
   switch (mode) {
     case "text":
@@ -43,9 +41,9 @@ export function modeHint(mode: EntryMode): string {
   }
 }
 
-// Both modes hold `{{slots}}`: `logic/07` step 5 renders a text body per `logic/03` with
-// no call, and `logic/03` step 3 collects the picked intro's and outro's names whatever
-// the mode. Only what happens to the rendered body differs, so only that sentence does.
+// Both modes hold `{{slots}}`: a text body is rendered with no call, and the picked intro's
+// and outro's names are collected whatever the mode. Only what happens to the rendered body
+// differs, so only that sentence does.
 export function noSlotsHint(mode: EntryMode): string {
   switch (mode) {
     case "text":

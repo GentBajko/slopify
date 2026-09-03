@@ -3,16 +3,15 @@ import type { StageKind } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
 import type { Usage } from "../../kernel/ports/llm.js";
 
-// logic/16 step 2: one install event, one per project created, one per stage completing.
+// One install event, one per project created, one per stage completing.
 export const telemetryEventTypes = ["install", "project.created", "stage.completed"] as const;
 export type TelemetryEventType = (typeof telemetryEventTypes)[number];
 
-// logic/16 step 2 counts finer than a stage: "one event per stage completing: research,
-// article, each intro/outro text, audio per segment (body, intro, outro), images,
-// thumbnail, video". The three that are not whole stages are named by `segment` beside
-// the stage that produced them - the article stage writes the intro and outro texts
-// (logic/07 step 5) and the audio stage narrates all three (logic/08 step 5) - so the
-// event type stays `stage.completed` and the pair (stage, segment) says which unit it is.
+// Counting is finer than a stage: one event per research, article, intro/outro text, audio
+// segment (body, intro, outro), images, thumbnail and video. The three that are not whole
+// stages are named by `segment` beside the stage that produced them - the article stage
+// writes the intro and outro texts, the audio stage narrates all three - so the event type
+// stays `stage.completed` and the pair (stage, segment) says which unit it is.
 export const audioSegments = ["body", "intro", "outro"] as const;
 export type AudioSegment = (typeof audioSegments)[number];
 
@@ -21,8 +20,8 @@ export type AudioSegment = (typeof audioSegments)[number];
 // counting it. The composition root closes over the deps and the flusher (main.ts).
 export type RecordEvent = (type: TelemetryEventType, counters: TelemetryCounters) => void;
 
-// logic/16 step 3: "tokens in and out as the provider reports them, 0 when unreported".
-// Never estimated, so a provider that reports nothing adds nothing.
+// Tokens in and out as the provider reports them, 0 when unreported. Never estimated, so a
+// provider that reports nothing adds nothing.
 export interface Tokens {
   readonly tokensIn: number;
   readonly tokensOut: number;
@@ -37,12 +36,11 @@ export function plusUsage(tokens: Tokens, usage: Usage | null): Tokens {
   };
 }
 
-// The whole privacy surface. logic/16 step 4 bars API keys, prompt bodies, keyword
-// values, titles, article and research text, files, filenames, OS, locale and hardware
-// from a payload, and mockup/02-first-run-notice promises the user exactly that. The
-// schema below is strict, so a caller that hands `record` anything not named here is
-// rejected before the row is written; model.test.ts pins the set and record.test.ts
-// sweeps every event type against it.
+// The whole privacy surface. API keys, prompt bodies, keyword values, titles, article and
+// research text, files, filenames, OS, locale and hardware are all barred from a payload,
+// which is exactly what the first-run notice promises. The schema below is strict, so a
+// caller that hands `record` anything not named here is rejected before the row is written;
+// model.test.ts pins the set and record.test.ts sweeps every event type against it.
 export const payloadSchema = z.strictObject({
   appVersion: z.string().max(40),
   stage: z.enum(stageKinds).optional(),
@@ -71,7 +69,7 @@ export interface TelemetryCounters {
   readonly thumbnails?: number | undefined;
 }
 
-// logic/16 §Q129: every event carries the app version beside its counters.
+// Every event carries the app version beside its counters.
 export interface TelemetryPayload extends TelemetryCounters {
   readonly appVersion: string;
 }
@@ -85,7 +83,7 @@ export interface TelemetryEvent {
 }
 
 // The single row of the `machine` table. No account, no login: a random UUID made once,
-// when the first-run notice is dismissed (logic/16 step 1).
+// when the first-run notice is dismissed.
 export interface Machine {
   readonly machineId: string;
   readonly noticeSeenAt: string | null;

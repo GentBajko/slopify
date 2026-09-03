@@ -5,8 +5,8 @@ export type { Format } from "../../kernel/pipeline.js";
 // The format is the kernel's: the image port asks for the same two aspects.
 export { formats } from "../../kernel/pipeline.js";
 
-// mockup §Q28 and logic/10 §Q78: Generate / Provide / Off for most stages, and the
-// thumbnail's two Generate modes. Video is always `generate` (logic/01 step 5).
+// Generate, Provide or Off for most stages, plus the thumbnail's two Generate modes. Video
+// is always `generate`.
 export const stageSources = ["generate", "provide", "off", "from_prompt", "prompt_by_llm"] as const;
 export type StageSource = (typeof stageSources)[number];
 
@@ -24,25 +24,25 @@ export interface VoiceChoice extends ProviderChoice {
 
 export interface ImagePromptChoice {
   readonly name: string;
-  // logic/04 §Q30: 1-20 per ticked prompt, 60 across the run.
+  // 1-20 per ticked prompt, 60 across the run.
   readonly number: number;
 }
 
 export interface EntryChoice {
   readonly name: string;
-  // The mode decides whether the run needs the LLM row (§Q97). The request carries it so
+  // The mode decides whether the run needs the LLM row. The request carries it so
   // Play can show the row live, but edge/http/projects.ts replaces it with the saved
   // entry's mode before this rule set sees the draft.
   readonly mode: EntryMode;
 }
 
-// Text a stage set to Provide carries instead of a file (logic/05 §Q37).
+// Text a stage set to Provide carries instead of a file.
 export interface ProvidedText {
   readonly research?: string | undefined;
   readonly article?: string | undefined;
 }
 
-// Ids of files already in staging, in slideshow order for images (logic/05 §Q39).
+// Ids of files already in staging, in slideshow order for images.
 export interface ProvidedFiles {
   readonly audio?: string | undefined;
   readonly images?: readonly string[] | undefined;
@@ -64,7 +64,7 @@ export interface RunDraft {
   readonly outro?: EntryChoice | undefined;
   readonly values: Readonly<Record<string, string>>;
   readonly provided: ProvidedText & ProvidedFiles;
-  // logic/08 §Q65: how the narration source is cut into TTS requests, chosen per run on
+  // How the narration source is cut into TTS requests, chosen per run on
   // Play's audio block. Optional here because Play's control is not built yet; the
   // narration slice falls back to `defaultChunking` and a run made before the control
   // existed keeps working.
@@ -72,8 +72,8 @@ export interface RunDraft {
   readonly silenceGapSeconds: number;
 }
 
-// The draft as accepted, with the coercions logic/05 §Q41 requires and the values
-// trimmed per logic/03 step 4. This is what the project's `config` column holds.
+// The draft as accepted, coerced and trimmed. This is what the project's `config` column
+// holds.
 export interface RunConfig extends RunDraft {
   readonly rendered: Readonly<Record<string, string>>;
 }

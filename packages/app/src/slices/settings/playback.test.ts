@@ -29,7 +29,7 @@ function harness(): Harness {
 }
 
 describe("readSettings", () => {
-  // `logic/11` §Q99 and `logic/02`: three seconds of silence, and uiux §Q19's System.
+  // Three seconds of silence, and the System theme.
   it("answers with the defaults on a fresh install", () => {
     expect(readSettings(harness().deps)).toEqual({ silenceGapSeconds: 3, appearance: "system" });
   });

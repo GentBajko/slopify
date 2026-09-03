@@ -54,7 +54,7 @@ describe("pickTemplates", () => {
     expect(picked.missing).toEqual([]);
   });
 
-  // `logic/15` step 2: names are matched case-insensitively, so the picker's spelling
+  // Names are matched case-insensitively, so the picker's spelling
   // does not have to match the saved one.
   it("finds a prompt by a differently cased name", () => {
     const deps = library();
@@ -65,8 +65,8 @@ describe("pickTemplates", () => {
     ]);
   });
 
-  // `logic/03` §Q24: article body order, then image prompts in selection order, then the
-  // thumbnail prompt; each distinct name once (§Q23).
+  // Article body order, then image prompts in selection order, then the
+  // thumbnail prompt; each distinct name once.
   it("orders the slots by first appearance across the picked bodies", () => {
     const deps = library();
     createPrompt(deps, { kind: "article", name: "Dossier", body: "{{topic}} {{tone}}" });
@@ -90,7 +90,7 @@ describe("pickTemplates", () => {
     expect(picked.requiredSlots).toEqual(["topic", "tone", "era", "scale", "title"]);
   });
 
-  // `logic/03` step 3: only stages set to Generate contribute.
+  // Only stages set to Generate contribute.
   it("ignores a prompt left selected on a stage set to Provide", () => {
     const deps = library();
     createPrompt(deps, { kind: "article", name: "Dossier", body: "{{topic}}" });
@@ -143,7 +143,7 @@ describe("pickTemplates", () => {
     expect(picked.requiredSlots).toEqual(["greeting", "signoff"]);
   });
 
-  // `logic/04` §Q97: whether the run needs an LLM depends on the entry's saved mode, so
+  // Whether the run needs an LLM depends on the entry's saved mode, so
   // the request's claim about it is replaced, not trusted.
   it("takes a picked entry's mode from the saved entry", () => {
     const deps = library();
@@ -160,7 +160,7 @@ describe("pickTemplates", () => {
     expect(pickTemplates(deps.db, draft()).draft.intro).toBeUndefined();
   });
 
-  // `logic/15` step 4: a template deleted between selection and Play.
+  // A template deleted between selection and Play.
   it("marks a picked prompt that no longer exists", () => {
     const deps = library();
 
@@ -227,7 +227,7 @@ describe("renderPicked", () => {
     });
   });
 
-  // `logic/03` §Q23: one name, one value, in every prompt of the run.
+  // One name, one value, in every prompt of the run.
   it("gives the same name the same value in every body", () => {
     const deps = library();
     createPrompt(deps, { kind: "article", name: "A", body: "{{topic}}" });

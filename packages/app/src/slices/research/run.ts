@@ -21,10 +21,10 @@ import { chaptersFrom, plannerMessages, subAgentMessages } from "./planner.js";
 import type { Finding } from "./synthesis.js";
 import { sourcedAnswer, synthesisMessages } from "./synthesis.js";
 
-// `logic/06`: the planner call names the chapters, one sub-agent researches each of them
-// on the web in parallel, and an editorial call writes the notes from what they found.
-// Every call goes through the wrapped `providers.llm`, so the retry policy of `logic/01`
-// step 6 covers all three and nothing here waits or counts attempts.
+// The planner call names the chapters, one sub-agent researches each of them on the web in
+// parallel, and an editorial call writes the notes from what they found. Every call goes
+// through the wrapped `providers.llm`, so the retry policy covers all three and nothing here
+// waits or counts attempts.
 
 export interface ResearchDeps {
   readonly db: DatabaseSync;
@@ -32,16 +32,16 @@ export interface ResearchDeps {
   readonly ids: Ids;
   readonly clock: Clock;
   readonly log: Log;
-  // logic/16 step 2: the stage records one event when it completes.
+  // The stage records one event when it completes.
   readonly count: RecordEvent;
 }
 
-// §Q47, verbatim: "the stage fails immediately with 'web research unsupported by this
-// model'; no fallback to model knowledge".
+// A model that cannot ground on the web fails the stage immediately, with no fallback to
+// what the model already knows.
 export const webResearchUnsupported = "web research unsupported by this model";
 
 // What a chapter piece carries between runs: its title, and its notes once a sub-agent
-// has answered. That is the whole of the resume of §Q54.
+// has answered. That is the whole of the resume.
 const chapterPayload = z.object({ title: z.string(), notes: z.string().optional() });
 
 export async function runResearch(
@@ -57,7 +57,7 @@ export async function runResearch(
   const choice = project.config.llm;
   const articlePrompt = project.config.rendered.article;
   if (choice === undefined || articlePrompt === undefined) {
-    // Admission refuses a run whose research is Generate without both (`logic/04`), so
+    // Admission refuses a run whose research is Generate without both, so
     // reaching here is a bug in admission rather than something the user did.
     throw new Error("the run has no LLM provider or no rendered article prompt");
   }
@@ -67,7 +67,7 @@ export async function runResearch(
     await research(deps, context, providers, choice, brief);
   } catch (error) {
     // The adapter says the model cannot ground on the web and the wrapper has already
-    // made that terminal; this is where it becomes the sentence the user reads (§Q47).
+    // made that terminal; this is where it becomes the sentence the user reads.
     if (isProviderError(error) && error.fault.kind === "unsupported") {
       throw new Error(webResearchUnsupported);
     }
@@ -82,10 +82,9 @@ async function research(
   choice: ProviderChoice,
   brief: ResearchBrief,
 ): Promise<void> {
-  // logic/16 step 3 counts tokens per stage, so the planner, every sub-agent and the
-  // synthesis add into one total. A call that was aborted or that failed never answers,
-  // so it adds nothing (§Q112); a provider that reports no usage adds zero, never an
-  // estimate (§Q131).
+  // Tokens are counted per stage, so the planner, every sub-agent and the synthesis add
+  // into one total. A call that was aborted or failed never answers and adds nothing; a
+  // provider that reports no usage adds zero, never an estimate.
   let tokens = noTokens;
   const add = (usage: Usage | null): void => {
     tokens = plusUsage(tokens, usage);
@@ -102,8 +101,8 @@ async function research(
   add(answer.usage);
 
   const { projectId } = context.stage;
-  // Step 4: the notes and every instruction sent are stored on the project. Each
-  // sub-agent's own output stays on its chapter row, which is where the resume reads it.
+  // The notes and every instruction sent are stored on the project. Each sub-agent's own output
+  // stays on its chapter row, which is where the resume reads it.
   storeText(deps, { projectId, stageKind: "research", role: "notes", text: answer.text.trim() });
   storeText(deps, {
     projectId,
@@ -125,7 +124,7 @@ async function research(
 }
 
 // The chapter list, planned once and kept. A retry after a failure finds the rows the
-// first run wrote and does not ask again (§Q54).
+// first run wrote and does not ask again.
 async function plan(
   deps: ResearchDeps,
   context: StageContext,
@@ -142,12 +141,12 @@ async function plan(
     provider: choice.provider,
     model: choice.model,
     messages: plannerMessages(brief),
-    // §Q50: an empty answer, or one with no chapter in it, is a failed attempt.
+    // An empty answer, or one with no chapter in it, is a failed attempt.
     check: (given: LlmAnswer): string | undefined =>
       chaptersFrom(given.text).length === 0 ? "the planner named no chapters" : undefined,
   });
   add(answer.usage);
-  // §Q53: no cap on the count. The list is the prompt's own section guide as often as
+  // No cap on the count. The list is the prompt's own section guide as often as
   // not, and capping it would silently drop a section the article asks for.
   const planned: StagePiece[] = chaptersFrom(answer.text).map((title, index) => ({
     id: deps.ids.next(),
@@ -165,9 +164,9 @@ async function plan(
   return planned;
 }
 
-// §Q53: "one per chapter, all in parallel". §Q54: a chapter a previous run finished is
-// not researched again, and one that fails fails the whole stage while its siblings
-// finish and keep their output for the next resume.
+// One sub-agent per chapter, all in parallel. A chapter a previous run finished is not
+// researched again, and one that fails takes down the whole stage while its siblings finish and
+// keep their output for the next resume.
 async function researchChapters(
   deps: ResearchDeps,
   context: StageContext,
@@ -194,7 +193,7 @@ async function researchChapters(
           provider: choice.provider,
           model: choice.model,
           messages: subAgentMessages(brief, kept.title, outline),
-          // §Q47: grounding is asked for explicitly, so a model without it says so
+          // Grounding is asked for explicitly, so a model without it says so
           // instead of answering from what it already knows.
           webSearch: true,
           check: (given: LlmAnswer): string | undefined =>
@@ -207,8 +206,8 @@ async function researchChapters(
         report(deps, context, done, total);
         return { ok: true, finding: { title: kept.title, notes } };
       } catch (error) {
-        // A cancel is not this chapter failing: `logic/13` §Q112 counts an aborted call
-        // as nothing, and the resume runs a `pending` chapter exactly as a failed one.
+        // A cancel is not this chapter failing: an aborted call counts as nothing, and
+        // the resume runs a `pending` chapter exactly as a failed one.
         setPiece(deps.db, piece.id, context.signal.aborted ? "pending" : "failed", piece.payload);
         return { ok: false, error };
       }
@@ -229,8 +228,8 @@ type Outcome =
   | { readonly ok: true; readonly finding: Finding }
   | { readonly ok: false; readonly error: unknown };
 
-// Step 5: "k of N chapters researched". Written as well as emitted, so a page opened
-// mid-stage reads the count off the row rather than waiting for the next chapter.
+// K of N chapters researched, written as well as emitted, so a page opened mid-stage reads the
+// count off the row rather than waiting for the next chapter.
 function report(deps: ResearchDeps, context: StageContext, done: number, total: number): void {
   setStageProgress(deps.db, context.stage.id, done, total);
   context.emit({
@@ -242,7 +241,7 @@ function report(deps: ResearchDeps, context: StageContext, done: number, total: 
   });
 }
 
-// §Q51: every instruction sent is stored on the project. All three are pure functions of
+// Every instruction sent is stored on the project. All three are pure functions of
 // the brief and the findings, so a resumed run reproduces the ones it did not send.
 function instructionsText(brief: ResearchBrief, findings: readonly Finding[]): string {
   const outline = findings.map((finding) => finding.title);

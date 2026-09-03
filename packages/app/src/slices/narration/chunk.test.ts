@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import type { Chunking } from "./chunk.js";
 import { chunkNarration, defaultChunkWords, wordsIn } from "./chunk.js";
 
-// `logic/08` step 2, the whole of it: "Whole text = one request; Per paragraph = one
-// request per paragraph; Every ~N words = consecutive chunks, each ending at the last
-// sentence boundary at or before N words, default N = 500 (§Q69)."
+// The whole chunking rule: whole text is one request, per paragraph is one request per
+// paragraph, and every ~N words is consecutive chunks each ending at the last sentence
+// boundary at or before N words, N defaulting to 500.
 
 const article = [
   "Rope is older than writing.",
@@ -91,9 +91,9 @@ describe("chunkNarration, every ~N words", () => {
     ]);
   });
 
-  // §Q69 caps nothing and the rule never splits a sentence, so an unbroken sentence
-  // longer than N is sent whole and the provider's own limit is what decides (§Q69
-  // unhappy path). Splitting it would put a TTS pause in the middle of a clause.
+  // Nothing caps a sentence and the rule never splits one, so an unbroken sentence longer
+  // than N is sent whole and the provider's own limit decides. Splitting it would put a
+  // TTS pause in the middle of a clause.
   it("sends a single sentence longer than N as one over-long chunk", () => {
     const long = words(25, 1);
 

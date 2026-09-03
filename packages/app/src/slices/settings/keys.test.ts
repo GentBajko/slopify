@@ -74,9 +74,9 @@ describe("removeProviderKey", () => {
 });
 
 describe("keyForAttempt", () => {
-  // logic/02 §Q16: an attempt reads the key once, at its start. The value it got is a
-  // plain string, so a removal landing mid-attempt cannot reach back into it; the next
-  // attempt is the one that finds the key gone.
+  // An attempt reads the key once, at its start. The value it got is a plain string, so a
+  // removal landing mid-attempt cannot reach back into it; the next attempt is the one that
+  // finds the key gone.
   it("hands an in-flight attempt a value a later removal cannot change", () => {
     const keys = deps();
     saveProviderKey(keys, "cartesia", standIn);

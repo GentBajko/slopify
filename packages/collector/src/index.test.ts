@@ -62,7 +62,7 @@ async function aggregatesOf(db: CollectorDb): Promise<Record<string, number>> {
 }
 
 describe("POST /events", () => {
-  // The dedup rule, logic/16 §Q134: the same event posted twice counts once.
+  // The dedup rule: the same event posted twice counts once.
   it("counts an event once however many times it is posted", async () => {
     const db = d1();
     const batch = { events: [event()] };

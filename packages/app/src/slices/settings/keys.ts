@@ -9,11 +9,10 @@ export interface KeysDeps {
   readonly clock: Clock;
 }
 
-// `logic/02` step 1 says the field shows the key masked and points at
-// `mockup/03-settings.md`, which draws it with nothing legible in it; the scenario's own
-// invariant is that keys never appear outside a provider call. So the mask is a
-// constant: it carries no character of the key and not even its length. Every response
-// that reports a stored key reports this string and nothing else about the value.
+// The Settings field shows a stored key masked, with nothing legible in it, and a key never
+// appears outside a provider call. So the mask is a constant: it carries no character of
+// the key and not even its length. Every response that reports a stored key reports this
+// string and nothing else about the value.
 export const keyMask = "••••••••••••";
 
 export interface KeyStatus {
@@ -36,13 +35,13 @@ export type RemoveKeyResult =
   | { readonly ok: false; readonly reason: "absent" | "cli-provider" };
 
 // What a provider call gets. The failure is an ordinary answer, not an exception: an
-// attempt that finds no key fails immediately without retries (`logic/02` §Q13).
+// attempt that finds no key fails immediately without retries.
 export type KeyLookup =
   | { readonly ok: true; readonly key: string }
   | { readonly ok: false; readonly reason: "key-missing" | "cli-provider" };
 
-// `logic/02` step 1: trimmed, stored as given, overwriting any previous one. No format
-// check and no test call (§Q11, §Q17, §Q18).
+// Trimmed, stored as given, overwriting any previous one. No format
+// check and no test call.
 export function saveProviderKey(deps: KeysDeps, provider: ProviderId, key: string): SaveKeyResult {
   if (providerById(provider).auth === "cli") {
     return { ok: false, reason: "cli-provider" };
@@ -69,9 +68,9 @@ export function removeProviderKey(deps: KeysDeps, provider: ProviderId): RemoveK
   return deleteKey(deps.db, provider) ? { ok: true } : { ok: false, reason: "absent" };
 }
 
-// `logic/02` step 7: the key is read at the moment an attempt starts. This reads the row
+// The key is read at the moment an attempt starts. This reads the row
 // every time and hands back a plain string, so an attempt holds the value it started
-// with and a save or a remove landing mid-run reaches the next attempt only (§Q16).
+// with and a save or a remove landing mid-run reaches the next attempt only.
 export function keyForAttempt(deps: KeysDeps, provider: ProviderId): KeyLookup {
   if (providerById(provider).auth === "cli") {
     return { ok: false, reason: "cli-provider" };

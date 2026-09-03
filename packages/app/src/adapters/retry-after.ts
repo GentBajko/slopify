@@ -1,10 +1,10 @@
-// `logic/01` §Q4: a 429 naming a Retry-After replaces the fixed backoff for that wait.
-// RFC 9110 allows seconds or an HTTP date; `Date.parse` is the platform's own reader for
-// the second form, so no date parsing is written here.
+// A 429 naming a Retry-After replaces the fixed backoff for that wait. RFC 9110 allows seconds
+// or an HTTP date; `Date.parse` is the platform's own reader for the second form, so no date
+// parsing is written here.
 //
-// It sits beside the adapters rather than inside one because the rule is the retry
-// policy's, not any provider's: four adapters read the same header off the same kind of
-// response. Nothing else is shared between them.
+// It sits beside the adapters rather than inside one because the rule is the retry policy's,
+// not any provider's: four adapters read the same header off the same kind of response. Nothing
+// else is shared between them.
 
 export function retryAfter(header: string | null): number | undefined {
   if (header === null) {

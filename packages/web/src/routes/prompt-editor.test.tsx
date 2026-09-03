@@ -41,7 +41,7 @@ function saveSpy(taken: readonly Prompt[]) {
       (prompt) =>
         prompt.kind === draft.kind && prompt.name.toLowerCase() === draft.name.trim().toLowerCase(),
     );
-    // §Q122: names are unique per kind, compared case-insensitively, and the index is what
+    // Names are unique per kind, compared case-insensitively, and the index is what
     // decides, so the answer is a 409 marking the field.
     return clash
       ? refusalAnswer(409, "Another prompt already has this name.", [

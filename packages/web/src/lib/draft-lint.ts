@@ -8,11 +8,11 @@ import type { EntryDraft, PromptDraft } from "@app/slices/library/model.js";
 // they delegate to, imported through the `@app/*` alias so the editor's feedback while
 // typing and the server's refusal are one rule with one set of sentences. Nothing the
 // editor lets through can surprise the server, and a `fields[]` that comes back from a
-// save lands on the same list the local pass writes (`logic/15` step 2, `logic/03` §Q20).
+// save lands on the same list the local pass writes.
 //
-// One module for both libraries because `logic/15` §Q121 puts one rule set over both: a
-// prompt and an intro/outro entry are a name and a body with `{{slots}}`, and the two
-// screens that edit them say the same sentences about the same mistakes.
+// One module for both libraries, because one rule set covers both: a prompt and an
+// intro/outro entry are a name and a body with `{{slots}}`, and the two screens that edit
+// them say the same sentences about the same mistakes.
 
 export type { FieldError };
 
@@ -32,7 +32,7 @@ export interface BodyPiece {
 // Every problem that would refuse this draft, in the order the shared lint reports them:
 // the name before the body, and within the body the earliest offset first. `refused` is
 // what the browser cannot know on its own - a name's uniqueness belongs to the database
-// index, so a collision exists only once the server has answered 409 (`logic/15` §Q122).
+// index, so a collision exists only once the server has answered 409.
 //
 // A prompt is told from an entry by the field that names its library, which is the same
 // discriminant `slices/library/model.ts` gives the two drafts.

@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { keys, providersQuery } from "@/queries";
 
-// The three families in the order mockup/03-settings.md draws them.
+// The three families, in the order Settings draws them.
 const familyOrder: readonly ProviderFamily[] = ["llm", "tts", "image"];
 const familyTitles: Readonly<Record<ProviderFamily, string>> = {
   llm: "API keys · LLM",
@@ -31,7 +31,7 @@ const row =
 const header = "engraved border-t border-line px-4 py-3 text-ink3 first:border-t-0";
 
 // Every supported provider, keyed or not, found or not, so the user can see that a
-// provider exists and why it is unavailable (`logic/02` step 5, §Q135).
+// provider exists and why it is unavailable.
 export function ProviderKeys() {
   const { api } = useApp();
   const providers = useQuery(providersQuery(api));
@@ -50,7 +50,7 @@ export function ProviderKeys() {
   }
 
   const listed = providers.data.providers;
-  // `logic/02` §Q12: on a fresh install nothing is selectable on Play yet, and the hint
+  // On a fresh install nothing is selectable on Play yet, and the hint
   // under the LLM group is what says so.
   const fresh = listed.every(
     (provider) => provider.readiness.kind !== "keyed" || !provider.readiness.hasKey,
@@ -102,11 +102,11 @@ function KeyRow({
   const [failure, setFailure] = useState<string | undefined>(undefined);
   const [asking, setAsking] = useState(false);
 
-  // The one control in the app that handles a key, and the one that does its own
-  // request rather than going through `useMutation`: a mutation keeps what it was called
-  // with in `state.variables` for its whole life, and nothing here may hold a key past
-  // the save (`logic/02` invariants). The draft is cleared in the same tick the answer
-  // lands, so the value exists only between the keystroke and the response.
+  // The one control in the app that handles a key, and the one that does its own request rather
+  // than going through `useMutation`: a mutation keeps what it was called with in
+  // `state.variables` for its whole life, and nothing here may hold a key past the save. The
+  // draft is cleared in the same tick the answer lands, so the value exists only between the
+  // keystroke and the response.
   const save = async (): Promise<void> => {
     setSaving(true);
     setFailure(undefined);
@@ -135,7 +135,7 @@ function KeyRow({
     },
   });
 
-  // The tick sits beside Save for 2 s (uiux/screens/03-settings.md, States).
+  // The tick sits beside Save for 2 s.
   useEffect(() => {
     if (!saved) {
       return;
@@ -231,10 +231,9 @@ function KeyRow({
   );
 }
 
-// A local agent CLI has no key: the CLI's own login is used, so the row is a status line
-// and no controls (`logic/02` §Q135). The name greys to --ink3 when the binary did not
-// answer, which is the contrast floor rather than an opacity that would drop the status
-// text below it.
+// A local agent CLI has no key: the CLI's own login is used, so the row is a status line and no
+// controls. The name greys to --ink3 when the binary did not answer, which is the contrast
+// floor rather than an opacity that would drop the status text below it.
 function CliRow({
   provider,
   readiness,

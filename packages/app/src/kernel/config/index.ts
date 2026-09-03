@@ -17,7 +17,7 @@ export interface ConfigFlags {
 
 export type ConfigEnv = Readonly<Record<string, string | undefined>>;
 
-const defaultPort = 4242;
+const defaultPort = 6969;
 const defaultHost = "127.0.0.1";
 
 export function configFrom(flags: ConfigFlags, env: ConfigEnv): Config {

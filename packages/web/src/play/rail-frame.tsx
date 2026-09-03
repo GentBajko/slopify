@@ -28,7 +28,7 @@ export interface RailProps {
   readonly voices: readonly Voice[];
   readonly silenceGapSeconds: number;
   // The sentence to put under a control, when the shared admission rule or the server's
-  // own refusal named it (`logic/04` §Q29).
+  // own refusal named it.
   readonly problem: (field: string) => string | undefined;
   readonly update: (patch: Partial<PlayFormState>) => void;
   readonly onPickFiles: (kind: UploadKind, files: readonly File[]) => void;
@@ -49,7 +49,7 @@ export function StageRail({
   return (
     <Rail className={railGrid}>
       {/* Unlit: no stage has run yet, and the lamp is here so the rail reads the same
-          before and after Play (uiux/screens/06-play.md). */}
+          before and after Play. */}
       <Lamp state="pending" />
       <StageGlyph kind={kind} className={dim ? "text-ink3" : "text-ink2"} />
       <span className={cn("font-semibold", dim ? "text-ink3" : undefined)}>{name}</span>

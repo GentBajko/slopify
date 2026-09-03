@@ -33,16 +33,16 @@ export interface AppDeps {
   readonly log: Log;
   readonly version: string;
   readonly webDist: string;
-  // Runs a local agent CLI to learn whether it is installed (`logic/02` §Q135). Handed
-  // in so a test can answer for both branches without depending on this machine's PATH.
+  // Runs a local agent CLI to learn whether it is installed. Handed in so a test can answer for
+  // both branches without depending on this machine's PATH.
   readonly probe: CliProbe;
   // Asks the telemetry flusher for a delivery attempt. It returns at once and never
-  // throws: nothing a route does may wait on the collector (logic/16 step 5).
+  // throws: nothing a route does may wait on the collector.
   readonly flushSoon: () => void;
 }
 
 // The type `packages/web` builds its client from: hc<AppType>(...). It widens as the
-// context routers of steps S3-S16 are chained onto the api app below.
+// context routers are chained onto the api app below.
 export type AppType = ReturnType<typeof apiRoutes>;
 
 const notBuilt =
@@ -61,8 +61,8 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       )
       .route("/staging", stagingRoutes(deps))
       .route("/projects", projectRoutes(deps))
-      // The actions of `logic/12` and `logic/13` sit on the same prefix as the project
-      // itself; they are their own router because they are their own concern.
+      // The re-run and cancel actions sit on the same prefix as the project itself; they
+      // are their own router because they are their own concern.
       .route("/projects", actionRoutes(deps))
       .route("/prompts", promptRoutes(deps))
       .route("/entries", entryRoutes(deps))
@@ -90,7 +90,7 @@ export function createApp(deps: AppDeps): Hono {
     .get("/api/events/projects/:id", (c) =>
       streamSSE(c, (stream) => deps.hub.subscribe(c.req.param("id"), stream, c.req.raw.signal)),
     )
-    // Files are served by URL, not through the API (02-models Boundaries).
+    // Files are served by URL, not through the API.
     .route("/", fileRoutes(deps))
     // The API answers for its whole prefix, so an unknown endpoint is a problem+json 404
     // rather than the SPA's index.html with a 200.

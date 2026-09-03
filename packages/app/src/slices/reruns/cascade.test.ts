@@ -5,7 +5,7 @@ import type { StageSource } from "../admission/model.js";
 import type { CascadeInput, RerunAction, StageStanding } from "./cascade.js";
 import { redoPlan } from "./cascade.js";
 
-// The cascade rule of `logic/12` §Q101 and §Q102, decided with no database in reach.
+// The cascade rule, decided with no database in reach.
 
 function standing(overrides: Partial<Record<StageKind, StageState>> = {}): StageStanding[] {
   return stageKinds.map((kind) => ({ kind, state: overrides[kind] ?? "done" }));
@@ -21,7 +21,7 @@ function plan(
 }
 
 describe("a re-run of one stage", () => {
-  // §Q102: "every re-run marks its dependents `pending` and runs them automatically".
+  // Every re-run marks its dependents `pending` and runs them automatically.
   it("carries the whole graph below research", () => {
     expect(plan({ kind: "rerun", stage: "research" })).toEqual([
       "research:all",
@@ -37,7 +37,7 @@ describe("a re-run of one stage", () => {
     expect(plan({ kind: "rerun", stage: "audio" })).toEqual(["audio:all", "video:nothing"]);
   });
 
-  // Step 8: a re-render is the video stage alone.
+  // A re-render is the video stage alone.
   it("takes nothing with the video", () => {
     expect(plan({ kind: "rerun", stage: "video" })).toEqual(["video:nothing"]);
   });
@@ -52,7 +52,7 @@ describe("a re-run of one stage", () => {
     ]);
   });
 
-  // `logic/01`: `provided` → `running` and `skipped` → `running` are forbidden, so a
+  // `provided` → `running` and `skipped` → `running` are forbidden, so a
   // dependent the user supplied is stepped over rather than reset.
   it("steps over a provided dependent and still reaches the video", () => {
     expect(
@@ -62,8 +62,8 @@ describe("a re-run of one stage", () => {
 });
 
 describe("an article edit", () => {
-  // §Q101: "audio, LLM-mode intro/outro text, LLM-written thumbnail, and video re-run;
-  // prompt-based images are untouched".
+  // Audio, LLM-mode intro/outro text, LLM-written thumbnail, and video re-run; prompt-based
+  // images are untouched.
   it("redoes the audio and the video and leaves the prompt-based images alone", () => {
     expect(plan({ kind: "article-edit" })).toEqual(["audio:all", "video:nothing"]);
   });
@@ -86,13 +86,13 @@ describe("an article edit", () => {
 });
 
 describe("a change to one image", () => {
-  // §Q103 with §Q102: the set is smaller by one and the video is rebuilt from it.
+  // The set is smaller by one and the video is rebuilt from it.
   it("re-renders the video and nothing else when an image is deleted", () => {
     expect(plan({ kind: "image-deleted" })).toEqual(["video:nothing"]);
   });
 
-  // §Q103: "one new call with that image's stored prompt text, replacing it in place at
-  // the same index" - which is the piece the first run planned, so it is kept.
+  // One new call with that image's stored prompt text, replacing it in place at the same index
+  // - which is the piece the first run planned, so it is kept.
   it("keeps what landed when one image is regenerated", () => {
     expect(plan({ kind: "image-regenerated" })).toEqual(["images:nothing", "video:nothing"]);
   });

@@ -2,10 +2,9 @@ import type { StageKind } from "@app/kernel/pipeline.js";
 import type { RunConfig } from "@app/slices/admission/model.js";
 import type { ProviderStatus } from "@app/slices/settings/model.js";
 
-// `logic/02` §Q13 and §Q135 through `uiux/screens/08-project.md`: a stage whose provider
-// has no key, or whose agent CLI is not on PATH, cannot be retried or re-run, and the
-// control says which of the two it is with a link to Settings. Pure: the row only has to
-// draw what this decides.
+// A stage whose provider has no key, or whose agent CLI is not on PATH, cannot be retried
+// or re-run, and the control says which of the two it is with a link to Settings. Pure: the
+// row only has to draw what this decides.
 
 export interface Unready {
   // What the disabled control reads instead of its verb.
@@ -14,7 +13,7 @@ export interface Unready {
 }
 
 // Which provider a stage's work goes to. The video stage renders locally with ffmpeg, so
-// it has none (04-data-flow, Side-effect boundaries).
+// it has none.
 export function providerFor(kind: StageKind, config: RunConfig): string | undefined {
   switch (kind) {
     case "research":

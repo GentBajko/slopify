@@ -26,9 +26,9 @@ import type { Counted } from "../src/slices/telemetry/record.fake.js";
 import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 import { runThumbnail } from "../src/slices/thumbnail/run.js";
 
-// The thumbnail stage against the real attempt wrapper and the real piece store: §Q82's
-// resume - the written prompt is kept and reused - cannot be proved without the rows the
-// two doubles' calls leave behind. No provider is called (06-testing Doubles).
+// The thumbnail stage against the real attempt wrapper and the real piece store: the resume
+// - the written prompt is kept and reused - cannot be proved without the rows the two
+// doubles' calls leave behind. No provider is called.
 
 const silent: Log = { write: (): void => {} };
 const pngBytes = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x07]);
@@ -152,7 +152,7 @@ function thumbnails(db: DatabaseSync): { path: string; meta: string }[] {
 }
 
 describe("the thumbnail stage, from the picked prompt", () => {
-  // `logic/09` step 4: one call, the run's aspect, stored apart from the slideshow.
+  // One call, the run's aspect, stored apart from the slideshow.
   it("sends the rendered template once and stores the image with its metadata", async () => {
     const h = harness("from_prompt");
     const image = fakeImage({ bytes: pngBytes });
@@ -174,11 +174,11 @@ describe("the thumbnail stage, from the picked prompt", () => {
         }),
       },
     ]);
-    // §Q72: it is never in the slideshow, so it carries no slideshow index.
+    // It is never in the slideshow, so it carries no slideshow index.
     expect(JSON.parse(thumbnails(h.db)[0]?.meta ?? "{}")).not.toHaveProperty("index");
     expect(readFileSync(join(h.dir, "thumbnail.png"))).toEqual(Buffer.from(pngBytes));
-    // logic/16 steps 2 and 3: one event, one thumbnail. No LLM was asked, so the event
-    // names the image model that drew it and reports the zero tokens of step 3.
+    // One event, one thumbnail. No LLM was asked, so the event names the image model that
+    // drew it and reports zero tokens.
     expect(h.counted.events().map((one) => one.counters)).toEqual([
       {
         stage: "thumbnail",
@@ -191,7 +191,7 @@ describe("the thumbnail stage, from the picked prompt", () => {
     ]);
   });
 
-  // §Q74 through `logic/10` §Q82: the image call obeys scenario 09's rules.
+  // The image call obeys the same rules as the images stage.
   it("fails on a refusal with the provider's own words and without a second attempt", async () => {
     const h = harness("from_prompt");
     const refusing = fakeImage({ refuse: "we cannot make that thumbnail" });
@@ -207,7 +207,7 @@ describe("the thumbnail stage, from the picked prompt", () => {
 });
 
 describe("the thumbnail stage, with the prompt written by the LLM", () => {
-  // `logic/10` steps 1 to 4: one `complete` call, then one `generate` with what it wrote.
+  // One `complete` call, then one `generate` with what it wrote.
   it("asks the LLM for the prompt once, then the image provider once", async () => {
     const h = harness("prompt_by_llm");
     const llm = fakeLlm({ deltas: ["A weathered dock", " at golden hour."] });
@@ -217,18 +217,18 @@ describe("the thumbnail stage, with the prompt written by the LLM", () => {
 
     expect(llm.calls()).toBe(1);
     expect(image.calls()).toBe(1);
-    // Step 1: the instruction, the title, the keyword values, the aspect, the article.
+    // The instruction, the title, the keyword values, the aspect, the article.
     const sent = llm.seen()[0]?.[0]?.content ?? "";
     expect(sent).toContain(template);
     expect(sent).toContain("Video title: Rope Tricks");
     expect(sent).toContain("topic: rope");
     expect(sent).toContain("Aspect ratio of the thumbnail: 16:9");
     expect(sent).toContain(article.trim());
-    // §Q83: the prompt sent is exactly the LLM's output, never edited by the app.
+    // The prompt sent is exactly the LLM's output, never edited by the app.
     expect(image.seen()[0]?.prompt).toBe("A weathered dock at golden hour.");
   });
 
-  // Step 3: the written prompt and the messages that asked for it are on the project.
+  // The written prompt and the messages that asked for it are on the project.
   it("stores the written prompt and what was sent to get it", async () => {
     const h = harness("prompt_by_llm");
 
@@ -246,8 +246,8 @@ describe("the thumbnail stage, with the prompt written by the LLM", () => {
     });
   });
 
-  // §Q82 and §Q83: "manual retry reuses the stored written prompt and redoes only the
-  // image call". The wording the user is looking at must not change under them.
+  // Manual retry reuses the stored written prompt and redoes only the image call. The wording
+  // the user is looking at must not change under them.
   it("reuses the stored prompt on a retry rather than writing a new one", async () => {
     const h = harness("prompt_by_llm");
     const first = fakeLlm({ deltas: ["A weathered dock."] });
@@ -266,9 +266,9 @@ describe("the thumbnail stage, with the prompt written by the LLM", () => {
     expect(second.calls()).toBe(0);
     expect(image.seen()[0]?.prompt).toBe("A weathered dock.");
     expect(piecesOf(h.db, "s1", "prompt_written")).toHaveLength(1);
-    // §Q82's resume through logic/16 step 3: the run that wrote the prompt paid for it and
-    // failed before the thumbnail existed, so it counted nothing; the resume made the
-    // thumbnail without a call, so it counts the thumbnail and no tokens.
+    // The resume, counted: the run that wrote the prompt paid for it and failed before the
+    // thumbnail existed, so it counted nothing; the resume made the thumbnail without a
+    // call, so it counts the thumbnail and no tokens.
     expect(h.counted.events().map((one) => one.counters)).toEqual([
       {
         stage: "thumbnail",
@@ -285,7 +285,7 @@ describe("the thumbnail stage, with the prompt written by the LLM", () => {
     ).toEqual({ n: 1 });
   });
 
-  // §Q82: "empty output is a failed attempt", so the wrapper retries it.
+  // Empty output is a failed attempt, so the wrapper retries it.
   it("counts an empty answer as a failed attempt and asks again", async () => {
     const h = harness("prompt_by_llm");
     const llm = fakeLlm({ reply: (_req, attempt) => (attempt === 1 ? [""] : ["A dock."]) });
@@ -311,7 +311,7 @@ describe("the thumbnail stage, with the prompt written by the LLM", () => {
     });
   });
 
-  // §Q82's `image-done` sub-step: a thumbnail already stored is not made twice.
+  // The `image-done` sub-step: a thumbnail already stored is not made twice.
   it("keeps a thumbnail a previous run already stored", async () => {
     const h = harness("prompt_by_llm");
     await run(h, fakeLlm({ deltas: ["A dock."] }), fakeImage({ bytes: pngBytes }));
@@ -323,7 +323,7 @@ describe("the thumbnail stage, with the prompt written by the LLM", () => {
     expect(thumbnails(h.db)).toHaveLength(1);
   });
 
-  // §Q79's invariant: the stage never starts without an article on the project.
+  // The stage never starts without an article on the project.
   it("says so when the project has no article to write the prompt from", async () => {
     const h = harness("prompt_by_llm", { article: false });
 
@@ -335,8 +335,8 @@ describe("the thumbnail stage, with the prompt written by the LLM", () => {
 });
 
 describe("the thumbnail stage with a source that never runs", () => {
-  // `logic/01` step 1 marks Off `skipped` and Provide `provided`, so the runner never
-  // starts this stage for either; reaching it would be a bug in the graph.
+  // Off marks the stage `skipped` and Provide marks it `provided`, so the runner never
+  // starts it for either; reaching it would be a bug in the graph.
   it("refuses to run for Off or Provide", async () => {
     for (const source of ["off", "provide"] as const) {
       const h = harness(source);

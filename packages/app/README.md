@@ -6,7 +6,7 @@ A prompt and a few keywords in. A narrated slideshow video out. Your keys, your 
 npx @gentbajko/slopify@latest
 ```
 
-That opens a browser at `http://127.0.0.1:4242`. Nothing to configure first; add
+That opens a browser at `http://127.0.0.1:6969`. Nothing to configure first; add
 provider keys on the Settings screen when you want a stage to generate rather than
 take what you paste in.
 
@@ -18,7 +18,7 @@ video is a slideshow with alternating zoom over the narration, rendered with ffm
 
 | Flag | Environment variable | Default |
 |---|---|---|
-| `--port` | `SLOPIFY_PORT` | `4242` |
+| `--port` | `SLOPIFY_PORT` | `6969` |
 | `--host` | `SLOPIFY_HOST` | `127.0.0.1` |
 | `--data-dir` | `SLOPIFY_DATA_DIR` | `~/.slopify` |
 | `--no-open` | `SLOPIFY_NO_OPEN` | the browser opens |

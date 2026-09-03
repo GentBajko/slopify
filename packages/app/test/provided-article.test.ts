@@ -24,9 +24,9 @@ import { stageUpload } from "../src/slices/storage/staging.js";
 import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 import { resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
 
-// `logic/08` step 1: the end-matter split runs "when the article becomes `done` or
-// `provided`". S12 wired it into the Generate path alone, so this covers the other half
-// end to end: a pasted article goes in at Play and the audio stage reads what came out.
+// The end-matter split runs "when the article becomes `done` or `provided`". The event was
+// first wired into the Generate path alone, so this is the other half end to end: a pasted
+// article goes in at Play and the audio stage reads what came out.
 
 const clock = fixedClock("2026-09-02T10:00:00.000Z");
 const silent: Log = { write: (): void => {} };
@@ -142,8 +142,8 @@ describe("a pasted article through Play and the audio stage", () => {
     const { project, stages } = startRun(deps, draft(image, pasted), {});
 
     const dir = join(deps.paths.projects, project.id);
-    // `logic/08` step 1 with `logic/05` §Q37: the narration source is the article's body,
-    // as plain text, with both end sections cut away.
+    // The narration source is the article's body, as plain text, with both end sections
+    // cut away.
     expect(readFileSync(join(dir, "article.txt"), "utf8")).toBe("Rope\n\nRope is twisted fibre.\n");
     expect(readFileSync(join(dir, "sources.txt"), "utf8")).toBe(
       "## Sources Consulted\n\n- https://example.test/rope\n\n",
@@ -176,7 +176,7 @@ describe("a pasted article through Play and the audio stage", () => {
       ),
     );
 
-    // §Q69: the IPA is never sent to the TTS, and neither is the sources list.
+    // The IPA is never sent to the TTS, and neither is the sources list.
     expect(tts.seen()).toEqual(["Rope\n\nRope is twisted fibre."]);
     expect(existsSync(join(dir, "audio-body.mp3"))).toBe(true);
   });

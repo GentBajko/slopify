@@ -115,7 +115,7 @@ describe("the intros and outros list", () => {
 
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText('Delete "Cold open"?')).not.toBeNull();
-    // `logic/15` §Q123: nothing a past project made is touched by this.
+    // Nothing a past project made is touched by this.
     expect(within(dialog).getByText("Projects that used it keep their text.")).not.toBeNull();
 
     await user.click(within(dialog).getByRole("button", { name: "Delete" }));

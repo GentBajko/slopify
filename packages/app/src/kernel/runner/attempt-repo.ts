@@ -4,10 +4,9 @@ import type { Ids } from "../ids.js";
 import type { ProviderErrorKind } from "../ports/model.js";
 import { providerErrorKinds } from "../ports/model.js";
 
-// One row per provider call attempt (02-models, `logic/01` §Q4). The project page reads
-// the last error text off these rows and the Usage page counts them, so an attempt is
-// written when it opens rather than when it ends: a process that dies mid-call leaves
-// the evidence behind (`logic/01` §Q7).
+// One row per provider call attempt. The project page reads the last error text off these rows
+// and Usage counts them, so an attempt is written when it opens rather than when it ends: a
+// process that dies mid-call leaves the evidence behind.
 
 export const attemptOutcomes = ["ok", "canceled", ...providerErrorKinds] as const;
 export type AttemptOutcome = "ok" | "canceled" | ProviderErrorKind;
@@ -56,8 +55,8 @@ export function sqliteAttempts(db: DatabaseSync, ids: Ids): AttemptStore {
       db.prepare(
         "INSERT INTO attempts (id, stage_id, piece_id, n, started_at) VALUES (?, ?, ?, ?, ?)",
       ).run(id, attempt.stageId, attempt.pieceId, attempt.n, attempt.startedAt);
-      // `logic/01` §Q3: the stage shows the attempt count beside the error. A stage with
-      // pieces (twenty images) shows the count of the call being attempted, not a sum.
+      // The stage shows the attempt count beside the error. A stage with pieces (twenty images)
+      // shows the count of the call being attempted, not a sum.
       db.prepare("UPDATE stages SET attempt_count = ? WHERE id = ?").run(
         attempt.n,
         attempt.stageId,

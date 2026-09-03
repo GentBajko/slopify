@@ -10,7 +10,7 @@ const providerChoice = z.object({ provider: z.string(), model: z.string() });
 const entryChoice = z.object({ name: z.string(), mode: z.enum(entryModes) });
 
 // The shape Play posts and the shape `projects.config` holds, in one place: the second
-// is the first plus the rendered prompt texts (logic/03 §Q25).
+// is the first plus the rendered prompt texts.
 export const runDraftSchema = z.object({
   title: z.string(),
   format: z.enum(formats),
@@ -40,8 +40,8 @@ export const runDraftSchema = z.object({
     images: z.array(z.string()).optional(),
     thumbnail: z.string().optional(),
   }),
-  // logic/08 §Q65. Optional until Play carries the control; unknown keys are stripped by
-  // this schema, so a mode that is not listed here would never reach the audio stage.
+  // Optional until Play carries the control; unknown keys are stripped by this schema, so
+  // a mode not listed here would never reach the audio stage.
   chunking: z.object({ mode: z.enum(chunkModes), words: z.number().optional() }).optional(),
   silenceGapSeconds: z.number(),
 });
@@ -112,7 +112,7 @@ export function projectExists(db: DatabaseSync, id: string): boolean {
   return db.prepare("SELECT 1 FROM projects WHERE id = ?").get(id) !== undefined;
 }
 
-// mockup/07: newest first.
+// Newest first.
 export function listProjects(db: DatabaseSync): Project[] {
   return db
     .prepare("SELECT * FROM projects ORDER BY created_at DESC, id DESC")
@@ -181,9 +181,8 @@ export function finishStage(
   );
 }
 
-// `logic/12` step 9 and `logic/13` step 5: a stage put back to `pending` by a re-run, a
-// cascade or a retry starts again from a clean row - no error text, no progress from the
-// run before it, and the fresh attempt budget of `logic/01` §Q5.
+// A stage put back to `pending` by a re-run, a cascade or a retry starts again from a clean row
+// - no error text, no progress from the run before it, and a fresh attempt budget.
 export function resetStage(db: DatabaseSync, stageId: string): void {
   db.prepare(
     "UPDATE stages SET state = 'pending', failure_reason = NULL, attempt_count = 0, progress_current = NULL, progress_total = NULL, started_at = NULL, finished_at = NULL WHERE id = ?",

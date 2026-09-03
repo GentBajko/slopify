@@ -12,9 +12,9 @@ import type { AppDeps } from "./app.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
 
 const providerParam = z.object({ id: z.enum(providerIds) });
-// ceiling: `logic/02` §Q11 forbids any format check, so the only thing said about the
-// value is that it is a string of a length a key could plausibly have. Raise the bound
-// if a provider ever issues something longer.
+// ceiling: no format check is allowed on a key, so the only thing said about the value is
+// that it is a string of a length a key could plausibly have. Raise the bound if a provider
+// ever issues something longer.
 const keyBody = z.object({ key: z.string().min(1).max(4096) });
 
 // The return type is inferred so Hono keeps the route types the SPA's client is
@@ -26,7 +26,7 @@ export function providerRoutes(deps: AppDeps) {
   return (
     new Hono()
       // What Settings draws its rails from and Play its dropdowns: every provider, with
-      // the one fact that decides whether it is selectable (`logic/02` step 5, §Q135).
+      // the one fact that decides whether it is selectable.
       .get("/", async (c) => c.json({ providers: await providerStatuses(readiness) }))
       .put(
         "/:id/key",

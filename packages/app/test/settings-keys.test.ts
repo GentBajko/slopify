@@ -64,9 +64,9 @@ describe("a provider key on a booted app", () => {
     expect(await after.text()).toContain('"hasKey":false');
   });
 
-  // The guard for the one rule this slice cannot get wrong (`logic/02` invariants): a key
-  // reaches the provider it belongs to and nowhere else. Every surface the save touches
-  // is read back and searched for the value that was sent.
+  // The guard for the one rule this slice cannot get wrong: a key reaches the provider it
+  // belongs to and nowhere else. Every surface the save touches is read back and searched for
+  // the value that was sent.
   it("never appears in a response body or a log line", async () => {
     const { url, logsDir } = await started();
     const bodies: string[] = [];

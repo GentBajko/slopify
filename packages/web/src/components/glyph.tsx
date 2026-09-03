@@ -1,6 +1,8 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import type { CSSProperties } from "react";
+import coffee from "@/assets/buymeacoffee.svg";
 import logoMark from "@/assets/logo-mark.svg";
+import patreon from "@/assets/patreon.svg";
 import article from "@/assets/stage-article.svg";
 import audio from "@/assets/stage-audio.svg";
 import images from "@/assets/stage-images.svg";
@@ -9,9 +11,9 @@ import thumbnail from "@/assets/stage-thumbnail.svg";
 import video from "@/assets/stage-video.svg";
 import { cn } from "@/lib/utils";
 
-// The mark and the six stage glyphs come from docs/capstone/uiux/assets/ verbatim
-// (uiux/02-system.md), so they are worn as a mask rather than redrawn in JSX: the file
-// stays the single copy and `bg-current` still lets the artwork take its row's colour.
+// The mark and the six stage glyphs are used verbatim from `src/assets/`, worn as a mask
+// rather than redrawn in JSX: the file stays the single copy and `bg-current` still lets
+// the artwork take its row's colour.
 const glyphs: Readonly<Record<StageKind, string>> = {
   research,
   article,
@@ -51,7 +53,7 @@ export function StageGlyph({
   );
 }
 
-// The wordmark is live text beside this, never a rasterised lockup (uiux/02-system.md).
+// The wordmark is live text beside this, never a rasterised lockup.
 export function Mark({ className }: { readonly className?: string }) {
   return (
     <span
@@ -59,6 +61,28 @@ export function Mark({ className }: { readonly className?: string }) {
       data-glyph="mark"
       className={cn("block size-[26px] shrink-0 bg-current", className)}
       style={mask(logoMark)}
+    />
+  );
+}
+
+const supportGlyphs = { patreon, coffee } as const;
+
+export type SupportGlyphName = keyof typeof supportGlyphs;
+
+// The link beside it names the destination, so the glyph is decoration.
+export function SupportGlyph({
+  name,
+  className,
+}: {
+  readonly name: SupportGlyphName;
+  readonly className?: string;
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      data-glyph={name}
+      className={cn("block size-[14px] shrink-0 bg-current", className)}
+      style={mask(supportGlyphs[name])}
     />
   );
 }

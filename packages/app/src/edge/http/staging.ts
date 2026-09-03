@@ -15,7 +15,7 @@ const kindParam = z.object({ kind: z.enum(uploadableStageKinds) });
 const idParam = z.object({ id: z.string().min(1).max(64) });
 
 // The return type is inferred on purpose: annotating it would erase the route types the
-// SPA's client is generated from (02-models §Q27).
+// SPA's client is generated from.
 export function stagingRoutes(deps: AppDeps) {
   const storage: StorageDeps = {
     db: deps.db,

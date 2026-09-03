@@ -4,15 +4,14 @@ import { useId } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-// The keyword block of the cue sheet (uiux/screens/06-play.md, §Q14): a centred "Common"
-// header with rules and its fields full width, then "Text" and "Image" side by side with
-// a vertical divider between them. Three columns is not this layout and neither is one
-// list; the reference sheet draws Common over a two-column grid and that is what this is.
+// The keyword block of the cue sheet: a centred "Common" header with rules and its fields full
+// width, then "Text" and "Image" side by side with a vertical divider between them. Three
+// columns is not this layout and neither is one list; the reference sheet draws Common over a
+// two-column grid and that is what this is.
 //
-// Which fields exist is `logic/03` step 3's: one per distinct slot name across the picked
-// prompts and entries, Common when a name is used on both sides. They appear and
-// disappear as prompts are ticked, because the group they belong to is recomputed from
-// the picked bodies on every render.
+// Which fields exist: one per distinct slot name across the picked prompts and entries, Common
+// when a name is used on both sides. They appear and disappear as prompts are ticked, because
+// the group they belong to is recomputed from the picked bodies on every render.
 export function KeywordBlock({
   fields,
   values,
@@ -124,9 +123,8 @@ function GroupHeading({ name }: { readonly name: string }) {
   );
 }
 
-// `logic/03` step 4: a single line, trimmed, non-empty, at most 200 characters. The cap
-// is on the input as well as in the rule, so the field cannot be typed past the width the
-// column holds.
+// A single line, trimmed, non-empty, at most 200 characters. The cap is on the input as well as
+// in the rule, so the field cannot be typed past the width the column holds.
 function KeywordField({
   name,
   value,

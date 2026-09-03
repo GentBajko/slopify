@@ -14,13 +14,13 @@ export interface CollectorEvent {
 export type PostOutcome =
   | { readonly ok: true }
   // `retriable` decides whether the events stay queued. A batch the collector refuses
-  // will be refused again forever, and the queue is unbounded (logic/16 §Q134), so
+  // will be refused again forever, and the queue is unbounded, so
   // retrying it would park every later event behind it.
   | { readonly ok: false; readonly retriable: boolean; readonly reason: string };
 
 export type PostEvents = (events: readonly CollectorEvent[]) => Promise<PostOutcome>;
 
-// 07-operations: the collector URL is built into the release and is not user
+// The collector URL is built into the release and is not user
 // configurable. The environment variable below is a test seam, not a documented knob:
 // packages/app/test/telemetry-flush.test.ts points it at a fake collector.
 export const defaultCollectorUrl = "https://collector.slopify.stream";
@@ -64,7 +64,7 @@ export function httpPostEvents(endpoint: string, timeoutMs: number): PostEvents 
       };
     } catch (error) {
       // Offline is the ordinary case, not a fault: the events stay queued and the user is
-      // told nothing (logic/16 step 5).
+      // told nothing.
       return { ok: false, retriable: true, reason: messageOf(error) };
     }
   };

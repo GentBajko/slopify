@@ -2,9 +2,8 @@ import { useId } from "react";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-// A segmented switch with its engraved label above it: the Kind of 05, and the Category
-// and Mode of 09 (uiux/02-system.md, controls; uiux/03-experience.md, accessibility
-// floor - every input carries a label above it).
+// A segmented switch with its engraved label above it: the prompt editor's Kind, and the
+// entry editor's Category and Mode. Every input in this app carries a label above it.
 //
 // Radix hands `onValueChange` the raw string of the pressed item and an empty string when
 // a press deselects, so every call site had the same lookup guarding the same union. It

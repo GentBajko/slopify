@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import type { TelemetryCounters, TelemetryEvent, TelemetryEventType } from "./model.js";
 import { usageOf } from "./usage.js";
 
-// logic/16 step 6 with §Q132: the page's totals are the sum of the local log and nothing
-// else. Every case here is a hand-built log, so what the fold does with it is the whole
-// subject; `test/telemetry-counters.test.ts` checks the totals against a real pipeline.
+// The page's totals are the sum of the local log and nothing else. Every case here is a
+// hand-built log, so what the fold does with it is the whole subject;
+// `test/telemetry-counters.test.ts` checks the totals against a real pipeline.
 
 let n = 0;
 
@@ -59,7 +59,7 @@ describe("the Usage page's five counters", () => {
     });
   });
 
-  // §Q132: the totals come off the log, not off the delivery. A delivered event still
+  // The totals come off the log, not off the delivery. A delivered event still
   // counts, which is what makes the page independent of the collector.
   it("counts an event that has already been delivered", () => {
     const delivered: TelemetryEvent = {
@@ -79,8 +79,8 @@ describe("the Usage page's five counters", () => {
 });
 
 describe("the Tokens by stage table", () => {
-  // uiux/screens/10-usage: Stage, Provider · model, Tokens in, Tokens out, sorted by
-  // tokens out. §Q128 groups by all three, so one stage against two models is two rows.
+  // Stage, Provider · model, Tokens in, Tokens out, sorted by tokens out. The grouping is
+  // on all three, so one stage against two models is two rows.
   it("groups by stage, provider and model, and sorts by tokens out", () => {
     const usage = totals([
       event("stage.completed", {
@@ -120,7 +120,7 @@ describe("the Tokens by stage table", () => {
     ]);
   });
 
-  // The segments are the article stage's own units (logic/16 step 2), and the table is by
+  // The segments are the article stage's own units, and the table is by
   // stage, so an intro's tokens sit in the article's row.
   it("folds an intro and an outro text into their stage's row", () => {
     const usage = totals([
@@ -164,8 +164,8 @@ describe("the Tokens by stage table", () => {
     expect(usage.counters.imagesMade).toBe(4);
   });
 
-  // §Q131: "provider reports no token usage → 0 recorded, never estimated". A stage that
-  // only ever reported zero is not a row either, but it is still counted as work done.
+  // Provider reports no token usage → 0 recorded, never estimated. A stage that only ever
+  // reported zero is not a row either, but it is still counted as work done.
   it("keeps a zero-token stage out of the table without losing its other counters", () => {
     const usage = totals([
       event("stage.completed", {

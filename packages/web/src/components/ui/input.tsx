@@ -1,9 +1,9 @@
 import type * as React from "react";
 import { cn } from "@/lib/utils";
 
-// shadcn/ui's input, restyled to uiux/02-system.md: --panel2 fill, --line2 border,
-// radius 4, --ink3 placeholder. `aria-invalid` carries the error border; the message
-// belongs below the field, which is the caller's job.
+// shadcn/ui's input, restyled to this app's system: --panel2 fill, --line2 border, radius 4,
+// --ink3 placeholder. `aria-invalid` carries the error border; the message belongs below
+// the field, which is the caller's job.
 function Input({ className, ...props }: React.ComponentProps<"input">) {
   return (
     <input
@@ -18,7 +18,7 @@ function Input({ className, ...props }: React.ComponentProps<"input">) {
   );
 }
 
-// The same skin over a textarea: the pasted article is the one multi-line field S6 has.
+// The same skin over a textarea: the pasted article is the one multi-line field on Play.
 function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
   return (
     <textarea

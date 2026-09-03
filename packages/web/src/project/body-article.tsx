@@ -18,9 +18,9 @@ import {
   useOutputText,
 } from "./parts.js";
 
-// "Article: the markdown rendered in a 75 ch measure; Edit (inline editor with Save &
-// re-run from audio, Discard); Download; links to the sources and glossary files beside
-// the title; 'Show instructions'" (uiux/screens/08-project.md).
+// Article: the markdown rendered in a 75 ch measure; Edit (inline editor with Save & re-run
+// from audio, Discard); Download; links to the sources and glossary files beside the title;
+// 'Show instructions'.
 export function ArticleBody({ stage, project, outputs, actions, busy }: BodyProps) {
   const mine = outputsOf(outputs, stage);
   const markdown = roleOf(mine, "article_md");
@@ -105,7 +105,7 @@ export function ArticleBody({ stage, project, outputs, actions, busy }: BodyProp
             <ConfirmedButton
               action={{ kind: "save-article", markdown: draft }}
               run={() => {
-                // The editor closes only once the server has taken the text (§Q106).
+                // The editor closes only once the server has taken the text.
                 actions.run({ kind: "save-article", markdown: draft }, () => {
                   setDraft(undefined);
                 });

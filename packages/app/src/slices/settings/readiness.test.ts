@@ -31,7 +31,7 @@ function statusOf(statuses: readonly ProviderStatus[], id: ProviderId): Provider
 }
 
 describe("providerStatuses", () => {
-  // `logic/02` step 5: listed, not hidden, so Play can grey a row with a reason.
+  // Listed, not hidden, so Play can grey a row with a reason.
   it("lists every supported provider whether it is ready or not", async () => {
     const statuses = await providerStatuses(harness(notFound));
 
@@ -72,7 +72,7 @@ describe("providerStatuses", () => {
     expect(statusOf(statuses, "fal").readiness).toEqual({ kind: "keyed", hasKey: false });
   });
 
-  // §Q135: a CLI provider is ready when its binary answers, and a key is never involved.
+  // A CLI provider is ready when its binary answers, and a key is never involved.
   it("reports a CLI provider whose binary answers as installed", async () => {
     const statuses = await providerStatuses(harness(installed));
 

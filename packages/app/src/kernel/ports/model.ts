@@ -1,27 +1,26 @@
 // The vocabulary that crosses the provider seam. Domain types only: a vendor's payload
-// shape never leaves its adapter (01-architecture §Q10, §Q33).
+// shape never leaves its adapter.
 
 export const providerFamilies = ["llm", "tts", "image"] as const;
 export type ProviderFamily = (typeof providerFamilies)[number];
 
-// What Play's model dropdown is filled from, fetched per load (`logic/02` §Q15).
+// What Play's model dropdown is filled from, fetched per load.
 export interface ModelInfo {
   readonly id: string;
   readonly name: string;
 }
 
-// What Settings and Play both read per provider. `hasKey` and `installed` are the two
-// ways a provider can be usable; neither carries key material. It lives here because
-// the registry lists it and the kernel may not import the settings slice that fills it.
+// What Settings and Play both read per provider. `hasKey` and `installed` are the two ways
+// a provider can be usable; neither carries key material. It lives here because the
+// registry lists it and the kernel may not import the settings slice that fills it in.
 export type Readiness =
   | { readonly kind: "keyed"; readonly hasKey: boolean }
   | { readonly kind: "cli"; readonly installed: boolean; readonly version?: string };
 
 export const providerErrorKinds = [
   "auth",
-  // Distinct from `auth`, which is a key the provider rejected. `logic/02` §Q13 splits
-  // them: a bad key runs the whole retry policy (§Q11) and an absent one "fails
-  // immediately, without retries", so the wrapper needs two kinds to tell apart.
+  // Distinct from `auth`, a key the provider rejected: a bad key runs the whole retry
+  // policy, an absent one fails immediately.
   "missing_key",
   "rate_limit",
   "refusal",
@@ -33,18 +32,18 @@ export type ProviderErrorKind = (typeof providerErrorKinds)[number];
 
 export interface ProviderFault {
   readonly kind: ProviderErrorKind;
-  // `logic/01` §Q4: a 429 carrying Retry-After replaces the fixed backoff for that wait.
+  // A 429 carrying Retry-After replaces the fixed backoff for that wait.
   readonly retryAfterMs?: number | undefined;
 }
 
 // An Error, so a stack survives and every existing catch still works, carrying the one
-// field the attempt wrapper reads. Adapters name the kind because only the adapter can
-// read the vendor's status code; nothing downstream classifies again (03-standards).
+// field the attempt wrapper reads. Adapters name the kind because only the adapter sees
+// the vendor's status code; nothing downstream classifies again.
 export type ProviderError = Error & { readonly fault: ProviderFault };
 
 export interface ProviderErrorInit {
   readonly kind: ProviderErrorKind;
-  // The provider's own words, verbatim: `logic/01` unhappy paths show this on the stage.
+  // The provider's own words, verbatim - this is what the stage shows.
   readonly message: string;
   readonly retryAfterMs?: number | undefined;
 }

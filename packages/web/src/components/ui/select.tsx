@@ -3,11 +3,10 @@ import { Select as SelectPrimitive } from "radix-ui";
 import type * as React from "react";
 import { cn } from "@/lib/utils";
 
-// shadcn/ui's select, restyled to uiux/02-system.md and cut to the parts this app mounts:
-// the picker lists a handful of providers, so the scroll buttons, groups, labels and
-// separators it ships beside these are not here. The list renders in a portal, so the
-// overlay escapes the rail it was opened from (uiux/02-system.md, implementation
-// constraints).
+// shadcn/ui's select, restyled to this app's system and cut to the parts it mounts: the
+// picker lists a handful of providers, so the scroll buttons, groups, labels and separators
+// shipped beside these are not here. The list renders in a portal, so the overlay escapes
+// the rail it was opened from.
 const Select = SelectPrimitive.Root;
 const SelectValue = SelectPrimitive.Value;
 

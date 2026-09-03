@@ -6,15 +6,14 @@ import { providerError } from "../../kernel/ports/model.js";
 import { retryAfter } from "../retry-after.js";
 import { describeBytes, sniffImage } from "./bytes.js";
 
-// The HTTP gateway adapter for OpenAI's images endpoint (01-architecture Module
-// boundaries). `fetch` and nothing else: 05-dependencies records global `fetch` at rung 3
-// and the whole call is one request. Unlike fal and Replicate this one hands back the
-// image itself - a GPT image model always answers with base64 and never with a URL - so
-// there is no link to follow.
+// The HTTP gateway adapter for OpenAI's images endpoint: the platform's own `fetch` and
+// nothing else, because the whole call is one request. Unlike fal and Replicate this one
+// hands back the image itself - a GPT image model always answers with base64, never a URL -
+// so there is no link to follow.
 
 export const openAiImagesBase = "https://api.openai.com/v1";
 
-// `logic/02` §Q15: the dropdown is filled from what the provider offers, and `/v1/models`
+// The dropdown is filled from what the provider offers, and `/v1/models`
 // lists every model on the account, chat and embeddings among them, so the image
 // shortlist is this adapter's own data. These are the four GPT image models OpenAI
 // documents; adding the next one is a line here and no code change anywhere else.
@@ -25,9 +24,9 @@ export const openAiImageModels: readonly ModelInfo[] = [
   { id: "gpt-image-1-mini", name: "GPT Image 1 mini" },
 ];
 
-// `logic/09` step 1: "the provider's closest supported size to the run's aspect". The
-// standard GPT image sizes are 3:2 and 2:3, so 16:9 is asked for as 1536×1024 and the
-// remaining sliver is cropped by the render (`logic/11` step 4).
+// The provider's closest supported size to the run's aspect. The standard GPT image sizes are
+// 3:2 and 2:3, so 16:9 is asked for as 1536×1024 and the remaining sliver is cropped by the
+// render.
 const standard: Readonly<Record<ImageRequest["aspect"], string>> = {
   "16:9": "1536x1024",
   "9:16": "1024x1536",
@@ -42,13 +41,13 @@ const exact: Readonly<Record<ImageRequest["aspect"], string>> = {
 const arbitrarySizes = /^gpt-image-2/;
 
 export interface OpenAiImageDeps {
-  // Injected so a test never needs the network and `main.ts` owns the real one.
+  // Injected so a test never needs the network.
   readonly fetch: typeof globalThis.fetch;
-  // Called for every request, never held (`logic/02` §Q16).
+  // Called for every request, never held.
   readonly key: () => string | undefined;
 }
 
-// A wire payload is narrowed, never cast (01-architecture §Q10, §Q33).
+// A wire payload is narrowed, never cast.
 const generated = z.object({ data: z.array(z.object({ b64_json: z.string().nullish() })) });
 
 const errorBody = z.object({
@@ -59,7 +58,7 @@ const errorBody = z.object({
   }),
 });
 
-// `logic/09` §Q74: a content-policy refusal is the provider's final answer and is never
+// A content-policy refusal is the provider's final answer and is never
 // retried. OpenAI names it in the body rather than in the status, so the code is what
 // tells a declined prompt from a malformed request that shares its 400.
 const refusalCodes: readonly string[] = ["moderation_blocked", "content_policy_violation"];
@@ -80,11 +79,11 @@ export function openAiImage(deps: OpenAiImageDeps): ImagePort {
         body: JSON.stringify({
           model: req.model,
           prompt: req.prompt,
-          // `logic/09` step 2 sends Number as that many independent calls, each its own
-          // resumable piece, so one image per request is what the stage asks for.
+          // The stage sends Number as that many independent calls, one piece each, so one
+          // image per request is what it asks for.
           n: 1,
           size: sizeFor(req.model, req.aspect),
-          // No `quality` and no `background`: step 2 asks for the provider's default
+          // No `quality` and no `background`: the stage asks for the provider's default
           // quality and style, which is what leaving them off means.
         }),
       });
@@ -116,8 +115,7 @@ function decode(b64: string): GeneratedImage {
 }
 
 function keyOf(deps: OpenAiImageDeps): string {
-  // `logic/02` §Q13: an attempt that finds no key fails rather than calling anonymously.
-  // `missing_key` rather than `auth` because the same rule makes it terminal.
+  // `missing_key`, not `auth`, because that rule makes it terminal.
   const key = deps.key();
   if (key === undefined || key === "") {
     throw providerError({ kind: "missing_key", message: "no OpenAI image key is stored" });
@@ -125,8 +123,7 @@ function keyOf(deps: OpenAiImageDeps): string {
   return key;
 }
 
-// Only the adapter can read a vendor's status code, so only the adapter names the kind;
-// the attempt wrapper maps it and nothing downstream classifies again (03-conventions).
+// Only the adapter sees the vendor's status code, so only the adapter names the kind.
 function kindOf(status: number, code: string | null | undefined): ProviderErrorKind {
   if (code !== undefined && code !== null && refusalCodes.includes(code)) {
     return "refusal";
@@ -137,18 +134,16 @@ function kindOf(status: number, code: string | null | undefined): ProviderErrorK
   if (status === 429) {
     return "rate_limit";
   }
-  // ceiling: everything else is `other` and is retried, so a prompt past the model's
-  // length limit fails the same way four times over. A terminal kind for "this request
-  // will never work" would have to be added to the port's error contract first, which is
-  // not this adapter's to widen.
+  // ceiling: everything else is `other` and is retried, so a prompt past the model's length
+  // limit fails the same way four times over. A terminal "this will never work" kind has to
+  // reach the port's error contract first, which is not this adapter's to widen.
   return "other";
 }
 
 async function failure(response: Response): Promise<Error> {
   const text = await response.text().catch(() => "");
   const parsed = errorBody.safeParse(safeJson(text));
-  // The provider's own words, verbatim, through the same redactor the wrapper uses: an
-  // error body is free to quote the key back and this is the first place it is held.
+  // The provider's own words, through the redactor - an error body may quote the key back.
   const message = redact(
     parsed.success ? parsed.data.error.message : text.trim() || response.statusText,
   );

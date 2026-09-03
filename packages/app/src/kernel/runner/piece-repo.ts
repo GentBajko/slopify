@@ -1,11 +1,10 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 
-// One row per resumable sub-unit of a stage (02-models, `stage_pieces`): a research
-// chapter, an audio chunk, an image index. It sits beside the attempt store because the
-// attempt wrapper stamps `piece_id` on every row it writes and the kernel may not import
-// the slices that fill these in. The payload is carried as the JSON text it is stored
-// as: its shape belongs to whichever stage owns the kind, and nothing here reads inside.
+// One `stage_pieces` row per resumable sub-unit of a stage: a research chapter, an audio
+// chunk, an image index. It sits beside the attempt store because the wrapper stamps
+// `piece_id` on every row it writes. The payload stays the JSON text it was stored as - its
+// shape belongs to whichever stage owns the kind, and nothing here reads inside it.
 
 export const pieceKinds = ["chapter", "chunk", "segment", "image", "prompt_written"] as const;
 export type PieceKind = (typeof pieceKinds)[number];
@@ -38,9 +37,8 @@ export function insertPiece(db: DatabaseSync, piece: StagePiece): void {
   ).run(piece.id, piece.stageId, piece.kind, piece.idx, piece.state, piece.payload);
 }
 
-// In `idx` order: the resume of `logic/06` §Q54 re-runs the pieces a previous attempt did
-// not finish and keeps the rest, and the order they were planned in is the order the
-// stage's output is assembled in.
+// In `idx` order: a resume re-runs only the unfinished pieces, and planning order is
+// assembly order.
 export function piecesOf(
   db: DatabaseSync,
   stageId: string,
@@ -54,7 +52,7 @@ export function piecesOf(
 
 // Every piece of a stage whatever its kind, for the one caller that does not care: a
 // re-run throws the whole plan away, because the text a chunk was cut from and the prompt
-// an image was sent with are what changed (`logic/12` §Q101, §Q104).
+// an image was sent with are what changed.
 export function allPiecesOf(db: DatabaseSync, stageId: string): readonly StagePiece[] {
   return db
     .prepare("SELECT * FROM stage_pieces WHERE stage_id = ? ORDER BY kind, idx")
@@ -66,8 +64,8 @@ export function deletePieces(db: DatabaseSync, stageId: string): void {
   db.prepare("DELETE FROM stage_pieces WHERE stage_id = ?").run(stageId);
 }
 
-// One piece, for `logic/09` §Q75: an image the user deleted leaves no row behind, or the
-// next run of the stage would look at the plan and make it again.
+// One piece: an image the user deleted leaves no row behind, or the next run would look at
+// the plan and make it again.
 export function deletePiece(db: DatabaseSync, id: string): void {
   db.prepare("DELETE FROM stage_pieces WHERE id = ?").run(id);
 }

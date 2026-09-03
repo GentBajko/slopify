@@ -19,8 +19,8 @@ const coldOpen: Entry = {
   updatedAt: "2026-09-01T10:00:00.000Z",
 };
 
-// The refusals `edge/http/entries.ts` writes, which are the prompt routes' own mapping
-// (`logic/15` §Q121): RFC 9457 with the `fields` extension member.
+// The refusals `edge/http/entries.ts` writes, which are the prompt routes' own mapping: RFC
+// 9457 with the `fields` extension member.
 function refusalAnswer(status: number, detail: string, fields: readonly unknown[]): Answer {
   return () =>
     new Response(JSON.stringify({ title: "Refused", status, detail, fields }), {
@@ -38,7 +38,7 @@ function saveSpy(taken: readonly Entry[]) {
   const answer: Answer = async (request) => {
     const draft = (await request.json()) as EntryDraft;
     sent.push(draft);
-    // §Q122: a name is taken within its category only, compared case-insensitively, and
+    // A name is taken within its category only, compared case-insensitively, and
     // the unique index is what decides, so the answer is a 409 marking the field.
     const clash = taken.some(
       (entry) =>
@@ -122,7 +122,7 @@ describe("the entry editor's two switches", () => {
 });
 
 describe("what the mode asks of the body", () => {
-  // `logic/07` step 5: a text-mode entry is narrated as it stands, an LLM-mode one is an
+  // A text-mode entry is narrated as it stands, an LLM-mode one is an
   // instruction the article stage runs and the answer is what gets narrated.
   it("says what the body is for, and says something else in the other mode", async () => {
     const user = userEvent.setup();
@@ -161,9 +161,8 @@ describe("the entry editor's slots", () => {
     expect(screen.getByText("channel").getAttribute("data-slot-chip")).toBe("channel");
   });
 
-  // `logic/07` step 5 stores a text-mode entry "as rendered per scenario 03", and
-  // `logic/03` step 3 collects the fields of the picked intro and outro whatever their
-  // mode, so a narrated body carries slots too.
+  // A text-mode entry is stored as rendered, and the fields of the picked intro and outro
+  // are collected whatever their mode, so a narrated body carries slots too.
   it("lists a text body's slots as well, because a text entry is rendered too", async () => {
     const user = userEvent.setup();
     await newEditor();

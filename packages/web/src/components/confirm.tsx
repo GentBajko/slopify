@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 
 // The posture for every destructive action is stop and confirm: a dialog naming the
 // consequence in one sentence, offering the action verb and Cancel, and carrying no
-// secondary options (uiux/03-experience.md). Esc and the overlay close it, which is what
+// secondary options. Esc and the overlay close it, which is what
 // Cancel does, so Radix's own handling is left alone.
 export function ConfirmDialog({
   open,

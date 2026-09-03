@@ -9,7 +9,7 @@ own provider keys, behind a local web UI.
 npx @gentbajko/slopify@latest
 ```
 
-The app serves its UI on `http://127.0.0.1:4242` and opens a browser at it. Node 26
+The app serves its UI on `http://127.0.0.1:6969` and opens a browser at it. Node 26
 or newer, nothing else to install.
 
 ## How to use it
@@ -33,7 +33,7 @@ variable, the variable beats the default.
 
 | Flag | Variable | Default | Does |
 |---|---|---|---|
-| `--port` | `SLOPIFY_PORT` | `4242` | The port the app listens on. An integer from 1 to 65535; anything else refuses to start. |
+| `--port` | `SLOPIFY_PORT` | `6969` | The port the app listens on. An integer from 1 to 65535; anything else refuses to start. |
 | `--host` | `SLOPIFY_HOST` | `127.0.0.1` | The address it binds to. |
 | `--data-dir` | `SLOPIFY_DATA_DIR` | `~/.slopify` | Where `slopify.db`, `projects/`, `staging/` and `logs/` live. Relative paths are resolved against the working directory. |
 | `--no-open` | `SLOPIFY_NO_OPEN` | the browser opens | Keeps the browser shut. As a variable, any value other than empty, `0` or `false` counts as set. |

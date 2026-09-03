@@ -1,9 +1,9 @@
 import type { Output } from "@app/slices/storage/model.js";
 
-// The slideshow order, which is also the order the grid draws in: "image prompts in
-// selection order, then index within each prompt" (`logic/09` §Q72). The rows come back
-// from the server in insert order, and a regenerated image is a new row, so neither the
-// grouping nor the order can be read off the list itself.
+// The slideshow order, which is also the order the grid draws in: "image prompts in selection
+// order, then index within each prompt". The rows come back from the server in insert order,
+// and a regenerated image is a new row, so neither the grouping nor the order can be read off
+// the list itself.
 
 export interface ImageGroup {
   readonly name: string;

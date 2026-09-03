@@ -9,8 +9,8 @@ import { ConfirmedButton } from "./controls.js";
 import type { ProjectActions } from "./use-actions.js";
 
 // The rundown's header: lamp, title, what the run was made of, its state word, and Cancel
-// while it is running (uiux/screens/08-project.md, Composition). `logic/13` §Q108 shows
-// Cancel only while the project reads `running`, and a second press is the server's no-op.
+// while it is running. Cancel is shown only while the project reads `running`, and a second
+// press is the server's no-op.
 export function ProjectHeader({
   project,
   prompts,
@@ -54,7 +54,7 @@ function lampOf(project: ProjectSummary): StageState {
 }
 
 // "Documentary dossier · 9:16 · started 21:14". The name is the run's own copy of it, so a
-// template deleted since the run is still named, marked as gone (`logic/15` §Q123).
+// template deleted since the run is still named, marked as gone.
 function subtitle(project: ProjectSummary, prompts: readonly Prompt[] | undefined): string {
   const name = project.config.articlePrompt;
   const known = prompts === undefined || prompts.some((prompt) => prompt.name === name);

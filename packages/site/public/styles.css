@@ -1,11 +1,9 @@
-/* The tokens and the layout of uiux/assets/reference-screens.html, which the user gave as
-   the binding picture of this page. Where the prose chapters and the reference disagree,
-   the reference wins. */
+/* The tokens and the layout of the reference sheet the page was drawn from. */
 
-/* Barlow and Barlow Condensed, the latin subsets only, copied out of @fontsource at
-   build S23 and served from this origin. Self-hosted rather than fetched from Google's
-   CDN: a page whose whole claim is that nothing leaves your machine should not make a
-   third party watch you read it. The OFL text ships beside the files as required.
+/* Barlow and Barlow Condensed, the latin subsets only, copied out of @fontsource and
+   served from this origin. Self-hosted rather than fetched from Google's CDN: a page whose
+   whole claim is that nothing leaves your machine should not make a third party watch you
+   read it. The OFL text ships beside the files as required.
    ceiling: latin only. A visitor whose name needs latin-ext or Vietnamese gets the
    system UI face for those glyphs; the fix is copying two more subsets in. */
 @font-face {
@@ -446,8 +444,8 @@ h1 {
   line-height: 1;
 }
 
-/* Anything slower than about a second shows the final shape rather than a spinner
-   (uiux/03-experience). The bars are the row's own two boxes, emptied. */
+/* Anything slower than about a second shows the final shape rather than a spinner. The
+   bars are the row's own two boxes, emptied. */
 .tally[data-loading] .tally-item {
   align-items: center;
   padding-block: calc(var(--step) * 5.5);

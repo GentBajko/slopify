@@ -136,7 +136,7 @@ describe("boot", () => {
 
 describe("urlOf", () => {
   it("brackets an IPv6 literal and leaves a name or IPv4 host alone", () => {
-    expect(urlOf("127.0.0.1", 4242)).toBe("http://127.0.0.1:4242");
-    expect(urlOf("::1", 4242)).toBe("http://[::1]:4242");
+    expect(urlOf("127.0.0.1", 6969)).toBe("http://127.0.0.1:6969");
+    expect(urlOf("::1", 6969)).toBe("http://[::1]:6969");
   });
 });

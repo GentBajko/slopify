@@ -9,9 +9,8 @@ import { keys, noticeQuery } from "@/queries";
 // the payload schema allows is named here, and the schema is strict, so nothing can be
 // added to a report without this list failing its test first.
 //
-// logic/16 step 3, in the counters' own names, plus the two things every event carries
-// beyond its counters: the event type and the time it happened (`slices/telemetry/
-// flush.ts`, the collector envelope).
+// The counters in their own names, plus the two things every event carries beyond them:
+// the event type and the time it happened.
 const tracked = [
   "Tokens in and out per stage, with provider and model",
   "Audio seconds per segment",
@@ -23,7 +22,6 @@ const tracked = [
   "The time each of those happened",
 ];
 
-// logic/16 step 4.
 const never = [
   "API keys",
   "Prompt bodies",
@@ -34,10 +32,9 @@ const never = [
   "OS, locale, hardware",
 ];
 
-// Shown once per machine, before any telemetry exists. Pressing "Got it" is what creates
-// the machine ID (logic/16 step 1), so the notice is the disclosure and the consent in
-// one control: there is no close icon, no secondary action, and Esc does not dismiss it
-// (uiux/screens/02-first-run-notice.md).
+// Shown once per machine, before any telemetry exists. Pressing "Got it" is what creates the
+// machine ID, so the notice is the disclosure and the consent in one control: there is no close
+// icon, no secondary action, and Esc does not dismiss it.
 export function FirstRunNotice() {
   const { api } = useApp();
   const queryClient = useQueryClient();
@@ -82,7 +79,7 @@ export function FirstRunNotice() {
           </p>
         )}
         <Button
-          // uiux/screens/02: focus starts on the one action.
+          // Focus starts on the one action.
           autoFocus
           variant="play"
           size="play"

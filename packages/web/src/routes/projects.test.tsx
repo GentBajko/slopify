@@ -132,7 +132,7 @@ describe("the projects list", () => {
   });
 });
 
-// logic/14 step 4, through the screen that owns the confirmation.
+// Deleting a project, through the screen that owns the confirmation.
 describe("deleting a project", () => {
   it("confirms first, naming the project and what goes with it", async () => {
     const user = userEvent.setup();

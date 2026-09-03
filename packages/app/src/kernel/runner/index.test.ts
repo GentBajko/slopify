@@ -209,8 +209,8 @@ describe("tick", () => {
   });
 
   it("keeps a stage done when its output was stored in the same instant as the cancel", async () => {
-    // logic/13 §Q113: cancel never rolls back a stored output. The stage decides for
-    // itself whether it got far enough; the runner does not second-guess a clean resolve.
+    // Cancel never rolls back a stored output. The stage decides for itself whether it got far
+    // enough; the runner does not second-guess a clean resolve.
     const finishesAnyway: StageRun = async (): Promise<void> => {
       await new Promise((resolve) => setTimeout(resolve, 2));
     };
@@ -500,8 +500,8 @@ describe("abortAll", () => {
 });
 
 describe("abortProject", () => {
-  // `logic/13` D14: "other projects are untouched", so the barrier and the aborts are
-  // both per project and this store carries more than one.
+  // Other projects are untouched, so the barrier and the aborts are both per project and this
+  // store carries more than one.
   interface Rows {
     readonly store: StageStore;
     readonly stateOf: (stageId: string) => StageState;
@@ -581,8 +581,8 @@ describe("abortProject", () => {
     await runner.abortAll();
   });
 
-  // §Q113 with the barrier: the stage stays `done`, and the hand-over its own tick would
-  // have made must not start the video under a controller the cancel never touched.
+  // The barrier: the stage stays `done`, and the hand-over its own tick would have made
+  // must not start the video under a controller the cancel never touched.
   it("keeps a stage that finished during the cancel done and starts no dependent", async () => {
     const rows = rowsFor(["p1"], {
       research: "skipped",
@@ -605,7 +605,7 @@ describe("abortProject", () => {
     expect(started).toEqual(["audio", "images"]);
   });
 
-  // §Q111: a canceled project never resumes on its own, but Retry does resume it - so the
+  // A canceled project never resumes on its own, but Retry does resume it - so the
   // barrier is only up for as long as the cancel takes.
   it("lets a later tick start the stage a retry made pending", async () => {
     const rows = rowsFor(["p1"], ends);

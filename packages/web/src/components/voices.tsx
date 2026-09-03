@@ -24,9 +24,9 @@ import { keys, providersQuery, voicesQuery } from "@/queries";
 // than the reference's 80 px because "Add voice" does not fit in 80.
 const cell = "px-4 align-top";
 
-// The voice list and the row that adds to it (`logic/02` steps 3 and 4). Nothing here is
-// checked against the provider: a wrong voice ID is discovered when the audio stage uses
-// it (§Q14), so the only rule the form knows is the one the server enforces.
+// The voice list and the row that adds to it. Nothing here is checked against the provider: a
+// wrong voice ID is discovered when the audio stage uses it, so the only rule the form knows is
+// the one the server enforces.
 export function Voices() {
   const { api } = useApp();
   const queryClient = useQueryClient();
@@ -78,7 +78,7 @@ export function Voices() {
               </td>
             </tr>
           ) : listed.length === 0 ? (
-            // An empty list teaches rather than showing a bare box (`logic/02` §Q14).
+            // An empty list teaches rather than showing a bare box.
             <tr className="border-b border-line">
               <td colSpan={4} className={cn(cell, "py-4 text-ink2")}>
                 Add a voice ID from your text-to-speech provider. Audio needs one to narrate.
@@ -165,7 +165,7 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
   });
 
   // The refusal names a field, and it stands until that field changes: the screen keeps
-  // Add disabled while a duplicate is on the form (uiux/screens/03-settings.md, States).
+  // Add disabled while a duplicate is on the form.
   const edit = (field: VoiceField, apply: () => void): void => {
     apply();
     if (refusal?.field === field) {

@@ -1,6 +1,6 @@
 import type { ProjectState, StageKind, StageState } from "../pipeline.js";
 
-// logic/01 steps 2-5: research → article → {audio ∥ images ∥ thumbnail} → video.
+// Research → article → {audio ∥ images ∥ thumbnail} → video.
 export const deps = {
   research: [],
   article: ["research"],
@@ -10,7 +10,7 @@ export const deps = {
   video: ["audio", "images", "thumbnail"],
 } as const satisfies Readonly<Record<StageKind, readonly StageKind[]>>;
 
-// logic/01 §Q2: a dependency is released by `provided` and `skipped` exactly as by `done`.
+// `provided` and `skipped` release a dependency exactly as `done` does.
 export function satisfied(state: StageState): boolean {
   return state === "done" || state === "provided" || state === "skipped";
 }
@@ -20,7 +20,7 @@ export interface StageStanding {
   readonly state: StageState;
 }
 
-// logic/01 §Q9, in its order. Derived on every read, never stored.
+// The four states, in their order. Derived on every read, never stored.
 export function derive(stages: readonly StageStanding[]): ProjectState {
   if (stages.some((stage) => stage.state === "running")) {
     return "running";
@@ -34,47 +34,36 @@ export function derive(stages: readonly StageStanding[]): ProjectState {
   if (stages.some((stage) => stage.kind === "video" && stage.state === "done")) {
     return "done";
   }
-  // Extended rule, not one of §Q9's four. §Q9 offers no answer for a project that matches
-  // none of them, and `pending` was chosen for the window between creating a project and
-  // the runner claiming its first stage. `logic/13` §Q113 makes a second case reachable:
-  // when the only running stage stores its output in the same instant as the cancel it
-  // stays `done`, so nothing is `canceled` and a run the user stopped would read as one
-  // about to start. `logic/13` step 3 is unconditional - "the project reads `canceled`" -
-  // so that is what a run which started and stopped reads here.
-  //
-  // A stage in a terminal state is what tells the two apart: at creation every stage is
-  // `pending`, `provided` or `skipped`, and only a stage the runner carried to the end is
-  // `done`. Nothing restarts such a project by itself (§Q111), so `pending` is the one
-  // answer that is certainly wrong.
+  // Extended rule, beyond the four above. `pending` covers the window between creating a
+  // project and the runner claiming its first stage. A second case is reachable: a stage
+  // that stores its output in the same instant as the cancel stays `done`, so nothing is
+  // `canceled` and a stopped run would read as about to start. A stage in a terminal state
+  // tells the two apart - at creation none is `done`.
   //
   // ceiling: a process killed between a stage finishing and its dependent being claimed
-  // leaves the same rows and reads `canceled` too - `logic/01` §Q7 only reaches a stage
-  // found `running`. Telling that apart needs the cancel recorded on the project, which is
-  // the upgrade if it ever matters; §Q9 keeps status derived and stores nothing.
+  // reads `canceled` too. Separating those needs the cancel stored on the project, and
+  // nothing about the status is stored.
   if (stages.some((stage) => stage.state === "done")) {
     return "canceled";
   }
   return "pending";
 }
 
-// What a stage row carries about how far through itself it is (`logic/01` §Q6): chapters,
-// chunks, images, or a render percentage, counted by the slice that runs it.
+// How far through itself a stage row is: chapters, chunks, images or a
+// render percentage, counted by the slice that runs it.
 export interface StageProgress extends StageStanding {
   readonly progressCurrent: number | null;
   readonly progressTotal: number | null;
 }
 
-// The thin meter under a running row on 07 Projects, "averaging stage progress"
-// (uiux/screens/07-projects.md). Every stage the run actually asks for counts once: a
-// finished one whole, a running one by its own progress, a waiting, failed or canceled
-// one not at all.
-//
-// `provided` and `skipped` are left out of the average rather than counted as finished.
-// Nothing was asked of them, and counting them would put a run with research off and a
-// supplied article at a third of the way along before the first call was made.
+// The thin meter under a running row on Projects, averaging stage progress. Every stage
+// the run asks for counts once: a finished one whole, a running one by its own progress, a
+// waiting, failed or canceled one not at all. `provided` and `skipped` are left out rather
+// than counted as finished, which would put a run with a supplied article a third of the
+// way along before the first call was made.
 export function progressOf(stages: readonly StageProgress[]): number {
   const asked = stages.filter((stage) => stage.state !== "provided" && stage.state !== "skipped");
-  // A run made entirely of supplied files has nothing outstanding, and a division by zero
+  // A run made entirely of supplied files has nothing outstanding; dividing by zero
   // would answer NaN.
   if (asked.length === 0) {
     return 1;
@@ -92,8 +81,8 @@ function shareOf(stage: StageProgress): number {
   }
   const total = stage.progressTotal ?? 0;
   if (total <= 0) {
-    // A stage that has not yet said how many chapters or chunks there are. Guessing would
-    // be a meter that moves backwards when the count arrives.
+    // The stage has not said how many chapters or chunks there are yet. Guessing gives a
+    // meter that moves backwards when the count arrives.
     return 0;
   }
   return Math.min(1, Math.max(0, (stage.progressCurrent ?? 0) / total));

@@ -2,10 +2,9 @@ import type { ReactNode } from "react";
 import { SavedTick } from "@/components/saved-tick";
 import { Button } from "@/components/ui/button";
 
-// The bar under an editor's sheet: Delete at the left, then the reason Save is holding,
-// the Saved tick, Cancel and Save (uiux/screens/05-prompt-editor.md). Both template
-// libraries of `logic/15` §Q121 draw it - the prompt editor and the intro/outro editor -
-// so the refusal affordance is written once and cannot drift between them.
+// The bar under an editor's sheet: Delete at the left, then the reason Save is holding, the
+// Saved tick, Cancel and Save. Both editors draw it - prompts and intros/outros - so the
+// refusal affordance is written once and cannot drift between them.
 //
 // `cancel` is a node rather than a route, because the two editors return to two different
 // lists and neither of them belongs in here.

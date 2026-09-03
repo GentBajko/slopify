@@ -106,7 +106,7 @@ describe("the appearance switch", () => {
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
   });
 
-  // uiux/03-experience.md: toggling the theme is immediate. The page repaints from the
+  // Toggling the theme is immediate. The page repaints from the
   // cache the moment the switch moves, not when the server answers.
   it("paints the new theme before the save has answered", async () => {
     const user = userEvent.setup();

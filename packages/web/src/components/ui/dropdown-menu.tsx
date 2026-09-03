@@ -2,10 +2,10 @@ import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 import type * as React from "react";
 import { cn } from "@/lib/utils";
 
-// shadcn/ui's dropdown menu, restyled to uiux/02-system.md and cut to the parts this app
-// mounts: the row overflow on 04 Prompts offers two plain actions, so the checkbox,
-// radio, sub-menu, label and shortcut pieces it ships beside these are not here. The
-// content renders in a portal, so it escapes the rail it was opened from.
+// shadcn/ui's dropdown menu, restyled to this app's system and cut to the parts it mounts:
+// the row overflow on Prompts offers two plain actions, so the checkbox, radio, sub-menu,
+// label and shortcut pieces shipped beside these are not here. The content renders in a
+// portal, so it escapes the rail it was opened from.
 const DropdownMenu = DropdownMenuPrimitive.Root;
 const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 

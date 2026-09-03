@@ -82,7 +82,7 @@ describe("httpPostEvents", () => {
   });
 
   // A batch the collector calls malformed will be called malformed forever, and the queue
-  // is unbounded (logic/16 §Q134), so retrying it would wedge every later event behind it.
+  // is unbounded, so retrying it would wedge every later event behind it.
   it("treats a rejected batch as not retriable", async () => {
     const fake = await collector(() => ({ status: 400 }));
 

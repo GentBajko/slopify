@@ -41,18 +41,17 @@ import { runThumbnail } from "../src/slices/thumbnail/run.js";
 import { resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
 import { renderVideo } from "../src/slices/video/run.js";
 
-// `logic/16` steps 2 and 3 over a whole pipeline: every stage of a run made by the real
-// stages and the real runner, counted through the real `record` into the real queue. No
-// provider is called; `adapters/fake/*` are the scripted doubles (06-testing), and the
-// render is the bundled ffmpeg.
+// Counting over a whole pipeline: every stage of a run made by the real stages and the real
+// runner, counted through the real `record` into the real queue. No provider is called;
+// `adapters/fake/*` are the scripted doubles, and the render is the bundled ffmpeg.
 
 const silent: Log = { write: (): void => {} };
 const ffmpeg = resolveFfmpeg(process.env, ffmpegStatic);
 const appVersion = "1.2.3";
 
 // The rendered texts each call is recognised by, so the script below can answer as the
-// stage that asked. Every one of them is prompt text, which is on logic/16 step 4's
-// never-list: the last assertion of this file checks none of it reached a payload.
+// stage that asked. Every one of them is prompt text, which is on the never-list: the last
+// assertion of this file checks none of it reached a payload.
 const articlePrompt = "PROMPT-ARTICLE: write about rope";
 const introBody = "PROMPT-INTRO: open the video";
 const outroBody = "PROMPT-OUTRO: close the video";
@@ -88,7 +87,7 @@ function still(): Uint8Array {
 }
 
 // One mp3 per distinct text, so the three narrated segments have three real durations for
-// step 3's "audio seconds from the measured duration per segment" to be read off.
+// the audio seconds to be read off the measured duration per segment.
 function tone(text: string): Uint8Array {
   const tenths = 3 + (text.length % 5);
   const path = join(scratch, `tone-${String(tenths)}.mp3`);
@@ -150,7 +149,7 @@ function harness(): Harness {
   ensureDirs(paths, { mode: 0o700 });
   const db = openDb(paths.db);
   migrate(db, systemClock);
-  // logic/16 step 1: nothing is recorded before the notice created the machine id, so the
+  // Nothing is recorded before the notice created the machine id, so the
   // row the dismissal writes has to be there for any of this to be counted.
   insertMachine(db, {
     machineId: "7b1f0d2e-0000-4000-8000-000000000000",
@@ -255,17 +254,17 @@ function payloads(db: DatabaseSync): TelemetryPayload[] {
   return undeliveredEvents(db, 100).map((event) => event.payload);
 }
 
-// The unit of logic/16 step 2 an event belongs to: the stage, and the segment when the
-// unit is narrower than the stage.
+// The unit an event belongs to: the stage, and the segment when the unit is narrower than
+// the stage.
 function unitOf(payload: TelemetryPayload): string {
   const stage = payload.stage ?? "project.created";
   return payload.segment === undefined ? stage : `${stage}/${payload.segment}`;
 }
 
 describe("a whole pipeline against the fakes", () => {
-  it("records one event per unit of logic/16 step 2, with the counters of step 3", async () => {
+  it("records one event per counted unit, with its counters", async () => {
     const h = harness();
-    // logic/16 step 2: one event per project created. The route records it; here the
+    // One event per project created. The route records it; here the
     // pipeline is driven directly, so it is recorded the same way the route does.
     record(
       { db: h.db, ids: { next: () => "created" }, clock: systemClock, log: silent, appVersion },
@@ -280,10 +279,10 @@ describe("a whole pipeline against the fakes", () => {
     // thumbnail together, so which of the three finishes first is not a rule.
     const byUnit = new Map(payloads(h.db).map((row) => [unitOf(row), row]));
 
-    // One event per unit of logic/16 step 2: the project, research, the article, its
-    // intro and outro texts, the three narrated segments, the images, the thumbnail and
-    // the render. The narration is three units because `logic/08` §Q93 makes each picked
-    // segment a request of its own, narrated from the pieces the article stage wrote.
+    // One event per unit: the project, research, the article, its intro and outro texts,
+    // the three narrated segments, the images, the thumbnail and the render. The narration
+    // is three units because each picked segment is a request of its own, narrated from
+    // the pieces the article stage wrote.
     expect([...byUnit.keys()].toSorted()).toEqual(
       [
         "project.created",
@@ -300,7 +299,7 @@ describe("a whole pipeline against the fakes", () => {
       ].toSorted(),
     );
 
-    // Step 3, counter by counter, against what the stages actually did. The fake reports
+    // Counter by counter, against what the stages actually did. The fake reports
     // 11 tokens in and 22 out per answered call.
     const llm = { provider: "fake-llm", model: "fake-model" };
     const perCall = { tokensIn: reportedUsage.inputTokens, tokensOut: reportedUsage.outputTokens };
@@ -348,8 +347,8 @@ describe("a whole pipeline against the fakes", () => {
     expect(byUnit.get("video")).toEqual({ appVersion, stage: "video" });
 
     // The audio seconds are the measured duration of the file the stage stored, which is
-    // the number `logic/11` builds the video timeline from (§Q68). One event per segment,
-    // each carrying its own file's duration rather than the run's total.
+    // the number the video timeline is built from. One event per segment, each carrying its
+    // own file's duration rather than the run's total.
     const outputs = outputsOf(h.db, h.projectId);
     for (const [segment, role] of [
       ["body", "audio_body"],
@@ -369,8 +368,8 @@ describe("a whole pipeline against the fakes", () => {
     h.db.close();
   }, 180_000);
 
-  // logic/16 step 4 and the promise in mockup/02-first-run-notice, checked against the
-  // rows a real run left in the queue rather than against a hand-written payload.
+  // The never-list and the promise the first-run notice makes, checked against the rows a
+  // real run left in the queue rather than against a hand-written payload.
   it("puts nothing from the never-list into a payload", async () => {
     const h = harness();
 
@@ -413,8 +412,8 @@ describe("a whole pipeline against the fakes", () => {
     h.db.close();
   }, 180_000);
 
-  // §Q132's invariant: "Usage page totals equal the sum of the local event log". The
-  // numbers below are what the stages of the run above actually did, counted by hand.
+  // Usage page totals equal the sum of the local event log. The numbers below are what the
+  // stages of the run above actually did, counted by hand.
   it("adds up to the totals the Usage page serves", async () => {
     const h = harness();
     record(
@@ -430,7 +429,7 @@ describe("a whole pipeline against the fakes", () => {
       machineId: null,
       appVersion,
     });
-    // Every second the run narrated: the body and the two picked segments (§Q93).
+    // Every second the run narrated: the body and the two picked segments.
     const audioSeconds = outputsOf(h.db, h.projectId)
       .filter((output) => output.role.startsWith("audio_"))
       .reduce((total, output) => total + (output.durationMs ?? 0) / 1000, 0);
@@ -472,10 +471,10 @@ describe("a whole pipeline against the fakes", () => {
     h.db.close();
   }, 180_000);
 
-  // §Q131: "deleting a project changes nothing". There is no delete control yet, so the
-  // project row goes the way the schema's ON DELETE CASCADE would take it - stages,
-  // pieces, attempts and outputs with it. Nothing follows, because a telemetry payload
-  // names no project: that is the whole reason the rule holds.
+  // Deleting a project changes nothing. There is no delete control yet, so the project row goes
+  // the way the schema's ON DELETE CASCADE would take it - stages, pieces, attempts and outputs
+  // with it. Nothing follows, because a telemetry payload names no project: that is the whole
+  // reason the rule holds.
   it("keeps every counter when the project row is deleted", async () => {
     const h = harness();
     await h.run();

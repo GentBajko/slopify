@@ -59,7 +59,7 @@ export function projectRoutes(deps: AppDeps) {
   return (
     new Hono()
       .post("/", zValidator("json", runDraftSchema, onInvalid), (c) => {
-        // logic/04 §Q34: the bodies are read here, at the click, so an edit made since the
+        // The bodies are read here, at the click, so an edit made since the
         // prompt was selected is the one that runs.
         const picked = pickTemplates(deps.db, c.req.valid("json"));
         const admitted = admit({
@@ -79,17 +79,17 @@ export function projectRoutes(deps: AppDeps) {
         }
 
         // Rendered from the values admit() has trimmed, so the stored text carries no
-        // padding the user did not intend (logic/03 step 4 and step 5).
+        // padding the user did not intend.
         const { project } = startRun(
           storage,
           admitted.draft,
           renderPicked(picked, admitted.draft.values),
         );
-        // logic/16 step 2: one event per project created. record() swallows its own
+        // One event per project created. record() swallows its own
         // failures, so a broken telemetry write cannot cost the user the run.
         record(telemetry, "project.created", {});
         deps.flushSoon();
-        // logic/04 step 6: the run starts only once the project is committed.
+        // The run starts only once the project is committed.
         deps.runner.tick(project.id);
         // Read back after the tick, not from the rows startRun built: the runner has
         // already claimed every eligible stage, and a body that paired status "running"
@@ -121,8 +121,8 @@ export function projectRoutes(deps: AppDeps) {
           outputs: outputsOf(deps.db, project.id),
         });
       })
-      // `logic/14` step 4. Irreversible, and only from the app: 07 Projects puts the
-      // confirmation dialog in front of it.
+      // Irreversible, and only from the app: the Projects screen puts a confirmation
+      // dialog in front of it.
       .delete("/:id", zValidator("param", idParam, onInvalid), (c) => {
         const result = deleteProject(storageForDelete, c.req.valid("param").id);
         if (result.ok) {
@@ -145,7 +145,7 @@ const deleteStatus: Readonly<Record<DeleteRefusal, 404 | 409 | 500>> = {
 
 const deleteDetails: Readonly<Record<DeleteRefusal, string>> = {
   "no-project": "No project has that id.",
-  // §Q117: the run has to be stopped before its files can go.
+  // The run has to be stopped before its files can go.
   running: "This project is still running. Cancel the run first.",
   files: "Some of this project's files could not be removed.",
 };

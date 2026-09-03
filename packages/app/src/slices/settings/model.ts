@@ -1,4 +1,4 @@
-// The provider catalogue and the settings domain types (02-models, `logic/02`).
+// The provider catalogue and the settings domain types.
 
 import type { ProviderFamily, Readiness } from "../../kernel/ports/model.js";
 
@@ -6,9 +6,9 @@ export type { ProviderFamily } from "../../kernel/ports/model.js";
 // The three families are the three ports, so the set is named beside them.
 export { providerFamilies } from "../../kernel/ports/model.js";
 
-// The supported set is `05-dependencies` External services. OpenAI ships two adapters
-// with two ids, one per family: `provider_keys.provider` is the primary key, and a row
-// per family is what lets a user key TTS without keying image generation.
+// The supported set. OpenAI ships two adapters with two ids, one per family:
+// `provider_keys.provider` is the primary key, and a row per family is what lets a user key TTS
+// without keying image generation.
 export const providerIds = [
   "openrouter",
   "claude-code",
@@ -33,7 +33,7 @@ export interface KeyedProvider extends ProviderBase {
 }
 
 // A local agent CLI has no key: the CLI's own login is used, so readiness is whether the
-// binary answers on PATH (`logic/02` §Q135).
+// binary answers on PATH.
 export interface CliProvider extends ProviderBase {
   readonly auth: "cli";
   readonly binary: string;
@@ -95,12 +95,12 @@ export interface Voice {
   readonly voiceId: string;
 }
 
-// uiux §Q19: the theme override the Appearance control writes.
+// The theme override the Appearance control writes.
 export const appearances = ["system", "light", "dark"] as const;
 export type Appearance = (typeof appearances)[number];
 
 export interface AppSettings {
-  // `logic/11` §Q99: the silence beside a segment that exists, default 3 s.
+  // The silence beside a segment that exists, default 3 s.
   readonly silenceGapSeconds: number;
   readonly appearance: Appearance;
 }

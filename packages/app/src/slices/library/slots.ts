@@ -1,7 +1,7 @@
 // What a run needs from the library at the moment Play is pressed: the saved bodies of
 // the picked templates, the slot names they ask for, and the rendered text stored on the
-// project. `logic/04` §Q34 fixes the timing - the bodies are read at the click, not at
-// selection, so an edit made in between is the one that runs.
+// project. The bodies are read at the click, not at selection, so an edit made in between
+// is the one that runs.
 
 import type { DatabaseSync } from "node:sqlite";
 import type { EntryChoice, RunDraft } from "../admission/model.js";
@@ -20,20 +20,20 @@ export interface PickedBody {
 
 export interface PickedTemplates {
   // The draft with each picked entry's mode replaced by the saved entry's. The request
-  // says which entry, the library says what it is (`logic/04` §Q97).
+  // says which entry, the library says what it is.
   readonly draft: RunDraft;
-  // Distinct slot names in the order `logic/03` §Q24 fixes: the article body, then the
-  // image prompts in selection order, then the thumbnail prompt.
+  // Distinct slot names in first-appearance order: the article body, then the image
+  // prompts in selection order, then the thumbnail prompt.
   readonly requiredSlots: readonly string[];
   readonly bodies: readonly PickedBody[];
-  // A template the draft names that the library no longer holds (`logic/15` step 4).
+  // A template the draft names that the library no longer holds.
   readonly missing: readonly FieldError[];
 }
 
 export function pickTemplates(db: DatabaseSync, draft: RunDraft): PickedTemplates {
   const { sources } = draft;
   const missing: FieldError[] = [];
-  // `logic/03` step 3: only the prompts of stages set to Generate, plus the picked
+  // Only the prompts of stages set to Generate, plus the picked
   // entries. A prompt left selected on a stage set to Provide asks for no field.
   const text: PickedBody[] = [];
   const image: PickedBody[] = [];
@@ -55,7 +55,7 @@ export function pickTemplates(db: DatabaseSync, draft: RunDraft): PickedTemplate
   }
 
   // Both Generate modes read the same thumbnail template; Prompt by LLM sends it as the
-  // instruction rather than to the image provider (`logic/10` step 1).
+  // instruction rather than to the image provider.
   if (sources.thumbnail === "from_prompt" || sources.thumbnail === "prompt_by_llm") {
     body(
       db,
@@ -80,7 +80,7 @@ export function pickTemplates(db: DatabaseSync, draft: RunDraft): PickedTemplate
   };
 }
 
-// `logic/03` step 5 and step 6: every picked body rendered once, with the trimmed values
+// Every picked body rendered once, with the trimmed values
 // admission has already accepted, and stored on the project.
 export function renderPicked(
   picked: PickedTemplates,

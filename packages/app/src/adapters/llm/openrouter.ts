@@ -6,17 +6,16 @@ import { providerError } from "../../kernel/ports/model.js";
 import { retryAfter } from "../retry-after.js";
 import { sseData } from "./sse-lines.js";
 
-// The HTTP gateway adapter (01-architecture Module boundaries). `fetch` plus the line
-// reader beside this file, no SDK: 05-dependencies records global `fetch` at rung 3 and
-// the reader at rung 6, so nothing here is worth a dependency.
+// The HTTP gateway adapter: the platform's own `fetch` plus the line reader beside this
+// file, no SDK. Neither is worth a dependency.
 
 export const openRouterBase = "https://openrouter.ai/api/v1";
 
 export interface OpenRouterDeps {
-  // Injected so a test never needs the network and `main.ts` owns the real one.
+  // Injected so a test never needs the network.
   readonly fetch: typeof globalThis.fetch;
   // Called for every request, never held: an attempt in flight finishes on the key it
-  // started with and the next one picks up a key saved since (`logic/02` §Q16).
+  // started with and the next one picks up a key saved since.
   readonly key: () => string | undefined;
 }
 
@@ -27,7 +26,7 @@ const appHeaders = {
 } as const;
 
 // A wire payload is narrowed, never cast: everything unlisted is dropped at the seam so
-// no vendor shape can leak past this file (01-architecture §Q10, §Q33).
+// no vendor shape can leak past this file.
 const modelList = z.object({
   data: z.array(z.object({ id: z.string(), name: z.string().optional() })),
 });
@@ -65,9 +64,9 @@ export function openRouterLlm(deps: OpenRouterDeps): LlmPort {
         })),
         stream: true,
         // The usage-accounting flag: without it the final chunk carries no token counts
-        // and the Usage page would have nothing to count (`logic/16`).
+        // and the Usage page would have nothing to count.
         usage: { include: true },
-        // `logic/06` §Q47: web grounding is asked for explicitly. OpenRouter runs the
+        // Web grounding is asked for explicitly. OpenRouter runs the
         // search itself, so the plugin works whatever model was picked.
         ...(req.webSearch === true ? { plugins: [{ id: "web" }] } : {}),
       }),
@@ -106,8 +105,8 @@ export function openRouterLlm(deps: OpenRouterDeps): LlmPort {
       }
       if (choice?.finish_reason !== undefined && choice.finish_reason !== null) {
         // It arrives on the last choice chunk, one frame before the usage frame, so it is
-        // held rather than read off whichever chunk happens to be last (`logic/07` §Q59
-        // reads it to tell a finished article from a truncated one).
+        // held rather than read off whichever chunk happens to be last - the continuation
+        // loop reads it to tell a finished article from a truncated one.
         finishReason = choice.finish_reason;
       }
       if (chunk.usage !== undefined && chunk.usage !== null) {
@@ -153,7 +152,7 @@ export function openRouterLlm(deps: OpenRouterDeps): LlmPort {
 }
 
 function headers(key: string | undefined): Record<string, string> {
-  // `logic/02` §Q13: an attempt that finds no key fails rather than calling anonymously
+  // An attempt that finds no key fails rather than calling anonymously
   // and being told off by the provider in words the user cannot act on. `missing_key`
   // rather than `auth` because the same rule makes it terminal: there is nothing to
   // retry until the user saves a key, and the wrapper is where that is decided.
@@ -163,8 +162,7 @@ function headers(key: string | undefined): Record<string, string> {
   return { Authorization: `Bearer ${key}`, ...appHeaders };
 }
 
-// Only the adapter can read a vendor's status code, so only the adapter names the kind;
-// the attempt wrapper maps it and nothing downstream classifies again (03-conventions).
+// Only the adapter sees the vendor's status code, so only the adapter names the kind.
 function kindOf(status: number): ProviderErrorKind {
   if (status === 401 || status === 403) {
     return "auth";
@@ -172,17 +170,16 @@ function kindOf(status: number): ProviderErrorKind {
   if (status === 429) {
     return "rate_limit";
   }
-  // ceiling: everything else is `other` and is retried. 400 and 402 will fail the same
-  // way four times over; a terminal kind for "this request will never work" would have to
-  // be added to the port's error contract first, which is not this adapter's to widen.
+  // ceiling: everything else is `other` and is retried, so a 400 or a 402 fails the same
+  // way four times over. A terminal "this will never work" kind has to reach the port's
+  // error contract first, which is not this adapter's to widen.
   return "other";
 }
 
 async function failure(response: Response): Promise<Error> {
   const text = await response.text().catch(() => "");
   const parsed = errorBody.safeParse(safeJson(text));
-  // The provider's own words, verbatim, through the same redactor the wrapper uses: an
-  // error body is free to quote the key back and this is the first place it is held.
+  // The provider's own words, through the redactor - an error body may quote the key back.
   const message = redact(
     parsed.success ? parsed.data.error.message : text.trim() || response.statusText,
   );

@@ -120,8 +120,8 @@ describe("the API key rails", () => {
     expect(screen.getByRole("button", { name: "Remove ElevenLabs key" })).not.toBeNull();
   });
 
-  // The rule of `logic/02`: a key is written, never read back. Nothing this page renders
-  // may carry any run of it once the save has landed.
+  // A key is written, never read back. Nothing this page renders may carry any run of it
+  // once the save has landed.
   it("keeps every part of a saved key out of the page", async () => {
     const secret = "sk-or-v1-QZJXWKPVNMTRGB74390HYUC";
     const user = userEvent.setup();

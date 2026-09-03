@@ -12,15 +12,14 @@ import { unreadyFor } from "./readiness.js";
 import { attempts, stageNames, summaryOf } from "./summary.js";
 import type { ProjectActions } from "./use-actions.js";
 
-// One row of the rundown and the body it opens into. The five columns are the reference
-// sheet's - lamp, glyph, name, summary, state word - and a failed stage puts a sixth thing
-// across them: the provider's own words with its Retry
-// (uiux/screens/08-project.md, States).
+// One row of the rundown and the body it opens into. The five columns are the reference sheet's
+// - lamp, glyph, name, summary, state word - and a failed stage puts a sixth thing across them:
+// the provider's own words with its Retry.
 
 const grid = "grid grid-cols-[14px_24px_110px_minmax(0,1fr)_auto] gap-[14px] items-center py-3";
 
 // The body is open once the stage has something in it, and collapsed while it is still
-// waiting or was switched off (uiux/screens/08-project.md, Composition).
+// waiting or was switched off.
 const opened: ReadonlySet<Stage["state"]> = new Set([
   "running",
   "done",
@@ -88,10 +87,10 @@ export function StageRow({
   );
 }
 
-// `logic/01` §Q10: "the stage shows the provider's error text verbatim and the attempt
-// count". The text is placed as its own node and nothing here shortens, wraps or rewrites
-// it; it is the user's only diagnostic. The backend redacted it on its way out of the
-// attempt wrapper (kernel/log.ts), and no other field of the stage is rendered here.
+// The stage shows the provider's error text verbatim and the attempt count. The text is placed
+// as its own node and nothing here shortens, wraps or rewrites it; it is the user's only
+// diagnostic. The backend redacted it on its way out of the attempt wrapper (kernel/log.ts),
+// and no other field of the stage is rendered here.
 function ErrorLine({
   stage,
   unready,
@@ -112,9 +111,8 @@ function ErrorLine({
   );
 }
 
-// Retry is the recovery, not a destruction: `slices/reruns` leaves the stage's finished
-// pieces and outputs where they are, so it goes straight through without a dialog
-// (`logic/13` step 5, `uiux/03-experience.md` Error recovery).
+// Retry is the recovery, not a destruction: `slices/reruns` leaves the stage's finished pieces
+// and outputs where they are, so it goes straight through without a dialog.
 function RetryButton({
   stage,
   unready,

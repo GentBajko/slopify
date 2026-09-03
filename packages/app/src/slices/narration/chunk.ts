@@ -1,24 +1,24 @@
-// `logic/08` step 2, the run's chunking choice: "Whole text = one request; Per paragraph
-// = one request per paragraph; Every ~N words = consecutive chunks, each ending at the
-// last sentence boundary at or before N words, default N = 500 (§Q69)."
+// The run's chunking choice: whole text is one request, per paragraph is one request per
+// paragraph, and every ~N words is consecutive chunks each ending at the last sentence
+// boundary at or before N words, N defaulting to 500.
 //
-// Pure, and the only place the rule lives: 03-conventions puts chunking with substitution
-// and the render plan in the functional core, so it is testable with no I/O at all and
-// `run.ts` does nothing but call it.
+// Pure, and the only place the rule lives. Chunking sits in the functional core beside
+// substitution and the render plan, so it is testable with no I/O and `run.ts` does nothing
+// but call it.
 
 export const chunkModes = ["whole", "paragraph", "words"] as const;
 export type ChunkMode = (typeof chunkModes)[number];
 
 export interface Chunking {
   readonly mode: ChunkMode;
-  // Only the `words` mode reads it; the default is §Q69's.
+  // Only the `words` mode reads it.
   readonly words?: number | undefined;
 }
 
 export const defaultChunkWords = 500;
 
 // A run created before Play carried the control sends the whole text as one request,
-// which is step 2's first case and the one that adds nothing the user did not ask for.
+// which is the first case and the one that adds nothing the user did not ask for.
 export const defaultChunking: Chunking = { mode: "whole" };
 
 // A run of blank lines is one paragraph break, not several, and a line of nothing but
@@ -52,8 +52,8 @@ function wordRuns(text: string, budget: number): readonly string[] {
 
   for (const sentence of sentences(text)) {
     const words = wordsIn(sentence);
-    // "the last sentence boundary at or before N words": the sentence that would push the
-    // count past the budget starts the next chunk instead of being split.
+    // The last sentence boundary at or before N words: the sentence that would push the count
+    // past the budget starts the next chunk instead of being split.
     if (count > 0 && count + words > limit) {
       chunks.push(current);
       current = "";
@@ -63,9 +63,9 @@ function wordRuns(text: string, budget: number): readonly string[] {
     count += words;
   }
   chunks.push(current);
-  // A single sentence longer than the budget lands here whole, on its own: §Q69 caps
-  // nothing, and a cut inside a clause would be an audible pause the writer never wrote.
-  // The provider's own per-request limit is what refuses it, as an error on the stage.
+  // A single sentence longer than the budget lands here whole, on its own: a cut inside a
+  // clause would be an audible pause the writer never wrote. The provider's own per-request
+  // limit is what refuses it, as an error on the stage.
   return nonEmpty(chunks);
 }
 

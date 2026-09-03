@@ -35,19 +35,19 @@ export function writeEvent(
   return event;
 }
 
-// logic/16 step 5: telemetry never blocks and never fails a pipeline stage. This is the
-// one place in the codebase where an error is swallowed rather than propagated - a
-// failure to count a finished render must not undo the render. It is logged, so the
-// failure is still visible in <data-dir>/logs, and nothing else in this module catches.
+// Telemetry never blocks and never fails a pipeline stage. This is the one place in the
+// codebase where an error is swallowed rather than propagated - a failure to count a finished
+// render must not undo the render. It is logged, so the failure is still visible in
+// <data-dir>/logs, and nothing else in this module catches.
 export function record(
   deps: TelemetryDeps,
   type: TelemetryEventType,
   counters: TelemetryCounters,
 ): void {
   try {
-    // logic/16 step 2 precondition: a machine id exists for every event except the
-    // install event that creates it. Before the notice is dismissed nothing is written,
-    // so nothing about a run the user has not been told about can ever be sent.
+    // A machine id exists for every event except the install event that creates it. Before
+    // the notice is dismissed nothing is written, so nothing about a run the user has not
+    // been told about can ever be sent.
     if (type !== "install" && machineOf(deps.db) === undefined) {
       return;
     }

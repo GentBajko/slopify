@@ -9,7 +9,7 @@ export interface Message {
 }
 
 // Null when the provider reports none: `reportsUsage` says whether to expect it, and the
-// Usage page counts what arrived rather than estimating what did not (`logic/16`).
+// Usage page counts what arrived rather than estimating what did not.
 export interface Usage {
   readonly inputTokens: number;
   readonly outputTokens: number;
@@ -37,8 +37,8 @@ export interface LlmCapabilities {
 export interface LlmCompletion {
   readonly model: string;
   readonly messages: readonly Message[];
-  // `logic/06` §Q47: a provider or model that cannot ground on the web refuses the whole
-  // stage rather than answering from its own knowledge, so this is never quietly dropped.
+  // A provider or model that cannot ground on the web refuses the whole stage rather than
+  // answering from its own knowledge, so this is never quietly dropped.
   readonly webSearch?: boolean | undefined;
   readonly signal: AbortSignal;
 }

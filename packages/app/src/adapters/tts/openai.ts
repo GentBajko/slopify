@@ -5,19 +5,18 @@ import { providerError } from "../../kernel/ports/model.js";
 import type { TtsAudio, TtsPort, TtsRequest } from "../../kernel/ports/tts.js";
 import { retryAfter } from "../retry-after.js";
 
-// The HTTP gateway adapter for OpenAI's speech endpoint (01-architecture Module
-// boundaries). `fetch` and nothing else; the response body is already the stream the port
-// asks for.
+// The HTTP gateway adapter for OpenAI's speech endpoint. `fetch` and nothing else; the response
+// body is already the stream the port asks for.
 
 export const openAiAudioBase = "https://api.openai.com/v1";
-// 05-dependencies lists gpt-4o-mini-tts, tts-1 and tts-1-hd; the first is the current one
-// and the cheapest of the three per character.
+// gpt-4o-mini-tts, tts-1 and tts-1-hd; the first is the current one and the cheapest of the
+// three per character.
 export const openAiTtsModel = "gpt-4o-mini-tts";
 
 export interface OpenAiTtsDeps {
-  // Injected so a test never needs the network and `main.ts` owns the real one.
+  // Injected so a test never needs the network.
   readonly fetch: typeof globalThis.fetch;
-  // Called for every request, never held (`logic/02` §Q16).
+  // Called for every request, never held.
   readonly key: () => string | undefined;
 }
 
@@ -42,9 +41,9 @@ export function openAiTts(deps: OpenAiTtsDeps): TtsPort {
           Authorization: `Bearer ${keyOf(deps)}`,
           "Content-Type": "application/json",
         },
-        // `logic/08` §Q69: the 4096-character cap is not checked here. A longer text
-        // comes back as OpenAI's own 400 and that is what the stage shows, so a user who
-        // chose Whole text learns the limit from the provider that set it.
+        // The 4096-character cap is not checked here. A longer text comes back as OpenAI's own
+        // 400 and that is what the stage shows, so a user who chose Whole text learns the limit
+        // from the provider that set it.
         body: JSON.stringify({
           model: openAiTtsModel,
           input: req.text,
@@ -69,7 +68,7 @@ function voiceOf(voiceId: string): string | { readonly id: string } {
 
 function keyOf(deps: OpenAiTtsDeps): string {
   const key = deps.key();
-  // `logic/02` §Q13: an absent key is terminal, so it never becomes a request.
+  // An absent key is terminal, so it never becomes a request.
   if (key === undefined || key === "") {
     throw providerError({ kind: "missing_key", message: "no OpenAI key is stored" });
   }
@@ -99,7 +98,7 @@ async function failure(response: Response, voiceId: string): Promise<Error> {
   const retryAfterMs = retryAfter(response.headers.get("retry-after"));
   return providerError({
     kind: kindOf(response.status),
-    // `logic/02` §Q14: the voice ID is named, so a rejected voice reads differently from
+    // The voice ID is named, so a rejected voice reads differently from
     // a rejected key.
     message: `OpenAI answered ${response.status} for voice ${voiceId}: ${message}`,
     ...(retryAfterMs === undefined ? {} : { retryAfterMs }),

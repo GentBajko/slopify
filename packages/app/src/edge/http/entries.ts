@@ -7,7 +7,7 @@ import type { LibraryDeps } from "../../slices/library/save.js";
 import { createEntry, removeEntry, updateEntry } from "../../slices/library/save.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid } from "./problem.js";
-// `logic/15` §Q121: one rule set for prompts and entries, so one refusal mapping too.
+// One rule set for prompts and entries, so one refusal mapping too.
 import { refused } from "./prompts.js";
 
 const idParam = z.object({

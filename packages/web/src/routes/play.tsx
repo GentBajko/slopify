@@ -19,11 +19,11 @@ import {
   voicesQuery,
 } from "@/queries";
 
-// 06 Play. The stage rails on the left, the cue sheet on the right, and one key at the
-// bottom of it (uiux/screens/06-play.md). This file is the composition: it holds the one
-// piece of state the screen has, fetches what the pickers are filled from, stages the
-// files a Provide needs, and posts the draft. Every rule it obeys lives elsewhere -
-// `play/admission.ts` runs the server's own, and the controls are in `play/`.
+// 06 Play. The stage rails on the left, the cue sheet on the right, and one key at the bottom
+// of it. This file is the composition: it holds the one piece of state the screen has, fetches
+// what the pickers are filled from, stages the files a Provide needs, and posts the draft.
+// Every rule it obeys lives elsewhere - `play/admission.ts` runs the server's own, and the
+// controls are in `play/`.
 
 export function PlayRoute() {
   const navigate = useNavigate();
@@ -48,11 +48,10 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
 
   const [form, setForm] = useState<PlayFormState>(freshForm);
   // What the server marked when it refused the draft: a template deleted since it was
-  // picked, or a rule the browser's copy could not see (`logic/15` step 4).
+  // picked, or a rule the browser's copy could not see.
   const [refused, setRefused] = useState<readonly FieldError[]>([]);
-  // Whether the user has configured anything yet. A fresh form shows the hint over the
-  // key and nothing else; a form being filled marks the control the hint is naming
-  // (uiux/screens/06-play.md, Fresh vs Invalid field).
+  // Whether the user has configured anything yet. A fresh form shows the hint over the key and
+  // nothing else; a form being filled marks the control the hint is naming.
   const [touched, setTouched] = useState(false);
 
   const update = (patch: Partial<PlayFormState>): void => {
@@ -73,7 +72,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     mutationFn: () => createProject(api, draft),
     onSuccess: (created) => {
       if (!created.ok) {
-        // `logic/04` §Q29: the server names every failing field, and each one is marked
+        // The server names every failing field, and each one is marked
         // where it stands rather than being summarised over the key.
         setRefused(created.fields);
         return;
@@ -86,7 +85,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
 
   // The refusal to put under one control: every field the server named, and the one the
   // hint is pointing at once the form has been touched. Nothing else, so a form nobody
-  // has configured yet is not painted red (`logic/04` §Q29 with uiux/screens/06-play.md).
+  // has configured yet is not painted red.
   const problem = (field: string): string | undefined => {
     const named = refused.find((error) => error.field === field);
     if (named !== undefined) {
@@ -104,8 +103,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     }
   };
 
-  // Ctrl/Cmd+Enter presses Play from anywhere on the form when it is valid
-  // (uiux/03-experience.md, Keyboard).
+  // Ctrl/Cmd+Enter presses Play from anywhere on the form when it is valid.
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
     if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
@@ -140,9 +138,9 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     }));
   };
 
-  // `logic/05` step 5: the copy starts the moment the file is picked, in the background,
-  // with its progress on the form. §Q43: a second pick replaces the first in a
-  // single-file slot; §Q39: the slideshow keeps selection order.
+  // The copy starts the moment the file is picked, in the background, with its progress on
+  // the form. A second pick replaces the first in a single-file slot, and the slideshow
+  // keeps selection order.
   const onPickFiles = (kind: UploadKind, files: readonly File[]): void => {
     const uploads = files.map(newUpload);
     const last = uploads[uploads.length - 1];

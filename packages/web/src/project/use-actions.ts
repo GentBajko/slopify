@@ -28,10 +28,10 @@ export type Action =
 
 // A refused action, and where the user was standing when they asked for it. The sentence
 // is shown under that stage's own row rather than at the top of the page, because that is
-// where the press happened (`uiux/03-experience.md`, Error recovery).
+// where the press happened.
 export interface Refusal {
   // The server's own sentence, verbatim: "At least one image must remain, so the last one
-  // cannot be deleted." (`logic/09` §Q75).
+  // cannot be deleted.".
   readonly message: string;
   // Undefined for a cancel, which belongs to the project rather than to one stage.
   readonly stage: StageKind | undefined;
@@ -39,8 +39,7 @@ export interface Refusal {
 
 export interface ProjectActions {
   // `onDone` runs only when the server accepted the change. An editor closes on it, so a
-  // refused save leaves the user's typing where it is (`uiux/03-experience.md`, Error
-  // recovery: "an article edit in progress stays in the editor").
+  // refused save leaves the user's typing where it is: an edit in progress stays put.
   readonly run: (action: Action, onDone?: () => void) => void;
   readonly pending: boolean;
   readonly refusal: Refusal | undefined;

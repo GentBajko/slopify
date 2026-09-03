@@ -3,14 +3,13 @@ import { Textarea } from "@/components/ui/input";
 import { bodyPieces } from "@/lib/draft-lint";
 import { cn } from "@/lib/utils";
 
-// The prompt body, with every malformed `{{` marked where it stands
-// (uiux/screens/05-prompt-editor.md, Lint error). A textarea cannot style a range of its
-// own value, so the text is painted by a mirror behind it and the textarea's own glyphs
-// are made transparent; the caret keeps its colour. Both layers carry the identical
+// The prompt body, with every malformed `{{` marked where it stands. A textarea cannot style a
+// range of its own value, so the text is painted by a mirror behind it and the textarea's own
+// glyphs are made transparent; the caret keeps its colour. Both layers carry the identical
 // metrics below, which is why they are one constant and not two class lists.
 //
-// The mark is never colour alone: the same errors are listed as sentences beside the
-// field, and `describedBy` points the textarea at them (uiux/02-system.md, accessibility).
+// The mark is never colour alone: the same errors are listed as sentences beside the field, and
+// `describedBy` points the textarea at them.
 const metrics =
   "px-3 py-[10px] font-sans text-body leading-[1.5] break-words [scrollbar-gutter:stable]";
 

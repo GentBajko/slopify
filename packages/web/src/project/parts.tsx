@@ -13,10 +13,9 @@ import { cn } from "@/lib/utils";
 import { keys } from "@/queries";
 import { readOutputText } from "./api.js";
 
-// The furniture every stage body is made of: the indented frame under a rundown row, the
-// 75 ch prose measure, a download link, and the "Show instructions" toggle each stage
-// carries (uiux/screens/08-project.md). It sits apart from the bodies so none of the six
-// has to redraw it.
+// The furniture every stage body is made of: the indented frame under a rundown row, the 75 ch
+// prose measure, a download link, and the "Show instructions" toggle each stage carries. It
+// sits apart from the bodies so none of the six has to redraw it.
 
 // The reference sheet's body inset: flush with the row's name column, not its lamp.
 export function StageBody({
@@ -41,10 +40,9 @@ export function EngravedLabel({ children }: { readonly children: ReactNode }) {
   return <span className="engraved text-ink3">{children}</span>;
 }
 
-// `logic/07` writes the article as markdown and this page shows it as prose. The parser
-// is react-markdown, the pick `05-dependencies.md` records for article display; the
-// components below only give its output this project's type scale and colours. GFM is on
-// for the same reason `packages/app` turns it on for the narration source: without it a
+// The article is stored as markdown and shown here as prose. The parser is react-markdown;
+// the components below only give its output this project's type scale and colours. GFM is
+// on for the same reason `packages/app` turns it on for the narration source: without it a
 // `| Year | Event |` row survives as literal pipes.
 //
 // Six heading levels collapse onto the two prose sizes the scale has, and every one of
@@ -112,7 +110,7 @@ function Heading({ size, children }: { readonly size: string; readonly children:
   return <h3 className={cn("mt-2 font-bold tracking-[-0.01em]", size)}>{children}</h3>;
 }
 
-// 65-75 ch, which is the measure `uiux/02-system.md` locks for prose.
+// 65-75 ch, the measure this app locks for prose.
 export function Prose({ markdown }: { readonly markdown: string }) {
   return (
     <div className="flex max-w-[75ch] flex-col gap-2 text-pretty text-body text-ink">
@@ -155,7 +153,7 @@ export function splitTitle(markdown: string): Split {
 }
 
 // A refused action, said where the press happened. `role="alert"` so it reaches a screen
-// reader without the focus having to move (`uiux/03-experience.md`, Error recovery).
+// reader without the focus having to move.
 export function RefusalLine({
   message,
   onDismiss,
@@ -179,7 +177,7 @@ export function RefusalLine({
   );
 }
 
-// `logic/14` §Q116 names the file the server sends; the anchor only has to ask for it.
+// The server names the file it sends; the anchor only has to ask for it.
 export function DownloadLink({
   projectId,
   asset,
@@ -227,8 +225,8 @@ export function useOutputText(output: Output | undefined) {
     queryFn: () =>
       output === undefined ? "" : readOutputText(api, output.projectId, assetOf(output)),
     enabled: output !== undefined,
-    // A file is immutable for as long as its row is, and `logic/12` §Q106 replaces a row
-    // rather than versioning it, so a changed file always arrives under a new key.
+    // A file is immutable for as long as its row is, and a re-run replaces a row rather
+    // than versioning it, so a changed file always arrives under a new key.
     staleTime: Number.POSITIVE_INFINITY,
   });
 }
@@ -256,8 +254,7 @@ export function OutputText({
   );
 }
 
-// `uiux/03-experience.md`, Progressive disclosure: "the instructions sent to the LLM sit
-// behind a 'Show instructions' toggle per stage".
+// The instructions sent to the LLM sit behind a "Show instructions" toggle per stage.
 export function Instructions({ output }: { readonly output: Output | undefined }) {
   const [shown, setShown] = useState(false);
   if (output === undefined) {

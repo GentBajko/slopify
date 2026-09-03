@@ -10,9 +10,9 @@ import { ConfirmedButton } from "./controls.js";
 import { groupImages } from "./image-groups.js";
 import { ActionRow, DownloadLink, EngravedLabel, OutputDownload, StageBody } from "./parts.js";
 
-// "Images: a grid per image prompt, 6 columns at 1440 px, prompt name as an engraved
-// header with '× N'; per image on hover and focus: Download, Regenerate, Delete;
-// 'Download all' and 'Re-run stage' at the group's right" (uiux/screens/08-project.md).
+// Images: a grid per image prompt, 6 columns at 1440 px, prompt name as an engraved header with
+// '× N'; per image on hover and focus: Download, Regenerate, Delete; 'Download all' and 'Re-run
+// stage' at the group's right.
 
 export function aspectOf(format: Format): string {
   return format === "9:16" ? "aspect-[9/16]" : "aspect-video";
@@ -83,15 +83,14 @@ function ImageTile({
       <img
         src={fileUrl(api, image.projectId, assetOf(image))}
         alt={image.meta.prompt ?? `Slideshow image${place}`}
-        // The image fades in as it lands, which is the grid's whole motion budget
-        // (uiux/screens/08-project.md, Motion).
+        // The image fades in as it lands, which is the grid's whole motion budget.
         className={cn(
           "block w-full object-cover animate-tick-in motion-reduce:animate-none",
           aspectOf(format),
         )}
       />
       {/* Revealed by hover and by focus alike, and always in the tab order, so nothing
-          here is hover-only information (uiux/03-experience.md). */}
+          here is hover-only information. */}
       <figcaption className="absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-between gap-1 bg-panel/90 p-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100 motion-reduce:transition-none">
         <OutputDownload output={image} />
         <ConfirmedButton

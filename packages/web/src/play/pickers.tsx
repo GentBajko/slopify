@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 // The pickers Play draws over and over: a labelled control with its refusal underneath.
 // Inside a stage rail the label sits before the control on one line, as the reference
-// sheet draws it; on the cue sheet it sits above (uiux/screens/06-play.md).
+// sheet draws it; on the cue sheet it sits above.
 
 export interface FieldProps {
   readonly label: string;
@@ -96,7 +96,7 @@ export function OptionPicker({
   );
 }
 
-// `logic/02` §Q12 and §Q135: every supported provider is listed, and one that cannot be
+// Every supported provider is listed, and one that cannot be
 // used is greyed with the reason beside its name rather than being hidden. The two
 // reasons are the two ways a provider is authorised - a stored key, or the CLI's own
 // login - so they read "Key missing" and "CLI missing".
@@ -150,10 +150,10 @@ export function ProviderPicker({
   );
 }
 
-// `logic/02` §Q15 wants the provider's own list. The app exposes none, so the models the
-// registry ships are offered and anything else is typed: OpenRouter's catalogue is
-// fetched per call and runs to thousands of entries, so it has no list to draw.
-// See lib/models.ts for the ceiling and its upgrade.
+// The provider's own list is what should fill this, but the app exposes none, so the models
+// the registry ships are offered and anything else is typed: OpenRouter's catalogue is
+// fetched per call and runs to thousands of entries, so it has no list to draw. See
+// lib/models.ts for the ceiling and its upgrade.
 export function ModelPicker({
   label,
   provider,

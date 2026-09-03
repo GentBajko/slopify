@@ -6,11 +6,10 @@ import type {
 import type { Stage } from "@app/slices/admission/model.js";
 import type { ProjectBody } from "@/api";
 
-// What a live event does to the page that is already open. Three of the five project
-// events carry their whole change, so the cached body is rewritten from them and the lamp
-// flips in the same frame the frame arrived in; only `image.landed` and a reconnect need
-// the server (04-data-flow, SSE disconnect). Pure, so the rule is testable without a
-// query client.
+// What a live event does to the page that is already open. Three of the five project events
+// carry their whole change, so the cached body is rewritten from them and the lamp flips in the
+// same frame the frame arrived in; only `image.landed` and a reconnect need the server. Pure,
+// so the rule is testable without a query client.
 
 export type PatchEvent = StageStateEvent | StageProgressEvent | ProjectStateEvent;
 
@@ -39,9 +38,9 @@ function patchStage(stage: Stage, event: StageStateEvent | StageProgressEvent): 
   return {
     ...stage,
     state: event.state,
-    // The provider's own words reach the row through here and are never rewritten
-    // (`logic/01` §Q10). An event without one leaves the reason the row already held,
-    // because the refetch this same event schedules is what replaces it.
+    // The provider's own words reach the row through here and are never rewritten. An event
+    // without one leaves the reason the row already held, because the refetch this same event
+    // schedules is what replaces it.
     failureReason: event.failureReason ?? stage.failureReason,
   };
 }

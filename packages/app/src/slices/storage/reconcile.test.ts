@@ -58,9 +58,9 @@ describe("reconcileStorage", () => {
     expect(db.prepare("SELECT count(*) AS n FROM staged_files").get()).toEqual({ n: 0 });
   });
 
-  // logic/08 §Q66: a process that died mid-stage leaves the chunks it finished, and the
-  // manual retry re-runs only the ones it did not. A chunk is not an output, so its file
-  // is named by the piece payload and this is what stops the boot sweeping it up.
+  // A process that died mid-stage leaves the chunks it finished, and the manual retry re-runs
+  // only the ones it did not. A chunk is not an output, so its file is named by the piece
+  // payload and this is what stops the boot sweeping it up.
   it("keeps a file a stage piece names and drops one whose piece never wrote it", () => {
     const paths = layout(dataDir());
     ensureDirs(paths, { mode: 0o700 });

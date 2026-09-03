@@ -18,7 +18,7 @@ const webp = [0x57, 0x45, 0x42, 0x50] as const;
 
 // The bytes decide, never the Content-Type header. A CDN in front of an expired link
 // serves `image/png` over an HTML error page often enough to be worth not trusting, and
-// the mime is stored with the file and becomes its extension (`logic/09` step 3).
+// the mime is stored with the file and becomes its extension.
 export function sniffImage(bytes: Uint8Array): GeneratedImage["mime"] | undefined {
   if (startsWith(bytes, png, 0)) {
     return "image/png";

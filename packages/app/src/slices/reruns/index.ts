@@ -25,10 +25,10 @@ import { storeText } from "../storage/staging.js";
 import type { RerunAction } from "./cascade.js";
 import { redoPlan } from "./cascade.js";
 
-// `logic/12`: every action on an existing project that changes an output. Each one puts
-// the stages the change made stale back to `pending` and hands the caller the list; the
-// caller ticks the runner, which is what actually starts them. Nothing here runs a stage,
-// and nothing here calls a provider.
+// Every action on an existing project that changes an output. Each one puts the stages the
+// change made stale back to `pending` and hands the caller the list; the caller ticks the
+// runner, which is what actually starts them. Nothing here runs a stage, and nothing here calls
+// a provider.
 
 export interface RerunDeps {
   readonly db: DatabaseSync;
@@ -39,7 +39,7 @@ export interface RerunDeps {
 }
 
 // Expected outcomes of the rules above, not faults: a refused delete is an answer the
-// page shows, so it comes back as a value (03-conventions).
+// page shows, so it comes back as a value.
 export type RerunRefusal =
   | "no-project"
   | "running"
@@ -58,11 +58,11 @@ export type RerunResult =
   | { readonly ok: true; readonly redone: readonly StageKind[] }
   | { readonly ok: false; readonly reason: RerunRefusal };
 
-// What an article edit replaces (step 1). `instructions` is not among them: §Q57 keeps
-// the record of what was actually sent to the model, and an edit did not send anything.
+// What an article edit replaces. `instructions` is not among them: that row records what
+// was actually sent to the model, and an edit did not send anything.
 const articleRoles: readonly OutputRole[] = ["article_md", "article_txt", "sources", "glossary"];
 
-// `logic/13` step 5 and `logic/01` §Q5: Retry is offered on a stage that stopped short,
+// Retry is offered on a stage that stopped short,
 // and a canceled stage resumes exactly as a failed one does.
 export function retryStage(deps: RerunDeps, projectId: string, kind: StageKind): RerunResult {
   const loaded = load(deps, projectId);
@@ -74,15 +74,15 @@ export function retryStage(deps: RerunDeps, projectId: string, kind: StageKind):
     return { ok: false, reason: "not-retryable" };
   }
   // The pieces and the outputs stay where they are: the per-stage resume rules keep what
-  // finished (`logic/06` §Q54, `logic/08` §Q66, `logic/09` §Q73), and `logic/13` step 2
-  // keeps them through a cancel too. That is the whole of "a canceled stage is resumable".
+  // finished, and a cancel keeps them too. That is the whole of a canceled stage being
+  // resumable.
   transact(deps.db, () => {
     resetStage(deps.db, stage.id);
   });
   return { ok: true, redone: [kind] };
 }
 
-// Steps 2, 3 and 8: Re-run audio with another voice, Re-run images, Re-render. The stage
+// Re-run audio with another voice, Re-run images, Re-render. The stage
 // starts over from the project's stored configuration rather than resuming.
 export function rerunStage(deps: RerunDeps, projectId: string, kind: StageKind): RerunResult {
   const loaded = load(deps, projectId);
@@ -96,15 +96,15 @@ export function rerunStage(deps: RerunDeps, projectId: string, kind: StageKind):
   return apply(deps, projectId, { kind: "rerun", stage: kind }, loaded);
 }
 
-// Step 1: "the inline editor replaces the stored markdown; the plain-text narration source
-// and the sources and glossary files are rebuilt; then audio, LLM-mode intro/outro text,
-// LLM-written thumbnail, and video re-run; prompt-based images are untouched".
+// The inline editor replaces the stored markdown; the plain-text narration source and the
+// sources and glossary files are rebuilt; then audio, LLM-mode intro/outro text, the
+// LLM-written thumbnail and the video re-run, leaving prompt-based images untouched.
 //
 // ceiling: the LLM-mode intro and outro texts are *not* rewritten from the edited article.
-// Only the article stage writes them (`logic/07` step 5), and §Q60 makes any run of that
-// stage regenerate the whole article - which would throw away the edit that triggered it.
-// The audio does re-narrate the kept entry text, so the video is whole; the upgrade is a
-// mode on the article stage that keeps the stored article and rewrites the entries alone.
+// Only the article stage writes them, and any run of that stage regenerates the whole
+// article - which would throw away the edit that triggered it. The audio does re-narrate
+// the kept entry text, so the video is whole; the upgrade is a mode on the article stage
+// that keeps the stored article and rewrites the entries alone.
 export function editArticle(deps: RerunDeps, projectId: string, markdown: string): RerunResult {
   const loaded = load(deps, projectId);
   if (!loaded.ok) {
@@ -116,8 +116,8 @@ export function editArticle(deps: RerunDeps, projectId: string, markdown: string
   }
   const text = markdown.trim();
   if (text === "") {
-    // §Q106 leaves a project with one output per stage; an empty article would leave the
-    // audio stage with nothing to narrate and no way back except another edit.
+    // A project keeps one output per stage; an empty article would leave the audio stage
+    // with nothing to narrate and no way back except another edit.
     return { ok: false, reason: "empty-article" };
   }
   return apply(deps, projectId, { kind: "article-edit" }, loaded, () => {
@@ -125,16 +125,16 @@ export function editArticle(deps: RerunDeps, projectId: string, markdown: string
     for (const output of replaced) {
       deleteOutput(deps.db, output.id);
     }
-    // The four files are written back under the names they already had, so the write is
-    // the replacement §Q106 asks for rather than a second version beside the first.
+    // The four files are written back under the names they already had, so the write
+    // replaces rather than leaving a second version beside the first.
     storeText(deps, { projectId, stageKind: "article", role: "article_md", text });
     storeArticleText(deps, { projectId, markdown: text });
     return replaced.map((output) => output.path);
   });
 }
 
-// Step 5 with `logic/09` §Q75: one image is "removed from the set; at least one image must
-// remain; video re-renders".
+// One image is removed from the set, at least one image has to remain, and the video
+// re-renders.
 export function deleteImage(deps: RerunDeps, projectId: string, outputId: string): RerunResult {
   const loaded = load(deps, projectId);
   if (!loaded.ok) {
@@ -145,8 +145,7 @@ export function deleteImage(deps: RerunDeps, projectId: string, outputId: string
     return { ok: false, reason: "unknown-image" };
   }
   if (loaded.outputs.filter((output) => output.role === "image").length <= 1) {
-    // §Q103's invariant: "at least one image always remains". `logic/11` step 2 has no
-    // slideshow to compute without one.
+    // At least one image always remains: there is no slideshow to compute without one.
     return { ok: false, reason: "last-image" };
   }
   return apply(deps, projectId, { kind: "image-deleted" }, loaded, () => {
@@ -159,9 +158,9 @@ export function deleteImage(deps: RerunDeps, projectId: string, outputId: string
   });
 }
 
-// Step 4: "one new call with that image's stored prompt text, replacing it in place at the
-// same index (§Q103)". The piece carries that prompt and that index, so it is left alone
-// and the images stage sees one image of its plan missing.
+// One new call with that image's stored prompt text, replacing it in place at the same
+// index. The piece carries that prompt and that index, so it is left alone and the images
+// stage sees one image of its plan missing.
 export function regenerateImage(deps: RerunDeps, projectId: string, outputId: string): RerunResult {
   const loaded = load(deps, projectId);
   if (!loaded.ok) {
@@ -193,9 +192,9 @@ function load(deps: RerunDeps, projectId: string): Loaded {
     return { ok: false, reason: "no-project" };
   }
   const stages = stagesOf(deps.db, projectId);
-  // The precondition every action of `logic/12` shares: "no stage of the project is
-  // `running` (§Q106)". The page disables the controls; this is the other half, because
-  // clearing an output from under a stage that is writing it would lose both.
+  // The precondition every re-run action shares: no stage of the project is `running`. The
+  // page disables the controls; this is the other half, because clearing an output from
+  // under a stage that is writing it would lose both.
   if (stages.some((stage) => stage.state === "running")) {
     return { ok: false, reason: "running" };
   }
@@ -207,9 +206,9 @@ function load(deps: RerunDeps, projectId: string): Loaded {
   };
 }
 
-// One transaction for every row the action touches, then the filesystem. S4's lesson:
-// an unlink cannot be rolled back, so it waits for the commit - and a file with no row is
-// what the boot reconcile collects, where a row with no file is a broken download.
+// One transaction for every row the action touches, then the filesystem: an unlink cannot
+// be rolled back, so it waits for the commit. A file with no row is what the boot reconcile
+// collects, where a row with no file is a broken download.
 function apply(
   deps: RerunDeps,
   projectId: string,
@@ -220,8 +219,8 @@ function apply(
   const plan = redoPlan({ action, stages: loaded.stages, thumbnailSource: loaded.thumbnailSource });
   // `own` is the action's own change - the new article, the image that goes - and it runs
   // first and inside the same transaction, so it lands or rolls back with the cascade it
-  // triggers. The files it writes take the names they already had, which is the
-  // replacement §Q106 asks for rather than work a rollback would have to undo.
+  // triggers. The files it writes take the names they already had, replacing in place
+  // rather than leaving work a rollback would have to undo.
   const orphaned = transact(deps.db, () => {
     const files = own === undefined ? [] : [...own()];
     for (const redo of plan) {
@@ -241,7 +240,7 @@ function apply(
 }
 
 // Everything the stage produced: its outputs, and the resumable pieces whose payloads name
-// files of their own - the audio chunks of `logic/08` §Q65, which are not outputs.
+// files of their own - the audio chunks, which are not outputs.
 function clearStage(deps: RerunDeps, stage: Stage, outputs: readonly Output[]): readonly string[] {
   const files: string[] = [];
   for (const output of outputs) {
@@ -261,7 +260,7 @@ function clearStage(deps: RerunDeps, stage: Stage, outputs: readonly Output[]): 
   return files;
 }
 
-// §Q103 replaces the image "in place at the same index", so the piece keeps the prompt
+// A regenerated image is replaced in place at the same index, so the piece keeps the prompt
 // and the index it was planned with and only stops naming a file: `slices/images/run.ts`
 // then sees one image of its plan still to make, and the file it named can be removed.
 function forgetImageFile(deps: RerunDeps, stages: readonly Stage[], path: string): void {
@@ -329,9 +328,9 @@ function removeFiles(deps: RerunDeps, projectId: string, orphaned: readonly stri
   }
 }
 
-// `logic/01`: `done` → `running` is scenario 12's own transition, and a stage that failed
-// or was canceled may be started over rather than resumed. `provided` and `skipped` never
-// run, and `pending` has nothing to redo.
+// `done` → `running` is a re-run's own transition, and a stage that failed or was canceled may
+// be started over rather than resumed. `provided` and `skipped` never run, and `pending` has
+// nothing to redo.
 function rerunnable(state: StageState): boolean {
   return state === "done" || state === "failed" || state === "canceled";
 }

@@ -32,7 +32,7 @@ describe("detectSlots", () => {
   });
 
   it("marks an opener whose closer is on the next line", () => {
-    // A name may not contain a newline (§Q19), so this never closes.
+    // A name may not contain a newline, so this never closes.
     expect(detectSlots("{{topic\n}}").errors).toEqual([{ kind: "unclosed", at: 0 }]);
   });
 
@@ -109,7 +109,7 @@ describe("render", () => {
   });
 
   it("does not read a slot's value off Object's prototype", () => {
-    // Slot names are user-authored and free-form (§Q19), so "constructor" and "toString"
+    // Slot names are user-authored and free-form, so "constructor" and "toString"
     // are ordinary names, not accessors into a prototype nobody asked about.
     expect(render("{{constructor}}", {})).toBe("{{constructor}}");
     expect(render("{{toString}}", {})).toBe("{{toString}}");

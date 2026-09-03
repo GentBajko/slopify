@@ -2,16 +2,16 @@ import type { Message } from "../../kernel/ports/llm.js";
 import type { ResearchBrief } from "./planner.js";
 import { briefText } from "./planner.js";
 
-// Step 3 of `logic/06`: the editorial pass, and the one rule its output has to satisfy.
+// The editorial pass, and the one rule its output has to satisfy.
 
 export interface Finding {
   readonly title: string;
   readonly notes: string;
 }
 
-// §Q52: "an editorial pass over every sub-agent's output that selects and organizes the
-// findings; it does not concatenate". The sub-agents' notes are the material, not the
-// answer, and the synthesising model is told so.
+// An editorial pass over every sub-agent's output that selects and organizes the findings; it
+// does not concatenate. The sub-agents' notes are the material, not the answer, and the
+// synthesising model is told so.
 export function synthesisMessages(
   brief: ResearchBrief,
   findings: readonly Finding[],
@@ -40,7 +40,7 @@ export function synthesisMessages(
   ];
 }
 
-// §Q48 and §Q55: the stored notes always end with a Sources list, and an answer without
+// The stored notes always end with a Sources list, and an answer without
 // one "counts as a failed attempt". A heading with nothing under it is not a list, so
 // the line has to be followed by something.
 const heading =
@@ -53,7 +53,7 @@ export function endsWithSources(text: string): boolean {
 }
 
 // The one shape a stage hands `StageProviders.llm` as its `check`: an answer that arrived
-// but cannot be used is a failed attempt, so the wrapper retries it (§Q50, §Q55).
+// but cannot be used is a failed attempt, so the wrapper retries it.
 export function sourcedAnswer(who: string, text: string): string | undefined {
   if (text.trim() === "") {
     return `${who} answered with nothing`;

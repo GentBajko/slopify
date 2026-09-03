@@ -4,9 +4,8 @@ import type { Api } from "./api.js";
 import type { OpenEvents } from "./events.js";
 import type { VersionWatch } from "./version.js";
 
-// Everything the tree needs that is not React's. It is built once in main.tsx and handed
-// down through this provider; no module here reaches for a client of its own
-// (03-conventions, Dependency injection).
+// Everything the tree needs that is not React's. It is built once in main.tsx and handed down
+// through this provider; no module here reaches for a client of its own.
 export interface AppDeps {
   readonly api: Api;
   readonly openEvents: OpenEvents;

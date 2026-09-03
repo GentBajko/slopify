@@ -5,10 +5,9 @@ import { useId } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-// mockup §Q12 and §Q13: several image prompts run in one run, each ticked and each with
-// its own Number. `logic/04` §Q30 bounds it - 1 to 20 per prompt, 60 across the run -
-// and the admission rule is what refuses a Number outside them; the inputs below carry
-// the same bounds so the browser's own spinner cannot walk past one.
+// Several image prompts run at once, each ticked and each with its own Number, bounded at
+// 1 to 20 per prompt and 60 across the run. Admission refuses a Number outside them; the
+// inputs below carry the same bounds so the browser's own spinner cannot walk past one.
 
 // The Number a prompt starts on when it is ticked: the smallest a ticked prompt may run.
 const firstNumber = 1;
@@ -54,7 +53,7 @@ export function ImagePrompts({
                   onPick(
                     ticked
                       ? // Selection order is the order the fields are collected in
-                        // (`logic/03` §Q24), so a newly ticked prompt goes last.
+                        //, so a newly ticked prompt goes last.
                         [...picked, { name: prompt.name, number: firstNumber }]
                       : picked.filter((entry) => entry.name !== prompt.name),
                   );

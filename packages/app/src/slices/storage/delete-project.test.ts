@@ -86,7 +86,7 @@ describe("deleting a project", () => {
     expect(deps.db.prepare("SELECT count(*) AS n FROM projects").get()).toEqual({ n: 1 });
   });
 
-  it("refuses while the run is still going (logic/14 step 4)", () => {
+  it("refuses while the run is still going", () => {
     const deps = harness();
     const dir = project(deps, "p1", ["done", "running"]);
 

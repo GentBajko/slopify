@@ -29,19 +29,17 @@ import type { Counted } from "../src/slices/telemetry/record.fake.js";
 import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 import { probeDurationMs, resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
 
-// The audio stage against the real attempt wrapper and the real bundled ffmpeg, which is
-// what `slices/narration/*.test.ts` cannot show: a slice may not reach a registry or an
-// adapter, and a concatenation cannot be proved without decoding one. No provider is
-// called; `adapters/fake/tts.ts` answers with mp3 bytes ffmpeg itself made
-// (06-testing Doubles).
+// The audio stage against the real attempt wrapper and the real bundled ffmpeg, which is what
+// `slices/narration/*.test.ts` cannot show: a slice may not reach a registry or an adapter, and
+// a concatenation cannot be proved without decoding one. No provider is called;
+// `adapters/fake/tts.ts` answers with mp3 bytes ffmpeg itself made.
 
 const silent: Log = { write: (): void => {} };
 const ffmpeg = resolveFfmpeg(process.env, ffmpegStatic);
 
-// Two stage rows with two ids, because the two ids are the whole point of step 5: the
-// segment texts are written onto the *article* stage's pieces (`logic/07` step 5) and
-// spoken by the *audio* stage. A harness that gave both stages one id would pass whichever
-// of the two the code happened to read.
+// Two stage rows with two ids, because the two ids are the whole point here: the segment texts
+// are written onto the *article* stage's pieces and spoken by the *audio* stage. A harness that
+// gave both stages one id would pass whichever of the two the code happened to read.
 const articleStage = "s-article";
 const audioStage = "s-audio";
 
@@ -279,7 +277,7 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
 
     await run(h, tts);
 
-    // §Q65: one request per paragraph, and the text sent is the paragraph's own.
+    // One request per paragraph, and the text sent is the paragraph's own.
     expect(tts.calls()).toBe(3);
     expect(tts.seen()).toEqual([...paragraphs]);
     expect(piecesOf(h.db, audioStage, "chunk").map((piece) => piece.state)).toEqual([
@@ -295,20 +293,20 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
     );
     const total = parts.reduce((sum, part) => sum + part, 0);
     const joined = await measure(body);
-    // The concat adds no silence (§Q65), so the joined file is the sum of its parts. The
+    // The concat adds no silence, so the joined file is the sum of its parts. The
     // tolerance is two mp3 frames: the encoder works in 1152-sample blocks and cannot end
     // a file mid-block.
     expect(Math.abs(joined - total)).toBeLessThan(60);
 
-    // §Q68: the duration on the row is the measured one, because logic/11 builds the
-    // video timeline out of it.
+    // The duration on the row is the measured one, because the video timeline is built out
+    // of it.
     const stored = h.db
       .prepare("SELECT duration_ms AS ms FROM outputs WHERE role = 'audio_body'")
       .get() as { ms: number };
     expect(stored.ms).toBe(joined);
     expect(stored.ms).toBeGreaterThan(2000);
 
-    // §Q68 again: provider and voice travel with the audio they made.
+    // Provider and voice travel with the audio they made.
     expect(outputRows(h.db)).toEqual([
       {
         role: "audio_body",
@@ -320,7 +318,7 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
     h.db.close();
   }, 120_000);
 
-  // §Q65 first case: "Whole text = one request."
+  // The first chunking case: whole text is one request.
   it("sends the whole text as one request and copies it rather than re-encoding", async () => {
     const h = harness({ chunking: { mode: "whole" } });
     const tts = speaking();
@@ -337,8 +335,8 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
     h.db.close();
   }, 120_000);
 
-  // §Q93: "each picked segment's text is one TTS request ... stored as its own audio file
-  // with its duration; body chunking does not apply to them."
+  // Each picked segment's text is one TTS request.. stored as its own audio file with its
+  // duration; body chunking does not apply to them.
   it("narrates the intro and the outro as one request each, with their own durations", async () => {
     const h = harness({ chunking: { mode: "paragraph" }, segments: true });
     const tts = speaking();
@@ -359,10 +357,10 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
     }
     const intro = rows.find((row) => row.role === "audio_intro");
     expect(intro?.duration_ms).toBe(await measure(join(h.dir, "audio-intro.mp3")));
-    // §Q65's invariant: the body plus the two segments are the project's only audio
+    // The body plus the two segments are the project's only audio
     // outputs. The chunks are files, not outputs.
     expect(rows).toHaveLength(3);
-    // logic/16 step 2: "audio per segment (body, intro, outro)", and step 3 takes the
+    // One event per audio segment - body, intro, outro - and the seconds come from the
     // seconds from the duration that was measured rather than from the text. No model:
     // the TTS port carries none, which is why the output row has none either.
     expect(h.counted.events().map((one) => one.counters)).toEqual(
@@ -377,8 +375,8 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
     h.db.close();
   }, 120_000);
 
-  // §Q66's resume, applied to a segment: the intro that landed is not spoken again, and
-  // the article stage's pieces are still there to be read on the second run.
+  // The resume, applied to a segment: the intro that landed is not spoken again, and the
+  // article stage's pieces are still there to be read on the second run.
   it("speaks neither segment again when the stage runs a second time", async () => {
     const h = harness({ chunking: { mode: "paragraph" }, segments: true });
     await run(h, speaking());
@@ -424,10 +422,10 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
     h.db.close();
   }, 120_000);
 
-  // §Q66: "One chunk exhausts its retries → the whole stage fails; manual retry keeps
-  // completed chunks and re-runs only failed or not-started ones, then concatenates."
-  // logic/16 step 2 puts the event on the unit completing, so a stage that never joined
-  // its body counted nothing - and §Q112's aborted calls have nothing to add either.
+  // One chunk exhausting its retries fails the whole stage; a manual retry keeps the
+  // completed chunks, re-runs only the failed or not-started ones, then concatenates. The
+  // event goes on the unit completing, so a stage that never joined its body counted
+  // nothing, and aborted calls have nothing to add either.
   it("counts no audio for a stage that failed before it joined the body", async () => {
     const beat = manualClock("2026-09-02T10:00:00.000Z");
     const h = harness({ chunking: { mode: "paragraph" }, clock: beat });
@@ -479,7 +477,7 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
     });
     await expect(beat.settle(run(h, failing))).rejects.toThrow(/synthesiser is down/);
 
-    // The manual retry of `logic/01` §Q5, against the same project and the same rows.
+    // A manual retry, against the same project and the same rows.
     const working = speaking();
     await runNarration(
       { ...h.deps, clock: systemClock },
@@ -506,8 +504,8 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
     h.db.close();
   }, 120_000);
 
-  // §Q67: "Narration source empty after the split → immediate stage failure 'nothing to
-  // narrate', no retries."
+  // Narration source empty after the split → immediate stage failure 'nothing to narrate', no
+  // retries.
   it("fails at once with nothing to narrate when the source is blank", async () => {
     const h = harness({ article: "   \n\n  \n" });
     const tts = speaking();
@@ -527,8 +525,8 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
     h.db.close();
   }, 60_000);
 
-  // §Q65's third case, end to end: the cut lands on a sentence boundary, so a chunk is
-  // always something a voice can read.
+  // The third chunking case, end to end: the cut lands on a sentence boundary, so a chunk
+  // is always something a voice can read.
   it("cuts at sentence boundaries in the every-N-words mode", async () => {
     const h = harness({
       article: "Rope is older than writing. It is stronger than it looks. Braid it well.",

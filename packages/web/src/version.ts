@@ -3,7 +3,7 @@
 // and the header come out of the same process. `npx slopify@latest` can replace that
 // process while the tab stays open, and from then on the tab is running older JavaScript
 // than the API it is talking to, so it asks to be reloaded rather than misbehaving
-// quietly (04-data-flow, Version header).
+// quietly.
 
 export interface VersionWatch {
   readonly observe: (version: string) => void;

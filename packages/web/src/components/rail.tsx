@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-// Rails are bordered rows sharing edges, not cards; elevation belongs to dialogs alone
-// (uiux/02-system.md, Spacing and shape). Radius 6 on the group, none on the rows.
+// Rails are bordered rows sharing edges, not cards; elevation belongs to dialogs alone. Radius
+// 6 on the group, none on the rows.
 export function RailGroup({
   children,
   className,
@@ -36,7 +36,7 @@ export function Rail({
   );
 }
 
-// The thin progress meter under a running rail (uiux/screens/08-project.md).
+// The thin progress meter under a running rail.
 export function RailMeter({
   current,
   total,

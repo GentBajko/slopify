@@ -197,7 +197,7 @@ describe("replicateImage.generate", () => {
     expect(String(thrown)).toContain("Request was throttled");
   });
 
-  // §Q74: the refusal arrives as a settled prediction, with the same 201 a success has.
+  // The refusal arrives as a settled prediction, with the same 201 a success has.
   it("calls a content refusal a refusal, in Replicate's own words", async () => {
     const seen: Seen[] = [];
     const thrown = await failed(replaying([answering("replicate-nsfw.json")], undefined, seen));

@@ -1,7 +1,7 @@
-// The marketing page's live tally board (logic/16 step 7, uiux/screens/01). Plain ES
+// The marketing page's live tally board. Plain ES
 // module, no framework and no build step: the page is four static files.
 
-// 07-operations: the collector URL is built into the release. A page served from a
+// The collector URL is built into the release. A page served from a
 // loopback origin talks to a local collector, which is what makes the counters
 // exercisable without deploying anything.
 export const collectorUrl = /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/.test(
@@ -11,7 +11,7 @@ export const collectorUrl = /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/.t
   : "https://collector.slopify.stream";
 
 export const pollIntervalMs = 5_000;
-// logic/16 §Q133: when the collector cannot be reached the page shows dashes, never a
+// When the collector cannot be reached the page shows dashes, never a
 // zero that reads as a real count and never an error.
 export const dash = "—";
 
@@ -75,7 +75,7 @@ export async function readAggregates(endpoint, fetcher) {
 }
 
 // What the strip along the bottom of the board says. The lamp never carries the state on
-// its own (uiux/02-system): the word beside it says the same thing in text.
+// its own: the word beside it says the same thing in text.
 export function tallyFoot(aggregates) {
   return aggregates === null
     ? { lamp: null, word: "Off", note: "live stats unavailable" }
@@ -117,7 +117,7 @@ function write(node, text) {
   }
 }
 
-// uiux/screens/01: a changed digit fades over 150 ms, and nothing else on the page
+// A changed digit fades over 150 ms, and nothing else on the page
 // animates. Opacity only, and reduced motion swaps the digit instantly.
 function fade(node) {
   if (typeof node.animate !== "function" || reducedMotion()) {

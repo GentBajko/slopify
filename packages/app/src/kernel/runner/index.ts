@@ -12,8 +12,7 @@ export interface RunnerStage {
 
 export interface StageStore {
   readonly stagesOf: (projectId: string) => readonly RunnerStage[];
-  // One statement, `pending` → `running`, answering false when the row was no longer
-  // pending. This is the runner's guarantee that a stage starts at most once.
+  // One statement, `pending` → `running`, false if the row moved on. A stage starts once.
   readonly claim: (stageId: string) => boolean;
   readonly finish: (stageId: string, state: StageState, failureReason: string | null) => void;
 }
@@ -24,8 +23,7 @@ export interface StageContext {
   readonly emit: EmitProject;
 }
 
-// What the runner knows about a stage implementation. The slices that satisfy it are
-// handed in from main.ts: kernel may not import them (03-conventions).
+// A stage implementation. main.ts hands the slices in; kernel may not import them.
 export type StageRun = (context: StageContext) => Promise<void>;
 
 export interface RunnerDeps {
@@ -39,8 +37,7 @@ export interface RunnerDeps {
 export interface Runner {
   readonly tick: (projectId: string) => void;
   readonly settled: () => Promise<void>;
-  // `logic/13` step 1: abort every in-flight call of one project at once and wait for
-  // them to stop, leaving every other project running (§Q113, D14).
+  // Abort one project's in-flight calls and wait; others keep running.
   readonly abortProject: (projectId: string) => Promise<void>;
   readonly abortAll: () => Promise<void>;
 }
@@ -53,16 +50,14 @@ interface Inflight {
 
 export function createRunner(deps: RunnerDeps): Runner {
   const inflight = new Map<string, Inflight>();
-  // ceiling: one entry per project ticked since boot, never evicted, so it costs a few
-  // dozen bytes per project of a single user's local app and is emptied by any restart.
-  // Evicting on a terminal state would re-announce that state on the next tick of the
-  // same project, so the upgrade is to drop the entry when the project is deleted.
+  // ceiling: one entry per project ticked since boot, never evicted - a few dozen bytes
+  // each, emptied by any restart. Evicting on a terminal state would re-announce it on the
+  // next tick, so the upgrade is to drop the entry when the project is deleted.
   const announced = new Map<string, ProjectState>();
-  // The projects a cancel is walking through. It is a set rather than a flag because
-  // `logic/13` D14 leaves every other project untouched, and it is held for the whole of
-  // abortProject rather than for the abort call alone: a stage of this project that
-  // stores its output in the same instant as the cancel stays `done` (§Q113), and its
-  // hand-over to the next stage is exactly what must not happen.
+  // The projects a cancel is walking through. A set, not a flag, because a cancel leaves
+  // every other project untouched. Held for the whole of abortProject: a stage that stores
+  // its output in the same instant as the cancel stays `done`, and its hand-over to the
+  // next stage is what must not happen.
   const stopped = new Set<string>();
   let count = 0;
   let shuttingDown = false;
@@ -77,8 +72,8 @@ export function createRunner(deps: RunnerDeps): Runner {
     });
   };
 
-  // The global tally is the number of projects with a stage in flight, so it is read off
-  // the in-flight set rather than counted in the database (04-data-flow, Run step 5).
+  // The global tally counts projects with a stage in flight, read off the in-flight set
+  // rather than the database.
   const retally = (): void => {
     const projects = new Set<string>();
     for (const entry of inflight.values()) {
@@ -103,8 +98,8 @@ export function createRunner(deps: RunnerDeps): Runner {
     try {
       deps.stages.finish(stage.id, state, reason);
     } catch (error) {
-      // The page would otherwise sit on a stage that never leaves `running`; the event
-      // still goes out, and the next boot marks the row interrupted (logic/01 §Q7).
+      // The row stays `running` when the write fails. The event still goes out, and the
+      // next boot marks the row interrupted.
       deps.log.write("error", "stage.finish", {
         projectId: stage.projectId,
         stage: stage.kind,
@@ -130,8 +125,8 @@ export function createRunner(deps: RunnerDeps): Runner {
       conclude(stage, "done", null);
     } catch (error) {
       if (controller.signal.aborted) {
-        // logic/13 step 3 fixes the wording; a late rejection from the aborted call is
-        // the expected way a stage learns it was canceled, so it is not logged as a fault.
+        // A late rejection from the aborted call is how a stage learns it was canceled, so
+        // it is not logged as a fault.
         conclude(stage, "canceled", "canceled by user");
         return;
       }
@@ -154,8 +149,7 @@ export function createRunner(deps: RunnerDeps): Runner {
         release = resolve;
       }),
     };
-    // Registered before the stage body is invoked: a tick arriving while this stage is
-    // starting has to see it in flight.
+    // Registered before the body runs: a tick arriving mid-start has to see it in flight.
     inflight.set(stage.id, entry);
     retally();
     emitStage(stage, "running", null);
@@ -164,12 +158,12 @@ export function createRunner(deps: RunnerDeps): Runner {
         inflight.delete(stage.id);
         release();
         try {
-          // The next stage is claimed before the tally is read, so a fan-out handing over
-          // to the video stage never reports the project as briefly not running.
+          // Claim the next stage before reading the tally, so a hand-over never reports
+          // the project as briefly not running.
           tick(stage.projectId);
         } finally {
-          // stagesOf parses rows and can throw. The tally is replayed to every page that
-          // opens afterwards, so it is read whether or not the tick got that far.
+          // stagesOf can throw. The tally is replayed to every page that opens later, so
+          // it is read whether or not the tick got that far.
           retally();
         }
       })
@@ -183,10 +177,9 @@ export function createRunner(deps: RunnerDeps): Runner {
   }
 
   function tick(projectId: string): void {
-    // A stage that finished in the same instant as the shutdown or a cancel would
-    // otherwise release its dependent, and the abort would then be waiting on a render
-    // nobody asked for - or, worse, leaving one running under a controller nobody
-    // aborted. The project's state still goes out, so an open page sees the run stop.
+    // A stage finishing in the same instant as a shutdown or cancel would otherwise release
+    // its dependent, leaving the abort waiting on a render nobody asked for - or one running
+    // under a controller nobody aborted. The state still goes out, so an open page sees it.
     if (!shuttingDown && !stopped.has(projectId)) {
       startEligible(projectId);
     }
@@ -204,8 +197,7 @@ export function createRunner(deps: RunnerDeps): Runner {
       if (!graph[stage.kind].every((kind) => satisfied(stateOf(kind)))) {
         continue;
       }
-      // Nothing is awaited in this loop, so the fan-out after the article starts audio,
-      // images and thumbnail together rather than one after another.
+      // Nothing is awaited here: the fan-out starts audio, images and thumbnail together.
       if (deps.stages.claim(stage.id)) {
         start({ ...stage, state: "running" });
       }
@@ -232,8 +224,8 @@ export function createRunner(deps: RunnerDeps): Runner {
     tick,
     settled,
     abortProject: async (projectId: string): Promise<void> => {
-      // Up before the first abort and down only once every stage of the project has
-      // stopped: in between, the tick each finishing stage fires starts nothing.
+      // Up before the first abort, down only once every stage has stopped. In between, the
+      // tick each finishing stage fires starts nothing.
       stopped.add(projectId);
       try {
         for (const entry of inflight.values()) {
@@ -241,14 +233,13 @@ export function createRunner(deps: RunnerDeps): Runner {
             entry.controller.abort();
           }
         }
-        // §Q109's invariant: "no provider call of the project continues after cancel
-        // returns". Waiting here is what makes that true rather than hoped for.
+        // No provider call continues after cancel returns. The wait makes it true.
         await settledOf(projectId);
       } finally {
         stopped.delete(projectId);
       }
-      // The last stage's own tick announced the project while the barrier was up and the
-      // rows may not all have been written yet; this is the state the user asked for.
+      // The last stage's tick announced the project while the barrier was up, before every
+      // row was written. This is the state the user asked for.
       announce(projectId);
     },
     abortAll: async (): Promise<void> => {

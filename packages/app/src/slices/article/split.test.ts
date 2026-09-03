@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { splitEndMatter } from "./split.js";
 
-// `logic/08` step 1: "find the first section whose heading is 'Sources Consulted' or
-// 'Pronunciation Glossary' (case-insensitive); that section and everything after it are
-// removed from the narration source and written as two separate files". Nothing is
-// rewritten on the way, so the three parts always add back up to the article.
+// Find the first section whose heading is 'Sources Consulted' or 'Pronunciation Glossary'
+// (case-insensitive); that section and everything after it are removed from the narration
+// source and written as two separate files. Nothing is rewritten on the way, so the three parts
+// always add back up to the article.
 
 const both = `# Rope
 
@@ -98,7 +98,7 @@ A bowline holds.
 `;
     const split = splitEndMatter(early);
 
-    // Step 1 is explicit: "that section and everything after it". A chapter the model
+    // The cut takes that section and everything after it. A chapter the model
     // wrote below its sources list is end matter too, not narration.
     expect(split.body).toBe("# Rope\n\n");
     expect(split.sources).toContain("A bowline holds.");

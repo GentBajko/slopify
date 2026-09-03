@@ -31,7 +31,7 @@ describe("counterText", () => {
     expect(counterText(live, "audio_seconds")).toBe("4,321");
   });
 
-  // logic/16 §Q133: dashes, never a zero that reads as a real count.
+  // Dashes, never a zero that reads as a real count.
   it.each(["videos_made", "audio_seconds", "images_made", "tokens_used", "installs"])(
     "shows a dash for %s when there are no aggregates",
     (key) => {
@@ -85,7 +85,7 @@ describe("tallyFoot", () => {
     expect(tallyFoot(live)).toEqual({ lamp: "run", word: "Live", note: "updates every 5 seconds" });
   });
 
-  // logic/16 §Q133: the wording beside the dashes is fixed.
+  // The wording beside the dashes is fixed.
   it("names it off with the recorded wording when there are none", () => {
     expect(tallyFoot(null)).toEqual({ lamp: null, word: "Off", note: "live stats unavailable" });
   });

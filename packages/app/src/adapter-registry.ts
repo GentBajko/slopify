@@ -20,16 +20,16 @@ import { keyForAttempt } from "./slices/settings/keys.js";
 import type { ProviderId } from "./slices/settings/model.js";
 import { providerStatuses } from "./slices/settings/readiness.js";
 
-// Where the adapters and the settings slice meet: `adapters/**` may not import a slice
-// and `slices/**` may not import an adapter, so pairing an adapter with the key store
-// and the CLI probe belongs to the composition root alone (01-architecture §Q33). It
-// sits beside `main.ts` rather than inside it only for length; the linter forbids
-// anything below the root to import this file, exactly as it does the registry type.
+// Where the adapters and the settings slice meet: `adapters/**` may not import a slice and
+// `slices/**` may not import an adapter, so pairing an adapter with the key store and the CLI
+// probe belongs to the composition root alone. It sits beside `main.ts` rather than inside it
+// only for length; the linter forbids anything below the root to import this file, exactly as
+// it does the registry type.
 
 export interface RegistryDeps {
   readonly db: DatabaseSync;
   // Injected rather than reached for, so a test can build the registry without a network
-  // or a child process and `main.ts` owns the real ones (06-testing Doubles).
+  // or a child process and `main.ts` owns the real ones.
   readonly fetch: typeof globalThis.fetch;
   readonly spawn: RunCli;
   readonly clock: Clock;
@@ -37,9 +37,9 @@ export interface RegistryDeps {
 }
 
 export function buildRegistry(deps: RegistryDeps): Registry {
-  // `logic/02` §Q16: read per request, never held, so an attempt in flight finishes on
-  // the key it started with and the next one picks up a key saved since. The closure is
-  // handed to the one adapter that provider belongs to and to nothing else (§Q18).
+  // Read per request, never held, so an attempt in flight finishes on the key it started with
+  // and the next one picks up a key saved since. The closure is handed to the one adapter that
+  // provider belongs to and to nothing else.
   const keyOf = (provider: ProviderId) => (): string | undefined => {
     const found = keyForAttempt({ db: deps.db, clock: deps.clock }, provider);
     return found.ok ? found.key : undefined;
@@ -47,22 +47,21 @@ export function buildRegistry(deps: RegistryDeps): Registry {
 
   const llms = new Map<string, LlmPort>([
     ["openrouter", openRouterLlm({ fetch: deps.fetch, key: keyOf("openrouter") })],
-    // No key: both CLIs authenticate with their own login (`logic/02` §Q135).
+    // No key: both CLIs authenticate with their own login.
     ["claude-code", claudeCodeLlm({ run: deps.spawn })],
     ["codex", codexLlm({ run: deps.spawn })],
   ]);
-  // One key per provider (`logic/02` invariant), so each adapter is handed the reader for
-  // its own row and no other. OpenAI keeps two rows because it ships an adapter in two
-  // families and a user may key one without the other (`slices/settings/model.ts`).
+  // One key per provider, so each adapter is handed the reader for its own row and no other.
+  // OpenAI keeps two rows because it ships an adapter in two families and a user may key one
+  // without the other (`slices/settings/model.ts`).
   const ttses = new Map<string, TtsPort>([
     ["elevenlabs", elevenLabsTts({ fetch: deps.fetch, key: keyOf("elevenlabs") })],
     ["openai-tts", openAiTts({ fetch: deps.fetch, key: keyOf("openai-tts") })],
     ["cartesia", cartesiaTts({ fetch: deps.fetch, key: keyOf("cartesia") })],
   ]);
-  // `logic/09` and `logic/02` §Q15: three image providers behind one port, each handed
-  // the reader for its own key row. Replicate also takes the clock: `Prefer: wait` gives
-  // up after 60 s and the prediction has to be polled, and the wait is spent on the
-  // app's clock so a test never sits through one.
+  // Three image providers behind one port, each handed the reader for its own key row.
+  // Replicate also takes the clock: `Prefer: wait` gives up after 60 s and the prediction has
+  // to be polled, and the wait is spent on the app's clock so a test never sits through one.
   const images = new Map<string, ImagePort>([
     ["fal", falImage({ fetch: deps.fetch, key: keyOf("fal") })],
     [
@@ -76,7 +75,7 @@ export function buildRegistry(deps: RegistryDeps): Registry {
     llm: (id: string): LlmPort => resolve(llms, "llm", id),
     tts: (id: string): TtsPort => resolve(ttses, "tts", id),
     image: (id: string): ImagePort => resolve(images, "image", id),
-    // `logic/02` step 5: every supported provider, keyed or not, found or not, so Play
+    // Every supported provider, keyed or not, found or not, so Play
     // can grey one out with a reason instead of hiding it.
     list: async (): Promise<readonly ProviderListing[]> =>
       (await providerStatuses({ db: deps.db, probe: deps.probe })).map((status) => ({

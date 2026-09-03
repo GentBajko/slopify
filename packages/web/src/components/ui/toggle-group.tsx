@@ -2,10 +2,10 @@ import { ToggleGroup as ToggleGroupPrimitive } from "radix-ui";
 import type * as React from "react";
 import { cn } from "@/lib/utils";
 
-// shadcn/ui's toggle group, restyled as the segmented switch of uiux/02-system.md: one
-// bordered strip at radius 4 with shared edges, the selected segment a --panel2 fill
-// with a 2 px inset bottom line in --lamp-run. Radix keeps the roving tabindex and the
-// arrow-key movement; the standalone Toggle it usually ships beside is unused here.
+// shadcn/ui's toggle group, restyled as this app's segmented switch: one bordered strip at
+// radius 4 with shared edges, the selected segment a --panel2 fill with a 2 px inset bottom
+// line in --lamp-run. Radix keeps the roving tabindex and the arrow-key movement; the
+// standalone Toggle it usually ships beside is unused here.
 
 function ToggleGroup({
   className,

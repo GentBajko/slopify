@@ -1,6 +1,6 @@
-// What `logic/15` step 2 asks of a save: a name, a body, and no lint error. The slot
-// grammar is not restated here - it is admission/substitute.ts's, imported so the editor
-// and the run see the same parse of the same body.
+// What a save has to carry: a name, a body and no lint error. The slot grammar is not
+// restated here - it is admission/substitute.ts's, imported so the editor and the run see
+// the same parse of the same body.
 
 import type { FieldError } from "../admission/rules.js";
 import type { SlotLintError } from "../admission/substitute.js";

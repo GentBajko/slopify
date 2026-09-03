@@ -8,7 +8,7 @@ export interface TtsRequest {
   readonly signal: AbortSignal;
 }
 
-// mp3 is the one container the renderer's plan assumes (`logic/08`, `logic/11`); an
+// mp3 is the one container the renderer's plan assumes; an
 // adapter whose provider speaks anything else converts before it answers.
 export interface TtsAudio {
   readonly audio: ReadableStream<Uint8Array>;

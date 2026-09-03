@@ -7,15 +7,14 @@ import { TallyBoard, TallySkeleton } from "@/components/tally";
 import { stageNames } from "@/project/summary";
 import { usageQuery } from "@/queries";
 
-// 10 Usage: this install's own numbers, the same ones the marketing page aggregates
-// (uiux/screens/10-usage.md). Everything on it comes from `GET /api/usage`, which
-// computes it from the local event log and never touches the collector, so the page is
-// as truthful offline as on.
+// 10 Usage: this install's own numbers, the same ones the marketing page aggregates. Everything
+// on it comes from `GET /api/usage`, which computes it from the local event log and never
+// touches the collector, so the page is as truthful offline as on.
 //
-// The provider and model attribution in the table below is this screen's by design
-// (`logic/16` §Q128): it is local, it is the user's own machine, and it is what makes the
-// token totals checkable. The per-model breakdown on the public counters is a different
-// thing and was deferred on 2026-09-03.
+// The provider and model attribution in the table below is this screen's by design: it is
+// local, it is the user's own machine, and it is what makes the token totals checkable. The
+// per-model breakdown on the public counters is a different thing and was deferred on
+// 2026-09-03.
 export function UsageRoute() {
   const { api } = useApp();
   const usage = useQuery(usageQuery(api));
@@ -50,8 +49,8 @@ export function UsageRoute() {
 }
 
 function Board({ usage }: { readonly usage: Usage }) {
-  // "Fresh install: counters at 0 with the teaching line." Nothing has been counted, which
-  // is different from a run whose stages reported no tokens.
+  // Fresh install: counters at 0 with the teaching line. Nothing has been counted, which is
+  // different from a run whose stages reported no tokens.
   const fresh = Object.values(usage.counters).every((count) => count === 0);
   return (
     <>
@@ -114,10 +113,10 @@ const whole = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 const tenths = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
 const short = new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 });
 
-// The counter labels are the marketing page's own (uiux/screens/10-usage.md, Copy). The
-// API answers in seconds because `logic/16` §Q132 wants the sum of the log; turning them
-// into hours is this screen's job. A token total runs to the billions, and nine grouped
-// digits in a 32 px face would wrap the cell, so past a million it reads compact.
+// The counter labels are the marketing page's own. The API answers in seconds, because that
+// is the sum of the log; turning them into hours is this screen's job. A token total runs to
+// the billions, and nine grouped digits in a 32 px face would wrap the cell, so past a
+// million it reads compact.
 function countersOf(usage: Usage): readonly Tally[] {
   const counters = usage.counters;
   return [

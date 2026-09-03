@@ -177,7 +177,7 @@ describe("POST /api/prompts", () => {
 });
 
 describe("GET /api/prompts", () => {
-  // `logic/15` step 5: sorted by name; every kind in one list, filtered by the tab.
+  // Sorted by name; every kind in one list, filtered by the tab.
   it("lists every kind sorted by name", async () => {
     const { app } = harness();
     await send(app, "POST", "/api/prompts", { kind: "article", name: "zebra", body: "b" });

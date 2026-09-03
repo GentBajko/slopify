@@ -3,21 +3,19 @@ import type { Api, ProjectBody } from "@/api";
 import { fileUrl } from "@/api";
 import { errorOf, problemOf, readText } from "@/http";
 
-// The six actions `mockup/08-project.md` puts on the project page, and the one read the
-// stage bodies need. Every one of them answers with the whole project as the server sees
-// it after the change (`edge/http/actions.ts` view()), so the page writes that straight
-// into its cache instead of asking again.
+// The six actions on the project page, and the one read the stage bodies need. Every one
+// answers with the whole project as the server sees it after the change (`edge/http/actions.ts`
+// view()), so the page writes that straight into its cache instead of asking again.
 
 export interface ActionBody extends ProjectBody {
-  // The stages the cascade put back to `pending` (`logic/12` step 9), or the ones a
-  // cancel stopped (`logic/13` step 3). Carried through so a caller can say what moved.
+  // The stages the cascade put back to `pending`, or the ones a
+  // cancel stopped. Carried through so a caller can say what moved.
   readonly redone?: readonly StageKind[];
   readonly canceled?: readonly StageKind[];
 }
 
-// A refused action is an expected outcome the page shows, not a fault: `logic/12`'s
-// unhappy paths are all refusals with a sentence the server wrote (03-standards, typed
-// results). Anything else still throws.
+// A refused action is an expected outcome the page shows, not a fault: every one is a
+// refusal with a sentence the server wrote. Anything else still throws.
 export type ActionResult =
   | { readonly ok: true; readonly value: ActionBody }
   | { readonly ok: false; readonly message: string };
@@ -101,7 +99,7 @@ async function acted(response: Response): Promise<ActionResult> {
   const problem = await problemOf(response);
   if (problem !== undefined && refusals.has(response.status)) {
     // The server's own sentence, verbatim: it names the rule and, for the last image,
-    // the reason the file survives (`logic/09` §Q75).
+    // the reason the file survives.
     return { ok: false, message: errorOf(response, problem).message };
   }
   throw errorOf(response, problem);

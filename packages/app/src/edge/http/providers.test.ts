@@ -236,7 +236,7 @@ describe("GET /api/providers", () => {
     });
   });
 
-  // The key is gone, so the row goes back to greyed on Play (`logic/02` §Q13).
+  // The key is gone, so the row goes back to greyed on Play.
   it("stops reporting a key once it is removed", async () => {
     const { app } = harness();
     await saveKey(app, "openrouter", standIn);

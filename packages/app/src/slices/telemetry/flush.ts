@@ -25,17 +25,17 @@ export interface Flusher {
 // ceiling: 200 events per request against the collector's cap of 500, and at most 25
 // requests per flush. A queue longer than 5000 undelivered events drains over several
 // flushes rather than in one burst, which is the back-pressure an unbounded queue
-// (logic/16 §Q134) needs against a collector that has been away for months.
+// needs against a collector that has been away for months.
 export const batchSize = 200;
 const maxBatchesPerFlush = 25;
 
-// logic/16 step 5: the queue is flushed at app start and after each new event. Nothing
+// The queue is flushed at app start and after each new event. Nothing
 // here touches a pipeline, and an unreachable collector costs one refused socket.
 export async function flush(deps: FlushDeps): Promise<FlushResult> {
   const machine = machineOf(deps.db);
   if (machine === undefined) {
     // Before the notice is dismissed there is no machine id to send events under, and
-    // logic/16 step 1 says nothing leaves until then.
+    // nothing leaves the machine until then.
     return { delivered: 0, dropped: 0 };
   }
   let delivered = 0;
@@ -54,7 +54,7 @@ export async function flush(deps: FlushDeps): Promise<FlushResult> {
     }
     if (outcome.retriable) {
       // Offline, or the collector is having a bad day. The events stay queued and the
-      // user is told nothing (logic/16 step 5).
+      // user is told nothing.
       deps.log.write("info", "telemetry.deferred", {
         detail: `${ids.length} events stay queued: ${outcome.reason}`,
       });
@@ -72,9 +72,9 @@ export async function flush(deps: FlushDeps): Promise<FlushResult> {
   return { delivered, dropped };
 }
 
-// The schedule from logic/16 step 5, debounced: a fan-out that finishes four stages at
-// once sends one request, not four. Every timer is unref'd, so a queued flush never
-// keeps the process alive.
+// The flush schedule, debounced: a fan-out that finishes four stages at once sends one
+// request, not four. Every timer is unref'd, so a queued flush never keeps the process
+// alive.
 export function createFlusher(deps: FlushDeps, delayMs: number): Flusher {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let running = false;
@@ -101,7 +101,7 @@ export function createFlusher(deps: FlushDeps, delayMs: number): Flusher {
     flush(deps)
       .catch((error: unknown) => {
         // The timer has no caller to fail: a broken flush is logged and the next one
-        // tries again (logic/16 step 5).
+        // tries again.
         deps.log.write("warn", "telemetry.flush", { detail: messageOf(error) });
       })
       .finally(() => {

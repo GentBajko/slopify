@@ -33,7 +33,7 @@ export function deleteKey(db: DatabaseSync, provider: ProviderId): boolean {
 }
 
 // The one place a key value leaves the database. Every caller reads it for a single
-// provider call and holds it no longer (`logic/02` §Q16). Nothing under `edge/` calls
+// provider call and holds it no longer. Nothing under `edge/` calls
 // this: a route asks the two functions below, which never select the `key` column.
 export function keyOf(db: DatabaseSync, provider: ProviderId): string | undefined {
   const row = db.prepare("SELECT key FROM provider_keys WHERE provider = ?").get(provider);

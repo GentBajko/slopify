@@ -93,7 +93,7 @@ describe("record", () => {
     ]);
   });
 
-  // logic/16 step 1: the notice is the promise, and it has not been made yet.
+  // The notice is the promise, and it has not been made yet.
   it("records nothing before the notice created the machine id", () => {
     const { deps, db } = harness();
 
@@ -158,10 +158,10 @@ describe("record", () => {
     );
   });
 
-  // The second half of the sweep. logic/16 step 2 counts per stage and, for the three
-  // units that are not a whole stage, per segment, so the pair is part of the privacy
-  // surface: a stage kind or a segment added later cannot be recorded until it appears in
-  // one of the two unions below, and whatever it carries still leaves only allowed keys.
+  // The second half of the sweep. Counting is per stage and, for the three units that are
+  // not a whole stage, per segment, so the pair is part of the privacy surface: a stage kind
+  // or a segment added later cannot be recorded until it appears in one of the two unions
+  // below, and whatever it carries still leaves only allowed keys.
   it.each(units())("keeps %s/%s inside the allowed key set", (stage, segment) => {
     const { deps, db } = harness();
     seen(db);
@@ -181,8 +181,8 @@ describe("record", () => {
         ...Object.keys(everyCounter),
       ].toSorted(),
     );
-    // Nothing free-text but the two provider names logic/16 step 3 asks for, both capped
-    // by the schema; every other value is a number.
+    // Nothing free-text but the two provider names, both capped by the schema; every other
+    // value is a number.
     expect(
       Object.entries(payload)
         .filter(([, value]) => typeof value === "string")
@@ -196,8 +196,8 @@ describe("record", () => {
   });
 });
 
-// Every counter of logic/16 step 3 at once, which is more than any one unit records: the
-// sweep is about which keys can reach a row, not about which combination is realistic.
+// Every counter at once, which is more than any one unit records: the sweep is about which
+// keys can reach a row, not about which combination is realistic.
 const everyCounter: TelemetryCounters = {
   provider: "elevenlabs",
   model: "eleven_v3",

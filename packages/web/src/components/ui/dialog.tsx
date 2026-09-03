@@ -2,11 +2,10 @@ import { Dialog as DialogPrimitive } from "radix-ui";
 import type * as React from "react";
 import { cn } from "@/lib/utils";
 
-// shadcn/ui's dialog, restyled to uiux/02-system.md and cut to what this app's dialogs
-// are: --panel at radius 6 with the one tinted shadow elevation the system allows,
-// portal-rendered so overlays escape their containers. There is no close icon: every
-// dialog here carries its own action row (uiux/03-experience.md, dialogs carry no
-// secondary options).
+// shadcn/ui's dialog, restyled to this app's system and cut to what its dialogs are:
+// --panel at radius 6 with the one tinted shadow elevation allowed, portal-rendered so
+// overlays escape their containers. There is no close icon, because every dialog here
+// carries its own action row and offers no secondary options.
 const Dialog = DialogPrimitive.Root;
 const DialogTrigger = DialogPrimitive.Trigger;
 const DialogPortal = DialogPrimitive.Portal;

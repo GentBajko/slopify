@@ -1,7 +1,7 @@
 import type { ModelInfo } from "@app/kernel/ports/model.js";
 import type { ProviderId } from "@app/slices/settings/model.js";
 
-// What Play's Model picker offers per provider (`logic/02` §Q15).
+// What Play's Model picker offers per provider.
 //
 // ceiling: the app has no endpoint that lists models. `GET /api/providers` answers
 // readiness and nothing else, and the lists the registry holds live inside the adapter

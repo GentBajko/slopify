@@ -17,15 +17,14 @@ import { UsageRoute } from "@/routes/usage";
 // generated tree a plugin would write would be one more artefact to keep honest.
 const rootRoute = createRootRoute({ component: Shell });
 
-// The kind tab of 04 and the kind a new prompt opens on live in the URL, so the tab
-// survives a reload and "New prompt" can carry the tab it was pressed on into 05
-// (uiux/screens/05-prompt-editor.md, New).
+// The kind tab of 04 and the kind a new prompt opens on live in the URL, so the tab survives a
+// reload and "New prompt" can carry the tab it was pressed on into 05.
 interface KindSearch {
   readonly kind: PromptKind;
 }
 
 interface NewPromptSearch extends KindSearch {
-  // The prompt being duplicated, when Duplicate opened the editor (`logic/15` §Q124).
+  // The prompt being duplicated, when Duplicate opened the editor.
   readonly from?: string;
 }
 

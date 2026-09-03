@@ -106,7 +106,7 @@ export async function boot(config: Config): Promise<Boot> {
       probe: nodeCliProbe,
     });
     const server = await listen(app, config, log);
-    // logic/16 step 5: whatever last run left queued goes out at start. Nothing waits for
+    // Whatever last run left queued goes out at start. Nothing waits for
     // it, and an unreachable collector costs one refused socket.
     flusher.soon();
     const open = db;
@@ -125,7 +125,7 @@ export async function boot(config: Config): Promise<Boot> {
           // The pending timer is cancelled rather than awaited: a shutdown must not wait
           // on the collector. A flush already in flight may land after the database
           // closes and fail to mark its batch delivered, which costs one re-send that
-          // the collector deduplicates by event id (logic/16 §Q134).
+          // the collector deduplicates by event id.
           flusher.stop();
           log.write("info", "shutdown");
           open.close();
@@ -140,9 +140,8 @@ export async function boot(config: Config): Promise<Boot> {
   }
 }
 
-// The composition root: the runner is handed the stage implementations it may not
-// import, and each implementation is handed the dependencies it needs, closed over here
-// (03-conventions Dependency injection).
+// The composition root: the runner is handed the stage implementations it may not import, and
+// each implementation is handed the dependencies it needs, closed over here.
 interface Wiring {
   readonly db: DatabaseSync;
   readonly paths: Paths;
@@ -159,9 +158,9 @@ function wire({ db, paths, clock, ids, log, hub, telemetry, flusher, registry }:
   // Resolved once at boot rather than per render, so a machine with no usable binary
   // fails at start with one message instead of on every project's last stage.
   const ffmpeg = resolveFfmpeg(process.env, ffmpegStatic);
-  // logic/16 steps 2 and 5: a stage counts what it did and the queue is flushed after
-  // each new event. `record` swallows its own failures, so this can neither fail a stage
-  // nor widen what leaves the machine - the payload allow-list is checked inside it.
+  // A stage counts what it did and the queue is flushed after each new event. `record`
+  // swallows its own failures, so this can neither fail a stage nor widen what leaves the
+  // machine - the payload allow-list is checked inside it.
   const count: RecordEvent = (type, counters) => {
     record(telemetry, type, counters);
     flusher.soon();
@@ -192,11 +191,10 @@ function wire({ db, paths, clock, ids, log, hub, telemetry, flusher, registry }:
       thumbnail: (context) => runThumbnail(writing, context, stageProviders(providers, context)),
       video: (context) => renderVideo(video, context),
     },
-    // logic/16 step 2 counts finer than a stage reaching `done` - each intro and outro
-    // text, each narrated segment - and its counters are the provider names, the token
-    // usage and the durations only the stage slice ever sees. Each slice therefore
-    // records its own units through `count` above, and the runner is left counting
-    // nothing: the kernel may not import a slice (03-conventions).
+    // Counting is finer than a stage reaching `done` - each intro and outro text, each
+    // narrated segment - and the counters are provider names, token usage and durations
+    // only the stage slice ever sees. Each slice records its own units through `count`
+    // above, and the runner counts nothing: the kernel may not import a slice.
     emit: (projectId, event) => {
       hub.emit(projectId, event);
     },
@@ -248,7 +246,7 @@ export function urlOf(host: string, port: number): string {
 }
 
 // A stage can only be `running` at boot if the previous process died mid-run;
-// nothing auto-resumes, the user retries by hand (logic/01 §Q7).
+// nothing auto-resumes, the user retries by hand.
 export function markInterruptedStages(db: DatabaseSync, clock: Clock): number {
   const result = db
     .prepare(

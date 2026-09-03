@@ -47,7 +47,7 @@ describe("the first-run notice", () => {
     renderApp(<FirstRunNotice />, testDeps({ "GET /api/telemetry/notice": fresh }));
 
     expect(await screen.findByText(title)).not.toBeNull();
-    // The disclosure itself: what is counted and what never is (logic/16 steps 3-4).
+    // The disclosure itself: what is counted and what never is.
     expect(screen.getByText("Tracked")).not.toBeNull();
     expect(screen.getByText("Never tracked")).not.toBeNull();
     expect(screen.getByText("API keys")).not.toBeNull();

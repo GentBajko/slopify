@@ -2,9 +2,9 @@ import type { StageState } from "@app/kernel/pipeline.js";
 import { cn } from "@/lib/utils";
 import { StateWord } from "./state-word.js";
 
-// A lamp never conveys state alone: the state word is always rendered beside it
-// (uiux/02-system.md §Q18). In a rundown row the two sit at opposite ends, so the row
-// composes `Lamp` and `StateWord` itself; `StageLamp` is the pair for everywhere else.
+// A lamp never conveys state alone: the state word is always rendered beside it. In a rundown
+// row the two sit at opposite ends, so the row composes `Lamp` and `StateWord` itself;
+// `StageLamp` is the pair for everywhere else.
 const lit: Readonly<Record<StageState, string>> = {
   pending: "bg-lamp-off shadow-[inset_0_0_0_1px_var(--color-lamp-ring)]",
   running:

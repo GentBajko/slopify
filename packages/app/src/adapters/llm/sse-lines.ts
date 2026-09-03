@@ -1,7 +1,6 @@
 // Bytes off a socket or off a child's stdout, turned into the units above them. One file
 // for both because OpenRouter's SSE and the two CLIs' JSONL differ only in what a line
-// means, and 05-dependencies records the decision: global `fetch` at rung 3, this reader
-// at rung 6, no SDK for any of the three providers.
+// means, and none of the three providers is worth an SDK.
 
 // A chunk boundary lands wherever the network or the pipe put it: between two lines, in
 // the middle of one, or inside a multi-byte character. TextDecoder's streaming mode holds

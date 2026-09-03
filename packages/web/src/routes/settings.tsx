@@ -33,8 +33,7 @@ export function gapProblem(value: string): string | undefined {
     : `The silence gap is a whole number of seconds between 0 and ${String(silenceGapSecondsMax)}.`;
 }
 
-// Keys, voices, and the two playback values, without ceremony
-// (uiux/screens/03-settings.md).
+// Keys, voices, and the two playback values, without ceremony.
 export function SettingsRoute() {
   return (
     <div className="flex max-w-[1100px] flex-col gap-6">
@@ -59,7 +58,7 @@ function Playback() {
 
   const save = useMutation({
     mutationFn: (next: AppSettings) => saveAppSettings(api, next),
-    // Switching theme is immediate (uiux/03-experience.md, feedback thresholds), and the
+    // Switching theme is immediate, and the
     // cache is what components/theme.tsx paints from, so the write happens before the
     // request and is rolled back if the request refuses it.
     onMutate: (next: AppSettings) => {

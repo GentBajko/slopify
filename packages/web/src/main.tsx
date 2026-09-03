@@ -17,9 +17,8 @@ import { AppProvider } from "@/app-context";
 import { createAppRouter } from "@/router";
 import { createVersionWatch, watchingFetch } from "@/version";
 
-// The composition root. Everything with a lifetime is built here, once, and handed down
-// through providers; nothing below reaches for a client of its own (03-conventions,
-// Dependency injection).
+// The composition root. Everything with a lifetime is built here, once, and handed down through
+// providers; nothing below reaches for a client of its own.
 function start(container: HTMLElement): void {
   const version = createVersionWatch();
   const deps: AppDeps = {

@@ -23,7 +23,7 @@ const clock = fixedClock("2026-09-02T10:00:00.000Z");
 const silent: Log = { write: (): void => {} };
 
 // Nothing in this file may reach the network or spawn a binary: the CLIs cost money and
-// there is no key to call OpenRouter with (06-testing Doubles, "no live provider calls").
+// there is no key to call OpenRouter with. No live provider calls, ever.
 const refuseFetch: typeof globalThis.fetch = () => {
   throw new Error("the registry test made a request");
 };
@@ -127,8 +127,8 @@ describe("buildRegistry", () => {
     db.close();
   });
 
-  // `logic/02` invariant again, on the other side of the OpenAI split: the image row's key
-  // must never reach the speech endpoint, nor the TTS row's key the images endpoint.
+  // The same invariant on the other side of the OpenAI split: the image row's key must
+  // never reach the speech endpoint, nor the TTS row's key the images endpoint.
   it("hands each image adapter the key of its own provider row and no other", async () => {
     const db = migrated();
     const save = db.prepare(
@@ -161,9 +161,9 @@ describe("buildRegistry", () => {
     db.close();
   });
 
-  // `logic/02` invariant: "A key is sent only to the provider it belongs to." OpenAI has
-  // a TTS row and an image row, so the wrong one reaching the speech endpoint would be a
-  // key crossing a provider boundary inside one vendor.
+  // A key is sent only to the provider it belongs to. OpenAI has a TTS row and an image row, so
+  // the wrong one reaching the speech endpoint would be a key crossing a provider boundary
+  // inside one vendor.
   it("hands each TTS adapter the key of its own provider row and no other", async () => {
     const db = migrated();
     const save = db.prepare(
@@ -194,7 +194,7 @@ describe("buildRegistry", () => {
     db.close();
   });
 
-  // `logic/02` step 5 and §Q135: every supported provider is listed, keyed or not, found
+  // Every supported provider is listed, keyed or not, found
   // or not.
   it("lists the whole catalogue with each provider's readiness", async () => {
     const db = migrated();
@@ -224,7 +224,7 @@ describe("buildRegistry", () => {
     db.close();
   });
 
-  // `logic/02` §Q13: "the next attempt finds no key, fails immediately without retries".
+  // The next attempt finds no key, fails immediately without retries.
   it("fails a call with no key on the first attempt, without calling the provider", async () => {
     const db = migrated();
     let requests = 0;
@@ -262,7 +262,7 @@ describe("buildRegistry", () => {
     db.close();
   });
 
-  // `logic/02` §Q16: the key is read at the moment the attempt starts, so one saved after
+  // The key is read at the moment the attempt starts, so one saved after
   // the registry was built still reaches the next call.
   it("reads the key the database holds when the call is made", async () => {
     const db = migrated();

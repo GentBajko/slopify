@@ -6,11 +6,11 @@ import type { ProjectState, StageKind } from "../../kernel/pipeline.js";
 import { derive } from "../../kernel/runner/graph.js";
 import { finishStage, projectExists, stagesOf } from "../admission/repo.js";
 
-// `logic/13`: Cancel on the project header. Every in-flight call of this project is
-// aborted at once, every `done` output and every finished piece is kept for the resume,
-// and the project sits `canceled` until the user retries a stage.
+// Cancel on the project header. Every in-flight call of this project is aborted at once, every
+// `done` output and every finished piece is kept for the resume, and the project sits
+// `canceled` until the user retries a stage.
 
-// §Q111 and `logic/01`'s transition table, in the words the stage row carries.
+// The cancel rules and the stage transition table, in the words the stage row carries.
 export const canceledByUser = "canceled by user";
 
 export interface CancelDeps {
@@ -26,7 +26,7 @@ export interface CancelDeps {
 export type CancelResult =
   | {
       readonly ok: true;
-      // The stages this click stopped, empty when there was nothing running (§Q108).
+      // The stages this click stopped, empty when there was nothing running.
       readonly canceled: readonly StageKind[];
       readonly state: ProjectState;
     }
@@ -39,16 +39,16 @@ export async function cancelProject(deps: CancelDeps, projectId: string): Promis
   const before = stagesOf(deps.db, projectId);
   const running = before.filter((stage) => stage.state === "running").map((stage) => stage.kind);
   if (running.length === 0) {
-    // Step 4: "a second click is a no-op". Nothing is aborted and no state changes, so
+    // A second click is a no-op. Nothing is aborted and no state changes, so
     // the page is simply told what the project already reads.
     return { ok: true, canceled: [], state: derive(before) };
   }
 
-  // Step 1: nothing waits for a response. The runner holds the controllers and its own
+  // Nothing waits for a response. The runner holds the controllers and its own
   // barrier, so a stage that finishes during this does not release its dependents.
   await deps.abort(projectId);
 
-  // Step 3's invariant: "after cancel completes no stage of the project is `running`".
+  // The invariant: after cancel completes no stage of the project is `running`.
   // The runner writes that row as each aborted stage unwinds; this is the path where it
   // could not - a failed write is logged there and the run is left mid-flight otherwise.
   const after = stagesOf(deps.db, projectId);
@@ -81,7 +81,7 @@ export async function cancelProject(deps: CancelDeps, projectId: string): Promis
   }
   return {
     ok: true,
-    // §Q113: a stage whose output was stored in the same instant as the cancel stays
+    // A stage whose output was stored in the same instant as the cancel stays
     // `done`, so what was stopped is read back rather than assumed from what was running.
     canceled: settled
       .filter((stage) => stage.state === "canceled" && running.includes(stage.kind))

@@ -18,10 +18,10 @@ import type { StagedFile } from "@app/slices/storage/model.js";
 // plain value: `routes/play.tsx` keeps one in `useState`, every function here is pure,
 // and `draftOf` is the only place that turns it into the body the server reads.
 
-// One picked file and how far its copy into staging got. A file starts copying the moment
-// it is picked (`logic/05` step 5); until the copy finishes the run cannot start (§Q44).
-// The whole staged row is kept rather than its id, because the admission rule the form
-// runs live is handed the same rows the server's own copy is handed.
+// One picked file and how far its copy into staging got. A file starts copying the moment it is
+// picked; until the copy finishes the run cannot start. The whole staged row is kept rather
+// than its id, because the admission rule the form runs live is handed the same rows the
+// server's own copy is handed.
 export interface Upload {
   readonly key: string;
   readonly name: string;
@@ -45,10 +45,10 @@ export interface PlayFormState {
   readonly audio: VoiceChoice;
   readonly images: ProviderChoice;
   readonly articlePrompt: string;
-  // The ticked image prompts, in tick order, each with its Number (`logic/09`, §Q30).
+  // The ticked image prompts, in tick order, each with its Number.
   readonly imagePrompts: readonly ImagePromptChoice[];
   readonly thumbnailPrompt: string;
-  // The picked entry's name, or "" for Off (`logic/04` §Q91).
+  // The picked entry's name, or "" for Off.
   readonly intro: string;
   readonly outro: string;
   readonly chunking: Chunking;
@@ -58,9 +58,9 @@ export interface PlayFormState {
   readonly provided: ProvidedState;
 }
 
-// `logic/04` step 1: format 16:9; intro and outro Off; research Off; thumbnail Off;
-// article, audio and images Generate; nothing else picked. `logic/08` step 2's first case
-// is the chunking that adds nothing the user did not ask for.
+// Format 16:9; intro and outro Off; research Off; thumbnail Off; article, audio and images
+// Generate; nothing else picked. Whole-text chunking is the case that adds nothing the user
+// did not ask for.
 export const freshForm: PlayFormState = {
   title: "",
   format: "16:9",
@@ -94,7 +94,7 @@ export const sourceLabels: Readonly<Record<StageSource, string>> = {
 };
 
 // The switch a stage draws, straight from the rule that will judge it. Video has one
-// legal source and no switch (`logic/01` step 5), which is why the caller checks the
+// legal source and no switch, which is why the caller checks the
 // length rather than this function hiding it.
 export function sourceOptions(
   kind: StageKind,
@@ -102,9 +102,9 @@ export function sourceOptions(
   return allowedSources[kind].map((value) => ({ value, label: sourceLabels[value] }));
 }
 
-// `logic/04` §Q28 with `logic/10` §Q81 and §Q97, said in the form's own vocabulary so the
-// cue sheet can hide the LLM row before anything is posted. The rule itself says it
-// again over the draft; this is what decides whether the row is drawn at all.
+// The LLM-row rule, said in the form's own vocabulary so the cue sheet can hide the row
+// before anything is posted. Admission says it again over the draft; this only decides
+// whether the row is drawn at all.
 export function needsLlm(form: PlayFormState, entries: readonly Entry[]): boolean {
   return (
     form.sources.research === "generate" ||
@@ -138,9 +138,9 @@ export interface DraftInput {
   readonly form: PlayFormState;
   readonly entries: readonly Entry[];
   // The names the picked prompts and entries ask for: a value the run no longer needs is
-  // not carried onto the project (`logic/03` step 6).
+  // not carried onto the project.
   readonly slots: readonly string[];
-  // `logic/11` §Q99: the gap beside a segment that exists, as Settings has it.
+  // The gap beside a segment that exists, as Settings has it.
   readonly silenceGapSeconds: number;
 }
 
@@ -149,7 +149,7 @@ export function draftOf(input: DraftInput): RunDraft {
   return {
     title: form.title,
     format: form.format,
-    // `logic/01` step 5: video is generated whatever the form says.
+    // Video is generated whatever the form says.
     sources: { ...form.sources, video: "generate" },
     llm: form.llm,
     audio: form.audio,

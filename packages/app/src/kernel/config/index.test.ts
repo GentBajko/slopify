@@ -6,7 +6,7 @@ import { configFrom } from "./index.js";
 describe("configFrom", () => {
   it("falls back to the documented defaults", () => {
     expect(configFrom({}, {})).toEqual({
-      port: 4242,
+      port: 6969,
       host: "127.0.0.1",
       dataDir: join(homedir(), ".slopify"),
       open: true,

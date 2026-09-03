@@ -1,7 +1,7 @@
-// logic/03 §Q19-§Q21 fix the grammar: `{{` … `}}`, whitespace immediately inside the
-// braces stripped, the name case-sensitive and free to hold anything but `{`, `}` and a
-// newline (so `{{Middle of Words}}` is one name). There is no escape syntax. Hand-rolled
-// on purpose (standards §Q2): a template library would bring its own grammar.
+// The slot grammar: `{{` … `}}`, whitespace immediately inside the braces stripped, the
+// name case-sensitive and free to hold anything but `{`, `}` and a newline (so
+// `{{Middle of Words}}` is one name). There is no escape syntax. Hand-rolled on purpose: a
+// template library would bring its own grammar.
 
 export const slotLintKinds = ["unclosed", "empty", "nested"] as const;
 export type SlotLintKind = (typeof slotLintKinds)[number];
@@ -58,9 +58,9 @@ export function detectSlots(body: string): DetectedSlots {
   return { names, errors };
 }
 
-// logic/03 step 3: one field per distinct name; Common when a name is used on both
-// sides, otherwise Text or Image. §Q24 fixes the order as first appearance, which is why
-// both sides arrive as ordered lists of bodies rather than as sets.
+// One field per distinct name; Common when a name is used on both sides, otherwise Text or
+// Image. The order is first appearance, which is why both sides arrive as ordered lists of
+// bodies rather than as sets.
 export function collectFields(
   textBodies: readonly string[],
   imageBodies: readonly string[],
@@ -79,12 +79,12 @@ export function collectFields(
   return fields;
 }
 
-// logic/03 step 5 and §Q21: one pass, so a value that itself contains `{{x}}` lands in
-// the output verbatim and is never looked at again. A name with no value is left as it
-// was written; scenario 04 refuses the run before this can reach a provider.
+// One pass, so a value that itself contains `{{x}}` lands in the output verbatim and is never
+// looked at again. A name with no value is left as it was written; admission refuses the run
+// before this can reach a provider.
 export function render(body: string, values: Readonly<Record<string, string>>): string {
   return body.replace(slot, (whole: string, inside: string): string => {
-    // A slot name may be anything but a brace or a newline (§Q19), so "constructor" and
+    // A slot name may be anything but a brace or a newline, so "constructor" and
     // "toString" are ordinary names; a plain lookup would answer them from Object's
     // prototype and splice a function's source into a prompt bound for a provider.
     const name = inside.trim();

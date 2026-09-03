@@ -9,7 +9,7 @@ import { lines } from "./sse-lines.js";
 
 // The local-agent adapter for the Codex CLI. Same shape as Claude Code's and a different
 // vocabulary: Codex writes a JSONL thread of `thread.started`, `item.*` and `turn.*`
-// events. No key here either - the CLI's own login authenticates it (`logic/02` §Q135).
+// events. No key here either - the CLI's own login authenticates it.
 
 export const codexBinary = "codex";
 
@@ -28,13 +28,13 @@ export interface CodexDeps {
   readonly binary?: string | undefined;
 }
 
-// `codex exec --help` (0.149.1) for the flags. `-c web_search=<mode>` is a TOML override,
-// and the binary's own error names the modes: "unknown variant `bogus`, expected one of
-// `disabled`, `cached`, `indexed`, `live`". `live` is the grounded mode `logic/06` asks
-// for and `disabled` is what every other stage runs under, so no stage grounds itself by
-// accident. `--ephemeral` keeps no session file, `--skip-git-repo-check` lets it run in
-// the data directory, and the quotes in the value are part of the argv element because
-// the override is parsed as TOML, where a bare `live` is not a string.
+// `codex exec --help` (0.149.1) for the flags. `-c web_search=<mode>` is a TOML override, and
+// the binary's own error names the modes: "unknown variant `bogus`, expected one of `disabled`,
+// `cached`, `indexed`, `live`". `live` is the grounded mode research asks for and `disabled` is
+// what every other stage runs under, so none grounds itself by accident. `--ephemeral` keeps no
+// session file, `--skip-git-repo-check` lets it run in the data directory, and the quotes in
+// the value are part of the argv element because the override is parsed as TOML, where a bare
+// `live` is not a string.
 export function codexArgs(req: LlmCompletion): string[] {
   return [
     "exec",
@@ -89,10 +89,9 @@ export function codexLlm(deps: CodexDeps): LlmPort {
         }
         if (event.type === "turn.completed") {
           const { usage } = cliShaped(binary, turnCompleted, event.value);
-          // ceiling: Codex reports no stop reason, so the continuation loop of
-          // `logic/07` §Q59 cannot tell a finished answer from one cut at the output
-          // limit for this provider. A `--output-schema` run would, at the cost of
-          // constraining every stage's answer.
+          // ceiling: Codex reports no stop reason, so the continuation loop cannot tell a
+          // finished answer from one cut at the output limit. A `--output-schema` run
+          // would, at the cost of constraining every stage's answer.
           yield { type: "done", usage: usageOf(usage), finishReason: null };
           return;
         }
@@ -116,8 +115,8 @@ export function codexLlm(deps: CodexDeps): LlmPort {
       run.kill();
     }
     // A cancelled run ends its stream the same way an exhausted one does: the child was
-    // killed, so stdout simply stopped. `logic/13` §Q112 says an aborted call counts
-    // nothing, so it must not be reported as the provider failing.
+    // killed, so stdout simply stopped. An aborted call counts as nothing, so it must not
+    // be reported as the provider failing.
     req.signal.throwIfAborted();
     // The stream ended with neither a completed turn nor a failure.
     throw providerError({
@@ -129,7 +128,7 @@ export function codexLlm(deps: CodexDeps): LlmPort {
   return {
     id: "codex",
     // ceiling: one `item.completed` per whole message rather than per token, same as the
-    // other CLI. Enough for the idle timeout of `logic/01` §Q62 to see life on the stream.
+    // other CLI. Enough for the idle timeout to see life on the stream.
     capabilities: { streams: true, reportsUsage: true, webSearch: true },
     models: (): Promise<readonly ModelInfo[]> => Promise.resolve(codexModels),
     complete,

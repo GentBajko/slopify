@@ -6,9 +6,8 @@ import { cn } from "@/lib/utils";
 import type { Destructive } from "./confirmations.js";
 import { confirmationFor } from "./confirmations.js";
 
-// A control that stops and confirms. Every destructive action on this page goes through
-// it, so none of them can be wired straight to a click by accident
-// (`uiux/03-experience.md`, Destructive actions).
+// A control that stops and confirms. Every destructive action on this page goes through it, so
+// none of them can be wired straight to a click by accident.
 
 export function ConfirmedButton({
   action,

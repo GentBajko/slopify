@@ -5,7 +5,7 @@ import { providerError } from "../../kernel/ports/model.js";
 import type { TtsAudio, TtsPort, TtsRequest } from "../../kernel/ports/tts.js";
 import { retryAfter } from "../retry-after.js";
 
-// The HTTP gateway adapter for Cartesia (01-architecture Module boundaries). `fetch` and
+// The HTTP gateway adapter for Cartesia. `fetch` and
 // nothing else; `/tts/bytes` streams the audio it renders, so the response body is
 // already the stream the port asks for.
 
@@ -16,13 +16,13 @@ export const cartesiaBase = "https://api.cartesia.ai";
 export const cartesiaVersion = "2026-03-01";
 export const cartesiaModel = "sonic-3.5";
 // mp3 is the port's container; `bit_rate` is required for it and `sample_rate` fixes the
-// rate the concatenation of `logic/08` step 4 then keeps.
+// rate the concatenation then keeps.
 const outputFormat = { container: "mp3", bit_rate: 128_000, sample_rate: 44_100 } as const;
 
 export interface CartesiaDeps {
-  // Injected so a test never needs the network and `main.ts` owns the real one.
+  // Injected so a test never needs the network.
   readonly fetch: typeof globalThis.fetch;
-  // Called for every request, never held (`logic/02` §Q16).
+  // Called for every request, never held.
   readonly key: () => string | undefined;
 }
 
@@ -46,7 +46,7 @@ export function cartesiaTts(deps: CartesiaDeps): TtsPort {
           "Cartesia-Version": cartesiaVersion,
           "Content-Type": "application/json",
         },
-        // `logic/08` §Q69: no pre-check on length; Cartesia's own limit surfaces as its
+        // No pre-check on length; Cartesia's own limit surfaces as its
         // error. `language` is left out so the model reads it off the transcript.
         body: JSON.stringify({
           model_id: cartesiaModel,
@@ -68,7 +68,7 @@ export function cartesiaTts(deps: CartesiaDeps): TtsPort {
 
 function keyOf(deps: CartesiaDeps): string {
   const key = deps.key();
-  // `logic/02` §Q13: an absent key is terminal, so it never becomes a request.
+  // An absent key is terminal, so it never becomes a request.
   if (key === undefined || key === "") {
     throw providerError({ kind: "missing_key", message: "no Cartesia key is stored" });
   }
@@ -94,7 +94,7 @@ async function failure(response: Response, voiceId: string): Promise<Error> {
   const retryAfterMs = retryAfter(response.headers.get("retry-after"));
   return providerError({
     kind: kindOf(response.status),
-    // `logic/02` §Q14: `voice_not_found` has to say which voice was asked for; Cartesia's
+    // `voice_not_found` has to say which voice was asked for; Cartesia's
     // own message does not repeat the id.
     message: `Cartesia answered ${response.status} for voice ${voiceId}: ${message}`,
     ...(retryAfterMs === undefined ? {} : { retryAfterMs }),

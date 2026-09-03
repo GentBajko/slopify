@@ -3,10 +3,10 @@ import { useApp } from "@/app-context";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
-// The app was upgraded underneath this tab: `npx slopify@latest` replaced the process
-// that served this bundle, and the version header on the last response no longer matches
-// the one this tab loaded from (04-data-flow, Version header). The tab is stale, so it
-// says so instead of carrying on against an API it was not built for.
+// The app was upgraded underneath this tab: `npx slopify@latest` replaced the process that
+// served this bundle, and the version header on the last response no longer matches the one
+// this tab loaded from. The tab is stale, so it says so instead of carrying on against an API
+// it was not built for.
 export function VersionPrompt({ reload }: { readonly reload: () => void }) {
   const { version } = useApp();
   const serving = useSyncExternalStore(version.subscribe, version.staleAt, version.staleAt);

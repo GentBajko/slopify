@@ -1,8 +1,8 @@
 import type { ProjectState, StageKind, StageState } from "./pipeline.js";
 
-// What a run tells the open pages about itself (04-data-flow, Run step 5). The union
-// lives below the edge because the runner and the stage slices produce these values and
-// neither may import `edge`; `edge/events/hub.ts` only delivers them.
+// What a run tells the open pages about itself. The union sits below the edge because the
+// runner and the stage slices produce these values and neither may import `edge`;
+// `edge/events/hub.ts` only delivers them.
 
 export interface StageStateEvent {
   readonly type: "stage.state";

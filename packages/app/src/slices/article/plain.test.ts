@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { plainText } from "./plain.js";
 
-// `logic/05` §Q37 and `logic/07` step 4: the narration source is plain text. The bar is
-// what a TTS engine would say out loud, so every assertion here is about a character the
-// engine must never reach.
+// The narration source is plain text. The bar is what a TTS engine would say out loud, so every
+// assertion here is about a character the engine must never reach.
 
 const article = `# The Wreck of the *Mary Rose*
 

@@ -189,20 +189,20 @@ describe("runResearch", () => {
       "chapter",
       "synthesis",
     ]);
-    // §Q52: every sub-agent call is web-grounded and the other two are not.
+    // Every sub-agent call is web-grounded and the other two are not.
     expect(llm.made.filter((one) => one.webSearch).map((one) => one.turn)).toEqual([
       "chapter",
       "chapter",
       "chapter",
     ]);
-    // Each sub-agent call is recorded against its own chapter row (§Q54).
+    // Each sub-agent call is recorded against its own chapter row.
     expect(
       new Set(llm.made.filter((one) => one.pieceId !== null).map((one) => one.pieceId)).size,
     ).toBe(3);
     expect(
       llm.made.filter((one) => one.turn === "chapter").map((one) => chapterOf(one.prompt)),
     ).toEqual(["History", "Materials", "Knots"]);
-    // §Q52: the editor is handed what the researchers found, not asked to search again.
+    // The editor is handed what the researchers found, not asked to search again.
     const synthesis = llm.made.at(-1)?.prompt ?? "";
     expect(synthesis).toContain("Found about History.");
     expect(synthesis).toContain("Found about Knots.");
@@ -213,7 +213,7 @@ describe("runResearch", () => {
     h.db.close();
   });
 
-  // Step 4: the final notes and every instruction sent are stored on the project.
+  // The final notes and every instruction sent are stored on the project.
   it("stores the notes and the instructions it sent", async () => {
     const h = harness();
 
@@ -232,7 +232,7 @@ describe("runResearch", () => {
     h.db.close();
   });
 
-  // §Q53: "one per chapter, all in parallel".
+  // One per chapter, all in parallel.
   it("runs every sub-agent call at once rather than one after another", async () => {
     const h = harness();
     const llm = fake((turn, prompt) =>
@@ -250,7 +250,7 @@ describe("runResearch", () => {
     h.db.close();
   });
 
-  // Step 5: "k of N chapters researched".
+  // K of N chapters researched.
   it("reports each chapter as it lands, and writes the count on the stage", async () => {
     const h = harness();
 
@@ -263,7 +263,7 @@ describe("runResearch", () => {
     h.db.close();
   });
 
-  // §Q54: "completed sub-agents kept, failed and not-started ones run, then synthesis".
+  // Completed sub-agents kept, failed and not-started ones run, then synthesis.
   it("does not research again a chapter an earlier run finished", async () => {
     const h = harness();
     const titles = ["One", "Two", "Three", "Four", "Five"];
@@ -282,7 +282,7 @@ describe("runResearch", () => {
 
     await runResearch(h.deps, h.context, llm.providers);
 
-    // No planner call: the chapter list survived the failure (§Q54).
+    // No planner call: the chapter list survived the failure.
     expect(llm.made.map((one) => one.turn)).toEqual(["chapter", "chapter", "synthesis"]);
     expect(
       llm.made.filter((one) => one.turn === "chapter").map((one) => chapterOf(one.prompt)),
@@ -295,7 +295,7 @@ describe("runResearch", () => {
     h.db.close();
   });
 
-  // §Q54: one sub-agent exhausting its retries fails the whole stage; the outputs of the
+  // One sub-agent exhausting its retries fails the whole stage; the outputs of the
   // ones that finished are kept for the resume.
   it("fails the stage when a sub-agent fails, keeping what the others found", async () => {
     const h = harness();
@@ -320,7 +320,7 @@ describe("runResearch", () => {
     h.db.close();
   });
 
-  // §Q47: no fallback to model knowledge, and the sentence the user reads is fixed.
+  // No fallback to model knowledge, and the sentence the user reads is fixed.
   it("fails with the doc's own sentence when the model cannot search the web", async () => {
     const h = harness();
     const llm = fake((turn) => {
@@ -340,7 +340,7 @@ describe("runResearch", () => {
     h.db.close();
   });
 
-  // §Q50: an empty answer is a failed attempt, so it reaches the caller as a failure
+  // An empty answer is a failed attempt, so it reaches the caller as a failure
   // rather than being stored as a chapter with nothing in it.
   it("refuses an empty sub-agent answer and one with no Sources list", async () => {
     const empty = harness();

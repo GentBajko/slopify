@@ -105,14 +105,14 @@ export async function stageUpload(
     createdAt: deps.clock.now().toISOString(),
   };
   // The row exists before the first byte, so a process that dies mid-copy leaves a
-  // record reconcile collects rather than an untracked file (logic/05 §Q44).
+  // record reconcile collects rather than an untracked file.
   insertStagedFile(deps.db, file);
 
   let bytes = 0;
   let lastEmit = 0;
   const notify = (event: StagingEvent): void => {
     // Nothing about progress delivery may abort the write: a page that navigated away
-    // is not a reason to lose the upload it started (logic/05 §Q43).
+    // is not a reason to lose the upload it started.
     try {
       deps.emit(event);
     } catch (error) {
@@ -179,7 +179,7 @@ export function attachStagedFile(deps: StorageDeps, input: AttachInput): AttachR
   if (staged === undefined) {
     return { ok: false, reason: "unknown-staged-file" };
   }
-  // A run never starts with provided content that is still copying (logic/05 §Q44).
+  // A run never starts with provided content that is still copying.
   if (staged.state !== "staged") {
     return { ok: false, reason: "still-copying" };
   }
@@ -213,10 +213,9 @@ export function attachStagedFile(deps: StorageDeps, input: AttachInput): AttachR
     meta: input.role === "image" ? { index } : {},
     createdAt: deps.clock.now().toISOString(),
   };
-  // The file already moved. If this fails the file is under projects/ with no row,
-  // which is exactly what the boot reconcile collects.
-  // A savepoint rather than BEGIN, so startRun can attach several files inside the one
-  // transaction that creates the project.
+  // The file already moved. If this fails the file is under projects/ with no row, which is
+  // exactly what the boot reconcile collects. A savepoint rather than BEGIN, so startRun can
+  // attach several files inside the one transaction that creates the project.
   try {
     transact(deps.db, () => {
       insertOutput(deps.db, output);
@@ -243,9 +242,9 @@ export function dropStagedSource(deps: StorageDeps, source: string): void {
   }
 }
 
-// Writing text needs no staging channel: the progress events belong to uploads
-// (logic/05 §Q43). Named separately so a stage that only stores its own output - the
-// research notes of logic/06 step 4 - can call this without inventing an emitter.
+// Writing text needs no staging channel, because the progress events belong to uploads.
+// Named separately so a stage that only stores its own output - the research notes - can
+// call this without inventing an emitter.
 export type TextStoreDeps = Omit<StorageDeps, "emit">;
 
 export interface TextInput {
@@ -255,14 +254,12 @@ export interface TextInput {
   readonly text: string;
 }
 
-// logic/05 step 1: a stage set to Provide can carry pasted text instead of a file, and
-// the project holds it as an output like any other. Unlike an attached upload this needs
-// no two-phase dance: the text came in on the request, so a rollback loses nothing the
-// caller cannot write again, and the file left under a project id that was rolled back
-// is an orphan the boot reconcile removes.
-// ceiling: the paste is stored as typed. logic/05 §Q37 also asks for markdown syntax to
-// be stripped for the narration source; that reduction belongs to the narration slice
-// that reads this file, and lands with it.
+// A stage set to Provide can carry pasted text instead of a file, and the project holds it as
+// an output like any other. Unlike an attached upload this needs no two-phase dance: the text
+// came in on the request, so a rollback loses nothing the caller cannot write again, and the
+// file left under a project id that was rolled back is an orphan the boot reconcile removes.
+// ceiling: the paste is stored as typed. Markdown syntax still has to be stripped for the
+// narration source; that reduction belongs to the narration slice that reads this file.
 export function storeText(deps: TextStoreDeps, input: TextInput): Output {
   const name = outputFileName(input.role, 1, ".txt", input.stageKind);
   const target = outputPath(deps.paths, input.projectId, name);

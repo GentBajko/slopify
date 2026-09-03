@@ -8,12 +8,11 @@ import { aspectOf } from "./body-images.js";
 import { ConfirmedButton } from "./controls.js";
 import { ActionRow, EngravedLabel, Instructions, OutputDownload, StageBody } from "./parts.js";
 
-// "the thumbnail in its own single-cell group with its prompt text"
-// (uiux/screens/08-project.md). The thumbnail is a stage of its own here, so it gets the
-// row the reference sheet gives it rather than a corner of the image grid.
+// The thumbnail in its own single-cell group with its prompt text. It is a stage of its own
+// here, so it gets a row rather than a corner of the image grid.
 //
-// ceiling: the prompt is shown, not edited. `logic/12` §Q104 lets a stored rendered prompt
-// be edited before a re-run, and `edge/http/actions.ts` has no route that writes one back;
+// ceiling: the prompt is shown, not edited. A stored rendered prompt is meant to be
+// editable before a re-run, and `edge/http/actions.ts` has no route that writes one back;
 // the upgrade is a route that replaces `outputs.meta.prompt` and marks the stage stale.
 export function ThumbnailBody({ stage, project, outputs, actions, busy }: BodyProps) {
   const { api } = useApp();

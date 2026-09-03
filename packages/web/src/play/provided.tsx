@@ -4,9 +4,9 @@ import { Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Upload } from "@/play/state";
 
-// What a stage set to Provide draws instead of its generation controls (mockup §Q28):
+// What a stage set to Provide draws instead of its generation controls:
 // a paste area for the text stages and a file pick for the rest, with the staging
-// progress of each picked file under it (`logic/05` steps 5 and 6).
+// progress of each picked file under it.
 
 const fileInput =
   "text-small text-ink2 file:mr-3 file:h-8 file:rounded-control file:border file:border-line2 file:bg-panel2 file:px-3 file:text-ink";
@@ -67,7 +67,7 @@ export function FilePick({
   readonly multiple?: boolean | undefined;
   readonly uploads: readonly Upload[];
   readonly problem: string | undefined;
-  // `logic/05` §Q39: slideshow order is selection order, so the images say where they sit.
+  // Slideshow order is selection order, so the images say where they sit.
   readonly numbered?: boolean | undefined;
   readonly onPick: (files: readonly File[]) => void;
   readonly onRemove: ((key: string) => void) | undefined;

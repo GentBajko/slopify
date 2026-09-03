@@ -7,14 +7,14 @@ import type { RailProps } from "@/play/rail-frame";
 import { promptNames, railBeneath, railControls, SourceSwitch, StageRail } from "@/play/rail-frame";
 
 // The left column of Play: six rails sharing their borders, each with its lamp, glyph,
-// name, source switch and that source's controls (uiux/screens/06-play.md).
+// name, source switch and that source's controls.
 
 export function StageRails(props: RailProps) {
   const { form } = props;
 
   return (
     <RailGroup>
-      {/* `logic/05` §Q41: research only feeds article writing, so a provided article
+      {/* Research only feeds article writing, so a provided article
           hides the rail rather than leaving a switch that changes nothing. */}
       {form.sources.article === "provide" ? null : <ResearchRail {...props} />}
       <ArticleRail {...props} />
@@ -130,7 +130,7 @@ function ThumbnailRail({ form, prompts, problem, update, onPickFiles, onRemoveFi
   );
 }
 
-// `logic/01` step 5: the video is always generated, so this rail carries no switch and
+// The video is always generated, so this rail carries no switch and
 // says what it will be made of instead.
 function VideoRail({ form, silenceGapSeconds }: RailProps) {
   const parts = [

@@ -3,8 +3,7 @@ import { outputsOf, roleOf } from "./body.js";
 import { ConfirmedButton } from "./controls.js";
 import { ActionRow, Instructions, OutputDownload, OutputText, StageBody } from "./parts.js";
 
-// "Research: the notes in a 75 ch measure; 'Show instructions' toggle; Download"
-// (uiux/screens/08-project.md).
+// Research: the notes in a 75 ch measure; 'Show instructions' toggle; Download.
 export function ResearchBody({ stage, outputs, actions, busy }: BodyProps) {
   const mine = outputsOf(outputs, stage);
   const notes = roleOf(mine, "notes");

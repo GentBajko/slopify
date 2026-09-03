@@ -10,10 +10,9 @@ export interface ReadinessDeps {
   readonly probe: CliProbe;
 }
 
-// `logic/02` step 5 and §Q135: every supported provider is listed, keyed or not, found
-// or not, so Play can grey one out with a reason instead of hiding it. A keyed provider
-// is ready when a key is stored; a CLI provider when its binary answers. Readiness is
-// computed per request and nothing about a CLI is stored.
+// Every supported provider is listed, keyed or not, found or not, so Play can grey one out with
+// a reason instead of hiding it. A keyed provider is ready when a key is stored; a CLI provider
+// when its binary answers. Readiness is computed per request and nothing about a CLI is stored.
 export async function providerStatuses(deps: ReadinessDeps): Promise<readonly ProviderStatus[]> {
   const keyed = keyedProviders(deps.db);
   return await Promise.all(

@@ -13,7 +13,7 @@ import { coalesce, patchProject } from "./live.js";
 const burstMs = 200;
 
 // The project page's subscription: patch what the frame carries, ask for what it cannot,
-// and refetch outright when the browser reconnects (04-data-flow, SSE disconnect).
+// and refetch outright when the browser reconnects.
 export function useLiveProject(projectId: string): void {
   const { api, openEvents } = useApp();
   const queryClient = useQueryClient();

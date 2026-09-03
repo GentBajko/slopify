@@ -9,7 +9,7 @@ export interface Reconciled {
 }
 
 // Files the database does not know about, and staged uploads that never reached a
-// project, are removed at start (logic/05 §Q44, logic/14 step 5).
+// project, are removed at start.
 export function reconcileStorage(db: DatabaseSync, paths: Paths): Reconciled {
   const projects = idsOf(db, "SELECT id FROM projects", "id");
   const kept = new Set<string>();
@@ -21,12 +21,11 @@ export function reconcileStorage(db: DatabaseSync, paths: Paths): Reconciled {
     }
   }
 
-  // A stage's unfinished work is on the project too: `logic/08` §Q66 keeps the audio
-  // chunks a previous run finished so a manual retry re-runs only the failed ones, and
-  // `logic/13` step 2 keeps them through a cancel. A chunk is not an output - the
-  // concatenated body is the project's only body audio (§Q65) - so the file it wrote is
-  // named by its `stage_pieces` payload instead, and that is as much of a record as an
-  // outputs row.
+  // A stage's unfinished work is on the project too: the audio chunks a previous run
+  // finished are kept so a manual retry re-runs only the failed ones, and a cancel keeps
+  // them as well. A chunk is not an output - the concatenated body is the project's only
+  // body audio - so the file it wrote is named by its `stage_pieces` payload instead, and
+  // that is as much of a record as an outputs row.
   for (const row of db
     .prepare(
       "SELECT stages.project_id AS project_id, stage_pieces.payload AS payload FROM stage_pieces JOIN stages ON stages.id = stage_pieces.stage_id WHERE stage_pieces.payload IS NOT NULL",

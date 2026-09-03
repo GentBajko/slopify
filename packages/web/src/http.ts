@@ -5,7 +5,7 @@ import type { FieldError } from "@app/slices/admission/rules.js";
 // they read a refusal the same way and neither invents a sentence of its own.
 
 // RFC 9457 as `edge/http/problem.ts` writes it, with the `fields` extension member the
-// admission rules add (logic/04 §Q29).
+// admission rules add.
 export interface Problem {
   readonly title: string;
   readonly status: number;
@@ -14,9 +14,9 @@ export interface Problem {
 }
 
 // A refused save is an expected outcome, so it comes back as a value carrying the
-// server's own `fields[]` for the editor to mark (03-standards, typed results). One type
-// for prompts and entries, because `logic/15` §Q121 gives them one rule set and
-// `edge/http/entries.ts` reuses the prompt routes' refusal mapping.
+// server's own `fields[]` for the editor to mark. One type for prompts and entries, because
+// they share one rule set and `edge/http/entries.ts` reuses the prompt routes' refusal
+// mapping.
 export type SaveResult<T> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly fields: readonly FieldError[] };
@@ -44,8 +44,8 @@ export async function saved<T>(response: Response): Promise<SaveResult<T>> {
   }
   const problem = await problemOf(response);
   const fields = problem?.fields ?? [];
-  // 400 marks the lint that got past the editor, 409 the name the unique index refused
-  // (`logic/15` §Q122). Both name their fields; anything else is a fault and throws.
+  // 400 marks the lint that got past the editor, 409 the name the unique index refused. Both
+  // name their fields; anything else is a fault and throws.
   if ((response.status === 400 || response.status === 409) && fields.length > 0) {
     return { ok: false, fields };
   }

@@ -14,8 +14,8 @@ import { stagesOf } from "../admission/repo.js";
 import type { CancelDeps } from "./index.js";
 import { canceledByUser, cancelProject } from "./index.js";
 
-// `logic/13` from the slice's side: the abort is the runner's, and what is left on the
-// rows afterwards is this module's.
+// Cancel from the slice's side: the abort is the runner's, and what is left on the rows
+// afterwards is this module's.
 
 const silent: Log = { write: (): void => {} };
 const projectId = "p1";
@@ -66,7 +66,7 @@ function harness(
   };
 }
 
-// The runner's own answer to an aborted stage: `canceled` with §Q111's reason.
+// The runner's own answer to an aborted stage: `canceled`, with the reason it carries.
 function concludes(db: DatabaseSync): void {
   db.prepare(
     "UPDATE stages SET state = 'canceled', failure_reason = ? WHERE state = 'running'",
@@ -74,8 +74,8 @@ function concludes(db: DatabaseSync): void {
 }
 
 describe("cancelProject", () => {
-  // Step 3: "mark each `running` stage `canceled`; `pending` stages stay `pending`; the
-  // project reads `canceled`".
+  // Each `running` stage is marked `canceled`, `pending` stages stay `pending`, and the
+  // project reads `canceled`.
   it("reports the stages it stopped and leaves the pending ones pending", async () => {
     const h = harness({ audio: "running", images: "running", article: "done" });
 
@@ -86,8 +86,8 @@ describe("cancelProject", () => {
     expect(h.stateOf("article")).toBe("done");
   });
 
-  // §Q113: "a stage whose output was stored in the same instant as the cancel stays
-  // `done`; cancel never rolls back a stored output".
+  // A stage whose output was stored in the same instant as the cancel stays `done`; cancel
+  // never rolls back a stored output.
   it("does not count a stage that finished while the cancel was landing", async () => {
     const h = harness({ audio: "running", images: "running" }, (db) => {
       db.prepare("UPDATE stages SET state = 'done' WHERE kind = 'audio'").run();
@@ -100,7 +100,7 @@ describe("cancelProject", () => {
     expect(h.stateOf("audio")).toBe("done");
   });
 
-  // Step 4: "a second click is a no-op".
+  // A second click is a no-op.
   it("changes nothing and aborts nothing when the project is not running", async () => {
     let aborts = 0;
     const h = harness({ audio: "canceled", article: "done" }, () => {
@@ -114,8 +114,8 @@ describe("cancelProject", () => {
     expect(h.events).toEqual([]);
   });
 
-  // The invariant of step 3: "after cancel completes no stage of the project is
-  // `running`" - true even when the runner could not write the row itself.
+  // The invariant: after cancel completes no stage of the project is `running`, true even
+  // when the runner could not write the row itself.
   it("marks a stage the runner left running and tells the page about it", async () => {
     const h = harness({ audio: "running" }, () => {});
 

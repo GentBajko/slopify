@@ -5,7 +5,7 @@ import type { Output } from "@app/slices/storage/model.js";
 // The one-line summary in the middle of a rundown row: "7 chapters researched · 41
 // sources" in the design chapter's words, built here from what the project actually holds
 // rather than from anything invented. Pure, so every branch of it is tested without a
-// render (uiux/screens/08-project.md, Composition).
+// render.
 
 export const stageNames: Readonly<Record<StageKind, string>> = {
   research: "Research",
@@ -16,7 +16,7 @@ export const stageNames: Readonly<Record<StageKind, string>> = {
   video: "Video",
 };
 
-// What each stage's progress counts (`logic/01` §Q6): chapters, chunks, images, and a
+// What each stage's progress counts: chapters, chunks, images, and a
 // render percentage. The word the meter is measured in belongs beside the meter.
 const running: Readonly<Record<StageKind, (current: number, total: number) => string>> = {
   research: (current, total) => `chapter ${String(current)} of ${String(total)}`,
@@ -48,7 +48,7 @@ export function summaryOf(
       return filenames(mine) ?? "Provided";
     case "failed":
       // The row's error line carries the provider's own words; repeating them here would
-      // truncate them into the column (`logic/01` §Q10).
+      // truncate them into the column.
       return `Stopped after ${attempts(stage)}`;
     case "canceled":
       return "Canceled by user";

@@ -14,7 +14,7 @@ export function stagingPath(paths: Paths, stagedFileId: string): string {
   return contained(paths.staging, stagedFileId);
 }
 
-// Every asset of a project lives under its own folder (logic/14 §Q115); an id or a
+// Every asset of a project lives under its own folder; an id or a
 // stored path that resolves anywhere else is a bug in whatever produced it.
 function contained(root: string, path: string): string {
   const target = resolve(root, path);
@@ -25,11 +25,10 @@ function contained(root: string, path: string): string {
   return target;
 }
 
-// logic/14 step 2 fixes the names inside a project folder, so a provided file is
-// stored under the name its role dictates and keeps only its extension. The stage is part
-// of the name for the one role more than one stage produces: research and the article each
-// store what they sent (logic/06 step 4, logic/07 step 4), and the project page offers
-// them per stage ("Show instructions", uiux/screens/08-project).
+// The names inside a project folder are fixed, so a provided file is stored under the name
+// its role dictates and keeps only its extension. The stage is part of the name for the one
+// role more than one stage produces: research and the article each store what they sent,
+// and the project page offers them per stage under "Show instructions".
 export function outputFileName(
   role: OutputRole,
   index: number,

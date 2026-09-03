@@ -200,9 +200,9 @@ describe("a run against a collector", () => {
     for (const event of collector.received) {
       expect(event.id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
       expect(event.createdAt).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/);
-      // The never-list of logic/16 step 4, checked against what actually crossed the
-      // socket: the run above had a title, an article, two uploaded files and a project
-      // id, and none of them may appear anywhere in the delivered event.
+      // The never-list, checked against what actually crossed the socket: the run above
+      // had a title, an article, two uploaded files and a project id, and none of them may
+      // appear anywhere in the delivered event.
       const wire = JSON.stringify(event);
       for (const secret of ["Rope Tricks", "rope", "body.mp3", "shot.png", "never wanted"]) {
         expect(wire).not.toContain(secret);

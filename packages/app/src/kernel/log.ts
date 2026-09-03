@@ -15,9 +15,9 @@ export interface Log {
 }
 
 // ceiling: prefix matching, not a secret scanner. The prefixes cover the providers in
-// `slices/settings/model.ts`; fal.ai's `<uuid>:<hex>` form has no prefix to match on and
-// is the known gap. That is why LogFields is a closed set of three strings: no caller
-// can hand this module an arbitrary payload to serialise.
+// `slices/settings/model.ts`; fal.ai's `<uuid>:<hex>` form has no prefix and is the known
+// gap. Hence LogFields is a closed set of three strings - no caller can hand this module
+// an arbitrary payload to serialise.
 const keyLike =
   /\b(?:sk|rk|pk|hf|gsk|xai|nvapi|r8)[-_][A-Za-z0-9_-]{16,}|\bAIza[A-Za-z0-9_-]{16,}/g;
 const bearerLike = /\bBearer\s+[A-Za-z0-9._~+/=-]{8,}/gi;
@@ -44,8 +44,8 @@ export function openLog(logsDir: string, clock: Clock): Log {
   };
 }
 
-// Exported for the attempt wrapper: a provider's verbatim error is shown on the project
-// page and stored on the attempt, so it goes through the same filter as a log line.
+// Exported for the attempt wrapper: a provider's verbatim error reaches the project page
+// and the attempt row, so it goes through the same filter as a log line.
 export function redact(text: string): string {
   return text.replace(bearerLike, "Bearer [redacted]").replace(keyLike, "[redacted]");
 }

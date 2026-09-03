@@ -6,12 +6,10 @@ import type { Message } from "../../kernel/ports/llm.js";
 import { providerError } from "../../kernel/ports/model.js";
 
 // The local-agent seam, shaped after `slices/settings/cli-status.ts`'s `CliProbe`: a type
-// the adapters take as a parameter and one implementation over `node:child_process`
-// (05-dependencies, rung 3). It exists once rather than twice because killing the child on
-// abort, capping stderr, waiting for the exit code and turning a JSONL line into an event
-// are the same problems for Claude Code and for Codex. Everything either of them knows
-// about its own CLI - its flags, its event vocabulary, its usage fields - stays in its own
-// adapter; there is no base class and no provider framework here.
+// the adapters take as a parameter and one implementation over `node:child_process`. It
+// exists once because killing the child on abort, capping stderr, waiting for the exit code
+// and parsing a JSONL line are the same problems for Claude Code and for Codex. Flags,
+// event vocabulary and usage fields stay in each adapter; there is no base class here.
 
 export interface CliEnded {
   // Null when a signal killed the process rather than it exiting on its own.
@@ -41,12 +39,11 @@ export type RunCli = (binary: string, args: readonly string[], signal: AbortSign
 export const stderrMax = 8192;
 
 export function nodeRunCli(binary: string, args: readonly string[], signal: AbortSignal): CliRun {
-  // An argument array, never a shell string: a prompt carrying backticks, `$(...)`,
-  // quotes or newlines is one argv element and nothing in it can become a command.
-  // stdin is /dev/null because `codex exec` appends piped stdin to the prompt, and a pipe
-  // nobody closes would leave it waiting for an EOF that never comes.
-  // `signal` is how the child dies: Node sends it SIGTERM when the stage is cancelled, so
-  // no agent session outlives the run that started it (`logic/13`).
+  // An argument array, never a shell string: a prompt carrying backticks, `$(...)`, quotes or
+  // newlines is one argv element and nothing in it can become a command. stdin is /dev/null
+  // because `codex exec` appends piped stdin to the prompt, and a pipe nobody closes would
+  // leave it waiting for an EOF that never comes. `signal` is how the child dies: Node sends it
+  // SIGTERM when the stage is cancelled, so no agent session outlives the run that started it.
   const child = spawn(binary, [...args], {
     signal,
     stdio: ["ignore", "pipe", "pipe"],
@@ -98,9 +95,8 @@ export function nodeRunCli(binary: string, args: readonly string[], signal: Abor
 }
 
 // ceiling: both CLIs take one prompt string, so a system or assistant turn is flattened
-// into it under a header rather than being sent as its own message. Claude Code's
-// `--append-system-prompt` is the upgrade if a stage ever needs a real system turn; today
-// `logic/06` and `logic/07` each compose exactly one user message.
+// into it under a header. Claude Code's `--append-system-prompt` is the upgrade if a stage
+// ever needs a real system turn; today research and the article each compose one message.
 export function promptOf(messages: readonly Message[]): string {
   return messages
     .map((message) =>
@@ -109,8 +105,8 @@ export function promptOf(messages: readonly Message[]): string {
     .join("\n\n");
 }
 
-// A bare non-zero exit tells the user nothing, so whatever the CLI put on stderr is what
-// the stage shows (`logic/01` unhappy paths: the provider's error text verbatim).
+// A bare non-zero exit tells the user nothing, so the stage shows whatever the CLI put on
+// stderr - the provider's error text, verbatim.
 export function endedWithout(binary: string, ended: CliEnded, stderr: string): string {
   const said = redact(stderr.trim());
   const how =

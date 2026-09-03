@@ -12,14 +12,12 @@ import { ConfirmedButton } from "./controls.js";
 import { ActionRow, EngravedLabel, OutputDownload, StageBody } from "./parts.js";
 import { duration } from "./summary.js";
 
-// "Audio: three players when intro or outro exist (Intro, Body, Outro) with durations;
-// Download each; Re-run with a Voice select beside it; Chunking shown as text"
-// (uiux/screens/08-project.md).
-//
-// ceiling: the Voice is shown, not picked. `edge/http/actions.ts` re-runs a stage from the
-// project's stored configuration and takes no body, so a voice chosen here would have
-// nowhere to go; the upgrade is a payload on the re-run route that overwrites
-// `config.audio.voice` before the stage restarts.
+// Audio: three players when intro or outro exist (Intro, Body, Outro) with durations; Download
+// each; Re-run with a Voice select beside it; Chunking shown as text.  ceiling: the Voice is
+// shown, not picked. `edge/http/actions.ts` re-runs a stage from the project's stored
+// configuration and takes no body, so a voice chosen here would have nowhere to go; the upgrade
+// is a payload on the re-run route that overwrites `config.audio.voice` before the stage
+// restarts.
 const players: readonly { readonly role: OutputRole; readonly name: string }[] = [
   { role: "audio_intro", name: "Intro" },
   { role: "audio_body", name: "Body" },
@@ -90,7 +88,7 @@ function Player({ name, output }: { readonly name: string; readonly output: Outp
   );
 }
 
-// `logic/08` §Q65, said in the words Play offered the choice in.
+// The chunking modes, in the words Play offered the choice in.
 function chunkingOf(chunking: Chunking | undefined): string {
   if (chunking === undefined || chunking.mode === "whole") {
     return "the whole text as one request";

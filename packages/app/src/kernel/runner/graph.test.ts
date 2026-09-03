@@ -29,7 +29,7 @@ describe("deps", () => {
 
 describe("satisfied", () => {
   it("treats done, provided, and skipped alike", () => {
-    // logic/01 §Q2: "Dependencies satisfied by `provided` or `skipped` exactly as by `done`".
+    // Dependencies satisfied by `provided` or `skipped` exactly as by `done`.
     expect(satisfied("done")).toBe(true);
     expect(satisfied("provided")).toBe(true);
     expect(satisfied("skipped")).toBe(true);
@@ -72,9 +72,9 @@ describe("derive", () => {
     expect(derive([])).toBe("pending");
   });
 
-  // The rule this extends: `logic/13` step 3 says "the project reads `canceled`", and
-  // §Q113 lets the last running stage store its output as the cancel lands and stay
-  // `done`. Nothing is then `canceled`, and §Q9's four states have no answer.
+  // The rule this extends: a cancelled project reads `canceled`, but the last running
+  // stage may store its output as the cancel lands and stay `done`. Nothing is then
+  // `canceled`, and the four derived states have no answer.
   it("reads canceled when a run stopped after a stage finished and nothing runs", () => {
     expect(derive(stages({ research: "done" }))).toBe("canceled");
     expect(derive(stages({ ...allSatisfied(), images: "done", video: "pending" }))).toBe(
@@ -99,7 +99,7 @@ function allSatisfied(): Partial<Record<StageKind, StageState>> {
   };
 }
 
-// The thin meter under a running row on 07 Projects, "averaging stage progress".
+// The thin meter under a running row on Projects, averaging stage progress.
 describe("progressOf", () => {
   function measured(over: Partial<Record<StageKind, readonly [number | null, number | null]>>) {
     return stageKinds.map((kind) => {

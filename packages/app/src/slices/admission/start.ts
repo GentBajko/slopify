@@ -12,7 +12,7 @@ export interface StartedRun {
   readonly stages: readonly Stage[];
 }
 
-// logic/01 step 1: Provide → `provided` with its output attached; Off → `skipped`;
+// Provide → `provided` with its output attached; Off → `skipped`;
 // everything else → `pending`.
 export function initialState(source: StageSource): StageState {
   if (source === "provide") {
@@ -21,9 +21,8 @@ export function initialState(source: StageSource): StageState {
   return source === "off" ? "skipped" : "pending";
 }
 
-// logic/04 step 6 with 04-data-flow Run step 2: the project row, its six stages, and the
-// provided content all land together or not at all. The caller ticks the runner after
-// this returns, never inside it.
+// The project row, its six stages and the provided content all land together or not at
+// all. The caller ticks the runner after this returns, never inside it.
 export function startRun(
   deps: StorageDeps,
   draft: RunDraft,
@@ -88,9 +87,9 @@ function attachProvided(
     });
   }
   if (sources.article === "provide" && provided.article !== undefined) {
-    // logic/08 step 1: the end-matter split runs when the article becomes done *or
-    // provided*, so a pasted Sources Consulted list is cut into its own file here exactly
-    // as the article stage cuts a written one, and never reaches the narration.
+    // The end-matter split runs when the article becomes done *or provided*, so a pasted
+    // Sources Consulted list is cut into its own file here exactly as the article stage cuts a
+    // written one, and never reaches the narration.
     storeArticleText(deps, { projectId, markdown: provided.article.trim() });
   }
   if (sources.audio === "provide") {
@@ -100,7 +99,7 @@ function attachProvided(
     attach(deps, projectId, "thumbnail", provided.thumbnail, "thumbnail", collected);
   }
   if (sources.images === "provide") {
-    // logic/05 §Q39: slideshow order is the order the user left the list in.
+    // Slideshow order is the order the user left the list in.
     for (const [index, stagedFileId] of (provided.images ?? []).entries()) {
       attach(deps, projectId, "images", stagedFileId, "image", collected, index + 1);
     }

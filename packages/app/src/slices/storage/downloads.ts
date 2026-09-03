@@ -64,7 +64,7 @@ export function slugOf(title: string): string {
 // of this module's surface, because a download name is built from it.
 export { assetOf };
 
-// logic/14 §Q116: "single files as `<title-slug>-<asset>.<ext>`".
+// "single files as `<title-slug>-<asset>.<ext>`".
 export function downloadName(slug: string, output: Output): string {
   return `${slug}-${assetOf(output)}${extname(output.path)}`;
 }
@@ -94,7 +94,7 @@ export function findDownload(deps: DownloadDeps, projectId: string, asset: strin
   };
 }
 
-// logic/14 §Q116: "download all" images as `<title-slug>-images.zip`, thumbnail included.
+// "download all" images as `<title-slug>-images.zip`, thumbnail included.
 export function imagesZip(deps: DownloadDeps, projectId: string): ImagesZipResult {
   const title = projectTitle(deps.db, projectId);
   if (title === undefined) {
@@ -108,11 +108,11 @@ export function imagesZip(deps: DownloadDeps, projectId: string): ImagesZipResul
     }
     const path = outputPath(deps.paths, projectId, output.path);
     if (sizeOf(path) === undefined) {
-      // A missing file is the project page's problem per logic/14; the rest still zips.
+      // A missing file is the project page's problem; the rest still zips.
       continue;
     }
     // Images are already compressed formats, so deflating them costs time and saves
-    // nothing. ceiling: 60 images (logic/05 §Q39) are read into memory at once; a set
+    // nothing. ceiling: 60 images are read into memory at once; a set
     // large enough to hurt would move to fflate's streaming Zip.
     entries[`${slug}-${assetOf(output)}${extname(output.path)}`] = [
       readFileSync(path),

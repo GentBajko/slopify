@@ -27,10 +27,10 @@ import { outputsOf } from "../src/slices/storage/repo.js";
 import type { Counted } from "../src/slices/telemetry/record.fake.js";
 import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 
-// `logic/13` through the real runner and the real images stage: what a cancel aborts,
-// what it keeps, and what a retry afterwards has left to do. No provider is called - the
-// image port below is the scripted double (06-testing) - and no render is run: the video
-// stage is a stub here precisely so the test can prove it never started.
+// Cancel through the real runner and the real images stage: what it aborts, what it keeps,
+// and what a retry afterwards has left to do. No provider is called - the image port below
+// is the scripted double - and no render is run: the video stage is a stub here precisely
+// so the test can prove it never started.
 
 const silent: Log = { write: (): void => {} };
 const projectId = "p1";
@@ -79,7 +79,7 @@ function harness(images: number, port: ImagePort): Harness {
     "2026-09-03",
     "2026-09-03",
   );
-  // `logic/01` step 1: Off is `skipped`, Provide is `provided` with its output attached.
+  // Off is `skipped`, Provide is `provided` with its output attached.
   const states: Record<StageKind, StageState> = {
     research: "skipped",
     article: "provided",
@@ -197,8 +197,8 @@ function imagePaths(h: Harness): string[] {
 }
 
 describe("cancelling a run", () => {
-  // Steps 1-3 and §Q110: the images that landed are kept, the calls in flight are aborted
-  // and nothing waits for them, the stage reads `canceled` and the project with it.
+  // The images that landed are kept, the calls in flight are aborted and nothing waits for
+  // them, the stage reads `canceled` and the project with it.
   it("stops the calls in flight, keeps what landed, and reads canceled", async () => {
     // One image answers at once; the other two never answer, which is what a cancel has to
     // be able to walk away from.
@@ -227,31 +227,31 @@ describe("cancelling a run", () => {
 
     expect(result).toEqual({ ok: true, canceled: ["images"], state: "canceled" });
     expect(h.stateOf("images")).toBe("canceled");
-    // §Q110: "within a running stage, the pieces already completed ... for resume".
+    // Within a running stage, the pieces already completed.. for resume.
     expect(piecesOf(h.db, "s-images", "image").map((piece) => piece.state)).toEqual([
       "done",
       "pending",
       "pending",
     ]);
     expect(imagePaths(h)).toEqual(["images/001.png"]);
-    // §Q111's invariant: after cancel completes no stage of the project is running, and
+    // After cancel completes no stage of the project is running, and
     // the stages the run had not reached stay pending.
     expect(h.stateOf("video")).toBe("pending");
     expect(h.videoRuns()).toBe(0);
-    // §Q112: an aborted call contributes nothing - the row is closed with no error text
+    // An aborted call contributes nothing - the row is closed with no error text
     // because the user stopped it, the provider did not fail.
     const canceled = attemptsOf(h.db, "s-images").filter((one) => one.outcome === "canceled");
     expect(canceled).toHaveLength(2);
     expect(canceled.map((one) => one.errorText)).toEqual([null, null]);
     // Nothing was retried: a cancel is not a failure.
     expect(attemptsOf(h.db, "s-images").every((one) => one.n === 1)).toBe(true);
-    // §Q112 through logic/16 step 3: the stage never completed, so it counted nothing -
-    // the two aborted calls least of all.
+    // The stage never completed, so it counted nothing - the two aborted calls least of
+    // all.
     expect(h.counted.events()).toEqual([]);
   });
 
-  // Step 5: "retry on a `canceled` stage resumes exactly like a `failed` one ... and the
-  // cascade continues".
+  // A retry on a `canceled` stage resumes exactly like a `failed` one, and the cascade
+  // continues.
   it("resumes on retry, remakes only what was missing, and runs on to the video", async () => {
     let landedFirst = false;
     const h = harness(
@@ -296,15 +296,15 @@ describe("cancelling a run", () => {
     expect(h.stateOf("images")).toBe("done");
     // The cascade continues: the video the cancel held back renders once the stage is done.
     expect(h.videoRuns()).toBe(1);
-    // §Q112 again: the resumed run made two images and counted those two. The image the
-    // cancelled run had already stored is not made again, so it is not counted again.
+    // The resumed run made two images and counted those two. The image the cancelled run
+    // had already stored is not made again, so it is not counted again.
     expect(h.counted.events().map((one) => one.counters.images)).toEqual([2]);
     expect(derive(stagesOf(h.db, projectId))).toBe("done");
   });
 
-  // §Q113: "a stage whose output was stored in the same instant as the cancel stays
-  // `done`; cancel never rolls back a stored output" - and the barrier is what stops that
-  // stage from releasing the video into a run nobody aborted.
+  // A stage whose output was stored in the same instant as the cancel stays `done`; cancel
+  // never rolls back a stored output - and the barrier is what stops that stage from releasing
+  // the video into a run nobody aborted.
   it("keeps a stage that stored its output as the cancel landed, and starts no dependent", async () => {
     const inFlight = latch();
     const h = harness(
@@ -312,8 +312,8 @@ describe("cancelling a run", () => {
       imagePort(
         (req) =>
           new Promise<GeneratedImage>((resolve) => {
-            // The image answers exactly when the abort arrives, which is the instant
-            // §Q113 is about.
+            // The image answers exactly when the abort arrives, which is the instant a
+            // stored output has to survive.
             req.signal.addEventListener("abort", () => {
               resolve({ bytes: png, mime: "image/png" });
             });
@@ -329,18 +329,17 @@ describe("cancelling a run", () => {
     expect(h.stateOf("images")).toBe("done");
     expect(imagePaths(h)).toEqual(["images/001.png"]);
     expect(existsSync(join(h.dir, "images", "001.png"))).toBe(true);
-    // No stage ended `canceled`, so §Q9's derivation has nothing to read the cancel off.
-    // `logic/13` step 3 says the project reads `canceled` all the same, and
-    // `kernel/runner/graph.ts` extends §Q9's fallback to say so: a run that carried a
-    // stage to `done` and then stopped is not a run about to start.
+    // No stage ended `canceled`, so the derivation has nothing to read the cancel off. The
+    // project reads `canceled` all the same, because `kernel/runner/graph.ts` extends the
+    // fallback: a run that carried a stage to `done` and then stopped is not a run about
+    // to start.
     expect(result).toEqual({ ok: true, canceled: [], state: "canceled" });
     // Every dependency of the video is now satisfied - audio provided, thumbnail skipped,
     // images done - so only the cancel's own barrier keeps the render from starting.
     expect(h.stateOf("video")).toBe("pending");
     expect(h.videoRuns()).toBe(0);
-    // §Q112 reads from the other side here: the call completed before the abort took
-    // effect, the image is stored, and it is counted. The render never ran, so no video
-    // is counted.
+    // The other side of it: the call completed before the abort took effect, the image is
+    // stored, and it is counted. The render never ran, so no video is counted.
     expect(h.counted.events().map((one) => one.counters)).toEqual([
       { stage: "images", provider: "fake-image", model: "fake-diffusion", images: 1 },
     ]);

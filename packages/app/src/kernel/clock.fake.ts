@@ -1,8 +1,7 @@
 import type { Clock } from "./clock.js";
 
-// Test support, not shipped: `tsconfig.build.json` keeps `*.fake.ts` out of `dist`.
-// 06-testing Doubles makes the clock injectable so retries, backoff and timestamps are
-// deterministic; this is the one place that double is written.
+// Test support, not shipped: `tsconfig.build.json` keeps `*.fake.ts` out of `dist`. The
+// clock is injectable so retries and timestamps are deterministic.
 
 // A clock that never moves and never waits, for the code that only stamps a row.
 export function fixedClock(iso: string): Clock {
@@ -13,8 +12,8 @@ export function fixedClock(iso: string): Clock {
 }
 
 export interface ManualClock extends Clock {
-  // Every duration asked of `sleep`, in the order it was asked, so a test can read the
-  // backoff schedule off the clock instead of guessing at wall time.
+  // Every duration asked of `sleep`, in order, so a test can read the backoff schedule off
+  // the clock instead of guessing at wall time.
   readonly waits: readonly number[];
   // Runs the pending timers, earliest first, until `work` settles. Time only moves here.
   readonly settle: <T>(work: Promise<T>) => Promise<T>;
@@ -78,10 +77,10 @@ export function manualClock(startIso = "2026-09-02T10:00:00.000Z"): ManualClock 
         },
       );
       // The rejection is delivered by the return below; this only stops Node reporting it
-      // as unhandled in the turns between.
+      // as unhandled in between.
       tracked.catch((): void => {});
-      // ceiling: a thousand timer firings is far past any real schedule (four attempts
-      // wait three times) and turns a hung test into a message instead of a timeout.
+      // ceiling: a thousand firings is far past any real schedule (four attempts wait
+      // three times) and turns a hung test into a message instead of a timeout.
       for (let guard = 0; guard < 1000; guard += 1) {
         await flush();
         if (done) {
@@ -100,8 +99,8 @@ export function manualClock(startIso = "2026-09-02T10:00:00.000Z"): ManualClock 
   };
 }
 
-// One macrotask turn drains every microtask queued behind it; three covers work that
-// hops the queue again on the way.
+// One macrotask turn drains every microtask queued behind it; three covers work that hops
+// the queue again on the way.
 async function flush(): Promise<void> {
   for (let turn = 0; turn < 3; turn += 1) {
     await new Promise<void>((resolve) => {

@@ -98,7 +98,6 @@ describe("createPrompt", () => {
     expect(listPrompts(library.db)).toEqual([]);
   });
 
-  // Verification 2 and §Q122.
   it("refuses a name that differs only by case within the same kind", () => {
     const library = deps();
     createPrompt(library, { kind: "article", name: "Dossier", body: "{{topic}}" });
@@ -134,7 +133,7 @@ describe("createPrompt", () => {
 });
 
 describe("updatePrompt", () => {
-  // §Q125: a save overwrites, and the stored slots follow the new body.
+  // A save overwrites, and the stored slots follow the new body.
   it("overwrites the body and recomputes the slots", () => {
     const library = deps();
     createPrompt(library, { kind: "article", name: "Dossier", body: "{{topic}} {{era}}" });
@@ -149,7 +148,7 @@ describe("updatePrompt", () => {
     expect(promptById(library.db, "t1")?.slots).toEqual(["era"]);
   });
 
-  // §Q122: the kind may be changed after creation.
+  // The kind may be changed after creation.
   it("moves a prompt to another kind", () => {
     const library = deps();
     createPrompt(library, { kind: "article", name: "Dossier", body: "b" });
@@ -225,7 +224,7 @@ describe("removePrompt", () => {
     expect(removePrompt(deps(), "nope")).toEqual({ ok: false, reason: "not-found" });
   });
 
-  // §Q123 and 02-models: a project references a template by name inside its config and
+  // A project references a template by name inside its config and
   // never by foreign key, so deleting the template leaves the project untouched.
   it("leaves a project that used the prompt exactly as it was", () => {
     const library = deps();
@@ -244,7 +243,7 @@ describe("removePrompt", () => {
 });
 
 describe("listPrompts", () => {
-  // `logic/15` step 5: sorted by name.
+  // Sorted by name.
   it("sorts by name without regard to case", () => {
     const library = deps();
     createPrompt(library, { kind: "article", name: "zebra", body: "b" });
@@ -259,7 +258,7 @@ describe("listPrompts", () => {
   });
 });
 
-// §Q121: the entries library obeys the same rules under its own category.
+// The entries library obeys the same rules under its own category.
 describe("entries", () => {
   it("stores an entry with its mode and detected slots", () => {
     const library = deps();

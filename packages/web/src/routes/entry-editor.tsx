@@ -26,10 +26,10 @@ import {
 import { categoryOptions, modeHint, modeOptions, noSlotsHint } from "@/lib/entry-options";
 import { entriesQuery } from "@/queries";
 
-// One intro or outro: a name, a category, a mode and a body whose `{{slots}}` are shown as
-// they are typed (uiux/screens/09-intros-outros.md). Every rule the Save obeys is the
-// shared lint of `@/lib/draft-lint`, which is the server's own `lintEntry`, so the editor
-// refuses exactly what the server would and says the same sentence about it.
+// One intro or outro: a name, a category, a mode and a body whose `{{slots}}` are shown as they
+// are typed. Every rule the Save obeys is the shared lint of `@/lib/draft-lint`, which is the
+// server's own `lintEntry`, so the editor refuses exactly what the server would and says the
+// same sentence about it.
 export function EntryEditorRoute({
   entryId,
   category,
@@ -38,7 +38,7 @@ export function EntryEditorRoute({
 }: {
   readonly entryId: string | undefined;
   readonly category: EntryCategory;
-  // The entry this one is a copy of (`logic/15` §Q124), when Duplicate opened the editor.
+  // The entry this one is a copy of, when Duplicate opened the editor.
   readonly from: string | undefined;
   readonly onLeave: (category: EntryCategory) => void;
 }) {
@@ -161,7 +161,7 @@ export function EntryEditorRoute({
                 </p>
               )}
             </div>
-            {/* §Q122: the category may change after creation, and a name is only taken
+            {/* The category may change after creation, and a name is only taken
                 within its own category, so a collision under the old one is moot. */}
             <LabelledSwitch
               label="Category"

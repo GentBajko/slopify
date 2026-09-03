@@ -26,10 +26,9 @@ import {
 import { kindOptions } from "@/lib/prompt-kinds";
 import { promptsQuery } from "@/queries";
 
-// One prompt: a name, a kind and a body whose `{{slots}}` are shown as they are typed
-// (uiux/screens/05-prompt-editor.md). Every rule the Save obeys is the shared lint of
-// `@/lib/draft-lint`, so the editor refuses exactly what the server would and says the
-// same sentence about it.
+// One prompt: a name, a kind and a body whose `{{slots}}` are shown as they are typed. Every
+// rule the Save obeys is the shared lint of `@/lib/draft-lint`, so the editor refuses exactly
+// what the server would and says the same sentence about it.
 export function PromptEditorRoute({
   promptId,
   kind,
@@ -38,7 +37,7 @@ export function PromptEditorRoute({
 }: {
   readonly promptId: string | undefined;
   readonly kind: PromptKind;
-  // The prompt this one is a copy of (`logic/15` §Q124), when Duplicate opened the editor.
+  // The prompt this one is a copy of, when Duplicate opened the editor.
   readonly from: string | undefined;
   readonly onLeave: (kind: PromptKind) => void;
 }) {
@@ -102,10 +101,10 @@ export function PromptEditorRoute({
   const problems = draftProblems(draft, refused);
   const blocked = firstProblem(problems);
   const slots = slotNames(draft.body);
-  // An untouched body is not an error on the page: its "A body is required." is the
-  // sentence beside Save, not a red mark on a field nobody has typed in yet.
-  // ceiling: a body past `bodyMax` lands in this list too, under a heading that counts
-  // slot errors. It takes 100 000 characters to see; the upgrade is a second list.
+  // An untouched body is not an error on the page: its "A body is required." is the sentence
+  // beside Save, not a red mark on a field nobody has typed in yet. ceiling: a body past
+  // `bodyMax` lands in this list too, under a heading that counts slot errors. It takes 100 000
+  // characters to see; the upgrade is a second list.
   const lint = draft.body.trim() === "" ? [] : bodyProblems(problems);
   const named = draft.name.trim() === "" ? [] : nameProblems(problems);
 
@@ -157,7 +156,7 @@ export function PromptEditorRoute({
                 </p>
               )}
             </div>
-            {/* §Q122: the kind may change after creation, and a name is only taken
+            {/* The kind may change after creation, and a name is only taken
                 within its own kind, so a collision under the old one is moot. */}
             <LabelledSwitch
               label="Kind"

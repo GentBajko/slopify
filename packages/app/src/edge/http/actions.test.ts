@@ -14,8 +14,8 @@ import { stageKinds } from "../../kernel/pipeline.js";
 import { createHub } from "../events/hub.js";
 import { createApp } from "./app.js";
 
-// The action routes of `logic/12` and `logic/13`: what each refusal answers with, and
-// that a successful action is the one thing that ticks the runner.
+// The re-run and cancel routes: what each refusal answers with, and that a successful
+// action is the one thing that ticks the runner.
 
 const clock = fixedClock("2026-09-03T09:00:00.000Z");
 const log: Log = { write: (): void => {} };
@@ -253,7 +253,7 @@ describe("the image actions", () => {
     expect(await response.json()).toMatchObject({ redone: ["video"] });
   });
 
-  // `logic/09` §Q75 and `logic/12`'s invariant, in the words the page shows.
+  // The image-delete and re-run preconditions, in the words the page shows.
   it("refuses the last image with the reason", async () => {
     const h = harness();
     await h.app.request(`/api/projects/${projectId}/images/o-image-1`, { method: "DELETE" });
@@ -303,11 +303,11 @@ describe("cancel", () => {
       project: { status: "canceled" },
     });
     expect(h.aborted).toEqual([projectId]);
-    // §Q111: "a canceled project never resumes on its own".
+    // A canceled project never resumes on its own.
     expect(h.ticked).toEqual([]);
   });
 
-  // Step 4: "a second click is a no-op".
+  // A second click is a no-op.
   it("answers a second click without aborting anything", async () => {
     const h = harness({ audio: "canceled", video: "pending" });
 

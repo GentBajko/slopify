@@ -10,7 +10,7 @@ import type {
 import type { ModelInfo, ProviderErrorInit } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 
-// The scripted double every later stage's tests run against (06-testing Doubles): the
+// The scripted double every later stage's tests run against: the
 // only doubles in the project are these three, so they carry the seam's shape and
 // nothing mocks past it.
 
@@ -19,13 +19,12 @@ export interface FakeLlmOptions {
   readonly capabilities?: LlmCapabilities;
   readonly models?: readonly ModelInfo[];
   readonly deltas?: readonly string[];
-  // The deltas one request answers with, when the answer has to depend on what was
-  // asked: `logic/06` sends a planner call, one call per chapter and a synthesis call to
-  // the same adapter. The attempt number is 1-based, as `failOnAttempt`'s key is.
+  // The deltas one request answers with, when the answer has to depend on what was asked:
+  // research sends a planner call, one call per chapter and a synthesis call to the same
+  // adapter. The attempt number is 1-based, as `failOnAttempt`'s key is.
   readonly reply?: ((req: LlmCompletion, attempt: number) => readonly string[]) | undefined;
-  // `usage: null` is the provider that reports none (logic/16 §Q131), and it has to be
-  // tellable from the option not being given at all, so it is read with `in` rather than
-  // with `??`.
+  // `usage: null` is the provider that reports none, and it has to be tellable from the option
+  // not being given at all, so it is read with `in` rather than with `??`.
   readonly usage?: Usage | null;
   readonly finishReason?: string | null;
   // Fake milliseconds spent on the injected clock before each delta: how a test drives

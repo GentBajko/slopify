@@ -21,16 +21,15 @@ import { cn } from "@/lib/utils";
 import { keys, promptsQuery } from "@/queries";
 
 // One row of the rundown, and the same shape for a skeleton. The Slots column collapses
-// under the name below 768 px (uiux/screens/04-prompts.md, Narrow).
+// under the name below 768 px.
 const row =
   "grid grid-cols-[minmax(0,1fr)_auto_32px] items-center gap-x-[14px] gap-y-[6px] border-b border-line px-4 py-[14px] last:border-b-0 md:grid-cols-[260px_minmax(0,1fr)_auto_32px]";
 const slotsCell = "col-span-3 col-start-1 row-start-2 flex flex-wrap gap-[6px] md:col-span-1";
 const slotsWide = "md:col-start-2 md:row-start-1";
 
-// Every saved prompt of one kind, sorted by name by the list endpoint (`logic/15` step 5).
-// Navigation that only follows a link is a `Link`; the tab switch has to rewrite the URL
-// it is already on, so it is handed up to router.tsx instead of reaching for a router
-// here.
+// Every saved prompt of one kind, sorted by name by the list endpoint. Navigation that only
+// follows a link is a `Link`; the tab switch has to rewrite the URL it is already on, so it is
+// handed up to router.tsx instead of reaching for a router here.
 export function PromptsRoute({
   kind,
   onKind,
@@ -124,7 +123,7 @@ export function PromptsRoute({
       <ConfirmDialog
         open={deleting !== undefined}
         title={deleting === undefined ? "" : `Delete "${deleting.name}"?`}
-        // `logic/15` §Q123: a project holds its own rendered text, so nothing it made is
+        // A project holds its own rendered text, so nothing it made is
         // touched. It goes on showing the name it was run with, marked "(deleted)".
         consequence="Projects that used it keep their text."
         verb="Delete"
@@ -153,8 +152,7 @@ function NewPromptButton({ kind }: { readonly kind: PromptKind }) {
   );
 }
 
-// An empty kind teaches what a prompt is and repeats the one action
-// (uiux/screens/04-prompts.md, States).
+// An empty kind teaches what a prompt is and repeats the one action.
 function EmptyKind({ kind }: { readonly kind: PromptKind }) {
   return (
     <RailGroup>
@@ -187,7 +185,7 @@ function RowOverflow({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
-        {/* §Q124: the copy is named "<name> copy" and opened for editing, so a name that
+        {/* The copy is named "<name> copy" and opened for editing, so a name that
             is already taken is renamed before it is ever saved. */}
         <DropdownMenuItem asChild>
           <Link to="/prompts/new" search={{ kind: prompt.kind, from: prompt.id }}>

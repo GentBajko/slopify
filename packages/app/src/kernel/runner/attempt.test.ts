@@ -102,8 +102,8 @@ describe("attempt", () => {
     ]);
   });
 
-  // logic/01 step 6: "attempted up to 4 times: the first attempt plus 3 retries, waiting
-  // 2 s, 8 s, 30 s between attempts".
+  // Attempted up to 4 times: the first attempt plus 3 retries, waiting 2 s, 8 s, 30 s between
+  // attempts.
   it("makes four attempts in all, waiting 2 s, 8 s and 30 s between them", async () => {
     const h = harness();
     let calls = 0;
@@ -156,7 +156,7 @@ describe("attempt", () => {
     expect(gaps(h.attempts.rows)).toEqual([2000]);
   });
 
-  // logic/09 §Q74: a content-policy refusal fails that call immediately, no retries.
+  // A content-policy refusal fails that call immediately, no retries.
   it("stops on a refusal and fails with the provider's own words", async () => {
     const h = harness();
     let calls = 0;
@@ -178,7 +178,7 @@ describe("attempt", () => {
     expect(h.clock.now().toISOString()).toBe("2026-09-02T10:00:00.000Z");
   });
 
-  // logic/06 §Q47: a model that cannot ground on the web fails the stage, no fallback.
+  // A model that cannot ground on the web fails the stage, no fallback.
   it("stops on an unsupported capability", async () => {
     const h = harness();
     let calls = 0;
@@ -196,7 +196,7 @@ describe("attempt", () => {
     expect(calls).toBe(1);
   });
 
-  // logic/02 §Q13: "the next attempt finds no key, fails immediately without retries".
+  // The next attempt finds no key, fails immediately without retries.
   it("stops when the provider has no key stored", async () => {
     const h = harness();
     let calls = 0;
@@ -218,7 +218,7 @@ describe("attempt", () => {
     expect(h.clock.now().toISOString()).toBe("2026-09-02T10:00:00.000Z");
   });
 
-  // logic/02 §Q11: a bad key fails the call and the retry policy runs like any other.
+  // A bad key fails the call and the retry policy runs like any other.
   it("retries an auth failure like any other", async () => {
     const h = harness();
     let calls = 0;
@@ -246,7 +246,7 @@ describe("attempt", () => {
       };
     }
 
-    // logic/01 §Q62: a streaming call's 120 s is measured between chunks.
+    // A streaming call's 120 s is measured between chunks.
     it("lets a streaming call run past 120 s while chunks keep arriving", async () => {
       const h = harness();
 
@@ -296,7 +296,7 @@ describe("attempt", () => {
       expect(h.attempts.rows[0]?.endedAt).toBe("2026-09-02T10:02:01.000Z");
     });
 
-    // logic/09 §Q77: an image call gets 300 s.
+    // An image call gets 300 s.
     it("gives an image call 300 s and a narration call 120 s", async () => {
       const h = harness();
 
@@ -312,7 +312,7 @@ describe("attempt", () => {
     });
   });
 
-  // logic/13 §Q109 and §Q112: the stage's own abort ends the call where it stands, and
+  // The stage's own abort ends the call where it stands, and
   // the wrapper does not retry a call nobody is waiting for any more.
   it("stops for good when the stage is aborted mid-attempt", async () => {
     const h = harness();

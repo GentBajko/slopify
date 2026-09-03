@@ -1,16 +1,15 @@
 import type { StageKind } from "../../kernel/pipeline.js";
 import type { TelemetryEvent, TelemetryPayload } from "./model.js";
 
-// What `uiux/screens/10-usage.md` shows, computed from the local event log alone.
-// logic/16 step 6 and §Q132: "this install's all-time totals per counter of step 3,
-// computed from the local log, independent of delivery", and the invariant that the page's
-// totals equal the sum of that log. Nothing here reads a project, a stage or a file: the
-// same rows the collector receives are the only source, so what the page shows and what
-// slopify.stream aggregates cannot drift apart.
+// What the Usage screen shows: this install's all-time totals per counter, computed from
+// the local event log alone and independent of delivery, so the page's totals always equal
+// the sum of that log. Nothing here reads a project, a stage or a file - the same rows the
+// collector receives are the only source, so what the page shows and what slopify.stream
+// aggregates cannot drift apart.
 
 // The five counters of the tally board, in the marketing page's own words: videos made,
 // audio hours, images made, tokens used, projects. Seconds rather than hours, because
-// rounding to hours is the screen's business and §Q132 wants the sum of the log.
+// rounding to hours is the screen's business and this is the sum of the log.
 export interface UsageCounters {
   readonly videosMade: number;
   readonly audioSeconds: number;
@@ -29,8 +28,8 @@ export interface StageTokens {
 }
 
 export interface Usage {
-  // Null until the first-run notice is dismissed, which is when the id is made
-  // (logic/16 step 1). The screen shows it at the bottom beside the app version.
+  // Null until the first-run notice is dismissed, which is when the id is made. The screen
+  // shows it at the bottom beside the app version.
   readonly machineId: string | null;
   readonly appVersion: string;
   readonly counters: UsageCounters;
@@ -62,8 +61,8 @@ function counters(events: readonly TelemetryEvent[]): UsageCounters {
     if (event.type === "project.created") {
       projects += 1;
     }
-    // One event per completed render (logic/16 step 3), which is the same rule the
-    // collector counts `videos_made` by, so the local page and the public board agree.
+    // One event per completed render, which is the same rule the collector counts `videos_made`
+    // by, so the local page and the public board agree.
     if (event.payload.stage === "video") {
       videosMade += 1;
     }
@@ -74,9 +73,9 @@ function counters(events: readonly TelemetryEvent[]): UsageCounters {
   return { videosMade, audioSeconds, imagesMade, tokensUsed, projects };
 }
 
-// §Q128 counts tokens "with provider and model names, per stage", so the table groups by
-// all three. Rows with no tokens are left out: the table's two number columns would both
-// read zero, and the render and the image calls that produce them report no usage at all.
+// Tokens are counted with provider and model names per stage, so the table groups by all
+// three. Rows with no tokens are left out: the two number columns would both read zero, and
+// the render and image calls that produce them report no usage at all.
 //
 // ceiling: this is a per-stage table, not a per-model one. The user deferred the per-model
 // breakdown on the public counters on 2026-09-03; the payload already carries the provider

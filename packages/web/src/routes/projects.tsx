@@ -20,7 +20,7 @@ import { startedAt } from "@/lib/utils";
 import { keys, projectsQuery } from "@/queries";
 
 // One row of the rundown, and the same shape for a skeleton. Below 768 px the prompt and
-// the started time stack under the title (uiux/screens/07-projects.md, Narrow).
+// the started time stack under the title.
 const row =
   "relative grid grid-cols-[14px_minmax(0,1fr)_auto_32px] items-center gap-x-[14px] gap-y-[4px] border-b border-line px-4 py-[14px] last:border-b-0 md:grid-cols-[14px_minmax(0,1fr)_140px_100px_32px]";
 const timeCell =
@@ -28,10 +28,9 @@ const timeCell =
 const wordCell = "col-start-3 row-start-1 justify-end md:col-start-4";
 const menuCell = "relative z-10 col-start-4 row-start-1 size-8 p-0 md:col-start-5";
 
-// Every run ever started, newest first (uiux/screens/07-projects.md). The row is one grid
-// so the columns line up down the sheet; the title's link is stretched across it with an
-// overlay, which keeps the overflow button a sibling rather than a control nested inside
-// a link.
+// Every run ever started, newest first. The row is one grid so the columns line up down the
+// sheet; the title's link is stretched across it with an overlay, which keeps the overflow
+// button a sibling rather than a control nested inside a link.
 export function ProjectsRoute() {
   const { api } = useApp();
   const queryClient = useQueryClient();
@@ -98,7 +97,7 @@ export function ProjectsRoute() {
       <ConfirmDialog
         open={deleting !== undefined}
         title={deleting === undefined ? "" : `Delete "${deleting.title}"?`}
-        // `logic/14` step 4: the rows and the folder both go, and nothing brings them back.
+        // The rows and the folder both go, and nothing brings them back.
         consequence="Deletes the project and every file it produced."
         verb="Delete"
         pending={remove.isPending}
@@ -145,8 +144,8 @@ function ProjectRow({
   );
 }
 
-// "Documentary dossier · 16:9". The prompt name is the run's own copy of it (`logic/15`
-// §Q123); a run that generated no article from a template names only its format.
+// "Documentary dossier · 16:9". The prompt name is the run's own copy of it; a run that
+// generated no article from a template names only its format.
 function madeOf(project: ProjectListing): string {
   const prompt = project.config.articlePrompt;
   return [prompt === undefined || prompt === "" ? undefined : prompt, project.format]
@@ -161,9 +160,9 @@ function RowOverflow({
   readonly project: ProjectListing;
   readonly onDelete: () => void;
 }) {
-  // `logic/14` step 4 refuses a delete while the project is running, so the screen does
-  // not offer it. The reason is rendered under the disabled item as well as carried on
-  // the tooltip, because a hover-only explanation reaches nobody on a keyboard.
+  // The server refuses a delete while the project is running, so the screen does not offer
+  // it. The reason is rendered under the disabled item as well as carried on the tooltip,
+  // because a hover-only explanation reaches nobody on a keyboard.
   const running = project.status === "running";
   return (
     <DropdownMenu>
@@ -186,7 +185,7 @@ function RowOverflow({
   );
 }
 
-// Skeletons match the final layout's shape (uiux/02-system.md, Motion).
+// Skeletons match the final layout's shape.
 function SkeletonRows() {
   return (
     <RailGroup>

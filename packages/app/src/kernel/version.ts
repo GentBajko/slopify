@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 
-// package.json sits two directories above this module both in src/ and in dist/,
-// because the build mirrors the source tree (src/kernel/version.ts -> dist/kernel/
-// version.js). Reading it through import.meta.url survives `npx slopify` from any cwd.
+// package.json sits two directories above this module in both src/ and dist/, because the
+// build mirrors the source tree. Reading it through import.meta.url survives `npx` from
+// any working directory.
 export function readVersion(): string {
   const parsed: unknown = JSON.parse(
     readFileSync(new URL("../../package.json", import.meta.url), "utf8"),

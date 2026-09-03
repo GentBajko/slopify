@@ -4,7 +4,7 @@ import type { StagedFile } from "../storage/model.js";
 import type { ProviderChoice, RunDraft, StageSource } from "./model.js";
 
 export interface FieldError {
-  // Dotted path of the control on Play, so the form marks it in place (logic/04 §Q29).
+  // Dotted path of the control on Play, so the form marks it in place.
   readonly field: string;
   readonly message: string;
 }
@@ -16,8 +16,8 @@ export type AdmissionResult =
 export interface AdmissionInput {
   readonly draft: RunDraft;
   readonly staged: readonly StagedFile[];
-  // The distinct slot names the selected prompt bodies and picked entries ask for
-  // (logic/03 step 3). The caller collects them; the rule only checks the values.
+  // The distinct slot names the selected prompt bodies and picked entries ask for. The caller
+  // collects them; the rule only checks the values.
   readonly requiredSlots: readonly string[];
 }
 
@@ -25,16 +25,15 @@ export const titleMax = 200;
 export const valueMax = 200;
 export const numberPerPromptMax = 20;
 export const imagesPerRunMax = 60;
-// ceiling: logic/11 §Q99 and logic/02 fix the default at 3 s but name no bounds, so the
-// range is this module's. A wider gap is a settings change, not a schema change.
+// ceiling: the default gap is 3 s and nothing fixes an upper or lower bound, so the range
+// is this module's. A wider gap is a settings change, not a schema change.
 export const silenceGapSecondsMax = 30;
 
-// mockup §Q28, logic/04 §Q31, logic/10 §Q78. Video is always generated (logic/01 step 5).
-// Exported because Play's source switches offer exactly these and nothing else: the
-// segmented control and the refusal below it are then the same list, and a stage whose
-// legal set changes cannot leave a switch behind offering something the server refuses.
-// The order is the order the segments are drawn in on the reference sheet; the rule
-// itself only asks whether a source is on its stage's list.
+// The legal source for each stage; video is always generated. Exported because Play's
+// source switches offer exactly these and nothing else, so the segmented control and the
+// refusal below it are the same list and a stage whose legal set changes cannot leave a
+// switch offering something the server refuses. The order is the order the segments are
+// drawn in; the rule itself only asks whether a source is on its stage's list.
 export const allowedSources: Readonly<Record<StageKind, readonly StageSource[]>> = {
   research: ["off", "generate", "provide"],
   article: ["generate", "provide"],
@@ -64,8 +63,7 @@ export function admit(input: AdmissionInput): AdmissionResult {
     }
   }
 
-  // logic/04 §Q28 with logic/10 §Q81 and §Q97: the LLM row is required only when
-  // something in the run actually asks an LLM for text.
+  // The LLM row is required only when something in the run actually asks an LLM for text.
   const needsLlm =
     sources.research === "generate" ||
     sources.article === "generate" ||
@@ -120,8 +118,8 @@ export function admit(input: AdmissionInput): AdmissionResult {
   return fields.length === 0 ? { ok: true, draft } : { ok: false, fields };
 }
 
-// logic/05 §Q41: research only feeds article writing, so a provided article hides it.
-// logic/01 step 5: video is generated whatever the form said.
+// Research only feeds article writing, so a provided article hides it.
+// Video is generated whatever the form said.
 function normalise(draft: RunDraft): RunDraft {
   const sources = { ...draft.sources, video: "generate" as StageSource };
   if (sources.article === "provide") {
@@ -139,7 +137,7 @@ function normalise(draft: RunDraft): RunDraft {
 
 function checkImagePrompts(draft: RunDraft, fields: FieldError[]): void {
   if (draft.imagePrompts.length === 0) {
-    // logic/04 §Q31: a run always has an image source.
+    // A run always has an image source.
     fields.push({ field: "imagePrompts", message: "Tick at least one image prompt." });
     return;
   }
@@ -208,7 +206,7 @@ function checkProvided(draft: RunDraft, staged: readonly StagedFile[], fields: F
   }
 }
 
-// logic/05 §Q44: a run never starts with provided content that is missing or still copying.
+// A run never starts with provided content that is missing or still copying.
 function checkFile(
   staged: readonly StagedFile[],
   id: string | undefined,
@@ -231,7 +229,6 @@ function checkFile(
   }
 }
 
-// logic/03 step 4 and §Q26.
 function checkValues(
   draft: RunDraft,
   requiredSlots: readonly string[],

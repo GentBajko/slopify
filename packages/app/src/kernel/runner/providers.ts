@@ -9,10 +9,9 @@ import { attempt } from "./attempt.js";
 import type { AttemptStore } from "./attempt-repo.js";
 import type { StageContext } from "./index.js";
 
-// What a stage slice is handed instead of a port. Every method here is already inside
-// the attempt wrapper and none of them takes a signal or hands back an adapter, so a
-// slice has nothing to call around: it cannot reach a provider except through the retry
-// policy. The linter holds the other half, forbidding `slices/**` to import `adapters/**`.
+// What a stage slice is handed instead of a port. Every method is already inside the
+// attempt wrapper and none hands back an adapter, so a slice cannot reach a provider
+// except through the retry policy; the linter forbids `slices/**` importing `adapters/**`.
 
 export interface LlmAnswer {
   readonly text: string;
@@ -25,11 +24,9 @@ export interface LlmCall {
   readonly model: string;
   readonly messages: readonly Message[];
   readonly webSearch?: boolean | undefined;
-  // `logic/06` §Q50 and §Q55, `logic/07` §Q61: an answer that arrived but is unusable -
-  // empty, or without the Sources list the instruction asked for - "counts as a failed
-  // attempt", so the check has to run inside the wrapper for the retry policy to cover
-  // it. It returns the sentence the stage would show rather than throwing, so a slice
-  // still never names a provider failure (03-conventions).
+  // An answer that arrived but is unusable counts as a failed attempt, so the check runs inside
+  // the wrapper. It returns the sentence the stage would show rather than throwing, so a slice
+  // never names a failure.
   readonly check?: ((answer: LlmAnswer) => string | undefined) | undefined;
 }
 
@@ -52,17 +49,14 @@ export interface ImageCall {
 }
 
 export interface StageProviders {
-  // `onEvent` sees the deltas of the attempt in flight, for the text streamed onto the
-  // page (`logic/01` §Q6). A retry starts the answer again, so a caller that has already
-  // shown deltas has to say so; the text returned is only ever the successful attempt's.
+  // `onEvent` sees the deltas of the attempt in flight. A retry starts the
+  // answer again; the text returned is only ever the successful attempt's.
   readonly llm: (call: LlmCall, onEvent?: (event: LlmEvent) => void) => Promise<LlmAnswer>;
-  // ceiling: the narration is collected in memory before the slice writes it, which for
-  // a few minutes of mp3 is a few megabytes. Streaming it to disk as it arrives is the
-  // upgrade, and it needs a partial-file rule for a retry first (`logic/13` step 2).
+  // ceiling: the narration is collected in memory before the slice writes it - a few MB for
+  // a few minutes. Streaming to disk needs a partial-file rule for retries first.
   readonly tts: (call: TtsCall) => Promise<NarratedAudio>;
   readonly image: (call: ImageCall) => Promise<GeneratedImage>;
-  // The same calls, recorded against one resumable piece: an image of twenty, a research
-  // chapter, an audio chunk (`logic/09` §Q73).
+  // The same calls, recorded against one resumable piece.
   readonly forPiece: (pieceId: string) => StageProviders;
 }
 
@@ -91,8 +85,8 @@ export function stageProviders(
 
   return {
     llm: (call: LlmCall, onEvent?: (event: LlmEvent) => void): Promise<LlmAnswer> => {
-      // Resolved once: an adapter reads the stored key when it builds each request, so a
-      // key replaced mid-run still reaches the next attempt (`logic/02` §Q16).
+      // Resolved once; the adapter reads the stored key per request, so a key replaced
+      // mid-run still reaches the next attempt.
       const port = deps.registry.llm(call.provider);
       return attempt(
         ctx,
@@ -106,8 +100,7 @@ export function stageProviders(
             ...(call.webSearch === undefined ? {} : { webSearch: call.webSearch }),
             signal,
           })) {
-            // Every event is a sign of life, so the idle clock restarts here rather than
-            // in each slice that consumes one.
+            // Every event is a sign of life, so the idle clock restarts here.
             progress();
             if (event.type === "delta") {
               text += event.text;
@@ -120,8 +113,7 @@ export function stageProviders(
           const answer: LlmAnswer = { text, usage, finishReason };
           const unusable = call.check?.(answer);
           if (unusable !== undefined) {
-            // Thrown bare: the wrapper is the one place a failure is named, and it names
-            // this `other`, which is retried like any other bad answer.
+            // Thrown bare: the wrapper names it `other` and retries it like any bad answer.
             throw new Error(unusable);
           }
           return answer;
@@ -175,7 +167,7 @@ export function stageProviders(
             aspect: call.aspect,
             signal,
           }),
-        // One request, one answer: the 300 s runs over the whole call (`logic/09` §Q77).
+        // One request, one answer: the 300 s runs over the whole call.
         { kind: "image" },
       );
     },

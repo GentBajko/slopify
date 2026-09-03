@@ -27,7 +27,7 @@ export function insertTelemetryEvent(db: DatabaseSync, event: TelemetryEvent): v
 // recorded in the same millisecond carry the same timestamp and their ULIDs are random
 // within it, so a timestamp sort would hand back the install after the project it
 // preceded. The collector deduplicates by id, so re-sending the head of the queue after
-// an ambiguous failure is safe (logic/16 §Q134).
+// an ambiguous failure is safe.
 export function undeliveredEvents(db: DatabaseSync, limit: number): TelemetryEvent[] {
   return db
     .prepare("SELECT * FROM telemetry_events WHERE delivered_at IS NULL ORDER BY rowid LIMIT ?")
@@ -35,8 +35,8 @@ export function undeliveredEvents(db: DatabaseSync, limit: number): TelemetryEve
     .map((row) => toEvent(eventRow.parse(row)));
 }
 
-// logic/16 step 6 and §Q132: the Usage page's totals are the sum of the whole local log,
-// delivered or not, and §Q134 keeps that log forever.
+// The Usage page's totals are the sum of the whole local log, delivered or not, and that
+// log is kept forever.
 //
 // ceiling: every row is read and folded in memory. One event per stage of one run is a
 // few dozen bytes and a machine would need a hundred thousand runs to make this cost a
@@ -56,7 +56,7 @@ export function markDelivered(db: DatabaseSync, ids: readonly string[], at: stri
   db.prepare(`UPDATE telemetry_events SET delivered_at = ? WHERE id IN (${holes})`).run(at, ...ids);
 }
 
-// 02-models: a single row, so the first one is the machine.
+// A single row, so the first one is the machine.
 export function machineOf(db: DatabaseSync): Machine | undefined {
   const row = db.prepare("SELECT * FROM machine LIMIT 1").get();
   return row === undefined ? undefined : toMachine(machineRow.parse(row));

@@ -41,7 +41,7 @@ describe("stagingPath", () => {
 });
 
 describe("outputFileName", () => {
-  it("names the fixed assets of logic/14 step 2 regardless of the uploaded name", () => {
+  it("names the fixed assets regardless of the uploaded name", () => {
     expect(outputFileName("notes", 0, ".doc", "research")).toBe("research.txt");
     expect(outputFileName("article_md", 0, "", "article")).toBe("article.md");
     expect(outputFileName("article_txt", 0, "", "article")).toBe("article.txt");

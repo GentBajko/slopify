@@ -36,9 +36,9 @@ import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 import { resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
 import { renderVideo } from "../src/slices/video/run.js";
 
-// `logic/12` end to end: a run made by the real stages, then an edit and a delete on it,
-// each cascading through the real runner to a fresh render by the real bundled ffmpeg. No
-// provider is called; `adapters/fake/*` are the scripted doubles (06-testing).
+// Re-runs end to end: a run made by the real stages, then an edit and a delete on it, each
+// cascading through the real runner to a fresh render by the real bundled ffmpeg. No
+// provider is called; `adapters/fake/*` are the scripted doubles.
 
 const silent: Log = { write: (): void => {} };
 const ffmpeg = resolveFfmpeg(process.env, ffmpegStatic);
@@ -228,8 +228,8 @@ function renderedImages(h: Harness): string[] {
 }
 
 describe("an edit and a delete on a finished project", () => {
-  // §Q101 and §Q102: the audio and the video are redone from the new text, the images are
-  // not touched, and the cascade ends in a fresh render with the project `done` again.
+  // The audio and the video are redone from the new text, the images are not touched, and the
+  // cascade ends in a fresh render with the project `done` again.
   it("cascades an article edit through the audio to a fresh render", async () => {
     const h = harness();
     await h.settle();
@@ -254,14 +254,14 @@ describe("an edit and a delete on a finished project", () => {
     // The narration is the edit's, and it was spoken again rather than reused.
     expect(h.tts.seen().at(-1)).toBe("Knots\n\nKnots hold fast under load.");
     expect(readFileSync(join(h.dir, "audio-body.mp3")).equals(firstBody)).toBe(false);
-    // §Q101: "prompt-based images are untouched".
+    // Prompt-based images are untouched.
     expect(h.images.calls()).toBe(madeImages);
     expect(imageOutputs(h)).toHaveLength(3);
-    // §Q102: "ending in a fresh render".
+    // Ending in a fresh render.
     expect(h.renders()).toBe(2);
     expect(renderedImages(h)).toHaveLength(3);
-    // logic/16 step 3: "regenerations count again". The re-narration and the re-render
-    // are counted a second time; the images the edit left alone are counted once.
+    // Regenerations count again. The re-narration and the re-render are counted a second time;
+    // the images the edit left alone are counted once.
     const counted = h.counted.events().map((one) => one.counters);
     expect(counted.filter((one) => one.stage === "video")).toHaveLength(2);
     expect(counted.filter((one) => one.stage === "audio" && one.segment === "body")).toHaveLength(
@@ -270,12 +270,12 @@ describe("an edit and a delete on a finished project", () => {
     expect(counted.filter((one) => one.stage === "images")).toEqual([
       { stage: "images", provider: "fake-image", model: "fake-diffusion", images: 3 },
     ]);
-    // §Q131: nothing here is a project delete, and the audio seconds only ever grow.
+    // Nothing here is a project delete, and the audio seconds only ever grow.
     expect(counted.reduce((sum, one) => sum + (one.audioSeconds ?? 0), 0)).toBeGreaterThan(0);
   }, 180_000);
 
-  // Step 5 with `logic/09` §Q75: one image leaves the set, the video is rebuilt without
-  // it, and the last one may not go.
+  // One image leaves the set, the video is rebuilt without it, and the last one may not
+  // go.
   it("re-renders without a deleted image and refuses to delete the last one", async () => {
     const h = harness();
     await h.settle();
@@ -290,14 +290,14 @@ describe("an edit and a delete on a finished project", () => {
     expect(status(h)).toBe("done");
     expect(h.renders()).toBe(2);
     expect(existsSync(join(h.dir, second.path))).toBe(false);
-    // `logic/11`'s invariant, with the gap `meta.index` leaves behind harmless.
+    // The render's invariant, with the gap `meta.index` leaves behind harmless.
     expect(renderedImages(h)).toEqual([first.path, third.path]);
 
     expect(deleteImage(h.deps, h.projectId, first.id)).toEqual({ ok: true, redone: ["video"] });
     await h.settle();
     expect(renderedImages(h)).toEqual([third.path]);
 
-    // §Q103's invariant: "at least one image always remains".
+    // At least one image always remains.
     expect(deleteImage(h.deps, h.projectId, third.id)).toEqual({
       ok: false,
       reason: "last-image",

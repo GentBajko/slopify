@@ -167,7 +167,7 @@ function fixture(options: FixtureOptions = {}): Fixture {
   // and 360 output pixels at zoom 1.0, which is what the assertions below read back.
   marker(join(dir, "images", "001.png"), 640, 200, 360);
   marker(join(dir, "images", "002.png"), 640, 160, 360);
-  // A square source, so the cover-and-crop of logic/11 step 4 is exercised too.
+  // A square source, so the cover-and-crop is exercised too.
   marker(join(dir, "images", "003.png"), 360, 120, 360);
   tone(join(dir, "audio-body.mp3"), 440, 1);
   if (options.withEnds === true) {
@@ -298,8 +298,8 @@ describe("the ffmpeg render", () => {
     expect(harness.db.prepare("SELECT progress_current, progress_total FROM stages").get()).toEqual(
       { progress_current: 3000, progress_total: 3000 },
     );
-    // logic/16 step 3: "videos rendered (completed renders)". One event, no provider:
-    // ffmpeg is the machine's own binary, not a service with a model name.
+    // Videos rendered (completed renders). One event, no provider: ffmpeg is the machine's own
+    // binary, not a service with a model name.
     expect(harness.counted.events()).toEqual([
       { type: "stage.completed", counters: { stage: "video" } },
     ]);
@@ -354,7 +354,7 @@ describe("the ffmpeg render", () => {
 
     await expect(running).rejects.toThrow(/canceled|abort/i);
     expect(existsSync(join(harness.dir, "video.mp4"))).toBe(false);
-    // §Q112: the aborted render counts nothing either.
+    // The aborted render counts nothing either.
     expect(harness.counted.events()).toEqual([]);
     // Nothing is stored for a render that was cancelled, whichever guard caught it.
     expect(
@@ -365,8 +365,8 @@ describe("the ffmpeg render", () => {
   it("stores nothing when the cancel lands after ffmpeg has already exited", async () => {
     const harness = fixture();
     const controller = new AbortController();
-    // Aborted before renderVideo is entered: the render never gets to the point where
-    // logic/13 §Q113 would protect a stored output, so no row and no file may appear.
+    // Aborted before renderVideo is entered: the render never reaches the point where a
+    // stored output would be protected, so no row and no file may appear.
     controller.abort();
 
     await expect(renderVideo(deps(harness), context(controller.signal, []))).rejects.toThrow(
@@ -380,9 +380,9 @@ describe("the ffmpeg render", () => {
     ).toEqual({ n: 0 });
   }, 60_000);
 
-  // `logic/12` §Q106: "the previous video stays downloadable until the new render
-  // finishes". The render writes beside the finished file and swaps only once ffmpeg has
-  // exited cleanly, so neither a failure nor a cancel can take the old one away.
+  // The previous video stays downloadable until the new render finishes. The render writes
+  // beside the finished file and swaps only once ffmpeg has exited cleanly, so neither a
+  // failure nor a cancel can take the old one away.
   it("leaves the previous video whole when the new render fails", async () => {
     const harness = fixture();
     await renderVideo(deps(harness), context(new AbortController().signal, []));
@@ -430,8 +430,8 @@ describe("the ffmpeg render", () => {
     expect(existsSync(join(harness.dir, "video.part.mp4"))).toBe(false);
   }, 180_000);
 
-  // The other half of §Q106: "a project never keeps two outputs for one stage once an
-  // action completes". The swap replaces the file and the row that named it.
+  // The other half of it: a project never keeps two outputs for one stage once an action
+  // completes. The swap replaces the file and the row that named it.
   it("replaces the previous video when the new render finishes", async () => {
     const harness = fixture();
     await renderVideo(deps(harness), context(new AbortController().signal, []));

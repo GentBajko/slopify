@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { payloadSchema } from "./model.js";
 
 // The privacy surface, written out rather than derived: adding a key to the schema fails
-// this test until someone edits the list below on purpose, having read logic/16 step 4
-// and the promise in mockup/02-first-run-notice.md.
+// this test until someone edits the list below on purpose, having read what the first-run
+// notice promises the user.
 const allowed = [
   "appVersion",
   "stage",
@@ -18,12 +18,12 @@ const allowed = [
 ];
 
 describe("the telemetry payload schema", () => {
-  it("allows exactly the counters logic/16 names", () => {
+  it("allows exactly the counters the app records", () => {
     expect(Object.keys(payloadSchema.shape).toSorted()).toEqual(allowed.toSorted());
   });
 
-  // logic/16 step 4, the never-list. Each of these is a real field the app holds and a
-  // future stage could reach for without thinking.
+  // The never-list. Each of these is a real field the app holds and a future stage could
+  // reach for without thinking.
   it.each([
     ["apiKey", "sk-live-0123456789abcdef"],
     ["key", "sk-live-0123456789abcdef"],

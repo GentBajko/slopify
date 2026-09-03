@@ -225,7 +225,7 @@ describe("a stage running through the wrapper", () => {
     };
   }
 
-  // logic/13 step 3: a call aborted mid-flight leaves the stage `canceled`.
+  // A call aborted mid-flight leaves the stage `canceled`.
   it("leaves the stage canceled when the cancel lands mid-attempt", async () => {
     const h = harness();
     const llm = fakeLlm({ deltas: ["a", "b"], gapMs: 60_000, clock: h.clock });
@@ -251,7 +251,7 @@ describe("a stage running through the wrapper", () => {
     expect(attempts.rows.map((row) => row.outcome)).toEqual(["canceled"]);
   });
 
-  // logic/09 §Q74: the stage fails at once with the refusal, and the page shows it.
+  // The stage fails at once with the refusal, and the page shows it.
   it("fails the stage with the provider's refusal, once, without retrying", async () => {
     const h = harness();
     const image = fakeImage({ refuse: "I can't create that image." });

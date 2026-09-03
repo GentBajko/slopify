@@ -8,8 +8,8 @@ import { zoomBy, zoomFrom, zoomTo } from "./plan.js";
 // string, so a title or a filename cannot become a command.
 
 // zoompan works on a still that has been pre-scaled, because it steps the zoom in
-// sub-pixel increments and a source at output resolution visibly jitters (logic/11 §Q85
-// asks for a smooth linear zoom). Four times the frame is enough at 115%.
+// sub-pixel increments and a source at output resolution visibly jitters where the zoom is
+// meant to be smooth and linear. Four times the frame is enough at 115%.
 const prescale = 4;
 const sampleRate = 44100;
 const channelLayout = "stereo";
@@ -96,7 +96,7 @@ function filterGraph(plan: RenderPlan, audioAt: readonly number[]): string {
   plan.images.forEach((slot, at) => {
     chains.push(
       `[${at}:v]trim=end_frame=1,setpts=PTS-STARTPTS,` +
-        // logic/11 step 4: cover the frame and centre-crop, never letterbox.
+        // Cover the frame and centre-crop, never letterbox.
         `scale=${wide}:${tall}:force_original_aspect_ratio=increase,crop=${wide}:${tall},` +
         `zoompan=z='${zoomExpression(slot)}':d=${slot.frames}:` +
         `x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':` +
@@ -121,7 +121,7 @@ function filterGraph(plan: RenderPlan, audioAt: readonly number[]): string {
   return chains.join(";");
 }
 
-// §Q85: odd images 100% → 115%, even images 115% → 100%, linear over the slot. `on` is
+// Odd images 100% → 115%, even images 115% → 100%, linear over the slot. `on` is
 // zoompan's output frame counter, 0 to d-1, and a one-frame slot has no span to divide
 // by, so it holds the zoom it starts at.
 function zoomExpression(slot: ImageSlot): string {
@@ -155,8 +155,8 @@ export interface RenderRun {
   readonly log: Log;
 }
 
-// ceiling: the last 20 lines of stderr are kept. logic/11 §Q89 shows the renderer's error
-// verbatim, and ffmpeg's useful complaint is always at the end of what it wrote.
+// ceiling: the last 20 lines of stderr are kept. The renderer's error is shown verbatim,
+// and ffmpeg's useful complaint is always at the end of what it wrote.
 const stderrLines = 20;
 
 export function runFfmpeg(run: RenderRun): Promise<void> {

@@ -10,10 +10,10 @@ import { useProjectActions } from "@/project/use-actions";
 import { useLiveProject } from "@/project/use-live";
 import { projectQuery, promptsQuery, providersQuery } from "@/queries";
 
-// 08 Project page. The rundown - one row per stage with its lamp, its state word and the
-// body it opens into - plus the actions of `logic/12` and the cancel of `logic/13`. This
-// file is only the composition: what a row draws is `project/stage-row.tsx`, what a body
-// draws is `project/body-*.tsx`, and what an action does is `project/use-actions.ts`.
+// The project page. The rundown - one row per stage with its lamp, its state word and the
+// body it opens into - plus the re-run actions and Cancel. This file is only the
+// composition: what a row draws is `project/stage-row.tsx`, what a body draws is
+// `project/body-*.tsx`, and what an action does is `project/use-actions.ts`.
 export function ProjectRoute({ projectId }: { readonly projectId: string }) {
   const { api } = useApp();
   const project = useQuery(projectQuery(api, projectId));
@@ -31,13 +31,13 @@ export function ProjectRoute({ projectId }: { readonly projectId: string }) {
   }
 
   const { project: summary, stages, outputs } = project.data;
-  // `logic/12` preconditions: no action is offered while a stage of the project is
-  // running, and the server refuses one that gets through anyway.
+  // No action is offered while a stage of the project is running, and the server refuses
+  // one that gets through anyway.
   const busy = summary.status === "running" || actions.pending;
 
   return (
     <div className="mx-auto max-w-[1440px]">
-      {/* The back link sits above a detail page's title (uiux/03-experience.md). */}
+      {/* The back link sits above a detail page's title. */}
       <Link to="/" className="mb-[10px] block text-small text-ink2 hover:text-ink">
         &lt; Projects
       </Link>
@@ -76,7 +76,7 @@ export function ProjectRoute({ projectId }: { readonly projectId: string }) {
   );
 }
 
-// The final layout's shape, not a spinner (uiux/03-experience.md, Feedback thresholds).
+// The final layout's shape, not a spinner.
 function SkeletonRundown() {
   return (
     <div className="mx-auto max-w-[1440px]">

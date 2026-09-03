@@ -25,7 +25,7 @@ describe("briefText", () => {
 });
 
 describe("plannerMessages", () => {
-  // §Q46: one built-in instruction composed from the keyword values and the rendered
+  // One built-in instruction composed from the keyword values and the rendered
   // article prompt, answered with the chapter list.
   it("asks one user turn for the chapters, from the prompt's own section guide", () => {
     const content = only(plannerMessages(brief));
@@ -34,14 +34,14 @@ describe("plannerMessages", () => {
     expect(content.startsWith("You are planning the web research for an article.")).toBe(true);
     expect(content).toContain("Write about rope, in three sections");
     expect(content).toContain("topic: rope");
-    // §Q53: from the section guide when there is one, proposed when there is not.
+    // From the section guide when there is one, proposed when there is not.
     expect(content).toContain("section guide");
     expect(content).toContain("propose the chapters");
     expect(content).toContain("one chapter title per line");
   });
 
   it("never asks the planner to search the web", () => {
-    // The planner reads the prompt; only the sub-agents are grounded (§Q52).
+    // The planner reads the prompt; only the sub-agents are grounded.
     expect(only(plannerMessages(brief)).toLowerCase()).not.toContain("search the web");
   });
 });
@@ -69,7 +69,7 @@ describe("chaptersFrom", () => {
     expect(chaptersFrom("\n  History  \n\n\tMaterials\n\n")).toEqual(["History", "Materials"]);
   });
 
-  // The invariant of `logic/06`: no chapter is researched twice within one run.
+  // The invariant: no chapter is researched twice within one run.
   it("keeps the first of a repeated title, whatever its case", () => {
     expect(chaptersFrom("History\nMaterials\nhistory\nHISTORY")).toEqual(["History", "Materials"]);
   });
@@ -83,7 +83,7 @@ describe("chaptersFrom", () => {
 describe("subAgentMessages", () => {
   const outline = ["History", "Materials", "Knots"];
 
-  // §Q52, §Q53: one per chapter, web-grounded, answering that chapter's notes and its
+  // One per chapter, web-grounded, answering that chapter's notes and its
   // sources.
   it("names the one chapter to research and the rest of the outline", () => {
     const content = only(subAgentMessages(brief, "Materials", outline));

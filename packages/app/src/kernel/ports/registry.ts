@@ -10,14 +10,14 @@ export interface ProviderListing {
   readonly readiness: Readiness;
 }
 
-// Built in `main.ts` from the settings slice and handed to the stage wiring; no slice
-// ever holds one, so no slice can reach an adapter around the attempt wrapper. A lookup
-// for an id the catalogue does not carry is a bug in admission, not a user error, so it
-// throws rather than answering undefined.
+// Built in `main.ts` from the settings slice and handed to the stage wiring; no slice ever
+// holds one, so none can reach an adapter around the attempt wrapper. A lookup for an id
+// the catalogue does not carry is a bug in admission, so it throws rather than answering
+// undefined.
 export interface Registry {
   readonly llm: (id: string) => LlmPort;
   readonly tts: (id: string) => TtsPort;
   readonly image: (id: string) => ImagePort;
-  // Async because a CLI provider's readiness is a spawn (`logic/02` §Q135).
+  // Async because a CLI provider's readiness is a spawn.
   readonly list: () => Promise<readonly ProviderListing[]>;
 }

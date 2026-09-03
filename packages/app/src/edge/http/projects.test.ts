@@ -159,8 +159,8 @@ describe("POST /api/projects", () => {
   });
 });
 
-// logic/03 steps 3-6 through the route: the picked prompts decide which fields a run
-// requires, and their bodies are what the project stores rendered.
+// Substitution through the route: the picked prompts decide which fields a run requires,
+// and their bodies are what the project stores rendered.
 describe("POST /api/projects with library templates", () => {
   async function savePrompt(app: Harness["app"], body: unknown): Promise<void> {
     await app.request("/api/prompts", {
@@ -217,7 +217,7 @@ describe("POST /api/projects with library templates", () => {
     const row = db.prepare("SELECT config FROM projects WHERE id = ?").get(created.project.id) as {
       config: string;
     };
-    // The values are stored trimmed and the same name fills both bodies (§Q23).
+    // The values are stored trimmed and the same name fills both bodies.
     expect(JSON.parse(row.config)).toMatchObject({
       values: { topic: "rope tricks" },
       rendered: {
@@ -244,7 +244,7 @@ describe("POST /api/projects with library templates", () => {
     expect(db.prepare("SELECT count(*) AS n FROM projects").get()).toEqual({ n: 0 });
   });
 
-  // logic/15 step 4: a template deleted between selection and Play.
+  // A template deleted between selection and Play.
   it("marks a picked prompt the library no longer holds", async () => {
     const { app } = harness();
     await savePrompt(app, { kind: "article", name: "Dossier", body: "b" });
@@ -265,7 +265,7 @@ describe("POST /api/projects with library templates", () => {
     });
   });
 
-  // logic/04 §Q97: the LLM row follows the saved entry's mode, not the request's claim.
+  // The LLM row follows the saved entry's mode, not the request's claim.
   it("takes a picked entry's mode from the library", async () => {
     const { app } = harness();
     await savePrompt(app, { kind: "article", name: "Dossier", body: "b" });
@@ -300,10 +300,10 @@ describe("POST /api/projects with library templates", () => {
     });
   });
 
-  // A slot name is whatever the user typed (§Q19), so a prompt may name a member of
-  // Object's prototype. Neither the required-value check nor the render may answer from
-  // it: the first would let an unfilled field through, the second would splice a
-  // function's source into a prompt bound for a provider.
+  // A slot name is whatever the user typed, so a prompt may name a member of Object's
+  // prototype. Neither the required-value check nor the render may answer from it: the first
+  // would let an unfilled field through, the second would splice a function's source into a
+  // prompt bound for a provider.
   it("treats {{constructor}} as an ordinary slot", async () => {
     const { app, db } = harness();
     await savePrompt(app, { kind: "article", name: "Dossier", body: "Write {{constructor}} now." });
@@ -358,9 +358,9 @@ describe("GET /api/projects", () => {
     expect(await (await app.request("/api/projects")).json()).toEqual({ projects: [] });
   });
 
-  // uiux/screens/07: "running rows carry the thin meter under the row averaging stage
-  // progress". The share is computed here, from the stage rows the list already reads to
-  // derive the status, so a row costs one number rather than six stage rows.
+  // Running rows carry the thin meter under the row averaging stage progress. The share is
+  // computed here, from the stage rows the list already reads to derive the status, so a row
+  // costs one number rather than six stage rows.
   it("carries a progress share per row, averaged over the stages the run asked for", async () => {
     const { app, db } = harness();
     db.exec(
@@ -410,7 +410,7 @@ describe("GET /api/projects", () => {
   });
 });
 
-// logic/14 step 4: refused while running, otherwise the rows and the folder go.
+// Refused while running, otherwise the rows and the folder go.
 describe("DELETE /api/projects/:id", () => {
   async function made(app: Harness["app"]): Promise<string> {
     const audio = await stage(app, "audio", "narration");

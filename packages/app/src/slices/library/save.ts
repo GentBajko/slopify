@@ -1,5 +1,5 @@
-// Creating, editing and deleting a template (`logic/15`). One rule set covers prompts
-// and entries (§Q121), so both go through the same three outcomes.
+// Creating, editing and deleting a template. One rule set covers prompts
+// and entries, so both go through the same three outcomes.
 
 import type { DatabaseSync } from "node:sqlite";
 import type { Clock } from "../../kernel/clock.js";
@@ -45,7 +45,7 @@ export function createPrompt(deps: LibraryDeps, draft: PromptDraft): SaveResult<
   }, prompt);
 }
 
-// §Q125: a save overwrites; there is no version history, so the row is replaced whole.
+// A save overwrites; there is no version history, so the row is replaced whole.
 export function updatePrompt(
   deps: LibraryDeps,
   id: string,
@@ -111,10 +111,10 @@ function entryOf(deps: LibraryDeps, draft: EntryDraft): Omit<Entry, "id"> {
   };
 }
 
-// §Q122's uniqueness is the schema's: `prompts(kind, lower(name))` and
-// `entries(category, lower(name))`. A read-then-write check would answer from a row a
-// second writer could delete between the two statements, so the index decides and the
-// raw SQLite error never leaves this module.
+// Uniqueness is the schema's: `prompts(kind, lower(name))` and `entries(category,
+// lower(name))`. A read-then-write check would answer from a row a second writer could
+// delete between the two statements, so the index decides and the raw SQLite error never
+// leaves this module.
 function written<T>(write: () => boolean, value: T): SaveResult<T> {
   try {
     return write() ? { ok: true, value } : { ok: false, reason: "not-found" };

@@ -3,9 +3,8 @@ import { RailGroup } from "@/components/rail";
 
 // What an editor shows instead of its form: the two-column outline while the list it
 // reads the row from is still in flight, and a sentence with the way back when there is
-// no row to show. Both editors of `logic/15` §Q121 draw them, and `sheet` below is the
-// one panel style the forms use, so the outline cannot drift from the form it stands in
-// for (uiux/screens/05-prompt-editor.md).
+// no row to show. Both editors draw them, and `sheet` below is the one panel style the
+// forms use, so the outline cannot drift from the form it stands in for.
 export const sheet = "rounded-panel border border-line bg-panel p-[18px]";
 
 export function EditorSkeleton() {

@@ -2,15 +2,13 @@ import { CheckIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 // A save in Settings waits for the server and then confirms inline: the tick sits beside
-// the button for two seconds and fades in over 150 ms (uiux/03-experience.md, feedback
-// thresholds; uiux/screens/03-settings.md, Motion).
+// the button for two seconds and fades in over 150 ms.
 export const savedTickMs = 2000;
 
-// An editor confirms the write with the tick and then goes back to the list it came from
-// (uiux/screens/05-prompt-editor.md, Saved). The delay is the tick's own duration, which
-// is why it is timed here and not in either editor. `leave` is held in a ref so a render
-// between the save and the return - an invalidated list arriving, say - cannot restart
-// the two seconds by handing this a new closure.
+// An editor confirms the write with the tick and then goes back to the list it came from. The
+// delay is the tick's own duration, which is why it is timed here and not in either editor.
+// `leave` is held in a ref so a render between the save and the return - an invalidated list
+// arriving, say - cannot restart the two seconds by handing this a new closure.
 export function useLeaveWhenSaved(saved: boolean, leave: () => void): void {
   const latest = useRef(leave);
   useEffect(() => {

@@ -4,12 +4,12 @@ import { isProviderError } from "../../kernel/ports/model.js";
 import type { ElevenLabsDeps } from "./elevenlabs.js";
 import { elevenLabsBase, elevenLabsFormat, elevenLabsModel, elevenLabsTts } from "./elevenlabs.js";
 
-// Fixture provenance: `fixtures/elevenlabs-*.json` are constructed, not captured. No
-// ElevenLabs key exists on this machine or in `~/.slopify/slopify.db`, so nothing here
-// ran against the live API. The envelopes are transcribed from ElevenLabs' own error
-// reference - the `detail` object carrying `status` and `message`, and the
-// `max_character_limit_exceeded` sentence quoted on its 400/401 help-centre page. The
-// voice id is the one its own quickstart uses; the audio bytes are invented.
+// Fixture provenance: `fixtures/elevenlabs-*.json` are constructed, not captured. No ElevenLabs
+// key exists on this machine or in `~/.slopify/slopify.db`, so nothing here ran against the
+// live API. The envelopes are transcribed from ElevenLabs' own error reference - the `detail`
+// object carrying `status` and `message`, and the `max_character_limit_exceeded` sentence
+// quoted on its 400/401 help-centre page. The voice id is the one its own quickstart uses; the
+// audio bytes are invented.
 
 const key = "sk_0123456789abcdef0123456789abcdef0123456789abcdef";
 const voiceId = "JBFqnCBsd6RMkjVDRZzb";
@@ -143,8 +143,8 @@ describe("elevenLabsTts.synthesize", () => {
       .synthesize({ voiceId, text: "Hello.", signal: new AbortController().signal })
       .catch((thrown: unknown) => thrown);
 
-    // `logic/02` §Q13: an absent key is terminal, so it carries the kind the wrapper does
-    // not retry rather than the `auth` kind a rejected key carries (§Q11).
+    // An absent key is terminal, so it carries the kind the wrapper does
+    // not retry rather than the `auth` kind a rejected key carries.
     expect(isProviderError(error) && error.fault.kind).toBe("missing_key");
     expect(String(error)).toContain("no ElevenLabs key is stored");
     expect(called).toBe(0);
@@ -171,8 +171,8 @@ describe("elevenLabsTts.synthesize", () => {
     expect(String(error)).toContain("too many concurrent requests");
   });
 
-  // `logic/08` §Q69: "Whole text longer than the provider's per-request limit → the
-  // provider's error surfaces as the stage failure; no pre-check."
+  // Whole text longer than the provider's per-request limit → the provider's error surfaces as
+  // the stage failure; no pre-check.
   it("surfaces the character-limit 400 verbatim instead of checking the length itself", async () => {
     const error = await failed(new Response(fixture("elevenlabs-400-limit.json"), { status: 400 }));
 
@@ -181,7 +181,7 @@ describe("elevenLabsTts.synthesize", () => {
     expect(String(error)).toContain("exceeds the character limit of 333 characters");
   });
 
-  // `logic/02` §Q14: a rejected voice ID names the voice, distinct from an auth failure.
+  // A rejected voice ID names the voice, distinct from an auth failure.
   it("names the voice a rejected voice id was asked for", async () => {
     const error = await failed(new Response(fixture("elevenlabs-400-voice.json"), { status: 400 }));
 

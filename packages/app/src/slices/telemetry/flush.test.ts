@@ -100,7 +100,7 @@ describe("flush", () => {
     ).toEqual({ delivered_at: "2026-09-02T11:00:00.000Z" });
   });
 
-  // logic/16 step 1: nothing is sent before the notice created the machine id.
+  // Nothing is sent before the notice created the machine id.
   it("sends nothing when the notice has not been dismissed", async () => {
     const { deps, db, posted } = harness(() => ({ ok: true }), { seen: false });
     db.prepare(

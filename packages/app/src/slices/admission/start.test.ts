@@ -113,7 +113,7 @@ describe("startRun", () => {
       { role: "image", path: "images/002.bin" },
     ]);
     const dir = join(storage.paths.projects, project.id);
-    // logic/05 §Q37: what is stored is the narration source, so the paste has been through
+    // What is stored is the narration source, so the paste has been through
     // the same markdown reduction the article stage puts its own output through.
     expect(readFileSync(join(dir, "article.txt"), "utf8")).toBe("The article.\n");
     expect(readFileSync(join(dir, "images", "002.bin"), "utf8")).toBe("two");

@@ -2,8 +2,8 @@ import { Label as LabelPrimitive } from "radix-ui";
 import type * as React from "react";
 import { cn } from "@/lib/utils";
 
-// shadcn/ui's label, restyled as the engraved label of uiux/02-system.md. Every input in
-// this app carries one above it (uiux/03-experience.md, accessibility floor).
+// shadcn/ui's label, restyled as this app's engraved label. Every input carries one above
+// it.
 function Label({ className, ...props }: React.ComponentProps<typeof LabelPrimitive.Root>) {
   return (
     <LabelPrimitive.Root

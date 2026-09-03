@@ -148,8 +148,8 @@ describe("POST /api/settings/voices", () => {
     });
   });
 
-  // `logic/02` §Q18: the ID is unique within its provider, and the message is the one
-  // uiux/03-settings prints under the Voice ID input.
+  // The ID is unique within its provider, and the message is the one printed under the
+  // Voice ID input.
   it("refuses a voice ID already listed for that provider", async () => {
     const { app } = harness();
     const draft = { provider: "elevenlabs", name: "Narrator M", voiceId: "abc123" };

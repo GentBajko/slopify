@@ -1,7 +1,6 @@
-// The tally board: five counters in tabular Barlow 700 at 32 px with engraved labels, on
-// a `--panel` sheet (uiux/02-system.md, Typography; uiux/screens/10-usage.md). 01 shows the
-// world's totals in it and 10 shows this machine's, so the board itself knows neither - it
-// is handed formatted strings and lays them out.
+// The tally board: five counters in tabular Barlow 700 at 32 px with engraved labels, on a
+// `--panel` sheet. 01 shows the world's totals in it and 10 shows this machine's, so the board
+// itself knows neither - it is handed formatted strings and lays them out.
 
 export interface Tally {
   readonly label: string;
@@ -29,8 +28,7 @@ export function TallyBoard({ counters }: { readonly counters: readonly Tally[] }
   );
 }
 
-// The same board with nothing in it yet: the shape arrives before the numbers do
-// (uiux/02-system.md, Motion).
+// The same board with nothing in it yet: the shape arrives before the numbers do.
 export function TallySkeleton({ cells }: { readonly cells: number }) {
   return (
     <div className="grid grid-cols-2 overflow-hidden rounded-panel border border-line bg-panel md:grid-cols-5">

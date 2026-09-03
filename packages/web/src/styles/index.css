@@ -1,10 +1,9 @@
 @import "tailwindcss";
 
-/* Every value below is copied from docs/capstone/uiux/02-system.md. The dark theme is
-   the default from the use scene; the light theme overrides the same names so a utility
-   built on `var(--color-*)` never has to know which theme is on. `static` keeps the
-   whole palette in the output, because the overrides below name variables the utility
-   scan alone would not have kept. */
+/* The whole palette, in one place. Dark is the default; the light theme overrides the same
+   names so a utility built on `var(--color-*)` never has to know which theme is on.
+   `static` keeps the whole palette in the output, because the overrides below name
+   variables the utility scan alone would not have kept. */
 @theme static {
   --color-bg: #141416;
   --color-panel: #1b1b1f;
@@ -32,7 +31,7 @@
   --color-shadow: rgb(8 8 10 / 0.24);
   --color-scrim: rgb(20 20 22 / 0.6);
   /* The unlit face of a player, darker than the page on both themes so a video with black
-     bars does not dissolve into the panel behind it (reference-screens.html --screen). */
+     bars does not dissolve into the panel behind it. */
   --color-screen: #0b0b0d;
 
   --font-sans: "Barlow", system-ui, sans-serif;
@@ -130,7 +129,7 @@
   }
 }
 
-/* The Saved tick beside a Save button (uiux/screens/03-settings.md, Motion).
+/* The Saved tick beside a Save button.
    ceiling: the fade out is not animated - the tick is unmounted when its 2 s are up, and
    a leaving transition needs the element kept mounted through it. A presence wrapper
    around it is the upgrade if the cut ever reads as abrupt. */

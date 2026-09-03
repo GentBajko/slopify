@@ -29,7 +29,7 @@ const slotsColumn = z.array(z.string());
 // `lower(name)` and not `name COLLATE NOCASE`: it is the expression the unique indexes
 // are built on, so a lookup by name reads the index instead of the table.
 const byName = "lower(name) = lower(?)";
-// `logic/15` step 5: the lists on 04 Prompts and the pickers on Play sort by name.
+// The lists on 04 Prompts and the pickers on Play sort by name.
 const byNameOrder = "ORDER BY lower(name)";
 
 export function insertPrompt(db: DatabaseSync, prompt: Prompt): void {
@@ -45,7 +45,7 @@ export function insertPrompt(db: DatabaseSync, prompt: Prompt): void {
   );
 }
 
-// §Q122: the kind may change after creation, so the update writes it like any other
+// The kind may change after creation, so the update writes it like any other
 // column. Returns false when no row has that id.
 export function replacePrompt(db: DatabaseSync, prompt: Prompt): boolean {
   const result = db
@@ -63,7 +63,7 @@ export function replacePrompt(db: DatabaseSync, prompt: Prompt): boolean {
   return Number(result.changes) > 0;
 }
 
-// §Q123: no foreign key points at this row, so a project that used the template keeps
+// No foreign key points at this row, so a project that used the template keeps
 // its own rendered text and nothing cascades.
 export function deletePrompt(db: DatabaseSync, id: string): boolean {
   return Number(db.prepare("DELETE FROM prompts WHERE id = ?").run(id).changes) > 0;

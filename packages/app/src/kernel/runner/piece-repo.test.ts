@@ -75,8 +75,8 @@ describe("stage pieces", () => {
     db.close();
   });
 
-  // The UNIQUE(stage_id, kind, idx) of 02-models: a second run that planned the same
-  // chapters must not be able to double them.
+  // UNIQUE(stage_id, kind, idx): a second run that planned the same chapters must not be
+  // able to double them.
   it("refuses a second piece at the same index", () => {
     const db = migrated();
     insertPiece(db, chapter("c1", 1));

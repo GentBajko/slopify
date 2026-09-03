@@ -18,7 +18,7 @@ import { outputsOf } from "../storage/repo.js";
 import type { RerunDeps } from "./index.js";
 import { deleteImage, editArticle, regenerateImage, rerunStage, retryStage } from "./index.js";
 
-// The shell of `logic/12`: which rows and which files each action leaves behind. The rule
+// The re-run shell: which rows and which files each action leaves behind. The rule
 // that decides *which* stages it touches is `cascade.test.ts`'s and is not repeated here.
 
 const silent: Log = { write: (): void => {} };
@@ -149,7 +149,7 @@ function paths(h: Harness): string[] {
 }
 
 describe("the precondition every action shares", () => {
-  // §Q106: "no stage of the project is `running`".
+  // No stage of the project is `running`.
   it("refuses while a stage is running", () => {
     const h = finished({ states: { video: "running" } });
 
@@ -172,9 +172,9 @@ describe("the precondition every action shares", () => {
 });
 
 describe("re-running one stage", () => {
-  // Step 2 with §Q102 and §Q106: the audio is remade and the video with it. The audio
-  // keeps nothing it had; the video keeps everything, because §Q106 leaves the previous
-  // render downloadable until the new one finishes and `slices/video/run.ts` swaps it.
+  // The audio is remade and the video with it. The audio keeps nothing it had; the video
+  // keeps everything, because the previous render stays downloadable until the new one
+  // finishes and `slices/video/run.ts` swaps it.
   it("drops the stage's outputs, its pieces and its chunk files, but keeps the video", () => {
     const h = finished();
 
@@ -197,17 +197,17 @@ describe("re-running one stage", () => {
       "render.json",
     ]);
     expect(existsSync(join(h.dir, "audio-body.mp3"))).toBe(false);
-    // §Q106: "the previous video stays downloadable until the new render finishes".
+    // The previous video stays downloadable until the new render finishes.
     expect(existsSync(join(h.dir, "video.mp4"))).toBe(true);
     expect(existsSync(join(h.dir, "render.json"))).toBe(true);
-    // `logic/08` §Q66's chunks are named by their pieces, not by an output row, so the
-    // re-run has to take them away itself or the next run would reuse the old narration.
+    // The audio chunks are named by their pieces, not by an output row, so the re-run has
+    // to take them away itself or the next run would reuse the old narration.
     expect(existsSync(join(h.dir, "audio-chunks", "001.mp3"))).toBe(false);
     expect(allPiecesOf(h.db, "s-audio")).toEqual([]);
     expect(allPiecesOf(h.db, "s-images")).toHaveLength(3);
   });
 
-  // `logic/01` §Q5: "the stage re-runs from scratch with a fresh attempt budget".
+  // The stage re-runs from scratch with a fresh attempt budget.
   it("clears the error, the progress and the attempt count off the row", () => {
     const h = finished({ states: { video: "failed" } });
 
@@ -237,7 +237,7 @@ describe("re-running one stage", () => {
 });
 
 describe("retrying a stage", () => {
-  // `logic/13` step 5: a canceled stage resumes exactly like a failed one, so what the
+  // A canceled stage resumes exactly like a failed one, so what the
   // run before it finished is still there for it.
   it("puts the stage back to pending and keeps every piece and output", () => {
     const h = finished({ states: { audio: "canceled" } });
@@ -261,8 +261,8 @@ describe("retrying a stage", () => {
 });
 
 describe("editing the article", () => {
-  // Step 1: "the inline editor replaces the stored markdown; the plain-text narration
-  // source and the sources and glossary files are rebuilt".
+  // The inline editor replaces the stored markdown; the plain-text narration source and
+  // the sources and glossary files are rebuilt.
   it("replaces the article and its derived files and redoes the audio and the video", () => {
     const h = finished();
 
@@ -277,16 +277,16 @@ describe("editing the article", () => {
     expect(readFileSync(join(h.dir, "article.txt"), "utf8")).toBe("Knots\n\nRope holds.\n");
     expect(readFileSync(join(h.dir, "sources.txt"), "utf8")).toContain("A book");
     expect(states(h)).toMatchObject({ article: "done", audio: "pending", video: "pending" });
-    // §Q106: one output per stage. The four rows are replaced, not doubled.
+    // One output per stage. The four rows are replaced, not doubled.
     expect(paths(h).filter((path) => path === "article.md")).toEqual(["article.md"]);
-    // §Q101: "prompt-based images are untouched".
+    // Prompt-based images are untouched.
     expect(paths(h)).toContain("images/002.png");
     expect(existsSync(join(h.dir, "images", "002.png"))).toBe(true);
-    // §Q57's record of what was actually sent to the model is not an edit's to remove.
+    // The record of what was actually sent to the model is not an edit's to remove.
     expect(paths(h)).toContain("instructions-article.txt");
   });
 
-  // §Q63: no such heading means no file, not an empty one - so a heading the edit removed
+  // No such heading means no file, not an empty one - so a heading the edit removed
   // leaves neither a row nor a file behind.
   it("removes the sources file when the new article has no end matter", () => {
     const h = finished();
@@ -327,7 +327,7 @@ describe("editing the article", () => {
 });
 
 describe("deleting one image", () => {
-  // §Q75 and step 5: the row, the file and the piece all go, and the video re-renders.
+  // The row, the file and the piece all go, and the video re-renders.
   it("removes the row, the file and the piece, and leaves the other images in order", () => {
     const h = finished();
 
@@ -339,19 +339,19 @@ describe("deleting one image", () => {
     ]);
     expect(existsSync(join(h.dir, "images", "002.png"))).toBe(false);
     expect(allPiecesOf(h.db, "s-images").map((one) => one.idx)).toEqual([1, 3]);
-    // `logic/11` sorts on `meta.index`, so the gap the delete leaves is harmless.
+    // The render sorts on `meta.index`, so the gap the delete leaves is harmless.
     expect(
       outputsOf(h.db, projectId)
         .filter((one) => one.role === "image")
         .map((one) => one.meta.index),
     ).toEqual([1, 3]);
     expect(states(h)).toMatchObject({ images: "done", video: "pending" });
-    // §Q106 again: the render that used the deleted image is still the one on offer until
-    // the re-render replaces it.
+    // The render that used the deleted image is still the one on offer until the re-render
+    // replaces it.
     expect(existsSync(join(h.dir, "video.mp4"))).toBe(true);
   });
 
-  // §Q103's invariant: "at least one image always remains".
+  // At least one image always remains.
   it("refuses the last image and changes nothing", () => {
     const h = finished();
     deleteImage(h.deps, projectId, "o-image-1");
@@ -376,8 +376,8 @@ describe("deleting one image", () => {
 });
 
 describe("regenerating one image", () => {
-  // §Q103: "one new call with that image's stored prompt text, replacing it in place at
-  // the same index". The piece carries both, so it stays.
+  // One new call with that image's stored prompt text, replacing it in place at the same index.
+  // The piece carries both, so it stays.
   it("takes away only that image and keeps the plan that made it", () => {
     const h = finished();
 

@@ -69,8 +69,8 @@ export type UploadKind = "audio" | "images" | "thumbnail";
 // `Response`, and a bare `Response` in a handler's union erases the JSON type of every
 // route that can answer problem+json, which is every route with a validator.
 export interface ProjectListBody {
-  // A listing, not a summary: 07 Projects draws a meter per running row and the share it
-  // needs is averaged server-side from the stage rows the list already reads
+  // A listing, not a summary: 07 Projects draws a meter per running row and the share it needs
+  // is averaged server-side from the stage rows the list already reads
   // (`edge/http/projects.ts`).
   readonly projects: readonly ProjectListing[];
 }
@@ -99,7 +99,7 @@ export interface VoiceListBody {
   readonly voices: readonly Voice[];
 }
 // Every kind in one answer: 04 Prompts filters by tab and Duplicate needs the body it is
-// copying, so `edge/http/prompts.ts` lists them all (`logic/15` step 3).
+// copying, so `edge/http/prompts.ts` lists them all.
 export interface PromptListBody {
   readonly prompts: readonly Prompt[];
 }
@@ -123,7 +123,7 @@ export interface Api {
   // has no request type for it. The URL still comes from the route type.
   readonly fetch: typeof fetch;
   // Where `/files/...` and the SSE endpoints live. They are served by URL, not through
-  // the API (02-models Boundaries).
+  // the API.
   readonly origin: string;
 }
 
@@ -143,12 +143,11 @@ export async function readProject(api: Api, id: string): Promise<ProjectBody> {
   return read<ProjectBody>(await api.client.projects[":id"].$get({ param: { id } }));
 }
 
-// A refused run is an expected outcome, not a fault: `logic/04` §Q29 has the server name
-// every failing field, and Play marks each one in place. So this answers with a value
-// carrying the 400's `fields[]`, the way a refused template does. A creation that failed
-// on this machine (§Q36) is still thrown, and the key shows it.
-// `logic/14` step 4. A refusal is a problem+json the screen shows where the press
-// happened; there is nothing to read back on success.
+// A refused run is an expected outcome, not a fault: the server names every failing field
+// and Play marks each one in place. So this answers with a value carrying the 400's
+// `fields[]`, the way a refused template does. A creation that failed on this machine is
+// still thrown, and the key shows it. A refusal is a problem+json the screen shows where
+// the press happened; there is nothing to read back on success.
 export async function removeProject(api: Api, id: string): Promise<void> {
   const response = await api.client.projects[":id"].$delete({ param: { id } });
   if (!response.ok) {
@@ -185,8 +184,8 @@ export async function discardStaged(api: Api, id: string): Promise<void> {
   }
 }
 
-// 10 Usage: this install's own numbers, computed from the local event log alone
-// (`logic/16` step 6). Seconds of audio come back as seconds; the hours are the screen's.
+// 10 Usage: this install's own numbers, computed from the local event log alone. Seconds of
+// audio come back as seconds; the hours are the screen's.
 export async function readUsage(api: Api): Promise<Usage> {
   return read<Usage>(await api.client.usage.$get());
 }
@@ -210,7 +209,7 @@ export async function listProviders(api: Api): Promise<ProviderListBody> {
 }
 
 // The key crosses this function and is never handed back: the answer carries `hasKey`
-// and the mask (`logic/02` invariants).
+// and the mask.
 export async function saveProviderKey(
   api: Api,
   provider: ProviderId,
@@ -254,7 +253,7 @@ export type AddVoiceResult =
   | { readonly ok: false; readonly refusal: VoiceRefusal };
 
 // A refused voice is an expected outcome, not a fault, so it comes back as a value the
-// form can mark a field with (03-standards, typed results). Everything else still throws.
+// form can mark a field with. Everything else still throws.
 export async function addVoice(api: Api, draft: VoiceDraft): Promise<AddVoiceResult> {
   const response = await api.client.settings.voices.$post({
     json: { provider: draft.provider, name: draft.name, voiceId: draft.voiceId },
@@ -277,7 +276,7 @@ export async function removeVoice(api: Api, id: string): Promise<void> {
   }
 }
 
-// `logic/02` §Q18: a duplicate voice ID is a conflict with a row that exists, and the
+// A duplicate voice ID is a conflict with a row that exists, and the
 // screen puts that sentence under the Voice ID input. A 400 names its own field.
 function refusalOf(status: number, problem: Problem | undefined): VoiceRefusal | undefined {
   if (problem === undefined) {

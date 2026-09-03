@@ -9,14 +9,14 @@ import { claudeCodeArgs, claudeCodeLlm, claudeCodeModels } from "./claude-code.j
 import type { CliEnded, CliRun } from "./run-cli.js";
 import { nodeRunCli } from "./run-cli.js";
 
-// Fixture provenance: `fixtures/claude-code-*.jsonl` come from real `claude` 2.1.258 runs
-// on this machine (spike 1), captured with
-//   claude -p "..." --output-format stream-json --verbose --model haiku [--tools ...]
-// and abridged only where the capture carried this machine rather than the CLI: the init
-// event's tool, MCP, plugin, skill and command lists, and the opaque signature on a
-// thinking block. `claude-code-auth-failure.jsonl` and `claude-code-rate-limit.jsonl` are
-// the recorded bad-model result event with its status and text changed - the shape is
-// real, those two statuses were not provoked against a live account.
+// Fixture provenance: `fixtures/claude-code-*.jsonl` come from real `claude` 2.1.258 runs on
+// this machine (spike 1), captured with claude -p "..." --output-format stream-json --verbose
+// --model haiku [--tools ...] and abridged only where the capture carried this machine rather
+// than the CLI: the init event's tool, MCP, plugin, skill and command lists, and the opaque
+// signature on a thinking block. `claude-code-auth-failure.jsonl` and
+// `claude-code-rate-limit.jsonl` are the recorded bad-model result event with its status and
+// text changed - the shape is real, those two statuses were not provoked against a live
+// account.
 
 function fixture(name: string): string {
   return readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8");
@@ -142,7 +142,7 @@ describe("claudeCodeLlm.complete", () => {
     expect(deltas).toHaveLength(1);
     const text = deltas[0]?.type === "delta" ? deltas[0].text : "";
     expect(text).toContain("Node.js 24 is the current Active LTS version");
-    // `logic/06` step 3: the grounded answer ends in the sources it used.
+    // The grounded answer ends in the sources it used.
     expect(text).toContain("\n\nSources:\n- ");
     expect(text).not.toContain("tool_use");
     expect(events.at(-1)).toEqual({

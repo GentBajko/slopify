@@ -2,10 +2,9 @@ import { setTimeout as delay } from "node:timers/promises";
 
 export interface Clock {
   readonly now: () => Date;
-  // Waiting is the clock's business, not the caller's: the retry backoff of `logic/01`
-  // §Q4 and the per-attempt timeouts of §Q62 are driven through here, so a test can run
-  // forty seconds of retry policy without sleeping. Rejects with the signal's reason
-  // when the signal aborts first.
+  // Waiting is the clock's business, not the caller's: the retry backoff and the
+  // per-attempt timeouts run through here, so a test can play forty seconds of retry policy
+  // without sleeping. Rejects with the signal's reason when it aborts.
   readonly sleep: (ms: number, signal?: AbortSignal) => Promise<void>;
 }
 

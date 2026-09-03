@@ -16,9 +16,9 @@ import type { PlayFormState } from "@/play/state";
 import { needsLlm } from "@/play/state";
 import { InlineSwitch } from "@/play/switches";
 
-// The sticky right column (uiux/screens/06-play.md): the run's title and frame, the
-// entries narrated around it, the LLM row when something asks for one, the keywords the
-// picked prompts want, and the Play key the whole screen exists to serve.
+// The sticky right column: the run's title and frame, the entries narrated around it, the LLM
+// row when something asks for one, the keywords the picked prompts want, and the Play key the
+// whole screen exists to serve.
 
 export interface CueSheetProps {
   readonly form: PlayFormState;
@@ -111,7 +111,7 @@ export function CueSheet({
         </div>
       </div>
 
-      {/* `logic/04` §Q28: the row exists only while something in the run asks an LLM for
+      {/* The row exists only while something in the run asks an LLM for
           text - research, the article, a thumbnail written by the LLM, or an LLM-mode
           intro or outro. */}
       {needsLlm(form, entries) ? (
@@ -167,7 +167,7 @@ export function CueSheet({
         variant="play"
         size="play"
         // `aria-disabled` rather than `disabled`: a key nobody can focus cannot announce
-        // the reason it is refusing, and the reason is the point (uiux/03-experience.md).
+        // the reason it is refusing, and the reason is the point.
         aria-disabled={held}
         aria-describedby={blocker === undefined ? undefined : hintId}
         onClick={() => {
@@ -183,7 +183,7 @@ export function CueSheet({
   );
 }
 
-// `logic/04` §Q91: Off, or one saved entry.
+// Off, or one saved entry.
 function EntryPicker({
   label,
   category,

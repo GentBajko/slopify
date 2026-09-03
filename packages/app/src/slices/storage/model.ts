@@ -4,7 +4,7 @@ export { stageKinds } from "../../kernel/pipeline.js";
 export type { StageKind };
 
 // The stages whose content arrives as a file. Research and article take pasted text
-// instead (logic/05 §Q37), and video is always generated (logic/01 step 5).
+// instead, and video is always generated.
 export const uploadableStageKinds = ["audio", "images", "thumbnail"] as const;
 
 export const outputRoles = [
@@ -29,9 +29,9 @@ export type StagedFileState = (typeof stagedFileStates)[number];
 
 export interface OutputMeta {
   readonly promptName?: string | undefined;
-  // logic/09 §Q76: an image is stored with the prompt text that made it, not only the
-  // name of the template it came from - the run's keyword values are already substituted
-  // in, and logic/10 §Q80 stores the LLM's own wording for the thumbnail the same way.
+  // An image is stored with the prompt text that made it, not only the name of the template
+  // it came from: the run's keyword values are already substituted in, and the thumbnail
+  // keeps the LLM's own wording the same way.
   readonly prompt?: string | undefined;
   readonly index?: number | undefined;
   readonly provider?: string | undefined;
@@ -65,7 +65,7 @@ export interface StagedFile {
 }
 
 // A staged upload belongs to no project yet, so its progress cannot ride a project
-// channel; the form that started it watches the global one (logic/05 §Q43).
+// channel; the form that started it watches the global one.
 export interface StagingProgressEvent {
   readonly type: "staging.progress";
   readonly stagedFileId: string;

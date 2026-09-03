@@ -94,7 +94,7 @@ describe("the voice list", () => {
     });
   });
 
-  // `logic/02` §Q18: the conflict is with a row that already exists, so the sentence goes
+  // The conflict is with a row that already exists, so the sentence goes
   // under the field that holds the duplicate and Add stops until it changes.
   it("marks a duplicate voice ID on its own field and holds Add", async () => {
     const user = userEvent.setup();

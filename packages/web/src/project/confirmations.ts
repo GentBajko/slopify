@@ -1,13 +1,12 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 
 // Every action on this page that destroys something the user cannot get back, with the
-// one sentence naming the consequence. `uiux/03-experience.md` fixes the posture - stop
-// and confirm, the action verb and a dismissal, no secondary options - and the copy of
-// the cancel dialog is the reference sheet's own.
+// one sentence naming the consequence. The posture is fixed: stop and confirm, the action
+// verb and a dismissal, no secondary options.
 //
-// Retry is not here on purpose: `logic/12` and `slices/reruns` leave a retried stage's
-// pieces and outputs where they are, so it destroys nothing and a dialog in front of the
-// only recovery path would be friction (`uiux/03-experience.md`, Error recovery).
+// Retry is not here on purpose: `slices/reruns` leaves a retried stage's pieces and outputs
+// where they are, so it destroys nothing and a dialog in front of the only recovery path
+// would be friction.
 
 export type Destructive =
   | { readonly kind: "cancel" }

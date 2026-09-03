@@ -29,7 +29,7 @@ import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 
 // The research stage against the real attempt wrapper: what `slices/research/run.test.ts`
 // cannot show, because a slice may not reach a registry or an adapter. Nothing here calls
-// a provider; `adapters/fake/llm.ts` answers every request (06-testing Doubles).
+// a provider; `adapters/fake/llm.ts` answers every request.
 
 const silent: Log = { write: (): void => {} };
 
@@ -185,9 +185,8 @@ describe("the research stage through the attempt wrapper", () => {
       "All of it.\n\nSources\nhttps://example.test/all",
     );
     expect(piecesOf(h.db, "s1", "chapter").map((piece) => piece.state)).toEqual(["done", "done"]);
-    // logic/16 steps 2 and 3: one event for the stage, carrying the tokens of all four
-    // calls under the provider and model that were asked. The fake reports 11 in and 22
-    // out per call.
+    // One event for the stage, carrying the tokens of all four calls under the provider
+    // and model that were asked. The fake reports 11 in and 22 out per call.
     expect(h.counted.events()).toEqual([
       {
         type: "stage.completed",
@@ -203,8 +202,8 @@ describe("the research stage through the attempt wrapper", () => {
     h.db.close();
   });
 
-  // logic/16 step 3 with §Q131: "provider reports no token usage → 0 recorded, never
-  // estimated". The stage still records, so the Usage page shows the call happened.
+  // A provider that reports no token usage records 0, never an estimate. The stage still
+  // records, so the Usage page shows the call happened.
   it("records zero tokens for a provider that reports no usage", async () => {
     const h = harness();
     const llm = fakeLlm({ reply: script(() => good), usage: null });
@@ -223,8 +222,8 @@ describe("the research stage through the attempt wrapper", () => {
     h.db.close();
   });
 
-  // §Q50: "Empty response from any call → counts as a failed attempt", so the wrapper
-  // sees a failure and runs the retry policy of `logic/01` step 6 over it.
+  // An empty response from any call counts as a failed attempt, so the wrapper sees a
+  // failure and runs the retry policy over it.
   it("retries a sub-agent that answers nothing, four times, then fails the stage", async () => {
     const h = harness();
     const llm = fakeLlm({
@@ -237,8 +236,8 @@ describe("the research stage through the attempt wrapper", () => {
     const failing = Object.entries(counts).find(([, count]) => count === 4);
     expect(failing).toBeDefined();
     expect(Object.values(counts).toSorted()).toEqual([1, 1, 4]);
-    // The stage never completed, so it counted nothing: logic/16 step 2 puts one event on
-    // the stage completing, and a failed attempt reports no usage to add.
+    // The stage never completed, so it counted nothing: the event goes on the stage
+    // completing, and a failed attempt reports no usage to add.
     expect(h.counted.events()).toEqual([]);
     expect(h.clock.waits).toContain(2000);
     expect(h.clock.waits).toContain(8000);
@@ -246,7 +245,7 @@ describe("the research stage through the attempt wrapper", () => {
     h.db.close();
   });
 
-  // §Q55: the same for an answer that carries no Sources list.
+  // The same for an answer that carries no Sources list.
   it("retries a sub-agent whose notes carry no Sources list", async () => {
     const h = harness();
     const llm = fakeLlm({
@@ -261,7 +260,7 @@ describe("the research stage through the attempt wrapper", () => {
     h.db.close();
   });
 
-  // §Q50 again, for the last call rather than a sub-agent's.
+  // The same rule, for the last call rather than a sub-agent's.
   it("retries a synthesis that answers with no Sources list", async () => {
     const h = harness();
     const llm = fakeLlm({
@@ -283,7 +282,7 @@ describe("the research stage through the attempt wrapper", () => {
     h.db.close();
   });
 
-  // §Q47: the adapter says the model cannot ground on the web, the wrapper makes that
+  // The adapter says the model cannot ground on the web, the wrapper makes that
   // terminal, and the user reads the doc's own sentence.
   it("stops at once when the model cannot search the web", async () => {
     const h = harness();

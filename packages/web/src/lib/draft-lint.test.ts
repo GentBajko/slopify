@@ -28,7 +28,7 @@ describe("draftProblems", () => {
     expect(draftProblems(draft({}), [])).toEqual([]);
   });
 
-  // `logic/15` §Q121: one rule set over both libraries, so an entry is linted by the
+  // One rule set over both libraries, so an entry is linted by the
   // same sentences a prompt is.
   it("lints an intro/outro entry by the same rules as a prompt", () => {
     expect(draftProblems(entry({}), [])).toEqual([]);
@@ -40,8 +40,8 @@ describe("draftProblems", () => {
     ]);
   });
 
-  // `logic/07` step 5: a text-mode entry is rendered per `logic/03` with no call, so its
-  // body carries slots and is linted exactly as an LLM-mode one is.
+  // A text-mode entry is rendered with no call, so its body carries slots and is linted
+  // exactly as an LLM-mode one is.
   it("lints a text-mode body's slots, not only an LLM-mode one's", () => {
     expect(draftProblems(entry({ mode: "text", body: "Today on {{" }), [])).toEqual([
       { field: "body", message: "The `{{` at line 1, column 10 is never closed." },

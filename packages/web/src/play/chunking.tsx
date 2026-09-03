@@ -4,10 +4,10 @@ import { Input } from "@/components/ui/input";
 import { LabelledField } from "@/play/pickers";
 import { InlineSwitch } from "@/play/switches";
 
-// `logic/08` step 2 and §Q65: how the narration is cut into requests. Whole text is one
-// request, Per paragraph one per paragraph, and Every ~N words cuts at the last sentence
-// boundary at or before N. The third segment names the N it is carrying, which is how the
-// reference sheet draws it ("Every 500 words").
+// How the narration is cut into requests. Whole text is one request, Per paragraph one per
+// paragraph, and Every ~N words cuts at the last sentence boundary at or before N. The third
+// segment names the N it is carrying, which is how the reference sheet draws it ("Every 500
+// words").
 
 export function ChunkingControl({
   value,
@@ -48,7 +48,7 @@ export function ChunkingControl({
                 const typed = Number.parseInt(event.target.value, 10);
                 // An emptied box carries no count at all rather than snapping back to a
                 // number the user is in the middle of replacing; the chunker's own
-                // default (§Q69) is what a run without one is cut by.
+                // default is what a run without one is cut by.
                 onPick(
                   Number.isFinite(typed) && typed > 0
                     ? { mode: "words", words: typed }

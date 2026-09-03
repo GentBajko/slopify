@@ -7,11 +7,10 @@ import type { RunCli } from "./run-cli.js";
 import { cliEvent, cliShaped, endedWithout, promptOf } from "./run-cli.js";
 import { lines } from "./sse-lines.js";
 
-// The local-agent adapter for Claude Code (01-architecture Module boundaries): spawned
-// non-interactively, authenticated by the CLI's own login, no key anywhere in this file.
-// Readiness is not computed here - `adapters/**` may not import `slices/**`, and
-// `slices/settings/cli-status.ts` already probes the binary per request (`logic/02`
-// §Q135). The registry `main.ts` builds is where this adapter and that probe meet.
+// The local-agent adapter for Claude Code: spawned non-interactively, authenticated by the
+// CLI's own login, no key anywhere in this file. Readiness is not computed here - `adapters/**`
+// may not import `slices/**`, and `slices/settings/cli-status.ts` already probes the binary per
+// request. The registry `main.ts` builds is where this adapter and that probe meet.
 
 export const claudeCodeBinary = "claude";
 
@@ -31,13 +30,12 @@ export interface ClaudeCodeDeps {
   readonly binary?: string | undefined;
 }
 
-// Measured on 2.1.258, not assumed: with the built-in tools left alone, a `-p` run of this
-// CLI still reached for ToolSearch and WebFetch, and the machine's MCP servers were loaded
-// into the session. Neither belongs in a content pipeline - the article stage must not
-// quietly ground itself on the web, since `logic/06` §Q47 makes grounding an explicit ask,
-// and no stage should be able to touch the disk. `--tools ""` empties the built-in set and
-// `--strict-mcp-config` drops the user's MCP servers; the init event of a run with both
-// reports `"tools":[]` and `"mcp_servers":[]`.
+// Measured on 2.1.258, not assumed: with the built-in tools left alone, a `-p` run of this CLI
+// still reached for ToolSearch and WebFetch, and the machine's MCP servers were loaded into the
+// session. Neither belongs in a content pipeline - grounding on the web is an explicit ask,
+// never something a stage does quietly, and no stage should touch the disk. `--tools ""`
+// empties the built-in set and `--strict-mcp-config` drops the user's MCP servers; the init
+// event of a run with both reports `"tools":[]` and `"mcp_servers":[]`.
 export function claudeCodeArgs(req: LlmCompletion): string[] {
   return [
     "-p",
@@ -118,7 +116,7 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
       }
     } catch (error) {
       // A cancelled stage killed the child; the reason the user's cancel carried is what
-      // the runner expects back, not whatever the half-closed pipe threw (`logic/13`).
+      // the runner expects back, not whatever the half-closed pipe threw.
       req.signal.throwIfAborted();
       throw error;
     } finally {
@@ -127,8 +125,8 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
       run.kill();
     }
     // A cancelled run ends its stream the same way an exhausted one does: the child was
-    // killed, so stdout simply stopped. `logic/13` §Q112 says an aborted call counts
-    // nothing, so it must not be reported as the provider failing.
+    // killed, so stdout simply stopped. An aborted call counts as nothing, so it must not
+    // be reported as the provider failing.
     req.signal.throwIfAborted();
     // The stream ended with no result event at all.
     throw providerError({
@@ -139,10 +137,9 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
 
   return {
     id: "claude-code",
-    // The CLI emits whole assistant turns rather than token deltas, which is still enough
-    // for the idle timeout of `logic/01` §Q62 to see life on the stream.
-    // ceiling: `--include-partial-messages` would give per-token deltas for the streamed
-    // article of `logic/07` step 2; it is the upgrade when the page needs finer text.
+    // Whole assistant turns rather than token deltas, still enough for the idle timeout to
+    // see life on the stream. ceiling: `--include-partial-messages` would give per-token
+    // deltas for the streamed article; it is the upgrade when the page needs finer text.
     capabilities: { streams: true, reportsUsage: true, webSearch: true },
     models: (): Promise<readonly ModelInfo[]> => Promise.resolve(claudeCodeModels),
     complete,

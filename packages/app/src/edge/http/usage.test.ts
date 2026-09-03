@@ -17,8 +17,8 @@ import type { Usage } from "../../slices/telemetry/usage.js";
 import { createHub } from "../events/hub.js";
 import { createApp } from "./app.js";
 
-// `GET /api/usage`, the data behind `uiux/screens/10-usage.md`. The rows are written by
-// the real `record`, so what this route serves is the same log the collector receives.
+// `GET /api/usage`, the data behind the Usage screen. The rows are written by the real
+// `record`, so what this route serves is the same log the collector receives.
 
 const clock = fixedClock("2026-09-03T10:00:00.000Z");
 const log: Log = { write: (): void => {} };
@@ -137,7 +137,7 @@ describe("GET /api/usage", () => {
         tokensUsed: 2800,
         projects: 1,
       },
-      // Sorted by tokens out, as `uiux/screens/10-usage.md` asks.
+      // Sorted by tokens out.
       byStage: [
         {
           stage: "research",
@@ -157,7 +157,7 @@ describe("GET /api/usage", () => {
     });
   });
 
-  // logic/16 §Q132: the totals are the log's, "independent of delivery", so a queue that
+  // The totals are the log's, "independent of delivery", so a queue that
   // has already gone to the collector reads exactly the same.
   it("counts events that have already been delivered", async () => {
     const h = harness();

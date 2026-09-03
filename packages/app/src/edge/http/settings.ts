@@ -17,7 +17,7 @@ import { onInvalid, problem, titleOf } from "./problem.js";
 
 const idParam = z.object({ id: z.string().min(1).max(64) });
 // Shape only. The rules - trimming, emptiness, length, the provider speaking at all -
-// are the slice's, so one set of messages reaches the form (03-conventions).
+// are the slice's, so one set of messages reaches the form.
 const voiceBody = z.object({
   provider: z.enum(providerIds),
   name: z.string(),
@@ -52,7 +52,7 @@ export function settingsRoutes(deps: AppDeps) {
     .post("/voices", zValidator("json", voiceBody, onInvalid), (c) => {
       const result = addVoice(voiceDeps, c.req.valid("json"));
       if (!result.ok) {
-        // `logic/02` §Q18: a voice ID already listed for its provider is a conflict with
+        // A voice ID already listed for its provider is a conflict with
         // a row that exists, which the form shows under the Voice ID input.
         return result.reason === "duplicate-voice-id"
           ? problem(c, {

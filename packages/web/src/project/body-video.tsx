@@ -8,10 +8,10 @@ import { ConfirmedButton } from "./controls.js";
 import { ActionRow, OutputDownload, StageBody } from "./parts.js";
 import { duration, percent } from "./summary.js";
 
-// "Video: the player at the run's aspect, capped at 720 px tall; Download .mp4; Re-render"
-// (uiux/screens/08-project.md). `logic/12` §Q106 keeps the previous file playable through
-// a re-render, and `slices/video/run.ts` swaps it only when ffmpeg has exited cleanly, so
-// the player stays on air and a line above it says how far the new one has got.
+// The player at the run's aspect, capped at 720 px tall, with Download .mp4 and Re-render.
+// The previous file stays playable through a re-render, and `slices/video/run.ts` swaps it
+// only when ffmpeg has exited cleanly, so the player stays on air and a line above it says
+// how far the new one has got.
 export function VideoBody({ stage, project, outputs, actions, busy }: BodyProps) {
   const { api } = useApp();
   const video = roleOf(outputsOf(outputs, stage), "video");

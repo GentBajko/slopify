@@ -1,4 +1,4 @@
--- The collector's database (02-models). Aggregates are sums over deduplicated events;
+-- The collector's database. Aggregates are sums over deduplicated events;
 -- the event rows are kept so a lost aggregate can be recomputed from them.
 CREATE TABLE IF NOT EXISTS events (
   id TEXT PRIMARY KEY,

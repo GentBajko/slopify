@@ -41,7 +41,7 @@ describe("addVoice", () => {
     ]);
   });
 
-  // logic/02 §Q14: a voice may be added before any key exists, and nothing is checked
+  // A voice may be added before any key exists, and nothing is checked
   // against the provider.
   it("does not require a key for the provider", () => {
     const settings = deps();

@@ -282,7 +282,7 @@ describe("the source switches", () => {
     expect(screen.getByRole("radiogroup", { name: "thumbnail source" }).textContent).toBe(
       "OffFrom promptPrompt by LLMProvide",
     );
-    // `logic/01` step 5: the video is always generated, so it carries no switch at all.
+    // The video is always generated, so it carries no switch at all.
     expect(screen.queryByRole("radiogroup", { name: "video source" })).toBeNull();
   });
 
@@ -296,7 +296,7 @@ describe("the source switches", () => {
 
     expect(screen.queryByLabelText("Article prompt")).toBeNull();
     expect(screen.getByLabelText("Article text")).not.toBeNull();
-    // `logic/05` §Q41: research only feeds article writing.
+    // Research only feeds article writing.
     expect(screen.queryByRole("radiogroup", { name: "research source" })).toBeNull();
   });
 });

@@ -14,7 +14,7 @@ const findings: readonly Finding[] = [
 ];
 
 describe("synthesisMessages", () => {
-  // §Q52: an editorial pass that selects and organizes, not a concatenation.
+  // An editorial pass that selects and organizes, not a concatenation.
   it("hands the editor every sub-agent's findings and forbids concatenating them", () => {
     const messages = synthesisMessages(brief, findings);
     const content = messages[0]?.content ?? "";
@@ -30,7 +30,7 @@ describe("synthesisMessages", () => {
     expect(content).toContain("concatenate");
   });
 
-  // §Q48: plain-text notes ending in a Sources list.
+  // Plain-text notes ending in a Sources list.
   it("asks for plain text ending in a Sources list", () => {
     const content = synthesisMessages(brief, findings)[0]?.content ?? "";
 
@@ -55,7 +55,7 @@ describe("endsWithSources", () => {
     expect(endsWithSources("Notes with a link https://a and nothing else.")).toBe(false);
   });
 
-  // §Q55: the heading alone is not a list.
+  // The heading alone is not a list.
   it("refuses a Sources heading with nothing under it", () => {
     expect(endsWithSources("Notes.\n\nSources\n\n   ")).toBe(false);
     expect(endsWithSources("Sources")).toBe(false);
@@ -67,13 +67,13 @@ describe("endsWithSources", () => {
 });
 
 describe("sourcedAnswer", () => {
-  // §Q50: an empty response counts as a failed attempt.
+  // An empty response counts as a failed attempt.
   it("names an empty answer", () => {
     expect(sourcedAnswer("the synthesis", "")).toBe("the synthesis answered with nothing");
     expect(sourcedAnswer("the synthesis", "  \n ")).toBe("the synthesis answered with nothing");
   });
 
-  // §Q55: output lacking a Sources list counts as a failed attempt.
+  // Output lacking a Sources list counts as a failed attempt.
   it("names an answer with no Sources list", () => {
     expect(sourcedAnswer("the synthesis", "Notes and nothing else.")).toBe(
       "the synthesis answered with no Sources list",

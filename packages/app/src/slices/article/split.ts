@@ -2,10 +2,9 @@ import { remark } from "remark";
 import remarkGfm from "remark-gfm";
 import { plainText } from "./plain.js";
 
-// `logic/08` step 1 and §Q64, the user's words: "It's an additional file. So sources and
-// IPA etc. are separate files." The sources list and the pronunciation glossary are cut
-// out of the article and stored beside it, so the narration never reaches them, and the
-// article itself keeps them (`logic/07` step 4: the stored markdown is never edited).
+// The sources list and the pronunciation glossary are cut out of the narration source and
+// stored as files of their own, so the narration never reaches them. The stored article
+// keeps them: its markdown is never edited.
 //
 // The heading is found in the parsed document rather than by scanning lines: remark is
 // already here for the plain-text conversion, it settles what a heading is at any level,
@@ -20,7 +19,7 @@ export interface EndMatter {
 
 type Part = "sources" | "glossary";
 
-// §Q63 names the two sections. The comparison is on the heading's own text, so "## Sources
+// The two end-matter sections. The comparison is on the heading's own text, so "## Sources
 // Consulted", "# SOURCES CONSULTED" and "**Sources Consulted:**" are one heading and
 // "## Sources Consulted and Further Reading" is not.
 const endHeadings: Readonly<Record<string, Part>> = {

@@ -83,9 +83,9 @@ describe("openAiImage.models", () => {
   });
 });
 
-// `logic/09` step 1 asks for "the provider's closest supported size to the run's aspect".
-// The standard GPT image frames are 3:2, so 16:9 is asked for as 1536×1024 and the render
-// crops the rest; gpt-image-2 takes an arbitrary frame, where the closest is the exact one.
+// The adapter asks for the provider's closest supported size to the run's aspect. The
+// standard GPT image frames are 3:2, so 16:9 is asked for as 1536×1024 and the render crops
+// the rest; gpt-image-2 takes an arbitrary frame, where the closest is the exact one.
 describe("sizeFor", () => {
   it("asks the standard models for the nearest standard frame", () => {
     expect(sizeFor("gpt-image-1", "16:9")).toBe("1536x1024");
@@ -112,8 +112,8 @@ describe("openAiImage.generate", () => {
     expect(call?.url).toBe(`${openAiImagesBase}/images/generations`);
     expect(call?.init?.method).toBe("POST");
     expect(headersOf(call).Authorization).toBe(`Bearer ${key}`);
-    // `logic/09` step 2 asks for the provider's own quality and style, so neither
-    // `quality` nor `background` is sent: leaving them off is what "default" means.
+    // The provider's own quality and style are what the stage asks for, so neither
+    // `quality` nor `background` is sent: leaving them off is what default means.
     expect(bodyOf(call)).toEqual({ model, prompt, n: 1, size: "1536x1024" });
   });
 
@@ -184,7 +184,7 @@ describe("openAiImage.generate", () => {
     expect(String(thrown)).toContain("Rate limit reached for images per min");
   });
 
-  // §Q74: `moderation_blocked` shares its 400 with a malformed request, so the code and
+  // `moderation_blocked` shares its 400 with a malformed request, so the code and
   // not the status is what makes it terminal.
   it("calls a moderation rejection a refusal, in OpenAI's own words", async () => {
     const thrown = await failed(replaying(answering("openai-image-moderation.json", 400)));

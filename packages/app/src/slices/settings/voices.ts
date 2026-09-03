@@ -33,10 +33,9 @@ export type AddVoiceResult =
 
 export type RemoveVoiceResult = { readonly ok: true } | { readonly ok: false };
 
-// `logic/02` step 3: a non-empty name and a non-empty voice ID, the ID unique within its
-// provider, names free to repeat. Nothing is verified against the provider - a wrong ID
-// is discovered when the audio stage uses it (§Q14), which is why a key is not required
-// here either.
+// A non-empty name and a non-empty voice ID, the ID unique within its provider, names free to
+// repeat. Nothing is verified against the provider - a wrong ID is discovered when the audio
+// stage uses it, which is why a key is not required here either.
 export function addVoice(deps: VoicesDeps, draft: VoiceDraft): AddVoiceResult {
   if (providerById(draft.provider).family !== "tts") {
     return { ok: false, reason: "not-a-tts-provider" };

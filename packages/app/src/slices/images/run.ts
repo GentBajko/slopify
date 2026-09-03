@@ -19,11 +19,10 @@ import type { Output } from "../storage/model.js";
 import { insertOutput, outputsOf } from "../storage/repo.js";
 import type { RecordEvent } from "../telemetry/model.js";
 
-// `logic/09`: every ticked image prompt is sent Number times as independent parallel
-// calls, each one a resumable piece so a failure re-runs only what is missing, and each
-// image appears on the page as it lands. Every call goes through the wrapped
-// `providers.image`, so the retry policy of `logic/01` step 6 and its 300 s image timeout
-// cover all of them and nothing here waits or counts attempts.
+// Every ticked image prompt is sent Number times as independent parallel calls, each one a
+// resumable piece so a failure re-runs only what is missing, and each image appears on the page
+// as it lands. Every call goes through the wrapped `providers.image`, so the retry policy and
+// its 300 s image timeout cover all of them and nothing here waits or counts attempts.
 
 export interface ImagesDeps {
   readonly db: DatabaseSync;
@@ -31,18 +30,18 @@ export interface ImagesDeps {
   readonly ids: Ids;
   readonly clock: Clock;
   readonly log: Log;
-  // logic/16 step 2: one event for the stage, carrying the images it made.
+  // One event for the stage, carrying the images it made.
   readonly count: RecordEvent;
 }
 
 // What an image piece carries between runs: what was asked for, and the file it came back
-// as once the provider answered. That is the whole of the resume of §Q73.
+// as once the provider answered. That is the whole of the resume.
 const imagePayload = z.object({
   promptName: z.string(),
   prompt: z.string(),
   // Which ticked prompt this send belongs to, and which send of that prompt it is. Both
-  // are stored rather than derived, because §Q75 lets the user delete an image and the
-  // pieces that are left must still say where each one came from.
+  // are stored rather than derived, because the user can delete an image and the pieces
+  // that are left must still say where each one came from.
   promptIndex: z.number(),
   indexInPrompt: z.number(),
   file: z.string().optional(),
@@ -62,29 +61,27 @@ export async function runImages(
   }
   const choice = project.config.images;
   if (choice === undefined) {
-    // Admission refuses a run whose images are Generate without a provider and a model
-    // (`logic/04` step 2), so reaching here is a bug in admission rather than the user's.
+    // Admission refuses a run whose images are Generate without a provider and a model, so
+    // reaching here is a bug in admission rather than the user's.
     throw new Error("the run has no image provider or model");
   }
 
   const pieces = plan(deps, context, project.config);
   if (pieces.length === 0) {
-    // `logic/04` §Q31 makes an image source mandatory and step 3 puts the Number at one
-    // or more, so an empty plan is a bug upstream rather than a run with no pictures.
+    // Admission makes an image source mandatory and puts the Number at one or more, so an
+    // empty plan is a bug upstream rather than a run with no pictures.
     throw new Error("the run ticked no image prompt");
   }
-  // Step 1: the run's own frame. The adapter turns it into whatever its provider spells
-  // the closest supported size, and `logic/11` step 4 crops whatever is left over.
+  // The run's own frame. The adapter turns it into whatever its provider spells the
+  // closest supported size, and the render crops whatever is left over.
   const made = await sendAll(deps, context, providers, choice, pieces, project.format);
 
-  // logic/16 step 3: "images made (stored images)". Only the ones this run stored, so a
-  // resume does not count an image the previous run made (§Q73) and a single regenerated
-  // image counts as one (§Q103, scenario 12: "regenerations count again").
+  // Images made means images stored, and only the ones this run stored: a resume does not
+  // count an image the previous run made, and a regenerated image counts again.
   //
   // ceiling: a run that fails partway records nothing, so the images it did store are
-  // counted by no event and the resume counts only its own. logic/16 step 2 puts one
-  // event on the stage completing; the upgrade, if the drift ever matters, is an event
-  // per image.
+  // counted by no event and the resume counts only its own. One event is written when the
+  // stage completes; the upgrade, if the drift ever matters, is an event per image.
   deps.count("stage.completed", {
     stage: "images",
     provider: choice.provider,
@@ -98,12 +95,12 @@ export async function runImages(
   });
 }
 
-// Step 2 with `logic/04` §Q30: "for each ticked image prompt, send its rendered text
-// Number times as independent parallel calls". The plan is made once and kept, so a retry
-// finds the rows the first run wrote and sends only what did not land (§Q73).
+// For each ticked image prompt, its rendered text is sent Number times as independent
+// parallel calls. The plan is made once and kept, so a retry finds the rows the first run
+// wrote and sends only what did not land.
 //
-// `idx` is the slideshow order of §Q72 - prompts in selection order, then the index within
-// each prompt - so the order is fixed here and never depends on which image arrives first.
+// `idx` is the slideshow order - prompts in selection order, then the index within each
+// prompt - so the order is fixed here and never depends on which image arrives first.
 function plan(deps: ImagesDeps, context: StageContext, config: RunConfig): readonly StagePiece[] {
   const existing = piecesOf(deps.db, context.stage.id, "image");
   if (existing.length > 0) {
@@ -112,7 +109,7 @@ function plan(deps: ImagesDeps, context: StageContext, config: RunConfig): reado
   const planned: StagePiece[] = [];
   for (const [at, picked] of config.imagePrompts.entries()) {
     // `slices/library/slots.ts` names the rendered body after the draft field that picked
-    // it, so the run carries the substituted text under this key (`logic/03`).
+    // it, so the run carries the substituted text under this key.
     const prompt = config.rendered[`imagePrompts.${String(at)}`];
     if (prompt === undefined) {
       throw new Error(`the run has no rendered text for the image prompt ${picked.name}`);
@@ -141,9 +138,9 @@ function plan(deps: ImagesDeps, context: StageContext, config: RunConfig): reado
   return planned;
 }
 
-// §Q73: an image a previous run stored is not made again, and one that fails fails the
+// An image a previous run stored is not made again, and one that fails takes down the
 // whole stage while its siblings finish and keep their images for the next resume. A
-// refusal is the wrapper's to make terminal (§Q74); nothing here counts attempts.
+// refusal is the wrapper's to make terminal; nothing here counts attempts.
 async function sendAll(
   deps: ImagesDeps,
   context: StageContext,
@@ -175,20 +172,20 @@ async function sendAll(
           aspect: format,
         });
         const file = keep(deps, projectId, piece.idx, made);
-        // §Q76: the prompt text, the prompt name, the index within the prompt, the
+        // The prompt text, the prompt name, the index within the prompt, the
         // provider and the model travel with the image.
         const output = record(deps, projectId, piece, asked, file, made, choice);
         // The row and the file are both there before the piece says so: a crash between
         // them leaves a piece that is not `done`, which the next run simply sends again.
         setPiece(deps.db, piece.id, "done", JSON.stringify({ ...asked, file }));
         done += 1;
-        // Step 3: the project page fills in as each one arrives.
+        // The project page fills in as each one arrives.
         context.emit({ type: "image.landed", projectId, outputId: output.id, index: piece.idx });
         report(deps, context, done, total);
         return { ok: true, made: true };
       } catch (error) {
-        // A cancel is not this image failing: `logic/13` §Q112 counts an aborted call as
-        // nothing, and the resume runs a `pending` image exactly as a failed one.
+        // A cancel is not this image failing: an aborted call counts as nothing, and the
+        // resume runs a `pending` image exactly as a failed one.
         setPiece(deps.db, piece.id, context.signal.aborted ? "pending" : "failed", piece.payload);
         return { ok: false, error };
       }
@@ -211,8 +208,8 @@ type Outcome =
 
 // An image counts as landed only when its row and its file are both still there: they are
 // written one after the other, the boot reconcile can remove a file whose row survived,
-// and §Q75 lets the user delete one on purpose. Answering "done" for a missing file would
-// hand the render a path to nothing.
+// and the user can delete one on purpose. Answering "done" for a missing file would hand
+// the render a path to nothing.
 function landed(
   deps: ImagesDeps,
   projectId: string,
@@ -230,7 +227,7 @@ function landed(
 }
 
 function keep(deps: ImagesDeps, projectId: string, idx: number, made: GeneratedImage): string {
-  // Step 3: "stored as received (png or jpg)". The adapter read the mime off the bytes,
+  // Stored as received, png or jpg. The adapter read the mime off the bytes,
   // so the extension is what the file actually is rather than what a header claimed.
   const name = outputFileName("image", idx, made.mime === "image/png" ? ".png" : ".jpg", "images");
   const target = outputPath(deps.paths, projectId, name);
@@ -257,8 +254,8 @@ function record(
     originalFilename: null,
     bytes: made.bytes.byteLength,
     durationMs: null,
-    // `index` is the slideshow place `logic/11` sorts on, and it is the piece's own `idx`
-    // rather than the order the images came back in (§Q72).
+    // `index` is the slideshow place the render sorts on, and it is the piece's own `idx`
+    // rather than the order the images came back in.
     meta: {
       index: piece.idx,
       promptName: asked.promptName,
@@ -272,8 +269,8 @@ function record(
   return output;
 }
 
-// `logic/01` §Q6: "k of N images made". Written as well as emitted, so a page opened
-// mid-stage reads the count off the row rather than waiting for the next image.
+// K of N images made. Written as well as emitted, so a page opened mid-stage reads the count
+// off the row rather than waiting for the next image.
 function report(deps: ImagesDeps, context: StageContext, done: number, total: number): void {
   setStageProgress(deps.db, context.stage.id, done, total);
   context.emit({

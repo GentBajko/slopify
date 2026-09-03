@@ -97,8 +97,8 @@ describe("openRouterLlm.complete", () => {
       key: () => key,
     });
     const events = await drain(port);
-    // `logic/07` §Q59 starts a continuation off this, so reading it off the usage frame -
-    // which carries no choices at all - would silently truncate every long article.
+    // A continuation starts off this, so reading it off the usage frame - which carries no
+    // choices at all - would silently truncate every long article.
     expect(events.at(-1)).toEqual({
       type: "done",
       usage: { inputTokens: 9, outputTokens: 4096 },
@@ -176,8 +176,8 @@ describe("openRouterLlm.complete", () => {
       key: () => undefined,
     });
     const error: unknown = await drain(port).catch((thrown: unknown) => thrown);
-    // `logic/02` §Q13: an absent key is terminal, so it carries the kind the wrapper does
-    // not retry rather than the `auth` kind a rejected key carries (§Q11).
+    // An absent key is terminal, so it carries the kind the wrapper does
+    // not retry rather than the `auth` kind a rejected key carries.
     expect(isProviderError(error) && error.fault.kind).toBe("missing_key");
     expect(String(error)).toContain("no OpenRouter key is stored");
     expect(called).toBe(0);

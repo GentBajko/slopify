@@ -22,7 +22,7 @@ function staged(
   };
 }
 
-// The skeleton run: every stage provided or off, which is what S4 can actually execute.
+// The skeleton run: every stage provided or off, so nothing calls a provider.
 function provided(over: Partial<RunDraft> = {}): RunDraft {
   return {
     title: "Rope Tricks",

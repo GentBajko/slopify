@@ -84,7 +84,7 @@ describe("the telemetry queue", () => {
     expect(undeliveredEvents(db, 10).map((row) => row.id)).toEqual(["e1"]);
   });
 
-  // logic/16 §Q132: the Usage page's totals are the sum of the whole log, delivered or
+  // The Usage page's totals are the sum of the whole log, delivered or
   // not, which is the one reader that must not stop at the queue.
   it("hands the whole log back whether or not it was delivered", () => {
     const db = migrated();

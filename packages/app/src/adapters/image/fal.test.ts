@@ -172,7 +172,7 @@ describe("falImage.generate", () => {
     expect(String(thrown)).toContain("value is not a valid enumeration member");
   });
 
-  // §Q74: the safety checker's verdict is fal's final answer, so the wrapper must not
+  // The safety checker's verdict is fal's final answer, so the wrapper must not
   // spend three more images finding that out.
   it("calls a flagged answer a refusal, which the wrapper never retries", async () => {
     const seen: Seen[] = [];

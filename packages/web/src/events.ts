@@ -14,18 +14,17 @@ export interface EventSourceLike {
 export type OpenEvents = (url: string) => EventSourceLike;
 
 export interface ProjectSink {
-  // 04-data-flow, SSE disconnect: the browser reconnects by itself and the events it
-  // missed are never replayed, so the page refetches instead of resuming. It is also what
+  // On an SSE disconnect the browser reconnects by itself and the events it missed are
+  // never replayed, so the page refetches instead of resuming. It is also what
   // fetches the rows an event cannot carry: the output an image landed as, and the files a
   // stage wrote on its way to `done`.
   readonly refetch: () => void;
   // The one event that only patches: the article arrives as a stream of deltas, and asking
   // the server for the whole project per token would be absurd.
   readonly appendArticle: (text: string) => void;
-  // The three events that carry their whole change. Patching them puts the lamp, the state
-  // word and the meter on the page in the frame the event arrived in, which is the
-  // signature interaction (uiux/screens/08-project.md, Motion), and it is what keeps a
-  // meter ticking from asking the server sixty times.
+  // The three events that carry their whole change. Patching them puts the lamp, the state word
+  // and the meter on the page in the frame the event arrived in, which is the signature
+  // interaction, and it is what keeps a meter ticking from asking the server sixty times.
   readonly patch: (event: PatchEvent) => void;
 }
 

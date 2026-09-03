@@ -12,8 +12,8 @@ export interface BodyProps {
   // wants nothing else, and filtering is each body's own business.
   readonly outputs: readonly Output[];
   readonly actions: ProjectActions;
-  // `logic/12` §Q106: while any stage of the project is running, every edit and re-run
-  // control is disabled. The server refuses these too; this is the half the user sees.
+  // While any stage of the project is running, every edit and re-run control is disabled. The
+  // server refuses these too; this is the half the user sees.
   readonly busy: boolean;
 }
 

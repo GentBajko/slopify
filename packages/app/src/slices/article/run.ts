@@ -20,9 +20,9 @@ import type { ArticleBrief, SentMessages } from "./continuation.js";
 import { writeArticle } from "./continuation.js";
 import { storeArticleText } from "./store.js";
 
-// `logic/07`: one streamed call writes the article from the research notes and the
-// rendered prompt, its end matter is cut into files of its own, and the picked intro and
-// outro get their text last, since an LLM-mode entry is written from the article (§Q97).
+// One streamed call writes the article from the research notes and the rendered prompt, its end
+// matter is cut into files of its own, and the picked intro and outro get their text last,
+// since an LLM-mode entry is written from the article.
 
 export interface ArticleDeps {
   readonly db: DatabaseSync;
@@ -30,11 +30,11 @@ export interface ArticleDeps {
   readonly ids: Ids;
   readonly clock: Clock;
   readonly log: Log;
-  // logic/16 step 2: one event for the article, one for each intro or outro text.
+  // One event for the article, one for each intro or outro text.
   readonly count: RecordEvent;
 }
 
-// What the article stage leaves for `logic/08` to narrate: one `segment` piece per picked
+// What the article stage leaves for the narration to speak: one `segment` piece per picked
 // entry, whether its text was written by the model or rendered from the entry body.
 export interface SegmentText {
   readonly category: EntryCategory;
@@ -63,7 +63,7 @@ export async function runArticle(
   const choice = project.config.llm;
   const articlePrompt = project.config.rendered.article;
   if (choice === undefined || articlePrompt === undefined) {
-    // Admission refuses a run whose article is Generate without both (`logic/04`), so
+    // Admission refuses a run whose article is Generate without both, so
     // reaching here is a bug in admission rather than something the user did.
     throw new Error("the run has no LLM provider or no rendered article prompt");
   }
@@ -71,23 +71,23 @@ export async function runArticle(
   const brief: ArticleBrief = { articlePrompt, ...(notes === undefined ? {} : { notes }) };
 
   const written = await writeArticle(providers, choice, brief, (text: string): void => {
-    // Step 2 and `logic/01` §Q6: the page shows the article as it is written. The idle
-    // timeout is restarted by the wrapper on the same events, not here.
-    // ceiling: §Q60 discards the partial text of a failed attempt, but the deltas already
-    // sent cannot be unsent, so a retry mid-stream leaves the page appending the second
-    // telling under the first. What the project keeps is still the successful attempt's
-    // text alone; the upgrade is an event telling the page to start the article again.
+    // The page shows the article as it is written. The idle timeout is restarted by the wrapper
+    // on the same events, not here. ceiling: the partial text of a failed attempt is discarded,
+    // but the deltas already sent cannot be unsent, so a retry mid-stream leaves the page
+    // appending the second telling under the first. What the project keeps is still the
+    // successful attempt's text alone; the upgrade is an event telling the page to start the
+    // article again.
     context.emit({ type: "article.delta", projectId, text });
   });
 
-  // Step 4: the markdown exactly as the model produced it, and the plain-text narration
-  // source. §Q63 keeps the end matter out of the narration and beside the article instead.
+  // The markdown exactly as the model produced it, and the plain-text narration source.
+  // The end matter is kept out of the narration and stored beside the article instead.
   const store = { projectId, stageKind: "article" } as const;
   storeText(deps, { ...store, role: "article_md", text: written.markdown });
   const narration = storeArticleText(deps, { projectId, markdown: written.markdown });
-  // logic/16 step 2 counts the article and each entry text as units of their own, so the
-  // article's own event goes out as soon as its text is stored, carrying the tokens of
-  // the first call and its continuations (logic/07 step 3).
+  // The article and each entry text are counted as units of their own, so the article's
+  // event goes out as soon as its text is stored, carrying the tokens of the first call
+  // and its continuations.
   deps.count("stage.completed", {
     stage: "article",
     provider: choice.provider,
@@ -107,9 +107,9 @@ export async function runArticle(
     );
     if (segment !== undefined) {
       keepSegment(deps, context, segment, index + 1);
-      // "each intro/outro text" of logic/16 step 2, named by its segment. A text-mode
-      // entry is rendered rather than written (§Q98), so it made no call and names no
-      // provider; its tokens are the zero step 3 asks for rather than an estimate.
+      // One event per intro/outro text, named by its segment. A text-mode entry is
+      // rendered rather than written, so it made no call, names no provider and reports
+      // zero tokens rather than an estimate.
       deps.count("stage.completed", {
         stage: "article",
         segment: category,
@@ -119,7 +119,7 @@ export async function runArticle(
     }
   }
 
-  // §Q57: the exact messages sent, the continuations and the entry calls among them.
+  // The exact messages sent, the continuations and the entry calls among them.
   storeText(deps, { ...store, role: "instructions", text: instructionsText(sent) });
   deps.log.write("info", "article.done", {
     projectId,
@@ -128,9 +128,9 @@ export async function runArticle(
   });
 }
 
-// Step 5: "for each picked entry in LLM mode, one call with the filled entry as
-// instruction plus the title, keyword values, and the plain-text article ... Text-mode
-// entries are stored as rendered per scenario 03 with no call" (§Q97, §Q98).
+// For each picked entry in LLM mode, one call with the filled entry as instruction plus the
+// title, keyword values, and the plain-text article ... Text-mode entries are stored as
+// rendered, with no call.
 async function writeSegment(
   providers: StageProviders,
   choice: ProviderChoice,
@@ -157,7 +157,7 @@ async function writeSegment(
     provider: choice.provider,
     model: choice.model,
     messages,
-    // §Q96 and §Q61: an entry that answers with nothing is a failed attempt like any
+    // An entry that answers with nothing is a failed attempt like any
     // other, and the wrapper is what retries it.
     check: (given: LlmAnswer): string | undefined =>
       given.text.trim() === "" ? `the ${category} answered with nothing` : undefined,
@@ -198,8 +198,8 @@ function keepSegment(
   idx: number,
 ): void {
   // Written out rather than stringified whole: the caller hands in what the call cost as
-  // well, and the piece is `logic/08`'s to read - it carries the text to narrate, nothing
-  // about the model that wrote it.
+  // well, and the narration stage is what reads the piece - it carries the text to speak,
+  // nothing about the model that wrote it.
   const payload = JSON.stringify({
     category: segment.category,
     name: segment.name,
@@ -223,9 +223,9 @@ function keepSegment(
   setPiece(deps.db, existing.id, "done", payload);
 }
 
-// Research writes its notes as an output of its own (`logic/06` step 4), and a provided
-// research stage stores the pasted text the same way, so one lookup covers both. No row
-// means research was Off or skipped, and the article is written from the prompt alone.
+// Research writes its notes as an output of its own, and a provided research stage stores the
+// pasted text the same way, so one lookup covers both. No row means research was Off or
+// skipped, and the article is written from the prompt alone.
 function researchNotes(deps: ArticleDeps, projectId: string): string | undefined {
   const notes = outputsOf(deps.db, projectId).find((output) => output.role === "notes");
   if (notes === undefined) {

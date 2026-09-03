@@ -59,9 +59,9 @@ async function ingest(request: Request, db: CollectorDb): Promise<Response> {
   return answer({ ok: true, accepted }, 200, request);
 }
 
-// The dedup rule (logic/16 §Q134): the event id is the primary key, so a batch re-sent
-// after an ambiguous failure inserts nothing the second time, and only the insert that
-// actually changed a row moves the aggregates.
+// The dedup rule: the event id is the primary key, so a batch re-sent after an ambiguous
+// failure inserts nothing the second time, and only the insert that actually changed a row
+// moves the aggregates.
 async function store(db: CollectorDb, events: readonly CollectorEvent[]): Promise<number> {
   const receivedAt = new Date().toISOString();
   let accepted = 0;
@@ -76,10 +76,10 @@ async function store(db: CollectorDb, events: readonly CollectorEvent[]): Promis
       continue;
     }
     accepted += 1;
-    // ceiling: the insert and its aggregate bumps are separate statements, so a Worker
-    // killed between them loses that event's contribution while the event itself stays
-    // stored. Aggregates are best effort by design (07-operations); the upgrade is a
-    // batch, which needs the dedup decision to move into SQL.
+    // ceiling: the insert and its aggregate bumps are separate statements, so a Worker killed
+    // between them loses that event's contribution while the event itself stays stored.
+    // Aggregates are best effort by design; the upgrade is a batch, which needs the dedup
+    // decision to move into SQL.
     for (const [key, delta] of deltasFor(event)) {
       await db
         .prepare(
@@ -112,7 +112,7 @@ async function totals(db: CollectorDb): Promise<{ readonly aggregates: Aggregate
     }
   }
   // Every key is present at zero, so the page never has to tell a missing counter from a
-  // real zero (logic/16 §Q133 keeps dashes for the collector being unreachable).
+  // real zero. Dashes are reserved for the collector being unreachable.
   return { aggregates: { ...emptyAggregates(), ...found } };
 }
 

@@ -33,11 +33,10 @@ import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 import { probeDurationMs, resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
 import { renderVideo } from "../src/slices/video/run.js";
 
-// `logic/07` step 5 writes the picked intro and outro texts, `logic/08` step 5 narrates
-// them and `logic/11` step 1 puts them either side of the body with a gap between. That
-// hand-over crosses two stages and two stage ids, so it is proved here over the real
-// stages, the real runner and the bundled ffmpeg. No provider is called: `adapters/fake/*`
-// are the doubles (06-testing).
+// The article stage writes the picked intro and outro texts, the audio stage narrates them
+// and the render puts them either side of the body with a gap between. That hand-over
+// crosses two stages and two stage ids, so it is proved here over the real stages, the real
+// runner and the bundled ffmpeg. No provider is called: `adapters/fake/*` are the doubles.
 
 const silent: Log = { write: (): void => {} };
 const ffmpeg = resolveFfmpeg(process.env, ffmpegStatic);
@@ -47,8 +46,8 @@ const gapSeconds = 1;
 
 const articlePrompt = "PROMPT-ARTICLE: write about rope";
 const introBody = "PROMPT-INTRO: open the video";
-// The outro is picked in text mode, so this is spoken verbatim and no call is made for it
-// (`logic/07` §Q98). The intro is LLM mode, so the model's answer is what is narrated.
+// The outro is picked in text mode, so this is spoken verbatim and no call is made for it. The
+// intro is LLM mode, so the model's answer is what is narrated.
 const outroText = "Thanks for watching, and mind the splice.";
 const introText = "Welcome to the channel.";
 const imageBody = "PROMPT-IMAGE: a coil of rope on a dock";
@@ -235,8 +234,8 @@ describe("a run with a picked intro and outro", () => {
     const dir = join(h.paths.projects, h.projectId);
     const outputs = outputsOf(h.db, h.projectId);
 
-    // `logic/08` §Q93 and §Q65's invariant: the body plus the two picked segments, each
-    // its own file with the duration that was measured off it (§Q68).
+    // The body plus the two picked segments, each
+    // its own file with the duration that was measured off it.
     expect(
       outputs.filter((output) => output.stageKind === "audio").map((output) => output.role),
     ).toEqual(["audio_body", "audio_intro", "audio_outro"]);
@@ -251,7 +250,7 @@ describe("a run with a picked intro and outro", () => {
     // The three requests carried three different texts, so the three files differ.
     expect(new Set(parts.values()).size).toBe(3);
 
-    // `logic/11` step 1: intro, gap, body, gap, outro, the gaps at the configured length.
+    // Intro, gap, body, gap, outro, the gaps at the configured length.
     const plan = JSON.parse(readFileSync(join(dir, "render.json"), "utf8")) as {
       audio: readonly PlannedSegment[];
       gapSeconds: number;
@@ -273,16 +272,15 @@ describe("a run with a picked intro and outro", () => {
       parts.get("audio_outro"),
     ]);
 
-    // §Q95's invariant: "Video length = intro + gaps + body + outro", read off the mp4
-    // rather than off the plan that asked for it. The tolerance is a frame and a half:
-    // the video track is a whole number of frames at 30 fps and AAC cannot end a file
-    // mid-block.
+    // Video length = intro + gaps + body + outro, read off the mp4 rather than off the plan
+    // that asked for it. The tolerance is a frame and a half: the video track is a whole number
+    // of frames at 30 fps and AAC cannot end a file mid-block.
     const sumSeconds = plan.audio.reduce((total, segment) => total + segment.seconds, 0);
     expect(plan.totalSeconds).toBe(sumSeconds);
     const rendered = await measure(join(dir, "video.mp4"));
     expect(Math.abs(rendered - sumSeconds * 1000)).toBeLessThan(120);
 
-    // logic/16 step 2: one event per narrated segment, and step 3 takes the seconds from
+    // One event per narrated segment, and the seconds come from
     // the measured duration rather than from the text.
     expect(
       h.counted

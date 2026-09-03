@@ -26,8 +26,8 @@ import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 
 // The images stage against the real attempt wrapper and the real piece store, which is
 // what a unit test of the slice cannot show: a slice may not reach a registry or an
-// adapter, and §Q73's resume cannot be proved without the rows the wrapper writes. No
-// provider is called; `adapters/fake/image.ts` is the scripted double (06-testing).
+// adapter, and the resume cannot be proved without the rows the wrapper writes. No provider
+// is called; `adapters/fake/image.ts` is the scripted double.
 
 const silent: Log = { write: (): void => {} };
 
@@ -166,8 +166,8 @@ function imageRows(db: DatabaseSync): { role: string; path: string; meta: string
     .all() as { role: string; path: string; meta: string }[];
 }
 
-// What `logic/11` reads: the image rows in slideshow order, which is `meta.index` and
-// never the order the provider happened to answer in.
+// What the render reads: the image rows in slideshow order, which is `meta.index` and never
+// the order the provider happened to answer in.
 function slideshow(db: DatabaseSync): string[] {
   return imageRows(db)
     .map((row) => ({ path: row.path, index: Number(JSON.parse(row.meta).index) }))
@@ -180,7 +180,7 @@ function metaOf(db: DatabaseSync): unknown[] {
 }
 
 describe("the images stage through the attempt wrapper", () => {
-  // §Q71 with `logic/04` §Q30: Number is how many times each ticked prompt is sent.
+  // Number is how many times each ticked prompt is sent.
   it("sends a prompt with Number 3 exactly three times, as three pieces", async () => {
     const h = harness({ prompts: [{ name: "Wide shot", number: 3, body: "a coil of rope" }] });
     const image = fakeImage({ bytes: pngBytes });
@@ -203,14 +203,14 @@ describe("the images stage through the attempt wrapper", () => {
       "images/002.png",
       "images/003.png",
     ]);
-    // logic/16 steps 2 and 3: one event for the stage, carrying the images it stored
-    // under the provider and model that drew them. No tokens: an image call reports none.
+    // One event for the stage, carrying the images it stored under the provider and model
+    // that drew them. No tokens: an image call reports none.
     expect(h.counted.events().map((one) => one.counters)).toEqual([
       { stage: "images", provider: "fake-image", model: "fake-diffusion", images: 3 },
     ]);
   });
 
-  // §Q72: prompts in selection order, then the index within each prompt.
+  // Prompts in selection order, then the index within each prompt.
   it("numbers the slideshow by selection order and then by index within the prompt", async () => {
     const h = harness({
       prompts: [
@@ -253,7 +253,7 @@ describe("the images stage through the attempt wrapper", () => {
     );
   });
 
-  // Step 1: the run's own frame reaches the adapter, which spells it for its provider.
+  // The run's own frame reaches the adapter, which spells it for its provider.
   it("asks for the run's aspect", async () => {
     const h = harness({ format: "9:16" });
     const image = fakeImage({ bytes: pngBytes });
@@ -263,7 +263,7 @@ describe("the images stage through the attempt wrapper", () => {
     expect(image.seen().map((req) => req.aspect)).toEqual(["9:16"]);
   });
 
-  // Step 3: "stored as received (png or jpg)".
+  // Stored as received, png or jpg.
   it("keeps the extension the bytes say the image is", async () => {
     const h = harness();
 
@@ -273,7 +273,7 @@ describe("the images stage through the attempt wrapper", () => {
     expect(readFileSync(join(h.dir, "images", "001.jpg"))).toEqual(Buffer.from(jpegBytes));
   });
 
-  // Step 3 with `logic/01` §Q6: the page fills in as each one arrives.
+  // The page fills in as each one arrives.
   it("announces every image as it lands, and the running count beside it", async () => {
     const h = harness({ prompts: [{ name: "Wide", number: 2, body: "a coil of rope" }] });
 
@@ -294,13 +294,13 @@ describe("the images stage through the attempt wrapper", () => {
     ).toEqual({ progress_current: 2, progress_total: 2 });
   });
 
-  // §Q73: "manual retry generates only the missing images".
+  // Manual retry generates only the missing images.
   it("re-sends only the image that failed and keeps the two that landed", async () => {
     const h = harness({ prompts: [{ name: "Wide", number: 3, body: "a coil of rope" }] });
     // The three sends are launched in piece order and the fake counts synchronously, so
     // calls 1, 2 and 3 are the first attempt of each. Sends 1 and 3 land there; send 2 is
-    // then alone, and its three retries are calls 4, 5 and 6 - the four attempts of
-    // `logic/01` step 6, spent on one image while its siblings keep theirs.
+    // then alone, and its three retries are calls 4, 5 and 6 - four attempts spent on one
+    // image while its siblings keep theirs.
     const fell = { kind: "other", message: "the GPU fell over" } as const;
     const failing = fakeImage({
       bytes: pngBytes,
@@ -328,20 +328,20 @@ describe("the images stage through the attempt wrapper", () => {
       "done",
       "done",
     ]);
-    // The resumed image was written last, so it is last by rowid - and §Q72's order is
-    // read off `meta.index`, which the piece fixed before anything was sent.
+    // The resumed image was written last, so it is last by rowid - and the slideshow order
+    // is read off `meta.index`, which the piece fixed before anything was sent.
     expect(imageRows(h.db).map((row) => row.path)).toEqual([
       "images/001.png",
       "images/003.png",
       "images/002.png",
     ]);
     expect(slideshow(h.db)).toEqual(["images/001.png", "images/002.png", "images/003.png"]);
-    // logic/16 step 3: "images made (stored images)". The failed run counted nothing, and
-    // the resume counted only the one image it actually made - not the two it kept.
+    // Images made (stored images). The failed run counted nothing, and the resume counted only
+    // the one image it actually made - not the two it kept.
     expect(h.counted.events().map((one) => one.counters.images)).toEqual([1]);
   });
 
-  // §Q74: "no retries. The user edits the prompt and re-runs the stage."
+  // No retries. The user edits the prompt and re-runs the stage.
   it("fails on a refusal with the provider's own words and without a second attempt", async () => {
     const h = harness();
     const refusing = fakeImage({ refuse: "this prompt is not allowed by our safety system" });
@@ -360,8 +360,8 @@ describe("the images stage through the attempt wrapper", () => {
     expect(imageRows(h.db)).toEqual([]);
   });
 
-  // §Q73's other half: a file the boot reconcile removed is made again rather than left
-  // as a row pointing at nothing.
+  // The other half of the resume: a file the boot reconcile removed is made again rather
+  // than left as a row pointing at nothing.
   it("makes an image again when its row survived but its file did not", async () => {
     const h = harness();
     await run(h, fakeImage({ bytes: pngBytes }));
@@ -375,7 +375,7 @@ describe("the images stage through the attempt wrapper", () => {
     expect(existsSync(join(h.dir, "images", "001.png"))).toBe(true);
   });
 
-  // `logic/03` and `slices/library/slots.ts` put the substituted body on the run under
+  // `slices/library/slots.ts` puts the substituted body on the run under
   // `imagePrompts.<n>`; a ticked prompt with no rendered text is a bug in admission.
   it("says which prompt has no rendered text rather than sending an empty one", async () => {
     const h = harness();

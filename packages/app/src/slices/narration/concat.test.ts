@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { concatArgs, concatListText } from "./concat.js";
 
-// The argument builder and the demuxer script, with no ffmpeg: 06-testing puts the real
-// binary in the integration suite and a builder's unit test here.
+// The argument builder and the demuxer script, with no ffmpeg: the real binary runs in the
+// integration suite and the builder is unit-tested here.
 
 describe("concatListText", () => {
   it("names every chunk once, in the order it was given", () => {
@@ -46,8 +46,8 @@ describe("concatArgs", () => {
     ]);
   });
 
-  // §Q65: "provider default sample rate". Nothing here resamples, so a provider that
-  // answers at 24 kHz is not silently pushed to 44.1.
+  // Provider default sample rate. Nothing here resamples, so a provider that answers at 24 kHz
+  // is not silently pushed to 44.1.
   it("never names a sample rate", () => {
     expect(concatArgs("/p/list.txt", "/p/out.mp3")).not.toContain("-ar");
   });

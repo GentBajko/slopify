@@ -4,8 +4,8 @@ import type { LlmAnswer, LlmCall, StageProviders } from "../../kernel/runner/pro
 import type { ArticleBrief } from "./continuation.js";
 import { articleMessages, continuationLimit, writeArticle } from "./continuation.js";
 
-// `logic/07` step 1 (what one call is composed of), step 3 (the continuation rule) and
-// §Q61 (an empty answer is a failed attempt).
+// What one call is composed of, the continuation rule, and an empty answer counting as a
+// failed attempt.
 
 const choice = { provider: "openrouter", model: "openai/gpt-5" };
 const brief: ArticleBrief = { articlePrompt: "Write about rope." };

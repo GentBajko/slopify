@@ -180,10 +180,9 @@ describe("a project whose every stage is provided renders an mp4", () => {
     });
     expect(created.status).toBe(201);
     const { project } = (await created.json()) as { project: { id: string; status: string } };
-    // tick() runs inside the request, so the video stage is already going by the time the
-    // 201 is written. That is also why the stream below is not asked for `video:running`:
-    // the page that navigates here after Play subscribes afterwards and refetches instead
-    // (04-data-flow, SSE disconnect).
+    // tick() runs inside the request, so the video stage is already going by the time the 201
+    // is written. That is also why the stream below is not asked for `video:running`: the page
+    // that navigates here after Play subscribes afterwards and refetches instead.
     expect(project.status).toBe("running");
 
     const events = await watch(`${url}/api/events/projects/${project.id}`);
@@ -207,10 +206,10 @@ describe("a project whose every stage is provided renders an mp4", () => {
 
     const video = join(paths.projects, project.id, "video.mp4");
     expect(existsSync(video)).toBe(true);
-    // logic/11 step 1: a gap is inserted only beside a segment that exists, and a
-    // provided audio stage carries the body alone, so this run's timeline has no gap to
-    // insert and the video is exactly as long as the narration. The gap arithmetic over
-    // a real render is asserted in test/video-render.test.ts.
+    // A gap is inserted only beside a segment that exists, and a provided audio stage carries
+    // the body alone, so this run's timeline has no gap to insert and the video is exactly as
+    // long as the narration. The gap arithmetic over a real render is asserted in
+    // test/video-render.test.ts.
     const plan = JSON.parse(
       readFileSync(join(paths.projects, project.id, "render.json"), "utf8"),
     ) as {

@@ -1,13 +1,13 @@
 import type { Format } from "../admission/model.js";
 
-// logic/11 step 5: 30 fps, 1920×1080 for 16:9 and 1080×1920 for 9:16.
+// 30 fps, 1920×1080 for 16:9 and 1080×1920 for 9:16.
 export const fps = 30;
 const frames: Readonly<Record<Format, { width: number; height: number }>> = {
   "16:9": { width: 1920, height: 1080 },
   "9:16": { width: 1080, height: 1920 },
 };
 
-// §Q85: 100% → 115%, linear, centred, alternating per image. The three are written out
+// 100% → 115%, linear, centred, alternating per image. The three are written out
 // rather than derived from one another, because they are formatted into an ffmpeg
 // expression and 1.15 - 1 is not 0.15 in binary floating point.
 export const zoomFrom = 1;
@@ -55,14 +55,14 @@ export interface PlanInput {
   readonly intro?: AudioInput | undefined;
   readonly body: AudioInput;
   readonly outro?: AudioInput | undefined;
-  // Absolute paths in slideshow order (logic/11 §Q84).
+  // Absolute paths in slideshow order.
   readonly images: readonly string[];
   readonly output: string;
 }
 
 export function planRender(input: PlanInput): RenderPlan {
   if (input.images.length === 0) {
-    // logic/04 §Q31 makes an image source mandatory, so an empty set is a bug upstream.
+    // Admission makes an image source mandatory, so an empty set is a bug upstream.
     throw new Error("a render needs at least one image");
   }
   const frame = frames[input.format];
@@ -82,7 +82,7 @@ export function planRender(input: PlanInput): RenderPlan {
   };
 }
 
-// logic/11 step 1: intro, gap, body, gap, outro, with a gap only where the segment on
+// Intro, gap, body, gap, outro, with a gap only where the segment on
 // the other side of it exists.
 function timeline(input: PlanInput): readonly AudioSegment[] {
   const segments: AudioSegment[] = [];
@@ -107,17 +107,17 @@ function timeline(input: PlanInput): readonly AudioSegment[] {
   return segments;
 }
 
-// logic/11 step 2: the slot is the total divided by the image count, and the last image
-// absorbs the frame rounding. §Q100: one image fills the whole length.
-// ceiling: every slot holds at least one frame, so a run with more images than the
-// timeline has frames renders slightly longer than its audio rather than failing.
+// The slot is the total divided by the image count, and the last image absorbs the frame
+// rounding. One image fills the whole length. ceiling: every slot holds at least one frame, so
+// a run with more images than the timeline has frames renders slightly longer than its audio
+// rather than failing.
 function slots(paths: readonly string[], totalFrames: number): readonly ImageSlot[] {
   const each = Math.max(1, Math.floor(totalFrames / paths.length));
   return paths.map((path, at) => ({
     path,
     index: at + 1,
     frames: at === paths.length - 1 ? Math.max(1, totalFrames - each * at) : each,
-    // §Q85: odd images zoom in, even images zoom out.
+    // Odd images zoom in, even images zoom out.
     zoom: at % 2 === 0 ? "in" : "out",
   }));
 }

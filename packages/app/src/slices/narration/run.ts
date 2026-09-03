@@ -23,11 +23,11 @@ import { probeDurationMs } from "../video/ffmpeg.js";
 import { chunkNarration, defaultChunking } from "./chunk.js";
 import { joinNarration } from "./concat.js";
 
-// `logic/08`: the narration source is cut per the run's chunking choice, every chunk is
-// synthesized in parallel as a resumable piece, the chunk audio is concatenated in order
-// into one body file, and the picked intro and outro are one request each. Every call
-// goes through the wrapped `providers.tts`, so the retry policy of `logic/01` step 6
-// covers all of them and nothing here waits or counts attempts.
+// The narration source is cut per the run's chunking choice, every chunk is synthesized in
+// parallel as a resumable piece, the chunk audio is concatenated in order into one body file,
+// and the picked intro and outro are one request each. Every call goes through the wrapped
+// `providers.tts`, so the retry policy covers all of them and nothing here waits or counts
+// attempts.
 
 export interface NarrationDeps {
   readonly db: DatabaseSync;
@@ -36,20 +36,19 @@ export interface NarrationDeps {
   readonly clock: Clock;
   readonly log: Log;
   readonly ffmpeg: string;
-  // logic/16 step 2: one event per narrated segment - body, intro, outro.
+  // One event per narrated segment - body, intro, outro.
   readonly count: RecordEvent;
 }
 
-// §Q67, verbatim: an empty narration source is an "immediate stage failure 'nothing to
-// narrate', no retries". Thrown from the slice rather than from a provider call, so the
-// attempt wrapper never sees it and nothing is retried.
+// An empty narration source fails the stage immediately with no retries. Thrown from the
+// slice rather than from a provider call, so the attempt wrapper never sees it.
 export const nothingToNarrate = "nothing to narrate";
 
 // What a chunk piece carries between runs: the text that was sent, and the file it came
-// back as once the provider answered. That is the whole of the resume of §Q66.
+// back as once the provider answered. That is the whole of the resume.
 const chunkPayload = z.object({ text: z.string(), file: z.string().optional() });
 
-// What the article stage left on its `segment` pieces (`logic/07` step 5).
+// What the article stage left on its `segment` pieces.
 const segmentPayload = z.object({
   category: z.enum(entryCategories),
   name: z.string(),
@@ -57,10 +56,10 @@ const segmentPayload = z.object({
   text: z.string(),
 });
 
-// The chunk audio sits in a folder of its own under the project. It is not an output:
-// §Q65's invariant makes the concatenated body plus the picked intro and outro "the
-// project's only audio outputs", so the pieces name these files and the boot reconcile
-// keeps them by that name (`slices/storage/reconcile.ts`).
+// The chunk audio sits in a folder of its own under the project. It is not an output: the
+// concatenated body plus the picked intro and outro are the project's only audio outputs,
+// so the pieces name these files and the boot reconcile keeps them by that name
+// (`slices/storage/reconcile.ts`).
 const chunkDir = "audio-chunks";
 
 export async function runNarration(
@@ -75,17 +74,16 @@ export async function runNarration(
   }
   const choice = project.config.audio;
   if (choice === undefined) {
-    // Admission refuses a run whose audio is Generate without a provider and a voice
-    // (`logic/04`), so reaching here is a bug in admission rather than something the user
-    // did.
+    // Admission refuses a run whose audio is Generate without a provider and a voice, so
+    // reaching here is a bug in admission rather than something the user did.
     throw new Error("the run has no TTS provider or voice");
   }
   // Read once, before anything is written: the segment steps below ask it what a previous
   // run already stored, and the body step is the only thing that adds to it.
   const outputs = outputsOf(deps.db, projectId);
 
-  // Step 2. The end matter is already out of this text: the article stage cut it into
-  // files of its own (§Q63, `logic/07` step 4), so nothing here can narrate a sources list.
+  // The end matter is already out of this text: the article stage cut it into
+  // files of its own, so nothing here can narrate a sources list.
   const chunking = project.config.chunking ?? defaultChunking;
   const texts = chunkNarration(narrationSource(deps, outputs, projectId), chunking);
   if (texts.length === 0) {
@@ -103,8 +101,8 @@ export async function runNarration(
   });
 }
 
-// The narration source of §Q37 and `logic/07` step 4: the plain-text article, written by
-// the article stage or pasted in by a user whose article stage was set to Provide.
+// The narration source: the plain-text article, written by the article stage or pasted in
+// by a user whose article stage was set to Provide.
 function narrationSource(
   deps: NarrationDeps,
   outputs: readonly Output[],
@@ -118,7 +116,7 @@ function narrationSource(
 }
 
 // The chunk list, planned once and kept. A retry after a failure finds the rows the first
-// run wrote and narrates only the ones that did not finish (§Q66).
+// run wrote and narrates only the ones that did not finish.
 function plan(
   deps: NarrationDeps,
   context: StageContext,
@@ -144,9 +142,9 @@ function plan(
   return planned;
 }
 
-// Step 3: "Synthesize every chunk in parallel". §Q66: a chunk a previous run finished is
-// not spoken again, and one that fails fails the whole stage while its siblings finish
-// and keep their audio for the next resume.
+// Every chunk is synthesized in parallel. A chunk a previous run finished is not spoken
+// again, and one that fails takes down the whole stage while its siblings finish and keep their
+// audio for the next resume.
 async function speakChunks(
   deps: NarrationDeps,
   context: StageContext,
@@ -183,8 +181,8 @@ async function speakChunks(
         report(deps, context, done, total);
         return { ok: true, file };
       } catch (error) {
-        // A cancel is not this chunk failing: `logic/13` §Q112 counts an aborted call as
-        // nothing, and the resume runs a `pending` chunk exactly as a failed one.
+        // A cancel is not this chunk failing: an aborted call counts as nothing, and the
+        // resume runs a `pending` chunk exactly as a failed one.
         setPiece(deps.db, piece.id, context.signal.aborted ? "pending" : "failed", piece.payload);
         return { ok: false, error };
       }
@@ -205,7 +203,7 @@ type Outcome =
   | { readonly ok: true; readonly file: string }
   | { readonly ok: false; readonly error: unknown };
 
-// Steps 4 and 6: one body file, in chunk order, with its measured duration on the row.
+// One body file, in chunk order, with its measured duration on the row.
 async function storeBody(
   deps: NarrationDeps,
   context: StageContext,
@@ -229,17 +227,17 @@ async function storeBody(
       signal: context.signal,
     },
   );
-  // `logic/13` §Q113 protects an output already stored, not one about to be: a cancel
-  // landing between ffmpeg exiting and the row below leaves nothing recorded.
+  // A cancel protects an output already stored, not one about to be: one landing between
+  // ffmpeg exiting and the row below leaves nothing recorded.
   context.signal.throwIfAborted();
   store(deps, projectId, "audio_body", name, durationMs, choice);
   counted(deps, "body", durationMs, choice);
 }
 
-// Step 5: "each picked segment's text is one TTS request with the same provider and
-// voice, stored as its own audio file with its duration; body chunking does not apply to
-// them" (§Q93). The text is whatever the article stage wrote onto the segment piece: an
-// LLM-mode entry's answer, or a text-mode entry's rendered body, spoken verbatim.
+// Each picked segment's text is one TTS request with the same provider and voice, stored as
+// its own audio file with its duration; body chunking does not apply to them. The text is
+// whatever the article stage wrote onto the segment piece: an LLM-mode entry's answer, or a
+// text-mode entry's rendered body, spoken verbatim.
 async function speakSegments(
   deps: NarrationDeps,
   context: StageContext,
@@ -252,13 +250,13 @@ async function speakSegments(
     const segment = segmentOf(piece);
     const role: OutputRole = segment.category === "intro" ? "audio_intro" : "audio_outro";
     if (outputs.some((output) => output.role === role)) {
-      // Spoken by a previous run of this stage; §Q66's resume keeps it.
+      // Spoken by a previous run of this stage; the resume keeps it.
       continue;
     }
     const text = segment.text.trim();
     if (text === "") {
-      // §Q67's rule, applied to a segment: there is nothing to say, and silently dropping
-      // an intro the user picked would lose it without telling anyone.
+      // The same rule, applied to a segment: there is nothing to say, and silently
+      // dropping an intro the user picked would lose it without telling anyone.
       throw new Error(`the ${segment.category} segment has ${nothingToNarrate}`);
     }
     const spoken = await providers.forPiece(piece.id).tts({
@@ -268,8 +266,8 @@ async function speakSegments(
     });
     const name = outputFileName(role, 1, ".mp3", "audio");
     write(deps, projectId, name, spoken.bytes);
-    // Measured the same way the body is, because `logic/11` step 1 adds all three and the
-    // gaps to get the length of the video (§Q68).
+    // Measured the same way the body is, because the render adds all three and the gaps to
+    // get the length of the video.
     const durationMs = await probeDurationMs(
       deps.ffmpeg,
       outputPath(deps.paths, projectId, name),
@@ -282,26 +280,25 @@ async function speakSegments(
   }
 }
 
-// The segment pieces belong to the *article* stage, which is where `logic/07` step 5
-// writes them, so they are read under its id and never under this stage's own. They stay
-// there because `logic/12` is what depends on it: a Re-run audio (step 2) and the audio
-// re-run an article edit cascades into (step 1) both clear the audio stage's pieces, and
-// only the article stage ever writes an entry text - so an intro kept on this stage's row
-// would be thrown away by the first re-narration and never written again.
+// The segment pieces belong to the *article* stage, which is where they are written, so
+// they are read under its id and never under this stage's own. They stay there because the
+// re-run rules depend on it: a Re-run audio, and the audio re-run an article edit cascades
+// into, both clear the audio stage's pieces, and only the article stage ever writes an
+// entry text - so an intro kept on this stage's row would be thrown away by the first
+// re-narration and never written again.
 function segmentPieces(deps: NarrationDeps, projectId: string): readonly StagePiece[] {
   const article = stagesOf(deps.db, projectId).find((stage) => stage.kind === "article");
   if (article === undefined) {
-    // Admission writes all six stage rows with the project (`logic/04` step 6), so a
-    // project without an article stage is a bug rather than a run the user configured.
+    // Admission writes all six stage rows with the project, so a project without an article
+    // stage is a bug rather than a run the user configured.
     throw new Error(`project ${projectId} has no article stage`);
   }
   return piecesOf(deps.db, article.id, "segment");
 }
 
-// logic/16 step 3: "audio seconds from the measured duration per segment". The measured
-// one, not the text's length: `logic/08` §Q68 puts the real duration on the row and
-// `logic/11` builds the timeline from it. No model is named because the TTS port carries
-// none - the same reason `store` above leaves it off the output row.
+// Audio seconds come from the measured duration per segment, never from the text's length:
+// the real duration goes on the row and the video timeline is built from it. No model is
+// named because the TTS port carries none - the same reason `store` above leaves it off.
 function counted(
   deps: NarrationDeps,
   segment: AudioSegment,
@@ -316,8 +313,8 @@ function counted(
   });
 }
 
-// Step 5: "k of N chunks narrated". Written as well as emitted, so a page opened mid-stage
-// reads the count off the row rather than waiting for the next chunk.
+// K of N chunks narrated, written as well as emitted, so a page opened mid-stage reads the
+// count off the row rather than waiting for the next chunk.
 function report(deps: NarrationDeps, context: StageContext, done: number, total: number): void {
   setStageProgress(deps.db, context.stage.id, done, total);
   context.emit({
@@ -346,7 +343,7 @@ function write(deps: NarrationDeps, projectId: string, path: string, bytes: Uint
   writeFileSync(target, bytes, { mode: 0o600 });
 }
 
-// §Q68: the provider and the voice are stored with the audio they made. The model is not:
+// The provider and the voice are stored with the audio they made. The model is not:
 // the TTS port carries no model, so every request went to the adapter's own, and writing
 // the run's dropdown value here would record something that was never sent.
 function store(

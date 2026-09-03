@@ -16,14 +16,13 @@ export function telemetryRoutes(deps: AppDeps) {
 
   return (
     new Hono()
-      // What the SPA asks before it shows the first-run notice
-      // (mockup/02-first-run-notice.md). The app version comes with it because the notice
-      // names the version that goes out in every report, and the promise has to be made
-      // with the number it is true of.
+      // What the SPA asks before it shows the first-run notice. The app version comes with it
+      // because the notice names the version that goes out in every report, and the promise has
+      // to be made with the number it is true of.
       .get("/notice", (c) => c.json({ seen: noticeSeen(deps.db), appVersion: deps.version }))
-      // "Got it" is the only control on that modal, and pressing it is what creates the
-      // machine id (logic/16 step 1). Idempotent: a second press, a reload or a second tab
-      // finds the machine already there and mints nothing.
+      // "Got it" is the only control on that modal, and pressing it is what creates the machine
+      // id. Idempotent: a second press, a reload or a second tab finds the machine already
+      // there and mints nothing.
       .post("/notice", (c) => {
         dismissNotice(telemetry);
         deps.flushSoon();

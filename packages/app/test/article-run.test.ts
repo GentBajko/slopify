@@ -27,7 +27,7 @@ import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 
 // The article stage against the real attempt wrapper: what `slices/article/run.test.ts`
 // cannot show, because a slice may not reach a registry or an adapter. Nothing here calls
-// a provider; `adapters/fake/llm.ts` answers every request (06-testing Doubles).
+// a provider; `adapters/fake/llm.ts` answers every request.
 
 const silent: Log = { write: (): void => {} };
 
@@ -130,8 +130,8 @@ function run(h: Harness, llm: FakeLlm): Promise<void> {
   );
 }
 
-// The wrapper arms the 120 s idle timeout on the same clock, so the schedule of
-// `logic/01` step 6 is what is left once those are taken out.
+// The wrapper arms the 120 s idle timeout on the same clock, so the backoff schedule is
+// what is left once those are taken out.
 function backoff(waits: readonly number[]): readonly number[] {
   return waits.filter((ms) => ms !== 120_000);
 }
@@ -173,9 +173,9 @@ describe("the article stage through the attempt wrapper", () => {
     expect(segments[0]?.payload).toContain("Rope holds worlds.");
     // The piece carries the text to narrate and nothing about the model that wrote it.
     expect(segments[0]?.payload).not.toContain("tokens");
-    // logic/16 step 2: the article is one unit and each intro or outro text is another,
-    // named by its segment. This run picked an intro in LLM mode and no outro, so there
-    // are two events; the fake reports 11 in and 22 out per call.
+    // The article is one unit and each intro or outro text is another, named by its segment.
+    // This run picked an intro in LLM mode and no outro, so there are two events; the fake
+    // reports 11 in and 22 out per call.
     expect(h.counted.events().map((one) => one.counters)).toEqual([
       {
         stage: "article",
@@ -196,8 +196,8 @@ describe("the article stage through the attempt wrapper", () => {
     h.db.close();
   });
 
-  // §Q59: three continuations, and the fourth truncation is a failed attempt the wrapper
-  // retries under `logic/01` step 6 before the stage fails.
+  // Three continuations, and the fourth truncation is a failed attempt the wrapper retries
+  // before the stage fails.
   it("continues three times, then retries the last continuation four times and fails", async () => {
     const h = harness();
     const llm = fakeLlm({ deltas: ["on and on"], finishReason: "length" });
@@ -214,7 +214,7 @@ describe("the article stage through the attempt wrapper", () => {
     h.db.close();
   });
 
-  // §Q61: an empty response is a failed attempt, so the wrapper asks again rather than
+  // An empty response is a failed attempt, so the wrapper asks again rather than
   // storing an empty article.
   it("retries an empty answer and keeps the article the next attempt wrote", async () => {
     const h = harness();

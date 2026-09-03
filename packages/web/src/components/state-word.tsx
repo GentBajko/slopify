@@ -1,9 +1,8 @@
 import type { StageState } from "@app/kernel/pipeline.js";
 import { cn } from "@/lib/utils";
 
-// The uppercase engraved label beside every lamp (uiux/03-experience.md, Copy register).
-// The casing is CSS, so the accessible name stays the ordinary word and a screen reader
-// reads "running" rather than spelling it out.
+// The uppercase engraved label beside every lamp. The casing is CSS, so the accessible name
+// stays the ordinary word and a screen reader reads "running" rather than spelling it out.
 const tones: Readonly<Record<StageState, string>> = {
   pending: "text-ink3",
   running: "text-run-text",
@@ -20,8 +19,8 @@ export function StateWord({
   className,
 }: {
   readonly state: StageState;
-  // What a change is announced as: "Audio: running" (uiux/03-experience.md, accessibility
-  // floor). A row that can change state while the page is open passes its name.
+  // What a change is announced as: "Audio: running". A row that can change state while the page
+  // is open passes its name.
   readonly announce?: string;
   readonly className?: string;
 }) {

@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useApp } from "@/app-context";
 import { settingsQuery } from "@/queries";
 
-// uiux §Q19: `prefers-color-scheme` decides until the Settings control overrides it. The
+// `prefers-color-scheme` decides until the Settings control overrides it. The
 // override is one attribute on the document element, which is what the light and dark
 // blocks of styles/index.css key off; "system" removes it and hands the decision back to
 // the media query, so there is no third palette to keep in step.

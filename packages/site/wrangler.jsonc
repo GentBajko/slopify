@@ -3,9 +3,9 @@
   "name": "slopify-site",
   "compatibility_date": "2026-08-01",
   // Static assets only: the page is HTML, CSS, one module and its fonts, and has no
-  // server side. The counters come from the collector Worker over CORS (logic/16 step 7),
-  // which is why the hostname below matters - the collector answers cross-origin requests
-  // from https://slopify.stream and from loopback, and from nowhere else.
+  // server side. The counters come from the collector Worker over CORS, which is why the
+  // hostname below matters - the collector answers cross-origin requests from
+  // https://slopify.stream and from loopback, and from nowhere else.
   "assets": { "directory": "./public" },
   "routes": [{ "pattern": "slopify.stream", "custom_domain": true }]
 }

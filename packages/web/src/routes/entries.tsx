@@ -20,16 +20,15 @@ import { categoryOptions, modeLabel } from "@/lib/entry-options";
 import { entriesQuery, keys } from "@/queries";
 
 // One row of the rundown, and the same shape for a skeleton. Mode sits in its own 70 px
-// column beside the name; the Slots column collapses under both below 768 px
-// (uiux/screens/09-intros-outros.md, which mirrors 04).
+// column beside the name; the Slots column collapses under both below 768 px.
 const row =
   "grid grid-cols-[minmax(0,1fr)_auto_auto_32px] items-center gap-x-[14px] gap-y-[6px] border-b border-line px-4 py-[14px] last:border-b-0 md:grid-cols-[260px_70px_minmax(0,1fr)_auto_32px]";
 const slotsCell =
   "col-span-4 col-start-1 row-start-2 flex flex-wrap gap-[6px] md:col-span-1 md:col-start-3 md:row-start-1";
 
-// Every saved entry of one category, sorted by name by the list endpoint (`logic/15`
-// step 5). The tab switch has to rewrite the URL it is already on, so it is handed up to
-// router.tsx rather than reaching for a router here - the same division 04 Prompts makes.
+// Every saved entry of one category, sorted by name by the list endpoint. The tab switch has to
+// rewrite the URL it is already on, so it is handed up to router.tsx rather than reaching for a
+// router here - the same division 04 Prompts makes.
 export function EntriesRoute({
   category,
   onCategory,
@@ -129,7 +128,7 @@ export function EntriesRoute({
       <ConfirmDialog
         open={deleting !== undefined}
         title={deleting === undefined ? "" : `Delete "${deleting.name}"?`}
-        // `logic/15` §Q123: a project holds its own rendered text, so nothing it made is
+        // A project holds its own rendered text, so nothing it made is
         // touched. It goes on showing the name it was run with, marked "(deleted)".
         consequence="Projects that used it keep their text."
         verb="Delete"
@@ -161,8 +160,7 @@ function ModeChip({ mode }: { readonly mode: EntryMode }) {
   );
 }
 
-// An empty category teaches what the thing is and where it lands in the run
-// (uiux/screens/09-intros-outros.md, States; `logic/08` step 5).
+// An empty category teaches what the thing is and where it lands in the run.
 function EmptyCategory({ category }: { readonly category: EntryCategory }) {
   const where = category === "intro" ? "before" : "after";
   return (
@@ -193,7 +191,7 @@ function RowOverflow({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
-        {/* §Q124: the copy is named "<name> copy" and opened for editing, so a name that
+        {/* The copy is named "<name> copy" and opened for editing, so a name that
             is already taken is renamed before it is ever saved. */}
         <DropdownMenuItem asChild>
           <Link to="/entries/new" search={{ category: entry.category, from: entry.id }}>

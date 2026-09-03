@@ -16,8 +16,8 @@ export interface CollectorDb {
   readonly prepare: (query: string) => CollectorStatement;
 }
 
-// The totals the marketing page reads. logic/16 step 3 names the counters; the page
-// shows five of them and the other two are kept because the same step counts them.
+// The totals the marketing page reads. Five of the seven counters are shown; the other two
+// are kept because the app counts them all the same.
 export const aggregateKeys = [
   "installs",
   "projects_created",

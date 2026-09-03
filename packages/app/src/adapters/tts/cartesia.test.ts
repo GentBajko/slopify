@@ -132,7 +132,7 @@ describe("cartesiaTts.synthesize", () => {
       .synthesize({ voiceId, text: "Hello.", signal: new AbortController().signal })
       .catch((thrown: unknown) => thrown);
 
-    // `logic/02` §Q13: an absent key is terminal, so it never becomes a request.
+    // An absent key is terminal, so it never becomes a request.
     expect(isProviderError(error) && error.fault.kind).toBe("missing_key");
     expect(String(error)).toContain("no Cartesia key is stored");
     expect(called).toBe(0);
@@ -159,7 +159,7 @@ describe("cartesiaTts.synthesize", () => {
     expect(String(error)).toContain("concurrency_limited");
   });
 
-  // `logic/02` §Q14: a rejected voice ID names the voice. Cartesia's own message does not
+  // A rejected voice ID names the voice. Cartesia's own message does not
   // repeat the id, so the adapter puts it back.
   it("names the voice a rejected voice id was asked for", async () => {
     const error = await failed(new Response(fixture("cartesia-404-voice.json"), { status: 404 }));

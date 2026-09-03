@@ -18,10 +18,9 @@ import { outputsOf } from "../../slices/storage/repo.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
 
-// The actions `mockup/08-project.md` puts on the project header and on each stage: Cancel,
-// Retry, Re-run, Save & re-run, Regenerate one image, Delete one image. Every one of them
-// changes rows and files through a slice and then ticks the runner; the route itself
-// decides nothing (`logic/12`, `logic/13`).
+// The actions on the project header and on each stage: Cancel, Retry, Re-run, Save &
+// re-run, Regenerate one image, Delete one image. Every one changes rows and files through
+// a slice and then ticks the runner; the route itself decides nothing.
 
 const idParam = z.object({
   id: z
@@ -57,12 +56,12 @@ const details: Readonly<Record<RerunRefusal, string>> = {
   "no-project": "No project has that id.",
   "unknown-image": "This project has no image with that id.",
   "empty-article": "An article cannot be saved empty.",
-  // logic/12 preconditions: "no stage of the project is `running` (§Q106)".
+  // The precondition on every re-run: no stage of the project is `running`.
   running: "This project is still running. Cancel it or wait for it to finish.",
   "not-rerunnable": "Only a stage that has finished, failed, or been canceled can be re-run.",
   "not-retryable": "Only a failed or canceled stage can be retried.",
   "no-article": "This project has no article to edit yet.",
-  // logic/09 §Q75 and logic/12's invariant: "at least one image always remains".
+  // At least one image always remains.
   "last-image": "At least one image must remain, so the last one cannot be deleted.",
 };
 
@@ -93,8 +92,8 @@ export function actionRoutes(deps: AppDeps) {
       outputs: outputsOf(deps.db, projectId),
     };
   };
-  // Every re-run action ends the same way: the rows are written, then the runner is
-  // asked to look at the project. `logic/12` step 9 does the rest by itself.
+  // Every re-run action ends the same way: the rows are written, then the runner is asked
+  // to look at the project. The cascade does the rest by itself.
   const started = (
     c: Parameters<typeof problem>[0],
     projectId: string,
@@ -118,7 +117,7 @@ export function actionRoutes(deps: AppDeps) {
       if (!result.ok) {
         return problem(c, { status: 404, title: titleOf(404), detail: details["no-project"] });
       }
-      // No tick: §Q111 leaves a canceled project sitting until the user retries a stage.
+      // No tick: a canceled project sits until the user retries a stage.
       return c.json({ ...view(id), canceled: result.canceled });
     })
     .post("/:id/stages/:kind/retry", zValidator("param", stageParam, onInvalid), (c) => {

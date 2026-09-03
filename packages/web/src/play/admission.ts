@@ -18,14 +18,14 @@ import { draftOf, stagedOf } from "@/play/state";
 
 export interface Blocker {
   // The dotted path of the control, the same name `admit` and the 400's `fields[]` use,
-  // so the field is marked in place (`logic/04` §Q29).
+  // so the field is marked in place.
   readonly field: string;
-  // Hints name the next action, never the rule (uiux/screens/06-play.md).
+  // Hints name the next action, never the rule.
   readonly hint: string;
 }
 
 export interface Admission {
-  // The keyword fields the picked prompts and entries ask for, grouped (`logic/03` step 3).
+  // The keyword fields the picked prompts and entries ask for, grouped.
   readonly fields: readonly Field[];
   readonly draft: RunDraft;
   readonly result: AdmissionResult;
@@ -39,10 +39,9 @@ export interface AdmissionInput {
   readonly silenceGapSeconds: number;
 }
 
-// `slices/library/slots.ts` collects the same bodies at the click: the article prompt of
-// a generating article stage, the picked intro and outro whatever the sources say
-// (`logic/03` §Q98), the ticked image prompts of a generating images stage, and the
-// thumbnail prompt of either Generate mode.
+// `slices/library/slots.ts` collects the same bodies at the click: the article prompt of a
+// generating article stage, the picked intro and outro whatever the sources say, the ticked
+// image prompts of a generating images stage, and the thumbnail prompt of either Generate mode.
 export function keywordFields(input: AdmissionInput): readonly Field[] {
   const { form } = input;
   const text: string[] = [];
@@ -83,9 +82,9 @@ export function admission(input: AdmissionInput): Admission {
   return { fields, draft, result, blocker: firstBlocker(input.form, result) };
 }
 
-// The rails top to bottom, then the cue sheet: the order the screen is read in, which is
-// the order the hint names things in (uiux/03-experience.md, tab order). `admit` answers
-// in its own order, so the ranking is done here rather than by reading its list.
+// The rails top to bottom, then the cue sheet: the order the screen is read in, which is the
+// order the hint names things in. `admit` answers in its own order, so the ranking is done here
+// rather than by reading its list.
 const readingOrder: readonly string[] = [
   "sources",
   "provided.research",
@@ -108,7 +107,7 @@ const readingOrder: readonly string[] = [
 
 export function firstBlocker(form: PlayFormState, result: AdmissionResult): Blocker | undefined {
   // An upload the rule cannot see yet: it has no staged row, so `admit` would call it
-  // missing rather than say it is still copying (`logic/05` §Q44).
+  // missing rather than say it is still copying.
   const waiting = uploadBlocker(form);
   if (waiting !== undefined) {
     return waiting;

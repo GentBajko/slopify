@@ -338,7 +338,7 @@ describe("a provided stage", () => {
     ).toBe("Remove the upload that failed to play");
   });
 
-  // A provided article forces research off (`logic/05` §Q41), so the notes are only ever
+  // A provided article forces research off, so the notes are only ever
   // asked for beside an article the run is going to write.
   it("asks for the research notes when research is provided beside a generated article", () => {
     expect(

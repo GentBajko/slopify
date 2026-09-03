@@ -1,10 +1,9 @@
 import type { FieldError } from "@/api";
 import { SlotChip } from "@/components/slot-chip";
 
-// The editor's right-hand panel: every `{{name}}` the body holds, and beneath them the
-// lint the shared rule found (uiux/screens/05-prompt-editor.md). The lint is text, not a
-// colour: the red mark in the body is the same problem said twice, and `lintId` is what
-// the textarea points its `aria-describedby` at.
+// The editor's right-hand panel: every `{{name}}` the body holds, and beneath them the lint the
+// shared rule found. The lint is text, not a colour: the red mark in the body is the same
+// problem said twice, and `lintId` is what the textarea points its `aria-describedby` at.
 export function DetectedSlots({
   slots,
   body,
@@ -12,7 +11,7 @@ export function DetectedSlots({
   lintId,
   // What a body with no slots does instead. A prompt runs as written; an intro is
   // narrated or instructs, so 09 hands its own sentence in rather than calling a
-  // narrated opener a prompt (uiux/screens/09-intros-outros.md).
+  // narrated opener a prompt.
   noSlots = "No slots. This prompt runs as written.",
 }: {
   readonly slots: readonly string[];

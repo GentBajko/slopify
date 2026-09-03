@@ -68,7 +68,7 @@ describe("renderArgs", () => {
     ]);
   });
 
-  it("writes an mp4 with the codecs and the faststart flag logic/11 asks for", () => {
+  it("writes an mp4 with the expected codecs and the faststart flag", () => {
     const args = renderArgs(plan());
     expect(args.slice(-13)).toEqual([
       "-map",

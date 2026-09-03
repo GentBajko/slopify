@@ -18,7 +18,7 @@ const idParam = z.object({
 });
 
 // Shape only. The rules - trimming, emptiness, length, the slot lint - are the slice's,
-// so one set of messages reaches the editor (03-conventions).
+// so one set of messages reaches the editor.
 const promptBody = z.object({
   kind: z.enum(promptKinds),
   name: z.string(),
@@ -33,7 +33,7 @@ export function promptRoutes(deps: AppDeps) {
   return (
     new Hono()
       // Every kind in one list: 04 Prompts filters by tab, and Duplicate needs the body it
-      // is copying (`logic/15` step 3).
+      // is copying.
       .get("/", (c) => c.json({ prompts: listPrompts(deps.db) }))
       .post("/", zValidator("json", promptBody, onInvalid), (c) => {
         const result = createPrompt(library, c.req.valid("json"));
@@ -48,7 +48,7 @@ export function promptRoutes(deps: AppDeps) {
           return result.ok ? c.json(result.value) : refused(c, result, "prompt");
         },
       )
-      // `logic/15` §Q123: a project holds its own rendered text, so nothing cascades and a
+      // A project holds its own rendered text, so nothing cascades and a
       // template used by past projects is deleted like any other.
       .delete("/:id", zValidator("param", idParam, onInvalid), (c) => {
         const result = removePrompt(library, c.req.valid("param").id);
@@ -57,8 +57,8 @@ export function promptRoutes(deps: AppDeps) {
   );
 }
 
-// One refusal mapping for both libraries: `logic/15` §Q121 puts one rule set over
-// prompts and entries, so entryRoutes shares this rather than mirroring it.
+// One refusal mapping for both libraries: prompts and entries share one rule set, so
+// entryRoutes reuses this rather than mirroring it.
 export function refused(c: Context, failure: SaveFailure, noun: "prompt" | "entry"): Response {
   switch (failure.reason) {
     case "invalid":
@@ -68,7 +68,7 @@ export function refused(c: Context, failure: SaveFailure, noun: "prompt" | "entr
         detail: `This ${noun} cannot be saved; the listed fields need attention.`,
         extensions: { fields: failure.fields },
       });
-    // §Q122: the name is refused against a row that exists, and the form marks the field.
+    // The name is refused against a row that exists, and the form marks the field.
     case "duplicate-name":
       return problem(c, {
         status: 409,

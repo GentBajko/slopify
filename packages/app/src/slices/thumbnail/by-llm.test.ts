@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { ThumbnailBrief } from "./by-llm.js";
 import { thumbnailMessages, writtenPrompt } from "./by-llm.js";
 
-// `logic/10` step 1: "the filled thumbnail prompt as the instruction, then the video
-// title, the keyword values, the run's aspect, and the full plain-text article".
+// The filled thumbnail prompt as the instruction, then the video title, the keyword values, the
+// run's aspect, and the full plain-text article.
 
 function brief(over: Partial<ThumbnailBrief> = {}): ThumbnailBrief {
   return {
@@ -55,7 +55,7 @@ describe("thumbnailMessages", () => {
 });
 
 describe("writtenPrompt", () => {
-  // §Q82: "empty output is a failed attempt".
+  // Empty output is a failed attempt.
   it("calls an empty answer unusable, whitespace included", () => {
     expect(writtenPrompt("")).toBe("the LLM wrote no thumbnail prompt");
     expect(writtenPrompt("   \n\t ")).toBe("the LLM wrote no thumbnail prompt");

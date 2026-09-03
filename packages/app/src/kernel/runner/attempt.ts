@@ -6,28 +6,24 @@ import type { ProviderError, ProviderErrorKind } from "../ports/model.js";
 import { isProviderError, providerError } from "../ports/model.js";
 import type { AttemptStore } from "./attempt-repo.js";
 
-// The retry policy of `logic/01` step 6, in one place. Every provider call in the app
-// goes through here: a stage slice is handed the wrapped calls of `providers.ts` and
-// never an adapter, so there is no way round it.
+// The retry policy, in one place. A stage slice is handed the wrapped calls of
+// `providers.ts` and never an adapter, so there is no way round it.
 
-// "attempted up to 4 times: the first attempt plus 3 retries, waiting 2 s, 8 s, 30 s
-// between attempts" (`logic/01` step 6, §Q4).
+// Four attempts - the first plus 3 retries - waiting 2 s, 8 s, 30 s.
 export const attemptLimit = 4;
 export const backoffMs: readonly number[] = [2000, 8000, 30_000];
 
-// "each attempt times out at 120 s ... except image-generation calls, which time out at
-// 300 s" (`logic/01` step 6, §Q62; `logic/09` §Q77).
+// Each attempt times out at 120 s, image calls at 300 s.
 export const timeoutMs: Readonly<Record<ProviderCallKind, number>> = {
   llm: 120_000,
   tts: 120_000,
   image: 300_000,
 };
 
-// `logic/09` §Q74 and `logic/06` §Q47: a refusal and an unsupported capability are the
-// provider's final answer. Retrying either would only spend the user's money again.
-// `logic/02` §Q13 adds the third: a key removed mid-run leaves nothing to call with, so
-// "the next attempt finds no key, fails immediately without retries" - unlike a key the
-// provider rejected, which is an `auth` failure and is retried like any other (§Q11).
+// A refusal and an unsupported capability are the provider's final answer; retrying only
+// spends the user's money again. The third is a key removed mid-run, which leaves nothing
+// to call with. A key the provider rejected is different: that is an `auth` failure,
+// retried like any other.
 const terminalKinds: readonly ProviderErrorKind[] = ["refusal", "unsupported", "missing_key"];
 
 export type ProviderCallKind = "llm" | "tts" | "image";
@@ -39,15 +35,13 @@ export interface AttemptContext {
   readonly projectId: string;
   readonly stage: StageKind;
   readonly stageId: string;
-  // The resumable sub-unit this call belongs to: one image of twenty, one research
-  // chapter, one audio chunk (02-models, `stage_pieces`).
+  // The resumable sub-unit this call belongs to: one image of twenty, one audio chunk.
   readonly pieceId?: string | undefined;
   // The stage's own signal. Cancel aborts it and the whole attempt loop stops.
   readonly signal: AbortSignal;
 }
 
-// `progress` is how a streaming call says a chunk arrived; the idle clock restarts on
-// each one. A call that does not stream never calls it.
+// How a streaming call says a chunk arrived; the idle clock restarts on each one.
 export type ProviderCall<T> = (signal: AbortSignal, progress: () => void) => Promise<T>;
 
 export interface AttemptOptions {
@@ -90,9 +84,8 @@ export async function attempt<T>(
       return result.value;
     }
     if (ctx.signal.aborted) {
-      // `logic/13` §Q112: an aborted call counts nothing. The row is closed so the page
-      // is not left with an attempt that never ended, and it carries no error text: the
-      // user stopped it, the provider did not fail.
+      // An aborted call counts nothing. The row is closed so the page is
+      // not left with an attempt that never ended, and carries no error text.
       ctx.attempts.end(id, {
         outcome: "canceled",
         endedAt: ctx.clock.now().toISOString(),
@@ -115,13 +108,12 @@ export async function attempt<T>(
     if (terminalKinds.includes(failure.fault.kind) || n >= attemptLimit) {
       throw failure;
     }
-    // §Q4: a 429 that names a Retry-After replaces the fixed wait with the provider's.
+    // A 429 that names a Retry-After replaces the fixed wait with the provider's.
     await ctx.clock.sleep(failure.fault.retryAfterMs ?? backoffMs[n - 1] ?? 0, ctx.signal);
   }
 }
 
-// The wrapper is the only place a provider failure is named (03-standards). Everything
-// downstream reads `fault.kind` and shows `message`.
+// The wrapper is the only place a provider failure is named.
 function classify(
   error: unknown,
   expired: boolean,
@@ -139,8 +131,8 @@ function classify(
     });
   }
   if (isProviderError(error)) {
-    // Rebuilt rather than rethrown so the text that reaches the stage row, the page and
-    // the log has been through the redactor: a provider is free to quote the key back.
+    // Rebuilt rather than rethrown so the text reaching the stage row, the page and the
+    // log has been through the redactor: a provider is free to quote the key back.
     return providerError({
       kind: error.fault.kind,
       message: redact(error.message),
@@ -161,9 +153,8 @@ interface Deadline {
   readonly dispose: () => void;
 }
 
-// `logic/01` §Q62: the same number of milliseconds, measured two ways. `idle` restarts
-// the count on every chunk, so a long answer that keeps arriving is never cut off, and a
-// stream that stalls is. Composed with AbortSignal.any so the stage's cancel still wins.
+// The same milliseconds, measured two ways. `idle` restarts the count on every chunk, so a
+// stalled stream is cut off and a long answer is not. Cancel still wins.
 function deadline(clock: Clock, parent: AbortSignal, ms: number, idle: boolean): Deadline {
   const timer = new AbortController();
   const signal = AbortSignal.any([parent, timer.signal]);

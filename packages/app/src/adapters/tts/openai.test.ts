@@ -139,7 +139,7 @@ describe("openAiTts.synthesize", () => {
       .synthesize({ voiceId, text: "Hello.", signal: new AbortController().signal })
       .catch((thrown: unknown) => thrown);
 
-    // `logic/02` §Q13: an absent key is terminal, so it never becomes a request.
+    // An absent key is terminal, so it never becomes a request.
     expect(isProviderError(error) && error.fault.kind).toBe("missing_key");
     expect(String(error)).toContain("no OpenAI key is stored");
     expect(called).toBe(0);
@@ -166,7 +166,7 @@ describe("openAiTts.synthesize", () => {
     expect(String(error)).toContain("Rate limit reached");
   });
 
-  // `logic/08` §Q69: the 4096-character cap is the provider's, and its 400 is what the
+  // The 4096-character cap is the provider's, and its 400 is what the
   // stage shows. Nothing here counts characters before sending.
   it("surfaces the 4096-character 400 verbatim instead of checking the length itself", async () => {
     const seen: Seen[] = [];
@@ -186,7 +186,7 @@ describe("openAiTts.synthesize", () => {
     expect(String(error)).toContain("maximum length 4096");
   });
 
-  // `logic/02` §Q14: a rejected voice ID names the voice.
+  // A rejected voice ID names the voice.
   it("names the voice every failure was asked for", async () => {
     const error = await failed(new Response(fixture("openai-401.json"), { status: 401 }));
 

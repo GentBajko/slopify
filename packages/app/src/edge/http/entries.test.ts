@@ -57,8 +57,8 @@ async function send(app: App, method: string, path: string, body?: unknown): Pro
   });
 }
 
-// §Q98: an intro or outro is either narrated verbatim (Text) or written by the LLM from
-// the entry as instruction (LLM). §Q121 gives both the prompt library's rule set.
+// An intro or outro is either narrated verbatim (Text) or written by the LLM from the entry
+// as instruction (LLM). Both follow the prompt library's rule set.
 describe("POST /api/entries", () => {
   it("stores a text entry with its detected slots", async () => {
     const app = harness();

@@ -12,7 +12,7 @@ export interface FakeImageOptions {
   readonly takesMs?: number;
   readonly clock?: Clock;
   readonly failOnAttempt?: Readonly<Record<number, ProviderErrorInit>>;
-  // `logic/09` §Q74: a content-policy refusal, which is never retried.
+  // A content-policy refusal, which is never retried.
   readonly refuse?: string;
 }
 

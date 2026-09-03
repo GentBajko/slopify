@@ -1,10 +1,10 @@
 # Slopify: capstone index
 
-Slopify: a self-hosted, single-user content pipeline (research → article → TTS narration → images and thumbnail → slideshow video) for faceless YouTube channel operators, run with `npx slopify@latest`. TypeScript on Node ≥ 26; one process: a Hono 4 API serving a React 19 SPA, an in-process pipeline runner, bundled ffmpeg as a child process, one SQLite file; plus a static marketing site and a serverless telemetry collector. Paradigm: functional core (pure slices) with a procedural shell (runner, adapters, edge). Every chapter below is `mode: prescriptive`: written from `architecture-interview.md`, not from code; `map` rewrites them descriptively once code exists.
+Slopify: a self-hosted, single-user content pipeline (research → article → TTS narration → images and thumbnail → slideshow video) for faceless YouTube channel operators, run with `npx @gentbajko/slopify@latest`. TypeScript on Node ≥ 26; one process: a Hono 4 API serving a React 19 SPA, an in-process pipeline runner, bundled ffmpeg as a child process, one SQLite file; plus a static marketing site and a serverless telemetry collector. Paradigm: functional core (pure slices) with a procedural shell (runner, adapters, edge).
 
-## Module map (planned)
+## Module map
 
-| Module | Planned entry point |
+| Module | Entry point |
 |---|---|
 | CLI and boot sequence | `packages/app/src/edge/cli.ts` |
 | Composition root | `packages/app/src/main.ts` |

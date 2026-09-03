@@ -23,24 +23,23 @@ export interface VideoDeps {
   readonly clock: Clock;
   readonly log: Log;
   readonly ffmpeg: string;
-  // logic/16 step 2: one event per render that finished.
+  // One event per render that finished.
   readonly count: RecordEvent;
 }
 
 // ceiling: progress is coalesced to one event per 500 ms, and the stage's progress
 // columns are written on the same tick so a page that reconnects mid-render sees a bar
-// rather than nothing (04-data-flow, SSE disconnect).
+// rather than nothing.
 const progressIntervalMs = 500;
 
-// logic/12 §Q106: "the previous video stays downloadable until the new render finishes".
-// ffmpeg therefore writes beside the finished file rather than over it, and the swap
-// below is what replaces it. The name keeps the `.mp4` extension because that is what
-// ffmpeg picks its muxer from, and no row ever names it: a download resolves an outputs
-// row, and the boot reconcile collects a part file left by a killed process as an orphan
-// (`slices/storage/reconcile.ts`).
+// The previous video stays downloadable until the new render finishes. ffmpeg therefore writes
+// beside the finished file rather than over it, and the swap below is what replaces it. The
+// name keeps the `.mp4` extension because that is what ffmpeg picks its muxer from, and no row
+// ever names it: a download resolves an outputs row, and the boot reconcile collects a part
+// file left by a killed process as an orphan (`slices/storage/reconcile.ts`).
 const partName = "video.part.mp4";
 // The two outputs one render produces. Both are replaced together, so a project never
-// carries the video of one render beside the parameters of another (§Q106's invariant).
+// carries the video of one render beside the parameters of another.
 const renderRoles: readonly Output["role"][] = ["video", "render_params"];
 
 export async function renderVideo(deps: VideoDeps, context: StageContext): Promise<void> {
@@ -77,7 +76,7 @@ export async function renderVideo(deps: VideoDeps, context: StageContext): Promi
   const totalMs = Math.round(plan.totalSeconds * 1000);
   let announced = 0;
   try {
-    // logic/11 §Q89: no retry and no timeout. A render that fails is terminal.
+    // No retry and no timeout. A render that fails is terminal.
     await runFfmpeg({
       bin: deps.ffmpeg,
       args: renderArgs({ ...plan, output: part }),
@@ -100,13 +99,13 @@ export async function renderVideo(deps: VideoDeps, context: StageContext): Promi
         });
       },
     });
-    // logic/13 §Q113 protects an output that was already stored, not one that is about to
-    // be. A cancel landing between ffmpeg exiting and the rows below discards the render
-    // rather than reporting done to a page that pressed Cancel.
+    // A cancel protects an output that was already stored, not one about to be. One
+    // landing between ffmpeg exiting and the rows below discards the render rather than
+    // reporting done to a page that pressed Cancel.
     context.signal.throwIfAborted();
   } catch (error) {
-    // logic/13 step 2: a partial render file is discarded, never kept or served. Only the
-    // part file: the previous video is a finished output and §Q106 keeps it downloadable.
+    // A partial render file is discarded, never kept or served. Only the part file: the
+    // previous video is a finished output and stays downloadable.
     rmSync(part, { force: true });
     throw error;
   }
@@ -115,7 +114,7 @@ export async function renderVideo(deps: VideoDeps, context: StageContext): Promi
   renameSync(part, target);
   const params = outputPath(deps.paths, projectId, "render.json");
   writeFileSync(params, `${JSON.stringify(recorded(plan, dir), null, 2)}\n`, { mode: 0o600 });
-  // §Q106: no version history. The files were written under the names the previous render
+  // No version history. The files were written under the names the previous render
   // already used, so replacing the rows that named them is all that is left to do. In one
   // transaction, or a crash between the delete and the insert would leave the finished
   // video with no row and the boot reconcile would collect it. Read back rather than
@@ -139,14 +138,14 @@ export async function renderVideo(deps: VideoDeps, context: StageContext): Promi
     current: totalMs,
     total: totalMs,
   });
-  // logic/16 step 3: "videos rendered (completed renders)". One event per swap, so a
-  // render that failed or was canceled counts nothing and a re-render counts again
-  // (scenario 12). No provider: ffmpeg is the machine's own, not a service.
+  // Videos rendered (completed renders). One event per swap, so a render that failed or was
+  // canceled counts nothing and a re-render counts again No provider: ffmpeg is the machine's
+  // own, not a service.
   deps.count("stage.completed", { stage: "video" });
 }
 
 // Written with project-relative paths, so the record of what was rendered can be read
-// beside the files it names and carries no absolute path off the machine (logic/11 §Q100).
+// beside the files it names and carries no absolute path off the machine.
 function recorded(plan: RenderPlan, dir: string): unknown {
   return {
     ...plan,
@@ -159,7 +158,7 @@ function recorded(plan: RenderPlan, dir: string): unknown {
   };
 }
 
-// logic/11 invariant: every slideshow image appears exactly once, in slideshow order.
+// Every slideshow image appears exactly once, in slideshow order.
 // The thumbnail is a different role, so it is never in this list.
 function slideshow(outputs: readonly Output[]): readonly Output[] {
   return outputs

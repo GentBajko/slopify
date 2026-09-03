@@ -7,9 +7,9 @@ import type { RailProps } from "@/play/rail-frame";
 import { railBeneath, railControls, SourceSwitch, StageRail } from "@/play/rail-frame";
 
 // The two rails that carry a provider, and with it everything a provider decides: the
-// voice and the chunking of the narration (`logic/08`), and the model and the ticked
-// prompts of the images (`logic/09`). Both fall back to a file pick when their stage is
-// set to Provide (`logic/05`).
+// voice and the chunking of the narration, and the model and the ticked
+// prompts of the images. Both fall back to a file pick when their stage is
+// set to Provide.
 
 export function AudioRail({
   form,
