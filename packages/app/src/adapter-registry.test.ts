@@ -95,13 +95,56 @@ describe("buildRegistry", () => {
     db.close();
   });
 
+  it("resolves every TTS provider id to its own adapter", () => {
+    const db = migrated();
+    const built = registry(db);
+
+    expect(built.tts("elevenlabs").id).toBe("elevenlabs");
+    expect(built.tts("openai-tts").id).toBe("openai-tts");
+    expect(built.tts("cartesia").id).toBe("cartesia");
+    db.close();
+  });
+
   it("throws for an id no adapter is built for", () => {
     const db = migrated();
     const built = registry(db);
 
     expect(() => built.llm("elevenlabs")).toThrow("no llm adapter is registered for elevenlabs");
-    expect(() => built.tts("elevenlabs")).toThrow("no tts adapter is registered for elevenlabs");
+    expect(() => built.tts("openrouter")).toThrow("no tts adapter is registered for openrouter");
     expect(() => built.image("fal")).toThrow("no image adapter is registered for fal");
+    db.close();
+  });
+
+  // `logic/02` invariant: "A key is sent only to the provider it belongs to." OpenAI has
+  // a TTS row and an image row, so the wrong one reaching the speech endpoint would be a
+  // key crossing a provider boundary inside one vendor.
+  it("hands each TTS adapter the key of its own provider row and no other", async () => {
+    const db = migrated();
+    const save = db.prepare(
+      "INSERT INTO provider_keys (provider, key, updated_at) VALUES (?, ?, '2026-09-02T10:00:00.000Z')",
+    );
+    save.run("elevenlabs", "eleven-key");
+    save.run("openai-tts", "openai-tts-key");
+    save.run("openai-image", "openai-image-key");
+    save.run("cartesia", "cartesia-key");
+    const sent: string[] = [];
+    const built = registry(db, (_input, init) => {
+      const headers = new Headers(init?.headers);
+      sent.push(
+        headers.get("xi-api-key") ?? headers.get("x-api-key") ?? headers.get("authorization") ?? "",
+      );
+      return Promise.resolve(new Response(new Uint8Array([1]), { status: 200 }));
+    });
+
+    for (const id of ["elevenlabs", "openai-tts", "cartesia"]) {
+      await built.tts(id).synthesize({
+        voiceId: "v1",
+        text: "hello",
+        signal: new AbortController().signal,
+      });
+    }
+
+    expect(sent).toEqual(["eleven-key", "Bearer openai-tts-key", "cartesia-key"]);
     db.close();
   });
 

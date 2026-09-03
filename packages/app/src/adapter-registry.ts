@@ -3,6 +3,9 @@ import { claudeCodeLlm } from "./adapters/llm/claude-code.js";
 import { codexLlm } from "./adapters/llm/codex.js";
 import { openRouterLlm } from "./adapters/llm/openrouter.js";
 import type { RunCli } from "./adapters/llm/run-cli.js";
+import { cartesiaTts } from "./adapters/tts/cartesia.js";
+import { elevenLabsTts } from "./adapters/tts/elevenlabs.js";
+import { openAiTts } from "./adapters/tts/openai.js";
 import type { Clock } from "./kernel/clock.js";
 import type { ImagePort } from "./kernel/ports/image.js";
 import type { LlmPort } from "./kernel/ports/llm.js";
@@ -45,7 +48,14 @@ export function buildRegistry(deps: RegistryDeps): Registry {
     ["claude-code", claudeCodeLlm({ run: deps.spawn })],
     ["codex", codexLlm({ run: deps.spawn })],
   ]);
-  const ttses = new Map<string, TtsPort>();
+  // One key per provider (`logic/02` invariant), so each adapter is handed the reader for
+  // its own row and no other. OpenAI keeps two rows because it ships an adapter in two
+  // families and a user may key one without the other (`slices/settings/model.ts`).
+  const ttses = new Map<string, TtsPort>([
+    ["elevenlabs", elevenLabsTts({ fetch: deps.fetch, key: keyOf("elevenlabs") })],
+    ["openai-tts", openAiTts({ fetch: deps.fetch, key: keyOf("openai-tts") })],
+    ["cartesia", cartesiaTts({ fetch: deps.fetch, key: keyOf("cartesia") })],
+  ]);
   const images = new Map<string, ImagePort>();
 
   return {

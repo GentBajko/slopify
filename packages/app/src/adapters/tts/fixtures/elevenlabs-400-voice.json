@@ -1,0 +1,6 @@
+{
+  "detail": {
+    "status": "voice_not_found",
+    "message": "A voice with voice_id nosuchvoice was not found."
+  }
+}

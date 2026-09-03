@@ -1,0 +1,6 @@
+{
+  "detail": {
+    "status": "too_many_concurrent_requests",
+    "message": "You have too many concurrent requests. Please wait and try again."
+  }
+}

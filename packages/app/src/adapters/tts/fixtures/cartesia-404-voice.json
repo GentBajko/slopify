@@ -1,0 +1,6 @@
+{
+  "error_code": "voice_not_found",
+  "title": "Voice not found",
+  "message": "The requested voice does not exist.",
+  "request_id": "550e8400-e29b-41d4-a716-446655440000"
+}

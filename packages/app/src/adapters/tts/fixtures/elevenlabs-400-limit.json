@@ -1,0 +1,6 @@
+{
+  "detail": {
+    "status": "max_character_limit_exceeded",
+    "message": "This request's text has 627 characters and exceeds the character limit of 333 characters for non signed in accounts."
+  }
+}

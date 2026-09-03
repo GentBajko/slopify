@@ -1,0 +1,8 @@
+{
+  "error": {
+    "message": "Invalid 'input': string too long. Expected a string with maximum length 4096, but got a string with length 5120 instead.",
+    "type": "invalid_request_error",
+    "param": "input",
+    "code": "string_above_max_length"
+  }
+}

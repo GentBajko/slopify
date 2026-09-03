@@ -1,0 +1,6 @@
+{
+  "error_code": "concurrency_limited",
+  "title": "Too many concurrent requests",
+  "message": "You have exceeded your plan's concurrency limit.",
+  "request_id": "550e8400-e29b-41d4-a716-446655440000"
+}

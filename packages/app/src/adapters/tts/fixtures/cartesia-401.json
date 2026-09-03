@@ -1,0 +1,6 @@
+{
+  "error_code": "invalid_api_key",
+  "title": "Invalid API key",
+  "message": "The API key provided is not valid.",
+  "request_id": "550e8400-e29b-41d4-a716-446655440000"
+}
