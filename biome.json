@@ -72,6 +72,10 @@
                   {
                     "group": ["**/edge", "**/edge/**"],
                     "message": "slices sit below edge: they may not import edge."
+                  },
+                  {
+                    "group": ["**/adapters", "**/adapters/**", "**/kernel/ports/registry.js"],
+                    "message": "a slice never holds a provider adapter or the registry that hands one out: it is handed the wrapped calls of kernel/runner/providers.ts, so every provider call goes through the attempt wrapper."
                   }
                 ]
               }
