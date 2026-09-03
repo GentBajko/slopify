@@ -6,3 +6,4 @@ coverage/
 packages/app/dist/web/
 .wrangler
 .playwright-mcp/
+.VSCodeCounter/
