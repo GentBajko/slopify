@@ -64,4 +64,4 @@ Posture: stop and confirm. A dialog precedes each of these, names the consequenc
 
 ## Copy register
 
-Deadpan and literal, owning "slop" without winking twice: "New run", "Play", "Retry stage", "Cancel run", "Nothing to narrate", "AI Slop, on schedule." State words are uppercase engraved labels: PENDING, RUNNING, DONE, FAILED, CANCELED, PROVIDED, SKIPPED.
+Deadpan and literal, owning "slop" without winking twice: "New run", "Play", "Retry stage", "Cancel run", "Nothing to narrate", "AI Slop, on demand." State words are uppercase engraved labels: PENDING, RUNNING, DONE, FAILED, CANCELED, PROVIDED, SKIPPED.
