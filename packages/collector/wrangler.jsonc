@@ -3,24 +3,27 @@
   "name": "slopify-collector",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-01",
-  "observability": { "enabled": true },
+  "observability": {
+    "enabled": true
+  },
   // The hostname is not decoration: the shipped app posts to
   // https://collector.slopify.stream (slices/telemetry/collector-client.ts) and the
   // Worker answers CORS for https://slopify.stream only. Deploying without this route
   // gives a collector nothing talks to. The zone has to be on the Cloudflare account
   // first; see "Deploying to Cloudflare" in the repository README.
-  "routes": [{ "pattern": "collector.slopify.stream", "custom_domain": true }],
+  "routes": [
+    {
+      "pattern": "collector.slopify.stream",
+      "custom_domain": true
+    }
+  ],
+  // The binding name is load-bearing: src/index.ts reads env.DB, so a second entry
+  // under any other name is an unused binding, not an alternative.
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "slopify-collector",
-      // Local runs (`wrangler dev`, `wrangler d1 execute --local`) key their state off the
-      // database name and never read this, so the placeholder is enough to develop and to
-      // pass `wrangler deploy --dry-run`. A real id only exists once someone with a
-      // Cloudflare account has run `wrangler d1 create slopify-collector`; that command
-      // prints the id and this line is where it goes. Anything invented here would deploy
-      // a collector bound to a database nobody owns.
-      "database_id": "D1_DATABASE_ID_PLACEHOLDER"
+      "database_id": "c0639824-a730-4f90-b9b6-38e6305b1395"
     }
   ]
 }
