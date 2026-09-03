@@ -71,6 +71,22 @@ describe("derive", () => {
   it("reads pending for a project with no stages at all", () => {
     expect(derive([])).toBe("pending");
   });
+
+  // The rule this extends: `logic/13` step 3 says "the project reads `canceled`", and
+  // §Q113 lets the last running stage store its output as the cancel lands and stay
+  // `done`. Nothing is then `canceled`, and §Q9's four states have no answer.
+  it("reads canceled when a run stopped after a stage finished and nothing runs", () => {
+    expect(derive(stages({ research: "done" }))).toBe("canceled");
+    expect(derive(stages({ ...allSatisfied(), images: "done", video: "pending" }))).toBe(
+      "canceled",
+    );
+  });
+
+  // A stage the user supplied or switched off is not a stage the runner carried to the
+  // end, so a project that has not started still reads `pending`.
+  it("does not read canceled for a project whose only finished stages were provided", () => {
+    expect(derive(stages({ ...allSatisfied(), video: "pending" }))).toBe("pending");
+  });
 });
 
 function allSatisfied(): Partial<Record<StageKind, StageState>> {

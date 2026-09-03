@@ -318,7 +318,11 @@ describe("cancelling a run", () => {
     expect(h.stateOf("images")).toBe("done");
     expect(imagePaths(h)).toEqual(["images/001.png"]);
     expect(existsSync(join(h.dir, "images", "001.png"))).toBe(true);
-    expect(result).toEqual({ ok: true, canceled: [], state: "pending" });
+    // No stage ended `canceled`, so §Q9's derivation has nothing to read the cancel off.
+    // `logic/13` step 3 says the project reads `canceled` all the same, and
+    // `kernel/runner/graph.ts` extends §Q9's fallback to say so: a run that carried a
+    // stage to `done` and then stopped is not a run about to start.
+    expect(result).toEqual({ ok: true, canceled: [], state: "canceled" });
     // Every dependency of the video is now satisfied - audio provided, thumbnail skipped,
     // images done - so only the cancel's own barrier keeps the render from starting.
     expect(h.stateOf("video")).toBe("pending");

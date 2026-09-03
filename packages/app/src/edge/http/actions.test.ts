@@ -132,9 +132,12 @@ describe("re-run and retry", () => {
     });
 
     expect(response.status).toBe(200);
+    // The status is not asserted here: this runner is a stub that starts nothing, so what
+    // the project derives to afterwards is the stub's doing. The real runner claims the
+    // reset stage inside the same tick, and `test/reruns.test.ts` reads it back there.
     expect(await response.json()).toMatchObject({
       redone: ["audio", "video"],
-      project: { id: projectId, status: "pending" },
+      project: { id: projectId },
     });
     expect(h.ticked).toEqual([projectId]);
   });
