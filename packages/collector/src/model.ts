@@ -4,8 +4,8 @@ import { z } from "zod";
 // binding goes straight in and a test hands in a stand-in over node:sqlite without a
 // cast. @cloudflare/workers-types is not installed for it: its global Request and
 // Response declarations collide with the @types/node ones this workspace typechecks
-// against, and `wrangler dev` against real D1 (see README of this package) is the check
-// that matters anyway.
+// against. `npm run schema:local && npm run dev` in this package runs the Worker on real
+// local D1, which is the check that the four methods below are the right ones.
 export interface CollectorStatement {
   readonly bind: (...values: readonly unknown[]) => CollectorStatement;
   readonly run: () => Promise<{ readonly meta: { readonly changes: number } }>;
