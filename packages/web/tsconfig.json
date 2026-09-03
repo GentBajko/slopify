@@ -7,10 +7,13 @@
     "types": ["node", "vite/client"],
     "jsx": "react-jsx",
     "noEmit": true,
+    // The two Vite configs share aliases.ts, and Vite's config loader resolves that
+    // specifier itself: extensionless it warns, and no .js sits beside the file.
+    "allowImportingTsExtensions": true,
     "paths": {
       "@/*": ["./src/*"],
       "@app/*": ["../app/dist/*"]
     }
   },
-  "include": ["src", "vite.config.ts", "vitest.config.ts"]
+  "include": ["src", "aliases.ts", "vite.config.ts", "vitest.config.ts"]
 }

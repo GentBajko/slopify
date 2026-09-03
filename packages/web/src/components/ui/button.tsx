@@ -14,6 +14,12 @@ const buttonVariants = cva(
         outline:
           "rounded-control border border-line2 bg-panel2 text-ink hover:bg-panel2 hover:border-ink3",
         accent: "rounded-control border border-accent bg-transparent text-run-text hover:bg-panel2",
+        // The one accent fill outside the Play key: the Save of the prompt editor, which
+        // uiux/screens/05-prompt-editor.md makes the only filled control on its sheet.
+        // The hover darkens to the key's own edge colour rather than lifting to --panel2,
+        // which a fill has no room for.
+        primary:
+          "rounded-control bg-accent px-[14px] font-semibold text-accent-ink hover:bg-accent-edge",
         ghost: "rounded-control text-ink2 hover:bg-panel2 hover:text-ink",
         // The action verb of a confirm dialog: the red is the border, never the fill, so
         // the label keeps --ink's contrast on both themes.

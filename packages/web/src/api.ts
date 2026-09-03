@@ -1,6 +1,7 @@
 import type { AppType } from "@app/edge/http/app.js";
 import type { Project, ProjectSummary, RunDraft, Stage } from "@app/slices/admission/model.js";
 import type { FieldError } from "@app/slices/admission/rules.js";
+import type { Prompt, PromptDraft, PromptKind } from "@app/slices/library/model.js";
 import type {
   Appearance,
   AppSettings,
@@ -20,6 +21,9 @@ export type {
   Output,
   Project,
   ProjectSummary,
+  Prompt,
+  PromptDraft,
+  PromptKind,
   ProviderFamily,
   ProviderId,
   ProviderStatus,
@@ -62,6 +66,11 @@ export interface ProviderListBody {
 }
 export interface VoiceListBody {
   readonly voices: readonly Voice[];
+}
+// Every kind in one answer: 04 Prompts filters by tab and Duplicate needs the body it is
+// copying, so `edge/http/prompts.ts` lists them all (`logic/15` step 3).
+export interface PromptListBody {
+  readonly prompts: readonly Prompt[];
 }
 // What a save answers with: that a key is stored and the mask, never the value
 // (slices/settings/keys.ts).
@@ -237,6 +246,47 @@ function refusalOf(status: number, problem: Problem | undefined): VoiceRefusal |
 
 function isVoiceField(field: string): field is VoiceField {
   return field === "name" || field === "provider" || field === "voiceId";
+}
+
+export async function listPrompts(api: Api): Promise<PromptListBody> {
+  return read<PromptListBody>(await api.client.prompts.$get());
+}
+
+export type SavePromptResult =
+  | { readonly ok: true; readonly prompt: Prompt }
+  | { readonly ok: false; readonly fields: readonly FieldError[] };
+
+// A refused prompt is an expected outcome, so it comes back as a value carrying the
+// server's own `fields[]` for the editor to mark (03-standards, typed results). `id`
+// undefined creates; anything else replaces (`logic/15` §Q125: a save overwrites).
+export async function savePrompt(
+  api: Api,
+  draft: PromptDraft,
+  id: string | undefined,
+): Promise<SavePromptResult> {
+  const json = { kind: draft.kind, name: draft.name, body: draft.body };
+  const response =
+    id === undefined
+      ? await api.client.prompts.$post({ json })
+      : await api.client.prompts[":id"].$put({ param: { id }, json });
+  if (response.ok) {
+    return { ok: true, prompt: (await response.json()) as Prompt };
+  }
+  const problem = await problemOf(response);
+  const fields = problem?.fields ?? [];
+  // 400 marks the lint that got past the editor, 409 the name the unique index refused
+  // (`logic/15` §Q122). Both name their fields; anything else is a fault and throws.
+  if ((response.status === 400 || response.status === 409) && fields.length > 0) {
+    return { ok: false, fields };
+  }
+  throw errorOf(response, problem);
+}
+
+export async function removePrompt(api: Api, id: string): Promise<void> {
+  const response = await api.client.prompts[":id"].$delete({ param: { id } });
+  if (!response.ok) {
+    throw await failure(response);
+  }
 }
 
 export function eventsUrl(api: Api, path: string): string {

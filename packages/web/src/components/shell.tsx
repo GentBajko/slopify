@@ -11,11 +11,12 @@ import { subscribeGlobal } from "@/events";
 import { keys } from "@/queries";
 
 // One top bar on every app screen, the active item underlined in the running-lamp colour
-// (uiux/03-experience.md). Prompts, Intros & Outros and Usage are S18-S22 and have no
-// route yet, so they are not offered as links that go nowhere.
+// (uiux/03-experience.md). Intros & Outros and Usage are S19-S22 and have no route yet,
+// so they are not offered as links that go nowhere.
 const sections = [
   { to: "/", label: "Projects" },
   { to: "/play", label: "Play" },
+  { to: "/prompts", label: "Prompts" },
   { to: "/settings", label: "Settings" },
 ] as const;
 
@@ -56,7 +57,8 @@ export function Shell() {
           <Link
             key={section.to}
             to={section.to}
-            activeOptions={{ exact: true }}
+            // Prompts stays lit while the editor beneath it is open.
+            activeOptions={{ exact: section.to !== "/prompts" }}
             className="border-b-2 border-transparent py-[18px] text-ink2 hover:text-ink"
             activeProps={{ className: "!border-lamp-run !text-ink" }}
           >

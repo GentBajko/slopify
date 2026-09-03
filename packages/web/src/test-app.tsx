@@ -75,8 +75,8 @@ export function testDeps(routes: Readonly<Record<string, Answer>>): AppDeps {
 }
 
 // A router the component under test can render `Link`s against. Its root renders the
-// subject and never an Outlet, so the three paths below exist only so a link resolves;
-// they mirror router.tsx, which owns the real tree.
+// subject and never an Outlet, so the paths below exist only so a link resolves; they
+// mirror router.tsx, which owns the real tree.
 function testRouter(ui: ReactNode) {
   const rootRoute = createRootRoute({ component: () => ui });
   const nowhere = () => null;
@@ -92,6 +92,21 @@ function testRouter(ui: ReactNode) {
       project: createRoute({
         getParentRoute: () => rootRoute,
         path: "projects/$projectId",
+        component: nowhere,
+      }),
+      prompts: createRoute({
+        getParentRoute: () => rootRoute,
+        path: "prompts",
+        component: nowhere,
+      }),
+      newPrompt: createRoute({
+        getParentRoute: () => rootRoute,
+        path: "prompts/new",
+        component: nowhere,
+      }),
+      prompt: createRoute({
+        getParentRoute: () => rootRoute,
+        path: "prompts/$promptId",
         component: nowhere,
       }),
     }),
