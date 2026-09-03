@@ -60,4 +60,4 @@ id exists, and the Usage screen shows you your own numbers at any time.
 MIT. The ffmpeg binary fetched at install time is a separate GPL-3.0-or-later program,
 as described above.
 
-Source, issues and the full guide: <https://github.com/gentbajko/slopify>
+Source, issues and the full guide: <https://github.com/GentBajko/slopify>

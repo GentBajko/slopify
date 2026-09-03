@@ -1,12 +1,12 @@
 {
   "name": "slopify",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Turn a prompt into a finished video, locally, with your own provider keys",
   "license": "MIT",
   "author": "Gent Bajko",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/gentbajko/slopify.git",
+    "url": "git+https://github.com/GentBajko/slopify.git",
     "directory": "packages/app"
   },
   "type": "module",
