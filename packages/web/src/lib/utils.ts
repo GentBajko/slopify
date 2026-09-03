@@ -1,5 +1,21 @@
 import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+
+// tailwind-merge knows Tailwind's own scales, not this project's. Left unextended it
+// reads `text-small` as a colour, so `cn("text-small text-ink")` dropped every engraved
+// and small size in the app; the same happened to the radius lock and the animations.
+// The names below are the `--text-*`, `--radius-*`, `--animate-*` and `--font-*`
+// namespaces of styles/index.css, without their prefixes.
+const twMerge = extendTailwindMerge({
+  extend: {
+    theme: {
+      text: ["label", "small", "body", "row", "title", "wordmark", "counter"],
+      radius: ["control", "panel"],
+      animate: ["lamp-pulse", "dialog-in", "tick-in"],
+      font: ["sans", "condensed"],
+    },
+  },
+});
 
 // The class merger every vendored shadcn component expects at `@/lib/utils`.
 export function cn(...inputs: readonly ClassValue[]): string {
