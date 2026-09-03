@@ -4,6 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "dev": "wrangler dev",
+    "schema:local": "wrangler d1 execute slopify-collector --local --file=schema.sql"
+  },
+  "devDependencies": {
+    "wrangler": "^4.128.0"
+  },
+  "dependencies": {
+    "zod": "^4.5.4"
   }
 }

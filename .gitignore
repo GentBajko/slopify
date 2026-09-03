@@ -4,3 +4,4 @@ coverage/
 *.tsbuildinfo
 .DS_Store
 packages/app/dist/web/
+.wrangler

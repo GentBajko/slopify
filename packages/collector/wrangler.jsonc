@@ -1,0 +1,17 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "slopify-collector",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-01",
+  "observability": { "enabled": true },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "slopify-collector",
+      // Local runs (`wrangler dev`, `wrangler d1 execute --local`) key their state off the
+      // database name and never read this. S23 replaces it with the id of the database it
+      // creates at deploy time.
+      "database_id": "placeholder-filled-at-deploy-time"
+    }
+  ]
+}
