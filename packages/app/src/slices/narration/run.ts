@@ -13,7 +13,7 @@ import { insertPiece, piecesOf, setPiece } from "../../kernel/runner/piece-repo.
 import type { StageProviders } from "../../kernel/runner/providers.js";
 import type { VoiceChoice } from "../admission/model.js";
 import { entryModes } from "../admission/model.js";
-import { projectById, setStageProgress } from "../admission/repo.js";
+import { projectById, setStageProgress, stagesOf } from "../admission/repo.js";
 import { entryCategories } from "../library/model.js";
 import { outputFileName, outputPath } from "../storage/layout.js";
 import type { Output, OutputRole } from "../storage/model.js";
@@ -248,7 +248,7 @@ async function speakSegments(
   outputs: readonly Output[],
 ): Promise<void> {
   const { projectId } = context.stage;
-  for (const piece of piecesOf(deps.db, context.stage.id, "segment")) {
+  for (const piece of segmentPieces(deps, projectId)) {
     const segment = segmentOf(piece);
     const role: OutputRole = segment.category === "intro" ? "audio_intro" : "audio_outro";
     if (outputs.some((output) => output.role === role)) {
@@ -280,6 +280,22 @@ async function speakSegments(
     store(deps, projectId, role, name, durationMs, choice);
     counted(deps, segment.category, durationMs, choice);
   }
+}
+
+// The segment pieces belong to the *article* stage, which is where `logic/07` step 5
+// writes them, so they are read under its id and never under this stage's own. They stay
+// there because `logic/12` is what depends on it: a Re-run audio (step 2) and the audio
+// re-run an article edit cascades into (step 1) both clear the audio stage's pieces, and
+// only the article stage ever writes an entry text - so an intro kept on this stage's row
+// would be thrown away by the first re-narration and never written again.
+function segmentPieces(deps: NarrationDeps, projectId: string): readonly StagePiece[] {
+  const article = stagesOf(deps.db, projectId).find((stage) => stage.kind === "article");
+  if (article === undefined) {
+    // Admission writes all six stage rows with the project (`logic/04` step 6), so a
+    // project without an article stage is a bug rather than a run the user configured.
+    throw new Error(`project ${projectId} has no article stage`);
+  }
+  return piecesOf(deps.db, article.id, "segment");
 }
 
 // logic/16 step 3: "audio seconds from the measured duration per segment". The measured

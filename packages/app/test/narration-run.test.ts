@@ -38,6 +38,13 @@ import { probeDurationMs, resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
 const silent: Log = { write: (): void => {} };
 const ffmpeg = resolveFfmpeg(process.env, ffmpegStatic);
 
+// Two stage rows with two ids, because the two ids are the whole point of step 5: the
+// segment texts are written onto the *article* stage's pieces (`logic/07` step 5) and
+// spoken by the *audio* stage. A harness that gave both stages one id would pass whichever
+// of the two the code happened to read.
+const articleStage = "s-article";
+const audioStage = "s-audio";
+
 // Three paragraphs, so `paragraph` mode makes three chunks and the join has two seams.
 const paragraphs = [
   "Rope is older than writing.",
@@ -156,9 +163,11 @@ function harness(options: HarnessOptions = {}): Harness {
     "2026-09-01",
     "2026-09-01",
   );
-  db.exec(
-    "INSERT INTO stages (id, project_id, kind, source, state) VALUES ('s1','p1','audio','generate','running')",
+  const stage = db.prepare(
+    "INSERT INTO stages (id, project_id, kind, source, state) VALUES (?,'p1',?,'generate',?)",
   );
+  stage.run(articleStage, "article", "done");
+  stage.run(audioStage, "audio", "running");
 
   const article = options.article ?? paragraphs.join("\n\n");
   writeFileSync(join(dir, "article.txt"), article);
@@ -167,11 +176,13 @@ function harness(options: HarnessOptions = {}): Harness {
   ).run(article.length);
 
   if (options.segments === true) {
+    // On the article stage's row, where `slices/article/run.ts` puts them.
     const piece = db.prepare(
-      "INSERT INTO stage_pieces (id, stage_id, kind, idx, state, payload) VALUES (?, 's1', 'segment', ?, 'done', ?)",
+      "INSERT INTO stage_pieces (id, stage_id, kind, idx, state, payload) VALUES (?, ?, 'segment', ?, 'done', ?)",
     );
     piece.run(
       "seg-1",
+      articleStage,
       1,
       JSON.stringify({
         category: "intro",
@@ -182,6 +193,7 @@ function harness(options: HarnessOptions = {}): Harness {
     );
     piece.run(
       "seg-2",
+      articleStage,
       2,
       JSON.stringify({
         category: "outro",
@@ -209,7 +221,7 @@ function harness(options: HarnessOptions = {}): Harness {
     counted,
     deps: { db, paths, ids, clock, log: silent, ffmpeg, count: counted.count },
     context: {
-      stage: { id: "s1", projectId: "p1", kind: "audio", state: "running" },
+      stage: { id: audioStage, projectId: "p1", kind: "audio", state: "running" },
       signal: new AbortController().signal,
       emit: (event: ProjectEvent): void => {
         events.push(event);
@@ -270,7 +282,7 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
     // §Q65: one request per paragraph, and the text sent is the paragraph's own.
     expect(tts.calls()).toBe(3);
     expect(tts.seen()).toEqual([...paragraphs]);
-    expect(piecesOf(h.db, "s1", "chunk").map((piece) => piece.state)).toEqual([
+    expect(piecesOf(h.db, audioStage, "chunk").map((piece) => piece.state)).toEqual([
       "done",
       "done",
       "done",
@@ -365,6 +377,34 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
     h.db.close();
   }, 120_000);
 
+  // §Q66's resume, applied to a segment: the intro that landed is not spoken again, and
+  // the article stage's pieces are still there to be read on the second run.
+  it("speaks neither segment again when the stage runs a second time", async () => {
+    const h = harness({ chunking: { mode: "paragraph" }, segments: true });
+    await run(h, speaking());
+
+    const again = speaking();
+    await run(h, again);
+
+    expect(again.seen()).toEqual([]);
+    expect((outputRows(h.db) as Array<{ role: string }>).map((row) => row.role)).toEqual([
+      "audio_body",
+      "audio_intro",
+      "audio_outro",
+    ]);
+    h.db.close();
+  }, 120_000);
+
+  it("fails the stage when a picked segment carries no text", async () => {
+    const h = harness({ chunking: { mode: "whole" }, segments: true });
+    h.db
+      .prepare("UPDATE stage_pieces SET payload = ? WHERE id = 'seg-1'")
+      .run(JSON.stringify({ category: "intro", name: "Standard intro", mode: "text", text: "  " }));
+
+    await expect(run(h, speaking())).rejects.toThrow(`the intro segment has ${nothingToNarrate}`);
+    h.db.close();
+  }, 120_000);
+
   it("reports k of N as the chunks land", async () => {
     const h = harness({ chunking: { mode: "paragraph" } });
 
@@ -373,7 +413,11 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
     expect(
       h.events.filter((event) => event.type === "stage.progress").map((event) => event.current),
     ).toEqual([0, 1, 2, 3]);
-    expect(h.db.prepare("SELECT progress_current, progress_total FROM stages").get()).toEqual({
+    expect(
+      h.db
+        .prepare("SELECT progress_current, progress_total FROM stages WHERE id = ?")
+        .get(audioStage),
+    ).toEqual({
       progress_current: 3,
       progress_total: 3,
     });
@@ -410,7 +454,7 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
     expect(beat.waits).toContain(2000);
     expect(beat.waits).toContain(8000);
     expect(beat.waits).toContain(30_000);
-    const states = piecesOf(h.db, "s1", "chunk").map((piece) => piece.state);
+    const states = piecesOf(h.db, audioStage, "chunk").map((piece) => piece.state);
     expect(states).toEqual(["done", "failed", "done"]);
     // The two that landed kept their audio for the retry, and no body was written.
     expect(existsSync(join(h.dir, "audio-chunks", "001.mp3"))).toBe(true);
@@ -419,7 +463,7 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
     expect(outputRows(h.db)).toEqual([]);
     // Four attempts on the failing chunk, one each on the other two.
     const perPiece: Record<string, number> = {};
-    for (const row of attemptsOf(h.db, "s1")) {
+    for (const row of attemptsOf(h.db, audioStage)) {
       const at = row.pieceId ?? "stage";
       perPiece[at] = (perPiece[at] ?? 0) + 1;
     }
@@ -453,7 +497,7 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
 
     // Only the middle paragraph was spoken again; the other two were read off disk.
     expect(working.seen()).toEqual([paragraphs[1]]);
-    expect(piecesOf(h.db, "s1", "chunk").map((piece) => piece.state)).toEqual([
+    expect(piecesOf(h.db, audioStage, "chunk").map((piece) => piece.state)).toEqual([
       "done",
       "done",
       "done",
@@ -471,7 +515,7 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
     await expect(run(h, tts)).rejects.toThrow(nothingToNarrate);
 
     expect(tts.calls()).toBe(0);
-    expect(attemptsOf(h.db, "s1")).toHaveLength(0);
+    expect(attemptsOf(h.db, audioStage)).toHaveLength(0);
     h.db.close();
   }, 60_000);
 

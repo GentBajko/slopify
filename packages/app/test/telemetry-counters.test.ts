@@ -281,15 +281,9 @@ describe("a whole pipeline against the fakes", () => {
     const byUnit = new Map(payloads(h.db).map((row) => [unitOf(row), row]));
 
     // One event per unit of logic/16 step 2: the project, research, the article, its
-    // intro and outro texts, the narration, the images, the thumbnail and the render.
-    //
-    // The narration is the body alone. That is a defect of the audio stage, not of the
-    // counters: `slices/article/run.ts` stores its `segment` pieces under the article
-    // stage's id and `slices/narration/run.ts` looks for them under the audio stage's, so
-    // a real pipeline never narrates the picked intro and outro at all - `logic/08` §Q93
-    // asks for one request per picked segment. It is reported rather than fixed here.
-    // When it is fixed this list gains "audio/intro" and "audio/outro" and nothing that
-    // logic/16 owns changes.
+    // intro and outro texts, the three narrated segments, the images, the thumbnail and
+    // the render. The narration is three units because `logic/08` §Q93 makes each picked
+    // segment a request of its own, narrated from the pieces the article stage wrote.
     expect([...byUnit.keys()].toSorted()).toEqual(
       [
         "project.created",
@@ -298,6 +292,8 @@ describe("a whole pipeline against the fakes", () => {
         "article/intro",
         "article/outro",
         "audio/body",
+        "audio/intro",
+        "audio/outro",
         "images",
         "thumbnail",
         "video",
@@ -352,18 +348,24 @@ describe("a whole pipeline against the fakes", () => {
     expect(byUnit.get("video")).toEqual({ appVersion, stage: "video" });
 
     // The audio seconds are the measured duration of the file the stage stored, which is
-    // the number `logic/11` builds the video timeline from (§Q68).
-    const measured = outputsOf(h.db, h.projectId)
-      .filter((output) => output.role === "audio_body")
-      .map((output) => (output.durationMs ?? 0) / 1000);
-    expect(byUnit.get("audio/body")).toEqual({
-      appVersion,
-      stage: "audio",
-      segment: "body",
-      provider: "fake-tts",
-      audioSeconds: measured[0],
-    });
-    expect(measured[0]).toBeGreaterThan(0.2);
+    // the number `logic/11` builds the video timeline from (§Q68). One event per segment,
+    // each carrying its own file's duration rather than the run's total.
+    const outputs = outputsOf(h.db, h.projectId);
+    for (const [segment, role] of [
+      ["body", "audio_body"],
+      ["intro", "audio_intro"],
+      ["outro", "audio_outro"],
+    ] as const) {
+      const measured = (outputs.find((output) => output.role === role)?.durationMs ?? 0) / 1000;
+      expect(measured).toBeGreaterThan(0.2);
+      expect(byUnit.get(`audio/${segment}`)).toEqual({
+        appVersion,
+        stage: "audio",
+        segment,
+        provider: "fake-tts",
+        audioSeconds: measured,
+      });
+    }
     h.db.close();
   }, 180_000);
 
@@ -428,13 +430,16 @@ describe("a whole pipeline against the fakes", () => {
       machineId: null,
       appVersion,
     });
-    const body = outputsOf(h.db, h.projectId).find((output) => output.role === "audio_body");
+    // Every second the run narrated: the body and the two picked segments (§Q93).
+    const audioSeconds = outputsOf(h.db, h.projectId)
+      .filter((output) => output.role.startsWith("audio_"))
+      .reduce((total, output) => total + (output.durationMs ?? 0) / 1000, 0);
     // Eight answered LLM calls: four for research, one for the article, one for each entry
     // text and one for the thumbnail prompt.
     const perCall = reportedUsage.inputTokens + reportedUsage.outputTokens;
     expect(usage.counters).toEqual({
       videosMade: 1,
-      audioSeconds: (body?.durationMs ?? 0) / 1000,
+      audioSeconds,
       imagesMade: 2,
       tokensUsed: perCall * 8,
       projects: 1,
