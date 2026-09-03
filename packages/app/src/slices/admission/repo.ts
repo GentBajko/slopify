@@ -96,6 +96,13 @@ export function projectById(db: DatabaseSync, id: string): Project | undefined {
   return row === undefined ? undefined : toProject(projectRow.parse(row));
 }
 
+// Existence alone, for a caller that needs no run configuration: `slices/cancel` only
+// asks whether the id names a project, and parsing the config to answer that would tie
+// cancelling to a schema it never reads.
+export function projectExists(db: DatabaseSync, id: string): boolean {
+  return db.prepare("SELECT 1 FROM projects WHERE id = ?").get(id) !== undefined;
+}
+
 // mockup/07: newest first.
 export function listProjects(db: DatabaseSync): Project[] {
   return db
@@ -134,6 +141,15 @@ export function finishStage(
     at,
     stageId,
   );
+}
+
+// `logic/12` step 9 and `logic/13` step 5: a stage put back to `pending` by a re-run, a
+// cascade or a retry starts again from a clean row - no error text, no progress from the
+// run before it, and the fresh attempt budget of `logic/01` §Q5.
+export function resetStage(db: DatabaseSync, stageId: string): void {
+  db.prepare(
+    "UPDATE stages SET state = 'pending', failure_reason = NULL, attempt_count = 0, progress_current = NULL, progress_total = NULL, started_at = NULL, finished_at = NULL WHERE id = ?",
+  ).run(stageId);
 }
 
 export function setStageProgress(

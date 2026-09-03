@@ -59,6 +59,17 @@ export function outputsOf(db: DatabaseSync, projectId: string): Output[] {
     .map((row) => toOutput(outputRow.parse(row)));
 }
 
+export function outputById(db: DatabaseSync, id: string): Output | undefined {
+  const row = db.prepare("SELECT * FROM outputs WHERE id = ?").get(id);
+  return row === undefined ? undefined : toOutput(outputRow.parse(row));
+}
+
+// `logic/12` §Q106: an action replaces an output rather than versioning it. The row goes
+// here; the file it names is the caller's to unlink once this has committed.
+export function deleteOutput(db: DatabaseSync, id: string): void {
+  db.prepare("DELETE FROM outputs WHERE id = ?").run(id);
+}
+
 export function insertStagedFile(db: DatabaseSync, file: StagedFile): void {
   db.prepare(
     "INSERT INTO staged_files (id, stage_kind, path, original_filename, bytes, state, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",

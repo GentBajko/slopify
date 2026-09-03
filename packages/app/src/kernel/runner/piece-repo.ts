@@ -52,6 +52,26 @@ export function piecesOf(
     .map((row) => toPiece(pieceRow.parse(row)));
 }
 
+// Every piece of a stage whatever its kind, for the one caller that does not care: a
+// re-run throws the whole plan away, because the text a chunk was cut from and the prompt
+// an image was sent with are what changed (`logic/12` §Q101, §Q104).
+export function allPiecesOf(db: DatabaseSync, stageId: string): readonly StagePiece[] {
+  return db
+    .prepare("SELECT * FROM stage_pieces WHERE stage_id = ? ORDER BY kind, idx")
+    .all(stageId)
+    .map((row) => toPiece(pieceRow.parse(row)));
+}
+
+export function deletePieces(db: DatabaseSync, stageId: string): void {
+  db.prepare("DELETE FROM stage_pieces WHERE stage_id = ?").run(stageId);
+}
+
+// One piece, for `logic/09` §Q75: an image the user deleted leaves no row behind, or the
+// next run of the stage would look at the plan and make it again.
+export function deletePiece(db: DatabaseSync, id: string): void {
+  db.prepare("DELETE FROM stage_pieces WHERE id = ?").run(id);
+}
+
 export function setPiece(
   db: DatabaseSync,
   id: string,

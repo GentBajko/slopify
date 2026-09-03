@@ -33,7 +33,7 @@ export function reconcileStorage(db: DatabaseSync, paths: Paths): Reconciled {
     )
     .all()) {
     const projectId = row.project_id;
-    const file = fileIn(row.payload);
+    const file = pieceFile(row.payload);
     if (typeof projectId === "string" && file !== undefined) {
       kept.add(`${projectId}/${slashed(file)}`);
     }
@@ -71,10 +71,11 @@ export function reconcileStorage(db: DatabaseSync, paths: Paths): Reconciled {
   return { orphanFiles, stagedFiles };
 }
 
-// The one field this module reads inside a payload whose shape belongs to the stage that
-// wrote it: a project-relative path the piece left on disk. A payload without one is any
-// other kind of piece and names no file.
-function fileIn(payload: unknown): string | undefined {
+// The one field read inside a payload whose shape belongs to the stage that wrote it: a
+// project-relative path the piece left on disk. A payload without one is any other kind
+// of piece and names no file. Exported because a re-run drops the same pieces the boot
+// sweep keeps, and the two have to agree on which file a piece is holding.
+export function pieceFile(payload: unknown): string | undefined {
   if (typeof payload !== "string") {
     return undefined;
   }
