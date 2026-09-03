@@ -30,7 +30,10 @@ export const imagesPerRunMax = 60;
 export const silenceGapSecondsMax = 30;
 
 // mockup §Q28, logic/04 §Q31, logic/10 §Q78. Video is always generated (logic/01 step 5).
-const allowedSources: Readonly<Record<StageKind, readonly StageSource[]>> = {
+// Exported because Play's source switches offer exactly these and nothing else: the
+// segmented control and the refusal below it are then the same list, and a stage whose
+// legal set changes cannot leave a switch behind offering something the server refuses.
+export const allowedSources: Readonly<Record<StageKind, readonly StageSource[]>> = {
   research: ["generate", "provide", "off"],
   article: ["generate", "provide"],
   audio: ["generate", "provide"],

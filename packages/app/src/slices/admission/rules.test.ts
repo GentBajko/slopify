@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { StageKind } from "../../kernel/pipeline.js";
+import { stageKinds } from "../../kernel/pipeline.js";
 import type { StagedFile } from "../storage/model.js";
 import type { RunDraft, StageSource } from "./model.js";
-import { admit } from "./rules.js";
+import { stageSources } from "./model.js";
+import { admit, allowedSources } from "./rules.js";
 
 function staged(
   id: string,
@@ -85,6 +87,26 @@ describe("title", () => {
 });
 
 describe("sources", () => {
+  // The switches on Play are drawn from `allowedSources`, so what the control offers and
+  // what this rule accepts have to be the same list for every stage.
+  it("refuses exactly the sources allowedSources leaves out", () => {
+    for (const kind of stageKinds) {
+      for (const source of stageSources) {
+        const marked = fields(provided({ sources: sources({ [kind]: source }) })).includes(
+          `sources.${kind}`,
+        );
+        // Video is normalised back to generate before the check, and a provided article
+        // forces research off, so neither stage can be marked whatever the form said.
+        const normalised = kind === "video" || (kind === "research" && source !== "off");
+        expect([kind, source, marked]).toEqual([
+          kind,
+          source,
+          !normalised && !allowedSources[kind].includes(source),
+        ]);
+      }
+    }
+  });
+
   it("refuses images set to off, because a run always has an image source", () => {
     expect(fields(provided({ sources: sources({ images: "off" }) }))).toContain("sources.images");
   });
