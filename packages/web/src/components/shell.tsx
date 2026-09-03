@@ -11,13 +11,16 @@ import { subscribeGlobal } from "@/events";
 import { keys } from "@/queries";
 
 // One top bar on every app screen, the active item underlined in the running-lamp colour
-// (uiux/03-experience.md). Intros & Outros and Usage are S19-S22 and have no route yet,
-// so they are not offered as links that go nowhere.
+// (uiux/03-experience.md). Usage is S20-S22 and has no route yet, so it is not offered as
+// a link that goes nowhere.
+// `exact: false` is a section that keeps an editor beneath it: Prompts stays lit while
+// 05 is open, and Intros & Outros while its own editor is.
 const sections = [
-  { to: "/", label: "Projects" },
-  { to: "/play", label: "Play" },
-  { to: "/prompts", label: "Prompts" },
-  { to: "/settings", label: "Settings" },
+  { to: "/", label: "Projects", exact: true },
+  { to: "/play", label: "Play", exact: true },
+  { to: "/prompts", label: "Prompts", exact: false },
+  { to: "/entries", label: "Intros & Outros", exact: false },
+  { to: "/settings", label: "Settings", exact: true },
 ] as const;
 
 export function Shell() {
@@ -57,8 +60,7 @@ export function Shell() {
           <Link
             key={section.to}
             to={section.to}
-            // Prompts stays lit while the editor beneath it is open.
-            activeOptions={{ exact: section.to !== "/prompts" }}
+            activeOptions={{ exact: section.exact }}
             className="border-b-2 border-transparent py-[18px] text-ink2 hover:text-ink"
             activeProps={{ className: "!border-lamp-run !text-ink" }}
           >

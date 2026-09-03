@@ -109,6 +109,21 @@ function testRouter(ui: ReactNode) {
         path: "prompts/$promptId",
         component: nowhere,
       }),
+      entries: createRoute({
+        getParentRoute: () => rootRoute,
+        path: "entries",
+        component: nowhere,
+      }),
+      newEntry: createRoute({
+        getParentRoute: () => rootRoute,
+        path: "entries/new",
+        component: nowhere,
+      }),
+      entry: createRoute({
+        getParentRoute: () => rootRoute,
+        path: "entries/$entryId",
+        component: nowhere,
+      }),
     }),
     history: createMemoryHistory({ initialEntries: ["/"] }),
   });

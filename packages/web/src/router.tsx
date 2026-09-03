@@ -1,7 +1,10 @@
-import type { PromptKind } from "@app/slices/library/model.js";
+import type { EntryCategory, PromptKind } from "@app/slices/library/model.js";
 import { createRootRoute, createRoute, createRouter, useNavigate } from "@tanstack/react-router";
 import { Shell } from "@/components/shell";
+import { categoryOf } from "@/lib/entry-options";
 import { kindOf } from "@/lib/prompt-kinds";
+import { EntriesRoute } from "@/routes/entries";
+import { EntryEditorRoute } from "@/routes/entry-editor";
 import { PlayRoute } from "@/routes/play";
 import { ProjectRoute } from "@/routes/project";
 import { ProjectsRoute } from "@/routes/projects";
@@ -22,6 +25,15 @@ interface KindSearch {
 
 interface NewPromptSearch extends KindSearch {
   // The prompt being duplicated, when Duplicate opened the editor (`logic/15` §Q124).
+  readonly from?: string;
+}
+
+// 09 Intros & Outros keeps its tab in the URL for the same reasons 04 does.
+interface CategorySearch {
+  readonly category: EntryCategory;
+}
+
+interface NewEntrySearch extends CategorySearch {
   readonly from?: string;
 }
 
@@ -64,6 +76,31 @@ const promptRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "prompts/$promptId",
   component: PromptPage,
+});
+
+const entriesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "entries",
+  validateSearch: (search: Record<string, unknown>): CategorySearch => ({
+    category: categoryOf(search.category),
+  }),
+  component: EntriesPage,
+});
+
+const newEntryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "entries/new",
+  validateSearch: (search: Record<string, unknown>): NewEntrySearch => {
+    const category = categoryOf(search.category);
+    return typeof search.from === "string" ? { category, from: search.from } : { category };
+  },
+  component: NewEntryPage,
+});
+
+const entryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "entries/$entryId",
+  component: EntryPage,
 });
 
 const settingsRoute = createRoute({
@@ -119,6 +156,47 @@ function useLeave(): (kind: PromptKind) => void {
   };
 }
 
+function EntriesPage() {
+  const { category } = entriesRoute.useSearch();
+  const navigate = useNavigate();
+  return (
+    <EntriesRoute
+      category={category}
+      onCategory={(next) => {
+        void navigate({ to: "/entries", search: { category: next }, replace: true });
+      }}
+    />
+  );
+}
+
+function NewEntryPage() {
+  const { category, from } = newEntryRoute.useSearch();
+  const leave = useLeaveEntries();
+  return <EntryEditorRoute entryId={undefined} category={category} from={from} onLeave={leave} />;
+}
+
+function EntryPage() {
+  const { entryId } = entryRoute.useParams();
+  const leave = useLeaveEntries();
+  return (
+    <EntryEditorRoute
+      entryId={entryId}
+      // The row the editor loads carries the category; the tab is only a default for an
+      // entry that does not exist yet.
+      category="intro"
+      from={undefined}
+      onLeave={leave}
+    />
+  );
+}
+
+function useLeaveEntries(): (category: EntryCategory) => void {
+  const navigate = useNavigate();
+  return (category) => {
+    void navigate({ to: "/entries", search: { category } });
+  };
+}
+
 const routeTree = rootRoute.addChildren({
   projectsRoute,
   playRoute,
@@ -126,6 +204,9 @@ const routeTree = rootRoute.addChildren({
   promptsRoute,
   newPromptRoute,
   promptRoute,
+  entriesRoute,
+  newEntryRoute,
+  entryRoute,
   settingsRoute,
 });
 

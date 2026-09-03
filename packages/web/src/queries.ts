@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import type { Api } from "./api.js";
 import {
+  listEntries,
   listProjects,
   listPrompts,
   listProviders,
@@ -23,6 +24,7 @@ export const keys = {
   providers: ["providers"] as const,
   voices: ["voices"] as const,
   prompts: ["prompts"] as const,
+  entries: ["entries"] as const,
   settings: ["settings"] as const,
 };
 
@@ -52,6 +54,10 @@ export function voicesQuery(api: Api) {
 
 export function promptsQuery(api: Api) {
   return queryOptions({ queryKey: keys.prompts, queryFn: () => listPrompts(api) });
+}
+
+export function entriesQuery(api: Api) {
+  return queryOptions({ queryKey: keys.entries, queryFn: () => listEntries(api) });
 }
 
 export function settingsQuery(api: Api) {

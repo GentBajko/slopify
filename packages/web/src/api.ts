@@ -1,7 +1,15 @@
 import type { AppType } from "@app/edge/http/app.js";
 import type { Project, ProjectSummary, RunDraft, Stage } from "@app/slices/admission/model.js";
 import type { FieldError } from "@app/slices/admission/rules.js";
-import type { Prompt, PromptDraft, PromptKind } from "@app/slices/library/model.js";
+import type {
+  Entry,
+  EntryCategory,
+  EntryDraft,
+  EntryMode,
+  Prompt,
+  PromptDraft,
+  PromptKind,
+} from "@app/slices/library/model.js";
 import type {
   Appearance,
   AppSettings,
@@ -17,6 +25,10 @@ import { hc } from "hono/client";
 export type {
   Appearance,
   AppSettings,
+  Entry,
+  EntryCategory,
+  EntryDraft,
+  EntryMode,
   FieldError,
   Output,
   Project,
@@ -71,6 +83,11 @@ export interface VoiceListBody {
 // copying, so `edge/http/prompts.ts` lists them all (`logic/15` step 3).
 export interface PromptListBody {
   readonly prompts: readonly Prompt[];
+}
+// Both categories in one answer, for the same reason: 09 filters by tab and Duplicate
+// needs the body it is copying (`edge/http/entries.ts`).
+export interface EntryListBody {
+  readonly entries: readonly Entry[];
 }
 // What a save answers with: that a key is stored and the mask, never the value
 // (slices/settings/keys.ts).
@@ -276,6 +293,30 @@ export async function savePrompt(
 
 export async function removePrompt(api: Api, id: string): Promise<void> {
   const response = await api.client.prompts[":id"].$delete({ param: { id } });
+  if (!response.ok) {
+    throw await failure(response);
+  }
+}
+
+export async function listEntries(api: Api): Promise<EntryListBody> {
+  return read<EntryListBody>(await api.client.entries.$get());
+}
+
+export async function saveEntry(
+  api: Api,
+  draft: EntryDraft,
+  id: string | undefined,
+): Promise<SaveResult<Entry>> {
+  const json = { category: draft.category, mode: draft.mode, name: draft.name, body: draft.body };
+  return saved<Entry>(
+    id === undefined
+      ? await api.client.entries.$post({ json })
+      : await api.client.entries[":id"].$put({ param: { id }, json }),
+  );
+}
+
+export async function removeEntry(api: Api, id: string): Promise<void> {
+  const response = await api.client.entries[":id"].$delete({ param: { id } });
   if (!response.ok) {
     throw await failure(response);
   }
