@@ -172,9 +172,10 @@ describe("the precondition every action shares", () => {
 });
 
 describe("re-running one stage", () => {
-  // Step 2 with §Q102 and §Q106: the audio is remade and the video with it, and neither
-  // keeps the output it had.
-  it("drops the stage's outputs, its pieces and its chunk files, and the video with them", () => {
+  // Step 2 with §Q102 and §Q106: the audio is remade and the video with it. The audio
+  // keeps nothing it had; the video keeps everything, because §Q106 leaves the previous
+  // render downloadable until the new one finishes and `slices/video/run.ts` swaps it.
+  it("drops the stage's outputs, its pieces and its chunk files, but keeps the video", () => {
     const h = finished();
 
     expect(rerunStage(h.deps, projectId, "audio")).toEqual({
@@ -192,10 +193,13 @@ describe("re-running one stage", () => {
       "images/002.png",
       "images/003.png",
       "thumbnail.png",
+      "video.mp4",
+      "render.json",
     ]);
     expect(existsSync(join(h.dir, "audio-body.mp3"))).toBe(false);
-    expect(existsSync(join(h.dir, "video.mp4"))).toBe(false);
-    expect(existsSync(join(h.dir, "render.json"))).toBe(false);
+    // §Q106: "the previous video stays downloadable until the new render finishes".
+    expect(existsSync(join(h.dir, "video.mp4"))).toBe(true);
+    expect(existsSync(join(h.dir, "render.json"))).toBe(true);
     // `logic/08` §Q66's chunks are named by their pieces, not by an output row, so the
     // re-run has to take them away itself or the next run would reuse the old narration.
     expect(existsSync(join(h.dir, "audio-chunks", "001.mp3"))).toBe(false);
@@ -342,7 +346,9 @@ describe("deleting one image", () => {
         .map((one) => one.meta.index),
     ).toEqual([1, 3]);
     expect(states(h)).toMatchObject({ images: "done", video: "pending" });
-    expect(existsSync(join(h.dir, "video.mp4"))).toBe(false);
+    // §Q106 again: the render that used the deleted image is still the one on offer until
+    // the re-render replaces it.
+    expect(existsSync(join(h.dir, "video.mp4"))).toBe(true);
   });
 
   // §Q103's invariant: "at least one image always remains".

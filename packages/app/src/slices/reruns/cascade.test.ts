@@ -29,17 +29,17 @@ describe("a re-run of one stage", () => {
       "audio:all",
       "images:all",
       "thumbnail:all",
-      "video:all",
+      "video:nothing",
     ]);
   });
 
   it("takes only the video with the audio", () => {
-    expect(plan({ kind: "rerun", stage: "audio" })).toEqual(["audio:all", "video:all"]);
+    expect(plan({ kind: "rerun", stage: "audio" })).toEqual(["audio:all", "video:nothing"]);
   });
 
   // Step 8: a re-render is the video stage alone.
   it("takes nothing with the video", () => {
-    expect(plan({ kind: "rerun", stage: "video" })).toEqual(["video:all"]);
+    expect(plan({ kind: "rerun", stage: "video" })).toEqual(["video:nothing"]);
   });
 
   it("fans the article out over audio, images, the thumbnail and the video", () => {
@@ -48,7 +48,7 @@ describe("a re-run of one stage", () => {
       "audio:all",
       "images:all",
       "thumbnail:all",
-      "video:all",
+      "video:nothing",
     ]);
   });
 
@@ -57,7 +57,7 @@ describe("a re-run of one stage", () => {
   it("steps over a provided dependent and still reaches the video", () => {
     expect(
       plan({ kind: "rerun", stage: "article" }, { audio: "provided", thumbnail: "skipped" }),
-    ).toEqual(["article:all", "images:all", "video:all"]);
+    ).toEqual(["article:all", "images:all", "video:nothing"]);
   });
 });
 
@@ -65,14 +65,14 @@ describe("an article edit", () => {
   // §Q101: "audio, LLM-mode intro/outro text, LLM-written thumbnail, and video re-run;
   // prompt-based images are untouched".
   it("redoes the audio and the video and leaves the prompt-based images alone", () => {
-    expect(plan({ kind: "article-edit" })).toEqual(["audio:all", "video:all"]);
+    expect(plan({ kind: "article-edit" })).toEqual(["audio:all", "video:nothing"]);
   });
 
   it("redoes an LLM-written thumbnail as well", () => {
     expect(plan({ kind: "article-edit" }, {}, "prompt_by_llm")).toEqual([
       "audio:all",
       "thumbnail:all",
-      "video:all",
+      "video:nothing",
     ]);
   });
 
@@ -81,19 +81,19 @@ describe("an article edit", () => {
   });
 
   it("still re-renders when the audio was provided", () => {
-    expect(plan({ kind: "article-edit" }, { audio: "provided" })).toEqual(["video:all"]);
+    expect(plan({ kind: "article-edit" }, { audio: "provided" })).toEqual(["video:nothing"]);
   });
 });
 
 describe("a change to one image", () => {
   // §Q103 with §Q102: the set is smaller by one and the video is rebuilt from it.
   it("re-renders the video and nothing else when an image is deleted", () => {
-    expect(plan({ kind: "image-deleted" })).toEqual(["video:all"]);
+    expect(plan({ kind: "image-deleted" })).toEqual(["video:nothing"]);
   });
 
   // §Q103: "one new call with that image's stored prompt text, replacing it in place at
   // the same index" - which is the piece the first run planned, so it is kept.
   it("keeps what landed when one image is regenerated", () => {
-    expect(plan({ kind: "image-regenerated" })).toEqual(["images:nothing", "video:all"]);
+    expect(plan({ kind: "image-regenerated" })).toEqual(["images:nothing", "video:nothing"]);
   });
 });

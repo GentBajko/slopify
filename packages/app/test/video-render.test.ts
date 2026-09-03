@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
@@ -233,6 +233,16 @@ function deps(harness: Fixture): Parameters<typeof renderVideo>[0] {
   };
 }
 
+function rowsOf(db: DatabaseSync): unknown[] {
+  return db
+    .prepare("SELECT role, path FROM outputs WHERE stage_kind = 'video' ORDER BY rowid")
+    .all();
+}
+
+function idsOf(db: DatabaseSync): unknown[] {
+  return db.prepare("SELECT id FROM outputs WHERE stage_kind = 'video' ORDER BY rowid").all();
+}
+
 describe("the ffmpeg render", () => {
   it("renders the slideshow over the audio, gaps included, and records the plan", async () => {
     const harness = fixture({ withEnds: true, gapSeconds: 0.5 });
@@ -356,6 +366,76 @@ describe("the ffmpeg render", () => {
       harness.db.prepare("SELECT count(*) AS n FROM outputs WHERE stage_kind = 'video'").get(),
     ).toEqual({ n: 0 });
   }, 60_000);
+
+  // `logic/12` §Q106: "the previous video stays downloadable until the new render
+  // finishes". The render writes beside the finished file and swaps only once ffmpeg has
+  // exited cleanly, so neither a failure nor a cancel can take the old one away.
+  it("leaves the previous video whole when the new render fails", async () => {
+    const harness = fixture();
+    await renderVideo(deps(harness), context(new AbortController().signal, []));
+    const video = join(harness.dir, "video.mp4");
+    const before = readFileSync(video);
+    const params = readFileSync(join(harness.dir, "render.json"), "utf8");
+    // The image the second render would read is replaced with something undecodable.
+    writeFileSync(join(harness.dir, "images", "002.png"), "not an image");
+
+    await expect(
+      renderVideo(deps(harness), context(new AbortController().signal, [])),
+    ).rejects.toThrow(/ffmpeg exited with code \d+/);
+
+    expect(readFileSync(video)).toEqual(before);
+    expect(readFileSync(join(harness.dir, "render.json"), "utf8")).toBe(params);
+    expect(rowsOf(harness.db)).toEqual([
+      { role: "render_params", path: "render.json" },
+      { role: "video", path: "video.mp4" },
+    ]);
+    // The half-written render is not left beside the good one for the download route to
+    // find, and the boot reconcile has nothing to collect.
+    expect(existsSync(join(harness.dir, "video.part.mp4"))).toBe(false);
+  }, 180_000);
+
+  it("leaves the previous video whole when the new render is canceled", async () => {
+    const harness = fixture();
+    await renderVideo(deps(harness), context(new AbortController().signal, []));
+    const video = join(harness.dir, "video.mp4");
+    const before = readFileSync(video);
+    const controller = new AbortController();
+
+    const running = renderVideo(deps(harness), context(controller.signal, []));
+    setTimeout(() => {
+      controller.abort();
+    }, 150);
+    await expect(running).rejects.toThrow(/canceled|abort/i);
+
+    expect(readFileSync(video)).toEqual(before);
+    expect(rowsOf(harness.db)).toEqual([
+      { role: "render_params", path: "render.json" },
+      { role: "video", path: "video.mp4" },
+    ]);
+    expect(existsSync(join(harness.dir, "video.part.mp4"))).toBe(false);
+  }, 180_000);
+
+  // The other half of §Q106: "a project never keeps two outputs for one stage once an
+  // action completes". The swap replaces the file and the row that named it.
+  it("replaces the previous video when the new render finishes", async () => {
+    const harness = fixture();
+    await renderVideo(deps(harness), context(new AbortController().signal, []));
+    const before = readFileSync(join(harness.dir, "video.mp4"));
+    const firstIds = idsOf(harness.db);
+    // A longer body, so the second render cannot produce the same bytes as the first.
+    tone(join(harness.dir, "audio-body.mp3"), 440, 2);
+    harness.db.prepare("UPDATE outputs SET duration_ms = NULL WHERE role = 'audio_body'").run();
+
+    await renderVideo(deps(harness), context(new AbortController().signal, []));
+
+    expect(readFileSync(join(harness.dir, "video.mp4"))).not.toEqual(before);
+    expect(rowsOf(harness.db)).toEqual([
+      { role: "render_params", path: "render.json" },
+      { role: "video", path: "video.mp4" },
+    ]);
+    expect(idsOf(harness.db)).not.toEqual(firstIds);
+    expect(existsSync(join(harness.dir, "video.part.mp4"))).toBe(false);
+  }, 180_000);
 
   it("refuses to render a project whose audio decodes to nothing", async () => {
     const harness = fixture();

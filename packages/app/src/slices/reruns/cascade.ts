@@ -80,6 +80,15 @@ function redoable(state: StageState): boolean {
 }
 
 function clearsOf(action: RerunAction, kind: StageKind): Redo["clears"] {
+  // §Q106: "the previous video stays downloadable until the new render finishes". Clearing
+  // the video's outputs here would take it away the moment the user pressed Re-render - or
+  // for the whole of a re-narration, when the video comes along as a dependent. It is kept
+  // instead, and `slices/video/run.ts` replaces the file and the rows in one swap once
+  // ffmpeg has exited cleanly. A render that fails or is canceled leaves the old one
+  // standing, which is exactly what §Q106 promises.
+  if (kind === "video") {
+    return "nothing";
+  }
   return action.kind === "image-regenerated" && kind === "images" ? "nothing" : "all";
 }
 

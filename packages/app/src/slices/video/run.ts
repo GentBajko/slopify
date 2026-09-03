@@ -1,7 +1,8 @@
-import { mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, relative } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import type { Clock } from "../../kernel/clock.js";
+import { transact } from "../../kernel/db/tx.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
@@ -9,7 +10,7 @@ import type { StageContext } from "../../kernel/runner/index.js";
 import { projectById, setStageProgress } from "../admission/repo.js";
 import { outputPath, projectDir } from "../storage/layout.js";
 import type { Output } from "../storage/model.js";
-import { insertOutput, outputsOf } from "../storage/repo.js";
+import { deleteOutput, insertOutput, outputsOf } from "../storage/repo.js";
 import { probeDurationMs, renderArgs, runFfmpeg } from "./ffmpeg.js";
 import type { AudioInput, RenderPlan } from "./plan.js";
 import { planRender } from "./plan.js";
@@ -27,6 +28,17 @@ export interface VideoDeps {
 // columns are written on the same tick so a page that reconnects mid-render sees a bar
 // rather than nothing (04-data-flow, SSE disconnect).
 const progressIntervalMs = 500;
+
+// logic/12 §Q106: "the previous video stays downloadable until the new render finishes".
+// ffmpeg therefore writes beside the finished file rather than over it, and the swap
+// below is what replaces it. The name keeps the `.mp4` extension because that is what
+// ffmpeg picks its muxer from, and no row ever names it: a download resolves an outputs
+// row, and the boot reconcile collects a part file left by a killed process as an orphan
+// (`slices/storage/reconcile.ts`).
+const partName = "video.part.mp4";
+// The two outputs one render produces. Both are replaced together, so a project never
+// carries the video of one render beside the parameters of another (§Q106's invariant).
+const renderRoles: readonly Output["role"][] = ["video", "render_params"];
 
 export async function renderVideo(deps: VideoDeps, context: StageContext): Promise<void> {
   const { projectId } = context.stage;
@@ -56,13 +68,16 @@ export async function renderVideo(deps: VideoDeps, context: StageContext): Promi
   });
 
   mkdirSync(dirname(target), { recursive: true, mode: 0o700 });
+  // The plan is the record of what was rendered and names the file the user downloads,
+  // so it keeps the final path; only the ffmpeg invocation is pointed at the part file.
+  const part = outputPath(deps.paths, projectId, partName);
   const totalMs = Math.round(plan.totalSeconds * 1000);
   let announced = 0;
   try {
     // logic/11 §Q89: no retry and no timeout. A render that fails is terminal.
     await runFfmpeg({
       bin: deps.ffmpeg,
-      args: renderArgs(plan),
+      args: renderArgs({ ...plan, output: part }),
       signal: context.signal,
       log: deps.log,
       onProgress: (elapsedMs: number): void => {
@@ -87,15 +102,30 @@ export async function renderVideo(deps: VideoDeps, context: StageContext): Promi
     // rather than reporting done to a page that pressed Cancel.
     context.signal.throwIfAborted();
   } catch (error) {
-    // logic/13 step 2: a partial render file is discarded, never kept or served.
-    rmSync(target, { force: true });
+    // logic/13 step 2: a partial render file is discarded, never kept or served. Only the
+    // part file: the previous video is a finished output and §Q106 keeps it downloadable.
+    rmSync(part, { force: true });
     throw error;
   }
 
+  // The swap. Everything below replaces the previous render, and nothing above it could.
+  renameSync(part, target);
   const params = outputPath(deps.paths, projectId, "render.json");
   writeFileSync(params, `${JSON.stringify(recorded(plan, dir), null, 2)}\n`, { mode: 0o600 });
-  store(deps, projectId, "render_params", "render.json", null);
-  store(deps, projectId, "video", "video.mp4", totalMs);
+  // §Q106: no version history. The files were written under the names the previous render
+  // already used, so replacing the rows that named them is all that is left to do. In one
+  // transaction, or a crash between the delete and the insert would leave the finished
+  // video with no row and the boot reconcile would collect it. Read back rather than
+  // reused from above: the rows are what a download resolves.
+  transact(deps.db, () => {
+    for (const previous of outputsOf(deps.db, projectId)) {
+      if (renderRoles.includes(previous.role)) {
+        deleteOutput(deps.db, previous.id);
+      }
+    }
+    store(deps, projectId, "render_params", "render.json", null);
+    store(deps, projectId, "video", "video.mp4", totalMs);
+  });
   // Written as well as emitted: a page opened after the render reads the row, and the
   // throttled in-flight writes would have left it frozen short of the end.
   setStageProgress(deps.db, context.stage.id, totalMs, totalMs);
