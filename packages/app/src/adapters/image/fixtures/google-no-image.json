@@ -1,0 +1,13 @@
+{
+  "id": "v1_Q2hkVGV4dE9ubHlSZXBseQ",
+  "object": "interaction",
+  "model": "gemini-3.1-flash-image",
+  "status": "completed",
+  "steps": [
+    {
+      "type": "model_output",
+      "status": "done",
+      "content": [{ "type": "text", "text": "I can describe it, but I cannot draw that." }]
+    }
+  ]
+}

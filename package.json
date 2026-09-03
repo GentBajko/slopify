@@ -10,6 +10,9 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "vitest run",
     "build": "npm run build --workspace @slopify/web && npm run build --workspace @gentbajko/slopify",
+    "start": "npm run build && node packages/app/dist/edge/cli.js",
+    "start:fresh": "npm run build && node packages/app/dist/edge/cli.js --data-dir .slopify-local",
+    "dev": "npm run dev --workspace @slopify/web",
     "deploy": "npm run deploy --workspace @slopify/collector && npm run deploy --workspace @slopify/site",
     "deploy:check": "npm run deploy:check --workspace @slopify/collector && npm run deploy:check --workspace @slopify/site"
   },

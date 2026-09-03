@@ -5,6 +5,19 @@ capstone_version: 5.2.0
 
 # Changelog
 
+## 2026-09-03 - Google as its own image provider, and a local run
+key: adapters/google-image
+- User: "I have credits at google not at fal. Also we need a local run to be able to test without publishing."
+- The correction it followed: the previous entry added Google's *models* hosted on fal, billed to a fal key. That was narrower than "add Google" reasonably reads, and was not flagged as such at the time. Google is now a fourth image provider of its own, keyed and billed separately, and the fal entries stay for anyone who prefers that host.
+- Endpoint, auth and response were read from the API docs rather than assumed: `POST https://generativelanguage.googleapis.com/v1beta/interactions`, the key in an `x-goog-api-key` header rather than a query parameter that every proxy between here and Google would log, and the image returned as base64 in a `model_output` step's `content` beside any prose the model wrote. The part is found by type, not by index, so a model that narrates before it draws still works.
+- `gemini-3.1-flash-image` is the one model listed, because it is the one the docs name. The field is free text, so a newer id can be typed before it is added.
+- Aspect goes as the run's own `16:9` or `9:16`, so the closest supported size is exact and the render crops nothing - unlike OpenAI, whose 3:2 frames leave a sliver.
+- The redactor needed no change: it already matches Google's `AIza` key prefix.
+- Local run, so nothing has to be published to be tried: `npm start` builds and runs exactly what an install gets, and `npm run start:fresh` does the same against a throwaway `.slopify-local/` data directory. `npm run dev` is the Vite server for SPA iteration, proxying to a running app. No dependency was added for any of it.
+- The drift guard from the previous entry now covers all four image providers, not just the two it was written for.
+- A test bug found and fixed while writing it: the no-key case passed `undefined` to a defaulted parameter, which re-triggers the default, so it had been asserting against a request that *did* carry a key. The helper takes `null` for absent now.
+- Verified after: 1436 tests across 135 files, lint clean on 407, typecheck clean. The built app was run locally and `/api/providers` lists `google-image`; the Settings screen was screenshotted showing Google as a fourth key row under Image generation.
+
 ## 2026-09-03 - fal: the Google image models
 key: adapters/fal-google
 - User: "we forgot to add Google Nano Banana and Flash 3.8 models to generate images".

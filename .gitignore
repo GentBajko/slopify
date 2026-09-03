@@ -8,3 +8,6 @@ packages/app/dist/web/
 .playwright-mcp/
 .VSCodeCounter/
 *.tgz
+
+# A local data directory for `npm run start:fresh`
+.slopify-local/

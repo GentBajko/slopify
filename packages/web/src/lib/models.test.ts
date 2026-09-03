@@ -11,6 +11,8 @@ import { modelsOf, providerModels } from "./models";
 const adapters = {
   fal: { file: "adapters/image/fal.ts", list: "falModels" },
   replicate: { file: "adapters/image/replicate.ts", list: "replicateModels" },
+  "openai-image": { file: "adapters/image/openai.ts", list: "openAiImageModels" },
+  "google-image": { file: "adapters/image/google.ts", list: "googleImageModels" },
 } as const;
 
 // Vitest runs this project from `packages/web`, but the whole suite can be run from the
@@ -37,11 +39,19 @@ function shipped(which: keyof typeof adapters): readonly string[] {
 }
 
 describe("providerModels", () => {
-  it.each(["fal", "replicate"] as const)("offers exactly what the %s adapter ships", (which) => {
-    const ours = providerModels[which].map((one) => one.id);
+  it.each(["fal", "replicate", "openai-image", "google-image"] as const)(
+    "offers exactly what the %s adapter ships",
+    (which) => {
+      const ours = providerModels[which].map((one) => one.id);
 
-    expect(ours).toEqual(shipped(which));
-    expect(ours.length).toBeGreaterThan(0);
+      expect(ours).toEqual(shipped(which));
+      expect(ours.length).toBeGreaterThan(0);
+    },
+  );
+
+  // Google is its own provider, billed to a Gemini key, not the same models resold by a host.
+  it("offers Google's own image model under its own provider", () => {
+    expect(providerModels["google-image"].map((one) => one.id)).toContain("gemini-3.1-flash-image");
   });
 
   // The Google endpoints arrived after the FLUX ones and take a different aspect field, which

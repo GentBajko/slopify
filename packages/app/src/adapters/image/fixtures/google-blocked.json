@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": 400,
+    "message": "The prompt was blocked by the content safety filter.",
+    "status": "INVALID_ARGUMENT"
+  }
+}

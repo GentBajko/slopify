@@ -1,0 +1,20 @@
+{
+  "id": "v1_ChdEZW1vSW50ZXJhY3Rpb25JZA",
+  "object": "interaction",
+  "model": "gemini-3.1-flash-image",
+  "status": "completed",
+  "steps": [
+    {
+      "type": "model_output",
+      "status": "done",
+      "content": [
+        { "type": "text", "text": "Here is your generated image:" },
+        {
+          "type": "image",
+          "mime_type": "image/png",
+          "data": "iVBORw0KGgoAAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHw=="
+        }
+      ]
+    }
+  ]
+}

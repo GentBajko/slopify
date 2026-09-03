@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { falImage } from "./adapters/image/fal.js";
+import { googleImage } from "./adapters/image/google.js";
 import { openAiImage } from "./adapters/image/openai.js";
 import { replicateImage } from "./adapters/image/replicate.js";
 import { claudeCodeLlm } from "./adapters/llm/claude-code.js";
@@ -59,7 +60,7 @@ export function buildRegistry(deps: RegistryDeps): Registry {
     ["openai-tts", openAiTts({ fetch: deps.fetch, key: keyOf("openai-tts") })],
     ["cartesia", cartesiaTts({ fetch: deps.fetch, key: keyOf("cartesia") })],
   ]);
-  // Three image providers behind one port, each handed the reader for its own key row.
+  // Four image providers behind one port, each handed the reader for its own key row.
   // Replicate also takes the clock: `Prefer: wait` gives up after 60 s and the prediction has
   // to be polled, and the wait is spent on the app's clock so a test never sits through one.
   const images = new Map<string, ImagePort>([
@@ -69,6 +70,7 @@ export function buildRegistry(deps: RegistryDeps): Registry {
       replicateImage({ fetch: deps.fetch, key: keyOf("replicate"), clock: deps.clock }),
     ],
     ["openai-image", openAiImage({ fetch: deps.fetch, key: keyOf("openai-image") })],
+    ["google-image", googleImage({ fetch: deps.fetch, key: keyOf("google-image") })],
   ]);
 
   return {

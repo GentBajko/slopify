@@ -1,0 +1,12 @@
+{
+  "id": "v1_VHJ1bmNhdGVkUGF5bG9hZA",
+  "object": "interaction",
+  "model": "gemini-3.1-flash-image",
+  "status": "completed",
+  "steps": [
+    {
+      "type": "model_output",
+      "content": [{ "type": "image", "mime_type": "image/png", "data": "bm90LWFuLWltYWdl" }]
+    }
+  ]
+}

@@ -44,6 +44,7 @@ export const providerModels: Readonly<Record<ProviderId, readonly ModelInfo[]>> 
     { id: "black-forest-labs/flux-dev", name: "FLUX.1 [dev]" },
     { id: "black-forest-labs/flux-schnell", name: "FLUX.1 [schnell]" },
   ],
+  "google-image": [{ id: "gemini-3.1-flash-image", name: "Gemini 3.1 Flash Image" }],
   "openai-image": [
     { id: "gpt-image-2", name: "GPT Image 2" },
     { id: "gpt-image-1.5", name: "GPT Image 1.5" },

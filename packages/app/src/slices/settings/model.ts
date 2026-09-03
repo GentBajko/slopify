@@ -19,6 +19,7 @@ export const providerIds = [
   "fal",
   "replicate",
   "openai-image",
+  "google-image",
 ] as const;
 export type ProviderId = (typeof providerIds)[number];
 
@@ -66,6 +67,7 @@ export const providers: readonly Provider[] = [
   { id: "fal", family: "image", displayName: "fal.ai", auth: "key" },
   { id: "replicate", family: "image", displayName: "Replicate", auth: "key" },
   { id: "openai-image", family: "image", displayName: "OpenAI", auth: "key" },
+  { id: "google-image", family: "image", displayName: "Google", auth: "key" },
 ];
 
 export function providerById(id: ProviderId): Provider {
