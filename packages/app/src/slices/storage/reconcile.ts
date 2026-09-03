@@ -21,6 +21,24 @@ export function reconcileStorage(db: DatabaseSync, paths: Paths): Reconciled {
     }
   }
 
+  // A stage's unfinished work is on the project too: `logic/08` §Q66 keeps the audio
+  // chunks a previous run finished so a manual retry re-runs only the failed ones, and
+  // `logic/13` step 2 keeps them through a cancel. A chunk is not an output - the
+  // concatenated body is the project's only body audio (§Q65) - so the file it wrote is
+  // named by its `stage_pieces` payload instead, and that is as much of a record as an
+  // outputs row.
+  for (const row of db
+    .prepare(
+      "SELECT stages.project_id AS project_id, stage_pieces.payload AS payload FROM stage_pieces JOIN stages ON stages.id = stage_pieces.stage_id WHERE stage_pieces.payload IS NOT NULL",
+    )
+    .all()) {
+    const projectId = row.project_id;
+    const file = fileIn(row.payload);
+    if (typeof projectId === "string" && file !== undefined) {
+      kept.add(`${projectId}/${slashed(file)}`);
+    }
+  }
+
   let orphanFiles = 0;
   for (const entry of readdirSync(paths.projects, { withFileTypes: true })) {
     const path = join(paths.projects, entry.name);
@@ -51,6 +69,26 @@ export function reconcileStorage(db: DatabaseSync, paths: Paths): Reconciled {
   db.exec("DELETE FROM staged_files");
 
   return { orphanFiles, stagedFiles };
+}
+
+// The one field this module reads inside a payload whose shape belongs to the stage that
+// wrote it: a project-relative path the piece left on disk. A payload without one is any
+// other kind of piece and names no file.
+function fileIn(payload: unknown): string | undefined {
+  if (typeof payload !== "string") {
+    return undefined;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(payload);
+  } catch {
+    return undefined;
+  }
+  if (typeof parsed !== "object" || parsed === null || !("file" in parsed)) {
+    return undefined;
+  }
+  const file: unknown = parsed.file;
+  return typeof file === "string" && file !== "" ? file : undefined;
 }
 
 function idsOf(db: DatabaseSync, sql: string, column: string): Set<string> {

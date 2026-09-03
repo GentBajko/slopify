@@ -8,6 +8,9 @@ export interface FakeTtsOptions {
   readonly capabilities?: TtsCapabilities;
   // The audio, as text: nothing decodes it, and a test can read the bytes back.
   readonly chunks?: readonly string[];
+  // Real bytes instead, for the one test that hands what came back to ffmpeg: a
+  // concatenation cannot be proved against text pretending to be an mp3.
+  readonly bytesFor?: (req: TtsRequest) => readonly Uint8Array[];
   readonly gapMs?: number;
   readonly clock?: Clock;
   readonly failOnAttempt?: Readonly<Record<number, ProviderErrorInit>>;
@@ -44,10 +47,11 @@ export function fakeTts(options: FakeTtsOptions = {}): FakeTts {
       if (failure !== undefined) {
         return Promise.reject(providerError(failure));
       }
+      const parts = options.bytesFor?.(req) ?? chunks.map((chunk) => encoder.encode(chunk));
       let index = 0;
       const audio = new ReadableStream<Uint8Array>({
         pull: async (controller): Promise<void> => {
-          const chunk = chunks[index];
+          const chunk = parts[index];
           if (chunk === undefined) {
             controller.close();
             return;
@@ -57,7 +61,7 @@ export function fakeTts(options: FakeTtsOptions = {}): FakeTts {
           }
           req.signal.throwIfAborted();
           index += 1;
-          controller.enqueue(encoder.encode(chunk));
+          controller.enqueue(chunk);
         },
       });
       return Promise.resolve({ audio, container: "mp3" });

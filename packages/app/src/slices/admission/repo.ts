@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { stageKinds, stageStates } from "../../kernel/pipeline.js";
+import { chunkModes } from "../narration/chunk.js";
 import type { Project, RunConfig, Stage } from "./model.js";
 import { entryModes, formats, stageSources } from "./model.js";
 
@@ -38,6 +39,9 @@ export const runDraftSchema = z.object({
     images: z.array(z.string()).optional(),
     thumbnail: z.string().optional(),
   }),
+  // logic/08 §Q65. Optional until Play carries the control; unknown keys are stripped by
+  // this schema, so a mode that is not listed here would never reach the audio stage.
+  chunking: z.object({ mode: z.enum(chunkModes), words: z.number().optional() }).optional(),
   silenceGapSeconds: z.number(),
 });
 

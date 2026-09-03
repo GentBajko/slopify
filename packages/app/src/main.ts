@@ -29,6 +29,7 @@ import { stageProviders } from "./kernel/runner/providers.js";
 import { readVersion } from "./kernel/version.js";
 import { claimStage, finishStage, stagesOf } from "./slices/admission/repo.js";
 import { runArticle } from "./slices/article/run.js";
+import { runNarration } from "./slices/narration/run.js";
 import { runResearch } from "./slices/research/run.js";
 import { nodeCliProbe } from "./slices/settings/cli-status.js";
 import { reconcileStorage } from "./slices/storage/reconcile.js";
@@ -155,6 +156,8 @@ function wire({ db, paths, clock, ids, log, hub, telemetry, flusher, registry }:
   // Resolved once at boot rather than per render, so a machine with no usable binary
   // fails at start with one message instead of on every project's last stage.
   const ffmpeg = resolveFfmpeg(process.env, ffmpegStatic);
+  // The audio stage joins its chunks with the same binary the render uses, so it takes
+  // the same six dependencies.
   const video = { db, paths, ids, clock, log, ffmpeg };
   // Research and the article write text into the same project folder from the same
   // database handle, so they take the same five dependencies.
@@ -174,6 +177,7 @@ function wire({ db, paths, clock, ids, log, hub, telemetry, flusher, registry }:
     runs: {
       research: (context) => runResearch(writing, context, stageProviders(providers, context)),
       article: (context) => runArticle(writing, context, stageProviders(providers, context)),
+      audio: (context) => runNarration(video, context, stageProviders(providers, context)),
       video: (context) => renderVideo(video, context),
     },
     emit: (projectId, event) => {
