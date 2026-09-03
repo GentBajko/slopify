@@ -30,7 +30,8 @@ paths_covered:
 | lucide-react | 1.39 | ISC | icon family | uiux §Q5 |
 | @fontsource/barlow, @fontsource/barlow-condensed | 5.3 | OFL-1.1 (font licence, accepted) | self-hosted typefaces | stack C7; uiux §Q15 |
 | react-markdown | 10 | MIT | article display | stack C12 |
-| remark, strip-markdown | 15 / 6 | MIT | markdown → plain-text narration source (`logic/05` §Q37) | stack C12 |
+| remark, strip-markdown | 15.0.1 / 6.0.0 installed | MIT | markdown → plain-text narration source (`logic/05` §Q37) | stack C12 |
+| remark-gfm | 4.0.1 installed | MIT | added in build S12: without it remark does not parse tables, so `\| Year \| Event \|` rows survive verbatim into the narration, and footnote markers come back from remark-stringify escaped as `\[^1]` - a backslash the TTS reads aloud. strip-markdown can only remove what the parser produced, so neither is fixable through its options | build S12 |
 | fflate | 0.8.3 installed | MIT | zip for "download all" (`logic/14` §Q116) | stack C13 |
 | ulid | 3.0.2 installed | MIT | entity IDs (architecture §Q19) | stack C10 |
 | @fastify/busboy | 3.2.2 installed | MIT | streaming `multipart/form-data` parser for staged uploads (build S3) | build S3, ladder rung 4 |
