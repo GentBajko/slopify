@@ -246,10 +246,24 @@ code {
   height: 26px;
 }
 
+.glyph-github,
 .glyph-patreon,
 .glyph-coffee {
   display: inline-block;
+}
+
+/* The accent is the mark's own green, and it is what makes the two donation links read as
+   something to press rather than another item of chrome. GitHub is a source link, not a
+   donation, so it stays the colour of the text it sits in. */
+.glyph-patreon,
+.glyph-coffee {
   background-color: var(--lamp-run);
+}
+
+.glyph-github {
+  background-color: currentColor;
+  -webkit-mask: url("/assets/github.svg") center / contain no-repeat;
+  mask: url("/assets/github.svg") center / contain no-repeat;
 }
 
 .glyph-patreon {

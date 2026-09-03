@@ -5,6 +5,14 @@ capstone_version: 5.2.0
 
 # Changelog
 
+## 2026-09-03 - the support links move to the navbar
+key: web/navbar-support
+- User: "didn't I ask to put Github BMaC and Patreon on the navbar in every page on the app?" - and the earlier ask was "buttons like we did in the marketing page on every page of the app". The marketing page's placement is the masthead and it carries three links; they went into the app's footer and only two of them. Corrected: all three now sit in the app's top nav, right-aligned, in the masthead's own order, so every screen carries them. The footer goes back to its one line.
+- The marketing footer was inconsistent with itself: the colophon's GitHub link was the only one of the three without an icon. It has one now, from the same mask the app uses.
+- The accent is the mark's own green on the two donation links, so they read as something to press rather than another item of chrome. GitHub is a source link, not a donation, so its glyph takes the colour of the text beside it. The light theme darkens the accent to #5F8A2B for contrast, which is the token doing its job rather than the colour failing to apply - checked with computed styles, not by eye.
+- Nine links in a 56 px bar do not fit forever: at 860 px "Intros & Outros" and "Buy Me a Coffee" wrapped and pushed the bar open. Found by resizing the real app rather than by reasoning about it. The links no longer wrap mid-phrase, and below 1100 px the three support labels stand down to their icons while keeping the same accessible name.
+- Verified after: 1446 tests across 135 files, lint clean on 409, typecheck clean; the nav was screenshotted at 1440, 1024 and 860.
+
 ## 2026-09-03 - the hero recording, and the WSL browser
 key: site/hero-and-wsl
 - The recording landed, so the one asset this page was missing is no longer missing: `play-run.mp4` (31.1 s, 1152x648, 16:9, 60 fps, 11.1 MB), its poster, and an empty `play-run.vtt` cue list. The capture carries no audio stream, which is what the figcaption already claimed and what makes the next line free.

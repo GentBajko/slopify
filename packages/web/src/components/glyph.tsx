@@ -1,6 +1,7 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import type { CSSProperties } from "react";
 import coffee from "@/assets/buymeacoffee.svg";
+import github from "@/assets/github.svg";
 import logoMark from "@/assets/logo-mark.svg";
 import patreon from "@/assets/patreon.svg";
 import article from "@/assets/stage-article.svg";
@@ -65,7 +66,7 @@ export function Mark({ className }: { readonly className?: string }) {
   );
 }
 
-const supportGlyphs = { patreon, coffee } as const;
+const supportGlyphs = { github, patreon, coffee } as const;
 
 export type SupportGlyphName = keyof typeof supportGlyphs;
 

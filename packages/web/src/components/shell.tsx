@@ -22,12 +22,26 @@ const sections = [
   { to: "/usage", label: "Usage", exact: true },
 ] as const;
 
-// The same two links the marketing page carries, on every screen of the app. They open in a
-// tab of their own: the app is a local server and a run may be in flight, so navigating the
-// only tab away from it is never what the press meant.
+// The same three links the marketing page's masthead carries, in the same order, on every
+// screen of the app. They open in a tab of their own: the app is a local server and a run may
+// be in flight, so navigating the only tab away from it is never what the press meant.
+// The accent is the mark's own green, and it is what makes the two donation links read as
+// something to press rather than another item of chrome. GitHub is a source link, not a
+// donation, so its glyph stays the colour of the text beside it.
 const support = [
-  { href: "https://www.patreon.com/cw/GentBajko", label: "Patreon", glyph: "patreon" },
-  { href: "https://buymeacoffee.com/gentbajko", label: "Buy Me a Coffee", glyph: "coffee" },
+  { href: "https://github.com/GentBajko/slopify", label: "GitHub", glyph: "github", tone: "" },
+  {
+    href: "https://www.patreon.com/cw/GentBajko",
+    label: "Patreon",
+    glyph: "patreon",
+    tone: "text-lamp-run",
+  },
+  {
+    href: "https://buymeacoffee.com/gentbajko",
+    label: "Buy Me a Coffee",
+    glyph: "coffee",
+    tone: "text-lamp-run",
+  },
 ] as const;
 
 export function Shell() {
@@ -68,7 +82,7 @@ export function Shell() {
             key={section.to}
             to={section.to}
             activeOptions={{ exact: section.exact }}
-            className="border-b-2 border-transparent py-[18px] text-ink2 hover:text-ink"
+            className="whitespace-nowrap border-b-2 border-transparent py-[18px] text-ink2 hover:text-ink"
             activeProps={{ className: "!border-lamp-run !text-ink" }}
           >
             {section.label}
@@ -80,28 +94,30 @@ export function Shell() {
             {`${String(running)} running`}
           </Link>
         )}
-      </nav>
-
-      <main className="flex-1 px-7 py-6">
-        <Outlet />
-      </main>
-
-      <footer className="flex flex-wrap items-center gap-[18px] border-t border-line px-7 py-[14px] text-label text-ink3">
-        <span>Free. Your keys, your machine.</span>
-        <span className="flex-1" />
-        <span>Support the project</span>
         {support.map((link) => (
           <a
             key={link.href}
             href={link.href}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-[6px] text-ink2 underline hover:text-ink"
+            className="flex shrink-0 items-center gap-[6px] whitespace-nowrap text-ink2 hover:text-ink"
           >
-            <SupportGlyph name={link.glyph} />
-            {link.label}
+            <SupportGlyph name={link.glyph} className={link.tone} />
+            {/* Below 1100px the six section links and these three do not both fit, and the
+                bar is a fixed 56 px: something has to give before the words wrap and push
+                it open. The icons stay, the words stand down, and the accessible name is
+                the same either way. */}
+            <span className="sr-only min-[1100px]:not-sr-only">{link.label}</span>
           </a>
         ))}
+      </nav>
+
+      <main className="flex-1 px-7 py-6">
+        <Outlet />
+      </main>
+
+      <footer className="flex items-center gap-[18px] border-t border-line px-7 py-[14px] text-label text-ink3">
+        <span>Free. Your keys, your machine.</span>
       </footer>
 
       <AppearanceSkin />
