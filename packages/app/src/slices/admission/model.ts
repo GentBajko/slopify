@@ -29,8 +29,9 @@ export interface ImagePromptChoice {
 
 export interface EntryChoice {
   readonly name: string;
-  // The mode decides whether the run needs the LLM row (§Q97). ceiling: it arrives on the
-  // request until the library slice can look the saved entry up by name.
+  // The mode decides whether the run needs the LLM row (§Q97). The request carries it so
+  // Play can show the row live, but edge/http/projects.ts replaces it with the saved
+  // entry's mode before this rule set sees the draft.
   readonly mode: EntryMode;
 }
 

@@ -11,6 +11,7 @@ import {
 } from "../../slices/admission/repo.js";
 import { admit } from "../../slices/admission/rules.js";
 import { startRun } from "../../slices/admission/start.js";
+import { pickTemplates, renderPicked } from "../../slices/library/slots.js";
 import { outputsOf, stagedFiles } from "../../slices/storage/repo.js";
 import type { StorageDeps } from "../../slices/storage/staging.js";
 import type { TelemetryDeps } from "../../slices/telemetry/record.js";
@@ -53,24 +54,32 @@ export function projectRoutes(deps: AppDeps) {
 
   return new Hono()
     .post("/", zValidator("json", runDraftSchema, onInvalid), (c) => {
-      // ceiling: no prompt body exists to scan yet, so no slot is required and nothing is
-      // rendered. Both lists come from the prompt library slice once it lands, through
-      // collectFields and render in slices/admission/substitute.ts.
+      // logic/04 §Q34: the bodies are read here, at the click, so an edit made since the
+      // prompt was selected is the one that runs.
+      const picked = pickTemplates(deps.db, c.req.valid("json"));
       const admitted = admit({
-        draft: c.req.valid("json"),
+        draft: picked.draft,
         staged: stagedFiles(deps.db),
-        requiredSlots: [],
+        requiredSlots: picked.requiredSlots,
       });
-      if (!admitted.ok) {
+      if (!admitted.ok || picked.missing.length > 0) {
         return problem(c, {
           status: 400,
           title: titleOf(400),
           detail: "This run cannot start yet; the listed fields need attention.",
-          extensions: { fields: admitted.fields },
+          extensions: {
+            fields: [...picked.missing, ...(admitted.ok ? [] : admitted.fields)],
+          },
         });
       }
 
-      const { project } = startRun(storage, admitted.draft, {});
+      // Rendered from the values admit() has trimmed, so the stored text carries no
+      // padding the user did not intend (logic/03 step 4 and step 5).
+      const { project } = startRun(
+        storage,
+        admitted.draft,
+        renderPicked(picked, admitted.draft.values),
+      );
       // logic/16 step 2: one event per project created. record() swallows its own
       // failures, so a broken telemetry write cannot cost the user the run.
       record(telemetry, "project.created", {});

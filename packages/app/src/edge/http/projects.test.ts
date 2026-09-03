@@ -158,6 +158,176 @@ describe("POST /api/projects", () => {
   });
 });
 
+// logic/03 steps 3-6 through the route: the picked prompts decide which fields a run
+// requires, and their bodies are what the project stores rendered.
+describe("POST /api/projects with library templates", () => {
+  async function savePrompt(app: Harness["app"], body: unknown): Promise<void> {
+    await app.request("/api/prompts", {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: { "content-type": "application/json" },
+    });
+  }
+
+  async function saveEntry(app: Harness["app"], body: unknown): Promise<void> {
+    await app.request("/api/entries", {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: { "content-type": "application/json" },
+    });
+  }
+
+  async function generating(app: Harness["app"], over: Partial<RunDraft> = {}): Promise<RunDraft> {
+    const audio = await stage(app, "audio", "narration");
+    return draft({
+      sources: {
+        research: "off",
+        article: "generate",
+        audio: "provide",
+        images: "generate",
+        thumbnail: "off",
+        video: "generate",
+      },
+      llm: { provider: "openrouter", model: "m" },
+      images: { provider: "fal", model: "m" },
+      provided: { audio },
+      articlePrompt: "Dossier",
+      imagePrompts: [{ name: "Oils", number: 1 }],
+      ...over,
+    });
+  }
+
+  it("renders the picked bodies and stores them on the project", async () => {
+    const { app, db } = harness();
+    await savePrompt(app, {
+      kind: "article",
+      name: "Dossier",
+      body: "Compose a dossier on {{topic}}.",
+    });
+    await savePrompt(app, { kind: "image", name: "Oils", body: "An oil painting of {{topic}}." });
+
+    const response = await post(
+      app,
+      await generating(app, { values: { topic: "  rope tricks  " } }),
+    );
+
+    expect(response.status).toBe(201);
+    const created = (await response.json()) as { project: { id: string } };
+    const row = db.prepare("SELECT config FROM projects WHERE id = ?").get(created.project.id) as {
+      config: string;
+    };
+    // The values are stored trimmed and the same name fills both bodies (§Q23).
+    expect(JSON.parse(row.config)).toMatchObject({
+      values: { topic: "rope tricks" },
+      rendered: {
+        article: "Compose a dossier on rope tricks.",
+        "imagePrompts.0": "An oil painting of rope tricks.",
+      },
+    });
+  });
+
+  it("requires a value for every slot the picked bodies ask for", async () => {
+    const { app, db } = harness();
+    await savePrompt(app, { kind: "article", name: "Dossier", body: "{{topic}} in {{tone}}" });
+    await savePrompt(app, { kind: "image", name: "Oils", body: "{{era}}" });
+
+    const response = await post(app, await generating(app, { values: { topic: "rope" } }));
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      fields: [
+        { field: "values.tone", message: "This field is required." },
+        { field: "values.era", message: "This field is required." },
+      ],
+    });
+    expect(db.prepare("SELECT count(*) AS n FROM projects").get()).toEqual({ n: 0 });
+  });
+
+  // logic/15 step 4: a template deleted between selection and Play.
+  it("marks a picked prompt the library no longer holds", async () => {
+    const { app } = harness();
+    await savePrompt(app, { kind: "article", name: "Dossier", body: "b" });
+
+    const response = await post(
+      app,
+      await generating(app, { imagePrompts: [{ name: "Gone", number: 1 }] }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      fields: [
+        {
+          field: "imagePrompts.0.name",
+          message: "That image prompt no longer exists; pick another.",
+        },
+      ],
+    });
+  });
+
+  // logic/04 §Q97: the LLM row follows the saved entry's mode, not the request's claim.
+  it("takes a picked entry's mode from the library", async () => {
+    const { app } = harness();
+    await savePrompt(app, { kind: "article", name: "Dossier", body: "b" });
+    await savePrompt(app, { kind: "image", name: "Oils", body: "b" });
+    await saveEntry(app, {
+      category: "intro",
+      mode: "llm",
+      name: "Welcome",
+      body: "Greet them.",
+    });
+
+    const response = await post(
+      app,
+      await generating(app, {
+        sources: {
+          research: "off",
+          article: "provide",
+          audio: "provide",
+          images: "generate",
+          thumbnail: "off",
+          video: "generate",
+        },
+        provided: { article: "The article.", audio: await stage(app, "audio", "narration") },
+        llm: undefined,
+        intro: { name: "Welcome", mode: "text" },
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      fields: [{ field: "llm", message: "Pick an LLM provider and model." }],
+    });
+  });
+
+  // A slot name is whatever the user typed (§Q19), so a prompt may name a member of
+  // Object's prototype. Neither the required-value check nor the render may answer from
+  // it: the first would let an unfilled field through, the second would splice a
+  // function's source into a prompt bound for a provider.
+  it("treats {{constructor}} as an ordinary slot", async () => {
+    const { app, db } = harness();
+    await savePrompt(app, { kind: "article", name: "Dossier", body: "Write {{constructor}} now." });
+    await savePrompt(app, { kind: "image", name: "Oils", body: "A {{constructor}}." });
+
+    const unfilled = await post(app, await generating(app));
+
+    expect(unfilled.status).toBe(400);
+    expect(await unfilled.json()).toMatchObject({
+      fields: [{ field: "values.constructor", message: "This field is required." }],
+    });
+
+    const filled = await post(app, await generating(app, { values: { constructor: "a rope" } }));
+
+    expect(filled.status).toBe(201);
+    const created = (await filled.json()) as { project: { id: string } };
+    const row = db.prepare("SELECT config FROM projects WHERE id = ?").get(created.project.id) as {
+      config: string;
+    };
+    expect(JSON.parse(row.config)).toMatchObject({
+      rendered: { article: "Write a rope now.", "imagePrompts.0": "A a rope." },
+    });
+  });
+});
+
 describe("GET /api/projects", () => {
   it("lists what has been created, newest first, with the derived status", async () => {
     const { app, db } = harness();
