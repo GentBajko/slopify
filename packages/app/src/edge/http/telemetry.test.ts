@@ -66,14 +66,19 @@ describe("GET /api/telemetry/notice", () => {
     const response = await app.request("/api/telemetry/notice");
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ seen: false });
+    // The version comes with the answer: the notice promises that this number goes out
+    // in every report, and the promise has to name the number it is true of.
+    expect(await response.json()).toEqual({ seen: false, appVersion: "1.2.3" });
   });
 
   it("says it has been seen once it is dismissed", async () => {
     const { app } = harness();
     await app.request("/api/telemetry/notice", { method: "POST" });
 
-    expect(await (await app.request("/api/telemetry/notice")).json()).toEqual({ seen: true });
+    expect(await (await app.request("/api/telemetry/notice")).json()).toEqual({
+      seen: true,
+      appVersion: "1.2.3",
+    });
   });
 });
 
@@ -84,7 +89,7 @@ describe("POST /api/telemetry/notice", () => {
     const response = await app.request("/api/telemetry/notice", { method: "POST" });
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ seen: true });
+    expect(await response.json()).toEqual({ seen: true, appVersion: "1.2.3" });
     expect(undeliveredEvents(db, 10).map((event) => event.type)).toEqual(["install"]);
     expect(db.prepare("SELECT count(*) AS n FROM machine").get()).toEqual({ n: 1 });
     expect(flushes).toHaveLength(1);

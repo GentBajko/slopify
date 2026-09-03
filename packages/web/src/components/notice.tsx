@@ -5,23 +5,32 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { keys, noticeQuery } from "@/queries";
 
-// logic/16 step 3, in the counters' own names.
+// The promise, checked against `slices/telemetry/model.ts` in notice.test.tsx: every key
+// the payload schema allows is named here, and the schema is strict, so nothing can be
+// added to a report without this list failing its test first.
+//
+// logic/16 step 3, in the counters' own names, plus the two things every event carries
+// beyond its counters: the event type and the time it happened (`slices/telemetry/
+// flush.ts`, the collector envelope).
 const tracked = [
-  "tokens in and out, per stage, with the provider and model names",
-  "audio seconds, per segment",
-  "images and thumbnails made",
-  "videos rendered",
-  "projects created",
+  "Tokens in and out per stage, with provider and model",
+  "Audio seconds per segment",
+  "Images made",
+  "Thumbnails made",
+  "Videos rendered",
+  "Projects created",
+  "That this machine installed Slopify",
+  "The time each of those happened",
 ];
 
 // logic/16 step 4.
 const never = [
   "API keys",
-  "prompt bodies",
-  "keyword values",
-  "titles",
-  "article and research text",
-  "files and filenames",
+  "Prompt bodies",
+  "Keyword values",
+  "Titles",
+  "Article or research text",
+  "Files and filenames",
   "OS, locale, hardware",
 ];
 
@@ -43,6 +52,7 @@ export function FirstRunNotice() {
   // Nothing is shown while the answer is still coming: a notice that flashed and
   // vanished would be worse than one that arrives a moment late.
   const open = notice.data?.seen === false;
+  const version = notice.data?.appVersion;
 
   return (
     <Dialog open={open}>
@@ -58,28 +68,19 @@ export function FirstRunNotice() {
         <DialogDescription>
           These numbers power the live counters on slopify.stream.
         </DialogDescription>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-[10px]">
-          <div>
-            <p className="engraved mb-[10px] text-ink3">Tracked</p>
-            <ul className="flex flex-col gap-1 text-small text-ink2">
-              {tracked.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <p className="engraved mb-[10px] text-ink3">Never tracked</p>
-            <ul className="flex flex-col gap-1 text-small text-ink2">
-              {never.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </div>
+        <div className="grid grid-cols-2 gap-4">
+          <Column heading="Tracked" items={tracked} />
+          <Column heading="Never tracked" items={never} />
         </div>
         <p className="text-small text-ink2">
-          Every event carries a random ID for this machine and the app version. Nothing you write,
-          upload, or paste ever leaves your machine.
+          Every event carries a random ID of its own and this machine's random ID, and nothing else.
+          Nothing you write, upload, or paste ever leaves your machine.
         </p>
+        {version === undefined ? null : (
+          <p className="engraved text-ink3">
+            {`Slopify ${version} · this version is included in each report`}
+          </p>
+        )}
         <Button
           // uiux/screens/02: focus starts on the one action.
           autoFocus
@@ -93,9 +94,33 @@ export function FirstRunNotice() {
           Got it
         </Button>
         {dismiss.error === null ? null : (
-          <p className="text-small text-red">{dismiss.error.message}</p>
+          <p role="alert" className="text-small text-red">
+            {dismiss.error.message}
+          </p>
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function Column({
+  heading,
+  items,
+}: {
+  readonly heading: string;
+  readonly items: readonly string[];
+}) {
+  const id = `notice-${heading.replace(/\s+/g, "-").toLowerCase()}`;
+  return (
+    <div className="flex flex-col gap-[6px]">
+      <p id={id} className="engraved border-b border-line pb-1 text-ink3">
+        {heading}
+      </p>
+      <ul aria-labelledby={id} className="m-0 flex list-none flex-col gap-[6px] p-0 text-small">
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    </div>
   );
 }

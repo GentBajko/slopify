@@ -88,6 +88,9 @@ export interface StagingListBody {
 }
 export interface NoticeBody {
   readonly seen: boolean;
+  // The version the notice names as the one that goes out in each report. Optional so a
+  // server older than this bundle still answers something the SPA can read.
+  readonly appVersion?: string;
 }
 export interface ProviderListBody {
   readonly providers: readonly ProviderStatus[];
