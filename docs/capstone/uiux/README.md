@@ -31,7 +31,7 @@ Design assets now live with the code that serves them: `packages/web/src/assets/
 These were invented to complete a chapter rather than decided outright. All of them were
 settled by shipping; each now has code to read instead of a claim to confirm.
 
-- The marketing headline "Slop, on schedule." and its subtext: live in
+- The marketing headline "AI Slop, on schedule." and its subtext: live in
  `packages/site/public/index.html`.
 - The hero slot on that page: **still open**, and now a video of a real run rather than
  the screenshot originally assumed. `play-run.mp4`, its poster and its captions are
