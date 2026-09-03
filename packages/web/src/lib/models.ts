@@ -35,6 +35,9 @@ export const providerModels: Readonly<Record<ProviderId, readonly ModelInfo[]>> 
     { id: "fal-ai/flux-2", name: "FLUX.2" },
     { id: "fal-ai/flux/dev", name: "FLUX.1 [dev]" },
     { id: "fal-ai/flux/schnell", name: "FLUX.1 [schnell]" },
+    { id: "fal-ai/nano-banana", name: "Nano Banana" },
+    { id: "fal-ai/nano-banana-2", name: "Nano Banana 2" },
+    { id: "fal-ai/gemini-3.1-flash-image-preview", name: "Gemini 3.1 Flash Image" },
   ],
   replicate: [
     { id: "black-forest-labs/flux-1.1-pro", name: "FLUX 1.1 [pro]" },

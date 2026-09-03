@@ -48,9 +48,9 @@ function answering(name: string, status = 200, headers: Record<string, string> =
   return () => new Response(fixture(name), { status, headers });
 }
 
-function generate(fetcher: FalImageDeps["fetch"], aspect: "16:9" | "9:16" = "16:9") {
+function generate(fetcher: FalImageDeps["fetch"], aspect: "16:9" | "9:16" = "16:9", which = model) {
   return falImage({ fetch: fetcher, key: () => key }).generate({
-    model,
+    model: which,
     prompt,
     aspect,
     signal: new AbortController().signal,
@@ -107,6 +107,46 @@ describe("falImage.generate", () => {
     await generate(replaying(answering("fal-success.json"), undefined, seen), "9:16");
 
     expect(bodyOf(seen[0])).toMatchObject({ image_size: "portrait_16_9" });
+  });
+
+  // The Google endpoints take `aspect_ratio` where the FLUX ones take `image_size`, and a
+  // request carrying the wrong one is a 422 the wrapper would retry three more times.
+  it.each(["fal-ai/nano-banana", "fal-ai/nano-banana-2", "fal-ai/gemini-3.1-flash-image-preview"])(
+    "sends %s its aspect as aspect_ratio and never as image_size",
+    async (which) => {
+      const seen: Seen[] = [];
+      await generate(replaying(answering("fal-success.json"), undefined, seen), "9:16", which);
+
+      const body = bodyOf(seen[0]);
+      expect(body).toEqual({
+        prompt,
+        aspect_ratio: "9:16",
+        num_images: 1,
+        output_format: "png",
+      });
+      expect(body).not.toHaveProperty("image_size");
+    },
+  );
+
+  // A model id is user input: the picker offers the list above but the field is free text.
+  it("falls back to image_size for a model it does not know", async () => {
+    const seen: Seen[] = [];
+    await generate(replaying(answering("fal-success.json"), undefined, seen), "16:9", "fal-ai/who");
+
+    expect(bodyOf(seen[0])).toMatchObject({ image_size: "landscape_16_9" });
+  });
+
+  // A plain lookup would answer this one from Object's own prototype and send `[object
+  // Object]` as the aspect.
+  it("does not read a prototype key as a model shape", async () => {
+    const seen: Seen[] = [];
+    await generate(
+      replaying(answering("fal-success.json"), undefined, seen),
+      "16:9",
+      "constructor",
+    );
+
+    expect(bodyOf(seen[0])).toMatchObject({ image_size: "landscape_16_9" });
   });
 
   it("downloads the image it was handed a link to and reports the mime the bytes say", async () => {

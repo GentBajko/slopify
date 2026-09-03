@@ -14,21 +14,49 @@ import { downloadImage } from "./bytes.js";
 export const falBase = "https://fal.run";
 
 // fal has no endpoint listing only its text-to-image models, so the list is this adapter's own
-// data and adding one is a line here. Every entry takes the same input shape: `image_size` as
-// an enum, `num_images`, `output_format`. ceiling: a model spelling its aspect `aspect_ratio`
-// instead - `xai/grok-imagine-image` does - needs a per-model input map first.
+// data and adding one is a line here plus its aspect shape below.
 export const falModels: readonly ModelInfo[] = [
   { id: "fal-ai/flux-2", name: "FLUX.2" },
   { id: "fal-ai/flux/dev", name: "FLUX.1 [dev]" },
   { id: "fal-ai/flux/schnell", name: "FLUX.1 [schnell]" },
+  { id: "fal-ai/nano-banana", name: "Nano Banana" },
+  { id: "fal-ai/nano-banana-2", name: "Nano Banana 2" },
+  { id: "fal-ai/gemini-3.1-flash-image-preview", name: "Gemini 3.1 Flash Image" },
 ];
 
-// The closest supported size. fal names both 16:9 frames from the
-// orientation, so the portrait one is "portrait_16_9" and is 9:16.
-const sizes: Readonly<Record<ImageRequest["aspect"], string>> = {
-  "16:9": "landscape_16_9",
-  "9:16": "portrait_16_9",
+// fal spells the frame two ways and the difference is per model, not per family: the FLUX
+// endpoints take an `image_size` enum naming the orientation, the Google ones take a plain
+// `aspect_ratio` string. Both accept everything else identically, so the shape is the only
+// thing a model entry has to declare.
+const aspectFields = ["image_size", "aspect_ratio"] as const;
+type AspectField = (typeof aspectFields)[number];
+
+// The closest supported size, per shape. fal names both 16:9 `image_size` frames from the
+// orientation, so the portrait one is "portrait_16_9" and is 9:16; `aspect_ratio` takes the
+// run's own words.
+const sizes: Readonly<Record<AspectField, Readonly<Record<ImageRequest["aspect"], string>>>> = {
+  image_size: { "16:9": "landscape_16_9", "9:16": "portrait_16_9" },
+  aspect_ratio: { "16:9": "16:9", "9:16": "9:16" },
 };
+
+const modelAspects: Readonly<Record<string, AspectField>> = {
+  "fal-ai/flux-2": "image_size",
+  "fal-ai/flux/dev": "image_size",
+  "fal-ai/flux/schnell": "image_size",
+  "fal-ai/nano-banana": "aspect_ratio",
+  "fal-ai/nano-banana-2": "aspect_ratio",
+  "fal-ai/gemini-3.1-flash-image-preview": "aspect_ratio",
+};
+
+// A model the map does not know is one the user typed rather than picked, so it falls back to
+// `image_size` - the shape the FLUX endpoints use and the one this adapter shipped with.
+// `Object.hasOwn` because a model id is user input and a plain lookup would answer
+// "constructor" from Object's own prototype.
+function aspectOf(model: string, aspect: ImageRequest["aspect"]): Record<string, string> {
+  const field = Object.hasOwn(modelAspects, model) ? modelAspects[model] : undefined;
+  const shape: AspectField = field ?? "image_size";
+  return { [shape]: sizes[shape][aspect] };
+}
 
 export interface FalImageDeps {
   // Injected so a test never needs the network.
@@ -65,7 +93,7 @@ export function falImage(deps: FalImageDeps): ImagePort {
         headers: { Authorization: `Key ${keyOf(deps)}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: req.prompt,
-          image_size: sizes[req.aspect],
+          ...aspectOf(req.model, req.aspect),
           // The stage sends Number as that many independent calls, one piece each.
           num_images: 1,
           // The port stores PNG or JPEG; fal defaults to WebP on some models and the

@@ -5,6 +5,16 @@ capstone_version: 5.2.0
 
 # Changelog
 
+## 2026-09-03 - fal: the Google image models
+key: adapters/fal-google
+- User: "we forgot to add Google Nano Banana and Flash 3.8 models to generate images".
+- "Flash 3.8" does not exist. fal's catalogue, checked rather than assumed, carries `fal-ai/nano-banana`, `fal-ai/nano-banana-2` and `fal-ai/gemini-3.1-flash-image-preview` - Gemini 3.1 Flash Image. All three added; no id was invented to fill the name.
+- Not a one-liner, exactly as the adapter's ceiling comment predicted: the three Google endpoints take `aspect_ratio` where the FLUX ones take an `image_size` enum, and everything else about the request is identical. Each catalogue entry now declares its aspect shape, and a model the map does not know falls back to `image_size` - the shape the adapter shipped with. The lookup is `Object.hasOwn`, because the model field is free text and a plain lookup would answer `constructor` from Object's prototype and send `[object Object]` as the frame.
+- Near-miss: `packages/web/src/lib/models.ts` keeps a hand-copied duplicate of the catalogue, because the browser cannot import the adapters - they reach `node:fs` through `kernel/log.ts`. Adding the models to the adapter alone would have left the Play picker silently not offering them, and nothing guarded it. `models.test.ts` now reads the adapter source as text and asserts the two lists match; it was checked by deleting an entry and watching it fail, not by trusting a green run.
+- `05-dependencies.md`: the fal row described a constraint that no longer holds and now describes the per-model aspect shape instead.
+- Sweep correction the user prompted: the earlier de-citation pass matched lowercase `build S<n>` only, so `Build S13` and `Build S14` had survived in three rows of `05-dependencies.md`. Removed.
+- Verified after: 1421 tests across 134 files, lint clean on 399, typecheck clean.
+
 ## 2026-09-03 - release 0.2.0
 key: release/0.2.0
 - Minor, not patch: the default port moved 4242 → 6969, so anyone upgrading from 0.1.0 finds nothing at the address they had bookmarked. Pre-1.0 puts a breaking change in the minor, and a patch bump would have understated it.
