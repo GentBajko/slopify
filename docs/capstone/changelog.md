@@ -5,6 +5,13 @@ capstone_version: 5.2.0
 
 # Changelog
 
+## 2026-09-03 - release 0.2.0
+key: release/0.2.0
+- Minor, not patch: the default port moved 4242 → 6969, so anyone upgrading from 0.1.0 finds nothing at the address they had bookmarked. Pre-1.0 puts a breaking change in the minor, and a patch bump would have understated it.
+- Trusted publishing registered for `@gentbajko/slopify` against `GentBajko/slopify` / `release.yml` with publish permission, so the tag publishes over OIDC with provenance and no `NPM_TOKEN` exists to leak. The `v0.1.0` tag had failed with `ENEEDAUTH` and 0.1.0 was published by hand; this is the first release to go through CI as designed.
+- CI npm is new enough: Node 26.8.1 ships npm 11.19.0, past the 11.5.1 that added OIDC publishing.
+- Cloudflare deployed ahead of the tag, since the site and collector carry no version: collector `c54ec880`, site `c1d29ee4`. The live page was checked for the new port, the scoped install command and both donation links.
+
 ## 2026-09-03 - support links in the app, default port 6969
 key: app/support-and-port
 - User, before publishing: "add BMaC and Patreon buttons like we did in the marketing page on every page of the app", then "change the port to 69420".
