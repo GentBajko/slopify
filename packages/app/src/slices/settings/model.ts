@@ -1,0 +1,108 @@
+// The provider catalogue and the settings domain types (02-models, `logic/02`).
+
+export const providerFamilies = ["llm", "tts", "image"] as const;
+export type ProviderFamily = (typeof providerFamilies)[number];
+
+// The supported set is `05-dependencies` External services. OpenAI ships two adapters
+// with two ids, one per family: `provider_keys.provider` is the primary key, and a row
+// per family is what lets a user key TTS without keying image generation.
+export const providerIds = [
+  "openrouter",
+  "claude-code",
+  "codex",
+  "elevenlabs",
+  "openai-tts",
+  "cartesia",
+  "fal",
+  "replicate",
+  "openai-image",
+] as const;
+export type ProviderId = (typeof providerIds)[number];
+
+interface ProviderBase {
+  readonly id: ProviderId;
+  readonly family: ProviderFamily;
+  readonly displayName: string;
+}
+
+export interface KeyedProvider extends ProviderBase {
+  readonly auth: "key";
+}
+
+// A local agent CLI has no key: the CLI's own login is used, so readiness is whether the
+// binary answers on PATH (`logic/02` §Q135).
+export interface CliProvider extends ProviderBase {
+  readonly auth: "cli";
+  readonly binary: string;
+  readonly versionArgs: readonly string[];
+}
+
+export type Provider = KeyedProvider | CliProvider;
+
+export const providers: readonly Provider[] = [
+  { id: "openrouter", family: "llm", displayName: "OpenRouter", auth: "key" },
+  {
+    id: "claude-code",
+    family: "llm",
+    displayName: "Claude Code CLI",
+    auth: "cli",
+    binary: "claude",
+    versionArgs: ["--version"],
+  },
+  {
+    id: "codex",
+    family: "llm",
+    displayName: "Codex CLI",
+    auth: "cli",
+    binary: "codex",
+    versionArgs: ["--version"],
+  },
+  { id: "elevenlabs", family: "tts", displayName: "ElevenLabs", auth: "key" },
+  { id: "openai-tts", family: "tts", displayName: "OpenAI", auth: "key" },
+  { id: "cartesia", family: "tts", displayName: "Cartesia", auth: "key" },
+  { id: "fal", family: "image", displayName: "fal.ai", auth: "key" },
+  { id: "replicate", family: "image", displayName: "Replicate", auth: "key" },
+  { id: "openai-image", family: "image", displayName: "OpenAI", auth: "key" },
+];
+
+export function providerById(id: ProviderId): Provider {
+  const found = providers.find((provider) => provider.id === id);
+  if (found === undefined) {
+    // Unreachable while ProviderId is derived from the catalogue; a new id added to one
+    // and not the other is a bug, not a user error.
+    throw new Error(`the provider catalogue has no entry for ${id}`);
+  }
+  return found;
+}
+
+// What Settings and Play both read per provider. `hasKey` and `installed` are the two
+// ways a provider can be usable; neither carries key material.
+export type Readiness =
+  | { readonly kind: "keyed"; readonly hasKey: boolean }
+  | { readonly kind: "cli"; readonly installed: boolean; readonly version?: string };
+
+export interface ProviderStatus {
+  readonly id: ProviderId;
+  readonly family: ProviderFamily;
+  readonly displayName: string;
+  readonly readiness: Readiness;
+}
+
+export interface Voice {
+  readonly id: string;
+  readonly provider: ProviderId;
+  readonly name: string;
+  readonly voiceId: string;
+}
+
+// uiux §Q19: the theme override the Appearance control writes.
+export const appearances = ["system", "light", "dark"] as const;
+export type Appearance = (typeof appearances)[number];
+
+export interface AppSettings {
+  // `logic/11` §Q99: the silence beside a segment that exists, default 3 s.
+  readonly silenceGapSeconds: number;
+  readonly appearance: Appearance;
+}
+
+export const defaultSettings: AppSettings = { silenceGapSeconds: 3, appearance: "system" };
