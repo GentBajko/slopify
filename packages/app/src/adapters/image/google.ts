@@ -13,12 +13,18 @@ import { describeBytes, sniffImage } from "./bytes.js";
 
 export const googleImagesBase = "https://generativelanguage.googleapis.com/v1beta";
 
-// The dropdown is filled from what the provider offers, and Google's model list carries
-// every text and embedding model too, so the image shortlist is this adapter's own data.
-// Only what the API documents as an image model is listed; the field stays free text, so a
-// newer one can be typed before it is added here.
+// The dropdown is filled from what the provider offers, and Google's model list carries every
+// text and embedding model too, so the image shortlist is this adapter's own data. Named as
+// Google markets them: "Nano Banana" is the family, `gemini-*-image` is what the API answers
+// to, and the picker shows the name a user would recognise. Newest first.
+//
+// A Gemini model without the `-image` suffix returns text and cannot be used here, whatever
+// its version number: `gemini-3.8-flash` is newer than all of these and generates no images.
 export const googleImageModels: readonly ModelInfo[] = [
-  { id: "gemini-3.1-flash-image", name: "Gemini 3.1 Flash Image" },
+  { id: "gemini-3.1-flash-image", name: "Nano Banana 2" },
+  { id: "gemini-3.1-flash-lite-image", name: "Nano Banana 2 Lite" },
+  { id: "gemini-3-pro-image", name: "Nano Banana Pro" },
+  { id: "gemini-2.5-flash-image", name: "Nano Banana" },
 ];
 
 // The API takes the aspect in the run's own words, so the closest supported size is exact

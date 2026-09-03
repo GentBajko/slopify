@@ -60,14 +60,31 @@ function headersOf(call: Seen | undefined): Record<string, string> {
 }
 
 describe("googleImage.models", () => {
-  it("offers the documented image model", async () => {
+  it("offers the Nano Banana family under the ids the API answers to", async () => {
     const offered = await googleImage({
       fetch: answering("google-success.json"),
       key: () => key,
     }).models();
 
     expect(offered).toEqual(googleImageModels);
-    expect(offered.map((one) => one.id)).toContain("gemini-3.1-flash-image");
+    expect(offered.map((one) => one.id)).toEqual([
+      "gemini-3.1-flash-image",
+      "gemini-3.1-flash-lite-image",
+      "gemini-3-pro-image",
+      "gemini-2.5-flash-image",
+    ]);
+    expect(offered.map((one) => one.name)).toContain("Nano Banana 2");
+  });
+
+  // `gemini-3.8-flash` is newer than every model above and returns text, not pictures.
+  // Offering it here would be a stage that fails on every call.
+  it("offers no text-only Gemini model", async () => {
+    const offered = await googleImage({
+      fetch: answering("google-success.json"),
+      key: () => key,
+    }).models();
+
+    expect(offered.every((one) => one.id.endsWith("-image"))).toBe(true);
   });
 });
 

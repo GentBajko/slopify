@@ -5,6 +5,15 @@ capstone_version: 5.2.0
 
 # Changelog
 
+## 2026-09-03 - the Nano Banana family, named as Google markets it
+key: adapters/google-image-names
+- User: "Why 3.1 flash? Latest is 3.8 flash and you did not include nano banana".
+- Both halves settled against Google's live docs rather than a snapshot. `gemini-3.8-flash` is real, generally available 2026-09-02, and was twice called non-existent here on the strength of training data and a stale index - the live page should have been checked the first time it was questioned. It is also text-only: its documented output modality is text and image generation is listed "Not supported", so it cannot be an image model and offering it would have shipped a stage that failed on every call. It belongs to the LLM side, where Slopify has no direct Google provider yet.
+- "Nano Banana" is Google's marketing name for the `gemini-*-image` family, not a separate model. One of the four was shipped, labelled with its API id, so it was invisible to anyone looking for the name they had actually heard. The picker now carries all four newest-first: Nano Banana 2 (`gemini-3.1-flash-image`), Nano Banana 2 Lite (`gemini-3.1-flash-lite-image`), Nano Banana Pro (`gemini-3-pro-image`), Nano Banana (`gemini-2.5-flash-image`). Imagen 4 is deprecated and left out.
+- The image family's highest version is 3.1 even though the text side is on 3.8, which is exactly the confusion that made the question reasonable. A test now asserts every id this provider offers ends in `-image`, so a text-only model cannot be added here by accident.
+- Verified in the built bundle, not just the source: all four ids and all four names are in the SPA a user downloads, and a grep for `gemini-3.8` finds nothing.
+- Verified after: 1437 tests across 135 files, lint clean on 407, typecheck clean.
+
 ## 2026-09-03 - Google as its own image provider, and a local run
 key: adapters/google-image
 - User: "I have credits at google not at fal. Also we need a local run to be able to test without publishing."
