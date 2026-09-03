@@ -1,7 +1,8 @@
-import type { ProjectState, StageKind, StageState } from "../../kernel/pipeline.js";
+import type { Format, ProjectState, StageKind, StageState } from "../../kernel/pipeline.js";
 
-export const formats = ["16:9", "9:16"] as const;
-export type Format = (typeof formats)[number];
+export type { Format } from "../../kernel/pipeline.js";
+// The format is the kernel's: the image port asks for the same two aspects.
+export { formats } from "../../kernel/pipeline.js";
 
 // mockup §Q28 and logic/10 §Q78: Generate / Provide / Off for most stages, and the
 // thumbnail's two Generate modes. Video is always `generate` (logic/01 step 5).

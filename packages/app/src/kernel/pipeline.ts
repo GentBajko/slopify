@@ -2,6 +2,11 @@
 // implement a stage, and the edge that reports one all name the same finite sets, and
 // the runner may not import a slice to learn them (03-conventions Dependency injection).
 
+// The frame a run is made in, and the aspect an image is asked for: one set, named once
+// (`logic/04`, `logic/09` step 1).
+export const formats = ["16:9", "9:16"] as const;
+export type Format = (typeof formats)[number];
+
 export const stageKinds = ["research", "article", "audio", "images", "thumbnail", "video"] as const;
 export type StageKind = (typeof stageKinds)[number];
 

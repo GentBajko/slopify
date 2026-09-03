@@ -1,7 +1,10 @@
 // The provider catalogue and the settings domain types (02-models, `logic/02`).
 
-export const providerFamilies = ["llm", "tts", "image"] as const;
-export type ProviderFamily = (typeof providerFamilies)[number];
+import type { ProviderFamily, Readiness } from "../../kernel/ports/model.js";
+
+export type { ProviderFamily } from "../../kernel/ports/model.js";
+// The three families are the three ports, so the set is named beside them.
+export { providerFamilies } from "../../kernel/ports/model.js";
 
 // The supported set is `05-dependencies` External services. OpenAI ships two adapters
 // with two ids, one per family: `provider_keys.provider` is the primary key, and a row
@@ -75,11 +78,8 @@ export function providerById(id: ProviderId): Provider {
   return found;
 }
 
-// What Settings and Play both read per provider. `hasKey` and `installed` are the two
-// ways a provider can be usable; neither carries key material.
-export type Readiness =
-  | { readonly kind: "keyed"; readonly hasKey: boolean }
-  | { readonly kind: "cli"; readonly installed: boolean; readonly version?: string };
+// The registry lists a provider's readiness, so the type is the kernel's.
+export type { Readiness } from "../../kernel/ports/model.js";
 
 export interface ProviderStatus {
   readonly id: ProviderId;
