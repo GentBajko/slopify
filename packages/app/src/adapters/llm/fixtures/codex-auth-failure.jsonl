@@ -1,0 +1,5 @@
+{"type":"thread.started","thread_id":"01a06523-8b9f-7460-81fa-e84414608a93"}
+{"type":"item.completed","item":{"id":"item_0","type":"error","message":"Model metadata for `gpt-5.1-codex-max` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."}}
+{"type":"turn.started"}
+{"type":"error","message":"Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again."}
+{"type":"turn.failed","error":{"message":"Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again."}}

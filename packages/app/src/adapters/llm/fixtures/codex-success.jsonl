@@ -1,0 +1,5 @@
+{"type":"thread.started","thread_id":"01a06523-8b9f-7460-81fa-e84414608a93"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"reasoning","text":"Answering directly."}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Server-Sent Events aré a one-way 𝄞 push channel over HTTP."}}
+{"type":"turn.completed","usage":{"input_tokens":2451,"cached_input_tokens":2304,"cache_write_input_tokens":0,"output_tokens":118,"reasoning_output_tokens":64}}

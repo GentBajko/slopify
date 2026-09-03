@@ -1,0 +1,5 @@
+{"type":"thread.started","thread_id":"01a06529-0000-7000-8000-000000000001"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"web_search","query":"current Node.js LTS version"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Node.js 24 is the current Active LTS.\n\nSources:\n- https://nodejs.org/en/about/previous-releases"}}
+{"type":"turn.completed","usage":{"input_tokens":5120,"cached_input_tokens":4096,"cache_write_input_tokens":0,"output_tokens":240,"reasoning_output_tokens":96}}
