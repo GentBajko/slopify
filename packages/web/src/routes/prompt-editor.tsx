@@ -2,34 +2,35 @@ import type { PromptDraft, PromptKind } from "@app/slices/library/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeftIcon } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import type { FieldError } from "@/api";
 import { removePrompt, savePrompt } from "@/api";
 import { useApp } from "@/app-context";
 import { ConfirmDialog } from "@/components/confirm";
 import { DetectedSlots } from "@/components/detected-slots";
+import { EditorActions } from "@/components/editor-actions";
 import { RailGroup } from "@/components/rail";
-import { SavedTick, savedTickMs } from "@/components/saved-tick";
+import { useLeaveWhenSaved } from "@/components/saved-tick";
 import { SlotBody } from "@/components/slot-body";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { kindOptions } from "@/lib/prompt-kinds";
 import {
   bodyProblems,
+  draftProblems,
   firstProblem,
   nameProblems,
-  promptProblems,
   slotNames,
-} from "@/lib/prompt-lint";
+} from "@/lib/draft-lint";
+import { kindOptions } from "@/lib/prompt-kinds";
 import { promptsQuery } from "@/queries";
 
 const sheet = "rounded-panel border border-line bg-panel p-[18px]";
 
 // One prompt: a name, a kind and a body whose `{{slots}}` are shown as they are typed
 // (uiux/screens/05-prompt-editor.md). Every rule the Save obeys is the shared lint of
-// `@/lib/prompt-lint`, so the editor refuses exactly what the server would and says the
+// `@/lib/draft-lint`, so the editor refuses exactly what the server would and says the
 // same sentence about it.
 export function PromptEditorRoute({
   promptId,
@@ -90,19 +91,9 @@ export function PromptEditorRoute({
     },
   });
 
-  // The tick confirms the write, then the screen goes back to the list it came from
-  // (uiux/screens/05-prompt-editor.md, Saved).
-  useEffect(() => {
-    if (!saved) {
-      return;
-    }
-    const timer = setTimeout(() => {
-      onLeave(draft.kind);
-    }, savedTickMs);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [saved, onLeave, draft.kind]);
+  useLeaveWhenSaved(saved, () => {
+    onLeave(draft.kind);
+  });
 
   // A refusal names its field and stands until that field is edited, which is how a
   // collision keeps Save held while the taken name is still on the form.
@@ -111,7 +102,7 @@ export function PromptEditorRoute({
     setRefused((current) => current.filter((problem) => problem.field !== field));
   };
 
-  const problems = promptProblems(draft, refused);
+  const problems = draftProblems(draft, refused);
   const blocked = firstProblem(problems);
   const slots = slotNames(draft.body);
   // An untouched body is not an error on the page: its "A body is required." is the
@@ -210,51 +201,32 @@ export function PromptEditorRoute({
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-[10px] border-t border-line pt-[14px]">
-            {promptId === undefined ? null : (
-              <Button
-                className="bg-transparent"
-                onClick={() => {
-                  setDeleting(true);
-                }}
-              >
-                Delete
+          <EditorActions
+            onDelete={
+              promptId === undefined
+                ? undefined
+                : () => {
+                    setDeleting(true);
+                  }
+            }
+            blocked={blocked}
+            blockedId={hintId}
+            pending={save.isPending}
+            saved={saved}
+            cancel={
+              <Button asChild>
+                <Link to="/prompts" search={{ kind: draft.kind }}>
+                  Cancel
+                </Link>
               </Button>
+            }
+            errors={[save.error, remove.error].flatMap((error) =>
+              error === null ? [] : [error.message],
             )}
-            <span className="flex-1" />
-            {saved ? <SavedTick /> : null}
-            {blocked === undefined ? null : (
-              <span id={hintId} className="text-small text-ink2">
-                {blocked}
-              </span>
-            )}
-            <Button asChild>
-              <Link to="/prompts" search={{ kind: draft.kind }}>
-                Cancel
-              </Link>
-            </Button>
-            <Button
-              variant="primary"
-              aria-disabled={blocked !== undefined || save.isPending || saved}
-              aria-describedby={blocked === undefined ? undefined : hintId}
-              onClick={() => {
-                // `aria-disabled` rather than `disabled`: a button nobody can focus cannot
-                // announce the reason it is refusing, so the reason stays reachable and
-                // the guard lives here.
-                if (blocked === undefined && !save.isPending && !saved) {
-                  save.mutate(draft);
-                }
-              }}
-            >
-              Save
-            </Button>
-            {save.error === null ? null : (
-              <p className="basis-full text-label text-red">{save.error.message}</p>
-            )}
-            {remove.error === null ? null : (
-              <p className="basis-full text-label text-red">{remove.error.message}</p>
-            )}
-          </div>
+            onSave={() => {
+              save.mutate(draft);
+            }}
+          />
         </div>
 
         <div className={`${sheet} flex flex-col gap-3 lg:sticky lg:top-6`}>

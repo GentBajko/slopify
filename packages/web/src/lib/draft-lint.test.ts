@@ -1,61 +1,92 @@
-import type { PromptDraft } from "@app/slices/library/model.js";
+import type { EntryDraft, PromptDraft } from "@app/slices/library/model.js";
 import { describe, expect, it } from "vitest";
 import {
   bodyPieces,
   bodyProblems,
+  draftProblems,
   firstProblem,
   nameProblems,
-  promptProblems,
   slotNames,
-} from "./prompt-lint.js";
+} from "./draft-lint.js";
 
 function draft(over: Partial<PromptDraft>): PromptDraft {
   return { kind: "article", name: "Dossier", body: "Write about {{topic}}.", ...over };
 }
 
-describe("promptProblems", () => {
+function entry(over: Partial<EntryDraft>): EntryDraft {
+  return {
+    category: "intro",
+    mode: "text",
+    name: "Cold open",
+    body: "Today on {{topic}}.",
+    ...over,
+  };
+}
+
+describe("draftProblems", () => {
   it("finds nothing wrong with a well-formed draft", () => {
-    expect(promptProblems(draft({}), [])).toEqual([]);
+    expect(draftProblems(draft({}), [])).toEqual([]);
+  });
+
+  // `logic/15` §Q121: one rule set over both libraries, so an entry is linted by the
+  // same sentences a prompt is.
+  it("lints an intro/outro entry by the same rules as a prompt", () => {
+    expect(draftProblems(entry({}), [])).toEqual([]);
+    expect(draftProblems(entry({ name: " " }), [])).toEqual([
+      { field: "name", message: "A name is required." },
+    ]);
+    expect(draftProblems(entry({ body: "one\ntwo {{bad\n" }), [])).toEqual([
+      { field: "body", message: "The `{{` at line 2, column 5 is never closed." },
+    ]);
+  });
+
+  // `logic/07` step 5: a text-mode entry is rendered per `logic/03` with no call, so its
+  // body carries slots and is linted exactly as an LLM-mode one is.
+  it("lints a text-mode body's slots, not only an LLM-mode one's", () => {
+    expect(draftProblems(entry({ mode: "text", body: "Today on {{" }), [])).toEqual([
+      { field: "body", message: "The `{{` at line 1, column 10 is never closed." },
+    ]);
+    expect(slotNames(entry({ mode: "text" }).body)).toEqual(["topic"]);
   });
 
   it("carries the server's own sentence for an unclosed slot, with its line and column", () => {
-    const problems = promptProblems(draft({ body: "one\ntwo {{bad\n" }), []);
+    const problems = draftProblems(draft({ body: "one\ntwo {{bad\n" }), []);
     expect(problems).toEqual([
       { field: "body", message: "The `{{` at line 2, column 5 is never closed." },
     ]);
   });
 
   it("names an empty slot and a nested one", () => {
-    expect(promptProblems(draft({ body: "{{}}" }), [])[0]?.message).toBe(
+    expect(draftProblems(draft({ body: "{{}}" }), [])[0]?.message).toBe(
       "The slot at line 1, column 1 has no name.",
     );
-    expect(promptProblems(draft({ body: "{{a{b}}" }), [])[0]?.message).toBe(
+    expect(draftProblems(draft({ body: "{{a{b}}" }), [])[0]?.message).toBe(
       "The slot at line 1, column 1 holds a brace; slots do not nest.",
     );
   });
 
   it("appends a refusal the browser could not have known", () => {
     const refusal = { field: "name", message: "Another prompt already has this name." };
-    expect(promptProblems(draft({}), [refusal])).toEqual([refusal]);
+    expect(draftProblems(draft({}), [refusal])).toEqual([refusal]);
   });
 });
 
 describe("firstProblem", () => {
   it("is undefined when there is nothing to fix", () => {
-    expect(firstProblem(promptProblems(draft({}), []))).toBeUndefined();
+    expect(firstProblem(draftProblems(draft({}), []))).toBeUndefined();
   });
 
   it("names the missing name before the malformed body", () => {
-    const problems = promptProblems(draft({ name: "  ", body: "{{bad" }), []);
+    const problems = draftProblems(draft({ name: "  ", body: "{{bad" }), []);
     expect(firstProblem(problems)).toBe("A name is required.");
   });
 
   it("names the missing body once the name is there", () => {
-    expect(firstProblem(promptProblems(draft({ body: "   " }), []))).toBe("A body is required.");
+    expect(firstProblem(draftProblems(draft({ body: "   " }), []))).toBe("A body is required.");
   });
 
   it("names the earliest slot error when a body holds two", () => {
-    const problems = promptProblems(draft({ body: "{{a{b}} then {{unclosed" }), []);
+    const problems = draftProblems(draft({ body: "{{a{b}} then {{unclosed" }), []);
     expect(firstProblem(problems)).toBe(
       "The slot at line 1, column 1 holds a brace; slots do not nest.",
     );
@@ -63,7 +94,7 @@ describe("firstProblem", () => {
   });
 
   it("names the collision when nothing else is wrong", () => {
-    const problems = promptProblems(draft({}), [
+    const problems = draftProblems(draft({}), [
       { field: "name", message: "Another prompt already has this name." },
     ]);
     expect(firstProblem(problems)).toBe("Another prompt already has this name.");
@@ -72,7 +103,7 @@ describe("firstProblem", () => {
 
 describe("problems by field", () => {
   it("splits the name's problems from the body's", () => {
-    const problems = promptProblems(draft({ name: "", body: "{{bad" }), []);
+    const problems = draftProblems(draft({ name: "", body: "{{bad" }), []);
     expect(nameProblems(problems).map((problem) => problem.message)).toEqual([
       "A name is required.",
     ]);

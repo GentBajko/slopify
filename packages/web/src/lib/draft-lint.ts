@@ -1,14 +1,18 @@
 import type { FieldError } from "@app/slices/admission/rules.js";
 import { detectSlots } from "@app/slices/admission/substitute.js";
-import { lintPrompt } from "@app/slices/library/lint.js";
-import type { PromptDraft } from "@app/slices/library/model.js";
+import { lintEntry, lintPrompt } from "@app/slices/library/lint.js";
+import type { EntryDraft, PromptDraft } from "@app/slices/library/model.js";
 
-// The slot grammar is not restated here. `lintPrompt` is the function
+// The slot grammar is not restated here. `lintPrompt` and `lintEntry` are the functions
 // `slices/library/save.ts` runs on the way to the database and `detectSlots` is the parser
-// it delegates to, imported through the `@app/*` alias so the editor's feedback while
+// they delegate to, imported through the `@app/*` alias so the editor's feedback while
 // typing and the server's refusal are one rule with one set of sentences. Nothing the
 // editor lets through can surprise the server, and a `fields[]` that comes back from a
 // save lands on the same list the local pass writes (`logic/15` step 2, `logic/03` §Q20).
+//
+// One module for both libraries because `logic/15` §Q121 puts one rule set over both: a
+// prompt and an intro/outro entry are a name and a body with `{{slots}}`, and the two
+// screens that edit them say the same sentences about the same mistakes.
 
 export type { FieldError };
 
@@ -29,11 +33,15 @@ export interface BodyPiece {
 // the name before the body, and within the body the earliest offset first. `refused` is
 // what the browser cannot know on its own - a name's uniqueness belongs to the database
 // index, so a collision exists only once the server has answered 409 (`logic/15` §Q122).
-export function promptProblems(
-  draft: PromptDraft,
+//
+// A prompt is told from an entry by the field that names its library, which is the same
+// discriminant `slices/library/model.ts` gives the two drafts.
+export function draftProblems(
+  draft: PromptDraft | EntryDraft,
   refused: readonly FieldError[],
 ): readonly FieldError[] {
-  return [...lintPrompt(draft), ...refused];
+  const lint = "kind" in draft ? lintPrompt(draft) : lintEntry(draft);
+  return [...lint, ...refused];
 }
 
 // The sentence beside a disabled Save. It names the first problem rather than the count,

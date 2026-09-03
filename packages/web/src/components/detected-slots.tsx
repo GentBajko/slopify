@@ -10,11 +10,16 @@ export function DetectedSlots({
   body,
   lint,
   lintId,
+  // What a body with no slots does instead. A prompt runs as written; an intro is
+  // narrated or instructs, so 09 hands its own sentence in rather than calling a
+  // narrated opener a prompt (uiux/screens/09-intros-outros.md).
+  noSlots = "No slots. This prompt runs as written.",
 }: {
   readonly slots: readonly string[];
   readonly body: string;
   readonly lint: readonly FieldError[];
   readonly lintId: string;
+  readonly noSlots?: string;
 }) {
   return (
     <>
@@ -29,7 +34,7 @@ export function DetectedSlots({
       ) : body.trim() === "" ? (
         <p className="text-small text-ink3">{"Slots appear here as you type {{name}}."}</p>
       ) : (
-        <p className="text-small text-ink2">No slots. This prompt runs as written.</p>
+        <p className="text-small text-ink2">{noSlots}</p>
       )}
 
       {lint.length === 0 ? null : (

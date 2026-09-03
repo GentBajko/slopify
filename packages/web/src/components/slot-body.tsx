@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { Textarea } from "@/components/ui/input";
-import { bodyPieces } from "@/lib/prompt-lint";
+import { bodyPieces } from "@/lib/draft-lint";
 import { cn } from "@/lib/utils";
 
 // The prompt body, with every malformed `{{` marked where it stands

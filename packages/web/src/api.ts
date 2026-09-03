@@ -252,25 +252,38 @@ export async function listPrompts(api: Api): Promise<PromptListBody> {
   return read<PromptListBody>(await api.client.prompts.$get());
 }
 
-export type SavePromptResult =
-  | { readonly ok: true; readonly prompt: Prompt }
+// A refused template is an expected outcome, so it comes back as a value carrying the
+// server's own `fields[]` for the editor to mark (03-standards, typed results). One type
+// for prompts and entries, because `logic/15` §Q121 gives them one rule set and
+// `edge/http/entries.ts` reuses the prompt routes' refusal mapping.
+export type SaveResult<T> =
+  | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly fields: readonly FieldError[] };
 
-// A refused prompt is an expected outcome, so it comes back as a value carrying the
-// server's own `fields[]` for the editor to mark (03-standards, typed results). `id`
-// undefined creates; anything else replaces (`logic/15` §Q125: a save overwrites).
+// `id` undefined creates; anything else replaces (`logic/15` §Q125: a save overwrites).
 export async function savePrompt(
   api: Api,
   draft: PromptDraft,
   id: string | undefined,
-): Promise<SavePromptResult> {
+): Promise<SaveResult<Prompt>> {
   const json = { kind: draft.kind, name: draft.name, body: draft.body };
-  const response =
+  return saved<Prompt>(
     id === undefined
       ? await api.client.prompts.$post({ json })
-      : await api.client.prompts[":id"].$put({ param: { id }, json });
+      : await api.client.prompts[":id"].$put({ param: { id }, json }),
+  );
+}
+
+export async function removePrompt(api: Api, id: string): Promise<void> {
+  const response = await api.client.prompts[":id"].$delete({ param: { id } });
+  if (!response.ok) {
+    throw await failure(response);
+  }
+}
+
+async function saved<T>(response: Response): Promise<SaveResult<T>> {
   if (response.ok) {
-    return { ok: true, prompt: (await response.json()) as Prompt };
+    return { ok: true, value: (await response.json()) as T };
   }
   const problem = await problemOf(response);
   const fields = problem?.fields ?? [];
@@ -280,13 +293,6 @@ export async function savePrompt(
     return { ok: false, fields };
   }
   throw errorOf(response, problem);
-}
-
-export async function removePrompt(api: Api, id: string): Promise<void> {
-  const response = await api.client.prompts[":id"].$delete({ param: { id } });
-  if (!response.ok) {
-    throw await failure(response);
-  }
 }
 
 export function eventsUrl(api: Api, path: string): string {
