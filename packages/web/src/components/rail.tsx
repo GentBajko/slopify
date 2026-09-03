@@ -48,6 +48,7 @@ export function RailMeter({
   return (
     <span
       aria-hidden="true"
+      data-slot="rail-meter"
       className="absolute inset-x-0 bottom-0 h-[2px] bg-lamp-run transition-[width] duration-[250ms] ease-out motion-reduce:transition-none"
       style={{ width: `${String(Math.round(share * 100))}%` }}
     />

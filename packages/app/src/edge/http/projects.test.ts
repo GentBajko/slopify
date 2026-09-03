@@ -357,6 +357,109 @@ describe("GET /api/projects", () => {
     const { app } = harness();
     expect(await (await app.request("/api/projects")).json()).toEqual({ projects: [] });
   });
+
+  // uiux/screens/07: "running rows carry the thin meter under the row averaging stage
+  // progress". The share is computed here, from the stage rows the list already reads to
+  // derive the status, so a row costs one number rather than six stage rows.
+  it("carries a progress share per row, averaged over the stages the run asked for", async () => {
+    const { app, db } = harness();
+    db.exec(
+      'INSERT INTO projects VALUES (\'p1\',\'First\',\'16:9\',\'{"title":"First","format":"16:9","sources":{"research":"off","article":"provide","audio":"provide","images":"provide","thumbnail":"off","video":"generate"},"imagePrompts":[],"values":{},"provided":{},"silenceGapSeconds":3,"rendered":{}}\',\'2026-09-01\',\'2026-09-01\')',
+    );
+    db.exec(
+      "INSERT INTO stages (id, project_id, kind, source, state, progress_current, progress_total) VALUES ('s1','p1','research','generate','done',NULL,NULL)",
+    );
+    db.exec(
+      "INSERT INTO stages (id, project_id, kind, source, state, progress_current, progress_total) VALUES ('s2','p1','article','generate','running',1,4)",
+    );
+    db.exec(
+      "INSERT INTO stages (id, project_id, kind, source, state) VALUES ('s3','p1','video','generate','pending')",
+    );
+
+    const response = await app.request("/api/projects");
+
+    const body = (await response.json()) as {
+      projects: Array<{ status: string; progress: number }>;
+    };
+    // done + a quarter + nothing, over three stages.
+    expect(body.projects[0]?.status).toBe("running");
+    expect(body.projects[0]?.progress).toBeCloseTo(1.25 / 3, 10);
+  });
+
+  it("carries no stage rows in the list, because the screen reads none", async () => {
+    const { app } = harness();
+    const audio = await stage(app, "audio", "narration");
+    const image = await stage(app, "images", "a picture");
+    await post(app, draft({ provided: { article: "The article.", audio, images: [image] } }));
+
+    const body = (await (await app.request("/api/projects")).json()) as {
+      projects: Array<Record<string, unknown>>;
+    };
+
+    expect(body.projects[0]).not.toHaveProperty("stages");
+    expect(Object.keys(body.projects[0] ?? {}).toSorted()).toEqual([
+      "config",
+      "createdAt",
+      "format",
+      "id",
+      "progress",
+      "status",
+      "title",
+      "updatedAt",
+    ]);
+  });
+});
+
+// logic/14 step 4: refused while running, otherwise the rows and the folder go.
+describe("DELETE /api/projects/:id", () => {
+  async function made(app: Harness["app"]): Promise<string> {
+    const audio = await stage(app, "audio", "narration");
+    const image = await stage(app, "images", "a picture");
+    const created = (await (
+      await post(app, draft({ provided: { article: "The article.", audio, images: [image] } }))
+    ).json()) as { project: { id: string } };
+    return created.project.id;
+  }
+
+  it("removes the project and its files once the run has stopped", async () => {
+    const { app, db } = harness();
+    const id = await made(app);
+    db.prepare("UPDATE stages SET state = 'done' WHERE project_id = ?").run(id);
+
+    const response = await app.request(`/api/projects/${id}`, { method: "DELETE" });
+
+    expect(response.status).toBe(204);
+    expect(await (await app.request("/api/projects")).json()).toEqual({ projects: [] });
+    expect(db.prepare("SELECT count(*) AS n FROM outputs").get()).toEqual({ n: 0 });
+  });
+
+  it("refuses while the run is still going, and names the way out", async () => {
+    const { app, db } = harness();
+    const id = await made(app);
+
+    const response = await app.request(`/api/projects/${id}`, { method: "DELETE" });
+
+    expect(response.status).toBe(409);
+    expect(response.headers.get("content-type")).toBe("application/problem+json");
+    expect(await response.json()).toMatchObject({ detail: /Cancel the run first/ });
+    expect(db.prepare("SELECT count(*) AS n FROM projects").get()).toEqual({ n: 1 });
+  });
+
+  it("says so when no project has that id", async () => {
+    const { app } = harness();
+
+    const response = await app.request("/api/projects/nope", { method: "DELETE" });
+
+    expect(response.status).toBe(404);
+  });
+
+  it("refuses an id that is not one at all", async () => {
+    const { app } = harness();
+
+    const response = await app.request("/api/projects/..%2Fetc", { method: "DELETE" });
+
+    expect(response.status).toBe(400);
+  });
 });
 
 describe("GET /api/projects/:id", () => {

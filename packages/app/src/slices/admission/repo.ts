@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { stageKinds, stageStates } from "../../kernel/pipeline.js";
+import type { StageProgress } from "../../kernel/runner/graph.js";
 import { chunkModes } from "../narration/chunk.js";
 import type { Project, RunConfig, Stage } from "./model.js";
 import { entryModes, formats, stageSources } from "./model.js";
@@ -58,6 +59,14 @@ const projectRow = z.object({
   updated_at: z.string(),
 });
 
+const standingRow = z.object({
+  project_id: z.string(),
+  kind: z.enum(stageKinds),
+  state: z.enum(stageStates),
+  progress_current: z.number().nullable(),
+  progress_total: z.number().nullable(),
+});
+
 const stageRow = z.object({
   id: z.string(),
   project_id: z.string(),
@@ -109,6 +118,35 @@ export function listProjects(db: DatabaseSync): Project[] {
     .prepare("SELECT * FROM projects ORDER BY created_at DESC, id DESC")
     .all()
     .map((row) => toProject(projectRow.parse(row)));
+}
+
+// What 07 Projects needs of every project's stages and no more: the state each one is in
+// and how far through itself a running one is. One statement for the whole list rather
+// than `stagesOf` per row, and five columns rather than the whole stage table, because
+// the screen shows a status word and a meter and reads nothing else from a stage.
+export function stageStandingsByProject(db: DatabaseSync): Map<string, StageProgress[]> {
+  const grouped = new Map<string, StageProgress[]>();
+  const rows = db
+    .prepare(
+      "SELECT project_id, kind, state, progress_current, progress_total FROM stages ORDER BY rowid",
+    )
+    .all();
+  for (const row of rows) {
+    const parsed = standingRow.parse(row);
+    const standing: StageProgress = {
+      kind: parsed.kind,
+      state: parsed.state,
+      progressCurrent: parsed.progress_current,
+      progressTotal: parsed.progress_total,
+    };
+    const seen = grouped.get(parsed.project_id);
+    if (seen === undefined) {
+      grouped.set(parsed.project_id, [standing]);
+    } else {
+      seen.push(standing);
+    }
+  }
+  return grouped;
 }
 
 export function stagesOf(db: DatabaseSync, projectId: string): Stage[] {

@@ -56,3 +56,45 @@ export function derive(stages: readonly StageStanding[]): ProjectState {
   }
   return "pending";
 }
+
+// What a stage row carries about how far through itself it is (`logic/01` §Q6): chapters,
+// chunks, images, or a render percentage, counted by the slice that runs it.
+export interface StageProgress extends StageStanding {
+  readonly progressCurrent: number | null;
+  readonly progressTotal: number | null;
+}
+
+// The thin meter under a running row on 07 Projects, "averaging stage progress"
+// (uiux/screens/07-projects.md). Every stage the run actually asks for counts once: a
+// finished one whole, a running one by its own progress, a waiting, failed or canceled
+// one not at all.
+//
+// `provided` and `skipped` are left out of the average rather than counted as finished.
+// Nothing was asked of them, and counting them would put a run with research off and a
+// supplied article at a third of the way along before the first call was made.
+export function progressOf(stages: readonly StageProgress[]): number {
+  const asked = stages.filter((stage) => stage.state !== "provided" && stage.state !== "skipped");
+  // A run made entirely of supplied files has nothing outstanding, and a division by zero
+  // would answer NaN.
+  if (asked.length === 0) {
+    return 1;
+  }
+  const share = asked.reduce((total, stage) => total + shareOf(stage), 0);
+  return share / asked.length;
+}
+
+function shareOf(stage: StageProgress): number {
+  if (satisfied(stage.state)) {
+    return 1;
+  }
+  if (stage.state !== "running") {
+    return 0;
+  }
+  const total = stage.progressTotal ?? 0;
+  if (total <= 0) {
+    // A stage that has not yet said how many chapters or chunks there are. Guessing would
+    // be a meter that moves backwards when the count arrives.
+    return 0;
+  }
+  return Math.min(1, Math.max(0, (stage.progressCurrent ?? 0) / total));
+}

@@ -104,3 +104,12 @@ export interface Stage {
 export interface ProjectSummary extends Project {
   readonly status: ProjectState;
 }
+
+// One row of 07 Projects. The list carries a share rather than the stage rows a project
+// page reads: the screen shows one thin meter per running row and nothing else of a
+// stage, so sending six stage rows per project to average them in the browser would be
+// six times the body for the same 2 px.
+export interface ProjectListing extends ProjectSummary {
+  // 0 to 1, averaged over the stages the run asked for (`kernel/runner/graph.ts`).
+  readonly progress: number;
+}

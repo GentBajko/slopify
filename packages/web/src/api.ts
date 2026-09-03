@@ -1,5 +1,11 @@
 import type { AppType } from "@app/edge/http/app.js";
-import type { Project, ProjectSummary, RunDraft, Stage } from "@app/slices/admission/model.js";
+import type {
+  Project,
+  ProjectListing,
+  ProjectSummary,
+  RunDraft,
+  Stage,
+} from "@app/slices/admission/model.js";
 import type { FieldError } from "@app/slices/admission/rules.js";
 import type {
   Entry,
@@ -35,6 +41,7 @@ export type {
   Output,
   Problem,
   Project,
+  ProjectListing,
   ProjectSummary,
   Prompt,
   PromptDraft,
@@ -60,7 +67,10 @@ export type UploadKind = "audio" | "images" | "thumbnail";
 // `Response`, and a bare `Response` in a handler's union erases the JSON type of every
 // route that can answer problem+json, which is every route with a validator.
 export interface ProjectListBody {
-  readonly projects: readonly ProjectSummary[];
+  // A listing, not a summary: 07 Projects draws a meter per running row and the share it
+  // needs is averaged server-side from the stage rows the list already reads
+  // (`edge/http/projects.ts`).
+  readonly projects: readonly ProjectListing[];
 }
 export interface ProjectBody {
   readonly project: ProjectSummary;
@@ -132,6 +142,15 @@ export async function readProject(api: Api, id: string): Promise<ProjectBody> {
 // every failing field, and Play marks each one in place. So this answers with a value
 // carrying the 400's `fields[]`, the way a refused template does. A creation that failed
 // on this machine (§Q36) is still thrown, and the key shows it.
+// `logic/14` step 4. A refusal is a problem+json the screen shows where the press
+// happened; there is nothing to read back on success.
+export async function removeProject(api: Api, id: string): Promise<void> {
+  const response = await api.client.projects[":id"].$delete({ param: { id } });
+  if (!response.ok) {
+    throw await failure(response);
+  }
+}
+
 export async function createProject(
   api: Api,
   draft: RunDraft,
