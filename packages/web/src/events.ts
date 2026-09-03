@@ -1,4 +1,5 @@
 import type { GlobalEvent, ProjectEvent } from "@app/edge/events/hub.js";
+import type { PatchEvent } from "@/project/live";
 
 // One EventSource per open project page and one for the running tally. Every frame the
 // hub writes names its own type (`event: stage.state`), so the listener is registered
@@ -14,11 +15,18 @@ export type OpenEvents = (url: string) => EventSourceLike;
 
 export interface ProjectSink {
   // 04-data-flow, SSE disconnect: the browser reconnects by itself and the events it
-  // missed are never replayed, so the page refetches instead of resuming.
+  // missed are never replayed, so the page refetches instead of resuming. It is also what
+  // fetches the rows an event cannot carry: the output an image landed as, and the files a
+  // stage wrote on its way to `done`.
   readonly refetch: () => void;
-  // The one event that patches rather than refetches: the article arrives as a stream of
-  // deltas, and asking the server for the whole project per token would be absurd.
+  // The one event that only patches: the article arrives as a stream of deltas, and asking
+  // the server for the whole project per token would be absurd.
   readonly appendArticle: (text: string) => void;
+  // The three events that carry their whole change. Patching them puts the lamp, the state
+  // word and the meter on the page in the frame the event arrived in, which is the
+  // signature interaction (uiux/screens/08-project.md, Motion), and it is what keeps a
+  // meter ticking from asking the server sixty times.
+  readonly patch: (event: PatchEvent) => void;
 }
 
 export interface GlobalSink {
@@ -38,17 +46,28 @@ const projectEventNames = [
 const globalEventNames = ["running.count", "staging.progress", "staging.failed"] as const;
 
 export function subscribeProject(open: OpenEvents, url: string, sink: ProjectSink): () => void {
-  return listen(open, url, projectEventNames, sink.refetch, (event) => {
+  return listen<ProjectEvent>(open, url, projectEventNames, sink.refetch, (event) => {
     if (event.type === "article.delta") {
       sink.appendArticle(event.text);
       return;
     }
-    sink.refetch();
+    if (event.type === "image.landed") {
+      // The frame names an output id and an index, not the row or the file behind them,
+      // so this is the one event the page cannot paint without asking.
+      sink.refetch();
+      return;
+    }
+    sink.patch(event);
+    // A stage reaching a new state has usually just written the files its body draws, and
+    // `stage.progress` has not, so only the former asks.
+    if (event.type === "stage.state") {
+      sink.refetch();
+    }
   });
 }
 
 export function subscribeGlobal(open: OpenEvents, url: string, sink: GlobalSink): () => void {
-  return listen(open, url, globalEventNames, sink.refetch, (event) => {
+  return listen<GlobalEvent>(open, url, globalEventNames, sink.refetch, (event) => {
     if (event.type === "running.count") {
       sink.tally(event.count);
       return;

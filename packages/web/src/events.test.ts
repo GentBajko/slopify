@@ -38,22 +38,46 @@ function fakeSource(): FakeSource {
 }
 
 function projectSink() {
-  return { refetch: vi.fn(), appendArticle: vi.fn() };
+  return { refetch: vi.fn(), appendArticle: vi.fn(), patch: vi.fn() };
 }
 
 describe("the project event stream", () => {
-  it("refetches the project on every state event", () => {
+  it("patches the three events that carry their whole change", () => {
     const source = fakeSource();
     const sink = projectSink();
     subscribeProject(() => source, "/api/events/projects/p1", sink);
 
-    source.emit({ type: "stage.state", projectId: "p1", stage: "video", state: "running" });
-    source.emit({ type: "stage.progress", projectId: "p1", stage: "video", current: 1, total: 4 });
-    source.emit({ type: "image.landed", projectId: "p1", outputId: "o1", index: 1 });
-    source.emit({ type: "project.state", projectId: "p1", state: "done" });
+    const state = { type: "stage.state", projectId: "p1", stage: "video", state: "done" } as const;
+    const meter = {
+      type: "stage.progress",
+      projectId: "p1",
+      stage: "video",
+      current: 1,
+      total: 4,
+    } as const;
+    const project = { type: "project.state", projectId: "p1", state: "done" } as const;
+    source.emit(state);
+    source.emit(meter);
+    source.emit(project);
 
-    expect(sink.refetch).toHaveBeenCalledTimes(4);
+    expect(sink.patch.mock.calls).toEqual([[state], [meter], [project]]);
     expect(sink.appendArticle).not.toHaveBeenCalled();
+  });
+
+  it("asks the server only for what an event cannot carry", () => {
+    const source = fakeSource();
+    const sink = projectSink();
+    subscribeProject(() => source, "/api/events/projects/p1", sink);
+
+    // A meter tick and a project word are complete in themselves; a landed image names an
+    // output the page has never seen, and a stage reaching `done` has written files.
+    source.emit({ type: "stage.progress", projectId: "p1", stage: "video", current: 1, total: 4 });
+    source.emit({ type: "project.state", projectId: "p1", state: "running" });
+    expect(sink.refetch).not.toHaveBeenCalled();
+
+    source.emit({ type: "image.landed", projectId: "p1", outputId: "o1", index: 1 });
+    source.emit({ type: "stage.state", projectId: "p1", stage: "images", state: "done" });
+    expect(sink.refetch).toHaveBeenCalledTimes(2);
   });
 
   it("appends an article delta instead of refetching", () => {
@@ -66,6 +90,7 @@ describe("the project event stream", () => {
 
     expect(sink.appendArticle.mock.calls).toEqual([["Once "], ["upon"]]);
     expect(sink.refetch).not.toHaveBeenCalled();
+    expect(sink.patch).not.toHaveBeenCalled();
   });
 
   it("does not refetch when the stream first opens", () => {

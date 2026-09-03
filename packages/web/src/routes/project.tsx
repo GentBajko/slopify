@@ -1,17 +1,16 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import type { Stage } from "@app/slices/admission/model.js";
 import type { Output } from "@app/slices/storage/model.js";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { eventsUrl, fileUrl } from "@/api";
+import { fileUrl } from "@/api";
 import { useApp } from "@/app-context";
 import { StageGlyph } from "@/components/glyph";
 import { Lamp } from "@/components/lamp";
 import { Rail, RailGroup, RailMeter } from "@/components/rail";
 import { StateWord } from "@/components/state-word";
-import { subscribeProject } from "@/events";
 import { startedAt } from "@/lib/utils";
+import { useLiveProject } from "@/project/use-live";
 import { keys, projectQuery } from "@/queries";
 
 const stageNames: Readonly<Record<StageKind, string>> = {
@@ -27,26 +26,10 @@ const stageNames: Readonly<Record<StageKind, string>> = {
 // (uiux/screens/08-project.md). The per-stage bodies, the grids, the confirm dialogs and
 // the error lines are S21.
 export function ProjectRoute({ projectId }: { readonly projectId: string }) {
-  const { api, openEvents } = useApp();
-  const queryClient = useQueryClient();
+  const { api } = useApp();
   const project = useQuery(projectQuery(api, projectId));
 
-  useEffect(
-    () =>
-      subscribeProject(openEvents, eventsUrl(api, `projects/${projectId}`), {
-        refetch: () => {
-          void queryClient.invalidateQueries({ queryKey: keys.project(projectId) });
-          void queryClient.invalidateQueries({ queryKey: keys.projects });
-        },
-        appendArticle: (text) => {
-          queryClient.setQueryData<string>(
-            keys.article(projectId),
-            (seen) => `${seen ?? ""}${text}`,
-          );
-        },
-      }),
-    [api, openEvents, queryClient, projectId],
-  );
+  useLiveProject(projectId);
 
   const streaming = useQuery({
     queryKey: keys.article(projectId),
