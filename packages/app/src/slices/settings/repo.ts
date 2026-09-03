@@ -3,10 +3,6 @@ import { z } from "zod";
 import type { ProviderId, Voice } from "./model.js";
 import { providerIds } from "./model.js";
 
-// SQLITE_CONSTRAINT_UNIQUE. The extended result code node:sqlite puts on the error it
-// throws when a UNIQUE index rejects a row.
-const uniqueConstraint = 2067;
-
 const keyRow = z.object({ key: z.string() });
 const providerRow = z.object({ provider: z.enum(providerIds) });
 // A row naming a provider this build does not know can only come from a hand-edited
@@ -84,10 +80,6 @@ export function writeSetting(db: DatabaseSync, key: string, value: string): void
     "INSERT INTO settings (key, value) VALUES (?, ?)" +
       " ON CONFLICT(key) DO UPDATE SET value = excluded.value",
   ).run(key, value);
-}
-
-export function isUniqueConstraint(error: unknown): boolean {
-  return error instanceof Error && "errcode" in error && error.errcode === uniqueConstraint;
 }
 
 function toVoice(row: z.infer<typeof voiceRow>): Voice {

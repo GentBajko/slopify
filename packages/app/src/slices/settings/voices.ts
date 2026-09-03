@@ -1,8 +1,9 @@
 import type { DatabaseSync } from "node:sqlite";
+import { isUniqueConstraint } from "../../kernel/db/index.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { ProviderId, Voice } from "./model.js";
 import { providerById } from "./model.js";
-import { deleteVoice, insertVoice, isUniqueConstraint, listVoices } from "./repo.js";
+import { deleteVoice, insertVoice, listVoices } from "./repo.js";
 
 export interface VoicesDeps {
   readonly db: DatabaseSync;
