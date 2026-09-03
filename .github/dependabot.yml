@@ -1,8 +1,13 @@
 version: 2
 
 updates:
+  # Each workspace is listed on its own: a root-only entry would rely on Dependabot
+  # expanding the `workspaces` globs in the root package.json, and the packages here
+  # carry dependencies the root manifest never names.
   - package-ecosystem: npm
-    directory: /
+    directories:
+      - /
+      - /packages/*
     schedule:
       interval: weekly
   - package-ecosystem: github-actions
