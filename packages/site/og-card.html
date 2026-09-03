@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Slopify social card</title>
+    <!--
+      Not part of the site: `public/` is uploaded to the static host verbatim, and this is a
+      source file for one asset. It is the card `og:image` points at, rendered rather than
+      drawn so it cannot drift from the page it represents - the same tokens, the same
+      Barlow, the same mark.
+
+      To re-render: serve this directory, open this file in a headless browser at a 1200x630
+      viewport, and screenshot it to public/assets/og.png. No script ships for it, because
+      the only thing that can rasterise this is a browser and the site has no dependencies.
+
+      1200x630 is the size every scraper crops to; anything else gets letterboxed or cut.
+    -->
+    <style>
+      @font-face {
+        font-family: Barlow;
+        font-style: normal;
+        font-weight: 400;
+        src: url("public/assets/fonts/barlow-latin-400-normal.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: Barlow;
+        font-style: normal;
+        font-weight: 800;
+        src: url("public/assets/fonts/barlow-latin-800-normal.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "Barlow Condensed";
+        font-style: normal;
+        font-weight: 600;
+        src: url("public/assets/fonts/barlow-condensed-latin-600-normal.woff2") format("woff2");
+      }
+
+      * {
+        margin: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        width: 1200px;
+        height: 630px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 72px 80px;
+        background: #141416;
+        color: #e6e3dc;
+        font-family: Barlow, system-ui, sans-serif;
+        overflow: hidden;
+      }
+
+      .wordmark {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+
+      /* The mark is worn as a mask, the same way the page and the app wear it, so it takes
+         the accent rather than shipping a second recoloured copy of the artwork. */
+      .mark {
+        width: 40px;
+        height: 40px;
+        background-color: #9bcb4f;
+        -webkit-mask: url("public/assets/logo-mark.svg") center / contain no-repeat;
+        mask: url("public/assets/logo-mark.svg") center / contain no-repeat;
+      }
+
+      h1 {
+        max-width: 15ch;
+        font-size: 104px;
+        font-weight: 800;
+        line-height: 0.95;
+        letter-spacing: -0.03em;
+      }
+
+      .lede {
+        margin-top: 24px;
+        max-width: 44ch;
+        color: #9a978f;
+        font-size: 27px;
+        line-height: 1.35;
+      }
+
+      .foot {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .command {
+        display: inline-flex;
+        align-items: center;
+        padding: 16px 26px;
+        background: #1b1b1f;
+        border: 1px solid #2a2a30;
+        border-radius: 6px;
+        font-size: 26px;
+        letter-spacing: -0.01em;
+      }
+
+      .stages {
+        display: flex;
+        gap: 12px;
+        margin-left: auto;
+      }
+
+      /* Six lamps, one per stage, in the order the pipeline runs them. */
+      .lamp {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #9bcb4f;
+      }
+
+      .lamp:nth-child(5) {
+        opacity: 0.55;
+      }
+      .lamp:nth-child(6) {
+        opacity: 0.3;
+      }
+
+      .engraved {
+        color: #9a978f;
+        font-family: "Barlow Condensed", Barlow, sans-serif;
+        font-weight: 600;
+        font-size: 20px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wordmark"><span class="mark"></span>Slopify</div>
+
+    <div>
+      <h1>AI Slop, on demand.</h1>
+      <p class="lede">
+        A prompt and a few keywords in. A narrated slideshow video out. Your keys, your machine,
+        free.
+      </p>
+    </div>
+
+    <div class="foot">
+      <span class="command">npx @gentbajko/slopify@latest</span>
+      <span class="engraved">six stages</span>
+      <span class="stages">
+        <span class="lamp"></span><span class="lamp"></span><span class="lamp"></span
+        ><span class="lamp"></span><span class="lamp"></span><span class="lamp"></span>
+      </span>
+    </div>
+  </body>
+</html>

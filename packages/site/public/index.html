@@ -9,6 +9,35 @@
       content="A prompt and a few keywords in. A narrated slideshow video out. Your keys, your machine, free."
     />
     <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+    <link rel="canonical" href="https://slopify.stream/" />
+
+    <!-- The card every scraper reads when the link is pasted. Absolute URLs, because a
+         scraper resolves nothing against the page it found them on. `og.png` is rendered
+         from og-card.html rather than drawn, so it cannot drift from the page: same tokens,
+         same Barlow, same mark. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Slopify" />
+    <meta property="og:url" content="https://slopify.stream/" />
+    <meta property="og:title" content="AI Slop, on demand." />
+    <meta
+      property="og:description"
+      content="A prompt and a few keywords in. A narrated slideshow video out. Your keys, your machine, free."
+    />
+    <meta property="og:image" content="https://slopify.stream/assets/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Slopify: AI Slop, on demand. Install with npx @gentbajko/slopify@latest."
+    />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="AI Slop, on demand." />
+    <meta
+      name="twitter:description"
+      content="A prompt and a few keywords in. A narrated slideshow video out. Your keys, your machine, free."
+    />
+    <meta name="twitter:image" content="https://slopify.stream/assets/og.png" />
     <link rel="preload" href="/assets/fonts/barlow-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/styles.css" />
     <script type="module" src="/main.js"></script>
