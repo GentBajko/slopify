@@ -133,10 +133,17 @@ export async function readProject(api: Api, id: string): Promise<ProjectBody> {
   return read<ProjectBody>(await api.client.projects[":id"].$get({ param: { id } }));
 }
 
-export async function createProject(api: Api, draft: RunDraft): Promise<CreatedProjectBody> {
+// A refused run is an expected outcome, not a fault: `logic/04` §Q29 has the server name
+// every failing field, and Play marks each one in place. So this answers with a value
+// carrying the 400's `fields[]`, the way a refused template does. A creation that failed
+// on this machine (§Q36) is still thrown, and the key shows it.
+export async function createProject(
+  api: Api,
+  draft: RunDraft,
+): Promise<SaveResult<CreatedProjectBody>> {
   // RunDraft is `readonly`; hono's client asks for the mutable shape the route's schema
   // infers, and a structured clone is the honest way to hand it one.
-  return read<CreatedProjectBody>(
+  return saved<CreatedProjectBody>(
     await api.client.projects.$post({ json: JSON.parse(JSON.stringify(draft)) }),
   );
 }

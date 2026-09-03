@@ -33,8 +33,10 @@ export const silenceGapSecondsMax = 30;
 // Exported because Play's source switches offer exactly these and nothing else: the
 // segmented control and the refusal below it are then the same list, and a stage whose
 // legal set changes cannot leave a switch behind offering something the server refuses.
+// The order is the order the segments are drawn in on the reference sheet; the rule
+// itself only asks whether a source is on its stage's list.
 export const allowedSources: Readonly<Record<StageKind, readonly StageSource[]>> = {
-  research: ["generate", "provide", "off"],
+  research: ["off", "generate", "provide"],
   article: ["generate", "provide"],
   audio: ["generate", "provide"],
   images: ["generate", "provide"],
