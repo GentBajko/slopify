@@ -1,13 +1,13 @@
 version: 2
 
 updates:
-  # Each workspace is listed on its own: a root-only entry would rely on Dependabot
-  # expanding the `workspaces` globs in the root package.json, and the packages here
-  # carry dependencies the root manifest never names.
+  # Root only, and deliberately so. This repo has one hoisted package-lock.json, and
+  # Dependabot expands the root manifest's `workspaces` globs to reach every member.
+  # Listing `/packages/*` as separate directories was tried and broke every PR it
+  # opened: those entries bump a member's package.json without updating the root lock,
+  # so CI fails with `npm ci` EUSAGE, "lock file's X does not satisfy X".
   - package-ecosystem: npm
-    directories:
-      - /
-      - /packages/*
+    directory: /
     schedule:
       interval: weekly
   - package-ecosystem: github-actions
