@@ -83,6 +83,7 @@ function harness(
     log,
     version: "1.2.3",
     webDist,
+    flushSoon: (): void => {},
   });
   return { app, hub, lines };
 }

@@ -23,13 +23,14 @@ export function insertTelemetryEvent(db: DatabaseSync, event: TelemetryEvent): v
   ).run(event.id, event.type, JSON.stringify(event.payload), event.createdAt, event.deliveredAt);
 }
 
-// The queue, oldest first: the collector deduplicates by id, so re-sending the head of
-// the queue after an ambiguous failure is safe (logic/16 §Q134).
+// The queue in the order it was written. By rowid rather than by created_at: two events
+// recorded in the same millisecond carry the same timestamp and their ULIDs are random
+// within it, so a timestamp sort would hand back the install after the project it
+// preceded. The collector deduplicates by id, so re-sending the head of the queue after
+// an ambiguous failure is safe (logic/16 §Q134).
 export function undeliveredEvents(db: DatabaseSync, limit: number): TelemetryEvent[] {
   return db
-    .prepare(
-      "SELECT * FROM telemetry_events WHERE delivered_at IS NULL ORDER BY created_at, id LIMIT ?",
-    )
+    .prepare("SELECT * FROM telemetry_events WHERE delivered_at IS NULL ORDER BY rowid LIMIT ?")
     .all(limit)
     .map((row) => toEvent(eventRow.parse(row)));
 }

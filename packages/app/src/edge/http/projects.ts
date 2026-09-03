@@ -13,6 +13,8 @@ import { admit } from "../../slices/admission/rules.js";
 import { startRun } from "../../slices/admission/start.js";
 import { outputsOf, stagedFiles } from "../../slices/storage/repo.js";
 import type { StorageDeps } from "../../slices/storage/staging.js";
+import type { TelemetryDeps } from "../../slices/telemetry/record.js";
+import { record } from "../../slices/telemetry/record.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
 
@@ -36,6 +38,13 @@ export function projectRoutes(deps: AppDeps) {
     emit: (event) => {
       deps.hub.emitGlobal(event);
     },
+  };
+  const telemetry: TelemetryDeps = {
+    db: deps.db,
+    ids: deps.ids,
+    clock: deps.clock,
+    log: deps.log,
+    appVersion: deps.version,
   };
   const summarise = (project: Project): ProjectSummary => ({
     ...project,
@@ -62,6 +71,10 @@ export function projectRoutes(deps: AppDeps) {
       }
 
       const { project } = startRun(storage, admitted.draft, {});
+      // logic/16 step 2: one event per project created. record() swallows its own
+      // failures, so a broken telemetry write cannot cost the user the run.
+      record(telemetry, "project.created", {});
+      deps.flushSoon();
       // logic/04 step 6: the run starts only once the project is committed.
       deps.runner.tick(project.id);
       // Read back after the tick, not from the rows startRun built: the runner has

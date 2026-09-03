@@ -23,8 +23,19 @@ import { createRunner } from "./kernel/runner/index.js";
 import { readVersion } from "./kernel/version.js";
 import { claimStage, finishStage, stagesOf } from "./slices/admission/repo.js";
 import { reconcileStorage } from "./slices/storage/reconcile.js";
+import { collectorEndpoint, httpPostEvents } from "./slices/telemetry/collector-client.js";
+import type { Flusher } from "./slices/telemetry/flush.js";
+import { createFlusher } from "./slices/telemetry/flush.js";
+import type { TelemetryDeps } from "./slices/telemetry/record.js";
+import { record } from "./slices/telemetry/record.js";
 import { resolveFfmpeg } from "./slices/video/ffmpeg.js";
 import { renderVideo } from "./slices/video/run.js";
+
+// ceiling: a burst of finished stages coalesces into one delivery a second later, and the
+// collector gets ten seconds to answer before the attempt is abandoned and the events
+// stay queued.
+const flushDelayMs = 1000;
+const collectorTimeoutMs = 10_000;
 
 export interface Boot {
   readonly paths: Paths;
@@ -49,7 +60,18 @@ export async function boot(config: Config): Promise<Boot> {
       detail: `interrupted stages ${interrupted}, orphan files ${reconciled.orphanFiles}, staged files ${reconciled.stagedFiles}`,
     });
     const hub = createHub({ ids, log });
-    const runner = wire(db, paths, clock, ids, log, hub);
+    const version = readVersion();
+    const telemetry: TelemetryDeps = { db, ids, clock, log, appVersion: version };
+    const flusher = createFlusher(
+      {
+        db,
+        clock,
+        log,
+        post: httpPostEvents(collectorEndpoint(process.env), collectorTimeoutMs),
+      },
+      flushDelayMs,
+    );
+    const runner = wire(db, paths, clock, ids, log, hub, telemetry, flusher);
     const app = createApp({
       db,
       paths,
@@ -58,10 +80,14 @@ export async function boot(config: Config): Promise<Boot> {
       clock,
       ids,
       log,
-      version: readVersion(),
+      version,
       webDist: fileURLToPath(new URL("../dist/web", import.meta.url)),
+      flushSoon: flusher.soon,
     });
     const server = await listen(app, config, log);
+    // logic/16 step 5: whatever last run left queued goes out at start. Nothing waits for
+    // it, and an unreachable collector costs one refused socket.
+    flusher.soon();
     const open = db;
     return {
       paths,
@@ -75,6 +101,11 @@ export async function boot(config: Config): Promise<Boot> {
           await close(server);
           await runner.abortAll();
         } finally {
+          // The pending timer is cancelled rather than awaited: a shutdown must not wait
+          // on the collector. A flush already in flight may land after the database
+          // closes and fail to mark its batch delivered, which costs one re-send that
+          // the collector deduplicates by event id (logic/16 §Q134).
+          flusher.stop();
           log.write("info", "shutdown");
           open.close();
           lock.release();
@@ -98,6 +129,8 @@ function wire(
   ids: Ids,
   log: Log,
   hub: ReturnType<typeof createHub>,
+  telemetry: TelemetryDeps,
+  flusher: Flusher,
 ): Runner {
   // Resolved once at boot rather than per render, so a machine with no usable binary
   // fails at start with one message instead of on every project's last stage.
@@ -115,6 +148,13 @@ function wire(
     runs: { video: (context) => renderVideo(video, context) },
     emit: (projectId, event) => {
       hub.emit(projectId, event);
+      // logic/16 step 2: one event per stage that completes. The runner reports a stage
+      // reaching `done` here already, so the count is taken off that report rather than
+      // by handing the kernel a telemetry dependency it may not import.
+      if (event.type === "stage.state" && event.state === "done") {
+        record(telemetry, "stage.completed", { stage: event.stage });
+        flusher.soon();
+      }
     },
     emitRunningCount: (count) => {
       hub.emitGlobal({ type: "running.count", count });

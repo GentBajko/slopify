@@ -39,13 +39,26 @@ describe("the telemetry queue", () => {
     expect(undeliveredEvents(db, 10)).toEqual([event("e1")]);
   });
 
-  it("returns the oldest events first, up to the batch size", () => {
+  it("returns the events in the order they were recorded, up to the batch size", () => {
     const db = migrated();
     for (const id of ["e1", "e2", "e3"]) {
       insertTelemetryEvent(db, event(id));
     }
 
     expect(undeliveredEvents(db, 2).map((row) => row.id)).toEqual(["e1", "e2"]);
+  });
+
+  // Two events recorded in the same millisecond share a timestamp, and the ids are random
+  // within it, so the queue is ordered by the write and not by either.
+  it("keeps the write order when the timestamps and the ids disagree with it", () => {
+    const db = migrated();
+    insertTelemetryEvent(db, event("zzz", { type: "install" }));
+    insertTelemetryEvent(db, event("aaa", { type: "project.created" }));
+
+    expect(undeliveredEvents(db, 10).map((row) => row.type)).toEqual([
+      "install",
+      "project.created",
+    ]);
   });
 
   it("leaves a delivered event out of the next batch", () => {

@@ -14,6 +14,7 @@ import { fileRoutes } from "./files.js";
 import { problem, problemFromError, titleOf } from "./problem.js";
 import { projectRoutes } from "./projects.js";
 import { stagingRoutes } from "./staging.js";
+import { telemetryRoutes } from "./telemetry.js";
 
 export interface AppDeps {
   readonly db: DatabaseSync;
@@ -25,6 +26,9 @@ export interface AppDeps {
   readonly log: Log;
   readonly version: string;
   readonly webDist: string;
+  // Asks the telemetry flusher for a delivery attempt. It returns at once and never
+  // throws: nothing a route does may wait on the collector (logic/16 step 5).
+  readonly flushSoon: () => void;
 }
 
 // The type `packages/web` builds its client from: hc<AppType>(...). It widens as the
@@ -45,7 +49,8 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       }),
     )
     .route("/staging", stagingRoutes(deps))
-    .route("/projects", projectRoutes(deps));
+    .route("/projects", projectRoutes(deps))
+    .route("/telemetry", telemetryRoutes(deps));
 }
 
 export function createApp(deps: AppDeps): Hono {

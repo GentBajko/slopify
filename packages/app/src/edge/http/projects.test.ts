@@ -56,6 +56,7 @@ function harness(): Harness {
     log,
     version: "1.2.3",
     webDist: join(paths.dataDir, "missing"),
+    flushSoon: (): void => {},
   });
   return { app, db, ticked };
 }
