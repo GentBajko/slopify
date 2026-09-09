@@ -1,10 +1,17 @@
 ---
-absorbed_from: features/2026-09-09-pausable-optional-runs@2026-09-10
-generated_date: 2026-09-09
+content_hash: 14145afc3f08
+generated_at_commit: a3bf858ce7d1
+absorbed_from:
+ - features/2026-09-09-pausable-optional-runs@2026-09-10
+ - features/2026-09-10-subtitles-fonts@2026-09-10
+generated_date: 2026-09-10
 capstone_version: 5.2.0
 paths_covered:
  - "packages/app/src/kernel/db/**"
  - "packages/app/src/slices/**/model.ts"
+ - "packages/app/src/slices/subtitles/**"
+ - "packages/app/src/slices/fonts/**"
+ - "packages/app/src/kernel/ports/subtitles.ts"
  - "packages/collector/src/**"
 ---
 
@@ -26,6 +33,9 @@ paths_covered:
 | Voice | `slices/settings/model.ts` | table `voices` | name, provider, voice ID (`logic/02`) |
 | Setting | `slices/settings/model.ts` | table `settings` | silence gap seconds, appearance (`logic/11`) |
 | RunConfig | `slices/admission/model.ts` | column `projects.config` (JSON) | the full Play configuration, keyword values, rendered prompt texts (`logic/03`, `logic/04`) |
+| SubtitleConfig | `slices/subtitles/model.ts` | optional `projects.config.subtitles` | per-project mode, language and font style; old projects default Off |
+| FontSummary, ResolvedFont | `slices/fonts/model.ts` | bundled/system files or `<data-dir>/fonts/`; no table | public catalog metadata; resolved paths remain server-side |
+| TimedWord | `kernel/ports/subtitles.ts` | project `subtitle_words` JSON output | acoustic word timings and timing-cache key |
 | StagedFile | `slices/storage/model.ts` | table `staged_files` + `staging/` | an upload before Play (`logic/05`) |
 | TelemetryEvent | `slices/telemetry/model.ts` | table `telemetry_events` | one local event, queued then delivered (`logic/16`) |
 | Machine | `slices/telemetry/model.ts` | table `machine` (single row) | machine ID, notice seen, app version (`logic/16`) |
@@ -37,7 +47,10 @@ paths_covered:
 - Stage: `id`, `project_id`, `kind` enum (`research`, `article`, `audio`, `images`, `thumbnail`, `video`); `source` enum (`generate`, `provide`, `off`, `from_prompt`, `prompt_by_llm`); `state` enum (`pending`, `running`, `done`, `failed`, `canceled`, `provided`, `skipped`); `failure_reason` text nullable (verbatim provider text, "interrupted", "canceled by user"); `attempt_count` integer; `progress_current`, `progress_total` integer nullable; `started_at`, `finished_at` nullable.
 - Attempt: `id`, `stage_id`, `piece_id` nullable, `n` 1-4, `started_at`, `ended_at`, `outcome` enum (`ok`, `error`, `timeout`, `refusal`, `aborted`), `error_text`.
 - StagePiece: `id`, `stage_id`, `kind` (`chapter`, `chunk`, `segment`, `image`, `prompt_written`, `article_written`), `index` integer, `state` (`pending`, `running`, `done`, `failed`), `payload` JSON (prompt text, chapter title, chunk text).
-- Output: `id`, `project_id`, `stage_kind`, `role` (`notes`, `article_md`, `article_txt`, `sources`, `glossary`, `audio_body`, `audio_intro`, `audio_outro`, `image`, `thumbnail`, `video`, `audio_export`, `render_params`, `instructions`), `path` relative to the project folder, `original_filename` nullable (provided files), `bytes`, `duration_ms` nullable, `meta` JSON (prompt name, index, provider, model, voice), `created_at`.
+- Output: `id`, `project_id`, `stage_kind`, `role` (`notes`, `article_md`, `article_txt`, `sources`, `glossary`, `audio_body`, `audio_intro`, `audio_outro`, `image`, `thumbnail`, `video`, `audio_export`, `render_params`, `subtitles_srt`, `subtitles_vtt`, `subtitle_words`, `subtitle_ass`, `subtitle_font`, `instructions`), `path` relative to the project folder, `original_filename` nullable (provided files), `bytes`, `duration_ms` nullable, `meta` JSON (prompt name, index, provider, model, voice, actual final-export `subtitlesMode`), `created_at`.
+- SubtitleConfig: `mode` = `off` / `files` / `burn-in`; `language` = `en`; `fontId` = opaque catalog ID (default `default`, ASCII letters/digits/underscore/hyphen, ≤160 characters); `fontSize` integer 16–120, default 48. Absent config defaults to Off without a migration (`slices/subtitles/model.ts`, `slices/admission/repo.ts`).
+- FontSummary: `id`, `name`, `family`, `source` = `bundled` / `system` / `uploaded`. ResolvedFont additionally carries server-only `path`, `extension` (`.ttf` / `.otf` / `.ttc`), `assName`, `faceIndex`; uploads use content-hash IDs and system IDs hash path plus face index (`slices/fonts/model.ts`, `catalog.ts`, `discovery.ts`).
+- TimedWord: `text`, finite `start`/`end` in seconds and optional `confidence`. The stored cache is `{key, words, font: {id, name, assName, extension}}`; each completed caption export also owns a copied font output (`slices/subtitles/prepare.ts`).
 - Prompt: `id`, `kind` (`article`, `image`, `thumbnail`), `name` unique per kind case-insensitively, `body`, `slots` JSON (detected names), `updated_at`.
 - Entry: `id`, `category` (`intro`, `outro`), `mode` (`text`, `llm`), `name` unique per category, `body`, `slots` JSON.
 - ProviderKey: `provider` primary key, `key` text, `updated_at`. CLI providers have no row; their `installed` status is computed at request time.
@@ -94,4 +107,4 @@ CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT
 
 Tables with no code model: `schema_migrations`. Collector schema (`logic/16`): `events(id TEXT PRIMARY KEY, machine_id, type, payload, received_at)` and `aggregates(key TEXT PRIMARY KEY, value INTEGER)` in the managed database; the engine is `stack`'s.
 
-Data lifecycle (`logic/14`): hard deletes only; projects and templates kept until the user deletes them; the telemetry log kept forever; no archival, no legal hold; PII: none stored except provider keys, classified secret and never exported. Analytics path: local `telemetry_events` → collector aggregates; no warehouse. Search: none. Caching: none (model lists are fetched per Play load, `logic/02`). Backups: none for local data (§0.5, `logic/14`); collector: the host's daily backup.
+Data lifecycle (`logic/14`): hard deletes only; projects and templates kept until the user deletes them; the telemetry log kept forever; no archival, no legal hold; PII: none stored except provider keys, classified secret and never exported. Analytics path: local `telemetry_events` → collector aggregates; no warehouse. Search: none. Caching: provider model lists are fetched per Play load (`logic/02`); verified English speech weights live under `models/english-subtitles/`, and project word timings plus font snapshots live in output files (`logic/17`). Backups: none for local data (§0.5, `logic/14`); collector: the host's daily backup.

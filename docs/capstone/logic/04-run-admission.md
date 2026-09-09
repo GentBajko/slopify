@@ -1,5 +1,7 @@
 ---
-absorbed_from: features/2026-09-09-pausable-optional-runs@2026-09-10
+absorbed_from:
+ - features/2026-09-09-pausable-optional-runs@2026-09-10
+ - features/2026-09-10-subtitles-fonts@2026-09-10
 scenario: run-admission
 mockup_row: S2
 screens: [06-play, 08-project]
@@ -20,7 +22,7 @@ What Play requires before a project exists, and what one click produces.
 
 ## Steps
 
-1. Fresh form defaults: format 16:9; intro and outro Off; research Off; thumbnail Off; article, audio, images and video Generate; no prompts, providers, models, or voice selected; keywords empty.
+1. Fresh form defaults: format 16:9; intro and outro Off; research Off; thumbnail Off; article, audio, images and video Generate; no prompts, providers, models, or voice selected; keywords empty; Subtitles Off, English, bundled default font, size 48 (`packages/app/src/slices/subtitles/model.ts`).
 2. Required set:
  - title: non-empty, at most 200 characters; duplicates across projects allowed;
  - format: one of 16:9, 9:16;
@@ -28,7 +30,8 @@ What Play requires before a project exists, and what one click produces.
  - the LLM provider and model only when research or article is Generate, the thumbnail source is Prompt by LLM (scenario 10), or an generated-audio intro or outro entry is LLM-mode;
  - intro and outro: optional picks, Off or one saved entry each, used only when Audio is Generate; hidden and ignored for Off or Provide;
  - every keyword field valid per scenario 03 (non-empty, ≤200 characters);
- - for each stage set to Provide: its content present (scenario 05 validates it).
+ - for each stage set to Provide: its content present (scenario 05 validates it);
+ - enabled subtitles require active narration, an available catalog font and integer font size 16–120 (scenario 17); Video Off permits files mode only.
 3. Limits: Number per image prompt 1-20 inclusive; total images per run = sum of Numbers ≤ 60; exactly 20 and exactly 60 are valid.
 4. Article is required (Generate or Provide). Research, Audio, Images and Thumbnail can be Off; Video can Generate or be Off. Images Off normalizes Video Off. Audio Off with Video Generate is valid and produces silent video. Video Off with active Audio produces WAV; both Off permits article-only output. Disabled prompts, uploads, voices and intro/outro entries do not impose requirements.
 5. Validation is live: Play is disabled until every check passes; each failing field is marked in place; no error is shown after a click.
@@ -49,6 +52,7 @@ What Play requires before a project exists, and what one click produces.
 - Model list unavailable → Play blocked for that provider per scenario 02.
 - Empty voice list with audio Generate → voice required, so Play stays disabled (scenario 02).
 - Double click → the second click finds the button disabled; one project.
+- Active subtitle font removed since selection → 400 before project creation or provider work, with a `subtitles.fontId` field problem (`packages/app/src/edge/http/projects.ts`).
 - Local project creation fails (disk error) → no project; the error is shown on Play.
 
 ## State transitions

@@ -1,9 +1,16 @@
 ---
-generated_date: 2026-09-02
+content_hash: 71d194ea1844
+generated_at_commit: a3bf858ce7d1
+absorbed_from: features/2026-09-10-subtitles-fonts@2026-09-10
+generated_date: 2026-09-10
 capstone_version: 5.2.0
 paths_covered:
  - "packages/app/src/edge/cli.ts"
  - "packages/app/src/kernel/config/**"
+ - "packages/app/src/adapters/alignment/**"
+ - "packages/app/src/slices/fonts/**"
+ - "packages/app/src/slices/subtitles/**"
+ - "packages/app/scripts/copy-assets.mjs"
  - ".github/workflows/**"
  - "packages/site/**"
  - "packages/collector/**"
@@ -20,7 +27,7 @@ paths_covered:
 | Collector | serverless functions from `packages/collector` on the host | the managed database |
 | Marketing site | static build of `packages/site` on the host | the collector's `GET /aggregates` at runtime |
 
-No containers, no compose, no Kubernetes. The app is one process: HTTP server, pipeline runner, SSE hubs, and child processes for ffmpeg and agent CLIs.
+No containers, no compose, no Kubernetes. The app is one process: HTTP server, pipeline runner, SSE hubs, and child processes for ffmpeg, agent CLIs and enabled local subtitle alignment (`packages/app/src/adapters/alignment/runner.ts`).
 
 ## Configuration
 
@@ -54,7 +61,7 @@ Interactions retry sentence.
 
 ## Infrastructure
 
-- Local app: none beyond the user's machine; data directory layout per `logic/14` (`slopify.db`, `projects/`, `staging/`, `logs/`), created with user-only permissions.
+- Local app: none beyond the user's machine; data directory layout per `logic/14` (`slopify.db`, `projects/`, `staging/`, `logs/`, uploaded `fonts/`, lazy `models/english-subtitles/`), created with user-only permissions.
 - Collector: serverless API + managed database with the host's daily backup (RPO 24 h, RTO within a day, best effort); a $10/month budget alert on the host. Rate limit per machine id and dedup by event id.
 - Marketing site: static files on a serverless host; preview deployments per PR, production from `main`.
 - Observability: app logs in `<data-dir>/logs/` (JSON lines, daily rotation), warnings and errors on the terminal; no metrics, no tracing; collector uses the host's request logs (accepted red flag).
@@ -63,7 +70,17 @@ Interactions retry sentence.
 ## Developer workflow
 
 - CI on push and PR: lint and format check (Biome, with the boundary rule), typecheck, tests on Node 26; `npm audit` fails on high severity; Dependabot weekly.
-- Windows CI separately builds the package, checks ffmpeg download recovery and boot, and runs the real ffmpeg end-to-end smoke.
-- Release: tag → CI publishes `@gentbajko/slopify` to npm with semantic versioning; the package contains the built SPA; rollback is users pinning `npx @gentbajko/slopify@<version>`. Collector and site do not deploy from a push: nothing in CI touches them. They go out when `npm run deploy` is run by hand, which is `wrangler deploy` for each; `npm run deploy:check` is the dry run.
+- Windows CI separately builds the package, checks ffmpeg download recovery and boot, and runs the real ffmpeg end-to-end smoke, alignment/font/subtitle suites and caption-render regression (`.github/workflows/ci.yml`).
+- Release: tag → CI publishes `@gentbajko/slopify` to npm with semantic versioning; the package contains the built SPA, alignment worker and WASM runtime dependency, plus Barlow TTF/OFL/source assets; rollback is users pinning `npx @gentbajko/slopify@<version>`. Collector and site do not deploy from a push: nothing in CI touches them. They go out when `npm run deploy` is run by hand, which is `wrangler deploy` for each; `npm run deploy:check` is the dry run.
 - Migrations: forward-only SQL files applied at app boot; a schema newer than the app refuses to start; never destructive within a minor version.
 - Commands per `05-dependencies.md`: Vitest for tests, `tsc --noEmit` for typecheck, Biome for lint and format; exact npm scripts are written by `build` and this chapter is refreshed by `map` once they exist.
+
+## Subtitle operation
+
+- Subtitles default Off. First enabled export downloads a verified 95,286,046-byte English model into `<data-dir>/models/english-subtitles/`; later exports use the verified cache offline. The model's exact revision/hash live in `packages/app/src/adapters/alignment/cache.ts`. No provider key, Python or compiler is required (`packages/app/SUBTITLES.md`).
+- A per-cache filesystem lock serializes model/inference work across processes; queued waits and active decode/inference respond to abort. Temporary download/audio directories are cleaned on completion or failure (`adapters/alignment/{index,lock,cache,runner,audio}.ts`).
+- The proof machine aligned 68 seconds of narration in 17.7 seconds and 205 seconds in 53 seconds, at about 728 MiB RSS. These are observed manual runs, not a performance guarantee. User guidance asks for roughly 1 GB available memory (`packages/app/SUBTITLES.md`); inference runs one WASM thread in bounded audio windows (`adapters/alignment/worker.ts`).
+- Font discovery reads standard Windows system/user Fonts directories, macOS system/library/user Fonts directories, and Linux system/XDG/legacy user font directories. Scans skip symlinks and unavailable directories and bound entries, depth, file count and bytes. Valid `.ttf`/`.otf` uploads are capped at 32 MiB under `<data-dir>/fonts/`; system `.ttc` faces are supported (`slices/fonts/discovery.ts`, `upload.ts`).
+- Completed caption exports retain their chosen font snapshot and word timing in the project folder. Style-only changes reuse matching timing and the snapshot; a failed model download, alignment or replacement keeps the prior completed export. A synchronous output-commit error restores media/parameter backups; failed restoration retains `.previous` files (`slices/subtitles/prepare.ts`, `slices/video/write-export.ts`).
+- Enabled subtitles require matching English narration and transcript. A mismatch fails the final stage with correction guidance. Pause active work before changing subtitles; save on a paused project queues only the final export until Resume (`edge/http/subtitles.ts`).
+- ASS rendering uses a project caption working directory and fixed relative filter paths. A path-containing relative FFmpeg override is resolved against the app launch directory before that cwd change (`slices/video/ffmpeg.ts`).

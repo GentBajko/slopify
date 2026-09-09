@@ -1,4 +1,5 @@
 ---
+absorbed_from: features/2026-09-10-subtitles-fonts@2026-09-10
 generated_date: 2026-09-02
 capstone_version: 5.2.0
 ---
@@ -31,12 +32,14 @@ Posture: stop and confirm. A dialog precedes each of these, names the consequenc
 - The user's work is never lost by a failure: the Play form keeps its values, an article edit in progress stays in the editor, staged uploads stay staged.
 - A failed stage shows the provider's error text verbatim and the attempt count under its rail, with "Retry stage" as the recovery (`logic/01`). Nothing retries silently beyond the four automatic attempts.
 - Local errors (disk, creation) show inline where the action was taken, with the OS message.
+- Subtitle alignment/render/save failure leaves the last finished export and caption downloads visible; saved output metadata decides whether the player adds native VTT captions. Font-preview failure labels the fallback. Paused projects require Save or Discard of subtitle edits before Resume (`packages/web/src/project/{subtitles,body-video}.tsx`, `subtitles/font-picker.tsx`).
 - A "Key missing" stage shows the disabled control with that label and a link to Settings (`logic/02`).
 
 ## Progressive disclosure
 
 - A stage rail shows only the controls of its active source; Off and Provide collapse the rail to one line (the filename for Provide).
 - Research and thumbnail default to Off and read as one line until switched on.
+- Subtitles default Off; selecting files or burn-in reveals font, size, upload and a reduced-scale preview. Audio Off disables the section, Video Off permits files only. The active controls explain local English timing and the first-use model download (`packages/web/src/subtitles/controls.tsx`).
 - On the project page, the instructions sent to the LLM sit behind a "Show instructions" toggle per stage; sources and glossary files are links beside the article, not inline.
 - Dialogs carry no secondary options.
 
@@ -58,10 +61,15 @@ Posture: stop and confirm. A dialog precedes each of these, names the consequenc
 - WCAG AA: 4.5:1 body and 3:1 large text and indicators on both themes, as `02-system.md` locks.
 - Focus rings visible on every interactive element, 2 px in the focus colour with a 2 px offset.
 - Lamps are never colour-only: the state word is rendered beside every lamp, and rows carry an `aria-live` region announcing state changes ("Audio: running", "Images: failed").
-- `prefers-reduced-motion` honoured per `02-system.md`.
+- `prefers-reduced-motion` honoured per `02-system.md`; the marketing recording pauses and restores native controls, while its default display loops without controls (`packages/site/public/main.js`, `index.html`).
+- Files-mode MP4 preview offers a native English caption track; burned output already contains captions and receives no duplicate track. SRT/VTT download links remain available for either mode (`packages/web/src/project/body-video.tsx`).
 - Every icon-only control has a label; every input has a visible label above it.
 - Interface copy: the product's own words, one register per page, zero em-dashes, controls name their action.
 
 ## Copy register
 
 Deadpan and literal, owning "slop" without winking twice: "New run", "Play", "Retry stage", "Cancel run", "Nothing to narrate", "AI Slop, on demand." State words are uppercase engraved labels: PENDING, RUNNING, DONE, FAILED, CANCELED, PROVIDED, SKIPPED.
+
+## Optional getting-started guide
+
+`packages/web/src/tutorial/model.ts` defines 20 steps over the real Settings, prompt editors, Play and project pages. Step 15 spotlights the optional subtitle controls, including upload and preview; Audio Off still lets the guide continue after explaining why captions are unavailable. Progress stores readiness booleans and saved resource IDs, never keys, font bytes or form text. The guide neither generates subtitles nor starts a project (`tutorial/runner.tsx`, `step-content.tsx`).

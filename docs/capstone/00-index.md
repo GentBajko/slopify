@@ -1,6 +1,6 @@
 # Slopify: capstone index
 
-Slopify: a self-hosted, single-user content pipeline (research → article → narration, with independent images and an optional MP4 or WAV export) for faceless YouTube channel operators, run with `npx @gentbajko/slopify@latest`. TypeScript on Node ≥ 26; one process: a Hono 4 API serving a React 19 SPA, an in-process pipeline runner, bundled ffmpeg as a child process, one SQLite file; plus a static marketing site and a serverless telemetry collector. Paradigm: functional core (pure slices) with a procedural shell (runner, adapters, edge).
+Slopify: a self-hosted, single-user content pipeline (research → article → narration, with independent images and an optional MP4 or WAV export with locally timed English subtitles) for faceless YouTube channel operators, run with `npx @gentbajko/slopify@latest`. TypeScript on Node ≥ 26; one process: a Hono 4 API serving a React 19 SPA, an in-process pipeline runner, bundled ffmpeg as a child process, one SQLite file; plus a static marketing site and a serverless telemetry collector. Paradigm: functional core (pure slices) with a procedural shell (runner, adapters, edge).
 
 ## Module map
 
@@ -10,8 +10,8 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | Composition root | `packages/app/src/main.ts` |
 | HTTP API and SSE | `packages/app/src/edge/http/*.ts`, `packages/app/src/edge/events/*.ts` |
 | Stage-graph runner and retry wrapper | `packages/app/src/kernel/runner/` |
-| Provider ports and adapters | `packages/app/src/kernel/ports/`, `packages/app/src/adapters/{llm,tts,image,fake}/` |
-| Pipeline slices | `packages/app/src/slices/{research,article,narration,images,thumbnail,video,reruns,cancel,control,admission,storage,library,settings,telemetry}/` |
+| Provider ports and adapters | `packages/app/src/kernel/ports/`, `packages/app/src/adapters/{llm,tts,image,alignment,fake}/` |
+| Pipeline slices | `packages/app/src/slices/{research,article,narration,images,thumbnail,video,subtitles,fonts,reruns,cancel,control,admission,storage,library,settings,telemetry}/` |
 | SQLite and migrations | `packages/app/src/kernel/db/` |
 | React SPA | `packages/web/src/main.tsx` |
 | Marketing site | `packages/site/` |
@@ -45,6 +45,7 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | logic | [logic/14-storage-and-downloads.md](logic/14-storage-and-downloads.md) |
 | logic | [logic/15-prompt-management.md](logic/15-prompt-management.md) |
 | logic | [logic/16-telemetry.md](logic/16-telemetry.md) |
+| logic | [logic/17-subtitles.md](logic/17-subtitles.md) |
 
 ## Companion docs
 
@@ -56,9 +57,9 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | [mockup/03-settings.md](mockup/03-settings.md) | Screen: API keys, voices, outro card text |
 | [mockup/04-prompts.md](mockup/04-prompts.md) | Screen: prompts list by kind |
 | [mockup/05-prompt-editor.md](mockup/05-prompt-editor.md) | Screen: prompt editor with `{{keyword}}` slots |
-| [mockup/06-play.md](mockup/06-play.md) | Screen: run configuration and play |
+| [mockup/06-play.md](mockup/06-play.md) | Screen: run configuration, subtitle fonts and play |
 | [mockup/07-projects.md](mockup/07-projects.md) | Screen: projects list |
-| [mockup/08-project.md](mockup/08-project.md) | Screen: project pipeline view |
+| [mockup/08-project.md](mockup/08-project.md) | Screen: project pipeline, subtitle restyling and downloads |
 | [uiux/README.md](uiux/README.md) | UI/UX design index: direction, system, experience, assumed items |
 | [uiux/01-direction.md](uiux/01-direction.md) | Design read, mode map, the control-room direction contract |
 | [uiux/02-system.md](uiux/02-system.md) | Tokens: type, colour per theme, spacing, icons, motion, component library, implementation constraints |

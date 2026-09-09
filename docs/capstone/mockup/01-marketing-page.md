@@ -1,4 +1,5 @@
 ---
+absorbed_from: features/2026-09-10-subtitles-fonts@2026-09-10
 screen: marketing page (slopify.stream)
 journeys: [J1-discover-and-install]
 assumed:
@@ -47,6 +48,7 @@ Element tree:
 - Page
  - Header: wordmark, GitHub link, donation links
  - Hero: one-line pitch, pipeline summary, install command with copy
+ - Showcase: edited silent recording of real app controls and an existing completed project
  - Live counters: five aggregate numbers
  - How to use: numbered walkthrough of the app's options
  - Footer: free/BYO-keys statement, donation links, telemetry statement
@@ -59,10 +61,13 @@ Element tree:
 | Patreon / Buy Me a Coffee | Donation links | External |
 | GitHub | Repository, whose README also carries the donation links | External |
 | Live counters | Aggregate telemetry across all installs, refreshed every few seconds | None |
+| Slopify, in action | Plays the existing 1920×1080 silent edited recording: prompt keyword, unsaved cue sheet, output choice, then a cut to completed article/narration/image/video and downloads | None |
 | How to use | Static walkthrough: keys, prompts, keywords, play options, project page | None |
 
 ## States
 
 - Counters live: numbers refresh in place; interval and animation `rule: logic (S12-telemetry)`.
 - Counters unavailable: collector unreachable; what is shown instead `rule: logic (S12-telemetry)`.
+- Showcase: muted autoplay loop, plays inline, metadata preload and poster. Normal native controls are absent; reduced motion pauses playback and restores controls. The footage remains the existing edited walkthrough and does not depict a new run or the 0.6 subtitle controls (`packages/site/public/index.html`, `main.js`).
+- Version 0.6 copy describes free English subtitles timed locally from article/narration; it does not change the showcase footage (`packages/site/public/index.html`).
 - Default: everything else is static content.

@@ -1,6 +1,10 @@
 ---
-absorbed_from: features/2026-09-09-pausable-optional-runs@2026-09-10
-generated_date: 2026-09-09
+content_hash: bc8ae7a8bf59
+generated_at_commit: a3bf858ce7d1
+absorbed_from:
+ - features/2026-09-09-pausable-optional-runs@2026-09-10
+ - features/2026-09-10-subtitles-fonts@2026-09-10
+generated_date: 2026-09-10
 capstone_version: 5.2.0
 paths_covered:
  - "packages/app/src/**"
@@ -17,11 +21,11 @@ Single-process modular monolith in `packages/app`, three layers with imports poi
 
 | Layer | Planned directory | Contains | May import |
 |---|---|---|---|
-| kernel | `packages/app/src/kernel/` | `runner/` (the stage-graph runner of `logic/01`), `db/` (SQLite open, migrations, WAL), `ports/` (`LlmPort`, `TtsPort`, `ImagePort` interfaces and adapter registry), `config/` (flags and `SLOPIFY_*` env), `clock.ts`, `ids.ts` (ULID), `log.ts` | nothing above it |
-| slices | `packages/app/src/slices/` | `research/`, `article/`, `narration/`, `images/`, `thumbnail/`, `video/`, `reruns/`, `cancel/`, `control/`, `library/`, `settings/`, `telemetry/`, `storage/`, `admission/` | kernel |
+| kernel | `packages/app/src/kernel/` | `runner/` (the stage-graph runner of `logic/01`), `db/` (SQLite open, migrations, WAL), `ports/` (`LlmPort`, `TtsPort`, `ImagePort`, `SubtitleAligner` interfaces and adapter registry), `config/` (flags and `SLOPIFY_*` env), `clock.ts`, `ids.ts` (ULID), `log.ts` | nothing above it |
+| slices | `packages/app/src/slices/` | `research/`, `article/`, `narration/`, `images/`, `thumbnail/`, `video/`, `subtitles/`, `fonts/`, `reruns/`, `cancel/`, `control/`, `library/`, `settings/`, `telemetry/`, `storage/`, `admission/` | kernel |
 | edge | `packages/app/src/edge/` | `http/` (Hono routes per context), `events/` (SSE), `cli.ts` (the `slopify` entry) | slices, kernel |
 
-Adapters live beside their port: `packages/app/src/adapters/llm/{openrouter,claude-code,codex}.ts`, `adapters/tts/*.ts`, `adapters/image/*.ts`, `adapters/fake/*.ts`; the renderer `packages/app/src/slices/video/ffmpeg.ts` and the collector client `packages/app/src/slices/telemetry/collector-client.ts` are contained modules without ports.
+Adapters live beside their port: `packages/app/src/adapters/llm/{openrouter,claude-code,codex}.ts`, `adapters/tts/*.ts`, `adapters/image/*.ts`, `adapters/alignment/*.ts`, `adapters/fake/*.ts`; the renderer `packages/app/src/slices/video/ffmpeg.ts` and the collector client `packages/app/src/slices/telemetry/collector-client.ts` are contained modules without ports.
 
 The other packages: `packages/web` (React SPA), `packages/site` (static marketing page), `packages/collector` (serverless API + managed database). No package imports another's source; `app` consumes `web`'s build output as static files; `site` calls `collector` over HTTPS.
 
@@ -40,13 +44,13 @@ The other packages: `packages/web` (React SPA), `packages/site` (static marketin
 | Collector | `packages/collector/src/index.ts` | deployed as serverless functions |
 | Marketing site | `packages/site/` static build | deployed as static files |
 
-`cli.ts`: parse flags and env → resolve the data directory and refuse a second instance (`logic/14`) → open SQLite, run migrations → mark stages found `running` as `failed` "interrupted" (`logic/01`) → clean unattached staging files (`logic/05`) → build ports and registry → start Hono on `host:port` → print the URL → open the browser unless `--no-open` → on SIGINT stop the server and exit (the interrupted mark happens at the next boot). No workers, no cron.
+`cli.ts`: parse flags and env → resolve the data directory and refuse a second instance (`logic/14`) → open SQLite, run migrations → mark stages found `running` as `failed` "interrupted" (`logic/01`) → clean unattached staging files (`logic/05`) → build ports and registry → start Hono on `host:port` → print the URL → open the browser unless `--no-open` → on SIGINT stop the server and exit (the interrupted mark happens at the next boot). No cron. Subtitle alignment forks a short-lived Node child process running ONNX Runtime WASM; it is created only for enabled subtitles (`packages/app/src/adapters/alignment/runner.ts`).
 
 ## Communication
 
-- Browser ↔ app: JSON over HTTP under `/api/<context>/...` (`projects`, `prompts`, `entries`, `settings`, `usage`, `providers`), RFC 9457 `application/problem+json` errors, no versioning, no pagination. Files under `/files/<projectId>/<asset>`. Live updates over SSE: `/api/events/projects/<id>` (stage status, progress, streamed article text, image landed, and `project.updated` to refresh saved provider choices and pause state) and `/api/events/global` (running tally). Uploads stage through `POST /api/staging` with progress events (`logic/05`).
+- Browser ↔ app: JSON over HTTP under `/api/<context>/...` (`projects`, `prompts`, `entries`, `settings`, `usage`, `providers`, `fonts`), RFC 9457 `application/problem+json` errors, no versioning, no pagination. Files under `/files/<projectId>/<asset>`. Live updates over SSE: `/api/events/projects/<id>` (stage status, progress, streamed article text, image landed, and `project.updated` to refresh saved provider choices and pause state) and `/api/events/global` (running tally). Uploads stage through `POST /api/staging` with progress events (`logic/05`).
 - App → providers: HTTPS through the HTTP adapters; local CLIs through child processes with structured stdout.
-- App → ffmpeg: child process with arguments built by `slices/video/ffmpeg.ts`; progress parsed from stderr into render percentage (`logic/11`).
+- App → ffmpeg: child process with arguments built by `slices/video/ffmpeg.ts`; progress parsed from stdout into render percentage (`logic/11`).
 - App → collector: HTTPS `POST /events` batches from the local queue, idempotent by event ID (`logic/16`).
 - Site → collector: HTTPS `GET /aggregates` every 5 s (`logic/16`).
 - No message broker, no queue service, no webhooks.
@@ -64,4 +68,11 @@ The other packages: `packages/web` (React SPA), `packages/site` (static marketin
 - Design system: shadcn/ui restyled to `uiux/02-system.md`'s tokens on Radix primitives.
 - API-client seam: the client generated from Hono's route types (its RPC client); no hand-rolled fetch layer.
 - Versioning: server and SPA ship in one package; the API returns a version header and the SPA offers a reload on mismatch. No mobile app, no offline sync.
-- Getting started: `packages/web/src/tutorial/` owns an optional 19-step guide, opened from navigation or the empty Projects page. It routes through real Settings, prompt editors, Play and the created project. Video selection explains silent slideshows, WAV export and article-only runs; the final spotlight follows the selected output. Completion uses provider/voice readiness, form validity flags and confirmed save/create IDs; it never captures API keys or starts generation. The spotlight follows `data-tour` anchors across scrolling, resizing and routed content, allowing interaction with the active section and its select menus while dimming the rest. Back, Skip and Exit remain available outside pending saves; the guide waits for the first-run notice to be dismissed.
+- Getting started: `packages/web/src/tutorial/` owns an optional 20-step guide, opened from navigation or the empty Projects page. It routes through real Settings, prompt editors, Play and the created project. Video selection explains silent slideshows, WAV export and article-only runs. A dedicated subtitle step exposes the actual mode, font upload, preview and size controls; it never runs alignment. The final spotlight follows the selected output. Completion uses provider/voice readiness, form validity flags and confirmed save/create IDs; it never captures API keys or starts generation. The spotlight follows `data-tour` anchors across scrolling, resizing and routed content, allowing interaction with the active section and its select menus while dimming the rest. Back, Skip and Exit remain available outside pending saves; the guide waits for the first-run notice to be dismissed.
+
+## Local subtitles and fonts
+
+- `packages/app/src/kernel/ports/subtitles.ts` defines `SubtitleAligner`, passed from `main.ts` into the existing video slice. `slices/subtitles/prepare.ts` derives the spoken transcript, fingerprints audio/text/gaps, reuses word timing when unchanged, snapshots the font, and prepares SRT/VTT/ASS assets. Subtitles add no stage and make no paid provider request (`logic/17`).
+- `adapters/alignment/` owns verified model download/cache, decoded 16 kHz PCM, a per-cache process lock, and abortable child-process inference using `onnxruntime-web/wasm`. The model is lazy; app boot and Subtitle Off do not download it (`adapters/alignment/index.ts`, `cache.ts`, `runner.ts`).
+- `slices/fonts/` owns bounded system discovery, SFNT metadata validation, opaque font IDs, custom TTF/OTF uploads and preview extraction; `edge/http/fonts.ts` exposes list/upload/file routes. Bundled Barlow and its OFL/source records ship from `src/assets/fonts/` into `dist/assets/fonts/` (`scripts/copy-assets.mjs`).
+- `packages/web/src/subtitles/` supplies shared mode/font/size controls for Play and the final project stage. `project/subtitles.tsx` saves through `PATCH /api/projects/:id/subtitles`; `project/body-video.tsx` uses saved output metadata for native VTT tracks, preventing double captions on burned exports.

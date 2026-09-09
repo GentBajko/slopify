@@ -1,5 +1,7 @@
 ---
-absorbed_from: features/2026-09-09-pausable-optional-runs@2026-09-10
+absorbed_from:
+ - features/2026-09-09-pausable-optional-runs@2026-09-10
+ - features/2026-09-10-subtitles-fonts@2026-09-10
 scenario: video-assembly
 mockup_row: S8
 screens: [06-play, 08-project]
@@ -22,14 +24,16 @@ The final media stage produces an MP4 slideshow or a combined PCM WAV. Audio Off
 
 1. When audio is enabled, build the audio timeline: intro audio, gap, body audio, gap, outro audio; a gap is inserted only where the neighbouring segment exists; gaps are plain silence of the configured length. Total length = sum of segments and gaps. Audio Off uses five seconds per image and omits the audio stream entirely.
 2. Slot computation: per-image slot = total length ÷ image count; the last image absorbs frame rounding at 30 fps. One image → it fills the whole length.
-3. Slideshow across the whole timeline, intro through outro, with the same images: hard cut between images; zoom alternates, odd images 100% → 115% zooming in, even images 115% → 100% zooming out, linear, centred.
+3. Slideshow across the whole timeline, intro through outro, with the same images: hard cut between images; zoom alternates, odd images 100% → 122.5% zooming in, even images 122.5% → 100% zooming out, linear, centred. The 22.5% zoom travel is 1.5× the earlier 15% travel over the same image slot; it changes motion only, never narration or slideshow timing (`packages/app/src/slices/video/plan.ts`, `ffmpeg.ts`).
 4. Fit every image by scaling to cover the frame and centre-cropping; no letterboxing.
 5. Frame: 16:9 renders 1920×1080, 9:16 renders 1080×1920; 30 fps; mp4 container; codecs are `stack`'s. Progress reported as render percentage (scenario 01).
-6. Store the mp4 and the render parameters used: segment durations, gap, per-image slots, zoom pattern, frame, fps, image order. Mark the stage `done`; the project completes once every selected stage is satisfied (scenario 01).
+6. If subtitles are enabled, prepare acoustically timed SRT/VTT and optional ASS burn-in using scenario 17. Alignment and rendering remain work of this final stage; no narration/image regeneration occurs.
+7. Store the mp4 and the render parameters used: segment durations, gap, per-image slots, zoom pattern, frame, fps, image order. Mark the stage `done`; the project completes once every selected stage is satisfied (scenario 01).
 
 ## Branches
 
 - Video Off with Audio Generate/Provide → decode and combine intro, body and outro with the configured silence gaps into `audio.wav`, 48 kHz stereo signed 16-bit PCM. Record the plan in `render.json`; no images are needed and this does not increment the videos counter.
+- Enabled subtitles with WAV → separate SRT/VTT files; burn-in is normalized to files (`slices/admission/rules.ts`, `slices/video/audio-export.ts`).
 - Both Audio and Video Off → the final stage is skipped; the Article download remains available.
 - Intro Off → no intro segment and no leading gap; outro Off → no outro segment and no trailing gap.
 - Image aspect equals the frame → no crop; differs → cover and crop.
@@ -37,6 +41,7 @@ The final media stage produces an MP4 slideshow or a combined PCM WAV. Audio Off
 ## Unhappy paths
 
 - Render fails → the renderer's error shown verbatim on the video stage; no automatic retry; no timeout; manual re-render per scenario 12.
+- Caption alignment, font resolution, render or output-commit failure → stage fails and prior completed output/captions remain usable. Media/parameter rollback copies cover synchronous file and database errors; backups are retained if restoration itself fails (`packages/app/src/slices/video/write-export.ts`).
 - Interrupted process → stage failed "interrupted" (scenario 01).
 - Cancel → scenario 13.
 

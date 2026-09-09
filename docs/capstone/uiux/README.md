@@ -1,4 +1,5 @@
 ---
+absorbed_from: features/2026-09-10-subtitles-fonts@2026-09-10
 generated_date: 2026-09-02
 capstone_version: 5.2.0
 ---
@@ -20,7 +21,7 @@ drawn is listed under Assumed below.
 |---|---|---|
 | [01-direction.md](01-direction.md) | all | all |
 | [02-system.md](02-system.md) | all | all |
-| [03-experience.md](03-experience.md) | all | 01, 02, 04, 12, 13 |
+| [03-experience.md](03-experience.md) | all | 01, 02, 04, 12, 13, 17 |
 
 ## Assets
 
@@ -33,9 +34,7 @@ settled by shipping; each now has code to read instead of a claim to confirm.
 
 - The marketing headline "AI Slop, on demand." and its subtext: live in
  `packages/site/public/index.html`.
-- The hero slot on that page: **still open**, and now a video of a real run rather than
- the screenshot originally assumed. `play-run.mp4`, its poster and its captions are
- wired and absent.
+- The hero slot: an existing 1920×1080 silent edited recording of real app controls and a completed project. `packages/site/public/assets/play-run.mp4`, its poster and VTT are present. Normal controls are hidden; reduced motion pauses the recording and restores them (`packages/site/public/index.html`, `main.js`). The 0.6 change keeps that footage unchanged.
 - The Appearance control sitting in the Playback rail: built that way in
  `packages/web/src/routes/settings.tsx`.
 - Stage bodies opening when done and collapsing when pending: built that way in
@@ -46,3 +45,5 @@ settled by shipping; each now has code to read instead of a claim to confirm.
  all in `packages/web/src/styles/index.css`. The light values were measured
  rather than trusted during `build`; one row of `02-system.md` was corrected as a
  result, and no pair fails its floor.
+
+Subtitle controls live in `packages/web/src/subtitles/`, reused by Play and the final project stage. Scenario [17](../logic/17-subtitles.md) records their modes, font lifecycle and save/export behavior. No per-screen design chapters are recreated; the source remains the screen reference.

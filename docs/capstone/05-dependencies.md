@@ -1,10 +1,15 @@
 ---
-generated_date: 2026-09-02
+content_hash: 91137433d2a5
+generated_at_commit: a3bf858ce7d1
+absorbed_from: features/2026-09-10-subtitles-fonts@2026-09-10
+generated_date: 2026-09-10
 capstone_version: 5.2.0
 paths_covered:
  - "package.json"
  - "packages/*/package.json"
  - "package-lock.json"
+ - "packages/app/src/adapters/alignment/**"
+ - "packages/app/src/assets/fonts/**"
 ---
 
 > Rows marked "installed" carry the version resolved and locked in `package-lock.json`; the
@@ -35,6 +40,7 @@ paths_covered:
 | fflate | 0.8.3 installed | MIT | zip for "download all" (`logic/14`) | stack |
 | ulid | 3.0.2 installed | MIT | entity IDs | stack |
 | @fastify/busboy | 3.2.2 installed | MIT | streaming `multipart/form-data` parser for staged uploads | ladder rung 4 |
+| onnxruntime-web | 1.24.3 exact, installed | MIT | local English acoustic inference via WASM in an abortable Node child; no Python/compiler or paid subtitle API | subtitles 0.6; 2026-09-10 |
 | ffmpeg-static | 5.3.0 installed | GPL-3.0-or-later (binary shipped unlinked, notice in README) | bundled ffmpeg per platform; `SLOPIFY_FFMPEG` override. The package's release tag reads `b6.1.1`, but the linux-x64 asset it fetches reports `ffmpeg version 7.0.2-static` (johnvansickle build), measured - the "6.1.1" this row used to claim was never what shipped | architecture; stack note |
 
 ## No dependency, by the ladder
@@ -50,6 +56,7 @@ paths_covered:
 | HTTP client for providers | global `fetch`; ~20-line SSE line parser shared with the CLI adapters' JSONL reading | 3 / 6 |
 | Agent CLI processes | `node:child_process` | 3 |
 | ~~Uploads~~ | ~~Hono `c.req.formData()` and streams~~ - **overturned**: measured on Node 24, a 512 MiB part cost +1586 MiB RSS because undici's `formData()` buffers every part. Uploads here are audio and video with no size cap (`logic/05`), and hand-rolling a multipart parser is barred by standards, so rung 4 failed and `@fastify/busboy` was added. | 4 → 5 |
+| System/custom font catalog | `node:fs` bounded standard-directory scan plus bounded SFNT metadata parsing; TTF/OTF uploads reuse Busboy; TTC faces are extracted for preview (`packages/app/src/slices/fonts/`) | 3 / 4 / 6 |
 | Marketing page | plain HTML, CSS, one script | 4 |
 
 ## Dev and tooling
@@ -91,3 +98,11 @@ Deferred adapters: Google Cloud TTS, Azure TTS, Stability, Google Imagen; trigge
 - Vetting bar for any addition: release within 12 months, more than one maintainer or a trivially replaceable surface, and the ladder rung that failed named in the commit.
 - Lockfile committed; Dependabot weekly; `npm audit` gate.
 - Exit costs: every provider sits behind a port with several adapters; Cloudflare is replaceable by any static host plus any serverless SQL at the cost of a redeploy, the data being aggregates only.
+
+## Local subtitle assets and runtime
+
+The dependency ladder found no acoustic inference capability in Node, browser APIs or the existing dependencies. `onnxruntime-web@1.24.3` supplies WASM inference; the native runtime option was rejected because of its CUDA postinstall behavior and Intel Mac coverage gaps. The installed WASM runtime is about 138 MB on disk and requires no local compiler or Python (`packages/app/package.json`, `packages/app/SUBTITLES.md`, `packages/app/src/adapters/alignment/worker.ts`).
+
+`adapters/alignment/cache.ts` pins the Apache-2.0 Xenova ONNX conversion of `facebook/wav2vec2-base-960h`: revision `a19f851b3d42865797e410752b4c570c871e4825`, quantized model 95,286,046 bytes, SHA256 `cd5040c147381580ed73258143dd8e0c28e800a09e74ee42ee2b3e8cb4d760a3`. First enabled use fetches the model from Hugging Face; every downloaded/cached copy is checked before use. Audio/text never leave the computer for alignment.
+
+The subtitle default is static Barlow Regular TTF, separate from the SPA's Fontsource WOFF2 files. The TTF, OFL and pinned source record live in `packages/app/src/assets/fonts/` and ship in `dist/assets/fonts/` via `scripts/copy-assets.mjs`. Font files remain the existing OFL exception to the code-dependency license policy; no font parsing dependency was added.
