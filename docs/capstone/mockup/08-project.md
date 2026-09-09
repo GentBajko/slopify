@@ -1,4 +1,5 @@
 ---
+absorbed_from: features/2026-09-09-pausable-optional-runs@2026-09-10
 screen: project page
 journeys: [J3-make-a-video, J4-bring-your-own, J5-revise, J6-revisit]
 assumed:

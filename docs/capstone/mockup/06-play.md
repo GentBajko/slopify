@@ -1,4 +1,5 @@
 ---
+absorbed_from: features/2026-09-09-pausable-optional-runs@2026-09-10
 screen: play (new project)
 journeys: [J2-first-run-setup, J3-make-a-video, J4-bring-your-own]
 assumed:

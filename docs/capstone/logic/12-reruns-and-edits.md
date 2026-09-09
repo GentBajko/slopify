@@ -1,4 +1,5 @@
 ---
+absorbed_from: features/2026-09-09-pausable-optional-runs@2026-09-10
 scenario: reruns-and-edits
 mockup_row: S10
 screens: [08-project]

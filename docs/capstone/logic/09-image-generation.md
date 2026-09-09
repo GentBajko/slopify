@@ -1,4 +1,5 @@
 ---
+absorbed_from: features/2026-09-09-pausable-optional-runs@2026-09-10
 scenario: image-generation
 mockup_row: S7
 screens: [06-play, 08-project]

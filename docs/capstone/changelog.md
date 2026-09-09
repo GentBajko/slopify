@@ -5,6 +5,38 @@ capstone_version: 5.2.0
 
 # Changelog
 
+## 2026-09-10 - implement: pausable optional runs
+key: implement/2026-09-09-pausable-optional-runs@Q2
+- What: Slopify 0.5.1 lets local users pause work, save different providers, skip every stage except Article, and export the media they selected.
+- Approach: preserve the six stage rows, store pause separately, serialize project mutations, and share source-aware dependencies between scheduling and reruns. A separate pause table preserves existing project rows during upgrade.
+- Media decision: the user chose silent video without audio and audio-only output without images. Images Off selects Video Off; silent slides last five seconds each. WAV combines the available narration segments and gaps.
+- Review refinement: supplied narration is used as-is; selected entries apply to generated narration. A supplied Article prepares entry text during Audio, retaining that text on Article for retries and voice changes.
+- Out of scope: no background-only video or configurable silent-slide timing.
+- Out of scope: no automatic provider fallback or key-management changes.
+- Out of scope: no replacement of completed outputs merely because provider settings changed; no new runtime dependency.
+- Task 1 complete: normalize optional admission and ignore unused prompts, uploads, voices and keyword requirements.
+- Task 2 complete: durable pause/resume, validated provider edits, partial-work preservation and independent image scheduling.
+- Task 3 complete: real PCM WAV export, silent MP4 rendering and retained previous exports during failures.
+- Task 4 complete: Play controls, provider editor, pause/resume and 19-step tutorial with the selected final download.
+- Task 5 complete: integrated review, local tests/browser checks, package verification, push, Linux/Windows CI, v0.5.1 tag and successful npm publication workflow.
+- Diff: d7d28c4..b5a3b22 changed .github/workflows/ci.yml, package version files, app HTTP/events, runner/database, admission/article/control/cancel/library/reruns/storage/video slices and tests, web shell/events/Play/project/tutorial surfaces and tests, and the reference files listed below.
+- 01-architecture.md: control slice, per-project mutation queue, live configuration updates and the extended guide.
+- 02-models.md: durable pause table, article checkpoints and audio_export role.
+- 04-data-flow.md: independent scheduling, source-aware exports and cross-window updates.
+- 06-testing.md: concurrency, provider changes, restart and real media export coverage.
+- logic/01-pipeline-lifecycle.md: pause precedence, all-selected-stage completion and dependency rules.
+- logic/04-run-admission.md: Article-only minimum, optional media combinations and inactive requirements.
+- logic/08-narration.md: entry preparation for supplied articles and complete uploaded narration.
+- logic/09-image-generation.md: immediate saved-prompt images and prewritten thumbnails.
+- logic/11-video-assembly.md: silent MP4 and combined PCM WAV outputs.
+- logic/12-reruns-and-edits.md: provider changes, retained work and source-aware invalidation.
+- logic/13-cancel.md: durable pause/resume and cancellation when active work finishes during abort.
+- logic/14-storage-and-downloads.md: WAV file, output role, URL and MIME type.
+- mockup/06-play.md: Off choices, provided narration and final export controls.
+- mockup/08-project.md: pause/provider controls, unsaved-change protection and WAV presentation.
+- Review loop: lifecycle, optional-output and UI/API review passes identified and fixed catalog-lock timeout, dropped provided-content entries, misleading independent-stage copy, unsaved provider edits on Resume, stale mutation responses, actions updating another project's cache, and stale cross-window listings. Follow-up reviews reported no remaining concrete findings.
+- Verification: 1,571 tests, lint, typecheck, production build, package checks and audit pass. Chrome checks cover the full guide and controls at 1440px/1024px. Windows CI found an equivalent ffmpeg channel-label difference in one test; corrected in b5a3b22. CI run34410489598 and publication run34410721672 succeeded for that exact commit.
+
 ## 2026-09-10 - release 0.5.1: pause and optional outputs
 key: release/0.5.1
 - Runs can pause and resume with a durable pause flag. Pause aborts and drains active work, preserves completed pieces and outputs, and prevents new claims across app restarts.

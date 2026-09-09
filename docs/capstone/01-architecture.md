@@ -1,4 +1,5 @@
 ---
+absorbed_from: features/2026-09-09-pausable-optional-runs@2026-09-10
 generated_date: 2026-09-09
 capstone_version: 5.2.0
 paths_covered:

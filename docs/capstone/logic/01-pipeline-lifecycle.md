@@ -1,4 +1,5 @@
 ---
+absorbed_from: features/2026-09-09-pausable-optional-runs@2026-09-10
 scenario: pipeline-lifecycle
 mockup_row: S9
 screens: [07-projects, 08-project]
