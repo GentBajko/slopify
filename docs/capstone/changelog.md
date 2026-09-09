@@ -5,6 +5,15 @@ capstone_version: 5.2.0
 
 # Changelog
 
+## 2026-09-09 - interactive first-video tutorial
+key: web/interactive-tutorial
+- Added a guide users can open from Tutorial in the navigation or Start tutorial on an empty Projects page.
+- Eighteen steps walk through API keys, a saved voice, article and image prompts, `{{keyword}}` syntax, Play configuration, explicit generation, stage progress and video download. Copyable examples explain shared keywords and how image prompts use them.
+- A spotlight dims the page around each real section, leaving its controls and select menus usable. It follows navigation, scrolling and resizing, supports keyboard interaction and provides Back, Skip and Exit.
+- Progress waits for successful saves and actual project creation. The guide stores completion flags and resource IDs in memory, never API keys, and never submits a generation request itself.
+- Prompt and Play drafts stay in memory across guide navigation. Pending saves finish before the guide advances; accepted generation clears Play for the next video.
+- Verified with 1,496 tests, lint, typecheck and a production build. The complete Chrome walkthrough passes at 1440px and 1024px; narrow-screen scrolling and app dialogs were also checked using simulated API responses and no provider generation calls.
+
 ## 2026-09-09 - 0.4.3 repairs first-run generation failures
 key: release/0.4.3
 - Missing ffmpeg downloads are recovered with the existing ffmpeg-static installer into the app's data directory and verified before any provider work starts. Explicit overrides are checked without being replaced; download failures leave no completed cache entry.

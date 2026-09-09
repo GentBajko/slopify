@@ -8,7 +8,10 @@ import { FirstRunNotice } from "@/components/notice";
 import { AppearanceSkin } from "@/components/theme";
 import { VersionPrompt } from "@/components/version-prompt";
 import { subscribeGlobal } from "@/events";
+import { FormDraftsProvider } from "@/lib/form-drafts";
 import { keys } from "@/queries";
+import { TutorialProvider } from "@/tutorial/context";
+import { TutorialLauncher } from "@/tutorial/launcher";
 
 // One top bar on every app screen, the active item underlined in the running-lamp colour, in
 // the order the reference sheet puts them. `exact: false` is a section that keeps an editor
@@ -45,6 +48,16 @@ const support = [
 ] as const;
 
 export function Shell() {
+  return (
+    <FormDraftsProvider>
+      <TutorialProvider>
+        <ShellContent />
+      </TutorialProvider>
+    </FormDraftsProvider>
+  );
+}
+
+function ShellContent() {
   const { api, openEvents } = useApp();
   const queryClient = useQueryClient();
   const [running, setRunning] = useState(0);
@@ -88,6 +101,7 @@ export function Shell() {
             {section.label}
           </Link>
         ))}
+        <TutorialLauncher />
         <span className="flex-1" />
         {running === 0 ? null : (
           <Link to="/" className="engraved text-ink3 hover:text-ink2">

@@ -6,12 +6,17 @@ import { cn } from "@/lib/utils";
 export function RailGroup({
   children,
   className,
+  "data-tour": tour,
 }: {
   readonly children: ReactNode;
   readonly className?: string;
+  readonly "data-tour"?: string;
 }) {
   return (
-    <div className={cn("overflow-hidden rounded-panel border border-line bg-panel", className)}>
+    <div
+      data-tour={tour}
+      className={cn("overflow-hidden rounded-panel border border-line bg-panel", className)}
+    >
       {children}
     </div>
   );
@@ -20,12 +25,15 @@ export function RailGroup({
 export function Rail({
   children,
   className,
+  "data-tour": tour,
 }: {
   readonly children: ReactNode;
   readonly className?: string;
+  readonly "data-tour"?: string;
 }) {
   return (
     <div
+      data-tour={tour}
       className={cn(
         "relative flex items-center gap-[14px] border-b border-line px-4 py-[14px] last:border-b-0",
         className,

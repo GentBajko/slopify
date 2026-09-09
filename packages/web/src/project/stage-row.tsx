@@ -49,7 +49,7 @@ export function StageRow({
   const retryable = stage.state === "failed" || stage.state === "canceled";
 
   return (
-    <div className="border-b border-line last:border-b-0">
+    <div data-tour={`project-${stage.kind}`} className="border-b border-line last:border-b-0">
       <Rail className={`${grid} border-b-0`}>
         <Lamp state={stage.state} />
         <StageGlyph kind={stage.kind} className="text-ink2" />

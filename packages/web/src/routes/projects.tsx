@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { startedAt } from "@/lib/utils";
 import { keys, projectsQuery } from "@/queries";
+import { TutorialInvite } from "@/tutorial/launcher";
 
 // One row of the rundown, and the same shape for a skeleton. Below 768 px the prompt and
 // the started time stack under the title.
@@ -53,6 +54,8 @@ export function ProjectsRoute() {
           <Link to="/play">New run</Link>
         </Button>
       </div>
+
+      {projects.data?.projects.length === 0 ? <TutorialInvite /> : null}
 
       {projects.error === null ? null : (
         <RailGroup>

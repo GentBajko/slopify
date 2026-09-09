@@ -58,7 +58,7 @@ export function Voices() {
   const listed = voices.data?.voices;
 
   return (
-    <RailGroup>
+    <RailGroup data-tour="voices">
       <table className="w-full table-fixed border-collapse text-small">
         <thead>
           <tr className="border-b border-line">

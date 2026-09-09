@@ -19,6 +19,7 @@ paths_covered:
 - Integration tests in `packages/app/test/integration/`: boot the composition root against a temporary data directory and SQLite file, run slices through the runner with fake provider adapters, and render with the real bundled ffmpeg in CI.
 - One end-to-end smoke in `packages/app/test/e2e/skeleton.test.ts`: start the CLI on a random port, create a project with every stage Provided through the HTTP API, wait for `done` over SSE, assert the mp4 exists and downloads.
 - `packages/web`: component tests for the Play form's admission states and the project page's lamp states; no browser e2e beyond the smoke above.
+- Tutorial tests exercise the real router, Settings, prompt editors and Play with fake API responses: notice gating, saved-key readiness, accepted/refused saves, keyword fields, delayed navigation, explicit project creation and finishing without generation. Spotlight tests cover keyboard boundaries, related select portals, missing anchors and geometry. The interactive walkthrough is also checked manually in Chrome at desktop and narrow viewport sizes with intercepted API responses, without real provider calls.
 - `packages/collector`: unit tests for dedup and aggregation.
 - Exact run commands are recorded by `standards`/`stack`; the CI job runs them on Node 26.
 

@@ -5,6 +5,7 @@ import { type KeyboardEvent, useState } from "react";
 import type { UploadKind } from "@/api";
 import { createProject, uploadStaged } from "@/api";
 import { useApp } from "@/app-context";
+import { usePlayDraft } from "@/lib/form-drafts";
 import { admission } from "@/play/admission";
 import { CueSheet } from "@/play/cue-sheet";
 import { StageRails } from "@/play/stage-rails";
@@ -18,6 +19,7 @@ import {
   settingsQuery,
   voicesQuery,
 } from "@/queries";
+import { useTutorialEvent, useTutorialProgress } from "@/tutorial/context";
 
 // 06 Play. The stage rails on the left, the cue sheet on the right, and one key at the bottom
 // of it. This file is the composition: it holds the one piece of state the screen has, fetches
@@ -39,6 +41,7 @@ export function PlayRoute() {
 export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string) => void }) {
   const { api } = useApp();
   const queryClient = useQueryClient();
+  const tutorialEvent = useTutorialEvent();
 
   const providers = useQuery(providersQuery(api));
   const prompts = useQuery(promptsQuery(api));
@@ -46,7 +49,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   const voices = useQuery(voicesQuery(api));
   const settings = useQuery(settingsQuery(api));
 
-  const [form, setForm] = useState<PlayFormState>(freshForm);
+  const [form, setForm] = usePlayDraft();
   // What the server marked when it refused the draft: a template deleted since it was
   // picked, or a rule the browser's copy could not see.
   const [refused, setRefused] = useState<readonly FieldError[]>([]);
@@ -79,8 +82,40 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
       }
       void queryClient.invalidateQueries({ queryKey: keys.projects });
       void queryClient.invalidateQueries({ queryKey: keys.staging });
+      // Upload IDs belong to this run once accepted; the next Play starts fresh.
+      setForm(freshForm);
+      tutorialEvent({ type: "project-created", id: created.value.project.id });
       onCreated(created.value.project.id);
     },
+  });
+
+  // Completion follows the same field rules as PLAY, with selected prompts checked
+  // against the loaded library and pending uploads kept incomplete.
+  const errors = result.ok ? refused : [...result.fields, ...refused];
+  const clear = (...prefixes: readonly string[]): boolean =>
+    !errors.some((error) =>
+      prefixes.some((prefix) => error.field === prefix || error.field.startsWith(`${prefix}.`)),
+    );
+  const promptExists = (kind: "article" | "image", name: string): boolean =>
+    (prompts.data?.prompts ?? []).some((prompt) => prompt.kind === kind && prompt.name === name);
+  const uploadReady = (upload: Upload | undefined): boolean =>
+    upload?.file !== undefined && upload.error === undefined;
+  useTutorialProgress({
+    playArticleReady:
+      clear("sources.article", "articlePrompt", "provided.article") &&
+      (form.sources.article === "provide" || promptExists("article", form.articlePrompt)),
+    playAudioReady:
+      clear("sources.audio", "audio", "provided.audio") &&
+      (form.sources.audio !== "provide" || uploadReady(form.provided.audio)),
+    playImagesReady:
+      clear("sources.images", "images", "imagePrompts", "provided.images") &&
+      (form.sources.images === "provide"
+        ? form.provided.images.every(uploadReady)
+        : form.imagePrompts.every((prompt) => promptExists("image", prompt.name))),
+    playOptionsReady: clear("title", "format", "llm", "intro", "outro"),
+    playHasKeywords: fields.length > 0,
+    playKeywordsReady: clear("values"),
+    playReady: blocker === undefined && !play.isPending,
   });
 
   // The refusal to put under one control: every field the server named, and the one the

@@ -7,7 +7,21 @@ import type { Answer } from "@/test-app";
 import { emptyAnswer, jsonAnswer, renderRouted, testDeps, testVersion } from "@/test-app";
 import { PromptEditorRoute } from "./prompt-editor.js";
 
-afterEach(cleanup);
+const tutorial = vi.hoisted(() => ({
+  event: vi.fn(),
+  progress: vi.fn<(progress: Readonly<Record<string, boolean>>) => void>(),
+}));
+
+vi.mock("@/tutorial/context", () => ({
+  useTutorialEvent: () => tutorial.event,
+  useTutorialProgress: tutorial.progress,
+}));
+
+afterEach(() => {
+  cleanup();
+  tutorial.event.mockClear();
+  tutorial.progress.mockClear();
+});
 
 const dossier: Prompt = {
   id: "p1",
@@ -70,6 +84,65 @@ async function newEditor(extra: Readonly<Record<string, Answer>> = {}, onLeave =
   await screen.findByLabelText("Name");
   return { ...rendered, onLeave };
 }
+
+describe("tutorial completion from the prompt editor", () => {
+  it("requires a valid named body and keywords, then reports only the successful saved record", async () => {
+    const user = userEvent.setup();
+    const save = saveSpy([]);
+    await newEditor({ "POST /api/prompts": save.answer });
+
+    expect(tutorial.progress.mock.lastCall?.[0]).toEqual({
+      promptNamed: false,
+      promptBodyReady: false,
+      promptHasKeywords: false,
+      promptSaveReady: false,
+      promptSaving: false,
+      promptIsArticle: true,
+      promptIsImage: false,
+    });
+    await fill(user, "Name", "My article");
+    await fill(user, "Body", "Write about {{topic");
+    expect(tutorial.progress.mock.lastCall?.[0]).toMatchObject({
+      promptNamed: true,
+      promptBodyReady: false,
+      promptHasKeywords: false,
+      promptSaveReady: false,
+    });
+    await fill(user, "Body", "Write about {{topic}}.");
+    expect(tutorial.progress.mock.lastCall?.[0]).toMatchObject({
+      promptBodyReady: true,
+      promptHasKeywords: true,
+      promptSaveReady: true,
+    });
+    expect(tutorial.event).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(tutorial.event).toHaveBeenCalledExactlyOnceWith({
+        type: "prompt-saved",
+        id: "new",
+        kind: "article",
+      });
+    });
+  });
+
+  it("does not complete a save refused by the server", async () => {
+    const user = userEvent.setup();
+    const save = saveSpy([dossier]);
+    await newEditor({ "POST /api/prompts": save.answer });
+    await fill(user, "Name", dossier.name);
+    await fill(user, "Body", dossier.body);
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(tutorial.progress.mock.lastCall?.[0]).toMatchObject({
+        promptNamed: false,
+        promptSaveReady: false,
+      });
+    });
+    expect(tutorial.event).not.toHaveBeenCalled();
+  });
+});
 
 describe("the prompt editor's slots panel", () => {
   it("invites the first slot, then lists what the body holds as chips", async () => {

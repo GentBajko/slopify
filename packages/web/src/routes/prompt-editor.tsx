@@ -23,8 +23,10 @@ import {
   nameProblems,
   slotNames,
 } from "@/lib/draft-lint";
+import { usePromptDraft } from "@/lib/form-drafts";
 import { kindOptions } from "@/lib/prompt-kinds";
 import { promptsQuery } from "@/queries";
+import { useTutorialEvent, useTutorialProgress } from "@/tutorial/context";
 
 // One prompt: a name, a kind and a body whose `{{slots}}` are shown as they are typed. Every
 // rule the Save obeys is the shared lint of `@/lib/draft-lint`, so the editor refuses exactly
@@ -43,6 +45,7 @@ export function PromptEditorRoute({
 }) {
   const { api } = useApp();
   const queryClient = useQueryClient();
+  const tutorialEvent = useTutorialEvent();
   const prompts = useQuery(promptsQuery(api));
   const nameId = useId();
   const nameErrorId = useId();
@@ -50,9 +53,13 @@ export function PromptEditorRoute({
   const lintId = useId();
   const hintId = useId();
 
-  const [edited, setEdited] = useState<PromptDraft | undefined>(undefined);
+  const draftKey = JSON.stringify(
+    promptId === undefined ? ["new", kind, from ?? null] : ["prompt", promptId],
+  );
+  const [edited, setEdited] = usePromptDraft(draftKey);
   const [refused, setRefused] = useState<readonly FieldError[]>([]);
-  const [saved, setSaved] = useState(false);
+  const [savedDraft, setSavedDraft] = useState<PromptDraft | undefined>(undefined);
+  const saved = savedDraft !== undefined;
   const [deleting, setDeleting] = useState(false);
 
   const rows = prompts.data?.prompts;
@@ -64,16 +71,20 @@ export function PromptEditorRoute({
       : promptId === undefined
         ? { kind: found.kind, name: `${found.name} copy`, body: found.body }
         : { kind: found.kind, name: found.name, body: found.body };
-  const draft = edited ?? base;
+  const draft = edited ?? savedDraft ?? base;
 
   const save = useMutation({
     mutationFn: (next: PromptDraft) => savePrompt(api, next, promptId),
-    onSuccess: async (result) => {
+    onSuccess: async (result, submitted) => {
       if (!result.ok) {
         setRefused(result.fields);
         return;
       }
-      setSaved(true);
+      setSavedDraft(result.value);
+      // A successful save clears its reusable draft without discarding edits made
+      // after the request began. Keep the saved snapshot visible during its tick.
+      setEdited((current) => (current === submitted ? undefined : current));
+      tutorialEvent({ type: "prompt-saved", id: result.value.id, kind: result.value.kind });
       await queryClient.invalidateQueries({ queryKey: promptsQuery(api).queryKey });
     },
   });
@@ -82,6 +93,7 @@ export function PromptEditorRoute({
     mutationFn: (id: string) => removePrompt(api, id),
     onSuccess: async () => {
       setDeleting(false);
+      setEdited(undefined);
       await queryClient.invalidateQueries({ queryKey: promptsQuery(api).queryKey });
       onLeave(draft.kind);
     },
@@ -107,6 +119,15 @@ export function PromptEditorRoute({
   // characters to see; the upgrade is a second list.
   const lint = draft.body.trim() === "" ? [] : bodyProblems(problems);
   const named = draft.name.trim() === "" ? [] : nameProblems(problems);
+  useTutorialProgress({
+    promptNamed: draft.name.trim() !== "" && named.length === 0,
+    promptBodyReady: draft.body.trim() !== "" && lint.length === 0,
+    promptHasKeywords: slots.length > 0 && lint.length === 0,
+    promptSaveReady: blocked === undefined && !save.isPending && !saved,
+    promptSaving: save.isPending || saved,
+    promptIsArticle: draft.kind === "article",
+    promptIsImage: draft.kind === "image",
+  });
 
   if (prompts.error !== null) {
     return <Notice kind={draft.kind}>{prompts.error.message}</Notice>;
@@ -134,10 +155,13 @@ export function PromptEditorRoute({
         {promptId === undefined ? "New prompt" : "Edit prompt"}
       </h1>
 
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div
+        data-tour="prompt-editor"
+        className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]"
+      >
         <div className={`${sheet} flex min-w-0 flex-col gap-[14px]`}>
           <div className="flex items-end gap-[14px]">
-            <div className="flex-1">
+            <div data-tour="prompt-name" className="flex-1">
               <Label htmlFor={nameId} className="mb-[5px]">
                 Name
               </Label>
@@ -168,7 +192,7 @@ export function PromptEditorRoute({
             />
           </div>
 
-          <div>
+          <div data-tour="prompt-body">
             <Label htmlFor={bodyId} className="mb-[5px]">
               Body
             </Label>
@@ -183,35 +207,43 @@ export function PromptEditorRoute({
             />
           </div>
 
-          <EditorActions
-            onDelete={
-              promptId === undefined
-                ? undefined
-                : () => {
-                    setDeleting(true);
-                  }
-            }
-            blocked={blocked}
-            blockedId={hintId}
-            pending={save.isPending}
-            saved={saved}
-            cancel={
-              <Button asChild>
-                <Link to="/prompts" search={{ kind: draft.kind }}>
-                  Cancel
-                </Link>
-              </Button>
-            }
-            errors={[save.error, remove.error].flatMap((error) =>
-              error === null ? [] : [error.message],
-            )}
-            onSave={() => {
-              save.mutate(draft);
-            }}
-          />
+          <div data-tour="prompt-save">
+            <EditorActions
+              onDelete={
+                promptId === undefined
+                  ? undefined
+                  : () => {
+                      setDeleting(true);
+                    }
+              }
+              blocked={blocked}
+              blockedId={hintId}
+              pending={save.isPending}
+              saved={saved}
+              cancel={
+                <Button asChild>
+                  <Link
+                    to="/prompts"
+                    search={{ kind: draft.kind }}
+                    onClick={() => {
+                      setEdited(undefined);
+                    }}
+                  >
+                    Cancel
+                  </Link>
+                </Button>
+              }
+              errors={[save.error, remove.error].flatMap((error) =>
+                error === null ? [] : [error.message],
+              )}
+              onSave={() => {
+                save.mutate(draft);
+              }}
+            />
+          </div>
         </div>
 
-        <div className={`${sheet} flex flex-col gap-3 lg:sticky lg:top-6`}>
+        <div data-tour="prompt-slots" className={`${sheet} flex flex-col gap-3 lg:sticky lg:top-6`}>
           <DetectedSlots slots={slots} body={draft.body} lint={lint} lintId={lintId} />
         </div>
       </div>

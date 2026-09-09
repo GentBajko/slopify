@@ -31,7 +31,7 @@ export function KeywordBlock({
   const image = fields.filter((field) => field.group === "image");
 
   return (
-    <>
+    <div data-tour="play-keywords" className="flex min-w-0 flex-col gap-[14px]">
       {common.length === 0 ? null : (
         <div data-keywords="common" className="mt-[6px]">
           <GroupHeading name="Common" />
@@ -73,7 +73,7 @@ export function KeywordBlock({
           />
         </div>
       )}
-    </>
+    </div>
   );
 }
 

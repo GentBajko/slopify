@@ -136,7 +136,15 @@ function PromptsPage() {
 function NewPromptPage() {
   const { kind, from } = newPromptRoute.useSearch();
   const leave = useLeave();
-  return <PromptEditorRoute promptId={undefined} kind={kind} from={from} onLeave={leave} />;
+  return (
+    <PromptEditorRoute
+      key={`${kind}:${from ?? "new"}`}
+      promptId={undefined}
+      kind={kind}
+      from={from}
+      onLeave={leave}
+    />
+  );
 }
 
 function PromptPage() {
@@ -144,6 +152,7 @@ function PromptPage() {
   const leave = useLeave();
   return (
     <PromptEditorRoute
+      key={promptId}
       promptId={promptId}
       // The row the editor loads carries the kind; the tab is only a default for a prompt
       // that does not exist yet.

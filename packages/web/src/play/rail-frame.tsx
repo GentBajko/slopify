@@ -47,7 +47,7 @@ export function StageRail({
   readonly children: ReactNode;
 }) {
   return (
-    <Rail className={railGrid}>
+    <Rail data-tour={`play-${kind}`} className={railGrid}>
       {/* Unlit: no stage has run yet, and the lamp is here so the rail reads the same
           before and after Play. */}
       <Lamp state="pending" />

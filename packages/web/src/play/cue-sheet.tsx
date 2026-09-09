@@ -56,91 +56,93 @@ export function CueSheet({
     >
       <h2 className="engraved text-ink3">Cue sheet</h2>
 
-      <div>
-        <Label htmlFor={titleId} className="mb-[5px]">
-          Video title
-        </Label>
-        <Input
-          id={titleId}
-          value={form.title}
-          maxLength={titleMax}
-          aria-invalid={problem("title") !== undefined}
-          onChange={(event) => {
-            update({ title: event.target.value });
-          }}
-        />
-        <FieldNote message={problem("title")} />
-      </div>
-
-      <div className="flex flex-wrap gap-[10px]">
-        <InlineSwitch<Format>
-          label="Format"
-          className="flex-col items-start gap-[5px]"
-          value={form.format}
-          options={[
-            { value: "16:9", label: "16:9" },
-            { value: "9:16", label: "9:16" },
-          ]}
-          onPick={(format) => {
-            update({ format });
-          }}
-        />
-        <div className="min-w-[120px] flex-1">
-          <EntryPicker
-            label="Intro"
-            category="intro"
-            entries={entries}
-            value={form.intro}
-            problem={problem("intro")}
-            onPick={(intro) => {
-              update({ intro });
+      <div data-tour="play-options" className="flex min-w-0 flex-col gap-[14px]">
+        <div>
+          <Label htmlFor={titleId} className="mb-[5px]">
+            Video title
+          </Label>
+          <Input
+            id={titleId}
+            value={form.title}
+            maxLength={titleMax}
+            aria-invalid={problem("title") !== undefined}
+            onChange={(event) => {
+              update({ title: event.target.value });
             }}
           />
+          <FieldNote message={problem("title")} />
         </div>
-        <div className="min-w-[120px] flex-1">
-          <EntryPicker
-            label="Outro"
-            category="outro"
-            entries={entries}
-            value={form.outro}
-            problem={problem("outro")}
-            onPick={(outro) => {
-              update({ outro });
+
+        <div className="flex flex-wrap gap-[10px]">
+          <InlineSwitch<Format>
+            label="Format"
+            className="flex-col items-start gap-[5px]"
+            value={form.format}
+            options={[
+              { value: "16:9", label: "16:9" },
+              { value: "9:16", label: "9:16" },
+            ]}
+            onPick={(format) => {
+              update({ format });
             }}
           />
+          <div className="min-w-[120px] flex-1">
+            <EntryPicker
+              label="Intro"
+              category="intro"
+              entries={entries}
+              value={form.intro}
+              problem={problem("intro")}
+              onPick={(intro) => {
+                update({ intro });
+              }}
+            />
+          </div>
+          <div className="min-w-[120px] flex-1">
+            <EntryPicker
+              label="Outro"
+              category="outro"
+              entries={entries}
+              value={form.outro}
+              problem={problem("outro")}
+              onPick={(outro) => {
+                update({ outro });
+              }}
+            />
+          </div>
         </div>
-      </div>
 
-      {/* The row exists only while something in the run asks an LLM for
+        {/* The row exists only while something in the run asks an LLM for
           text - research, the article, a thumbnail written by the LLM, or an LLM-mode
           intro or outro. */}
-      {needsLlm(form, entries) ? (
-        <div className="flex gap-[10px]">
-          <div className="min-w-0 flex-1">
-            <ProviderPicker
-              label="LLM"
-              family="llm"
-              providers={providers}
-              value={form.llm.provider}
-              problem={problem("llm")}
-              onPick={(provider) => {
-                update({ llm: { provider, model: soleModelOf(provider) } });
-              }}
-            />
+        {needsLlm(form, entries) ? (
+          <div className="flex gap-[10px]">
+            <div className="min-w-0 flex-1">
+              <ProviderPicker
+                label="LLM"
+                family="llm"
+                providers={providers}
+                value={form.llm.provider}
+                problem={problem("llm")}
+                onPick={(provider) => {
+                  update({ llm: { provider, model: soleModelOf(provider) } });
+                }}
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <ModelPicker
+                label="Model"
+                provider={form.llm.provider}
+                value={form.llm.model}
+                problem={undefined}
+                onPick={(model) => {
+                  update({ llm: { ...form.llm, model } });
+                }}
+              />
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <ModelPicker
-              label="Model"
-              provider={form.llm.provider}
-              value={form.llm.model}
-              problem={undefined}
-              onPick={(model) => {
-                update({ llm: { ...form.llm, model } });
-              }}
-            />
-          </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
       <KeywordBlock
         fields={fields}
@@ -164,6 +166,7 @@ export function CueSheet({
       )}
 
       <Button
+        data-tour="play-start"
         variant="play"
         size="play"
         // `aria-disabled` rather than `disabled`: a key nobody can focus cannot announce

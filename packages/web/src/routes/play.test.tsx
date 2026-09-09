@@ -6,7 +6,21 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { type Answer, jsonAnswer, renderApp, testDeps, testVersion } from "@/test-app";
 import { PlayForm } from "./play.js";
 
-afterEach(cleanup);
+const tutorial = vi.hoisted(() => ({
+  event: vi.fn(),
+  progress: vi.fn<(progress: Readonly<Record<string, boolean>>) => void>(),
+}));
+
+vi.mock("@/tutorial/context", () => ({
+  useTutorialEvent: () => tutorial.event,
+  useTutorialProgress: tutorial.progress,
+}));
+
+afterEach(() => {
+  cleanup();
+  tutorial.event.mockClear();
+  tutorial.progress.mockClear();
+});
 
 const providers: readonly ProviderStatus[] = [
   {
@@ -164,6 +178,62 @@ async function fillGeneratedRun(): Promise<void> {
   await userEvent.type(screen.getByLabelText("minWords"), "3000");
   await userEvent.type(screen.getByLabelText("style"), "oil on canvas");
 }
+
+describe("tutorial completion from the Play form", () => {
+  it("tracks valid stage choices and keywords, and emits creation before leaving the form", async () => {
+    const created = await mount();
+    expect(tutorial.progress.mock.lastCall?.[0]).toEqual({
+      playArticleReady: false,
+      playAudioReady: false,
+      playImagesReady: false,
+      playOptionsReady: false,
+      playHasKeywords: false,
+      playKeywordsReady: true,
+      playReady: false,
+    });
+
+    await pick("Article prompt", "Dossier");
+    expect(tutorial.progress.mock.lastCall?.[0]).toMatchObject({
+      playArticleReady: true,
+      playKeywordsReady: false,
+      playReady: false,
+    });
+    await fillGeneratedRun();
+    expect(tutorial.progress.mock.lastCall?.[0]).toEqual({
+      playArticleReady: true,
+      playAudioReady: true,
+      playImagesReady: true,
+      playOptionsReady: true,
+      playHasKeywords: true,
+      playKeywordsReady: true,
+      playReady: true,
+    });
+    expect(tutorial.event).not.toHaveBeenCalled();
+
+    await userEvent.click(playKey());
+    await waitFor(() => {
+      expect(created).toHaveBeenCalledWith("p1");
+    });
+    expect(tutorial.event).toHaveBeenCalledExactlyOnceWith({ type: "project-created", id: "p1" });
+    const emittedAt = tutorial.event.mock.invocationCallOrder[0];
+    const leftAt = vi.mocked(created).mock.invocationCallOrder[0];
+    expect(emittedAt).toBeLessThan(leftAt ?? 0);
+  });
+
+  it("does not report a project when server admission refuses the run", async () => {
+    await mount({
+      "POST /api/projects": fieldsAnswer([
+        { field: "articlePrompt", message: "That article prompt was deleted." },
+      ]),
+    });
+    await fillGeneratedRun();
+    await userEvent.click(playKey());
+
+    await screen.findByText("That article prompt was deleted.");
+    expect(tutorial.progress.mock.lastCall?.[0]?.playArticleReady).toBe(false);
+    expect(tutorial.event).not.toHaveBeenCalled();
+  });
+});
 
 describe("the Play key and its hint", () => {
   it("is held on a fresh form and names the first missing item", async () => {

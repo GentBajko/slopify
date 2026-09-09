@@ -1,6 +1,6 @@
 import type { ProviderFamily, ProviderStatus } from "@app/slices/settings/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Fragment, useEffect, useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { removeProviderKey, saveProviderKey } from "@/api";
 import { useApp } from "@/app-context";
 import { ConfirmDialog } from "@/components/confirm";
@@ -59,7 +59,11 @@ export function ProviderKeys() {
   return (
     <RailGroup>
       {familyOrder.map((family) => (
-        <Fragment key={family}>
+        <section
+          key={family}
+          data-tour={`keys-${family}`}
+          className="border-t border-line first:border-t-0"
+        >
           <h2 className={header}>{familyTitles[family]}</h2>
           {listed
             .filter((provider) => provider.family === family)
@@ -75,7 +79,7 @@ export function ProviderKeys() {
               Paste a key to make its provider selectable on Play.
             </p>
           ) : null}
-        </Fragment>
+        </section>
       ))}
     </RailGroup>
   );
