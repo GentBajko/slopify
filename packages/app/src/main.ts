@@ -5,6 +5,7 @@ import { serve } from "@hono/node-server";
 import ffmpegStatic from "ffmpeg-static";
 import type { Hono } from "hono";
 import { buildRegistry } from "./adapter-registry.js";
+import { alignSubtitles } from "./adapters/alignment/index.js";
 import { prepareFfmpeg } from "./adapters/ffmpeg.js";
 import { nodeRunCli } from "./adapters/llm/run-cli.js";
 import { cartesiaModel } from "./adapters/tts/cartesia.js";
@@ -204,7 +205,7 @@ function wire({
   };
   // The audio stage joins its chunks with the same binary the render uses, so it takes
   // the same seven dependencies.
-  const video = { db, paths, ids, clock, log, ffmpeg, count };
+  const video = { db, paths, ids, clock, log, ffmpeg, count, alignSubtitles };
   // Research, the article, the images and the thumbnail all write into the same project
   // folder from the same database handle, so they take the same six dependencies.
   const writing = { db, paths, ids, clock, log, count };

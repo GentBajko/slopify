@@ -13,6 +13,7 @@ import {
 import { admit } from "../../slices/admission/rules.js";
 import { startRun } from "../../slices/admission/start.js";
 import { withProjectControl } from "../../slices/control/lock.js";
+import { resolveFont } from "../../slices/fonts/index.js";
 import { pickTemplates, renderPicked } from "../../slices/library/slots.js";
 import type { DeleteDeps, DeleteRefusal } from "../../slices/storage/delete-project.js";
 import { deleteProject } from "../../slices/storage/delete-project.js";
@@ -59,7 +60,27 @@ export function projectRoutes(deps: AppDeps) {
 
   return (
     new Hono()
-      .post("/", zValidator("json", runDraftSchema, onInvalid), (c) => {
+      .post("/", zValidator("json", runDraftSchema, onInvalid), async (c) => {
+        const requestedSubtitles = c.req.valid("json").subtitles;
+        if (requestedSubtitles !== undefined && requestedSubtitles.mode !== "off") {
+          try {
+            await resolveFont(deps.paths, requestedSubtitles.fontId);
+          } catch {
+            return problem(c, {
+              status: 400,
+              title: titleOf(400),
+              detail: "Choose an available subtitle font before starting.",
+              extensions: {
+                fields: [
+                  {
+                    field: "subtitles.fontId",
+                    message: "This font is no longer available; choose another or upload it again.",
+                  },
+                ],
+              },
+            });
+          }
+        }
         // The bodies are read here, at the click, so an edit made since the
         // prompt was selected is the one that runs.
         const picked = pickTemplates(deps.db, c.req.valid("json"));

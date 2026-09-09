@@ -177,6 +177,26 @@ export function StepContent({
           </p>
         </>
       );
+    case "play-subtitles":
+      return (
+        <>
+          <p>
+            Subtitles are optional and start <strong>Off</strong>. Choose{" "}
+            <strong>Subtitle files</strong> for SRT and VTT downloads, or{" "}
+            <strong>Burn into video + files</strong> to keep captions visible in an MP4.
+          </p>
+          <p>
+            English captions are timed locally from your narration with no paid API. First use
+            downloads an approximately <strong>95 MB</strong> speech model. Audio must be active;
+            WAV exports support separate subtitle files.
+          </p>
+          <p>
+            Pick a font or upload a TTF/OTF file, then adjust its size in the preview. Styling
+            applies to burned captions. You can also add or change subtitles on a completed project
+            later without regenerating its narration.
+          </p>
+        </>
+      );
     case "play-options":
       return (
         <>
@@ -274,6 +294,11 @@ export function StepContent({
           <p>
             You can also download the article, audio and images from their own stages.{" "}
             <strong>Download all</strong> under Images gives an image ZIP, not the video.
+          </p>
+          <p>
+            If subtitles are enabled, download the <strong>.srt</strong> or <strong>.vtt</strong>{" "}
+            files beside the final export. File-mode captions are also available in the video
+            player.
           </p>
           <p>
             You have reached the end. Open <strong>Tutorial</strong> in the navigation anytime to

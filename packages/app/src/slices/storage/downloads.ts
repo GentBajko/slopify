@@ -43,6 +43,8 @@ const contentTypes: Readonly<Record<string, string>> = {
   ".ogg": "audio/ogg",
   ".opus": "audio/opus",
   ".mp4": "video/mp4",
+  ".srt": "application/x-subrip; charset=utf-8",
+  ".vtt": "text/vtt; charset=utf-8",
 };
 
 // Leaves room for "-<asset>.<ext>" inside a 255-byte filename, and keeps a download

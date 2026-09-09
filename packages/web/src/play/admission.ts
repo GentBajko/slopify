@@ -11,6 +11,7 @@ import { collectFields } from "@app/slices/admission/substitute.js";
 import type { Entry, Prompt } from "@app/slices/library/model.js";
 import type { DraftInput, PlayFormState, Upload } from "@/play/state";
 import { draftOf, stagedOf } from "@/play/state";
+import { validSubtitleStyle } from "@/subtitles/config";
 
 // Live admission. `admit` is the server's own function, imported through `@app/*`: the
 // sentence the form shows and the refusal the server writes are one rule, and the only
@@ -76,11 +77,24 @@ export function admission(input: AdmissionInput): Admission {
     silenceGapSeconds: input.silenceGapSeconds,
   };
   const draft = draftOf(draftInput);
-  const result = admit({
+  const admitted = admit({
     draft,
     staged: stagedOf(input.form.provided),
     requiredSlots: draftInput.slots,
   });
+  const result: AdmissionResult = !validSubtitleStyle(draft.subtitles ?? input.form.subtitles)
+    ? {
+        ok: false,
+        fields: [
+          ...(admitted.ok ? [] : admitted.fields),
+          {
+            field: "subtitles.fontSize",
+            message: "Choose a whole subtitle font size from 16 to 120.",
+          },
+        ],
+      }
+    : admitted;
+
   return { fields, draft, result, blocker: firstBlocker(input.form, result) };
 }
 
@@ -99,6 +113,7 @@ const readingOrder: readonly string[] = [
   "provided.images",
   "thumbnailPrompt",
   "provided.thumbnail",
+  "subtitles",
   "title",
   "intro",
   "outro",

@@ -46,6 +46,16 @@ export function outputFileName(
       return "sources.txt";
     case "glossary":
       return "glossary.txt";
+    case "subtitles_srt":
+      return "subtitles.srt";
+    case "subtitles_vtt":
+      return "subtitles.vtt";
+    case "subtitle_words":
+      return "subtitles.json";
+    case "subtitle_ass":
+      return "subtitles.ass";
+    case "subtitle_font":
+      return `subtitle-font${extension}`;
     case "render_params":
       return "render.json";
     case "instructions":

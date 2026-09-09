@@ -1,3 +1,4 @@
+import type { SubtitleConfig } from "@app/slices/subtitles/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
@@ -9,9 +10,11 @@ import { ProjectHeader } from "@/project/header";
 import { RefusalLine } from "@/project/parts";
 import { changedProviderChoices, ProjectProviders } from "@/project/providers";
 import { StageRow } from "@/project/stage-row";
+import { ProjectSubtitles } from "@/project/subtitles";
 import { useProjectActions } from "@/project/use-actions";
 import { useLiveProject } from "@/project/use-live";
 import { projectQuery, promptsQuery, providersQuery } from "@/queries";
+import { sameSubtitles, subtitlesFor } from "@/subtitles/config";
 
 // The project page. The rundown - one row per stage with its lamp, its state word and the
 // body it opens into - plus the re-run actions and Cancel. This file is only the
@@ -24,6 +27,12 @@ export function ProjectRoute({ projectId }: { readonly projectId: string }) {
   const prompts = useQuery(promptsQuery(api));
   const actions = useProjectActions(projectId);
   const [providerEdits, setProviderEdits] = useState<ProviderChanges>({});
+  const [subtitleEdits, setSubtitleEdits] = useState<
+    { readonly projectId: string; readonly value: SubtitleConfig } | undefined
+  >();
+  const [subtitleUpload, setSubtitleUpload] = useState<
+    { readonly projectId: string; readonly pending: boolean } | undefined
+  >();
 
   useLiveProject(projectId);
 
@@ -41,6 +50,16 @@ export function ProjectRoute({ projectId }: { readonly projectId: string }) {
   const busy =
     summary.status === "running" || summary.status === "paused" || inFlight || actions.pending;
 
+  const savedSubtitles = subtitlesFor(summary.config.subtitles, summary.config.sources);
+  const subtitles =
+    subtitleEdits?.projectId === projectId
+      ? subtitlesFor(subtitleEdits.value, summary.config.sources)
+      : savedSubtitles;
+  const subtitlesDirty = !sameSubtitles(subtitles, savedSubtitles);
+  const subtitleUploading = subtitleUpload?.projectId === projectId && subtitleUpload.pending;
+  const discardSubtitles = () =>
+    setSubtitleEdits((current) => (current?.projectId === projectId ? undefined : current));
+
   return (
     <div className="mx-auto max-w-[1440px]">
       {/* The back link sits above a detail page's title. */}
@@ -56,7 +75,9 @@ export function ProjectRoute({ projectId }: { readonly projectId: string }) {
             actions={actions}
             inFlight={inFlight}
             unsavedProviders={
-              Object.keys(changedProviderChoices(summary.config, providerEdits)).length > 0
+              Object.keys(changedProviderChoices(summary.config, providerEdits)).length > 0 ||
+              subtitlesDirty ||
+              subtitleUploading
             }
           />
           <ProjectProviders
@@ -91,6 +112,34 @@ export function ProjectRoute({ projectId }: { readonly projectId: string }) {
               outputs={outputs}
               actions={actions}
               busy={busy}
+              {...(stage.kind === "video"
+                ? {
+                    subtitleControls: (
+                      <ProjectSubtitles
+                        key={projectId}
+                        project={summary}
+                        actions={actions}
+                        inFlight={inFlight}
+                        value={subtitles}
+                        uploading={subtitleUploading}
+                        onChange={(value) =>
+                          setSubtitleEdits({
+                            projectId,
+                            value: subtitlesFor(value, summary.config.sources),
+                          })
+                        }
+                        onDiscard={discardSubtitles}
+                        onUploading={(pending) =>
+                          setSubtitleUpload((current) =>
+                            current?.projectId === projectId && current.pending === pending
+                              ? current
+                              : { projectId, pending },
+                          )
+                        }
+                      />
+                    ),
+                  }
+                : {})}
             />
           </StageRow>
         ))}

@@ -13,6 +13,8 @@ import { allowedSources } from "@app/slices/admission/rules.js";
 import type { Entry } from "@app/slices/library/model.js";
 import type { Chunking } from "@app/slices/narration/chunk.js";
 import type { StagedFile } from "@app/slices/storage/model.js";
+import { defaultSubtitles, type SubtitleConfig } from "@app/slices/subtitles/model.js";
+import { subtitlesFor } from "@/subtitles/config";
 
 // Everything the Play form holds between one page load and the run it posts. It is a
 // plain value: `routes/play.tsx` keeps one in `useState`, every function here is pure,
@@ -52,6 +54,7 @@ export interface PlayFormState {
   readonly intro: string;
   readonly outro: string;
   readonly chunking: Chunking;
+  readonly subtitles: SubtitleConfig;
   // Every value the user has typed, including one for a slot no prompt asks for any more:
   // unticking a prompt and ticking it again gives its field back with what was in it.
   readonly values: Readonly<Record<string, string>>;
@@ -81,6 +84,7 @@ export const freshForm: PlayFormState = {
   intro: "",
   outro: "",
   chunking: { mode: "whole" },
+  subtitles: defaultSubtitles,
   values: {},
   provided: { research: "", article: "", audio: undefined, images: [], thumbnail: undefined },
 };
@@ -171,6 +175,7 @@ export function draftOf(input: DraftInput): RunDraft {
       ),
     },
     chunking: form.chunking,
+    subtitles: subtitlesFor(form.subtitles, form.sources),
     silenceGapSeconds: input.silenceGapSeconds,
   };
 }

@@ -1,5 +1,6 @@
 import type { Entry, Prompt } from "@app/slices/library/model.js";
 import type { ProviderStatus, Voice } from "@app/slices/settings/model.js";
+import { subtitleConfigSchema } from "@app/slices/subtitles/model.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -187,6 +188,7 @@ describe("tutorial completion from the Play form", () => {
       playAudioReady: false,
       playImagesReady: false,
       playVideoReady: true,
+      playSubtitlesReady: true,
       playOptionsReady: false,
       playHasKeywords: false,
       playKeywordsReady: true,
@@ -205,6 +207,7 @@ describe("tutorial completion from the Play form", () => {
       playAudioReady: true,
       playImagesReady: true,
       playVideoReady: true,
+      playSubtitlesReady: true,
       playOptionsReady: true,
       playHasKeywords: true,
       playKeywordsReady: true,
@@ -464,6 +467,7 @@ describe("optional stages", () => {
       playAudioReady: true,
       playImagesReady: true,
       playVideoReady: true,
+      playSubtitlesReady: true,
     });
     await userEvent.click(playKey());
     await waitFor(() => expect(created).toHaveBeenCalledWith("article-only"));
@@ -618,5 +622,121 @@ describe("a run the server refuses", () => {
 
     await userEvent.type(screen.getByLabelText("topic"), "s");
     expect(screen.queryByText("This field is required.")).toBeNull();
+  });
+});
+
+describe("subtitles on Play", () => {
+  const fonts = [{ id: "default", name: "Default", family: "Arial", source: "bundled" }];
+  const mode = () =>
+    screen.getByLabelText("Subtitles", { selector: "select" }) as HTMLSelectElement;
+
+  it("converts burn-in to files when Video turns Off, then clears captions when Audio turns Off", async () => {
+    await mount({ "GET /api/fonts": jsonAnswer({ fonts }) });
+    await userEvent.selectOptions(mode(), "burn-in");
+    await userEvent.click(segment("images", "Off"));
+    expect(mode().value).toBe("files");
+    await userEvent.click(segment("audio", "Off"));
+    expect(mode().value).toBe("off");
+    expect(mode().closest("fieldset")?.disabled).toBe(true);
+    await userEvent.click(segment("audio", "Generate"));
+    expect(mode().value).toBe("off");
+  });
+
+  it("blocks Play until an uploaded font is selected and sends the chosen subtitle settings", async () => {
+    let release: ((response: Response) => void) | undefined;
+    const pending = new Promise<Response>((resolve) => {
+      release = resolve;
+    });
+    const custom = {
+      id: "uploaded-font",
+      name: "Uploaded",
+      family: "Uploaded",
+      source: "uploaded",
+    };
+    const create = vi.fn(async (request: Request) => {
+      const body = await request.json();
+      expect(body.subtitles).toEqual({
+        mode: "burn-in",
+        language: "en",
+        fontId: "uploaded-font",
+        fontSize: 64,
+      });
+      return jsonAnswer({ project: { id: "p1", status: "running" }, stages: [] }, 201)(request);
+    });
+    await mount({
+      "GET /api/fonts": jsonAnswer({ fonts: [...fonts, custom] }),
+      "POST /api/fonts": () => pending,
+      "POST /api/projects": create,
+    });
+    await fillGeneratedRun();
+    expect(held()).toBe(false);
+    await userEvent.selectOptions(mode(), "burn-in");
+    await userEvent.upload(
+      screen.getByLabelText("Upload font (.ttf or .otf)"),
+      new File(["font"], "uploaded.ttf", { type: "font/ttf" }),
+    );
+    await screen.findByText("Uploading font…");
+    expect(held()).toBe(true);
+    const size = screen.getByLabelText("Subtitle font size");
+    await userEvent.clear(size);
+    await userEvent.type(size, "64");
+    release?.(
+      new Response(JSON.stringify({ font: custom }), {
+        headers: { "content-type": "application/json", "X-Slopify-Version": testVersion },
+      }),
+    );
+    await waitFor(() => expect(held()).toBe(false));
+    expect((screen.getByLabelText("Subtitle font") as HTMLSelectElement).value).toBe(
+      "uploaded-font",
+    );
+    expect((size as HTMLInputElement).value).toBe("64");
+    await userEvent.click(playKey());
+    await waitFor(() => expect(create).toHaveBeenCalledTimes(1));
+  });
+
+  it.each([
+    { off: "subtitles", size: "" },
+    { off: "subtitles", size: "150" },
+    { off: "audio", size: "" },
+    { off: "audio", size: "150" },
+  ])(
+    "can start after an invalid subtitle size is hidden by $off Off (size '$size')",
+    async ({ off, size }) => {
+      const created = await mount({
+        "GET /api/fonts": jsonAnswer({ fonts }),
+        "POST /api/projects": async (request) => {
+          const draft = await request.json();
+          expect(subtitleConfigSchema.parse(draft.subtitles)).toMatchObject({
+            mode: "off",
+            fontSize: 48,
+          });
+          return jsonAnswer({ project: { id: "p1", status: "running" }, stages: [] }, 201)(request);
+        },
+      });
+      await fillGeneratedRun();
+      await userEvent.selectOptions(mode(), "burn-in");
+      await userEvent.clear(screen.getByLabelText("Subtitle font size"));
+      if (size) await userEvent.type(screen.getByLabelText("Subtitle font size"), size);
+      expect(held()).toBe(true);
+      if (off === "audio") await userEvent.click(segment("audio", "Off"));
+      else await userEvent.selectOptions(mode(), "off");
+      expect(held()).toBe(false);
+      expect(screen.queryByLabelText("Subtitle font size")).toBeNull();
+      await userEvent.click(playKey());
+      await waitFor(() => expect(created).toHaveBeenCalledTimes(1));
+    },
+  );
+
+  it("shows a subtitle font refusal from the server at the subtitle controls", async () => {
+    await mount({
+      "GET /api/fonts": jsonAnswer({ fonts }),
+      "POST /api/projects": fieldsAnswer([
+        { field: "subtitles.fontId", message: "Choose an installed font." },
+      ]),
+    });
+    await fillGeneratedRun();
+    await userEvent.selectOptions(mode(), "files");
+    await userEvent.click(playKey());
+    await screen.findByText("Choose an installed font.");
   });
 });

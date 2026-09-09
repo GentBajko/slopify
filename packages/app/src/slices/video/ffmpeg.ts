@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { isAbsolute, resolve as resolvePath } from "node:path";
 import type { Log } from "../../kernel/log.js";
 import type { ImageSlot, RenderPlan } from "./plan.js";
 import { zoomBy, zoomFrom, zoomTo } from "./plan.js";
@@ -37,7 +38,7 @@ export function resolveFfmpeg(
   );
 }
 
-export function renderArgs(plan: RenderPlan): string[] {
+export function renderArgs(plan: RenderPlan, burnSubtitles = false): string[] {
   const inputs: string[] = [];
   for (const slot of plan.images) {
     inputs.push("-i", slot.path);
@@ -71,7 +72,7 @@ export function renderArgs(plan: RenderPlan): string[] {
     "-y",
     ...inputs,
     "-filter_complex",
-    filterGraph(plan, audioAt),
+    filterGraph(plan, audioAt, burnSubtitles),
     "-map",
     "[v]",
     ...(plan.audio.length > 0 ? ["-map", "[a]"] : []),
@@ -86,7 +87,7 @@ export function renderArgs(plan: RenderPlan): string[] {
   ];
 }
 
-function filterGraph(plan: RenderPlan, audioAt: readonly number[]): string {
+function filterGraph(plan: RenderPlan, audioAt: readonly number[], burnSubtitles: boolean): string {
   const chains: string[] = [];
   const wide = plan.width * prescale;
   const tall = plan.height * prescale;
@@ -102,8 +103,10 @@ function filterGraph(plan: RenderPlan, audioAt: readonly number[]): string {
     );
   });
   chains.push(
-    `${plan.images.map((_slot, at) => `[v${at}]`).join("")}concat=n=${plan.images.length}:v=1:a=0[v]`,
+    `${plan.images.map((_slot, at) => `[v${at}]`).join("")}concat=n=${plan.images.length}:v=1:a=0${burnSubtitles ? "[uncaptioned]" : "[v]"}`,
   );
+
+  if (burnSubtitles) chains.push("[uncaptioned]ass=filename=subtitles.ass:fontsdir=fonts[v]");
 
   audioAt.forEach((input, at) => {
     // The segments come from different files and the silence from lavfi, so they are
@@ -149,6 +152,7 @@ export function progressMsOf(line: string): number | undefined {
 
 export interface RenderRun {
   readonly bin: string;
+  readonly cwd?: string | undefined;
   readonly args: readonly string[];
   readonly signal: AbortSignal;
   readonly onProgress: (elapsedMs: number) => void;
@@ -165,9 +169,14 @@ export function runFfmpeg(run: RenderRun): Promise<void> {
       reject(new Error("the render was canceled before it started"));
       return;
     }
-    const child = spawn(run.bin, [...run.args], {
+    // Subtitle filters use their own working directory. An explicit relative binary
+    // still resolves from the app launch directory, where boot verified it.
+    const executable =
+      !isAbsolute(run.bin) && /[\\/]/.test(run.bin) ? resolvePath(run.bin) : run.bin;
+    const child = spawn(executable, [...run.args], {
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
+      ...(run.cwd === undefined ? {} : { cwd: run.cwd }),
     });
     const errors: string[] = [];
     let pending = "";

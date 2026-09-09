@@ -1,5 +1,6 @@
 import type { Format, ProjectState, StageKind, StageState } from "../../kernel/pipeline.js";
 import type { Chunking } from "../narration/chunk.js";
+import type { SubtitleConfig } from "../subtitles/model.js";
 
 export type { Format } from "../../kernel/pipeline.js";
 // The format is the kernel's: the image port asks for the same two aspects.
@@ -70,6 +71,7 @@ export interface RunDraft {
   // existed keeps working.
   readonly chunking?: Chunking | undefined;
   readonly silenceGapSeconds: number;
+  readonly subtitles?: SubtitleConfig | undefined;
 }
 
 // The draft as accepted, coerced and trimmed. This is what the project's `config` column

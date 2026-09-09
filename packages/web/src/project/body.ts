@@ -1,5 +1,6 @@
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
 import type { Output, OutputRole } from "@app/slices/storage/model.js";
+import type { ReactNode } from "react";
 import type { ProjectActions } from "./use-actions.js";
 
 // What every stage body is handed. One shape, so the six of them stay interchangeable and
@@ -15,6 +16,7 @@ export interface BodyProps {
   // While any stage of the project is running, every edit and re-run control is disabled. The
   // server refuses these too; this is the half the user sees.
   readonly busy: boolean;
+  readonly subtitleControls?: ReactNode;
 }
 
 export function outputsOf(outputs: readonly Output[], stage: Stage): readonly Output[] {

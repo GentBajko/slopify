@@ -1,4 +1,5 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
+import type { SubtitleConfig } from "@app/slices/subtitles/model.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { Api, ProjectBody } from "@/api";
@@ -15,6 +16,7 @@ import {
   retryStage,
   saveArticle,
   updateProviders,
+  updateSubtitles,
 } from "./api.js";
 import type { Destructive } from "./confirmations.js";
 
@@ -29,7 +31,8 @@ export type Action =
   | Exclude<Destructive, { readonly kind: "discard-article" }>
   | { readonly kind: "retry"; readonly stage: StageKind }
   | { readonly kind: "pause" | "resume" }
-  | { readonly kind: "providers"; readonly choices: ProviderChanges };
+  | { readonly kind: "providers"; readonly choices: ProviderChanges }
+  | { readonly kind: "subtitles"; readonly subtitles: SubtitleConfig };
 
 // A refused action, and where the user was standing when they asked for it. The sentence
 // is shown under that stage's own row rather than at the top of the page, because that is
@@ -121,6 +124,8 @@ function stageOf(action: Action): StageKind | undefined {
     case "retry":
     case "rerun":
       return action.stage;
+    case "subtitles":
+      return "video";
     case "save-article":
       return "article";
     case "delete-image":
@@ -137,6 +142,8 @@ function perform(api: Api, projectId: string, action: Action): Promise<ActionRes
       return resumeRun(api, projectId);
     case "providers":
       return updateProviders(api, projectId, action.choices);
+    case "subtitles":
+      return updateSubtitles(api, projectId, action.subtitles);
     case "cancel":
       return cancelRun(api, projectId);
     case "retry":

@@ -9,6 +9,8 @@ import { projectById } from "../admission/repo.js";
 import { outputPath, projectDir } from "../storage/layout.js";
 import type { Output } from "../storage/model.js";
 import { outputsOf } from "../storage/repo.js";
+import type { SubtitleAligner } from "../subtitles/model.js";
+import { prepareSubtitles } from "../subtitles/prepare.js";
 import type { RecordEvent } from "../telemetry/model.js";
 import { exportAudioWav } from "./audio-export.js";
 import { audioInputs } from "./audio-inputs.js";
@@ -24,6 +26,7 @@ export interface VideoDeps {
   readonly clock: Clock;
   readonly log: Log;
   readonly ffmpeg: string;
+  readonly alignSubtitles?: SubtitleAligner;
   // One event per render that finished.
   readonly count: RecordEvent;
 }
@@ -51,20 +54,22 @@ export async function renderVideo(deps: VideoDeps, context: StageContext): Promi
     images: slideshow(outputs).map((output) => outputPath(deps.paths, projectId, output.path)),
     output: outputPath(deps.paths, projectId, "video.mp4"),
   });
+  const subtitles = await prepareSubtitles(deps, context, plan.audio, plan);
   await writeExport(deps, context, {
     role: "video",
     filename: "video.mp4",
     partName: "video.part.mp4",
     totalSeconds: plan.totalSeconds,
-    record: recorded(plan, dir),
-    args: (part) => renderArgs({ ...plan, output: part }),
+    record: { ...recorded(plan, dir), subtitles: project.config.subtitles ?? null },
+    subtitles,
+    args: (part) => renderArgs({ ...plan, output: part }, subtitles?.burnIn),
   });
   deps.count("stage.completed", { stage: "video" });
 }
 
 // Written with project-relative paths, so the record of what was rendered can be read
 // beside the files it names and carries no absolute path off the machine.
-function recorded(plan: RenderPlan, dir: string): unknown {
+function recorded(plan: RenderPlan, dir: string): Record<string, unknown> {
   return {
     ...plan,
     audio: plan.audio.map((segment) => ({

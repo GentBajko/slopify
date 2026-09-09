@@ -1,6 +1,6 @@
 {
   "name": "@gentbajko/slopify",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "Turn a prompt into a finished video, locally, with your own provider keys",
   "license": "MIT",
   "author": "Gent Bajko",
@@ -18,10 +18,11 @@
   },
   "files": [
     "dist",
+    "SUBTITLES.md",
     "!dist/**/*.d.ts"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && node scripts/copy-migrations.mjs && node scripts/copy-web.mjs",
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-migrations.mjs && node scripts/copy-assets.mjs && node scripts/copy-web.mjs",
     "build:types": "tsc -p tsconfig.build.json --declaration --emitDeclarationOnly",
     "typecheck": "tsc --noEmit"
   },
@@ -32,6 +33,7 @@
     "fflate": "^0.8.3",
     "ffmpeg-static": "^5.3.0",
     "hono": "^4.13.5",
+    "onnxruntime-web": "1.24.3",
     "remark": "^15.0.1",
     "remark-gfm": "^4.0.1",
     "strip-markdown": "^6.0.0",

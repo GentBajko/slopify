@@ -425,6 +425,7 @@ describe("the tutorial in the real app", () => {
     expect(nextHeld()).toBe(true);
     await user.click(screen.getByRole("checkbox", { name: "My images" }));
     await next(user, "play-video");
+    await next(user, "play-subtitles");
     await next(user, "play-options");
     expect(nextHeld()).toBe(true);
     await fill(user, "Video title", "My first video");
@@ -497,6 +498,7 @@ describe("the tutorial in the real app", () => {
           .getByRole("radio", { name: "Off" })
           .getAttribute("aria-checked"),
       ).toBe("true");
+      await next(user, "play-subtitles");
       await next(user, "play-options");
       await fill(user, "Video title", "Optional stages");
       await next(user, "play-keywords");

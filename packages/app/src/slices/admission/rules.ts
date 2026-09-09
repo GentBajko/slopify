@@ -106,6 +106,9 @@ export function admit(input: AdmissionInput): AdmissionResult {
     fields.push({ field: "thumbnailPrompt", message: "Pick a thumbnail prompt." });
   }
 
+  if (sources.audio === "off" && draft.subtitles !== undefined && draft.subtitles.mode !== "off") {
+    fields.push({ field: "subtitles.mode", message: "Subtitles need narration audio." });
+  }
   checkProvided(draft, input.staged, fields);
   checkValues(draft, input.requiredSlots, fields);
 
@@ -144,6 +147,10 @@ export function normaliseDraft(draft: RunDraft): RunDraft {
   return {
     ...draft,
     title: draft.title.trim(),
+    subtitles:
+      sources.video === "off" && draft.subtitles?.mode === "burn-in"
+        ? { ...draft.subtitles, mode: "files" }
+        : draft.subtitles,
     sources,
     values,
     intro: sources.audio === "generate" ? draft.intro : undefined,

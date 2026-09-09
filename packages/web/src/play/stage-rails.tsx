@@ -4,6 +4,8 @@ import { OptionPicker } from "@/play/pickers";
 import { FilePick, PasteArea } from "@/play/provided";
 import type { RailProps } from "@/play/rail-frame";
 import { promptNames, railBeneath, railControls, SourceSwitch, StageRail } from "@/play/rail-frame";
+import { subtitlesFor } from "@/subtitles/config";
+import { SubtitleControls } from "@/subtitles/controls";
 
 // The left column of Play: six rails sharing their borders, each with its lamp, glyph,
 // name, source switch and that source's controls.
@@ -145,7 +147,7 @@ function ThumbnailRail({
   );
 }
 
-function VideoRail({ form, silenceGapSeconds, update }: RailProps) {
+function VideoRail({ form, silenceGapSeconds, update, onSubtitleUpload, problem }: RailProps) {
   const explanation =
     form.sources.video === "generate"
       ? form.sources.audio === "off"
@@ -161,6 +163,16 @@ function VideoRail({ form, silenceGapSeconds, update }: RailProps) {
       <span className={railControls}>
         <span className="engraved text-ink3">{explanation}</span>
       </span>
+      <div data-tour="play-subtitles" className={railBeneath}>
+        <SubtitleControls
+          value={subtitlesFor(form.subtitles, form.sources)}
+          audioEnabled={form.sources.audio !== "off"}
+          videoEnabled={form.sources.video === "generate" && form.sources.images !== "off"}
+          onChange={(subtitles) => update({ subtitles })}
+          problem={problem}
+          {...(onSubtitleUpload === undefined ? {} : { onUploading: onSubtitleUpload })}
+        />
+      </div>
       {form.sources.images === "off" ? (
         <p className={`${railBeneath} text-small text-ink2`}>
           Video is Off because Images is Off. Generate or provide images to enable video.

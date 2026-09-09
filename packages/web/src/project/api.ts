@@ -1,5 +1,6 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import type { ProviderChoice, VoiceChoice } from "@app/slices/admission/model.js";
+import type { SubtitleConfig } from "@app/slices/subtitles/model.js";
 import type { Api, ProjectBody } from "@/api";
 import { fileUrl } from "@/api";
 import { errorOf, problemOf, readText } from "@/http";
@@ -50,6 +51,20 @@ export async function updateProviders(
 ): Promise<ActionResult> {
   return acted(
     await api.client.projects[":id"].providers.$patch({ param: { id: projectId }, json: choices }),
+  );
+}
+
+export async function updateSubtitles(
+  api: Api,
+  projectId: string,
+  subtitles: SubtitleConfig,
+): Promise<ActionResult> {
+  return acted(
+    await api.fetch(`${api.origin}/api/projects/${encodeURIComponent(projectId)}/subtitles`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(subtitles),
+    }),
   );
 }
 

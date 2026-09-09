@@ -573,3 +573,20 @@ describe("GET /api/projects/:id", () => {
     expect(response.headers.get("content-type")).toBe("application/problem+json");
   });
 });
+
+describe("subtitle admission", () => {
+  it("rejects an unavailable font before creating or starting a paid run", async () => {
+    const one = harness();
+    const response = await one.app.request("/api/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(
+        draft({ subtitles: { mode: "files", language: "en", fontId: "missing", fontSize: 48 } }),
+      ),
+    });
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("subtitles.fontId");
+    expect(one.ticked).toEqual([]);
+    expect(one.db.prepare("SELECT count(*) AS n FROM projects").get()?.n).toBe(0);
+  });
+});

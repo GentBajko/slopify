@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import ffmpegStatic from "ffmpeg-static";
 import { describe, expect, it } from "vitest";
@@ -13,6 +13,9 @@ import type { Log } from "../src/kernel/log.js";
 import type { Paths } from "../src/kernel/paths.js";
 import { ensureDirs, layout } from "../src/kernel/paths.js";
 import type { StageContext } from "../src/kernel/runner/index.js";
+import { projectById, updateProjectConfig } from "../src/slices/admission/repo.js";
+import { outputsOf } from "../src/slices/storage/repo.js";
+import { defaultSubtitles } from "../src/slices/subtitles/model.js";
 import type { Counted } from "../src/slices/telemetry/record.fake.js";
 import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 import { resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
@@ -462,4 +465,118 @@ describe("the ffmpeg render", () => {
       renderVideo(deps(harness), context(new AbortController().signal, [])),
     ).rejects.toThrow(/no sound/);
   }, 60_000);
+});
+
+describe("real subtitle export", () => {
+  it("burns captions, reuses timing for WAV, and preserves exports on alignment failure", async () => {
+    const one = fixture();
+    const project = projectById(one.db, "p1");
+    if (project === undefined) throw new Error("fixture project missing");
+    writeFileSync(join(one.dir, "article.txt"), "Hello world.");
+    one.db
+      .prepare(
+        "INSERT INTO outputs (id, project_id, stage_kind, role, path, bytes, meta, created_at) VALUES ('txt','p1','article','article_txt','article.txt',12,'{}','2026')",
+      )
+      .run();
+    updateProjectConfig(
+      one.db,
+      "p1",
+      { ...project.config, subtitles: { ...defaultSubtitles, mode: "burn-in" } },
+      "2026",
+    );
+    let calls = 0;
+    const configured = {
+      ...deps(one),
+      ffmpeg: relative(process.cwd(), ffmpeg),
+      alignSubtitles: async (): Promise<
+        readonly { text: string; start: number; end: number }[]
+      > => {
+        calls += 1;
+        return [
+          { text: "Hello", start: 0.1, end: 0.4 },
+          { text: "world.", start: 0.45, end: 0.9 },
+        ];
+      },
+    };
+    await renderVideo(configured, context(new AbortController().signal, []));
+    const outputs = outputsOf(one.db, "p1");
+    expect(outputs.find((output) => output.role === "video")?.meta.subtitlesMode).toBe("burn-in");
+    expect(outputs.filter((output) => output.role.startsWith("subtitle"))).toHaveLength(5);
+    const pixels = execFileSync(
+      ffmpeg,
+      [
+        "-v",
+        "error",
+        "-ss",
+        "0.5",
+        "-i",
+        join(one.dir, "video.mp4"),
+        "-vf",
+        "crop=1920:200:0:880",
+        "-frames:v",
+        "1",
+        "-f",
+        "rawvideo",
+        "-pix_fmt",
+        "gray",
+        "-",
+      ],
+      { maxBuffer: 1 << 22 },
+    );
+    expect(pixels.filter((value) => value > 180).length).toBeGreaterThan(100);
+    const prior = readFileSync(join(one.dir, "video.mp4"));
+    const priorParams = readFileSync(join(one.dir, "render.json"));
+    one.db.exec(
+      "CREATE TRIGGER reject_caption_font BEFORE INSERT ON outputs WHEN NEW.role = 'subtitle_font' BEGIN SELECT RAISE(ABORT, 'simulated font row failure'); END",
+    );
+    updateProjectConfig(
+      one.db,
+      "p1",
+      { ...project.config, subtitles: { ...defaultSubtitles, mode: "burn-in", fontSize: 90 } },
+      "2026",
+    );
+    await expect(
+      renderVideo(configured, context(new AbortController().signal, [])),
+    ).rejects.toThrow("simulated font row failure");
+    expect(readFileSync(join(one.dir, "video.mp4"))).toEqual(prior);
+    expect(readFileSync(join(one.dir, "render.json"))).toEqual(priorParams);
+    expect(outputsOf(one.db, "p1").map((output) => output.id)).toEqual(
+      outputs.map((output) => output.id),
+    );
+    one.db.exec("DROP TRIGGER reject_caption_font");
+    // Force a different audio fingerprint while retaining a playable source.
+    tone(join(one.dir, "audio-body.mp3"), 550, 1);
+    await expect(
+      renderVideo(
+        {
+          ...configured,
+          alignSubtitles: async () => {
+            throw new Error("Audio and text do not match");
+          },
+        },
+        context(new AbortController().signal, []),
+      ),
+    ).rejects.toThrow(/do not match/);
+    expect(readFileSync(join(one.dir, "video.mp4"))).toEqual(prior);
+    expect(outputsOf(one.db, "p1").map((output) => output.id)).toEqual(
+      outputs.map((output) => output.id),
+    );
+    tone(join(one.dir, "audio-body.mp3"), 440, 1);
+    updateProjectConfig(
+      one.db,
+      "p1",
+      {
+        ...project.config,
+        sources: { ...project.config.sources, video: "off" },
+        subtitles: { ...defaultSubtitles, mode: "files", fontSize: 60 },
+      },
+      "2026",
+    );
+    await renderVideo(configured, context(new AbortController().signal, []));
+    expect(calls).toBe(1);
+    expect(outputsOf(one.db, "p1").find((output) => output.role === "audio_export")?.path).toBe(
+      "audio.wav",
+    );
+    expect(outputsOf(one.db, "p1").some((output) => output.role === "subtitles_vtt")).toBe(true);
+  }, 180_000);
 });

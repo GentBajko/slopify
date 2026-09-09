@@ -10,13 +10,20 @@ import { duration, percent } from "./summary.js";
 
 // The final stage plays an MP4 or, when Video is Off, the combined narration WAV.
 // The previous file stays playable until ffmpeg successfully replaces it.
-export function VideoBody({ stage, project, outputs, actions, busy }: BodyProps) {
+export function VideoBody({ stage, project, outputs, actions, busy, subtitleControls }: BodyProps) {
   const { api } = useApp();
   const audioExport =
     project.config.sources.video === "off" && project.config.sources.audio !== "off";
   const video = roleOf(outputsOf(outputs, stage), audioExport ? "audio_export" : "video");
+  const subtitleOutputs = outputsOf(outputs, stage);
+  const srt = roleOf(subtitleOutputs, "subtitles_srt");
+  const vtt = roleOf(subtitleOutputs, "subtitles_vtt");
+  const playedSubtitles = video?.meta.subtitlesMode ?? project.config.subtitles?.mode;
   const rendering = stage.state === "running";
   const done = percent(stage.progressCurrent ?? 0, stage.progressTotal ?? 0);
+
+  if (project.config.sources.video === "off" && !audioExport)
+    return <StageBody>{subtitleControls}</StageBody>;
 
   return (
     <StageBody>
@@ -37,6 +44,7 @@ export function VideoBody({ stage, project, outputs, actions, busy }: BodyProps)
       ) : audioExport ? (
         // biome-ignore lint/a11y/useMediaCaption: the export is the user's own narration and there is no caption track.
         <audio
+          key={video.id}
           controls
           preload="metadata"
           aria-label="Combined narration"
@@ -44,32 +52,47 @@ export function VideoBody({ stage, project, outputs, actions, busy }: BodyProps)
           className="h-9 w-full max-w-[720px]"
         />
       ) : (
-        // biome-ignore lint/a11y/useMediaCaption: the narration is the user's own audio and no caption track exists for it anywhere in the pipeline.
+        // biome-ignore lint/a11y/useMediaCaption: the conditional track uses generated VTT only in files mode; burned captions are already visible.
         <video
+          key={video.id}
           controls
           preload="metadata"
           src={fileUrl(api, video.projectId, assetOf(video))}
+          aria-label="Generated video"
           className={cn(
             "block max-h-[720px] w-auto max-w-full rounded-control bg-screen",
             project.format === "9:16" ? "aspect-[9/16]" : "aspect-video",
           )}
-        />
+        >
+          {playedSubtitles === "files" && vtt ? (
+            <track
+              key={vtt.id}
+              kind="captions"
+              srcLang="en"
+              label="English"
+              default
+              src={fileUrl(api, project.id, "subtitles-vtt")}
+            />
+          ) : null}
+        </video>
       )}
 
       <ActionRow>
         {video === undefined ? null : (
           <OutputDownload output={video} label={audioExport ? "Download .wav" : "Download .mp4"} />
         )}
-        <ConfirmedButton
-          action={{ kind: "rerun", stage: stage.kind }}
-          run={() => {
-            actions.run({ kind: "rerun", stage: stage.kind });
-          }}
-          disabled={busy}
-          pending={actions.pending}
-        >
-          {audioExport ? "Re-export" : "Re-render"}
-        </ConfirmedButton>
+        {stage.state === "pending" || stage.state === "skipped" ? null : (
+          <ConfirmedButton
+            action={{ kind: "rerun", stage: stage.kind }}
+            run={() => {
+              actions.run({ kind: "rerun", stage: stage.kind });
+            }}
+            disabled={busy || !["done", "failed", "canceled"].includes(stage.state)}
+            pending={actions.pending}
+          >
+            {audioExport ? "Re-export" : "Re-render"}
+          </ConfirmedButton>
+        )}
         <span className="text-small text-ink2">
           {[
             duration(video?.durationMs ?? undefined),
@@ -79,6 +102,13 @@ export function VideoBody({ stage, project, outputs, actions, busy }: BodyProps)
             .join(" · ")}
         </span>
       </ActionRow>
+      {srt || vtt ? (
+        <ActionRow>
+          {srt ? <OutputDownload output={srt} label="Download .srt" /> : null}
+          {vtt ? <OutputDownload output={vtt} label="Download .vtt" /> : null}
+        </ActionRow>
+      ) : null}
+      {subtitleControls}
     </StageBody>
   );
 }

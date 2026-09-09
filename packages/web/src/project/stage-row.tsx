@@ -83,7 +83,8 @@ export function StageRow({
           <RefusalLine message={refused} onDismiss={actions.dismissRefusal} />
         </div>
       )}
-      {opened.has(stage.state) ||
+      {stage.kind === "video" ||
+      opened.has(stage.state) ||
       (project.status === "paused" && outputs.some((output) => output.stageKind === stage.kind))
         ? children
         : null}

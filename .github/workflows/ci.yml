@@ -33,4 +33,5 @@ jobs:
       - run: npm ci
       - run: npm run build
       # Exercise native executable paths, recovery, WAV exports and narrated/silent renders.
-      - run: npx vitest run packages/app/src/adapters/ffmpeg.test.ts packages/app/src/main.test.ts packages/app/test/e2e/skeleton.test.ts packages/app/test/e2e/optional-outputs.test.ts
+      - run: npx vitest run packages/app/src/adapters/ffmpeg.test.ts packages/app/src/main.test.ts packages/app/test/e2e/skeleton.test.ts packages/app/test/e2e/optional-outputs.test.ts packages/app/src/adapters/alignment packages/app/src/slices/fonts packages/app/src/edge/http/fonts.test.ts packages/app/src/slices/subtitles
+      - run: npx vitest run packages/app/test/video-render.test.ts -t "real subtitle export"

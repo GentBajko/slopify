@@ -1,0 +1,7 @@
+Barlow-Regular.ttf
+Source: https://raw.githubusercontent.com/google/fonts/6cdf01867df0813c2390f90dff7dc66c87f14cf7/ofl/barlow/Barlow-Regular.ttf
+SHA-256: 95aa02c7c43096e0dd44d787ba6216864a67157e402adab59b35572e0c1577ea
+
+OFL.txt
+Source: https://raw.githubusercontent.com/google/fonts/6cdf01867df0813c2390f90dff7dc66c87f14cf7/ofl/barlow/OFL.txt
+SHA-256: 186d750eb496a4c17a76385f82be6aea2ac1cf2de074a811d63786cf374ea73f

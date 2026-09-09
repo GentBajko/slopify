@@ -123,6 +123,7 @@ export function TutorialRunner({
     "play-audio": progress.playAudioReady === true,
     "play-images": progress.playImagesReady === true,
     "play-video": progress.playVideoReady === true,
+    "play-subtitles": progress.playSubtitlesReady === true,
     "play-options": progress.playOptionsReady === true,
     "play-keywords": progress.playKeywordsReady === true,
     "play-start": false,

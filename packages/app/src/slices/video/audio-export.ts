@@ -2,6 +2,7 @@ import { relative } from "node:path";
 import type { StageContext } from "../../kernel/runner/index.js";
 import { projectDir } from "../storage/layout.js";
 import { outputsOf } from "../storage/repo.js";
+import { prepareSubtitles } from "../subtitles/prepare.js";
 import { audioInputs } from "./audio-inputs.js";
 import { type AudioSegment, audioTimeline } from "./plan.js";
 import type { VideoDeps } from "./run.js";
@@ -31,12 +32,14 @@ export async function exportAudioWav(
     })),
     output: "audio.wav",
   };
+  const subtitles = await prepareSubtitles(deps, context, audio, { width: 1920, height: 1080 });
   await writeExport(deps, context, {
     role: "audio_export",
     filename: "audio.wav",
     partName: "audio.part.wav",
     totalSeconds,
     record: plan,
+    subtitles,
     args: (part) => audioExportArgs(audio, part),
   });
 }

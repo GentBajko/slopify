@@ -378,3 +378,12 @@ describe("the draft the form posts", () => {
     expect(draft.outro).toBeUndefined();
   });
 });
+
+it("blocks Play for an invalid subtitle size before the server is called", () => {
+  const invalid = ask({
+    ...generated,
+    subtitles: { mode: "burn-in", language: "en", fontId: "default", fontSize: 150 },
+  });
+  expect(invalid.blocker?.field).toBe("subtitles.fontSize");
+  expect(invalid.result.ok).toBe(false);
+});

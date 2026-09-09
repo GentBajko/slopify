@@ -15,12 +15,14 @@ import type { Hub } from "../events/hub.js";
 import { actionRoutes } from "./actions.js";
 import { entryRoutes } from "./entries.js";
 import { fileRoutes } from "./files.js";
+import { fontsRoutes } from "./fonts.js";
 import { problem, problemFromError, titleOf } from "./problem.js";
 import { projectRoutes } from "./projects.js";
 import { promptRoutes } from "./prompts.js";
 import { providerRoutes } from "./providers.js";
 import { settingsRoutes } from "./settings.js";
 import { stagingRoutes } from "./staging.js";
+import { subtitleRoutes } from "./subtitles.js";
 import { telemetryRoutes } from "./telemetry.js";
 import { usageRoutes } from "./usage.js";
 
@@ -66,6 +68,8 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       // The re-run and cancel actions sit on the same prefix as the project itself; they
       // are their own router because they are their own concern.
       .route("/projects", actionRoutes(deps))
+      .route("/projects", subtitleRoutes(deps))
+      .route("/fonts", fontsRoutes(deps))
       .route("/prompts", promptRoutes(deps))
       .route("/entries", entryRoutes(deps))
       .route("/telemetry", telemetryRoutes(deps))

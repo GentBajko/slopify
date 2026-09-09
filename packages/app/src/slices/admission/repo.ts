@@ -3,6 +3,7 @@ import { z } from "zod";
 import { stageKinds, stageStates } from "../../kernel/pipeline.js";
 import type { StageProgress } from "../../kernel/runner/graph.js";
 import { chunkModes } from "../narration/chunk.js";
+import { subtitleConfigSchema } from "../subtitles/model.js";
 import type { Project, RunConfig, Stage } from "./model.js";
 import { entryModes, formats, stageSources } from "./model.js";
 
@@ -44,6 +45,7 @@ export const runDraftSchema = z.object({
   // a mode not listed here would never reach the audio stage.
   chunking: z.object({ mode: z.enum(chunkModes), words: z.number().optional() }).optional(),
   silenceGapSeconds: z.number(),
+  subtitles: subtitleConfigSchema.optional(),
 });
 
 export const runConfigSchema = runDraftSchema.extend({

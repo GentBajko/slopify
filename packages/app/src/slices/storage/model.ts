@@ -21,6 +21,11 @@ export const outputRoles = [
   "thumbnail",
   "video",
   "render_params",
+  "subtitles_srt",
+  "subtitles_vtt",
+  "subtitle_words",
+  "subtitle_ass",
+  "subtitle_font",
   "instructions",
 ] as const;
 export type OutputRole = (typeof outputRoles)[number];
@@ -29,6 +34,7 @@ export const stagedFileStates = ["copying", "staged"] as const;
 export type StagedFileState = (typeof stagedFileStates)[number];
 
 export interface OutputMeta {
+  readonly subtitlesMode?: "off" | "files" | "burn-in" | undefined;
   readonly promptName?: string | undefined;
   // An image is stored with the prompt text that made it, not only the name of the template
   // it came from: the run's keyword values are already substituted in, and the thumbnail

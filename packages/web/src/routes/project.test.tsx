@@ -247,7 +247,7 @@ describe("the stage bodies", () => {
     expect(screen.getByText("A cracked skull with gemstone eyes")).not.toBeNull();
   });
 
-  it("keeps a pending stage collapsed", async () => {
+  it("keeps pending export actions unavailable while showing the existing file and subtitle settings", async () => {
     renderRouted(
       <ProjectRoute projectId="p1" />,
       deps({
@@ -262,5 +262,9 @@ describe("the stage bodies", () => {
     );
     await screen.findByText("Video");
     expect(screen.queryByRole("button", { name: "Re-render" })).toBeNull();
+    expect(screen.getByLabelText("Generated video")).not.toBeNull();
+    expect(
+      screen.getByLabelText("Subtitles", { selector: "select" }).closest("fieldset")?.disabled,
+    ).toBe(true);
   });
 });

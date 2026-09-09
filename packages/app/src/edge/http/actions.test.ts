@@ -413,3 +413,49 @@ describe("pause, resume, and provider editing", () => {
     ).toBe(404);
   });
 });
+
+describe("subtitle edits", () => {
+  it("rerenders only the local final stage and preserves current outputs", async () => {
+    const one = harness();
+    const before = one.db.prepare("SELECT * FROM outputs").all();
+    const response = await one.app.request("/api/projects/p1/subtitles", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ mode: "files" }),
+    });
+    expect(response.status).toBe(200);
+    expect(projectById(one.db, "p1")?.config.subtitles?.mode).toBe("files");
+    expect(
+      stagesOf(one.db, "p1")
+        .filter((stage) => stage.state === "pending")
+        .map((stage) => stage.kind),
+    ).toEqual(["video"]);
+    expect(one.db.prepare("SELECT * FROM outputs").all()).toEqual(before);
+    expect(one.ticked).toEqual(["p1"]);
+  });
+  it("saves paused settings without starting any work", async () => {
+    const one = harness({ audio: "failed" });
+    await one.app.request("/api/projects/p1/pause", { method: "POST" });
+    const response = await one.app.request("/api/projects/p1/subtitles", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ mode: "burn-in" }),
+    });
+    expect(response.status).toBe(200);
+    expect(one.ticked).toEqual([]);
+    expect(projectById(one.db, "p1")?.paused).toBe(true);
+  });
+  it("refuses active work and invalid font paths without changing saved settings", async () => {
+    const one = harness({ audio: "running" });
+    const request = async (fontId: string): Promise<Response> =>
+      one.app.request("/api/projects/p1/subtitles", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ mode: "files", fontId }),
+      });
+    expect((await request("default")).status).toBe(409);
+    expect((await request("../../secret.ttf")).status).toBe(400);
+    expect(projectById(one.db, "p1")?.config.subtitles).toBeUndefined();
+    expect(one.ticked).toEqual([]);
+  });
+});

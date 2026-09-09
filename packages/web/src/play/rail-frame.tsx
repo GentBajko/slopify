@@ -33,6 +33,7 @@ export interface RailProps {
   readonly update: (patch: Partial<PlayFormState>) => void;
   readonly onPickFiles: (kind: UploadKind, files: readonly File[]) => void;
   readonly onRemoveFile: (kind: UploadKind, key: string) => void;
+  readonly onSubtitleUpload?: (pending: boolean) => void;
 }
 
 export function StageRail({

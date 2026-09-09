@@ -19,6 +19,7 @@ import {
   settingsQuery,
   voicesQuery,
 } from "@/queries";
+import { subtitlesFor } from "@/subtitles/config";
 import { useTutorialEvent, useTutorialProgress } from "@/tutorial/context";
 
 // 06 Play. The stage rails on the left, the cue sheet on the right, and one key at the bottom
@@ -50,6 +51,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   const settings = useQuery(settingsQuery(api));
 
   const [form, setForm] = usePlayDraft();
+  const [subtitleUploading, setSubtitleUploading] = useState(false);
   // What the server marked when it refused the draft: a template deleted since it was
   // picked, or a rule the browser's copy could not see.
   const [refused, setRefused] = useState<readonly FieldError[]>([]);
@@ -58,18 +60,30 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   const [touched, setTouched] = useState(false);
 
   const update = (patch: Partial<PlayFormState>): void => {
-    setForm((current) => ({ ...current, ...patch }));
+    setForm((current) => {
+      const next = { ...current, ...patch };
+      return { ...next, subtitles: subtitlesFor(next.subtitles, next.sources) };
+    });
     setTouched(true);
     // A refusal stands until the form changes; the next press asks the server again.
     setRefused([]);
   };
 
-  const { fields, draft, result, blocker } = admission({
+  const {
+    fields,
+    draft,
+    result,
+    blocker: admissionBlocker,
+  } = admission({
     form,
     prompts: prompts.data?.prompts ?? [],
     entries: entries.data?.entries ?? [],
     silenceGapSeconds: settings.data?.silenceGapSeconds ?? 3,
   });
+
+  const blocker = subtitleUploading
+    ? { field: "subtitles.fontId", hint: "Wait for the subtitle font upload to finish to play" }
+    : admissionBlocker;
 
   const play = useMutation({
     mutationFn: () => createProject(api, draft),
@@ -115,6 +129,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
           ? form.provided.images.every(uploadReady)
           : form.imagePrompts.every((prompt) => promptExists("image", prompt.name)))),
     playVideoReady: clear("sources.video"),
+    playSubtitlesReady: clear("subtitles") && !subtitleUploading,
     playOptionsReady: clear("title", "format", "llm", "intro", "outro"),
     playHasKeywords: fields.length > 0,
     playKeywordsReady: clear("values"),
@@ -247,6 +262,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
           update={update}
           onPickFiles={onPickFiles}
           onRemoveFile={onRemoveFile}
+          onSubtitleUpload={setSubtitleUploading}
         />
       </div>
 
