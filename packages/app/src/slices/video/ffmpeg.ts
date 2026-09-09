@@ -9,7 +9,7 @@ import { zoomBy, zoomFrom, zoomTo } from "./plan.js";
 
 // zoompan works on a still that has been pre-scaled, because it steps the zoom in
 // sub-pixel increments and a source at output resolution visibly jitters where the zoom is
-// meant to be smooth and linear. Four times the frame is enough at 115%.
+// meant to be smooth and linear. Four times the frame is enough at 122.5%.
 const prescale = 4;
 const sampleRate = 44100;
 const channelLayout = "stereo";
@@ -121,7 +121,7 @@ function filterGraph(plan: RenderPlan, audioAt: readonly number[]): string {
   return chains.join(";");
 }
 
-// Odd images 100% → 115%, even images 115% → 100%, linear over the slot. `on` is
+// Odd images 100% → 122.5%, even images 122.5% → 100%, linear over the slot. `on` is
 // zoompan's output frame counter, 0 to d-1, and a one-frame slot has no span to divide
 // by, so it holds the zoom it starts at.
 function zoomExpression(slot: ImageSlot): string {

@@ -7,12 +7,12 @@ const frames: Readonly<Record<Format, { width: number; height: number }>> = {
   "9:16": { width: 1080, height: 1920 },
 };
 
-// 100% → 115%, linear, centred, alternating per image. The three are written out
+// 100% → 122.5%, linear, centred, alternating per image. The three are written out
 // rather than derived from one another, because they are formatted into an ffmpeg
-// expression and 1.15 - 1 is not 0.15 in binary floating point.
+// expression and 1.225 - 1 is not 0.225 in binary floating point.
 export const zoomFrom = 1;
-export const zoomTo = 1.15;
-export const zoomBy = 0.15;
+export const zoomTo = 1.225;
+export const zoomBy = 0.225;
 
 export type AudioKind = "intro" | "body" | "outro" | "gap";
 export type Zoom = "in" | "out";

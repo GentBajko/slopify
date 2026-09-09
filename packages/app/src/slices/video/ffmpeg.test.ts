@@ -100,11 +100,11 @@ describe("renderArgs", () => {
     expect(graphOf(renderArgs(plan({ images: ["/p/images/001.png", "/p/images/002.png"] })))).toBe(
       "[0:v]trim=end_frame=1,setpts=PTS-STARTPTS," +
         "scale=7680:4320:force_original_aspect_ratio=increase,crop=7680:4320," +
-        "zoompan=z='1+0.15*on/149':d=150:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':" +
+        "zoompan=z='1+0.225*on/149':d=150:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':" +
         "s=1920x1080:fps=30,setsar=1[v0];" +
         "[1:v]trim=end_frame=1,setpts=PTS-STARTPTS," +
         "scale=7680:4320:force_original_aspect_ratio=increase,crop=7680:4320," +
-        "zoompan=z='1.15-0.15*on/149':d=150:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':" +
+        "zoompan=z='1.225-0.225*on/149':d=150:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':" +
         "s=1920x1080:fps=30,setsar=1[v1];" +
         "[v0][v1]concat=n=2:v=1:a=0[v];" +
         "[2:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[a0];" +
@@ -129,7 +129,7 @@ describe("renderArgs", () => {
       ),
     );
     expect(graph).toContain("zoompan=z='1':d=1:");
-    expect(graph).toContain("zoompan=z='1.15':d=1:");
+    expect(graph).toContain("zoompan=z='1.225':d=1:");
   });
 
   it("numbers the audio inputs after the images", () => {

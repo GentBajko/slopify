@@ -319,11 +319,11 @@ describe("the ffmpeg render", () => {
 
     // A 200 px rectangle on a 640 px source is 600 px in a 1920 px frame at zoom 1.
     expect(firstStart).toBe(600);
-    expect(firstEnd / firstStart).toBeCloseTo(1.15, 1);
+    expect(firstEnd / firstStart).toBeCloseTo(1.225, 1);
     expect(firstEnd).toBeGreaterThan(firstStart);
 
-    // A 160 px rectangle is 480 px at zoom 1, so it starts at 1.15 and ends at 1.
-    expect(secondStart / 480).toBeCloseTo(1.15, 1);
+    // A 160 px rectangle is 480 px at zoom 1, so it starts at 1.225 and ends at 1.
+    expect(secondStart / 480).toBeCloseTo(1.225, 1);
     expect(secondEnd).toBeCloseTo(480, -1);
     expect(secondEnd).toBeLessThan(secondStart);
   }, 180_000);
