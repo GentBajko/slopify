@@ -170,9 +170,8 @@ export function wireCopy(root, clipboard) {
 }
 
 // The showcase video autoplays and loops, which is the one thing on this page that moves
-// without being asked. Its native controls allow pausing and fullscreen playback. Reduced
-// motion holds the poster frame until the viewer chooses to play. Nothing happens for
-// anyone else, and nothing happens if the video is absent.
+// without being asked. Reduced motion holds its poster frame and restores native controls
+// so the viewer chooses when to play. Otherwise the recording loops without controls.
 export function wireShowcase(root) {
   const video = root.querySelector(".showcase-video");
   if (video === null || !reducedMotion()) {
