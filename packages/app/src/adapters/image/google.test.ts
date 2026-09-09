@@ -155,6 +155,66 @@ describe("googleImage failures", () => {
     expect(isProviderError(error) && error.fault.kind).toBe("rate_limit");
   });
 
+  it("explains a zero quota from Interactions without retrying an unavailable model", async () => {
+    const message =
+      "You exceeded your current quota.\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-3.1-flash-image\nPlease retry in 42.393466919s.";
+    const error = await generate(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ error: { message, code: "too_many_requests" } }), {
+          status: 429,
+        }),
+      ),
+    ).catch((e: unknown) => e);
+    expect(isProviderError(error) && error.fault.kind).toBe("unsupported");
+    expect(String(error)).toContain("Google AI Studio");
+    expect(String(error)).toContain(message);
+    expect(String(error)).not.toContain('{"error":');
+  });
+
+  it("reads Google's retry delay from structured details", async () => {
+    const error = await generate(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            error: {
+              message: "Quota exceeded",
+              code: 429,
+              status: "RESOURCE_EXHAUSTED",
+              details: [
+                {
+                  "@type": "type.googleapis.com/google.rpc.RetryInfo",
+                  retryDelay: "42.393466919s",
+                },
+              ],
+            },
+          }),
+          { status: 429 },
+        ),
+      ),
+    ).catch((e: unknown) => e);
+    expect(isProviderError(error) && error.fault.kind).toBe("rate_limit");
+    expect(isProviderError(error) && error.fault.retryAfterMs).toBe(42394);
+  });
+
+  it("keeps a nonzero quota retryable and reads the Interactions retry sentence", async () => {
+    const error = await generate(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            error: {
+              message:
+                "Quota exceeded for metric: generate_content_requests, limit: 10, model: gemini-3.1-flash-image. Please retry in 5.5s.",
+              code: "too_many_requests",
+            },
+          }),
+          { status: 429 },
+        ),
+      ),
+    ).catch((e: unknown) => e);
+    expect(isProviderError(error) && error.fault.kind).toBe("rate_limit");
+    expect(isProviderError(error) && error.fault.retryAfterMs).toBe(5500);
+  });
+
   // A safety block arrives as a plain 400 with no machine-readable reason, so it is read
   // off the sentence. Retrying it would spend the user's quota on the same answer.
   it("names a safety block a refusal so it is never retried", async () => {

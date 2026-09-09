@@ -165,7 +165,10 @@ export function runFfmpeg(run: RenderRun): Promise<void> {
       reject(new Error("the render was canceled before it started"));
       return;
     }
-    const child = spawn(run.bin, [...run.args], { stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(run.bin, [...run.args], {
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+    });
     const errors: string[] = [];
     let pending = "";
 

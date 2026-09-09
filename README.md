@@ -54,8 +54,20 @@ platform binary at `npm install` time, and never falls back to an ffmpeg on your
 `PATH`: the binary that ships is the binary that is tested. Point `SLOPIFY_FFMPEG` at
 another build to override it.
 
+Slopify checks that ffmpeg runs before starting. If the install-time download is
+missing, it downloads the same platform build into `<data-dir>/bin/`, keeping the
+licence and source notice beside it. Later launches reuse that copy. If recovery
+fails, check your connection and antivirus quarantine, or choose your own executable.
+
 ```sh
 SLOPIFY_FFMPEG=/usr/bin/ffmpeg npx @gentbajko/slopify@latest
+```
+
+In Windows PowerShell:
+
+```powershell
+$env:SLOPIFY_FFMPEG = 'C:\tools\ffmpeg\bin\ffmpeg.exe'
+npx @gentbajko/slopify@latest
 ```
 
 That binary is a separate program, run as a child process with an argument array. It

@@ -5,6 +5,7 @@ import { serve } from "@hono/node-server";
 import ffmpegStatic from "ffmpeg-static";
 import type { Hono } from "hono";
 import { buildRegistry } from "./adapter-registry.js";
+import { prepareFfmpeg } from "./adapters/ffmpeg.js";
 import { nodeRunCli } from "./adapters/llm/run-cli.js";
 import { createHub } from "./edge/events/hub.js";
 import { createApp } from "./edge/http/app.js";
@@ -41,7 +42,6 @@ import type { RecordEvent } from "./slices/telemetry/model.js";
 import type { TelemetryDeps } from "./slices/telemetry/record.js";
 import { record } from "./slices/telemetry/record.js";
 import { runThumbnail } from "./slices/thumbnail/run.js";
-import { resolveFfmpeg } from "./slices/video/ffmpeg.js";
 import { renderVideo } from "./slices/video/run.js";
 
 // ceiling: a burst of finished stages coalesces into one delivery a second later, and the
@@ -64,6 +64,12 @@ export async function boot(config: Config): Promise<Boot> {
   const lock = acquireInstanceLock(paths.lock);
   let db: DatabaseSync | undefined;
   try {
+    const ffmpeg = await prepareFfmpeg({
+      dataDir: paths.dataDir,
+      env: process.env,
+      bundled: ffmpegStatic,
+      report: (message) => console.warn(message),
+    });
     db = openDb(paths.db);
     migrate(db, clock);
     const interrupted = markInterruptedStages(db, clock);
@@ -91,7 +97,7 @@ export async function boot(config: Config): Promise<Boot> {
       clock,
       probe: nodeCliProbe,
     });
-    const runner = wire({ db, paths, clock, ids, log, hub, telemetry, flusher, registry });
+    const runner = wire({ db, paths, clock, ids, log, hub, telemetry, flusher, registry, ffmpeg });
     const app = createApp({
       db,
       paths,
@@ -143,6 +149,7 @@ export async function boot(config: Config): Promise<Boot> {
 // The composition root: the runner is handed the stage implementations it may not import, and
 // each implementation is handed the dependencies it needs, closed over here.
 interface Wiring {
+  readonly ffmpeg: string;
   readonly db: DatabaseSync;
   readonly paths: Paths;
   readonly clock: Clock;
@@ -154,10 +161,18 @@ interface Wiring {
   readonly registry: Registry;
 }
 
-function wire({ db, paths, clock, ids, log, hub, telemetry, flusher, registry }: Wiring): Runner {
-  // Resolved once at boot rather than per render, so a machine with no usable binary
-  // fails at start with one message instead of on every project's last stage.
-  const ffmpeg = resolveFfmpeg(process.env, ffmpegStatic);
+function wire({
+  db,
+  paths,
+  clock,
+  ids,
+  log,
+  hub,
+  telemetry,
+  flusher,
+  registry,
+  ffmpeg,
+}: Wiring): Runner {
   // A stage counts what it did and the queue is flushed after each new event. `record`
   // swallows its own failures, so this can neither fail a stage nor widen what leaves the
   // machine - the payload allow-list is checked inside it.

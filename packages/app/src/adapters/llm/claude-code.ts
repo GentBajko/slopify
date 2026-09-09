@@ -30,6 +30,14 @@ export interface ClaudeCodeDeps {
   readonly binary?: string | undefined;
 }
 
+const writingRole =
+  "You are the writing and research component of Slopify, a video creation app. " +
+  "Produce the text requested in the supplied conversation: articles, narration scripts, " +
+  "research notes or image prompts. Follow the requested topic, language, tone, length and format. " +
+  "Return only the requested content, without progress updates or introductory remarks. " +
+  "Use web search when it is available and needed for the requested research. " +
+  "Do not inspect or modify local files.";
+
 // Measured on 2.1.258, not assumed: with the built-in tools left alone, a `-p` run of this CLI
 // still reached for ToolSearch and WebFetch, and the machine's MCP servers were loaded into the
 // session. Neither belongs in a content pipeline - grounding on the web is an explicit ask,
@@ -43,6 +51,11 @@ export function claudeCodeArgs(req: LlmCompletion): string[] {
     "stream-json",
     // stream-json output is refused without it.
     "--verbose",
+    // `claude --help` 2.1.263: safe mode excludes CLAUDE.md, output styles, skills and
+    // hooks while retaining login and managed policy. --bare would discard OAuth.
+    "--safe-mode",
+    "--system-prompt",
+    writingRole,
     "--strict-mcp-config",
     ...(req.webSearch === true
       ? ["--tools", "WebSearch", "--allowedTools", "WebSearch"]

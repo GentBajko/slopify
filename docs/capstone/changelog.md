@@ -5,6 +5,13 @@ capstone_version: 5.2.0
 
 # Changelog
 
+## 2026-09-09 - 0.4.3 repairs first-run generation failures
+key: release/0.4.3
+- Missing ffmpeg downloads are recovered with the existing ffmpeg-static installer into the app's data directory and verified before any provider work starts. Explicit overrides are checked without being replaced; download failures leave no completed cache entry.
+- Claude Code content calls use a writing and research system prompt with personal coding customizations disabled, while retaining subscription login and managed policy.
+- Google Interactions string error codes are parsed correctly. Explicitly zero image quota fails once with account/quota guidance; temporary limits honor Google's retry delay.
+- Verified with 1,460 tests, lint, typecheck, production build, package contents and a real ffmpeg recovery download. Added Windows CI for startup, recovery and the real-render smoke.
+
 ## 2026-09-03 - the marketing page grows an install path
 key: site/install-steps
 - User: "we need to add npm i -g @gentbajko/slopify / slopify in the marketing page too as another option", after asking whether an alias could stand in for the npx command.

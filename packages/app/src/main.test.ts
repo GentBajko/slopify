@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { fixedClock } from "./kernel/clock.fake.js";
 import type { Config } from "./kernel/config/index.js";
 import { openDb } from "./kernel/db/index.js";
@@ -68,6 +68,7 @@ describe("boot", () => {
   const running: Array<() => Promise<void>> = [];
 
   afterEach(async () => {
+    vi.unstubAllEnvs();
     for (const stop of running.splice(0)) {
       await stop();
     }
@@ -76,6 +77,15 @@ describe("boot", () => {
   function config(dir: string, port = 0): Config {
     return { port, host: "127.0.0.1", dataDir: dir, open: false };
   }
+
+  it("rejects a missing ffmpeg override before serving jobs and releases the lock", async () => {
+    const dir = dataDir();
+    vi.stubEnv("SLOPIFY_FFMPEG", join(dir, "missing", "ffmpeg.exe"));
+    await expect(boot(config(dir))).rejects.toThrow(/SLOPIFY_FFMPEG/);
+    expect(existsSync(join(dir, "slopify.db"))).toBe(false);
+    vi.unstubAllEnvs();
+    await (await boot(config(dir))).stop();
+  });
 
   it("creates the tree, migrates, and logs", async () => {
     const dir = dataDir();

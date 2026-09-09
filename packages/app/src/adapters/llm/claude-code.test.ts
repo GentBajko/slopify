@@ -77,12 +77,27 @@ async function drain(text: string, ended?: CliEnded, stderr?: string): Promise<L
 }
 
 describe("claudeCodeArgs", () => {
+  it("gives content jobs a writing role with local coding customizations disabled", () => {
+    const args = claudeCodeArgs(
+      request({ messages: [{ role: "user", content: "Write a travel article about Albania." }] }),
+    );
+    expect(args).toContain("--safe-mode");
+    const role = args[args.indexOf("--system-prompt") + 1];
+    expect(role).toContain("writing and research");
+    expect(role).toContain("Return only the requested content");
+    expect(args.at(-1)).toBe("Write a travel article about Albania.");
+    // Bare mode would discard the subscription login this provider exists to use.
+    expect(args).not.toContain("--bare");
+  });
   it("asks for the streamed JSON the adapter reads, with tools and MCP shut off", () => {
     expect(claudeCodeArgs(request())).toEqual([
       "-p",
       "--output-format",
       "stream-json",
       "--verbose",
+      "--safe-mode",
+      "--system-prompt",
+      expect.stringContaining("writing and research"),
       "--strict-mcp-config",
       "--tools",
       "",

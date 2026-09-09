@@ -21,3 +21,16 @@ jobs:
       # the package that npm publishes, so a tag must never be the first time it runs.
       - run: npm run build
       - run: npm audit --audit-level=high
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      # Exercise native executable paths, skipped-download recovery and a real render.
+      - run: npx vitest run packages/app/src/adapters/ffmpeg.test.ts packages/app/src/main.test.ts packages/app/test/e2e/skeleton.test.ts

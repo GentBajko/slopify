@@ -35,6 +35,11 @@ Everything lives in one SQLite file and one directory tree under the data direct
 Slopify renders video with ffmpeg. The `ffmpeg-static` dependency downloads a
 prebuilt binary to `node_modules/ffmpeg-static/` at install time.
 
+Slopify checks that ffmpeg runs before starting. If the install-time download is
+missing, it downloads the same platform build into `<data-dir>/bin/`, keeping the
+licence and source notice beside it. Later launches reuse that copy. If recovery
+fails, check your connection and antivirus quarantine, or choose your own executable.
+
 That binary is a separate program, run as a child process with an argument array. It
 is licensed under the **GPL-3.0-or-later**. Slopify does not link against it, does not
 embed it, and does not distribute it inside this package; its licence text and the
@@ -43,6 +48,13 @@ code is MIT and stays MIT. Anyone redistributing the downloaded binary takes on 
 GPL's obligations for it, including offering that corresponding source.
 
 Point `SLOPIFY_FFMPEG` at your own build to use that instead.
+
+In Windows PowerShell:
+
+```powershell
+$env:SLOPIFY_FFMPEG = 'C:\tools\ffmpeg\bin\ffmpeg.exe'
+npx @gentbajko/slopify@latest
+```
 
 ## Telemetry
 

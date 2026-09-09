@@ -30,12 +30,27 @@ No containers, no compose, no Kubernetes. The app is one process: HTTP server, p
 | `--host` / `SLOPIFY_HOST` | 127.0.0.1; any other value prints the no-login warning | `kernel/config` | README |
 | `--data-dir` / `SLOPIFY_DATA_DIR` | `~/.slopify` (`logic/14`) | `kernel/config`, `slices/storage` | README |
 | `--no-open` / `SLOPIFY_NO_OPEN` | opens the browser | `cli.ts` | README |
-| `SLOPIFY_FFMPEG` | the bundled binary | `slices/video/ffmpeg.ts` | README |
+| `SLOPIFY_FFMPEG` / `FFMPEG_BIN` | the bundled binary, then a recovered copy in `<data-dir>/bin/` | `adapters/ffmpeg.ts` at boot | README |
 | provider keys | none | `provider_keys` table, never env | Settings screen |
 | collector URL | built into the release | `slices/telemetry/collector-client.ts` | none (not user-configurable) |
 | collector secrets (database URL) | none | `packages/collector` from the host environment | deployment notes |
 
 Secrets never live in files in the repository. Configuration precedence: flag, then env, then default.
+
+Before opening the HTTP listener or running providers, boot executes `ffmpeg -version`.
+A missing bundled download is recovered with ffmpeg-static's existing installer into a
+temporary directory under `<data-dir>/bin/`, verified, then promoted into a cache keyed
+by package version, platform and architecture. The installer also downloads its licence
+and source notice. Failed downloads are discarded. Explicit executable overrides are
+verified and never replaced by a download. Failed startup releases the instance lock.
+
+Claude Code content calls use a writing/research system prompt and `--safe-mode` to
+exclude personal CLAUDE.md files, skills, hooks and output styles. Subscription login
+and managed policy remain active; built-in tools stay disabled except WebSearch for
+research. Google image responses with an explicitly zero quota fail once as an
+unsupported model/account combination, with Google AI Studio billing and quota guidance.
+Temporary 429s retain retries, taking their delay from Retry-After, RetryInfo or the
+Interactions retry sentence.
 
 ## Infrastructure
 
@@ -48,6 +63,7 @@ Secrets never live in files in the repository. Configuration precedence: flag, t
 ## Developer workflow
 
 - CI on push and PR: lint and format check (Biome, with the boundary rule), typecheck, tests on Node 26; `npm audit` fails on high severity; Dependabot weekly.
+- Windows CI separately builds the package, checks ffmpeg download recovery and boot, and runs the real ffmpeg end-to-end smoke.
 - Release: tag → CI publishes `@gentbajko/slopify` to npm with semantic versioning; the package contains the built SPA; rollback is users pinning `npx @gentbajko/slopify@<version>`. Collector and site do not deploy from a push: nothing in CI touches them. They go out when `npm run deploy` is run by hand, which is `wrangler deploy` for each; `npm run deploy:check` is the dry run.
 - Migrations: forward-only SQL files applied at app boot; a schema newer than the app refuses to start; never destructive within a minor version.
 - Commands per `05-dependencies.md`: Vitest for tests, `tsc --noEmit` for typecheck, Biome for lint and format; exact npm scripts are written by `build` and this chapter is refreshed by `map` once they exist.

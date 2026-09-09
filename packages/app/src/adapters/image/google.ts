@@ -57,7 +57,15 @@ const errorBody = z.object({
   error: z.object({
     message: z.string().nullish(),
     status: z.string().nullish(),
-    code: z.number().nullish(),
+    code: z.union([z.number(), z.string()]).nullish(),
+    details: z
+      .array(
+        z.object({
+          "@type": z.string().optional(),
+          retryDelay: z.string().optional(),
+        }),
+      )
+      .nullish(),
   }),
 });
 
@@ -154,6 +162,11 @@ function kindOf(
     return "auth";
   }
   if (status === 429) {
+    // Interactions wraps quota failures in a string-coded error and exposes the limit
+    // in the message. Zero allocated capacity cannot be fixed by waiting and retrying.
+    if (/quota exceeded for metric:[^\r\n]*?\blimit:\s*0\s*(?:,|$)/im.test(message)) {
+      return "unsupported";
+    }
     return "rate_limit";
   }
   // ceiling: everything else is `other` and is retried, so a prompt past the model's limit
@@ -170,12 +183,32 @@ async function failure(response: Response): Promise<Error> {
   const message = redact(
     (parsed.success ? parsed.data.error.message : undefined) ?? text.trim() ?? response.statusText,
   );
-  const retryAfterMs = retryAfter(response.headers.get("retry-after"));
+  const kind = kindOf(response.status, named, message);
+  const delay = parsed.success
+    ? parsed.data.error.details?.find(
+        (one) => one["@type"] === "type.googleapis.com/google.rpc.RetryInfo",
+      )?.retryDelay
+    : undefined;
+  const retryAfterMs =
+    retryAfter(response.headers.get("retry-after")) ?? googleRetryDelay(delay, message);
+  const guidance =
+    kind === "unsupported"
+      ? "Google reports zero image quota for this model. Check the API key's project, billing and model quota in Google AI Studio, or choose another image provider. Retrying will not help until quota is available. "
+      : "";
   return providerError({
-    kind: kindOf(response.status, named, message),
-    message: `Google answered ${String(response.status)}: ${message || response.statusText}`,
+    kind,
+    message: `${guidance}Google answered ${String(response.status)}: ${message || response.statusText}`,
     ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
   });
+}
+
+function googleRetryDelay(delay: string | undefined, message: string): number | undefined {
+  const seconds =
+    delay?.match(/^(\d+(?:\.\d+)?)s$/)?.[1] ??
+    message.match(/\bPlease retry in (\d+(?:\.\d+)?)s\b/i)?.[1];
+  if (seconds === undefined) return undefined;
+  const ms = Math.ceil(Number(seconds) * 1000);
+  return Number.isFinite(ms) ? ms : undefined;
 }
 
 function parse(text: string): z.infer<typeof interaction> {
