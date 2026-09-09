@@ -22,7 +22,11 @@ export function InlineSwitch<T extends string>({
   // would say it twice; the label stays in the accessibility tree either way.
   readonly hideLabel?: boolean | undefined;
   readonly value: T;
-  readonly options: readonly { readonly value: T; readonly label: string }[];
+  readonly options: readonly {
+    readonly value: T;
+    readonly label: string;
+    readonly disabled?: boolean;
+  }[];
   readonly className?: string | undefined;
   readonly onPick: (next: T) => void;
 }) {
@@ -39,13 +43,17 @@ export function InlineSwitch<T extends string>({
         aria-labelledby={labelId}
         onValueChange={(next) => {
           const picked = options.find((option) => option.value === next);
-          if (picked !== undefined) {
+          if (picked !== undefined && picked.disabled !== true) {
             onPick(picked.value);
           }
         }}
       >
         {options.map((option) => (
-          <ToggleGroupItem key={option.value} value={option.value}>
+          <ToggleGroupItem
+            key={option.value}
+            value={option.value}
+            disabled={option.disabled === true}
+          >
             {option.label}
           </ToggleGroupItem>
         ))}

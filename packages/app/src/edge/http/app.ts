@@ -8,6 +8,7 @@ import type { Clock } from "../../kernel/clock.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
+import type { ModelInfo, ProviderFamily } from "../../kernel/ports/model.js";
 import type { Runner } from "../../kernel/runner/index.js";
 import type { CliProbe } from "../../slices/settings/cli-status.js";
 import type { Hub } from "../events/hub.js";
@@ -28,6 +29,7 @@ export interface AppDeps {
   readonly paths: Paths;
   readonly hub: Hub;
   readonly runner: Runner;
+  readonly modelsFor?: (provider: string, family: ProviderFamily) => Promise<readonly ModelInfo[]>;
   readonly clock: Clock;
   readonly ids: Ids;
   readonly log: Log;

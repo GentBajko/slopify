@@ -29,7 +29,7 @@ export const imagesPerRunMax = 60;
 // is this module's. A wider gap is a settings change, not a schema change.
 export const silenceGapSecondsMax = 30;
 
-// The legal source for each stage; video is always generated. Exported because Play's
+// The legal source for each stage. Exported because Play's
 // source switches offer exactly these and nothing else, so the segmented control and the
 // refusal below it are the same list and a stage whose legal set changes cannot leave a
 // switch offering something the server refuses. The order is the order the segments are
@@ -37,15 +37,15 @@ export const silenceGapSecondsMax = 30;
 export const allowedSources: Readonly<Record<StageKind, readonly StageSource[]>> = {
   research: ["off", "generate", "provide"],
   article: ["generate", "provide"],
-  audio: ["generate", "provide"],
-  images: ["generate", "provide"],
+  audio: ["off", "generate", "provide"],
+  images: ["off", "generate", "provide"],
   thumbnail: ["off", "from_prompt", "prompt_by_llm", "provide"],
-  video: ["generate"],
+  video: ["off", "generate"],
 };
 
 export function admit(input: AdmissionInput): AdmissionResult {
   const fields: FieldError[] = [];
-  const draft = normalise(input.draft);
+  const draft = normaliseDraft(input.draft);
   const { sources } = draft;
 
   if (draft.title === "") {
@@ -89,9 +89,14 @@ export function admit(input: AdmissionInput): AdmissionResult {
 
   if (sources.images === "generate") {
     checkImagePrompts(draft, fields);
-    if (!chosen(draft.images)) {
-      fields.push({ field: "images", message: "Pick an image provider and model." });
-    }
+  }
+  if (
+    (sources.images === "generate" ||
+      sources.thumbnail === "from_prompt" ||
+      sources.thumbnail === "prompt_by_llm") &&
+    !chosen(draft.images)
+  ) {
+    fields.push({ field: "images", message: "Pick an image provider and model." });
   }
 
   if (
@@ -119,11 +124,15 @@ export function admit(input: AdmissionInput): AdmissionResult {
 }
 
 // Research only feeds article writing, so a provided article hides it.
-// Video is generated whatever the form said.
-function normalise(draft: RunDraft): RunDraft {
-  const sources = { ...draft.sources, video: "generate" as StageSource };
+// Disabling images chooses audio export. Uploaded narration is used as-is, and
+// only generated narration uses separately selected intro/outro entries.
+export function normaliseDraft(draft: RunDraft): RunDraft {
+  const sources = { ...draft.sources };
   if (sources.article === "provide") {
     sources.research = "off";
+  }
+  if (sources.images === "off" && sources.video === "generate") {
+    sources.video = "off";
   }
   // Prototype-free, because a slot name is user-authored: `{{constructor}}` would
   // otherwise answer with Object rather than undefined and pass the "required" check, and
@@ -132,7 +141,14 @@ function normalise(draft: RunDraft): RunDraft {
   for (const [name, value] of Object.entries(draft.values)) {
     values[name] = value.trim();
   }
-  return { ...draft, title: draft.title.trim(), sources, values };
+  return {
+    ...draft,
+    title: draft.title.trim(),
+    sources,
+    values,
+    intro: sources.audio === "generate" ? draft.intro : undefined,
+    outro: sources.audio === "generate" ? draft.outro : undefined,
+  };
 }
 
 function checkImagePrompts(draft: RunDraft, fields: FieldError[]): void {

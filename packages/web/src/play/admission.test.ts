@@ -243,7 +243,7 @@ describe("the keyword fields the picked prompts ask for", () => {
     ]);
   });
 
-  it("asks for a provided stage's prompt nothing, and for a picked entry's slots always", () => {
+  it("omits a provided stage's prompt and keeps entry slots when narration is generated", () => {
     const provided: PlayFormState = {
       ...generated,
       sources: { ...generated.sources, article: "provide", images: "provide" },

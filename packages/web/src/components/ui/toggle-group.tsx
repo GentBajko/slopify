@@ -34,6 +34,7 @@ function ToggleGroupItem({
         "min-h-8 shrink-0 border-r border-line2 px-[10px] py-[5px] text-label text-ink2 last:border-r-0",
         "transition-colors duration-150 ease-out motion-reduce:transition-none hover:bg-panel2 hover:text-ink",
         "data-[state=on]:bg-panel2 data-[state=on]:text-ink data-[state=on]:shadow-[inset_0_-2px_0_var(--color-lamp-run)]",
+        "disabled:cursor-not-allowed disabled:opacity-40",
         className,
       )}
       {...props}

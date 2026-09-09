@@ -1,5 +1,5 @@
 ---
-generated_date: 2026-09-02
+generated_date: 2026-09-09
 capstone_version: 5.2.0
 paths_covered:
  - "packages/app/src/kernel/runner/**"
@@ -15,10 +15,10 @@ paths_covered:
 **Run** (`logic/01`, `logic/04`):
 1. SPA `packages/web/src/routes/play.tsx` posts the RunConfig to `POST /api/projects` through the typed client.
 2. `edge/http/projects.ts` validates the body → `slices/admission/startRun()`: validates per `logic/04`, renders prompts per `logic/03`, attaches staged files per `logic/05`, inserts `projects`, six `stages`, `outputs` for provided files in one SQLite transaction; responds 201 with the project.
-3. `kernel/runner` picks up the project: walks the graph research → article → {audio ∥ images ∥ thumbnail} → video, starting a stage when its dependencies are `done`, `provided`, or `skipped` (`logic/01`).
+3. `kernel/runner` picks up the project: starts saved-prompt images and a prewritten thumbnail immediately alongside research. Article waits for research; narration and an LLM-written thumbnail wait for Article. MP4 waits for Article, Audio, Images and Thumbnail; WAV waits for Article and Audio only. Dependencies accept `done`, `provided` or `skipped`; a persisted pause prevents all new claims (`logic/01`).
 4. Each stage slice runs its steps, writing `stage_pieces`, `attempts`, `outputs`, and files under `projects/<id>/`, and emitting progress to `edge/events`.
 5. `edge/events/projects.ts` pushes SSE events (`stage.state`, `stage.progress`, `article.delta`, `image.landed`) to subscribed pages; `edge/events/global.ts` pushes the running tally.
-6. Video `done` → project derived `done`; `slices/telemetry` appends a `stage.completed` event per stage and flushes the queue (`logic/16`).
+6. Every stage satisfied → project derived `done`, including article-only runs; `slices/telemetry` appends a `stage.completed` event per stage and flushes the queue (`logic/16`).
 
 **Provider attempt** (`logic/01`):
 1. A stage slice calls its port with domain inputs.
@@ -31,6 +31,8 @@ paths_covered:
 2. `slices/telemetry/flush()` runs at boot and after every record: batches undelivered rows to the collector's `POST /events`; on success marks `delivered_at`; on any failure leaves them queued silently (`logic/16`).
 3. Collector dedups by event ID and adds to `aggregates`; the site polls `GET /aggregates` every 5 s (`logic/16`).
 
+**Pause / resume / providers** (`logic/13`, `logic/12`): `POST /api/projects/:id/pause` persists the pause before aborting and draining active work. Interrupted stages return to pending and completed pieces remain. `PATCH /api/projects/:id/providers` validates and saves changed choices only while paused or failed; it does not resume. `POST /api/projects/:id/resume` clears the pause and retries unfinished stages. Control actions, output edits and deletion are serialized per project. `project.updated` invalidates the SPA query. The global event stream forwards project state/configuration changes to refresh project listings in other windows, even when the running tally is unchanged.
+
 **Cancel** (`logic/13`): `POST /api/projects/:id/cancel` → `slices/cancel` aborts every in-flight attempt through an `AbortSignal` handed to adapters and the ffmpeg child, marks running stages `canceled`, keeps done pieces, discards partial streams and partial render files, emits SSE.
 
 **Re-run** (`logic/12`): `POST /api/projects/:id/stages/:kind/rerun` (and edit, regenerate, delete-image, replace endpoints) → `slices/reruns` mutates outputs, marks dependents `pending`, and hands the project back to the runner, which cascades to a fresh render.
@@ -39,7 +41,7 @@ paths_covered:
 
 | State | Where | Mutated by |
 |---|---|---|
-| Projects, stages, attempts, pieces, outputs | SQLite (`kernel/db`), single writer in WAL mode | slices through `repo.ts` modules; the runner through `kernel/runner` |
+| Projects, pause controls, stages, attempts, pieces, outputs | SQLite (`kernel/db`), single writer in WAL mode | slices through `repo.ts` modules; the runner through `kernel/runner` |
 | Files (article, audio, images, video, provided uploads) | `<data-dir>/projects/<id>/`, `<data-dir>/staging/` (`logic/14`) | `slices/storage` only; other slices ask it for paths |
 | Templates, keys, voices, settings | SQLite | `slices/library`, `slices/settings` |
 | Telemetry queue, machine ID | SQLite | `slices/telemetry` |
@@ -62,7 +64,7 @@ Compute is stateless apart from the in-flight run state above; there is no sessi
 ## Failure paths
 
 - Provider error, timeout, rate limit: the attempt wrapper above; after 4 attempts the stage fails with verbatim text; siblings continue; done outputs are kept (`logic/01`).
-- Interrupted process: at the next boot every `running` stage → `failed` "interrupted"; in-flight memory is gone; staged uploads never attached are deleted (`logic/01`, `logic/05`).
+- Interrupted process: at the next boot running stages in paused projects return to pending; other running stages become failed "interrupted"; persisted pauses prevent scheduling; in-flight memory is gone; staged uploads never attached are deleted (`logic/01`, `logic/05`).
 - SSE disconnect: the browser reconnects automatically; on reconnect the page refetches the project and resumes from current state; events are not replayed.
 - Disk write failure: the writing stage fails with the OS error (`logic/14`); the transaction that created a project rolls back and Play shows the error (`logic/04`).
 - Collector unreachable: events stay queued; the pipeline never waits on telemetry (`logic/16`).

@@ -11,6 +11,8 @@ import type { Log } from "../../kernel/log.js";
 import { ensureDirs, layout } from "../../kernel/paths.js";
 import type { StageKind, StageState } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
+import { projectById, stagesOf } from "../../slices/admission/repo.js";
+import { upsertKey } from "../../slices/settings/repo.js";
 import { createHub } from "../events/hub.js";
 import { createApp } from "./app.js";
 
@@ -114,6 +116,10 @@ function harness(states: Partial<Record<StageKind, StageState>> = {}): Harness {
     webDist: join(paths.dataDir, "missing"),
     flushSoon: (): void => {},
     probe: () => Promise.resolve({ ran: false, stdout: "" }),
+    modelsFor: async () => [
+      { id: "new", name: "New" },
+      { id: "typed/model-id", name: "Typed model" },
+    ],
   });
   return { app, db, ticked, aborted };
 }
@@ -324,5 +330,86 @@ describe("cancel", () => {
     const response = await h.app.request("/api/projects/nope/cancel", { method: "POST" });
 
     expect(response.status).toBe(404);
+  });
+});
+
+describe("pause, resume, and provider editing", () => {
+  it("returns a paused project after draining then resumes it with one tick", async () => {
+    const h = harness({ article: "running", audio: "pending", video: "pending" });
+    const paused = await h.app.request(`/api/projects/${projectId}/pause`, { method: "POST" });
+    expect(paused.status).toBe(200);
+    expect(await paused.json()).toMatchObject({
+      project: { id: projectId, status: "paused", paused: true },
+      stages: expect.arrayContaining([
+        { ...stagesOf(h.db, projectId).find((stage) => stage.kind === "article") },
+      ]),
+    });
+    expect(stagesOf(h.db, projectId).find((stage) => stage.kind === "article")?.state).toBe(
+      "pending",
+    );
+    expect(h.aborted).toEqual([projectId]);
+    expect(h.ticked).toEqual([]);
+    const resumed = await h.app.request(`/api/projects/${projectId}/resume`, { method: "POST" });
+    expect(resumed.status).toBe(200);
+    expect(await resumed.json()).toMatchObject({ project: { paused: false } });
+    expect(h.ticked).toEqual([projectId]);
+  });
+
+  it("updates paused provider choices and preserves the saved run configuration", async () => {
+    const h = harness({ article: "failed" });
+    upsertKey(h.db, "openrouter", "test-key", clock.now().toISOString());
+    await h.app.request(`/api/projects/${projectId}/pause`, { method: "POST" });
+    const before = projectById(h.db, projectId)?.config;
+    const response = await h.app.request(`/api/projects/${projectId}/providers`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ llm: { provider: "openrouter", model: "typed/model-id" } }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      project: {
+        status: "paused",
+        config: { ...before, llm: { provider: "openrouter", model: "typed/model-id" } },
+      },
+    });
+    expect(h.ticked).toEqual([]);
+  });
+
+  it("refuses provider edits during active work and returns field errors for unavailable choices", async () => {
+    const h = harness({ article: "running" });
+    const request = () =>
+      h.app.request(`/api/projects/${projectId}/providers`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ llm: { provider: "openrouter", model: "new" } }),
+      });
+    expect((await request()).status).toBe(409);
+    await h.app.request(`/api/projects/${projectId}/pause`, { method: "POST" });
+    const response = await request();
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      fields: [{ field: "llm", message: expect.stringContaining("API key") }],
+    });
+  });
+
+  it.each([{}, { llm: { provider: "openrouter", model: "" } }, { sources: { article: "off" } }])(
+    "rejects a malformed provider patch without touching the project: %j",
+    async (body) => {
+      const h = harness({ article: "failed" });
+      const response = await h.app.request(`/api/projects/${projectId}/providers`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      expect(response.status).toBe(400);
+      expect(h.ticked).toEqual([]);
+    },
+  );
+
+  it.each(["pause", "resume"])("answers 404 for %s of an unknown project", async (action) => {
+    const h = harness();
+    expect(
+      (await h.app.request(`/api/projects/missing/${action}`, { method: "POST" })).status,
+    ).toBe(404);
   });
 });

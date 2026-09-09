@@ -1,6 +1,6 @@
 # Slopify: capstone index
 
-Slopify: a self-hosted, single-user content pipeline (research → article → TTS narration → images and thumbnail → slideshow video) for faceless YouTube channel operators, run with `npx @gentbajko/slopify@latest`. TypeScript on Node ≥ 26; one process: a Hono 4 API serving a React 19 SPA, an in-process pipeline runner, bundled ffmpeg as a child process, one SQLite file; plus a static marketing site and a serverless telemetry collector. Paradigm: functional core (pure slices) with a procedural shell (runner, adapters, edge).
+Slopify: a self-hosted, single-user content pipeline (research → article → narration, with independent images and an optional MP4 or WAV export) for faceless YouTube channel operators, run with `npx @gentbajko/slopify@latest`. TypeScript on Node ≥ 26; one process: a Hono 4 API serving a React 19 SPA, an in-process pipeline runner, bundled ffmpeg as a child process, one SQLite file; plus a static marketing site and a serverless telemetry collector. Paradigm: functional core (pure slices) with a procedural shell (runner, adapters, edge).
 
 ## Module map
 
@@ -11,7 +11,7 @@ Slopify: a self-hosted, single-user content pipeline (research → article → T
 | HTTP API and SSE | `packages/app/src/edge/http/*.ts`, `packages/app/src/edge/events/*.ts` |
 | Stage-graph runner and retry wrapper | `packages/app/src/kernel/runner/` |
 | Provider ports and adapters | `packages/app/src/kernel/ports/`, `packages/app/src/adapters/{llm,tts,image,fake}/` |
-| Pipeline slices | `packages/app/src/slices/{research,article,narration,images,thumbnail,video,reruns,cancel,admission,storage,library,settings,telemetry}/` |
+| Pipeline slices | `packages/app/src/slices/{research,article,narration,images,thumbnail,video,reruns,cancel,control,admission,storage,library,settings,telemetry}/` |
 | SQLite and migrations | `packages/app/src/kernel/db/` |
 | React SPA | `packages/web/src/main.tsx` |
 | Marketing site | `packages/site/` |

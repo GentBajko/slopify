@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { StageKind, StageState } from "../pipeline.js";
 import { stageKinds } from "../pipeline.js";
-import { deps, derive, progressOf, satisfied } from "./graph.js";
+import { dependenciesOf, deps, derive, progressOf, satisfied } from "./graph.js";
 
 function stages(states: Partial<Record<StageKind, StageState>>): Array<{
   kind: StageKind;
@@ -11,14 +11,14 @@ function stages(states: Partial<Record<StageKind, StageState>>): Array<{
 }
 
 describe("deps", () => {
-  it("wires research → article → {audio, images, thumbnail} → video", () => {
+  it("starts images independently and waits for required article before video", () => {
     expect(deps).toEqual({
       research: [],
       article: ["research"],
       audio: ["article"],
-      images: ["article"],
+      images: [],
       thumbnail: ["article"],
-      video: ["audio", "images", "thumbnail"],
+      video: ["article", "audio", "images", "thumbnail"],
     });
   });
 
@@ -59,7 +59,7 @@ describe("derive", () => {
     expect(derive(stages({ audio: "failed", video: "done" }))).toBe("failed");
   });
 
-  it("reads done only when video is done", () => {
+  it("reads done when every requested stage is satisfied", () => {
     expect(derive(stages({ ...allSatisfied(), video: "done" }))).toBe("done");
     expect(derive(stages({ ...allSatisfied(), video: "pending" }))).toBe("pending");
   });
@@ -72,14 +72,16 @@ describe("derive", () => {
     expect(derive([])).toBe("pending");
   });
 
-  // The rule this extends: a cancelled project reads `canceled`, but the last running
-  // stage may store its output as the cancel lands and stay `done`. Nothing is then
-  // `canceled`, and the four derived states have no answer.
-  it("reads canceled when a run stopped after a stage finished and nothing runs", () => {
-    expect(derive(stages({ research: "done" }))).toBe("canceled");
-    expect(derive(stages({ ...allSatisfied(), images: "done", video: "pending" }))).toBe(
-      "canceled",
-    );
+  it("leaves unfinished work pending when an independent stage finishes", () => {
+    expect(derive(stages({ research: "done" }))).toBe("pending");
+    expect(derive(stages({ images: "done" }))).toBe("pending");
+  });
+
+  it("finishes an article-only run and preserves an explicit pause while draining", () => {
+    expect(
+      derive(stages({ ...allSatisfied(), audio: "skipped", images: "skipped", video: "skipped" })),
+    ).toBe("done");
+    expect(derive(stages({ audio: "running" }), true)).toBe("paused");
   });
 
   // A stage the user supplied or switched off is not a stage the runner carried to the
@@ -169,5 +171,25 @@ describe("progressOf", () => {
 
   it("has nothing outstanding for a project with no stage rows at all", () => {
     expect(progressOf([])).toBe(1);
+  });
+});
+
+describe("source-aware dependencies", () => {
+  const sources = {
+    research: "generate",
+    article: "generate",
+    audio: "generate",
+    images: "generate",
+    thumbnail: "from_prompt",
+    video: "generate",
+  };
+  it("starts a prewritten thumbnail independently, while an LLM-written one waits for article", () => {
+    expect(dependenciesOf("thumbnail", sources)).toEqual([]);
+    expect(dependenciesOf("thumbnail", { ...sources, thumbnail: "prompt_by_llm" })).toEqual([
+      "article",
+    ]);
+  });
+  it("exports WAV as soon as article and audio finish even if optional images fail", () => {
+    expect(dependenciesOf("video", { ...sources, video: "off" })).toEqual(["article", "audio"]);
   });
 });

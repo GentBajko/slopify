@@ -108,12 +108,11 @@ describe("tick", () => {
     await runner.settled();
 
     expect(stages.rows.every((row) => row.state === "done")).toBe(true);
-    expect(states(events).slice(0, 4)).toEqual([
-      "research:running",
-      "research:done",
-      "article:running",
-      "article:done",
-    ]);
+    expect(
+      states(events)
+        .filter((event) => !event.startsWith("images:"))
+        .slice(0, 4),
+    ).toEqual(["research:running", "research:done", "article:running", "article:done"]);
     expect(states(events).slice(-2)).toEqual(["video:running", "video:done"]);
   });
 
@@ -165,7 +164,7 @@ describe("tick", () => {
 
     // Six starts for six stages: the in-flight set turned every extra tick away.
     expect(started.sort()).toEqual([...stageKinds].sort());
-    expect(stages.claims).toEqual([...stageKinds]);
+    expect([...stages.claims].sort()).toEqual([...stageKinds].sort());
   });
 
   it("starts a stage once even when the stage list it reads is stale", async () => {

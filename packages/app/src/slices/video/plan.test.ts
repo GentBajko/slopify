@@ -97,6 +97,12 @@ describe("the frame", () => {
 });
 
 describe("the image slots", () => {
+  it("gives each silent image five seconds and omits the audio timeline", () => {
+    const plan = planRender(input({ body: undefined }));
+    expect(plan.audio).toEqual([]);
+    expect(plan.totalSeconds).toBe(15);
+    expect(plan.images.map((slot) => slot.frames)).toEqual([150, 150, 150]);
+  });
   it("splits the timeline evenly and lets the last image absorb the rounding", () => {
     // 10 s at 30 fps is 300 frames over three images: 100, 100, 100.
     expect(planRender(input()).images.map((slot) => slot.frames)).toEqual([100, 100, 100]);

@@ -54,6 +54,8 @@ export function outputFileName(
       return "video.mp4";
     case "audio_body":
       return `audio-body${extension}`;
+    case "audio_export":
+      return "audio.wav";
     case "audio_intro":
       return `audio-intro${extension}`;
     case "audio_outro":

@@ -40,7 +40,7 @@ export interface AdmissionInput {
 }
 
 // `slices/library/slots.ts` collects the same bodies at the click: the article prompt of a
-// generating article stage, the picked intro and outro whatever the sources say, the ticked
+// generating article stage, the picked intro and outro when audio is generated, the ticked
 // image prompts of a generating images stage, and the thumbnail prompt of either Generate mode.
 export function keywordFields(input: AdmissionInput): readonly Field[] {
   const { form } = input;
@@ -50,8 +50,10 @@ export function keywordFields(input: AdmissionInput): readonly Field[] {
   if (form.sources.article === "generate") {
     push(text, bodyOf(input.prompts, "article", form.articlePrompt));
   }
-  push(text, entryBody(input.entries, "intro", form.intro));
-  push(text, entryBody(input.entries, "outro", form.outro));
+  if (form.sources.audio === "generate") {
+    push(text, entryBody(input.entries, "intro", form.intro));
+    push(text, entryBody(input.entries, "outro", form.outro));
+  }
 
   if (form.sources.images === "generate") {
     for (const picked of form.imagePrompts) {

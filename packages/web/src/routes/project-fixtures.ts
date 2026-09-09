@@ -1,4 +1,4 @@
-import type { StageKind, StageState } from "@app/kernel/pipeline.js";
+import type { ProjectState, StageKind, StageState } from "@app/kernel/pipeline.js";
 import type { Stage } from "@app/slices/admission/model.js";
 import type { Output } from "@app/slices/storage/model.js";
 import type { Answer } from "@/test-app";
@@ -46,7 +46,7 @@ export function output(
 }
 
 export function body(options: {
-  readonly status: "running" | "done" | "failed" | "canceled";
+  readonly status: ProjectState;
   readonly stages: readonly Stage[];
   readonly outputs: readonly Output[];
 }) {
@@ -102,7 +102,10 @@ export const finished = body({
     output("sources", "article"),
     output("glossary", "article"),
     output("audio_intro", "audio", { durationMs: 7000 }),
-    output("audio_body", "audio", { durationMs: 60_000 }),
+    output("audio_body", "audio", {
+      durationMs: 60_000,
+      meta: { voice: "narrator-m", provider: "elevenlabs", model: "v3" },
+    }),
     output("audio_outro", "audio", { durationMs: 5000 }),
     ...twoImages,
     output("thumbnail", "thumbnail", { meta: { prompt: "A cracked skull with gemstone eyes" } }),

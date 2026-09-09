@@ -1,6 +1,5 @@
 import { RailGroup } from "@/components/rail";
-import { cn } from "@/lib/utils";
-import { AudioRail, ImagesRail } from "@/play/media-rails";
+import { AudioRail, ImageProviderControls, ImagesRail } from "@/play/media-rails";
 import { OptionPicker } from "@/play/pickers";
 import { FilePick, PasteArea } from "@/play/provided";
 import type { RailProps } from "@/play/rail-frame";
@@ -88,7 +87,15 @@ function ArticleRail({ form, prompts, problem, update }: RailProps) {
   );
 }
 
-function ThumbnailRail({ form, prompts, problem, update, onPickFiles, onRemoveFile }: RailProps) {
+function ThumbnailRail({
+  form,
+  providers,
+  prompts,
+  problem,
+  update,
+  onPickFiles,
+  onRemoveFile,
+}: RailProps) {
   const generating =
     form.sources.thumbnail === "from_prompt" || form.sources.thumbnail === "prompt_by_llm";
 
@@ -96,6 +103,14 @@ function ThumbnailRail({ form, prompts, problem, update, onPickFiles, onRemoveFi
     <StageRail kind="thumbnail" name="Thumbnail" dim={form.sources.thumbnail === "off"}>
       <SourceSwitch kind="thumbnail" form={form} update={update} />
       <div className={railControls}>
+        {generating && form.sources.images !== "generate" ? (
+          <ImageProviderControls
+            form={form}
+            providers={providers}
+            problem={problem}
+            update={update}
+          />
+        ) : null}
         {generating ? (
           <OptionPicker
             label="Thumbnail prompt"
@@ -130,22 +145,27 @@ function ThumbnailRail({ form, prompts, problem, update, onPickFiles, onRemoveFi
   );
 }
 
-// The video is always generated, so this rail carries no switch and
-// says what it will be made of instead.
-function VideoRail({ form, silenceGapSeconds }: RailProps) {
-  const parts = [
-    "Rendered from the stages above",
-    ...(form.intro === "" ? [] : ["intro"]),
-    "body",
-    ...(form.outro === "" ? [] : ["outro"]),
-    `${String(silenceGapSeconds)} s gaps`,
-  ];
+function VideoRail({ form, silenceGapSeconds, update }: RailProps) {
+  const explanation =
+    form.sources.video === "generate"
+      ? form.sources.audio === "off"
+        ? "Silent video · 5 seconds per image"
+        : `Images and narration · ${String(silenceGapSeconds)} s segment gaps`
+      : form.sources.audio !== "off"
+        ? "Combined WAV export with narration and segment gaps"
+        : "Download each enabled stage separately";
 
   return (
-    <StageRail kind="video" name="Video" dim>
-      <span className={cn(railControls, "col-start-4 col-end-6")}>
-        <span className="engraved text-ink3">{parts.join(" · ")}</span>
+    <StageRail kind="video" name="Video" dim={form.sources.video === "off"}>
+      <SourceSwitch kind="video" form={form} update={update} />
+      <span className={railControls}>
+        <span className="engraved text-ink3">{explanation}</span>
       </span>
+      {form.sources.images === "off" ? (
+        <p className={`${railBeneath} text-small text-ink2`}>
+          Video is Off because Images is Off. Generate or provide images to enable video.
+        </p>
+      ) : null}
     </StageRail>
   );
 }

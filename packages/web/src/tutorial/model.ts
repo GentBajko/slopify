@@ -58,21 +58,27 @@ export const tutorialSteps = [
   { id: "play-article", title: "11. Choose what to write", target: "play-article", page: "play" },
   { id: "play-audio", title: "12. Choose the narration", target: "play-audio", page: "play" },
   { id: "play-images", title: "13. Choose the images", target: "play-images", page: "play" },
+  { id: "play-video", title: "14. Choose your final output", target: "play-video", page: "play" },
   {
     id: "play-options",
-    title: "14. Name and configure your video",
+    title: "15. Name and configure your project",
     target: "play-options",
     page: "play",
   },
   {
     id: "play-keywords",
-    title: "15. Fill in your keywords",
+    title: "16. Fill in your keywords",
     target: "play-keywords",
     page: "play",
   },
-  { id: "play-start", title: "16. Review and press PLAY", target: "play-start", page: "play" },
-  { id: "project", title: "17. Follow the run", target: "project-article", page: "project" },
-  { id: "download", title: "18. Download your video", target: "project-video", page: "project" },
+  { id: "play-start", title: "17. Review and press PLAY", target: "play-start", page: "play" },
+  {
+    id: "project",
+    title: "18. Follow and control the run",
+    target: "project-controls",
+    page: "project",
+  },
+  { id: "download", title: "19. Download your results", target: "project-video", page: "project" },
 ] as const;
 
 export type TutorialStep = (typeof tutorialSteps)[number];

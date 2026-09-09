@@ -194,7 +194,11 @@ describe("the stage bodies", () => {
       `${testOrigin}/files/p1/audio-outro`,
     ]);
     expect(screen.getByLabelText("Body narration")).not.toBeNull();
-    expect(await screen.findByText("Narrator M")).not.toBeNull();
+    expect(
+      await within(
+        container.querySelector('[data-tour="project-audio"]') as HTMLElement,
+      ).findByText("Narrator M"),
+    ).not.toBeNull();
     expect(screen.getByText("Chunking: every 500 words")).not.toBeNull();
   });
 

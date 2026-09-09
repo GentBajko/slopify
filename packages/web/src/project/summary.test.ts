@@ -9,7 +9,7 @@ const project = {
   title: "Rope Tricks",
   format: "16:9",
   status: "running",
-  config: {},
+  config: { sources: { video: "generate", audio: "generate" } },
   createdAt: "2026-09-03T00:00:00.000Z",
   updatedAt: "2026-09-03T00:00:00.000Z",
 } as unknown as ProjectSummary;
@@ -51,6 +51,13 @@ describe("the summary in a rundown row", () => {
   it("says what a pending or skipped stage is doing about it", () => {
     expect(summaryOf(stage("audio", "pending"), [], project)).toBe("Waits for the stages above");
     expect(summaryOf(stage("research", "skipped"), [], project)).toBe("Not part of this run");
+    expect(summaryOf(stage("images", "pending"), [], project)).toBe("Ready to run");
+    expect(summaryOf(stage("thumbnail", "pending", { source: "from_prompt" }), [], project)).toBe(
+      "Ready to run",
+    );
+    expect(summaryOf(stage("images", "pending"), [], { ...project, status: "paused" })).toBe(
+      "Waiting for Resume",
+    );
   });
 
   it("names the file behind a provided stage", () => {

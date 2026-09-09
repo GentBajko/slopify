@@ -12,6 +12,7 @@ import {
 } from "../../slices/admission/repo.js";
 import { admit } from "../../slices/admission/rules.js";
 import { startRun } from "../../slices/admission/start.js";
+import { withProjectControl } from "../../slices/control/lock.js";
 import { pickTemplates, renderPicked } from "../../slices/library/slots.js";
 import type { DeleteDeps, DeleteRefusal } from "../../slices/storage/delete-project.js";
 import { deleteProject } from "../../slices/storage/delete-project.js";
@@ -53,7 +54,7 @@ export function projectRoutes(deps: AppDeps) {
   const storageForDelete: DeleteDeps = { db: deps.db, paths: deps.paths, log: deps.log };
   const summarise = (project: Project): ProjectSummary => ({
     ...project,
-    status: derive(stagesOf(deps.db, project.id)),
+    status: derive(stagesOf(deps.db, project.id), project.paused),
   });
 
   return (
@@ -102,7 +103,11 @@ export function projectRoutes(deps: AppDeps) {
         const standings = stageStandingsByProject(deps.db);
         const projects: ProjectListing[] = listProjects(deps.db).map((project) => {
           const stages = standings.get(project.id) ?? [];
-          return { ...project, status: derive(stages), progress: progressOf(stages) };
+          return {
+            ...project,
+            status: derive(stages, project.paused),
+            progress: progressOf(stages),
+          };
         });
         return c.json({ projects });
       })
@@ -124,14 +129,15 @@ export function projectRoutes(deps: AppDeps) {
       // Irreversible, and only from the app: the Projects screen puts a confirmation
       // dialog in front of it.
       .delete("/:id", zValidator("param", idParam, onInvalid), (c) => {
-        const result = deleteProject(storageForDelete, c.req.valid("param").id);
-        if (result.ok) {
-          return c.body(null, 204);
-        }
-        return problem(c, {
-          status: deleteStatus[result.reason],
-          title: titleOf(deleteStatus[result.reason]),
-          detail: result.detail ?? deleteDetails[result.reason],
+        const id = c.req.valid("param").id;
+        return withProjectControl(deps.db, id, () => {
+          const result = deleteProject(storageForDelete, id);
+          if (result.ok) return c.body(null, 204);
+          return problem(c, {
+            status: deleteStatus[result.reason],
+            title: titleOf(deleteStatus[result.reason]),
+            detail: result.detail ?? deleteDetails[result.reason],
+          });
         });
       })
   );

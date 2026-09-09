@@ -5,6 +5,17 @@ capstone_version: 5.2.0
 
 # Changelog
 
+## 2026-09-10 - release 0.5.1: pause and optional outputs
+key: release/0.5.1
+- Runs can pause and resume with a durable pause flag. Pause aborts and drains active work, preserves completed pieces and outputs, and prevents new claims across app restarts.
+- Paused and failed projects can save text, image and narration provider/model choices, including a saved voice, before resuming separately. Provider validation has a deadline; per-project control queues protect concurrent edits, pause/resume and deletion. Changing unfinished narration's TTS choices clears partial audio to keep the voice consistent.
+- Article is the only required stage. Research, Audio, Images, Thumbnail and Video can be Off. Images Off selects Video Off; active Audio then exports combined 48 kHz stereo PCM WAV. Audio Off with images produces a silent MP4 at five seconds per image. Audio and Video Off permits article-only completion.
+- Saved-prompt images and prewritten thumbnails run immediately alongside research/writing. Only an LLM-written thumbnail waits for Article. Completion and rerun dependencies follow the selected outputs, so independent images neither wait for Article nor regenerate after text edits, and do not block or invalidate WAV exports.
+- Disabled fields no longer require unused prompts, keywords or voices. Uploaded narration is used as-is; generated narration can add selected intro/outro entries even when the Article is supplied.
+- The interactive tutorial now has 19 steps, explains Video selection and pause/provider controls, and highlights the actual MP4, WAV or Article download. Chrome checks at 1440px and 1024px cover the complete guide and new controls using simulated API responses.
+- Added real-app WAV and silent-video download checks to both Linux and Windows CI, plus control-concurrency, restart, partial-preservation and provider-switch regressions. No runtime dependencies added.
+- Verified locally with 1,571 tests, lint, typecheck, production build, package contents and a clean dependency audit. Provider edits must be saved or explicitly discarded before Resume; late action responses reconcile with server state and remain bound to their original project.
+
 ## 2026-09-09 - release 0.5.0
 key: release/0.5.0
 - The interactive first-video tutorial ships as 0.5.0, following the 0.4.3 first-run fixes. The guide is available from Tutorial in the navigation and from the empty Projects page.

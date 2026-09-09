@@ -192,7 +192,12 @@ export function ModelPicker({
       problem={problem}
       inline={inline}
       placeholder={provider === "" ? "Pick a provider first" : "Pick a model"}
-      options={listed.map((model) => ({ value: model.id, label: model.name }))}
+      options={[
+        ...(value !== "" && !listed.some((model) => model.id === value)
+          ? [{ value, label: `${value} (saved model)` }]
+          : []),
+        ...listed.map((model) => ({ value: model.id, label: model.name })),
+      ]}
       disabled={provider === ""}
       onPick={onPick}
     />

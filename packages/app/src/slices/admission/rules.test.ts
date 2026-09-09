@@ -95,9 +95,8 @@ describe("sources", () => {
         const marked = fields(provided({ sources: sources({ [kind]: source }) })).includes(
           `sources.${kind}`,
         );
-        // Video is normalised back to generate before the check, and a provided article
-        // forces research off, so neither stage can be marked whatever the form said.
-        const normalised = kind === "video" || (kind === "research" && source !== "off");
+        // A provided article forces research off before checking its source.
+        const normalised = kind === "research" && source !== "off";
         expect([kind, source, marked]).toEqual([
           kind,
           source,
@@ -107,13 +106,37 @@ describe("sources", () => {
     }
   });
 
-  it("refuses images set to off, because a run always has an image source", () => {
-    expect(fields(provided({ sources: sources({ images: "off" }) }))).toContain("sources.images");
+  it("allows every stage except article to be off", () => {
+    const result = admit({
+      draft: provided({
+        sources: sources({ audio: "off", images: "off", video: "off" }),
+        provided: { article: "Only the article." },
+        intro: { name: "Unused intro", mode: "llm" },
+        outro: { name: "Unused outro", mode: "llm" },
+      }),
+      staged: [],
+      requiredSlots: [],
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.draft.intro).toBeUndefined();
+      expect(result.draft.outro).toBeUndefined();
+    }
+    expect(fields(provided({ sources: sources({ article: "off" }) }))).toContain("sources.article");
   });
 
-  it("refuses article or audio set to off", () => {
-    expect(fields(provided({ sources: sources({ article: "off" }) }))).toContain("sources.article");
-    expect(fields(provided({ sources: sources({ audio: "off" }) }))).toContain("sources.audio");
+  it("allows a silent video with images and no narration", () => {
+    expect(fields(provided({ sources: sources({ audio: "off" }) }))).toEqual([]);
+  });
+
+  it("switches video off when images are off", () => {
+    const result = admit({
+      draft: provided({ sources: sources({ images: "off" }) }),
+      staged: files,
+      requiredSlots: [],
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.draft.sources.video).toBe("off");
   });
 
   it("forces research off when the article is provided", () => {
@@ -129,17 +152,26 @@ describe("sources", () => {
     }
   });
 
-  it("forces video to generate whatever the form asked for", () => {
+  it("retains Video Off and refuses a provided Video", () => {
     const result = admit({
-      draft: provided({ sources: sources({ video: "provide" }) }),
+      draft: provided({ sources: sources({ video: "off" }) }),
       staged: files,
       requiredSlots: [],
     });
-
     expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.draft.sources.video).toBe("generate");
-    }
+    if (result.ok) expect(result.draft.sources.video).toBe("off");
+    expect(fields(provided({ sources: sources({ video: "provide" }) }))).toContain("sources.video");
+  });
+
+  it("requires an image provider for a generated thumbnail even with Images Off", () => {
+    expect(
+      fields(
+        provided({
+          sources: sources({ images: "off", thumbnail: "from_prompt" }),
+          thumbnailPrompt: "Poster",
+        }),
+      ),
+    ).toEqual(["images"]);
   });
 
   it("accepts the thumbnail's four modes and nothing else", () => {
@@ -182,14 +214,38 @@ describe("the LLM row", () => {
   it("is required when the thumbnail prompt is written by an LLM", () => {
     expect(
       fields(
-        provided({ sources: sources({ thumbnail: "prompt_by_llm" }), thumbnailPrompt: "Bold" }),
+        provided({
+          sources: sources({ thumbnail: "prompt_by_llm" }),
+          thumbnailPrompt: "Bold",
+          images: { provider: "fal", model: "test" },
+        }),
       ),
     ).toEqual(["llm"]);
   });
 
-  it("is required when a picked intro or outro is in LLM mode", () => {
-    expect(fields(provided({ intro: { name: "Welcome", mode: "llm" } }))).toEqual(["llm"]);
-    expect(fields(provided({ outro: { name: "Bye", mode: "llm" } }))).toEqual(["llm"]);
+  it("is required for LLM entries with generated narration and a provided article", () => {
+    const narrated = provided({
+      sources: sources({ audio: "generate" }),
+      audio: { provider: "elevenlabs", model: "v3", voice: "v1" },
+    });
+    expect(fields({ ...narrated, intro: { name: "Welcome", mode: "llm" } })).toEqual(["llm"]);
+    expect(fields({ ...narrated, outro: { name: "Bye", mode: "llm" } })).toEqual(["llm"]);
+  });
+
+  it("uses provided narration as-is without requiring unused entry generation", () => {
+    const result = admit({
+      draft: provided({
+        intro: { name: "Unused", mode: "llm" },
+        outro: { name: "Unused", mode: "text" },
+      }),
+      staged: files,
+      requiredSlots: [],
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.draft.intro).toBeUndefined();
+      expect(result.draft.outro).toBeUndefined();
+    }
   });
 
   it("is not required for a Text-mode intro on an otherwise provided run", () => {

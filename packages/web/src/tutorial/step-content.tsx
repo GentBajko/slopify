@@ -7,7 +7,13 @@ const articleExample =
 const imageExample =
   "A cinematic editorial photograph of {{topic}}, with natural light, a clear focal point, rich detail, and no text or logos. Compose it for a travel video.";
 
-export function StepContent({ step }: { readonly step: TutorialStepId }) {
+export function StepContent({
+  step,
+  output = "video",
+}: {
+  readonly step: TutorialStepId;
+  readonly output?: "video" | "audio" | "article";
+}) {
   switch (step) {
     case "text-key":
     case "audio-key":
@@ -105,12 +111,12 @@ export function StepContent({ step }: { readonly step: TutorialStepId }) {
       return (
         <>
           <p>
-            Play is where you configure one video. Leave <strong>Article</strong> on{" "}
+            Play is where you configure one project. Leave <strong>Article</strong> on{" "}
             <strong>Generate</strong>, then select the article prompt you saved.
           </p>
           <p>
             <strong>Provide</strong> is for an article you already have. For this first run, use
-            Generate and keep the script short.
+            Generate and keep the script short. Article is required; every other stage can be Off.
           </p>
           <p>
             Research starts Off. You can turn it on in a later run for web-grounded notes that are
@@ -129,7 +135,11 @@ export function StepContent({ step }: { readonly step: TutorialStepId }) {
             Keep chunking on <strong>Whole</strong> for the short example: the narration is sent as
             one request. Other chunking modes split longer text into pieces.
           </p>
-          <p>Use Provide when you want to upload existing narration instead.</p>
+          <p>
+            Use Provide to upload existing narration, including any intro and outro in that file, or
+            Off to skip narration. Video can still run silently, with each image shown for 5
+            seconds.
+          </p>
         </>
       );
     case "play-images":
@@ -144,7 +154,27 @@ export function StepContent({ step }: { readonly step: TutorialStepId }) {
             Number means separate images made from that same prompt. It does not make one scene per
             article paragraph. Add more image prompts when you want different scenes.
           </p>
-          <p>Keep Thumbnail Off for now. You can add a thumbnail to later runs.</p>
+          <p>
+            Use Provide for your own images or Off to skip them. Turning Images Off also turns Video
+            Off. Thumbnail remains independent; keep it Off for this first run.
+          </p>
+        </>
+      );
+    case "play-video":
+      return (
+        <>
+          <p>
+            Choose <strong>Generate</strong> for an MP4 slideshow. It needs generated or provided
+            images. With Audio Off, the video is silent and each image lasts 5 seconds.
+          </p>
+          <p>
+            Choose <strong>Off</strong> to skip video. If Audio is active, Slopify exports one
+            combined <strong>WAV</strong> with the intro, body, outro and configured gaps.
+          </p>
+          <p>
+            If both Audio and Video are Off, download the article and any other enabled outputs
+            individually.
+          </p>
         </>
       );
     case "play-options":
@@ -160,7 +190,9 @@ export function StepContent({ step }: { readonly step: TutorialStepId }) {
             ; the other providers have a dropdown.
           </p>
           <p>
-            Leave <strong>Intro</strong> and <strong>Outro</strong> Off for this first video.
+            Leave <strong>Intro</strong> and <strong>Outro</strong> Off for this first run. They are
+            available only when Audio is Generate. The LLM controls appear only when an enabled
+            stage needs text generation.
           </p>
         </>
       );
@@ -195,7 +227,7 @@ export function StepContent({ step }: { readonly step: TutorialStepId }) {
           </p>
           <p>
             The tour will follow you to the project. You can also finish the tutorial without
-            generating a video.
+            generating anything.
           </p>
         </>
       );
@@ -203,17 +235,18 @@ export function StepContent({ step }: { readonly step: TutorialStepId }) {
       return (
         <>
           <p>
-            This page shows each stage’s progress and its results. Article text, audio and images
-            appear as they finish; the video assembles when its inputs are ready.
+            This page shows each stage’s progress and results. Press <strong>Pause</strong> to stop
+            active requests safely and keep finished work.
           </p>
           <p>
-            You can keep the page open while it runs. If a stage fails, read its error, fix the
-            cause, then use <strong>Retry stage</strong>. A zero provider quota needs account
-            changes first.
+            While paused or failed, open <strong>Run providers</strong> to change providers, models
+            or voice. Press <strong>Save providers</strong>, then <strong>Resume</strong>{" "}
+            separately. Changing TTS choices restarts unfinished narration to avoid mixing voices;
+            completed outputs stay unchanged.
           </p>
           <p>
-            Editing or rerunning an earlier stage can affect later stages; Slopify explains the
-            consequences before proceeding.
+            A failed stage also offers <strong>Retry stage</strong> after you fix its cause. Editing
+            or rerunning earlier work updates only the enabled dependent outputs.
           </p>
         </>
       );
@@ -221,8 +254,22 @@ export function StepContent({ step }: { readonly step: TutorialStepId }) {
       return (
         <>
           <p>
-            When Video finishes, open this stage and press <strong>Download .mp4</strong>. The
-            completed project stays in <strong>Projects</strong> so you can return to it.
+            {output === "audio" ? (
+              <>
+                When Audio export finishes, press <strong>Download .wav</strong> for the combined
+                narration.
+              </>
+            ) : output === "article" ? (
+              <>
+                Use <strong>Download</strong> here to save the article. Audio and Video are Off for
+                this project.
+              </>
+            ) : (
+              <>
+                When Video finishes, press <strong>Download .mp4</strong>.
+              </>
+            )}{" "}
+            The completed project stays in <strong>Projects</strong> so you can return to it.
           </p>
           <p>
             You can also download the article, audio and images from their own stages.{" "}

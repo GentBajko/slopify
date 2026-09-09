@@ -329,14 +329,10 @@ describe("cancelling a run", () => {
     expect(h.stateOf("images")).toBe("done");
     expect(imagePaths(h)).toEqual(["images/001.png"]);
     expect(existsSync(join(h.dir, "images", "001.png"))).toBe(true);
-    // No stage ended `canceled`, so the derivation has nothing to read the cancel off. The
-    // project reads `canceled` all the same, because `kernel/runner/graph.ts` extends the
-    // fallback: a run that carried a stage to `done` and then stopped is not a run about
-    // to start.
+    // The completed image stays done. Cancel marks the waiting render canceled,
+    // making the stopped state explicit without guessing from completed stages.
     expect(result).toEqual({ ok: true, canceled: [], state: "canceled" });
-    // Every dependency of the video is now satisfied - audio provided, thumbnail skipped,
-    // images done - so only the cancel's own barrier keeps the render from starting.
-    expect(h.stateOf("video")).toBe("pending");
+    expect(h.stateOf("video")).toBe("canceled");
     expect(h.videoRuns()).toBe(0);
     // The other side of it: the call completed before the abort took effect, the image is
     // stored, and it is counted. The render never ran, so no video is counted.

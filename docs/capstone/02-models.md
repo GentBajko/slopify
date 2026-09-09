@@ -1,5 +1,5 @@
 ---
-generated_date: 2026-09-02
+generated_date: 2026-09-09
 capstone_version: 5.2.0
 paths_covered:
  - "packages/app/src/kernel/db/**"
@@ -14,9 +14,10 @@ paths_covered:
 | Entity | Planned definition site | Storage | Purpose |
 |---|---|---|---|
 | Project | `packages/app/src/slices/admission/model.ts` | table `projects` + folder `projects/<id>/` | one run (`logic/04`) |
+| ProjectControl | `slices/admission/repo.ts` | table `project_controls` | durable pause flag; absent row means unpaused |
 | Stage | `slices/admission/model.ts` | table `stages` | one of research, article, audio, images, thumbnail, video per project (`logic/01`) |
 | Attempt | `kernel/runner/model.ts` | table `attempts` | one provider call attempt with error text (`logic/01`) |
-| StagePiece | `kernel/runner/model.ts` | table `stage_pieces` | resumable sub-unit: research chapter, audio chunk or segment, image index, thumbnail prompt-written (`logic/06`, `08`, `09`, `10`) |
+| StagePiece | `kernel/runner/model.ts` | table `stage_pieces` | resumable sub-unit: research chapter, audio chunk or segment, image index, thumbnail prompt-written, article-written checkpoint (`logic/06`, `08`, `09`, `10`) |
 | Output | `slices/storage/model.ts` | table `outputs` + file | a produced or provided file with its metadata (`logic/14`) |
 | Prompt | `slices/library/model.ts` | table `prompts` | article / image / thumbnail template (`logic/15`) |
 | Entry | `slices/library/model.ts` | table `entries` | intro / outro, Text or LLM mode (`logic/15`) |
@@ -31,11 +32,11 @@ paths_covered:
 
 ## Fields and types
 
-- Project: `id` ULID; `title` text ≤200; `format` enum `16:9`, `9:16`; `config` JSON (RunConfig); `status` derived, never stored (`logic/01`); `created_at`, `updated_at` UTC ISO-8601 text.
+- Project: `id` ULID; `title` text ≤200; `format` enum `16:9`, `9:16`; `config` JSON (RunConfig); `paused` boolean read from `project_controls`; `status` derived from the pause flag and stages, never stored (`logic/01`); `created_at`, `updated_at` UTC ISO-8601 text.
 - Stage: `id`, `project_id`, `kind` enum (`research`, `article`, `audio`, `images`, `thumbnail`, `video`); `source` enum (`generate`, `provide`, `off`, `from_prompt`, `prompt_by_llm`); `state` enum (`pending`, `running`, `done`, `failed`, `canceled`, `provided`, `skipped`); `failure_reason` text nullable (verbatim provider text, "interrupted", "canceled by user"); `attempt_count` integer; `progress_current`, `progress_total` integer nullable; `started_at`, `finished_at` nullable.
 - Attempt: `id`, `stage_id`, `piece_id` nullable, `n` 1-4, `started_at`, `ended_at`, `outcome` enum (`ok`, `error`, `timeout`, `refusal`, `aborted`), `error_text`.
-- StagePiece: `id`, `stage_id`, `kind` (`chapter`, `chunk`, `segment`, `image`, `prompt_written`), `index` integer, `state` (`pending`, `running`, `done`, `failed`), `payload` JSON (prompt text, chapter title, chunk text).
-- Output: `id`, `project_id`, `stage_kind`, `role` (`notes`, `article_md`, `article_txt`, `sources`, `glossary`, `audio_body`, `audio_intro`, `audio_outro`, `image`, `thumbnail`, `video`, `render_params`, `instructions`), `path` relative to the project folder, `original_filename` nullable (provided files), `bytes`, `duration_ms` nullable, `meta` JSON (prompt name, index, provider, model, voice), `created_at`.
+- StagePiece: `id`, `stage_id`, `kind` (`chapter`, `chunk`, `segment`, `image`, `prompt_written`, `article_written`), `index` integer, `state` (`pending`, `running`, `done`, `failed`), `payload` JSON (prompt text, chapter title, chunk text).
+- Output: `id`, `project_id`, `stage_kind`, `role` (`notes`, `article_md`, `article_txt`, `sources`, `glossary`, `audio_body`, `audio_intro`, `audio_outro`, `image`, `thumbnail`, `video`, `audio_export`, `render_params`, `instructions`), `path` relative to the project folder, `original_filename` nullable (provided files), `bytes`, `duration_ms` nullable, `meta` JSON (prompt name, index, provider, model, voice), `created_at`.
 - Prompt: `id`, `kind` (`article`, `image`, `thumbnail`), `name` unique per kind case-insensitively, `body`, `slots` JSON (detected names), `updated_at`.
 - Entry: `id`, `category` (`intro`, `outro`), `mode` (`text`, `llm`), `name` unique per category, `body`, `slots` JSON.
 - ProviderKey: `provider` primary key, `key` text, `updated_at`. CLI providers have no row; their `installed` status is computed at request time.
@@ -67,10 +68,11 @@ Three representations: SQLite rows (snake_case columns, JSON columns for config,
 
 ## Schema
 
-Migrations in `packages/app/src/kernel/db/migrations/NNNN-<name>.sql`, forward-only, applied at boot in order, recorded in `schema_migrations(version, applied_at)`; the app refuses to start when the database records a version newer than it knows. WAL journal mode on open. Planned DDL, transcribed into the first migration when `build` runs:
+Migrations in `packages/app/src/kernel/db/migrations/NNNN-<name>.sql`, forward-only, applied at boot in order, recorded in `schema_migrations(version, applied_at)`; the app refuses to start when the database records a version newer than it knows. WAL journal mode on open. Core DDL lives in `0001-init.sql`; `0002-project-controls.sql` adds the pause table without changing existing project rows:
 
 ```sql
 CREATE TABLE projects (id TEXT PRIMARY KEY, title TEXT NOT NULL CHECK(length(title) <= 200), format TEXT NOT NULL CHECK(format IN ('16:9','9:16')), config TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE project_controls (project_id TEXT PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE, paused INTEGER NOT NULL DEFAULT 0 CHECK(paused IN (0,1)));
 CREATE TABLE stages (id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE, kind TEXT NOT NULL CHECK(kind IN ('research','article','audio','images','thumbnail','video')), source TEXT NOT NULL, state TEXT NOT NULL CHECK(state IN ('pending','running','done','failed','canceled','provided','skipped')), failure_reason TEXT, attempt_count INTEGER NOT NULL DEFAULT 0, progress_current INTEGER, progress_total INTEGER, started_at TEXT, finished_at TEXT, UNIQUE(project_id, kind));
 CREATE TABLE attempts (id TEXT PRIMARY KEY, stage_id TEXT NOT NULL REFERENCES stages(id) ON DELETE CASCADE, piece_id TEXT, n INTEGER NOT NULL, started_at TEXT NOT NULL, ended_at TEXT, outcome TEXT, error_text TEXT);
 CREATE TABLE stage_pieces (id TEXT PRIMARY KEY, stage_id TEXT NOT NULL REFERENCES stages(id) ON DELETE CASCADE, kind TEXT NOT NULL, idx INTEGER NOT NULL, state TEXT NOT NULL, payload TEXT, UNIQUE(stage_id, kind, idx));

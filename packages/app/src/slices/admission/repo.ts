@@ -57,6 +57,7 @@ const projectRow = z.object({
   config: z.string(),
   created_at: z.string(),
   updated_at: z.string(),
+  paused: z.number().default(0),
 });
 
 const standingRow = z.object({
@@ -92,6 +93,7 @@ export function insertProject(db: DatabaseSync, project: Project): void {
     project.createdAt,
     project.updatedAt,
   );
+  if (project.paused === true) setProjectPaused(db, project.id, true, project.updatedAt);
 }
 
 export function insertStage(db: DatabaseSync, stage: Stage): void {
@@ -101,7 +103,7 @@ export function insertStage(db: DatabaseSync, stage: Stage): void {
 }
 
 export function projectById(db: DatabaseSync, id: string): Project | undefined {
-  const row = db.prepare("SELECT * FROM projects WHERE id = ?").get(id);
+  const row = db.prepare(`${projectSelect} WHERE projects.id = ?`).get(id);
   return row === undefined ? undefined : toProject(projectRow.parse(row));
 }
 
@@ -115,7 +117,7 @@ export function projectExists(db: DatabaseSync, id: string): boolean {
 // Newest first.
 export function listProjects(db: DatabaseSync): Project[] {
   return db
-    .prepare("SELECT * FROM projects ORDER BY created_at DESC, id DESC")
+    .prepare(`${projectSelect} ORDER BY created_at DESC, id DESC`)
     .all()
     .map((row) => toProject(projectRow.parse(row)));
 }
@@ -160,7 +162,7 @@ export function stagesOf(db: DatabaseSync, projectId: string): Stage[] {
 export function claimStage(db: DatabaseSync, stageId: string, at: string): boolean {
   const result = db
     .prepare(
-      "UPDATE stages SET state = 'running', started_at = ?, finished_at = NULL, failure_reason = NULL WHERE id = ? AND state = 'pending'",
+      "UPDATE stages SET state = 'running', started_at = ?, finished_at = NULL, failure_reason = NULL WHERE id = ? AND state = 'pending' AND NOT EXISTS (SELECT 1 FROM project_controls WHERE project_id = stages.project_id AND paused = 1)",
     )
     .run(at, stageId);
   return Number(result.changes) === 1;
@@ -176,7 +178,7 @@ export function finishStage(
   db.prepare("UPDATE stages SET state = ?, failure_reason = ?, finished_at = ? WHERE id = ?").run(
     state,
     failureReason,
-    at,
+    state === "pending" ? null : at,
     stageId,
   );
 }
@@ -210,7 +212,43 @@ function toProject(row: z.infer<typeof projectRow>): Project {
     config: parseConfig(row.config),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    paused: row.paused === 1,
   };
+}
+
+const projectSelect =
+  "SELECT projects.*, COALESCE(project_controls.paused, 0) AS paused FROM projects LEFT JOIN project_controls ON project_controls.project_id = projects.id";
+
+export function projectPaused(db: DatabaseSync, projectId: string): boolean {
+  return (
+    db.prepare("SELECT paused FROM project_controls WHERE project_id = ?").get(projectId)
+      ?.paused === 1
+  );
+}
+
+export function setProjectPaused(
+  db: DatabaseSync,
+  projectId: string,
+  paused: boolean,
+  at: string,
+): void {
+  db.prepare(
+    "INSERT INTO project_controls (project_id, paused) VALUES (?, ?) ON CONFLICT(project_id) DO UPDATE SET paused = excluded.paused",
+  ).run(projectId, paused ? 1 : 0);
+  db.prepare("UPDATE projects SET updated_at = ? WHERE id = ?").run(at, projectId);
+}
+
+export function updateProjectConfig(
+  db: DatabaseSync,
+  projectId: string,
+  config: RunConfig,
+  at: string,
+): void {
+  db.prepare("UPDATE projects SET config = ?, updated_at = ? WHERE id = ?").run(
+    JSON.stringify(config),
+    at,
+    projectId,
+  );
 }
 
 // A JSON column never reaches a caller as a string.

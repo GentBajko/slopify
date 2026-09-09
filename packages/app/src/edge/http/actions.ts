@@ -3,9 +3,13 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { stageKinds } from "../../kernel/pipeline.js";
 import { derive } from "../../kernel/runner/graph.js";
-import { projectById, stagesOf } from "../../slices/admission/repo.js";
+import { projectById, projectPaused, stagesOf } from "../../slices/admission/repo.js";
 import type { CancelDeps } from "../../slices/cancel/index.js";
 import { cancelProject } from "../../slices/cancel/index.js";
+import type { ControlDeps, ControlResult } from "../../slices/control/index.js";
+import { changeProviders, pauseProject, resumeProject } from "../../slices/control/index.js";
+import { withProjectControl } from "../../slices/control/lock.js";
+import { providerChangesSchema } from "../../slices/control/providers.js";
 import type { RerunDeps, RerunRefusal, RerunResult } from "../../slices/reruns/index.js";
 import {
   deleteImage,
@@ -14,6 +18,7 @@ import {
   rerunStage,
   retryStage,
 } from "../../slices/reruns/index.js";
+import { providerStatuses } from "../../slices/settings/readiness.js";
 import { outputsOf } from "../../slices/storage/repo.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
@@ -84,10 +89,20 @@ export function actionRoutes(deps: AppDeps) {
       deps.hub.emit(projectId, event);
     },
   };
+  const control: ControlDeps = {
+    ...reruns,
+    runner: deps.runner,
+    emit: (projectId, event) => deps.hub.emit(projectId, event),
+    providers: () => providerStatuses({ db: deps.db, probe: deps.probe }),
+    modelsFor: deps.modelsFor ?? (() => Promise.reject(new Error("Model catalog unavailable"))),
+  };
   const view = (projectId: string): Record<string, unknown> => {
     const stages = stagesOf(deps.db, projectId);
     return {
-      project: { ...projectById(deps.db, projectId), status: derive(stages) },
+      project: {
+        ...projectById(deps.db, projectId),
+        status: derive(stages, projectPaused(deps.db, projectId)),
+      },
       stages,
       outputs: outputsOf(deps.db, projectId),
     };
@@ -106,27 +121,74 @@ export function actionRoutes(deps: AppDeps) {
         detail: details[result.reason],
       });
     }
-    deps.runner.tick(projectId);
+    deps.hub.emit(projectId, { type: "project.updated", projectId });
+    if (!projectPaused(deps.db, projectId)) deps.runner.tick(projectId);
     return c.json({ ...view(projectId), redone: result.redone });
+  };
+  const controlled = (
+    c: Parameters<typeof problem>[0],
+    id: string,
+    result: ControlResult,
+  ): Response => {
+    if (result.ok) return c.json(view(id));
+    const codes = {
+      "no-project": 404,
+      running: 409,
+      "not-editable": 409,
+      "invalid-providers": 400,
+      "catalog-unavailable": 503,
+    } as const;
+    const messages = {
+      "no-project": "No project has that id.",
+      running: "Pause the run and wait for its active calls to stop before changing providers.",
+      "not-editable": "Providers can be changed only while a project is paused or failed.",
+      "invalid-providers": "The provider choices need attention.",
+      "catalog-unavailable": "The provider model catalog could not be loaded. Try again.",
+    };
+    return problem(c, {
+      status: codes[result.reason],
+      title: titleOf(codes[result.reason]),
+      detail: messages[result.reason],
+      ...(result.fields === undefined ? {} : { extensions: { fields: result.fields } }),
+    });
   };
 
   return new Hono()
+    .post("/:id/pause", zValidator("param", idParam, onInvalid), async (c) => {
+      const { id } = c.req.valid("param");
+      return controlled(c, id, await pauseProject(control, id));
+    })
+    .post("/:id/resume", zValidator("param", idParam, onInvalid), async (c) => {
+      const { id } = c.req.valid("param");
+      return controlled(c, id, await resumeProject(control, id));
+    })
+    .patch(
+      "/:id/providers",
+      zValidator("param", idParam, onInvalid),
+      zValidator("json", providerChangesSchema, onInvalid),
+      async (c) => {
+        const { id } = c.req.valid("param");
+        return controlled(c, id, await changeProviders(control, id, c.req.valid("json")));
+      },
+    )
     .post("/:id/cancel", zValidator("param", idParam, onInvalid), async (c) => {
       const { id } = c.req.valid("param");
-      const result = await cancelProject(cancel, id);
-      if (!result.ok) {
-        return problem(c, { status: 404, title: titleOf(404), detail: details["no-project"] });
-      }
-      // No tick: a canceled project sits until the user retries a stage.
-      return c.json({ ...view(id), canceled: result.canceled });
+      return withProjectControl(deps.db, id, async () => {
+        const result = await cancelProject(cancel, id);
+        if (!result.ok) {
+          return problem(c, { status: 404, title: titleOf(404), detail: details["no-project"] });
+        }
+        // No tick: a canceled project sits until the user retries a stage.
+        return c.json({ ...view(id), canceled: result.canceled });
+      });
     })
     .post("/:id/stages/:kind/retry", zValidator("param", stageParam, onInvalid), (c) => {
       const { id, kind } = c.req.valid("param");
-      return started(c, id, retryStage(reruns, id, kind));
+      return withProjectControl(deps.db, id, () => started(c, id, retryStage(reruns, id, kind)));
     })
     .post("/:id/stages/:kind/rerun", zValidator("param", stageParam, onInvalid), (c) => {
       const { id, kind } = c.req.valid("param");
-      return started(c, id, rerunStage(reruns, id, kind));
+      return withProjectControl(deps.db, id, () => started(c, id, rerunStage(reruns, id, kind)));
     })
     .put(
       "/:id/article",
@@ -134,15 +196,21 @@ export function actionRoutes(deps: AppDeps) {
       zValidator("json", articleBody, onInvalid),
       (c) => {
         const { id } = c.req.valid("param");
-        return started(c, id, editArticle(reruns, id, c.req.valid("json").markdown));
+        return withProjectControl(deps.db, id, () =>
+          started(c, id, editArticle(reruns, id, c.req.valid("json").markdown)),
+        );
       },
     )
     .delete("/:id/images/:outputId", zValidator("param", imageParam, onInvalid), (c) => {
       const { id, outputId } = c.req.valid("param");
-      return started(c, id, deleteImage(reruns, id, outputId));
+      return withProjectControl(deps.db, id, () =>
+        started(c, id, deleteImage(reruns, id, outputId)),
+      );
     })
     .post("/:id/images/:outputId/regenerate", zValidator("param", imageParam, onInvalid), (c) => {
       const { id, outputId } = c.req.valid("param");
-      return started(c, id, regenerateImage(reruns, id, outputId));
+      return withProjectControl(deps.db, id, () =>
+        started(c, id, regenerateImage(reruns, id, outputId)),
+      );
     });
 }

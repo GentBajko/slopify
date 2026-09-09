@@ -117,7 +117,7 @@ const usageRoute = createRoute({
 
 function ProjectPage() {
   const { projectId } = projectRoute.useParams();
-  return <ProjectRoute projectId={projectId} />;
+  return <ProjectRoute key={projectId} projectId={projectId} />;
 }
 
 function PromptsPage() {

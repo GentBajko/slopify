@@ -12,12 +12,8 @@ import { ConfirmedButton } from "./controls.js";
 import { ActionRow, EngravedLabel, OutputDownload, StageBody } from "./parts.js";
 import { duration } from "./summary.js";
 
-// Audio: three players when intro or outro exist (Intro, Body, Outro) with durations; Download
-// each; Re-run with a Voice select beside it; Chunking shown as text.  ceiling: the Voice is
-// shown, not picked. `edge/http/actions.ts` re-runs a stage from the project's stored
-// configuration and takes no body, so a voice chosen here would have nowhere to go; the upgrade
-// is a payload on the re-run route that overwrites `config.audio.voice` before the stage
-// restarts.
+// Each completed segment keeps its player and download. Historical voice metadata
+// describes these files; the separate project controls choose providers for future work.
 const players: readonly { readonly role: OutputRole; readonly name: string }[] = [
   { role: "audio_intro", name: "Intro" },
   { role: "audio_body", name: "Body" },
@@ -32,9 +28,12 @@ export function AudioBody({ stage, project, outputs, actions, busy }: BodyProps)
     const output = roleOf(mine, player.role);
     return output === undefined ? [] : [{ ...player, output }];
   });
-  const picked = project.config.audio?.voice;
+  const historical = landed.find((player) => player.output.meta.voice !== undefined)?.output.meta;
+  const picked = landed.length > 0 ? historical?.voice : project.config.audio?.voice;
+  const provider = landed.length > 0 ? historical?.provider : project.config.audio?.provider;
   const voice =
-    voices.data?.voices.find((known) => known.voiceId === picked)?.name ?? picked ?? "the run's";
+    voices.data?.voices.find((known) => known.voiceId === picked && known.provider === provider)
+      ?.name ?? picked;
 
   return (
     <StageBody>
@@ -57,8 +56,12 @@ export function AudioBody({ stage, project, outputs, actions, busy }: BodyProps)
         >
           Re-run
         </ConfirmedButton>
-        <EngravedLabel>Voice</EngravedLabel>
-        <span className="text-small text-ink">{voice}</span>
+        {voice === undefined ? null : (
+          <>
+            <EngravedLabel>Voice</EngravedLabel>
+            <span className="text-small text-ink">{voice}</span>
+          </>
+        )}
         <span className="text-small text-ink2">{`Chunking: ${chunkingOf(project.config.chunking)}`}</span>
       </ActionRow>
     </StageBody>

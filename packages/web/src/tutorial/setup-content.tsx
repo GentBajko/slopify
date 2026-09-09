@@ -49,7 +49,10 @@ export function SetupContent({
             · <External href="https://platform.openai.com/api-keys">OpenAI keys</External> ·{" "}
             <External href="https://play.cartesia.ai/keys">Cartesia keys</External>
           </p>
-          <p>Next, you’ll add the exact voice that this provider should use.</p>
+          <p>
+            Next, you’ll add the exact voice that this provider should use. Skip voice setup if you
+            plan to provide your own narration or turn Audio Off.
+          </p>
         </>
       );
     case "image-key":
@@ -72,6 +75,7 @@ export function SetupContent({
           </p>
           <p>
             OpenAI’s voice and image rows are saved separately, even when you use the same API key.
+            Skip this step if you plan to provide your own images or turn Images and Thumbnail Off.
           </p>
         </>
       );
@@ -95,7 +99,8 @@ export function SetupContent({
           </ol>
           <p>
             The name is your label; the ID tells the provider which voice to use. Slopify checks the
-            ID with the provider when narration runs.
+            ID with the provider when narration runs. A voice is only required when Audio is set to
+            Generate.
           </p>
         </>
       );

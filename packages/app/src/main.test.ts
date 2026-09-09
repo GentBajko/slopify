@@ -59,6 +59,20 @@ describe("markInterruptedStages", () => {
     ]);
   });
 
+  it("returns interrupted paused work to pending and keeps the pause after reopening", () => {
+    const db = migrated();
+    db.exec("INSERT INTO projects VALUES ('p1','t','16:9','{}','2026-09-01','2026-09-01')");
+    db.exec("INSERT INTO project_controls VALUES ('p1', 1)");
+    addStage(db, "research", "running");
+    expect(markInterruptedStages(db, clock)).toBe(1);
+    expect(db.prepare("SELECT state, failure_reason, finished_at FROM stages").get()).toEqual({
+      state: "pending",
+      failure_reason: null,
+      finished_at: null,
+    });
+    expect(db.prepare("SELECT paused FROM project_controls").get()).toEqual({ paused: 1 });
+  });
+
   it("changes nothing when no stage was running", () => {
     expect(markInterruptedStages(migrated(), clock)).toBe(0);
   });
@@ -97,7 +111,10 @@ describe("boot", () => {
     expect(existsSync(paths.projects)).toBe(true);
     expect(existsSync(paths.staging)).toBe(true);
     const db = openDb(paths.db);
-    expect(db.prepare("SELECT version FROM schema_migrations").all()).toEqual([{ version: 1 }]);
+    expect(db.prepare("SELECT version FROM schema_migrations").all()).toEqual([
+      { version: 1 },
+      { version: 2 },
+    ]);
     db.close();
   });
 

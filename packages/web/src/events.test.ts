@@ -123,6 +123,18 @@ describe("the project event stream", () => {
 });
 
 describe("the global event stream", () => {
+  it("refreshes project changes without needing a running-count change", () => {
+    const source = fakeSource();
+    const sink = { tally: vi.fn(), stagingChanged: vi.fn(), refetch: vi.fn() };
+    subscribeGlobal(() => source, "/api/events/global", sink);
+    source.emit({ type: "project.updated", projectId: "p1" });
+    source.emit({ type: "project.state", projectId: "p1", state: "paused" });
+    expect(sink.refetch).toHaveBeenCalledTimes(2);
+    expect(sink.refetch).toHaveBeenCalledWith("p1");
+    expect(sink.tally).not.toHaveBeenCalled();
+    expect(sink.stagingChanged).not.toHaveBeenCalled();
+  });
+
   it("takes the running tally off its own event and nothing else", () => {
     const source = fakeSource();
     const sink = { tally: vi.fn(), stagingChanged: vi.fn(), refetch: vi.fn() };

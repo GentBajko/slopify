@@ -26,12 +26,12 @@ export interface Confirmation {
 }
 
 const rerunConsequence: Readonly<Record<StageKind, string>> = {
-  research: "Replaces the notes, then re-runs every stage below.",
-  article: "Replaces the article, then re-runs every stage below.",
-  audio: "Replaces the narration; the video re-renders.",
-  images: "Replaces every image in this run; the video re-renders.",
+  research: "Replaces the notes, then re-runs the enabled stages below.",
+  article: "Replaces the article, then re-runs the enabled stages below.",
+  audio: "Replaces the narration and refreshes the final audio or video export.",
+  images: "Replaces every image in this run and re-renders video when enabled.",
   thumbnail: "Replaces the thumbnail.",
-  video: "Replaces the video with a fresh render.",
+  video: "Replaces the final audio or video export.",
 };
 
 export function confirmationFor(action: Destructive): Confirmation {
@@ -53,22 +53,22 @@ export function confirmationFor(action: Destructive): Confirmation {
     case "delete-image":
       return {
         title: "Delete this image?",
-        consequence: "Removed from the slideshow; the video re-renders.",
+        consequence: "Removes the image and re-renders video when enabled.",
         verb: "Delete",
         dismiss: "Cancel",
       };
     case "regenerate-image":
       return {
         title: "Regenerate this image?",
-        consequence: "Replaces the image with a new one; the video re-renders.",
+        consequence: "Replaces the image with a new one and re-renders video when enabled.",
         verb: "Regenerate",
         dismiss: "Cancel",
       };
     case "save-article":
       return {
         title: "Save the edited article?",
-        consequence: "Replaces the article, then re-runs the narration and the video.",
-        verb: "Save & re-run from audio",
+        consequence: "Replaces the article, then updates the enabled narration and final export.",
+        verb: "Save & update outputs",
         dismiss: "Cancel",
       };
     case "discard-article":

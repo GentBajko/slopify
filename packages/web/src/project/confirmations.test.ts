@@ -24,16 +24,16 @@ describe("the dialog in front of a destructive action", () => {
 
   it("uses the design chapter's own sentence for a deleted image", () => {
     expect(confirmationFor({ kind: "delete-image", outputId: "o1" }).consequence).toBe(
-      "Removed from the slideshow; the video re-renders.",
+      "Removes the image and re-renders video when enabled.",
     );
   });
 
   it("names what a re-run of each stage replaces", () => {
     expect(confirmationFor({ kind: "rerun", stage: "images" }).consequence).toBe(
-      "Replaces every image in this run; the video re-renders.",
+      "Replaces every image in this run and re-renders video when enabled.",
     );
     expect(confirmationFor({ kind: "rerun", stage: "video" }).consequence).toBe(
-      "Replaces the video with a fresh render.",
+      "Replaces the final audio or video export.",
     );
   });
 

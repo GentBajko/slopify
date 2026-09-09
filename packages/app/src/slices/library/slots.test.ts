@@ -30,7 +30,7 @@ function draft(over: Partial<RunDraft> = {}): RunDraft {
     sources: {
       research: "off",
       article: "generate",
-      audio: "provide",
+      audio: "generate",
       images: "generate",
       thumbnail: "off",
       video: "generate",
@@ -44,6 +44,37 @@ function draft(over: Partial<RunDraft> = {}): RunDraft {
 }
 
 describe("pickTemplates", () => {
+  it.each(["off", "provide"] as const)(
+    "ignores unused entries with Audio %s and prompts on disabled stages",
+    (audio) => {
+      const deps = library();
+      const picked = pickTemplates(
+        deps.db,
+        draft({
+          sources: {
+            research: "off",
+            article: "provide",
+            audio,
+            images: "off",
+            thumbnail: "off",
+            video: "off",
+          },
+          articlePrompt: "Deleted article",
+          imagePrompts: [{ name: "Deleted image", number: 1 }],
+          thumbnailPrompt: "Deleted thumbnail",
+          intro: { name: "Deleted intro", mode: "llm" },
+          outro: { name: "Deleted outro", mode: "llm" },
+          provided: { article: "Provided text" },
+        }),
+      );
+      expect(picked.missing).toEqual([]);
+      expect(picked.requiredSlots).toEqual([]);
+      expect(picked.bodies).toEqual([]);
+      expect(picked.draft.intro).toBeUndefined();
+      expect(picked.draft.outro).toBeUndefined();
+    },
+  );
+
   it("asks for the slots of the picked article prompt", () => {
     const deps = library();
     createPrompt(deps, { kind: "article", name: "Dossier", body: "{{topic}} in {{tone}}" });

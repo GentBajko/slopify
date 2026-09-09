@@ -27,8 +27,6 @@ describe("a re-run of one stage", () => {
       "research:all",
       "article:all",
       "audio:all",
-      "images:all",
-      "thumbnail:all",
       "video:nothing",
     ]);
   });
@@ -42,12 +40,10 @@ describe("a re-run of one stage", () => {
     expect(plan({ kind: "rerun", stage: "video" })).toEqual(["video:nothing"]);
   });
 
-  it("fans the article out over audio, images, the thumbnail and the video", () => {
+  it("redoes audio and video while retaining prewritten image and thumbnail outputs", () => {
     expect(plan({ kind: "rerun", stage: "article" })).toEqual([
       "article:all",
       "audio:all",
-      "images:all",
-      "thumbnail:all",
       "video:nothing",
     ]);
   });
@@ -57,7 +53,7 @@ describe("a re-run of one stage", () => {
   it("steps over a provided dependent and still reaches the video", () => {
     expect(
       plan({ kind: "rerun", stage: "article" }, { audio: "provided", thumbnail: "skipped" }),
-    ).toEqual(["article:all", "images:all", "video:nothing"]);
+    ).toEqual(["article:all", "video:nothing"]);
   });
 });
 
@@ -96,4 +92,16 @@ describe("a change to one image", () => {
   it("keeps what landed when one image is regenerated", () => {
     expect(plan({ kind: "image-regenerated" })).toEqual(["images:nothing", "video:nothing"]);
   });
+});
+
+it("keeps a completed WAV when unrelated images change", () => {
+  const input = {
+    stages: standing(),
+    thumbnailSource: "from_prompt" as const,
+    videoSource: "off" as const,
+  };
+  expect(redoPlan({ ...input, action: { kind: "image-deleted" } })).toEqual([]);
+  expect(redoPlan({ ...input, action: { kind: "image-regenerated" } })).toEqual([
+    { stage: "images", clears: "nothing" },
+  ]);
 });

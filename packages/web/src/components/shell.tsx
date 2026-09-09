@@ -9,6 +9,7 @@ import { AppearanceSkin } from "@/components/theme";
 import { VersionPrompt } from "@/components/version-prompt";
 import { subscribeGlobal } from "@/events";
 import { FormDraftsProvider } from "@/lib/form-drafts";
+import { coalesce } from "@/project/live";
 import { keys } from "@/queries";
 import { TutorialProvider } from "@/tutorial/context";
 import { TutorialLauncher } from "@/tutorial/launcher";
@@ -62,21 +63,27 @@ function ShellContent() {
   const queryClient = useQueryClient();
   const [running, setRunning] = useState(0);
 
-  useEffect(
-    () =>
-      subscribeGlobal(openEvents, eventsUrl(api, "global"), {
-        tally: setRunning,
-        stagingChanged: () => {
-          void queryClient.invalidateQueries({ queryKey: keys.staging });
-        },
-        // A reconnect means the tally and every list may have moved on while the socket
-        // was down, and nothing is replayed.
-        refetch: () => {
-          void queryClient.invalidateQueries();
-        },
-      }),
-    [api, openEvents, queryClient],
-  );
+  useEffect(() => {
+    const refreshProjects = coalesce(() => {
+      void queryClient.invalidateQueries({ queryKey: keys.projects });
+    }, 200);
+    const unsubscribe = subscribeGlobal(openEvents, eventsUrl(api, "global"), {
+      tally: setRunning,
+      stagingChanged: () => {
+        void queryClient.invalidateQueries({ queryKey: keys.staging });
+      },
+      // A reconnect means the tally and every list may have moved on while the socket
+      // was down, and nothing is replayed.
+      refetch: (projectId) => {
+        if (projectId === undefined) void queryClient.invalidateQueries();
+        else refreshProjects.ask();
+      },
+    });
+    return () => {
+      unsubscribe();
+      refreshProjects.stop();
+    };
+  }, [api, openEvents, queryClient]);
 
   return (
     <div className="flex min-h-screen flex-col">

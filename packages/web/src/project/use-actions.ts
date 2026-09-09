@@ -4,14 +4,17 @@ import { useState } from "react";
 import type { Api, ProjectBody } from "@/api";
 import { useApp } from "@/app-context";
 import { keys } from "@/queries";
-import type { ActionResult } from "./api.js";
+import type { ActionResult, ProviderChanges } from "./api.js";
 import {
   cancelRun,
   deleteImage,
+  pauseRun,
   regenerateImage,
   rerunStage,
+  resumeRun,
   retryStage,
   saveArticle,
+  updateProviders,
 } from "./api.js";
 import type { Destructive } from "./confirmations.js";
 
@@ -24,7 +27,9 @@ import type { Destructive } from "./confirmations.js";
 // confirms - but it changes nothing the server holds, so it is not one of these.
 export type Action =
   | Exclude<Destructive, { readonly kind: "discard-article" }>
-  | { readonly kind: "retry"; readonly stage: StageKind };
+  | { readonly kind: "retry"; readonly stage: StageKind }
+  | { readonly kind: "pause" | "resume" }
+  | { readonly kind: "providers"; readonly choices: ProviderChanges };
 
 // A refused action, and where the user was standing when they asked for it. The sentence
 // is shown under that stage's own row rather than at the top of the page, because that is
@@ -46,41 +51,56 @@ export interface ProjectActions {
   readonly dismissRefusal: () => void;
 }
 
+interface MutationInput {
+  readonly projectId: string;
+  readonly action: Action;
+}
+
 export function useProjectActions(projectId: string): ProjectActions {
   const { api } = useApp();
   const queryClient = useQueryClient();
   const [refusal, setRefusal] = useState<Refusal | undefined>(undefined);
 
   const mutation = useMutation({
-    mutationFn: (action: Action) => perform(api, projectId, action),
+    mutationFn: (input: MutationInput) => perform(api, input.projectId, input.action),
     onMutate: () => {
       setRefusal(undefined);
     },
-    onSuccess: (result, action) => {
+    onSuccess: async (result, input) => {
       if (!result.ok) {
-        setRefusal({ message: result.message, stage: stageOf(action) });
+        setRefusal({ message: result.message, stage: stageOf(input.action) });
         return;
       }
       const { project, stages, outputs } = result.value;
-      queryClient.setQueryData<ProjectBody>(keys.project(projectId), { project, stages, outputs });
+      queryClient.setQueryData<ProjectBody>(keys.project(input.projectId), {
+        project,
+        stages,
+        outputs,
+      });
       void queryClient.invalidateQueries({ queryKey: keys.projects });
+      // A second tab can change the paused run while this response is in transit.
+      // Reconcile after painting the response so it cannot replace newer SSE data indefinitely.
+      await queryClient.invalidateQueries({ queryKey: keys.project(input.projectId) });
     },
-    onError: (error: Error, action) => {
+    onError: (error: Error, input) => {
       // Nothing is swallowed: a fault reaches the same line a refusal does, because the
       // user's next move is the same either way.
-      setRefusal({ message: error.message, stage: stageOf(action) });
+      setRefusal({ message: error.message, stage: stageOf(input.action) });
     },
   });
 
   return {
     run: (action, onDone) => {
-      mutation.mutate(action, {
-        onSuccess: (result) => {
-          if (result.ok) {
-            onDone?.();
-          }
+      mutation.mutate(
+        { projectId, action },
+        {
+          onSuccess: (result) => {
+            if (result.ok) {
+              onDone?.();
+            }
+          },
         },
-      });
+      );
     },
     pending: mutation.isPending,
     refusal,
@@ -94,6 +114,9 @@ export function useProjectActions(projectId: string): ProjectActions {
 function stageOf(action: Action): StageKind | undefined {
   switch (action.kind) {
     case "cancel":
+    case "pause":
+    case "resume":
+    case "providers":
       return undefined;
     case "retry":
     case "rerun":
@@ -108,6 +131,12 @@ function stageOf(action: Action): StageKind | undefined {
 
 function perform(api: Api, projectId: string, action: Action): Promise<ActionResult> {
   switch (action.kind) {
+    case "pause":
+      return pauseRun(api, projectId);
+    case "resume":
+      return resumeRun(api, projectId);
+    case "providers":
+      return updateProviders(api, projectId, action.choices);
     case "cancel":
       return cancelRun(api, projectId);
     case "retry":

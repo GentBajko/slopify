@@ -25,7 +25,7 @@ describe("the destructive actions", () => {
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Delete this image?")).not.toBeNull();
     expect(
-      within(dialog).getByText("Removed from the slideshow; the video re-renders."),
+      within(dialog).getByText("Removes the image and re-renders video when enabled."),
     ).not.toBeNull();
     expect(deleted).not.toHaveBeenCalled();
 
@@ -94,7 +94,7 @@ describe("the destructive actions", () => {
     await screen.findByText("Video");
     await userEvent.click(screen.getByRole("button", { name: "Re-render" }));
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("Replaces the video with a fresh render.")).not.toBeNull();
+    expect(within(dialog).getByText("Replaces the final audio or video export.")).not.toBeNull();
     expect(rerun).not.toHaveBeenCalled();
     await userEvent.click(within(dialog).getByRole("button", { name: "Re-run" }));
     await waitFor(() => {
@@ -121,12 +121,12 @@ describe("editing the article", () => {
     await userEvent.clear(editor);
     await userEvent.type(editor, "Rewritten.");
 
-    await userEvent.click(screen.getByRole("button", { name: "Save & re-run from audio" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save & update outputs" }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Save the edited article?")).not.toBeNull();
     expect(sent).toBe("");
 
-    await userEvent.click(within(dialog).getByRole("button", { name: "Save & re-run from audio" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save & update outputs" }));
     await waitFor(() => {
       expect(sent).toBe("Rewritten.");
     });
@@ -144,10 +144,10 @@ describe("editing the article", () => {
     const editor = await screen.findByLabelText("Article");
     await userEvent.clear(editor);
     await userEvent.type(editor, "Still mine.");
-    await userEvent.click(screen.getByRole("button", { name: "Save & re-run from audio" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save & update outputs" }));
     await userEvent.click(
       within(await screen.findByRole("dialog")).getByRole("button", {
-        name: "Save & re-run from audio",
+        name: "Save & update outputs",
       }),
     );
 

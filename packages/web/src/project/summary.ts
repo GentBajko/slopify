@@ -1,5 +1,5 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
-import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
+import type { ProjectSummary, RunConfig, Stage } from "@app/slices/admission/model.js";
 import type { Output } from "@app/slices/storage/model.js";
 
 // The one-line summary in the middle of a rundown row: "7 chapters researched · 41
@@ -15,6 +15,18 @@ export const stageNames: Readonly<Record<StageKind, string>> = {
   thumbnail: "Thumbnail",
   video: "Video",
 };
+
+export function finalOutput(config: RunConfig): "video" | "audio" | "article" {
+  return config.sources.video !== "off"
+    ? "video"
+    : config.sources.audio !== "off"
+      ? "audio"
+      : "article";
+}
+
+export function stageName(kind: StageKind, config: RunConfig): string {
+  return kind === "video" && finalOutput(config) === "audio" ? "Audio export" : stageNames[kind];
+}
 
 // What each stage's progress counts: chapters, chunks, images, and a
 // render percentage. The word the meter is measured in belongs beside the meter.
@@ -43,6 +55,9 @@ export function summaryOf(
     case "skipped":
       return "Not part of this run";
     case "pending":
+      if (project.status === "paused") return "Waiting for Resume";
+      if (stage.kind === "images" || (stage.kind === "thumbnail" && stage.source === "from_prompt"))
+        return "Ready to run";
       return "Waits for the stages above";
     case "provided":
       return filenames(mine) ?? "Provided";
@@ -53,6 +68,8 @@ export function summaryOf(
     case "canceled":
       return "Canceled by user";
     case "running":
+      if (stage.kind === "video" && finalOutput(project.config) === "audio")
+        return "Exporting combined audio";
       return stage.progressTotal === null || stage.progressTotal <= 0
         ? "Running"
         : running[stage.kind](stage.progressCurrent ?? 0, stage.progressTotal);
@@ -89,7 +106,10 @@ function done(kind: StageKind, mine: readonly Output[], project: ProjectSummary)
     case "thumbnail":
       return mine.length === 0 ? "Thumbnail ready" : "1 image";
     case "video":
-      return join([duration(total(mine)), project.format]);
+      return join([
+        duration(total(mine)),
+        finalOutput(project.config) === "audio" ? "WAV · stereo · 48 kHz" : project.format,
+      ]);
   }
 }
 

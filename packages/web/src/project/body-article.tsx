@@ -18,8 +18,8 @@ import {
   useOutputText,
 } from "./parts.js";
 
-// Article: the markdown rendered in a 75 ch measure; Edit (inline editor with Save & re-run
-// from audio, Discard); Download; links to the sources and glossary files beside the title;
+// Article: the markdown rendered in a 75 ch measure; Edit with Save & update outputs,
+// Discard and Download; links to the sources and glossary files beside the title;
 // 'Show instructions'.
 export function ArticleBody({ stage, project, outputs, actions, busy }: BodyProps) {
   const mine = outputsOf(outputs, stage);
@@ -113,7 +113,7 @@ export function ArticleBody({ stage, project, outputs, actions, busy }: BodyProp
               disabled={busy}
               pending={actions.pending}
             >
-              Save &amp; re-run from audio
+              Save &amp; update outputs
             </ConfirmedButton>
             <Button
               type="button"

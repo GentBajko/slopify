@@ -9,7 +9,7 @@ import { migrate } from "../../kernel/db/migrate.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import { ensureDirs, layout } from "../../kernel/paths.js";
-import type { RunDraft } from "../../slices/admission/model.js";
+import type { ProjectSummary, RunDraft, Stage } from "../../slices/admission/model.js";
 import { createHub } from "../events/hub.js";
 import { createApp } from "./app.js";
 
@@ -98,6 +98,80 @@ async function post(app: Harness["app"], body: unknown): Promise<Response> {
     headers: { "content-type": "application/json" },
   });
 }
+
+describe("optional run outputs", () => {
+  it("creates an Article-only project without uploads or hidden entry requirements", async () => {
+    const { app, db } = harness();
+    const response = await post(
+      app,
+      draft({
+        sources: {
+          research: "off",
+          article: "provide",
+          audio: "off",
+          images: "off",
+          thumbnail: "off",
+          video: "off",
+        },
+        intro: { name: "Deleted intro", mode: "llm" },
+        outro: { name: "Deleted outro", mode: "llm" },
+        imagePrompts: [{ name: "Deleted image", number: 1 }],
+      }),
+    );
+    expect(response.status).toBe(201);
+    const created = (await response.json()) as {
+      project: ProjectSummary;
+      stages: readonly Stage[];
+    };
+    expect(created.project.status).toBe("done");
+    expect(created.project.config.intro).toBeUndefined();
+    expect(created.stages.filter((stage) => stage.state === "skipped")).toHaveLength(5);
+    db.close();
+  });
+
+  it("normalizes a run without images into a queued WAV export", async () => {
+    const { app, db } = harness();
+    const audio = await stage(app, "audio", "supplied narration");
+    const response = await post(
+      app,
+      draft({
+        sources: { ...draft().sources, images: "off" },
+        provided: { article: "An article", audio },
+      }),
+    );
+    expect(response.status).toBe(201);
+    const created = (await response.json()) as {
+      project: ProjectSummary;
+      stages: readonly Stage[];
+    };
+    expect(created.project.config.sources.video).toBe("off");
+    expect(created.stages.find((stage) => stage.kind === "video")).toMatchObject({
+      state: "running",
+      source: "off",
+    });
+    db.close();
+  });
+
+  it("accepts a silent slideshow with provided images and no voice", async () => {
+    const { app, db } = harness();
+    const image = await stage(app, "images", "supplied image");
+    const response = await post(
+      app,
+      draft({
+        sources: { ...draft().sources, audio: "off" },
+        provided: { article: "An article", images: [image] },
+      }),
+    );
+    expect(response.status).toBe(201);
+    const created = (await response.json()) as {
+      project: ProjectSummary;
+      stages: readonly Stage[];
+    };
+    expect(created.project.config.sources.video).toBe("generate");
+    expect(created.stages.find((stage) => stage.kind === "audio")?.state).toBe("skipped");
+    db.close();
+  });
+});
 
 describe("POST /api/projects", () => {
   it("creates the project and hands it to the runner", async () => {
@@ -283,12 +357,13 @@ describe("POST /api/projects with library templates", () => {
         sources: {
           research: "off",
           article: "provide",
-          audio: "provide",
+          audio: "generate",
           images: "generate",
           thumbnail: "off",
           video: "generate",
         },
-        provided: { article: "The article.", audio: await stage(app, "audio", "narration") },
+        provided: { article: "The article." },
+        audio: { provider: "elevenlabs", model: "eleven_multilingual_v2", voice: "v1" },
         llm: undefined,
         intro: { name: "Welcome", mode: "text" },
       }),
@@ -402,6 +477,7 @@ describe("GET /api/projects", () => {
       "createdAt",
       "format",
       "id",
+      "paused",
       "progress",
       "status",
       "title",

@@ -81,6 +81,7 @@ function image(index: number): Output {
 interface Server {
   landed: number;
   video: StageState;
+  textModel?: string;
 }
 
 function view(server: Server) {
@@ -90,7 +91,11 @@ function view(server: Server) {
       title: "Rope Tricks",
       format: "16:9",
       status: "running",
-      config: { imagePrompts: [{ name: "Oils", number: 6 }], sources: {} },
+      config: {
+        imagePrompts: [{ name: "Oils", number: 6 }],
+        sources: server.textModel ? { article: "generate" } : {},
+        ...(server.textModel ? { llm: { provider: "openrouter", model: server.textModel } } : {}),
+      },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
@@ -126,6 +131,20 @@ function mount(server: Server): {
 }
 
 describe("the page under a live run", () => {
+  it("refetches saved provider configuration on project.updated", async () => {
+    const server: Server = { landed: 0, video: "pending", textModel: "model-before" };
+    const { source, reads } = mount(server);
+    const model = await screen.findByLabelText("Text model");
+    expect((model as HTMLInputElement).value).toBe("model-before");
+    const before = reads();
+    server.textModel = "model-after";
+    source.emit({ type: "project.updated", projectId: "p1" });
+    await waitFor(() =>
+      expect((screen.getByLabelText("Text model") as HTMLInputElement).value).toBe("model-after"),
+    );
+    expect(reads()).toBe(before + 1);
+  });
+
   it("flips a lamp and its state word from the event alone", async () => {
     const server: Server = { landed: 0, video: "pending" };
     const { source, reads } = mount(server);

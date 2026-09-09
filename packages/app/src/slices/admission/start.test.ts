@@ -78,6 +78,41 @@ describe("initialState", () => {
 });
 
 describe("startRun", () => {
+  it("queues a WAV export when Video is Off and Audio is supplied", async () => {
+    const storage = deps();
+    const audio = await upload(storage, "audio", "supplied audio");
+    const { stages } = startRun(
+      storage,
+      draft({
+        sources: { ...draft().sources, images: "off", video: "off" },
+        provided: { article: "Article", audio },
+      }),
+      {},
+    );
+    expect(stages.find((stage) => stage.kind === "video")).toMatchObject({
+      source: "off",
+      state: "pending",
+    });
+    expect(stages.find((stage) => stage.kind === "images")).toMatchObject({
+      source: "off",
+      state: "skipped",
+    });
+    storage.db.close();
+  });
+
+  it("skips final media output for an Article-only run", () => {
+    const storage = deps();
+    const { stages } = startRun(
+      storage,
+      draft({ sources: { ...draft().sources, audio: "off", images: "off", video: "off" } }),
+      {},
+    );
+    expect(stages.every((stage) => stage.state === "provided" || stage.state === "skipped")).toBe(
+      true,
+    );
+    storage.db.close();
+  });
+
   it("writes the project, its six stages, and the provided outputs together", async () => {
     const storage = deps();
     const audio = await upload(storage, "audio", "narration bytes");

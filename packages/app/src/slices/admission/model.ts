@@ -5,8 +5,8 @@ export type { Format } from "../../kernel/pipeline.js";
 // The format is the kernel's: the image port asks for the same two aspects.
 export { formats } from "../../kernel/pipeline.js";
 
-// Generate, Provide or Off for most stages, plus the thumbnail's two Generate modes. Video
-// is always `generate`.
+// Generate, Provide or Off for most stages, plus the thumbnail's two Generate modes.
+// Article stays Generate or Provide; Video can be Generate or Off.
 export const stageSources = ["generate", "provide", "off", "from_prompt", "prompt_by_llm"] as const;
 export type StageSource = (typeof stageSources)[number];
 
@@ -85,6 +85,8 @@ export interface Project {
   readonly config: RunConfig;
   readonly createdAt: string;
   readonly updatedAt: string;
+  // Optional on old in-memory fixtures; repository reads always expose a boolean.
+  readonly paused?: boolean;
 }
 
 export interface Stage {

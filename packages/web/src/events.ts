@@ -31,7 +31,7 @@ export interface ProjectSink {
 export interface GlobalSink {
   readonly tally: (count: number) => void;
   readonly stagingChanged: () => void;
-  readonly refetch: () => void;
+  readonly refetch: (projectId?: string) => void;
 }
 
 const projectEventNames = [
@@ -40,9 +40,16 @@ const projectEventNames = [
   "article.delta",
   "image.landed",
   "project.state",
+  "project.updated",
 ] as const;
 
-const globalEventNames = ["running.count", "staging.progress", "staging.failed"] as const;
+const globalEventNames = [
+  "running.count",
+  "staging.progress",
+  "staging.failed",
+  "project.updated",
+  "project.state",
+] as const;
 
 export function subscribeProject(open: OpenEvents, url: string, sink: ProjectSink): () => void {
   return listen<ProjectEvent>(open, url, projectEventNames, sink.refetch, (event) => {
@@ -50,7 +57,7 @@ export function subscribeProject(open: OpenEvents, url: string, sink: ProjectSin
       sink.appendArticle(event.text);
       return;
     }
-    if (event.type === "image.landed") {
+    if (event.type === "image.landed" || event.type === "project.updated") {
       // The frame names an output id and an index, not the row or the file behind them,
       // so this is the one event the page cannot paint without asking.
       sink.refetch();
@@ -69,6 +76,10 @@ export function subscribeGlobal(open: OpenEvents, url: string, sink: GlobalSink)
   return listen<GlobalEvent>(open, url, globalEventNames, sink.refetch, (event) => {
     if (event.type === "running.count") {
       sink.tally(event.count);
+      return;
+    }
+    if (event.type === "project.updated" || event.type === "project.state") {
+      sink.refetch(event.projectId);
       return;
     }
     sink.stagingChanged();

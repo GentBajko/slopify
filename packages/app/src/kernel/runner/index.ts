@@ -15,6 +15,8 @@ export interface StageStore {
   // One statement, `pending` → `running`, false if the row moved on. A stage starts once.
   readonly claim: (stageId: string) => boolean;
   readonly finish: (stageId: string, state: StageState, failureReason: string | null) => void;
+  readonly paused?: (projectId: string) => boolean;
+  readonly dependenciesOf?: (projectId: string, kind: StageKind) => readonly StageKind[];
 }
 
 export interface StageContext {
@@ -38,7 +40,8 @@ export interface Runner {
   readonly tick: (projectId: string) => void;
   readonly settled: () => Promise<void>;
   // Abort one project's in-flight calls and wait; others keep running.
-  readonly abortProject: (projectId: string) => Promise<void>;
+  readonly abortProject: (projectId: string, mode?: "cancel" | "pause") => Promise<void>;
+  readonly hasInflight?: (projectId: string) => boolean;
   readonly abortAll: () => Promise<void>;
 }
 
@@ -47,6 +50,8 @@ interface Inflight {
   readonly controller: AbortController;
   readonly settled: Promise<void>;
 }
+
+const pauseReason = new Error("paused by user");
 
 export function createRunner(deps: RunnerDeps): Runner {
   const inflight = new Map<string, Inflight>();
@@ -86,7 +91,7 @@ export function createRunner(deps: RunnerDeps): Runner {
   };
 
   const announce = (projectId: string): void => {
-    const state = derive(deps.stages.stagesOf(projectId));
+    const state = derive(deps.stages.stagesOf(projectId), deps.stages.paused?.(projectId));
     if (announced.get(projectId) === state) {
       return;
     }
@@ -127,7 +132,8 @@ export function createRunner(deps: RunnerDeps): Runner {
       if (controller.signal.aborted) {
         // A late rejection from the aborted call is how a stage learns it was canceled, so
         // it is not logged as a fault.
-        conclude(stage, "canceled", "canceled by user");
+        const paused = controller.signal.reason === pauseReason;
+        conclude(stage, paused ? "pending" : "canceled", paused ? null : "canceled by user");
         return;
       }
       deps.log.write("error", "stage.failed", {
@@ -180,7 +186,7 @@ export function createRunner(deps: RunnerDeps): Runner {
     // A stage finishing in the same instant as a shutdown or cancel would otherwise release
     // its dependent, leaving the abort waiting on a render nobody asked for - or one running
     // under a controller nobody aborted. The state still goes out, so an open page sees it.
-    if (!shuttingDown && !stopped.has(projectId)) {
+    if (!shuttingDown && !stopped.has(projectId) && !deps.stages.paused?.(projectId)) {
       startEligible(projectId);
     }
     announce(projectId);
@@ -194,7 +200,8 @@ export function createRunner(deps: RunnerDeps): Runner {
       if (stage.state !== "pending" || inflight.has(stage.id)) {
         continue;
       }
-      if (!graph[stage.kind].every((kind) => satisfied(stateOf(kind)))) {
+      const dependencies = deps.stages.dependenciesOf?.(projectId, stage.kind) ?? graph[stage.kind];
+      if (!dependencies.every((kind) => satisfied(stateOf(kind)))) {
         continue;
       }
       // Nothing is awaited here: the fan-out starts audio, images and thumbnail together.
@@ -223,14 +230,16 @@ export function createRunner(deps: RunnerDeps): Runner {
   return {
     tick,
     settled,
-    abortProject: async (projectId: string): Promise<void> => {
+    hasInflight: (projectId) =>
+      [...inflight.values()].some((entry) => entry.projectId === projectId),
+    abortProject: async (projectId: string, mode = "cancel"): Promise<void> => {
       // Up before the first abort, down only once every stage has stopped. In between, the
       // tick each finishing stage fires starts nothing.
       stopped.add(projectId);
       try {
         for (const entry of inflight.values()) {
           if (entry.projectId === projectId) {
-            entry.controller.abort();
+            entry.controller.abort(mode === "pause" ? pauseReason : undefined);
           }
         }
         // No provider call continues after cancel returns. The wait makes it true.

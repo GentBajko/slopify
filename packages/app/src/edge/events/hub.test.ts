@@ -118,6 +118,24 @@ describe("createHub", () => {
     }).not.toThrow();
   });
 
+  it("notifies project listings of pause and provider changes without changing the tally", () => {
+    const { hub: h } = hub();
+    const global = fakeStream();
+    const other = fakeStream();
+    void h.subscribeGlobal(global.stream, new AbortController().signal);
+    void h.subscribe("p2", other.stream, new AbortController().signal);
+
+    h.emit("p1", { type: "project.state", projectId: "p1", state: "paused" });
+    h.emit("p1", { type: "project.updated", projectId: "p1" });
+
+    expect(global.written.map((frame) => JSON.parse(frame.data))).toEqual([
+      { type: "running.count", count: 0 },
+      { type: "project.state", projectId: "p1", state: "paused" },
+      { type: "project.updated", projectId: "p1" },
+    ]);
+    expect(other.written).toEqual([]);
+  });
+
   it("drops a subscriber when its request aborts and stops writing to it", async () => {
     const { hub: h } = hub();
     const { stream, written } = fakeStream();

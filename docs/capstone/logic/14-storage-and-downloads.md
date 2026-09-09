@@ -3,7 +3,7 @@ scenario: storage-and-downloads
 mockup_row: S14
 screens: [07-projects, 08-project]
 depends_on: [01-pipeline-lifecycle, 05-provided-outputs, 12-reruns-and-edits]
-generated_date: 2026-09-02
+generated_date: 2026-09-09
 capstone_version: 5.2.0
 ---
 
@@ -20,8 +20,8 @@ Where everything lives on the user's machine, how downloads are named, and how a
 ## Steps
 
 1. Data directory: `~/.slopify/` by default, overridable by a launch flag or environment variable. Inside: the SQLite database (scenario 02), `projects/`, `staging/`. Nothing is written next to where `npx` was run.
-2. Project folder `projects/<id>/`: `article.md`, `article.txt` (narration source), `sources.txt`, `glossary.txt`, `research.txt`, audio files for body, intro, outro, images named `<prompt-name>-<index>`, the thumbnail, `video.mp4`, `render.json` (scenario 11 parameters). Provided files are copied in under the same names with their original filenames recorded (scenario 05).
-3. Downloads: single files as `<title-slug>-<asset>.<ext>`; "download all" images as `<title-slug>-images.zip`, thumbnail included.
+2. Project folder `projects/<id>/`: `article.md`, `article.txt` (narration source), `sources.txt`, `glossary.txt`, `research.txt`, audio files for body, intro, outro, images named `<prompt-name>-<index>`, the thumbnail, `video.mp4` or the combined `audio.wav`, `render.json` (scenario 11 parameters). Provided files are copied in under the same names with their original filenames recorded (scenario 05).
+3. WAV export uses output role `audio_export`, asset URL `/files/<id>/audio-export`, and `audio/wav` content type. Downloads: single files as `<title-slug>-<asset>.<ext>`; "download all" images as `<title-slug>-images.zip`, thumbnail included.
 4. Delete project: refused while `running`; otherwise removes the database rows and the folder; irreversible; only from the app. Confirmation dialog is `uiux`'s.
 5. Retention: projects are kept until the user deletes them; no automatic cleanup ever. Staging files never attached to a project are removed at app start (scenario 05).
 6. Single instance: a second app instance on the same data directory refuses to start with an error.

@@ -1,7 +1,8 @@
 import { type RefObject, useEffect, useRef } from "react";
 import { getOpenDialog, getTarget, relatedPortals } from "./spotlight-dom";
 
-const focusable = 'a[href], button, input, select, textarea, [tabindex], [contenteditable="true"]';
+const focusable =
+  'a[href], button, input, select, textarea, summary, [tabindex], [contenteditable="true"]';
 
 export function useSpotlightInteraction(
   target: string,
@@ -76,7 +77,8 @@ export function useSpotlightInteraction(
             all.indexOf(node) === index &&
             node.tabIndex >= 0 &&
             !node.matches(":disabled, [hidden], [aria-hidden='true']") &&
-            !node.closest("[hidden], [inert]"),
+            !node.closest("[hidden], [inert]") &&
+            (!node.closest("details:not([open])") || node.closest("summary") !== null),
         );
       if (controls.length === 0) return;
       const current = controls.indexOf(document.activeElement as HTMLElement);

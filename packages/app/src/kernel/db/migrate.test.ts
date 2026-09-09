@@ -1,4 +1,4 @@
-import { mkdtempSync, statSync } from "node:fs";
+import { mkdtempSync, readFileSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -42,6 +42,7 @@ describe("migrate", () => {
       "entries",
       "machine",
       "outputs",
+      "project_controls",
       "projects",
       "prompts",
       "provider_keys",
@@ -63,6 +64,7 @@ describe("migrate", () => {
 
     expect(db.prepare("SELECT version, applied_at FROM schema_migrations").all()).toEqual([
       { version: 1, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 2, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -72,7 +74,7 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 1 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 2 });
   });
 
   it("refuses a database newer than the app knows", () => {
@@ -80,7 +82,25 @@ describe("migrate", () => {
     migrate(db, clock);
     db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(42, clock.now().toISOString());
 
-    expect(() => migrate(db, clock)).toThrow("database schema 42 is newer than this app knows (1)");
+    expect(() => migrate(db, clock)).toThrow("database schema 42 is newer than this app knows (2)");
+  });
+
+  it("upgrades existing projects without changing their configuration or outputs", () => {
+    const db = openDb(":memory:");
+    db.exec(readFileSync(new URL("./migrations/0001-init.sql", import.meta.url), "utf8"));
+    db.exec("INSERT INTO schema_migrations VALUES (1, '2026-09-01')");
+    db.exec(
+      "INSERT INTO projects VALUES ('p1', 'Saved', '16:9', '{\"saved\":true}', '2026-09-01', '2026-09-01')",
+    );
+    migrate(db, clock);
+    expect(db.prepare("SELECT config FROM projects WHERE id = 'p1'").get()).toEqual({
+      config: '{"saved":true}',
+    });
+    expect(db.prepare("SELECT * FROM project_controls").all()).toEqual([]);
+    db.exec("INSERT INTO project_controls VALUES ('p1', 1)");
+    db.exec("DELETE FROM projects WHERE id = 'p1'");
+    expect(db.prepare("SELECT * FROM project_controls").all()).toEqual([]);
+    db.close();
   });
 
   it("enforces the cascade from projects to stages", () => {

@@ -1,11 +1,10 @@
 import type { StageKind, StageState } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
-import { deps as graph } from "../../kernel/runner/graph.js";
+import { dependenciesOf } from "../../kernel/runner/graph.js";
 import type { StageSource } from "../admission/model.js";
 
-// Every re-run marks its dependents `pending` and runs them automatically, ending in a
-// fresh render - with one exception, an article edit, which leaves prompt-based images
-// untouched.
+// Every re-run marks its source-dependent descendants `pending`. Prewritten image
+// prompts are independent of article changes; an audio export is independent of images.
 //
 // The rule is a function of the stage graph, the six current stage states and the run's
 // thumbnail source. Nothing here reads a row or a file: what the answer means for the
@@ -38,6 +37,7 @@ export interface CascadeInput {
   // An article edit splits the thumbnail in two: an LLM-written one is rewritten from the
   // edited article, a prompt-based one is not.
   readonly thumbnailSource: StageSource;
+  readonly videoSource?: StageSource;
 }
 
 // The stages to redo, in pipeline order, each with how much of itself it throws away.
@@ -52,7 +52,7 @@ function staleStages(input: CascadeInput): ReadonlySet<StageKind> {
   const { action } = input;
   switch (action.kind) {
     case "rerun":
-      return withDependents([action.stage]);
+      return withDependents([action.stage], input);
     case "article-edit": {
       // An article edit re-runs audio, LLM-mode intro/outro text, the LLM-written
       // thumbnail and the video, leaving prompt-based images untouched. The video comes
@@ -61,14 +61,14 @@ function staleStages(input: CascadeInput): ReadonlySet<StageKind> {
       if (input.thumbnailSource === "prompt_by_llm") {
         roots.push("thumbnail");
       }
-      return withDependents(roots);
+      return withDependents(roots, input);
     }
     case "image-deleted":
       // The image is removed from the set and the video re-renders. The remaining
       // images stand, so the images stage itself is not redone.
-      return withDependents(["video"]);
+      return input.videoSource === "off" ? new Set() : withDependents(["video"], input);
     case "image-regenerated":
-      return withDependents(["images"]);
+      return withDependents(["images"], input);
   }
 }
 
@@ -93,11 +93,15 @@ function clearsOf(action: RerunAction, kind: StageKind): Redo["clears"] {
 
 // The transitive closure of the dependents of `roots` over `kernel/runner/graph.ts`. The
 // graph has six nodes, so one pass per node closes it whatever the edges are.
-function withDependents(roots: readonly StageKind[]): ReadonlySet<StageKind> {
+function withDependents(roots: readonly StageKind[], input: CascadeInput): ReadonlySet<StageKind> {
   const found = new Set<StageKind>(roots);
   for (let pass = 0; pass < stageKinds.length; pass += 1) {
     for (const kind of stageKinds) {
-      if (graph[kind].some((dependency) => found.has(dependency))) {
+      const dependencies = dependenciesOf(kind, {
+        thumbnail: input.thumbnailSource,
+        video: input.videoSource ?? "generate",
+      });
+      if (dependencies.some((dependency) => found.has(dependency))) {
         found.add(kind);
       }
     }

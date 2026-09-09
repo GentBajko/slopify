@@ -2,6 +2,7 @@ import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { fixedClock } from "../../kernel/clock.fake.js";
 import type { Clock } from "../../kernel/clock.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
@@ -31,7 +32,8 @@ function harness(): Harness {
     },
     sleep: (): Promise<void> => Promise.resolve(),
   };
-  migrate(db, clock);
+  // Migration count must not advance the clock used to assert upload timestamps.
+  migrate(db, fixedClock("2026-09-02T10:00:00.000Z"));
   db.exec("INSERT INTO projects VALUES ('p1','Hello World','16:9','{}','2026-09-01','2026-09-01')");
   let n = 0;
   const ids: Ids = {
@@ -83,7 +85,7 @@ describe("stageUpload", () => {
         originalFilename: "Take One.MP3",
         bytes: 11,
         state: "staged",
-        createdAt: "2026-09-02T10:00:02.000Z",
+        createdAt: "2026-09-02T10:00:01.000Z",
       },
     });
     expect(readFileSync(join(deps.paths.staging, "id1"), "utf8")).toBe("hello world");
@@ -221,7 +223,7 @@ describe("attachStagedFile", () => {
         bytes: 9,
         durationMs: null,
         meta: { index: 2 },
-        createdAt: "2026-09-02T10:00:04.000Z",
+        createdAt: "2026-09-02T10:00:03.000Z",
       },
     });
     expect(readFileSync(join(deps.paths.projects, "p1", "images", "002.png"), "utf8")).toBe(

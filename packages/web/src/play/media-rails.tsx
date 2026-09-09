@@ -23,7 +23,7 @@ export function AudioRail({
   const mine = voices.filter((voice) => voice.provider === form.audio.provider);
 
   return (
-    <StageRail kind="audio" name="Audio" dim={false}>
+    <StageRail kind="audio" name="Audio" dim={form.sources.audio === "off"}>
       <SourceSwitch kind="audio" form={form} update={update} />
       <div className={railControls}>
         {form.sources.audio === "generate" ? (
@@ -77,6 +77,9 @@ export function AudioRail({
               onRemoveFile("audio", key);
             }}
           />
+          <p className="mt-2 text-small text-ink2">
+            Uploaded narration is used as-is; include any intro and outro in that file.
+          </p>
         </div>
       ) : null}
     </StageRail>
@@ -92,31 +95,16 @@ export function ImagesRail({
   onRemoveFile,
 }: RailProps) {
   return (
-    <StageRail kind="images" name="Images" dim={false}>
+    <StageRail kind="images" name="Images" dim={form.sources.images === "off"}>
       <SourceSwitch kind="images" form={form} update={update} />
       <div className={railControls}>
         {form.sources.images === "generate" ? (
           <>
-            <ProviderPicker
-              label="Provider"
-              inline
-              family="image"
+            <ImageProviderControls
+              form={form}
               providers={providers}
-              value={form.images.provider}
-              problem={problem("images")}
-              onPick={(provider) => {
-                update({ images: { provider, model: soleModelOf(provider) } });
-              }}
-            />
-            <ModelPicker
-              label="Model"
-              inline
-              provider={form.images.provider}
-              value={form.images.model}
-              problem={undefined}
-              onPick={(model) => {
-                update({ images: { ...form.images, model } });
-              }}
+              problem={problem}
+              update={update}
             />
             <ImagePrompts
               prompts={prompts.filter((prompt) => prompt.kind === "image")}
@@ -148,5 +136,34 @@ export function ImagesRail({
         </div>
       ) : null}
     </StageRail>
+  );
+}
+
+export function ImageProviderControls({
+  form,
+  providers,
+  problem,
+  update,
+}: Pick<RailProps, "form" | "providers" | "problem" | "update">) {
+  return (
+    <>
+      <ProviderPicker
+        label="Provider"
+        inline
+        family="image"
+        providers={providers}
+        value={form.images.provider}
+        problem={problem("images")}
+        onPick={(provider) => update({ images: { provider, model: soleModelOf(provider) } })}
+      />
+      <ModelPicker
+        label="Model"
+        inline
+        provider={form.images.provider}
+        value={form.images.model}
+        problem={undefined}
+        onPick={(model) => update({ images: { ...form.images, model } })}
+      />
+    </>
   );
 }

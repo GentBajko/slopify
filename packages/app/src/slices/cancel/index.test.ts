@@ -10,7 +10,7 @@ import type { ProjectEvent } from "../../kernel/events.js";
 import type { Log } from "../../kernel/log.js";
 import type { StageKind, StageState } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
-import { stagesOf } from "../admission/repo.js";
+import { projectPaused, setProjectPaused, stagesOf } from "../admission/repo.js";
 import type { CancelDeps } from "./index.js";
 import { canceledByUser, cancelProject } from "./index.js";
 
@@ -142,6 +142,38 @@ describe("cancelProject", () => {
     await cancelProject(h.deps, projectId);
 
     expect(h.events).toEqual([]);
+  });
+
+  it("explicitly cancels pending work when the active stage finishes during abort", async () => {
+    const h = harness(
+      {
+        research: "skipped",
+        article: "done",
+        audio: "running",
+        images: "skipped",
+        thumbnail: "skipped",
+        video: "pending",
+      },
+      (db) => {
+        db.prepare("UPDATE stages SET state = 'done' WHERE kind = 'audio'").run();
+      },
+    );
+    expect(await cancelProject(h.deps, projectId)).toEqual({
+      ok: true,
+      canceled: [],
+      state: "canceled",
+    });
+    expect(h.stateOf("audio")).toBe("done");
+    expect(h.stateOf("video")).toBe("canceled");
+  });
+
+  it("cancels paused work without unpausing it into a running stage", async () => {
+    const h = harness({ research: "skipped", article: "done", audio: "pending" });
+    setProjectPaused(h.db, projectId, true, clock.now().toISOString());
+    expect(await cancelProject(h.deps, projectId)).toMatchObject({ ok: true, state: "canceled" });
+    expect(projectPaused(h.db, projectId)).toBe(false);
+    expect(h.stateOf("article")).toBe("done");
+    expect(h.stateOf("audio")).toBe("canceled");
   });
 
   it("answers no-project for an id that has none", async () => {

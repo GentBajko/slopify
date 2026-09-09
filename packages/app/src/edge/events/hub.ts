@@ -3,6 +3,7 @@ import type {
   ImageLandedEvent,
   ProjectEvent,
   ProjectStateEvent,
+  ProjectUpdatedEvent,
   RunningCountEvent,
   StageProgressEvent,
   StageStateEvent,
@@ -22,9 +23,13 @@ export type {
   StageStateEvent,
 };
 
-// A staged upload has no project yet, so its progress goes to every open page
-// (slices/storage/model.ts).
-export type GlobalEvent = RunningCountEvent | StagingEvent;
+// Project state/configuration changes refresh listings in other windows even when
+// the running tally stays the same. Token and stage-progress events stay local.
+export type GlobalEvent =
+  | RunningCountEvent
+  | StagingEvent
+  | ProjectStateEvent
+  | ProjectUpdatedEvent;
 
 export interface SseMessage {
   readonly event: string;
@@ -130,6 +135,9 @@ export function createHub(deps: HubDeps): Hub {
     emit: (projectId: string, event: ProjectEvent): void => {
       for (const subscriber of projects.get(projectId) ?? []) {
         send(subscriber, event);
+      }
+      if (event.type === "project.state" || event.type === "project.updated") {
+        for (const subscriber of globals) send(subscriber, event);
       }
     },
 

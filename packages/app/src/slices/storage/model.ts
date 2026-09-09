@@ -16,6 +16,7 @@ export const outputRoles = [
   "audio_body",
   "audio_intro",
   "audio_outro",
+  "audio_export",
   "image",
   "thumbnail",
   "video",

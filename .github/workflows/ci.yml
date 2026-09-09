@@ -32,5 +32,5 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      # Exercise native executable paths, skipped-download recovery and a real render.
-      - run: npx vitest run packages/app/src/adapters/ffmpeg.test.ts packages/app/src/main.test.ts packages/app/test/e2e/skeleton.test.ts
+      # Exercise native executable paths, recovery, WAV exports and narrated/silent renders.
+      - run: npx vitest run packages/app/src/adapters/ffmpeg.test.ts packages/app/src/main.test.ts packages/app/test/e2e/skeleton.test.ts packages/app/test/e2e/optional-outputs.test.ts

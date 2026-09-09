@@ -39,6 +39,11 @@ export interface ProjectStateEvent {
   readonly state: ProjectState;
 }
 
+export interface ProjectUpdatedEvent {
+  readonly type: "project.updated";
+  readonly projectId: string;
+}
+
 export interface RunningCountEvent {
   readonly type: "running.count";
   readonly count: number;
@@ -49,6 +54,7 @@ export type ProjectEvent =
   | StageProgressEvent
   | ArticleDeltaEvent
   | ImageLandedEvent
-  | ProjectStateEvent;
+  | ProjectStateEvent
+  | ProjectUpdatedEvent;
 
 export type EmitProject = (event: ProjectEvent) => void;

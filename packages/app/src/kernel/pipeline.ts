@@ -20,9 +20,14 @@ export const stageStates = [
 ] as const;
 export type StageState = (typeof stageStates)[number];
 
-// Four project states, derived in order: running if any stage is running, else canceled,
-// else failed, else done when video is done. A project whose stages are all pending matches
-// none of them - the real window between creating it and the runner starting the first
-// stage - so `pending` is the fallback. Nothing stores it.
-export const projectStates = ["running", "canceled", "failed", "done", "pending"] as const;
+// A persisted pause overrides the stage-derived status. A completed run need not
+// include a video: all selected stages being satisfied is enough.
+export const projectStates = [
+  "running",
+  "paused",
+  "canceled",
+  "failed",
+  "done",
+  "pending",
+] as const;
 export type ProjectState = (typeof projectStates)[number];

@@ -105,13 +105,16 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
       clear("sources.article", "articlePrompt", "provided.article") &&
       (form.sources.article === "provide" || promptExists("article", form.articlePrompt)),
     playAudioReady:
-      clear("sources.audio", "audio", "provided.audio") &&
-      (form.sources.audio !== "provide" || uploadReady(form.provided.audio)),
+      form.sources.audio === "off" ||
+      (clear("sources.audio", "audio", "provided.audio") &&
+        (form.sources.audio !== "provide" || uploadReady(form.provided.audio))),
     playImagesReady:
-      clear("sources.images", "images", "imagePrompts", "provided.images") &&
-      (form.sources.images === "provide"
-        ? form.provided.images.every(uploadReady)
-        : form.imagePrompts.every((prompt) => promptExists("image", prompt.name))),
+      form.sources.images === "off" ||
+      (clear("sources.images", "images", "imagePrompts", "provided.images") &&
+        (form.sources.images === "provide"
+          ? form.provided.images.every(uploadReady)
+          : form.imagePrompts.every((prompt) => promptExists("image", prompt.name)))),
+    playVideoReady: clear("sources.video"),
     playOptionsReady: clear("title", "format", "llm", "intro", "outro"),
     playHasKeywords: fields.length > 0,
     playKeywordsReady: clear("values"),
@@ -228,7 +231,8 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
       <div className="min-w-0">
         <h1 className="mb-1 text-title font-bold tracking-[-0.01em]">New run</h1>
         <p className="mb-4 text-body text-ink2">
-          Six stages. Generate any of them, or provide the output yourself and the stage is skipped.
+          Generate or provide an Article. Every other stage can be Off. Choose narration, images,
+          and a video or combined audio export to suit your project.
         </p>
 
         {loadError === undefined ? null : <p className="mb-4 text-body text-red">{loadError}</p>}

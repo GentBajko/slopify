@@ -3,7 +3,7 @@ scenario: reruns-and-edits
 mockup_row: S10
 screens: [08-project]
 depends_on: [01-pipeline-lifecycle, 02-provider-credentials, 05-provided-outputs, 07-article-writing, 08-narration, 09-image-generation, 10-thumbnail-prompt-by-llm, 11-video-assembly]
-generated_date: 2026-09-02
+generated_date: 2026-09-09
 capstone_version: 5.2.0
 ---
 
@@ -27,8 +27,14 @@ Every action on an existing project that changes an output: edits, re-runs, sing
 6. Edit a stored rendered prompt text (an image prompt, the thumbnail prompt, an LLM-written intro or outro) on the project page, then re-run the affected stage; the saved templates are never modified.
 7. Replacement: paste or upload for any stage except video, under scenario 05's acceptance and background-staging rules; the stage becomes `provided`; dependents re-run.
 8. Re-render: the video stage re-runs from the current audio, images, and settings (scenario 11).
-9. Cascade: every re-run marks its dependents `pending` and runs them automatically per scenario 01, ending in a fresh render. The project reads `running` meanwhile.
-10. Replacement of an output deletes the previous file; no version history. The previous video stays downloadable until the new render finishes.
+9. Cascade: every re-run marks actual dependents `pending`; provided/skipped stages remain satisfied. A paused project keeps the cascade queued until Resume. Saved-prompt images and prewritten thumbnails do not depend on Article, and image/thumbnail changes do not invalidate WAV. Active runs proceed to the selected final export.
+10. Replacement of an output deletes the previous file; no version history. The previous MP4 or WAV stays downloadable until the new export finishes.
+
+## Provider changes
+
+Paused or failed projects expose per-family provider/model choices and an audio voice selector. `PATCH /api/projects/:id/providers` validates changed provider readiness, family, model and saved voice; unavailable catalogs reject the save without modifying configuration. Saved prompts, keywords, staged-file references and completed outputs remain unchanged. Saving never resumes the project.
+
+Changing provider/model/voice for unfinished narration clears its partial chunks and segments to prevent mixed voices; completed narration remains intact. Other completed pieces are retained. Resume retries all unfinished stages with the saved choices. Control actions and output edits are serialized per project to protect saves, resume, cancellation and deletion from races.
 
 ## Branches
 
@@ -54,7 +60,7 @@ Every action on an existing project that changes an output: edits, re-runs, sing
 - After a completed cascade nothing downstream is stale.
 - A project never keeps two outputs for one stage once an action completes.
 - Edits never touch saved templates.
-- At least one image always remains.
+- Deleting an image from an existing image set must leave at least one. Runs admitted with Images Off require none.
 
 ## Outcomes & side effects
 

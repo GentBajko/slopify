@@ -101,6 +101,7 @@ async function mount(
     readonly refusePrompt?: boolean;
     readonly initial?: string;
     readonly uploadAudio?: Answer;
+    readonly completeProject?: boolean;
   } = {},
 ) {
   let listed = providers(options.ready ?? true);
@@ -151,7 +152,7 @@ async function mount(
           id,
           title: draft.title,
           format: draft.format,
-          status: "running",
+          status: options.completeProject ? "done" : "running",
           config: { ...draft, rendered: {} },
           createdAt: now,
           updatedAt: now,
@@ -161,7 +162,13 @@ async function mount(
           projectId: id,
           kind,
           source: draft.sources[kind],
-          state: "pending",
+          state: options.completeProject
+            ? kind === "video" && draft.sources.audio !== "off"
+              ? "done"
+              : draft.sources[kind] === "off"
+                ? "skipped"
+                : "done"
+            : "pending",
           failureReason: null,
           attemptCount: 0,
           progressCurrent: null,
@@ -169,11 +176,43 @@ async function mount(
           startedAt: null,
           finishedAt: null,
         })),
-        outputs: [],
+        outputs: options.completeProject
+          ? [
+              {
+                id: "article-output",
+                projectId: id,
+                stageKind: "article",
+                role: "article_md",
+                path: "article.md",
+                bytes: 20,
+                originalFilename: null,
+                durationMs: null,
+                meta: {},
+                createdAt: now,
+              },
+              ...(draft.sources.audio !== "off" && draft.sources.video === "off"
+                ? [
+                    {
+                      id: "wav-output",
+                      projectId: id,
+                      stageKind: "video" as const,
+                      role: "audio_export" as const,
+                      path: "audio.wav",
+                      bytes: 40,
+                      originalFilename: null,
+                      durationMs: 10000,
+                      meta: {},
+                      createdAt: now,
+                    },
+                  ]
+                : []),
+            ]
+          : [],
       };
       return jsonAnswer(created, 201)(request);
     },
     "GET /api/projects/actual-created-project": (request) => jsonAnswer(created)(request),
+    "GET /files/actual-created-project/article-md": () => new Response("My finished article."),
   };
   const recorded = Object.fromEntries(
     Object.entries(routes).map(([path, answer]) => [
@@ -385,6 +424,7 @@ describe("the tutorial in the real app", () => {
     );
     expect(nextHeld()).toBe(true);
     await user.click(screen.getByRole("checkbox", { name: "My images" }));
+    await next(user, "play-video");
     await next(user, "play-options");
     expect(nextHeld()).toBe(true);
     await fill(user, "Video title", "My first video");
@@ -427,6 +467,65 @@ describe("the tutorial in the real app", () => {
     expect(router.state.location.pathname).toBe("/play");
     expect(requests.every((request) => request.startsWith("GET "))).toBe(true);
   });
+
+  it.each(["audio", "article"] as const)(
+    "guides an optional-stage %s run to its actual final download",
+    async (final) => {
+      const user = userEvent.setup();
+      const { requests } = await mount({ completeProject: true });
+      const source = (kind: string, value: string) =>
+        user.click(
+          within(screen.getByRole("radiogroup", { name: `${kind} source` })).getByRole("radio", {
+            name: value,
+          }),
+        );
+      await start(user);
+      await skipTo(user, "play-article");
+      await source("article", "Provide");
+      await fill(user, "Article text", "My finished article.");
+      await next(user, "play-audio");
+      if (final === "article") await source("audio", "Off");
+      else {
+        await user.selectOptions(screen.getByLabelText("TTS"), "elevenlabs");
+        await user.selectOptions(screen.getByLabelText("Voice"), "narrator-1");
+      }
+      await next(user, "play-images");
+      await source("images", "Off");
+      await next(user, "play-video");
+      expect(
+        within(screen.getByRole("radiogroup", { name: "video source" }))
+          .getByRole("radio", { name: "Off" })
+          .getAttribute("aria-checked"),
+      ).toBe("true");
+      await next(user, "play-options");
+      await fill(user, "Video title", "Optional stages");
+      await next(user, "play-keywords");
+      await next(user, "play-start");
+      expect(requests).not.toContain("POST /api/projects");
+      await user.click(screen.getByRole("button", { name: "PLAY" }));
+      await at("project");
+      await next(user, "download");
+      if (final === "audio") {
+        expect(guide().getByText("Download .wav")).not.toBeNull();
+        expect(screen.getByRole("link", { name: "Download .wav" }).getAttribute("href")).toContain(
+          "/files/actual-created-project/audio-export",
+        );
+        expect(screen.getByLabelText("Combined narration")).not.toBeNull();
+      } else {
+        expect(guide().getByText(/Audio and Video are Off/)).not.toBeNull();
+        // The guide's interaction boundary allows the Article download, proving the
+        // final spotlight moved off the skipped Video stage.
+        const download = screen.getByRole("link", { name: "Download" });
+        expect(download.getAttribute("href")).toContain("/article-md");
+        const clicked = vi.fn((event: Event) => event.preventDefault());
+        download.addEventListener("click", clicked);
+        await user.click(download);
+        expect(clicked).toHaveBeenCalledTimes(1);
+      }
+      await user.click(guide().getByRole("button", { name: "Finish tutorial" }));
+      expect(requests.filter((request) => request === "POST /api/projects")).toHaveLength(1);
+    },
+  );
 
   it("keeps an existing prompt draft when launching the guide", async () => {
     const user = userEvent.setup();

@@ -1,24 +1,26 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import type { DatabaseSync } from "node:sqlite";
+import { z } from "zod";
 import type { Clock } from "../../kernel/clock.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
-import type { Message } from "../../kernel/ports/llm.js";
+import { messageRoles } from "../../kernel/ports/llm.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import { insertPiece, piecesOf, setPiece } from "../../kernel/runner/piece-repo.js";
-import type { LlmAnswer, StageProviders } from "../../kernel/runner/providers.js";
-import type { EntryMode, ProviderChoice, RunConfig } from "../admission/model.js";
+import type { StageProviders } from "../../kernel/runner/providers.js";
+import type { ProviderChoice } from "../admission/model.js";
 import { projectById } from "../admission/repo.js";
-import type { EntryCategory } from "../library/model.js";
 import { outputPath } from "../storage/layout.js";
 import { outputsOf } from "../storage/repo.js";
 import { storeText } from "../storage/staging.js";
-import type { RecordEvent, Tokens } from "../telemetry/model.js";
-import { noTokens, plusUsage } from "../telemetry/model.js";
+import type { RecordEvent } from "../telemetry/model.js";
 import type { ArticleBrief, SentMessages } from "./continuation.js";
 import { writeArticle } from "./continuation.js";
+import { categories, instructionsText, keepSegment, writeSegment } from "./segments.js";
 import { storeArticleText } from "./store.js";
+
+export type { SegmentText } from "./segments.js";
 
 // One streamed call writes the article from the research notes and the rendered prompt, its end
 // matter is cut into files of its own, and the picked intro and outro get their text last,
@@ -33,22 +35,6 @@ export interface ArticleDeps {
   // One event for the article, one for each intro or outro text.
   readonly count: RecordEvent;
 }
-
-// What the article stage leaves for the narration to speak: one `segment` piece per picked
-// entry, whether its text was written by the model or rendered from the entry body.
-export interface SegmentText {
-  readonly category: EntryCategory;
-  readonly name: string;
-  readonly mode: EntryMode;
-  readonly text: string;
-}
-
-// The segment plus what its call cost, which the piece it is stored on has no room for.
-interface WrittenSegment extends SegmentText {
-  readonly tokens: Tokens;
-}
-
-const categories: readonly EntryCategory[] = ["intro", "outro"];
 
 export async function runArticle(
   deps: ArticleDeps,
@@ -70,33 +56,18 @@ export async function runArticle(
   const notes = researchNotes(deps, projectId);
   const brief: ArticleBrief = { articlePrompt, ...(notes === undefined ? {} : { notes }) };
 
-  const written = await writeArticle(providers, choice, brief, (text: string): void => {
-    // The page shows the article as it is written. The idle timeout is restarted by the wrapper
-    // on the same events, not here. ceiling: the partial text of a failed attempt is discarded,
-    // but the deltas already sent cannot be unsent, so a retry mid-stream leaves the page
-    // appending the second telling under the first. What the project keeps is still the
-    // successful attempt's text alone; the upgrade is an event telling the page to start the
-    // article again.
-    context.emit({ type: "article.delta", projectId, text });
-  });
-
-  // The markdown exactly as the model produced it, and the plain-text narration source.
-  // The end matter is kept out of the narration and stored beside the article instead.
-  const store = { projectId, stageKind: "article" } as const;
-  storeText(deps, { ...store, role: "article_md", text: written.markdown });
-  const narration = storeArticleText(deps, { projectId, markdown: written.markdown });
-  // The article and each entry text are counted as units of their own, so the article's
-  // event goes out as soon as its text is stored, carrying the tokens of the first call
-  // and its continuations.
-  deps.count("stage.completed", {
-    stage: "article",
-    provider: choice.provider,
-    model: choice.model,
-    ...written.tokens,
-  });
-
-  const sent = [...written.sent];
+  const completed = await articleBody(deps, context, providers, choice, brief);
+  const { narration } = completed;
+  const sent = [...completed.sent];
   for (const [index, category] of categories.entries()) {
+    if (project.config.sources.audio !== "generate") break;
+    if (
+      completed.resumed &&
+      piecesOf(deps.db, context.stage.id, "segment").some(
+        (piece) => piece.idx === index + 1 && piece.state === "done",
+      )
+    )
+      continue;
     const segment = await writeSegment(
       providers,
       choice,
@@ -107,6 +78,7 @@ export async function runArticle(
     );
     if (segment !== undefined) {
       keepSegment(deps, context, segment, index + 1);
+      checkpointArticle(deps, context, sent);
       // One event per intro/outro text, named by its segment. A text-mode entry is
       // rendered rather than written, so it made no call, names no provider and reports
       // zero tokens rather than an estimate.
@@ -120,107 +92,92 @@ export async function runArticle(
   }
 
   // The exact messages sent, the continuations and the entry calls among them.
-  storeText(deps, { ...store, role: "instructions", text: instructionsText(sent) });
+  storeText(deps, {
+    projectId,
+    stageKind: "article",
+    role: "instructions",
+    text: instructionsText(sent),
+  });
   deps.log.write("info", "article.done", {
     projectId,
     stage: "article",
-    detail: `${String(written.sent.length - 1)} continuations, ${String(narration.length)} characters to narrate`,
+    detail: `${String(narration.length)} characters to narrate`,
   });
 }
 
-// For each picked entry in LLM mode, one call with the filled entry as instruction plus the
-// title, keyword values, and the plain-text article ... Text-mode entries are stored as
-// rendered, with no call.
-async function writeSegment(
-  providers: StageProviders,
-  choice: ProviderChoice,
-  config: RunConfig,
-  category: EntryCategory,
-  article: string,
-  sent: SentMessages[],
-): Promise<WrittenSegment | undefined> {
-  const picked = config[category];
-  if (picked === undefined) {
-    return undefined;
-  }
-  const body = config.rendered[category];
-  if (body === undefined) {
-    throw new Error(`the run has no rendered ${category} text`);
-  }
-  const common = { category, name: picked.name, mode: picked.mode };
-  if (picked.mode === "text") {
-    return { ...common, text: body, tokens: noTokens };
-  }
-  const messages = segmentMessages(body, config, article);
-  sent.push({ label: label(category), messages });
-  const answer = await providers.llm({
-    provider: choice.provider,
-    model: choice.model,
-    messages,
-    // An entry that answers with nothing is a failed attempt like any
-    // other, and the wrapper is what retries it.
-    check: (given: LlmAnswer): string | undefined =>
-      given.text.trim() === "" ? `the ${category} answered with nothing` : undefined,
-  });
-  return { ...common, text: answer.text.trim(), tokens: plusUsage(noTokens, answer.usage) };
-}
+// Once the article is stored, a pause during end matter resumes that end matter
+// instead of buying and replacing the article again. Re-run clears this checkpoint.
+const articleCheckpoint = z.object({
+  sent: z.array(
+    z.object({
+      label: z.string(),
+      messages: z.array(z.object({ role: z.enum(messageRoles), content: z.string() })),
+    }),
+  ),
+});
 
-function segmentMessages(body: string, config: RunConfig, article: string): readonly Message[] {
-  const values = Object.entries(config.values);
-  return [
-    {
-      role: "user",
-      content: [
-        body,
-        "",
-        `Video title: ${config.title}`,
-        "",
-        "Keyword values for this run:",
-        "",
-        values.length === 0
-          ? "(none)"
-          : values.map(([name, value]) => `${name}: ${value}`).join("\n"),
-        "",
-        "The article this video narrates:",
-        "",
-        article,
-      ].join("\n"),
-    },
-  ];
-}
-
-// The segment rows are keyed by `idx` within the stage, so a stage that runs again after
-// a failure replaces what it wrote rather than colliding with it.
-function keepSegment(
+async function articleBody(
   deps: ArticleDeps,
   context: StageContext,
-  segment: SegmentText,
-  idx: number,
+  providers: StageProviders,
+  choice: ProviderChoice,
+  brief: ArticleBrief,
+): Promise<{
+  readonly narration: string;
+  readonly sent: readonly SentMessages[];
+  readonly resumed: boolean;
+}> {
+  const { projectId } = context.stage;
+  const saved = piecesOf(deps.db, context.stage.id, "article_written")[0];
+  const outputs = outputsOf(deps.db, projectId);
+  const plain = outputs.find((output) => output.role === "article_txt");
+  const markdown = outputs.find((output) => output.role === "article_md");
+  if (
+    saved?.payload !== null &&
+    saved?.payload !== undefined &&
+    plain &&
+    markdown &&
+    existsSync(outputPath(deps.paths, projectId, plain.path)) &&
+    existsSync(outputPath(deps.paths, projectId, markdown.path))
+  ) {
+    return {
+      narration: readFileSync(outputPath(deps.paths, projectId, plain.path), "utf8"),
+      sent: articleCheckpoint.parse(JSON.parse(saved.payload)).sent,
+      resumed: true,
+    };
+  }
+  const written = await writeArticle(providers, choice, brief, (text) => {
+    context.emit({ type: "article.delta", projectId, text });
+  });
+  storeText(deps, { projectId, stageKind: "article", role: "article_md", text: written.markdown });
+  const narration = storeArticleText(deps, { projectId, markdown: written.markdown });
+  checkpointArticle(deps, context, written.sent);
+  deps.count("stage.completed", {
+    stage: "article",
+    provider: choice.provider,
+    model: choice.model,
+    ...written.tokens,
+  });
+  return { narration, sent: written.sent, resumed: false };
+}
+
+function checkpointArticle(
+  deps: ArticleDeps,
+  context: StageContext,
+  sent: readonly SentMessages[],
 ): void {
-  // Written out rather than stringified whole: the caller hands in what the call cost as
-  // well, and the narration stage is what reads the piece - it carries the text to speak,
-  // nothing about the model that wrote it.
-  const payload = JSON.stringify({
-    category: segment.category,
-    name: segment.name,
-    mode: segment.mode,
-    text: segment.text,
-  } satisfies SegmentText);
-  const existing = piecesOf(deps.db, context.stage.id, "segment").find(
-    (piece) => piece.idx === idx,
-  );
-  if (existing === undefined) {
+  const existing = piecesOf(deps.db, context.stage.id, "article_written")[0];
+  const payload = JSON.stringify({ sent });
+  if (existing) setPiece(deps.db, existing.id, "done", payload);
+  else
     insertPiece(deps.db, {
       id: deps.ids.next(),
       stageId: context.stage.id,
-      kind: "segment",
-      idx,
+      kind: "article_written",
+      idx: 1,
       state: "done",
       payload,
     });
-    return;
-  }
-  setPiece(deps.db, existing.id, "done", payload);
 }
 
 // Research writes its notes as an output of its own, and a provided research stage stores the
@@ -232,16 +189,4 @@ function researchNotes(deps: ArticleDeps, projectId: string): string | undefined
     return undefined;
   }
   return readFileSync(outputPath(deps.paths, projectId, notes.path), "utf8");
-}
-
-function instructionsText(sent: readonly SentMessages[]): string {
-  const parts = sent.map(
-    (one) =>
-      `=== ${one.label} ===\n\n${one.messages.map((message) => message.content).join("\n\n")}`,
-  );
-  return `${parts.join("\n\n")}\n`;
-}
-
-function label(category: EntryCategory): string {
-  return category === "intro" ? "Intro" : "Outro";
 }

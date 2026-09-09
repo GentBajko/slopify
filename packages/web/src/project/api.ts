@@ -1,4 +1,5 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
+import type { ProviderChoice, VoiceChoice } from "@app/slices/admission/model.js";
 import type { Api, ProjectBody } from "@/api";
 import { fileUrl } from "@/api";
 import { errorOf, problemOf, readText } from "@/http";
@@ -26,6 +27,30 @@ const refusals: ReadonlySet<number> = new Set([400, 404, 409]);
 
 export async function cancelRun(api: Api, projectId: string): Promise<ActionResult> {
   return acted(await api.client.projects[":id"].cancel.$post({ param: { id: projectId } }));
+}
+
+export interface ProviderChanges {
+  readonly llm?: ProviderChoice;
+  readonly audio?: VoiceChoice;
+  readonly images?: ProviderChoice;
+}
+
+export async function pauseRun(api: Api, projectId: string): Promise<ActionResult> {
+  return acted(await api.client.projects[":id"].pause.$post({ param: { id: projectId } }));
+}
+
+export async function resumeRun(api: Api, projectId: string): Promise<ActionResult> {
+  return acted(await api.client.projects[":id"].resume.$post({ param: { id: projectId } }));
+}
+
+export async function updateProviders(
+  api: Api,
+  projectId: string,
+  choices: ProviderChanges,
+): Promise<ActionResult> {
+  return acted(
+    await api.client.projects[":id"].providers.$patch({ param: { id: projectId }, json: choices }),
+  );
 }
 
 export async function retryStage(

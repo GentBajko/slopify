@@ -3,7 +3,7 @@ scenario: image-generation
 mockup_row: S7
 screens: [06-play, 08-project]
 depends_on: [01-pipeline-lifecycle, 02-provider-credentials, 03-placeholder-substitution, 04-run-admission, 05-provided-outputs]
-generated_date: 2026-09-02
+generated_date: 2026-09-09
 capstone_version: 5.2.0
 ---
 
@@ -13,7 +13,7 @@ The images stage and the prompt-driven thumbnail: Number parallel sends per prom
 
 ## Trigger & preconditions
 
-- Trigger: scenario 01 step 4 starts images (and thumbnail when its source is Generate) once the article is `done` or `provided`.
+- Trigger: the scheduler starts saved-prompt images and a `from_prompt` thumbnail as soon as the project is admitted, in parallel with research or writing. Their templates and keywords were rendered before admission; they do not depend on generated Article text. A `prompt_by_llm` thumbnail still waits for Article.
 - Preconditions: image provider keyed and model chosen; at least one image prompt ticked with a Number 1-20, total ≤ 60 (scenarios 02, 04); rendered prompt texts on the project (scenario 03); for the thumbnail, a thumbnail prompt selected.
 - Actor: none beyond the pipeline.
 
@@ -36,7 +36,7 @@ The images stage and the prompt-driven thumbnail: Number parallel sends per prom
 - Call fails → scenario 01's retry policy with a 300 s per-call timeout for image calls.
 - One image exhausts its retries → the stage fails; completed images are kept; manual retry generates only the missing images.
 - Content-policy refusal → that image fails immediately with the refusal text, no retries; the user edits the prompt and re-runs the stage (scenario 12).
-- Thumbnail call fails → the thumbnail stage fails on its own; images and audio unaffected; video waits (scenario 01 step 5).
+- Thumbnail call fails → the thumbnail stage fails on its own; images and audio unaffected; MP4 waits, WAV can continue (scenario 01 step 5).
 - Interrupted process → stage failed "interrupted" (scenario 01); stored images kept.
 - Cancel → scenario 13.
 

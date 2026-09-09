@@ -44,7 +44,10 @@ export function startRun(
     projectId: id,
     kind,
     source: draft.sources[kind],
-    state: initialState(draft.sources[kind]),
+    state:
+      kind === "video" && draft.sources.video === "off" && draft.sources.audio !== "off"
+        ? "pending"
+        : initialState(draft.sources[kind]),
     failureReason: null,
     attemptCount: 0,
     progressCurrent: null,

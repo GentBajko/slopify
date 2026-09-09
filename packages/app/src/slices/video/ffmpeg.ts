@@ -74,14 +74,12 @@ export function renderArgs(plan: RenderPlan): string[] {
     filterGraph(plan, audioAt),
     "-map",
     "[v]",
-    "-map",
-    "[a]",
+    ...(plan.audio.length > 0 ? ["-map", "[a]"] : []),
     "-c:v",
     "libx264",
     "-pix_fmt",
     "yuv420p",
-    "-c:a",
-    "aac",
+    ...(plan.audio.length > 0 ? ["-c:a", "aac"] : ["-an"]),
     "-movflags",
     "+faststart",
     plan.output,
@@ -114,9 +112,11 @@ function filterGraph(plan: RenderPlan, audioAt: readonly number[]): string {
       `[${input}:a]aformat=sample_fmts=fltp:sample_rates=${sampleRate}:channel_layouts=${channelLayout}[a${at}]`,
     );
   });
-  chains.push(
-    `${audioAt.map((_input, at) => `[a${at}]`).join("")}concat=n=${audioAt.length}:v=0:a=1[a]`,
-  );
+  if (audioAt.length > 0) {
+    chains.push(
+      `${audioAt.map((_input, at) => `[a${at}]`).join("")}concat=n=${audioAt.length}:v=0:a=1[a]`,
+    );
+  }
 
   return chains.join(";");
 }

@@ -5,7 +5,7 @@
 
 import type { DatabaseSync } from "node:sqlite";
 import type { EntryChoice, RunDraft } from "../admission/model.js";
-import type { FieldError } from "../admission/rules.js";
+import { type FieldError, normaliseDraft } from "../admission/rules.js";
 import { collectFields, render } from "../admission/substitute.js";
 import type { Entry, EntryCategory, PromptKind } from "./model.js";
 import { entryByName, promptByName } from "./repo.js";
@@ -30,7 +30,8 @@ export interface PickedTemplates {
   readonly missing: readonly FieldError[];
 }
 
-export function pickTemplates(db: DatabaseSync, draft: RunDraft): PickedTemplates {
+export function pickTemplates(db: DatabaseSync, input: RunDraft): PickedTemplates {
+  const draft = normaliseDraft(input);
   const { sources } = draft;
   const missing: FieldError[] = [];
   // Only the prompts of stages set to Generate, plus the picked

@@ -53,7 +53,7 @@ export interface PlanInput {
   readonly format: Format;
   readonly gapSeconds: number;
   readonly intro?: AudioInput | undefined;
-  readonly body: AudioInput;
+  readonly body?: AudioInput | undefined;
   readonly outro?: AudioInput | undefined;
   // Absolute paths in slideshow order.
   readonly images: readonly string[];
@@ -62,12 +62,15 @@ export interface PlanInput {
 
 export function planRender(input: PlanInput): RenderPlan {
   if (input.images.length === 0) {
-    // Admission makes an image source mandatory, so an empty set is a bug upstream.
+    // Admission permits Video only with an image source, so an empty set is a bug upstream.
     throw new Error("a render needs at least one image");
   }
   const frame = frames[input.format];
-  const audio = timeline(input);
-  const totalSeconds = audio.reduce((sum, segment) => sum + segment.seconds, 0);
+  const audio = input.body === undefined ? [] : audioTimeline({ ...input, body: input.body });
+  const totalSeconds =
+    input.body === undefined
+      ? input.images.length * 5
+      : audio.reduce((sum, segment) => sum + segment.seconds, 0);
   const totalFrames = Math.max(input.images.length, Math.round(totalSeconds * fps));
   return {
     width: frame.width,
@@ -84,13 +87,15 @@ export function planRender(input: PlanInput): RenderPlan {
 
 // Intro, gap, body, gap, outro, with a gap only where the segment on
 // the other side of it exists.
-function timeline(input: PlanInput): readonly AudioSegment[] {
+export function audioTimeline(
+  input: Pick<PlanInput, "gapSeconds" | "intro" | "outro"> & { readonly body: AudioInput },
+  minimumGap = 1 / fps,
+): readonly AudioSegment[] {
   const segments: AudioSegment[] = [];
   const gap: AudioSegment = { kind: "gap", path: null, seconds: input.gapSeconds };
-  // A gap shorter than one frame is no gap. The renderer formats a segment's length to
-  // milliseconds, so anything under that would become `-t 0.000`: an anullsrc input with
-  // no samples that still had to be counted in the audio concat.
-  const audible = input.gapSeconds >= 1 / fps;
+  // Video keeps its existing minimum of one frame. WAV passes one sample instead,
+  // because its gap duration is independent of the slideshow's frame rate.
+  const audible = input.gapSeconds >= minimumGap;
   if (input.intro !== undefined) {
     segments.push({ kind: "intro", path: input.intro.path, seconds: input.intro.seconds });
     if (audible) {

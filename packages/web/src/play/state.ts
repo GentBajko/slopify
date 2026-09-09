@@ -93,9 +93,7 @@ export const sourceLabels: Readonly<Record<StageSource, string>> = {
   prompt_by_llm: "Prompt by LLM",
 };
 
-// The switch a stage draws, straight from the rule that will judge it. Video has one
-// legal source and no switch, which is why the caller checks the
-// length rather than this function hiding it.
+// The switch a stage draws, straight from the rule that will judge it.
 export function sourceOptions(
   kind: StageKind,
 ): readonly { readonly value: StageSource; readonly label: string }[] {
@@ -107,11 +105,11 @@ export function sourceOptions(
 // whether the row is drawn at all.
 export function needsLlm(form: PlayFormState, entries: readonly Entry[]): boolean {
   return (
-    form.sources.research === "generate" ||
     form.sources.article === "generate" ||
     form.sources.thumbnail === "prompt_by_llm" ||
-    modeOf(entries, "intro", form.intro) === "llm" ||
-    modeOf(entries, "outro", form.outro) === "llm"
+    (form.sources.audio === "generate" &&
+      (modeOf(entries, "intro", form.intro) === "llm" ||
+        modeOf(entries, "outro", form.outro) === "llm"))
   );
 }
 
@@ -149,8 +147,11 @@ export function draftOf(input: DraftInput): RunDraft {
   return {
     title: form.title,
     format: form.format,
-    // Video is generated whatever the form says.
-    sources: { ...form.sources, video: "generate" },
+    sources: {
+      ...form.sources,
+      ...(form.sources.article === "provide" ? { research: "off" as const } : {}),
+      ...(form.sources.images === "off" ? { video: "off" as const } : {}),
+    },
     llm: form.llm,
     audio: form.audio,
     images: form.images,
@@ -185,6 +186,7 @@ function pick<T, R extends object>(value: T | undefined, into: (present: T) => R
 // mode again before it judges the draft (`slices/library/slots.ts`), so a stale mode here
 // changes what the form shows and never what the run does.
 function entryChoice(input: DraftInput, category: "intro" | "outro"): EntryChoice | undefined {
+  if (input.form.sources.audio !== "generate") return undefined;
   const name = category === "intro" ? input.form.intro : input.form.outro;
   const mode = modeOf(input.entries, category, name);
   return name === "" || mode === undefined ? undefined : { name, mode };

@@ -3,7 +3,7 @@ scenario: narration
 mockup_row: S6
 screens: [06-play, 08-project]
 depends_on: [01-pipeline-lifecycle, 02-provider-credentials, 05-provided-outputs, 07-article-writing]
-generated_date: 2026-09-02
+generated_date: 2026-09-09
 capstone_version: 5.2.0
 ---
 
@@ -66,3 +66,7 @@ The audio stage: end matter split out, the body chunked per the user's choice, s
 - D5 money: nothing charged in-app.
 - D6 limits: no cap on text length or chunk count; the provider's own limits surface as errors.
 - D13 notification: no channel.
+
+## Provided-content entry preparation (0.5.1)
+
+When Article is provided and Audio is generated, the Audio stage first prepares selected intro/outro text from the supplied article. Text-mode entries need no LLM; LLM-mode entries use the saved text provider. Entry text is checkpointed on the Article stage so retries and voice changes retain finished text, while synthesis uses the current voice. Uploaded narration (Audio Provide) is used as a complete file; intro/outro pickers apply only to generated narration.

@@ -182,6 +182,7 @@ interface Standing {
   readonly stages: readonly Stage[];
   readonly outputs: readonly Output[];
   readonly thumbnailSource: StageSource;
+  readonly videoSource: StageSource;
 }
 
 type Loaded = Standing | { readonly ok: false; readonly reason: RerunRefusal };
@@ -203,6 +204,7 @@ function load(deps: RerunDeps, projectId: string): Loaded {
     stages,
     outputs: outputsOf(deps.db, projectId),
     thumbnailSource: project.config.sources.thumbnail,
+    videoSource: project.config.sources.video,
   };
 }
 
@@ -216,7 +218,12 @@ function apply(
   loaded: Standing,
   own?: () => readonly string[],
 ): RerunResult {
-  const plan = redoPlan({ action, stages: loaded.stages, thumbnailSource: loaded.thumbnailSource });
+  const plan = redoPlan({
+    action,
+    stages: loaded.stages,
+    thumbnailSource: loaded.thumbnailSource,
+    videoSource: loaded.videoSource,
+  });
   // `own` is the action's own change - the new article, the image that goes - and it runs
   // first and inside the same transaction, so it lands or rolls back with the cascade it
   // triggers. The files it writes take the names they already had, replacing in place
@@ -258,6 +265,25 @@ function clearStage(deps: RerunDeps, stage: Stage, outputs: readonly Output[]): 
   }
   deletePieces(deps.db, stage.id);
   return files;
+}
+
+// Switching narrator halfway through a stage must not join two different voices.
+// The caller includes these row changes with the config update's transaction and
+// runs the returned cleanup only after commit. Finished narration is left intact.
+export function clearUnfinishedAudio(deps: RerunDeps, projectId: string): readonly (() => void)[] {
+  const stage = stagesOf(deps.db, projectId).find((one) => one.kind === "audio");
+  if (
+    stage === undefined ||
+    stage.state === "done" ||
+    stage.state === "provided" ||
+    stage.state === "skipped"
+  )
+    return [];
+  const orphaned = clearStage(deps, stage, outputsOf(deps.db, projectId));
+  deps.db
+    .prepare("UPDATE stages SET progress_current = NULL, progress_total = NULL WHERE id = ?")
+    .run(stage.id);
+  return [() => removeFiles(deps, projectId, orphaned)];
 }
 
 // A regenerated image is replaced in place at the same index, so the piece keeps the prompt

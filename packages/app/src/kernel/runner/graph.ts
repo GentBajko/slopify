@@ -1,13 +1,14 @@
 import type { ProjectState, StageKind, StageState } from "../pipeline.js";
 
-// Research → article → {audio ∥ images ∥ thumbnail} → video.
+// Images use saved prompts and can run immediately. A thumbnail's source and an
+// audio-only export narrow these dependencies through dependenciesOf().
 export const deps = {
   research: [],
   article: ["research"],
   audio: ["article"],
-  images: ["article"],
+  images: [],
   thumbnail: ["article"],
-  video: ["audio", "images", "thumbnail"],
+  video: ["article", "audio", "images", "thumbnail"],
 } as const satisfies Readonly<Record<StageKind, readonly StageKind[]>>;
 
 // `provided` and `skipped` release a dependency exactly as `done` does.
@@ -20,8 +21,10 @@ export interface StageStanding {
   readonly state: StageState;
 }
 
-// The four states, in their order. Derived on every read, never stored.
-export function derive(stages: readonly StageStanding[]): ProjectState {
+// Stage state is derived; an explicit persisted pause takes precedence while calls
+// drain. Completed independent images do not imply that a run was canceled.
+export function derive(stages: readonly StageStanding[], paused = false): ProjectState {
+  if (paused) return "paused";
   if (stages.some((stage) => stage.state === "running")) {
     return "running";
   }
@@ -31,22 +34,20 @@ export function derive(stages: readonly StageStanding[]): ProjectState {
   if (stages.some((stage) => stage.state === "failed")) {
     return "failed";
   }
-  if (stages.some((stage) => stage.kind === "video" && stage.state === "done")) {
+  if (stages.length > 0 && stages.every((stage) => satisfied(stage.state))) {
     return "done";
   }
-  // Extended rule, beyond the four above. `pending` covers the window between creating a
-  // project and the runner claiming its first stage. A second case is reachable: a stage
-  // that stores its output in the same instant as the cancel stays `done`, so nothing is
-  // `canceled` and a stopped run would read as about to start. A stage in a terminal state
-  // tells the two apart - at creation none is `done`.
-  //
-  // ceiling: a process killed between a stage finishing and its dependent being claimed
-  // reads `canceled` too. Separating those needs the cancel stored on the project, and
-  // nothing about the status is stored.
-  if (stages.some((stage) => stage.state === "done")) {
-    return "canceled";
-  }
+  // Includes a run created but not yet claimed and unfinished work after restart.
   return "pending";
+}
+
+export function dependenciesOf(
+  kind: StageKind,
+  sources: { readonly thumbnail: string; readonly video: string },
+): readonly StageKind[] {
+  if (kind === "thumbnail" && sources.thumbnail === "from_prompt") return [];
+  if (kind === "video" && sources.video === "off") return ["article", "audio"];
+  return deps[kind];
 }
 
 // How far through itself a stage row is: chapters, chunks, images or a

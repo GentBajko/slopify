@@ -9,7 +9,7 @@ import { Rail, RailMeter } from "@/components/rail";
 import { StateWord } from "@/components/state-word";
 import { RefusalLine } from "./parts.js";
 import { unreadyFor } from "./readiness.js";
-import { attempts, stageNames, summaryOf } from "./summary.js";
+import { attempts, stageName, summaryOf } from "./summary.js";
 import type { ProjectActions } from "./use-actions.js";
 
 // One row of the rundown and the body it opens into. The five columns are the reference sheet's
@@ -43,7 +43,8 @@ export function StageRow({
   readonly actions: ProjectActions;
   readonly children: ReactNode;
 }) {
-  const name = stageNames[stage.kind];
+  const name = stageName(stage.kind, project.config);
+  const heldActions = project.status === "paused" ? { ...actions, pending: true } : actions;
   const refused = actions.refusal?.stage === stage.kind ? actions.refusal.message : undefined;
   const unready = unreadyFor(stage.kind, project.config, providers);
   const retryable = stage.state === "failed" || stage.state === "canceled";
@@ -58,11 +59,11 @@ export function StageRow({
         <StateWord state={stage.state} announce={name} />
 
         {stage.state === "failed" ? (
-          <ErrorLine stage={stage} unready={unready} actions={actions} />
+          <ErrorLine stage={stage} unready={unready} actions={heldActions} />
         ) : null}
         {stage.state === "canceled" ? (
           <div className="col-span-4 col-start-2 mt-[10px] flex justify-end">
-            <RetryButton stage={stage} unready={unready} actions={actions} />
+            <RetryButton stage={stage} unready={unready} actions={heldActions} />
           </div>
         ) : null}
         {stage.state === "running" && stage.progressTotal !== null ? (
@@ -82,7 +83,10 @@ export function StageRow({
           <RefusalLine message={refused} onDismiss={actions.dismissRefusal} />
         </div>
       )}
-      {opened.has(stage.state) ? children : null}
+      {opened.has(stage.state) ||
+      (project.status === "paused" && outputs.some((output) => output.stageKind === stage.kind))
+        ? children
+        : null}
     </div>
   );
 }

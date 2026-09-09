@@ -86,30 +86,34 @@ export function CueSheet({
               update({ format });
             }}
           />
-          <div className="min-w-[120px] flex-1">
-            <EntryPicker
-              label="Intro"
-              category="intro"
-              entries={entries}
-              value={form.intro}
-              problem={problem("intro")}
-              onPick={(intro) => {
-                update({ intro });
-              }}
-            />
-          </div>
-          <div className="min-w-[120px] flex-1">
-            <EntryPicker
-              label="Outro"
-              category="outro"
-              entries={entries}
-              value={form.outro}
-              problem={problem("outro")}
-              onPick={(outro) => {
-                update({ outro });
-              }}
-            />
-          </div>
+          {form.sources.audio !== "generate" ? null : (
+            <>
+              <div className="min-w-[120px] flex-1">
+                <EntryPicker
+                  label="Intro"
+                  category="intro"
+                  entries={entries}
+                  value={form.intro}
+                  problem={problem("intro")}
+                  onPick={(intro) => {
+                    update({ intro });
+                  }}
+                />
+              </div>
+              <div className="min-w-[120px] flex-1">
+                <EntryPicker
+                  label="Outro"
+                  category="outro"
+                  entries={entries}
+                  value={form.outro}
+                  problem={problem("outro")}
+                  onPick={(outro) => {
+                    update({ outro });
+                  }}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         {/* The row exists only while something in the run asks an LLM for

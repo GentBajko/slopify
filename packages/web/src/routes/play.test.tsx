@@ -186,6 +186,7 @@ describe("tutorial completion from the Play form", () => {
       playArticleReady: false,
       playAudioReady: false,
       playImagesReady: false,
+      playVideoReady: true,
       playOptionsReady: false,
       playHasKeywords: false,
       playKeywordsReady: true,
@@ -203,6 +204,7 @@ describe("tutorial completion from the Play form", () => {
       playArticleReady: true,
       playAudioReady: true,
       playImagesReady: true,
+      playVideoReady: true,
       playOptionsReady: true,
       playHasKeywords: true,
       playKeywordsReady: true,
@@ -352,8 +354,14 @@ describe("the source switches", () => {
     expect(screen.getByRole("radiogroup", { name: "thumbnail source" }).textContent).toBe(
       "OffFrom promptPrompt by LLMProvide",
     );
-    // The video is always generated, so it carries no switch at all.
-    expect(screen.queryByRole("radiogroup", { name: "video source" })).toBeNull();
+    for (const kind of ["audio", "images"]) {
+      expect(screen.getByRole("radiogroup", { name: `${kind} source` }).textContent).toBe(
+        "OffGenerateProvide",
+      );
+    }
+    expect(screen.getByRole("radiogroup", { name: "video source" }).textContent).toBe(
+      "OffGenerate",
+    );
   });
 
   it("swaps a stage's controls for its paste area, and hides research behind a provided article", async () => {
@@ -368,6 +376,132 @@ describe("the source switches", () => {
     expect(screen.getByLabelText("Article text")).not.toBeNull();
     // Research only feeds article writing.
     expect(screen.queryByRole("radiogroup", { name: "research source" })).toBeNull();
+  });
+});
+
+describe("optional stages", () => {
+  it("uses uploaded narration as-is and omits selected entry requirements", async () => {
+    const posted = vi.fn(async (request: Request) => {
+      const draft = await request.json();
+      expect(draft).toMatchObject({
+        sources: { article: "provide", audio: "provide", images: "off", video: "off" },
+        provided: { audio: "uploaded-narration" },
+        values: {},
+      });
+      expect(draft).not.toHaveProperty("intro");
+      expect(draft).not.toHaveProperty("outro");
+      return jsonAnswer({ project: { id: "uploaded-audio" }, stages: [] }, 201)(request);
+    });
+    const created = await mount({
+      "GET /api/entries": jsonAnswer({ entries: [{ ...entries[1], body: "Write {{unused}}." }] }),
+      "POST /api/staging/audio": jsonAnswer({
+        id: "uploaded-narration",
+        stageKind: "audio",
+        path: "uploaded-narration",
+        originalFilename: "narration.wav",
+        bytes: 5,
+        state: "staged",
+        createdAt: "2026-09-09T20:00:00.000Z",
+      }),
+      "POST /api/projects": posted,
+    });
+    await pick("Outro", "Sting");
+    await userEvent.click(segment("article", "Provide"));
+    await userEvent.type(screen.getByLabelText("Article text"), "The full article.");
+    await userEvent.click(segment("audio", "Provide"));
+    expect(screen.queryByLabelText("Intro")).toBeNull();
+    expect(screen.queryByLabelText("Outro")).toBeNull();
+    expect(screen.queryByLabelText("unused")).toBeNull();
+    expect(screen.queryByLabelText("LLM")).toBeNull();
+    expect(
+      screen.getByText(
+        "Uploaded narration is used as-is; include any intro and outro in that file.",
+      ),
+    ).not.toBeNull();
+    await userEvent.upload(
+      screen.getByLabelText("Narration file"),
+      new File(["audio"], "narration.wav", { type: "audio/wav" }),
+    );
+    await screen.findByText("Staged");
+    await userEvent.click(segment("images", "Off"));
+    await userEvent.type(screen.getByLabelText("Video title"), "Uploaded audio");
+    expect(held()).toBe(false);
+    await userEvent.click(playKey());
+    await waitFor(() => expect(created).toHaveBeenCalledWith("uploaded-audio"));
+    expect(posted).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts an article-only project without hidden provider, intro or keyword requirements", async () => {
+    const posted = vi.fn(async (request: Request) => {
+      const draft = await request.json();
+      expect(draft).toMatchObject({
+        sources: { article: "provide", research: "off", audio: "off", images: "off", video: "off" },
+        values: {},
+      });
+      expect(draft).not.toHaveProperty("intro");
+      expect(draft).not.toHaveProperty("outro");
+      return jsonAnswer({ project: { id: "article-only" }, stages: [] }, 201)(request);
+    });
+    const created = await mount({
+      "GET /api/entries": jsonAnswer({ entries: [{ ...entries[1], body: "Write {{unused}}." }] }),
+      "POST /api/projects": posted,
+    });
+    await pick("Outro", "Sting");
+    expect(screen.getByLabelText("unused")).not.toBeNull();
+    await userEvent.click(segment("article", "Provide"));
+    await userEvent.type(screen.getByLabelText("Article text"), "My finished article.");
+    await userEvent.click(segment("audio", "Off"));
+    await userEvent.click(segment("images", "Off"));
+    expect(screen.queryByLabelText("Intro")).toBeNull();
+    expect(screen.queryByLabelText("Outro")).toBeNull();
+    expect(screen.queryByLabelText("unused")).toBeNull();
+    expect(screen.queryByLabelText("LLM")).toBeNull();
+    expect(segment("video", "Off").getAttribute("aria-checked")).toBe("true");
+    expect((segment("video", "Generate") as HTMLButtonElement).disabled).toBe(true);
+    await userEvent.type(screen.getByLabelText("Video title"), "Article only");
+    expect(held()).toBe(false);
+    expect(tutorial.progress.mock.lastCall?.[0]).toMatchObject({
+      playAudioReady: true,
+      playImagesReady: true,
+      playVideoReady: true,
+    });
+    await userEvent.click(playKey());
+    await waitFor(() => expect(created).toHaveBeenCalledWith("article-only"));
+    expect(posted).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps silent video available without a TTS provider or voice", async () => {
+    await mount();
+    await fillGeneratedRun();
+    await userEvent.click(segment("audio", "Off"));
+    expect(screen.getByText("Silent video · 5 seconds per image")).not.toBeNull();
+    expect(screen.queryByLabelText("TTS")).toBeNull();
+    expect(held()).toBe(false);
+    await userEvent.click(segment("video", "Off"));
+    expect(screen.getByText("Download each enabled stage separately")).not.toBeNull();
+    await userEvent.click(segment("audio", "Generate"));
+    expect(screen.getByText("Combined WAV export with narration and segment gaps")).not.toBeNull();
+    expect(held()).toBe(false);
+  });
+
+  it("offers an image provider for a generated thumbnail with Images Off or Provide", async () => {
+    await mount();
+    await userEvent.click(segment("article", "Provide"));
+    await userEvent.type(screen.getByLabelText("Article text"), "Ready article.");
+    await userEvent.click(segment("audio", "Off"));
+    await userEvent.click(segment("images", "Off"));
+    await userEvent.click(segment("thumbnail", "From prompt"));
+    await pick("Thumbnail prompt", "Title card");
+    await pick("Provider", "fal");
+    await pick("Model", "fal-ai/flux-2");
+    await userEvent.type(screen.getByLabelText("topic"), "Albania");
+    await userEvent.type(screen.getByLabelText("Video title"), "Thumbnail run");
+    expect(held()).toBe(false);
+    await userEvent.click(segment("images", "Provide"));
+    expect(screen.getByLabelText("Provider")).not.toBeNull();
+    expect(screen.getByLabelText("Model")).not.toBeNull();
+    expect(segment("video", "Off").getAttribute("aria-checked")).toBe("true");
+    expect((segment("video", "Generate") as HTMLButtonElement).disabled).toBe(false);
   });
 });
 

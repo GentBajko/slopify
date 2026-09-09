@@ -7,6 +7,9 @@ import type { Hono } from "hono";
 import { buildRegistry } from "./adapter-registry.js";
 import { prepareFfmpeg } from "./adapters/ffmpeg.js";
 import { nodeRunCli } from "./adapters/llm/run-cli.js";
+import { cartesiaModel } from "./adapters/tts/cartesia.js";
+import { elevenLabsModel } from "./adapters/tts/elevenlabs.js";
+import { openAiTtsModel } from "./adapters/tts/openai.js";
 import { createHub } from "./edge/events/hub.js";
 import { createApp } from "./edge/http/app.js";
 import type { Clock } from "./kernel/clock.js";
@@ -23,12 +26,20 @@ import type { Paths } from "./kernel/paths.js";
 import { ensureDirs, layout } from "./kernel/paths.js";
 import type { Registry } from "./kernel/ports/registry.js";
 import { sqliteAttempts } from "./kernel/runner/attempt-repo.js";
+import { dependenciesOf } from "./kernel/runner/graph.js";
 import type { Runner } from "./kernel/runner/index.js";
 import { createRunner } from "./kernel/runner/index.js";
 import type { ProviderDeps } from "./kernel/runner/providers.js";
 import { stageProviders } from "./kernel/runner/providers.js";
 import { readVersion } from "./kernel/version.js";
-import { claimStage, finishStage, stagesOf } from "./slices/admission/repo.js";
+import {
+  claimStage,
+  finishStage,
+  projectById,
+  projectPaused,
+  stagesOf,
+} from "./slices/admission/repo.js";
+import { prepareProvidedArticleSegments } from "./slices/article/provided-entries.js";
 import { runArticle } from "./slices/article/run.js";
 import { runImages } from "./slices/images/run.js";
 import { runNarration } from "./slices/narration/run.js";
@@ -103,6 +114,17 @@ export async function boot(config: Config): Promise<Boot> {
       paths,
       hub,
       runner,
+      modelsFor: (provider, family) => {
+        if (family === "llm") return registry.llm(provider).models();
+        if (family === "image") return registry.image(provider).models();
+        const models: Readonly<Record<string, string>> = {
+          elevenlabs: elevenLabsModel,
+          "openai-tts": openAiTtsModel,
+          cartesia: cartesiaModel,
+        };
+        const id = models[provider];
+        return Promise.resolve(id === undefined ? [] : [{ id, name: id }]);
+      },
       clock,
       ids,
       log,
@@ -192,6 +214,11 @@ function wire({
   return createRunner({
     stages: {
       stagesOf: (projectId) => stagesOf(db, projectId),
+      paused: (projectId) => projectPaused(db, projectId),
+      dependenciesOf: (projectId, kind) => {
+        const project = projectById(db, projectId);
+        return project === undefined ? [] : dependenciesOf(kind, project.config.sources);
+      },
       claim: (stageId) => claimStage(db, stageId, clock.now().toISOString()),
       finish: (stageId, state, failureReason) =>
         finishStage(db, stageId, state, failureReason, clock.now().toISOString()),
@@ -201,7 +228,11 @@ function wire({
     runs: {
       research: (context) => runResearch(writing, context, stageProviders(providers, context)),
       article: (context) => runArticle(writing, context, stageProviders(providers, context)),
-      audio: (context) => runNarration(video, context, stageProviders(providers, context)),
+      audio: async (context) => {
+        const wrapped = stageProviders(providers, context);
+        await prepareProvidedArticleSegments(writing, context, wrapped);
+        await runNarration(video, context, wrapped);
+      },
       images: (context) => runImages(writing, context, stageProviders(providers, context)),
       thumbnail: (context) => runThumbnail(writing, context, stageProviders(providers, context)),
       video: (context) => renderVideo(video, context),
@@ -265,7 +296,7 @@ export function urlOf(host: string, port: number): string {
 export function markInterruptedStages(db: DatabaseSync, clock: Clock): number {
   const result = db
     .prepare(
-      "UPDATE stages SET state = 'failed', failure_reason = 'interrupted', finished_at = ? WHERE state = 'running'",
+      "UPDATE stages SET state = CASE WHEN EXISTS (SELECT 1 FROM project_controls WHERE project_id = stages.project_id AND paused = 1) THEN 'pending' ELSE 'failed' END, failure_reason = CASE WHEN EXISTS (SELECT 1 FROM project_controls WHERE project_id = stages.project_id AND paused = 1) THEN NULL ELSE 'interrupted' END, finished_at = CASE WHEN EXISTS (SELECT 1 FROM project_controls WHERE project_id = stages.project_id AND paused = 1) THEN NULL ELSE ? END WHERE state = 'running'",
     )
     .run(clock.now().toISOString());
   return Number(result.changes);

@@ -1,17 +1,18 @@
-import type { StageState } from "@app/kernel/pipeline.js";
+import type { ProjectState, StageState } from "@app/kernel/pipeline.js";
 import { cn } from "@/lib/utils";
 import { StateWord } from "./state-word.js";
 
 // A lamp never conveys state alone: the state word is always rendered beside it. In a rundown
 // row the two sit at opposite ends, so the row composes `Lamp` and `StateWord` itself;
 // `StageLamp` is the pair for everywhere else.
-const lit: Readonly<Record<StageState, string>> = {
+const lit: Readonly<Record<StageState | ProjectState, string>> = {
   pending: "bg-lamp-off shadow-[inset_0_0_0_1px_var(--color-lamp-ring)]",
   running:
     "bg-lamp-run shadow-[0_0_0_3px_var(--color-lamp-halo)] animate-lamp-pulse motion-reduce:animate-none",
   done: "bg-done",
   failed: "bg-red",
   canceled: "bg-amber",
+  paused: "bg-amber",
   provided: "bg-lamp-off shadow-[inset_0_0_0_1px_var(--color-lamp-ring)]",
   skipped: "bg-lamp-off shadow-[inset_0_0_0_1px_var(--color-lamp-ring)]",
 };
@@ -20,7 +21,7 @@ export function Lamp({
   state,
   className,
 }: {
-  readonly state: StageState;
+  readonly state: StageState | ProjectState;
   readonly className?: string;
 }) {
   return (
@@ -38,7 +39,7 @@ export function StageLamp({
   className,
 }: {
   readonly label: string;
-  readonly state: StageState;
+  readonly state: StageState | ProjectState;
   readonly className?: string;
 }) {
   return (

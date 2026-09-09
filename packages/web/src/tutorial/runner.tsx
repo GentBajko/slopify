@@ -4,7 +4,8 @@ import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useRef } from "react";
 import type { ProviderStatus } from "@/api";
 import { useApp } from "@/app-context";
-import { noticeQuery, providersQuery, voicesQuery } from "@/queries";
+import { finalOutput } from "@/project/summary";
+import { noticeQuery, projectQuery, providersQuery, voicesQuery } from "@/queries";
 import type { TutorialSession, TutorialStepId } from "./model";
 import { tutorialSteps } from "./model";
 import { Spotlight } from "./spotlight";
@@ -31,6 +32,10 @@ export function TutorialRunner({
   const notice = useQuery(noticeQuery(api));
   const providers = useQuery(providersQuery(api));
   const voices = useQuery(voicesQuery(api));
+  const project = useQuery({
+    ...projectQuery(api, session.projectId ?? ""),
+    enabled: session.projectId !== undefined,
+  });
   const entered = useRef<number | null>(null);
   const step = tutorialSteps[session.step];
   const allowed = notice.data?.seen === true;
@@ -117,6 +122,7 @@ export function TutorialRunner({
     "play-article": progress.playArticleReady === true,
     "play-audio": progress.playAudioReady === true,
     "play-images": progress.playImagesReady === true,
+    "play-video": progress.playVideoReady === true,
     "play-options": progress.playOptionsReady === true,
     "play-keywords": progress.playKeywordsReady === true,
     "play-start": false,
@@ -126,10 +132,13 @@ export function TutorialRunner({
     if (session.step === tutorialSteps.length - 1 || step.id === "play-start") close();
     else update((current) => ({ ...current, step: current.step + 1 }));
   };
+  const output = project.data ? finalOutput(project.data.project.config) : "video";
   const target =
-    step.id === "play-keywords" && progress.playHasKeywords === false
-      ? "play-options"
-      : step.target;
+    step.id === "download" && output === "article"
+      ? "project-article"
+      : step.id === "play-keywords" && progress.playHasKeywords === false
+        ? "play-options"
+        : step.target;
   const waitingForSave = step.id === "article-save" || step.id === "image-save";
   const saving =
     (step.page === "article" || step.page === "image") && progress.promptSaving === true;
@@ -139,7 +148,7 @@ export function TutorialRunner({
       stepId={step.id}
       target={`[data-tour="${target}"]`}
       title={step.title}
-      progress={`${session.step + 1} of ${tutorialSteps.length} · First video`}
+      progress={`${session.step + 1} of ${tutorialSteps.length} · First project`}
       onClose={close}
       {...(session.step === 0 || step.id === "project" || saving
         ? {}
@@ -164,7 +173,7 @@ export function TutorialRunner({
             : "Skip this step"
       }
     >
-      <StepContent step={step.id} />
+      <StepContent step={step.id} output={output} />
       {providers.error || voices.error ? (
         <p className="text-red">{providers.error?.message ?? voices.error?.message}</p>
       ) : null}

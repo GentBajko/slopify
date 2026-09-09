@@ -1,5 +1,5 @@
 ---
-generated_date: 2026-09-02
+generated_date: 2026-09-09
 capstone_version: 5.2.0
 paths_covered:
  - "packages/app/src/**/*.test.ts"
@@ -17,7 +17,9 @@ paths_covered:
 
 - Unit tests beside their module: `packages/app/src/slices/<slice>/*.test.ts`, `packages/app/src/kernel/**/*.test.ts`. Pure functions (substitution, chunking, end-matter split, render plan, status derivation) carry the bulk.
 - Integration tests in `packages/app/test/integration/`: boot the composition root against a temporary data directory and SQLite file, run slices through the runner with fake provider adapters, and render with the real bundled ffmpeg in CI.
-- One end-to-end smoke in `packages/app/test/e2e/skeleton.test.ts`: start the CLI on a random port, create a project with every stage Provided through the HTTP API, wait for `done` over SSE, assert the mp4 exists and downloads.
+- The original end-to-end smoke in `packages/app/test/e2e/skeleton.test.ts`: start the CLI on a random port, create a project with every stage Provided through the HTTP API, wait for `done` over SSE, assert the mp4 exists and downloads.
+- `packages/app/test/e2e/optional-outputs.test.ts` boots the real app and checks article-only completion, a provided MP3 converted into a downloadable PCM WAV, and a silent MP4 without an audio stream. These run in both Linux and Windows CI. Video-slice tests also cover intro/outro gaps, output replacement and retention after failed or aborted exports.
+- Control tests cover durable pause, draining concurrent work, resume, serialized provider edits, catalog errors and unfinished narration reset. Runner tests assert independent image scheduling and source-aware dependencies.
 - `packages/web`: component tests for the Play form's admission states and the project page's lamp states; no browser e2e beyond the smoke above.
 - Tutorial tests exercise the real router, Settings, prompt editors and Play with fake API responses: notice gating, saved-key readiness, accepted/refused saves, keyword fields, delayed navigation, explicit project creation and finishing without generation. Spotlight tests cover keyboard boundaries, related select portals, missing anchors and geometry. The interactive walkthrough is also checked manually in Chrome at desktop and narrow viewport sizes with intercepted API responses, without real provider calls.
 - `packages/collector`: unit tests for dedup and aggregation.

@@ -4,14 +4,13 @@ journeys: [J2-first-run-setup, J3-make-a-video, J4-bring-your-own]
 assumed:
  - research has three sources (Off / Generate / Provide) since it is optional and providable
  - thumbnail has three sources (Off / Generate / Provide) since selecting no thumbnail prompt means none
- - the video stage is always generated
  - provider dropdowns list only providers with a saved key
  - the model dropdown is populated from the LLM provider's model list; image providers get one on the same terms
  - a thumbnail prompt runs once, no Number field
  - Video title is a required per-run field and names the project
  - the LLM row is shown only while research or article is set to Generate
  - keyword fields render in the order: shared, then per image prompt, then thumbnail
-generated_date: 2026-09-02
+generated_date: 2026-09-09
 capstone_version: 5.2.0
 ---
 
@@ -38,12 +37,12 @@ Configures one run and starts it. One play = one run = one project.
 | Article prompt [Documentary dossier v] |
 | Provide: [ paste your article... ] |
 | |
-| AUDIO (•) Generate ( ) Provide |
+| AUDIO ( ) Off (•) Generate ( ) Provide |
 | TTS provider [<TTS provider A> v] Voice [Narrator M v]|
 | Chunking (•) Whole ( ) Per paragraph ( ) Every [500] words |
 | Provide: [ Upload audio file ] |
 | |
-| IMAGES (•) Generate ( ) Provide |
+| IMAGES ( ) Off (•) Generate ( ) Provide |
 | Image provider [<Image provider A> v] Model [... v] |
 | Image prompts |
 | [x] Oil painting scenes Number [ 8 ] |
@@ -54,6 +53,8 @@ Configures one run and starts it. One play = one run = one project.
 | THUMBNAIL ( ) Off (•) From prompt ( ) Prompt by LLM ( ) Provide|
 | Thumbnail prompt [Bold title card v] |
 | Provide: [ Upload image ] |
+| |
+| VIDEO ( ) Off (•) Generate |
 | |
 | KEYWORDS (single-line, max 200 chars) |
 | ---------------------- Common ---------------------------------- |
@@ -72,7 +73,7 @@ Element tree:
 - App shell
  - Run header: video title, format, intro and outro pickers
  - LLM row: provider, model
- - Stage blocks, each with a source choice: research, article, audio, images, thumbnail
+ - Stage blocks, each with a source choice: research, article, audio, images, thumbnail, video
  - Keywords: Common on top, then Text | Image
  - Play
  - Footer: donation links
@@ -88,21 +89,22 @@ Element tree:
 | Research: Off / Generate / Provide | Off skips research; Generate researches through the LLM; Provide pastes notes and skips the stage | None |
 | Article: Generate / Provide | Generate renders the article prompt; Provide pastes text and skips research and writing | None |
 | Article prompt | Picks one article prompt | Adds its slots to Keywords |
-| Audio: Generate / Provide | Generate runs TTS; Provide uploads an audio file | None |
+| Audio: Off / Generate / Provide | Off skips narration; Generate runs TTS and any selected intro/outro; Provide uses the uploaded complete narration as-is | None |
 | TTS provider, Voice, Chunking | Per-run provider, a voice from the settings list, and how the narration is split into requests: Whole / Per paragraph / Every N words | None |
-| Images: Generate / Provide | Generate runs the selected image prompts; Provide uploads images | None |
+| Images: Off / Generate / Provide | Off skips images and selects Video Off; Generate runs saved prompts immediately in parallel; Provide uploads images | None |
 | Image provider, Model | Per-run provider and model (assumed) | None |
 | Image prompts multi-select + Number | Each ticked prompt runs Number times | Adds each prompt's unique slots to Keywords |
 | Thumbnail: Off / From prompt / Prompt by LLM / Provide | Off: no thumbnail; From prompt: runs the chosen thumbnail prompt once; Prompt by LLM: the LLM writes the image prompt from the chosen template and the article; Provide: uploads one image | None |
 | Thumbnail prompt | Picks one thumbnail prompt | Adds its unique slots to Keywords |
+| Video: Off / Generate | Off exports WAV when audio is active; Generate requires images and can produce a silent five-seconds-per-image slideshow | None |
 | Keywords fields | One single-line field per distinct slot across every selected prompt and entry; shared names appear once; grouped Common, Text, Image | None |
 | ▶ Play | Creates the project and starts the pipeline | 08 Project page |
 
-Providing a stage hides that stage's generation controls.
+Providing or disabling a stage hides its generation controls and removes their validation requirements. Article is the only required stage. A generated thumbnail still exposes an image-provider choice when Images is Off or Provide. The tutorial spotlights the actual Video switch and explains the selected export.
 
 ## States
 
-- Fresh: no title, all stages Generate, no prompts selected, keywords empty.
+- Fresh: no title; Article, Audio, Images and Video Generate; Research and Thumbnail Off; no prompts selected; keywords empty.
 - Configured: keywords rendered from the selected prompts; pickers filled.
 - Provider without key, or a CLI provider not found: what the provider dropdown shows `rule: logic (S13-credentials)`.
 - No voices in settings: what the Voice control shows `rule: logic (S13-credentials)`.

@@ -1,10 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { useApp } from "@/app-context";
 import { Rail, RailGroup } from "@/components/rail";
+import type { ProviderChanges } from "@/project/api";
 import { StageBodyFor } from "@/project/bodies";
 import { ProjectHeader } from "@/project/header";
 import { RefusalLine } from "@/project/parts";
+import { changedProviderChoices, ProjectProviders } from "@/project/providers";
 import { StageRow } from "@/project/stage-row";
 import { useProjectActions } from "@/project/use-actions";
 import { useLiveProject } from "@/project/use-live";
@@ -20,6 +23,7 @@ export function ProjectRoute({ projectId }: { readonly projectId: string }) {
   const providers = useQuery(providersQuery(api));
   const prompts = useQuery(promptsQuery(api));
   const actions = useProjectActions(projectId);
+  const [providerEdits, setProviderEdits] = useState<ProviderChanges>({});
 
   useLiveProject(projectId);
 
@@ -33,7 +37,9 @@ export function ProjectRoute({ projectId }: { readonly projectId: string }) {
   const { project: summary, stages, outputs } = project.data;
   // No action is offered while a stage of the project is running, and the server refuses
   // one that gets through anyway.
-  const busy = summary.status === "running" || actions.pending;
+  const inFlight = stages.some((stage) => stage.state === "running");
+  const busy =
+    summary.status === "running" || summary.status === "paused" || inFlight || actions.pending;
 
   return (
     <div className="mx-auto max-w-[1440px]">
@@ -43,15 +49,32 @@ export function ProjectRoute({ projectId }: { readonly projectId: string }) {
       </Link>
 
       <RailGroup>
-        <ProjectHeader project={summary} prompts={prompts.data?.prompts} actions={actions} />
-
-        {actions.refusal === undefined || actions.refusal.stage !== undefined ? null : (
-          // A refused cancel belongs to the project, not to one stage; every other
-          // refusal is drawn under the row whose control was pressed.
-          <Rail className="py-[10px]">
-            <RefusalLine message={actions.refusal.message} onDismiss={actions.dismissRefusal} />
-          </Rail>
-        )}
+        <div data-tour="project-controls" className="border-b border-line">
+          <ProjectHeader
+            project={summary}
+            prompts={prompts.data?.prompts}
+            actions={actions}
+            inFlight={inFlight}
+            unsavedProviders={
+              Object.keys(changedProviderChoices(summary.config, providerEdits)).length > 0
+            }
+          />
+          <ProjectProviders
+            project={summary}
+            providers={providers.data?.providers ?? []}
+            actions={actions}
+            inFlight={inFlight}
+            edits={providerEdits}
+            setEdits={setProviderEdits}
+          />
+          {actions.refusal === undefined || actions.refusal.stage !== undefined ? null : (
+            // A refused cancel belongs to the project, not to one stage; every other
+            // refusal is drawn under the row whose control was pressed.
+            <Rail className="py-[10px]">
+              <RefusalLine message={actions.refusal.message} onDismiss={actions.dismissRefusal} />
+            </Rail>
+          )}
+        </div>
 
         {stages.map((stage) => (
           <StageRow

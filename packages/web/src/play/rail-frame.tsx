@@ -74,9 +74,18 @@ export function SourceSwitch({
       label={`${kind} source`}
       hideLabel
       value={form.sources[kind]}
-      options={sourceOptions(kind)}
+      options={sourceOptions(kind).map((option) => ({
+        ...option,
+        disabled: kind === "video" && option.value === "generate" && form.sources.images === "off",
+      }))}
       onPick={(source) => {
-        update({ sources: { ...form.sources, [kind]: source } });
+        update({
+          sources: {
+            ...form.sources,
+            [kind]: source,
+            ...(kind === "images" && source === "off" ? { video: "off" as const } : {}),
+          },
+        });
       }}
     />
   );

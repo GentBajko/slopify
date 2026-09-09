@@ -6,7 +6,14 @@ import { z } from "zod";
 // `piece_id` on every row it writes. The payload stays the JSON text it was stored as - its
 // shape belongs to whichever stage owns the kind, and nothing here reads inside it.
 
-export const pieceKinds = ["chapter", "chunk", "segment", "image", "prompt_written"] as const;
+export const pieceKinds = [
+  "chapter",
+  "chunk",
+  "segment",
+  "image",
+  "prompt_written",
+  "article_written",
+] as const;
 export type PieceKind = (typeof pieceKinds)[number];
 
 export const pieceStates = ["pending", "running", "done", "failed"] as const;

@@ -326,6 +326,33 @@ describe("runArticle", () => {
     h.db.close();
   });
 
+  it("resumes unfinished end matter without replacing the article or completed intro", async () => {
+    const h = harness({
+      intro: { name: "Hook", mode: "llm" },
+      outro: { name: "Ending", mode: "llm" },
+      rendered: { article: "Write about rope.", intro: "Write a hook.", outro: "Write ending." },
+    });
+    const first = fake((prompt) => {
+      if (prompt.startsWith("Write ending")) throw new Error("interrupted");
+      return prompt.startsWith("Write a hook") ? "Kept intro." : article;
+    });
+    await expect(runArticle(h.deps, h.context, first.providers)).rejects.toThrow("interrupted");
+    const introId = piecesOf(h.db, "s1", "segment")[0]?.id;
+    const resumed = fake(() => "New outro.");
+    await runArticle(h.deps, h.context, resumed.providers);
+    expect(resumed.made).toHaveLength(1);
+    expect(resumed.made[0]?.prompt).toContain("Write ending.");
+    expect(h.fileOf("article.md")).toBe(article);
+    expect(piecesOf(h.db, "s1", "segment")[0]?.id).toBe(introId);
+    expect(
+      piecesOf(h.db, "s1", "segment")
+        .map(segmentOf)
+        .map((segment) => segment.text),
+    ).toEqual(["Kept intro.", "New outro."]);
+    expect(h.fileOf("instructions-article.txt")).toContain("=== Intro ===");
+    h.db.close();
+  });
+
   it("replaces the segment a previous run of the stage wrote", async () => {
     const h = harness({
       intro: { name: "Standard", mode: "text" },
