@@ -5,6 +5,11 @@ capstone_version: 5.2.0
 
 # Changelog
 
+## 2026-09-09 - release 0.5.0
+key: release/0.5.0
+- The interactive first-video tutorial ships as 0.5.0, following the 0.4.3 first-run fixes. The guide is available from Tutorial in the navigation and from the empty Projects page.
+- Includes preserved prompt and Play drafts, spotlight interaction with the actual controls, and the API-key-to-video walkthrough. The tutorial commit passed Linux and Windows CI before the version bump.
+
 ## 2026-09-09 - interactive first-video tutorial
 key: web/interactive-tutorial
 - Added a guide users can open from Tutorial in the navigation or Start tutorial on an empty Projects page.
