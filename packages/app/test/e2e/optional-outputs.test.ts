@@ -155,8 +155,9 @@ describe("optional outputs through the real app", () => {
     const bytes = Buffer.from(await response.arrayBuffer());
     expect(bytes.subarray(0, 4).toString()).toBe("RIFF");
     expect(bytes.subarray(8, 12).toString()).toBe("WAVE");
+    // The Windows ffmpeg build labels stereo WAV streams as "2 channels".
     expect(probe(join(app.paths.projects, id, "audio.wav"))).toMatch(
-      /Audio: pcm_s16le.*48000 Hz, stereo/,
+      /Audio: pcm_s16le.*48000 Hz, (?:stereo|2 channels)/,
     );
   });
 
