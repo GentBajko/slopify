@@ -1,69 +1,51 @@
 ---
-content_hash: 4d40ef4800b7
-generated_at_commit: 1fa45d743329
-absorbed_from:
- - features/2026-09-09-pausable-optional-runs@2026-09-10
- - features/2026-09-10-subtitles-fonts@2026-09-10
+generated_at_commit: 3a9796eb7fec
 generated_date: 2026-09-10
-capstone_version: 5.2.0
+content_hash: beea3c3da582
 paths_covered:
- - "packages/app/src/**/*.test.ts"
- - "packages/app/src/adapters/alignment/**"
- - "packages/app/src/kernel/cli-command.ts"
- - "packages/app/src/kernel/ports/llm.ts"
- - "packages/app/src/kernel/runner/providers.ts"
- - "packages/app/src/adapters/llm/**"
- - "packages/app/test/**"
- - "packages/web/src/**/*.test.tsx"
- - "packages/collector/src/**/*.test.ts"
+  - ":(top)packages/app/src/**"
+  - ":(top)packages/web/src/**"
+  - ":(top)packages/collector/**"
+  - ":(top)packages/site/**"
+  - ":(top)package*.json"
+  - ":(top)packages/*/package.json"
+  - ":(top)biome.json"
+  - ":(top)tsconfig*.json"
+  - ":(top).github/workflows/**"
 ---
-
-> The runner, the style and the coverage policy are `standards.md`'s and
-> `05-dependencies.md`'s; this chapter is the shape of the suite.
 
 # Testing
 
 ## Layout
 
-- Unit tests beside their module: `packages/app/src/slices/<slice>/*.test.ts`, `packages/app/src/kernel/**/*.test.ts`. Pure functions (substitution, chunking, end-matter split, render plan, status derivation) carry the bulk.
-- Integration tests in `packages/app/test/integration/`: boot the composition root against a temporary data directory and SQLite file, run slices through the runner with fake provider adapters, and render with the real bundled ffmpeg in CI.
-- The original end-to-end smoke in `packages/app/test/e2e/skeleton.test.ts`: start the CLI on a random port, create a project with every stage Provided through the HTTP API, wait for `done` over SSE, assert the mp4 exists and downloads.
-- `packages/app/test/e2e/optional-outputs.test.ts` boots the real app and checks article-only completion, a provided MP3 converted into a downloadable PCM WAV, and a silent MP4 without an audio stream. These run in both Linux and Windows CI. Video-slice tests also cover intro/outro gaps, output replacement and retention after failed or aborted exports.
-- Control tests cover durable pause, draining concurrent work, resume, serialized provider edits, catalog errors and unfinished narration reset. Runner tests assert independent image scheduling and source-aware dependencies.
-- `packages/web`: component tests for the Play form's admission states and the project page's lamp states; no browser e2e beyond the smoke above.
-- Tutorial tests exercise the real router, Settings, prompt editors and Play with fake API responses: notice gating, saved-key readiness, accepted/refused saves, keyword fields, delayed navigation, explicit project creation and finishing without generation. Spotlight tests cover keyboard boundaries, related select portals, missing anchors and geometry. The interactive walkthrough is also checked manually in Chrome at desktop and narrow viewport sizes with intercepted API responses, without real provider calls.
-- `packages/collector`: unit tests for dedup and aggregation.
-- Exact run commands are recorded by `standards`/`stack`; the CI job runs them on Node 26.
+- Root Vitest runs project configs under `packages/*/vitest.config.ts`; `npm test` invokes `vitest run`. Source: `vitest.config.ts:1-7`; `package.json:8-15`.
+- App includes `src/**/*.test.ts` and `test/**/*.test.ts`; web includes `.test.ts/.test.tsx` under `src` in `happy-dom`; collector includes `src/**/*.test.ts`. Source: `packages/app/vitest.config.ts:3-8`; `packages/web/vitest.config.ts:5-12`; `packages/collector/vitest.config.ts:3-8`.
+- App test directories cover adapters, catalog, edge, kernel, updater, slices, integration-style `packages/app/test`, and `test/e2e/{skeleton,optional-outputs}.test.ts`; web covers components, routes, Play, project, subtitles, tutorial, updates; collector uses `src/index.test.ts`. Source: repository test-file inventory.
+- CI runs `npm ci`, lint, typecheck, `npm test`, build, and audit on Node 26. Windows additionally runs FFmpeg, e2e, alignment, font, subtitle, CLI, LLM, settings, and real subtitle-export suites. Source: `.github/workflows/ci.yml:7-38`.
+- The e2e skeleton boots the real app on an ephemeral localhost port, generates temporary FFmpeg audio/images, stages them over HTTP, watches SSE, and verifies the finished media. Source: `packages/app/test/e2e/skeleton.test.ts:42-84,133-180`.
+- Release verification on 2026-09-10: 1,893 tests passed, one platform skip; lint, type checking, build and audit passed. Browser tests use isolated local fixtures and do not start paid generation.
 
 ## Doubles
 
-- Ports: `packages/app/src/adapters/fake/{llm,tts,image}.ts`, in-memory adapters returning canned deltas, audio bytes with a declared duration, and image bytes; scriptable to fail on attempt n, to return a refusal, to stream or not, to report usage or not. These validate the seam's shape; provider semantics are never mocked past the interface.
-- Clock and IDs: injectable (`kernel/clock.ts`, `kernel/ids.ts`) so retries, backoff, timestamps, and ULIDs are deterministic.
-- ffmpeg: real binary in integration and e2e; a stub spawner only in unit tests of the argument builder.
-- Collector: an in-process fake HTTP endpoint in integration tests; never the live collector.
-- Subtitle alignment: inject `SubtitleAligner` for deterministic export/timing tests; cache and worker tests use bounded fixtures and fake children. Real downloaded-model timing proofs are manual checks, separate from the normal unit suite (`packages/app/src/kernel/ports/subtitles.ts`, `adapters/alignment/*.test.ts`).
-- No live provider calls in any suite.
+- Fake LLM/TTS/image adapters provide canned streams/bytes and controllable failures through kernel ports. Source: `packages/app/src/adapters/fake/{llm,tts,image}.ts`; `packages/app/src/kernel/ports/llm.ts:48-64`.
+- Tests inject clocks, IDs, fetch functions, runners, and temporary data directories for deterministic retries, timestamps, catalogue refreshes, and filesystem state. Source: `packages/app/src/kernel/clock.ts`; `packages/app/src/kernel/ids.ts`; `packages/app/src/catalog/store.test.ts:19-38`.
+- FFmpeg is real in integration/e2e tests; skeleton fixtures are generated with the same static binary used by rendering. Source: `packages/app/test/e2e/skeleton.test.ts:23-74`.
+- Subtitle alignment is injected as `SubtitleAligner`; alignment tests use bounded fixtures and fake children. Source: `packages/app/src/kernel/ports/subtitles.ts:7-15`; `packages/app/src/adapters/alignment/*.test.ts`.
+- Catalogue tests use temporary YAML and fake HTTP responses for validation, reload, recovery, replacement, and backups. Source: `packages/app/src/catalog/store.test.ts:7-39`.
+- Web tests use Testing Library/`happy-dom`; model-picker tests fake API responses for cache, refresh, warnings, saved IDs, custom IDs, and provider races. Source: `packages/web/vitest.config.ts:7-10`; `packages/web/src/play/model-picker.test.tsx:52-225`.
+- Batch tests use temporary SQLite and fake runner/storage dependencies. Source: `packages/app/src/slices/batch/index.test.ts:57-133`.
+- Estimate tests use a temporary catalogue and typed drafts for stage prices, unknown CLI costs, image/thumbnail counts, and uncertainty. Source: `packages/app/src/slices/estimate/index.test.ts:9-65`.
+- Thinking tests use a fake `LlmPort` and assert forwarding/rejection before provider calls. Source: `packages/app/src/catalog/registry.test.ts:31-57`.
+- Queue tests use held promises and abort controllers for capacity, independent providers, cancellation, and slot release. Source: `packages/app/src/kernel/runner/queue.test.ts:4-67`.
+- No suite makes live paid provider calls. Source: `packages/app/src/catalog/registry.test.ts:58-109`.
 
 ## Coverage shape
 
-Planned emphasis: every logic scenario's branches and unhappy paths as tests (`logic/01`-`17` are the specification); the runner's graph, retry, resume, and cancel behaviour; substitution and admission rules; the render plan arithmetic. Light coverage by design: HTTP route wiring (covered by the smoke), the SPA's visual layer, the collector's hosting glue. No load, chaos, security, or accessibility suites; accessibility is checked by the build-time constraints in `uiux/02-system.md`.
-
-## Subtitle and font regressions
-
-- `packages/app/src/slices/subtitles/{captions,prepare,model}.test.ts`: cue wrapping/timestamps, ASS/text escaping, invalid timing/style, intro/body/outro offsets including gaps, reuse after style/format changes and invalidation after audio changes.
-- `packages/app/src/slices/fonts/*.test.ts`, `edge/http/fonts.test.ts`: bounded SFNT/name-table parsing, corrupt/traversal/oversize/multipart rejection, opaque-ID storage, system-directory fixtures, selected-face preview and actual FFmpeg font selection.
-- `packages/app/src/adapters/alignment/*.test.ts`: exact model size/hash checks, corrupt cache and interrupted downloads, cross-process lock and aborted queue waits, child lifecycle, text normalization and CTC mismatch handling.
-- `packages/app/src/edge/http/projects.test.ts` rejects unavailable active fonts before creating a project; `edge/http/actions.test.ts` covers final-stage-only changes, paused queuing and active-work rejection.
-- `packages/app/test/video-render.test.ts` uses real bundled FFmpeg with fake word timing: visible burned captions, a relative executable override, WAV subtitle export, timing reuse, retention after alignment failure, and a database trigger that rejects a font output insert to verify rollback of previous media bytes/parameters/rows.
-- `packages/web/src/routes/project-subtitles.test.tsx`, `routes/play.test.tsx`, `subtitles/config.test.ts`, `tutorial/runner.test.tsx`: shared controls, upload/preview/save states, actual-output native-track behavior, paused Save/Resume guidance, invalid hidden style normalization when Off, and the optional subtitle tutorial step.
-- `.github/workflows/ci.yml` runs alignment/font/subtitle tests and the real subtitle-export regression in the Windows job as well as the normal Linux suite. Real-model manual proof measured 68 seconds of narration in 17.7 seconds and 205 seconds in 53 seconds, with about 728 MiB RSS on the proof machine; these are observed runs, not latency or memory guarantees.
-
-## CLI executable-path coverage
-
-`packages/app/src/slices/settings/{cli-paths,cli-status,readiness}.test.ts` covers default commands, all three CLI rows, successful override/reset, next-read behavior, readable JS entry files, invalid/non-executable/argument/oversize paths, failed-probe retention, launcher guidance and serialized saves. `edge/http/providers.test.ts` checks route schemas, direct refreshed status responses and keyed-provider refusal. This focused settings/provider suite passed 95 tests locally during implementation; it does not make paid model calls.
-
-`packages/app/src/adapter-registry-paths.test.ts` checks that already-created adapters read changed path settings on later invocations. `packages/web/src/components/provider-cli.test.tsx` covers per-provider drafts, save/reset, pending state, error retention and cache refresh. Windows command/shim tests live in `kernel/cli-command.test.ts`; `adapters/llm/gemini.test.ts` covers explicit `-p`, stream output, context/trust isolation, browser-auth prevention and typed license/auth failures. Runner/CLI tests cover content-free activity preserving idle deadlines for all three CLIs. Final local source commit `1fa45d743329` passed 1,706 tests with one Windows-only skip, lint, typecheck, build and inspection of the 202-file package. Browser path-field/save checks and tiny Codex/Claude requests passed; Gemini launch/login discovery reached an external #3501 license denial. No remote CI or Gemini generation success is claimed (record: `changelog.d/2026-09-10-cli-paths-gemini.md`).
-
-## Provider model picker coverage
-
-`packages/web/src/play/model-picker.test.tsx` covers automatic catalogue loading, cache reuse, explicit refresh, saved-ID preservation, custom-ID restrictions, separate origin/warning copy and provider-switch races. `lib/models.test.ts` verifies endpoint metadata, refresh query and HTTP failure propagation. Play, paused project and interactive tutorial regressions choose discovered TTS/image/LLM models; 441 web tests passed, with frontend typecheck clean. Catalogue tests use HTTP fakes and make no paid model calls.
+- Highest coverage is in pipeline rules, runner graph/attempts/pieces, retries/resume/cancel, adapters, admission/substitution, narration, storage, subtitles/fonts, updater, and telemetry. Source: repository test-file inventory under `packages/app/src`.
+- Catalogue coverage includes schema limits, local recovery, refresh replacement, curation, thinking, image compatibility, and TTS splitting. Source: `packages/app/src/catalog/{store,registry}.test.ts:8-109`.
+- Batch/queue coverage includes durable ordering, one active project, paused/finished transitions, rollback, provider concurrency, and cancellation. Source: `packages/app/src/slices/batch/index.test.ts:57-133`; `packages/app/src/kernel/runner/queue.test.ts:4-67`.
+- Estimate coverage checks USD rows, unknown charges, catalogue date, assumptions, generated-length ranges, image counts, and thumbnail pricing. Source: `packages/app/src/slices/estimate/index.ts:21-137`; `packages/app/src/slices/estimate/index.test.ts:30-65`.
+- Thinking coverage spans port types, catalogue maps, registry conversion, admission schemas, provider-change validation, and adapter requests. Source: `packages/app/src/kernel/ports/llm.ts:41-57`; `packages/app/src/slices/control/providers.ts:10-108`.
+- Subtitle/font regressions cover cue/timing/style reuse, font parsing/upload rejection, system fonts, HTTP contracts, and real FFmpeg export. Source: `packages/app/src/slices/subtitles/*.test.ts`; `packages/app/src/slices/fonts/*.test.ts`; `.github/workflows/ci.yml:35-38`.
+- HTTP wiring, SPA visual details, and collector hosting glue have lighter direct coverage. Source: repository test-file inventory; `packages/collector/src/index.test.ts`.
+- No configured load, chaos, security, or accessibility Vitest suite exists. Source: `vitest.config.ts:3-7`; package Vitest configs.

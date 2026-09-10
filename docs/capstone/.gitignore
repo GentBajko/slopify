@@ -11,9 +11,6 @@ features/
 # Interview transcripts for every other stage
 *-interview.md
 
-# Local settings
-capstone.json
-
 # Opinionated and personal outputs
 review.md
 
@@ -21,3 +18,11 @@ review.md
 be-review.md
 fe-review.md
 implementation.md
+
+# The uiux preview and raster brand assets; the SVG sources are committed
+uiux/preview.html
+uiux/assets/*.png
+uiux/assets/*.jpg
+uiux/assets/*.jpeg
+uiux/assets/*.webp
+uiux/assets/references/

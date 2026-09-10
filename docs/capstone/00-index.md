@@ -6,13 +6,18 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 
 | Module | Entry point |
 |---|---|
-| CLI and boot sequence | `packages/app/src/edge/cli.ts` |
-| Composition root | `packages/app/src/main.ts` |
+| CLI and boot sequence | `packages/app/src/edge/cli.ts:19` |
+| Composition root | `packages/app/src/main.ts:86` |
 | HTTP API and SSE | `packages/app/src/edge/http/*.ts`, `packages/app/src/edge/events/*.ts` |
 | Stage-graph runner and retry wrapper | `packages/app/src/kernel/runner/` |
 | CLI executable settings and launchers | `packages/app/src/slices/settings/cli-paths.ts`, `packages/app/src/kernel/cli-command.ts`, `packages/app/src/adapters/llm/` |
 | Provider ports and adapters | `packages/app/src/kernel/ports/`, `packages/app/src/adapters/{llm,tts,image,alignment,fake}/` |
 | Pipeline slices | `packages/app/src/slices/{research,article,narration,images,thumbnail,video,subtitles,fonts,reruns,cancel,control,admission,storage,library,settings,telemetry}/` |
+| Curated model catalogue, pricing and limits | `packages/app/src/catalog/store.ts:24`, `packages/app/src/catalog/registry.ts:7` |
+| Batch admission and scheduling | `packages/app/src/edge/http/planning.ts:32`, `packages/app/src/slices/batch/index.ts:73` |
+| Request scheduling | `packages/app/src/kernel/runner/queue.ts:12` |
+| Cost arithmetic | `packages/app/src/slices/estimate/index.ts:21` |
+| App updates | `packages/app/src/updater/service.ts:1`, `packages/app/src/edge/http/update.ts:6` |
 | SQLite and migrations | `packages/app/src/kernel/db/` |
 | React SPA | `packages/web/src/main.tsx` |
 | Marketing site | `packages/site/` |
@@ -48,6 +53,12 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | logic | [logic/16-telemetry.md](logic/16-telemetry.md) |
 | logic | [logic/17-subtitles.md](logic/17-subtitles.md) |
 
+| interfaces | Absent: no sibling-repository protocol; vendor APIs are in dependencies and collector is in this monorepo. |
+| logic | [logic/18-cost-review-batch.md](logic/18-cost-review-batch.md) |
+| logic | [logic/19-catalogue-thinking.md](logic/19-catalogue-thinking.md) |
+| logic | [logic/20-boot-cli-recovery.md](logic/20-boot-cli-recovery.md) |
+| logic | [logic/21-app-updater.md](logic/21-app-updater.md) |
+
 ## Companion docs
 
 | File | What it is |
@@ -68,3 +79,16 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | [implementation.md](implementation.md) | The approved build plan: module layout, load-bearing code sketches, 25-step build order with verifications, coverage table |
 | [standards.md](standards.md) | Binding code standards the user set; outranks generic best practice |
 | [changelog.md](changelog.md) | Append-only ledger of every stage run and its decisions |
+| [uiux/screens/01-projects.md](uiux/screens/01-projects.md) | Observed implemented surface |
+| [uiux/screens/02-play.md](uiux/screens/02-play.md) | Observed implemented surface |
+| [uiux/screens/03-project.md](uiux/screens/03-project.md) | Observed implemented surface |
+| [uiux/screens/04-prompts.md](uiux/screens/04-prompts.md) | Observed implemented surface |
+| [uiux/screens/05-prompt-editor.md](uiux/screens/05-prompt-editor.md) | Observed implemented surface |
+| [uiux/screens/06-entries.md](uiux/screens/06-entries.md) | Observed implemented surface |
+| [uiux/screens/07-entry-editor.md](uiux/screens/07-entry-editor.md) | Observed implemented surface |
+| [uiux/screens/08-settings.md](uiux/screens/08-settings.md) | Observed implemented surface |
+| [uiux/screens/09-usage.md](uiux/screens/09-usage.md) | Observed implemented surface |
+| [uiux/screens/10-marketing.md](uiux/screens/10-marketing.md) | Observed implemented surface |
+| [uiux/screens/11-first-run-tutorial.md](uiux/screens/11-first-run-tutorial.md) | Observed implemented surface |
+| [uiux/screens/12-updater.md](uiux/screens/12-updater.md) | Observed implemented surface |
+| [capstone.json](capstone.json) | Shared reference configuration |

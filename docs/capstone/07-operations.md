@@ -1,132 +1,82 @@
 ---
-content_hash: 9a01605b7532
-generated_at_commit: 1fa45d743329
-absorbed_from: features/2026-09-10-subtitles-fonts@2026-09-10
+generated_at_commit: 3a9796eb7fec
 generated_date: 2026-09-10
-capstone_version: 5.2.0
+content_hash: beea3c3da582
 paths_covered:
- - "packages/app/src/edge/cli.ts"
- - "packages/app/src/edge/update-worker.ts"
- - "packages/app/src/updater/**"
- - "packages/app/src/edge/http/update.ts"
- - "packages/app/src/edge/http/audio-preview.ts"
- - "packages/app/src/kernel/audio-preview.ts"
- - "packages/app/src/kernel/config/**"
- - "packages/app/src/kernel/cli-command.ts"
- - "packages/app/src/slices/settings/**"
- - "packages/app/src/adapters/llm/**"
- - "packages/app/src/adapters/alignment/**"
- - "packages/app/src/slices/fonts/**"
- - "packages/app/src/slices/subtitles/**"
- - "packages/app/scripts/copy-assets.mjs"
- - ".github/workflows/**"
- - "packages/site/**"
- - "packages/collector/**"
+  - ":(top)packages/app/src/**"
+  - ":(top)packages/web/src/**"
+  - ":(top)packages/collector/**"
+  - ":(top)packages/site/**"
+  - ":(top)package*.json"
+  - ":(top)packages/*/package.json"
+  - ":(top)biome.json"
+  - ":(top)tsconfig*.json"
+  - ":(top).github/workflows/**"
 ---
 
 # Operations
 
 ## Processes
 
-| Process | Command | Depends on |
+| Process | Command/config | Source |
 |---|---|---|
-| Local app (users) | `npx @gentbajko/slopify@latest` | Node ≥ 26 on PATH; the bundled ffmpeg; a writable data directory |
-| Local app (development) | workspace script starting `packages/app` in watch mode with `packages/web`'s dev server proxied; exact scripts per `stack`/`standards` | same |
-| Collector | serverless functions from `packages/collector` on the host | the managed database |
-| Marketing site | static build of `packages/site` on the host | the collector's `GET /aggregates` at runtime |
+| App build/start | `npm run build`; `node packages/app/dist/edge/cli.js` | `package.json:8-17`; `packages/app/package.json:24-27` |
+| Web dev/build | `npm run dev`; `vite build` in web workspace | `package.json:8-17`; `packages/web/package.json:6-9` |
+| Collector | `wrangler dev/deploy`; local/remote D1 schema commands | `packages/collector/package.json:6-12` |
+| Site | `wrangler deploy` / `--dry-run` | `packages/site/package.json:6-8` |
 
-No containers, no compose, no Kubernetes. The app is one process: HTTP server, pipeline runner, SSE hubs, and child processes for ffmpeg, agent CLIs and enabled local subtitle alignment (`packages/app/src/adapters/alignment/runner.ts`).
+The app is a single Node process containing HTTP, runner, SSE, provider adapters and child processes (`packages/app/src/main.ts:83-142`).
 
 ## Configuration
 
-| Name | Default | Consumed by | Documented |
+CLI flags take precedence over environment, then defaults (`packages/app/src/kernel/config/index.ts:24`).
+
+| Variable | Default | Consuming code | Documentation |
 |---|---|---|---|
-| `--port` / `SLOPIFY_PORT` | 6969 | `kernel/config` → HTTP listener | README, marketing page |
-| `--host` / `SLOPIFY_HOST` | 127.0.0.1; any other value prints the no-login warning | `kernel/config` | README |
-| `--data-dir` / `SLOPIFY_DATA_DIR` | `~/.slopify` (`logic/14`) | `kernel/config`, `slices/storage` | README |
-| `--no-open` / `SLOPIFY_NO_OPEN` | opens the browser | `cli.ts` | README |
-| `SLOPIFY_FFMPEG` / `FFMPEG_BIN` | the bundled binary, then a recovered copy in `<data-dir>/bin/` | `adapters/ffmpeg.ts` at boot | README |
-| CLI executable paths | `claude`, `codex`, `gemini` from server PATH | generic settings `cli.path.<provider>`; read on each invocation | Settings executable path rows |
-| provider keys | none | `provider_keys` table, never env | Settings screen |
-| collector URL | built into the release | `slices/telemetry/collector-client.ts` | none (not user-configurable) |
-| collector secrets (database URL) | none | `packages/collector` from the host environment | deployment notes |
+| SLOPIFY_PORT | 6969 | `packages/app/src/kernel/config/index.ts:25` | app README |
+| SLOPIFY_HOST | 127.0.0.1 | `packages/app/src/kernel/config/index.ts:26` | app README |
+| SLOPIFY_DATA_DIR | ~/.slopify | `packages/app/src/kernel/config/index.ts:27` | app README |
+| SLOPIFY_NO_OPEN | false | `packages/app/src/kernel/config/index.ts:35` | app README |
+| SLOPIFY_FFMPEG / FFMPEG_BIN | unset; bundled/recovered FFmpeg | `packages/app/src/adapters/ffmpeg.ts:1` | app README |
+| SLOPIFY_COLLECTOR_URL | collector.slopify.stream | `packages/app/src/slices/telemetry/collector-client.ts:26` | test seam |
+| CODEX_HOME | CLI default home | `packages/app/src/adapters/llm/codex-models.ts:29` | local metadata fallback |
+| SLOPIFY_UPDATE_TOKEN | <redacted> | `packages/app/src/main.ts:158` | internal candidate protocol |
+| SLOPIFY_UPDATE_PENDING / SLOPIFY_UPDATE_FAILED | unset | `packages/app/src/main.ts:160` | internal candidate protocol |
+| SLOPIFY_SKIP_MANAGED_UPDATE | unset | `packages/app/src/updater/forward.ts:9` | internal launcher bypass |
+| PATH / platform home and font-directory variables | inherited | `packages/app/src/kernel/cli-command.ts:33`, `packages/app/src/slices/fonts/discovery.ts:30` | OS integration |
 
-Secrets never live in files in the repository. Configuration precedence: flag, then env, then default.
+Saved CLI paths are SQLite settings, not environment values. Provider selections live in project configuration. Provider keys are stored in SQLite `provider_keys` (`packages/app/src/kernel/db/migrations/0001-init.sql:11`).
 
-Before opening the HTTP listener or running providers, boot executes `ffmpeg -version`.
-A missing bundled download is recovered with ffmpeg-static's existing installer into a
-temporary directory under `<data-dir>/bin/`, verified, then promoted into a cache keyed
-by package version, platform and architecture. The installer also downloads its licence
-and source notice. Failed downloads are discarded. Explicit executable overrides are
-verified and never replaced by a download. Failed startup releases the instance lock.
-
-Claude Code content calls use a writing/research system prompt and `--safe-mode` to
-exclude personal CLAUDE.md files, skills, hooks and output styles. Subscription login
-and managed policy remain active; built-in tools stay disabled except WebSearch for
-research. Google image responses with an explicitly zero quota fail once as an
-unsupported model/account combination, with Google AI Studio billing and quota guidance.
-Temporary 429s retain retries, taking their delay from Retry-After, RetryInfo or the
-Interactions retry sentence.
+Boot creates user-only paths, acquires the instance lock, prepares FFmpeg, opens/migrates SQLite, marks interrupted stages, reconciles storage, creates the catalogue and registry, and wires the runner (`packages/app/src/main.ts:83-142`).
 
 ## Infrastructure
 
-- Local app: none beyond the user's machine; data directory layout per `logic/14` (`slopify.db`, `projects/`, `staging/`, `logs/`, uploaded `fonts/`, lazy `models/english-subtitles/`), created with user-only permissions.
-- Collector: serverless API + managed database with the host's daily backup (RPO 24 h, RTO within a day, best effort); a $10/month budget alert on the host. Rate limit per machine id and dedup by event id.
-- Marketing site: static files on a serverless host; preview deployments per PR, production from `main`.
-- Observability: app logs in `<data-dir>/logs/` (JSON lines, daily rotation), warnings and errors on the terminal; no metrics, no tracing; collector uses the host's request logs (accepted red flag).
-- Incident process, on-call, maintenance windows: none; the app is local and the collector is best effort.
+The data directory contains SQLite, projects, staging, logs, fonts, alignment models and managed updates (`packages/app/src/kernel/paths.ts`). The collector Worker is `slopify-collector`, entry `src/index.ts`, custom domain `collector.slopify.stream`, D1 binding `DB` (`packages/collector/wrangler.jsonc:3-27`). The site serves `./public` at `slopify.stream` (`packages/site/wrangler.jsonc:3-10`).
 
 ## Developer workflow
 
-- CI on push and PR: lint and format check (Biome, with the boundary rule), typecheck, tests on Node 26; `npm audit` fails on high severity; Dependabot weekly.
-- Windows CI separately builds the package, checks ffmpeg download recovery and boot, and runs the real ffmpeg end-to-end smoke, alignment/font/subtitle suites and caption-render regression (`.github/workflows/ci.yml`).
-- Release: tag → CI publishes `@gentbajko/slopify` to npm with semantic versioning; the package contains the built SPA, alignment worker and WASM runtime dependency, plus Barlow TTF/OFL/source assets; manual package rollback requires a compatible database; an existing managed-update pointer must also be bypassed with `SLOPIFY_SKIP_MANAGED_UPDATE=1` or removed intentionally. Automatic update rollback is described below. Collector and site do not deploy from a push: nothing in CI touches them. They go out when `npm run deploy` is run by hand, which is `wrangler deploy` for each; `npm run deploy:check` is the dry run.
-- Migrations: forward-only SQL files applied at app boot; a schema newer than the app refuses to start; never destructive within a minor version.
-- Commands per `05-dependencies.md`: Vitest for tests, `tsc --noEmit` for typecheck, Biome for lint and format; exact npm scripts are written by `build` and this chapter is refreshed by `map` once they exist.
+Workspace scripts provide lint, typecheck, tests, build, start, web development and Cloudflare deployment (`package.json:8-17`). App build runs TypeScript and copies migrations/assets/web output (`packages/app/package.json:24-27`). Migrations are forward-only and run at boot (`packages/app/src/kernel/db/migrate.ts`). Model catalogue refresh uses the GitHub raw source, validates YAML/size, retains `.previous`, atomically renames `.next`, and keeps the last valid value on failure (`packages/app/src/catalog/store.ts:7-8,20-22,54-92`).
+
+Batch planning estimates before confirmation, validates up to 50 items, transactionally creates queue entries, and pumps projects sequentially (`packages/app/src/edge/http/planning.ts:15-31,60-108`; `packages/app/src/slices/batch/index.ts:38-90`). Provider execution is globally capped at five concurrent calls with per-provider catalogue limits (`packages/app/src/kernel/runner/queue.ts:10-34`; `packages/app/src/main.ts:330-337`).
 
 ## Subtitle operation
 
-- Subtitles default Off. First enabled export downloads a verified 95,286,046-byte English model into `<data-dir>/models/english-subtitles/`; later exports use the verified cache offline. The model's exact revision/hash live in `packages/app/src/adapters/alignment/cache.ts`. No provider key, Python or compiler is required (`packages/app/SUBTITLES.md`).
-- A per-cache filesystem lock serializes model/inference work across processes; queued waits and active decode/inference respond to abort. Temporary download/audio directories are cleaned on completion or failure (`adapters/alignment/{index,lock,cache,runner,audio}.ts`).
-- The proof machine aligned 68 seconds of narration in 17.7 seconds and 205 seconds in 53 seconds, at about 728 MiB RSS. These are observed manual runs, not a performance guarantee. User guidance asks for roughly 1 GB available memory (`packages/app/SUBTITLES.md`); inference runs one WASM thread in bounded audio windows (`adapters/alignment/worker.ts`).
-- Font discovery reads standard Windows system/user Fonts directories, macOS system/library/user Fonts directories, and Linux system/XDG/legacy user font directories. Scans skip symlinks and unavailable directories and bound entries, depth, file count and bytes. Valid `.ttf`/`.otf` uploads are capped at 32 MiB under `<data-dir>/fonts/`; system `.ttc` faces are supported (`slices/fonts/discovery.ts`, `upload.ts`).
-- Completed caption exports retain their chosen font snapshot and word timing in the project folder. Style-only changes reuse matching timing and the snapshot; a failed model download, alignment or replacement keeps the prior completed export. A synchronous output-commit error restores media/parameter backups; failed restoration retains `.previous` files (`slices/subtitles/prepare.ts`, `slices/video/write-export.ts`).
-- Enabled subtitles require matching English narration and transcript. A mismatch fails the final stage with correction guidance. Pause active work before changing subtitles; save on a paused project queues only the final export until Resume (`edge/http/subtitles.ts`).
-- ASS rendering uses a project caption working directory and fixed relative filter paths. A path-containing relative FFmpeg override is resolved against the app launch directory before that cwd change (`slices/video/ffmpeg.ts`).
+`onnxruntime-web` provides local WASM alignment; the model cache verifies pinned weights and uses a filesystem lock (`packages/app/src/adapters/alignment/cache.ts`; `packages/app/src/adapters/alignment/lock.ts`). Font discovery and uploads are owned by `packages/app/src/slices/fonts/`. Subtitle preparation and video export write captions/font snapshots, render a part file, and replace final rows with rollback handling (`packages/app/src/slices/subtitles/prepare.ts`; `packages/app/src/slices/video/write-export.ts`).
 
-## Local CLI discovery and overrides
+## CLI discovery and provider operation
 
-The server inherits the PATH of the process that launched Slopify; a CLI working in another terminal can still be absent from that PATH. Settings accepts an absolute executable path for Claude Code, Codex or Gemini CLI, shows the command it will use and checks `--version` with a 15-second timeout. Blank restores PATH lookup, including when the command is not found. A successful version check says the binary ran; users still sign in through the CLI before generation (`packages/app/src/slices/settings/{cli-status,cli-paths,readiness}.ts`, `packages/web/src/components/provider-cli.tsx`).
-
-New overrides must name existing executable files or readable JS/MJS/CJS entry scripts, not quoted shell commands or command arguments. On Windows the shared launcher unwraps recognized Node `.cmd`/`.bat` shims to Node plus their JS entry. Unknown batch scripts fail with guidance to select the `.exe` or JS entry; prompts never pass through `cmd.exe` (`packages/app/src/kernel/cli-command.ts`). Changes reach the next invocation without restarting Slopify and do not change already-running children (`adapter-registry.ts`).
-
-Gemini retains its own authentication directory while each explicit `-p` content call gets temporary system settings and writing instructions. Workspace settings first reset the context object to prevent concatenation of personal include directories; a private trusted-folder map permits only that temporary workspace. The adapter disables extensions/hooks/skills/local context, limits tools to none or research web search, sets `NO_BROWSER=true`, and removes the workspace after the child settles. It writes no user Gemini settings or trust map. A login prompt returns terminal sign-in guidance; Google license error #3501 is unsupported and receives no automatic retry (`packages/app/src/adapters/llm/{gemini,gemini-workspace}.ts`).
-
-## Local 0.6.0 verification and installation
-
-The local closeout for source commit `1fa45d743329` passed 1,706 tests with one Windows-only skip, lint, typecheck, production build and inspection of the 202-file package. Browser checks covered all three executable fields and saving without console errors or overflow. The existing local service on port 6969 moved from 0.5.1 to 0.6.0 after a private SQLite backup; existing projects were preserved, and verified paths were saved for the three CLIs. A local tarball installed the global `slopify` command. No public push, tag, npm publication or deployment occurred (record: `changelog.d/2026-09-10-cli-paths-gemini.md`).
-
-Tiny live content requests succeeded through Codex `gpt-5.6-sol` in 13.3 seconds and Claude Haiku in 2.7 seconds. Gemini 0.16.0 launched and loaded its cached login, then Google rejected the account with license error #3501. Gemini was not upgraded or signed in again during this work. These are local observed results, not service guarantees or a claim of successful Gemini generation (same verification record).
-
+Saved CLI paths and 15-second readiness probes cover Claude, Codex and Gemini (`packages/app/src/slices/settings/cli-paths.ts`; `packages/app/src/slices/settings/cli-status.ts`). The launcher resolves recognized Windows Node shims and rejects unknown batch scripts without shell interpolation (`packages/app/src/kernel/cli-command.ts`). Claude uses stream JSON, safe mode and strict MCP configuration (`packages/app/src/adapters/llm/claude-code.ts:20-78`). Production model choices come from the validated YAML catalogue. Legacy discovery can read Codex `CODEX_HOME/models_cache.json` (`packages/app/src/adapters/llm/codex-models.ts:20-44`). The Gemini discovery fallback parses installed metadata and aliases (`packages/app/src/adapters/llm/gemini-models.ts:6-75`).
 
 ## In-app updates
 
-The floating control checks the public npm latest tag for `@gentbajko/slopify` every 15 minutes and when the window regains focus. Server checks are cached for 15 minutes, with an explicit refresh. Only a newer stable semantic version is offered. Discovery sends no provider credentials and never installs automatically (`updater/registry.ts`, `service.ts`, `packages/web/src/updates/`).
+The updater checks npm registry state, obtains a mutation barrier, installs an exact stable version under `<data-dir>/updates/<version>`, starts a detached candidate with a token, checks readiness, and atomically activates the candidate (`packages/app/src/updater/service.ts:21-74`; `packages/app/src/updater/plan.ts:28-119`; `packages/app/src/updater/worker.ts:32-142`). Pre-activation failure restores the previous entry/database; activation state is stored in `updates/current.json` (`packages/app/src/updater/install-flow.ts`; `packages/app/src/updater/plan.ts:83-119`).
 
-An explicit update rechecks the registry, blocks new HTTP mutations, and refuses while projects, provider calls or pending mutations are active. A detached worker installs the exact version into `<data-dir>/updates/<version>` using fixed public registry settings. The current process keeps serving until package verification succeeds; then it closes its database/listener and transfers control. The worker backs up the closed SQLite database, starts the replacement with the same host, port, data directory and launch directory, and checks its health/version. The replacement holds a mutation barrier until an atomic activation marker commits its version and private startup token. Readiness must match that token, preventing another server on the port from passing the health check. A failed replacement before activation restores the prior entry and database and reports failure to the browser; a lost acknowledgement after activation cannot roll back accepted edits. Logs are in `<data-dir>/logs/updates.log` (`updater/`, `edge/update-worker.ts`).
+## Live previews and recovery
 
-Successful updates write `<data-dir>/updates/current.json`. The original launcher forwards subsequent starts to that managed installation, so Windows/npm/npx installations do not require overwriting running package files or a privileged global install. The browser reloads after an accepted update reaches a different version. Users should save open edits before clicking Update Slopify.
+LLM previews and narration audio previews are bounded process-memory state and are invalidated on retry, interruption, completion expiry or shutdown (`packages/app/src/edge/events/preview-cache.ts`; `packages/app/src/kernel/audio-preview.ts`). Pause persists before aborting work; completed pieces survive and unfinished stages return to pending (`packages/app/src/edge/http/actions.ts:158-184`; `packages/app/src/kernel/runner/index.ts:235-260`). Cancel retains committed outputs and does not tick the project (`packages/app/src/edge/http/actions.ts:176-184`). Telemetry delivery failures leave rows queued locally (`packages/app/src/slices/telemetry/`; `packages/app/src/main.ts:107-116`).
 
-## Live project previews
+## Release commands
 
-Project SSE includes visible LLM response text tagged by stage and logical call. The hub retains up to 16 projects, eight calls per project and 64 KiB of text per call, replaying replacement snapshots on reconnect. Retries reset a call; stage transitions clear cached previews. Preview text is transient and does not replace saved outputs (`edge/events/preview-cache.ts`, `kernel/runner/providers.ts`).
+`npm ci`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, and `npm audit --audit-level=high` are the Linux CI gate. Windows additionally runs actual FFmpeg/subtitle/CLI checks and catalogue/queue/batch/recovery suites (`.github/workflows/ci.yml:1`). A pushed `v*` tag runs `npm publish --provenance --access public --workspace @gentbajko/slopify` through npm trusted publishing (`.github/workflows/release.yml:1`). Website and collector deploy independently through `npm run deploy --workspace @slopify/site` and `npm run deploy --workspace @slopify/collector`; `npm run deploy:check` dry-runs both (`package.json:18`).
 
-Narration previews copy MP3 chunks from the synthesis request already in flight into bounded transient storage: 64 MiB total, 16 MiB per attempt and 128 entries. Completed previews expire after five minutes; retries, interruption and shutdown invalidate the affected streams. The manifest is polled once per second while Audio runs. Native audio playback starts only after a user gesture, and late listeners receive the retained prefix. Hitting preview limits stops only the preview; durable narration continues (`kernel/audio-preview.ts`, `slices/narration/live.ts`, `edge/http/audio-preview.ts`).
-
-### Inworld TTS and subtitle positions (0.7.0)
-
-- Settings accepts Inworld Base64 credentials and manual voice IDs. The catalogue includes `inworld-tts-2` and `inworld-tts-2-flash`. The public model listing is an LLM catalogue, so TTS uses documented defaults plus the existing custom-model field.
-- Narration uses NDJSON streaming up to 4,000 characters. Longer TTS-2 requests submit one async job up to 100,000 characters (On-Demand: 10,000); Flash is split at sentence/word boundaries into streaming requests. Provider errors preserve plan-specific guidance with credentials removed.
-- The TTS port supports actual status activity and an opaque per-call continuation. The runner retains the continuation across automatic attempts, so polling/download failures retry the accepted job rather than submitting again. Status replies reset the idle deadline. Polls use the injected clock every five seconds; signed audio downloads carry no provider credentials. Cancel stops local polling/download, not Inworld's remote synthesis. Continuations are not persisted across pause/restart.
-- Subtitle positions are top, upper-middle, center, lower-middle and bottom; old configs default to bottom. The same frame/anchor geometry drives ASS overrides and the responsive preview. The preview scales the loaded font in CSS container units; SRT/VTT remain unstyled. Font/size/position edits reuse existing alignment.
-- Verification: constructed Inworld stream/operation fixtures (no paid calls), a runner test exceeding 120 seconds with one accepted job across retries, both preview formats in Chrome, and full regression checks.
+There is no container configuration. Start the packaged app with `npx @gentbajko/slopify@latest`; process detachment belongs to the host shell/service manager. The HTTP healthcheck is `/api/health` (`packages/app/src/edge/http/app.ts:68`).

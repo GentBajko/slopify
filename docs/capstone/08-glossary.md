@@ -1,42 +1,35 @@
 ---
-generated_date: 2026-09-02
-capstone_version: 5.2.0
+generated_at_commit: 3a9796eb7fec
+generated_date: 2026-09-10
+content_hash: e293a0b5e022
 paths_covered:
- - "packages/app/src/**"
- - "packages/web/src/**"
+  - ":(top)packages/app/src/**"
+  - ":(top)packages/web/src/**"
+  - ":(top)packages/collector/**"
+  - ":(top)packages/site/**"
 ---
-
-> The vocabulary the product, the docs and the code all use for the same thing.
 
 # Glossary
 
 ## Concepts
 
-| Term | Meaning in Slopify | Planned implementation |
+| Term | Meaning in Slopify | Implementation |
 |---|---|---|
-| Run, project | One press of Play: a project record with six stages and a folder of outputs; the words are used interchangeably, "project" in the UI | `slices/admission`, table `projects` |
-| Stage | One of research, article, audio, images, thumbnail, video; has a source and a state (`logic/01`) | table `stages`, `kernel/runner` |
-| Source | How a stage is fulfilled: Generate, Provide, Off (research, thumbnail), From prompt / Prompt by LLM (thumbnail) (`logic/05`, `logic/10`) | `stages.source` |
-| State, lamp | A stage's lifecycle value (pending, running, done, failed, canceled, provided, skipped) and its rendering as a tally lamp with a state word (`logic/01`, `uiux/02-system.md`) | `stages.state`, `packages/web/src/components/lamp.tsx` |
-| Piece | A resumable sub-unit of a stage: research chapter, audio chunk or segment, image index, written thumbnail prompt (`logic/06`, `08`, `09`, `10`) | table `stage_pieces` |
-| Attempt | One try of a provider call under the retry policy: at most 4 per call (`logic/01`) | table `attempts`, `kernel/runner/attempt.ts` |
-| Slot, keyword | A `{{name}}` placeholder in a prompt body; one field per distinct name on Play; filled once per run (`logic/03`) | `slices/admission/substitute.ts`, `prompts.slots` |
-| Prompt kinds | Article, image, thumbnail templates | table `prompts` |
-| Entry | An intro or outro: Text mode narrated as written, LLM mode an instruction whose answer is narrated | table `entries` |
-| Cue sheet | The Play screen's right column: title, format, intro, outro, LLM, keywords, Play | `packages/web/src/routes/play.tsx` |
-| Rail | A full-width bordered row for a stage or a setting group, the control-room layout unit (`uiux/01-direction.md`) | `packages/web/src/components/rail.tsx` |
-| Rundown | The project list and the project page's stage-by-stage view | `packages/web/src/routes/projects.tsx`, `project.tsx` |
-| Tally | The "N running" count in the top bar (`uiux/03-experience.md`) | `edge/events/global.ts` |
-| Going on air | The signature interaction: lamps lighting stage by stage as a run proceeds (`uiux/01-direction.md`) | SSE events + lamp component |
-| Port, adapter | A behaviour-named interface per provider family (`LlmPort`, `TtsPort`, `ImagePort`) and a concrete implementation for one provider or CLI | `kernel/ports/`, `adapters/` |
-| Agent CLI adapter | An `LlmPort` adapter that spawns Claude Code or Codex non-interactively | `adapters/llm/claude-code.ts`, `codex.ts` |
-| Provided output | User-supplied content for a stage, staged in the background before Play, attached at Play (`logic/05`) | `slices/storage`, table `staged_files` |
-| End matter | The article's "Sources Consulted" and "Pronunciation Glossary" sections, split into files and never narrated (`logic/08`) | `slices/narration/split.ts` |
-| Narration source | The plain-text body the TTS reads (`logic/05`, `logic/07`) | output role `article_txt` |
-| Chunking | Whole / Per paragraph / Every ~N words (default 500) for TTS requests (`logic/08`) | `slices/narration/chunk.ts` |
-| Gap | Silence between intro, body, outro, default 3 s (`logic/11`) | `settings` key `silenceGapSeconds` |
-| Render plan | Per-image slots, zoom pattern, frame, fps computed before ffmpeg runs (`logic/11`) | `slices/video/plan.ts`, output role `render_params` |
-| Interrupted | A stage found running at boot after a process death; failed with that reason (`logic/01`) | `cli.ts` boot sequence |
-| Machine ID | The anonymous UUID created when the first-run notice is dismissed (`logic/16`) | table `machine` |
-| Telemetry event | One locally logged, queued, deduplicated usage record (`logic/16`) | table `telemetry_events`, collector |
-| Data directory | `~/.slopify` or the configured path holding the database, projects, staging, logs (`logic/14`) | `kernel/config` |
+| Run, project | One Play submission represented by a project record and its stages and outputs. `packages/app/src/slices/admission/model.ts:54-68` | `slices/admission`, `projects` table |
+| Stage | A pipeline unit such as research, article, audio, images, thumbnail, or video with a lifecycle state. `packages/app/src/kernel/pipeline.ts:10-36` | `stages`, `kernel/runner` |
+| Piece | A resumable sub-unit of work, such as an audio chunk or an individual image. `packages/app/src/kernel/runner/attempt.ts:31-38` `packages/app/src/slices/narration/plan.ts:1-12` | `stage_pieces` |
+| Attempt | One provider call under the retry and timeout policy; the policy allows at most four attempts. `packages/app/src/kernel/runner/attempt.ts:8-19` | `attempts`, `kernel/runner/attempt.ts` |
+| Provider port, adapter | A family interface and concrete provider implementation for LLM, TTS, image, or subtitle alignment work. `packages/app/src/kernel/ports/llm.ts:1-80` `packages/app/src/adapter-registry.ts:51-89` | `kernel/ports`, `adapters` |
+| Catalogue | YAML-backed and refreshable model metadata containing supported models, capabilities, concurrency, and pricing. `packages/app/src/catalog/store.ts:9-79` `packages/app/src/assets/models.yaml:1-20` | `catalog`, `models.yaml` |
+| Thinking | An optional LLM reasoning mode selected from the chosen catalogue model's supported modes. `packages/app/src/catalog/registry.ts:24-39` `packages/web/src/play/thinking.tsx:15-42` | `LlmCall.thinking`, catalogue `thinking` |
+| Provider request queue | An in-process queue allowing at most five active provider calls globally and applying lower per-provider catalogue limits. `packages/app/src/kernel/runner/queue.ts:12-77` | `kernel/runner/queue.ts` |
+| Batch queue | SQLite-persisted ordering of multiple project runs; one video project is activated at a time and pause holds its position. `packages/app/src/slices/batch/index.ts:19-57` | `batches`, `project_queue`, `slices/batch` |
+| Estimate | A pre-run `CostEstimate` containing USD low/high totals, stage rows, unknown charges, catalogue date, and assumptions. `packages/app/src/slices/estimate/index.ts:4-19` `packages/app/src/slices/estimate/index.ts:72-125` | `POST /api/projects/estimate` |
+| Continuation | A provider-issued async job token held during automatic retries of one call; it is not durable across process restarts. `packages/app/src/kernel/runner/providers.ts:170-190` `packages/app/src/adapters/tts/inworld-async.ts:22-70` | TTS `continuation.read/write` |
+| Source | How a stage is fulfilled, including generated, provided, or disabled inputs. `packages/app/src/slices/admission/model.ts:54-68` | run draft and stage configuration |
+| Slot, keyword | A `{{name}}` placeholder substituted from one run's values. `packages/app/src/slices/admission/substitute.ts:1-80` | `prompts.slots`, substitution slice |
+| Entry | An intro or outro in text or LLM mode. `packages/app/src/slices/library/model.ts:1-80` | `entries` table |
+| Provided output | User-supplied audio, images, thumbnail, or article staged before a run. `packages/app/src/slices/storage/staging.ts:1-80` | `staged_files`, storage slice |
+| Render plan | Computed image slots, zoom, frame, and FPS passed to local FFmpeg assembly. `packages/app/src/slices/video/plan.ts:1-100` `packages/app/src/slices/video/ffmpeg.ts:1-80` | `render_params`, video slice |
+| Telemetry event | A locally stored and queued usage event sent in batches to the collector. `packages/app/src/slices/telemetry/model.ts:1-80` `packages/app/src/slices/telemetry/flush.ts:1-110` | telemetry tables, collector |
+| Data directory | Configured local directory containing SQLite, project files, staging files, and logs. `packages/app/src/kernel/paths.ts:1-80` | `kernel/paths` |

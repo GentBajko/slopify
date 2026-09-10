@@ -1,19 +1,17 @@
 ---
-content_hash: 66c64be13061
-generated_at_commit: 1fa45d743329
-absorbed_from: features/2026-09-10-subtitles-fonts@2026-09-10
+generated_at_commit: 3a9796eb7fec
 generated_date: 2026-09-10
-capstone_version: 5.2.0
+content_hash: beea3c3da582
 paths_covered:
- - "package.json"
- - "packages/*/package.json"
- - "package-lock.json"
- - "packages/app/src/adapters/alignment/**"
- - "packages/app/src/adapters/llm/gemini.ts"
- - "packages/app/src/adapters/llm/gemini-workspace.ts"
- - "packages/app/src/kernel/cli-command.ts"
- - "packages/app/src/slices/settings/cli-status.ts"
- - "packages/app/src/assets/fonts/**"
+  - ":(top)packages/app/src/**"
+  - ":(top)packages/web/src/**"
+  - ":(top)packages/collector/**"
+  - ":(top)packages/site/**"
+  - ":(top)package*.json"
+  - ":(top)packages/*/package.json"
+  - ":(top)biome.json"
+  - ":(top)tsconfig*.json"
+  - ":(top).github/workflows/**"
 ---
 
 > Rows marked "installed" carry the version resolved and locked in `package-lock.json`; the
@@ -74,7 +72,7 @@ paths_covered:
 | happy-dom | 20 | MIT | DOM for component tests (stack) |
 | @biomejs/biome | 2.5.11 installed | MIT OR Apache-2.0 | formatter and linter; `noRestrictedImports` patterns enforce kernel → slices → edge |
 | GitHub Actions | hosted | n/a | lint, typecheck, test on Node 26; tag → `npm publish --provenance` |
-| @types/node | 26.4.1 installed | MIT | Node 26 type surface while the dev machine runs 24.3.0 |
+| @types/node | 26.4.1 installed | MIT | Node 26 type surface for the Node 26 runtime |
 | Dependabot | hosted | n/a | weekly updates; `npm audit` fails CI on high severity |
 | wrangler | current | MIT OR Apache-2.0 | deploys `packages/collector` and `packages/site` to Cloudflare (stack,) |
 
@@ -88,10 +86,10 @@ paths_covered:
 | Gemini CLI | LLM through installed CLI/login, explicit `-p` stream-json; no browser authentication; writing tools disabled, research permits only `google_web_search` | `packages/app/src/adapters/llm/{gemini,gemini-workspace}.ts`; optional saved executable path | user's Gemini login/account; no Slopify price assertion | missing/unusable executable disables selection; Google license #3501 is unsupported with no automatic retry; version readiness does not verify account eligibility |
 | ElevenLabs | TTS | `adapters/tts/elevenlabs.ts` | credits: Free 10k, Starter $6 / 30k, Creator $22 / 121k, Pro $99 / 600k; ~1 credit per character | stage fails after retries |
 | OpenAI (audio) | TTS: gpt-4o-mini-tts, tts-1, tts-1-hd (plus gpt-4o-mini-tts-2025-12-15). `voice` also accepts an object `{id}` for a cloned voice, which matters because Slopify's voice list is free text the user types | `adapters/tts/openai.ts` | $0.60 per 1M input characters + $12 per 1M audio tokens; tts-1 $15 / 1M chars; tts-1-hd $30 / 1M chars | stage fails after retries |
-| Cartesia | TTS; `sonic-3.5` on `Cartesia-Version: 2026-03-01` - the previously recorded `sonic-2` is retired (it now aliases to `jolly-totem`) and the recorded `2024-11-13` header stale and *required*, not optional; the error envelope changed with it to `{error_code, title, message, request_id}` | `adapters/tts/cartesia.ts` | Free (~27 min, API included), Pro $5, Startup $49, Scale $299 per month | stage fails after retries |
+| Cartesia | TTS; `sonic-3.6` on `Cartesia-Version: 2026-03-01` - the previously recorded `sonic-2` is retired (it now aliases to `jolly-totem`) and the recorded `2024-11-13` header stale and *required*, not optional; the error envelope changed with it to `{error_code, title, message, request_id}` | `adapters/tts/cartesia.ts` | Free (~27 min, API included), Pro $5, Startup $49, Scale $299 per month | stage fails after retries |
 | fal.ai | images and thumbnails; REST, no SDK. The frame is spelled per model, not per family: the FLUX endpoints take an `image_size` enum, the Google ones a plain `aspect_ratio`, so each curated entry declares its shape | `adapters/image/fal.ts` | per image, e.g. Flux Kontext Pro $0.04, Seedream V4 $0.03 | stage fails; refusals fail immediately (`logic/09`) |
 | Replicate | images. `Prefer: wait` holds the connection for **at most 60 s** - past that the prediction comes back `starting` and must be polled at `urls.get`, so the adapter sends `Prefer: wait=60` and polls; `output` is a bare string for single-image models and an array for others; both URL providers default to WebP, which the port cannot store, so both requests carry `output_format: "png"` | `adapters/image/replicate.ts` | FLUX Dev $0.025, FLUX Pro $0.04, Schnell $3 / 1000 images | same |
-| OpenAI (images) | images: gpt-image-2, gpt-image-1.5, gpt-image-1, gpt-image-1-mini (four models, not the two previously recorded). `quality` is not sent - `logic/09` step 2 asks for provider default, and the recorded `standard`/`hd` values were DALL-E 3's anyway; gpt-image-2 takes arbitrary WxH divisible by 16, so it gets the aspect exactly and the render crops less | `adapters/image/openai.ts` | gpt-image-1 $10 in / $40 out per 1M tokens; -mini $2.50 / $8 | same |
+| OpenAI (images) | Curated GPT Image 2.5 Sunburst, 2.5 Flare and GPT Image 2; aspect-matched sizes; provider default quality | `packages/app/src/adapters/image/openai.ts:45`, `packages/app/src/assets/models.yaml:1` | Output-dependent; estimate unknown | stage fails after retries |
 | Cloudflare Workers + D1 | telemetry collector and its database (`logic/16`) | `packages/collector/src/index.ts`, D1 binding in `wrangler.toml` | Free: 100k requests/day, D1 5M reads / 100k writes per day, 5 GB; Paid from $5/month | events queue locally; site shows dashes |
 | Cloudflare static assets | marketing page hosting | `packages/site/` deployed by wrangler | free tier | page unavailable |
 
@@ -112,4 +110,8 @@ The dependency ladder found no acoustic inference capability in Node, browser AP
 
 The subtitle default is static Barlow Regular TTF, separate from the SPA's Fontsource WOFF2 files. The TTF, OFL and pinned source record live in `packages/app/src/assets/fonts/` and ship in `dist/assets/fonts/` via `scripts/copy-assets.mjs`. Font files remain the existing OFL exception to the code-dependency license policy; no font parsing dependency was added.
 
-CLI adapters remain external installed commands; no Gemini SDK or process-launch dependency was added. The three CLI commands share 15-second readiness probes and saved path overrides (`packages/app/src/slices/settings/{cli-status,cli-paths}.ts`). Gemini model choices are discovered from installed CLI metadata and supported aliases (`adapters/llm/gemini-models.ts`); Codex reads its local catalogue, and Claude exposes family aliases. The server model endpoint distinguishes live/local discovery from bundled Cartesia and schema-compatible fal/Replicate lists through origin notices (`slices/settings/models.ts`). No new dependency was added for catalogue discovery.
+CLI adapters remain external installed commands; no Gemini SDK or process-launch dependency was added. The three commands share 15-second readiness probes and saved path overrides (`packages/app/src/slices/settings/cli-status.ts:1`). Production model pickers use the curated YAML rather than the old broad discovery lists; adapter discovery functions remain fallback seams for callers without a catalogue (`packages/app/src/edge/http/providers.ts:61`).
+
+`yaml@^2.9.0` (ISC) parses editable catalogue documents. Node and existing dependencies provide no YAML parser; the parser is isolated behind schema validation and a 1 MiB read limit (`packages/app/package.json:29`, `packages/app/src/catalog/store.ts:1`).
+
+Additional services: Inworld TTS-2/Flash stream and async endpoints (`packages/app/src/adapters/tts/inworld.ts:72`, `packages/app/src/adapters/tts/inworld-async.ts:1`); Google image interactions (`packages/app/src/adapters/image/google.ts:70`); GitHub raw catalogue refresh (`packages/app/src/catalog/store.ts:7`); npm registry/update installs (`packages/app/src/updater/registry.ts:9`). Current verified model pricing belongs to `packages/app/src/assets/models.yaml:1`; older dated service prices in this chapter record prior stack research and are not inputs to the estimator.

@@ -1,88 +1,67 @@
 ---
-content_hash: 3d36a4476b22
-generated_at_commit: 1fa45d743329
-absorbed_from:
- - features/2026-09-09-pausable-optional-runs@2026-09-10
- - features/2026-09-10-subtitles-fonts@2026-09-10
+generated_at_commit: 3a9796eb7fec
 generated_date: 2026-09-10
-capstone_version: 5.2.0
+content_hash: beea3c3da582
 paths_covered:
- - "packages/app/src/**"
- - "packages/web/src/**"
- - "packages/site/**"
- - "packages/collector/src/**"
+  - ":(top)packages/app/src/**"
+  - ":(top)packages/web/src/**"
+  - ":(top)packages/collector/**"
+  - ":(top)packages/site/**"
+  - ":(top)package*.json"
+  - ":(top)packages/*/package.json"
+  - ":(top)biome.json"
+  - ":(top)tsconfig*.json"
+  - ":(top).github/workflows/**"
 ---
 
 # Architecture
 
 ## Layers
 
-Single-process modular monolith in `packages/app`, three layers with imports pointing inward only, enforced by the linter's import-boundary rule in CI (the tool is Biome's `noRestrictedImports` and `05-dependencies.md`):
-
-| Layer | Planned directory | Contains | May import |
-|---|---|---|---|
-| kernel | `packages/app/src/kernel/` | `runner/` (the stage-graph runner of `logic/01`), `db/` (SQLite open, migrations, WAL), `ports/` (`LlmPort`, `TtsPort`, `ImagePort`, `SubtitleAligner` interfaces and adapter registry), `config/` (flags and `SLOPIFY_*` env), `clock.ts`, `ids.ts` (ULID), `log.ts` | nothing above it |
-| slices | `packages/app/src/slices/` | `research/`, `article/`, `narration/`, `images/`, `thumbnail/`, `video/`, `subtitles/`, `fonts/`, `reruns/`, `cancel/`, `control/`, `library/`, `settings/`, `telemetry/`, `storage/`, `admission/` | kernel |
-| edge | `packages/app/src/edge/` | `http/` (Hono routes per context), `events/` (SSE), `cli.ts` (the `slopify` entry) | slices, kernel |
-
-Adapters live beside their port: `packages/app/src/adapters/llm/{openrouter,claude-code,codex,gemini}.ts`, `adapters/tts/*.ts`, `adapters/image/*.ts`, `adapters/alignment/*.ts`, `adapters/fake/*.ts`; the renderer `packages/app/src/slices/video/ffmpeg.ts` and the collector client `packages/app/src/slices/telemetry/collector-client.ts` are contained modules without ports.
-
-The other packages: `packages/web` (React SPA), `packages/site` (static marketing page), `packages/collector` (serverless API + managed database). No package imports another's source; `app` consumes `web`'s build output as static files; `site` calls `collector` over HTTPS.
+- `packages/app/src/kernel` owns DB, config, clocks, IDs, locks, logs, ports, and runner; it imports no slices, edge, or adapter registry. `biome.json:40-62` `packages/app/src/kernel/runner/index.ts:1-52`
+- `packages/app/src/slices` owns feature modules and uses kernel contracts; it cannot import edge, adapters, or the adapter registry. `biome.json:66-87`
+- `packages/app/src/adapters` implements provider, alignment, and FFmpeg integrations; it may import only approved kernel ports/utilities. `biome.json:95-116`
+- `packages/app/src/edge` owns CLI, Hono routes, SSE hub, browser launcher, and update worker. `packages/app/src/edge/http/app.ts:69-91`
+- `packages/web` is the React SPA; `packages/collector` is a separately deployed worker with D1; `packages/site` is a static marketing site. `packages/web/src/main.tsx:1-37` `packages/collector/src/index.ts:19-32` `packages/site/package.json:1-14`
 
 ## Module boundaries
 
-- Ports: `LlmPort.complete(messages, options) → AsyncIterable<delta> + usage`, `TtsPort.synthesize(text, voiceId, options) → audio stream + duration`, `ImagePort.generate(prompt, size, options) → image bytes + metadata`. Each adapter declares capabilities (`streams`, `reportsUsage`, `webSearch` for LLM; `streams` for TTS; supported sizes for image). Domain types only cross the seam; vendor payloads never leave the adapter. Adapter kinds for `LlmPort`: HTTP gateway (OpenRouter, key from settings) and local agent CLI (Claude Code, Codex, Gemini CLI: spawned non-interactively with streaming structured output and the CLI's own login; readiness probes the saved executable override or PATH command).
-- Slices expose one function per scenario step to the edge (`startRun`, `retryStage`, `pauseProject`, `resumeProject`, `changeProviders`, `cancelProject`, `editArticle`,...) and to the runner; they never import each other's internals; shared rules live in the kernel (`ids`, `clock`, `db`) or in `slices/admission/` and `slices/storage/`, which every stage calls.
-- Edge routes hold no rules: they validate the request shape, call one slice function, and map results and errors to responses.
-- `packages/web` may only talk to `app` through the typed API client.
+- Ports are `LlmPort`, `TtsPort`, `ImagePort`, `SubtitleAligner`, and `Registry`; stages receive wrapped `StageProviders`, never adapters. `packages/app/src/kernel/ports/llm.ts:1-80` `packages/app/src/kernel/runner/providers.ts:1-59`
+- Stage dispatch registers `research`, `article`, `audio`, `images`, `thumbnail`, and `video`. `packages/app/src/main.ts:331-386`
+- Adapter registry registers LLM `openrouter`, `claude-code`, `codex`, `gemini`; TTS `elevenlabs`, `openai-tts`, `cartesia`, `inworld`; image `fal`, `replicate`, `openai-image`, `google-image`. `packages/app/src/adapter-registry.ts:51-89`
+- Catalogue curation validates model, aspect, web-search, thinking, and TTS splitting capabilities. `packages/app/src/catalog/registry.ts:5-86`
 
 ## Entry points
 
-| Process | Entry | Command |
-|---|---|---|
-| Local app | `packages/app/src/edge/cli.ts` (`bin: slopify`) | `npx @gentbajko/slopify@latest [--port 6969] [--host 127.0.0.1] [--data-dir ~/.slopify] [--no-open]` |
-| Collector | `packages/collector/src/index.ts` | deployed as serverless functions |
-| Marketing site | `packages/site/` static build | deployed as static files |
-
-`cli.ts`: parse flags and env → resolve the data directory and refuse a second instance (`logic/14`) → open SQLite, run migrations → mark stages found `running` as `failed` "interrupted" (`logic/01`) → clean unattached staging files (`logic/05`) → build ports and registry → start Hono on `host:port` → print the URL → open the browser unless `--no-open` → on SIGINT stop the server and exit (the interrupted mark happens at the next boot). No cron. Subtitle alignment forks a short-lived Node child process running ONNX Runtime WASM; it is created only for enabled subtitles (`packages/app/src/adapters/alignment/runner.ts`).
+- CLI: `packages/app/src/edge/cli.ts:1-39`; boot/server: `packages/app/src/main.ts:86-256`; HTTP listen: `packages/app/src/main.ts:431-445`.
+- Batch timer: `packages/app/src/main.ts:218-236`; alignment worker: `packages/app/src/adapters/alignment/worker.ts:1-80`; update worker: `packages/app/src/edge/update-worker.ts:1-120`.
+- Collector fetch worker: `packages/collector/src/index.ts:19-32`; site is static Wrangler output. `packages/site/package.json:1-14`
 
 ## Communication
 
-- Browser ↔ app: JSON over HTTP under `/api/<context>/...` (`projects`, `prompts`, `entries`, `settings`, `usage`, `providers`, `fonts`), RFC 9457 `application/problem+json` errors, no versioning, no pagination. Files under `/files/<projectId>/<asset>`. Live updates over SSE: `/api/events/projects/<id>` (stage status, progress, streamed article text, image landed, and `project.updated` to refresh saved provider choices and pause state) and `/api/events/global` (running tally). Uploads stage through `POST /api/staging` with progress events (`logic/05`).
-- App → providers: HTTPS through the HTTP adapters; local CLIs through child processes with structured stdout. `kernel/cli-command.ts` resolves known Windows Node launchers without passing prompts through a command shell. `adapter-registry.ts` reads saved executable paths at each invocation (`slices/settings/cli-paths.ts`).
-- App → ffmpeg: child process with arguments built by `slices/video/ffmpeg.ts`; progress parsed from stdout into render percentage (`logic/11`).
-- App → collector: HTTPS `POST /events` batches from the local queue, idempotent by event ID (`logic/16`).
-- Site → collector: HTTPS `GET /aggregates` every 5 s (`logic/16`).
-- No message broker, no queue service, no webhooks.
+- Hono registers `/api/health`, staging, project planning/project/preview/actions/subtitles, update, fonts, prompts, entries, telemetry, usage, settings, and providers. `packages/app/src/edge/http/app.ts:69-91`
+- Project routes carry `RunDraft`, `ProjectListBody`, `ProjectBody`, and `CreatedProjectBody`; planning carries `CostEstimate` and `QueueEntry`; actions carry action-specific JSON. `packages/app/src/edge/http/projects.ts:64-158` `packages/app/src/edge/http/planning.ts:15-104` `packages/web/src/api.ts:68-87`
+- Staging carries `StagedFile` or multipart `file`; prompts/entries carry `Prompt`/`PromptDraft` and `Entry`/`EntryDraft`; providers carry `ProviderStatus`, model arrays, and masked key status. `packages/app/src/edge/http/staging.ts:33-70` `packages/app/src/edge/http/prompts.ts:37-57` `packages/app/src/edge/http/entries.ts:34-52` `packages/app/src/edge/http/providers.ts:38-128`
+- Project SSE `/api/events/projects/:id` carries `ProjectEvent` union: stage state/progress, article delta, LLM preview, image landed, project state/update. `packages/app/src/edge/http/app.ts:128-134` `packages/app/src/kernel/events.ts:3-71`
+- Global SSE `/api/events/global` carries running count, staging events, and project state/update. `packages/app/src/edge/events/hub.ts:20-29` `packages/app/src/edge/events/hub.ts:119-141`
+- Provider calls use an in-process queue capped at five globally and per-provider catalogue limits; LLM streams `LlmEvent`, TTS streams audio bytes, and images return `GeneratedImage`. `packages/app/src/kernel/runner/queue.ts:12-77` `packages/app/src/kernel/runner/providers.ts:79-222`
+- Batch ordering is SQLite `batches`/`project_queue`, advanced by `pumpQueue`; no broker or external queue service exists. `packages/app/src/slices/batch/index.ts:19-57` `packages/app/src/main.ts:218-236`
+- Telemetry posts `{events: CollectorEvent[]}` to collector `/events` and receives `{ok, accepted}`; site reads `{aggregates: Aggregates}` from `/aggregates`. `packages/app/src/slices/telemetry/collector-client.ts:1-90` `packages/collector/src/index.ts:43-78` `packages/collector/src/index.ts:102-117`
 
 ## Composition
 
-`packages/app/src/main.ts` is the composition root: it constructs `db`, `clock`, `ids`, `log`, the adapter registry from settings, the runner, each slice with its dependencies as constructor or function parameters, and the Hono app with routes and SSE hubs. No DI container. `slices/control/lock.ts` keeps a per-database, per-project promise queue so pause, resume, provider edits, output mutations and deletion cannot race each other.
+- `boot()` constructs database, catalogue, registry, hub, telemetry, updater, runner, and Hono app; `wire()` injects stage implementations and provider wrappers. `packages/app/src/main.ts:86-214` `packages/app/src/main.ts:286-386`
+- No DI container or service locator is used; dependencies are typed parameters and closures. `packages/app/src/main.ts:286-386`
 
 ## Frontend
 
-- Rendering model: client-rendered SPA (React 19, Vite build) served as static files by the local Hono server; client-side routing for Projects, Play, Prompts, Intros & Outros, Settings, Usage, Project; no SSR, no islands. Marketing page: static site generation with a client-side fetch of the live counters.
-- Client entry: `packages/web/src/main.tsx`; one bundle plus route-level code splitting; initial bundle under 250 kB gzipped.
-- State: server state through a query library invalidated by SSE events; UI state in component state; the Play form's tab-session memory in the SPA (`uiux/03-experience.md`).
-- Form drafts: the Shell's `FormDraftsProvider` retains unsaved prompt edits by editor identity and the Play configuration in memory across route changes. Successful saves clear the corresponding prompt draft, and project creation resets Play. This lets tutorial Back and Settings navigation preserve unfinished work; nothing is written to browser storage.
-- Design system: shadcn/ui restyled to `uiux/02-system.md`'s tokens on Radix primitives.
-- API-client seam: the client generated from Hono's route types (its RPC client); no hand-rolled fetch layer.
-- Versioning: server and SPA ship in one package; the API returns a version header and the SPA offers a reload on mismatch. No mobile app, no offline sync.
-- Getting started: `packages/web/src/tutorial/` owns an optional 20-step guide, opened from navigation or the empty Projects page. It routes through real Settings, prompt editors, Play and the created project. Video selection explains silent slideshows, WAV export and article-only runs. A dedicated subtitle step exposes the actual mode, font upload, preview and size controls; it never runs alignment. The final spotlight follows the selected output. Completion uses provider/voice readiness, form validity flags and confirmed save/create IDs; it never captures API keys or starts generation. The spotlight follows `data-tour` anchors across scrolling, resizing and routed content, allowing interaction with the active section and its select menus while dimming the rest. Back, Skip and Exit remain available outside pending saves; the guide waits for the first-run notice to be dismissed.
+- The local app serves a client-rendered React 19/Vite SPA and falls back SPA paths to `index.html`. `packages/web/src/main.tsx:1-37` `packages/app/src/edge/http/app.ts:142-150`
+- Routes are `/`, `/play`, `/projects/$projectId`, prompts, entries, settings, and usage; prompt kind and entry category are URL search state. `packages/web/src/router.tsx:20-115` `packages/web/src/router.tsx:215-233`
+- The client uses React Query, TanStack Router, Radix-based UI primitives, Tailwind styling, and Barlow fonts. `packages/web/src/main.tsx:20-37` `packages/web/package.json:19-31`
+- The API seam is generated `hc<AppType>` at `${origin}/api`; EventSource carries SSE and same-origin URLs serve files. `packages/web/src/api.ts:60-132` `packages/web/src/events.ts:50-118`
 
-## Local subtitles and fonts
+### Planning and event payloads
 
-- `packages/app/src/kernel/ports/subtitles.ts` defines `SubtitleAligner`, passed from `main.ts` into the existing video slice. `slices/subtitles/prepare.ts` derives the spoken transcript, fingerprints audio/text/gaps, reuses word timing when unchanged, snapshots the font, and prepares SRT/VTT/ASS assets. Subtitles add no stage and make no paid provider request (`logic/17`).
-- `adapters/alignment/` owns verified model download/cache, decoded 16 kHz PCM, a per-cache process lock, and abortable child-process inference using `onnxruntime-web/wasm`. The model is lazy; app boot and Subtitle Off do not download it (`adapters/alignment/index.ts`, `cache.ts`, `runner.ts`).
-- `slices/fonts/` owns bounded system discovery, SFNT metadata validation, opaque font IDs, custom TTF/OTF uploads and preview extraction; `edge/http/fonts.ts` exposes list/upload/file routes. Bundled Barlow and its OFL/source records ship from `src/assets/fonts/` into `dist/assets/fonts/` (`scripts/copy-assets.mjs`).
-- `packages/web/src/subtitles/` supplies shared mode/font/size controls for Play and the final project stage. `project/subtitles.tsx` saves through `PATCH /api/projects/:id/subtitles`; `project/body-video.tsx` uses saved output metadata for native VTT tracks, preventing double captions on burned exports.
+Planning requests are `{draft: RunDraft, expectedWords?: number, items?: {title: string, values: Record<string,string>}[]}`; batch creation additionally requires `requestId: UUID`. Estimate returns `{estimates: CostEstimate[]}`; batch and queue listing return `{queue: QueueEntry[]}` (`packages/app/src/edge/http/planning.ts:15`). Provider catalogue status returns `{updatedAt, path, warning, source}`; refresh takes no body. Provider model listing returns `{models, allowsCustom: false, notice, warning?}` (`packages/app/src/edge/http/providers.ts:38`).
 
-## CLI executable settings
-
-`PUT /api/providers/:id/path` validates and probes an absolute executable/JavaScript entry or resets to PATH. Overrides live in the generic settings table, not provider keys; concurrent saves serialize per provider. `GET /api/providers` includes optional `cliPath` metadata only on CLI rows (`packages/app/src/edge/http/providers.ts`, `slices/settings/{model,readiness,cli-paths}.ts`). Gemini calls additionally create an isolated temporary writing workspace, retain normal CLI authentication, and restrict tools/context through per-call settings (`adapters/llm/gemini-workspace.ts`).
-
-`LlmEvent.activity` carries no content. Claude Code, Codex and Gemini emit it while processing structured CLI events; `kernel/runner/providers.ts` refreshes the idle deadline and suppresses it from the stage's output callback (`packages/app/src/kernel/ports/llm.ts`). Gemini uses explicit `-p`, `NO_BROWSER=true`, a temporary context reset and a private trusted-folder map; login/account failures return through the normal typed provider-error boundary (`adapters/llm/{gemini,gemini-workspace}.ts`).
-
-## Provider model catalogues
-
-The provider HTTP edge exposes `GET /api/providers/:id/models`; the composition root supplies adapter discovery and compatible fallbacks to the per-provider catalogue cache in `slices/settings/models.ts`. Catalogues carry origin notices and separate failure warnings. Play and paused project editing consume the same endpoint through `packages/web/src/lib/models.ts`; model lists no longer live in the browser bundle. New audio-provider choices require explicit selection from the TTS model picker. See `logic/02-provider-credentials.md` for cache, refresh, custom-ID and failure behavior.
+Project SSE payloads share projectId: stage.state adds stage/state/failureReason?; stage.progress adds stage/current/total; article.delta adds text; llm.preview adds stage/callId/text/label?/reset?; image.landed adds outputId/index; project.state adds state; project.updated has no extra field. Global running.count carries count. These are server-to-client events; the client sends no SSE body (`packages/app/src/kernel/events.ts:7`, `packages/web/src/events.ts:50`).
