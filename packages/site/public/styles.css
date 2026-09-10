@@ -370,6 +370,35 @@ h1 {
   text-wrap: pretty;
 }
 
+.hero-aside {
+  margin: 0;
+  color: var(--ink2);
+  font-size: 16px;
+}
+
+.install-options {
+  display: grid;
+  gap: calc(var(--step) * 5);
+  min-width: 0;
+}
+
+.install-label,
+.install-hint {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink2);
+}
+
+.install-hint {
+  margin-top: calc(var(--step) * 2);
+}
+
+.install-options .command code {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: clamp(13px, 2.8vw, 16px);
+}
+
 .command {
   display: flex;
   align-items: center;
