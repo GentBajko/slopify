@@ -1,5 +1,5 @@
 import type { Chunking } from "@app/slices/narration/chunk.js";
-import { defaultChunkWords } from "@app/slices/narration/chunk.js";
+import { defaultChunkCharacters, defaultChunkWords } from "@app/slices/narration/chunk.js";
 import { assetOf } from "@app/slices/storage/asset-name.js";
 import type { Output, OutputRole } from "@app/slices/storage/model.js";
 import { useQuery } from "@tanstack/react-query";
@@ -101,5 +101,7 @@ function chunkingOf(chunking: Chunking | undefined): string {
   if (chunking.mode === "paragraph") {
     return "one request per paragraph";
   }
+  if (chunking.mode === "characters")
+    return `every ${String(chunking.characters ?? defaultChunkCharacters)} characters`;
   return `every ${String(chunking.words ?? defaultChunkWords)} words`;
 }

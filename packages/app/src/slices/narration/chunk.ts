@@ -1,21 +1,15 @@
-// The run's chunking choice: whole text is one request, per paragraph is one request per
-// paragraph, and every ~N words is consecutive chunks each ending at the last sentence
-// boundary at or before N words, N defaulting to 500.
-//
-// Pure, and the only place the rule lives. Chunking sits in the functional core beside
-// substitution and the render plan, so it is testable with no I/O and `run.ts` does nothing
-// but call it.
-
-export const chunkModes = ["whole", "paragraph", "words"] as const;
+export const chunkModes = ["whole", "paragraph", "words", "characters"] as const;
 export type ChunkMode = (typeof chunkModes)[number];
 
 export interface Chunking {
   readonly mode: ChunkMode;
   // Only the `words` mode reads it.
   readonly words?: number | undefined;
+  readonly characters?: number | undefined;
 }
 
 export const defaultChunkWords = 500;
+export const defaultChunkCharacters = 3000;
 
 // A run created before Play carried the control sends the whole text as one request,
 // which is the first case and the one that adds nothing the user did not ask for.
@@ -32,7 +26,13 @@ export function chunkNarration(text: string, chunking: Chunking): readonly strin
     case "paragraph":
       return nonEmpty(text.split(paragraphBreak));
     case "words":
-      return wordRuns(text, chunking.words ?? defaultChunkWords);
+      return sentenceRuns(text, chunking.words ?? defaultChunkWords, wordsIn);
+    case "characters":
+      return sentenceRuns(
+        text,
+        chunking.characters ?? defaultChunkCharacters,
+        (part) => Array.from(part.trim()).length,
+      );
   }
 }
 
@@ -42,30 +42,35 @@ export function wordsIn(text: string): number {
   return text.split(/\s+/).filter((word) => word !== "").length;
 }
 
-function wordRuns(text: string, budget: number): readonly string[] {
-  // A budget below one word would end every chunk before it started; one sentence is the
-  // floor because the rule never cuts inside a sentence.
+export function sameChunking(left: Chunking | undefined, right: Chunking | undefined): boolean {
+  const a = left ?? defaultChunking;
+  const b = right ?? defaultChunking;
+  if (a.mode !== b.mode) return false;
+  if (a.mode === "words") return (a.words ?? defaultChunkWords) === (b.words ?? defaultChunkWords);
+  if (a.mode === "characters")
+    return (a.characters ?? defaultChunkCharacters) === (b.characters ?? defaultChunkCharacters);
+  return true;
+}
+
+function sentenceRuns(
+  text: string,
+  budget: number,
+  measure: (part: string) => number,
+): readonly string[] {
   const limit = Math.max(1, Math.floor(budget));
   const chunks: string[] = [];
   let current = "";
-  let count = 0;
-
   for (const sentence of sentences(text)) {
-    const words = wordsIn(sentence);
-    // The last sentence boundary at or before N words: the sentence that would push the count
-    // past the budget starts the next chunk instead of being split.
-    if (count > 0 && count + words > limit) {
+    // Measure the joined text so spaces between sentences count toward a character budget.
+    if (current.trim() && measure(current + sentence) > limit) {
       chunks.push(current);
       current = "";
-      count = 0;
     }
     current += sentence;
-    count += words;
   }
   chunks.push(current);
-  // A single sentence longer than the budget lands here whole, on its own: a cut inside a
-  // clause would be an audible pause the writer never wrote. The provider's own per-request
-  // limit is what refuses it, as an error on the stage.
+  // Like word chunking, a sentence longer than the budget stays whole on its own.
+  // The provider-specific planning layer applies any hard request limit afterwards.
   return nonEmpty(chunks);
 }
 

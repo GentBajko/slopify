@@ -21,7 +21,11 @@ export const providerChangesSchema = z
     audio: choice.extend({ voice: z.string().trim().min(1).max(200) }).optional(),
     images: choice.optional(),
     chunking: z
-      .object({ mode: z.enum(chunkModes), words: z.number().int().min(1).max(10000).optional() })
+      .object({
+        mode: z.enum(chunkModes),
+        words: z.number().int().min(1).max(10000).optional(),
+        characters: z.number().int().min(1).max(1000000).optional(),
+      })
       .strict()
       .optional(),
   })

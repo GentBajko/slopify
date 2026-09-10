@@ -4,6 +4,7 @@ import type {
   RunConfig,
   VoiceChoice,
 } from "@app/slices/admission/model.js";
+import { sameChunking } from "@app/slices/narration/chunk.js";
 import type { ProviderStatus } from "@app/slices/settings/model.js";
 import { useQuery } from "@tanstack/react-query";
 import type { Dispatch, SetStateAction } from "react";
@@ -175,9 +176,7 @@ export function ProjectProviders({
 
 export function changedProviderChoices(config: RunConfig, edits: ProviderChanges): ProviderChanges {
   return {
-    ...(edits.chunking &&
-    (edits.chunking.mode !== (config.chunking?.mode ?? "whole") ||
-      (edits.chunking.words ?? 500) !== (config.chunking?.words ?? 500))
+    ...(edits.chunking && !sameChunking(edits.chunking, config.chunking)
       ? { chunking: edits.chunking }
       : {}),
     ...(edits.llm && !same(edits.llm, config.llm) ? { llm: edits.llm } : {}),

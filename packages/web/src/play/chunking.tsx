@@ -1,13 +1,8 @@
 import type { Chunking, ChunkMode } from "@app/slices/narration/chunk.js";
-import { defaultChunkWords } from "@app/slices/narration/chunk.js";
+import { defaultChunkCharacters, defaultChunkWords } from "@app/slices/narration/chunk.js";
 import { Input } from "@/components/ui/input";
 import { LabelledField } from "@/play/pickers";
 import { InlineSwitch } from "@/play/switches";
-
-// How the narration is cut into requests. Whole text is one request, Per paragraph one per
-// paragraph, and Every ~N words cuts at the last sentence boundary at or before N. The third
-// segment names the N it is carrying, which is how the reference sheet draws it ("Every 500
-// words").
 
 export function ChunkingControl({
   value,
@@ -17,47 +12,65 @@ export function ChunkingControl({
   readonly onPick: (next: Chunking) => void;
 }) {
   const words = value.words ?? defaultChunkWords;
-
+  const characters = value.characters ?? defaultChunkCharacters;
+  const counted = value.mode === "words" || value.mode === "characters";
+  const characterMode = value.mode === "characters";
+  const count = characterMode ? value.characters : value.words;
   return (
     <>
       <InlineSwitch<ChunkMode>
         label="Chunking"
+        className="min-w-0 max-w-full flex-wrap [&_[data-slot=toggle-group]]:max-w-full [&_[data-slot=toggle-group]]:flex-wrap"
         value={value.mode}
         options={[
           { value: "whole", label: "Whole" },
           { value: "paragraph", label: "Paragraph" },
           { value: "words", label: `Every ${String(words)} words` },
+          { value: "characters", label: `Every ${String(characters)} characters` },
         ]}
         onPick={(mode) => {
-          // The count is carried across a mode change, so switching away and back does
-          // not lose the number that was typed.
-          onPick(mode === "words" ? { mode, words } : { mode });
+          onPick(
+            mode === "words"
+              ? { mode, words }
+              : mode === "characters"
+                ? { mode, characters }
+                : { mode },
+          );
         }}
       />
-      {value.mode === "words" ? (
-        <LabelledField label="Words" problem={undefined} inline>
+      {counted ? (
+        <LabelledField label={characterMode ? "Characters" : "Words"} problem={undefined} inline>
           {({ id }) => (
             <Input
               id={id}
               type="number"
               min={1}
+              max={characterMode ? 1000000 : 10000}
               inputMode="numeric"
-              className="w-[80px] tabular-nums"
-              value={value.words === undefined ? "" : String(value.words)}
+              className="w-[100px] tabular-nums"
+              value={count === undefined ? "" : String(count)}
               onChange={(event) => {
                 const typed = Number.parseInt(event.target.value, 10);
-                // An emptied box carries no count at all rather than snapping back to a
-                // number the user is in the middle of replacing; the chunker's own
-                // default is what a run without one is cut by.
+                const valid = Number.isFinite(typed) && typed > 0;
                 onPick(
-                  Number.isFinite(typed) && typed > 0
-                    ? { mode: "words", words: typed }
-                    : { mode: "words" },
+                  characterMode
+                    ? valid
+                      ? { mode: "characters", characters: Math.min(typed, 1000000) }
+                      : { mode: "characters" }
+                    : valid
+                      ? { mode: "words", words: Math.min(typed, 10000) }
+                      : { mode: "words" },
                 );
               }}
             />
           )}
         </LabelledField>
+      ) : null}
+      {characterMode ? (
+        <p className="basis-full text-small text-ink3">
+          Ends at the last complete sentence within the character count, including spaces. A longer
+          sentence stays whole; provider request limits still apply.
+        </p>
       ) : null}
     </>
   );

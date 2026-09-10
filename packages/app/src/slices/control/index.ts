@@ -12,6 +12,7 @@ import {
   updateProjectConfig,
 } from "../admission/repo.js";
 import type { FieldError } from "../admission/rules.js";
+import { sameChunking } from "../narration/chunk.js";
 import type { RerunDeps } from "../reruns/index.js";
 import { clearUnfinishedAudio } from "../reruns/index.js";
 import type { ProviderStatus } from "../settings/model.js";
@@ -181,9 +182,7 @@ export function changeProviders(
         changes.audio.model !== project.config.audio?.model ||
         changes.audio.voice !== project.config.audio?.voice);
     const chunkingChanged =
-      changes.chunking !== undefined &&
-      (changes.chunking.mode !== (project.config.chunking?.mode ?? "whole") ||
-        (changes.chunking.words ?? 500) !== (project.config.chunking?.words ?? 500));
+      changes.chunking !== undefined && !sameChunking(changes.chunking, project.config.chunking);
     const orphaned = transact(deps.db, () => {
       const files = audioChanged || chunkingChanged ? clearUnfinishedAudio(deps, id) : [];
       updateProjectConfig(

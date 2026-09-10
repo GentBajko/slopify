@@ -148,3 +148,37 @@ describe("wordsIn", () => {
     expect(wordsIn("   ")).toBe(0);
   });
 });
+
+describe("character chunks", () => {
+  it("stops at the last complete sentence that fits, counting spaces", () => {
+    expect(chunkNarration("One. Two. Six.", { mode: "characters", characters: 9 })).toEqual([
+      "One. Two.",
+      "Six.",
+    ]);
+    expect(chunkNarration("One. Two. Six.", { mode: "characters", characters: 8 })).toEqual([
+      "One.",
+      "Two.",
+      "Six.",
+    ]);
+  });
+  it("counts Unicode characters without splitting surrogate pairs", () => {
+    expect(chunkNarration("😀. Hi. Go.", { mode: "characters", characters: 6 })).toEqual([
+      "😀. Hi.",
+      "Go.",
+    ]);
+  });
+  it("keeps an oversized sentence alone, like word chunking", () => {
+    expect(
+      chunkNarration("Hi. This sentence is much longer. Bye.", {
+        mode: "characters",
+        characters: 10,
+      }),
+    ).toEqual(["Hi.", "This sentence is much longer.", "Bye."]);
+  });
+  it("preserves all source text in order and ignores blank input", () => {
+    expect(
+      chunkNarration(article, { mode: "characters", characters: 50 }).join(" ").split(/\s+/),
+    ).toEqual(article.trim().split(/\s+/));
+    expect(chunkNarration(" \n ", { mode: "characters" })).toEqual([]);
+  });
+});

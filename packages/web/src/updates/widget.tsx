@@ -1,4 +1,4 @@
-import { ArrowDownToLine, LoaderCircle, RefreshCw, X } from "lucide-react";
+import { RefreshCw, X } from "lucide-react";
 import { Popover } from "radix-ui";
 import type { ReactElement } from "react";
 import { useId } from "react";
@@ -37,22 +37,20 @@ export function UpdateWidget({ reload }: { readonly reload: () => void }): React
           aria-label={label}
           title={label}
           className={cn(
-            "fixed right-5 bottom-5 z-30 flex size-10 items-center justify-center rounded-panel border border-line2 bg-panel text-ink2 hover:border-ink3 hover:text-ink",
-            info?.available && "border-accent text-run-text",
+            "fixed right-5 bottom-5 z-30 flex size-10 items-center justify-center rounded-full bg-transparent text-ink2 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
             error && "text-amber",
           )}
         >
-          {active ? (
-            <LoaderCircle
-              aria-hidden="true"
-              size={18}
-              className="animate-spin motion-reduce:animate-none"
-            />
-          ) : (
-            <ArrowDownToLine aria-hidden="true" size={18} />
-          )}
+          <RefreshCw
+            aria-hidden="true"
+            size={20}
+            className={cn(active && "animate-spin motion-reduce:animate-none")}
+          />
           {info?.available && !active ? (
-            <span className="absolute top-1 right-1 size-1.5 rounded-full bg-lamp-run" />
+            <span
+              aria-hidden="true"
+              className="absolute top-1 right-1 size-1.5 rounded-full bg-lamp-run"
+            />
           ) : null}
         </button>
       </Popover.Trigger>

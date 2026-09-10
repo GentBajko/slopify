@@ -13,12 +13,13 @@ function control(value: Chunking, onPick = vi.fn()) {
 }
 
 describe("the chunking control", () => {
-  it("offers the three ways the narration is cut", () => {
+  it("offers the four ways the narration is cut", () => {
     control({ mode: "whole" });
 
     expect(screen.getByRole("radio", { name: "Whole" }).getAttribute("data-state")).toBe("on");
     expect(screen.getByRole("radio", { name: "Paragraph" })).not.toBeNull();
     expect(screen.getByRole("radio", { name: "Every 500 words" })).not.toBeNull();
+    expect(screen.getByRole("radio", { name: "Every 3000 characters" })).not.toBeNull();
   });
 
   it("hides the word count until the run is cut by words", async () => {
@@ -72,4 +73,19 @@ describe("the chunking control", () => {
 
     expect(onPick).toHaveBeenCalledWith({ mode: "paragraph" });
   });
+});
+
+it("edits the character budget and sends it with the selected mode", async () => {
+  function Harness() {
+    const [value, setValue] = useState<Chunking>({ mode: "whole" });
+    return <ChunkingControl value={value} onPick={setValue} />;
+  }
+  render(<Harness />);
+  await userEvent.click(screen.getByRole("radio", { name: "Every 3000 characters" }));
+  await userEvent.clear(screen.getByLabelText("Characters"));
+  await userEvent.type(screen.getByLabelText("Characters"), "1200");
+  expect(
+    screen.getByRole("radio", { name: "Every 1200 characters" }).getAttribute("data-state"),
+  ).toBe("on");
+  expect(screen.getByLabelText("Characters")).toHaveProperty("value", "1200");
 });

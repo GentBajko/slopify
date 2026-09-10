@@ -150,6 +150,35 @@ describe("pause and resume", () => {
 });
 
 describe("provider changes", () => {
+  it("replans unfinished narration when the character count changes, but not for an unchanged count", async () => {
+    const h = harness({ audio: "failed", article: "done" });
+    expect(
+      await changeProviders(h.deps, "p1", { chunking: { mode: "characters", characters: 1200 } }),
+    ).toEqual({ ok: true });
+    insertPiece(h.db, {
+      id: "old",
+      stageId: "s-audio",
+      kind: "chunk",
+      idx: 1,
+      state: "failed",
+      payload: JSON.stringify({ text: "old chunk" }),
+    });
+    expect(
+      await changeProviders(h.deps, "p1", { chunking: { mode: "characters", characters: 1200 } }),
+    ).toEqual({ ok: true });
+    expect(piecesOf(h.db, "s-audio", "chunk")).toHaveLength(1);
+    expect(
+      await changeProviders(h.deps, "p1", { chunking: { mode: "characters", characters: 800 } }),
+    ).toEqual({ ok: true });
+    expect(projectById(h.db, "p1")?.config.chunking).toEqual({
+      mode: "characters",
+      characters: 800,
+    });
+    expect(piecesOf(h.db, "s-audio", "chunk")).toHaveLength(0);
+    expect(h.state("article")).toBe("done");
+    expect(h.state("audio")).toBe("failed");
+    h.db.close();
+  });
   it("changes whole narration into chunks while failed without starting generation", async () => {
     const h = harness({ audio: "failed", article: "done" });
     insertPiece(h.db, {

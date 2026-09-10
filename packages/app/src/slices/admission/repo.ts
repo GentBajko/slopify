@@ -48,7 +48,13 @@ export const runDraftSchema = z.object({
   }),
   // Optional until Play carries the control; unknown keys are stripped by this schema, so
   // a mode not listed here would never reach the audio stage.
-  chunking: z.object({ mode: z.enum(chunkModes), words: z.number().optional() }).optional(),
+  chunking: z
+    .object({
+      mode: z.enum(chunkModes),
+      words: z.number().optional(),
+      characters: z.number().int().min(1).max(1000000).optional(),
+    })
+    .optional(),
   silenceGapSeconds: z.number(),
   subtitles: subtitleConfigSchema.optional(),
 });

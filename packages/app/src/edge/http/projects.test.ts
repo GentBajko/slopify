@@ -677,3 +677,33 @@ describe("planning and batch admission", () => {
     h.db.close();
   });
 });
+
+describe("character chunking admission", () => {
+  it.each([1200, 0, -1, 1.5, 1000001])(
+    "validates and preserves the character count %s",
+    async (characters) => {
+      const { app, db, ticked } = harness();
+      const response = await post(
+        app,
+        draft({
+          sources: {
+            research: "off",
+            article: "provide",
+            audio: "generate",
+            images: "off",
+            thumbnail: "off",
+            video: "off",
+          },
+          audio: { provider: "openai-tts", model: "tts-1", voice: "alloy" },
+          chunking: { mode: "characters", characters },
+        }),
+      );
+      expect(response.status).toBe(characters === 1200 ? 201 : 400);
+      if (characters === 1200) {
+        const body = (await response.json()) as { project: ProjectSummary };
+        expect(body.project.config.chunking).toEqual({ mode: "characters", characters: 1200 });
+      } else expect(ticked).toHaveLength(0);
+      db.close();
+    },
+  );
+});
