@@ -1,7 +1,7 @@
 ---
-generated_at_commit: 3a9796eb7fec
+generated_at_commit: f4d66867e39f
 generated_date: 2026-09-10
-content_hash: e293a0b5e022
+content_hash: 54e4b02083cb
 paths_covered:
   - ":(top)packages/app/src/**"
   - ":(top)packages/web/src/**"
@@ -51,6 +51,8 @@ paths_covered:
 | QueueEntry | `packages/app/src/slices/batch/index.ts:1` | project_queue | Validated model |
 | SubtitleConfig | `packages/app/src/slices/subtitles/model.ts:1` | projects.config JSON | Validated model |
 | Aggregates | `packages/collector/src/model.ts:1` | collector aggregate response | Validated model |
+
+| Chunking | `packages/app/src/slices/narration/chunk.ts:4` | RunConfig.chunking | Sentence-aware narration grouping |
 
 ## Fields and types
 
@@ -526,6 +528,16 @@ Source: `packages/app/src/slices/estimate/index.ts:11`.
 | tokens_used | `number` | yes |
 
 CatalogueModel is a union: exactly one family object is required for the selected branch. Parsed schema defaults are present; input YAML may omit those defaulted fields. Thinking maps supported modes to optional budget, level and effort fields (`packages/app/src/catalog/schema.ts:28`).
+
+### Chunking
+
+| Field | Type | Required |
+|---|---|---|
+| mode | `"whole" \| "paragraph" \| "words" \| "characters"` | yes |
+| words | `number \| undefined` (default 500 in words mode) | no |
+| characters | `number \| undefined` (default 3000 in characters mode) | no |
+
+Character budgets are integers 1–1,000,000 at HTTP boundaries. They count Unicode code points, including internal spaces, and choose the last complete sentence that fits. A single oversized sentence stays whole; provider planning applies the model's hard request limit afterwards. Only the active mode's count participates in edit invalidation (`packages/app/src/slices/narration/chunk.ts:22`, `packages/app/src/slices/narration/chunk.ts:45`).
 
 ## Relationships
 

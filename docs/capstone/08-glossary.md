@@ -1,7 +1,7 @@
 ---
-generated_at_commit: 3a9796eb7fec
+generated_at_commit: f4d66867e39f
 generated_date: 2026-09-10
-content_hash: e293a0b5e022
+content_hash: 54e4b02083cb
 paths_covered:
   - ":(top)packages/app/src/**"
   - ":(top)packages/web/src/**"
@@ -33,3 +33,4 @@ paths_covered:
 | Render plan | Computed image slots, zoom, frame, and FPS passed to local FFmpeg assembly. `packages/app/src/slices/video/plan.ts:1-100` `packages/app/src/slices/video/ffmpeg.ts:1-80` | `render_params`, video slice |
 | Telemetry event | A locally stored and queued usage event sent in batches to the collector. `packages/app/src/slices/telemetry/model.ts:1-80` `packages/app/src/slices/telemetry/flush.ts:1-110` | telemetry tables, collector |
 | Data directory | Configured local directory containing SQLite, project files, staging files, and logs. `packages/app/src/kernel/paths.ts:1-80` | `kernel/paths` |
+| Character chunking | Groups complete sentences up to a user-set character budget (default 3000); a single longer sentence stands alone, with provider limits applied afterwards. | `packages/app/src/slices/narration/chunk.ts:22` |

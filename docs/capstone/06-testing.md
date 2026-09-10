@@ -1,7 +1,7 @@
 ---
-generated_at_commit: 3a9796eb7fec
+generated_at_commit: f4d66867e39f
 generated_date: 2026-09-10
-content_hash: beea3c3da582
+content_hash: fbc488ce49d2
 paths_covered:
   - ":(top)packages/app/src/**"
   - ":(top)packages/web/src/**"
@@ -23,7 +23,7 @@ paths_covered:
 - App test directories cover adapters, catalog, edge, kernel, updater, slices, integration-style `packages/app/test`, and `test/e2e/{skeleton,optional-outputs}.test.ts`; web covers components, routes, Play, project, subtitles, tutorial, updates; collector uses `src/index.test.ts`. Source: repository test-file inventory.
 - CI runs `npm ci`, lint, typecheck, `npm test`, build, and audit on Node 26. Windows additionally runs FFmpeg, e2e, alignment, font, subtitle, CLI, LLM, settings, and real subtitle-export suites. Source: `.github/workflows/ci.yml:7-38`.
 - The e2e skeleton boots the real app on an ephemeral localhost port, generates temporary FFmpeg audio/images, stages them over HTTP, watches SSE, and verifies the finished media. Source: `packages/app/test/e2e/skeleton.test.ts:42-84,133-180`.
-- Release verification on 2026-09-10: 1,893 tests passed, one platform skip; lint, type checking, build and audit passed. Browser tests use isolated local fixtures and do not start paid generation.
+- Release verification on 2026-09-10: 1,904 tests passed, one platform skip; lint, type checking, build and audit passed. Browser tests use isolated local fixtures and do not start paid generation.
 
 ## Doubles
 
@@ -49,3 +49,5 @@ paths_covered:
 - Subtitle/font regressions cover cue/timing/style reuse, font parsing/upload rejection, system fonts, HTTP contracts, and real FFmpeg export. Source: `packages/app/src/slices/subtitles/*.test.ts`; `packages/app/src/slices/fonts/*.test.ts`; `.github/workflows/ci.yml:35-38`.
 - HTTP wiring, SPA visual details, and collector hosting glue have lighter direct coverage. Source: repository test-file inventory; `packages/collector/src/index.test.ts`.
 - No configured load, chaos, security, or accessibility Vitest suite exists. Source: `vitest.config.ts:3-7`; package Vitest configs.
+
+Character-mode tests cover exact boundaries, internal spaces, Unicode, oversized sentences, empty input, API validation/persistence and changed-count recovery. Browser verification covers 1440/390/320-pixel layout, editable character budgets, icon-only updater and the availability dot, without generation or update requests (`packages/app/src/slices/narration/chunk.test.ts:147`, `packages/app/src/edge/http/projects.test.ts:1`, `packages/web/src/play/chunking.test.tsx:1`). Windows runs the sentence-segmentation suite (`.github/workflows/ci.yml:39`).

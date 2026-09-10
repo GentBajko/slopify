@@ -1,7 +1,7 @@
 ---
-generated_at_commit: 3a9796eb7fec
+generated_at_commit: f4d66867e39f
 generated_date: 2026-09-10
-content_hash: 40c8389cfe58
+content_hash: accbad5ecbe4
 paths_covered:
   - ":(top)packages/web/src/**"
   - ":(top)packages/site/**"
@@ -13,6 +13,9 @@ paths_covered:
 Operate surface for monitoring a project, reviewing outputs, and editing controls. Source: packages/web/src/routes/project.tsx:27-79.
 
 ## Composition
+
+Narration chunking offers Whole, Paragraph, Every N words and Every N characters. The selected counted mode displays a numeric field; character mode explains sentence boundaries and oversized-sentence behavior. Options wrap at narrow widths (`packages/web/src/play/chunking.tsx:7`).
+
 The workspace centers the selected output/player and keeps stage navigation, rundown, live output, run settings, subtitle editing, and action controls around it. The final output chooses video, audio export, or article. Source: packages/web/src/routes/project.tsx:31-208; packages/web/src/project/.
 
 ## States

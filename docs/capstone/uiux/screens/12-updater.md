@@ -1,7 +1,7 @@
 ---
-generated_at_commit: 3a9796eb7fec
+generated_at_commit: f4d66867e39f
 generated_date: 2026-09-10
-content_hash: 40c8389cfe58
+content_hash: accbad5ecbe4
 paths_covered:
   - ":(top)packages/web/src/**"
   - ":(top)packages/site/**"
@@ -13,13 +13,13 @@ paths_covered:
 Operate overlay/control family for checking and applying a Slopify update. Source: packages/web/src/updates/widget.tsx:1-220; packages/web/src/updates/api.ts:1-120.
 
 ## Composition
-The floating update control opens a status panel with current/latest version, availability, check-again, and explicit update actions. Source: packages/web/src/updates/widget.tsx:1-220.
+The floating control shows only two circular arrows, with no visible button background or border. A small dot appears when an update is available and installation is inactive. It retains a 40-pixel hit area, accessible status label, focus outline and tooltip. The control opens a status panel with current/latest version, availability, check-again, and explicit update actions. Source: packages/web/src/updates/widget.tsx:1-220.
 
 ## States
 Idle, checking, available, installing/restarting, unavailable, blocked, and error responses are represented by the updater API model and widget. Source: packages/app/src/updater/model.ts:1-27; packages/web/src/updates/widget.tsx:1-220.
 
 ## Motion
-No updater-specific motion definition is present in the widget source. Source: packages/web/src/updates/widget.tsx:1-220.
+The same circular arrows spin during installation; reduced-motion disables the spin. Source: packages/web/src/updates/widget.tsx:1-220.
 
 ## Copy
 The control uses explicit Check again and Update Slopify actions and displays blocked/error detail from the server response. Source: packages/web/src/updates/widget.tsx:1-220; packages/app/src/updater/model.ts:3-18.

@@ -1,7 +1,7 @@
 ---
-generated_at_commit: 3a9796eb7fec
+generated_at_commit: f4d66867e39f
 generated_date: 2026-09-10
-content_hash: 40c8389cfe58
+content_hash: accbad5ecbe4
 paths_covered:
   - ":(top)packages/web/src/**"
   - ":(top)packages/site/**"
@@ -13,6 +13,9 @@ paths_covered:
 Operate surface for configuring and submitting a new video run. Source: packages/web/src/routes/play.tsx:34-45,277-314.
 
 ## Composition
+
+Narration chunking offers Whole, Paragraph, Every N words and Every N characters. The selected counted mode displays a numeric field; character mode explains sentence boundaries and oversized-sentence behavior. Options wrap at narrow widths (`packages/web/src/play/chunking.tsx:7`).
+
 The form groups stage controls, prompt/model pickers, uploads, subtitle controls, and the submit action; the title New run is the focal heading. Source: packages/web/src/routes/play.tsx:277-314; packages/web/src/play/pickers.tsx; packages/web/src/play/cue-sheet.tsx.
 
 ## States

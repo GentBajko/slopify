@@ -4,7 +4,7 @@ scenario: narration
 mockup_row: S6
 screens: [06-play, 08-project]
 depends_on: [01-pipeline-lifecycle, 02-provider-credentials, 05-provided-outputs, 07-article-writing]
-generated_date: 2026-09-09
+generated_date: 2026-09-10
 capstone_version: 5.2.0
 ---
 
@@ -21,8 +21,8 @@ The audio stage: end matter split out, the body chunked per the user's choice, s
 ## Steps
 
 1. End-matter split, run once when the article becomes `done` or `provided`: find the first section whose heading is "Sources Consulted" or "Pronunciation Glossary" (case-insensitive); that section and everything after it are removed from the narration source and written as two separate files on the project, sources and glossary, each shown and downloadable beside the article. Chapter headings stay and are spoken. The glossary is a file only; its IPA is never sent to the TTS.
-2. Chunk the narration source per the run's chunking choice: Whole text = one request; Per paragraph = one request per paragraph; Every ~N words = consecutive chunks, each ending at the last sentence boundary at or before N words, default N = 500.
-3. Synthesize every chunk in parallel with the chosen provider and voice; stream into the page when the provider streams (scenario 01).
+2. Chunk the narration source per the run's chunking choice: Whole text = one request; Per paragraph = one request per paragraph; Every ~N words = consecutive chunks, each ending at the last sentence boundary at or before N words, default N = 500. Every N characters uses the same sentence-boundary rule with a Unicode character count (including internal spaces), default N = 3000; the user can set 1–1,000,000 characters. A single sentence longer than the chosen budget stays whole until provider-limit planning.
+3. Schedule every chunk through the app-wide provider queue, at most five active calls with lower per-provider limits, using the chosen provider and voice; stream into the page when the provider streams (scenario 01).
 4. Concatenate the chunk audio in chunk order with no added silence; provider default sample rate; one output file whose container is `stack`'s (drawn as mp3 in the mockup).
 5. Intro and outro: each picked segment's text is one TTS request with the same provider and voice, stored as its own audio file with its duration; body chunking does not apply to them. A failed request fails the audio stage under the same rules.
 6. Store on the project: the text sent per chunk and per segment, provider, voice, chunking choice, and every audio duration. Durations feed scenario 11 (video timing) and scenario 16 (audio hours).
@@ -31,14 +31,14 @@ The audio stage: end matter split out, the body chunked per the user's choice, s
 ## Branches
 
 - Article has the end-matter headings → files written and body trimmed; no such headings → nothing split, no files.
-- Chunking mode → step 2's three cases.
+- Chunking mode → step 2's four cases.
 
 ## Unhappy paths
 
 - Chunk call fails → scenario 01's retry policy per chunk, idle timeout when streamed.
 - One chunk exhausts its retries → the whole stage fails; manual retry keeps completed chunks and re-runs only failed or not-started ones, then concatenates.
 - Voice ID rejected by the provider → the error names the voice ID (scenario 02).
-- Whole text longer than the provider's per-request limit → the provider's error surfaces as the stage failure; no pre-check.
+- Text longer than the model's request limit → provider-limit planning splits unfinished chunks before synthesis; completed chunks are preserved. A stricter account limit can still return a provider error.
 - Narration source empty after the split → immediate stage failure "nothing to narrate", no retries.
 - Interrupted process → stage failed "interrupted" (scenario 01); completed chunks kept for the retry.
 - Cancel → scenario 13.
@@ -71,3 +71,7 @@ The audio stage: end matter split out, the body chunked per the user's choice, s
 ## Provided-content entry preparation (0.5.1)
 
 When Article is provided and Audio is generated, the Audio stage first prepares selected intro/outro text from the supplied article. Text-mode entries need no LLM; LLM-mode entries use the saved text provider. Entry text is checkpointed on the Article stage so retries and voice changes retain finished text, while synthesis uses the current voice. Uploaded narration (Audio Provide) is used as a complete file; intro/outro pickers apply only to generated narration.
+
+## Editable chunk budgets (0.8.1)
+
+Paused or failed generated narration can switch to character chunking or change N in Run providers. Save validates and stores the choice without starting generation. A changed mode or effective count clears unfinished narration pieces; saving an unchanged effective budget preserves them. Finished audio remains intact. Resume remains a separate action (`packages/app/src/slices/control/index.ts:184`, `packages/web/src/project/providers.tsx:137`).
