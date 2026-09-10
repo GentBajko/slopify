@@ -113,7 +113,7 @@ export function thumbnailRecipes(
   const prompt =
     config.sources.thumbnail === "prompt_by_llm" && promptRecipe !== undefined
       ? matchingText(context, promptRecipe, "prompt")
-      : renderedPrompt(context, "thumbnail");
+      : renderedPrompt(context, "thumbnailPrompt");
   return [
     recipe(
       context,

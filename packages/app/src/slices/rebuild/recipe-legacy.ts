@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { StageKind } from "../../kernel/pipeline.js";
 import type { StagePiece } from "../../kernel/runner/piece-repo.js";
-import type { Project, Stage } from "../admission/model.js";
+import type { Project, RunConfig, Stage } from "../admission/model.js";
 import type { RevisionContent } from "../revisions/model.js";
 import type { Output } from "../storage/model.js";
 import { buildRecipes } from "./recipe-build.js";
@@ -24,7 +24,7 @@ export function baselineFingerprints(
   });
   const fingerprints = Object.fromEntries(recipes.map((value) => [value.key, value.fingerprint]));
   for (const output of outputs) {
-    const key = legacyOutputWorkKey(output);
+    const key = legacyOutputWorkKey(output, project.config);
     if (fingerprints[key] === undefined) fingerprints[key] = `legacy:${output.id}`;
   }
   for (const piece of pieces) {
@@ -36,7 +36,7 @@ export function baselineFingerprints(
 export function legacyOutputSlot(output: Output): string {
   return output.role === "image" ? `image:${output.id}` : `${output.stageKind}:${output.role}`;
 }
-export function legacyOutputWorkKey(output: Output): string {
+export function legacyOutputWorkKey(output: Output, config?: Pick<RunConfig, "sources">): string {
   switch (output.role) {
     case "image":
       return `image:${output.id}`;
@@ -50,7 +50,7 @@ export function legacyOutputWorkKey(output: Output): string {
     case "glossary":
       return "article:body";
     case "audio_body":
-      return "audio:body:concat";
+      return config?.sources.audio === "provide" ? "audio:provided" : "audio:body:concat";
     case "audio_intro":
       return "audio:intro";
     case "audio_outro":
@@ -77,14 +77,8 @@ export function legacyPieceKey(
   outputs: readonly Output[] = [],
 ): string {
   if (piece.kind === "chunk") return `audio:body:${piece.id}:1`;
-  if (piece.kind === "image") {
-    const file = legacyPieceFile(piece.payload);
-    const output =
-      file === undefined
-        ? undefined
-        : outputs.find((row) => row.role === "image" && row.path === file);
-    return `image:${output?.id ?? piece.id}`;
-  }
+  if (piece.kind === "image") return `image:${legacyImageOutput(piece, outputs)?.id ?? piece.id}`;
+  if (piece.kind === "prompt_written" && stageKind === "thumbnail") return "thumbnail:prompt";
   if (piece.kind === "segment") {
     const category = piece.idx === 1 ? "intro" : "outro";
     if (stageKind === "article") return `entry:${category}:text`;
@@ -113,19 +107,46 @@ function legacyStageKind(
       return "article";
   }
 }
-function legacyPieceFile(payload: string | null): string | undefined {
-  const parsed = z
-    .string()
-    .transform((value, context): unknown => {
-      try {
-        return JSON.parse(value) as unknown;
-      } catch (error) {
-        if (!(error instanceof SyntaxError)) throw error;
-        context.addIssue({ code: "custom", message: "Invalid legacy piece JSON." });
-        return z.NEVER;
-      }
-    })
-    .pipe(z.object({ file: z.string().optional() }))
-    .safeParse(payload);
-  return parsed.success ? parsed.data.file : undefined;
+export function legacyImageOutput(
+  piece: StagePiece,
+  outputs: readonly Output[],
+): Output | undefined {
+  if (piece.kind !== "image") return undefined;
+  const parsed = legacyImageMetadata.safeParse(piece.payload);
+  if (!parsed.success) return undefined;
+  const { file, prompt, promptName } = parsed.data;
+  const matches = outputs.filter(
+    (row) =>
+      row.role === "image" &&
+      (file !== undefined
+        ? row.path === file
+        : typeof prompt === "string" &&
+          row.meta.index === piece.idx &&
+          row.meta.prompt === prompt &&
+          (typeof promptName !== "string" ||
+            row.meta.promptName === undefined ||
+            row.meta.promptName === promptName)),
+  );
+  if (matches.length > 1)
+    throw new Error(`Legacy image piece ${piece.id} matches multiple outputs.`);
+  return matches[0];
 }
+
+const legacyImageMetadata = z
+  .string()
+  .transform((value, context): unknown => {
+    try {
+      return JSON.parse(value) as unknown;
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) throw error;
+      context.addIssue({ code: "custom", message: "Invalid legacy piece JSON." });
+      return z.NEVER;
+    }
+  })
+  .pipe(
+    z.object({
+      file: z.string().optional(),
+      prompt: z.unknown().optional(),
+      promptName: z.unknown().optional(),
+    }),
+  );

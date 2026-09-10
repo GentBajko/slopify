@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+import type { StagePiece } from "../../kernel/runner/piece-repo.js";
 import { articleMessages, continuationMessages } from "../article/continuation.js";
 import { plainText } from "../article/plain.js";
 import { segmentMessages } from "../article/segments.js";
@@ -7,7 +8,8 @@ import { plannerMessages, subAgentMessages } from "../research/planner.js";
 import { synthesisMessages } from "../research/synthesis.js";
 import { thumbnailMessages } from "../thumbnail/by-llm.js";
 import { catalogue, config, content, emptyView, readyView, workFor } from "./recipe-fixture.js";
-import { planRevision, planRevisionWork } from "./recipes.js";
+import { validateRecipeInputs } from "./recipe-validation.js";
+import { baselineFingerprints, legacyPieceKey, planRevision, planRevisionWork } from "./recipes.js";
 
 it("keeps independent generated images when article text changes", () => {
   const work = workFor(readyView(), config, { ...content, articleMarkdown: "Changed story." }).work;
@@ -93,7 +95,7 @@ it("uses plain body in LLM entries and thumbnail; body article stays reusable fo
     ...config,
     sources: { ...config.sources, audio: "generate" as const, thumbnail: "prompt_by_llm" as const },
     intro: { name: "Intro", mode: "llm" as const },
-    rendered: { ...config.rendered, intro: "Introduce", thumbnail: "Summarize" },
+    rendered: { ...config.rendered, intro: "Introduce", thumbnailPrompt: "Summarize" },
   };
   const base = readyView(c);
   const next = { ...c, rendered: { ...c.rendered, intro: "New introduction" } };
@@ -215,4 +217,88 @@ it("excludes old selected assets from changed work inputs while retaining their 
   const video = plan.recipes.find((row) => row.key === "export:video");
   expect(JSON.stringify(video?.input)).not.toContain("asset-image:harbor");
   expect(JSON.stringify(video?.input)).toContain("asset-image:hill");
+});
+
+it.each(["from_prompt", "prompt_by_llm"] as const)(
+  "uses the saved thumbnailPrompt template key for %s",
+  (mode) => {
+    const c = {
+      ...config,
+      sources: { ...config.sources, thumbnail: mode },
+      rendered: { ...config.rendered, thumbnailPrompt: "Saved old instruction" },
+      values: { topic: "Coast" },
+    };
+    const value = { ...content, promptTemplates: { thumbnailPrompt: "Show {{topic}}" } };
+    const base = emptyView(c, value);
+    const planned = planRevision(base, { config: c, content: value });
+    expect(planned.ok).toBe(true);
+    const work = workFor(base, c, value);
+    if (mode === "from_prompt") {
+      expect(work.recipes.find((row) => row.key === "thumbnail:image")?.input).toMatchObject({
+        kind: "image",
+        prompt: "Show Coast",
+      });
+    } else {
+      expect(work.recipes.find((row) => row.key === "thumbnail:prompt")?.input).toMatchObject({
+        messages: thumbnailMessages({
+          instruction: "Show Coast",
+          title: c.title,
+          values: c.values,
+          format: c.format,
+          article: plainText(splitEndMatter(content.articleMarkdown ?? "").body),
+        }),
+      });
+    }
+    expect(validateRecipeInputs({ ...c, rendered: {} }, content).map((row) => row.field)).toContain(
+      "rendered.thumbnailPrompt",
+    );
+  },
+);
+it("uses an adopted thumbnail prompt instead of deferring its image request again", () => {
+  const c = {
+    ...config,
+    sources: { ...config.sources, thumbnail: "prompt_by_llm" as const },
+    rendered: { ...config.rendered, thumbnailPrompt: "Summarize" },
+  };
+  const piece: StagePiece = {
+    id: "written",
+    stageId: "thumbnail-stage",
+    kind: "prompt_written",
+    idx: 1,
+    state: "done",
+    payload: JSON.stringify({ prompt: "A retained coastal image", sent: "Saved request" }),
+  };
+  const project = {
+    id: "p1",
+    title: c.title,
+    format: c.format,
+    config: c,
+    createdAt: "now",
+    updatedAt: "now",
+  };
+  const fingerprints = baselineFingerprints(project, [], [piece], content, [
+    { id: piece.stageId, kind: "thumbnail" },
+  ]);
+  const key = legacyPieceKey(piece, "thumbnail");
+  const fingerprint = fingerprints[key];
+  if (fingerprint === undefined) throw new Error("Missing thumbnail fingerprint");
+  const base = emptyView(c);
+  const manifest = {
+    outputs: [],
+    pieces: [{ key, stageKind: "thumbnail" as const, piece, assetId: null, fingerprint }],
+  };
+  const plan = planRevisionWork(
+    { ...base.revision, fingerprints },
+    manifest,
+    catalogue,
+    new Set(),
+    {
+      articleMarkdown: content.articleMarkdown ?? null,
+      researchNotes: null,
+    },
+  );
+  expect(plan.recipes.find((row) => row.key === "thumbnail:image")?.input).toMatchObject({
+    kind: "image",
+    prompt: "A retained coastal image",
+  });
 });

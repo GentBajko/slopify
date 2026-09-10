@@ -224,7 +224,7 @@ export function textRecipes(context: RecipeContext): TextRecipes {
     };
   }
   if (config.sources.thumbnail === "prompt_by_llm") {
-    const prompt = renderedPrompt(context, "thumbnail");
+    const prompt = renderedPrompt(context, "thumbnailPrompt");
     const messages = thumbnailMessages({
       instruction: prompt,
       title: config.title,

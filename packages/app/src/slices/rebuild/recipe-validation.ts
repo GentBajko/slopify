@@ -65,9 +65,9 @@ export function validateRecipeInputs(
       });
   if (config.sources.thumbnail === "from_prompt" || config.sources.thumbnail === "prompt_by_llm")
     prompts.push({
-      field: "rendered.thumbnail",
-      raw: content.promptTemplates.thumbnail ?? null,
-      literal: config.rendered.thumbnail,
+      field: "rendered.thumbnailPrompt",
+      raw: content.promptTemplates.thumbnailPrompt ?? null,
+      literal: config.rendered.thumbnailPrompt,
     });
   if (config.sources.images !== "off")
     for (const key of content.imageOrder) {
