@@ -21,7 +21,10 @@ async function regular(): Promise<Uint8Array> {
 }
 
 describe("font catalog", () => {
-  it("always resolves the bundled default with matching renderer metadata", async () => {
+  // Listing includes the runner’s installed fonts, whose first scan can exceed five seconds.
+  it("always resolves the bundled default with matching renderer metadata", {
+    timeout: 30_000,
+  }, async () => {
     const paths = await fresh();
     expect(await resolveFont(paths, "default")).toMatchObject({
       id: "default",
