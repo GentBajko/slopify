@@ -70,8 +70,9 @@ export function useUpdate(reload: () => void): UpdateView {
     // tab on the current build until that candidate leaves the restart barrier.
     if (status.data.currentVersion !== acceptedVersion && activated && !reloaded.current) {
       reloaded.current = true;
+      setAcceptedVersion(null);
       reload();
-    } else if (status.data.status === "error") {
+    } else if (activated) {
       setAcceptedVersion(null);
     }
   }, [acceptedVersion, reload, status.data]);

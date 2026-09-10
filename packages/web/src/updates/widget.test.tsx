@@ -261,3 +261,35 @@ describe("the floating update control", () => {
     );
   });
 });
+
+it("clears Updating when the server returns idle at the same version", async () => {
+  let accepted = false;
+  const reload = vi.fn();
+  renderApp(
+    <UpdateWidget reload={reload} />,
+    testDeps({
+      "GET /api/update": (request) =>
+        jsonAnswer(
+          accepted
+            ? { ...available, available: false, canUpdate: false, status: "idle" }
+            : available,
+        )(request),
+      "POST /api/update": (request) => {
+        accepted = true;
+        return jsonAnswer({ ...available, status: "installing" }, 202)(request);
+      },
+    }),
+  );
+  await openUpdates();
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"] });
+  fireEvent.click(screen.getByRole("button", { name: "Update Slopify" }));
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(2_010);
+  });
+  expect(screen.queryByRole("button", { name: "Updating…" })).toBeNull();
+  expect(screen.getByRole<HTMLButtonElement>("button", { name: "Check again" }).disabled).toBe(
+    false,
+  );
+  expect(screen.getByText("No newer release is available.")).not.toBeNull();
+  expect(reload).not.toHaveBeenCalled();
+});

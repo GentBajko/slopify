@@ -26,3 +26,5 @@ The control uses explicit Check again and Update Slopify actions and displays bl
 
 ## Not in play
 Permission-denied is represented by the server API rather than a dedicated widget state. Source: packages/app/src/edge/http/update.ts:17-29.
+
+A successful idle response clears the local Updating state even if the server version is unchanged (for example after a same-version restart). A changed activated version still requests one reload; the local update flag is cleared before that request.
