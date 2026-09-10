@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
@@ -22,6 +22,31 @@ function dataDir(): string {
 }
 
 describe("reconcileStorage", () => {
+  it("keeps historical registry files without a current output or piece", () => {
+    const paths = layout(dataDir());
+    ensureDirs(paths, { mode: 0o700 });
+    const db = migrated();
+    try {
+      db.exec("INSERT INTO projects VALUES ('p1','t','16:9','{}','old','old')");
+      db.exec("INSERT INTO project_assets VALUES ('a1','p1','assets/a1/article.md',3,'old')");
+      db.exec("INSERT INTO project_assets VALUES ('legacy','p1','audio-body.wav',4,'old')");
+      mkdirSync(join(paths.projects, "p1", "assets", "a1"), { recursive: true });
+      mkdirSync(join(paths.projects, "p1", "assets", "failed"), { recursive: true });
+      writeFileSync(join(paths.projects, "p1", "assets", "a1", "article.md"), "old");
+      writeFileSync(join(paths.projects, "p1", "audio-body.wav"), "kept");
+      writeFileSync(join(paths.projects, "p1", "assets", "failed", "article.md"), "orphan");
+      expect(reconcileStorage(db, paths)).toEqual({ orphanFiles: 1, stagedFiles: 0 });
+      expect(readFileSync(join(paths.projects, "p1", "assets", "a1", "article.md"), "utf8")).toBe(
+        "old",
+      );
+      expect(readFileSync(join(paths.projects, "p1", "audio-body.wav"), "utf8")).toBe("kept");
+      expect(existsSync(join(paths.projects, "p1", "assets", "failed", "article.md"))).toBe(false);
+    } finally {
+      db.close();
+      rmSync(paths.dataDir, { recursive: true, force: true });
+    }
+  });
+
   it("keeps tracked files, drops orphans, folders of gone projects, and staging", () => {
     const paths = layout(dataDir());
     ensureDirs(paths, { mode: 0o700 });

@@ -26,6 +26,8 @@ import {
   stagedFileById,
 } from "./repo.js";
 
+export { prepareStagedFile, prepareText } from "./prepare.js";
+
 export interface StorageDeps {
   readonly db: DatabaseSync;
   readonly paths: Paths;

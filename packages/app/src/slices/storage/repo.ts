@@ -56,8 +56,6 @@ export function outputById(db: DatabaseSync, id: string): Output | undefined {
   return row === undefined ? undefined : toOutput(outputRow.parse(row));
 }
 
-// An action replaces an output rather than versioning it. The row goes
-// here; the file it names is the caller's to unlink once this has committed.
 export function deleteOutput(db: DatabaseSync, id: string): void {
   db.prepare("DELETE FROM outputs WHERE id = ?").run(id);
 }

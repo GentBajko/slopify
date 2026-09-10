@@ -13,7 +13,11 @@ export interface Reconciled {
 export function reconcileStorage(db: DatabaseSync, paths: Paths): Reconciled {
   const projects = idsOf(db, "SELECT id FROM projects", "id");
   const kept = new Set<string>();
-  for (const row of db.prepare("SELECT project_id, path FROM outputs").all()) {
+  for (const row of db
+    .prepare(
+      "SELECT project_id, path FROM outputs UNION SELECT project_id, path FROM project_assets",
+    )
+    .all()) {
     const projectId = row.project_id;
     const path = row.path;
     if (typeof projectId === "string" && typeof path === "string") {
