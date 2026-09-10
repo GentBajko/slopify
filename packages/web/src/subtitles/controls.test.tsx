@@ -1,3 +1,4 @@
+import type { Format } from "@app/kernel/pipeline.js";
 import { defaultSubtitles, type SubtitleConfig } from "@app/slices/subtitles/model.js";
 import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -17,7 +18,9 @@ function Form({
   video = true,
   audio = true,
   onUploading,
+  format = "16:9",
 }: {
+  readonly format?: Format;
   readonly video?: boolean;
   readonly audio?: boolean;
   readonly onUploading?: (pending: boolean) => void;
@@ -27,6 +30,7 @@ function Form({
     <>
       <SubtitleControls
         value={value}
+        format={format}
         videoEnabled={video}
         audioEnabled={audio}
         onChange={setValue}
@@ -38,7 +42,7 @@ function Form({
 }
 
 describe("subtitle controls", () => {
-  it("starts Off, loads fonts only when enabled, and previews changed font and size", async () => {
+  it("starts Off, loads fonts only when enabled, and keeps changed font and size", async () => {
     const user = userEvent.setup();
     const list = vi.fn(jsonAnswer({ fonts }));
     renderApp(<Form />, testDeps({ "GET /api/fonts": list }));
@@ -53,10 +57,6 @@ describe("subtitle controls", () => {
     await user.clear(size);
     await user.type(size, "64");
     expect(screen.getByLabelText("Selected subtitles").textContent).toContain('"fontSize":64');
-    expect(
-      screen.getByRole("img", { name: "Subtitle style preview" }).querySelector("span")?.style
-        .fontSize,
-    ).toBe("32px");
     expect(screen.getByText(/approximately 95 MB/)).not.toBeNull();
   });
 
@@ -154,4 +154,36 @@ describe("subtitle controls", () => {
     await user.selectOptions(screen.getByLabelText("Subtitles", { selector: "select" }), "files");
     expect(screen.getByText(/Audio exports support separate subtitle files/)).not.toBeNull();
   });
+});
+
+it("previews all five saved positions in the selected video frame", async () => {
+  const user = userEvent.setup();
+  const mounted = renderApp(
+    <Form format="9:16" />,
+    testDeps({ "GET /api/fonts": jsonAnswer({ fonts }) }),
+  );
+  await user.selectOptions(screen.getByLabelText("Subtitles", { selector: "select" }), "burn-in");
+  const preview = screen.getByRole("img", { name: "Subtitle style preview" });
+  expect(preview.style.aspectRatio).toBe("1080 / 1920");
+  const position = screen.getByLabelText("Subtitle position");
+  expect(position.querySelectorAll("option")).toHaveLength(5);
+  for (const [value, top] of [
+    ["top", 3.125],
+    ["upper-middle", 25],
+    ["center", 50],
+    ["lower-middle", 75],
+    ["bottom", 96.875],
+  ] as const) {
+    await user.selectOptions(position, value);
+    expect(preview.querySelector("span")?.style.top).toBe(`${top}%`);
+    expect(screen.getByLabelText("Selected subtitles").textContent).toContain(
+      `"position":"${value}"`,
+    );
+  }
+  mounted.unmount();
+  renderApp(<Form format="16:9" />, testDeps({ "GET /api/fonts": jsonAnswer({ fonts }) }));
+  await user.selectOptions(screen.getByLabelText("Subtitles", { selector: "select" }), "burn-in");
+  expect(screen.getByRole("img", { name: "Subtitle style preview" }).style.aspectRatio).toBe(
+    "1920 / 1080",
+  );
 });

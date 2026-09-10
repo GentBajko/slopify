@@ -9,6 +9,7 @@ describe("subtitle configuration", () => {
       language: "en",
       fontId: "default",
       fontSize: 48,
+      position: "bottom",
     });
   });
   it.each([
@@ -17,6 +18,7 @@ describe("subtitle configuration", () => {
     { mode: "files", fontSize: 121 },
     { mode: "files", fontSize: 32.5 },
     { mode: "files", language: "unknown" },
+    { mode: "burn-in", position: "anywhere" },
   ])("rejects invalid subtitle settings: %j", (value) => {
     expect(subtitleConfigSchema.safeParse(value).success).toBe(false);
   });

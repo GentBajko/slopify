@@ -1,4 +1,3 @@
-import type { Format } from "@app/slices/admission/model.js";
 import { titleMax } from "@app/slices/admission/rules.js";
 import type { Field } from "@app/slices/admission/substitute.js";
 import type { Entry } from "@app/slices/library/model.js";
@@ -9,11 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Blocker } from "@/play/admission";
+import { FormatPicker } from "@/play/format-picker";
 import { KeywordBlock } from "@/play/keywords";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
 import type { PlayFormState } from "@/play/state";
 import { needsLlm } from "@/play/state";
-import { InlineSwitch } from "@/play/switches";
 
 // The sticky right column: the run's title and frame, the entries narrated around it, the LLM
 // row when something asks for one, the keywords the picked prompts want, and the Play key the
@@ -73,18 +72,7 @@ export function CueSheet({
         </div>
 
         <div className="flex flex-wrap gap-[10px]">
-          <InlineSwitch<Format>
-            label="Format"
-            className="flex-col items-start gap-[5px]"
-            value={form.format}
-            options={[
-              { value: "16:9", label: "16:9" },
-              { value: "9:16", label: "9:16" },
-            ]}
-            onPick={(format) => {
-              update({ format });
-            }}
-          />
+          <FormatPicker value={form.format} onPick={(format) => update({ format })} />
           {form.sources.audio !== "generate" ? null : (
             <>
               <div className="min-w-[120px] flex-1">

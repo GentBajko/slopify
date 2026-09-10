@@ -13,7 +13,7 @@ export function subtitlesFor(
     readonly images: StageSource;
   },
 ): SubtitleConfig {
-  const selected = value ?? defaultSubtitles;
+  const selected = { ...defaultSubtitles, ...value };
   const mode =
     sources.audio === "off"
       ? "off"
@@ -38,7 +38,8 @@ export function sameSubtitles(left: SubtitleConfig, right: SubtitleConfig): bool
     left.mode === right.mode &&
     left.language === right.language &&
     left.fontId === right.fontId &&
-    left.fontSize === right.fontSize
+    left.fontSize === right.fontSize &&
+    (left.position ?? "bottom") === (right.position ?? "bottom")
   );
 }
 

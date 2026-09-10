@@ -1,12 +1,16 @@
+import type { Format } from "@app/kernel/pipeline.js";
 import type { SubtitleConfig } from "@app/slices/subtitles/model.js";
+import { subtitlePositions } from "@app/slices/subtitles/model.js";
 import { useId, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { validSubtitleStyle } from "./config";
 import { FontPicker } from "./font-picker";
+import { SubtitlePreview } from "./style-preview";
 
 export function SubtitleControls({
   value,
+  format = "16:9",
   audioEnabled,
   videoEnabled,
   disabled = false,
@@ -15,6 +19,7 @@ export function SubtitleControls({
   problem,
 }: {
   readonly value: SubtitleConfig;
+  readonly format?: Format;
   readonly audioEnabled: boolean;
   readonly videoEnabled: boolean;
   readonly disabled?: boolean;
@@ -25,6 +30,7 @@ export function SubtitleControls({
   const id = useId();
   const sizeId = useId();
   const hintId = useId();
+  const positionId = useId();
   const [uploading, setUploading] = useState(false);
   const fontProblem = problem?.("subtitles.fontId");
   const sizeProblem = problem?.("subtitles.fontSize");
@@ -36,7 +42,7 @@ export function SubtitleControls({
         className="flex min-w-0 flex-col gap-3 disabled:opacity-60"
       >
         <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[210px] flex-1">
+          <div className="min-w-0 flex-1">
             <Label htmlFor={id} className="mb-1">
               Subtitles
             </Label>
@@ -66,35 +72,65 @@ export function SubtitleControls({
               Timed from your narration on this computer. First use downloads an approximately 95 MB
               speech model. Review the subtitles before publishing.
             </p>
-            <div className="max-w-[180px]">
-              <Label htmlFor={sizeId} className="mb-1">
-                Subtitle font size
-              </Label>
-              <Input
-                id={sizeId}
-                type="number"
-                min={16}
-                max={120}
-                step={1}
-                value={value.fontSize}
-                aria-invalid={!validSubtitleStyle(value) || sizeProblem !== undefined}
-                onChange={(event) => onChange({ ...value, fontSize: Number(event.target.value) })}
-              />
-              {!validSubtitleStyle(value) || sizeProblem ? (
-                <p role="alert" className="mt-1 text-label text-red">
-                  {sizeProblem ?? "Choose a whole font size from 16 to 120."}
-                </p>
-              ) : null}
+            <div
+              className="grid items-start gap-5"
+              style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))" }}
+            >
+              <div className="flex min-w-0 flex-col gap-4">
+                <FontPicker
+                  value={value.fontId}
+                  onPick={(fontId) => onChange({ ...value, fontId })}
+                  onUploading={(pending) => {
+                    setUploading(pending);
+                    onUploading?.(pending);
+                  }}
+                />
+                <div className="max-w-[180px]">
+                  <Label htmlFor={sizeId} className="mb-1">
+                    Subtitle font size
+                  </Label>
+                  <Input
+                    id={sizeId}
+                    type="number"
+                    min={16}
+                    max={120}
+                    step={1}
+                    value={value.fontSize}
+                    aria-invalid={!validSubtitleStyle(value) || sizeProblem !== undefined}
+                    onChange={(event) =>
+                      onChange({ ...value, fontSize: Number(event.target.value) })
+                    }
+                  />
+                  {!validSubtitleStyle(value) || sizeProblem ? (
+                    <p role="alert" className="mt-1 text-label text-red">
+                      {sizeProblem ?? "Choose a whole font size from 16 to 120."}
+                    </p>
+                  ) : null}
+                </div>
+                <div>
+                  <Label htmlFor={positionId} className="mb-1">
+                    Subtitle position
+                  </Label>
+                  <select
+                    id={positionId}
+                    value={value.position ?? "bottom"}
+                    onChange={(event) => {
+                      const position = subtitlePositions.find((one) => one === event.target.value);
+                      if (position) onChange({ ...value, position });
+                    }}
+                    className="h-8 w-full rounded-control border border-line2 bg-panel2 px-[10px] text-small text-ink"
+                  >
+                    {subtitlePositions.map((position) => (
+                      <option key={position} value={position}>
+                        {position[0]?.toUpperCase()}
+                        {position.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <SubtitlePreview value={value} format={format} />
             </div>
-            <FontPicker
-              value={value.fontId}
-              fontSize={value.fontSize}
-              onPick={(fontId) => onChange({ ...value, fontId })}
-              onUploading={(pending) => {
-                setUploading(pending);
-                onUploading?.(pending);
-              }}
-            />
             {fontProblem ? (
               <p role="alert" className="text-small text-red">
                 {fontProblem}
@@ -102,7 +138,8 @@ export function SubtitleControls({
             ) : null}
             {value.mode === "files" ? (
               <p className="text-label text-ink3">
-                Font styling applies to burned captions. SRT/VTT players choose their own styling.
+                Font, size and position apply to burned captions. SRT/VTT players choose their own
+                styling.
               </p>
             ) : null}
           </>

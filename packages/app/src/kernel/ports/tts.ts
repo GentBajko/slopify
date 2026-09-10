@@ -9,6 +9,16 @@ export interface TtsRequest {
   readonly voiceId: string;
   readonly text: string;
   readonly signal: AbortSignal;
+  // Successful status replies from a queued synthesis job also count as activity.
+  readonly onActivity?: (() => void) | undefined;
+  // Opaque provider continuation, scoped to this narration call and retained across
+  // automatic attempts. A failed poll/download must not submit another paid job.
+  readonly continuation?:
+    | {
+        readonly read: () => string | undefined;
+        readonly write: (token: string) => void;
+      }
+    | undefined;
 }
 
 // mp3 is the one container the renderer's plan assumes; an

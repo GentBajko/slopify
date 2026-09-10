@@ -243,6 +243,11 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
           }}
         />
         <FieldError id={`${refusalId}-voiceId`} message={problem("voiceId")} />
+        {provider === "inworld" ? (
+          <p className="mt-1 text-label text-ink3">
+            Use an Inworld voice ID, such as Dennis, or one from your workspace.
+          </p>
+        ) : null}
         {add.error === null ? null : (
           <p className="mt-1 text-label text-red">{add.error.message}</p>
         )}

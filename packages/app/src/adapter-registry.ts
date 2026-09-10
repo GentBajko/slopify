@@ -12,6 +12,7 @@ import { openRouterLlm } from "./adapters/llm/openrouter.js";
 import type { RunCli } from "./adapters/llm/run-cli.js";
 import { cartesiaTts } from "./adapters/tts/cartesia.js";
 import { elevenLabsTts } from "./adapters/tts/elevenlabs.js";
+import { inworldTts } from "./adapters/tts/inworld.js";
 import { openAiTts } from "./adapters/tts/openai.js";
 import type { Clock } from "./kernel/clock.js";
 import type { ImagePort } from "./kernel/ports/image.js";
@@ -76,6 +77,7 @@ export function buildRegistry(deps: RegistryDeps): Registry {
     ["elevenlabs", elevenLabsTts({ fetch: deps.fetch, key: keyOf("elevenlabs") })],
     ["openai-tts", openAiTts({ fetch: deps.fetch, key: keyOf("openai-tts") })],
     ["cartesia", cartesiaTts({ fetch: deps.fetch, key: keyOf("cartesia") })],
+    ["inworld", inworldTts({ fetch: deps.fetch, key: keyOf("inworld"), clock: deps.clock })],
   ]);
   // Four image providers behind one port, each handed the reader for its own key row.
   // Replicate also takes the clock: `Prefer: wait` gives up after 60 s and the prediction has

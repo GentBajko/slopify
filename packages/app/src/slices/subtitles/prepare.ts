@@ -90,7 +90,12 @@ export async function prepareSubtitles(
     writeFileSync(join(directory, "subtitles.vtt"), serializeVtt(cues), { mode: 0o600 });
     writeFileSync(
       join(directory, "subtitles.ass"),
-      serializeAss(cues, { ...frame, fontSize: config.fontSize, fontName: font.assName }),
+      serializeAss(cues, {
+        ...frame,
+        fontSize: config.fontSize,
+        fontName: font.assName,
+        position: config.position,
+      }),
       { mode: 0o600 },
     );
     writeFileSync(join(directory, "subtitles.json"), JSON.stringify({ key, words, font }), {

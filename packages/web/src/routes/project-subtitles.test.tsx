@@ -70,6 +70,7 @@ describe("existing project subtitles", () => {
     const size = screen.getByLabelText("Subtitle font size");
     await user.clear(size);
     await user.type(size, "64");
+    await user.selectOptions(screen.getByLabelText("Subtitle position"), "upper-middle");
     await user.click(screen.getByRole("button", { name: "Save subtitles" }));
     await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
     await waitFor(() =>
@@ -82,6 +83,7 @@ describe("existing project subtitles", () => {
       mode: "burn-in",
       fontId: "custom",
       fontSize: 64,
+      position: "upper-middle",
     });
     mounted.unmount();
     renderRouted(<ProjectRoute projectId="p1" />, app);
@@ -89,6 +91,9 @@ describe("existing project subtitles", () => {
     expect(subtitleMode().value).toBe("burn-in");
     expect((screen.getByLabelText("Subtitle font") as HTMLSelectElement).value).toBe("custom");
     expect((screen.getByLabelText("Subtitle font size") as HTMLInputElement).value).toBe("64");
+    expect((screen.getByLabelText("Subtitle position") as HTMLSelectElement).value).toBe(
+      "upper-middle",
+    );
   });
 
   it("holds Resume while subtitle edits are unsaved, and saves separately on paused projects", async () => {

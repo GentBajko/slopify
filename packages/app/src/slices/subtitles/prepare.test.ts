@@ -9,7 +9,7 @@ import { ulidIds } from "../../kernel/ids.js";
 import { ensureDirs, layout } from "../../kernel/paths.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import { insertPiece } from "../../kernel/runner/piece-repo.js";
-import { insertProject, insertStage } from "../admission/repo.js";
+import { insertProject, insertStage, projectById, updateProjectConfig } from "../admission/repo.js";
 import { insertOutput } from "../storage/repo.js";
 import type { VideoDeps } from "../video/run.js";
 import { defaultSubtitles } from "./model.js";
@@ -143,7 +143,25 @@ describe("subtitle preparation", () => {
         meta: {},
         createdAt: "2026",
       });
-    await prepareSubtitles(one.deps, one.context, audio, { width: 1080, height: 1920 });
+    const saved = projectById(one.deps.db, "p1");
+    if (saved === undefined) throw new Error("Missing project fixture");
+    updateProjectConfig(
+      one.deps.db,
+      "p1",
+      {
+        ...saved.config,
+        subtitles: { ...defaultSubtitles, mode: "burn-in", position: "upper-middle" },
+      },
+      "2026",
+    );
+    const repositioned = await prepareSubtitles(one.deps, one.context, audio, {
+      width: 1080,
+      height: 1920,
+    });
+    const ass = repositioned?.assets.find((asset) => asset.role === "subtitle_ass");
+    expect(readFileSync(join(one.dir, ass?.path ?? "missing"), "utf8")).toContain(
+      "{\\an5\\pos(540,480)}",
+    );
     expect(one.texts).toHaveLength(1);
     writeFileSync(join(one.dir, "body.mp3"), "changed recording");
     await prepareSubtitles(one.deps, one.context, audio, { width: 1920, height: 1080 });

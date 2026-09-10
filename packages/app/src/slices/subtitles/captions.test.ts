@@ -51,3 +51,22 @@ describe("timed caption files", () => {
     ).toThrow(/timing/i);
   });
 });
+
+describe("subtitle positions", () => {
+  it.each([
+    ["top", 8, 60, 60],
+    ["upper-middle", 5, 270, 480],
+    ["center", 5, 540, 960],
+    ["lower-middle", 5, 810, 1440],
+    ["bottom", 2, 1020, 1860],
+  ] as const)("places %s captions in both frame formats", (position, anchor, wideY, tallY) => {
+    const cues = [{ start: 0, end: 1, text: "Two lines\nof subtitles" }];
+    for (const [width, height, y] of [
+      [1920, 1080, wideY],
+      [1080, 1920, tallY],
+    ] as const) {
+      const ass = serializeAss(cues, { width, height, fontName: "Barlow", fontSize: 64, position });
+      expect(ass).toContain(`{\\an${anchor}\\pos(${width / 2},${y})}Two lines\\Nof subtitles`);
+    }
+  });
+});

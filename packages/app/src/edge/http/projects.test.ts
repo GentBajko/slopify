@@ -581,7 +581,15 @@ describe("subtitle admission", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(
-        draft({ subtitles: { mode: "files", language: "en", fontId: "missing", fontSize: 48 } }),
+        draft({
+          subtitles: {
+            mode: "files",
+            language: "en",
+            fontId: "missing",
+            fontSize: 48,
+            position: "bottom",
+          },
+        }),
       ),
     });
     expect(response.status).toBe(400);

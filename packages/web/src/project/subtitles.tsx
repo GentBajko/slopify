@@ -31,9 +31,10 @@ export function ProjectSubtitles({
   const videoEnabled =
     project.config.sources.video !== "off" && project.config.sources.images !== "off";
   return (
-    <div data-tour="project-subtitles" className="mt-2 max-w-[720px] border-t border-line pt-4">
+    <div data-tour="project-subtitles" className="mt-2 min-w-0 border-t border-line pt-4">
       <SubtitleControls
         value={value}
+        format={project.format}
         audioEnabled={audioEnabled}
         videoEnabled={videoEnabled}
         disabled={!editable || actions.pending}

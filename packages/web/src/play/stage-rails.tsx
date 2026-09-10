@@ -166,6 +166,7 @@ function VideoRail({ form, silenceGapSeconds, update, onSubtitleUpload, problem 
       <div data-tour="play-subtitles" className={railBeneath}>
         <SubtitleControls
           value={subtitlesFor(form.subtitles, form.sources)}
+          format={form.format}
           audioEnabled={form.sources.audio !== "off"}
           videoEnabled={form.sources.video === "generate" && form.sources.images !== "off"}
           onChange={(subtitles) => update({ subtitles })}

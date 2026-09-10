@@ -103,6 +103,7 @@ describe("buildRegistry", () => {
     expect(built.tts("elevenlabs").id).toBe("elevenlabs");
     expect(built.tts("openai-tts").id).toBe("openai-tts");
     expect(built.tts("cartesia").id).toBe("cartesia");
+    expect(built.tts("inworld").id).toBe("inworld");
     db.close();
   });
 

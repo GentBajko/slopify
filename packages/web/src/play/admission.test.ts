@@ -382,7 +382,13 @@ describe("the draft the form posts", () => {
 it("blocks Play for an invalid subtitle size before the server is called", () => {
   const invalid = ask({
     ...generated,
-    subtitles: { mode: "burn-in", language: "en", fontId: "default", fontSize: 150 },
+    subtitles: {
+      mode: "burn-in",
+      language: "en",
+      fontId: "default",
+      fontSize: 150,
+      position: "bottom",
+    },
   });
   expect(invalid.blocker?.field).toBe("subtitles.fontSize");
   expect(invalid.result.ok).toBe(false);

@@ -1,17 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef } from "react";
 import { useApp } from "@/app-context";
 import { Label } from "@/components/ui/label";
-import { type FontSummary, fontsKey, fontUrl, listFonts, uploadFont } from "./api";
+import { type FontSummary, fontsKey, listFonts, uploadFont } from "./api";
 
 export function FontPicker({
   value,
-  fontSize,
   onPick,
   onUploading,
 }: {
   readonly value: string;
-  readonly fontSize: number;
   readonly onPick: (id: string) => void;
   readonly onUploading: (pending: boolean) => void;
 }) {
@@ -43,7 +41,7 @@ export function FontPicker({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-[180px] flex-1">
+        <div className="min-w-0 basis-full">
           <Label htmlFor={id} className="mb-1">
             Subtitle font
           </Label>
@@ -65,7 +63,7 @@ export function FontPicker({
             ))}
           </select>
         </div>
-        <div className="min-w-[180px] flex-1">
+        <div className="min-w-0 basis-full">
           <Label htmlFor={uploadId} className="mb-1">
             Upload font (.ttf or .otf)
           </Label>
@@ -98,55 +96,6 @@ export function FontPicker({
           Could not load fonts. {fonts.error.message}
         </p>
       ) : null}
-      <FontPreview url={fontUrl(api, value)} fontSize={fontSize} />
-    </div>
-  );
-}
-
-function FontPreview({ url, fontSize }: { readonly url: string; readonly fontSize: number }) {
-  const family = `subtitle-preview-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
-  const [failed, setFailed] = useState(false);
-  useEffect(() => {
-    if (typeof FontFace === "undefined" || !document.fonts) return;
-    let active = true;
-    const font = new FontFace(family, `url(${JSON.stringify(url)})`);
-    setFailed(false);
-    void font
-      .load()
-      .then((loaded) => {
-        if (active) document.fonts.add(loaded);
-      })
-      .catch(() => {
-        if (active) setFailed(true);
-      });
-    return () => {
-      active = false;
-      document.fonts.delete(font);
-    };
-  }, [family, url]);
-  return (
-    <div>
-      <div
-        role="img"
-        aria-label="Subtitle style preview"
-        className="flex min-h-[110px] items-end justify-center overflow-hidden rounded-control border border-line bg-screen px-5 pt-8 pb-4 text-center text-white"
-        style={{ fontFamily: `"${family}", sans-serif` }}
-      >
-        <span
-          style={{
-            fontSize: `${Math.max(8, Math.min(60, Number.isFinite(fontSize) ? fontSize / 2 : 24))}px`,
-            lineHeight: 1.25,
-            textShadow:
-              "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 3px #000",
-          }}
-        >
-          Every story begins with a word.
-        </span>
-      </div>
-      <p className="mt-1 text-label text-ink3">
-        Style preview at reduced scale.
-        {failed ? " Font preview unavailable; showing a fallback." : ""}
-      </p>
     </div>
   );
 }

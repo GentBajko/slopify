@@ -684,6 +684,7 @@ describe("subtitles on Play", () => {
         language: "en",
         fontId: "uploaded-font",
         fontSize: 64,
+        position: "top",
       });
       return jsonAnswer({ project: { id: "p1", status: "running" }, stages: [] }, 201)(request);
     });
@@ -704,6 +705,7 @@ describe("subtitles on Play", () => {
     const size = screen.getByLabelText("Subtitle font size");
     await userEvent.clear(size);
     await userEvent.type(size, "64");
+    await userEvent.selectOptions(screen.getByLabelText("Subtitle position"), "top");
     release?.(
       new Response(JSON.stringify({ font: custom }), {
         headers: { "content-type": "application/json", "X-Slopify-Version": testVersion },

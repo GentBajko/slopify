@@ -1,4 +1,15 @@
-# Slopify
+<h1 align="center">
+  <a href="https://slopify.stream"><img src="https://slopify.stream/assets/favicon.svg" width="40" height="40" align="middle" alt="" /></a>
+  Slopify
+</h1>
+
+<p align="center">
+  <a href="https://slopify.stream">slopify.stream</a>
+  &nbsp;·&nbsp;
+  <a href="https://www.patreon.com/cw/GentBajko"><img src="https://slopify.stream/assets/patreon-green.svg" width="14" height="14" align="middle" alt="" /> Patreon</a>
+  &nbsp;·&nbsp;
+  <a href="https://buymeacoffee.com/gentbajko"><img src="https://slopify.stream/assets/buymeacoffee-green.svg" width="14" height="14" align="middle" alt="" /> Buy Me a Coffee</a>
+</p>
 
 Slopify turns a prompt and a handful of keywords into a narrated slideshow video.
 It researches the topic, writes the article, narrates it, generates the imagery and
@@ -22,9 +33,30 @@ or newer, nothing else to install.
 4. Play is the cue sheet: pick the prompts, fill in the keywords, choose a voice and
    a format, press the key. Any stage you would rather do yourself, you upload
    instead, and that stage is skipped.
-5. The project page shows the six stages as they run and holds the results: the
-   article, the narration, every image, the thumbnail and the mp4, each one
-   downloadable on its own or as a zip.
+5. The project workspace shows total progress and lets you inspect one stage at a time,
+   read writing as it arrives, and listen to streamed narration. Download the article,
+   audio, images or final export. Pause unfinished work to change providers.
+6. Subtitles can use a bundled, system or uploaded font. Preview size and one of five
+   positions in the selected landscape or portrait frame before saving.
+7. The floating update button checks for new releases and installs an update when you
+   choose it. Active projects must finish or be paused first.
+
+## Inworld narration
+
+In Settings, add the **Base64 credentials** from Inworld's API Keys page, then add an
+Inworld voice ID (for example `Dennis`, or a voice from your workspace). In Play,
+choose **Realtime TTS-2** or **Realtime TTS-2 Flash** and that voice.
+
+Short text streams immediately. TTS-2 text over 4,000 characters uses one async job,
+up to 100,000 characters; Inworld caps On-Demand accounts at 10,000. Audio becomes
+available once that job finishes. Flash uses streamed parts of at most 4,000 characters.
+For longer articles, select paragraph chunking. Successful status checks keep long jobs
+alive, and automatic polling/download retries reuse the accepted job. Pausing stops
+local requests; Inworld may still finish and bill an accepted job. Resuming after a
+pause or app restart starts a new request for unfinished narration.
+
+See [Inworld's async API](https://docs.inworld.ai/api-reference/ttsAPI/texttospeech/synthesize-speech-async)
+for account limits. Both model IDs are bundled; Inworld's LLM catalogue does not list TTS models.
 
 ## Options
 
@@ -93,6 +125,8 @@ Slopify is free and always will be. If it is worth something to you:
 
 - [Patreon](https://www.patreon.com/cw/GentBajko)
 - [Buy Me a Coffee](https://buymeacoffee.com/gentbajko)
+
+The people who do are listed in [SUPPORTERS.md](SUPPORTERS.md).
 
 
 ## Working on it

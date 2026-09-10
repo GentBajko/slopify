@@ -185,6 +185,11 @@ function KeyRow({
             setDraft(event.target.value);
           }}
         />
+        {provider.id === "inworld" ? (
+          <p className="mt-1 text-label text-ink3">
+            Paste the Base64 credentials from Inworld Settings → API Keys.
+          </p>
+        ) : null}
         {hasKey ? (
           <span id={storedId} className="sr-only">
             A key is stored for this provider.

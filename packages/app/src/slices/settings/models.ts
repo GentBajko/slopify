@@ -109,6 +109,7 @@ function catalogNotice(provider: string): { readonly notice?: string } {
       "Models and aliases come from the installed Gemini CLI. Update that CLI to discover newer models.",
     "claude-code":
       "These aliases follow Claude Code's model families. You can also enter an exact model ID.",
+    inworld: "These are Inworld’s documented TTS models. You can also enter a compatible model ID.",
     cartesia:
       "Cartesia has no model-list API. These are bundled compatible choices; you can enter a newer model ID.",
     fal: "These models have input formats supported by Slopify's fal adapter.",

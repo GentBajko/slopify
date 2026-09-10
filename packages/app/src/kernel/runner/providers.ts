@@ -146,6 +146,7 @@ export function stageProviders(
 
     tts: (call: TtsCall, observe?: ObserveTts): Promise<NarratedAudio> => {
       const port = deps.registry.tts(call.provider);
+      let continuation: string | undefined;
       const notify = (event: TtsStreamEvent): void => {
         try {
           observe?.(event);
@@ -168,6 +169,13 @@ export function stageProviders(
               voiceId: call.voiceId,
               text: call.text,
               signal,
+              onActivity: progress,
+              continuation: {
+                read: () => continuation,
+                write: (token: string): void => {
+                  continuation = token;
+                },
+              },
             });
             const reader = spoken.audio.getReader();
             const chunks: Uint8Array[] = [];

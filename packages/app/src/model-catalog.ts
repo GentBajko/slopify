@@ -7,6 +7,7 @@ import { codexModels } from "./adapters/llm/codex.js";
 import { geminiModels } from "./adapters/llm/gemini.js";
 import { cartesiaModels } from "./adapters/tts/cartesia.js";
 import { elevenLabsModels } from "./adapters/tts/elevenlabs.js";
+import { inworldModels } from "./adapters/tts/inworld.js";
 import { openAiTtsModels } from "./adapters/tts/openai.js";
 import type { ModelInfo, ProviderFamily } from "./kernel/ports/model.js";
 import type { Registry } from "./kernel/ports/registry.js";
@@ -23,6 +24,7 @@ export function modelSources(registry: Registry): {
     elevenlabs: elevenLabsModels,
     "openai-tts": openAiTtsModels,
     cartesia: cartesiaModels,
+    inworld: inworldModels,
     fal: falModels,
     replicate: replicateModels,
     "openai-image": openAiImageModels,

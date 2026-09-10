@@ -573,3 +573,49 @@ it("interrupts a live TTS preview immediately on pause and keeps cancellation ou
   expect(tts.calls()).toBe(1);
   expect(h.attempts.rows[0]?.outcome).toBe("canceled");
 });
+
+describe("queued narration jobs", () => {
+  it("keeps a job alive beyond 120 seconds and retains its continuation across an automatic retry", async () => {
+    const h = harness();
+    let submitted = 0;
+    let tries = 0;
+    const tts: TtsPort = {
+      id: "queued",
+      capabilities: { streams: true },
+      models: async () => [],
+      synthesize: async (request) => {
+        tries += 1;
+        if (!request.continuation?.read()) {
+          submitted += 1;
+          request.continuation?.write("opaque-job-1");
+        }
+        for (let poll = 0; poll < 5; poll += 1) {
+          await h.clock.sleep(30_000, request.signal);
+          request.onActivity?.();
+        }
+        if (tries === 1) throw new Error("temporary download failure");
+        return {
+          container: "mp3",
+          audio: new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(Uint8Array.from([1, 2, 3]));
+              controller.close();
+            },
+          }),
+        };
+      },
+    };
+    const providers = stageProviders(
+      { registry: registry({ tts }), attempts: h.attempts, clock: h.clock, log },
+      context("audio", h.controller.signal),
+    );
+    const answer = await h.clock.settle(
+      providers.tts({ provider: "queued", voiceId: "voice", text: "long narration" }),
+    );
+    expect(answer.bytes).toEqual(Uint8Array.from([1, 2, 3]));
+    expect(submitted).toBe(1);
+    expect(tries).toBe(2);
+    expect(h.attempts.rows.map((row) => row.outcome)).toEqual(["other", "ok"]);
+    expect(h.clock.now().getTime() - new Date("2026-09-02T10:00:00.000Z").getTime()).toBe(302_000);
+  });
+});
