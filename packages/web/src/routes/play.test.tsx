@@ -122,6 +122,20 @@ function playRoutes(over: Readonly<Record<string, Answer>> = {}): Readonly<Recor
     "GET /api/entries": jsonAnswer({ entries }),
     "GET /api/settings/voices": jsonAnswer({ voices }),
     "GET /api/settings": jsonAnswer({ silenceGapSeconds: 3, appearance: "system" }),
+    "POST /api/projects/estimate": jsonAnswer({
+      estimates: [
+        {
+          currency: "USD",
+          rows: [],
+          low: 0,
+          high: 0,
+          unknown: 0,
+          expectedWords: 1500,
+          catalogueDate: "2026-09-10",
+          assumptions: [],
+        },
+      ],
+    }),
     "POST /api/projects": jsonAnswer({ project: { id: "p1", status: "running" }, stages: [] }, 201),
     ...over,
   };
@@ -238,6 +252,8 @@ describe("tutorial completion from the Play form", () => {
     expect(tutorial.event).not.toHaveBeenCalled();
 
     await userEvent.click(playKey());
+    expect(created).not.toHaveBeenCalled();
+    await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
     await waitFor(() => {
       expect(created).toHaveBeenCalledWith("p1");
     });
@@ -255,6 +271,7 @@ describe("tutorial completion from the Play form", () => {
     });
     await fillGeneratedRun();
     await userEvent.click(playKey());
+    await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
 
     await screen.findByText("That article prompt was deleted.");
     expect(tutorial.progress.mock.lastCall?.[0]?.playArticleReady).toBe(false);
@@ -311,6 +328,7 @@ describe("the Play key and its hint", () => {
     expect(screen.queryByText(/to play$/)).toBeNull();
 
     await userEvent.click(playKey());
+    await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
     await waitFor(() => {
       expect(created).toHaveBeenCalledWith("p1");
     });
@@ -337,6 +355,7 @@ describe("Ctrl+Enter", () => {
 
     await userEvent.click(screen.getByLabelText("Video title"));
     await userEvent.keyboard("{Control>}{Enter}{/Control}");
+    await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
 
     await waitFor(() => {
       expect(created).toHaveBeenCalledWith("p1");
@@ -454,6 +473,7 @@ describe("optional stages", () => {
     await userEvent.type(screen.getByLabelText("Video title"), "Uploaded audio");
     expect(held()).toBe(false);
     await userEvent.click(playKey());
+    await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
     await waitFor(() => expect(created).toHaveBeenCalledWith("uploaded-audio"));
     expect(posted).toHaveBeenCalledTimes(1);
   });
@@ -494,6 +514,7 @@ describe("optional stages", () => {
       playSubtitlesReady: true,
     });
     await userEvent.click(playKey());
+    await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
     await waitFor(() => expect(created).toHaveBeenCalledWith("article-only"));
     expect(posted).toHaveBeenCalledTimes(1);
   });
@@ -619,6 +640,7 @@ describe("a run the server refuses", () => {
       expect(held()).toBe(false);
     });
     await userEvent.click(playKey());
+    await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
 
     expect(
       await screen.findByText("That article prompt no longer exists; pick another."),
@@ -642,6 +664,7 @@ describe("a run the server refuses", () => {
       expect(held()).toBe(false);
     });
     await userEvent.click(playKey());
+    await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
     expect(await screen.findByText("This field is required.")).not.toBeNull();
 
     await userEvent.type(screen.getByLabelText("topic"), "s");
@@ -717,6 +740,7 @@ describe("subtitles on Play", () => {
     );
     expect((size as HTMLInputElement).value).toBe("64");
     await userEvent.click(playKey());
+    await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
     await waitFor(() => expect(create).toHaveBeenCalledTimes(1));
   });
 
@@ -749,6 +773,7 @@ describe("subtitles on Play", () => {
       expect(held()).toBe(false);
       expect(screen.queryByLabelText("Subtitle font size")).toBeNull();
       await userEvent.click(playKey());
+      await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
       await waitFor(() => expect(created).toHaveBeenCalledTimes(1));
     },
   );
@@ -763,6 +788,7 @@ describe("subtitles on Play", () => {
     await fillGeneratedRun();
     await userEvent.selectOptions(mode(), "files");
     await userEvent.click(playKey());
+    await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
     await screen.findByText("Choose an installed font.");
   });
 });

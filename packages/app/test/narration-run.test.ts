@@ -289,9 +289,7 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
 
     const body = join(h.dir, "audio-body.mp3");
     expect(existsSync(body)).toBe(true);
-    const parts = await Promise.all(
-      [1, 2, 3].map((at) => measure(join(h.dir, "audio-chunks", `00${String(at)}.mp3`))),
-    );
+    const parts = await Promise.all([1, 2, 3].map((at) => measure(chunkFile(h, at))));
     const total = parts.reduce((sum, part) => sum + part, 0);
     const joined = await measure(body);
     // The concat adds no silence, so the joined file is the sum of its parts. The
@@ -334,9 +332,7 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
     expect(tts.seen()).toEqual([paragraphs.join("\n\n")]);
     // One chunk, so the body is that chunk byte for byte: nothing was decoded and
     // re-encoded for a join that had nothing to join.
-    expect(readFileSync(join(h.dir, "audio-body.mp3"))).toEqual(
-      readFileSync(join(h.dir, "audio-chunks", "001.mp3")),
-    );
+    expect(readFileSync(join(h.dir, "audio-body.mp3"))).toEqual(readFileSync(chunkFile(h, 1)));
     h.db.close();
   }, 120_000);
 
@@ -472,8 +468,8 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
     const states = piecesOf(h.db, audioStage, "chunk").map((piece) => piece.state);
     expect(states).toEqual(["done", "failed", "done"]);
     // The two that landed kept their audio for the retry, and no body was written.
-    expect(existsSync(join(h.dir, "audio-chunks", "001.mp3"))).toBe(true);
-    expect(existsSync(join(h.dir, "audio-chunks", "003.mp3"))).toBe(true);
+    expect(existsSync(chunkFile(h, 1))).toBe(true);
+    expect(existsSync(chunkFile(h, 3))).toBe(true);
     expect(existsSync(join(h.dir, "audio-body.mp3"))).toBe(false);
     expect(outputRows(h.db)).toEqual([]);
     // Four attempts on the failing chunk, one each on the other two.
@@ -603,3 +599,16 @@ it.each(["whole", "paragraph"] as const)(
     }
   },
 );
+
+function chunkFile(h: Harness, index: number): string {
+  const piece = piecesOf(h.db, audioStage, "chunk").find((p) => p.idx === index);
+  const payload: unknown = JSON.parse(piece?.payload ?? "null");
+  if (
+    !payload ||
+    typeof payload !== "object" ||
+    !("file" in payload) ||
+    typeof payload.file !== "string"
+  )
+    throw new Error("Missing chunk file");
+  return join(h.dir, payload.file);
+}

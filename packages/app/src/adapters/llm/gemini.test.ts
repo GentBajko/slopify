@@ -52,6 +52,27 @@ async function drain(run: RunCli, req = request()): Promise<LlmEvent[]> {
   return events;
 }
 describe("Gemini CLI", () => {
+  it("passes a selected thinking level through isolated model overrides", async () => {
+    const one = fake(success, (options) => {
+      const settings: unknown = JSON.parse(
+        readFileSync(options.env?.GEMINI_CLI_SYSTEM_SETTINGS_PATH ?? "", "utf8"),
+      );
+      expect(settings).toMatchObject({
+        modelConfigs: {
+          customOverrides: [
+            {
+              match: { model: "gemini-3.8-flash" },
+              modelConfig: { generateContentConfig: { thinkingConfig: { thinkingLevel: "low" } } },
+            },
+          ],
+        },
+      });
+    });
+    await drain(
+      one.run,
+      request({ model: "gemini-3.8-flash", thinking: "low", thinkingConfig: { level: "low" } }),
+    );
+  });
   it("runs headless without broad tool approvals and treats prompt commands as text", () => {
     const args = geminiArgs(
       request({ messages: [{ role: "user", content: "/help @/etc/passwd `id`\nquoted" }] }),

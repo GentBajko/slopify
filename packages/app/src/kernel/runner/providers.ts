@@ -9,6 +9,7 @@ import type { AttemptContext } from "./attempt.js";
 import { attempt } from "./attempt.js";
 import type { AttemptStore } from "./attempt-repo.js";
 import type { StageContext } from "./index.js";
+import type { ProviderQueue } from "./queue.js";
 
 // What a stage slice is handed instead of a port. Every method is already inside the
 // attempt wrapper and none hands back an adapter, so a slice cannot reach a provider
@@ -21,6 +22,7 @@ export interface LlmAnswer {
 }
 
 export interface LlmCall {
+  readonly thinking?: import("../ports/llm.js").ThinkingMode | undefined;
   readonly provider: string;
   readonly model: string;
   readonly messages: readonly Message[];
@@ -69,6 +71,7 @@ export interface StageProviders {
 }
 
 export interface ProviderDeps {
+  readonly queue?: ProviderQueue;
   readonly registry: Registry;
   readonly attempts: AttemptStore;
   readonly clock: Clock;
@@ -91,6 +94,8 @@ export function stageProviders(
     signal: context.signal,
   };
 
+  const schedule = <T>(provider: string, work: () => Promise<T>): Promise<T> =>
+    deps.queue ? deps.queue.run(provider, context.signal, work) : work();
   return {
     llm: (call: LlmCall, onEvent?: (event: LlmEvent) => void): Promise<LlmAnswer> => {
       // Resolved once; the adapter reads the stored key per request, so a key replaced
@@ -107,40 +112,43 @@ export function stageProviders(
           text,
           ...(reset === undefined ? {} : { reset }),
         });
-      return attempt(
-        ctx,
-        async (signal: AbortSignal, progress: () => void): Promise<LlmAnswer> => {
-          preview("", true);
-          let text = "";
-          let usage: Usage | null = null;
-          let finishReason: string | null = null;
-          for await (const event of port.complete({
-            model: call.model,
-            messages: call.messages,
-            ...(call.webSearch === undefined ? {} : { webSearch: call.webSearch }),
-            signal,
-          })) {
-            signal.throwIfAborted();
-            // Every event is a sign of life, so the idle clock restarts here.
-            progress();
-            if (event.type === "delta") {
-              text += event.text;
-              preview(event.text);
-            } else if (event.type === "done") {
-              usage = event.usage;
-              finishReason = event.finishReason;
+      return schedule(call.provider, () =>
+        attempt(
+          ctx,
+          async (signal: AbortSignal, progress: () => void): Promise<LlmAnswer> => {
+            preview("", true);
+            let text = "";
+            let usage: Usage | null = null;
+            let finishReason: string | null = null;
+            for await (const event of port.complete({
+              model: call.model,
+              ...(call.thinking === undefined ? {} : { thinking: call.thinking }),
+              messages: call.messages,
+              ...(call.webSearch === undefined ? {} : { webSearch: call.webSearch }),
+              signal,
+            })) {
+              signal.throwIfAborted();
+              // Every event is a sign of life, so the idle clock restarts here.
+              progress();
+              if (event.type === "delta") {
+                text += event.text;
+                preview(event.text);
+              } else if (event.type === "done") {
+                usage = event.usage;
+                finishReason = event.finishReason;
+              }
+              if (event.type !== "activity") onEvent?.(event);
             }
-            if (event.type !== "activity") onEvent?.(event);
-          }
-          const answer: LlmAnswer = { text, usage, finishReason };
-          const unusable = call.check?.(answer);
-          if (unusable !== undefined) {
-            // Thrown bare: the wrapper names it `other` and retries it like any bad answer.
-            throw new Error(unusable);
-          }
-          return answer;
-        },
-        { kind: "llm", streaming: port.capabilities.streams },
+            const answer: LlmAnswer = { text, usage, finishReason };
+            const unusable = call.check?.(answer);
+            if (unusable !== undefined) {
+              // Thrown bare: the wrapper names it `other` and retries it like any bad answer.
+              throw new Error(unusable);
+            }
+            return answer;
+          },
+          { kind: "llm", streaming: port.capabilities.streams },
+        ),
       );
     },
 
@@ -159,70 +167,76 @@ export function stageProviders(
           });
         }
       };
-      return attempt(
-        ctx,
-        async (signal: AbortSignal, progress: () => void): Promise<NarratedAudio> => {
-          notify({ type: "start" });
-          try {
-            const spoken = await port.synthesize({
-              model: call.model,
-              voiceId: call.voiceId,
-              text: call.text,
-              signal,
-              onActivity: progress,
-              continuation: {
-                read: () => continuation,
-                write: (token: string): void => {
-                  continuation = token;
-                },
-              },
-            });
-            const reader = spoken.audio.getReader();
-            const chunks: Uint8Array[] = [];
-            let total = 0;
+      return schedule(call.provider, () =>
+        attempt(
+          ctx,
+          async (signal: AbortSignal, progress: () => void): Promise<NarratedAudio> => {
+            notify({ type: "start" });
             try {
-              for (;;) {
-                const { done, value } = await reader.read();
-                signal.throwIfAborted();
-                if (done || value === undefined) break;
-                progress();
-                chunks.push(value);
-                total += value.length;
-                notify({ type: "chunk", bytes: value });
+              const spoken = await port.synthesize({
+                model: call.model,
+
+                voiceId: call.voiceId,
+                text: call.text,
+                signal,
+                onActivity: progress,
+                continuation: {
+                  read: () => continuation,
+                  write: (token: string): void => {
+                    continuation = token;
+                  },
+                },
+              });
+              const reader = spoken.audio.getReader();
+              const chunks: Uint8Array[] = [];
+              let total = 0;
+              try {
+                for (;;) {
+                  const { done, value } = await reader.read();
+                  signal.throwIfAborted();
+                  if (done || value === undefined) break;
+                  progress();
+                  chunks.push(value);
+                  total += value.length;
+                  notify({ type: "chunk", bytes: value });
+                }
+              } finally {
+                reader.releaseLock();
               }
-            } finally {
-              reader.releaseLock();
+              const bytes = new Uint8Array(total);
+              let at = 0;
+              for (const chunk of chunks) {
+                bytes.set(chunk, at);
+                at += chunk.length;
+              }
+              notify({ type: "complete" });
+              return { bytes, container: spoken.container };
+            } catch (error) {
+              notify({ type: "interrupted" });
+              throw error;
             }
-            const bytes = new Uint8Array(total);
-            let at = 0;
-            for (const chunk of chunks) {
-              bytes.set(chunk, at);
-              at += chunk.length;
-            }
-            notify({ type: "complete" });
-            return { bytes, container: spoken.container };
-          } catch (error) {
-            notify({ type: "interrupted" });
-            throw error;
-          }
-        },
-        { kind: "tts", streaming: port.capabilities.streams },
+          },
+          { kind: "tts", streaming: port.capabilities.streams },
+        ),
       );
     },
 
     image: (call: ImageCall): Promise<GeneratedImage> => {
       const port = deps.registry.image(call.provider);
-      return attempt(
-        ctx,
-        (signal: AbortSignal): Promise<GeneratedImage> =>
-          port.generate({
-            model: call.model,
-            prompt: call.prompt,
-            aspect: call.aspect,
-            signal,
-          }),
-        // One request, one answer: the 300 s runs over the whole call.
-        { kind: "image" },
+      return schedule(call.provider, () =>
+        attempt(
+          ctx,
+          (signal: AbortSignal): Promise<GeneratedImage> =>
+            port.generate({
+              model: call.model,
+
+              prompt: call.prompt,
+              aspect: call.aspect,
+              signal,
+            }),
+          // One request, one answer: the 300 s runs over the whole call.
+          { kind: "image" },
+        ),
       );
     },
 

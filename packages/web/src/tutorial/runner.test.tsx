@@ -174,6 +174,21 @@ async function mount(
       prompts.push(saved);
       return jsonAnswer(saved, 201)(request);
     },
+    "POST /api/projects/estimate": jsonAnswer({
+      estimates: [
+        {
+          currency: "USD",
+          rows: [],
+          low: 0,
+          high: 0,
+          unknown: 0,
+          expectedWords: 1500,
+          catalogueDate: "2026-09-10",
+          assumptions: [],
+        },
+      ],
+    }),
+    "GET /api/projects/queue": jsonAnswer({ queue: [] }),
     "POST /api/projects": async (request) => {
       const draft = (await request.json()) as RunDraft;
       const id = "actual-created-project";
@@ -477,6 +492,7 @@ describe("the tutorial in the real app", () => {
       "false",
     );
     await user.click(screen.getByRole("button", { name: "PLAY" }));
+    await user.click(await screen.findByRole("button", { name: "Start run" }));
     await at("project");
     expect(router.state.location.pathname).toBe("/projects/actual-created-project");
     await waitFor(() =>
@@ -548,6 +564,7 @@ describe("the tutorial in the real app", () => {
       await next(user, "play-start");
       expect(requests).not.toContain("POST /api/projects");
       await user.click(screen.getByRole("button", { name: "PLAY" }));
+      await user.click(await screen.findByRole("button", { name: "Start run" }));
       await at("project");
       await next(user, "download");
       const workspace = await screen.findByRole("region", {
@@ -709,6 +726,7 @@ describe("the tutorial in the real app", () => {
     );
     await fill(user, "topic", "Mountains");
     await user.click(screen.getByRole("button", { name: "PLAY" }));
+    await user.click(await screen.findByRole("button", { name: "Start run" }));
     await waitFor(() =>
       expect(router.state.location.pathname).toBe("/projects/actual-created-project"),
     );

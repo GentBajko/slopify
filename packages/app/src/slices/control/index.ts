@@ -180,8 +180,12 @@ export function changeProviders(
       (changes.audio.provider !== project.config.audio?.provider ||
         changes.audio.model !== project.config.audio?.model ||
         changes.audio.voice !== project.config.audio?.voice);
+    const chunkingChanged =
+      changes.chunking !== undefined &&
+      (changes.chunking.mode !== (project.config.chunking?.mode ?? "whole") ||
+        (changes.chunking.words ?? 500) !== (project.config.chunking?.words ?? 500));
     const orphaned = transact(deps.db, () => {
-      const files = audioChanged ? clearUnfinishedAudio(deps, id) : [];
+      const files = audioChanged || chunkingChanged ? clearUnfinishedAudio(deps, id) : [];
       updateProjectConfig(
         deps.db,
         id,
@@ -190,6 +194,7 @@ export function changeProviders(
           ...(changes.llm === undefined ? {} : { llm: changes.llm }),
           ...(changes.audio === undefined ? {} : { audio: changes.audio }),
           ...(changes.images === undefined ? {} : { images: changes.images }),
+          ...(changes.chunking === undefined ? {} : { chunking: changes.chunking }),
         },
         deps.clock.now().toISOString(),
       );

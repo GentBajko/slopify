@@ -4,6 +4,7 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import type { Context } from "hono";
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
+import type { CatalogueStore } from "../../catalog/store.js";
 import type { AudioPreviewStore } from "../../kernel/audio-preview.js";
 import type { Clock } from "../../kernel/clock.js";
 import type { Ids } from "../../kernel/ids.js";
@@ -19,6 +20,7 @@ import { audioPreviewRoutes } from "./audio-preview.js";
 import { entryRoutes } from "./entries.js";
 import { fileRoutes } from "./files.js";
 import { fontsRoutes } from "./fonts.js";
+import { planningRoutes } from "./planning.js";
 import { problem, problemFromError, titleOf } from "./problem.js";
 import { projectRoutes } from "./projects.js";
 import { promptRoutes } from "./prompts.js";
@@ -31,6 +33,7 @@ import { updateRoutes } from "./update.js";
 import { usageRoutes } from "./usage.js";
 
 export interface AppDeps {
+  readonly catalogue?: CatalogueStore;
   readonly updater?: AppUpdater;
   readonly audioPreviews?: AudioPreviewStore;
   readonly db: DatabaseSync;
@@ -71,6 +74,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
         }),
       )
       .route("/staging", stagingRoutes(deps))
+      .route("/projects", planningRoutes(deps))
       .route("/projects", projectRoutes(deps))
       .route("/projects", audioPreviewRoutes(deps))
       .route("/update", updateRoutes(deps))

@@ -85,7 +85,13 @@ export async function writeArticle(
   };
 
   let answer = await providers.llm(
-    { provider: choice.provider, model: choice.model, messages: base, check: written },
+    {
+      provider: choice.provider,
+      model: choice.model,
+      ...(choice.thinking === undefined ? {} : { thinking: choice.thinking }),
+      messages: base,
+      check: written,
+    },
     stream,
   );
   const pieces = [answer.text];
@@ -98,6 +104,7 @@ export async function writeArticle(
       {
         provider: choice.provider,
         model: choice.model,
+        ...(choice.thinking === undefined ? {} : { thinking: choice.thinking }),
         messages,
         // The last continuation allowed is the one that has to end the article: a fourth
         // truncation is a failed attempt, which is the wrapper's to retry. The

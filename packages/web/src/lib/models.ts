@@ -30,7 +30,8 @@ export function modelsQuery(api: Api, provider: string) {
     queryKey: modelsKey(provider),
     queryFn: ({ signal }) => listProviderModels(api, provider, false, signal),
     enabled: provider !== "",
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
+    refetchInterval: 30 * 1000,
     retry: false,
   });
 }

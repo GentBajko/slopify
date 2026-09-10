@@ -46,6 +46,7 @@ export type StageUploadResult =
   | { readonly ok: false; readonly reason: "unsafe-filename" | "empty-file" };
 
 export interface AttachInput {
+  readonly retainStaged?: boolean;
   readonly stagedFileId: string;
   readonly projectId: string;
   readonly role: OutputRole;
@@ -219,7 +220,7 @@ export function attachStagedFile(deps: StorageDeps, input: AttachInput): AttachR
   try {
     transact(deps.db, () => {
       insertOutput(deps.db, output);
-      deleteStagedFile(deps.db, staged.id);
+      if (!input.retainStaged) deleteStagedFile(deps.db, staged.id);
     });
   } catch (error) {
     deps.log.write("error", "storage.attach", {

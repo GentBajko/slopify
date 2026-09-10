@@ -35,11 +35,41 @@ export function providerRoutes(deps: AppDeps) {
 
   return (
     new Hono()
+      .get("/catalogue", (c) =>
+        c.json(deps.catalogue?.status() ?? { warning: "Catalogue unavailable." }),
+      )
+      .post("/catalogue/refresh", async (c) => {
+        if (!deps.catalogue)
+          return problem(c, { status: 503, title: titleOf(503), detail: "Catalogue unavailable." });
+        try {
+          await deps.catalogue.refresh();
+        } catch {
+          return problem(c, {
+            status: 502,
+            title: titleOf(502),
+            detail: "Could not update the catalogue. The last valid version remains in use.",
+          });
+        }
+        return c.json(deps.catalogue.status());
+      })
       // What Settings draws its rails from and Play its dropdowns: every provider, with
       // the one fact that decides whether it is selectable.
       .get("/", async (c) => c.json({ providers: await providerStatuses(readiness) }))
       .get("/:id/models", zValidator("param", providerParam, onInvalid), async (c) => {
         const { id } = c.req.valid("param");
+        if (deps.catalogue)
+          return c.json({
+            models: deps.catalogue.models(id, providerById(id).family).map((m) => ({
+              ...m,
+              ...("llm" in m && m.llm.thinking
+                ? { thinkingModes: Object.keys(m.llm.thinking) }
+                : {}),
+            })),
+            allowsCustom: false,
+            notice:
+              "Curated active models from models.yaml. Edit it locally or refresh in Settings.",
+            warning: deps.catalogue.status().warning ?? undefined,
+          });
         const result = await catalog.get(
           id,
           providerById(id).family,

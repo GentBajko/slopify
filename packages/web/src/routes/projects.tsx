@@ -5,6 +5,7 @@ import { EllipsisIcon } from "lucide-react";
 import { useState } from "react";
 import { removeProject } from "@/api";
 import { useApp } from "@/app-context";
+import { BatchQueue } from "@/components/batch-queue";
 import { ConfirmDialog } from "@/components/confirm";
 import { Lamp } from "@/components/lamp";
 import { RailGroup, RailMeter } from "@/components/rail";
@@ -55,6 +56,7 @@ export function ProjectsRoute() {
         </Button>
       </div>
 
+      <BatchQueue />
       {projects.data?.projects.length === 0 ? <TutorialInvite /> : null}
 
       {projects.error === null ? null : (

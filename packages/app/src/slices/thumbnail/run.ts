@@ -137,6 +137,7 @@ async function byLlm(
   const answer = await providers.llm({
     provider: llm.provider,
     model: llm.model,
+    ...(llm.thinking === undefined ? {} : { thinking: llm.thinking }),
     messages,
     // An empty answer is a failed attempt, and the wrapper is what retries it.
     check: (given: LlmAnswer): string | undefined => writtenPrompt(given.text),
@@ -225,6 +226,7 @@ async function make(
   const made = await providers.image({
     provider: choice.provider,
     model: choice.model,
+    ...(choice.thinking === undefined ? {} : { thinking: choice.thinking }),
     prompt,
     aspect: project.format,
   });
@@ -254,6 +256,7 @@ async function make(
       prompt,
       provider: choice.provider,
       model: choice.model,
+      ...(choice.thinking === undefined ? {} : { thinking: choice.thinking }),
     },
     createdAt: deps.clock.now().toISOString(),
   };

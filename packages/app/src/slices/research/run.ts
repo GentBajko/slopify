@@ -95,6 +95,7 @@ async function research(
   const answer = await providers.llm({
     provider: choice.provider,
     model: choice.model,
+    ...(choice.thinking === undefined ? {} : { thinking: choice.thinking }),
     messages: synthesisMessages(brief, findings),
     previewLabel: "Writing research notes",
     check: (given: LlmAnswer): string | undefined => sourcedAnswer("the synthesis", given.text),
@@ -115,6 +116,7 @@ async function research(
     stage: "research",
     provider: choice.provider,
     model: choice.model,
+    ...(choice.thinking === undefined ? {} : { thinking: choice.thinking }),
     ...tokens,
   });
   deps.log.write("info", "research.done", {
@@ -141,6 +143,7 @@ async function plan(
   const answer = await providers.llm({
     provider: choice.provider,
     model: choice.model,
+    ...(choice.thinking === undefined ? {} : { thinking: choice.thinking }),
     messages: plannerMessages(brief),
     previewLabel: "Planning research",
     // An empty answer, or one with no chapter in it, is a failed attempt.
@@ -194,6 +197,7 @@ async function researchChapters(
         const answer = await providers.forPiece(piece.id).llm({
           provider: choice.provider,
           model: choice.model,
+          ...(choice.thinking === undefined ? {} : { thinking: choice.thinking }),
           messages: subAgentMessages(brief, kept.title, outline),
           previewLabel: kept.title,
           // Grounding is asked for explicitly, so a model without it says so

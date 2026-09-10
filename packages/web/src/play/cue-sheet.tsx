@@ -13,12 +13,14 @@ import { KeywordBlock } from "@/play/keywords";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
 import type { PlayFormState } from "@/play/state";
 import { needsLlm } from "@/play/state";
+import { ThinkingPicker } from "@/play/thinking";
 
 // The sticky right column: the run's title and frame, the entries narrated around it, the LLM
 // row when something asks for one, the keywords the picked prompts want, and the Play key the
 // whole screen exists to serve.
 
 export interface CueSheetProps {
+  readonly children?: import("react").ReactNode;
   readonly form: PlayFormState;
   readonly providers: readonly ProviderStatus[];
   readonly entries: readonly Entry[];
@@ -32,6 +34,7 @@ export interface CueSheetProps {
 }
 
 export function CueSheet({
+  children,
   form,
   providers,
   entries,
@@ -135,6 +138,10 @@ export function CueSheet({
         ) : null}
       </div>
 
+      {needsLlm(form, entries) ? (
+        <ThinkingPicker choice={form.llm} onChange={(llm) => update({ llm })} />
+      ) : null}
+      {children}
       <KeywordBlock
         fields={fields}
         values={form.values}

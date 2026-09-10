@@ -10,7 +10,9 @@ import type { Dispatch, SetStateAction } from "react";
 import { useApp } from "@/app-context";
 import { Rail } from "@/components/rail";
 import { Button } from "@/components/ui/button";
+import { ChunkingControl } from "@/play/chunking";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
+import { ThinkingPicker } from "@/play/thinking";
 import { voicesQuery } from "@/queries";
 import type { ProviderChanges } from "./api";
 import type { ProjectActions } from "./use-actions";
@@ -39,6 +41,7 @@ export function ProjectProviders({
   const audio = edits.audio ?? config.audio ?? { provider: "", model: "", voice: "" };
   const images = edits.images ?? config.images ?? { provider: "", model: "" };
   const showLlm =
+    config.sources.research === "generate" ||
     config.sources.article === "generate" ||
     config.sources.thumbnail === "prompt_by_llm" ||
     (config.sources.audio === "generate" &&
@@ -78,7 +81,7 @@ export function ProjectProviders({
         <summary className="cursor-pointer text-row font-semibold">Run providers</summary>
         <p className="mt-2 text-small text-ink2">
           {editable
-            ? "Save your choices, then press Resume when ready. Finished outputs stay as they are. Changing the voice or TTS model restarts unfinished narration to keep one voice throughout."
+            ? "Save your choices, then press Resume when ready. Finished outputs stay as they are. Changing the voice, TTS model or chunking restarts unfinished narration to keep one voice throughout."
             : inFlight && project.status === "paused"
               ? "Pausing: waiting for active requests to stop before providers can be changed."
               : project.status === "done" || project.status === "canceled"
@@ -130,6 +133,12 @@ export function ProjectProviders({
               />
             </div>
           ) : null}
+          {showAudio ? (
+            <ChunkingControl
+              value={edits.chunking ?? config.chunking ?? { mode: "whole" }}
+              onPick={(chunking) => setEdits((current) => ({ ...current, chunking }))}
+            />
+          ) : null}
           {showImages ? (
             <ChoiceRow
               label="Image"
@@ -166,6 +175,11 @@ export function ProjectProviders({
 
 export function changedProviderChoices(config: RunConfig, edits: ProviderChanges): ProviderChanges {
   return {
+    ...(edits.chunking &&
+    (edits.chunking.mode !== (config.chunking?.mode ?? "whole") ||
+      (edits.chunking.words ?? 500) !== (config.chunking?.words ?? 500))
+      ? { chunking: edits.chunking }
+      : {}),
     ...(edits.llm && !same(edits.llm, config.llm) ? { llm: edits.llm } : {}),
     ...(edits.audio && !same(edits.audio, config.audio) ? { audio: edits.audio } : {}),
     ...(edits.images && !same(edits.images, config.images) ? { images: edits.images } : {}),
@@ -204,6 +218,7 @@ function ChoiceRow({
         problem={undefined}
         onPick={(model) => onChange({ ...choice, model })}
       />
+      {family === "llm" ? <ThinkingPicker choice={choice} onChange={onChange} /> : null}
     </div>
   );
 }
@@ -215,6 +230,7 @@ function same(
   return (
     left.provider === right?.provider &&
     left.model === right.model &&
+    left.thinking === right.thinking &&
     ("voice" in left ? left.voice : undefined) ===
       (right && "voice" in right ? right.voice : undefined)
   );

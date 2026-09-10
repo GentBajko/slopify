@@ -114,6 +114,7 @@ describe("boot", () => {
     expect(db.prepare("SELECT version FROM schema_migrations").all()).toEqual([
       { version: 1 },
       { version: 2 },
+      { version: 3 },
     ]);
     db.close();
   });

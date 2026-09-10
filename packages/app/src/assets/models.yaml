@@ -1,0 +1,470 @@
+# Curated adapter-compatible models. Edit this file to change the published defaults.
+# A private copy in the Slopify data directory reloads automatically.
+# Omitted pricing means unknown, never free. Provider concurrency is capped at five.
+schemaVersion: 1
+updatedAt: 2026-09-10
+providers:
+  openrouter:
+    maxConcurrent: 3
+  claude-code:
+    maxConcurrent: 3
+  codex:
+    maxConcurrent: 3
+  gemini:
+    maxConcurrent: 3
+  elevenlabs:
+    maxConcurrent: 3
+  openai-tts:
+    maxConcurrent: 3
+  cartesia:
+    maxConcurrent: 3
+  inworld:
+    maxConcurrent: 5
+  fal:
+    maxConcurrent: 3
+  replicate:
+    maxConcurrent: 3
+  openai-image:
+    maxConcurrent: 3
+  google-image:
+    maxConcurrent: 3
+llm:
+  - provider: claude-code
+    id: opus
+    name: Claude Opus (latest)
+    source: https://code.claude.com/docs/en/model-config
+    keywords:
+      - llm
+    pricing: &a1
+      note: Uses your CLI login and account plan. No per-run price is available; paid
+        overage may apply.
+    llm:
+      webSearch: true
+  - provider: claude-code
+    id: sonnet
+    name: Claude Sonnet (latest)
+    source: https://code.claude.com/docs/en/model-config
+    keywords:
+      - llm
+    pricing: *a1
+    llm:
+      webSearch: true
+  - provider: claude-code
+    id: haiku
+    name: Claude Haiku (latest)
+    source: https://code.claude.com/docs/en/model-config
+    keywords:
+      - llm
+    pricing: *a1
+    llm:
+      webSearch: true
+  - provider: codex
+    id: gpt-6-astra
+    name: GPT-6-Astra
+    source: https://developers.openai.com/codex/models
+    keywords:
+      - llm
+    pricing: *a1
+    llm:
+      webSearch: true
+      thinking: &a2
+        low:
+          effort: low
+        medium:
+          effort: medium
+        high:
+          effort: high
+  - provider: codex
+    id: gpt-5.6-sol
+    name: GPT-5.6-Sol
+    source: https://developers.openai.com/codex/models
+    keywords:
+      - llm
+    pricing: *a1
+    llm:
+      webSearch: true
+      thinking: *a2
+  - provider: codex
+    id: gpt-5.6-terra
+    name: GPT-5.6-Terra
+    source: https://developers.openai.com/codex/models
+    keywords:
+      - llm
+    pricing: *a1
+    llm:
+      webSearch: true
+      thinking: *a2
+  - provider: codex
+    id: gpt-5.6-luna
+    name: GPT-5.6-Luna
+    source: https://developers.openai.com/codex/models
+    keywords:
+      - llm
+    pricing: *a1
+    llm:
+      webSearch: true
+      thinking: *a2
+  - provider: codex
+    id: gpt-5.5
+    name: GPT-5.5
+    source: https://developers.openai.com/codex/models
+    keywords:
+      - llm
+    pricing: *a1
+    llm:
+      webSearch: true
+      thinking: *a2
+  - provider: codex
+    id: gpt-5.3-codex-spark
+    name: GPT-5.3-Codex-Spark
+    source: https://developers.openai.com/codex/models
+    keywords:
+      - llm
+    pricing: *a1
+    llm:
+      webSearch: true
+      thinking: *a2
+  - provider: gemini
+    id: gemini-3.8-flash
+    name: Gemini 3.8 Flash
+    source: https://ai.google.dev/gemini-api/docs/models
+    keywords:
+      - llm
+    pricing: *a1
+    llm:
+      webSearch: true
+      thinking: &a3
+        low:
+          level: low
+        medium:
+          level: medium
+        high:
+          level: high
+  - provider: gemini
+    id: gemini-3.1-pro-preview
+    name: Gemini 3.1 Pro (preview)
+    source: https://ai.google.dev/gemini-api/docs/models
+    keywords:
+      - llm
+    pricing: *a1
+    llm:
+      webSearch: true
+      thinking: *a3
+  - provider: openrouter
+    id: google/gemini-3.8-flash
+    name: "Google: Gemini 3.8 Flash"
+    source: https://openrouter.ai/api/v1/models
+    keywords:
+      - llm
+    pricing:
+      inputPerMillionTokens: 0.75
+      outputPerMillionTokens: 3.75
+      note: Public OpenRouter rates verified 2026-09-10; routing, long context,
+        reasoning and web search may add charges.
+    llm:
+      webSearch: true
+      contextTokens: 1048576
+      thinking: *a2
+  - provider: openrouter
+    id: google/gemini-3.1-pro-preview
+    name: "Google: Gemini 3.1 Pro Preview"
+    source: https://openrouter.ai/api/v1/models
+    keywords:
+      - llm
+    pricing:
+      inputPerMillionTokens: 2
+      outputPerMillionTokens: 12
+      note: Public OpenRouter rates verified 2026-09-10; routing, long context,
+        reasoning and web search may add charges.
+    llm:
+      webSearch: true
+      contextTokens: 1048576
+      thinking: *a2
+  - provider: openrouter
+    id: openai/gpt-5.6-sol
+    name: "OpenAI: GPT-5.6 Sol"
+    source: https://openrouter.ai/api/v1/models
+    keywords:
+      - llm
+    pricing:
+      inputPerMillionTokens: 2
+      outputPerMillionTokens: 10
+      note: Public OpenRouter rates verified 2026-09-10; routing, long context,
+        reasoning and web search may add charges.
+    llm:
+      webSearch: true
+      contextTokens: 1050000
+      thinking: *a2
+  - provider: openrouter
+    id: openai/gpt-5.6-terra
+    name: "OpenAI: GPT-5.6 Terra"
+    source: https://openrouter.ai/api/v1/models
+    keywords:
+      - llm
+    pricing:
+      inputPerMillionTokens: 2
+      outputPerMillionTokens: 12
+      note: Public OpenRouter rates verified 2026-09-10; routing, long context,
+        reasoning and web search may add charges.
+    llm:
+      webSearch: true
+      contextTokens: 1050000
+      thinking: *a2
+  - provider: openrouter
+    id: openai/gpt-5.6-luna
+    name: "OpenAI: GPT-5.6 Luna"
+    source: https://openrouter.ai/api/v1/models
+    keywords:
+      - llm
+    pricing:
+      inputPerMillionTokens: 0.19999999999999998
+      outputPerMillionTokens: 1.2
+      note: Public OpenRouter rates verified 2026-09-10; routing, long context,
+        reasoning and web search may add charges.
+    llm:
+      webSearch: true
+      contextTokens: 1050000
+      thinking: *a2
+  - provider: openrouter
+    id: anthropic/claude-sonnet-4.6
+    name: "Anthropic: Claude Sonnet 4.6"
+    source: https://openrouter.ai/api/v1/models
+    keywords:
+      - llm
+    pricing:
+      inputPerMillionTokens: 3
+      outputPerMillionTokens: 15
+      note: Public OpenRouter rates verified 2026-09-10; routing, long context,
+        reasoning and web search may add charges.
+    llm:
+      webSearch: true
+      contextTokens: 1000000
+      thinking: *a2
+  - provider: openrouter
+    id: anthropic/claude-opus-4.7
+    name: "Anthropic: Claude Opus 4.7"
+    source: https://openrouter.ai/api/v1/models
+    keywords:
+      - llm
+    pricing:
+      inputPerMillionTokens: 5
+      outputPerMillionTokens: 25
+      note: Public OpenRouter rates verified 2026-09-10; routing, long context,
+        reasoning and web search may add charges.
+    llm:
+      webSearch: true
+      contextTokens: 1000000
+      thinking: *a2
+image:
+  - provider: openai-image
+    id: gpt-image-2.5-sunburst
+    name: GPT Image 2.5 Sunburst
+    source: https://developers.openai.com/api/docs/guides/image-generation
+    keywords:
+      - image
+    pricing:
+      note: Automatic quality and generated image tokens determine the charge; a fixed
+        image price is unavailable.
+    image: &a4
+      aspectRatios: &a5
+        - 16:9
+        - 9:16
+  - provider: openai-image
+    id: gpt-image-2.5-flare
+    name: GPT Image 2.5 Flare
+    source: https://developers.openai.com/api/docs/guides/image-generation
+    keywords:
+      - image
+    pricing:
+      note: Automatic quality and generated image tokens determine the charge; a fixed
+        image price is unavailable.
+    image: *a4
+  - provider: openai-image
+    id: gpt-image-2
+    name: GPT Image 2
+    source: https://developers.openai.com/api/docs/guides/image-generation
+    keywords:
+      - image
+    pricing:
+      note: Automatic quality and generated image tokens determine the charge; a fixed
+        image price is unavailable.
+    image: *a4
+  - provider: google-image
+    id: gemini-3.1-flash-image
+    name: Nano Banana 2
+    source: https://ai.google.dev/gemini-api/docs/pricing
+    keywords:
+      - image
+    pricing:
+      perImage: 0.101
+      note: 2K image output price; prompt, thinking and other input tokens are
+        additional.
+    image:
+      aspectRatios: *a5
+      resolution: 2K
+  - provider: google-image
+    id: gemini-3-pro-image
+    name: Nano Banana Pro
+    source: https://ai.google.dev/gemini-api/docs/models
+    keywords:
+      - image
+    pricing:
+      note: Price depends on your account or generated output; estimate unavailable.
+    image:
+      aspectRatios: *a5
+      resolution: 2K
+  - provider: fal
+    id: fal-ai/flux-2
+    name: FLUX.2
+    source: https://fal.ai/models/fal-ai/flux-2
+    keywords:
+      - image
+    pricing:
+      note: Price depends on your account or generated output; estimate unavailable.
+    image: *a4
+  - provider: fal
+    id: fal-ai/nano-banana-2
+    name: Nano Banana 2
+    source: https://fal.ai/models/fal-ai/nano-banana-2
+    keywords:
+      - image
+    pricing:
+      note: Price depends on your account or generated output; estimate unavailable.
+    image: *a4
+  - provider: replicate
+    id: black-forest-labs/flux-1.1-pro
+    name: FLUX 1.1 Pro
+    source: https://replicate.com/black-forest-labs/flux-1.1-pro
+    keywords:
+      - image
+    pricing:
+      note: Price depends on your account or generated output; estimate unavailable.
+    image: *a4
+  - provider: replicate
+    id: black-forest-labs/flux-dev
+    name: FLUX.1 Dev
+    source: https://replicate.com/black-forest-labs/flux-dev
+    keywords:
+      - image
+    pricing:
+      note: Price depends on your account or generated output; estimate unavailable.
+    image: *a4
+  - provider: replicate
+    id: black-forest-labs/flux-schnell
+    name: FLUX.1 Schnell
+    source: https://replicate.com/black-forest-labs/flux-schnell
+    keywords:
+      - image
+    pricing:
+      note: Price depends on your account or generated output; estimate unavailable.
+    image: *a4
+tts:
+  - provider: elevenlabs
+    id: eleven_v3
+    name: Eleven v3
+    source: https://elevenlabs.io/docs/overview/models
+    keywords:
+      - tts
+    pricing:
+      perMillionCharacters: 100
+      note: Advertised starting API rate; your plan, voice and account credits affect
+        actual cost.
+    tts:
+      maxCharacters: 5000
+      streaming: true
+  - provider: elevenlabs
+    id: eleven_multilingual_v2
+    name: Eleven Multilingual v2
+    source: https://elevenlabs.io/docs/overview/models
+    keywords:
+      - tts
+    pricing:
+      perMillionCharacters: 100
+      note: Advertised starting API rate; your plan, voice and account credits affect
+        actual cost.
+    tts:
+      maxCharacters: 10000
+      streaming: true
+  - provider: elevenlabs
+    id: eleven_flash_v2_5
+    name: Eleven Flash v2.5
+    source: https://elevenlabs.io/docs/overview/models
+    keywords:
+      - tts
+    pricing:
+      perMillionCharacters: 50
+      note: Advertised starting API rate; your plan, voice and account credits affect
+        actual cost.
+    tts:
+      maxCharacters: 40000
+      streaming: true
+  - provider: inworld
+    id: inworld-tts-2
+    name: Inworld TTS-2
+    source: https://inworld.ai/pricing
+    keywords:
+      - tts
+    pricing:
+      perMillionCharacters: 25
+      note: On-Demand rate before discounts or credits. Requests are split at 10,000
+        characters for account compatibility.
+    tts:
+      maxCharacters: 10000
+      asyncMaxCharacters: 100000
+      streaming: true
+  - provider: inworld
+    id: inworld-tts-2-flash
+    name: Inworld TTS-2 Flash
+    source: https://inworld.ai/pricing
+    keywords:
+      - tts
+    pricing:
+      perMillionCharacters: 15
+      note: On-Demand rate before plan discounts or credits.
+    tts:
+      maxCharacters: 4000
+      streaming: true
+  - provider: cartesia
+    id: sonic-3.6
+    name: Sonic 3.6
+    source: https://docs.cartesia.ai/build-with-cartesia/tts-models/latest
+    keywords:
+      - tts
+    pricing:
+      note: Price depends on your account or generated output; estimate unavailable.
+    tts:
+      maxCharacters: 4000
+      streaming: true
+  - provider: openai-tts
+    id: gpt-4o-mini-tts
+    name: GPT-4o mini TTS
+    source: https://developers.openai.com/api/docs/guides/text-to-speech
+    keywords:
+      - tts
+    pricing:
+      note: Price depends on your account or generated output; estimate unavailable.
+    tts:
+      maxCharacters: 4096
+      streaming: true
+  - provider: openai-tts
+    id: tts-1
+    name: TTS-1
+    source: https://developers.openai.com/api/docs/guides/text-to-speech
+    keywords:
+      - tts
+    pricing:
+      note: Price depends on your account or generated output; estimate unavailable.
+    tts:
+      maxCharacters: 4096
+      streaming: true
+  - provider: openai-tts
+    id: tts-1-hd
+    name: TTS-1 HD
+    source: https://developers.openai.com/api/docs/guides/text-to-speech
+    keywords:
+      - tts
+    pricing:
+      note: Price depends on your account or generated output; estimate unavailable.
+    tts:
+      maxCharacters: 4096
+      streaming: true

@@ -53,7 +53,7 @@ export function geminiLlm(deps: GeminiDeps): LlmPort {
   const binary = deps.binary ?? geminiBinary;
   async function* complete(req: LlmCompletion): AsyncGenerator<LlmEvent> {
     req.signal.throwIfAborted();
-    const workspace = geminiWorkspace(req.webSearch === true);
+    const workspace = geminiWorkspace(req.webSearch === true, req);
     let run: ReturnType<RunCli> | undefined;
     try {
       run = deps.run(

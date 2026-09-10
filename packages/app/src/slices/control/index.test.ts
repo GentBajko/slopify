@@ -150,6 +150,25 @@ describe("pause and resume", () => {
 });
 
 describe("provider changes", () => {
+  it("changes whole narration into chunks while failed without starting generation", async () => {
+    const h = harness({ audio: "failed", article: "done" });
+    insertPiece(h.db, {
+      id: "old",
+      stageId: "s-audio",
+      kind: "chunk",
+      idx: 1,
+      state: "failed",
+      payload: JSON.stringify({ text: "old whole text" }),
+    });
+    expect(await changeProviders(h.deps, "p1", { chunking: { mode: "paragraph" } })).toEqual({
+      ok: true,
+    });
+    expect(projectById(h.db, "p1")?.config.chunking).toEqual({ mode: "paragraph" });
+    expect(piecesOf(h.db, "s-audio", "chunk")).toHaveLength(0);
+    expect(h.state("audio")).toBe("failed");
+    expect(h.state("article")).toBe("done");
+    h.db.close();
+  });
   it("keeps saved prompts/uploads and clears only unfinished audio when changing voice", async () => {
     const h = harness({ audio: "failed", images: "done" });
     const dir = join(h.paths.projects, "p1");

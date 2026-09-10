@@ -6,6 +6,7 @@ export type ProviderFamily = (typeof providerFamilies)[number];
 
 // What Play's model dropdown is filled from, fetched per load.
 export interface ModelInfo {
+  readonly thinkingModes?: readonly import("./llm.js").ThinkingMode[];
   readonly id: string;
   readonly name: string;
 }

@@ -46,6 +46,7 @@ export async function writeSegment(
   const answer = await providers.llm({
     provider: choice.provider,
     model: choice.model,
+    ...(choice.thinking === undefined ? {} : { thinking: choice.thinking }),
     messages,
     check: (given: LlmAnswer): string | undefined =>
       given.text.trim() === "" ? `the ${category} answered with nothing` : undefined,

@@ -1,6 +1,6 @@
 {
   "name": "@gentbajko/slopify",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Turn a prompt into a finished video, locally, with your own provider keys",
   "license": "MIT",
   "author": "Gent Bajko",
@@ -38,6 +38,7 @@
     "remark-gfm": "^4.0.1",
     "strip-markdown": "^6.0.0",
     "ulid": "^3.0.2",
+    "yaml": "^2.9.0",
     "zod": "^4.5.4"
   }
 }

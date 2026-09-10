@@ -1,12 +1,16 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { LlmCompletion } from "../../kernel/ports/llm.js";
 import type { CliOptions } from "./run-cli.js";
 
 // Gemini 0.16 supports stream-json and tools.core, but headless default mode still
 // exposes file-reading tools. Isolate each writing call while retaining ~/.gemini
 // authentication. Nothing is written into the user's settings or project.
-export function geminiWorkspace(webSearch: boolean): {
+export function geminiWorkspace(
+  webSearch: boolean,
+  request?: LlmCompletion,
+): {
   readonly options: CliOptions;
   readonly mcpAllowlist: string;
   readonly remove: () => void;
@@ -20,6 +24,29 @@ export function geminiWorkspace(webSearch: boolean): {
     writeFileSync(
       settings,
       JSON.stringify({
+        ...(request?.thinkingConfig
+          ? {
+              modelConfigs: {
+                customOverrides: [
+                  {
+                    match: { model: request.model },
+                    modelConfig: {
+                      generateContentConfig: {
+                        thinkingConfig: {
+                          ...(request.thinkingConfig.level === undefined
+                            ? {}
+                            : { thinkingLevel: request.thinkingConfig.level }),
+                          ...(request.thinkingConfig.budget === undefined
+                            ? {}
+                            : { thinkingBudget: request.thinkingConfig.budget }),
+                        },
+                      },
+                    },
+                  },
+                ],
+              },
+            }
+          : {}),
         tools: {
           core: webSearch ? ["google_web_search"] : [],
           allowed: webSearch ? ["google_web_search"] : [],

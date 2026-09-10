@@ -38,6 +38,9 @@ export function codexArgs(req: LlmCompletion): string[] {
     "--skip-git-repo-check",
     "-c",
     `web_search="${req.webSearch === true ? "live" : "disabled"}"`,
+    ...(req.thinkingConfig?.effort
+      ? ["-c", `model_reasoning_effort="${req.thinkingConfig.effort}"`]
+      : []),
     ...(req.model === "" ? [] : ["-m", req.model]),
     // The prompt is one argv element after `--`, so a leading dash is text, not a flag.
     "--",

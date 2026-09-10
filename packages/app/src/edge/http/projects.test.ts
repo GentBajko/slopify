@@ -598,3 +598,82 @@ describe("subtitle admission", () => {
     expect(one.db.prepare("SELECT count(*) AS n FROM projects").get()?.n).toBe(0);
   });
 });
+
+describe("planning and batch admission", () => {
+  async function generating(app: Harness["app"], over: Partial<RunDraft>): Promise<RunDraft> {
+    const response = await app.request("/api/prompts", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        kind: "article",
+        name: "Dossier",
+        body: "Compose a dossier on {{topic}}.",
+      }),
+    });
+    expect(response.status).toBe(201);
+    return draft({
+      sources: {
+        research: "off",
+        article: "generate",
+        audio: "off",
+        images: "off",
+        thumbnail: "off",
+        video: "off",
+      },
+      llm: { provider: "openrouter", model: "m" },
+      articlePrompt: "Dossier",
+      provided: {},
+      ...over,
+    });
+  }
+  it("estimates without creating a project or starting the runner", async () => {
+    const h = harness();
+    const configured = await generating(h.app, { values: { topic: "Arda" } });
+    const response = await h.app.request("/api/projects/estimate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ draft: configured, expectedWords: 5000 }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ estimates: [{ expectedWords: 5000 }] });
+    expect(h.db.prepare("SELECT * FROM projects").all()).toHaveLength(0);
+    expect(h.ticked).toHaveLength(0);
+    h.db.close();
+  });
+  it("rejects an incomplete batch atomically, then renders distinct keyword snapshots once", async () => {
+    const h = harness();
+    const configured = await generating(h.app, { values: { topic: "Arda" } });
+    const requestId = "6b7f00c7-c213-43b2-b263-260381f135e6";
+    const submit = (values: string) =>
+      h.app.request("/api/projects/batch", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          requestId,
+          draft: configured,
+          items: [
+            { title: "Arda", values: { topic: "Arda" } },
+            { title: "Gondor", values: { topic: values } },
+          ],
+        }),
+      });
+    expect((await submit("")).status).toBe(400);
+    expect(h.db.prepare("SELECT * FROM projects").all()).toHaveLength(0);
+    expect(h.ticked).toHaveLength(0);
+    const accepted = await submit("Gondor");
+    expect(accepted.status).toBe(201);
+    expect(h.ticked).toHaveLength(1);
+    const queue = (await accepted.json()) as { queue: { projectId: string }[] };
+    const second = h.db
+      .prepare("SELECT config FROM projects WHERE id=?")
+      .get(queue.queue[1]?.projectId ?? "");
+    expect(JSON.parse(String(second?.config))).toMatchObject({
+      values: { topic: "Gondor" },
+      rendered: { article: "Compose a dossier on Gondor." },
+    });
+    expect((await submit("Gondor")).status).toBe(200);
+    expect(h.ticked).toHaveLength(1);
+    expect(h.db.prepare("SELECT * FROM projects").all()).toHaveLength(2);
+    h.db.close();
+  });
+});

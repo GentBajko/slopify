@@ -68,6 +68,7 @@ export function openRouterLlm(deps: OpenRouterDeps): LlmPort {
           role: message.role,
           content: message.content,
         })),
+        ...(req.thinkingConfig?.effort ? { reasoning: { effort: req.thinkingConfig.effort } } : {}),
         stream: true,
         // The usage-accounting flag: without it the final chunk carries no token counts
         // and the Usage page would have nothing to count.

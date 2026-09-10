@@ -1,6 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
+import { modelFields } from "../../catalog/validate.js";
 import { derive, progressOf } from "../../kernel/runner/graph.js";
 import type { Project, ProjectListing, ProjectSummary } from "../../slices/admission/model.js";
 import {
@@ -89,13 +90,14 @@ export function projectRoutes(deps: AppDeps) {
           staged: stagedFiles(deps.db),
           requiredSlots: picked.requiredSlots,
         });
-        if (!admitted.ok || picked.missing.length > 0) {
+        const modelErrors = modelFields(picked.draft, deps.catalogue);
+        if (!admitted.ok || picked.missing.length > 0 || modelErrors.length > 0) {
           return problem(c, {
             status: 400,
             title: titleOf(400),
             detail: "This run cannot start yet; the listed fields need attention.",
             extensions: {
-              fields: [...picked.missing, ...(admitted.ok ? [] : admitted.fields)],
+              fields: [...picked.missing, ...modelErrors, ...(admitted.ok ? [] : admitted.fields)],
             },
           });
         }

@@ -1,13 +1,18 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { stageKinds, stageStates } from "../../kernel/pipeline.js";
+import { thinkingModes } from "../../kernel/ports/llm.js";
 import type { StageProgress } from "../../kernel/runner/graph.js";
 import { chunkModes } from "../narration/chunk.js";
 import { subtitleConfigSchema } from "../subtitles/model.js";
 import type { Project, RunConfig, Stage } from "./model.js";
 import { entryModes, formats, stageSources } from "./model.js";
 
-const providerChoice = z.object({ provider: z.string(), model: z.string() });
+const providerChoice = z.object({
+  provider: z.string(),
+  model: z.string(),
+  thinking: z.enum(thinkingModes).optional(),
+});
 const entryChoice = z.object({ name: z.string(), mode: z.enum(entryModes) });
 
 // The shape Play posts and the shape `projects.config` holds, in one place: the second

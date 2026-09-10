@@ -1,13 +1,16 @@
 import type { FieldError } from "@app/slices/admission/rules.js";
+import type { QueueEntry } from "@app/slices/batch/index.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { type KeyboardEvent, useState } from "react";
 import type { UploadKind } from "@/api";
 import { createProject, uploadStaged } from "@/api";
 import { useApp } from "@/app-context";
+import { read } from "@/http";
 import { usePlayDraft } from "@/lib/form-drafts";
 import { admission } from "@/play/admission";
 import { CueSheet } from "@/play/cue-sheet";
+import { BatchEditor, type BatchItem, RunReview } from "@/play/run-review";
 import { StageRails } from "@/play/stage-rails";
 import type { PlayFormState, Upload } from "@/play/state";
 import { freshForm } from "@/play/state";
@@ -51,6 +54,9 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   const settings = useQuery(settingsQuery(api));
 
   const [form, setForm] = usePlayDraft();
+  const [batchItems, setBatchItems] = useState<readonly BatchItem[]>([]);
+  const [review, setReview] = useState(false);
+  const [batchId, setBatchId] = useState(() => crypto.randomUUID());
   const [subtitleUploading, setSubtitleUploading] = useState(false);
   // What the server marked when it refused the draft: a template deleted since it was
   // picked, or a rule the browser's copy could not see.
@@ -64,6 +70,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
       const next = { ...current, ...patch };
       return { ...next, subtitles: subtitlesFor(next.subtitles, next.sources) };
     });
+    setBatchId(crypto.randomUUID());
     setTouched(true);
     // A refusal stands until the form changes; the next press asks the server again.
     setRefused([]);
@@ -86,18 +93,41 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     : admissionBlocker;
 
   const play = useMutation({
-    mutationFn: () => createProject(api, draft),
+    mutationFn: async () => {
+      if (!batchItems.length) return createProject(api, draft);
+      const created = await read<{ queue: QueueEntry[] }>(
+        await api.fetch(`${api.origin}/api/projects/batch`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            requestId: batchId,
+            draft,
+            items: [
+              { title: draft.title, values: draft.values },
+              ...batchItems.map(({ title, values }) => ({ title, values })),
+            ],
+          }),
+        }),
+      );
+      const first = created.queue[0];
+      if (!first) throw new Error("No videos were queued.");
+      return { ok: true as const, value: { project: { id: first.projectId } } };
+    },
     onSuccess: (created) => {
       if (!created.ok) {
         // The server names every failing field, and each one is marked
         // where it stands rather than being summarised over the key.
         setRefused(created.fields);
+        setReview(false);
         return;
       }
       void queryClient.invalidateQueries({ queryKey: keys.projects });
       void queryClient.invalidateQueries({ queryKey: keys.staging });
       // Upload IDs belong to this run once accepted; the next Play starts fresh.
       setForm(freshForm);
+      setBatchItems([]);
+      setBatchId(crypto.randomUUID());
+      setReview(false);
       tutorialEvent({ type: "project-created", id: created.value.project.id });
       onCreated(created.value.project.id);
     },
@@ -152,7 +182,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
 
   const submit = (): void => {
     if (blocker === undefined && !play.isPending) {
-      play.mutate();
+      setReview(true);
     }
   };
 
@@ -277,7 +307,28 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
         pending={play.isPending}
         update={update}
         onPlay={submit}
-      />
+      >
+        <BatchEditor
+          items={batchItems}
+          fields={fields}
+          title={form.title}
+          values={form.values}
+          onChange={(items) => {
+            setBatchItems(items);
+            setBatchId(crypto.randomUUID());
+          }}
+        />
+      </CueSheet>
+      {review ? (
+        <RunReview
+          draft={draft}
+          items={batchItems}
+          pending={play.isPending}
+          failure={play.error?.message ?? refused.map((f) => f.message).join(" ")}
+          onClose={() => setReview(false)}
+          onStart={() => play.mutate()}
+        />
+      ) : null}
     </div>
   );
 }

@@ -4,13 +4,12 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import type { AudioPreviewStore } from "../../kernel/audio-preview.js";
 import type { Clock } from "../../kernel/clock.js";
-import { transact } from "../../kernel/db/tx.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StagePiece } from "../../kernel/runner/piece-repo.js";
-import { insertPiece, piecesOf, setPiece } from "../../kernel/runner/piece-repo.js";
+import { piecesOf, setPiece } from "../../kernel/runner/piece-repo.js";
 import type { StageProviders } from "../../kernel/runner/providers.js";
 import type { VoiceChoice } from "../admission/model.js";
 import { entryModes } from "../admission/model.js";
@@ -24,6 +23,7 @@ import { probeDurationMs } from "../video/ffmpeg.js";
 import { chunkNarration, defaultChunking } from "./chunk.js";
 import { joinNarration } from "./concat.js";
 import { observeNarration } from "./live.js";
+import { planNarration } from "./plan.js";
 
 // The narration source is cut per the run's chunking choice, every chunk is synthesized in
 // parallel as a resumable piece, the chunk audio is concatenated in order into one body file,
@@ -32,6 +32,7 @@ import { observeNarration } from "./live.js";
 // attempts.
 
 export interface NarrationDeps {
+  readonly maxCharacters?: (provider: string, model: string | undefined) => number;
   readonly db: DatabaseSync;
   readonly paths: Paths;
   readonly ids: Ids;
@@ -94,7 +95,14 @@ export async function runNarration(
     throw new Error(nothingToNarrate);
   }
 
-  const files = await speakChunks(deps, context, providers, choice, plan(deps, context, texts));
+  const planned = planNarration(
+    deps,
+    context.stage.id,
+    texts,
+    deps.maxCharacters?.(choice.provider, choice.model) ?? 1000000,
+    (piece) => finished(deps, projectId, piece) !== undefined,
+  );
+  const files = await speakChunks(deps, context, providers, choice, planned);
   await storeBody(deps, context, choice, files, outputs);
   await speakSegments(deps, context, providers, choice, outputs);
 
@@ -119,34 +127,7 @@ function narrationSource(
   return readFileSync(outputPath(deps.paths, projectId, article.path), "utf8");
 }
 
-// The chunk list, planned once and kept. A retry after a failure finds the rows the first
-// run wrote and narrates only the ones that did not finish.
-function plan(
-  deps: NarrationDeps,
-  context: StageContext,
-  texts: readonly string[],
-): readonly StagePiece[] {
-  const existing = piecesOf(deps.db, context.stage.id, "chunk");
-  if (existing.length > 0) {
-    return existing;
-  }
-  const planned: StagePiece[] = texts.map((text, index) => ({
-    id: deps.ids.next(),
-    stageId: context.stage.id,
-    kind: "chunk",
-    idx: index + 1,
-    state: "pending",
-    payload: JSON.stringify({ text }),
-  }));
-  transact(deps.db, () => {
-    for (const piece of planned) {
-      insertPiece(deps.db, piece);
-    }
-  });
-  return planned;
-}
-
-// Every chunk is synthesized in parallel. A chunk a previous run finished is not spoken
+// Chunks are scheduled through the shared provider queue. A chunk a previous run finished is not spoken
 // again, and one that fails takes down the whole stage while its siblings finish and keep their
 // audio for the next resume.
 async function speakChunks(
@@ -168,7 +149,7 @@ async function speakChunks(
       if (kept !== undefined) {
         return { ok: true, file: kept };
       }
-      const file = `${chunkDir}/${String(piece.idx).padStart(3, "0")}.mp3`;
+      const file = `${chunkDir}/${piece.id}.mp3`;
       setPiece(deps.db, piece.id, "running", piece.payload);
       try {
         const spoken = await providers.forPiece(piece.id).tts(

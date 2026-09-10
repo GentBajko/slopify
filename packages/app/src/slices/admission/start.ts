@@ -27,6 +27,7 @@ export function startRun(
   deps: StorageDeps,
   draft: RunDraft,
   rendered: Readonly<Record<string, string>>,
+  retainStaged = false,
 ): StartedRun {
   const id = deps.ids.next();
   const at = deps.clock.now().toISOString();
@@ -65,9 +66,9 @@ export function startRun(
     for (const stage of stages) {
       insertStage(deps.db, stage);
     }
-    attachProvided(deps, id, draft, moved);
+    attachProvided(deps, id, draft, moved, retainStaged);
   });
-  for (const source of moved) {
+  for (const source of retainStaged ? [] : moved) {
     dropStagedSource(deps, source);
   }
 
@@ -79,6 +80,7 @@ function attachProvided(
   projectId: string,
   draft: RunDraft,
   collected: string[],
+  retainStaged: boolean,
 ): void {
   const { sources, provided } = draft;
   if (sources.research === "provide" && provided.research !== undefined) {
@@ -96,15 +98,15 @@ function attachProvided(
     storeArticleText(deps, { projectId, markdown: provided.article.trim() });
   }
   if (sources.audio === "provide") {
-    attach(deps, projectId, "audio", provided.audio, "audio_body", collected);
+    attach(deps, projectId, "audio", provided.audio, "audio_body", collected, retainStaged);
   }
   if (sources.thumbnail === "provide") {
-    attach(deps, projectId, "thumbnail", provided.thumbnail, "thumbnail", collected);
+    attach(deps, projectId, "thumbnail", provided.thumbnail, "thumbnail", collected, retainStaged);
   }
   if (sources.images === "provide") {
     // Slideshow order is the order the user left the list in.
     for (const [index, stagedFileId] of (provided.images ?? []).entries()) {
-      attach(deps, projectId, "images", stagedFileId, "image", collected, index + 1);
+      attach(deps, projectId, "images", stagedFileId, "image", collected, retainStaged, index + 1);
     }
   }
 }
@@ -116,6 +118,7 @@ function attach(
   stagedFileId: string | undefined,
   role: Parameters<typeof attachStagedFile>[1]["role"],
   collected: string[],
+  retainStaged: boolean,
   index?: number,
 ): void {
   if (stagedFileId === undefined) {
@@ -123,6 +126,7 @@ function attach(
   }
   const result = attachStagedFile(deps, {
     stagedFileId,
+    retainStaged,
     projectId,
     role,
     ...(index === undefined ? {} : { index }),

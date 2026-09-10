@@ -10,6 +10,8 @@ import { buildRegistry } from "./adapter-registry.js";
 import { alignSubtitles } from "./adapters/alignment/index.js";
 import { prepareFfmpeg } from "./adapters/ffmpeg.js";
 import { nodeRunCli } from "./adapters/llm/run-cli.js";
+import { curateRegistry } from "./catalog/registry.js";
+import { type CatalogueStore, createCatalogueStore } from "./catalog/store.js";
 import { createHub } from "./edge/events/hub.js";
 import { createApp } from "./edge/http/app.js";
 import type { AudioPreviewStore } from "./kernel/audio-preview.js";
@@ -33,6 +35,7 @@ import type { Runner } from "./kernel/runner/index.js";
 import { createRunner } from "./kernel/runner/index.js";
 import type { ProviderDeps } from "./kernel/runner/providers.js";
 import { stageProviders } from "./kernel/runner/providers.js";
+import { createProviderQueue } from "./kernel/runner/queue.js";
 import { readVersion } from "./kernel/version.js";
 import { modelSources } from "./model-catalog.js";
 import {
@@ -44,6 +47,7 @@ import {
 } from "./slices/admission/repo.js";
 import { prepareProvidedArticleSegments } from "./slices/article/provided-entries.js";
 import { runArticle } from "./slices/article/run.js";
+import { pumpQueue, queueWaiting } from "./slices/batch/index.js";
 import { runImages } from "./slices/images/run.js";
 import { runNarration } from "./slices/narration/run.js";
 import { runResearch } from "./slices/research/run.js";
@@ -110,13 +114,17 @@ export async function boot(config: Config): Promise<Boot> {
       },
       flushDelayMs,
     );
-    const registry = buildRegistry({
-      db,
-      fetch: globalThis.fetch,
-      spawn: nodeRunCli,
-      clock,
-      probe: nodeCliProbe,
-    });
+    const catalogue = createCatalogueStore({ dataDir: paths.dataDir, fetch: globalThis.fetch });
+    const registry = curateRegistry(
+      buildRegistry({
+        db,
+        fetch: globalThis.fetch,
+        spawn: nodeRunCli,
+        clock,
+        probe: nodeCliProbe,
+      }),
+      catalogue,
+    );
     const audioPreviews = createAudioPreviewStore();
     const runner = wire({
       db,
@@ -128,6 +136,7 @@ export async function boot(config: Config): Promise<Boot> {
       telemetry,
       flusher,
       registry,
+      catalogue,
       ffmpeg,
       audioPreviews,
     });
@@ -207,6 +216,7 @@ export async function boot(config: Config): Promise<Boot> {
       updater,
       audioPreviews,
       ...modelSources(registry),
+      catalogue,
       clock,
       ids,
       log,
@@ -216,6 +226,17 @@ export async function boot(config: Config): Promise<Boot> {
       probe: nodeCliProbe,
     });
     const server = await listen(app, config, log);
+    const queueTimer = setInterval(() => {
+      const release = updater.beginMutation();
+      if (!release) return;
+      try {
+        pumpQueue(updateDb, runner);
+      } catch {
+        log.write("error", "batch.queue", { detail: "The batch queue could not advance." });
+      } finally {
+        release();
+      }
+    }, 1000);
     listeningPort = portOf(server) ?? config.port;
     // Whatever last run left queued goes out at start. Nothing waits for
     // it, and an unreachable collector costs one refused socket.
@@ -225,6 +246,7 @@ export async function boot(config: Config): Promise<Boot> {
     let stopActivation = (): void => {};
     shutdown = (): Promise<void> => {
       stopping ??= (async () => {
+        clearInterval(queueTimer);
         stopActivation();
         audioPreviews.close();
         try {
@@ -273,6 +295,7 @@ interface Wiring {
   readonly telemetry: TelemetryDeps;
   readonly flusher: Flusher;
   readonly registry: Registry;
+  readonly catalogue: CatalogueStore;
 }
 
 function wire({
@@ -286,6 +309,7 @@ function wire({
   telemetry,
   flusher,
   registry,
+  catalogue,
   ffmpeg,
 }: Wiring): Runner {
   // A stage counts what it did and the queue is flushed after each new event. `record`
@@ -303,11 +327,19 @@ function wire({
   const writing = { db, paths, ids, clock, log, count };
   // A stage slice is handed the wrapped calls, never the registry: every provider call
   // it makes is already inside the retry policy (kernel/runner/providers.ts).
-  const providers: ProviderDeps = { registry, attempts: sqliteAttempts(db, ids), clock, log };
+  const providers: ProviderDeps = {
+    registry,
+    attempts: sqliteAttempts(db, ids),
+    clock,
+    log,
+    queue: createProviderQueue(
+      (provider) => catalogue.read().providers[provider]?.maxConcurrent ?? 1,
+    ),
+  };
   return createRunner({
     stages: {
       stagesOf: (projectId) => stagesOf(db, projectId),
-      paused: (projectId) => projectPaused(db, projectId),
+      paused: (projectId) => projectPaused(db, projectId) || queueWaiting(db, projectId),
       dependenciesOf: (projectId, kind) => {
         const project = projectById(db, projectId);
         return project === undefined ? [] : dependenciesOf(kind, project.config.sources);
@@ -324,7 +356,18 @@ function wire({
       audio: async (context) => {
         const wrapped = stageProviders(providers, context);
         await prepareProvidedArticleSegments(writing, context, wrapped);
-        await runNarration({ ...video, audioPreviews }, context, wrapped);
+        await runNarration(
+          {
+            ...video,
+            audioPreviews,
+            maxCharacters: (provider, model) => {
+              const entry = catalogue.models(provider, "tts").find((m) => m.id === model);
+              return entry && "tts" in entry ? entry.tts.maxCharacters : 4000;
+            },
+          },
+          context,
+          wrapped,
+        );
       },
       images: (context) => runImages(writing, context, stageProviders(providers, context)),
       thumbnail: (context) => runThumbnail(writing, context, stageProviders(providers, context)),

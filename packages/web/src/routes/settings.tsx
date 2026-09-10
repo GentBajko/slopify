@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import { saveAppSettings } from "@/api";
 import { useApp } from "@/app-context";
+import { CatalogueSettings } from "@/components/catalogue";
 import { ProviderKeys } from "@/components/provider-keys";
 import { Rail, RailGroup } from "@/components/rail";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
@@ -40,6 +41,7 @@ export function SettingsRoute() {
       <h1 className="text-title font-bold tracking-[-0.01em]">Settings</h1>
       <ProviderKeys />
       <Voices />
+      <CatalogueSettings />
       <Playback />
     </div>
   );

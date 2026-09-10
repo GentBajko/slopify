@@ -31,6 +31,7 @@ export async function cancelRun(api: Api, projectId: string): Promise<ActionResu
 }
 
 export interface ProviderChanges {
+  readonly chunking?: import("@app/slices/narration/chunk.js").Chunking;
   readonly llm?: ProviderChoice;
   readonly audio?: VoiceChoice;
   readonly images?: ProviderChoice;

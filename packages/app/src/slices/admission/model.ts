@@ -15,6 +15,7 @@ export const entryModes = ["text", "llm"] as const;
 export type EntryMode = (typeof entryModes)[number];
 
 export interface ProviderChoice {
+  readonly thinking?: import("../../kernel/ports/llm.js").ThinkingMode | undefined;
   readonly provider: string;
   readonly model: string;
 }

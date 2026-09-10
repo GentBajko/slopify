@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
+import { BatchQueue } from "@/components/batch-queue";
 import { Rail, RailGroup } from "@/components/rail";
 import type { ProviderChanges } from "@/project/api";
 import { StageBodyFor } from "@/project/bodies";
@@ -139,6 +140,7 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
         )}
       </div>
 
+      <BatchQueue />
       <ProjectProgress stages={stages} project={summary} />
       <div className="grid items-start gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
         <ProjectNavigation

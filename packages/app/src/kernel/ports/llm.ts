@@ -38,7 +38,16 @@ export interface LlmCapabilities {
   readonly webSearch: boolean;
 }
 
+export const thinkingModes = ["off", "low", "medium", "high", "xhigh"] as const;
+export type ThinkingMode = (typeof thinkingModes)[number];
+export interface ThinkingConfig {
+  readonly budget?: number | undefined;
+  readonly level?: "minimal" | "low" | "medium" | "high" | undefined;
+  readonly effort?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | undefined;
+}
 export interface LlmCompletion {
+  readonly thinking?: ThinkingMode | undefined;
+  readonly thinkingConfig?: ThinkingConfig | undefined;
   readonly model: string;
   readonly messages: readonly Message[];
   // A provider or model that cannot ground on the web refuses the whole stage rather than
