@@ -60,3 +60,70 @@ describe("bounded subtitle resynchronization", () => {
     expect(() => alignSpeechWindow(logits, frames, expected, true, 12, 40)).toThrow(/match/);
   });
 });
+
+const before = "CANDIDATE FIVE HAD WET RING CELLS";
+const after = "COMPARING CANDIDATE TWO WITH CANDIDATE FOUR SHOWED THE FLOODED FRAME DISAPPEARING";
+const missing = "alongside an interior fraction of another percentage";
+it("recovers an internal omission and reports its exact source span", () => {
+  const audio = recording(`${before} ${after}`);
+  const result = alignSpeechWindow(
+    audio.logits,
+    audio.frames,
+    speechWords(`${before} ${missing} ${after}`),
+    true,
+    12,
+    10,
+  );
+  expect(result.skipped).toBe(7);
+  expect(result.omissionStart).toBe(6);
+  expect(result.words.map((word) => word.text).join(" ")).toBe(`${before} ${after}`);
+});
+it("rejects internal recovery without budget or enough confirmed speech after it", () => {
+  for (const [ending, budget] of [
+    [after, 6],
+    ["HI THERE", 10],
+  ] as const) {
+    const audio = recording(`${before} ${ending}`);
+    expect(() =>
+      alignSpeechWindow(
+        audio.logits,
+        audio.frames,
+        speechWords(`${before} ${missing} ${ending}`),
+        true,
+        12,
+        budget,
+      ),
+    ).toThrow(/match/);
+  }
+});
+it("does not consume an internal omission whose following anchor is past the cutoff", () => {
+  const audio = recording(`${before} ${after}`);
+  expect(() =>
+    alignSpeechWindow(
+      audio.logits,
+      audio.frames,
+      speechWords(`${before} ${missing} ${after}`),
+      true,
+      1,
+      10,
+    ),
+  ).toThrow(/match/);
+});
+
+it("keeps the spoken occurrence when a word repeats across an omission", () => {
+  const prefix = "HAD ONE HUNDRED THIRTY THREE WET RING CELLS OR SIX POINT FIVE ONE PERCENT";
+  const gap = "ALONGSIDE AN INTERIOR FRACTION OF SIX POINT FOUR FIVE PERCENT";
+  const suffix = "COMPARING CANDIDATE TWO WITH CANDIDATE FOUR";
+  const audio = recording(`${prefix} ${suffix}`);
+  const result = alignSpeechWindow(
+    audio.logits,
+    audio.frames,
+    speechWords(`${prefix} ${gap} ${suffix}`),
+    true,
+    12,
+    20,
+  );
+  expect(result.omissionStart).toBe(speechWords(prefix).length);
+  expect(result.skipped).toBe(speechWords(gap).length);
+  expect(result.words.map((word) => word.text).join(" ")).toBe(`${prefix} ${suffix}`);
+});

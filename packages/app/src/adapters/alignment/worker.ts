@@ -89,9 +89,9 @@ async function run(input: WorkerInput): Promise<readonly TimedWord[]> {
         omitted += recovered.skipped;
         send({
           type: "omission",
-          start: sampleAt / sampleRate,
+          start: sampleAt / sampleRate + (accepted[recovered.omissionStart - 1]?.end ?? 0),
           text: candidate
-            .slice(0, recovered.skipped)
+            .slice(recovered.omissionStart, recovered.omissionStart + recovered.skipped)
             .map((word) => word.text)
             .join(" "),
         });

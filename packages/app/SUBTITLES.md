@@ -8,6 +8,8 @@
 
 For a completed project, open its final Video or Audio export section, set subtitles, and click **Save subtitles**. This rebuilds only the local export from saved narration and images. Changing font, size or position reuses word timing when the audio and spoken text are unchanged. A paused run saves these choices until Resume; pause an active run before editing. Failed alignment or rendering keeps the previous finished export.
 
+If narration omits a short phrase, alignment can skip that transcript span when the surrounding speech is a strong match, including omissions inside an alignment window. The export records the omitted text and audio position for review. Recovery stays bounded and never recreates missing speech.
+
 Audio Off disables subtitles. Video Off produces WAV audio with separate subtitle files. Uploaded audio must match the article; substantial mismatches fail with a message to correct the transcript. Review timing and spelling before publishing. English is supported first; unusual pronunciations and non-English passages can fail alignment.
 
 Fonts are copied into the completed project's caption assets, so an existing export can reuse its chosen font even after the original system font is removed. Installed fonts and uploaded fonts stay local. SRT/VTT are portable text/timing files and do not embed a font; the chosen font is used in burned video captions.
