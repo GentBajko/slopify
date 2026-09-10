@@ -32,6 +32,7 @@ export interface AppDeps {
   readonly hub: Hub;
   readonly runner: Runner;
   readonly modelsFor?: (provider: string, family: ProviderFamily) => Promise<readonly ModelInfo[]>;
+  readonly fallbackModelsFor?: (provider: string) => readonly ModelInfo[];
   readonly clock: Clock;
   readonly ids: Ids;
   readonly log: Log;

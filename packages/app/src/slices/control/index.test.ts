@@ -235,6 +235,24 @@ describe("provider changes", () => {
     h.db.close();
   });
 
+  it("accepts a custom model when the adapter supports it even if discovery is unavailable", async () => {
+    const h = harness({ article: "failed" });
+    const result = await changeProviders(
+      {
+        ...h.deps,
+        allowsCustomModels: (provider) => provider === "openrouter",
+        modelsFor: async () => {
+          throw new Error("catalog offline");
+        },
+      },
+      "p1",
+      { llm: { provider: "openrouter", model: "newly-released" } },
+    );
+    expect(result).toEqual({ ok: true });
+    expect(projectById(h.db, "p1")?.config.llm?.model).toBe("newly-released");
+    h.db.close();
+  });
+
   it("rechecks a key removed while the model catalog was loading", async () => {
     const h = harness({ article: "failed" });
     const deps = {

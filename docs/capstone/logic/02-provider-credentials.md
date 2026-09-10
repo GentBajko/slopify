@@ -24,8 +24,14 @@ API keys per provider, the voice list, and how their absence or change reaches P
 3. Add voice: require a non-empty name and a non-empty voice ID; the ID must be unique within its provider; names may repeat. Nothing is verified against the provider.
 4. Remove voice: delete the entry.
 5. Play reads the key table to render provider dropdowns: every supported provider is listed; a provider with no key is greyed out and unselectable.
-6. Play fetches the selected provider's model list for the model dropdown; a failed fetch shows the error in the dropdown and blocks Play for that provider until a fetch succeeds.
+6. Play and paused/failed project controls fetch the selected provider's model catalogue, including TTS models. Loading, refreshes and discovery failures preserve the selected ID; discovery failure alone does not block a valid selection. Refresh bypasses the server cache. Custom IDs are offered when the catalogue permits them.
 7. A provider call reads the key at the moment the attempt starts.
+
+## Model discovery
+
+`GET /api/providers/:id/models` returns `{models:[{id,name}], allowsCustom, notice?, warning?}`. The server caches successful catalogues per provider for five minutes and coalesces concurrent loads; failed discovery retains prior/bundled choices with a warning and a shorter retry window. `?refresh=1` requests a fresh catalogue (`packages/app/src/slices/settings/models.ts`, `edge/http/providers.ts`). Notices explain catalogue origins separately from failures: provider APIs, local CLI metadata/aliases, or curated adapter-compatible choices.
+
+The web query is keyed by provider and cached for five minutes. Changing providers cannot apply a previous provider's late response. Refresh and Custom ID controls retain the selected value, including IDs missing from the current catalogue. The UI contains no duplicate model lists and never silently picks a former single TTS default. New provider choices start with an empty model; saved configurations keep theirs (`packages/web/src/lib/models.ts`, `play/pickers.tsx`, `play/media-rails.tsx`, `project/providers.tsx`).
 
 ## Local agent CLI providers
 
@@ -42,7 +48,7 @@ Claude Code, Codex and Gemini CLI are LLM providers without stored API keys (`pa
 ## Branches
 
 - Provider has a key → selectable on Play; no key → greyed out.
-- Model fetch succeeded → dropdown populated; failed → Play blocked for that provider.
+- Model fetch succeeded → dropdown populated; failed → show the last loaded or bundled choices and a warning. An existing selected ID stays available even if absent from the catalogue; otherwise the user must choose a model or enter an allowed custom ID.
 - Project's provider has a key → its retry and re-run controls are enabled; no key → disabled, labelled "Key missing"; re-adding the key re-enables them.
 - Voice ID rejected by the provider at run time → the audio stage's error names the voice ID as rejected, distinct from an authentication error.
 
@@ -51,7 +57,7 @@ Claude Code, Codex and Gemini CLI are LLM providers without stored API keys (`pa
 - Bad key: the first provider call using it fails; scenario 01's retry policy runs and the stage shows the provider's error verbatim.
 - Key replaced while a project is running: attempts already in flight finish with the key they started with; every later attempt, retries included, uses the new key.
 - Key removed while a project is running: in-flight attempts finish; the next attempt finds no key, fails immediately without retries, and the stage's retry control reads "Key missing".
-- Model list unreachable (offline, provider down): Play blocked for that provider; other providers unaffected.
+- Model list unreachable (offline, provider down): show a warning without clearing the selection; keep cached/bundled choices and allow manual IDs where supported. fal and Replicate require supported adapter schemas and do not offer arbitrary custom IDs.
 - Empty voice list with audio set to Generate: no voice can be chosen; scenario 04 decides that Play is blocked.
 - Duplicate voice ID within a provider: rejected at add time.
 
@@ -85,7 +91,7 @@ Claude Code, Codex and Gemini CLI are LLM providers without stored API keys (`pa
 
 ## Gemini invocation
 
-`packages/app/src/adapters/llm/gemini.ts` offers `gemini-2.5-pro`, `gemini-2.5-flash` and `gemini-2.5-flash-lite`, parses assistant deltas/result usage from stream-json, and runs with the CLI's existing login. Each call uses a temporary writing workspace and system settings: extensions, hooks, skills, IDE integration and local context loading are disabled; ordinary writing exposes no tools, research only `google_web_search`; MCP is constrained to an unused allowlist name. Prompts use explicit `-p`, are prefixed, and escape literal `@` references to avoid interactive/slash/file preprocessing. Workspace settings reset the entire context object before restrictive system settings, because Gemini otherwise concatenates user include directories. A temporary trusted-folder map trusts only this private workspace; user context/trust files remain unchanged. `NO_BROWSER=true` prevents browser authentication, and an authorization prompt becomes a sign-in error rather than waiting for input. Cancellation/failure waits for the child and removes the workspace (`adapters/llm/gemini-workspace.ts`, `run-cli.ts`).
+`packages/app/src/adapters/llm/gemini.ts` obtains model choices through installed CLI metadata and supported aliases (`gemini-models.ts`), parses assistant deltas/result usage from stream-json, and runs with the CLI's existing login. Each call uses a temporary writing workspace and system settings: extensions, hooks, skills, IDE integration and local context loading are disabled; ordinary writing exposes no tools, research only `google_web_search`; MCP is constrained to an unused allowlist name. Prompts use explicit `-p`, are prefixed, and escape literal `@` references to avoid interactive/slash/file preprocessing. Workspace settings reset the entire context object before restrictive system settings, because Gemini otherwise concatenates user include directories. A temporary trusted-folder map trusts only this private workspace; user context/trust files remain unchanged. `NO_BROWSER=true` prevents browser authentication, and an authorization prompt becomes a sign-in error rather than waiting for input. Cancellation/failure waits for the child and removes the workspace (`adapters/llm/gemini-workspace.ts`, `run-cli.ts`).
 
 All three CLI adapters emit internal `activity` events for structured output, refreshing the attempt's idle timer even before visible answer text. These events are not forwarded as article deltas or tool/reasoning content (`packages/app/src/kernel/ports/llm.ts`, `kernel/runner/providers.ts`, `adapters/llm/{claude-code,codex,gemini}.ts`).
 

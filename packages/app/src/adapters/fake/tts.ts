@@ -35,6 +35,7 @@ export function fakeTts(options: FakeTtsOptions = {}): FakeTts {
   return {
     id: options.id ?? "fake-tts",
     capabilities: options.capabilities ?? { streams: true },
+    models: async () => [{ id: "fake-voice-model", name: "Fake voice model" }],
     calls: (): number => calls,
     seen: (): readonly string[] => seen,
     synthesize: (req: TtsRequest): Promise<TtsAudio> => {

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { isProviderError } from "../../kernel/ports/model.js";
 import type { OpenAiImageDeps } from "./openai.js";
-import { openAiImage, openAiImageModels, openAiImagesBase, sizeFor } from "./openai.js";
+import { openAiImage, openAiImagesBase, sizeFor } from "./openai.js";
 
 // Fixture provenance: `fixtures/openai-image-*.json` are constructed, not captured. No
 // OpenAI key exists on this machine or in `~/.slopify/slopify.db`, so nothing here ran
@@ -68,20 +68,6 @@ function failed(fetcher: OpenAiImageDeps["fetch"]): Promise<unknown> {
 function kindOf(thrown: unknown): string | undefined {
   return isProviderError(thrown) ? thrown.fault.kind : undefined;
 }
-
-describe("openAiImage.models", () => {
-  it("offers the curated list, so a newer model is data rather than code", async () => {
-    expect(
-      await openAiImage({ fetch: replaying(() => new Response()), key: () => key }).models(),
-    ).toEqual(openAiImageModels);
-    expect(openAiImageModels.map((one) => one.id)).toEqual([
-      "gpt-image-2",
-      "gpt-image-1.5",
-      "gpt-image-1",
-      "gpt-image-1-mini",
-    ]);
-  });
-});
 
 // The adapter asks for the provider's closest supported size to the run's aspect. The
 // standard GPT image frames are 3:2, so 16:9 is asked for as 1536×1024 and the render crops

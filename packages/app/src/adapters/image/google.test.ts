@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { isProviderError } from "../../kernel/ports/model.js";
 import type { GoogleImageDeps } from "./google.js";
-import { googleImage, googleImageModels, googleImagesBase } from "./google.js";
+import { googleImage, googleImagesBase } from "./google.js";
 
 // Fixture provenance: `fixtures/google-*.json` are constructed, not captured. No Gemini key
 // exists on this machine or in `~/.slopify/slopify.db`, so nothing here ran against the live
@@ -59,36 +59,44 @@ function headersOf(call: Seen | undefined): Record<string, string> {
   return (call?.init?.headers ?? {}) as Record<string, string>;
 }
 
-describe("googleImage.models", () => {
-  it("offers the Nano Banana family under the ids the API answers to", async () => {
-    const offered = await googleImage({
-      fetch: answering("google-success.json"),
-      key: () => key,
-    }).models();
-
-    expect(offered).toEqual(googleImageModels);
-    expect(offered.map((one) => one.id)).toEqual([
-      "gemini-3.1-flash-image",
-      "gemini-3.1-flash-lite-image",
-      "gemini-3-pro-image",
-      "gemini-2.5-flash-image",
-    ]);
-    expect(offered.map((one) => one.name)).toContain("Nano Banana 2");
-  });
-
-  // `gemini-3.8-flash` is newer than every model above and returns text, not pictures.
-  // Offering it here would be a stage that fails on every call.
-  it("offers no text-only Gemini model", async () => {
-    const offered = await googleImage({
-      fetch: answering("google-success.json"),
-      key: () => key,
-    }).models();
-
-    expect(offered.every((one) => one.id.endsWith("-image"))).toBe(true);
-  });
-});
-
 describe("googleImage.generate", () => {
+  it.each([
+    "gemini-2.5-flash-image",
+    "gemini-2.5-flash-image-preview",
+    "gemini-3.1-flash-lite-image",
+    "gemini-3.1-flash-lite-image-preview",
+    "gemini-future-image",
+  ])("uses the provider's default resolution for %s", async (selected) => {
+    const seen: Seen[] = [];
+    await googleImage({ fetch: watching("google-success.json", seen), key: () => key }).generate({
+      model: selected,
+      prompt,
+      aspect: "16:9",
+      signal: new AbortController().signal,
+    });
+    expect(bodyOf(seen[0])).toEqual({
+      model: selected,
+      input: prompt,
+      response_format: { type: "image", aspect_ratio: "16:9" },
+    });
+  });
+
+  it.each([
+    "gemini-3-pro-image",
+    "gemini-3-pro-image-preview",
+    "gemini-3.1-pro-image",
+    "gemini-3.1-flash-image-preview",
+  ])("retains 2K resolution for the supported %s family", async (selected) => {
+    const seen: Seen[] = [];
+    await googleImage({ fetch: watching("google-success.json", seen), key: () => key }).generate({
+      model: selected,
+      prompt,
+      aspect: "16:9",
+      signal: new AbortController().signal,
+    });
+    expect(bodyOf(seen[0])).toMatchObject({ response_format: { image_size: "2K" } });
+  });
+
   it("posts the prompt to the interactions endpoint with the key in Google's own header", async () => {
     const seen: Seen[] = [];
     await generate(watching("google-success.json", seen));

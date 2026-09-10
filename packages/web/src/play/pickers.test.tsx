@@ -2,7 +2,7 @@ import type { ProviderStatus } from "@app/slices/settings/model.js";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ModelPicker, ProviderPicker } from "@/play/pickers";
+import { ProviderPicker } from "@/play/pickers";
 
 afterEach(cleanup);
 
@@ -123,44 +123,5 @@ describe("the provider picker", () => {
 
     expect(screen.getByLabelText("LLM").getAttribute("aria-invalid")).toBe("true");
     expect(screen.getByText("Pick an LLM provider and model.")).not.toBeNull();
-  });
-});
-
-describe("the model picker", () => {
-  it("waits for a provider before it offers anything", () => {
-    render(<ModelPicker label="Model" provider="" value="" problem={undefined} onPick={vi.fn()} />);
-
-    const picker = screen.getByLabelText("Model");
-    expect(picker instanceof HTMLSelectElement && picker.disabled).toBe(true);
-    expect(screen.getByRole("option", { name: "Pick a provider first" })).not.toBeNull();
-  });
-
-  it("offers the models the registry ships for a provider that has a list", async () => {
-    const onPick = vi.fn();
-    render(
-      <ModelPicker label="Model" provider="fal" value="" problem={undefined} onPick={onPick} />,
-    );
-
-    expect(screen.getByRole("option", { name: "FLUX.2" })).not.toBeNull();
-    await userEvent.selectOptions(screen.getByLabelText("Model"), "fal-ai/flux-2");
-    expect(onPick).toHaveBeenCalledWith("fal-ai/flux-2");
-  });
-
-  it("takes a typed id for a provider whose catalogue is fetched per call", async () => {
-    const onPick = vi.fn();
-    render(
-      <ModelPicker
-        label="Model"
-        provider="openrouter"
-        value=""
-        problem={undefined}
-        onPick={onPick}
-      />,
-    );
-
-    const typed = screen.getByLabelText("Model");
-    expect(typed instanceof HTMLInputElement).toBe(true);
-    await userEvent.type(typed, "z");
-    expect(onPick).toHaveBeenCalledWith("z");
   });
 });

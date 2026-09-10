@@ -254,3 +254,20 @@ describe("codexLlm surface", () => {
     expect(await port.models()).toBe(codexModels);
   });
 });
+
+it("reads the injected catalogue again and exposes discovery failures", async () => {
+  let models = [{ id: "current", name: "Current" }];
+  let failed = false;
+  const port = codexLlm({
+    run: replaying("").run,
+    readModels: async () => {
+      if (failed) throw new Error("metadata unavailable");
+      return models;
+    },
+  });
+  expect(await port.models()).toEqual(models);
+  models = [{ id: "newly-added", name: "New" }];
+  expect(await port.models()).toEqual(models);
+  failed = true;
+  await expect(port.models()).rejects.toThrow("metadata unavailable");
+});

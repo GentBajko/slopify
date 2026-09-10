@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { LlmEvent, Message } from "../../kernel/ports/llm.js";
 import { isProviderError } from "../../kernel/ports/model.js";
 import type { OpenRouterDeps } from "./openrouter.js";
@@ -321,4 +321,29 @@ describe("openRouterLlm capabilities", () => {
     expect(port.id).toBe("openrouter");
     expect(port.capabilities).toEqual({ streams: true, reportsUsage: true, webSearch: true });
   });
+});
+
+it("only offers text models and bounds catalogue HTTP requests to ten seconds", async () => {
+  const signal = new AbortController().signal;
+  const timeout = vi.spyOn(AbortSignal, "timeout").mockReturnValue(signal);
+  try {
+    const fake = replaying(
+      Response.json({
+        data: [
+          { id: "text", architecture: { output_modalities: ["text"] } },
+          { id: "mixed", architecture: { output_modalities: ["text", "image"] } },
+          { id: "image-only", architecture: { output_modalities: ["image"] } },
+          { id: "embeddings", architecture: { output_modalities: ["embeddings"] } },
+        ],
+      }),
+    );
+    expect(await openRouterLlm({ ...fake, key: () => key }).models()).toEqual([
+      { id: "text", name: "text" },
+      { id: "mixed", name: "mixed" },
+    ]);
+    expect(timeout).toHaveBeenCalledWith(10_000);
+    expect(fake.seen[0]?.init?.signal).toBe(signal);
+  } finally {
+    timeout.mockRestore();
+  }
 });

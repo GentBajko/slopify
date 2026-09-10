@@ -8,7 +8,6 @@ import { Mark } from "@/components/glyph";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { soleModelOf } from "@/lib/models";
 import type { Blocker } from "@/play/admission";
 import { KeywordBlock } from "@/play/keywords";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
@@ -129,7 +128,7 @@ export function CueSheet({
                 value={form.llm.provider}
                 problem={problem("llm")}
                 onPick={(provider) => {
-                  update({ llm: { provider, model: soleModelOf(provider) } });
+                  update({ llm: { provider, model: "" } });
                 }}
               />
             </div>

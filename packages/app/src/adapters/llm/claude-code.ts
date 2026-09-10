@@ -14,10 +14,9 @@ import { lines } from "./sse-lines.js";
 
 export const claudeCodeBinary = "claude";
 
-// The CLI takes an alias for the latest model of a family (`claude --help`, 2.1.258).
-// ceiling: a fixed list, because the CLI has no offline command that prints the models an
-// account may use. A user whose plan carries a model not listed here cannot pick it;
-// reading the list off the CLI is the upgrade when it can print one.
+// Official stable family aliases resolve to the latest model available to the
+// installed CLI/account. Full model IDs remain available through custom entry.
+// https://code.claude.com/docs/en/model-config
 export const claudeCodeModels: readonly ModelInfo[] = [
   { id: "fable", name: "Claude Fable (latest)" },
   { id: "opus", name: "Claude Opus (latest)" },

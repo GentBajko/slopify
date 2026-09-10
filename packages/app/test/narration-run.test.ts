@@ -312,7 +312,11 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
         role: "audio_body",
         path: "audio-body.mp3",
         duration_ms: joined,
-        meta: JSON.stringify({ provider: "fake-tts", voice: "v-narrator" }),
+        meta: JSON.stringify({
+          provider: "fake-tts",
+          model: "fake-voice-model",
+          voice: "v-narrator",
+        }),
       },
     ]);
     h.db.close();
@@ -339,9 +343,17 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
   // duration; body chunking does not apply to them.
   it("narrates the intro and the outro as one request each, with their own durations", async () => {
     const h = harness({ chunking: { mode: "paragraph" }, segments: true });
-    const tts = speaking();
+    const models: (string | undefined)[] = [];
+    const tts = fakeTts({
+      bytesFor: (req) => {
+        models.push(req.model);
+        return [tones(req.text)];
+      },
+    });
 
     await run(h, tts);
+
+    expect(models).toEqual(Array.from({ length: 5 }, () => "fake-voice-model"));
 
     expect(tts.seen()).toEqual([
       ...paragraphs,
@@ -350,25 +362,29 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
       "Welcome to the channel.",
       "Thanks for watching.",
     ]);
-    const rows = outputRows(h.db) as Array<{ role: string; duration_ms: number }>;
+    const rows = outputRows(h.db) as Array<{ role: string; duration_ms: number; meta: string }>;
     expect(rows.map((row) => row.role)).toEqual(["audio_body", "audio_intro", "audio_outro"]);
     for (const row of rows) {
       expect(row.duration_ms).toBeGreaterThan(0);
+      expect(JSON.parse(row.meta)).toEqual({
+        provider: "fake-tts",
+        model: "fake-voice-model",
+        voice: "v-narrator",
+      });
     }
     const intro = rows.find((row) => row.role === "audio_intro");
     expect(intro?.duration_ms).toBe(await measure(join(h.dir, "audio-intro.mp3")));
     // The body plus the two segments are the project's only audio
     // outputs. The chunks are files, not outputs.
     expect(rows).toHaveLength(3);
-    // One event per audio segment - body, intro, outro - and the seconds come from the
-    // seconds from the duration that was measured rather than from the text. No model:
-    // the TTS port carries none, which is why the output row has none either.
+    // Each segment records the selected model and its measured duration.
     expect(h.counted.events().map((one) => one.counters)).toEqual(
       rows.map((row) => ({
         stage: "audio",
         segment:
           row.role === "audio_body" ? "body" : row.role === "audio_intro" ? "intro" : "outro",
         provider: "fake-tts",
+        model: "fake-voice-model",
         audioSeconds: row.duration_ms / 1000,
       })),
     );

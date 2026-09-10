@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { redact } from "../../kernel/log.js";
-import type { ProviderErrorKind } from "../../kernel/ports/model.js";
+import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import type { TtsAudio, TtsPort, TtsRequest } from "../../kernel/ports/tts.js";
 import { retryAfter } from "../retry-after.js";
@@ -14,6 +14,14 @@ export const elevenLabsBase = "https://api.elevenlabs.io/v1";
 // attempt wrapper measures its 120 s as an idle timeout between chunks only when bytes
 // keep arriving.
 export const elevenLabsModel = "eleven_multilingual_v2";
+export const elevenLabsModels: readonly ModelInfo[] = [
+  { id: "eleven_v3", name: "Eleven v3" },
+  { id: "eleven_multilingual_v2", name: "Eleven Multilingual v2" },
+  { id: "eleven_flash_v2_5", name: "Eleven Flash v2.5" },
+  { id: "eleven_flash_v2", name: "Eleven Flash v2" },
+  { id: "eleven_turbo_v2_5", name: "Eleven Turbo v2.5 (deprecated)" },
+  { id: "eleven_turbo_v2", name: "Eleven Turbo v2 (deprecated)" },
+];
 // mp3 at the port's container, 44.1 kHz, 128 kbps: `kernel/ports/tts.ts` fixes mp3 and the
 // concatenation keeps the provider's own sample rate.
 export const elevenLabsFormat = "mp3_44100_128";
@@ -25,6 +33,14 @@ export interface ElevenLabsDeps {
   // started with and the next one picks up a key saved since.
   readonly key: () => string | undefined;
 }
+
+const modelList = z.array(
+  z.object({
+    model_id: z.string().min(1),
+    name: z.string().optional(),
+    can_do_text_to_speech: z.boolean().optional(),
+  }),
+);
 
 // A wire payload is narrowed, never cast. `detail` is an object on a handled failure and
 // a string on the framework's own; anything else falls back to the raw text.
@@ -39,6 +55,23 @@ export function elevenLabsTts(deps: ElevenLabsDeps): TtsPort {
   return {
     id: "elevenlabs",
     capabilities: { streams: true },
+    models: async (): Promise<readonly ModelInfo[]> => {
+      const response = await deps.fetch(`${elevenLabsBase}/models`, {
+        headers: { "xi-api-key": keyOf(deps) },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!response.ok) throw await failure(response);
+      const parsed = modelList.safeParse(safeJson(await response.text()));
+      if (!parsed.success) {
+        throw providerError({
+          kind: "other",
+          message: "ElevenLabs' model list was not in the shape this app can read",
+        });
+      }
+      return parsed.data
+        .filter((model) => model.can_do_text_to_speech === true)
+        .map((model) => ({ id: model.model_id, name: model.name || model.model_id }));
+    },
     synthesize: async (req: TtsRequest): Promise<TtsAudio> => {
       const voice = encodeURIComponent(req.voiceId);
       const response = await deps.fetch(
@@ -49,7 +82,7 @@ export function elevenLabsTts(deps: ElevenLabsDeps): TtsPort {
           headers: { "xi-api-key": keyOf(deps), "Content-Type": "application/json" },
           // No pre-check on length. A text past the model's limit comes
           // back as the provider's own 400 and that is what the stage shows.
-          body: JSON.stringify({ text: req.text, model_id: elevenLabsModel }),
+          body: JSON.stringify({ text: req.text, model_id: req.model ?? elevenLabsModel }),
         },
       );
       if (!response.ok) {
@@ -86,7 +119,7 @@ function kindOf(status: number): ProviderErrorKind {
   return "other";
 }
 
-async function failure(response: Response, voiceId: string): Promise<Error> {
+async function failure(response: Response, voiceId?: string): Promise<Error> {
   const text = await response.text().catch(() => "");
   // The provider's own words, through the redactor - an error body may quote the key back.
   const message = redact(detailOf(text) || response.statusText);
@@ -95,7 +128,7 @@ async function failure(response: Response, voiceId: string): Promise<Error> {
     kind: kindOf(response.status),
     // A rejected voice ID has to be named, and it is the one part of the
     // request the user chose. It is not secret, unlike everything else on the wire.
-    message: `ElevenLabs answered ${response.status} for voice ${voiceId}: ${message}`,
+    message: `ElevenLabs answered ${response.status}${voiceId === undefined ? "" : ` for voice ${voiceId}`}: ${message}`,
     ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
   });
 }

@@ -8,9 +8,6 @@ import { buildRegistry } from "./adapter-registry.js";
 import { alignSubtitles } from "./adapters/alignment/index.js";
 import { prepareFfmpeg } from "./adapters/ffmpeg.js";
 import { nodeRunCli } from "./adapters/llm/run-cli.js";
-import { cartesiaModel } from "./adapters/tts/cartesia.js";
-import { elevenLabsModel } from "./adapters/tts/elevenlabs.js";
-import { openAiTtsModel } from "./adapters/tts/openai.js";
 import { createHub } from "./edge/events/hub.js";
 import { createApp } from "./edge/http/app.js";
 import type { Clock } from "./kernel/clock.js";
@@ -33,6 +30,7 @@ import { createRunner } from "./kernel/runner/index.js";
 import type { ProviderDeps } from "./kernel/runner/providers.js";
 import { stageProviders } from "./kernel/runner/providers.js";
 import { readVersion } from "./kernel/version.js";
+import { modelSources } from "./model-catalog.js";
 import {
   claimStage,
   finishStage,
@@ -115,17 +113,7 @@ export async function boot(config: Config): Promise<Boot> {
       paths,
       hub,
       runner,
-      modelsFor: (provider, family) => {
-        if (family === "llm") return registry.llm(provider).models();
-        if (family === "image") return registry.image(provider).models();
-        const models: Readonly<Record<string, string>> = {
-          elevenlabs: elevenLabsModel,
-          "openai-tts": openAiTtsModel,
-          cartesia: cartesiaModel,
-        };
-        const id = models[provider];
-        return Promise.resolve(id === undefined ? [] : [{ id, name: id }]);
-      },
+      ...modelSources(registry),
       clock,
       ids,
       log,

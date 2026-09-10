@@ -5,21 +5,15 @@ import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import { retryAfter } from "../retry-after.js";
 import { describeBytes, sniffImage } from "./bytes.js";
+import { discoverGoogleImages } from "./models.js";
 
 // The HTTP gateway adapter for Google's own image generation, billed to a Gemini API key
 // rather than to a host reselling the same models. Like the OpenAI one it hands back the
-// bytes with the call, so there is no link to follow; unlike it, the whole interaction is
-// one `input` string and a `response_format`, with no per-model size table to keep.
+// bytes with the call, so there is no link to follow.
 
 export const googleImagesBase = "https://generativelanguage.googleapis.com/v1beta";
 
-// The dropdown is filled from what the provider offers, and Google's model list carries every
-// text and embedding model too, so the image shortlist is this adapter's own data. Named as
-// Google markets them: "Nano Banana" is the family, `gemini-*-image` is what the API answers
-// to, and the picker shows the name a user would recognise. Newest first.
-//
-// A Gemini model without the `-image` suffix returns text and cannot be used here, whatever
-// its version number: `gemini-3.8-flash` is newer than all of these and generates no images.
+// Offline choices only; the picker normally loads the provider catalogue.
 export const googleImageModels: readonly ModelInfo[] = [
   { id: "gemini-3.1-flash-image", name: "Nano Banana 2" },
   { id: "gemini-3.1-flash-lite-image", name: "Nano Banana 2 Lite" },
@@ -27,10 +21,10 @@ export const googleImageModels: readonly ModelInfo[] = [
   { id: "gemini-2.5-flash-image", name: "Nano Banana" },
 ];
 
-// The API takes the aspect in the run's own words, so the closest supported size is exact
-// and the render crops nothing. `2K` is the middle of the documented ladder: enough to
-// survive the 4x pre-scale the zoom needs without paying for 4K on every slide.
-const imageSize = "2K";
+// 2.5 and Flash Lite cannot generate 2K images. Unknown models keep their own default
+// resolution until their capabilities are known; discovery alone does not describe sizes.
+const highResolutionModel =
+  /^gemini-(?:3(?:\.1)?-pro|3\.1-flash)-image(?:-preview(?:-\d{2}-\d{2})?)?$/;
 
 export interface GoogleImageDeps {
   // Injected so a test never needs the network.
@@ -77,7 +71,7 @@ const refusalWords = /\b(safety|blocked|content polic|prohibited|violat)/i;
 export function googleImage(deps: GoogleImageDeps): ImagePort {
   return {
     id: "google-image",
-    models: (): Promise<readonly ModelInfo[]> => Promise.resolve(googleImageModels),
+    models: () => discoverGoogleImages(deps),
     generate: async (req: ImageRequest): Promise<GeneratedImage> => {
       const response = await deps.fetch(`${googleImagesBase}/interactions`, {
         method: "POST",
@@ -91,7 +85,11 @@ export function googleImage(deps: GoogleImageDeps): ImagePort {
           // The stage sends Number as that many independent calls, one piece each, so one
           // image per request is what it asks for. Nothing about style is set: the stage
           // asks for the provider's own.
-          response_format: { type: "image", aspect_ratio: req.aspect, image_size: imageSize },
+          response_format: {
+            type: "image",
+            aspect_ratio: req.aspect,
+            ...(highResolutionModel.test(req.model) ? { image_size: "2K" } : {}),
+          },
         }),
       });
       if (!response.ok) {

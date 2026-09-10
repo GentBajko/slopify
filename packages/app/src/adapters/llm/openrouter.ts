@@ -28,7 +28,13 @@ const appHeaders = {
 // A wire payload is narrowed, never cast: everything unlisted is dropped at the seam so
 // no vendor shape can leak past this file.
 const modelList = z.object({
-  data: z.array(z.object({ id: z.string(), name: z.string().optional() })),
+  data: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string().optional(),
+      architecture: z.object({ output_modalities: z.array(z.string()).optional() }).optional(),
+    }),
+  ),
 });
 
 const errorBody = z.object({
@@ -133,6 +139,7 @@ export function openRouterLlm(deps: OpenRouterDeps): LlmPort {
     capabilities: { streams: true, reportsUsage: true, webSearch: true },
     models: async (): Promise<readonly ModelInfo[]> => {
       const response = await deps.fetch(`${openRouterBase}/models`, {
+        signal: AbortSignal.timeout(10_000),
         headers: headers(deps.key()),
       });
       if (!response.ok) {
@@ -145,7 +152,11 @@ export function openRouterLlm(deps: OpenRouterDeps): LlmPort {
           message: "OpenRouter's model list was not in the shape this app can read",
         });
       }
-      return parsed.data.data.map((model) => ({ id: model.id, name: model.name ?? model.id }));
+      // /models defaults to text output. Also reject an explicit non-text row
+      // if a gateway response includes one; Slopify sends chat completions here.
+      return parsed.data.data
+        .filter((model) => model.architecture?.output_modalities?.includes("text") !== false)
+        .map((model) => ({ id: model.id, name: model.name ?? model.id }));
     },
     complete,
   };

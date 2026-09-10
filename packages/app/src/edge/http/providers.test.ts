@@ -15,7 +15,7 @@ import type { CliProbe } from "../../slices/settings/cli-status.js";
 import { keyMask } from "../../slices/settings/keys.js";
 import { keyOf } from "../../slices/settings/repo.js";
 import { createHub } from "../events/hub.js";
-import { createApp } from "./app.js";
+import { type AppDeps, createApp } from "./app.js";
 
 const clock = fixedClock("2026-09-02T10:00:00.000Z");
 const log: Log = { write: (): void => {} };
@@ -31,12 +31,16 @@ interface Harness {
   readonly db: DatabaseSync;
 }
 
-function harness(probe: CliProbe = notFound): Harness {
+function harness(
+  probe: CliProbe = notFound,
+  models: Pick<AppDeps, "modelsFor" | "fallbackModelsFor"> = {},
+): Harness {
   const paths = layout(mkdtempSync(join(tmpdir(), "slopify-providers-")));
   ensureDirs(paths, { mode: 0o700 });
   const db = openDb(paths.db);
   migrate(db, clock);
   const app = createApp({
+    ...models,
     db,
     paths,
     hub: createHub({ ids, log }),
@@ -321,5 +325,62 @@ describe("PUT /api/providers/:id/path", () => {
       body: JSON.stringify({ binary: process.execPath }),
     });
     expect(response.status).toBe(400);
+  });
+});
+
+describe("GET /api/providers/:id/models", () => {
+  it("serves live models and custom capability without leaking keys", async () => {
+    const calls: string[] = [];
+    const { app } = harness(notFound, {
+      modelsFor: async (provider, family) => {
+        calls.push(`${provider}:${family}`);
+        return [{ id: "future-model", name: "Future model" }];
+      },
+    });
+    const response = await app.request("/api/providers/elevenlabs/models");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.json()).toEqual({
+      models: [{ id: "future-model", name: "Future model" }],
+      allowsCustom: true,
+    });
+    expect(calls).toEqual(["elevenlabs:tts"]);
+    expect(await (await app.request("/api/providers/fal/models")).json()).toMatchObject({
+      allowsCustom: false,
+    });
+  });
+  it("refreshes on demand and invalidates after a key is saved", async () => {
+    let calls = 0;
+    const { app } = harness(notFound, {
+      modelsFor: async () => {
+        calls++;
+        return [];
+      },
+    });
+    await app.request("/api/providers/elevenlabs/models");
+    await app.request("/api/providers/elevenlabs/models");
+    expect(calls).toBe(1);
+    await app.request("/api/providers/elevenlabs/models?refresh=1");
+    expect(calls).toBe(2);
+    await saveKey(app, "elevenlabs", standIn);
+    await app.request("/api/providers/elevenlabs/models");
+    expect(calls).toBe(3);
+  });
+  it("uses bundled fallback on discovery failure and validates provider IDs", async () => {
+    const { app } = harness(notFound, {
+      modelsFor: async () => {
+        throw new Error("private response");
+      },
+      fallbackModelsFor: () => [{ id: "alias", name: "Latest" }],
+    });
+    const response = await app.request("/api/providers/gemini/models");
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      models: [{ id: "alias", name: "Latest" }],
+      notice: expect.any(String),
+      allowsCustom: true,
+      warning: expect.any(String),
+    });
+    expect((await app.request("/api/providers/unknown/models")).status).toBe(400);
   });
 });

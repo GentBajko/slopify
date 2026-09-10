@@ -1,8 +1,11 @@
+import type { ModelInfo } from "./model.js";
+
 export interface TtsCapabilities {
   readonly streams: boolean;
 }
 
 export interface TtsRequest {
+  readonly model?: string | undefined;
   readonly voiceId: string;
   readonly text: string;
   readonly signal: AbortSignal;
@@ -18,5 +21,6 @@ export interface TtsAudio {
 export interface TtsPort {
   readonly id: string;
   readonly capabilities: TtsCapabilities;
+  readonly models: () => Promise<readonly ModelInfo[]>;
   readonly synthesize: (req: TtsRequest) => Promise<TtsAudio>;
 }

@@ -7,6 +7,7 @@ import type { KeysDeps } from "../../slices/settings/keys.js";
 import { keyStatus, removeProviderKey, saveProviderKey } from "../../slices/settings/keys.js";
 import type { ProviderId } from "../../slices/settings/model.js";
 import { providerById, providerIds } from "../../slices/settings/model.js";
+import { createModelCatalog } from "../../slices/settings/models.js";
 import type { ReadinessDeps } from "../../slices/settings/readiness.js";
 import { providerStatuses } from "../../slices/settings/readiness.js";
 import type { AppDeps } from "./app.js";
@@ -24,12 +25,29 @@ const keyBody = z.object({ key: z.string().min(1).max(4096) });
 export function providerRoutes(deps: AppDeps) {
   const keys: KeysDeps = { db: deps.db, clock: deps.clock };
   const readiness: ReadinessDeps = { db: deps.db, probe: deps.probe };
+  const catalog = createModelCatalog({
+    load: deps.modelsFor ?? (() => Promise.reject(new Error("Model catalog unavailable"))),
+    fallback: deps.fallbackModelsFor ?? (() => []),
+    now: () => deps.clock.now().getTime(),
+    report: (provider) =>
+      deps.log.write("warn", "model-catalog", { detail: `Could not load models for ${provider}` }),
+  });
 
   return (
     new Hono()
       // What Settings draws its rails from and Play its dropdowns: every provider, with
       // the one fact that decides whether it is selectable.
       .get("/", async (c) => c.json({ providers: await providerStatuses(readiness) }))
+      .get("/:id/models", zValidator("param", providerParam, onInvalid), async (c) => {
+        const { id } = c.req.valid("param");
+        const result = await catalog.get(
+          id,
+          providerById(id).family,
+          c.req.query("refresh") === "1",
+        );
+        c.header("Cache-Control", "no-store");
+        return c.json(result);
+      })
       .put(
         "/:id/path",
         zValidator("param", providerParam, onInvalid),
@@ -47,6 +65,7 @@ export function providerRoutes(deps: AppDeps) {
               detail: result.message,
               extensions: { fields: [{ field: "path", message: result.message }] },
             });
+          catalog.invalidate(c.req.valid("param").id);
           return c.json(result.status);
         },
       )
@@ -60,6 +79,7 @@ export function providerRoutes(deps: AppDeps) {
           if (!result.ok) {
             return refusal(c, id, result.reason);
           }
+          catalog.invalidate(id);
           // The response says a key is stored and shows the mask, never the value.
           return c.json(keyStatus(keys, id));
         },
@@ -70,6 +90,7 @@ export function providerRoutes(deps: AppDeps) {
         if (!result.ok) {
           return refusal(c, id, result.reason);
         }
+        catalog.invalidate(id);
         return c.body(null, 204);
       })
   );

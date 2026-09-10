@@ -97,6 +97,27 @@ const voices: readonly Voice[] = [
 function playRoutes(over: Readonly<Record<string, Answer>> = {}): Readonly<Record<string, Answer>> {
   return {
     "GET /api/providers": jsonAnswer({ providers }),
+    "GET /api/providers/claude-code/models": jsonAnswer({
+      models: [{ id: "sonnet", name: "Claude Sonnet" }],
+      allowsCustom: true,
+    }),
+    "GET /api/providers/elevenlabs/models": jsonAnswer({
+      models: [{ id: "eleven_multilingual_v2", name: "Multilingual v2" }],
+      allowsCustom: true,
+    }),
+    "GET /api/providers/cartesia/models": jsonAnswer({
+      models: [{ id: "sonic-3.5", name: "Sonic 3.5" }],
+      allowsCustom: true,
+    }),
+    "GET /api/providers/fal/models": jsonAnswer({
+      models: [{ id: "fal-ai/flux-2", name: "FLUX.2" }],
+      allowsCustom: false,
+    }),
+    "GET /api/providers/google-image/models": jsonAnswer({
+      models: [{ id: "gemini-3.1-flash-image", name: "Nano Banana 2" }],
+      allowsCustom: true,
+    }),
+
     "GET /api/prompts": jsonAnswer({ prompts }),
     "GET /api/entries": jsonAnswer({ entries }),
     "GET /api/settings/voices": jsonAnswer({ voices }),
@@ -162,6 +183,7 @@ async function mount(over: Readonly<Record<string, Answer>> = {}): Promise<() =>
 async function fillGeneratedRun(): Promise<void> {
   await pick("Article prompt", "Dossier");
   await pick("TTS", "elevenlabs");
+  await pick("TTS model", "eleven_multilingual_v2");
   await pick("Voice", "eleven-narrator");
   await pick("Provider", "fal");
   const [imageModel] = modelPickers();
@@ -271,6 +293,7 @@ describe("the Play key and its hint", () => {
     expect(screen.getByText("Pick a narration provider to play")).not.toBeNull();
 
     await pick("TTS", "elevenlabs");
+    await pick("TTS model", "eleven_multilingual_v2");
     expect(screen.getByText("Pick a voice to play")).not.toBeNull();
 
     await pick("Voice", "eleven-narrator");
@@ -339,6 +362,7 @@ describe("the providers a run may use", () => {
     await mount();
 
     await pick("TTS", "elevenlabs");
+    await pick("TTS model", "eleven_multilingual_v2");
     expect(screen.getByRole("option", { name: "Narrator M" })).not.toBeNull();
     expect(screen.queryByRole("option", { name: "Other" })).toBeNull();
   });

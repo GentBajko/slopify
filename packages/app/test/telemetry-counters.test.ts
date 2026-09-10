@@ -362,6 +362,7 @@ describe("a whole pipeline against the fakes", () => {
         stage: "audio",
         segment,
         provider: "fake-tts",
+        model: "fake-tts",
         audioSeconds: measured,
       });
     }

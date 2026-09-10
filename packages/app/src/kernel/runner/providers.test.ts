@@ -150,6 +150,35 @@ describe("stageProviders", () => {
     expect(tts.seen()).toEqual(["read this"]);
   });
 
+  it("keeps the selected TTS model on every retry and piece call", async () => {
+    const h = harness();
+    const models: (string | undefined)[] = [];
+    const speaker = fakeTts({ failOnAttempt: { 1: { kind: "other", message: "try again" } } });
+    const tts: TtsPort = {
+      ...speaker,
+      synthesize: (req) => {
+        models.push(req.model);
+        return speaker.synthesize(req);
+      },
+    };
+    const providers = stageProviders(
+      { registry: registry({ tts }), attempts: h.attempts, clock: h.clock, log },
+      context("audio", h.controller.signal),
+    );
+
+    await h.clock.settle(
+      providers.forPiece("chunk-2").tts({
+        provider: "fake-tts",
+        model: "chosen-tts",
+        voiceId: "v1",
+        text: "Read this.",
+      }),
+    );
+
+    expect(models).toEqual(["chosen-tts", "chosen-tts"]);
+    expect(h.attempts.rows.map((row) => row.pieceId)).toEqual(["chunk-2", "chunk-2"]);
+  });
+
   it("records an image's attempts against its own piece", async () => {
     const h = harness();
     const image = fakeImage({ bytes: new Uint8Array([1, 2, 3]) });

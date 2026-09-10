@@ -185,3 +185,20 @@ it("makes Gemini's license denial terminal with actionable guidance", async () =
   expect(one.killed()).toBe(1);
   expect(existsSync(one.options()?.cwd ?? "")).toBe(false);
 });
+
+it("reads the injected catalogue again and exposes discovery failures", async () => {
+  let models = [{ id: "current", name: "Current" }];
+  let failed = false;
+  const port = geminiLlm({
+    run: fake(success).run,
+    readModels: async () => {
+      if (failed) throw new Error("metadata unavailable");
+      return models;
+    },
+  });
+  expect(await port.models()).toEqual(models);
+  models = [{ id: "newly-added", name: "New" }];
+  expect(await port.models()).toEqual(models);
+  failed = true;
+  await expect(port.models()).rejects.toThrow("metadata unavailable");
+});

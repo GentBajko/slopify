@@ -51,7 +51,8 @@ describe("project pause and provider changes", () => {
         "POST /api/projects/p1/resume": resume,
       }),
     );
-    const model = await screen.findByLabelText("Text model");
+    await user.click(await screen.findByRole("button", { name: "Enter Text model ID" }));
+    const model = screen.getByRole("textbox", { name: "Text model" });
     await user.clear(model);
     await user.type(model, "different-model");
     expect((screen.getByRole("button", { name: "Resume" }) as HTMLButtonElement).disabled).toBe(
@@ -91,7 +92,8 @@ describe("project pause and provider changes", () => {
           listeners.set(name, [...(listeners.get(name) ?? []), listener]),
       }),
     });
-    const model = await screen.findByLabelText("Text model");
+    await user.click(await screen.findByRole("button", { name: "Enter Text model ID" }));
+    const model = screen.getByRole("textbox", { name: "Text model" });
     await user.clear(model);
     await user.type(model, "my-model");
     await user.click(screen.getByRole("button", { name: "Save providers" }));
@@ -213,6 +215,27 @@ describe("project pause and provider changes", () => {
       deps({
         "GET /api/projects/p1": (request) => jsonAnswer(current)(request),
         "GET /api/providers": jsonAnswer({ providers: extraProviders }),
+        "GET /api/providers/claude-code/models": jsonAnswer({
+          models: [{ id: "sonnet", name: "Claude Sonnet" }],
+          allowsCustom: true,
+        }),
+        "GET /api/providers/elevenlabs/models": jsonAnswer({
+          models: [{ id: "eleven_multilingual_v2", name: "Multilingual v2" }],
+          allowsCustom: true,
+        }),
+        "GET /api/providers/cartesia/models": jsonAnswer({
+          models: [{ id: "sonic-3.5", name: "Sonic 3.5" }],
+          allowsCustom: true,
+        }),
+        "GET /api/providers/fal/models": jsonAnswer({
+          models: [{ id: "fal-ai/flux-2", name: "FLUX.2" }],
+          allowsCustom: false,
+        }),
+        "GET /api/providers/google-image/models": jsonAnswer({
+          models: [{ id: "gemini-3.1-flash-image", name: "Nano Banana 2" }],
+          allowsCustom: true,
+        }),
+
         "GET /api/settings/voices": jsonAnswer({
           voices: [{ id: "voice", provider: "cartesia", voiceId: "new-voice", name: "New voice" }],
         }),
@@ -228,6 +251,7 @@ describe("project pause and provider changes", () => {
     await user.selectOptions(screen.getByLabelText("Text provider"), "claude-code");
     await user.selectOptions(screen.getByLabelText("Text model"), "sonnet");
     await user.selectOptions(screen.getByLabelText("TTS provider"), "cartesia");
+    await user.selectOptions(screen.getByLabelText("TTS model"), "sonic-3.5");
     await user.selectOptions(screen.getByLabelText("Narration voice"), "new-voice");
     await user.selectOptions(screen.getByLabelText("Image provider"), "google-image");
     const imageModel = screen.getByLabelText("Image model") as HTMLSelectElement;
@@ -266,7 +290,8 @@ describe("project pause and provider changes", () => {
         "PATCH /api/projects/p1/providers": save,
       }),
     );
-    const model = await screen.findByLabelText("Text model");
+    await user.click(await screen.findByRole("button", { name: "Enter Text model ID" }));
+    const model = screen.getByRole("textbox", { name: "Text model" });
     await user.clear(model);
     await user.type(model, "anthropic/claude-sonnet-4");
     await user.click(screen.getByRole("button", { name: "Save providers" }));
@@ -316,6 +341,27 @@ describe("project pause and provider changes", () => {
           ],
         }),
         "GET /api/providers": jsonAnswer({ providers: extraProviders }),
+        "GET /api/providers/claude-code/models": jsonAnswer({
+          models: [{ id: "sonnet", name: "Claude Sonnet" }],
+          allowsCustom: true,
+        }),
+        "GET /api/providers/elevenlabs/models": jsonAnswer({
+          models: [{ id: "eleven_multilingual_v2", name: "Multilingual v2" }],
+          allowsCustom: true,
+        }),
+        "GET /api/providers/cartesia/models": jsonAnswer({
+          models: [{ id: "sonic-3.5", name: "Sonic 3.5" }],
+          allowsCustom: true,
+        }),
+        "GET /api/providers/fal/models": jsonAnswer({
+          models: [{ id: "fal-ai/flux-2", name: "FLUX.2" }],
+          allowsCustom: false,
+        }),
+        "GET /api/providers/google-image/models": jsonAnswer({
+          models: [{ id: "gemini-3.1-flash-image", name: "Nano Banana 2" }],
+          allowsCustom: true,
+        }),
+
         "GET /api/settings/voices": jsonAnswer({
           voices: [
             { id: "old", provider: "elevenlabs", voiceId: "narrator-m", name: "Original voice" },

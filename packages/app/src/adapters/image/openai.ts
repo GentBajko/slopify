@@ -5,6 +5,7 @@ import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import { retryAfter } from "../retry-after.js";
 import { describeBytes, sniffImage } from "./bytes.js";
+import { discoverOpenAiImages } from "./models.js";
 
 // The HTTP gateway adapter for OpenAI's images endpoint: the platform's own `fetch` and
 // nothing else, because the whole call is one request. Unlike fal and Replicate this one
@@ -13,10 +14,7 @@ import { describeBytes, sniffImage } from "./bytes.js";
 
 export const openAiImagesBase = "https://api.openai.com/v1";
 
-// The dropdown is filled from what the provider offers, and `/v1/models`
-// lists every model on the account, chat and embeddings among them, so the image
-// shortlist is this adapter's own data. These are the four GPT image models OpenAI
-// documents; adding the next one is a line here and no code change anywhere else.
+// Offline choices only; the picker normally loads the provider catalogue.
 export const openAiImageModels: readonly ModelInfo[] = [
   { id: "gpt-image-2", name: "GPT Image 2" },
   { id: "gpt-image-1.5", name: "GPT Image 1.5" },
@@ -70,7 +68,7 @@ export function sizeFor(model: string, aspect: ImageRequest["aspect"]): string {
 export function openAiImage(deps: OpenAiImageDeps): ImagePort {
   return {
     id: "openai-image",
-    models: (): Promise<readonly ModelInfo[]> => Promise.resolve(openAiImageModels),
+    models: () => discoverOpenAiImages(deps),
     generate: async (req: ImageRequest): Promise<GeneratedImage> => {
       const response = await deps.fetch(`${openAiImagesBase}/images/generations`, {
         method: "POST",

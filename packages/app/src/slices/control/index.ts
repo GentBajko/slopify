@@ -26,6 +26,7 @@ export interface ControlDeps extends RerunDeps {
   readonly emit: (projectId: string, event: ProjectEvent) => void;
   readonly providers: () => Promise<readonly ProviderStatus[]>;
   readonly modelsFor: NonNullable<ProviderValidation["modelsFor"]>;
+  readonly allowsCustomModels?: ProviderValidation["allowsCustomModels"];
 }
 
 export const providerCheckTimeoutMs = 15_000;
@@ -42,6 +43,7 @@ async function providerFields(
           providers: await deps.providers(),
           voices: listVoices(deps.db),
           modelsFor: deps.modelsFor,
+          allowsCustomModels: deps.allowsCustomModels,
         }))(),
       new Promise<never>((_resolve, reject) => {
         timeout = setTimeout(

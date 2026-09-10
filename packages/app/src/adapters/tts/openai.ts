@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { redact } from "../../kernel/log.js";
-import type { ProviderErrorKind } from "../../kernel/ports/model.js";
+import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import type { TtsAudio, TtsPort, TtsRequest } from "../../kernel/ports/tts.js";
 import { retryAfter } from "../retry-after.js";
@@ -9,9 +9,14 @@ import { retryAfter } from "../retry-after.js";
 // body is already the stream the port asks for.
 
 export const openAiAudioBase = "https://api.openai.com/v1";
-// gpt-4o-mini-tts, tts-1 and tts-1-hd; the first is the current one and the cheapest of the
-// three per character.
+// Older callers can omit a model; saved project choices always supply one.
 export const openAiTtsModel = "gpt-4o-mini-tts";
+export const openAiTtsModels: readonly ModelInfo[] = [
+  { id: "gpt-4o-mini-tts", name: "GPT-4o mini TTS" },
+  { id: "gpt-4o-mini-tts-2025-12-15", name: "GPT-4o mini TTS (2025-12-15)" },
+  { id: "tts-1", name: "TTS-1" },
+  { id: "tts-1-hd", name: "TTS-1 HD" },
+];
 
 export interface OpenAiTtsDeps {
   // Injected so a test never needs the network.
@@ -19,6 +24,11 @@ export interface OpenAiTtsDeps {
   // Called for every request, never held.
   readonly key: () => string | undefined;
 }
+
+const modelList = z.object({ data: z.array(z.object({ id: z.string().min(1) })) });
+// /models has no capability metadata. Only the speech endpoint's documented model families
+// and dated snapshots belong here; realtime and transcription models use different APIs.
+const speechModel = /^(?:tts-1(?:-hd)?(?:-\d{4})?|gpt-4o-mini-tts(?:-\d{4}-\d{2}-\d{2})?)$/;
 
 const errorBody = z.object({
   error: z.object({ message: z.string(), code: z.string().nullish() }),
@@ -33,6 +43,23 @@ export function openAiTts(deps: OpenAiTtsDeps): TtsPort {
   return {
     id: "openai-tts",
     capabilities: { streams: true },
+    models: async (): Promise<readonly ModelInfo[]> => {
+      const response = await deps.fetch(`${openAiAudioBase}/models`, {
+        headers: { Authorization: `Bearer ${keyOf(deps)}` },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!response.ok) throw await failure(response);
+      const parsed = modelList.safeParse(safeJson(await response.text()));
+      if (!parsed.success) {
+        throw providerError({
+          kind: "other",
+          message: "OpenAI's model list was not in the shape this app can read",
+        });
+      }
+      return parsed.data.data
+        .filter((model) => speechModel.test(model.id))
+        .map((model) => ({ id: model.id, name: model.id }));
+    },
     synthesize: async (req: TtsRequest): Promise<TtsAudio> => {
       const response = await deps.fetch(`${openAiAudioBase}/audio/speech`, {
         method: "POST",
@@ -45,7 +72,7 @@ export function openAiTts(deps: OpenAiTtsDeps): TtsPort {
         // 400 and that is what the stage shows, so a user who chose Whole text learns the limit
         // from the provider that set it.
         body: JSON.stringify({
-          model: openAiTtsModel,
+          model: req.model ?? openAiTtsModel,
           input: req.text,
           voice: voiceOf(req.voiceId),
           response_format: "mp3",
@@ -87,7 +114,7 @@ function kindOf(status: number): ProviderErrorKind {
   return "other";
 }
 
-async function failure(response: Response, voiceId: string): Promise<Error> {
+async function failure(response: Response, voiceId?: string): Promise<Error> {
   const text = await response.text().catch(() => "");
   const parsed = errorBody.safeParse(safeJson(text));
   // Verbatim, through the same redactor the wrapper uses: OpenAI's own 401 quotes the
@@ -100,7 +127,7 @@ async function failure(response: Response, voiceId: string): Promise<Error> {
     kind: kindOf(response.status),
     // The voice ID is named, so a rejected voice reads differently from
     // a rejected key.
-    message: `OpenAI answered ${response.status} for voice ${voiceId}: ${message}`,
+    message: `OpenAI answered ${response.status}${voiceId === undefined ? "" : ` for voice ${voiceId}`}: ${message}`,
     ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
   });
 }

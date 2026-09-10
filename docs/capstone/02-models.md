@@ -32,6 +32,7 @@ paths_covered:
 | Prompt | `slices/library/model.ts` | table `prompts` | article / image / thumbnail template (`logic/15`) |
 | Entry | `slices/library/model.ts` | table `entries` | intro / outro, Text or LLM mode (`logic/15`) |
 | ProviderStatus | `slices/settings/model.ts` | computed per request | provider metadata/readiness and optional CLI path metadata |
+| ModelCatalog | `slices/settings/models.ts` | in-memory server/browser query caches | discovered model IDs/names, custom-ID policy, origin notice and discovery warning |
 | ProviderKey | `slices/settings/model.ts` | table `provider_keys` | one key per provider (`logic/02`) |
 | Voice | `slices/settings/model.ts` | table `voices` | name, provider, voice ID (`logic/02`) |
 | Setting | `slices/settings/model.ts` | table `settings` | silence gap seconds, appearance (`logic/11`) |
@@ -112,4 +113,4 @@ CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT
 
 Tables with no code model: `schema_migrations`. Collector schema (`logic/16`): `events(id TEXT PRIMARY KEY, machine_id, type, payload, received_at)` and `aggregates(key TEXT PRIMARY KEY, value INTEGER)` in the managed database; the engine is `stack`'s.
 
-Data lifecycle (`logic/14`): hard deletes only; projects and templates kept until the user deletes them; the telemetry log kept forever; no archival, no legal hold; PII: none stored except provider keys, classified secret and never exported. Analytics path: local `telemetry_events` → collector aggregates; no warehouse. Search: none. Caching: provider model lists are fetched per Play load (`logic/02`); verified English speech weights live under `models/english-subtitles/`, and project word timings plus font snapshots live in output files (`logic/17`). Backups: none for local data (§0.5, `logic/14`); collector: the host's daily backup.
+Data lifecycle (`logic/14`): hard deletes only; projects and templates kept until the user deletes them; the telemetry log kept forever; no archival, no legal hold; PII: none stored except provider keys, classified secret and never exported. Analytics path: local `telemetry_events` → collector aggregates; no warehouse. Search: none. Caching: provider model lists use five-minute server and provider-keyed browser caches, with explicit refresh and retained selections after discovery failure (`logic/02`); verified English speech weights live under `models/english-subtitles/`, and project word timings plus font snapshots live in output files (`logic/17`). Backups: none for local data (§0.5, `logic/14`); collector: the host's daily backup.

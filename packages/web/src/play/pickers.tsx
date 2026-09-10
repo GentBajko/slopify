@@ -1,9 +1,13 @@
 import type { ProviderFamily, ProviderStatus } from "@app/slices/settings/model.js";
-import { type ReactNode, useId } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { RefreshCw } from "lucide-react";
+import { type ReactNode, useId, useState } from "react";
+import { useApp } from "@/app-context";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Picker } from "@/components/ui/picker";
-import { modelsOf } from "@/lib/models";
+import { customModelFallback, listProviderModels, modelsKey, modelsQuery } from "@/lib/models";
 import { cn } from "@/lib/utils";
 
 // The pickers Play draws over and over: a labelled control with its refusal underneath.
@@ -150,11 +154,11 @@ export function ProviderPicker({
   );
 }
 
-// The provider's own list is what should fill this, but the app exposes none, so the models
-// the registry ships are offered and anything else is typed: OpenRouter's catalogue is
-// fetched per call and runs to thousands of entries, so it has no list to draw. See
-// lib/models.ts for the ceiling and its upgrade.
-export function ModelPicker({
+export function ModelPicker(props: FieldProps & { readonly provider: string }) {
+  return <ProviderModelPicker key={props.provider} {...props} />;
+}
+
+function ProviderModelPicker({
   label,
   provider,
   value,
@@ -162,44 +166,117 @@ export function ModelPicker({
   inline,
   onPick,
 }: FieldProps & { readonly provider: string }) {
-  const listed = modelsOf(provider);
-
-  if (provider !== "" && listed.length === 0) {
-    return (
-      <LabelledField label={label} problem={problem} inline={inline}>
-        {({ id, describedBy }) => (
-          <Input
-            id={id}
-            value={value}
-            spellCheck={false}
-            placeholder="Type the model id"
-            aria-invalid={problem !== undefined}
-            aria-describedby={describedBy}
-            className={inline === true ? "w-[180px]" : undefined}
-            onChange={(event) => {
-              onPick(event.target.value);
-            }}
-          />
-        )}
-      </LabelledField>
-    );
-  }
+  const { api } = useApp();
+  const client = useQueryClient();
+  const catalogue = useQuery(modelsQuery(api, provider));
+  const [custom, setCustom] = useState(false);
+  const noteId = useId();
+  const noticeId = useId();
+  const refresh = useMutation({
+    mutationFn: () => listProviderModels(api, provider, true),
+    onSuccess: (next) => client.setQueryData(modelsKey(provider), next),
+  });
+  const listed = catalogue.data?.models ?? [];
+  const allowsCustom = catalogue.data?.allowsCustom ?? customModelFallback(provider);
+  const typing = custom && allowsCustom;
+  const refreshing = catalogue.isFetching || refresh.isPending;
+  const warning = refresh.error?.message ?? catalogue.error?.message ?? catalogue.data?.warning;
+  const selectedMissing = value !== "" && !listed.some((model) => model.id === value);
 
   return (
-    <OptionPicker
-      label={label}
-      value={value}
-      problem={problem}
-      inline={inline}
-      placeholder={provider === "" ? "Pick a provider first" : "Pick a model"}
-      options={[
-        ...(value !== "" && !listed.some((model) => model.id === value)
-          ? [{ value, label: `${value} (saved model)` }]
-          : []),
-        ...listed.map((model) => ({ value: model.id, label: model.name })),
-      ]}
-      disabled={provider === ""}
-      onPick={onPick}
-    />
+    <div className="min-w-0 max-w-full">
+      <LabelledField label={label} problem={problem} inline={inline}>
+        {({ id, describedBy }) => {
+          const described =
+            [
+              describedBy,
+              warning ? noteId : undefined,
+              catalogue.data?.notice ? noticeId : undefined,
+            ]
+              .filter(Boolean)
+              .join(" ") || undefined;
+          return (
+            <div className={cn("min-w-0 [&>span]:w-full", inline ? "max-w-[260px]" : "w-full")}>
+              {typing ? (
+                <Input
+                  id={id}
+                  value={value}
+                  spellCheck={false}
+                  placeholder="Type the model id"
+                  aria-invalid={problem !== undefined}
+                  aria-describedby={described}
+                  className={inline ? "w-[180px]" : undefined}
+                  onChange={(event) => onPick(event.target.value)}
+                />
+              ) : (
+                <Picker
+                  id={id}
+                  value={value}
+                  disabled={provider === ""}
+                  aria-invalid={problem !== undefined}
+                  aria-describedby={described}
+                  className={inline ? "w-auto min-w-[120px] max-w-[260px]" : undefined}
+                  onChange={(event) => onPick(event.target.value)}
+                >
+                  <option value="">
+                    {provider === ""
+                      ? "Pick a provider first"
+                      : catalogue.isPending
+                        ? "Loading models…"
+                        : "Pick a model"}
+                  </option>
+                  {selectedMissing ? <option value={value}>{value} (saved model)</option> : null}
+                  {listed.map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {model.name}
+                    </option>
+                  ))}
+                </Picker>
+              )}
+            </div>
+          );
+        }}
+      </LabelledField>
+      {provider !== "" ? (
+        <div className="mt-1 flex flex-wrap items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            className="px-2 text-label"
+            aria-label={`Refresh ${label} list`}
+            title="Refresh models"
+            disabled={refreshing}
+            onClick={() => refresh.mutate()}
+          >
+            <RefreshCw
+              aria-hidden="true"
+              className={cn("size-3", refreshing && "animate-spin motion-reduce:animate-none")}
+            />
+            Refresh
+          </Button>
+          {allowsCustom ? (
+            <Button
+              type="button"
+              variant="ghost"
+              className="px-2 text-label"
+              aria-label={typing ? `Choose ${label} from list` : `Enter ${label} ID`}
+              onClick={() => setCustom(!typing)}
+            >
+              {typing ? "Use list" : "Custom ID"}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+      {catalogue.data?.notice ? (
+        <p id={noticeId} className="mt-1 max-w-[360px] text-label text-ink3">
+          {catalogue.data.notice}
+        </p>
+      ) : null}
+      {warning ? (
+        <p id={noteId} className="mt-1 max-w-[360px] text-label text-ink3" role="status">
+          {warning}
+        </p>
+      ) : null}
+    </div>
   );
 }

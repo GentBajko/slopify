@@ -10,7 +10,6 @@ import type { Dispatch, SetStateAction } from "react";
 import { useApp } from "@/app-context";
 import { Rail } from "@/components/rail";
 import { Button } from "@/components/ui/button";
-import { soleModelOf } from "@/lib/models";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
 import { voicesQuery } from "@/queries";
 import type { ProviderChanges } from "./api";
@@ -193,7 +192,7 @@ function ChoiceRow({
         providers={providers}
         value={choice.provider}
         problem={undefined}
-        onPick={(provider) => onChange({ provider, model: soleModelOf(provider) })}
+        onPick={(provider) => onChange({ provider, model: "" })}
       />
       <ModelPicker
         label={`${label} model`}

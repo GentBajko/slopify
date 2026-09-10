@@ -7,13 +7,13 @@ journeys: [J2-first-run-setup, J3-make-a-video, J4-bring-your-own]
 assumed:
  - research has three sources (Off / Generate / Provide) since it is optional and providable
  - thumbnail has three sources (Off / Generate / Provide) since selecting no thumbnail prompt means none
- - provider dropdowns list only providers with a saved key
- - the model dropdown is populated from the LLM provider's model list; image providers get one on the same terms
+ - provider dropdowns list every provider, with unavailable keys/CLIs disabled
+ - LLM, image and TTS model dropdowns load server catalogues with refresh and supported custom-ID entry
  - a thumbnail prompt runs once, no Number field
  - Video title is a required per-run field and names the project
  - the LLM row is shown only while research or article is set to Generate
  - keyword fields render in the order: shared, then per image prompt, then thumbnail
-generated_date: 2026-09-09
+generated_date: 2026-09-10
 capstone_version: 5.2.0
 ---
 
@@ -41,7 +41,7 @@ Configures one run and starts it. One play = one run = one project.
 | Provide: [ paste your article... ] |
 | |
 | AUDIO ( ) Off (•) Generate ( ) Provide |
-| TTS provider [<TTS provider A> v] Voice [Narrator M v]|
+| TTS provider [<TTS provider A> v] Model [... v] Voice [Narrator M v]|
 | Chunking (•) Whole ( ) Per paragraph ( ) Every [500] words |
 | Provide: [ Upload audio file ] |
 | |
@@ -97,7 +97,7 @@ Element tree:
 | Article: Generate / Provide | Generate renders the article prompt; Provide pastes text and skips research and writing | None |
 | Article prompt | Picks one article prompt | Adds its slots to Keywords |
 | Audio: Off / Generate / Provide | Off skips narration; Generate runs TTS and any selected intro/outro; Provide uses the uploaded complete narration as-is | None |
-| TTS provider, Voice, Chunking | Per-run provider, a voice from the settings list, and how the narration is split into requests: Whole / Per paragraph / Every N words | None |
+| TTS provider, TTS model, Voice, Chunking | Per-run provider/model, a voice from Settings, and narration request split: Whole / Per paragraph / Every N words | None |
 | Images: Off / Generate / Provide | Off skips images and selects Video Off; Generate runs saved prompts immediately in parallel; Provide uploads images | None |
 | Image provider, Model | Per-run provider and model (assumed) | None |
 | Image prompts multi-select + Number | Each ticked prompt runs Number times | Adds each prompt's unique slots to Keywords |
@@ -112,6 +112,8 @@ Element tree:
 Providing or disabling a stage hides its generation controls and removes their validation requirements. Article is the only required stage. A generated thumbnail still exposes an image-provider choice when Images is Off or Provide. The tutorial spotlights the actual Video switch and the separate subtitle section. Subtitles are disabled with Audio Off; Video/Images Off changes burn-in to files. Invalid hidden font/size edits are normalized when Off so they cannot block Play (`packages/web/src/subtitles/config.ts`).
 
 ## States
+
+- Model catalogues: automatically load for the selected provider in every generated text/image/audio control. Refresh requests updated choices; Custom ID switches to manual entry when supported. No eager model default is selected. Existing IDs remain visible during loading, failures and catalogue changes. Origin notices stay separate from discovery warnings; fal and Replicate permit supported catalogue schemas only (`packages/web/src/play/pickers.tsx`, `lib/models.ts`; `logic/02-provider-credentials.md`).
 
 - Subtitles enabled: explains first-use download of approximately 95 MB and local English timing; font styling affects burned captions, while SRT/VTT players choose their own styling. Font upload blocks submission until settled; errors stay inline (`packages/web/src/subtitles/controls.tsx`, `font-picker.tsx`, `routes/play.tsx`).
 - Fresh: Subtitles Off; no title; Article, Audio, Images and Video Generate; Research and Thumbnail Off; no prompts selected; keywords empty.

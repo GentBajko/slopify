@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { redact } from "../../kernel/log.js";
-import type { ProviderErrorKind } from "../../kernel/ports/model.js";
+import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import type { TtsAudio, TtsPort, TtsRequest } from "../../kernel/ports/tts.js";
 import { retryAfter } from "../retry-after.js";
@@ -15,6 +15,13 @@ export const cartesiaBase = "https://api.cartesia.ai";
 // constant rather than left to the account's default.
 export const cartesiaVersion = "2026-03-01";
 export const cartesiaModel = "sonic-3.5";
+// Cartesia publishes model IDs in its docs, with no model-list API. Stable family aliases
+// receive new snapshots automatically: https://docs.cartesia.ai/build-with-cartesia/tts-models/latest
+export const cartesiaModels: readonly ModelInfo[] = [
+  { id: "sonic-3.6", name: "Sonic 3.6" },
+  { id: "sonic-3.5", name: "Sonic 3.5" },
+  { id: "sonic-3", name: "Sonic 3" },
+];
 // mp3 is the port's container; `bit_rate` is required for it and `sample_rate` fixes the
 // rate the concatenation then keeps.
 const outputFormat = { container: "mp3", bit_rate: 128_000, sample_rate: 44_100 } as const;
@@ -37,6 +44,7 @@ export function cartesiaTts(deps: CartesiaDeps): TtsPort {
   return {
     id: "cartesia",
     capabilities: { streams: true },
+    models: async (): Promise<readonly ModelInfo[]> => cartesiaModels,
     synthesize: async (req: TtsRequest): Promise<TtsAudio> => {
       const response = await deps.fetch(`${cartesiaBase}/tts/bytes`, {
         method: "POST",
@@ -49,7 +57,7 @@ export function cartesiaTts(deps: CartesiaDeps): TtsPort {
         // No pre-check on length; Cartesia's own limit surfaces as its
         // error. `language` is left out so the model reads it off the transcript.
         body: JSON.stringify({
-          model_id: cartesiaModel,
+          model_id: req.model ?? cartesiaModel,
           transcript: req.text,
           voice: { mode: "id", id: req.voiceId },
           output_format: outputFormat,

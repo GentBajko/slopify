@@ -5,7 +5,9 @@ import { openAiImage } from "./adapters/image/openai.js";
 import { replicateImage } from "./adapters/image/replicate.js";
 import { claudeCodeLlm } from "./adapters/llm/claude-code.js";
 import { codexLlm } from "./adapters/llm/codex.js";
+import { nodeCodexModels } from "./adapters/llm/codex-models.js";
 import { geminiLlm } from "./adapters/llm/gemini.js";
+import { nodeGeminiModels } from "./adapters/llm/gemini-models.js";
 import { openRouterLlm } from "./adapters/llm/openrouter.js";
 import type { RunCli } from "./adapters/llm/run-cli.js";
 import { cartesiaTts } from "./adapters/tts/cartesia.js";
@@ -58,8 +60,14 @@ export function buildRegistry(deps: RegistryDeps): Registry {
     ["openrouter", openRouterLlm({ fetch: deps.fetch, key: keyOf("openrouter") })],
     // Each CLI authenticates with its own login.
     ["claude-code", claudeCodeLlm({ run: cliFor("claude-code") })],
-    ["codex", codexLlm({ run: cliFor("codex") })],
-    ["gemini", geminiLlm({ run: cliFor("gemini") })],
+    ["codex", codexLlm({ run: cliFor("codex"), readModels: () => nodeCodexModels() })],
+    [
+      "gemini",
+      geminiLlm({
+        run: cliFor("gemini"),
+        readModels: () => nodeGeminiModels(cliBinary(deps.db, "gemini")),
+      }),
+    ],
   ]);
   // One key per provider, so each adapter is handed the reader for its own row and no other.
   // OpenAI keeps two rows because it ships an adapter in two families and a user may key one

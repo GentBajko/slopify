@@ -13,19 +13,14 @@ import { lines } from "./sse-lines.js";
 
 export const codexBinary = "codex";
 
-// ceiling: a fixed list. `codex` has no offline command that prints the models an account
-// may use - `codex doctor` reports the install, not the catalogue, and the model refresh
-// it does at start needs the login this list is meant to be readable without. These two
-// are the ids this machine's `~/.codex/config.toml` names; reading the real catalogue is
-// the upgrade when the CLI grows a command that prints it.
-export const codexModels: readonly ModelInfo[] = [
-  { id: "gpt-5.1-codex-max", name: "GPT-5.1 Codex Max" },
-  { id: "gpt-5.6-sol", name: "GPT-5.6 Sol" },
-];
+// Codex publishes its account-specific picker in models_cache.json. With no
+// cache, offer custom entry rather than pretending a pinned model is current.
+export const codexModels: readonly ModelInfo[] = [];
 
 export interface CodexDeps {
   readonly run: RunCli;
   readonly binary?: string | undefined;
+  readonly readModels?: (() => Promise<readonly ModelInfo[]>) | undefined;
 }
 
 // `codex exec --help` (0.149.1) for the flags. `-c web_search=<mode>` is a TOML override, and
@@ -131,7 +126,7 @@ export function codexLlm(deps: CodexDeps): LlmPort {
     id: "codex",
     // Prose arrives as whole messages; other JSONL events carry activity separately.
     capabilities: { streams: true, reportsUsage: true, webSearch: true },
-    models: (): Promise<readonly ModelInfo[]> => Promise.resolve(codexModels),
+    models: deps.readModels ?? (() => Promise.resolve(codexModels)),
     complete,
   };
 }

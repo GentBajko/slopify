@@ -31,6 +31,7 @@ export interface LlmCall {
 }
 
 export interface TtsCall {
+  readonly model?: string | undefined;
   readonly provider: string;
   readonly voiceId: string;
   readonly text: string;
@@ -128,6 +129,7 @@ export function stageProviders(
         ctx,
         async (signal: AbortSignal, progress: () => void): Promise<NarratedAudio> => {
           const spoken = await port.synthesize({
+            model: call.model,
             voiceId: call.voiceId,
             text: call.text,
             signal,

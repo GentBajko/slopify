@@ -1,4 +1,4 @@
-import { Example, External } from "./content-parts";
+import { Example } from "./content-parts";
 import type { TutorialStepId } from "./model";
 import { SetupContent } from "./setup-content";
 
@@ -129,7 +129,8 @@ export function StepContent({
         <>
           <p>
             Leave <strong>Audio</strong> on <strong>Generate</strong>. Pick your voice{" "}
-            <strong>TTS</strong> provider, then the saved <strong>Voice</strong>.
+            <strong>TTS</strong> provider, a <strong>TTS model</strong>, then the saved{" "}
+            <strong>Voice</strong>.
           </p>
           <p>
             Keep chunking on <strong>Whole</strong> for the short example: the narration is sent as
@@ -205,9 +206,10 @@ export function StepContent({
             <strong>16:9</strong> for landscape or <strong>9:16</strong> for portrait.
           </p>
           <p>
-            Select the text <strong>LLM</strong> and <strong>Model</strong>. OpenRouter uses a typed
-            model ID from its <External href="https://openrouter.ai/models">model catalog</External>
-            ; the other providers have a dropdown.
+            Select the text <strong>LLM</strong> and <strong>Model</strong>. The model list loads
+            for your provider. Use <strong>Refresh</strong> for updated choices or{" "}
+            <strong>Custom ID</strong>
+            to enter an exact model ID when supported.
           </p>
           <p>
             Leave <strong>Intro</strong> and <strong>Outro</strong> Off for this first run. They are

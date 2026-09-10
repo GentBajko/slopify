@@ -77,6 +77,18 @@ function failed(response: Response): Promise<unknown> {
 }
 
 describe("elevenLabsTts.synthesize", () => {
+  it("sends the selected model instead of the adapter default", async () => {
+    const seen: Seen[] = [];
+    await port(replaying(new Response(audioBytes(), { status: 200 }), seen)).synthesize({
+      voiceId,
+      model: "eleven_v3",
+      text: "Use the chosen voice model.",
+      signal: new AbortController().signal,
+    });
+
+    expect(bodyOf(seen[0])).toMatchObject({ model_id: "eleven_v3" });
+  });
+
   it("hands back the response body as the audio stream", async () => {
     const bytes = audioBytes();
     const spoken = await speak(replaying(new Response(bytes, { status: 200 })));

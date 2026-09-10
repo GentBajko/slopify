@@ -1,4 +1,3 @@
-import { soleModelOf } from "@/lib/models";
 import { ChunkingControl } from "@/play/chunking";
 import { ImagePrompts } from "@/play/image-prompts";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
@@ -36,12 +35,18 @@ export function AudioRail({
               value={form.audio.provider}
               problem={problem("audio")}
               onPick={(provider) => {
-                // A text-to-speech provider speaks through one model, so picking the
-                // provider picks it; the reference sheet draws no model control here.
                 update({
-                  audio: { provider, model: soleModelOf(provider), voice: "" },
+                  audio: { provider, model: "", voice: "" },
                 });
               }}
+            />
+            <ModelPicker
+              label="TTS model"
+              inline
+              provider={form.audio.provider}
+              value={form.audio.model}
+              problem={undefined}
+              onPick={(model) => update({ audio: { ...form.audio, model } })}
             />
             <OptionPicker
               label="Voice"
@@ -154,7 +159,7 @@ export function ImageProviderControls({
         providers={providers}
         value={form.images.provider}
         problem={problem("images")}
-        onPick={(provider) => update({ images: { provider, model: soleModelOf(provider) } })}
+        onPick={(provider) => update({ images: { provider, model: "" } })}
       />
       <ModelPicker
         label="Model"

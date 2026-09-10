@@ -292,18 +292,21 @@ describe("a run with a picked intro and outro", () => {
         stage: "audio",
         segment: "body",
         provider: "fake-tts",
+        model: "fake-tts",
         audioSeconds: parts.get("audio_body"),
       },
       {
         stage: "audio",
         segment: "intro",
         provider: "fake-tts",
+        model: "fake-tts",
         audioSeconds: parts.get("audio_intro"),
       },
       {
         stage: "audio",
         segment: "outro",
         provider: "fake-tts",
+        model: "fake-tts",
         audioSeconds: parts.get("audio_outro"),
       },
     ]);

@@ -18,6 +18,7 @@ import {
   rerunStage,
   retryStage,
 } from "../../slices/reruns/index.js";
+import { allowsCustomModel } from "../../slices/settings/models.js";
 import { providerStatuses } from "../../slices/settings/readiness.js";
 import { outputsOf } from "../../slices/storage/repo.js";
 import type { AppDeps } from "./app.js";
@@ -94,6 +95,7 @@ export function actionRoutes(deps: AppDeps) {
     runner: deps.runner,
     emit: (projectId, event) => deps.hub.emit(projectId, event),
     providers: () => providerStatuses({ db: deps.db, probe: deps.probe }),
+    allowsCustomModels: allowsCustomModel,
     modelsFor: deps.modelsFor ?? (() => Promise.reject(new Error("Model catalog unavailable"))),
   };
   const view = (projectId: string): Record<string, unknown> => {

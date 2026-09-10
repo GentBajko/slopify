@@ -2,20 +2,18 @@ import { z } from "zod";
 import { redact } from "../../kernel/log.js";
 import type { LlmCompletion, LlmEvent, LlmPort } from "../../kernel/ports/llm.js";
 import { type ModelInfo, providerError } from "../../kernel/ports/model.js";
+import { geminiModels } from "./gemini-models.js";
 import { geminiWorkspace } from "./gemini-workspace.js";
 import type { RunCli } from "./run-cli.js";
 import { cliEvent, cliShaped, endedWithout, promptOf } from "./run-cli.js";
 import { lines } from "./sse-lines.js";
 
 export const geminiBinary = "gemini";
-export const geminiModels: readonly ModelInfo[] = [
-  { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro" },
-  { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash" },
-  { id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash-Lite" },
-];
+export { geminiModels } from "./gemini-models.js";
 export interface GeminiDeps {
   readonly run: RunCli;
   readonly binary?: string | undefined;
+  readonly readModels?: (() => Promise<readonly ModelInfo[]>) | undefined;
 }
 
 // Verified against installed Gemini CLI 0.16.0's config/nonInteractiveCli sources.
@@ -109,7 +107,7 @@ export function geminiLlm(deps: GeminiDeps): LlmPort {
   return {
     id: "gemini",
     capabilities: { streams: true, reportsUsage: true, webSearch: true },
-    models: () => Promise.resolve(geminiModels),
+    models: deps.readModels ?? (() => Promise.resolve(geminiModels)),
     complete,
   };
 }

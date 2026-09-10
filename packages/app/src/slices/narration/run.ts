@@ -169,6 +169,7 @@ async function speakChunks(
       try {
         const spoken = await providers.forPiece(piece.id).tts({
           provider: choice.provider,
+          model: choice.model,
           voiceId: choice.voice,
           text: carried.text,
         });
@@ -261,6 +262,7 @@ async function speakSegments(
     }
     const spoken = await providers.forPiece(piece.id).tts({
       provider: choice.provider,
+      model: choice.model,
       voiceId: choice.voice,
       text,
     });
@@ -296,9 +298,7 @@ function segmentPieces(deps: NarrationDeps, projectId: string): readonly StagePi
   return piecesOf(deps.db, article.id, "segment");
 }
 
-// Audio seconds come from the measured duration per segment, never from the text's length:
-// the real duration goes on the row and the video timeline is built from it. No model is
-// named because the TTS port carries none - the same reason `store` above leaves it off.
+// Audio seconds come from the measured duration per segment, never from the text's length.
 function counted(
   deps: NarrationDeps,
   segment: AudioSegment,
@@ -309,6 +309,7 @@ function counted(
     stage: "audio",
     segment,
     provider: choice.provider,
+    model: choice.model,
     audioSeconds: durationMs / 1000,
   });
 }
@@ -343,9 +344,6 @@ function write(deps: NarrationDeps, projectId: string, path: string, bytes: Uint
   writeFileSync(target, bytes, { mode: 0o600 });
 }
 
-// The provider and the voice are stored with the audio they made. The model is not:
-// the TTS port carries no model, so every request went to the adapter's own, and writing
-// the run's dropdown value here would record something that was never sent.
 function store(
   deps: NarrationDeps,
   projectId: string,
@@ -363,7 +361,7 @@ function store(
     originalFilename: null,
     bytes: statSync(outputPath(deps.paths, projectId, path)).size,
     durationMs,
-    meta: { provider: choice.provider, voice: choice.voice },
+    meta: { provider: choice.provider, model: choice.model, voice: choice.voice },
     createdAt: deps.clock.now().toISOString(),
   });
 }

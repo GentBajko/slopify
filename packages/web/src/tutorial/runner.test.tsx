@@ -110,6 +110,27 @@ async function mount(
   let created: ProjectBody | undefined;
   const routes: Readonly<Record<string, Answer>> = {
     "GET /api/projects": jsonAnswer({ projects: [] }),
+    "GET /api/providers/claude-code/models": jsonAnswer({
+      models: [{ id: "sonnet", name: "Claude Sonnet" }],
+      allowsCustom: true,
+    }),
+    "GET /api/providers/elevenlabs/models": jsonAnswer({
+      models: [{ id: "eleven_multilingual_v2", name: "Multilingual v2" }],
+      allowsCustom: true,
+    }),
+    "GET /api/providers/cartesia/models": jsonAnswer({
+      models: [{ id: "sonic-3.5", name: "Sonic 3.5" }],
+      allowsCustom: true,
+    }),
+    "GET /api/providers/fal/models": jsonAnswer({
+      models: [{ id: "fal-ai/flux-2", name: "FLUX.2" }],
+      allowsCustom: false,
+    }),
+    "GET /api/providers/google-image/models": jsonAnswer({
+      models: [{ id: "gemini-3.1-flash-image", name: "Nano Banana 2" }],
+      allowsCustom: true,
+    }),
+
     "GET /api/settings": jsonAnswer({ silenceGapSeconds: 3, appearance: "system" }),
     "GET /api/telemetry/notice":
       options.notice ?? jsonAnswer({ seen: true, appVersion: testVersion }),
@@ -411,6 +432,7 @@ describe("the tutorial in the real app", () => {
     await next(user, "play-audio");
     expect(nextHeld()).toBe(true);
     await user.selectOptions(screen.getByLabelText("TTS"), "elevenlabs");
+    await user.selectOptions(screen.getByLabelText("TTS model"), "eleven_multilingual_v2");
     expect(nextHeld()).toBe(true);
     await user.selectOptions(screen.getByLabelText("Voice"), "narrator-1");
     await next(user, "play-images");
@@ -488,6 +510,7 @@ describe("the tutorial in the real app", () => {
       if (final === "article") await source("audio", "Off");
       else {
         await user.selectOptions(screen.getByLabelText("TTS"), "elevenlabs");
+        await user.selectOptions(screen.getByLabelText("TTS model"), "eleven_multilingual_v2");
         await user.selectOptions(screen.getByLabelText("Voice"), "narrator-1");
       }
       await next(user, "play-images");
@@ -642,6 +665,7 @@ describe("the tutorial in the real app", () => {
     await user.click(audioSource().getByRole("radio", { name: "Generate" }));
     await user.selectOptions(await screen.findByLabelText("Article prompt"), "My article");
     await user.selectOptions(screen.getByLabelText("TTS"), "elevenlabs");
+    await user.selectOptions(screen.getByLabelText("TTS model"), "eleven_multilingual_v2");
     await user.selectOptions(screen.getByLabelText("Voice"), "narrator-1");
     await user.selectOptions(screen.getByLabelText("Provider"), "fal");
     await user.selectOptions(

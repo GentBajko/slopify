@@ -29,6 +29,7 @@ export interface ProviderChanges {
 export interface ProviderValidation {
   readonly providers: readonly ProviderStatus[];
   readonly voices: readonly Voice[];
+  readonly allowsCustomModels?: ((provider: string) => boolean) | undefined;
   readonly modelsFor?: (provider: string, family: ProviderFamily) => Promise<readonly ModelInfo[]>;
 }
 
@@ -82,6 +83,7 @@ export async function validateProviderChanges(
   for (const key of ["llm", "audio", "images"] as const) {
     const picked = changes[key];
     if (picked === undefined || fields.some((field) => field.field === key)) continue;
+    if (current.allowsCustomModels?.(picked.provider) === true) continue;
     const models = await current.modelsFor(picked.provider, families[key]);
     if (!models.some((model) => model.id === picked.model)) {
       fields.push({ field: `${key}.model`, message: "Choose a model supported by this provider." });
