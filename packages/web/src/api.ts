@@ -220,6 +220,16 @@ export async function saveProviderKey(
   );
 }
 
+export async function saveProviderPath(
+  api: Api,
+  provider: ProviderId,
+  path: string,
+): Promise<ProviderStatus> {
+  return read<ProviderStatus>(
+    await api.client.providers[":id"].path.$put({ param: { id: provider }, json: { path } }),
+  );
+}
+
 export async function removeProviderKey(api: Api, provider: ProviderId): Promise<void> {
   const response = await api.client.providers[":id"].key.$delete({ param: { id: provider } });
   if (!response.ok) {

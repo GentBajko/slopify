@@ -9,6 +9,7 @@ import { modelsOf, providerModels } from "./models";
 // the server would have accepted. Read the adapter source as text rather than importing it,
 // so the check cannot itself pull a Node builtin into the web graph.
 const adapters = {
+  gemini: { file: "adapters/llm/gemini.ts", list: "geminiModels" },
   fal: { file: "adapters/image/fal.ts", list: "falModels" },
   replicate: { file: "adapters/image/replicate.ts", list: "replicateModels" },
   "openai-image": { file: "adapters/image/openai.ts", list: "openAiImageModels" },
@@ -39,7 +40,7 @@ function shipped(which: keyof typeof adapters): readonly string[] {
 }
 
 describe("providerModels", () => {
-  it.each(["fal", "replicate", "openai-image", "google-image"] as const)(
+  it.each(["gemini", "fal", "replicate", "openai-image", "google-image"] as const)(
     "offers exactly what the %s adapter ships",
     (which) => {
       const ours = providerModels[which].map((one) => one.id);

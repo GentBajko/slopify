@@ -13,6 +13,7 @@ export const providerIds = [
   "openrouter",
   "claude-code",
   "codex",
+  "gemini",
   "elevenlabs",
   "openai-tts",
   "cartesia",
@@ -34,7 +35,7 @@ export interface KeyedProvider extends ProviderBase {
 }
 
 // A local agent CLI has no key: the CLI's own login is used, so readiness is whether the
-// binary answers on PATH.
+// configured executable or PATH binary answers.
 export interface CliProvider extends ProviderBase {
   readonly auth: "cli";
   readonly binary: string;
@@ -59,6 +60,14 @@ export const providers: readonly Provider[] = [
     displayName: "Codex CLI",
     auth: "cli",
     binary: "codex",
+    versionArgs: ["--version"],
+  },
+  {
+    id: "gemini",
+    family: "llm",
+    displayName: "Gemini CLI",
+    auth: "cli",
+    binary: "gemini",
     versionArgs: ["--version"],
   },
   { id: "elevenlabs", family: "tts", displayName: "ElevenLabs", auth: "key" },
@@ -88,6 +97,7 @@ export interface ProviderStatus {
   readonly family: ProviderFamily;
   readonly displayName: string;
   readonly readiness: Readiness;
+  readonly cliPath?: { readonly configured: string | null; readonly command: string };
 }
 
 export interface Voice {

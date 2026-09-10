@@ -21,8 +21,9 @@ export function SetupContent({
             </li>
           </ol>
           <p>
-            Already using Claude Code or Codex? You can use its existing CLI login instead.
-            “Installed” means Slopify found the CLI; sign in through that CLI before generating.
+            Already using Claude Code, Codex or Gemini CLI? You can use its existing CLI login
+            instead. “Installed” means Slopify found the CLI; sign in through that CLI before
+            generating. If it is missing, enter its executable path and save to check again.
           </p>
           <p className="text-ink3">
             These are the real Settings controls. The tutorial never reads your key. Skip any step

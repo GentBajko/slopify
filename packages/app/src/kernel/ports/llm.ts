@@ -26,7 +26,11 @@ export interface LlmDone {
   readonly finishReason: string | null;
 }
 
-export type LlmEvent = LlmDelta | LlmDone;
+// Provider activity refreshes the idle deadline without exposing reasoning or tools.
+export interface LlmActivity {
+  readonly type: "activity";
+}
+export type LlmEvent = LlmDelta | LlmDone | LlmActivity;
 
 export interface LlmCapabilities {
   readonly streams: boolean;

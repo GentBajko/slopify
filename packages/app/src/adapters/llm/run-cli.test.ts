@@ -220,3 +220,19 @@ describe("cliEvent and cliShaped", () => {
     );
   });
 });
+
+it.skipIf(process.platform !== "win32")(
+  "runs npm cmd shims with literal prompt arguments",
+  async () => {
+    const entry = script(
+      "windows-entry.cjs",
+      "process.stdout.write(JSON.stringify(process.argv.slice(2)));",
+    );
+    const shim = script("windows-cli.cmd", '@echo off\nnode "%~dp0\\windows-entry.cjs" %*\n');
+    const prompt = '%PATH% !USERPROFILE! & echo bad | "quoted"\nsecond line';
+    const run = nodeRunCli(shim, [prompt, ""], AbortSignal.any([]));
+    expect(JSON.parse((await textOf(run)).join("\n"))).toEqual([prompt, ""]);
+    expect((await run.ended).code).toBe(0);
+    expect(entry).toContain("windows-entry.cjs");
+  },
+);

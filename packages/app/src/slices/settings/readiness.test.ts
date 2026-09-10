@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
+import { saveCliPath } from "./cli-paths.js";
 import type { CliProbe } from "./cli-status.js";
 import { saveProviderKey } from "./keys.js";
 import type { ProviderId, ProviderStatus } from "./model.js";
@@ -103,7 +104,27 @@ describe("providerStatuses", () => {
 
     await providerStatuses(harness(probe));
 
-    expect(probed.toSorted()).toEqual(["claude", "codex"]);
+    expect(probed.toSorted()).toEqual(["claude", "codex", "gemini"]);
+  });
+
+  it("reports saved command paths and probes the latest override", async () => {
+    const probed: string[] = [];
+    const deps = harness(async (binary) => {
+      probed.push(binary);
+      return { ran: true, stdout: "0.16.0" };
+    });
+    await saveCliPath(deps, "gemini", process.execPath);
+    probed.length = 0;
+    const statuses = await providerStatuses(deps);
+    expect(probed).toContain(process.execPath);
+    expect(probed).not.toContain("gemini");
+    expect(statusOf(statuses, "gemini")).toMatchObject({
+      displayName: "Gemini CLI",
+      cliPath: { configured: process.execPath, command: process.execPath },
+      readiness: { installed: true, version: "0.16.0" },
+    });
+    expect(statusOf(statuses, "codex").cliPath).toEqual({ configured: null, command: "codex" });
+    expect(statusOf(statuses, "openrouter").cliPath).toBeUndefined();
   });
 
   it("carries each provider's family and display name for the grouped rails", async () => {

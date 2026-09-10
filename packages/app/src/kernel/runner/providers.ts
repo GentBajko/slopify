@@ -104,11 +104,11 @@ export function stageProviders(
             progress();
             if (event.type === "delta") {
               text += event.text;
-            } else {
+            } else if (event.type === "done") {
               usage = event.usage;
               finishReason = event.finishReason;
             }
-            onEvent?.(event);
+            if (event.type !== "activity") onEvent?.(event);
           }
           const answer: LlmAnswer = { text, usage, finishReason };
           const unusable = call.check?.(answer);

@@ -10,6 +10,7 @@ import { migrate } from "../../kernel/db/migrate.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import { ensureDirs, layout } from "../../kernel/paths.js";
+import { cliBinary } from "../../slices/settings/cli-paths.js";
 import type { CliProbe } from "../../slices/settings/cli-status.js";
 import { keyMask } from "../../slices/settings/keys.js";
 import { keyOf } from "../../slices/settings/repo.js";
@@ -210,6 +211,7 @@ describe("GET /api/providers", () => {
       family: "llm",
       displayName: "Claude Code CLI",
       readiness: { kind: "cli", installed: false },
+      cliPath: { configured: null, command: "claude" },
     });
   });
 
@@ -247,5 +249,77 @@ describe("GET /api/providers", () => {
     expect(statusOf(body, "openrouter")).toMatchObject({
       readiness: { kind: "keyed", hasKey: false },
     });
+  });
+});
+
+async function savePath(app: Harness["app"], provider: string, path: string): Promise<Response> {
+  return app.request(`/api/providers/${provider}/path`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ path }),
+  });
+}
+
+describe("PUT /api/providers/:id/path", () => {
+  it("saves each CLI override and returns current readiness and path", async () => {
+    const { app, db } = harness(installed);
+    for (const id of ["codex", "claude-code", "gemini"] as const) {
+      const response = await savePath(app, id, `  ${process.execPath}  `);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({
+        id,
+        readiness: { kind: "cli", installed: true },
+        cliPath: { configured: process.execPath, command: process.execPath },
+      });
+      expect(cliBinary(db, id)).toBe(process.execPath);
+      expect(keyOf(db, id)).toBeUndefined();
+    }
+    const providers: unknown = await (await app.request("/api/providers")).json();
+    expect(statusOf(providers, "gemini")).toMatchObject({
+      cliPath: { configured: process.execPath },
+    });
+  });
+
+  it("resets to PATH even when the provider cannot be found", async () => {
+    let answers = true;
+    const { app, db } = harness(async () => ({ ran: answers, stdout: "1.2.3" }));
+    await savePath(app, "codex", process.execPath);
+    answers = false;
+    const response = await savePath(app, "codex", "   ");
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      readiness: { kind: "cli", installed: false },
+      cliPath: { configured: null, command: "codex" },
+    });
+    expect(cliBinary(db, "codex")).toBe("codex");
+  });
+
+  it("rejects unusable files, keyed providers and argument strings with field guidance", async () => {
+    const { app, db } = harness();
+    for (const [id, path] of [
+      ["codex", process.execPath],
+      ["openrouter", process.execPath],
+      ["gemini", "gemini --version"],
+    ]) {
+      const response = await savePath(app, id ?? "", path ?? "");
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({
+        fields: [{ field: "path", message: expect.any(String) }],
+      });
+    }
+    expect(cliBinary(db, "codex")).toBe("codex");
+    expect(db.prepare("SELECT count(*) AS n FROM settings").get()).toEqual({ n: 0 });
+  });
+
+  it("rejects unknown providers, wrong bodies and oversized paths at the edge", async () => {
+    const { app } = harness(installed);
+    expect((await savePath(app, "unknown", process.execPath)).status).toBe(400);
+    expect((await savePath(app, "codex", "a".repeat(4097))).status).toBe(400);
+    const response = await app.request("/api/providers/codex/path", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ binary: process.execPath }),
+    });
+    expect(response.status).toBe(400);
   });
 });

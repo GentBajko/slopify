@@ -71,7 +71,7 @@ async function drain(text: string, ended?: CliEnded, stderr?: string): Promise<L
   const fake = replaying(text, ended, stderr);
   const out: LlmEvent[] = [];
   for await (const event of codexLlm({ run: fake.run }).complete(request())) {
-    out.push(event);
+    if (event.type !== "activity") out.push(event);
   }
   return out;
 }

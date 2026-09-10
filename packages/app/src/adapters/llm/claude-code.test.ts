@@ -71,7 +71,7 @@ async function drain(text: string, ended?: CliEnded, stderr?: string): Promise<L
   const fake = replaying(text, ended, stderr);
   const out: LlmEvent[] = [];
   for await (const event of claudeCodeLlm({ run: fake.run }).complete(request())) {
-    out.push(event);
+    if (event.type !== "activity") out.push(event);
   }
   return out;
 }
@@ -95,6 +95,7 @@ describe("claudeCodeArgs", () => {
       "--output-format",
       "stream-json",
       "--verbose",
+      "--include-partial-messages",
       "--safe-mode",
       "--system-prompt",
       expect.stringContaining("writing and research"),
@@ -297,6 +298,7 @@ setInterval(() => {}, 1000);\n`,
     await expect(
       (async () => {
         for await (const event of port.complete(request({ signal: controller.signal }))) {
+          if (event.type === "activity") continue;
           seen.push(event);
           controller.abort(reason);
         }

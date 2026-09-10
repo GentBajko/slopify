@@ -4,13 +4,12 @@ import { useEffect, useId, useState } from "react";
 import { removeProviderKey, saveProviderKey } from "@/api";
 import { useApp } from "@/app-context";
 import { ConfirmDialog } from "@/components/confirm";
-import { Lamp } from "@/components/lamp";
+import { CliProviderRow } from "@/components/provider-cli";
 import { Rail, RailGroup } from "@/components/rail";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
 import { keys, providersQuery } from "@/queries";
 
 // The three families, in the order Settings draws them.
@@ -69,7 +68,11 @@ export function ProviderKeys() {
             .filter((provider) => provider.family === family)
             .map((provider) =>
               provider.readiness.kind === "cli" ? (
-                <CliRow key={provider.id} provider={provider} readiness={provider.readiness} />
+                <CliProviderRow
+                  key={provider.id}
+                  provider={provider}
+                  readiness={provider.readiness}
+                />
               ) : (
                 <KeyRow key={provider.id} provider={provider} hasKey={provider.readiness.hasKey} />
               ),
@@ -233,47 +236,6 @@ function KeyRow({
       />
     </div>
   );
-}
-
-// A local agent CLI has no key: the CLI's own login is used, so the row is a status line and no
-// controls. The name greys to --ink3 when the binary did not answer, which is the contrast
-// floor rather than an opacity that would drop the status text below it.
-function CliRow({
-  provider,
-  readiness,
-}: {
-  readonly provider: ProviderStatus;
-  readonly readiness: {
-    readonly kind: "cli";
-    readonly installed: boolean;
-    readonly version?: string;
-  };
-}) {
-  return (
-    <div
-      data-ready={readiness.installed}
-      className="grid grid-cols-[140px_1fr] items-center gap-[14px] border-t border-line px-4 py-[14px] first:border-t-0"
-    >
-      <span className={cn("font-semibold", readiness.installed ? "text-ink" : "text-ink3")}>
-        {provider.displayName}
-      </span>
-      <p className="flex flex-wrap items-center gap-2 text-small text-ink2">
-        <Lamp state={readiness.installed ? "done" : "pending"} />
-        <span>{statusOf(readiness)}</span>
-        {readiness.installed ? null : (
-          <span className="text-ink3">{`Install the ${provider.displayName} and reload this page.`}</span>
-        )}
-      </p>
-    </div>
-  );
-}
-
-function statusOf(readiness: { readonly installed: boolean; readonly version?: string }): string {
-  if (!readiness.installed) {
-    return "Not found on PATH";
-  }
-  // A CLI that ran but printed nothing a version could be read out of is still installed.
-  return readiness.version === undefined ? "Installed" : `Installed, version ${readiness.version}`;
 }
 
 function SkeletonKeys() {

@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { fakeImage } from "../../adapters/fake/image.js";
 import { fakeLlm } from "../../adapters/fake/llm.js";
 import { fakeTts } from "../../adapters/fake/tts.js";
+import { claudeCodeLlm } from "../../adapters/llm/claude-code.js";
+import { codexLlm } from "../../adapters/llm/codex.js";
+import type { RunCli } from "../../adapters/llm/run-cli.js";
 import type { ManualClock } from "../clock.fake.js";
 import { manualClock } from "../clock.fake.js";
 import type { ProjectEvent } from "../events.js";
@@ -281,4 +284,92 @@ describe("a stage running through the wrapper", () => {
     expect(image.calls()).toBe(1);
     expect(attempts.rows).toHaveLength(1);
   });
+});
+
+describe("CLI activity deadlines", () => {
+  const cases = [
+    {
+      name: "Codex",
+      adapter: codexLlm,
+      pending: [
+        { type: "thread.started" },
+        { type: "item.started", item: { type: "reasoning" } },
+        { type: "item.completed", item: { type: "reasoning", text: "private thinking" } },
+      ],
+      final: [
+        { type: "item.completed", item: { type: "agent_message", text: "The finished article." } },
+        { type: "turn.completed", usage: null },
+      ],
+    },
+    {
+      name: "Claude Code",
+      adapter: claudeCodeLlm,
+      pending: [
+        { type: "system", subtype: "init" },
+        {
+          type: "stream_event",
+          event: {
+            type: "content_block_delta",
+            delta: { type: "thinking_delta", thinking: "private thinking" },
+          },
+        },
+        {
+          type: "stream_event",
+          event: {
+            type: "content_block_delta",
+            delta: { type: "text_delta", text: "The finished article." },
+          },
+        },
+      ],
+      final: [
+        {
+          type: "assistant",
+          message: { content: [{ type: "text", text: "The finished article." }] },
+        },
+        { type: "result", subtype: "success" },
+      ],
+    },
+  ];
+  it.each(cases)(
+    "keeps $name alive across 270 seconds of activity without exposing or duplicating it",
+    async ({ adapter, pending, final }) => {
+      const h = harness();
+      let starts = 0;
+      const run: RunCli = (_binary, _args, signal) => {
+        starts += 1;
+        return {
+          pid: 123,
+          stdout: {
+            async *[Symbol.asyncIterator]() {
+              for (const event of pending) {
+                await h.clock.sleep(90_000, signal);
+                yield new TextEncoder().encode(`${JSON.stringify(event)}\n`);
+              }
+              for (const event of final)
+                yield new TextEncoder().encode(`${JSON.stringify(event)}\n`);
+            },
+          },
+          stderr: () => "",
+          ended: Promise.resolve({ code: 0, error: null }),
+          kill: () => {},
+        };
+      };
+      const llm = adapter({ run });
+      const events: LlmEvent[] = [];
+      const providers = stageProviders(
+        { registry: registry({ llm }), attempts: h.attempts, clock: h.clock, log },
+        context("article", h.controller.signal),
+      );
+      const answer = await h.clock.settle(
+        providers.llm({ provider: llm.id, model: "fixture", messages: [] }, (event) =>
+          events.push(event),
+        ),
+      );
+      expect(answer.text).toBe("The finished article.");
+      expect(events.map((event) => event.type)).toEqual(["delta", "done"]);
+      expect(JSON.stringify(events)).not.toContain("private thinking");
+      expect(starts).toBe(1);
+      expect(h.attempts.rows.map((row) => row.outcome)).toEqual(["ok"]);
+    },
+  );
 });

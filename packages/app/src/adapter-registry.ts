@@ -5,6 +5,7 @@ import { openAiImage } from "./adapters/image/openai.js";
 import { replicateImage } from "./adapters/image/replicate.js";
 import { claudeCodeLlm } from "./adapters/llm/claude-code.js";
 import { codexLlm } from "./adapters/llm/codex.js";
+import { geminiLlm } from "./adapters/llm/gemini.js";
 import { openRouterLlm } from "./adapters/llm/openrouter.js";
 import type { RunCli } from "./adapters/llm/run-cli.js";
 import { cartesiaTts } from "./adapters/tts/cartesia.js";
@@ -16,6 +17,7 @@ import type { LlmPort } from "./kernel/ports/llm.js";
 import type { ProviderFamily } from "./kernel/ports/model.js";
 import type { ProviderListing, Registry } from "./kernel/ports/registry.js";
 import type { TtsPort } from "./kernel/ports/tts.js";
+import { cliBinary } from "./slices/settings/cli-paths.js";
 import type { CliProbe } from "./slices/settings/cli-status.js";
 import { keyForAttempt } from "./slices/settings/keys.js";
 import type { ProviderId } from "./slices/settings/model.js";
@@ -46,11 +48,18 @@ export function buildRegistry(deps: RegistryDeps): Registry {
     return found.ok ? found.key : undefined;
   };
 
+  // Resolve at invocation time so saved path changes apply to the next attempt.
+  const cliFor =
+    (provider: ProviderId): RunCli =>
+    (_binary, args, signal, ...options) =>
+      deps.spawn(cliBinary(deps.db, provider), args, signal, ...options);
+
   const llms = new Map<string, LlmPort>([
     ["openrouter", openRouterLlm({ fetch: deps.fetch, key: keyOf("openrouter") })],
-    // No key: both CLIs authenticate with their own login.
-    ["claude-code", claudeCodeLlm({ run: deps.spawn })],
-    ["codex", codexLlm({ run: deps.spawn })],
+    // Each CLI authenticates with its own login.
+    ["claude-code", claudeCodeLlm({ run: cliFor("claude-code") })],
+    ["codex", codexLlm({ run: cliFor("codex") })],
+    ["gemini", geminiLlm({ run: cliFor("gemini") })],
   ]);
   // One key per provider, so each adapter is handed the reader for its own row and no other.
   // OpenAI keeps two rows because it ships an adapter in two families and a user may key one

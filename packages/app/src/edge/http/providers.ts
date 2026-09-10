@@ -2,6 +2,7 @@ import { zValidator } from "@hono/zod-validator";
 import type { Context } from "hono";
 import { Hono } from "hono";
 import { z } from "zod";
+import { cliPathMaxLength, saveCliPath } from "../../slices/settings/cli-paths.js";
 import type { KeysDeps } from "../../slices/settings/keys.js";
 import { keyStatus, removeProviderKey, saveProviderKey } from "../../slices/settings/keys.js";
 import type { ProviderId } from "../../slices/settings/model.js";
@@ -15,6 +16,7 @@ const providerParam = z.object({ id: z.enum(providerIds) });
 // ceiling: no format check is allowed on a key, so the only thing said about the value is
 // that it is a string of a length a key could plausibly have. Raise the bound if a provider
 // ever issues something longer.
+const pathBody = z.object({ path: z.string().max(cliPathMaxLength) });
 const keyBody = z.object({ key: z.string().min(1).max(4096) });
 
 // The return type is inferred so Hono keeps the route types the SPA's client is
@@ -28,6 +30,26 @@ export function providerRoutes(deps: AppDeps) {
       // What Settings draws its rails from and Play its dropdowns: every provider, with
       // the one fact that decides whether it is selectable.
       .get("/", async (c) => c.json({ providers: await providerStatuses(readiness) }))
+      .put(
+        "/:id/path",
+        zValidator("param", providerParam, onInvalid),
+        zValidator("json", pathBody, onInvalid),
+        async (c) => {
+          const result = await saveCliPath(
+            readiness,
+            c.req.valid("param").id,
+            c.req.valid("json").path,
+          );
+          if (!result.ok)
+            return problem(c, {
+              status: 400,
+              title: titleOf(400),
+              detail: result.message,
+              extensions: { fields: [{ field: "path", message: result.message }] },
+            });
+          return c.json(result.status);
+        },
+      )
       .put(
         "/:id/key",
         zValidator("param", providerParam, onInvalid),

@@ -76,6 +76,8 @@ export function codexLlm(deps: CodexDeps): LlmPort {
           continue;
         }
         const event = cliEvent(binary, line);
+        yield { type: "activity" };
+        req.signal.throwIfAborted();
         if (event.type === "item.completed") {
           const { item } = cliShaped(binary, itemCompleted, event.value);
           // A turn also completes `reasoning`, `web_search`, `command_execution` and
@@ -127,8 +129,7 @@ export function codexLlm(deps: CodexDeps): LlmPort {
 
   return {
     id: "codex",
-    // ceiling: one `item.completed` per whole message rather than per token, same as the
-    // other CLI. Enough for the idle timeout to see life on the stream.
+    // Prose arrives as whole messages; other JSONL events carry activity separately.
     capabilities: { streams: true, reportsUsage: true, webSearch: true },
     models: (): Promise<readonly ModelInfo[]> => Promise.resolve(codexModels),
     complete,

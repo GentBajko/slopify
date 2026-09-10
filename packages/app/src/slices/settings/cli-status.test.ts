@@ -8,7 +8,7 @@ import { providerById } from "./model.js";
 // installed branch uses `node`, which is running this test.
 const absentBinary = "slopify-no-such-binary-1a2b3c";
 
-function cliProvider(id: "claude-code" | "codex"): CliProvider {
+function cliProvider(id: "claude-code" | "codex" | "gemini"): CliProvider {
   const provider = providerById(id);
   if (provider.auth !== "cli") {
     throw new Error(`${id} is not a CLI provider`);
@@ -23,6 +23,10 @@ describe("versionFrom", () => {
 
   it("reads the version out of what Codex prints", () => {
     expect(versionFrom("codex-cli 0.149.1\n")).toBe("0.149.1");
+  });
+
+  it("reads the version Gemini prints", () => {
+    expect(versionFrom("0.16.0\n")).toBe("0.16.0");
   });
 
   it("takes a two-part version", () => {

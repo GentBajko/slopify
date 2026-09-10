@@ -51,6 +51,7 @@ export function claudeCodeArgs(req: LlmCompletion): string[] {
     "stream-json",
     // stream-json output is refused without it.
     "--verbose",
+    "--include-partial-messages",
     // `claude --help` 2.1.263: safe mode excludes CLAUDE.md, output styles, skills and
     // hooks while retaining login and managed policy. --bare would discard OAuth.
     "--safe-mode",
@@ -100,6 +101,10 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
           continue;
         }
         const event = cliEvent(binary, line);
+        // Partial text/thinking and tool events are a heartbeat. Full assistant
+        // messages remain the sole prose source so text is never appended twice.
+        yield { type: "activity" };
+        req.signal.throwIfAborted();
         if (event.type === "assistant") {
           for (const block of cliShaped(binary, assistantEvent, event.value).message.content) {
             // A turn also carries `thinking` and `tool_use` blocks; only the prose is the
@@ -150,9 +155,7 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
 
   return {
     id: "claude-code",
-    // Whole assistant turns rather than token deltas, still enough for the idle timeout to
-    // see life on the stream. ceiling: `--include-partial-messages` would give per-token
-    // deltas for the streamed article; it is the upgrade when the page needs finer text.
+    // Partial messages keep the deadline alive; complete assistant turns supply prose.
     capabilities: { streams: true, reportsUsage: true, webSearch: true },
     models: (): Promise<readonly ModelInfo[]> => Promise.resolve(claudeCodeModels),
     complete,

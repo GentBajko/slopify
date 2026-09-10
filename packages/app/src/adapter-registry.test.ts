@@ -92,6 +92,7 @@ describe("buildRegistry", () => {
     expect(built.llm("openrouter").id).toBe("openrouter");
     expect(built.llm("claude-code").id).toBe("claude-code");
     expect(built.llm("codex").id).toBe("codex");
+    expect(built.llm("gemini").id).toBe("gemini");
     db.close();
   });
 

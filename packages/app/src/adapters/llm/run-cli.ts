@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import type { Readable } from "node:stream";
 import { z } from "zod";
+import { cliCommand } from "../../kernel/cli-command.js";
 import { redact } from "../../kernel/log.js";
 import type { Message } from "../../kernel/ports/llm.js";
 import { providerError } from "../../kernel/ports/model.js";
@@ -30,7 +31,16 @@ export interface CliRun {
   readonly kill: () => void;
 }
 
-export type RunCli = (binary: string, args: readonly string[], signal: AbortSignal) => CliRun;
+export interface CliOptions {
+  readonly cwd?: string | undefined;
+  readonly env?: NodeJS.ProcessEnv | undefined;
+}
+export type RunCli = (
+  binary: string,
+  args: readonly string[],
+  signal: AbortSignal,
+  options?: CliOptions,
+) => CliRun;
 
 // ceiling: the last 8 KiB of stderr is kept. A CLI that writes megabytes of progress there
 // would otherwise be held in memory for the length of a run, and the tail is the part that
@@ -38,16 +48,23 @@ export type RunCli = (binary: string, args: readonly string[], signal: AbortSign
 // buries its reason in the first line of a long report.
 export const stderrMax = 8192;
 
-export function nodeRunCli(binary: string, args: readonly string[], signal: AbortSignal): CliRun {
+export function nodeRunCli(
+  binary: string,
+  args: readonly string[],
+  signal: AbortSignal,
+  options?: CliOptions,
+): CliRun {
   // An argument array, never a shell string: a prompt carrying backticks, `$(...)`, quotes or
   // newlines is one argv element and nothing in it can become a command. stdin is /dev/null
   // because `codex exec` appends piped stdin to the prompt, and a pipe nobody closes would
   // leave it waiting for an EOF that never comes. `signal` is how the child dies: Node sends it
   // SIGTERM when the stage is cancelled, so no agent session outlives the run that started it.
-  const child = spawn(binary, [...args], {
+  const command = cliCommand(binary);
+  const child = spawn(command.file, [...command.args, ...args], {
     signal,
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
+    ...options,
   });
 
   let stderr = "";
@@ -72,13 +89,7 @@ export function nodeRunCli(binary: string, args: readonly string[], signal: Abor
       resolve({ code, error: spawnError });
     };
     child.once("close", settle);
-    // `close` follows `error` when the streams were opened; this is the belt for the case
-    // where they were not.
-    child.once("error", () => {
-      setImmediate(() => {
-        settle(null);
-      });
-    });
+    // Close follows an error too; waiting for it keeps cleanup behind process exit.
   });
 
   return {

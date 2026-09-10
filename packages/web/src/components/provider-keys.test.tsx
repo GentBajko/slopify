@@ -76,7 +76,7 @@ describe("the API key rails", () => {
       }),
     );
     expect(await screen.findByText("Not found on PATH")).not.toBeNull();
-    expect(screen.getByText("Install the Codex CLI and reload this page.")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Save Codex CLI path" })).not.toBeNull();
 
     const name = screen.getByText("Codex CLI");
     expect(name.className).toContain("text-ink3");
