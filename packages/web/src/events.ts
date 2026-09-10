@@ -1,4 +1,5 @@
 import type { GlobalEvent, ProjectEvent } from "@app/edge/events/hub.js";
+import type { LlmPreviewEvent } from "@app/kernel/events.js";
 import type { PatchEvent } from "@/project/live";
 
 // One EventSource per open project page and one for the running tally. Every frame the
@@ -22,6 +23,7 @@ export interface ProjectSink {
   // The one event that only patches: the article arrives as a stream of deltas, and asking
   // the server for the whole project per token would be absurd.
   readonly appendArticle: (text: string) => void;
+  readonly previewWriting?: (event: LlmPreviewEvent) => void;
   // The three events that carry their whole change. Patching them puts the lamp, the state word
   // and the meter on the page in the frame the event arrived in, which is the signature
   // interaction, and it is what keeps a meter ticking from asking the server sixty times.
@@ -38,6 +40,7 @@ const projectEventNames = [
   "stage.state",
   "stage.progress",
   "article.delta",
+  "llm.preview",
   "image.landed",
   "project.state",
   "project.updated",
@@ -53,6 +56,10 @@ const globalEventNames = [
 
 export function subscribeProject(open: OpenEvents, url: string, sink: ProjectSink): () => void {
   return listen<ProjectEvent>(open, url, projectEventNames, sink.refetch, (event) => {
+    if (event.type === "llm.preview") {
+      sink.previewWriting?.(event);
+      return;
+    }
     if (event.type === "article.delta") {
       sink.appendArticle(event.text);
       return;

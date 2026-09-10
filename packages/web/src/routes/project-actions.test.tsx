@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { jsonAnswer, problemAnswer, renderRouted } from "@/test-app";
 import { ProjectRoute } from "./project.js";
-import { deps, finished } from "./project-fixtures.js";
+import { deps, finished, selectProjectStage } from "./project-fixtures.js";
 
 afterEach(cleanup);
 
@@ -20,7 +20,7 @@ describe("the destructive actions", () => {
       }),
     );
 
-    await screen.findByText("Images");
+    await selectProjectStage("Images");
     await userEvent.click(screen.getAllByRole("button", { name: "Delete" })[0] as HTMLElement);
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Delete this image?")).not.toBeNull();
@@ -42,7 +42,7 @@ describe("the destructive actions", () => {
       deps({ "DELETE /api/projects/p1/images/o-image-1": problemAnswer(refusal, 409) }),
     );
 
-    await screen.findByText("Images");
+    await selectProjectStage("Images");
     await userEvent.click(screen.getAllByRole("button", { name: "Delete" })[0] as HTMLElement);
     await userEvent.click(
       within(await screen.findByRole("dialog")).getByRole("button", { name: "Delete" }),
@@ -52,8 +52,9 @@ describe("the destructive actions", () => {
     expect(said.textContent).toBe(refusal);
     // Said where the press happened: inside the Images stage's own block, not at the top
     // of a page the user has scrolled away from.
-    const block = said.closest("div.border-b") as HTMLElement;
-    expect(within(block).getByText("Images")).not.toBeNull();
+    const block = screen.getByRole("region", { name: "Images workspace" });
+    expect(block.contains(said)).toBe(true);
+    expect(within(block).getByRole("heading", { name: "Image library" })).not.toBeNull();
   });
 
   it("confirms before regenerating an image", async () => {
@@ -68,7 +69,7 @@ describe("the destructive actions", () => {
       }),
     );
 
-    await screen.findByText("Images");
+    await selectProjectStage("Images");
     await userEvent.click(screen.getAllByRole("button", { name: "Regenerate" })[0] as HTMLElement);
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Regenerate this image?")).not.toBeNull();
@@ -116,6 +117,7 @@ describe("editing the article", () => {
       }),
     );
 
+    await selectProjectStage("Article");
     await userEvent.click(await screen.findByRole("button", { name: "Edit" }));
     const editor = await screen.findByLabelText("Article");
     await userEvent.clear(editor);
@@ -140,6 +142,7 @@ describe("editing the article", () => {
       }),
     );
 
+    await selectProjectStage("Article");
     await userEvent.click(await screen.findByRole("button", { name: "Edit" }));
     const editor = await screen.findByLabelText("Article");
     await userEvent.clear(editor);
@@ -157,9 +160,29 @@ describe("editing the article", () => {
     expect((screen.getByLabelText("Article") as HTMLTextAreaElement).value).toBe("Still mine.");
   });
 
+  it("preserves an unfinished article edit when switching stages", async () => {
+    const save = vi.fn(jsonAnswer(finished));
+    renderRouted(<ProjectRoute projectId="p1" />, deps({ "PUT /api/projects/p1/article": save }));
+    await selectProjectStage("Article");
+    await userEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    const editor = await screen.findByRole("textbox", { name: "Article" });
+    await userEvent.clear(editor);
+    await userEvent.type(editor, "My unfinished changes.");
+    await selectProjectStage("Audio");
+    expect(screen.queryByRole("textbox", { name: "Article" })).toBeNull();
+    expect(screen.getByRole("region", { name: "Audio workspace" })).not.toBeNull();
+    await selectProjectStage("Article");
+    expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Article" }).value).toBe(
+      "My unfinished changes.",
+    );
+    expect(screen.getByRole("button", { name: "Save & update outputs" })).not.toBeNull();
+    expect(save).not.toHaveBeenCalled();
+  });
+
   it("confirms a discard before it throws the typing away", async () => {
     renderRouted(<ProjectRoute projectId="p1" />, deps());
 
+    await selectProjectStage("Article");
     await userEvent.click(await screen.findByRole("button", { name: "Edit" }));
     await userEvent.type(await screen.findByLabelText("Article"), " and mine");
     await userEvent.click(screen.getByRole("button", { name: "Discard" }));

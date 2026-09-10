@@ -6,6 +6,11 @@ generated_date: 2026-09-10
 capstone_version: 5.2.0
 paths_covered:
  - "packages/app/src/edge/cli.ts"
+ - "packages/app/src/edge/update-worker.ts"
+ - "packages/app/src/updater/**"
+ - "packages/app/src/edge/http/update.ts"
+ - "packages/app/src/edge/http/audio-preview.ts"
+ - "packages/app/src/kernel/audio-preview.ts"
  - "packages/app/src/kernel/config/**"
  - "packages/app/src/kernel/cli-command.ts"
  - "packages/app/src/slices/settings/**"
@@ -75,7 +80,7 @@ Interactions retry sentence.
 
 - CI on push and PR: lint and format check (Biome, with the boundary rule), typecheck, tests on Node 26; `npm audit` fails on high severity; Dependabot weekly.
 - Windows CI separately builds the package, checks ffmpeg download recovery and boot, and runs the real ffmpeg end-to-end smoke, alignment/font/subtitle suites and caption-render regression (`.github/workflows/ci.yml`).
-- Release: tag → CI publishes `@gentbajko/slopify` to npm with semantic versioning; the package contains the built SPA, alignment worker and WASM runtime dependency, plus Barlow TTF/OFL/source assets; rollback is users pinning `npx @gentbajko/slopify@<version>`. Collector and site do not deploy from a push: nothing in CI touches them. They go out when `npm run deploy` is run by hand, which is `wrangler deploy` for each; `npm run deploy:check` is the dry run.
+- Release: tag → CI publishes `@gentbajko/slopify` to npm with semantic versioning; the package contains the built SPA, alignment worker and WASM runtime dependency, plus Barlow TTF/OFL/source assets; manual package rollback requires a compatible database; an existing managed-update pointer must also be bypassed with `SLOPIFY_SKIP_MANAGED_UPDATE=1` or removed intentionally. Automatic update rollback is described below. Collector and site do not deploy from a push: nothing in CI touches them. They go out when `npm run deploy` is run by hand, which is `wrangler deploy` for each; `npm run deploy:check` is the dry run.
 - Migrations: forward-only SQL files applied at app boot; a schema newer than the app refuses to start; never destructive within a minor version.
 - Commands per `05-dependencies.md`: Vitest for tests, `tsc --noEmit` for typecheck, Biome for lint and format; exact npm scripts are written by `build` and this chapter is refreshed by `map` once they exist.
 
@@ -102,3 +107,18 @@ Gemini retains its own authentication directory while each explicit `-p` content
 The local closeout for source commit `1fa45d743329` passed 1,706 tests with one Windows-only skip, lint, typecheck, production build and inspection of the 202-file package. Browser checks covered all three executable fields and saving without console errors or overflow. The existing local service on port 6969 moved from 0.5.1 to 0.6.0 after a private SQLite backup; existing projects were preserved, and verified paths were saved for the three CLIs. A local tarball installed the global `slopify` command. No public push, tag, npm publication or deployment occurred (record: `changelog.d/2026-09-10-cli-paths-gemini.md`).
 
 Tiny live content requests succeeded through Codex `gpt-5.6-sol` in 13.3 seconds and Claude Haiku in 2.7 seconds. Gemini 0.16.0 launched and loaded its cached login, then Google rejected the account with license error #3501. Gemini was not upgraded or signed in again during this work. These are local observed results, not service guarantees or a claim of successful Gemini generation (same verification record).
+
+
+## In-app updates
+
+The floating control checks the public npm latest tag for `@gentbajko/slopify` every 15 minutes and when the window regains focus. Server checks are cached for 15 minutes, with an explicit refresh. Only a newer stable semantic version is offered. Discovery sends no provider credentials and never installs automatically (`updater/registry.ts`, `service.ts`, `packages/web/src/updates/`).
+
+An explicit update rechecks the registry, blocks new HTTP mutations, and refuses while projects, provider calls or pending mutations are active. A detached worker installs the exact version into `<data-dir>/updates/<version>` using fixed public registry settings. The current process keeps serving until package verification succeeds; then it closes its database/listener and transfers control. The worker backs up the closed SQLite database, starts the replacement with the same host, port, data directory and launch directory, and checks its health/version. The replacement holds a mutation barrier until an atomic activation marker commits its version and private startup token. Readiness must match that token, preventing another server on the port from passing the health check. A failed replacement before activation restores the prior entry and database and reports failure to the browser; a lost acknowledgement after activation cannot roll back accepted edits. Logs are in `<data-dir>/logs/updates.log` (`updater/`, `edge/update-worker.ts`).
+
+Successful updates write `<data-dir>/updates/current.json`. The original launcher forwards subsequent starts to that managed installation, so Windows/npm/npx installations do not require overwriting running package files or a privileged global install. The browser reloads after an accepted update reaches a different version. Users should save open edits before clicking Update Slopify.
+
+## Live project previews
+
+Project SSE includes visible LLM response text tagged by stage and logical call. The hub retains up to 16 projects, eight calls per project and 64 KiB of text per call, replaying replacement snapshots on reconnect. Retries reset a call; stage transitions clear cached previews. Preview text is transient and does not replace saved outputs (`edge/events/preview-cache.ts`, `kernel/runner/providers.ts`).
+
+Narration previews copy MP3 chunks from the synthesis request already in flight into bounded transient storage: 64 MiB total, 16 MiB per attempt and 128 entries. Completed previews expire after five minutes; retries, interruption and shutdown invalidate the affected streams. The manifest is polled once per second while Audio runs. Native audio playback starts only after a user gesture, and late listeners receive the retained prefix. Hitting preview limits stops only the preview; durable narration continues (`kernel/audio-preview.ts`, `slices/narration/live.ts`, `edge/http/audio-preview.ts`).

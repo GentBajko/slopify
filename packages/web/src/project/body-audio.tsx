@@ -9,6 +9,7 @@ import { voicesQuery } from "@/queries";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { ConfirmedButton } from "./controls.js";
+import { LiveAudio } from "./live-audio.js";
 import { ActionRow, EngravedLabel, OutputDownload, StageBody } from "./parts.js";
 import { duration } from "./summary.js";
 
@@ -37,6 +38,7 @@ export function AudioBody({ stage, project, outputs, actions, busy }: BodyProps)
 
   return (
     <StageBody>
+      {stage.state === "running" ? <LiveAudio projectId={project.id} /> : null}
       {landed.length === 0 ? (
         <p className="text-small text-ink2">No narration has landed yet.</p>
       ) : (

@@ -15,68 +15,50 @@ capstone_version: 5.2.0
 
 # 08 Project page
 
-The whole pipeline of one project, stage by stage, with its outputs and actions.
+A focused workspace for one project, with overall progress and a persistent stage navigator.
 
 ## Layout
 
-```
+```text
 +--------------------------------------------------------------------+
-| SLOPIFY [Projects] Play Prompts Settings |
+| App navigation                                                     |
 +--------------------------------------------------------------------+
-| < Projects |
-| The Complete History of Vecna running · 16:9 · 08:12 |
-| Documentary dossier · Oil painting scenes ×8, Map close-ups ×4 |
-| [ Pause ] [ Cancel ] |
-| |
-| 1 RESEARCH done |
-| Notes: "Vecna first appeared in Eldritch Wizardry (1976)..." |
-| [Download.txt] |
-| |
-| 2 ARTICLE done |
-| +----------------------------------------------------------+ |
-| | **Origins & Inspirations**... | |
-| +----------------------------------------------------------+ |
-| [Edit] [Download.txt] [Sources] [Glossary] |
-| (editing) [ Save & re-run from audio ] [Discard] |
-| |
-| 3 AUDIO running |
-| Intro [▶ ──── 0:07] Body [▶ ────────── 00:00/--:--] Outro [▶ ── 0:05] |
-| [Download.mp3] Re-run with voice [Narrator F v] [Re-run] |
-| |
-| 4 IMAGES pending |
-| Oil painting scenes (8) |
-| [img] [img] [img] [img] [img] [img] [img] [img] |
-| Map close-ups (4) |
-| [img] [img] [img] [img] |
-| Thumbnail |
-| [img] |
-| per image: [Download] [Regenerate] [Download all] [Re-run] |
-| |
-| 5 VIDEO pending |
-| [▶ ────────────────────────────────────── 16:9] |
-| [Download.mp4] [Re-render] [Download.srt] [Download.vtt] |
-| Subtitles [mode v] Font [font v] Size [48] [Upload font] |
-| [Style preview] [Save subtitles] [Discard subtitle changes] |
+| < Projects                                                         |
+| DONE / RUNNING / PAUSED / FAILED                                    |
+| Project title                 [Download video] [Run settings]       |
+| Prompt · format · started                     [Pause] [Cancel]     |
+|                                                                    |
+| Overall progress · 3 of 6 stages finished                    58%    |
+| [====================================------------------------]     |
+|                                                                    |
+| STAGES              | Selected stage workspace                     |
+| Research      done  | Heading · status · individual progress       |
+| Article       done  |                                              |
+| Audio      running  | Output / editor / live preview                |
+| Images     running  |                                              |
+| Thumbnail  pending  | Contextual actions and downloads               |
+| Video      pending  |                                              |
 +--------------------------------------------------------------------+
-| Free · your keys, your machine [Patreon] [☕] |
+| Free. Your keys, your machine.                       [Update icon]  |
 +--------------------------------------------------------------------+
 ```
 
-Element tree:
-- App shell
- - Header: back, title, project status, format, created, prompts used (assumed), Pause/Resume and Cancel
- - Stage 1 Research: notes text, download
- - Stage 2 Article: text, edit, download, the sources and glossary files split from the end matter
- - Stage 3 Audio: players for intro, body, outro when present, download each, re-run with another voice
- - Stage 4 Images: grid per image prompt, thumbnail apart; per-image download and regenerate; download all; re-run stage
- - Final stage: MP4 video player or WAV audio player, download and re-render/export; skipped for article-only runs; subtitle mode/font controls remain visible with Audio Off guidance
+The navigator is a sticky left column on desktop and a compact grid above the workspace on narrow screens. Its buttons retain each stage's status and summary. The selected pane initially follows a failed stage, then an active stage, then the completed export. Selecting a stage takes control of navigation until the project changes. Stage panes remain mounted while hidden so unsaved article and provider edits survive navigation.
+
+The header offers the completed MP4, WAV or article download directly. Run settings reveals provider/model/voice controls, with existing pause, resume and unsaved-change rules. The overall bar excludes skipped stages, counts done/provided stages as complete, and incorporates measurable partial stage progress. All included stages have equal weight; unknown work contributes zero and the bar cannot reach 100% until every included stage finishes. It is not a remaining-time estimate.
+
+Research and article actions appear above bounded, keyboard-scrollable reading regions. The final player is centered with a bounded height; subtitle and font editing sits under the Subtitles & fonts disclosure. Failed stages put Retry stage and provider-change guidance before collapsed Error details, which preserves the complete provider error.
+
+Live writing displays visible response text as it arrives, with a selector for concurrent research calls and a Follow output toggle. Reconnects receive a bounded snapshot of the current attempt; retries replace that attempt's preview. Reasoning and prompts are excluded. Live narration offers a separate native player for each body part, intro or outro while Audio runs. Pressing Play listens from that part's beginning, including retained bytes. Previews never create extra provider calls or autoplay; completed output players remain the durable playback/download path.
+
+The app-wide floating update icon opens installed/latest versions, Check again and an explicit Update Slopify action. Checks run every 15 minutes and on window focus. Active work blocks installation; accepted updates restart the local server and reload the tab when the new version responds. The icon shows availability, installation and failure states.
 
 ## Elements
 
 | Label | Does | Leads to |
 |---|---|---|
 | Pause / Resume | Pause drains active work and retains completed outputs; Resume continues unfinished stages | Stays |
-| Providers | Available on paused/failed projects; save provider/model/voice choices without resuming; Resume waits until edits are saved or explicitly discarded | Stays |
+| Run settings | Available on paused/failed projects; save provider/model/voice choices without resuming; Resume waits until edits are saved or explicitly discarded | Stays |
 | Cancel | Stops the running project | Stays; stage statuses update |
 | Download.txt (research) | Saves the research notes | File |
 | Edit (article) | Opens the text inline for editing | Stays |
@@ -101,12 +83,12 @@ Element tree:
 
 Per stage, one of: pending / running / done / failed, plus provided and skipped.
 
-- Pending: placeholder, actions disabled.
-- Running: progress shown; what progress a stage can report `rule: logic (S9-pipeline-lifecycle)`.
-- Done: output rendered as drawn.
+- Pending: dependency guidance in the selected workspace; actions disabled.
+- Running: individual and overall progress shown; live writing/audio previews when bytes arrive; what progress a stage can report `rule: logic (S9-pipeline-lifecycle)`.
+- Done: output is available in its selected workspace; a completed final export opens first.
 - Failed: the stage's error; retry, resume, or restart, and what downstream stages show `rule: logic (S9-pipeline-lifecycle)`.
 - Provided: the user's own output shown in place; no re-run of that stage.
-- Skipped: disabled stage; stage collapsed.
+- Skipped: labelled Off in navigation, with an explanatory empty state when selected.
 - Paused project: a distinct Paused status, Resume action and editable provider panel; each stage retains its own state and completed work.
 - Failed project: provider choices can be saved, then Resume retries unfinished stages.
 - Subtitle edits: active work locks controls; upload/save failures remain inline. Preview loads the selected font file, reports fallback if unavailable, and labels its reduced scale. SRT/VTT retain portable timing/text rather than embedded styling (`packages/web/src/subtitles/font-picker.tsx`, `project/subtitles.tsx`).

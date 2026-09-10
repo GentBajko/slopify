@@ -13,6 +13,7 @@ import { coalesce } from "@/project/live";
 import { keys } from "@/queries";
 import { TutorialProvider } from "@/tutorial/context";
 import { TutorialLauncher } from "@/tutorial/launcher";
+import { UpdateWidget } from "@/updates/widget";
 
 // One top bar on every app screen, the active item underlined in the running-lamp colour, in
 // the order the reference sheet puts them. `exact: false` is a section that keeps an editor
@@ -87,60 +88,72 @@ function ShellContent() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <nav className="flex h-14 items-center gap-7 border-b border-line bg-panel px-7">
+      <header className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 border-b border-line bg-panel px-4 min-[1280px]:flex min-[1280px]:h-14 min-[1280px]:gap-7 min-[1280px]:px-7">
         <Link
           to="/"
-          className="flex items-center gap-[10px] text-wordmark font-extrabold tracking-[-0.02em] text-ink"
+          className="flex h-14 shrink-0 items-center gap-[10px] text-wordmark font-extrabold tracking-[-0.02em] text-ink"
         >
           {/* The mark sits 3 px below the text baseline so the goo reads as a
               descender. */}
           <Mark className="relative top-[3px] text-lamp-run" />
           Slopify
         </Link>
-        {sections.map((section) => (
-          <Link
-            key={section.to}
-            to={section.to}
-            activeOptions={{ exact: section.exact }}
-            className="whitespace-nowrap border-b-2 border-transparent py-[18px] text-ink2 hover:text-ink"
-            activeProps={{ className: "!border-lamp-run !text-ink" }}
-          >
-            {section.label}
-          </Link>
-        ))}
-        <TutorialLauncher />
-        <span className="flex-1" />
-        {running === 0 ? null : (
-          <Link to="/" className="engraved text-ink3 hover:text-ink2">
-            {`${String(running)} running`}
-          </Link>
-        )}
-        {support.map((link) => (
-          <a
-            key={link.href}
-            href={link.href}
-            target="_blank"
-            rel="noreferrer"
-            className="flex shrink-0 items-center gap-[6px] whitespace-nowrap text-ink2 hover:text-ink"
-          >
-            <SupportGlyph name={link.glyph} className={link.tone} />
-            {/* Below 1100px the six section links and these three do not both fit, and the
-                bar is a fixed 56 px: something has to give before the words wrap and push
-                it open. The icons stay, the words stand down, and the accessible name is
-                the same either way. */}
-            <span className="sr-only min-[1100px]:not-sr-only">{link.label}</span>
-          </a>
-        ))}
-      </nav>
+        {/* Only this row scrolls on narrow screens. Its links remain keyboard reachable,
+            and the logo, tutorial and support controls stay in the header above it. */}
+        <nav
+          aria-label="Main navigation"
+          className="col-span-2 row-start-2 flex min-w-0 items-center gap-6 overflow-x-auto [scrollbar-width:thin] min-[1280px]:flex-1 min-[1280px]:gap-7"
+        >
+          {sections.map((section) => (
+            <Link
+              key={section.to}
+              to={section.to}
+              activeOptions={{ exact: section.exact }}
+              className="shrink-0 whitespace-nowrap border-b-2 border-transparent py-3 text-ink2 hover:text-ink focus-visible:outline-offset-[-3px] min-[1280px]:py-[18px]"
+              activeProps={{ className: "!border-lamp-run !text-ink" }}
+            >
+              {section.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="col-start-2 row-start-1 ml-auto flex items-center gap-1 sm:gap-4 min-[1280px]:gap-7 [&_button]:min-h-8 [&_button]:min-w-8">
+          <TutorialLauncher />
+          {running === 0 ? null : (
+            <Link
+              to="/"
+              aria-label={`${String(running)} running`}
+              title={`${String(running)} running`}
+              className="engraved flex min-h-8 items-center whitespace-nowrap text-ink3 hover:text-ink2"
+            >
+              {String(running)}
+              <span className="sr-only sm:not-sr-only">&nbsp;running</span>
+            </Link>
+          )}
+          {support.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              target="_blank"
+              rel="noreferrer"
+              title={link.label}
+              className="flex min-h-8 min-w-8 shrink-0 items-center justify-center gap-[6px] whitespace-nowrap text-ink2 hover:text-ink"
+            >
+              <SupportGlyph name={link.glyph} className={link.tone} />
+              <span className="sr-only min-[1100px]:not-sr-only">{link.label}</span>
+            </a>
+          ))}
+        </div>
+      </header>
 
-      <main className="flex-1 px-7 py-6">
+      <main className="min-w-0 flex-1 px-4 py-6 sm:px-7">
         <Outlet />
       </main>
 
-      <footer className="flex items-center gap-[18px] border-t border-line px-7 py-[14px] text-label text-ink3">
+      <footer className="flex items-center gap-[18px] border-t border-line px-4 py-[14px] text-label sm:px-7 text-ink3">
         <span>Free. Your keys, your machine.</span>
       </footer>
 
+      <UpdateWidget reload={() => window.location.reload()} />
       <AppearanceSkin />
       <FirstRunNotice />
       <VersionPrompt

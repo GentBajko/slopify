@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+import { existsSync } from "node:fs";
 import type { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import type { ServerType } from "@hono/node-server";
@@ -10,6 +12,8 @@ import { prepareFfmpeg } from "./adapters/ffmpeg.js";
 import { nodeRunCli } from "./adapters/llm/run-cli.js";
 import { createHub } from "./edge/events/hub.js";
 import { createApp } from "./edge/http/app.js";
+import type { AudioPreviewStore } from "./kernel/audio-preview.js";
+import { createAudioPreviewStore } from "./kernel/audio-preview.js";
 import type { Clock } from "./kernel/clock.js";
 import { systemClock } from "./kernel/clock.js";
 import type { Config } from "./kernel/config/index.js";
@@ -53,6 +57,12 @@ import type { TelemetryDeps } from "./slices/telemetry/record.js";
 import { record } from "./slices/telemetry/record.js";
 import { runThumbnail } from "./slices/thumbnail/run.js";
 import { renderVideo } from "./slices/video/run.js";
+import { watchActivation } from "./updater/candidate.js";
+import { launchUpdate } from "./updater/install.js";
+import { isUpdateToken } from "./updater/model.js";
+import { npmCommand, updateCommitted } from "./updater/plan.js";
+import { publishedVersion } from "./updater/registry.js";
+import { createUpdater } from "./updater/service.js";
 
 // ceiling: a burst of finished stages coalesces into one delivery a second later, and the
 // collector gets ten seconds to answer before the attempt is abandoned and the events
@@ -107,12 +117,95 @@ export async function boot(config: Config): Promise<Boot> {
       clock,
       probe: nodeCliProbe,
     });
-    const runner = wire({ db, paths, clock, ids, log, hub, telemetry, flusher, registry, ffmpeg });
+    const audioPreviews = createAudioPreviewStore();
+    const runner = wire({
+      db,
+      paths,
+      clock,
+      ids,
+      log,
+      hub,
+      telemetry,
+      flusher,
+      registry,
+      ffmpeg,
+      audioPreviews,
+    });
+    const updateDb = db;
+    const oldEntry = fileURLToPath(new URL("./edge/cli.js", import.meta.url));
+    const workerEntry = fileURLToPath(new URL("./edge/update-worker.js", import.meta.url));
+    let npm: Awaited<ReturnType<typeof npmCommand>> | undefined;
+    try {
+      npm = await npmCommand();
+    } catch {
+      log.write("warn", "update", {
+        detail: "npm is unavailable; in-app installation is disabled.",
+      });
+    }
+    let shutdown = async (): Promise<void> => {
+      throw new Error("The server is not ready.");
+    };
+    let listeningPort = config.port;
+    const candidateToken = process.env.SLOPIFY_UPDATE_TOKEN ?? "";
+    const pendingActivation =
+      isUpdateToken(candidateToken) && process.env.SLOPIFY_UPDATE_PENDING === "1";
+    const updater = createUpdater({
+      ...(isUpdateToken(candidateToken)
+        ? {
+            candidate: {
+              token: candidateToken,
+              pending: pendingActivation,
+              committed: () => updateCommitted(paths.dataDir, version, candidateToken),
+            },
+          }
+        : {}),
+      currentVersion: version,
+      previousUpdateFailed: process.env.SLOPIFY_UPDATE_FAILED === "1",
+      now: () => Date.now(),
+      latest: () => publishedVersion(globalThis.fetch),
+      unsupported: () =>
+        !existsSync(oldEntry) || !existsSync(workerEntry)
+          ? "Run Slopify from its installed package to use in-app updates."
+          : npm === undefined
+            ? "npm is unavailable. Install Node.js with npm to use in-app updates."
+            : undefined,
+      busy: () =>
+        updateDb.prepare("SELECT 1 FROM stages WHERE state = 'running' LIMIT 1").get() !==
+          undefined ||
+        updateDb
+          .prepare("SELECT id FROM projects")
+          .all()
+          .some((row) => typeof row.id === "string" && runner.hasInflight?.(row.id) === true),
+      report: (message) => log.write("warn", "update", { detail: message }),
+      install: async (next, restarting) => {
+        if (npm === undefined) throw new Error("npm is unavailable.");
+        await launchUpdate(
+          workerEntry,
+          {
+            version: next,
+            token: randomBytes(32).toString("hex"),
+            previousVersion: version,
+            oldEntry,
+            dataDir: paths.dataDir,
+            cwd: process.cwd(),
+            host: config.host,
+            port: listeningPort,
+            npm: { file: npm.file, args: [...npm.args] },
+          },
+          async () => {
+            restarting();
+            await shutdown();
+          },
+        );
+      },
+    });
     const app = createApp({
       db,
       paths,
       hub,
       runner,
+      updater,
+      audioPreviews,
       ...modelSources(registry),
       clock,
       ids,
@@ -123,14 +216,17 @@ export async function boot(config: Config): Promise<Boot> {
       probe: nodeCliProbe,
     });
     const server = await listen(app, config, log);
+    listeningPort = portOf(server) ?? config.port;
     // Whatever last run left queued goes out at start. Nothing waits for
     // it, and an unreachable collector costs one refused socket.
     flusher.soon();
     const open = db;
-    return {
-      paths,
-      url: urlOf(config.host, portOf(server) ?? config.port),
-      stop: async (): Promise<void> => {
+    let stopping: Promise<void> | undefined;
+    let stopActivation = (): void => {};
+    shutdown = (): Promise<void> => {
+      stopping ??= (async () => {
+        stopActivation();
+        audioPreviews.close();
         try {
           // The listener goes first. Aborting the runner while the socket still accepted
           // requests let a Play arriving during the await start a stage under a fresh
@@ -148,8 +244,14 @@ export async function boot(config: Config): Promise<Boot> {
           open.close();
           lock.release();
         }
-      },
+      })();
+      return stopping;
     };
+    if (pendingActivation)
+      stopActivation = watchActivation(updater, candidateToken, shutdown, (message) =>
+        log.write("warn", "update", { detail: message }),
+      );
+    return { paths, url: urlOf(config.host, listeningPort), stop: shutdown };
   } catch (error) {
     db?.close();
     lock.release();
@@ -160,6 +262,7 @@ export async function boot(config: Config): Promise<Boot> {
 // The composition root: the runner is handed the stage implementations it may not import, and
 // each implementation is handed the dependencies it needs, closed over here.
 interface Wiring {
+  readonly audioPreviews: AudioPreviewStore;
   readonly ffmpeg: string;
   readonly db: DatabaseSync;
   readonly paths: Paths;
@@ -173,6 +276,7 @@ interface Wiring {
 }
 
 function wire({
+  audioPreviews,
   db,
   paths,
   clock,
@@ -220,7 +324,7 @@ function wire({
       audio: async (context) => {
         const wrapped = stageProviders(providers, context);
         await prepareProvidedArticleSegments(writing, context, wrapped);
-        await runNarration(video, context, wrapped);
+        await runNarration({ ...video, audioPreviews }, context, wrapped);
       },
       images: (context) => runImages(writing, context, stageProviders(providers, context)),
       thumbnail: (context) => runThumbnail(writing, context, stageProviders(providers, context)),

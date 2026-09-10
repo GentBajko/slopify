@@ -74,18 +74,20 @@ export function ProjectProviders({
 
   return (
     <Rail className="block py-3" data-tour="project-providers">
-      <details open={editable}>
-        <summary className="cursor-pointer text-small font-semibold">Run providers</summary>
+      <details open>
+        <summary className="cursor-pointer text-row font-semibold">Run providers</summary>
         <p className="mt-2 text-small text-ink2">
           {editable
             ? "Save your choices, then press Resume when ready. Finished outputs stay as they are. Changing the voice or TTS model restarts unfinished narration to keep one voice throughout."
             : inFlight && project.status === "paused"
               ? "Pausing: waiting for active requests to stop before providers can be changed."
-              : "Pause the run to change providers, models or voice. These controls are also available after a failure."}
+              : project.status === "done" || project.status === "canceled"
+                ? "These are the saved providers for this run. Start a new run to choose different providers."
+                : "Pause the run to change providers, models or voice. These controls are also available after a failure."}
         </p>
         <fieldset
           disabled={!editable || actions.pending}
-          className="mt-3 flex flex-col gap-3 disabled:opacity-60"
+          className="mt-3 flex min-w-0 flex-col gap-3 disabled:opacity-60"
         >
           {showLlm ? (
             <ChoiceRow

@@ -25,11 +25,7 @@ export function StageBody({
   readonly children: ReactNode;
   readonly className?: string;
 }) {
-  return (
-    <div className={cn("flex flex-col gap-3 pt-0 pr-4 pb-[18px] pl-[66px]", className)}>
-      {children}
-    </div>
-  );
+  return <div className={cn("flex min-w-0 flex-col gap-4 p-5", className)}>{children}</div>;
 }
 
 export function ActionRow({ children }: { readonly children: ReactNode }) {

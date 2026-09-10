@@ -257,18 +257,20 @@ export function StepContent({
       return (
         <>
           <p>
-            This page shows each stage’s progress and results. Press <strong>Pause</strong> to stop
-            active requests safely and keep finished work.
+            Overall progress stays above the workspace. Select a stage from <strong>Stages</strong>{" "}
+            to see its results or live writing. Press <strong>Pause</strong> to stop active requests
+            safely and keep finished work.
           </p>
           <p>
-            While paused or failed, open <strong>Run providers</strong> to change providers, models
+            While paused or failed, open <strong>Run settings</strong> to change providers, models
             or voice. Press <strong>Save providers</strong>, then <strong>Resume</strong>{" "}
             separately. Changing TTS choices restarts unfinished narration to avoid mixing voices;
             completed outputs stay unchanged.
           </p>
           <p>
-            A failed stage also offers <strong>Retry stage</strong> after you fix its cause. Editing
-            or rerunning earlier work updates only the enabled dependent outputs.
+            Select a failed stage and open <strong>Error details</strong> to read the provider’s
+            message. <strong>Retry stage</strong> keeps completed outputs. Editing or rerunning
+            earlier work updates only the enabled dependent outputs.
           </p>
         </>
       );
@@ -294,7 +296,7 @@ export function StepContent({
             The completed project stays in <strong>Projects</strong> so you can return to it.
           </p>
           <p>
-            You can also download the article, audio and images from their own stages.{" "}
+            Select Article, Audio or Images in <strong>Stages</strong> to download their outputs.{" "}
             <strong>Download all</strong> under Images gives an image ZIP, not the video.
           </p>
           <p>

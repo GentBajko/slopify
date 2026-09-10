@@ -40,7 +40,7 @@ export function LabelledField({
   const noteId = useId();
 
   return (
-    <div className={cn(inline ? "flex items-center gap-[10px]" : "min-w-0")}>
+    <div className={cn(inline ? "flex min-w-0 max-w-full items-center gap-[10px]" : "min-w-0")}>
       <Label htmlFor={fieldId} className={inline ? "shrink-0" : "mb-[5px]"}>
         {label}
       </Label>
@@ -205,7 +205,7 @@ function ProviderModelPicker({
                   placeholder="Type the model id"
                   aria-invalid={problem !== undefined}
                   aria-describedby={described}
-                  className={inline ? "w-[180px]" : undefined}
+                  className={inline ? "w-[180px] max-w-full" : undefined}
                   onChange={(event) => onPick(event.target.value)}
                 />
               ) : (
@@ -215,7 +215,7 @@ function ProviderModelPicker({
                   disabled={provider === ""}
                   aria-invalid={problem !== undefined}
                   aria-describedby={described}
-                  className={inline ? "w-auto min-w-[120px] max-w-[260px]" : undefined}
+                  className={inline ? "w-full min-w-[120px] max-w-[260px]" : undefined}
                   onChange={(event) => onPick(event.target.value)}
                 >
                   <option value="">

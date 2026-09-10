@@ -9,11 +9,13 @@ import {
   useState,
 } from "react";
 import type { TutorialEvent, TutorialSession } from "./model";
-import { receiveTutorialEvent } from "./model";
+import { receiveTutorialEvent, tutorialSteps } from "./model";
 import { TutorialRunner } from "./runner";
 
 interface TutorialContextValue {
   readonly active: boolean;
+  readonly projectId: string | undefined;
+  readonly projectStep: "project" | "download" | undefined;
   readonly start: () => void;
   readonly report: (progress: Readonly<Record<string, boolean>>) => void;
   readonly clear: (fields: readonly string[]) => void;
@@ -45,9 +47,20 @@ export function TutorialProvider({ children }: { readonly children: ReactNode })
   const event = useCallback((next: TutorialEvent) => {
     setSession((previous) => receiveTutorialEvent(previous, next));
   }, []);
+  const step = tutorialSteps[session.step]?.id;
+  const projectStep =
+    session.active && (step === "project" || step === "download") ? step : undefined;
   const context = useMemo(
-    () => ({ active: session.active, start, report, clear, event }),
-    [session.active, start, report, clear, event],
+    () => ({
+      active: session.active,
+      projectId: session.projectId,
+      projectStep,
+      start,
+      report,
+      clear,
+      event,
+    }),
+    [session.active, session.projectId, projectStep, start, report, clear, event],
   );
 
   return (
@@ -89,4 +102,9 @@ export function useTutorialEvent(): (event: TutorialEvent) => void {
     },
     [context?.event],
   );
+}
+
+export function useTutorialProjectStep(projectId: string): "project" | "download" | undefined {
+  const context = useContext(TutorialContext);
+  return context?.projectId === projectId ? context.projectStep : undefined;
 }

@@ -1,6 +1,8 @@
 import type { ProjectState, StageKind, StageState } from "@app/kernel/pipeline.js";
 import type { Stage } from "@app/slices/admission/model.js";
 import type { Output } from "@app/slices/storage/model.js";
+import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { Answer } from "@/test-app";
 import { jsonAnswer, testDeps, testVersion } from "@/test-app";
 
@@ -151,4 +153,15 @@ function textAnswer(text: string): Answer {
       status: 200,
       headers: { "content-type": "text/plain", "X-Slopify-Version": testVersion },
     });
+}
+
+export async function selectProjectStage(name: string): Promise<HTMLElement> {
+  const navigation = await screen.findByRole("navigation", { name: "Project stages" });
+  await userEvent.click(within(navigation).getByRole("button", { name: new RegExp(`^${name},`) }));
+  return screen.getByRole("region", { name: `${name} workspace` });
+}
+
+export async function openRunSettings(): Promise<void> {
+  const button = await screen.findByRole("button", { name: /^Run settings/ });
+  if (button.getAttribute("aria-expanded") !== "true") await userEvent.click(button);
 }

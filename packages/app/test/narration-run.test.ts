@@ -7,6 +7,7 @@ import ffmpegStatic from "ffmpeg-static";
 import { describe, expect, it } from "vitest";
 import type { FakeTts } from "../src/adapters/fake/tts.js";
 import { fakeTts } from "../src/adapters/fake/tts.js";
+import { createAudioPreviewStore } from "../src/kernel/audio-preview.js";
 import { manualClock } from "../src/kernel/clock.fake.js";
 import type { Clock } from "../src/kernel/clock.js";
 import { systemClock } from "../src/kernel/clock.js";
@@ -565,3 +566,40 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
 function throwOut(): never {
   throw new Error("the synthesiser is down");
 }
+
+it.each(["whole", "paragraph"] as const)(
+  "previews %s narration plus intro/outro from the same synthesis calls",
+  async (mode) => {
+    const h = harness({ chunking: { mode }, segments: true });
+    const tts = speaking();
+    const audioPreviews = createAudioPreviewStore();
+    try {
+      await runNarration(
+        { ...h.deps, audioPreviews },
+        h.context,
+        stageProviders(
+          {
+            registry: registry(tts),
+            attempts: sqliteAttempts(h.db, h.deps.ids),
+            clock: h.deps.clock,
+            log: silent,
+          },
+          h.context,
+        ),
+      );
+      const previews = audioPreviews.list("p1");
+      expect(previews.map((preview) => preview.label)).toEqual(
+        mode === "whole"
+          ? ["Body", "Intro", "Outro"]
+          : ["Body part 1 of 3", "Body part 2 of 3", "Body part 3 of 3", "Intro", "Outro"],
+      );
+      expect(previews.every((preview) => preview.state === "ready" && preview.bytes > 0)).toBe(
+        true,
+      );
+      expect(tts.calls()).toBe(mode === "whole" ? 3 : 5);
+      expect(outputRows(h.db)).toHaveLength(3);
+    } finally {
+      audioPreviews.close();
+    }
+  },
+);

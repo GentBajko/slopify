@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "no
 import { dirname } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+import type { AudioPreviewStore } from "../../kernel/audio-preview.js";
 import type { Clock } from "../../kernel/clock.js";
 import { transact } from "../../kernel/db/tx.js";
 import type { Ids } from "../../kernel/ids.js";
@@ -22,6 +23,7 @@ import type { AudioSegment, RecordEvent } from "../telemetry/model.js";
 import { probeDurationMs } from "../video/ffmpeg.js";
 import { chunkNarration, defaultChunking } from "./chunk.js";
 import { joinNarration } from "./concat.js";
+import { observeNarration } from "./live.js";
 
 // The narration source is cut per the run's chunking choice, every chunk is synthesized in
 // parallel as a resumable piece, the chunk audio is concatenated in order into one body file,
@@ -36,6 +38,7 @@ export interface NarrationDeps {
   readonly clock: Clock;
   readonly log: Log;
   readonly ffmpeg: string;
+  readonly audioPreviews?: AudioPreviewStore | undefined;
   // One event per narrated segment - body, intro, outro.
   readonly count: RecordEvent;
 }
@@ -68,6 +71,7 @@ export async function runNarration(
   providers: StageProviders,
 ): Promise<void> {
   const { projectId } = context.stage;
+  deps.audioPreviews?.clear(projectId);
   const project = projectById(deps.db, projectId);
   if (project === undefined) {
     throw new Error(`project ${projectId} has no row`);
@@ -167,12 +171,20 @@ async function speakChunks(
       const file = `${chunkDir}/${String(piece.idx).padStart(3, "0")}.mp3`;
       setPiece(deps.db, piece.id, "running", piece.payload);
       try {
-        const spoken = await providers.forPiece(piece.id).tts({
-          provider: choice.provider,
-          model: choice.model,
-          voiceId: choice.voice,
-          text: carried.text,
-        });
+        const spoken = await providers.forPiece(piece.id).tts(
+          {
+            provider: choice.provider,
+            model: choice.model,
+            voiceId: choice.voice,
+            text: carried.text,
+          },
+          observeNarration(
+            deps.audioPreviews,
+            projectId,
+            piece.id,
+            total === 1 ? "Body" : `Body part ${piece.idx} of ${total}`,
+          ),
+        );
         write(deps, projectId, file, spoken.bytes);
         // The file is on disk before the row says so: a crash between the two leaves a
         // file the reconcile collects, where the other order would leave a `done` chunk
@@ -260,12 +272,20 @@ async function speakSegments(
       // dropping an intro the user picked would lose it without telling anyone.
       throw new Error(`the ${segment.category} segment has ${nothingToNarrate}`);
     }
-    const spoken = await providers.forPiece(piece.id).tts({
-      provider: choice.provider,
-      model: choice.model,
-      voiceId: choice.voice,
-      text,
-    });
+    const spoken = await providers.forPiece(piece.id).tts(
+      {
+        provider: choice.provider,
+        model: choice.model,
+        voiceId: choice.voice,
+        text,
+      },
+      observeNarration(
+        deps.audioPreviews,
+        projectId,
+        piece.id,
+        segment.category === "intro" ? "Intro" : "Outro",
+      ),
+    );
     const name = outputFileName(role, 1, ".mp3", "audio");
     write(deps, projectId, name, spoken.bytes);
     // Measured the same way the body is, because the render adds all three and the gaps to

@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import { parseArgs } from "node:util";
 import { configFrom } from "../kernel/config/index.js";
+import { readVersion } from "../kernel/version.js";
 import { boot } from "../main.js";
+import { forwardManagedUpdate } from "../updater/forward.js";
 import { openBrowser } from "./open-browser.js";
 
 const { values } = parseArgs({
@@ -15,6 +17,12 @@ const { values } = parseArgs({
 
 try {
   const config = configFrom(values, process.env);
+  const forwarded = await forwardManagedUpdate(
+    config.dataDir,
+    readVersion(),
+    process.argv.slice(2),
+  );
+  if (forwarded !== undefined) process.exit(forwarded);
   const { paths, url, stop } = await boot(config);
   console.log(`Slopify is running at ${url}`);
   console.log(`Slopify data directory: ${paths.dataDir}`);

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { jsonAnswer, problemAnswer, renderRouted, testDeps, testOrigin } from "@/test-app";
 import { ProjectRoute } from "./project.js";
-import { body, deps, output, ready, stage } from "./project-fixtures.js";
+import { body, deps, output, ready, selectProjectStage, stage } from "./project-fixtures.js";
 
 afterEach(cleanup);
 
@@ -38,6 +38,64 @@ describe("the project rundown", () => {
   });
 });
 
+describe("the focused project workspace", () => {
+  it("opens the final player and download before a long finished article", async () => {
+    renderRouted(
+      <ProjectRoute projectId="p1" />,
+      deps({
+        "GET /files/p1/article-md": () =>
+          new Response(`# The Archlich\n\n${"A long finished article. ".repeat(500)}`),
+      }),
+    );
+    const workspace = await screen.findByRole("region", { name: "Video workspace" });
+    expect(within(workspace).getByLabelText("Generated video")).not.toBeNull();
+    expect(within(workspace).getByRole("link", { name: "Download .mp4" })).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Download video" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Video, done" }).getAttribute("aria-current")).toBe(
+      "step",
+    );
+    expect(screen.queryByRole("region", { name: "Article workspace" })).toBeNull();
+    expect(
+      screen.getByRole("progressbar", { name: "Overall progress" }).getAttribute("aria-valuenow"),
+    ).toBe("100");
+    const article = await selectProjectStage("Article");
+    expect(await within(article).findByText(/A long finished article/)).not.toBeNull();
+    expect(screen.queryByRole("region", { name: "Video workspace" })).toBeNull();
+  });
+
+  it("keeps overall progress visible while reviewing a different stage", async () => {
+    renderRouted(
+      <ProjectRoute projectId="p1" />,
+      deps({
+        "GET /api/projects/p1": jsonAnswer(
+          body({
+            status: "running",
+            stages: [
+              stage("research", "skipped"),
+              stage("article", "done"),
+              stage("audio", "running"),
+              stage("images", "pending"),
+              stage("thumbnail", "pending"),
+              stage("video", "pending"),
+            ],
+            outputs: [output("article_md", "article")],
+          }),
+        ),
+      }),
+    );
+    await screen.findByRole("region", { name: "Audio workspace" });
+    expect(
+      screen.getByRole("progressbar", { name: "Overall progress" }).getAttribute("aria-valuenow"),
+    ).toBe("25");
+    expect(screen.getByText("1 of 5 stages finished")).not.toBeNull();
+    await selectProjectStage("Article");
+    expect(
+      screen.getByRole("progressbar", { name: "Overall progress" }).getAttribute("aria-valuenow"),
+    ).toBe("25");
+    expect(screen.getByRole("button", { name: "Pause" })).not.toBeNull();
+  });
+});
+
 describe("a failed stage", () => {
   const verbatim = "fal.ai: 429 Too Many Requests after 4 attempts (2s, 8s, 30s, Retry-After 45s)";
   const failed = body({
@@ -59,12 +117,13 @@ describe("a failed stage", () => {
       deps({ "GET /api/projects/p1": jsonAnswer(failed) }),
     );
 
-    const line = await screen.findByText(verbatim);
+    const workspace = await screen.findByRole("region", { name: "Images workspace" });
+    await userEvent.click(within(workspace).getByText("Error details"));
+    const line = within(workspace).getByText(verbatim);
     // Verbatim: the whole sentence is one text node, neither truncated nor rewritten.
     expect(line.textContent).toBe(verbatim);
-    const row = line.closest("div");
-    expect(within(row as HTMLElement).getByText("4 attempts")).not.toBeNull();
-    expect(within(row as HTMLElement).getByRole("button", { name: "Retry stage" })).not.toBeNull();
+    expect(within(workspace).getByText("4 attempts")).not.toBeNull();
+    expect(within(workspace).getByRole("button", { name: "Retry stage" })).not.toBeNull();
   });
 
   it("retries the failed stage without a dialog, because a retry destroys nothing", async () => {
@@ -177,6 +236,7 @@ describe("cancelling a run", () => {
       <ProjectRoute projectId="p1" />,
       deps({ "GET /api/projects/p1": jsonAnswer(running) }),
     );
+    await selectProjectStage("Article");
     const edit = await screen.findByRole("button", { name: "Edit" });
     expect(edit.hasAttribute("disabled")).toBe(true);
   });
@@ -185,9 +245,9 @@ describe("cancelling a run", () => {
 describe("the stage bodies", () => {
   it("plays the three narration segments and offers each for download", async () => {
     const { container } = renderRouted(<ProjectRoute projectId="p1" />, deps());
-    await screen.findByText("Audio");
+    const workspace = await selectProjectStage("Audio");
 
-    const players = [...container.querySelectorAll("audio")];
+    const players = [...workspace.querySelectorAll("audio")];
     expect(players.map((player) => player.getAttribute("src"))).toEqual([
       `${testOrigin}/files/p1/audio-intro`,
       `${testOrigin}/files/p1/audio-body`,
@@ -204,7 +264,7 @@ describe("the stage bodies", () => {
 
   it("draws the image grid from the run's own prompt groups", async () => {
     const { container } = renderRouted(<ProjectRoute projectId="p1" />, deps());
-    await screen.findByText("Images");
+    await selectProjectStage("Images");
 
     expect(screen.getByText("Oil painting scenes × 2")).not.toBeNull();
     const tiles = [...container.querySelectorAll("figure img")];
@@ -231,6 +291,7 @@ describe("the stage bodies", () => {
 
   it("renders the article and links its end matter beside the title", async () => {
     renderRouted(<ProjectRoute projectId="p1" />, deps());
+    await selectProjectStage("Article");
     expect(await screen.findByText("Most villains want something.")).not.toBeNull();
     expect(screen.getByText("The Archlich")).not.toBeNull();
     expect(screen.getByRole("link", { name: "Sources" }).getAttribute("href")).toBe(
@@ -243,7 +304,7 @@ describe("the stage bodies", () => {
 
   it("shows the thumbnail with the prompt that made it", async () => {
     renderRouted(<ProjectRoute projectId="p1" />, deps());
-    await screen.findByText("Thumbnail");
+    await selectProjectStage("Thumbnail");
     expect(screen.getByText("A cracked skull with gemstone eyes")).not.toBeNull();
   });
 

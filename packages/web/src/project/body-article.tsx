@@ -7,6 +7,7 @@ import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { confirmationFor } from "./confirmations.js";
 import { ConfirmedButton } from "./controls.js";
+import { LiveWriting, type WritingPreview, writingKey } from "./live-writing.js";
 import {
   ActionRow,
   InlineProse,
@@ -28,6 +29,12 @@ export function ArticleBody({ stage, project, outputs, actions, busy }: BodyProp
   const glossary = roleOf(mine, "glossary");
 
   const stored = useOutputText(markdown);
+  const previews = useQuery({
+    queryKey: writingKey(project.id),
+    queryFn: (): readonly WritingPreview[] => [],
+    enabled: false,
+  });
+  const hasLivePreview = previews.data?.some((one) => one.stage === "article") === true;
   // The article arrives token by token while the stage runs and is only ever patched into
   // the cache, never fetched: this query exists to read and subscribe to it.
   const streaming = useQuery({
@@ -54,26 +61,6 @@ export function ArticleBody({ stage, project, outputs, actions, busy }: BodyProp
         {sources === undefined ? null : <OutputDownload output={sources} label="Sources" />}
         {glossary === undefined ? null : <OutputDownload output={glossary} label="Glossary" />}
       </div>
-
-      {stored.error === null ? null : <p className="text-body text-red">{stored.error.message}</p>}
-
-      {draft === undefined ? (
-        <Prose markdown={split.body} />
-      ) : (
-        <>
-          <label htmlFor="article-editor" className="engraved text-ink3">
-            Article
-          </label>
-          <textarea
-            id="article-editor"
-            value={draft}
-            onChange={(event) => {
-              setDraft(event.target.value);
-            }}
-            className="h-[420px] w-full max-w-[75ch] resize-y rounded-control border border-line2 bg-panel2 p-[10px] font-sans text-body text-ink"
-          />
-        </>
-      )}
 
       <ActionRow>
         {draft === undefined ? (
@@ -126,6 +113,37 @@ export function ArticleBody({ stage, project, outputs, actions, busy }: BodyProp
           </>
         )}
       </ActionRow>
+
+      {stored.error === null ? null : <p className="text-body text-red">{stored.error.message}</p>}
+
+      <section
+        aria-label="Article content"
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users need to scroll this reading region.
+        tabIndex={0}
+        className="max-h-[min(58vh,640px)] min-h-48 overflow-auto pr-3"
+      >
+        {draft === undefined ? (
+          stage.state === "running" && hasLivePreview ? (
+            <LiveWriting projectId={project.id} stage="article" />
+          ) : (
+            <Prose markdown={split.body} />
+          )
+        ) : (
+          <>
+            <label htmlFor="article-editor" className="engraved text-ink3">
+              Article
+            </label>
+            <textarea
+              id="article-editor"
+              value={draft}
+              onChange={(event) => {
+                setDraft(event.target.value);
+              }}
+              className="h-[420px] w-full max-w-[75ch] resize-y rounded-control border border-line2 bg-panel2 p-[10px] font-sans text-body text-ink"
+            />
+          </>
+        )}
+      </section>
 
       <ConfirmDialog
         open={discarding}

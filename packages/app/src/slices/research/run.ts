@@ -96,6 +96,7 @@ async function research(
     provider: choice.provider,
     model: choice.model,
     messages: synthesisMessages(brief, findings),
+    previewLabel: "Writing research notes",
     check: (given: LlmAnswer): string | undefined => sourcedAnswer("the synthesis", given.text),
   });
   add(answer.usage);
@@ -141,6 +142,7 @@ async function plan(
     provider: choice.provider,
     model: choice.model,
     messages: plannerMessages(brief),
+    previewLabel: "Planning research",
     // An empty answer, or one with no chapter in it, is a failed attempt.
     check: (given: LlmAnswer): string | undefined =>
       chaptersFrom(given.text).length === 0 ? "the planner named no chapters" : undefined,
@@ -193,6 +195,7 @@ async function researchChapters(
           provider: choice.provider,
           model: choice.model,
           messages: subAgentMessages(brief, kept.title, outline),
+          previewLabel: kept.title,
           // Grounding is asked for explicitly, so a model without it says so
           // instead of answering from what it already knows.
           webSearch: true,

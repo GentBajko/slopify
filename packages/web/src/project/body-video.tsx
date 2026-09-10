@@ -60,7 +60,7 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
           src={fileUrl(api, video.projectId, assetOf(video))}
           aria-label="Generated video"
           className={cn(
-            "block max-h-[720px] w-auto max-w-full rounded-control bg-screen",
+            "mx-auto block max-h-[min(58vh,560px)] w-auto max-w-full rounded-control bg-screen",
             project.format === "9:16" ? "aspect-[9/16]" : "aspect-video",
           )}
         >
@@ -108,7 +108,14 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
           {vtt ? <OutputDownload output={vtt} label="Download .vtt" /> : null}
         </ActionRow>
       ) : null}
-      {subtitleControls}
+      {subtitleControls ? (
+        <details className="mt-2 rounded-control border border-line px-4 py-3">
+          <summary className="cursor-pointer text-small font-semibold">
+            Subtitles &amp; fonts
+          </summary>
+          {subtitleControls}
+        </details>
+      ) : null}
     </StageBody>
   );
 }

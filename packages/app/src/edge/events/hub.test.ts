@@ -180,3 +180,43 @@ describe("createHub", () => {
     ]);
   });
 });
+
+describe("live writing reconnects", () => {
+  it("replays the current attempt before new deltas, scoped to one project", async () => {
+    const { hub: h } = hub();
+    const event = {
+      type: "llm.preview",
+      projectId: "p1",
+      stage: "research",
+      callId: "call1",
+      label: "Chapter",
+      text: "Old attempt",
+    } as const;
+    h.emit("p1", event);
+    h.emit("p1", { ...event, reset: true, text: "New " });
+    h.emit("p1", { ...event, text: "attempt" });
+    const mine = fakeStream();
+    const other = fakeStream();
+    const global = fakeStream();
+    const controller = new AbortController();
+    const done = h.subscribe("p1", mine.stream, controller.signal);
+    void h.subscribe("p2", other.stream, controller.signal);
+    void h.subscribeGlobal(global.stream, controller.signal);
+    h.emit("p1", { ...event, text: " continues" });
+    expect(mine.written.map((frame) => JSON.parse(frame.data))).toEqual([
+      { ...event, text: "New attempt", reset: true },
+      { ...event, text: " continues" },
+    ]);
+    expect(other.written).toEqual([]);
+    expect(global.written.map((frame) => frame.event)).toEqual(["running.count"]);
+    controller.abort();
+    await done;
+    h.emit("p1", { type: "stage.state", projectId: "p1", stage: "research", state: "done" });
+    const fresh = fakeStream();
+    const next = new AbortController();
+    const finished = h.subscribe("p1", fresh.stream, next.signal);
+    expect(fresh.written).toEqual([]);
+    next.abort();
+    await finished;
+  });
+});

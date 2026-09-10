@@ -6,6 +6,7 @@ import { useApp } from "@/app-context";
 import { subscribeProject } from "@/events";
 import { keys } from "@/queries";
 import { coalesce, patchProject } from "./live.js";
+import { appendWriting, type WritingPreview, writingKey } from "./live-writing.js";
 
 // How long a burst of events is folded into one refetch. Short enough that an image
 // appears while the eye is still on the grid, long enough that a stage landing sixty of
@@ -26,10 +27,21 @@ export function useLiveProject(projectId: string): void {
 
     const unsubscribe = subscribeProject(openEvents, eventsUrl(api, `projects/${projectId}`), {
       refetch: refetch.ask,
+      previewWriting: (event) => {
+        queryClient.setQueryData<readonly WritingPreview[]>(writingKey(projectId), (seen) =>
+          appendWriting(seen ?? [], event),
+        );
+      },
       appendArticle: (text) => {
         queryClient.setQueryData<string>(keys.article(projectId), (seen) => `${seen ?? ""}${text}`);
       },
       patch: (event) => {
+        if (event.type === "stage.state" && event.state === "running") {
+          queryClient.setQueryData<readonly WritingPreview[]>(writingKey(projectId), (seen) =>
+            (seen ?? []).filter((one) => one.stage !== event.stage),
+          );
+          if (event.stage === "article") queryClient.setQueryData(keys.article(projectId), "");
+        }
         queryClient.setQueryData<ProjectBody>(keys.project(projectId), (seen) =>
           patchProject(seen, event),
         );

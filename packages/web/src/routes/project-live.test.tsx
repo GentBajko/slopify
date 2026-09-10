@@ -2,7 +2,8 @@ import type { ProjectEvent } from "@app/edge/events/hub.js";
 import type { StageKind, StageState } from "@app/kernel/pipeline.js";
 import type { Stage } from "@app/slices/admission/model.js";
 import type { Output } from "@app/slices/storage/model.js";
-import { act, cleanup, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { createApi } from "@/api";
 import type { AppDeps } from "@/app-context";
@@ -11,6 +12,7 @@ import type { Answer } from "@/test-app";
 import { fakeFetch, jsonAnswer, renderRouted, testOrigin } from "@/test-app";
 import { createVersionWatch, watchingFetch } from "@/version";
 import { ProjectRoute } from "./project.js";
+import { openRunSettings, selectProjectStage } from "./project-fixtures.js";
 
 afterEach(cleanup);
 
@@ -82,6 +84,8 @@ interface Server {
   landed: number;
   video: StageState;
   textModel?: string;
+  article?: StageState;
+  research?: StageState;
 }
 
 function view(server: Server) {
@@ -99,7 +103,12 @@ function view(server: Server) {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
-    stages: [stage("article", "done"), stage("images", "running"), stage("video", server.video)],
+    stages: [
+      ...(server.research ? [stage("research", server.research)] : []),
+      stage("article", server.article ?? "done"),
+      stage("images", "running"),
+      stage("video", server.video),
+    ],
     outputs: Array.from({ length: server.landed }, (_, at) => image(at + 1)),
   };
 }
@@ -134,6 +143,7 @@ describe("the page under a live run", () => {
   it("refetches saved provider configuration on project.updated", async () => {
     const server: Server = { landed: 0, video: "pending", textModel: "model-before" };
     const { source, reads } = mount(server);
+    await openRunSettings();
     const model = await screen.findByLabelText("Text model");
     expect((model as HTMLInputElement).value).toBe("model-before");
     const before = reads();
@@ -180,13 +190,17 @@ describe("the page under a live run", () => {
     }
 
     await waitFor(() => {
-      expect(screen.getByText("image 20 of 20")).not.toBeNull();
+      expect(
+        within(screen.getByRole("region", { name: "Images workspace" })).getByText(
+          "image 20 of 20",
+        ),
+      ).not.toBeNull();
     });
     expect(reads()).toBe(before);
   });
 
-  it("appends an article delta as it streams, without a request per token", async () => {
-    const server: Server = { landed: 0, video: "pending" };
+  it("shows article text as it streams, without a request per token", async () => {
+    const server: Server = { landed: 0, video: "pending", article: "running" };
     const { source, reads } = mount(server);
     await screen.findByText("Article");
     const before = reads();
@@ -195,8 +209,71 @@ describe("the page under a live run", () => {
       source.emit({ type: "article.delta", projectId: "p1", text: word });
     }
 
-    // The article stage reads `done` here, so the stored text is what is shown; the
-    // deltas still land in the cache without costing a request.
+    const content = screen.getByRole("region", { name: "Article content" });
+    expect(await within(content).findByText("Most villains want.")).not.toBeNull();
+    expect(reads()).toBe(before);
+  });
+
+  it("keeps distinct live writing tasks and replaces replayed text without duplicate output", async () => {
+    const server: Server = { landed: 0, video: "pending", research: "running" };
+    const { source, reads } = mount(server);
+    await screen.findByRole("region", { name: "Research workspace" });
+    const before = reads();
+    source.emit({
+      type: "llm.preview",
+      projectId: "p1",
+      stage: "research",
+      callId: "notes",
+      label: "Research notes",
+      text: "First notes",
+      reset: true,
+    });
+    source.emit({
+      type: "llm.preview",
+      projectId: "p1",
+      stage: "research",
+      callId: "sources",
+      label: "Sources",
+      text: "Source list",
+      reset: true,
+    });
+    await waitFor(() =>
+      expect(screen.getByRole("region", { name: "Live writing preview" }).textContent).toBe(
+        "Source list",
+      ),
+    );
+    await userEvent.selectOptions(
+      screen.getByRole("combobox", { name: "Live writing task" }),
+      "notes",
+    );
+    source.emit({
+      type: "llm.preview",
+      projectId: "p1",
+      stage: "research",
+      callId: "notes",
+      label: "Research notes",
+      text: " continue.",
+    });
+    await waitFor(() =>
+      expect(screen.getByRole("region", { name: "Live writing preview" }).textContent).toBe(
+        "First notes continue.",
+      ),
+    );
+    await selectProjectStage("Images");
+    expect(screen.queryByRole("region", { name: "Live writing preview" })).toBeNull();
+    source.emit({
+      type: "llm.preview",
+      projectId: "p1",
+      stage: "research",
+      callId: "notes",
+      label: "Research notes",
+      text: "Replayed current notes.",
+      reset: true,
+    });
+    await selectProjectStage("Research");
+    expect(screen.getByRole("region", { name: "Live writing preview" }).textContent).toBe(
+      "Replayed current notes.",
+    );
     expect(reads()).toBe(before);
   });
 

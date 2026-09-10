@@ -5,7 +5,7 @@ import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { jsonAnswer, problemAnswer, renderRouted, testOrigin } from "@/test-app";
 import { ProjectRoute } from "./project";
-import { body, deps, output, ready, stage } from "./project-fixtures";
+import { body, deps, openRunSettings, output, ready, stage } from "./project-fixtures";
 
 afterEach(cleanup);
 
@@ -51,6 +51,7 @@ describe("project pause and provider changes", () => {
         "POST /api/projects/p1/resume": resume,
       }),
     );
+    await openRunSettings();
     await user.click(await screen.findByRole("button", { name: "Enter Text model ID" }));
     const model = screen.getByRole("textbox", { name: "Text model" });
     await user.clear(model);
@@ -92,6 +93,7 @@ describe("project pause and provider changes", () => {
           listeners.set(name, [...(listeners.get(name) ?? []), listener]),
       }),
     });
+    await openRunSettings();
     await user.click(await screen.findByRole("button", { name: "Enter Text model ID" }));
     const model = screen.getByRole("textbox", { name: "Text model" });
     await user.clear(model);
@@ -248,6 +250,7 @@ describe("project pause and provider changes", () => {
     await screen.findByText("paused");
     expect(pause).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("dialog")).toBeNull();
+    await openRunSettings();
     await user.selectOptions(screen.getByLabelText("Text provider"), "claude-code");
     await user.selectOptions(screen.getByLabelText("Text model"), "sonnet");
     await user.selectOptions(screen.getByLabelText("TTS provider"), "cartesia");
@@ -290,6 +293,7 @@ describe("project pause and provider changes", () => {
         "PATCH /api/projects/p1/providers": save,
       }),
     );
+    await openRunSettings();
     await user.click(await screen.findByRole("button", { name: "Enter Text model ID" }));
     const model = screen.getByRole("textbox", { name: "Text model" });
     await user.clear(model);
@@ -303,7 +307,6 @@ describe("project pause and provider changes", () => {
   });
 
   it("holds editing and Resume until in-flight stages stop", async () => {
-    const user = userEvent.setup();
     const current = paused();
     renderRouted(
       <ProjectRoute projectId="p1" />,
@@ -311,7 +314,7 @@ describe("project pause and provider changes", () => {
         "GET /api/projects/p1": jsonAnswer({ ...current, stages: [stage("audio", "running")] }),
       }),
     );
-    await user.click(await screen.findByText("Run providers"));
+    await openRunSettings();
     expect((screen.getByRole("button", { name: "Resume" }) as HTMLButtonElement).disabled).toBe(
       true,
     );

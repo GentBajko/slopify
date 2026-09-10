@@ -11,6 +11,7 @@ import type {
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import type { StagingEvent } from "../../slices/storage/model.js";
+import { createPreviewCache } from "./preview-cache.js";
 
 export type { ProjectState, StageState } from "../../kernel/pipeline.js";
 export type {
@@ -66,6 +67,7 @@ interface Subscriber {
 }
 
 export function createHub(deps: HubDeps): Hub {
+  const previews = createPreviewCache();
   const projects = new Map<string, Set<Subscriber>>();
   const globals = new Set<Subscriber>();
   // The tally a page needs before anything else happens. The runner emits it when it
@@ -117,11 +119,14 @@ export function createHub(deps: HubDeps): Hub {
     subscribe: (projectId: string, stream: EventStream, signal: AbortSignal): Promise<void> => {
       const set = projects.get(projectId) ?? new Set<Subscriber>();
       projects.set(projectId, set);
-      return join(set, stream, signal, () => {
+      const subscriber = join(set, stream, signal, () => {
         if (set.size === 0) {
           projects.delete(projectId);
         }
-      }).done;
+      });
+      if (set.has(subscriber))
+        for (const event of previews.snapshot(projectId)) send(subscriber, event);
+      return subscriber.done;
     },
 
     subscribeGlobal: (stream: EventStream, signal: AbortSignal): Promise<void> => {
@@ -133,6 +138,7 @@ export function createHub(deps: HubDeps): Hub {
     },
 
     emit: (projectId: string, event: ProjectEvent): void => {
+      previews.observe(event);
       for (const subscriber of projects.get(projectId) ?? []) {
         send(subscriber, event);
       }

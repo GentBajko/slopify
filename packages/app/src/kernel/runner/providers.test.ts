@@ -18,6 +18,7 @@ import type { TtsPort } from "../ports/tts.js";
 import type { Attempt, AttemptEnd, AttemptStart, AttemptStore } from "./attempt-repo.js";
 import type { RunnerStage, StageContext, StageRun, StageStore } from "./index.js";
 import { createRunner } from "./index.js";
+import type { TtsStreamEvent } from "./providers.js";
 import { stageProviders } from "./providers.js";
 
 const log: Log = { write: (): void => {} };
@@ -401,4 +402,174 @@ describe("CLI activity deadlines", () => {
       expect(h.attempts.rows.map((row) => row.outcome)).toEqual(["ok"]);
     },
   );
+});
+
+describe("live previews through the attempt wrapper", () => {
+  it("forwards audio bytes before synthesis finishes without another provider call", async () => {
+    const h = harness();
+    let source: ReadableStreamDefaultController<Uint8Array> | undefined;
+    let calls = 0;
+    const tts: TtsPort = {
+      ...fakeTts(),
+      synthesize: async () => {
+        calls += 1;
+        return {
+          container: "mp3",
+          audio: new ReadableStream({
+            start(controller) {
+              source = controller;
+            },
+          }),
+        };
+      },
+    };
+    const events: TtsStreamEvent[] = [];
+    let received: () => void = () => {};
+    const first = new Promise<void>((resolve) => {
+      received = resolve;
+    });
+    const providers = stageProviders(
+      { registry: registry({ tts }), attempts: h.attempts, clock: h.clock, log },
+      context("audio", h.controller.signal),
+    );
+    const pending = providers.tts(
+      { provider: "fake-tts", voiceId: "v", text: "hello" },
+      (event) => {
+        events.push(event);
+        if (event.type === "chunk") received();
+      },
+    );
+    source?.enqueue(new Uint8Array([1, 2]));
+    await first;
+    expect(events.map((event) => event.type)).toEqual(["start", "chunk"]);
+    expect(h.attempts.rows[0]?.outcome).toBeNull();
+    source?.enqueue(new Uint8Array([3]));
+    source?.close();
+    expect([...(await pending).bytes]).toEqual([1, 2, 3]);
+    expect(events.map((event) => event.type)).toEqual(["start", "chunk", "chunk", "complete"]);
+    expect(calls).toBe(1);
+  });
+  it("marks failed attempts interrupted and starts a fresh preview on retry", async () => {
+    const h = harness();
+    const tts = fakeTts({
+      failOnAttempt: { 1: { kind: "other", message: "temporary failure" } },
+      chunks: ["good"],
+    });
+    const events: TtsStreamEvent[] = [];
+    const providers = stageProviders(
+      { registry: registry({ tts }), attempts: h.attempts, clock: h.clock, log },
+      context("audio", h.controller.signal),
+    );
+    await h.clock.settle(
+      providers.tts({ provider: "fake-tts", voiceId: "v", text: "hello" }, (event) =>
+        events.push(event),
+      ),
+    );
+    expect(events.map((event) => event.type)).toEqual([
+      "start",
+      "interrupted",
+      "start",
+      "chunk",
+      "complete",
+    ]);
+    expect(tts.calls()).toBe(2);
+  });
+  it("a preview observer failure does not fail or retry a successful paid request", async () => {
+    const h = harness();
+    const tts = fakeTts();
+    const providers = stageProviders(
+      { registry: registry({ tts }), attempts: h.attempts, clock: h.clock, log },
+      context("audio", h.controller.signal),
+    );
+    const audio = await h.clock.settle(
+      providers.tts({ provider: "fake-tts", voiceId: "v", text: "hello" }, () => {
+        throw new Error("preview failed");
+      }),
+    );
+    expect(new TextDecoder().decode(audio.bytes)).toBe("fake audio");
+    expect(tts.calls()).toBe(1);
+  });
+  it("gives parallel LLM calls separate identities and resets only the retrying call", async () => {
+    const h = harness();
+    const llm = fakeLlm({
+      deltas: ["visible"],
+      failOnAttempt: { 1: { kind: "other", message: "retry" } },
+    });
+    const events: ProjectEvent[] = [];
+    const providers = stageProviders(
+      { registry: registry({ llm }), attempts: h.attempts, clock: h.clock, log },
+      { ...context("research", h.controller.signal), emit: (event) => events.push(event) },
+    );
+    await h.clock.settle(
+      Promise.all([
+        providers.llm({
+          provider: "fake-llm",
+          model: "m",
+          messages: [],
+          previewLabel: "First researcher",
+        }),
+        providers.llm({
+          provider: "fake-llm",
+          model: "m",
+          messages: [],
+          previewLabel: "Second researcher",
+        }),
+      ]),
+    );
+    const previews = events.filter((event) => event.type === "llm.preview");
+    const first = previews.filter((event) => event.label === "First researcher");
+    const second = previews.filter((event) => event.label === "Second researcher");
+    expect(new Set(previews.map((event) => event.callId)).size).toBe(2);
+    expect(new Set(first.map((event) => event.callId)).size).toBe(1);
+    expect(first.filter((event) => event.reset)).toHaveLength(2);
+    expect(second.filter((event) => event.reset)).toHaveLength(1);
+    expect(previews.filter((event) => !event.reset).map((event) => event.text)).toEqual([
+      "visible",
+      "visible",
+    ]);
+  });
+  it("never publishes LLM activity or usage as writing", async () => {
+    const h = harness();
+    const llm: LlmPort = {
+      ...fakeLlm(),
+      complete: async function* () {
+        yield { type: "activity" };
+        yield { type: "delta", text: "Only visible writing" };
+        yield { type: "done", usage: null, finishReason: "stop" };
+      },
+    };
+    const events: ProjectEvent[] = [];
+    const callbacks: LlmEvent[] = [];
+    const providers = stageProviders(
+      { registry: registry({ llm }), attempts: h.attempts, clock: h.clock, log },
+      { ...context("article", h.controller.signal), emit: (event) => events.push(event) },
+    );
+    await h.clock.settle(
+      providers.llm({ provider: "fake-llm", model: "m", messages: [] }, (event) =>
+        callbacks.push(event),
+      ),
+    );
+    expect(
+      events.filter((event) => event.type === "llm.preview").map((event) => event.text),
+    ).toEqual(["", "Only visible writing"]);
+    expect(callbacks.map((event) => event.type)).toEqual(["delta", "done"]);
+  });
+});
+
+it("interrupts a live TTS preview immediately on pause and keeps cancellation out of retries", async () => {
+  const h = harness();
+  const tts = fakeTts({ chunks: ["first", "late"] });
+  const events: TtsStreamEvent[] = [];
+  const providers = stageProviders(
+    { registry: registry({ tts }), attempts: h.attempts, clock: h.clock, log },
+    context("audio", h.controller.signal),
+  );
+  const pending = providers.tts({ provider: "fake-tts", voiceId: "v", text: "hello" }, (event) => {
+    events.push(event);
+    if (event.type === "chunk") h.controller.abort(new Error("paused"));
+  });
+  await expect(h.clock.settle(pending)).rejects.toThrow("paused");
+  expect(events.map((event) => event.type)).toEqual(["start", "chunk", "interrupted"]);
+  expect(tts.calls()).toBe(1);
+  expect(h.attempts.rows[0]?.outcome).toBe("canceled");
 });

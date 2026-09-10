@@ -18,6 +18,7 @@ beforeEach(() => {
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
     this: HTMLElement,
   ) {
+    if (this.closest("[hidden]")) return new DOMRect(0, 0, 0, 0);
     return this.dataset.tutorial === "card"
       ? new DOMRect(0, 0, 360, 260)
       : new DOMRect(40, 80, 600, 180);
@@ -110,6 +111,14 @@ async function mount(
   let created: ProjectBody | undefined;
   const routes: Readonly<Record<string, Answer>> = {
     "GET /api/projects": jsonAnswer({ projects: [] }),
+    "GET /api/update": jsonAnswer({
+      currentVersion: testVersion,
+      latestVersion: testVersion,
+      available: false,
+      canUpdate: false,
+      busy: false,
+      status: "idle",
+    }),
     "GET /api/providers/claude-code/models": jsonAnswer({
       models: [{ id: "sonnet", name: "Claude Sonnet" }],
       allowsCustom: true,
@@ -470,8 +479,19 @@ describe("the tutorial in the real app", () => {
     await user.click(screen.getByRole("button", { name: "PLAY" }));
     await at("project");
     expect(router.state.location.pathname).toBe("/projects/actual-created-project");
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /^Run settings/ }).getAttribute("aria-expanded"),
+      ).toBe("true"),
+    );
+    expect(screen.getByRole("combobox", { name: "Text provider" })).not.toBeNull();
     expect(requests.filter((request) => request === "POST /api/projects")).toHaveLength(1);
     await next(user, "download");
+    await screen.findByRole("region", { name: "Video workspace" });
+    expect(
+      screen.getByRole("button", { name: "Video, pending" }).getAttribute("aria-current"),
+    ).toBe("step");
+    expect(screen.queryByRole("region", { name: "Article workspace" })).toBeNull();
     await user.click(guide().getByRole("button", { name: "Finish tutorial" }));
     expect(screen.queryByRole("region", { name: "Interactive getting started guide" })).toBeNull();
     expect(requests.filter((request) => request === "POST /api/projects")).toHaveLength(1);
@@ -530,6 +550,10 @@ describe("the tutorial in the real app", () => {
       await user.click(screen.getByRole("button", { name: "PLAY" }));
       await at("project");
       await next(user, "download");
+      const workspace = await screen.findByRole("region", {
+        name: final === "audio" ? "Audio export workspace" : "Article workspace",
+      });
+      expect(workspace.hasAttribute("hidden")).toBe(false);
       if (final === "audio") {
         expect(guide().getByText("Download .wav")).not.toBeNull();
         expect(screen.getByRole("link", { name: "Download .wav" }).getAttribute("href")).toContain(

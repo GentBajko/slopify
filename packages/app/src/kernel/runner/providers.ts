@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Clock } from "../clock.js";
 import type { Log } from "../log.js";
 import type { Format } from "../pipeline.js";
@@ -23,6 +24,7 @@ export interface LlmCall {
   readonly provider: string;
   readonly model: string;
   readonly messages: readonly Message[];
+  readonly previewLabel?: string | undefined;
   readonly webSearch?: boolean | undefined;
   // An answer that arrived but is unusable counts as a failed attempt, so the check runs inside
   // the wrapper. It returns the sentence the stage would show rather than throwing, so a slice
@@ -36,6 +38,11 @@ export interface TtsCall {
   readonly voiceId: string;
   readonly text: string;
 }
+
+export type TtsStreamEvent =
+  | { readonly type: "start" | "complete" | "interrupted" }
+  | { readonly type: "chunk"; readonly bytes: Uint8Array };
+export type ObserveTts = (event: TtsStreamEvent) => void;
 
 export interface NarratedAudio {
   readonly bytes: Uint8Array;
@@ -53,9 +60,9 @@ export interface StageProviders {
   // `onEvent` sees the deltas of the attempt in flight. A retry starts the
   // answer again; the text returned is only ever the successful attempt's.
   readonly llm: (call: LlmCall, onEvent?: (event: LlmEvent) => void) => Promise<LlmAnswer>;
-  // ceiling: the narration is collected in memory before the slice writes it - a few MB for
-  // a few minutes. Streaming to disk needs a partial-file rule for retries first.
-  readonly tts: (call: TtsCall) => Promise<NarratedAudio>;
+  // Durable narration keeps only a successful complete attempt. The optional
+  // observer copies preview bytes and resets on every retry.
+  readonly tts: (call: TtsCall, observe?: ObserveTts) => Promise<NarratedAudio>;
   readonly image: (call: ImageCall) => Promise<GeneratedImage>;
   // The same calls, recorded against one resumable piece.
   readonly forPiece: (pieceId: string) => StageProviders;
@@ -89,9 +96,21 @@ export function stageProviders(
       // Resolved once; the adapter reads the stored key per request, so a key replaced
       // mid-run still reaches the next attempt.
       const port = deps.registry.llm(call.provider);
+      const callId = randomUUID();
+      const preview = (text: string, reset?: boolean): void =>
+        context.emit({
+          type: "llm.preview",
+          projectId: context.stage.projectId,
+          stage: context.stage.kind,
+          callId,
+          label: call.previewLabel ?? context.stage.kind,
+          text,
+          ...(reset === undefined ? {} : { reset }),
+        });
       return attempt(
         ctx,
         async (signal: AbortSignal, progress: () => void): Promise<LlmAnswer> => {
+          preview("", true);
           let text = "";
           let usage: Usage | null = null;
           let finishReason: string | null = null;
@@ -101,10 +120,12 @@ export function stageProviders(
             ...(call.webSearch === undefined ? {} : { webSearch: call.webSearch }),
             signal,
           })) {
+            signal.throwIfAborted();
             // Every event is a sign of life, so the idle clock restarts here.
             progress();
             if (event.type === "delta") {
               text += event.text;
+              preview(event.text);
             } else if (event.type === "done") {
               usage = event.usage;
               finishReason = event.finishReason;
@@ -123,36 +144,59 @@ export function stageProviders(
       );
     },
 
-    tts: (call: TtsCall): Promise<NarratedAudio> => {
+    tts: (call: TtsCall, observe?: ObserveTts): Promise<NarratedAudio> => {
       const port = deps.registry.tts(call.provider);
+      const notify = (event: TtsStreamEvent): void => {
+        try {
+          observe?.(event);
+        } catch {
+          // A preview is optional. A broken observer must never repeat a paid call.
+          deps.log.write("warn", "audio.preview", {
+            projectId: context.stage.projectId,
+            stage: "audio",
+            detail: "Could not update the live audio preview",
+          });
+        }
+      };
       return attempt(
         ctx,
         async (signal: AbortSignal, progress: () => void): Promise<NarratedAudio> => {
-          const spoken = await port.synthesize({
-            model: call.model,
-            voiceId: call.voiceId,
-            text: call.text,
-            signal,
-          });
-          const reader = spoken.audio.getReader();
-          const chunks: Uint8Array[] = [];
-          let total = 0;
-          for (;;) {
-            const { done, value } = await reader.read();
-            if (done || value === undefined) {
-              break;
+          notify({ type: "start" });
+          try {
+            const spoken = await port.synthesize({
+              model: call.model,
+              voiceId: call.voiceId,
+              text: call.text,
+              signal,
+            });
+            const reader = spoken.audio.getReader();
+            const chunks: Uint8Array[] = [];
+            let total = 0;
+            try {
+              for (;;) {
+                const { done, value } = await reader.read();
+                signal.throwIfAborted();
+                if (done || value === undefined) break;
+                progress();
+                chunks.push(value);
+                total += value.length;
+                notify({ type: "chunk", bytes: value });
+              }
+            } finally {
+              reader.releaseLock();
             }
-            progress();
-            chunks.push(value);
-            total += value.length;
+            const bytes = new Uint8Array(total);
+            let at = 0;
+            for (const chunk of chunks) {
+              bytes.set(chunk, at);
+              at += chunk.length;
+            }
+            notify({ type: "complete" });
+            return { bytes, container: spoken.container };
+          } catch (error) {
+            notify({ type: "interrupted" });
+            throw error;
           }
-          const bytes = new Uint8Array(total);
-          let at = 0;
-          for (const chunk of chunks) {
-            bytes.set(chunk, at);
-            at += chunk.length;
-          }
-          return { bytes, container: spoken.container };
         },
         { kind: "tts", streaming: port.capabilities.streams },
       );

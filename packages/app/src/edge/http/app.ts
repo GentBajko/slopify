@@ -4,6 +4,7 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import type { Context } from "hono";
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
+import type { AudioPreviewStore } from "../../kernel/audio-preview.js";
 import type { Clock } from "../../kernel/clock.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
@@ -11,8 +12,10 @@ import type { Paths } from "../../kernel/paths.js";
 import type { ModelInfo, ProviderFamily } from "../../kernel/ports/model.js";
 import type { Runner } from "../../kernel/runner/index.js";
 import type { CliProbe } from "../../slices/settings/cli-status.js";
+import type { AppUpdater } from "../../updater/model.js";
 import type { Hub } from "../events/hub.js";
 import { actionRoutes } from "./actions.js";
+import { audioPreviewRoutes } from "./audio-preview.js";
 import { entryRoutes } from "./entries.js";
 import { fileRoutes } from "./files.js";
 import { fontsRoutes } from "./fonts.js";
@@ -24,9 +27,12 @@ import { settingsRoutes } from "./settings.js";
 import { stagingRoutes } from "./staging.js";
 import { subtitleRoutes } from "./subtitles.js";
 import { telemetryRoutes } from "./telemetry.js";
+import { updateRoutes } from "./update.js";
 import { usageRoutes } from "./usage.js";
 
 export interface AppDeps {
+  readonly updater?: AppUpdater;
+  readonly audioPreviews?: AudioPreviewStore;
   readonly db: DatabaseSync;
   readonly paths: Paths;
   readonly hub: Hub;
@@ -66,6 +72,8 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       )
       .route("/staging", stagingRoutes(deps))
       .route("/projects", projectRoutes(deps))
+      .route("/projects", audioPreviewRoutes(deps))
+      .route("/update", updateRoutes(deps))
       // The re-run and cancel actions sit on the same prefix as the project itself; they
       // are their own router because they are their own concern.
       .route("/projects", actionRoutes(deps))
@@ -85,8 +93,31 @@ export function createApp(deps: AppDeps): Hono {
 
   const app = new Hono()
     .use("*", async (c, next) => {
-      c.header("X-Slopify-Version", deps.version);
+      // A provisional candidate must not trigger the stale-tab Reload dialog.
+      if (!deps.updater?.locked()) c.header("X-Slopify-Version", deps.version);
       await next();
+    })
+    .use("/api/*", async (c, next) => {
+      if (
+        deps.updater === undefined ||
+        ["GET", "HEAD", "OPTIONS"].includes(c.req.method) ||
+        ["/api/update", "/api/update/", "/api/update/activate", "/api/update/activate/"].includes(
+          c.req.path,
+        )
+      )
+        return next();
+      const release = deps.updater.beginMutation();
+      if (release === undefined)
+        return problem(c, {
+          status: 409,
+          title: titleOf(409),
+          detail: "Slopify is updating. Wait for it to restart before making changes.",
+        });
+      try {
+        await next();
+      } finally {
+        release();
+      }
     })
     .onError((error, c) => problemFromError(c, error, deps))
     .notFound(missing)

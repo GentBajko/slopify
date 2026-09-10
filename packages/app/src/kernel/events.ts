@@ -26,6 +26,16 @@ export interface ArticleDeltaEvent {
   readonly text: string;
 }
 
+export interface LlmPreviewEvent {
+  readonly type: "llm.preview";
+  readonly projectId: string;
+  readonly stage: StageKind;
+  readonly callId: string;
+  readonly label?: string;
+  readonly text: string;
+  readonly reset?: boolean;
+}
+
 export interface ImageLandedEvent {
   readonly type: "image.landed";
   readonly projectId: string;
@@ -53,6 +63,7 @@ export type ProjectEvent =
   | StageStateEvent
   | StageProgressEvent
   | ArticleDeltaEvent
+  | LlmPreviewEvent
   | ImageLandedEvent
   | ProjectStateEvent
   | ProjectUpdatedEvent;
