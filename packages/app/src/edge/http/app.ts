@@ -20,6 +20,7 @@ import { audioPreviewRoutes } from "./audio-preview.js";
 import { entryRoutes } from "./entries.js";
 import { fileRoutes } from "./files.js";
 import { fontsRoutes } from "./fonts.js";
+import { openFolderRoutes } from "./open-folder.js";
 import { planningRoutes } from "./planning.js";
 import { problem, problemFromError, titleOf } from "./problem.js";
 import { projectRoutes } from "./projects.js";
@@ -33,6 +34,7 @@ import { updateRoutes } from "./update.js";
 import { usageRoutes } from "./usage.js";
 
 export interface AppDeps {
+  readonly openFolder?: (path: string) => Promise<void>;
   readonly catalogue?: CatalogueStore;
   readonly updater?: AppUpdater;
   readonly audioPreviews?: AudioPreviewStore;
@@ -76,6 +78,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/staging", stagingRoutes(deps))
       .route("/projects", planningRoutes(deps))
       .route("/projects", projectRoutes(deps))
+      .route("/projects", openFolderRoutes(deps))
       .route("/projects", audioPreviewRoutes(deps))
       .route("/update", updateRoutes(deps))
       // The re-run and cancel actions sit on the same prefix as the project itself; they

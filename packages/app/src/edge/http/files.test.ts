@@ -28,13 +28,14 @@ interface Harness {
   readonly paths: Paths;
 }
 
-function harness(): Harness {
+function harness(openFolder?: (path: string) => Promise<void>): Harness {
   const paths = layout(mkdtempSync(join(tmpdir(), "slopify-files-")));
   ensureDirs(paths, { mode: 0o700 });
   const db = openDb(paths.db);
   migrate(db, clock);
   db.exec("INSERT INTO projects VALUES ('p1','Rope','16:9','{}','2026-09-01','2026-09-01')");
   const app = createApp({
+    ...(openFolder === undefined ? {} : { openFolder }),
     db,
     paths,
     hub: createHub({ ids, log }),
@@ -144,5 +145,61 @@ describe("GET /files/:projectId/images.zip", () => {
 
     expect(response.status).toBe(404);
     expect(await response.json()).toMatchObject({ detail: /no images/ });
+  });
+});
+
+describe("opening output folders", () => {
+  it("opens only a recorded output's directory and the image collection directory", async () => {
+    const opened: string[] = [];
+    const { app, place, paths } = harness(async (path) => {
+      opened.push(path);
+    });
+    place({ id: "o1", role: "image", path: "images/001.png", meta: { index: 1 } }, "image");
+    for (const asset of ["image-1", "images.zip"]) {
+      const response = await app.request("/api/projects/p1/open-folder", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ asset }),
+      });
+      expect(response.status).toBe(200);
+    }
+    expect(opened).toEqual([
+      join(paths.projects, "p1", "images"),
+      join(paths.projects, "p1", "images"),
+    ]);
+    for (const asset of ["video", "../../etc"]) {
+      const response = await app.request("/api/projects/p1/open-folder", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ asset }),
+      });
+      expect(response.status).toBe(asset === "video" ? 404 : 400);
+    }
+    expect(opened).toHaveLength(2);
+  });
+
+  it("rejects cross-origin requests and reports unavailable desktop launchers", async () => {
+    const { app, place } = harness(async () => {
+      throw new Error("no desktop");
+    });
+    place({ id: "o1", role: "video", path: "video.mp4", stageKind: "video" }, "mp4");
+    const request = {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ asset: "video" }),
+    };
+    expect(
+      (
+        await app.request("/api/projects/p1/open-folder", {
+          ...request,
+          headers: { ...request.headers, origin: "https://other.example" },
+        })
+      ).status,
+    ).toBe(403);
+    const response = await app.request("/api/projects/p1/open-folder", request);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({
+      detail: expect.stringContaining("file manager"),
+    });
   });
 });

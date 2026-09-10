@@ -14,6 +14,8 @@ Operate surface for monitoring a project, reviewing outputs, and editing control
 
 ## Composition
 
+Every output Download action has an adjacent Open folder button, including the image archive and subtitle downloads. It opens the saved output directory on the server machine through its native file manager (Windows Explorer, including WSL; Finder; or Linux xdg-open). Pending state disables the folder action; failures appear inline and leave Download available. The API accepts an existing project asset, never an arbitrary client-supplied path.
+
 Narration chunking offers Whole, Paragraph, Every N words and Every N characters. The selected counted mode displays a numeric field; character mode explains sentence boundaries and oversized-sentence behavior. Options wrap at narrow widths (`packages/web/src/play/chunking.tsx:7`).
 
 The workspace centers the selected output/player and keeps stage navigation, rundown, live output, run settings, subtitle editing, and action controls around it. The final output chooses video, audio export, or article. Source: packages/web/src/routes/project.tsx:31-208; packages/web/src/project/.

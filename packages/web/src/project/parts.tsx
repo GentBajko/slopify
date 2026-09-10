@@ -12,6 +12,7 @@ import { useApp } from "@/app-context";
 import { cn } from "@/lib/utils";
 import { keys } from "@/queries";
 import { readOutputText } from "./api.js";
+import { OpenFolder } from "./open-folder.js";
 
 // The furniture every stage body is made of: the indented frame under a rundown row, the 75 ch
 // prose measure, a download link, and the "Show instructions" toggle each stage carries. It
@@ -185,14 +186,17 @@ export function DownloadLink({
 }) {
   const { api } = useApp();
   return (
-    <a
-      href={fileUrl(api, projectId, asset)}
-      download
-      className="inline-flex items-center gap-[5px] rounded-control text-small text-ink2 hover:text-ink"
-    >
-      <DownloadIcon aria-hidden="true" className="size-[14px] shrink-0" />
-      {label}
-    </a>
+    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+      <a
+        href={fileUrl(api, projectId, asset)}
+        download
+        className="inline-flex items-center gap-[5px] rounded-control text-small text-ink2 hover:text-ink"
+      >
+        <DownloadIcon aria-hidden="true" className="size-[14px] shrink-0" />
+        {label}
+      </a>
+      <OpenFolder projectId={projectId} asset={asset} />
+    </span>
   );
 }
 

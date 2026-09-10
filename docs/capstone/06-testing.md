@@ -23,7 +23,7 @@ paths_covered:
 - App test directories cover adapters, catalog, edge, kernel, updater, slices, integration-style `packages/app/test`, and `test/e2e/{skeleton,optional-outputs}.test.ts`; web covers components, routes, Play, project, subtitles, tutorial, updates; collector uses `src/index.test.ts`. Source: repository test-file inventory.
 - CI runs `npm ci`, lint, typecheck, `npm test`, build, and audit on Node 26. Windows additionally runs FFmpeg, e2e, alignment, font, subtitle, CLI, LLM, settings, and real subtitle-export suites. Source: `.github/workflows/ci.yml:7-38`.
 - The e2e skeleton boots the real app on an ephemeral localhost port, generates temporary FFmpeg audio/images, stages them over HTTP, watches SSE, and verifies the finished media. Source: `packages/app/test/e2e/skeleton.test.ts:42-84,133-180`.
-- Release verification on 2026-09-10: 1,904 tests passed, one platform skip; lint, type checking, build and audit passed. Browser tests use isolated local fixtures and do not start paid generation.
+- Release verification on 2026-09-10: 1,909 tests passed, one platform skip; lint, type checking, build and audit passed. Browser tests use isolated local fixtures and do not start paid generation.
 
 ## Doubles
 

@@ -14,6 +14,7 @@ import { curateRegistry } from "./catalog/registry.js";
 import { type CatalogueStore, createCatalogueStore } from "./catalog/store.js";
 import { createHub } from "./edge/events/hub.js";
 import { createApp } from "./edge/http/app.js";
+import { openFolder } from "./edge/open-folder.js";
 import type { AudioPreviewStore } from "./kernel/audio-preview.js";
 import { createAudioPreviewStore } from "./kernel/audio-preview.js";
 import type { Clock } from "./kernel/clock.js";
@@ -209,6 +210,7 @@ export async function boot(config: Config): Promise<Boot> {
       },
     });
     const app = createApp({
+      openFolder,
       db,
       paths,
       hub,
