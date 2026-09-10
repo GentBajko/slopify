@@ -10,6 +10,7 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | Composition root | `packages/app/src/main.ts` |
 | HTTP API and SSE | `packages/app/src/edge/http/*.ts`, `packages/app/src/edge/events/*.ts` |
 | Stage-graph runner and retry wrapper | `packages/app/src/kernel/runner/` |
+| CLI executable settings and launchers | `packages/app/src/slices/settings/cli-paths.ts`, `packages/app/src/kernel/cli-command.ts`, `packages/app/src/adapters/llm/` |
 | Provider ports and adapters | `packages/app/src/kernel/ports/`, `packages/app/src/adapters/{llm,tts,image,alignment,fake}/` |
 | Pipeline slices | `packages/app/src/slices/{research,article,narration,images,thumbnail,video,subtitles,fonts,reruns,cancel,control,admission,storage,library,settings,telemetry}/` |
 | SQLite and migrations | `packages/app/src/kernel/db/` |
@@ -54,7 +55,7 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | [mockup/README.md](mockup/README.md) | Mockup index: screens, journeys, scenarios handed to `logic`, assumed items |
 | [mockup/01-marketing-page.md](mockup/01-marketing-page.md) | Screen: slopify.stream marketing page |
 | [mockup/02-first-run-notice.md](mockup/02-first-run-notice.md) | Screen: once-per-machine telemetry notice |
-| [mockup/03-settings.md](mockup/03-settings.md) | Screen: API keys, voices, outro card text |
+| [mockup/03-settings.md](mockup/03-settings.md) | Screen: API keys, CLI executable paths, voices, playback settings |
 | [mockup/04-prompts.md](mockup/04-prompts.md) | Screen: prompts list by kind |
 | [mockup/05-prompt-editor.md](mockup/05-prompt-editor.md) | Screen: prompt editor with `{{keyword}}` slots |
 | [mockup/06-play.md](mockup/06-play.md) | Screen: run configuration, subtitle fonts and play |

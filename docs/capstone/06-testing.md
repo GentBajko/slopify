@@ -1,6 +1,6 @@
 ---
-content_hash: e1434169b705
-generated_at_commit: a3bf858ce7d1
+content_hash: 4d40ef4800b7
+generated_at_commit: 1fa45d743329
 absorbed_from:
  - features/2026-09-09-pausable-optional-runs@2026-09-10
  - features/2026-09-10-subtitles-fonts@2026-09-10
@@ -9,6 +9,10 @@ capstone_version: 5.2.0
 paths_covered:
  - "packages/app/src/**/*.test.ts"
  - "packages/app/src/adapters/alignment/**"
+ - "packages/app/src/kernel/cli-command.ts"
+ - "packages/app/src/kernel/ports/llm.ts"
+ - "packages/app/src/kernel/runner/providers.ts"
+ - "packages/app/src/adapters/llm/**"
  - "packages/app/test/**"
  - "packages/web/src/**/*.test.tsx"
  - "packages/collector/src/**/*.test.ts"
@@ -53,3 +57,9 @@ Planned emphasis: every logic scenario's branches and unhappy paths as tests (`l
 - `packages/app/test/video-render.test.ts` uses real bundled FFmpeg with fake word timing: visible burned captions, a relative executable override, WAV subtitle export, timing reuse, retention after alignment failure, and a database trigger that rejects a font output insert to verify rollback of previous media bytes/parameters/rows.
 - `packages/web/src/routes/project-subtitles.test.tsx`, `routes/play.test.tsx`, `subtitles/config.test.ts`, `tutorial/runner.test.tsx`: shared controls, upload/preview/save states, actual-output native-track behavior, paused Save/Resume guidance, invalid hidden style normalization when Off, and the optional subtitle tutorial step.
 - `.github/workflows/ci.yml` runs alignment/font/subtitle tests and the real subtitle-export regression in the Windows job as well as the normal Linux suite. Real-model manual proof measured 68 seconds of narration in 17.7 seconds and 205 seconds in 53 seconds, with about 728 MiB RSS on the proof machine; these are observed runs, not latency or memory guarantees.
+
+## CLI executable-path coverage
+
+`packages/app/src/slices/settings/{cli-paths,cli-status,readiness}.test.ts` covers default commands, all three CLI rows, successful override/reset, next-read behavior, readable JS entry files, invalid/non-executable/argument/oversize paths, failed-probe retention, launcher guidance and serialized saves. `edge/http/providers.test.ts` checks route schemas, direct refreshed status responses and keyed-provider refusal. This focused settings/provider suite passed 95 tests locally during implementation; it does not make paid model calls.
+
+`packages/app/src/adapter-registry-paths.test.ts` checks that already-created adapters read changed path settings on later invocations. `packages/web/src/components/provider-cli.test.tsx` covers per-provider drafts, save/reset, pending state, error retention and cache refresh. Windows command/shim tests live in `kernel/cli-command.test.ts`; `adapters/llm/gemini.test.ts` covers explicit `-p`, stream output, context/trust isolation, browser-auth prevention and typed license/auth failures. Runner/CLI tests cover content-free activity preserving idle deadlines for all three CLIs. Final local source commit `1fa45d743329` passed 1,706 tests with one Windows-only skip, lint, typecheck, build and inspection of the 202-file package. Browser path-field/save checks and tiny Codex/Claude requests passed; Gemini launch/login discovery reached an external #3501 license denial. No remote CI or Gemini generation success is claimed (record: `changelog.d/2026-09-10-cli-paths-gemini.md`).

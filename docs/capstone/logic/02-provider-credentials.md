@@ -3,7 +3,7 @@ scenario: provider-credentials
 mockup_row: S13
 screens: [03-settings, 06-play, 08-project]
 depends_on: [01-pipeline-lifecycle]
-generated_date: 2026-09-02
+generated_date: 2026-09-10
 capstone_version: 5.2.0
 ---
 
@@ -29,10 +29,13 @@ API keys per provider, the voice list, and how their absence or change reaches P
 
 ## Local agent CLI providers
 
-Claude Code and Codex are LLM providers without keys:
+Claude Code, Codex and Gemini CLI are LLM providers without stored API keys (`packages/app/src/slices/settings/model.ts`):
 
-- Readiness is computed at request time: `installed` when the CLI binary resolves on PATH and reports a version, else `not found`. Nothing is stored for them; the CLI's own login is used.
-- Settings lists each CLI provider with its status line ("Installed, version X" / "Not found on PATH") and no key field.
+- Readiness is computed at request time from the saved executable override or the default PATH command (`claude`, `codex`, `gemini`). A successful `--version` exit marks it installed; a parsed version is optional. Probes run concurrently with a 15-second timeout to allow slower CLI startup. The CLI's own login is used; readiness does not verify authentication (`slices/settings/{readiness,cli-status}.ts`).
+- Settings lists status (installed/version, not found on PATH, or not found at saved path), effective command, Executable path, Save path and login guidance. Pending saves show Checking; failures keep the entered text and previous saved setting. An API key is never requested for these rows (`packages/web/src/components/provider-cli.tsx`).
+- `PUT /api/providers/:id/path` accepts `{path:string}` and returns the refreshed `ProviderStatus`, including `cliPath: {configured:string|null, command:string}`. Trimmed blank resets to PATH even when it is currently unavailable. Nonblank paths must be absolute existing executable files, at most 4096 characters, without command arguments; readable `.js`/`.mjs`/`.cjs` entry files run through Node. Keyed-provider use, invalid paths and unsuccessful probes return a 400 path-field problem without changing the saved setting (`edge/http/providers.ts`, `slices/settings/cli-paths.ts`).
+- Overrides persist as JSON strings under generic settings key `cli.path.<provider>`; reset stores JSON null. Saves serialize per database/provider, so a slow check cannot overwrite a later Save or Reset. Every new invocation reads `cliBinary(db,id)`; already-running processes keep the binary they started with (`slices/settings/cli-paths.ts`, `adapter-registry.ts`).
+- Windows known npm-style Node `.cmd`/`.bat` shims resolve to Node plus their JavaScript entry; unknown batch launchers fail with guidance to select an executable or JS file. Prompt arguments never pass through `cmd.exe` (`kernel/cli-command.ts`, `adapters/llm/run-cli.ts`).
 - Play greys out a not-found CLI provider exactly as an unkeyed one (step 5).
 - A project whose CLI provider is no longer found has its retry and re-run controls disabled, labelled "CLI missing", mirroring "Key missing".
 
@@ -67,7 +70,7 @@ Claude Code and Codex are LLM providers without keys:
 
 ## Outcomes & side effects
 
-- Keys, voices, and the silence-gap setting (seconds, default 3) persist on the user's machine only; the storage engine is `architecture`'s (SQLite).
+- Keys, voices, CLI executable overrides, and the silence-gap setting (seconds, default 3) persist on the user's machine only; the storage engine is `architecture`'s (SQLite).
 - Removing a key changes the enablement of controls on every project that used the provider.
 - Nothing is notified.
 
@@ -79,3 +82,11 @@ Claude Code and Codex are LLM providers without keys:
 - D7 time: keys and voices never expire inside the app.
 - D11 termination: every action here is a single atomic save or delete; nothing is left half-done.
 - D13 notification: no channel.
+
+## Gemini invocation
+
+`packages/app/src/adapters/llm/gemini.ts` offers `gemini-2.5-pro`, `gemini-2.5-flash` and `gemini-2.5-flash-lite`, parses assistant deltas/result usage from stream-json, and runs with the CLI's existing login. Each call uses a temporary writing workspace and system settings: extensions, hooks, skills, IDE integration and local context loading are disabled; ordinary writing exposes no tools, research only `google_web_search`; MCP is constrained to an unused allowlist name. Prompts use explicit `-p`, are prefixed, and escape literal `@` references to avoid interactive/slash/file preprocessing. Workspace settings reset the entire context object before restrictive system settings, because Gemini otherwise concatenates user include directories. A temporary trusted-folder map trusts only this private workspace; user context/trust files remain unchanged. `NO_BROWSER=true` prevents browser authentication, and an authorization prompt becomes a sign-in error rather than waiting for input. Cancellation/failure waits for the child and removes the workspace (`adapters/llm/gemini-workspace.ts`, `run-cli.ts`).
+
+All three CLI adapters emit internal `activity` events for structured output, refreshing the attempt's idle timer even before visible answer text. These events are not forwarded as article deltas or tool/reasoning content (`packages/app/src/kernel/ports/llm.ts`, `kernel/runner/providers.ts`, `adapters/llm/{claude-code,codex,gemini}.ts`).
+
+Gemini Google license error `#3501` maps to `unsupported` and fails without automatic retries; a missing CLI login maps to `missing_key` with terminal sign-in guidance. Version readiness therefore does not imply account eligibility. Slopify does not upgrade Gemini or complete its login (`adapters/llm/gemini.ts`, `kernel/runner/attempt.ts`).

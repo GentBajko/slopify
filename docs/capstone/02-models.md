@@ -1,6 +1,6 @@
 ---
-content_hash: 14145afc3f08
-generated_at_commit: a3bf858ce7d1
+content_hash: 2eae585e112e
+generated_at_commit: 1fa45d743329
 absorbed_from:
  - features/2026-09-09-pausable-optional-runs@2026-09-10
  - features/2026-09-10-subtitles-fonts@2026-09-10
@@ -12,6 +12,8 @@ paths_covered:
  - "packages/app/src/slices/subtitles/**"
  - "packages/app/src/slices/fonts/**"
  - "packages/app/src/kernel/ports/subtitles.ts"
+ - "packages/app/src/kernel/ports/llm.ts"
+ - "packages/app/src/slices/settings/cli-paths.ts"
  - "packages/collector/src/**"
 ---
 
@@ -29,6 +31,7 @@ paths_covered:
 | Output | `slices/storage/model.ts` | table `outputs` + file | a produced or provided file with its metadata (`logic/14`) |
 | Prompt | `slices/library/model.ts` | table `prompts` | article / image / thumbnail template (`logic/15`) |
 | Entry | `slices/library/model.ts` | table `entries` | intro / outro, Text or LLM mode (`logic/15`) |
+| ProviderStatus | `slices/settings/model.ts` | computed per request | provider metadata/readiness and optional CLI path metadata |
 | ProviderKey | `slices/settings/model.ts` | table `provider_keys` | one key per provider (`logic/02`) |
 | Voice | `slices/settings/model.ts` | table `voices` | name, provider, voice ID (`logic/02`) |
 | Setting | `slices/settings/model.ts` | table `settings` | silence gap seconds, appearance (`logic/11`) |
@@ -53,12 +56,14 @@ paths_covered:
 - TimedWord: `text`, finite `start`/`end` in seconds and optional `confidence`. The stored cache is `{key, words, font: {id, name, assName, extension}}`; each completed caption export also owns a copied font output (`slices/subtitles/prepare.ts`).
 - Prompt: `id`, `kind` (`article`, `image`, `thumbnail`), `name` unique per kind case-insensitively, `body`, `slots` JSON (detected names), `updated_at`.
 - Entry: `id`, `category` (`intro`, `outro`), `mode` (`text`, `llm`), `name` unique per category, `body`, `slots` JSON.
-- ProviderKey: `provider` primary key, `key` text, `updated_at`. CLI providers have no row; their `installed` status is computed at request time.
+- ProviderKey: `provider` primary key, `key` text, `updated_at`. CLI providers have no key row; their `installed` status is computed at request time. The catalog includes `claude-code`, `codex` and `gemini`.
 - Voice: `id`, `provider`, `name`, `voice_id`; unique (`provider`, `voice_id`).
-- Setting: `key` primary key, `value` JSON.
+- ProviderStatus: `id`, `family`, `displayName`, `readiness`; CLI rows additionally expose optional `cliPath: {configured: string|null, command: string}`. This lists a local command, never an authentication token (`slices/settings/model.ts`).
+- Setting: `key` primary key, `value` JSON. CLI overrides use `cli.path.<provider>` with an absolute path string or null for PATH fallback; no migration/new table (`slices/settings/cli-paths.ts`).
 - StagedFile: `id`, `stage_kind`, `path`, `original_filename`, `bytes`, `state` (`copying`, `staged`), `created_at`.
 - TelemetryEvent: `id` ULID (the dedup key), `type`, `payload` JSON (counters, provider, model), `created_at`, `delivered_at` nullable.
 - Machine: `machine_id` UUID, `notice_seen_at`, `app_version`.
+- LlmEvent: `delta` carries answer text, `done` carries usage/finish reason, and content-free `activity` refreshes the attempt idle timer without being forwarded as stage output. All three CLI adapters emit activity (`packages/app/src/kernel/ports/llm.ts`, `kernel/runner/providers.ts`).
 - Money and quantities: none are currency; durations in integer milliseconds; counts as integers.
 
 ## Relationships

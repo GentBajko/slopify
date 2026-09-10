@@ -1,6 +1,6 @@
 ---
-content_hash: bc8ae7a8bf59
-generated_at_commit: a3bf858ce7d1
+content_hash: 3d36a4476b22
+generated_at_commit: 1fa45d743329
 absorbed_from:
  - features/2026-09-09-pausable-optional-runs@2026-09-10
  - features/2026-09-10-subtitles-fonts@2026-09-10
@@ -25,13 +25,13 @@ Single-process modular monolith in `packages/app`, three layers with imports poi
 | slices | `packages/app/src/slices/` | `research/`, `article/`, `narration/`, `images/`, `thumbnail/`, `video/`, `subtitles/`, `fonts/`, `reruns/`, `cancel/`, `control/`, `library/`, `settings/`, `telemetry/`, `storage/`, `admission/` | kernel |
 | edge | `packages/app/src/edge/` | `http/` (Hono routes per context), `events/` (SSE), `cli.ts` (the `slopify` entry) | slices, kernel |
 
-Adapters live beside their port: `packages/app/src/adapters/llm/{openrouter,claude-code,codex}.ts`, `adapters/tts/*.ts`, `adapters/image/*.ts`, `adapters/alignment/*.ts`, `adapters/fake/*.ts`; the renderer `packages/app/src/slices/video/ffmpeg.ts` and the collector client `packages/app/src/slices/telemetry/collector-client.ts` are contained modules without ports.
+Adapters live beside their port: `packages/app/src/adapters/llm/{openrouter,claude-code,codex,gemini}.ts`, `adapters/tts/*.ts`, `adapters/image/*.ts`, `adapters/alignment/*.ts`, `adapters/fake/*.ts`; the renderer `packages/app/src/slices/video/ffmpeg.ts` and the collector client `packages/app/src/slices/telemetry/collector-client.ts` are contained modules without ports.
 
 The other packages: `packages/web` (React SPA), `packages/site` (static marketing page), `packages/collector` (serverless API + managed database). No package imports another's source; `app` consumes `web`'s build output as static files; `site` calls `collector` over HTTPS.
 
 ## Module boundaries
 
-- Ports: `LlmPort.complete(messages, options) → AsyncIterable<delta> + usage`, `TtsPort.synthesize(text, voiceId, options) → audio stream + duration`, `ImagePort.generate(prompt, size, options) → image bytes + metadata`. Each adapter declares capabilities (`streams`, `reportsUsage`, `webSearch` for LLM; `streams` for TTS; supported sizes for image). Domain types only cross the seam; vendor payloads never leave the adapter. Adapter kinds for `LlmPort`: HTTP gateway (OpenRouter, key from settings) and local agent CLI (Claude Code, Codex: spawned non-interactively with streaming structured output, authenticated by the CLI's own login, reported `installed` when the binary resolves on PATH).
+- Ports: `LlmPort.complete(messages, options) → AsyncIterable<delta> + usage`, `TtsPort.synthesize(text, voiceId, options) → audio stream + duration`, `ImagePort.generate(prompt, size, options) → image bytes + metadata`. Each adapter declares capabilities (`streams`, `reportsUsage`, `webSearch` for LLM; `streams` for TTS; supported sizes for image). Domain types only cross the seam; vendor payloads never leave the adapter. Adapter kinds for `LlmPort`: HTTP gateway (OpenRouter, key from settings) and local agent CLI (Claude Code, Codex, Gemini CLI: spawned non-interactively with streaming structured output and the CLI's own login; readiness probes the saved executable override or PATH command).
 - Slices expose one function per scenario step to the edge (`startRun`, `retryStage`, `pauseProject`, `resumeProject`, `changeProviders`, `cancelProject`, `editArticle`,...) and to the runner; they never import each other's internals; shared rules live in the kernel (`ids`, `clock`, `db`) or in `slices/admission/` and `slices/storage/`, which every stage calls.
 - Edge routes hold no rules: they validate the request shape, call one slice function, and map results and errors to responses.
 - `packages/web` may only talk to `app` through the typed API client.
@@ -49,7 +49,7 @@ The other packages: `packages/web` (React SPA), `packages/site` (static marketin
 ## Communication
 
 - Browser ↔ app: JSON over HTTP under `/api/<context>/...` (`projects`, `prompts`, `entries`, `settings`, `usage`, `providers`, `fonts`), RFC 9457 `application/problem+json` errors, no versioning, no pagination. Files under `/files/<projectId>/<asset>`. Live updates over SSE: `/api/events/projects/<id>` (stage status, progress, streamed article text, image landed, and `project.updated` to refresh saved provider choices and pause state) and `/api/events/global` (running tally). Uploads stage through `POST /api/staging` with progress events (`logic/05`).
-- App → providers: HTTPS through the HTTP adapters; local CLIs through child processes with structured stdout.
+- App → providers: HTTPS through the HTTP adapters; local CLIs through child processes with structured stdout. `kernel/cli-command.ts` resolves known Windows Node launchers without passing prompts through a command shell. `adapter-registry.ts` reads saved executable paths at each invocation (`slices/settings/cli-paths.ts`).
 - App → ffmpeg: child process with arguments built by `slices/video/ffmpeg.ts`; progress parsed from stdout into render percentage (`logic/11`).
 - App → collector: HTTPS `POST /events` batches from the local queue, idempotent by event ID (`logic/16`).
 - Site → collector: HTTPS `GET /aggregates` every 5 s (`logic/16`).
@@ -76,3 +76,9 @@ The other packages: `packages/web` (React SPA), `packages/site` (static marketin
 - `adapters/alignment/` owns verified model download/cache, decoded 16 kHz PCM, a per-cache process lock, and abortable child-process inference using `onnxruntime-web/wasm`. The model is lazy; app boot and Subtitle Off do not download it (`adapters/alignment/index.ts`, `cache.ts`, `runner.ts`).
 - `slices/fonts/` owns bounded system discovery, SFNT metadata validation, opaque font IDs, custom TTF/OTF uploads and preview extraction; `edge/http/fonts.ts` exposes list/upload/file routes. Bundled Barlow and its OFL/source records ship from `src/assets/fonts/` into `dist/assets/fonts/` (`scripts/copy-assets.mjs`).
 - `packages/web/src/subtitles/` supplies shared mode/font/size controls for Play and the final project stage. `project/subtitles.tsx` saves through `PATCH /api/projects/:id/subtitles`; `project/body-video.tsx` uses saved output metadata for native VTT tracks, preventing double captions on burned exports.
+
+## CLI executable settings
+
+`PUT /api/providers/:id/path` validates and probes an absolute executable/JavaScript entry or resets to PATH. Overrides live in the generic settings table, not provider keys; concurrent saves serialize per provider. `GET /api/providers` includes optional `cliPath` metadata only on CLI rows (`packages/app/src/edge/http/providers.ts`, `slices/settings/{model,readiness,cli-paths}.ts`). Gemini calls additionally create an isolated temporary writing workspace, retain normal CLI authentication, and restrict tools/context through per-call settings (`adapters/llm/gemini-workspace.ts`).
+
+`LlmEvent.activity` carries no content. Claude Code, Codex and Gemini emit it while processing structured CLI events; `kernel/runner/providers.ts` refreshes the idle deadline and suppresses it from the stage's output callback (`packages/app/src/kernel/ports/llm.ts`). Gemini uses explicit `-p`, `NO_BROWSER=true`, a temporary context reset and a private trusted-folder map; login/account failures return through the normal typed provider-error boundary (`adapters/llm/{gemini,gemini-workspace}.ts`).

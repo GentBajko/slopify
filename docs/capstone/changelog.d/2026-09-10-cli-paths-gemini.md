@@ -1,0 +1,13 @@
+## 2026-09-10 - map: CLI executable paths and Gemini
+key: map/cli-paths-gemini@2026-09-10
+- Request: make installed Claude Code, Codex and Gemini CLI usable when the Slopify process cannot discover their command through PATH; provide editable per-provider paths in Settings.
+- Backend: Gemini provider/catalog entry; optional ProviderStatus.cliPath; PUT /api/providers/:id/path; absolute-file validation, readable JavaScript entries, 4096-character cap, version-probe validation and blank reset. Values use generic settings keys cli.path.<provider>, with no migration. Concurrent saves serialize and failed candidates preserve the old path.
+- Invocation: each new CLI call reads the latest saved override; in-flight calls keep their starting command. Shared Windows handling unwraps supported Node shims without shell-interpolating prompts and refuses unknown batch launchers with executable/JS guidance. Probes allow 15 seconds for startup.
+- Gemini: explicit -p stream-json adapter with existing CLI login, curated 2.5 Pro/Flash/Flash-Lite choices, temporary context reset and trusted-folder map, no browser authentication, restricted tools and abort cleanup. No Gemini SDK or new package dependency added.
+- Frontend: editable CLI rows with command/status, independent drafts, Checking/Saved states, inline failures, blank reset and provider-query refresh; tutorial setup mentions all three CLI choices.
+- Reference outputs: logic/02-provider-credentials, 01-architecture, 02-models, 05-dependencies, 06-testing, 07-operations, mockup/03-settings. Source commit/hash stamps refreshed against local implementation 1fa45d743329.
+- Local verification: 1,706 tests passed and one Windows-only test skipped; lint, typecheck, production build and inspection of the 202-file package passed. Browser checks verified all three path fields and saving without console errors or overflow.
+- Activity: all three CLI adapters emit content-free activity events; the runner refreshes idle deadlines without forwarding reasoning/tool details as output.
+- Local installation: existing port 6969 service updated from 0.5.1 to 0.6.0 after a private SQLite backup; projects preserved and all three verified CLI paths saved. Global slopify command installed from the local tarball; personal filesystem paths are omitted from the reference.
+- Live requests: Codex gpt-5.6-sol succeeded in 13.3 seconds and Claude Haiku in 2.7 seconds. Gemini 0.16.0 launched and loaded its cached login, but Google license error #3501 blocked generation; it maps to unsupported with no automatic retry. Gemini was neither upgraded nor signed in again.
+- Release status: 0.6.0 remains local under the user's existing choice; no push, tag, npm publication or site deployment is performed by this change.

@@ -1,6 +1,6 @@
 ---
-content_hash: 91137433d2a5
-generated_at_commit: a3bf858ce7d1
+content_hash: 66c64be13061
+generated_at_commit: 1fa45d743329
 absorbed_from: features/2026-09-10-subtitles-fonts@2026-09-10
 generated_date: 2026-09-10
 capstone_version: 5.2.0
@@ -9,6 +9,10 @@ paths_covered:
  - "packages/*/package.json"
  - "package-lock.json"
  - "packages/app/src/adapters/alignment/**"
+ - "packages/app/src/adapters/llm/gemini.ts"
+ - "packages/app/src/adapters/llm/gemini-workspace.ts"
+ - "packages/app/src/kernel/cli-command.ts"
+ - "packages/app/src/slices/settings/cli-status.ts"
  - "packages/app/src/assets/fonts/**"
 ---
 
@@ -54,7 +58,7 @@ paths_covered:
 | Opening the browser | ~6 lines over `node:child_process` (`open` / `xdg-open` / `start`) | 6 |
 | Logging | hand-rolled JSON lines to `<data-dir>/logs/<date>.jsonl`, console mirror for warn/error | 6 |
 | HTTP client for providers | global `fetch`; ~20-line SSE line parser shared with the CLI adapters' JSONL reading | 3 / 6 |
-| Agent CLI processes | `node:child_process` | 3 |
+| Agent CLI processes | `node:child_process`; shared known-Windows-shim resolution and direct Node execution for JS entries, no shell prompt interpolation (`packages/app/src/kernel/cli-command.ts`) | 3 / 6 |
 | ~~Uploads~~ | ~~Hono `c.req.formData()` and streams~~ - **overturned**: measured on Node 24, a 512 MiB part cost +1586 MiB RSS because undici's `formData()` buffers every part. Uploads here are audio and video with no size cap (`logic/05`), and hand-rolling a multipart parser is barred by standards, so rung 4 failed and `@fastify/busboy` was added. | 4 → 5 |
 | System/custom font catalog | `node:fs` bounded standard-directory scan plus bounded SFNT metadata parsing; TTF/OTF uploads reuse Busboy; TTC faces are extracted for preview (`packages/app/src/slices/fonts/`) | 3 / 4 / 6 |
 | Marketing page | plain HTML, CSS, one script | 4 |
@@ -81,6 +85,7 @@ paths_covered:
 | OpenRouter | LLM gateway; web grounding via `plugins: [{id: "web"}]` or `:online` | `packages/app/src/adapters/llm/openrouter.ts`, key from `provider_keys` | per-model token prices set by OpenRouter; user's key | stage fails after the retry policy (`logic/01`) |
 | Claude Code CLI | LLM via local agent; `claude -p --output-format stream-json --allowedTools WebSearch --model <m>` | `adapters/llm/claude-code.ts`; binary on PATH; the CLI's own login | user's Anthropic subscription or key | "not installed" when absent; a failing call ends the attempt |
 | Codex CLI | LLM via local agent; `codex exec --json -c web_search="live" --ephemeral --skip-git-repo-check` | `adapters/llm/codex.ts` | user's OpenAI subscription or key | same as above |
+| Gemini CLI | LLM through installed CLI/login, explicit `-p` stream-json; no browser authentication; writing tools disabled, research permits only `google_web_search` | `packages/app/src/adapters/llm/{gemini,gemini-workspace}.ts`; optional saved executable path | user's Gemini login/account; no Slopify price assertion | missing/unusable executable disables selection; Google license #3501 is unsupported with no automatic retry; version readiness does not verify account eligibility |
 | ElevenLabs | TTS | `adapters/tts/elevenlabs.ts` | credits: Free 10k, Starter $6 / 30k, Creator $22 / 121k, Pro $99 / 600k; ~1 credit per character | stage fails after retries |
 | OpenAI (audio) | TTS: gpt-4o-mini-tts, tts-1, tts-1-hd (plus gpt-4o-mini-tts-2025-12-15). `voice` also accepts an object `{id}` for a cloned voice, which matters because Slopify's voice list is free text the user types | `adapters/tts/openai.ts` | $0.60 per 1M input characters + $12 per 1M audio tokens; tts-1 $15 / 1M chars; tts-1-hd $30 / 1M chars | stage fails after retries |
 | Cartesia | TTS; `sonic-3.5` on `Cartesia-Version: 2026-03-01` - the previously recorded `sonic-2` is retired (it now aliases to `jolly-totem`) and the recorded `2024-11-13` header stale and *required*, not optional; the error envelope changed with it to `{error_code, title, message, request_id}` | `adapters/tts/cartesia.ts` | Free (~27 min, API included), Pro $5, Startup $49, Scale $299 per month | stage fails after retries |
@@ -106,3 +111,5 @@ The dependency ladder found no acoustic inference capability in Node, browser AP
 `adapters/alignment/cache.ts` pins the Apache-2.0 Xenova ONNX conversion of `facebook/wav2vec2-base-960h`: revision `a19f851b3d42865797e410752b4c570c871e4825`, quantized model 95,286,046 bytes, SHA256 `cd5040c147381580ed73258143dd8e0c28e800a09e74ee42ee2b3e8cb4d760a3`. First enabled use fetches the model from Hugging Face; every downloaded/cached copy is checked before use. Audio/text never leave the computer for alignment.
 
 The subtitle default is static Barlow Regular TTF, separate from the SPA's Fontsource WOFF2 files. The TTF, OFL and pinned source record live in `packages/app/src/assets/fonts/` and ship in `dist/assets/fonts/` via `scripts/copy-assets.mjs`. Font files remain the existing OFL exception to the code-dependency license policy; no font parsing dependency was added.
+
+CLI adapters remain external installed commands; no Gemini SDK or process-launch dependency was added. The three CLI commands share 15-second readiness probes and saved path overrides (`packages/app/src/slices/settings/{cli-status,cli-paths}.ts`). Gemini's curated model IDs are `gemini-2.5-pro`, `gemini-2.5-flash` and `gemini-2.5-flash-lite` (`adapters/llm/gemini.ts`).

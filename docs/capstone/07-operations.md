@@ -1,12 +1,15 @@
 ---
-content_hash: 71d194ea1844
-generated_at_commit: a3bf858ce7d1
+content_hash: 9a01605b7532
+generated_at_commit: 1fa45d743329
 absorbed_from: features/2026-09-10-subtitles-fonts@2026-09-10
 generated_date: 2026-09-10
 capstone_version: 5.2.0
 paths_covered:
  - "packages/app/src/edge/cli.ts"
  - "packages/app/src/kernel/config/**"
+ - "packages/app/src/kernel/cli-command.ts"
+ - "packages/app/src/slices/settings/**"
+ - "packages/app/src/adapters/llm/**"
  - "packages/app/src/adapters/alignment/**"
  - "packages/app/src/slices/fonts/**"
  - "packages/app/src/slices/subtitles/**"
@@ -38,6 +41,7 @@ No containers, no compose, no Kubernetes. The app is one process: HTTP server, p
 | `--data-dir` / `SLOPIFY_DATA_DIR` | `~/.slopify` (`logic/14`) | `kernel/config`, `slices/storage` | README |
 | `--no-open` / `SLOPIFY_NO_OPEN` | opens the browser | `cli.ts` | README |
 | `SLOPIFY_FFMPEG` / `FFMPEG_BIN` | the bundled binary, then a recovered copy in `<data-dir>/bin/` | `adapters/ffmpeg.ts` at boot | README |
+| CLI executable paths | `claude`, `codex`, `gemini` from server PATH | generic settings `cli.path.<provider>`; read on each invocation | Settings executable path rows |
 | provider keys | none | `provider_keys` table, never env | Settings screen |
 | collector URL | built into the release | `slices/telemetry/collector-client.ts` | none (not user-configurable) |
 | collector secrets (database URL) | none | `packages/collector` from the host environment | deployment notes |
@@ -84,3 +88,17 @@ Interactions retry sentence.
 - Completed caption exports retain their chosen font snapshot and word timing in the project folder. Style-only changes reuse matching timing and the snapshot; a failed model download, alignment or replacement keeps the prior completed export. A synchronous output-commit error restores media/parameter backups; failed restoration retains `.previous` files (`slices/subtitles/prepare.ts`, `slices/video/write-export.ts`).
 - Enabled subtitles require matching English narration and transcript. A mismatch fails the final stage with correction guidance. Pause active work before changing subtitles; save on a paused project queues only the final export until Resume (`edge/http/subtitles.ts`).
 - ASS rendering uses a project caption working directory and fixed relative filter paths. A path-containing relative FFmpeg override is resolved against the app launch directory before that cwd change (`slices/video/ffmpeg.ts`).
+
+## Local CLI discovery and overrides
+
+The server inherits the PATH of the process that launched Slopify; a CLI working in another terminal can still be absent from that PATH. Settings accepts an absolute executable path for Claude Code, Codex or Gemini CLI, shows the command it will use and checks `--version` with a 15-second timeout. Blank restores PATH lookup, including when the command is not found. A successful version check says the binary ran; users still sign in through the CLI before generation (`packages/app/src/slices/settings/{cli-status,cli-paths,readiness}.ts`, `packages/web/src/components/provider-cli.tsx`).
+
+New overrides must name existing executable files or readable JS/MJS/CJS entry scripts, not quoted shell commands or command arguments. On Windows the shared launcher unwraps recognized Node `.cmd`/`.bat` shims to Node plus their JS entry. Unknown batch scripts fail with guidance to select the `.exe` or JS entry; prompts never pass through `cmd.exe` (`packages/app/src/kernel/cli-command.ts`). Changes reach the next invocation without restarting Slopify and do not change already-running children (`adapter-registry.ts`).
+
+Gemini retains its own authentication directory while each explicit `-p` content call gets temporary system settings and writing instructions. Workspace settings first reset the context object to prevent concatenation of personal include directories; a private trusted-folder map permits only that temporary workspace. The adapter disables extensions/hooks/skills/local context, limits tools to none or research web search, sets `NO_BROWSER=true`, and removes the workspace after the child settles. It writes no user Gemini settings or trust map. A login prompt returns terminal sign-in guidance; Google license error #3501 is unsupported and receives no automatic retry (`packages/app/src/adapters/llm/{gemini,gemini-workspace}.ts`).
+
+## Local 0.6.0 verification and installation
+
+The local closeout for source commit `1fa45d743329` passed 1,706 tests with one Windows-only skip, lint, typecheck, production build and inspection of the 202-file package. Browser checks covered all three executable fields and saving without console errors or overflow. The existing local service on port 6969 moved from 0.5.1 to 0.6.0 after a private SQLite backup; existing projects were preserved, and verified paths were saved for the three CLIs. A local tarball installed the global `slopify` command. No public push, tag, npm publication or deployment occurred (record: `changelog.d/2026-09-10-cli-paths-gemini.md`).
+
+Tiny live content requests succeeded through Codex `gpt-5.6-sol` in 13.3 seconds and Claude Haiku in 2.7 seconds. Gemini 0.16.0 launched and loaded its cached login, then Google rejected the account with license error #3501. Gemini was not upgraded or signed in again during this work. These are local observed results, not service guarantees or a claim of successful Gemini generation (same verification record).
