@@ -41,3 +41,19 @@ describe("isolated subtitle worker", () => {
     ).rejects.toThrow(/stopped/);
   });
 });
+
+it("forwards validated omission notes without ending alignment", async () => {
+  const worker = await script(
+    'process.on("message", () => { process.send({type:"omission",start:12,text:"Missing passage"}); process.send({type:"done",words:[{text:"Next",start:13,end:14}]}); });',
+  );
+  const omissions: { start: number; text: string }[] = [];
+  const words = await runAlignmentWorker(
+    request,
+    new AbortController().signal,
+    undefined,
+    worker,
+    (omission) => omissions.push(omission),
+  );
+  expect(omissions).toEqual([{ start: 12, text: "Missing passage" }]);
+  expect(words).toEqual([{ text: "Next", start: 13, end: 14 }]);
+});

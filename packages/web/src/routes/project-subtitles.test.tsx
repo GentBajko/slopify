@@ -314,3 +314,29 @@ describe("subtitle downloads and playback", () => {
     expect(screen.queryByLabelText("Generated video")).toBeNull();
   });
 });
+
+it("shows persisted missing narration notes alongside downloadable subtitles", async () => {
+  const current = project({ ...defaultSubtitles, mode: "files" });
+  const value = {
+    ...current,
+    outputs: current.outputs.map((item) =>
+      item.role === "video"
+        ? {
+            ...item,
+            meta: {
+              ...item.meta,
+              subtitleOmissions: [{ start: 161, text: "The missing transcript passage." }],
+            },
+          }
+        : item,
+    ),
+  };
+  renderRouted(
+    <ProjectRoute projectId="p1" />,
+    deps({ ...fontRoute, "GET /api/projects/p1": jsonAnswer(value) }),
+  );
+  await screen.findByText(/Subtitles recovered after missing narration/);
+  expect(screen.getByText(/The missing transcript passage\./)).not.toBeNull();
+  expect(screen.getByText("00:02:41")).not.toBeNull();
+  expect(screen.getByRole("link", { name: "Download .srt" })).not.toBeNull();
+});

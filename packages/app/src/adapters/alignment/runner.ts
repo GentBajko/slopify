@@ -1,5 +1,5 @@
 import { type ForkOptions, fork } from "node:child_process";
-import type { TimedWord } from "../../kernel/ports/subtitles.js";
+import type { SubtitleOmission, TimedWord } from "../../kernel/ports/subtitles.js";
 import { type WorkerInput, workerMessage } from "./protocol.js";
 
 export async function runAlignmentWorker(
@@ -7,6 +7,7 @@ export async function runAlignmentWorker(
   signal: AbortSignal,
   onProgress?: ((current: number, total: number) => void) | undefined,
   worker = new URL("./worker.js", import.meta.url),
+  onOmission?: ((omission: SubtitleOmission) => void) | undefined,
 ): Promise<readonly TimedWord[]> {
   signal.throwIfAborted();
   return new Promise((resolve, reject) => {
@@ -53,7 +54,13 @@ export async function runAlignmentWorker(
         return;
       }
       const message = parsed.data;
-      if (message.type === "progress") {
+      if (message.type === "omission") {
+        try {
+          onOmission?.({ start: message.start, text: message.text });
+        } catch (error) {
+          finish(error instanceof Error ? error : new Error(String(error)));
+        }
+      } else if (message.type === "progress") {
         try {
           onProgress?.(message.current, message.total);
         } catch (error) {

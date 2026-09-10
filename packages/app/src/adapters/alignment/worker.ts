@@ -1,11 +1,10 @@
 import { open, readFile, stat } from "node:fs/promises";
 import * as ort from "onnxruntime-web/wasm";
 import type { TimedWord } from "../../kernel/ports/subtitles.js";
-import { alignWindow, frameSeconds, mismatch } from "./ctc.js";
+import { mismatch } from "./ctc.js";
 import { type WorkerInput, workerInput } from "./protocol.js";
-import { agreesWithSpeech } from "./quality.js";
 import { type SpeechWord, speechWords } from "./text.js";
-import { letters } from "./vocabulary.js";
+import { alignSpeechWindow, greedy } from "./window.js";
 
 const sampleRate = 16000;
 const windowSeconds = 12;
@@ -40,6 +39,8 @@ async function run(input: WorkerInput): Promise<readonly TimedWord[]> {
     const source = speechWords(input.text);
     const output: TimedWord[] = [];
     let cursor = 0;
+    let omitted = 0;
+    const omissionBudget = Math.min(60, Math.floor(source.length * 0.05));
     let sampleAt = 0;
     while (sampleAt < totalSamples && cursor < source.length) {
       const count = Math.min(windowSeconds * sampleRate, totalSamples - sampleAt);
@@ -72,22 +73,30 @@ async function run(input: WorkerInput): Promise<readonly TimedWord[]> {
       const candidate = candidates(source, cursor, observed);
       const finalWindow = sampleAt + count >= totalSamples;
       const complete = finalWindow && cursor + candidate.length === source.length;
-      const aligned = alignWindow(logits.data, frames, candidate, complete).words;
       const cutoff = finalWindow ? count / sampleRate : count / sampleRate - overlapSeconds;
-      const accepted = aligned.filter((word) => word.end <= cutoff);
+      const recovered = alignSpeechWindow(
+        logits.data,
+        frames,
+        candidate,
+        complete,
+        cutoff,
+        cursor === 0 ? 0 : omissionBudget - omitted,
+      );
+      const accepted = recovered.words;
       const last = accepted.at(-1);
       if (last === undefined) throw new Error(mismatch);
-      const heard = greedy(logits.data, Math.min(frames, Math.ceil(last.end / frameSeconds)));
-      if (
-        !agreesWithSpeech(
-          candidate
-            .slice(0, accepted.length)
-            .map((word) => word.spoken)
+      if (recovered.skipped > 0) {
+        omitted += recovered.skipped;
+        send({
+          type: "omission",
+          start: sampleAt / sampleRate,
+          text: candidate
+            .slice(0, recovered.skipped)
+            .map((word) => word.text)
             .join(" "),
-          heard,
-        )
-      )
-        throw new Error(mismatch);
+        });
+        cursor += recovered.skipped;
+      }
       const offset = sampleAt / sampleRate;
       output.push(
         ...accepted.map((word) => ({
@@ -160,18 +169,4 @@ function normalize(audio: Float32Array): Float32Array | undefined {
   if (variance < 1e-10) return undefined;
   const divisor = Math.sqrt(variance + 1e-7);
   return Float32Array.from(audio, (value) => (value - mean) / divisor);
-}
-
-function greedy(logits: Float32Array, frames: number): string {
-  let previous = -1;
-  let text = "";
-  for (let frame = 0; frame < frames; frame += 1) {
-    let best = 0;
-    for (let label = 1; label < 32; label += 1)
-      if ((logits[frame * 32 + label] ?? -Infinity) > (logits[frame * 32 + best] ?? -Infinity))
-        best = label;
-    if (best !== previous && best !== 0) text += letters[best] ?? "";
-    previous = best;
-  }
-  return text.trim().replace(/\s+/g, " ");
 }

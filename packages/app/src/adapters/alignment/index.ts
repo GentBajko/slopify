@@ -28,6 +28,8 @@ export const alignSubtitles: SubtitleAligner = async (request) => {
         { modelPath, pcmPath, text: request.text },
         request.signal,
         (current, total) => request.onProgress?.(25 + Math.round((current / total) * 75), 100),
+        undefined,
+        request.onOmission,
       );
     } finally {
       await rm(working, { recursive: true, force: true });

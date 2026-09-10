@@ -6,6 +6,11 @@ export const workerInput = z.object({
   text: z.string(),
 });
 export type WorkerInput = z.infer<typeof workerInput>;
+export const omissionSchema = z.object({
+  start: z.number().finite().nonnegative(),
+  text: z.string().min(1).max(10000),
+});
+
 export const workerMessage = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("progress"),
@@ -23,5 +28,6 @@ export const workerMessage = z.discriminatedUnion("type", [
       }),
     ),
   }),
+  omissionSchema.extend({ type: z.literal("omission") }),
   z.object({ type: z.literal("error"), message: z.string() }),
 ]);

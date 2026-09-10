@@ -1,3 +1,7 @@
+export interface SubtitleOmission {
+  readonly start: number;
+  readonly text: string;
+}
 export interface TimedWord {
   readonly text: string;
   readonly start: number;
@@ -10,6 +14,7 @@ export interface AlignmentRequest {
   readonly cacheDir: string;
   readonly ffmpeg: string;
   readonly signal: AbortSignal;
+  readonly onOmission?: (omission: SubtitleOmission) => void;
   readonly onProgress?: (current: number, total: number) => void;
 }
 export type SubtitleAligner = (request: AlignmentRequest) => Promise<readonly TimedWord[]>;

@@ -1,6 +1,6 @@
 // Compare acoustic recognition with the already aligned transcript. This catches extra
 // speech and missing phrases even when a few forced words individually score well.
-export function agreesWithSpeech(expected: string, observed: string): boolean {
+export function agreesWithSpeech(expected: string, observed: string, maximumError = 0.42): boolean {
   const left = expected.toUpperCase().replace(/[^A-Z']/g, "");
   const right = observed.toUpperCase().replace(/[^A-Z']/g, "");
   if (left.length === 0 || right.length === 0) return false;
@@ -16,5 +16,5 @@ export function agreesWithSpeech(expected: string, observed: string): boolean {
       );
     previous = current;
   }
-  return (previous[right.length] ?? Infinity) / Math.max(left.length, right.length) <= 0.42;
+  return (previous[right.length] ?? Infinity) / Math.max(left.length, right.length) <= maximumError;
 }

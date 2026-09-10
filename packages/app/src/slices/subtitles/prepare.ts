@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { z } from "zod";
+import type { SubtitleOmission } from "../../kernel/ports/subtitles.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import { projectById, setStageProgress } from "../admission/repo.js";
 import { resolveFont } from "../fonts/index.js";
@@ -37,6 +38,7 @@ export interface SubtitleAsset {
 export interface PreparedSubtitles {
   readonly directory: string;
   readonly burnIn: boolean;
+  readonly omissions?: readonly SubtitleOmission[];
   readonly assets: readonly SubtitleAsset[];
 }
 const wordSchema = z.object({
@@ -51,7 +53,14 @@ const fontSchema = z.object({
   assName: z.string(),
   extension: z.enum([".ttf", ".otf", ".ttc"]),
 });
-const cacheSchema = z.object({ key: z.string(), words: z.array(wordSchema), font: fontSchema });
+const cacheSchema = z.object({
+  key: z.string(),
+  words: z.array(wordSchema),
+  font: fontSchema,
+  omissions: z
+    .array(z.object({ start: z.number().finite().nonnegative(), text: z.string() }))
+    .default([]),
+});
 type Cache = z.infer<typeof cacheSchema>;
 
 // Preparation writes into a new directory; only writeExport commits its output rows.
@@ -79,7 +88,9 @@ export async function prepareSubtitles(
   const directory = mkdtempSync(join(dir, "captions-"));
   try {
     const font = await snapshotFont(deps, projectId, outputs, config.fontId, cache, directory);
-    const words = cache?.key === key ? cache.words : await alignSegments(deps, context, segments);
+    const omissions: SubtitleOmission[] = cache?.key === key ? [...cache.omissions] : [];
+    const words =
+      cache?.key === key ? cache.words : await alignSegments(deps, context, segments, omissions);
     context.signal.throwIfAborted();
     const cues = captionCues(words);
     if (cues.length === 0)
@@ -98,9 +109,13 @@ export async function prepareSubtitles(
       }),
       { mode: 0o600 },
     );
-    writeFileSync(join(directory, "subtitles.json"), JSON.stringify({ key, words, font }), {
-      mode: 0o600,
-    });
+    writeFileSync(
+      join(directory, "subtitles.json"),
+      JSON.stringify({ key, words, font, omissions }),
+      {
+        mode: 0o600,
+      },
+    );
     const files: readonly [(typeof subtitleRoles)[number], string][] = [
       ["subtitles_srt", "subtitles.srt"],
       ["subtitles_vtt", "subtitles.vtt"],
@@ -110,6 +125,7 @@ export async function prepareSubtitles(
     ];
     return {
       directory,
+      omissions,
       burnIn: config.mode === "burn-in" && project.config.sources.video !== "off",
       assets: files.map(([role, path]) => ({
         role,
@@ -127,7 +143,7 @@ interface SpokenSegment extends AudioSegment {
 }
 async function timingKey(segments: readonly SpokenSegment[], signal: AbortSignal): Promise<string> {
   // Bump when alignment normalization/model changes. Hash file contents, not timestamps.
-  const hash = createHash("sha256").update("wav2vec2-en-a19f851-v1");
+  const hash = createHash("sha256").update("wav2vec2-en-a19f851-v2-omissions");
   for (const segment of segments) {
     signal.throwIfAborted();
     hash.update(
@@ -144,6 +160,7 @@ async function alignSegments(
   deps: VideoDeps,
   context: StageContext,
   segments: readonly SpokenSegment[],
+  omissions: SubtitleOmission[],
 ): Promise<readonly TimedWord[]> {
   if (deps.alignSubtitles === undefined)
     throw new Error("Local subtitle alignment is unavailable in this build.");
@@ -155,6 +172,7 @@ async function alignSegments(
     if (segment.path !== null) {
       const aligned = await deps.alignSubtitles({
         audioPath: segment.path,
+        onOmission: (omission) => omissions.push({ ...omission, start: omission.start + offset }),
         text: segment.text,
         cacheDir: join(deps.paths.dataDir, "models", "english-subtitles"),
         ffmpeg: deps.ffmpeg,

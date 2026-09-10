@@ -169,3 +169,38 @@ describe("subtitle preparation", () => {
     expect(existsSync(join(one.dir, prepared?.assets[0]?.path ?? "missing"))).toBe(true);
   });
 });
+
+it("preserves omission notes and offsets them across segments and cached styling", async () => {
+  const one = fixture();
+  let calls = 0;
+  const deps: VideoDeps = {
+    ...one.deps,
+    alignSubtitles: async (request) => {
+      calls += 1;
+      request.onOmission?.({ start: 0.2, text: "Missing passage" });
+      return [{ text: "Spoken words", start: 0.3, end: 0.7 }];
+    },
+  };
+  const audio = [
+    { kind: "gap" as const, path: null, seconds: 2 },
+    { kind: "body" as const, path: join(one.dir, "body.mp3"), seconds: 1 },
+  ];
+  const first = await prepareSubtitles(deps, one.context, audio, { width: 1920, height: 1080 });
+  expect(first?.omissions).toEqual([{ start: 2.2, text: "Missing passage" }]);
+  for (const asset of first?.assets ?? [])
+    insertOutput(deps.db, {
+      id: asset.role,
+      projectId: "p1",
+      stageKind: "video",
+      role: asset.role,
+      path: asset.path,
+      originalFilename: null,
+      bytes: 1,
+      durationMs: null,
+      meta: {},
+      createdAt: "2026",
+    });
+  const second = await prepareSubtitles(deps, one.context, audio, { width: 1080, height: 1920 });
+  expect(second?.omissions).toEqual(first?.omissions);
+  expect(calls).toBe(1);
+});

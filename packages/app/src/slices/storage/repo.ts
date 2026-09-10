@@ -4,6 +4,9 @@ import type { Output, OutputMeta, StagedFile } from "./model.js";
 import { outputRoles, stagedFileStates, stageKinds } from "./model.js";
 
 const metaSchema = z.object({
+  subtitleOmissions: z
+    .array(z.object({ start: z.number().finite().nonnegative(), text: z.string() }))
+    .optional(),
   subtitlesMode: z.enum(["off", "files", "burn-in"]).optional(),
   promptName: z.string().optional(),
   prompt: z.string().optional(),

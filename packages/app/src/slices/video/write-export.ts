@@ -115,6 +115,9 @@ export async function writeExport(
       }
       store(deps, projectId, "render_params", "render.json", null);
       store(deps, projectId, output.role, output.filename, totalMs, {
+        ...(output.subtitles?.omissions?.length
+          ? { subtitleOmissions: output.subtitles.omissions }
+          : {}),
         subtitlesMode:
           output.subtitles === undefined ? "off" : output.subtitles.burnIn ? "burn-in" : "files",
       });

@@ -102,6 +102,25 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
             .join(" · ")}
         </span>
       </ActionRow>
+      {video?.meta.subtitleOmissions?.length ? (
+        <details className="rounded-control border border-line p-3 text-small">
+          <summary className="cursor-pointer font-semibold">
+            Subtitles recovered after missing narration ({video.meta.subtitleOmissions.length})
+          </summary>
+          <p className="mt-2 text-ink2">
+            These transcript passages could not be matched to the audio and were left out of the
+            captions. The audio is unchanged. Review these passages before sharing.
+          </p>
+          <ul className="mt-2 space-y-2">
+            {video.meta.subtitleOmissions.map((omission) => (
+              <li key={`${omission.start}-${omission.text}`}>
+                <strong>{new Date(omission.start * 1000).toISOString().slice(11, 19)}</strong> —{" "}
+                {omission.text}
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
       {srt || vtt ? (
         <ActionRow>
           {srt ? <OutputDownload output={srt} label="Download .srt" /> : null}

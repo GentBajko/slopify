@@ -34,6 +34,9 @@ export const stagedFileStates = ["copying", "staged"] as const;
 export type StagedFileState = (typeof stagedFileStates)[number];
 
 export interface OutputMeta {
+  readonly subtitleOmissions?:
+    | readonly { readonly start: number; readonly text: string }[]
+    | undefined;
   readonly subtitlesMode?: "off" | "files" | "burn-in" | undefined;
   readonly promptName?: string | undefined;
   // An image is stored with the prompt text that made it, not only the name of the template
