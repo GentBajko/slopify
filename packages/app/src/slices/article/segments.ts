@@ -54,7 +54,11 @@ export async function writeSegment(
   return { ...common, text: answer.text.trim(), tokens: plusUsage(noTokens, answer.usage) };
 }
 
-function segmentMessages(body: string, config: RunConfig, article: string): readonly Message[] {
+export function segmentMessages(
+  body: string,
+  config: RunConfig,
+  article: string,
+): readonly Message[] {
   const values = Object.entries(config.values);
   return [
     {

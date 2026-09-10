@@ -47,6 +47,7 @@ describe("cost planning", () => {
       catalogue,
     );
     expect(estimate.low).toBeCloseTo(0.25 + 4 * 0.101);
+    expect(estimate.rows.filter((row) => row.stage === "Images")).toHaveLength(1);
   });
   it("keeps unknown CLI costs separate and exposes generated length uncertainty", () => {
     const estimate = estimateRun(
@@ -62,5 +63,33 @@ describe("cost planning", () => {
     expect(estimate.unknown).toBe(1);
     expect(estimate.rows.find((r) => r.stage === "Article")?.low).toBeNull();
     expect(estimate.high).toBeGreaterThan(estimate.low);
+  });
+  it("keeps missing-catalogue charges unknown rather than reporting a free job", () => {
+    const estimate = estimateRun(draft, {}, 1500);
+    expect(estimate.rows.find((row) => row.stage === "Narration")?.low).toBeNull();
+    expect(estimate.unknown).toBe(1);
+    expect(estimate.catalogueDate).toBeNull();
+  });
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, -1])(
+    "rejects an invalid expected word count %s",
+    (expectedWords) => {
+      expect(() => estimateRun(draft, {}, expectedWords, catalogue)).toThrow();
+    },
+  );
+  it("groups an unknown image estimate into one stage without reporting zero", () => {
+    const estimate = estimateRun(
+      {
+        ...draft,
+        sources: { ...draft.sources, images: "generate" },
+        images: { provider: "google-image", model: "missing" },
+        imagePrompts: [{ name: "a", number: 3 }],
+      },
+      {},
+      1500,
+      catalogue,
+    );
+    expect(estimate.rows.filter((row) => row.stage === "Images")).toHaveLength(1);
+    expect(estimate.rows.find((row) => row.stage === "Images")?.low).toBeNull();
+    expect(estimate.unknown).toBe(1);
   });
 });
