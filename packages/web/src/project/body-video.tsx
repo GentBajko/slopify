@@ -6,7 +6,7 @@ import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { ConfirmedButton } from "./controls.js";
 import { ActionRow, OutputDownload, StageBody } from "./parts.js";
-import { duration, percent } from "./summary.js";
+import { duration, percent, preparingSubtitles } from "./summary.js";
 
 // The final stage plays an MP4 or, when Video is Off, the combined narration WAV.
 // The previous file stays playable until ffmpeg successfully replaces it.
@@ -29,11 +29,13 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
     <StageBody>
       {rendering ? (
         <p className="text-small text-run-text">
-          {audioExport
-            ? "Exporting combined audio"
-            : stage.progressTotal === null
-              ? "Re-rendering"
-              : `Re-rendering · ${String(done)}%`}
+          {preparingSubtitles(stage, project.config)
+            ? `Preparing subtitles · ${String(percent(stage.progressCurrent ?? 0, 35))}%`
+            : audioExport
+              ? "Exporting combined audio"
+              : stage.progressTotal === null
+                ? "Re-rendering"
+                : `Re-rendering · ${String(done)}%`}
         </p>
       ) : null}
 

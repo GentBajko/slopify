@@ -145,11 +145,14 @@ function ShellContent() {
         </div>
       </header>
 
-      <main className="min-w-0 flex-1 px-4 py-6 sm:px-7">
+      <main className="min-w-0 flex-1 px-4 py-6 pb-20 sm:px-7">
         <Outlet />
       </main>
 
-      <footer className="flex items-center gap-[18px] border-t border-line px-4 py-[14px] text-label sm:px-7 text-ink3">
+      <footer
+        id="app-footer"
+        className="flex items-center gap-[18px] border-t border-line px-4 py-[14px] text-label sm:px-7 text-ink3"
+      >
         <span>Free. Your keys, your machine.</span>
       </footer>
 

@@ -28,6 +28,17 @@ export function stageName(kind: StageKind, config: RunConfig): string {
   return kind === "video" && finalOutput(config) === "audio" ? "Audio export" : stageNames[kind];
 }
 
+export function preparingSubtitles(stage: Stage, config: RunConfig): boolean {
+  return (
+    stage.kind === "video" &&
+    stage.state === "running" &&
+    config.subtitles !== undefined &&
+    config.subtitles.mode !== "off" &&
+    stage.progressTotal === 100 &&
+    (stage.progressCurrent ?? 0) <= 35
+  );
+}
+
 // What each stage's progress counts: chapters, chunks, images, and a
 // render percentage. The word the meter is measured in belongs beside the meter.
 const running: Readonly<Record<StageKind, (current: number, total: number) => string>> = {
@@ -68,6 +79,8 @@ export function summaryOf(
     case "canceled":
       return "Canceled by user";
     case "running":
+      if (preparingSubtitles(stage, project.config))
+        return `Preparing subtitles · ${String(percent(stage.progressCurrent ?? 0, 35))}%`;
       if (stage.kind === "video" && finalOutput(project.config) === "audio")
         return "Exporting combined audio";
       return stage.progressTotal === null || stage.progressTotal <= 0

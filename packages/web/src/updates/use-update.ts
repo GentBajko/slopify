@@ -17,7 +17,6 @@ interface UpdateView {
   readonly installing: boolean;
   readonly reconnecting: boolean;
   readonly error: string | undefined;
-  readonly inspect: () => void;
   readonly refresh: () => void;
   readonly install: () => void;
 }
@@ -93,9 +92,6 @@ export function useUpdate(reload: () => void): UpdateView {
     installing: install.isPending,
     reconnecting: updating && status.isError,
     error,
-    inspect: () => {
-      void status.refetch();
-    },
     refresh: () => {
       install.reset();
       refresh.mutate();

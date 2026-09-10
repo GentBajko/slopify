@@ -5,8 +5,10 @@ import { outputsOf } from "../storage/repo.js";
 import { prepareSubtitles } from "../subtitles/prepare.js";
 import { audioInputs } from "./audio-inputs.js";
 import { type AudioSegment, audioTimeline } from "./plan.js";
+import { reusableAudioExport } from "./reuse-audio.js";
 import type { VideoDeps } from "./run.js";
 import { writeExport } from "./write-export.js";
+import { writeSubtitles } from "./write-subtitles.js";
 
 const rate = 48000;
 
@@ -16,7 +18,8 @@ export async function exportAudioWav(
   gapSeconds: number,
 ): Promise<void> {
   const { projectId } = context.stage;
-  const input = await audioInputs(deps, projectId, outputsOf(deps.db, projectId), context.signal);
+  const outputs = outputsOf(deps.db, projectId);
+  const input = await audioInputs(deps, projectId, outputs, context.signal);
   const audio = audioTimeline({ ...input, gapSeconds }, 1 / rate);
   const totalSeconds = audio.reduce((sum, segment) => sum + segment.seconds, 0);
   const dir = projectDir(deps.paths, projectId);
@@ -31,8 +34,16 @@ export async function exportAudioWav(
       path: segment.path === null ? null : relative(dir, segment.path),
     })),
     output: "audio.wav",
+    sourceIds: outputs
+      .filter((output) => ["audio_body", "audio_intro", "audio_outro"].includes(output.role))
+      .map((output) => output.id),
   };
+  const existing = reusableAudioExport(deps.paths, projectId, outputs, plan);
   const subtitles = await prepareSubtitles(deps, context, audio, { width: 1920, height: 1080 });
+  if (existing !== undefined) {
+    writeSubtitles(deps, context, existing, subtitles);
+    return;
+  }
   await writeExport(deps, context, {
     role: "audio_export",
     filename: "audio.wav",

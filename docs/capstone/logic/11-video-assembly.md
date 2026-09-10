@@ -69,3 +69,7 @@ The final media stage produces an MP4 slideshow or a combined PCM WAV. Audio Off
 - D6 limits: no cap on image count or duration.
 - D10 external failure: the render is local; its failure is handled above without retries.
 - D13 notification: no channel.
+
+## Audio-only subtitle edits
+
+An unchanged saved WAV is reused when its recorded format/timeline, source identities (when recorded), source dates/file sizes/mtimes, and output size/duration still match. Subtitle files and metadata commit separately, with rollback preserving prior captions and audio. Changed sources/timeline or missing media require normal export. Local subtitle alignment is still required when timing is not cached; the UI names this phase Preparing subtitles (`slices/video/reuse-audio.ts`, `write-subtitles.ts`, `audio-export.ts`).

@@ -169,3 +169,22 @@ describe("a duration", () => {
     expect(duration(Number.NaN)).toBeUndefined();
   });
 });
+
+it("distinguishes subtitle preparation from audio encoding", () => {
+  const config = {
+    ...project.config,
+    subtitles: {
+      mode: "files" as const,
+      language: "en" as const,
+      fontId: "default",
+      position: "bottom" as const,
+      fontSize: 48,
+    },
+  };
+  expect(
+    summaryOf(stage("video", "running", { progressCurrent: 21, progressTotal: 100 }), [], {
+      ...project,
+      config,
+    }),
+  ).toBe("Preparing subtitles · 60%");
+});

@@ -9,22 +9,13 @@ paths_covered:
 
 # Updater
 
-## Mode & job
-Operate overlay/control family for checking and applying a Slopify update. Source: packages/web/src/updates/widget.tsx:1-220; packages/web/src/updates/api.ts:1-120.
+## Composition and action
+The floating control contains two circular arrows and an availability dot. Its 40-pixel hit area has no visible background or border. Clicking checks the registry when no update is known; clicking a known installable update starts its download and installation directly. Discovering an update during a manual check does not install it on that same click. There is no popover (`packages/web/src/updates/widget.tsx`).
 
-## Composition
-The floating control shows only two circular arrows, with no visible button background or border. A small dot appears when an update is available and installation is inactive. It retains a 40-pixel hit area, accessible status label, focus outline and tooltip. The control opens a status panel with current/latest version, availability, check-again, and explicit update actions. Source: packages/web/src/updates/widget.tsx:1-220.
+Hover text and the accessible label show the installed version, installed-versus-newest versions when applicable, and progress, blocked or error details. Checking and installation prevent duplicate clicks. Background polling remains every fifteen minutes, with rapid reconnection polling during installation (`updates/use-update.ts`).
 
-## States
-Idle, checking, available, installing/restarting, unavailable, blocked, and error responses are represented by the updater API model and widget. Source: packages/app/src/updater/model.ts:1-27; packages/web/src/updates/widget.tsx:1-220.
+## Placement and motion
+The control floats 20 pixels above the viewport bottom until the footer enters view, then lifts to leave a 12-pixel gap above it. Scroll, resize and body-size changes recalculate placement. Main-content bottom padding keeps the final card clear too (`updates/footer-offset.ts`, `components/shell.tsx`). The arrows spin during checking and installation, respecting reduced motion.
 
-## Motion
-The same circular arrows spin during installation; reduced-motion disables the spin. Source: packages/web/src/updates/widget.tsx:1-220.
-
-## Copy
-The control uses explicit Check again and Update Slopify actions and displays blocked/error detail from the server response. Source: packages/web/src/updates/widget.tsx:1-220; packages/app/src/updater/model.ts:3-18.
-
-## Not in play
-Permission-denied is represented by the server API rather than a dedicated widget state. Source: packages/app/src/edge/http/update.ts:17-29.
-
-A successful idle response clears the local Updating state even if the server version is unchanged (for example after a same-version restart). A changed activated version still requests one reload; the local update flag is cleared before that request.
+## Completion
+An idle server response clears the local Updating state even when its version is unchanged. A changed, activated version requests one reload. Failed installation remains visible in the tooltip and accessible alert; blocked updates explain the restriction and clicks only recheck availability.

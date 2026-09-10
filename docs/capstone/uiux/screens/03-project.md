@@ -14,6 +14,8 @@ Operate surface for monitoring a project, reviewing outputs, and editing control
 
 ## Composition
 
+Subtitle preparation is labeled separately from WAV encoding. Editing subtitle files on an unchanged audio-only project retains its WAV and updates only caption outputs.
+
 When subtitle alignment recovers from a short missing passage, the final output shows a persistent expandable review note with each timestamp and unmatched transcript passage. Caption downloads remain available; the note explicitly says the audio is unchanged.
 
 Every output Download action has an adjacent Open folder button, including the image archive and subtitle downloads. It opens the saved output directory on the server machine through its native file manager (Windows Explorer, including WSL; Finder; or Linux xdg-open). Pending state disables the folder action; failures appear inline and leave Download available. The API accepts an existing project asset, never an arbitrary client-supplied path.

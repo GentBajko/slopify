@@ -63,7 +63,7 @@ const cacheSchema = z.object({
 });
 type Cache = z.infer<typeof cacheSchema>;
 
-// Preparation writes into a new directory; only writeExport commits its output rows.
+// Preparation writes into a new directory; export writers commit its output rows.
 // The old caption files/font/timing stay usable if alignment or rendering fails.
 export async function prepareSubtitles(
   deps: VideoDeps,
@@ -76,6 +76,9 @@ export async function prepareSubtitles(
   if (project === undefined) throw new Error("The project no longer exists.");
   const config = project.config.subtitles ?? defaultSubtitles;
   if (config.mode === "off") return undefined;
+  context.signal.throwIfAborted();
+  setStageProgress(deps.db, context.stage.id, 0, 100);
+  context.emit({ type: "stage.progress", projectId, stage: "video", current: 0, total: 100 });
   if (audio.length === 0) throw new Error("Subtitles need narration audio.");
   const outputs = outputsOf(deps.db, projectId);
   const segments = audio.map((segment) => ({
