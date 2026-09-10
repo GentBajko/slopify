@@ -53,6 +53,7 @@ async function body(filename = "font.ttf"): Promise<FormData> {
 }
 
 describe("font HTTP routes", () => {
+  // This route enumerates real system fonts; a cold Windows scan can exceed five seconds.
   it("lists public summaries without server file paths", async () => {
     const { app } = await harness();
     const response = await app.request("/api/fonts");
@@ -61,7 +62,7 @@ describe("font HTTP routes", () => {
     expect(text).toContain('"id":"default"');
     expect(text).not.toContain('"path"');
     expect(text).not.toContain('"assName"');
-  });
+  }, 30_000);
 
   it("uploads a font and previews exactly the stored bytes", async () => {
     const { app } = await harness();
