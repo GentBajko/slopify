@@ -43,11 +43,17 @@ describe("migrate", () => {
       "entries",
       "machine",
       "outputs",
+      "project_assets",
       "project_controls",
+      "project_heads",
       "project_queue",
+      "project_revisions",
       "projects",
       "prompts",
       "provider_keys",
+      "revision_mutations",
+      "revision_outputs",
+      "revision_pieces",
       "schema_migrations",
       "settings",
       "stage_pieces",
@@ -60,7 +66,14 @@ describe("migrate", () => {
       "entries_name",
       "outputs_project",
       "project_queue_state",
+      "project_revisions_project",
       "prompts_name",
+      "revision_outputs_publication",
+      "revision_outputs_revision",
+      "revision_outputs_selected",
+      "revision_pieces_publication",
+      "revision_pieces_revision",
+      "revision_pieces_selected",
     ]);
   });
 
@@ -73,6 +86,7 @@ describe("migrate", () => {
       { version: 1, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 2, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 3, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 4, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -82,7 +96,7 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 3 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 4 });
   });
 
   it("refuses a database newer than the app knows", () => {
@@ -90,7 +104,7 @@ describe("migrate", () => {
     migrate(db, clock);
     db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(42, clock.now().toISOString());
 
-    expect(() => migrate(db, clock)).toThrow("database schema 42 is newer than this app knows (3)");
+    expect(() => migrate(db, clock)).toThrow("database schema 42 is newer than this app knows (4)");
   });
 
   it("upgrades existing projects without changing their configuration or outputs", () => {
@@ -108,6 +122,48 @@ describe("migrate", () => {
     db.exec("INSERT INTO project_controls VALUES ('p1', 1)");
     db.exec("DELETE FROM projects WHERE id = 'p1'");
     expect(db.prepare("SELECT * FROM project_controls").all()).toEqual([]);
+    db.close();
+  });
+
+  it.each([1, 3])("keeps schema %i legacy rows intact and revision storage empty", (version) => {
+    const db = openDb(":memory:");
+    const files = ["0001-init.sql", "0002-project-controls.sql", "0003-batch-queue.sql"];
+    for (const file of files.slice(0, version)) {
+      db.exec(readFileSync(new URL(`./migrations/${file}`, import.meta.url), "utf8"));
+      db.prepare("INSERT INTO schema_migrations VALUES (?, '2026-09-01')").run(
+        Number(file.slice(0, 4)),
+      );
+    }
+    db.exec("INSERT INTO projects VALUES ('p1','Saved','16:9','{}','old','old')");
+    db.exec(
+      "INSERT INTO stages (id,project_id,kind,source,state) VALUES ('s1','p1','audio','generate','done')",
+    );
+    db.exec(
+      "INSERT INTO stage_pieces VALUES ('c1','s1','chunk',1,'done','{\"file\":\"audio/body.wav\"}')",
+    );
+    db.exec(
+      "INSERT INTO outputs VALUES ('o1','p1','audio','audio_body','audio/body.wav',NULL,12,1000,'{}','old')",
+    );
+    const before = ["projects", "stages", "stage_pieces", "outputs"].map((table) =>
+      db.prepare(`SELECT * FROM ${table}`).all(),
+    );
+    migrate(db, clock);
+    expect(
+      ["projects", "stages", "stage_pieces", "outputs"].map((table) =>
+        db.prepare(`SELECT * FROM ${table}`).all(),
+      ),
+    ).toEqual(before);
+    for (const table of [
+      "project_revisions",
+      "project_assets",
+      "project_heads",
+      "revision_outputs",
+      "revision_pieces",
+      "revision_mutations",
+    ]) {
+      expect(db.prepare(`SELECT * FROM ${table}`).all()).toEqual([]);
+    }
+    expect(db.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
     db.close();
   });
 
