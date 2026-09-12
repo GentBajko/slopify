@@ -229,6 +229,12 @@ export function validateRevisionEdit(
       message: `Use a gap between 0 and ${silenceGapSecondsMax} seconds.`,
     });
   if (
+    config.sources.article === "generate" &&
+    content.articleEdited === true &&
+    !content.articleMarkdown?.trim()
+  )
+    fields.push({ field: "content.articleMarkdown", message: "Enter article text." });
+  if (
     config.sources.article === "provide" &&
     !(content.articleMarkdown ?? config.provided.article)?.trim()
   )
