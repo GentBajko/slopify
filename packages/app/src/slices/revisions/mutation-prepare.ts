@@ -93,6 +93,7 @@ export async function prepareEditAssets(
             .prepare("SELECT * FROM project_assets WHERE project_id=? AND id=?")
             .get(projectId, assetId),
         );
+      const role = kind === "audio" ? "audio_body" : "thumbnail";
       const item: PreparedEditAsset = {
         asset: {
           id: asset.id,
@@ -104,13 +105,14 @@ export async function prepareEditAssets(
         output: {
           ...descriptor,
           id: deps.ids.next(),
+          role,
           durationMs:
             kind === "audio"
               ? await measureAudio(deps, projectId, asset.path)
               : descriptor.durationMs,
         },
         workKey: kind === "audio" ? "audio:provided" : "thumbnail:image",
-        slot: `${kind}:${kind === "audio" ? "audio_body" : "thumbnail"}`,
+        slot: `${kind}:${role}`,
       };
       prepared.push(item);
     }
