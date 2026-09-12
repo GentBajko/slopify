@@ -18,6 +18,7 @@ export function baselineContent(
   outputs: readonly Output[],
   pieces: readonly StagePiece[],
   assets: ReadonlyMap<string, ProjectAsset>,
+  templates: Readonly<Record<string, string>> = {},
 ): RevisionContent {
   const article = outputs.find((row) => row.role === "article_md");
   const articlePath =
@@ -88,7 +89,7 @@ export function baselineContent(
           source: "generate",
           assetId: null,
           prompt: project.config.rendered[key] ?? null,
-          templateKey: key,
+          templateKey: templates[key] === undefined ? null : key,
         };
         order.push({ key: id, index: order.length });
       }
@@ -103,7 +104,7 @@ export function baselineContent(
     narrationOverrides: {},
     regenerationTokens: {},
     promptTemplates: Object.fromEntries(
-      Object.keys(project.config.rendered).map((key) => [key, null]),
+      Object.keys(project.config.rendered).map((key) => [key, templates[key] ?? null]),
     ),
   };
 }

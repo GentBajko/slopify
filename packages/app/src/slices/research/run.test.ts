@@ -84,7 +84,29 @@ function harness(over: Partial<typeof config> = {}): Harness {
     counted,
     deps: { db, paths, ids, clock, log: silent, count: counted.count },
     context: {
-      stage: { id: "s1", projectId: "p1", kind: "research", state: "running" },
+      stage: {
+        id: "s1",
+        projectId: "p1",
+        kind: "research",
+        state: "running",
+        work: {
+          projectId: "p1",
+          stageId: "s1",
+          kind: "research",
+          revisionId: "r1",
+          workId: "s1" + "-r1",
+          fingerprint: "research",
+        },
+      },
+      work: {
+        projectId: "p1",
+        stageId: "s1",
+        kind: "research",
+        revisionId: "r1",
+        workId: "s1" + "-r1",
+        fingerprint: "research",
+      },
+      maySubmit: () => true,
       signal: new AbortController().signal,
       emit: (event: ProjectEvent): void => {
         events.push(event);
@@ -119,7 +141,9 @@ function fake(script: Script): Fake {
   const order: string[] = [];
 
   const build = (pieceId: string | null): StageProviders => ({
-    llm: async (call: LlmCall): Promise<LlmAnswer> => {
+    llm: async (
+      call: LlmCall,
+    ): Promise<import("../../kernel/runner/work.js").AttemptResult<LlmAnswer>> => {
       const prompt = promptOf(call.messages);
       const turn = turnOf(prompt);
       made.push({ turn, pieceId, webSearch: call.webSearch === true, prompt });
@@ -134,7 +158,7 @@ function fake(script: Script): Fake {
       if (unusable !== undefined) {
         throw new Error(unusable);
       }
-      return answer;
+      return { ok: true, value: answer };
     },
     tts: () => Promise.reject(new Error("research must not narrate")),
     image: () => Promise.reject(new Error("research must not generate images")),

@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import type { CatalogueStore } from "../../catalog/store.js";
 import { transact } from "../../kernel/db/tx.js";
 import type { ProjectEvent } from "../../kernel/events.js";
 import { derive, satisfied } from "../../kernel/runner/graph.js";
@@ -13,8 +14,14 @@ import {
 } from "../admission/repo.js";
 import type { FieldError } from "../admission/rules.js";
 import { sameChunking } from "../narration/chunk.js";
+import { admitPendingRevision } from "../rebuild/runtime-admission.js";
+import { projectStandings } from "../rebuild/runtime-store.js";
 import type { RerunDeps } from "../reruns/index.js";
 import { clearUnfinishedAudio } from "../reruns/index.js";
+import { adoptBaseline } from "../revisions/adopt.js";
+import { saveRevision } from "../revisions/mutations.js";
+import { currentRevisionId } from "../revisions/repo.js";
+import { getRevisionView } from "../revisions/view.js";
 import type { ProviderStatus } from "../settings/model.js";
 import { providers as providerCatalog } from "../settings/model.js";
 import { hasKey, listVoices } from "../settings/repo.js";
@@ -23,6 +30,7 @@ import type { ProviderChanges, ProviderValidation } from "./providers.js";
 import { validateLocalProviderChanges, validateProviderChanges } from "./providers.js";
 
 export interface ControlDeps extends RerunDeps {
+  readonly catalogue?: CatalogueStore | undefined;
   readonly runner: Runner;
   readonly emit: (projectId: string, event: ProjectEvent) => void;
   readonly providers: () => Promise<readonly ProviderStatus[]>;
@@ -115,6 +123,12 @@ export function resumeProject(deps: ControlDeps, id: string): Promise<ControlRes
       return { ok: true };
     if (project.paused !== true && stages.every((stage) => satisfied(stage.state)))
       return { ok: true };
+    if (deps.catalogue !== undefined) {
+      const baseline = adoptBaseline(deps, id);
+      if (!baseline.ok) return { ok: false, reason: "no-project" };
+      admitPendingRevision(deps, baseline.view, deps.catalogue.read());
+      projectStandings(deps, id);
+    }
     transact(deps.db, () => {
       for (const stage of stages) {
         if (stage.state === "failed" || stage.state === "canceled") resetStage(deps.db, stage.id);
@@ -176,6 +190,31 @@ export function changeProviders(
     });
     if (localFields.length > 0)
       return { ok: false, reason: "invalid-providers", fields: localFields };
+    if (deps.catalogue !== undefined) adoptBaseline(deps, id);
+    const revisionId = currentRevisionId(deps.db, id);
+    if (revisionId !== undefined) {
+      const view = getRevisionView(deps, id, revisionId);
+      if (view === undefined) return { ok: false, reason: "no-project" };
+      const saved = await saveRevision(deps, {
+        projectId: id,
+        baseRevisionId: revisionId,
+        idempotencyKey: deps.ids.next(),
+        edit: {
+          config: {
+            ...view.revision.config,
+            ...(changes.llm === undefined ? {} : { llm: changes.llm }),
+            ...(changes.audio === undefined ? {} : { audio: changes.audio }),
+            ...(changes.images === undefined ? {} : { images: changes.images }),
+            ...(changes.chunking === undefined ? {} : { chunking: changes.chunking }),
+          },
+          content: view.revision.content,
+        },
+      });
+      if (!saved.ok) return { ok: false, reason: "not-editable" };
+      projectStandings(deps, id);
+      deps.emit(id, { type: "project.updated", projectId: id });
+      return { ok: true };
+    }
     const audioChanged =
       changes.audio !== undefined &&
       (changes.audio.provider !== project.config.audio?.provider ||

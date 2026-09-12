@@ -11,6 +11,7 @@ import type { StageContext } from "../../kernel/runner/index.js";
 import type { StagePiece } from "../../kernel/runner/piece-repo.js";
 import { piecesOf, setPiece } from "../../kernel/runner/piece-repo.js";
 import type { StageProviders } from "../../kernel/runner/providers.js";
+import type { AttemptResult, StageRunResult } from "../../kernel/runner/work.js";
 import type { VoiceChoice } from "../admission/model.js";
 import { entryModes } from "../admission/model.js";
 import { projectById, setStageProgress, stagesOf } from "../admission/repo.js";
@@ -70,7 +71,7 @@ export async function runNarration(
   deps: NarrationDeps,
   context: StageContext,
   providers: StageProviders,
-): Promise<void> {
+): Promise<StageRunResult> {
   const { projectId } = context.stage;
   deps.audioPreviews?.clear(projectId);
   const project = projectById(deps.db, projectId);
@@ -102,15 +103,17 @@ export async function runNarration(
     deps.maxCharacters?.(choice.provider, choice.model) ?? 1000000,
     (piece) => finished(deps, projectId, piece) !== undefined,
   );
-  const files = await speakChunks(deps, context, providers, choice, planned);
-  await storeBody(deps, context, choice, files, outputs);
-  await speakSegments(deps, context, providers, choice, outputs);
+  const result = await speakChunks(deps, context, providers, choice, planned);
+  if (!result.ok) return "held";
+  await storeBody(deps, context, choice, result.value, outputs);
+  if ((await speakSegments(deps, context, providers, choice, outputs)) === "held") return "held";
 
   deps.log.write("info", "narration.done", {
     projectId,
     stage: "audio",
     detail: `${String(texts.length)} chunks in ${chunking.mode} mode`,
   });
+  return "done";
 }
 
 // The narration source: the plain-text article, written by the article stage or pasted in
@@ -136,7 +139,7 @@ async function speakChunks(
   providers: StageProviders,
   choice: VoiceChoice,
   pieces: readonly StagePiece[],
-): Promise<readonly string[]> {
+): Promise<AttemptResult<readonly string[]>> {
   const { projectId } = context.stage;
   const total = pieces.length;
   let done = pieces.filter((piece) => finished(deps, projectId, piece)).length;
@@ -166,7 +169,11 @@ async function speakChunks(
             total === 1 ? "Body" : `Body part ${piece.idx} of ${total}`,
           ),
         );
-        write(deps, projectId, file, spoken.bytes);
+        if (!spoken.ok) {
+          setPiece(deps.db, piece.id, "pending", piece.payload);
+          return spoken;
+        }
+        write(deps, projectId, file, spoken.value.bytes);
         // The file is on disk before the row says so: a crash between the two leaves a
         // file the reconcile collects, where the other order would leave a `done` chunk
         // whose audio never existed and a concat that fails on every retry.
@@ -186,16 +193,18 @@ async function speakChunks(
   const files: string[] = [];
   for (const outcome of outcomes) {
     if (!outcome.ok) {
+      if ("reason" in outcome) return outcome;
       throw outcome.error;
     }
     files.push(outcome.file);
   }
-  return files;
+  return { ok: true, value: files };
 }
 
 type Outcome =
   | { readonly ok: true; readonly file: string }
-  | { readonly ok: false; readonly error: unknown };
+  | { readonly ok: false; readonly error: unknown }
+  | { readonly ok: false; readonly reason: "held" };
 
 // One body file, in chunk order, with its measured duration on the row.
 async function storeBody(
@@ -238,7 +247,7 @@ async function speakSegments(
   providers: StageProviders,
   choice: VoiceChoice,
   outputs: readonly Output[],
-): Promise<void> {
+): Promise<StageRunResult> {
   const { projectId } = context.stage;
   for (const piece of segmentPieces(deps, projectId)) {
     const segment = segmentOf(piece);
@@ -267,8 +276,9 @@ async function speakSegments(
         segment.category === "intro" ? "Intro" : "Outro",
       ),
     );
+    if (!spoken.ok) return "held";
     const name = outputFileName(role, 1, ".mp3", "audio");
-    write(deps, projectId, name, spoken.bytes);
+    write(deps, projectId, name, spoken.value.bytes);
     // Measured the same way the body is, because the render adds all three and the gaps to
     // get the length of the video.
     const durationMs = await probeDurationMs(
@@ -281,6 +291,7 @@ async function speakSegments(
     store(deps, projectId, role, name, durationMs, choice);
     counted(deps, segment.category, durationMs, choice);
   }
+  return "done";
 }
 
 // The segment pieces belong to the *article* stage, which is where they are written, so

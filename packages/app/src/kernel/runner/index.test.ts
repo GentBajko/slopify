@@ -5,7 +5,18 @@ import type { StageKind, StageState } from "../pipeline.js";
 import { stageKinds } from "../pipeline.js";
 import type { Runner, RunnerStage, StageRun, StageStore } from "./index.js";
 import { createRunner } from "./index.js";
+import type { StageRunResult, WorkRef } from "./work.js";
 
+function fakeWork(projectId: string, kind: StageKind, stageId: string): WorkRef {
+  return {
+    projectId,
+    kind,
+    stageId,
+    revisionId: "r1",
+    workId: `${projectId}-${kind}-r1`,
+    fingerprint: kind,
+  };
+}
 const log: Log = { write: (): void => {} };
 
 interface Store extends StageStore {
@@ -17,6 +28,7 @@ interface Store extends StageStore {
 
 function store(initial: Partial<Record<StageKind, StageState>> = {}): Store {
   const rows: RunnerStage[] = stageKinds.map((kind) => ({
+    work: fakeWork("p1", kind, kind),
     id: kind,
     projectId: "p1",
     kind,
@@ -35,7 +47,8 @@ function store(initial: Partial<Record<StageKind, StageState>> = {}): Store {
     rows,
     claims,
     stagesOf: (projectId) => rows.filter((row) => row.projectId === projectId),
-    claim: (stageId) => {
+    maySubmit: () => true,
+    claim: ({ stageId }) => {
       claims.push(stageId);
       // The single statement the real store runs: it only fires while the row is pending.
       if (rows.find((row) => row.id === stageId)?.state !== "pending") {
@@ -44,7 +57,7 @@ function store(initial: Partial<Record<StageKind, StageState>> = {}): Store {
       replace(stageId, "running");
       return true;
     },
-    finish: (stageId, state, failureReason) => {
+    finish: ({ stageId }, state, failureReason) => {
       replace(stageId, state);
       reasons.set(stageId, failureReason);
     },
@@ -81,7 +94,9 @@ function harness(
   return { runner, events, counts, stages };
 }
 
-const ok: StageRun = async (): Promise<void> => {};
+const ok: StageRun = async (): Promise<StageRunResult> => {
+  return "done";
+};
 
 function states(events: readonly ProjectEvent[]): string[] {
   return events
@@ -119,11 +134,12 @@ describe("tick", () => {
   it("starts audio, images, and thumbnail together rather than one after another", async () => {
     let live = 0;
     let peak = 0;
-    const concurrent: StageRun = async (): Promise<void> => {
+    const concurrent: StageRun = async (): Promise<StageRunResult> => {
       live += 1;
       peak = Math.max(peak, live);
       await new Promise((resolve) => setTimeout(resolve, 5));
       live -= 1;
+      return "done";
     };
     const { runner } = harness(
       { audio: concurrent, images: concurrent, thumbnail: concurrent, video: ok },
@@ -138,10 +154,11 @@ describe("tick", () => {
 
   it("starts a stage once even when several ticks race its own completion", async () => {
     const started: StageKind[] = [];
-    const counted: StageRun = async ({ stage }): Promise<void> => {
+    const counted: StageRun = async ({ stage }): Promise<StageRunResult> => {
       started.push(stage.kind);
       // Ticks land while this stage is in flight, and once more from its own finally.
       await new Promise((resolve) => setTimeout(resolve, 1));
+      return "done";
     };
     const { runner, stages } = harness({
       research: counted,
@@ -178,13 +195,15 @@ describe("tick", () => {
     const runner = createRunner({
       stages: {
         stagesOf: () => frozen,
+        maySubmit: () => true,
         claim: honest,
         finish: stale.finish,
       },
       runs: {
-        research: async ({ stage }): Promise<void> => {
+        research: async ({ stage }): Promise<StageRunResult> => {
           started.push(stage.kind);
           await new Promise((resolve) => setTimeout(resolve, 2));
+          return "done";
         },
       },
       emit: (): void => {},
@@ -210,8 +229,9 @@ describe("tick", () => {
   it("keeps a stage done when its output was stored in the same instant as the cancel", async () => {
     // Cancel never rolls back a stored output. The stage decides for itself whether it got far
     // enough; the runner does not second-guess a clean resolve.
-    const finishesAnyway: StageRun = async (): Promise<void> => {
+    const finishesAnyway: StageRun = async (): Promise<StageRunResult> => {
       await new Promise((resolve) => setTimeout(resolve, 2));
+      return "done";
     };
     const { runner, stages, events } = harness(
       { video: finishesAnyway },
@@ -252,7 +272,7 @@ describe("tick", () => {
   it("leaves a dependent pending when its dependency failed", async () => {
     const { runner, stages } = harness(
       {
-        audio: async (): Promise<void> => {
+        audio: async (): Promise<StageRunResult> => {
           throw new Error("the narration provider said no");
         },
         images: ok,
@@ -328,7 +348,7 @@ describe("project.state", () => {
   it("announces failed when a stage failed and canceled takes precedence", async () => {
     const { runner, events } = harness(
       {
-        audio: async (): Promise<void> => {
+        audio: async (): Promise<StageRunResult> => {
           throw new Error("boom");
         },
         images: ok,
@@ -346,8 +366,9 @@ describe("project.state", () => {
 
 describe("running.count", () => {
   it("reports the tally only when it changes", async () => {
-    const slow: StageRun = async (): Promise<void> => {
+    const slow: StageRun = async (): Promise<StageRunResult> => {
       await new Promise((resolve) => setTimeout(resolve, 5));
+      return "done";
     };
     const { runner, counts } = harness(
       { audio: slow, images: slow, thumbnail: slow, video: slow },
@@ -384,7 +405,13 @@ describe("running.count", () => {
           return stages.stagesOf(projectId);
         },
       },
-      runs: { audio: async (): Promise<void> => {}, images: ok, thumbnail: ok },
+      runs: {
+        audio: async (): Promise<StageRunResult> => {
+          return "done";
+        },
+        images: ok,
+        thumbnail: ok,
+      },
       emit: (_projectId, event) => {
         events.push(event);
       },
@@ -404,7 +431,7 @@ describe("running.count", () => {
 describe("abortAll", () => {
   it("cancels every stage in flight and waits for them to settle", async () => {
     const waits: StageRun = ({ signal }) =>
-      new Promise<void>((_resolve, reject) => {
+      new Promise<StageRunResult>((_resolve, reject) => {
         signal.addEventListener("abort", () => {
           reject(new Error("aborted"));
         });
@@ -431,10 +458,10 @@ describe("abortAll", () => {
     });
     const started: StageKind[] = [];
     const waits: StageRun = ({ stage, signal }) =>
-      new Promise<void>((resolve, reject) => {
+      new Promise<StageRunResult>((resolve, reject) => {
         started.push(stage.kind);
         if (stage.kind === "thumbnail") {
-          void finishes.then(resolve);
+          void finishes.then(() => resolve("done"));
           return;
         }
         signal.addEventListener("abort", () => {
@@ -464,10 +491,10 @@ describe("abortAll", () => {
     });
     const started: StageKind[] = [];
     const waits: StageRun = ({ stage, signal }) =>
-      new Promise<void>((resolve, reject) => {
+      new Promise<StageRunResult>((resolve, reject) => {
         started.push(stage.kind);
         if (stage.kind === "audio") {
-          void audioDone.then(resolve);
+          void audioDone.then(() => resolve("done"));
           return;
         }
         signal.addEventListener("abort", () => {
@@ -512,6 +539,7 @@ describe("abortProject", () => {
   ): Rows {
     const rows: RunnerStage[] = projects.flatMap((projectId) =>
       stageKinds.map((kind) => ({
+        work: fakeWork(projectId, kind, `${projectId}:${kind}`),
         id: `${projectId}:${kind}`,
         projectId,
         kind,
@@ -528,14 +556,15 @@ describe("abortProject", () => {
     return {
       store: {
         stagesOf: (projectId) => rows.filter((row) => row.projectId === projectId),
-        claim: (stageId) => {
+        maySubmit: () => true,
+        claim: ({ stageId }) => {
           if (rows.find((row) => row.id === stageId)?.state !== "pending") {
             return false;
           }
           replace(stageId, "running");
           return true;
         },
-        finish: (stageId, state) => {
+        finish: ({ stageId }, state) => {
           replace(stageId, state);
         },
       },
@@ -564,7 +593,7 @@ describe("abortProject", () => {
   it("stops the project it names and leaves every other project running", async () => {
     const rows = rowsFor(["p1", "p2"], ends);
     const held: StageRun = ({ signal }) =>
-      new Promise<void>((_resolve, reject) => {
+      new Promise<StageRunResult>((_resolve, reject) => {
         signal.addEventListener("abort", () => {
           reject(new Error("aborted"));
         });
@@ -589,9 +618,10 @@ describe("abortProject", () => {
       thumbnail: "skipped",
     });
     const started: StageKind[] = [];
-    const finishes: StageRun = async ({ stage }): Promise<void> => {
+    const finishes: StageRun = async ({ stage }): Promise<StageRunResult> => {
       started.push(stage.kind);
       await new Promise((resolve) => setTimeout(resolve, 2));
+      return "done";
     };
     const runner = runnerOver(rows, { audio: finishes, images: finishes, video: finishes });
 
@@ -624,4 +654,211 @@ describe("abortProject", () => {
     await expect(runner.abortProject("p1")).resolves.toBeUndefined();
     expect(rows.stateOf("p1:video")).toBe("pending");
   });
+});
+
+describe("revision work scheduling", () => {
+  it("continues admitted downstream work under the pinned revision without another start", async () => {
+    const written: string[] = [];
+    const materialized: string[] = [];
+    const { runner } = harness(
+      {
+        article: async (context): Promise<StageRunResult> => {
+          written.push(context.work.revisionId);
+          return "done";
+        },
+        audio: async (context): Promise<StageRunResult> => {
+          expect(written).toContain(context.work.revisionId);
+          expect(context.maySubmit()).toBe(true);
+          materialized.push(context.work.revisionId);
+          return "done";
+        },
+      },
+      { research: "skipped", images: "skipped", thumbnail: "skipped", video: "skipped" },
+    );
+    runner.tick("p1");
+    await runner.settled();
+    expect(written).toEqual(["r1"]);
+    expect(materialized).toEqual(["r1"]);
+  });
+
+  it("waits for every desired invocation of a dependency", async () => {
+    const stages = store({
+      research: "skipped",
+      article: "provided",
+      audio: "provided",
+      thumbnail: "skipped",
+    });
+    const images = stages.rows.find((stage) => stage.kind === "images");
+    if (images === undefined) throw new Error("Missing image fixture");
+    stages.rows.push({
+      ...images,
+      id: "images-2",
+      work: { ...images.work, stageId: "images-2", workId: "images-2-r1" },
+    });
+    let finishImage = (): void => {};
+    const pending = new Promise<void>((resolve) => {
+      finishImage = resolve;
+    });
+    let rendered = false;
+    const runner = createRunner({
+      stages,
+      runs: {
+        images: async (context) => {
+          if (context.work.stageId === "images-2") await pending;
+          return "done";
+        },
+        video: async () => {
+          rendered = true;
+          return "done";
+        },
+      },
+      emit: () => {},
+      emitRunningCount: () => {},
+      log,
+    });
+    runner.tick("p1");
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(rendered).toBe(false);
+    finishImage();
+    await runner.settled();
+    expect(rendered).toBe(true);
+  });
+});
+
+it("settles old work independently while changed current audio holds video and another project progresses", async () => {
+  const row = (projectId: string, kind: StageKind, revisionId = "r1"): RunnerStage => ({
+    id: `${projectId}-${kind}`,
+    projectId,
+    kind,
+    state: "pending",
+    work: {
+      projectId,
+      revisionId,
+      workId: `${projectId}-${kind}-${revisionId}`,
+      stageId: `${projectId}-${kind}`,
+      kind,
+      fingerprint: `${kind}-${revisionId}`,
+    },
+  });
+  const audio = row("p1", "audio");
+  const image = row("p1", "images");
+  const video = row("p1", "video");
+  const other = row("p2", "article");
+  const all = new Map([audio, image, video, other].map((value) => [value.work.workId, value]));
+  const current = new Set(all.keys());
+  const allowed = new Set(all.keys());
+  const events: ProjectEvent[] = [];
+  const counts: number[] = [];
+  const results: { workId: string; revisionId: string; current: boolean }[] = [];
+  let finishAudio = (): void => undefined;
+  let finishImage = (): void => undefined;
+  const audioWait = new Promise<void>((resolve) => {
+    finishAudio = resolve;
+  });
+  const imageWait = new Promise<void>((resolve) => {
+    finishImage = resolve;
+  });
+  let renders = 0;
+  const runner = createRunner({
+    stages: {
+      stagesOf: (id) =>
+        [...all.values()].filter(
+          (value) => value.projectId === id && current.has(value.work.workId),
+        ),
+      maySubmit: (work) => allowed.has(work.workId),
+      dependenciesOf: (_id, kind) => (kind === "video" ? ["audio", "images"] : []),
+      claim: (work) => {
+        const value = all.get(work.workId);
+        if (value?.state !== "pending" || !allowed.has(work.workId)) return false;
+        all.set(work.workId, { ...value, state: "running" });
+        return true;
+      },
+      finish: (work, state) => {
+        const value = all.get(work.workId);
+        if (value !== undefined) all.set(work.workId, { ...value, state });
+      },
+    },
+    runs: {
+      audio: async (context) => {
+        await audioWait;
+        expect(context.signal.aborted).toBe(false);
+        results.push({
+          workId: context.work.workId,
+          revisionId: context.work.revisionId,
+          current: current.has(context.work.workId),
+        });
+        return "done";
+      },
+      images: async (context) => {
+        await imageWait;
+        results.push({
+          workId: context.work.workId,
+          revisionId: context.work.revisionId,
+          current: current.has(context.work.workId),
+        });
+        if (current.has(context.work.workId))
+          context.emit({ type: "project.updated", projectId: "p1" });
+        return "done";
+      },
+      video: async () => {
+        renders += 1;
+        return "done";
+      },
+      article: async () => "done",
+    },
+    emit: (_id, event) => {
+      events.push(event);
+    },
+    emitRunningCount: (count) => {
+      counts.push(count);
+    },
+    log,
+  });
+  try {
+    runner.tick("p1");
+    expect(all.get(audio.work.workId)?.state).toBe("running");
+    expect(all.get(image.work.workId)?.state).toBe("running");
+    const replacement = row("p1", "audio", "r2");
+    all.set(replacement.work.workId, replacement);
+    current.delete(audio.work.workId);
+    allowed.delete(audio.work.workId);
+    current.add(replacement.work.workId);
+    runner.tick("p1");
+    runner.tick("p2");
+    await expect.poll(() => all.get(other.work.workId)?.state).toBe("done");
+    expect(all.get(audio.work.workId)?.state).toBe("running");
+    expect(all.get(image.work.workId)?.state).toBe("running");
+    finishImage();
+    await expect.poll(() => all.get(image.work.workId)?.state).toBe("done");
+    expect(results).toContainEqual({ workId: image.work.workId, revisionId: "r1", current: true });
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "project.updated",
+        projectId: "p1",
+        revisionId: "r1",
+        workId: image.work.workId,
+      }),
+    );
+    expect(renders).toBe(0);
+    finishAudio();
+    await runner.settled();
+    expect(results).toContainEqual({ workId: audio.work.workId, revisionId: "r1", current: false });
+    expect(all.get(replacement.work.workId)?.state).toBe("pending");
+    expect(
+      events.some(
+        (event) =>
+          event.type === "stage.state" &&
+          event.workId === replacement.work.workId &&
+          event.state === "done",
+      ),
+    ).toBe(false);
+    expect(renders).toBe(0);
+    expect(counts).toContain(2);
+    expect(counts.at(-1)).toBe(0);
+  } finally {
+    finishAudio();
+    finishImage();
+    await runner.settled();
+  }
 });

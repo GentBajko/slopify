@@ -34,6 +34,7 @@ import { updateRoutes } from "./update.js";
 import { usageRoutes } from "./usage.js";
 
 export interface AppDeps {
+  readonly measureAudio?: ((path: string, signal?: AbortSignal) => Promise<number>) | undefined;
   readonly openFolder?: (path: string) => Promise<void>;
   readonly catalogue?: CatalogueStore;
   readonly updater?: AppUpdater;

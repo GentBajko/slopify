@@ -15,11 +15,15 @@ const burstMs = 200;
 
 // The project page's subscription: patch what the frame carries, ask for what it cannot,
 // and refetch outright when the browser reconnects.
-export function useLiveProject(projectId: string): void {
+export function useLiveProject(projectId: string, revisionId: string | null = null): void {
   const { api, openEvents } = useApp();
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    queryClient.setQueryData(keys.article(projectId, revisionId), "");
+    queryClient.setQueryData(writingKey(projectId, revisionId), []);
+    const currentRevision = (): string | null =>
+      queryClient.getQueryData<ProjectBody>(keys.project(projectId))?.revisionId ?? null;
     const refetch = coalesce(() => {
       void queryClient.invalidateQueries({ queryKey: keys.project(projectId) });
       void queryClient.invalidateQueries({ queryKey: keys.projects });
@@ -27,20 +31,46 @@ export function useLiveProject(projectId: string): void {
 
     const unsubscribe = subscribeProject(openEvents, eventsUrl(api, `projects/${projectId}`), {
       refetch: refetch.ask,
+      accept: (event) => {
+        if (
+          event.type === "project.updated" ||
+          (event.type === "project.state" && event.revisionId === undefined)
+        )
+          return true;
+        if ((event.revisionId ?? null) === currentRevision()) return true;
+        refetch.ask();
+        return false;
+      },
       previewWriting: (event) => {
-        queryClient.setQueryData<readonly WritingPreview[]>(writingKey(projectId), (seen) =>
-          appendWriting(seen ?? [], event),
+        queryClient.setQueryData<readonly WritingPreview[]>(
+          writingKey(projectId, currentRevision()),
+          (seen) => appendWriting(seen ?? [], event),
         );
       },
       appendArticle: (text) => {
-        queryClient.setQueryData<string>(keys.article(projectId), (seen) => `${seen ?? ""}${text}`);
+        queryClient.setQueryData<string>(
+          keys.article(projectId, currentRevision()),
+          (seen) => `${seen ?? ""}${text}`,
+        );
       },
       patch: (event) => {
         if (event.type === "stage.state" && event.state === "running") {
-          queryClient.setQueryData<readonly WritingPreview[]>(writingKey(projectId), (seen) =>
-            (seen ?? []).filter((one) => one.stage !== event.stage),
+          queryClient.setQueryData<readonly WritingPreview[]>(
+            writingKey(projectId, currentRevision()),
+            (seen) =>
+              (seen ?? []).filter(
+                (one) =>
+                  one.stage !== event.stage ||
+                  one.workId !== event.workId ||
+                  one.revisionId !== event.revisionId,
+              ),
           );
-          if (event.stage === "article") queryClient.setQueryData(keys.article(projectId), "");
+          if (event.stage === "article")
+            queryClient.setQueryData(keys.article(projectId, currentRevision()), "");
+        }
+        if (event.type !== "project.state" && event.workId !== undefined) {
+          refetch.ask();
+          return;
         }
         queryClient.setQueryData<ProjectBody>(keys.project(projectId), (seen) =>
           patchProject(seen, event),
@@ -52,5 +82,5 @@ export function useLiveProject(projectId: string): void {
       unsubscribe();
       refetch.stop();
     };
-  }, [api, openEvents, queryClient, projectId]);
+  }, [api, openEvents, queryClient, projectId, revisionId]);
 }

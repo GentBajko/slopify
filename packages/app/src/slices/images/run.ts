@@ -12,6 +12,7 @@ import type { StageContext } from "../../kernel/runner/index.js";
 import type { StagePiece } from "../../kernel/runner/piece-repo.js";
 import { insertPiece, piecesOf, setPiece } from "../../kernel/runner/piece-repo.js";
 import type { StageProviders } from "../../kernel/runner/providers.js";
+import type { AttemptResult, StageRunResult } from "../../kernel/runner/work.js";
 import type { Format, ProviderChoice, RunConfig } from "../admission/model.js";
 import { projectById, setStageProgress } from "../admission/repo.js";
 import { outputFileName, outputPath } from "../storage/layout.js";
@@ -53,7 +54,7 @@ export async function runImages(
   deps: ImagesDeps,
   context: StageContext,
   providers: StageProviders,
-): Promise<void> {
+): Promise<StageRunResult> {
   const { projectId } = context.stage;
   const project = projectById(deps.db, projectId);
   if (project === undefined) {
@@ -74,8 +75,10 @@ export async function runImages(
   }
   // The run's own frame. The adapter turns it into whatever its provider spells the
   // closest supported size, and the render crops whatever is left over.
-  const made = await sendAll(deps, context, providers, choice, pieces, project.format);
+  const result = await sendAll(deps, context, providers, choice, pieces, project.format);
 
+  if (!result.ok) return "held";
+  const made = result.value;
   // Images made means images stored, and only the ones this run stored: a resume does not
   // count an image the previous run made, and a regenerated image counts again.
   //
@@ -93,6 +96,7 @@ export async function runImages(
     stage: "images",
     detail: `${String(pieces.length)} images from ${String(project.config.imagePrompts.length)} prompts`,
   });
+  return "done";
 }
 
 // For each ticked image prompt, its rendered text is sent Number times as independent
@@ -148,7 +152,7 @@ async function sendAll(
   choice: ProviderChoice,
   pieces: readonly StagePiece[],
   format: Format,
-): Promise<number> {
+): Promise<AttemptResult<number>> {
   const { projectId } = context.stage;
   // Read once, before anything is written: a piece counts as landed only when its row and
   // its file both survived, and the parallel sends below each add one of each.
@@ -165,12 +169,17 @@ async function sendAll(
       }
       setPiece(deps.db, piece.id, "running", piece.payload);
       try {
-        const made = await providers.forPiece(piece.id).image({
+        const result = await providers.forPiece(piece.id).image({
           provider: choice.provider,
           model: choice.model,
           prompt: asked.prompt,
           aspect: format,
         });
+        if (!result.ok) {
+          setPiece(deps.db, piece.id, "pending", piece.payload);
+          return result;
+        }
+        const made = result.value;
         const file = keep(deps, projectId, piece.idx, made);
         // The prompt text, the prompt name, the index within the prompt, the
         // provider and the model travel with the image.
@@ -195,16 +204,19 @@ async function sendAll(
   let made = 0;
   for (const outcome of outcomes) {
     if (!outcome.ok) {
+      if ("reason" in outcome) return outcome;
       throw outcome.error;
     }
     made += outcome.made ? 1 : 0;
   }
-  return made;
+  return { ok: true, value: made };
 }
 
 type Outcome =
   // `made` is false for an image a previous run had already stored and this one skipped.
-  { readonly ok: true; readonly made: boolean } | { readonly ok: false; readonly error: unknown };
+  | { readonly ok: true; readonly made: boolean }
+  | { readonly ok: false; readonly error: unknown }
+  | { readonly ok: false; readonly reason: "held" };
 
 // An image counts as landed only when its row and its file are both still there: they are
 // written one after the other, the boot reconcile can remove a file whose row survived,

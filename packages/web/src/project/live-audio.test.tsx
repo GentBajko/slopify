@@ -1,5 +1,6 @@
 import type { AudioPreview } from "@app/kernel/audio-preview.js";
 import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { jsonAnswer, problemAnswer, renderApp, testDeps } from "@/test-app";
 import { LiveAudio } from "./live-audio.js";
@@ -85,4 +86,40 @@ it("keeps a failed preview lookup separate from final narration availability", a
     testDeps({ "GET /api/projects/p1/audio-preview": problemAnswer("unavailable", 503) }),
   );
   expect(await screen.findByText(/Live preview is temporarily unavailable/)).not.toBeNull();
+});
+
+it("does not restore players from a delayed previous-revision response", async () => {
+  vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
+  vi.spyOn(HTMLMediaElement.prototype, "load").mockImplementation(() => {});
+  let release: (response: Response) => void = () => {};
+  const pending = new Promise<Response>((resolve) => {
+    release = resolve;
+  });
+  let calls = 0;
+  const get = () => {
+    calls++;
+    return calls === 1
+      ? pending
+      : Response.json({ revisionId: "r2", previews: [{ ...first, label: "Current" }] });
+  };
+  function Subject() {
+    const [revisionId, setRevision] = useState("r1");
+    return (
+      <>
+        <button type="button" onClick={() => setRevision("r2")}>
+          Save revision
+        </button>
+        <LiveAudio projectId="p1" revisionId={revisionId} />
+      </>
+    );
+  }
+  renderApp(<Subject />, testDeps({ "GET /api/projects/p1/audio-preview": get }));
+  await waitFor(() => expect(calls).toBe(1));
+  fireEvent.click(screen.getByText("Save revision"));
+  await screen.findByLabelText("Live Current narration");
+  await act(async () => {
+    release(Response.json({ revisionId: "r1", previews: [{ ...first, label: "Old" }] }));
+  });
+  expect(screen.queryByLabelText("Live Old narration")).toBeNull();
+  expect(screen.getByLabelText("Live Current narration")).not.toBeNull();
 });

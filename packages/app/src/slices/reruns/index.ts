@@ -17,6 +17,7 @@ import {
 import type { Stage, StageSource } from "../admission/model.js";
 import { projectById, resetStage, stagesOf } from "../admission/repo.js";
 import { storeArticleText } from "../article/store.js";
+import { currentRevisionId } from "../revisions/repo.js";
 import { outputPath } from "../storage/layout.js";
 import type { Output, OutputRole } from "../storage/model.js";
 import { pieceFile } from "../storage/reconcile.js";
@@ -31,6 +32,7 @@ import { redoPlan } from "./cascade.js";
 // a provider.
 
 export interface RerunDeps {
+  readonly measureAudio?: ((path: string, signal?: AbortSignal) => Promise<number>) | undefined;
   readonly db: DatabaseSync;
   readonly paths: Paths;
   readonly ids: Ids;
@@ -188,6 +190,8 @@ interface Standing {
 type Loaded = Standing | { readonly ok: false; readonly reason: RerunRefusal };
 
 function load(deps: RerunDeps, projectId: string): Loaded {
+  if (currentRevisionId(deps.db, projectId) !== undefined)
+    return { ok: false, reason: "not-rerunnable" };
   const project = projectById(deps.db, projectId);
   if (project === undefined) {
     return { ok: false, reason: "no-project" };
@@ -271,6 +275,8 @@ function clearStage(deps: RerunDeps, stage: Stage, outputs: readonly Output[]): 
 // The caller includes these row changes with the config update's transaction and
 // runs the returned cleanup only after commit. Finished narration is left intact.
 export function clearUnfinishedAudio(deps: RerunDeps, projectId: string): readonly (() => void)[] {
+  if (currentRevisionId(deps.db, projectId) !== undefined)
+    throw new Error("Versioned narration must be edited through revisions.");
   const stage = stagesOf(deps.db, projectId).find((one) => one.kind === "audio");
   if (
     stage === undefined ||

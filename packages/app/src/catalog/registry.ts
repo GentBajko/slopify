@@ -1,8 +1,7 @@
 import type { LlmEvent } from "../kernel/ports/llm.js";
 import { providerError } from "../kernel/ports/model.js";
 import type { Registry } from "../kernel/ports/registry.js";
-import { splitText } from "../kernel/ports/text.js";
-import type { TtsAudio, TtsRequest } from "../kernel/ports/tts.js";
+import type { TtsAudio } from "../kernel/ports/tts.js";
 import type { CatalogueStore } from "./store.js";
 
 export function curateRegistry(registry: Registry, catalogue: CatalogueStore): Registry {
@@ -54,7 +53,10 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
               message:
                 "This model does not support the selected thinking setting. Choose an available setting.",
             });
-          yield* port.complete({ ...request, ...(thinkingConfig ? { thinkingConfig } : {}) });
+          yield* port.complete({
+            ...request,
+            ...(request.thinkingConfig === undefined && thinkingConfig ? { thinkingConfig } : {}),
+          });
         },
       };
     },
@@ -80,90 +82,18 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
         ...port,
         models: async () => catalogue.models(id, "tts"),
         synthesize: async (request): Promise<TtsAudio> => {
+          // Retrieval resumes an already accepted job even if new submissions are disabled.
+          if (request.continuation?.read() !== undefined) return port.synthesize(request);
           const model = requireModel(id, "tts", request.model);
           if (!("tts" in model)) throw new Error("Invalid TTS catalogue entry");
-          const parts = splitText(request.text, model.tts.maxCharacters);
-          if (parts.length <= 1) return port.synthesize({ ...request, model: model.id });
-          const abort = new AbortController();
-          const signal = AbortSignal.any([request.signal, abort.signal]);
-          const iterator = audioParts(
-            parts,
-            { ...request, model: model.id, signal },
-            port.synthesize,
-          );
-          return {
-            container: "mp3",
-            audio: new ReadableStream<Uint8Array>(
-              {
-                async pull(controller) {
-                  try {
-                    const next = await iterator.next();
-                    if (next.done) controller.close();
-                    else controller.enqueue(next.value);
-                  } catch (error) {
-                    controller.error(error);
-                  }
-                },
-                async cancel() {
-                  abort.abort();
-                  await iterator.return();
-                },
-              },
-              { highWaterMark: 0 },
-            ),
-          };
+          if (request.text.length > model.tts.maxCharacters)
+            throw providerError({
+              kind: "unsupported",
+              message: `${id}: this physical narration request exceeds the current ${model.tts.maxCharacters}-character limit. Rebuild narration to split it using the new limit.`,
+            });
+          return port.synthesize({ ...request, model: model.id });
         },
       };
     },
   };
-}
-async function* audioParts(
-  parts: readonly string[],
-  request: TtsRequest,
-  synthesize: (request: TtsRequest) => Promise<TtsAudio>,
-): AsyncGenerator<Uint8Array, void> {
-  let tokens: Record<string, string> = {};
-  const saved = request.continuation?.read();
-  if (saved) {
-    try {
-      const parsed: unknown = JSON.parse(saved);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
-        tokens = Object.fromEntries(
-          Object.entries(parsed).filter(
-            (entry): entry is [string, string] => typeof entry[1] === "string",
-          ),
-        );
-    } catch {
-      /* A legacy single-job token cannot identify several split jobs. */
-    }
-  }
-  for (const [index, text] of parts.entries()) {
-    request.signal.throwIfAborted();
-    // Body chunks are persisted individually by narration. Long intro/outro text
-    // is bounded here as well; each split has its own remote continuation.
-
-    const response = await synthesize({
-      ...request,
-      text,
-      continuation: {
-        read: () => tokens[String(index)],
-        write: (value) => {
-          tokens[String(index)] = value;
-          request.continuation?.write(JSON.stringify(tokens));
-        },
-      },
-    });
-    const reader = response.audio.getReader();
-    try {
-      for (;;) {
-        const next = await reader.read();
-        request.signal.throwIfAborted();
-        if (next.done) break;
-        yield next.value;
-      }
-    } finally {
-      await reader.cancel().catch(() => {});
-      reader.releaseLock();
-    }
-  }
 }

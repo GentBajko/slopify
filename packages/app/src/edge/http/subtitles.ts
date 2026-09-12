@@ -11,6 +11,11 @@ import {
 } from "../../slices/admission/repo.js";
 import { withProjectControl } from "../../slices/control/lock.js";
 import { resolveFont } from "../../slices/fonts/index.js";
+import { projectStandings } from "../../slices/rebuild/runtime-store.js";
+import { adoptBaseline } from "../../slices/revisions/adopt.js";
+import { saveRevision } from "../../slices/revisions/mutations.js";
+import { currentRevisionId } from "../../slices/revisions/repo.js";
+import { getRevisionView } from "../../slices/revisions/view.js";
 import { outputsOf } from "../../slices/storage/repo.js";
 import { subtitleConfigSchema } from "../../slices/subtitles/model.js";
 import type { AppDeps } from "./app.js";
@@ -78,6 +83,44 @@ export function subtitleRoutes(deps: AppDeps) {
             status: 409,
             title: titleOf(409),
             detail: "Pause the run before changing subtitles.",
+          });
+        }
+        if (deps.catalogue !== undefined) adoptBaseline(deps, id);
+        const revisionId = currentRevisionId(deps.db, id);
+        if (revisionId !== undefined) {
+          const view = getRevisionView(deps, id, revisionId);
+          if (view === undefined)
+            return problem(c, {
+              status: 404,
+              title: titleOf(404),
+              detail: "The saved revision is missing.",
+            });
+          const saved = await saveRevision(deps, {
+            projectId: id,
+            baseRevisionId: revisionId,
+            idempotencyKey: deps.ids.next(),
+            edit: {
+              config: { ...view.revision.config, subtitles },
+              content: view.revision.content,
+            },
+          });
+          if (!saved.ok)
+            return problem(c, {
+              status: 409,
+              title: titleOf(409),
+              detail: "The project changed. Refresh before saving subtitles.",
+            });
+          projectStandings(deps, id);
+          deps.hub.emit(id, { type: "project.updated", projectId: id });
+          const current = stagesOf(deps.db, id);
+          return c.json({
+            revisionId: saved.view.revision.id,
+            project: {
+              ...projectById(deps.db, id),
+              status: derive(current, project.paused === true),
+            },
+            stages: current,
+            outputs: outputsOf(deps.db, id),
           });
         }
         const video = stages.find((stage) => stage.kind === "video");

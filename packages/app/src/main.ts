@@ -13,6 +13,7 @@ import { nodeRunCli } from "./adapters/llm/run-cli.js";
 import { curateRegistry } from "./catalog/registry.js";
 import { type CatalogueStore, createCatalogueStore } from "./catalog/store.js";
 import { createHub } from "./edge/events/hub.js";
+import { currentProjectEvent } from "./edge/events/visibility.js";
 import { createApp } from "./edge/http/app.js";
 import { openFolder } from "./edge/open-folder.js";
 import type { AudioPreviewStore } from "./kernel/audio-preview.js";
@@ -31,7 +32,6 @@ import type { Paths } from "./kernel/paths.js";
 import { ensureDirs, layout } from "./kernel/paths.js";
 import type { Registry } from "./kernel/ports/registry.js";
 import { sqliteAttempts } from "./kernel/runner/attempt-repo.js";
-import { dependenciesOf } from "./kernel/runner/graph.js";
 import type { Runner } from "./kernel/runner/index.js";
 import { createRunner } from "./kernel/runner/index.js";
 import type { ProviderDeps } from "./kernel/runner/providers.js";
@@ -39,19 +39,18 @@ import { stageProviders } from "./kernel/runner/providers.js";
 import { createProviderQueue } from "./kernel/runner/queue.js";
 import { readVersion } from "./kernel/version.js";
 import { modelSources } from "./model-catalog.js";
-import {
-  claimStage,
-  finishStage,
-  projectById,
-  projectPaused,
-  stagesOf,
-} from "./slices/admission/repo.js";
-import { prepareProvidedArticleSegments } from "./slices/article/provided-entries.js";
-import { runArticle } from "./slices/article/run.js";
+import { projectPaused } from "./slices/admission/repo.js";
 import { pumpQueue, queueWaiting } from "./slices/batch/index.js";
-import { runImages } from "./slices/images/run.js";
-import { runNarration } from "./slices/narration/run.js";
-import { runResearch } from "./slices/research/run.js";
+import { claimWork, finishWork, maySubmit, recoverWork } from "./slices/rebuild/repo.js";
+import { materializeAdmittedWork } from "./slices/rebuild/runtime-materialize.js";
+import { runRevisionInvocation } from "./slices/rebuild/runtime-run.js";
+import {
+  executionStages,
+  executionStandings,
+  invocationReady,
+  projectStandings,
+  recordWorkProgress,
+} from "./slices/rebuild/runtime-store.js";
 import { nodeCliProbe } from "./slices/settings/cli-status.js";
 import { reconcileStorage } from "./slices/storage/reconcile.js";
 import { collectorEndpoint, httpPostEvents } from "./slices/telemetry/collector-client.js";
@@ -60,8 +59,8 @@ import { createFlusher } from "./slices/telemetry/flush.js";
 import type { RecordEvent } from "./slices/telemetry/model.js";
 import type { TelemetryDeps } from "./slices/telemetry/record.js";
 import { record } from "./slices/telemetry/record.js";
-import { runThumbnail } from "./slices/thumbnail/run.js";
-import { renderVideo } from "./slices/video/run.js";
+import { probeDurationMs } from "./slices/video/ffmpeg.js";
+
 import { watchActivation } from "./updater/candidate.js";
 import { launchUpdate } from "./updater/install.js";
 import { isUpdateToken } from "./updater/model.js";
@@ -98,12 +97,18 @@ export async function boot(config: Config): Promise<Boot> {
     db = openDb(paths.db);
     migrate(db, clock);
     const interrupted = markInterruptedStages(db, clock);
+    recoverWork(db);
     const reconciled = reconcileStorage(db, paths);
     const log = openLog(paths.logs, clock);
     log.write("info", "boot", {
       detail: `interrupted stages ${interrupted}, orphan files ${reconciled.orphanFiles}, staged files ${reconciled.stagedFiles}`,
     });
-    const hub = createHub({ ids, log });
+    const eventDb = db;
+    const hub = createHub({
+      ids,
+      log,
+      acceptEvent: (event) => currentProjectEvent(eventDb, event),
+    });
     const version = readVersion();
     const telemetry: TelemetryDeps = { db, ids, clock, log, appVersion: version };
     const flusher = createFlusher(
@@ -127,7 +132,7 @@ export async function boot(config: Config): Promise<Boot> {
       catalogue,
     );
     const audioPreviews = createAudioPreviewStore();
-    const runner = wire({
+    const runner = wireRunner({
       db,
       paths,
       clock,
@@ -210,6 +215,8 @@ export async function boot(config: Config): Promise<Boot> {
       },
     });
     const app = createApp({
+      measureAudio: (path, signal) =>
+        probeDurationMs(ffmpeg, path, signal ?? AbortSignal.timeout(30_000), log),
       openFolder,
       db,
       paths,
@@ -300,7 +307,7 @@ interface Wiring {
   readonly catalogue: CatalogueStore;
 }
 
-function wire({
+export function wireRunner({
   audioPreviews,
   db,
   paths,
@@ -321,12 +328,7 @@ function wire({
     record(telemetry, type, counters);
     flusher.soon();
   };
-  // The audio stage joins its chunks with the same binary the render uses, so it takes
-  // the same seven dependencies.
-  const video = { db, paths, ids, clock, log, ffmpeg, count, alignSubtitles };
-  // Research, the article, the images and the thumbnail all write into the same project
-  // folder from the same database handle, so they take the same six dependencies.
-  const writing = { db, paths, ids, clock, log, count };
+  const execution = { db, paths, ids, clock, log, ffmpeg, alignSubtitles, audioPreviews, count };
   // A stage slice is handed the wrapped calls, never the registry: every provider call
   // it makes is already inside the retry policy (kernel/runner/providers.ts).
   const providers: ProviderDeps = {
@@ -340,46 +342,39 @@ function wire({
   };
   return createRunner({
     stages: {
-      stagesOf: (projectId) => stagesOf(db, projectId),
+      stagesOf: (projectId) => {
+        materializeAdmittedWork(execution, projectId);
+        projectStandings(execution, projectId);
+        return executionStages(execution, projectId);
+      },
+      standingsOf: (projectId) => executionStandings(execution, projectId),
+      ready: (work) => invocationReady(execution, work),
       paused: (projectId) => projectPaused(db, projectId) || queueWaiting(db, projectId),
-      dependenciesOf: (projectId, kind) => {
-        const project = projectById(db, projectId);
-        return project === undefined ? [] : dependenciesOf(kind, project.config.sources);
+      claim: (work) => {
+        const claimed = claimWork(db, work);
+        projectStandings(execution, work.projectId);
+        return claimed;
       },
-      claim: (stageId) => claimStage(db, stageId, clock.now().toISOString()),
-      finish: (stageId, state, failureReason) =>
-        finishStage(db, stageId, state, failureReason, clock.now().toISOString()),
-    },
-    // Only the stages that exist. A pending stage with no entry here fails loudly with
-    // that sentence rather than waiting for a runner that will never call it.
-    runs: {
-      research: (context) => runResearch(writing, context, stageProviders(providers, context)),
-      article: (context) => runArticle(writing, context, stageProviders(providers, context)),
-      audio: async (context) => {
-        const wrapped = stageProviders(providers, context);
-        await prepareProvidedArticleSegments(writing, context, wrapped);
-        await runNarration(
-          {
-            ...video,
-            audioPreviews,
-            maxCharacters: (provider, model) => {
-              const entry = catalogue.models(provider, "tts").find((m) => m.id === model);
-              return entry && "tts" in entry ? entry.tts.maxCharacters : 4000;
-            },
-          },
-          context,
-          wrapped,
-        );
+      maySubmit: (work, pieceId) => maySubmit(db, work, pieceId),
+      finish: (work, state, reason) => {
+        finishWork(db, work, state, reason);
+        materializeAdmittedWork(execution, work.projectId);
+        projectStandings(execution, work.projectId);
       },
-      images: (context) => runImages(writing, context, stageProviders(providers, context)),
-      thumbnail: (context) => runThumbnail(writing, context, stageProviders(providers, context)),
-      video: (context) => renderVideo(video, context),
     },
+    runs: Object.fromEntries(
+      ["research", "article", "audio", "images", "thumbnail", "video"].map((kind) => [
+        kind,
+        (context: import("./kernel/runner/index.js").StageContext) =>
+          runRevisionInvocation(execution, context, stageProviders(providers, context)),
+      ]),
+    ),
     // Counting is finer than a stage reaching `done` - each intro and outro text, each
     // narrated segment - and the counters are provider names, token usage and durations
     // only the stage slice ever sees. Each slice records its own units through `count`
     // above, and the runner counts nothing: the kernel may not import a slice.
     emit: (projectId, event) => {
+      if (event.type === "stage.progress") recordWorkProgress(execution, event);
       hub.emit(projectId, event);
     },
     emitRunningCount: (running) => {

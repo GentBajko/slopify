@@ -3,13 +3,14 @@ import type { Clock } from "../clock.js";
 import type { Log } from "../log.js";
 import type { Format } from "../pipeline.js";
 import type { GeneratedImage } from "../ports/image.js";
-import type { LlmEvent, Message, Usage } from "../ports/llm.js";
+import type { LlmEvent, Message, ThinkingConfig, Usage } from "../ports/llm.js";
 import type { Registry } from "../ports/registry.js";
 import type { AttemptContext } from "./attempt.js";
 import { attempt } from "./attempt.js";
 import type { AttemptStore } from "./attempt-repo.js";
 import type { StageContext } from "./index.js";
 import type { ProviderQueue } from "./queue.js";
+import type { AttemptResult } from "./work.js";
 
 // What a stage slice is handed instead of a port. Every method is already inside the
 // attempt wrapper and none hands back an adapter, so a slice cannot reach a provider
@@ -22,6 +23,7 @@ export interface LlmAnswer {
 }
 
 export interface LlmCall {
+  readonly thinkingConfig?: ThinkingConfig | null | undefined;
   readonly thinking?: import("../ports/llm.js").ThinkingMode | undefined;
   readonly provider: string;
   readonly model: string;
@@ -61,11 +63,14 @@ export interface ImageCall {
 export interface StageProviders {
   // `onEvent` sees the deltas of the attempt in flight. A retry starts the
   // answer again; the text returned is only ever the successful attempt's.
-  readonly llm: (call: LlmCall, onEvent?: (event: LlmEvent) => void) => Promise<LlmAnswer>;
+  readonly llm: (
+    call: LlmCall,
+    onEvent?: (event: LlmEvent) => void,
+  ) => Promise<AttemptResult<LlmAnswer>>;
   // Durable narration keeps only a successful complete attempt. The optional
   // observer copies preview bytes and resets on every retry.
-  readonly tts: (call: TtsCall, observe?: ObserveTts) => Promise<NarratedAudio>;
-  readonly image: (call: ImageCall) => Promise<GeneratedImage>;
+  readonly tts: (call: TtsCall, observe?: ObserveTts) => Promise<AttemptResult<NarratedAudio>>;
+  readonly image: (call: ImageCall) => Promise<AttemptResult<GeneratedImage>>;
   // The same calls, recorded against one resumable piece.
   readonly forPiece: (pieceId: string) => StageProviders;
 }
@@ -84,6 +89,9 @@ export function stageProviders(
   pieceId?: string,
 ): StageProviders {
   const ctx: AttemptContext = {
+    work: context.work,
+    maySubmit: () => context.maySubmit(pieceId),
+    ...(pieceId === undefined ? {} : { workPieceId: pieceId }),
     clock: deps.clock,
     log: deps.log,
     attempts: deps.attempts,
@@ -97,7 +105,10 @@ export function stageProviders(
   const schedule = <T>(provider: string, work: () => Promise<T>): Promise<T> =>
     deps.queue ? deps.queue.run(provider, context.signal, work) : work();
   return {
-    llm: (call: LlmCall, onEvent?: (event: LlmEvent) => void): Promise<LlmAnswer> => {
+    llm: (
+      call: LlmCall,
+      onEvent?: (event: LlmEvent) => void,
+    ): Promise<AttemptResult<LlmAnswer>> => {
       // Resolved once; the adapter reads the stored key per request, so a key replaced
       // mid-run still reaches the next attempt.
       const port = deps.registry.llm(call.provider);
@@ -105,6 +116,7 @@ export function stageProviders(
       const preview = (text: string, reset?: boolean): void =>
         context.emit({
           type: "llm.preview",
+          ...(pieceId === undefined ? {} : { workPieceId: pieceId }),
           projectId: context.stage.projectId,
           stage: context.stage.kind,
           callId,
@@ -122,6 +134,7 @@ export function stageProviders(
             let finishReason: string | null = null;
             for await (const event of port.complete({
               model: call.model,
+              ...(call.thinkingConfig === undefined ? {} : { thinkingConfig: call.thinkingConfig }),
               ...(call.thinking === undefined ? {} : { thinking: call.thinking }),
               messages: call.messages,
               ...(call.webSearch === undefined ? {} : { webSearch: call.webSearch }),
@@ -152,9 +165,20 @@ export function stageProviders(
       );
     },
 
-    tts: (call: TtsCall, observe?: ObserveTts): Promise<NarratedAudio> => {
+    tts: (call: TtsCall, observe?: ObserveTts): Promise<AttemptResult<NarratedAudio>> => {
       const port = deps.registry.tts(call.provider);
-      let continuation: string | undefined;
+      let transientContinuation: string | undefined;
+      const continuation = {
+        read: (): string | undefined =>
+          pieceId === undefined
+            ? transientContinuation
+            : (deps.attempts.readContinuation?.(context.work, pieceId) ?? transientContinuation),
+        write: (token: string): void => {
+          if (pieceId !== undefined)
+            deps.attempts.writeContinuation?.(context.work, pieceId, token);
+          transientContinuation = token;
+        },
+      };
       const notify = (event: TtsStreamEvent): void => {
         try {
           observe?.(event);
@@ -169,7 +193,7 @@ export function stageProviders(
       };
       return schedule(call.provider, () =>
         attempt(
-          ctx,
+          { ...ctx, continuation },
           async (signal: AbortSignal, progress: () => void): Promise<NarratedAudio> => {
             notify({ type: "start" });
             try {
@@ -180,12 +204,7 @@ export function stageProviders(
                 text: call.text,
                 signal,
                 onActivity: progress,
-                continuation: {
-                  read: () => continuation,
-                  write: (token: string): void => {
-                    continuation = token;
-                  },
-                },
+                continuation,
               });
               const reader = spoken.audio.getReader();
               const chunks: Uint8Array[] = [];
@@ -221,7 +240,7 @@ export function stageProviders(
       );
     },
 
-    image: (call: ImageCall): Promise<GeneratedImage> => {
+    image: (call: ImageCall): Promise<AttemptResult<GeneratedImage>> => {
       const port = deps.registry.image(call.provider);
       return schedule(call.provider, () =>
         attempt(

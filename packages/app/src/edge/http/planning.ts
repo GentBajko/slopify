@@ -52,7 +52,12 @@ export function planningRoutes(deps: AppDeps) {
         ...f,
         message: `${drafts.length > 1 ? `Video ${index + 1}: ` : ""}${f.message}`,
       }));
-      return { draft: accepted, rendered: renderPicked(picked, accepted.values), fields };
+      return {
+        draft: accepted,
+        rendered: renderPicked(picked, accepted.values),
+        templates: Object.fromEntries(picked.bodies.map(({ key, body }) => [key, body])),
+        fields,
+      };
     });
   };
   return new Hono()

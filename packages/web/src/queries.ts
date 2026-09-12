@@ -19,7 +19,10 @@ export const keys = {
   projects: ["projects"] as const,
   project: (id: string) => ["project", id] as const,
   // The text `article.delta` appends to. It is patched, never fetched.
-  article: (id: string) => ["project", id, "article"] as const,
+  article: (id: string, revisionId: string | null = null) =>
+    ["project", id, "article", revisionId] as const,
+  audioPreview: (id: string, revisionId: string | null) =>
+    ["audio-preview", id, revisionId] as const,
   // One of a project's own files, read as text. The output's id is in the key rather than
   // its asset name because a re-run replaces an output rather than versioning it: an edited
   // article is a new row, so the key changes and the new text is fetched without anything

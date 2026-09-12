@@ -38,7 +38,11 @@ export function batchExists(db: DatabaseSync, id: string): boolean {
 export function enqueueBatch(
   deps: StorageDeps,
   batchId: string,
-  runs: readonly { draft: RunDraft; rendered: Readonly<Record<string, string>> }[],
+  runs: readonly {
+    draft: RunDraft;
+    rendered: Readonly<Record<string, string>>;
+    templates?: Readonly<Record<string, string>>;
+  }[],
 ): QueueEntry[] {
   if (batchExists(deps.db, batchId)) return queueEntries(deps.db, batchId);
   const sources = new Set<string>();
@@ -47,8 +51,8 @@ export function enqueueBatch(
       .prepare("INSERT INTO batches(id, created_at) VALUES (?, ?)")
       .run(batchId, deps.clock.now().toISOString());
     const used = new Set<string>();
-    for (const { draft, rendered } of runs) {
-      const { project } = startRun(deps, draft, rendered, true);
+    for (const { draft, rendered, templates } of runs) {
+      const { project } = startRun(deps, draft, rendered, true, templates);
       deps.db
         .prepare("INSERT INTO project_queue(project_id, batch_id) VALUES (?, ?)")
         .run(project.id, batchId);

@@ -53,6 +53,7 @@ describe("sqliteAttempts", () => {
       },
     ]);
 
+    if (typeof id !== "string") throw new Error("Unexpected revision attempt");
     store.end(id, {
       outcome: "rate_limit",
       endedAt: "2026-09-02T10:00:02.000Z",

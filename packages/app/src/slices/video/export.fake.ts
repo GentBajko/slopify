@@ -100,7 +100,29 @@ export function exportFixture(video: "generate" | "off", audio: "provide" | "off
     output("image", path, 1);
   };
   const context = (signal = new AbortController().signal): StageContext => ({
-    stage: { id: "s-video", projectId: "p1", kind: "video", state: "running" },
+    stage: {
+      id: "s-video",
+      projectId: "p1",
+      kind: "video",
+      state: "running",
+      work: {
+        projectId: "p1",
+        stageId: "s-video",
+        kind: "video",
+        revisionId: "r1",
+        workId: "s-video" + "-r1",
+        fingerprint: "video",
+      },
+    },
+    work: {
+      projectId: "p1",
+      stageId: "s-video",
+      kind: "video",
+      revisionId: "r1",
+      workId: "s-video" + "-r1",
+      fingerprint: "video",
+    },
+    maySubmit: () => true,
     signal,
     emit: () => {},
   });

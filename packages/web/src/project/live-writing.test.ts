@@ -29,3 +29,12 @@ describe("live writing", () => {
     );
   });
 });
+
+it("preserves origin before reducing text and isolates reused call IDs", () => {
+  const old = appendWriting([], { ...event, revisionId: "r1", workId: "w1", text: "Old" });
+  const current = appendWriting(old, { ...event, revisionId: "r2", workId: "w2", text: "New" });
+  expect(current).toMatchObject([
+    { revisionId: "r1", workId: "w1", text: "Old" },
+    { revisionId: "r2", workId: "w2", text: "New" },
+  ]);
+});

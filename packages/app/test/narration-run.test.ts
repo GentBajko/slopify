@@ -20,7 +20,7 @@ import type { Paths } from "../src/kernel/paths.js";
 import { ensureDirs, layout } from "../src/kernel/paths.js";
 import type { Registry } from "../src/kernel/ports/registry.js";
 import type { TtsPort } from "../src/kernel/ports/tts.js";
-import { attemptsOf, sqliteAttempts } from "../src/kernel/runner/attempt-repo.js";
+import { attemptsOf } from "../src/kernel/runner/attempt-repo.js";
 import type { StageContext } from "../src/kernel/runner/index.js";
 import { piecesOf } from "../src/kernel/runner/piece-repo.js";
 import { stageProviders } from "../src/kernel/runner/providers.js";
@@ -29,6 +29,7 @@ import type { RecordEvent } from "../src/slices/telemetry/model.js";
 import type { Counted } from "../src/slices/telemetry/record.fake.js";
 import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 import { probeDurationMs, resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
+import { legacyAttempts, legacyStage } from "./legacy-runner.js";
 
 // The audio stage against the real attempt wrapper and the real bundled ffmpeg, which is what
 // `slices/narration/*.test.ts` cannot show: a slice may not reach a registry or an adapter, and
@@ -220,7 +221,15 @@ function harness(options: HarnessOptions = {}): Harness {
     counted,
     deps: { db, paths, ids, clock, log: silent, ffmpeg, count: counted.count },
     context: {
-      stage: { id: audioStage, projectId: "p1", kind: "audio", state: "running" },
+      ...(() => {
+        const stage = legacyStage({
+          id: audioStage,
+          projectId: "p1",
+          kind: "audio",
+          state: "running",
+        });
+        return { stage, work: stage.work, maySubmit: () => true };
+      })(),
       signal: new AbortController().signal,
       emit: (event: ProjectEvent): void => {
         events.push(event);
@@ -247,14 +256,17 @@ function speaking(): FakeTts {
   return fakeTts({ bytesFor: (req) => [tones(req.text)] });
 }
 
-function run(h: Harness, tts: TtsPort): Promise<void> {
+function run(
+  h: Harness,
+  tts: TtsPort,
+): Promise<import("../src/kernel/runner/work.js").StageRunResult> {
   return runNarration(
     h.deps,
     h.context,
     stageProviders(
       {
         registry: registry(tts),
-        attempts: sqliteAttempts(h.db, h.deps.ids),
+        attempts: legacyAttempts(h.db, h.deps.ids),
         clock: h.deps.clock,
         log: silent,
       },
@@ -498,7 +510,7 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
       stageProviders(
         {
           registry: registry(working),
-          attempts: sqliteAttempts(h.db, h.deps.ids),
+          attempts: legacyAttempts(h.db, h.deps.ids),
           clock: systemClock,
           log: silent,
         },
@@ -576,7 +588,7 @@ it.each(["whole", "paragraph"] as const)(
         stageProviders(
           {
             registry: registry(tts),
-            attempts: sqliteAttempts(h.db, h.deps.ids),
+            attempts: legacyAttempts(h.db, h.deps.ids),
             clock: h.deps.clock,
             log: silent,
           },

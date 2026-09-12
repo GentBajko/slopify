@@ -105,17 +105,60 @@ describe("Inworld narration", () => {
     expect(h.fetch.mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(1);
   });
 
-  it("keeps Flash on the streaming endpoint and preserves long text", async () => {
-    const h = setup([streamed(), streamed(), streamed()]);
-    const text = "A whole sentence. ".repeat(500).trim();
-    await h.speak({ text, model: "inworld-tts-2-flash" });
-    const parts = h.fetch.mock.calls.map(
-      ([, init]) => JSON.parse(String(init?.body)).text as string,
-    );
-    expect(parts.every((part) => part.length <= 4000)).toBe(true);
-    expect(parts.join(" ")).toBe(text);
-    expect(h.fetch.mock.calls.every(([url]) => String(url).endsWith(":stream"))).toBe(true);
+  it("rejects oversized Flash input before any streaming POST", async () => {
+    const h = setup([]);
+    await expect(
+      h.speak({ text: "a".repeat(4001), model: "inworld-tts-2-flash" }),
+    ).rejects.toMatchObject({ fault: { kind: "unsupported" } });
+    expect(h.fetch).not.toHaveBeenCalled();
   });
+
+  it("submits one exact physical text without whitespace normalization", async () => {
+    const h = setup([streamed()]);
+    const text = "  First sentence.\r\nSecond sentence.  ";
+    expect(await h.speak({ text, model: "inworld-tts-2-flash" })).toEqual(mp3);
+    expect(h.fetch).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(h.fetch.mock.calls[0]?.[1]?.body)).text).toBe(text);
+  });
+
+  it.each(["", "invalid-operation"])(
+    "rejects saved token %j without a replacement POST",
+    async (token) => {
+      const h = setup([]);
+      await expect(
+        h.speak({ continuation: { read: () => token, write: () => {} } }),
+      ).rejects.toThrow(/operation/);
+      expect(h.fetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it("retrieves a saved job without applying new submission size limits", async () => {
+    const h = setup([
+      Response.json({
+        name,
+        done: true,
+        response: { audioUri: "https://storage.googleapis.com/audio.mp3" },
+      }),
+      new Response(mp3),
+    ]);
+    expect(
+      await h.speak({
+        text: "a".repeat(100001),
+        continuation: { read: () => name, write: () => {} },
+      }),
+    ).toEqual(mp3);
+    expect(h.fetch.mock.calls[0]?.[0]).toBe(`https://api.inworld.ai/lro/v1alpha/${name}`);
+    expect(h.fetch.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+  });
+
+  it.each(["", " ".repeat(4001)])(
+    "rejects blank physical narration before submitting",
+    async (text) => {
+      const h = setup([]);
+      await expect(h.speak({ text })).rejects.toMatchObject({ fault: { kind: "unsupported" } });
+      expect(h.fetch).not.toHaveBeenCalled();
+    },
+  );
 
   it("rejects over-limit async input before submitting", async () => {
     const h = setup([]);

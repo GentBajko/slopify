@@ -13,7 +13,7 @@ import type { StageKind, StageState } from "../src/kernel/pipeline.js";
 import { stageKinds } from "../src/kernel/pipeline.js";
 import type { GeneratedImage, ImagePort, ImageRequest } from "../src/kernel/ports/image.js";
 import type { Registry } from "../src/kernel/ports/registry.js";
-import { attemptsOf, sqliteAttempts } from "../src/kernel/runner/attempt-repo.js";
+import { attemptsOf } from "../src/kernel/runner/attempt-repo.js";
 import { derive } from "../src/kernel/runner/graph.js";
 import type { Runner, StageRun } from "../src/kernel/runner/index.js";
 import { createRunner } from "../src/kernel/runner/index.js";
@@ -26,6 +26,7 @@ import { retryStage } from "../src/slices/reruns/index.js";
 import { outputsOf } from "../src/slices/storage/repo.js";
 import type { Counted } from "../src/slices/telemetry/record.fake.js";
 import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
+import { legacyAttempts, legacyStage } from "./legacy-runner.js";
 
 // Cancel through the real runner and the real images stage: what it aborts, what it keeps,
 // and what a retry afterwards has left to do. No provider is called - the image port below
@@ -118,22 +119,24 @@ function harness(images: number, port: ImagePort): Harness {
   };
   const providers = {
     registry,
-    attempts: sqliteAttempts(db, ids),
+    attempts: legacyAttempts(db, ids),
     clock: systemClock,
     log: silent,
   };
   const counted = recordingCounter();
   const writing = { db, paths, ids, clock: systemClock, log: silent, count: counted.count };
   let videoRuns = 0;
-  const video: StageRun = async (): Promise<void> => {
+  const video: StageRun = async () => {
     videoRuns += 1;
+    return "done";
   };
   const runner = createRunner({
     stages: {
-      stagesOf: (id) => stagesOf(db, id),
-      claim: (stageId) => claimStage(db, stageId, systemClock.now().toISOString()),
-      finish: (stageId, state, failureReason) =>
-        finishStage(db, stageId, state, failureReason, systemClock.now().toISOString()),
+      stagesOf: (id) => stagesOf(db, id).map(legacyStage),
+      maySubmit: () => true,
+      claim: (work) => claimStage(db, work.stageId, systemClock.now().toISOString()),
+      finish: (work, state, failureReason) =>
+        finishStage(db, work.stageId, state, failureReason, systemClock.now().toISOString()),
     },
     runs: {
       images: (context) => runImages(writing, context, stageProviders(providers, context)),

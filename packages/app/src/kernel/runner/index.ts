@@ -2,8 +2,10 @@ import type { EmitProject, ProjectEvent } from "../events.js";
 import type { Log } from "../log.js";
 import type { ProjectState, StageKind, StageState } from "../pipeline.js";
 import { derive, deps as graph, satisfied } from "./graph.js";
+import type { StageRunResult, WorkRef } from "./work.js";
 
 export interface RunnerStage {
+  readonly work: WorkRef;
   readonly id: string;
   readonly projectId: string;
   readonly kind: StageKind;
@@ -11,22 +13,27 @@ export interface RunnerStage {
 }
 
 export interface StageStore {
+  readonly maySubmit: (work: WorkRef, pieceId?: string) => boolean;
   readonly stagesOf: (projectId: string) => readonly RunnerStage[];
+  readonly standingsOf?: (projectId: string) => readonly Pick<RunnerStage, "kind" | "state">[];
+  readonly ready?: (work: WorkRef) => boolean;
   // One statement, `pending` → `running`, false if the row moved on. A stage starts once.
-  readonly claim: (stageId: string) => boolean;
-  readonly finish: (stageId: string, state: StageState, failureReason: string | null) => void;
+  readonly claim: (work: WorkRef) => boolean;
+  readonly finish: (work: WorkRef, state: StageState, failureReason: string | null) => void;
   readonly paused?: (projectId: string) => boolean;
   readonly dependenciesOf?: (projectId: string, kind: StageKind) => readonly StageKind[];
 }
 
 export interface StageContext {
+  readonly work: WorkRef;
+  readonly maySubmit: (pieceId?: string) => boolean;
   readonly stage: RunnerStage;
   readonly signal: AbortSignal;
   readonly emit: EmitProject;
 }
 
 // A stage implementation. main.ts hands the slices in; kernel may not import them.
-export type StageRun = (context: StageContext) => Promise<void>;
+export type StageRun = (context: StageContext) => Promise<StageRunResult>;
 
 export interface RunnerDeps {
   readonly stages: StageStore;
@@ -46,6 +53,7 @@ export interface Runner {
 }
 
 interface Inflight {
+  readonly work: WorkRef;
   readonly projectId: string;
   readonly controller: AbortController;
   readonly settled: Promise<void>;
@@ -70,6 +78,8 @@ export function createRunner(deps: RunnerDeps): Runner {
   const emitStage = (stage: RunnerStage, state: StageState, reason: string | null): void => {
     deps.emit(stage.projectId, {
       type: "stage.state",
+      revisionId: stage.work.revisionId,
+      workId: stage.work.workId,
       projectId: stage.projectId,
       stage: stage.kind,
       state,
@@ -91,7 +101,10 @@ export function createRunner(deps: RunnerDeps): Runner {
   };
 
   const announce = (projectId: string): void => {
-    const state = derive(deps.stages.stagesOf(projectId), deps.stages.paused?.(projectId));
+    const state = derive(
+      deps.stages.standingsOf?.(projectId) ?? deps.stages.stagesOf(projectId),
+      deps.stages.paused?.(projectId),
+    );
     if (announced.get(projectId) === state) {
       return;
     }
@@ -101,7 +114,7 @@ export function createRunner(deps: RunnerDeps): Runner {
 
   const conclude = (stage: RunnerStage, state: StageState, reason: string | null): void => {
     try {
-      deps.stages.finish(stage.id, state, reason);
+      deps.stages.finish(stage.work, state, reason);
     } catch (error) {
       // The row stays `running` when the write fails. The event still goes out, and the
       // next boot marks the row interrupted.
@@ -120,14 +133,20 @@ export function createRunner(deps: RunnerDeps): Runner {
       if (run === undefined) {
         throw new Error(`no implementation is registered for the ${stage.kind} stage`);
       }
-      await run({
+      const result = await run({
         stage,
+        work: stage.work,
+        maySubmit: (pieceId) => deps.stages.maySubmit(stage.work, pieceId),
         signal: controller.signal,
         emit: (event: ProjectEvent): void => {
-          deps.emit(stage.projectId, event);
+          deps.emit(stage.projectId, {
+            ...event,
+            revisionId: stage.work.revisionId,
+            workId: stage.work.workId,
+          });
         },
       });
-      conclude(stage, "done", null);
+      conclude(stage, result === "held" ? "pending" : "done", null);
     } catch (error) {
       if (controller.signal.aborted) {
         // A late rejection from the aborted call is how a stage learns it was canceled, so
@@ -149,6 +168,7 @@ export function createRunner(deps: RunnerDeps): Runner {
     const controller = new AbortController();
     let release = (): void => {};
     const entry: Inflight = {
+      work: stage.work,
       projectId: stage.projectId,
       controller,
       settled: new Promise<void>((resolve) => {
@@ -156,12 +176,12 @@ export function createRunner(deps: RunnerDeps): Runner {
       }),
     };
     // Registered before the body runs: a tick arriving mid-start has to see it in flight.
-    inflight.set(stage.id, entry);
+    inflight.set(stage.work.workId, entry);
     retally();
     emitStage(stage, "running", null);
     void execute(stage, controller)
       .finally(() => {
-        inflight.delete(stage.id);
+        inflight.delete(stage.work.workId);
         release();
         try {
           // Claim the next stage before reading the tally, so a hand-over never reports
@@ -194,18 +214,24 @@ export function createRunner(deps: RunnerDeps): Runner {
 
   function startEligible(projectId: string): void {
     const stages = deps.stages.stagesOf(projectId);
-    const stateOf = (kind: StageKind): StageState =>
-      stages.find((stage) => stage.kind === kind)?.state ?? "pending";
+    const satisfiedKind = (kind: StageKind): boolean => {
+      const matches = stages.filter((stage) => stage.kind === kind);
+      return matches.length > 0 && matches.every((stage) => satisfied(stage.state));
+    };
     for (const stage of stages) {
-      if (stage.state !== "pending" || inflight.has(stage.id)) {
+      if (stage.state !== "pending" || inflight.has(stage.work.workId)) {
         continue;
       }
       const dependencies = deps.stages.dependenciesOf?.(projectId, stage.kind) ?? graph[stage.kind];
-      if (!dependencies.every((kind) => satisfied(stateOf(kind)))) {
+      if (
+        deps.stages.ready === undefined
+          ? !dependencies.every(satisfiedKind)
+          : !deps.stages.ready(stage.work)
+      ) {
         continue;
       }
       // Nothing is awaited here: the fan-out starts audio, images and thumbnail together.
-      if (deps.stages.claim(stage.id)) {
+      if (deps.stages.claim(stage.work)) {
         start({ ...stage, state: "running" });
       }
     }

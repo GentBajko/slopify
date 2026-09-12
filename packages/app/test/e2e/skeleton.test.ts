@@ -204,14 +204,28 @@ describe("a project whose every stage is provided renders an mp4", () => {
     );
     global.close();
 
-    const video = join(paths.projects, project.id, "video.mp4");
+    const completed = (await (await fetch(`${url}/api/projects/${project.id}`)).json()) as {
+      outputs: Array<{ role: string; path: string }>;
+    };
+    const video = join(
+      paths.projects,
+      project.id,
+      completed.outputs.find((row) => row.role === "video")?.path ?? "missing",
+    );
     expect(existsSync(video)).toBe(true);
     // A gap is inserted only beside a segment that exists, and a provided audio stage carries
     // the body alone, so this run's timeline has no gap to insert and the video is exactly as
     // long as the narration. The gap arithmetic over a real render is asserted in
     // test/video-render.test.ts.
     const plan = JSON.parse(
-      readFileSync(join(paths.projects, project.id, "render.json"), "utf8"),
+      readFileSync(
+        join(
+          paths.projects,
+          project.id,
+          completed.outputs.find((row) => row.role === "render_params")?.path ?? "missing",
+        ),
+        "utf8",
+      ),
     ) as {
       audio: Array<{ kind: string; seconds: number }>;
       gapSeconds: number;
@@ -237,15 +251,9 @@ describe("a project whose every stage is provided renders an mp4", () => {
       "thumbnail:skipped",
       "video:done",
     ]);
-    expect(read.outputs.map((output) => output.role)).toEqual([
-      "article_txt",
-      "audio_body",
-      "image",
-      "image",
-      "image",
-      "render_params",
-      "video",
-    ]);
+    expect(read.outputs.map((output) => output.role).sort()).toEqual(
+      ["article_txt", "audio_body", "image", "image", "image", "render_params", "video"].sort(),
+    );
 
     const download = await fetch(`${url}/files/${project.id}/video`);
     expect(download.status).toBe(200);

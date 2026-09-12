@@ -20,6 +20,7 @@ import { planRender } from "./plan.js";
 import { writeExport } from "./write-export.js";
 
 export interface VideoDeps {
+  readonly measureAudio?: (path: string, signal: AbortSignal) => Promise<number>;
   readonly db: DatabaseSync;
   readonly paths: Paths;
   readonly ids: Ids;

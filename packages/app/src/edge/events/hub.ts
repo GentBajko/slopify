@@ -45,6 +45,7 @@ export interface EventStream {
 }
 
 export interface HubDeps {
+  readonly acceptEvent?: (event: ProjectEvent) => boolean;
   readonly ids: Ids;
   readonly log: Log;
 }
@@ -125,7 +126,8 @@ export function createHub(deps: HubDeps): Hub {
         }
       });
       if (set.has(subscriber))
-        for (const event of previews.snapshot(projectId)) send(subscriber, event);
+        for (const event of previews.snapshot(projectId))
+          if (deps.acceptEvent?.(event) !== false) send(subscriber, event);
       return subscriber.done;
     },
 
@@ -138,7 +140,9 @@ export function createHub(deps: HubDeps): Hub {
     },
 
     emit: (projectId: string, event: ProjectEvent): void => {
-      previews.observe(event);
+      const accepted = deps.acceptEvent?.(event) !== false;
+      if (accepted || event.type === "stage.state") previews.observe(event);
+      if (!accepted) return;
       for (const subscriber of projects.get(projectId) ?? []) {
         send(subscriber, event);
       }

@@ -5,6 +5,7 @@ import type { StageKind } from "../pipeline.js";
 import type { ProviderError, ProviderErrorKind } from "../ports/model.js";
 import { isProviderError, providerError } from "../ports/model.js";
 import type { AttemptStore } from "./attempt-repo.js";
+import type { AttemptResult, WorkRef } from "./work.js";
 
 // The retry policy, in one place. A stage slice is handed the wrapped calls of
 // `providers.ts` and never an adapter, so there is no way round it.
@@ -29,6 +30,13 @@ const terminalKinds: readonly ProviderErrorKind[] = ["refusal", "unsupported", "
 export type ProviderCallKind = "llm" | "tts" | "image";
 
 export interface AttemptContext {
+  readonly work: WorkRef;
+  readonly workPieceId?: string | undefined;
+  readonly maySubmit: () => boolean;
+  readonly continuation?: {
+    readonly read: () => string | undefined;
+    readonly write: (token: string) => void;
+  };
   readonly clock: Clock;
   readonly log: Log;
   readonly attempts: AttemptStore;
@@ -53,16 +61,26 @@ export async function attempt<T>(
   ctx: AttemptContext,
   call: ProviderCall<T>,
   opts: AttemptOptions,
-): Promise<T> {
+): Promise<AttemptResult<T>> {
   ctx.signal.throwIfAborted();
   const limit = timeoutMs[opts.kind];
   for (let n = 1; ; n += 1) {
-    const id = ctx.attempts.start({
+    ctx.signal.throwIfAborted();
+    const retrieving = ctx.continuation?.read() !== undefined;
+    if (!retrieving && !ctx.maySubmit()) return { ok: false, reason: "held" };
+    const started = ctx.attempts.start({
       stageId: ctx.stageId,
+      revisionId: ctx.work.revisionId,
+      workId: ctx.work.workId,
+      workPieceId: ctx.workPieceId ?? null,
+      work: ctx.work,
+      operation: retrieving ? "retrieve" : "submit",
       pieceId: ctx.pieceId ?? null,
       n,
       startedAt: ctx.clock.now().toISOString(),
     });
+    if (typeof started !== "string" && !started.ok) return started;
+    const id = typeof started === "string" ? started : started.value;
     const window = deadline(ctx.clock, ctx.signal, limit, opts.streaming === true);
     let result:
       | { readonly ok: true; readonly value: T }
@@ -81,7 +99,7 @@ export async function attempt<T>(
         endedAt: ctx.clock.now().toISOString(),
         errorText: null,
       });
-      return result.value;
+      return { ok: true, value: result.value };
     }
     if (ctx.signal.aborted) {
       // An aborted call counts nothing. The row is closed so the page is

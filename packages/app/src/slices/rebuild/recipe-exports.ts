@@ -71,7 +71,7 @@ export function exportRecipes(
             operation: "manual-cues-v1",
             values: [cues.audioFingerprint, cues.cues.map((cue) => ({ ...cue }))],
           },
-          [timing.key],
+          audio.keys,
         );
   recipes.push(cueRecipe);
   recipes.push(

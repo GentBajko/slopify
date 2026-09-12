@@ -16,6 +16,8 @@ import { startRun } from "../../slices/admission/start.js";
 import { withProjectControl } from "../../slices/control/lock.js";
 import { resolveFont } from "../../slices/fonts/index.js";
 import { pickTemplates, renderPicked } from "../../slices/library/slots.js";
+import { adoptBaseline } from "../../slices/revisions/adopt.js";
+import { currentRevisionId } from "../../slices/revisions/repo.js";
 import type { DeleteDeps, DeleteRefusal } from "../../slices/storage/delete-project.js";
 import { deleteProject } from "../../slices/storage/delete-project.js";
 import { outputsOf, stagedFiles } from "../../slices/storage/repo.js";
@@ -37,6 +39,7 @@ const idParam = z.object({
 // generated from; see stagingRoutes.
 export function projectRoutes(deps: AppDeps) {
   const storage: StorageDeps = {
+    catalogue: deps.catalogue,
     db: deps.db,
     paths: deps.paths,
     ids: deps.ids,
@@ -108,6 +111,8 @@ export function projectRoutes(deps: AppDeps) {
           storage,
           admitted.draft,
           renderPicked(picked, admitted.draft.values),
+          false,
+          Object.fromEntries(picked.bodies.map(({ key, body }) => [key, body])),
         );
         // One event per project created. record() swallows its own
         // failures, so a broken telemetry write cannot cost the user the run.
@@ -143,7 +148,9 @@ export function projectRoutes(deps: AppDeps) {
             detail: "No project has that id.",
           });
         }
+        if (deps.catalogue !== undefined) adoptBaseline(deps, project.id);
         return c.json({
+          revisionId: currentRevisionId(deps.db, project.id) ?? null,
           project: summarise(project),
           stages: stagesOf(deps.db, project.id),
           outputs: outputsOf(deps.db, project.id),

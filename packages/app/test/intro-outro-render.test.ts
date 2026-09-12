@@ -16,7 +16,6 @@ import type { Log } from "../src/kernel/log.js";
 import { ensureDirs, layout } from "../src/kernel/paths.js";
 import type { LlmCompletion } from "../src/kernel/ports/llm.js";
 import type { Registry } from "../src/kernel/ports/registry.js";
-import { sqliteAttempts } from "../src/kernel/runner/attempt-repo.js";
 import { derive } from "../src/kernel/runner/graph.js";
 import { createRunner } from "../src/kernel/runner/index.js";
 import { stageProviders } from "../src/kernel/runner/providers.js";
@@ -32,6 +31,7 @@ import type { Counted } from "../src/slices/telemetry/record.fake.js";
 import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 import { probeDurationMs, resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
 import { renderVideo } from "../src/slices/video/run.js";
+import { legacyAttempts, legacyStage } from "./legacy-runner.js";
 
 // The article stage writes the picked intro and outro texts, the audio stage narrates them
 // and the render puts them either side of the body with a gap between. That hand-over
@@ -173,22 +173,26 @@ function harness(): Harness {
   };
   const providers = {
     registry,
-    attempts: sqliteAttempts(db, ids),
+    attempts: legacyAttempts(db, ids),
     clock: systemClock,
     log: silent,
   };
   const runner = createRunner({
     stages: {
-      stagesOf: (id) => stagesOf(db, id),
-      claim: (stageId) => claimStage(db, stageId, systemClock.now().toISOString()),
-      finish: (stageId, state, failureReason) =>
-        finishStage(db, stageId, state, failureReason, systemClock.now().toISOString()),
+      stagesOf: (id) => stagesOf(db, id).map(legacyStage),
+      maySubmit: () => true,
+      claim: (work) => claimStage(db, work.stageId, systemClock.now().toISOString()),
+      finish: (work, state, failureReason) =>
+        finishStage(db, work.stageId, state, failureReason, systemClock.now().toISOString()),
     },
     runs: {
       article: (context) => runArticle(deps, context, stageProviders(providers, context)),
       audio: (context) => runNarration(withFfmpeg, context, stageProviders(providers, context)),
       images: (context) => runImages(deps, context, stageProviders(providers, context)),
-      video: (context) => renderVideo(withFfmpeg, context),
+      video: async (context) => {
+        await renderVideo(withFfmpeg, context);
+        return "done";
+      },
     },
     emit: (): void => {},
     emitRunningCount: (): void => {},

@@ -1,6 +1,7 @@
 import { afterEach, expect, it } from "vitest";
 import {
   attemptsOf,
+  readWorkContinuation,
   startWorkAttempt,
   writeWorkContinuation,
 } from "../../kernel/runner/attempt-repo.js";
@@ -180,5 +181,17 @@ it("cannot open a new paid submission after an accepted continuation exists", as
     ok: false,
     reason: "held",
   });
+  expect(attemptsOf(deps.db, "s1")).toHaveLength(1);
+});
+
+it("does not reinterpret a corrupted empty accepted token as permission for a new paid submit", async () => {
+  const { deps, work } = await fixture();
+  const input = { stageId: "s1", pieceId: null, n: 1, startedAt: "submitted" };
+  startWorkAttempt(deps.db, deps.ids, input, work, "piece1");
+  deps.db.exec("UPDATE revision_work_pieces SET continuation='' WHERE id='piece1'");
+  expect(readWorkContinuation(deps.db, work, "piece1")).toBe("");
+  expect(startWorkAttempt(deps.db, deps.ids, { ...input, n: 2 }, work, "piece1", "submit")).toEqual(
+    { ok: false, reason: "held" },
+  );
   expect(attemptsOf(deps.db, "s1")).toHaveLength(1);
 });

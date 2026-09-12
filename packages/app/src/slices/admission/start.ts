@@ -2,6 +2,8 @@ import { transact } from "../../kernel/db/tx.js";
 import type { StageKind, StageState } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
 import { storeArticleText } from "../article/store.js";
+import { admitInitialRevision } from "../rebuild/runtime-admission.js";
+import { adoptBaseline } from "../revisions/adopt.js";
 import type { StorageDeps } from "../storage/staging.js";
 import { attachStagedFile, dropStagedSource, storeText } from "../storage/staging.js";
 import type { Project, RunConfig, RunDraft, Stage, StageSource } from "./model.js";
@@ -28,6 +30,7 @@ export function startRun(
   draft: RunDraft,
   rendered: Readonly<Record<string, string>>,
   retainStaged = false,
+  templates?: Readonly<Record<string, string>>,
 ): StartedRun {
   const id = deps.ids.next();
   const at = deps.clock.now().toISOString();
@@ -67,6 +70,11 @@ export function startRun(
       insertStage(deps.db, stage);
     }
     attachProvided(deps, id, draft, moved, retainStaged);
+    if (deps.catalogue !== undefined) {
+      const baseline = adoptBaseline(deps, id, templates);
+      if (!baseline.ok) throw new Error("The new project has no revision.");
+      admitInitialRevision(deps, baseline.view, deps.catalogue.read());
+    }
   });
   for (const source of retainStaged ? [] : moved) {
     dropStagedSource(deps, source);

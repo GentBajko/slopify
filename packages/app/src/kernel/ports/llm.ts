@@ -47,7 +47,7 @@ export interface ThinkingConfig {
 }
 export interface LlmCompletion {
   readonly thinking?: ThinkingMode | undefined;
-  readonly thinkingConfig?: ThinkingConfig | undefined;
+  readonly thinkingConfig?: ThinkingConfig | null | undefined;
   readonly model: string;
   readonly messages: readonly Message[];
   // A provider or model that cannot ground on the web refuses the whole stage rather than

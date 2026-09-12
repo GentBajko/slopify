@@ -9,6 +9,7 @@ import { messageRoles } from "../../kernel/ports/llm.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import { insertPiece, piecesOf, setPiece } from "../../kernel/runner/piece-repo.js";
 import type { StageProviders } from "../../kernel/runner/providers.js";
+import type { AttemptResult, StageRunResult } from "../../kernel/runner/work.js";
 import type { ProviderChoice } from "../admission/model.js";
 import { projectById } from "../admission/repo.js";
 import { outputPath } from "../storage/layout.js";
@@ -40,7 +41,7 @@ export async function runArticle(
   deps: ArticleDeps,
   context: StageContext,
   providers: StageProviders,
-): Promise<void> {
+): Promise<StageRunResult> {
   const { projectId } = context.stage;
   const project = projectById(deps.db, projectId);
   if (project === undefined) {
@@ -56,7 +57,9 @@ export async function runArticle(
   const notes = researchNotes(deps, projectId);
   const brief: ArticleBrief = { articlePrompt, ...(notes === undefined ? {} : { notes }) };
 
-  const completed = await articleBody(deps, context, providers, choice, brief);
+  const result = await articleBody(deps, context, providers, choice, brief);
+  if (!result.ok) return "held";
+  const completed = result.value;
   const { narration } = completed;
   const sent = [...completed.sent];
   for (const [index, category] of categories.entries()) {
@@ -68,14 +71,9 @@ export async function runArticle(
       )
     )
       continue;
-    const segment = await writeSegment(
-      providers,
-      choice,
-      project.config,
-      category,
-      narration,
-      sent,
-    );
+    const result = await writeSegment(providers, choice, project.config, category, narration, sent);
+    if (!result.ok) return "held";
+    const segment = result.value;
     if (segment !== undefined) {
       keepSegment(deps, context, segment, index + 1);
       checkpointArticle(deps, context, sent);
@@ -103,6 +101,7 @@ export async function runArticle(
     stage: "article",
     detail: `${String(narration.length)} characters to narrate`,
   });
+  return "done";
 }
 
 // Once the article is stored, a pause during end matter resumes that end matter
@@ -122,11 +121,13 @@ async function articleBody(
   providers: StageProviders,
   choice: ProviderChoice,
   brief: ArticleBrief,
-): Promise<{
-  readonly narration: string;
-  readonly sent: readonly SentMessages[];
-  readonly resumed: boolean;
-}> {
+): Promise<
+  AttemptResult<{
+    readonly narration: string;
+    readonly sent: readonly SentMessages[];
+    readonly resumed: boolean;
+  }>
+> {
   const { projectId } = context.stage;
   const saved = piecesOf(deps.db, context.stage.id, "article_written")[0];
   const outputs = outputsOf(deps.db, projectId);
@@ -141,14 +142,19 @@ async function articleBody(
     existsSync(outputPath(deps.paths, projectId, markdown.path))
   ) {
     return {
-      narration: readFileSync(outputPath(deps.paths, projectId, plain.path), "utf8"),
-      sent: articleCheckpoint.parse(JSON.parse(saved.payload)).sent,
-      resumed: true,
+      ok: true,
+      value: {
+        narration: readFileSync(outputPath(deps.paths, projectId, plain.path), "utf8"),
+        sent: articleCheckpoint.parse(JSON.parse(saved.payload)).sent,
+        resumed: true,
+      },
     };
   }
-  const written = await writeArticle(providers, choice, brief, (text) => {
+  const result = await writeArticle(providers, choice, brief, (text) => {
     context.emit({ type: "article.delta", projectId, text });
   });
+  if (!result.ok) return result;
+  const written = result.value;
   storeText(deps, { projectId, stageKind: "article", role: "article_md", text: written.markdown });
   const narration = storeArticleText(deps, { projectId, markdown: written.markdown });
   checkpointArticle(deps, context, written.sent);
@@ -158,7 +164,7 @@ async function articleBody(
     model: choice.model,
     ...written.tokens,
   });
-  return { narration, sent: written.sent, resumed: false };
+  return { ok: true, value: { narration, sent: written.sent, resumed: false } };
 }
 
 function checkpointArticle(

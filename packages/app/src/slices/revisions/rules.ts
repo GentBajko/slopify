@@ -65,7 +65,11 @@ export function validateTemplateIntent(
     if (
       image.source === "generate" &&
       image.templateKey != null &&
-      edit.content.promptTemplates[image.templateKey] == null
+      edit.content.promptTemplates[image.templateKey] == null &&
+      !(
+        base.revision.content.promptTemplates[image.templateKey] == null &&
+        isDeepStrictEqual(base.revision.content.imageDefinitions[key], image)
+      )
     )
       fields.push({
         field: `content.imageDefinitions.${key}.templateKey`,

@@ -3,13 +3,23 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { read } from "@/http";
+import { keys } from "@/queries";
+import { useProjectRevision } from "./live-revision.js";
 
-export function LiveAudio({ projectId }: { readonly projectId: string }) {
+export function LiveAudio({
+  projectId,
+  revisionId,
+}: {
+  readonly projectId: string;
+  readonly revisionId?: string | null;
+}) {
+  const currentRevision = useProjectRevision(projectId);
+  const expectedRevision = revisionId === undefined ? currentRevision : revisionId;
   const { api } = useApp();
   const preview = useQuery({
-    queryKey: ["audio-preview", projectId],
+    queryKey: keys.audioPreview(projectId, expectedRevision),
     queryFn: async () =>
-      read<{ readonly previews: readonly AudioPreview[] }>(
+      read<{ readonly revisionId?: string | null; readonly previews: readonly AudioPreview[] }>(
         await api.client.projects[":projectId"]["audio-preview"].$get({ param: { projectId } }),
       ),
     refetchInterval: 1000,
@@ -17,7 +27,8 @@ export function LiveAudio({ projectId }: { readonly projectId: string }) {
     gcTime: 0,
     retry: false,
   });
-  const items = preview.data?.previews ?? [];
+  const items =
+    (preview.data?.revisionId ?? null) === expectedRevision ? (preview.data?.previews ?? []) : [];
   return (
     <section
       aria-label="Live narration"

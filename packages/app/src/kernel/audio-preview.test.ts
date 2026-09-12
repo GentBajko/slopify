@@ -102,3 +102,27 @@ describe("live audio preview storage", () => {
     }
   });
 });
+
+it("keeps same-key revisions separate and clears only the completed work", async () => {
+  const store = createAudioPreviewStore();
+  try {
+    const origin = { revisionId: "r1", workId: "w1", workPieceId: "part1" };
+    const old = store.begin("p1", "body", "Old", origin);
+    old.append(bytes("old"));
+    const next = store.begin("p1", "body", "New", { ...origin, revisionId: "r2", workId: "w2" });
+    next.append(bytes("new"));
+    expect(store.list("p1")).toHaveLength(2);
+    old.complete();
+    store.clear("p1", "w1");
+    next.append(bytes("er"));
+    next.complete();
+    const current = store.list("p1");
+    expect(current).toHaveLength(1);
+    expect(current[0]).toMatchObject({ revisionId: "r2", workId: "w2", workPieceId: "part1" });
+    expect(
+      await new Response(store.stream("p1", idOf(store), new AbortController().signal)).text(),
+    ).toBe("newer");
+  } finally {
+    store.close();
+  }
+});

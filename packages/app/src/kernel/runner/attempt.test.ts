@@ -20,9 +20,9 @@ function recorder(): Recorder {
       rows.push({
         ...start,
         id,
-        revisionId: null,
-        workId: null,
-        workPieceId: null,
+        revisionId: start.revisionId ?? null,
+        workId: start.workId ?? null,
+        workPieceId: start.workPieceId ?? null,
         endedAt: null,
         outcome: null,
         errorText: null,
@@ -63,6 +63,15 @@ function harness(): Harness {
     lines,
     controller,
     context: {
+      work: {
+        projectId: "p1",
+        revisionId: "r1",
+        workId: "w1",
+        stageId: "s1",
+        kind: "article",
+        fingerprint: "fp",
+      },
+      maySubmit: () => true,
       clock,
       log,
       attempts,
@@ -96,13 +105,15 @@ describe("attempt", () => {
       attempt(h.context, () => Promise.resolve("hello"), { kind: "llm" }),
     );
 
-    expect(out).toBe("hello");
+    expect(out).toEqual({ ok: true, value: "hello" });
     expect(h.attempts.rows).toEqual([
       {
         id: "a1",
-        revisionId: null,
-        workId: null,
+        revisionId: "r1",
+        workId: "w1",
         workPieceId: null,
+        work: h.context.work,
+        operation: "submit",
         stageId: "s1",
         pieceId: null,
         n: 1,
@@ -149,7 +160,7 @@ describe("attempt", () => {
 
     const out = await h.clock.settle(attempt(h.context, call, { kind: "llm" }));
 
-    expect(out).toBe("second time lucky");
+    expect(out).toEqual({ ok: true, value: "second time lucky" });
     expect(gaps(h.attempts.rows)).toEqual([45_000]);
   });
 
@@ -266,7 +277,7 @@ describe("attempt", () => {
         attempt(h.context, producing(h.clock, 5, 60_000), { kind: "llm", streaming: true }),
       );
 
-      expect(out).toBe("xxxxx");
+      expect(out).toEqual({ ok: true, value: "xxxxx" });
       expect(h.attempts.rows).toHaveLength(1);
       expect(h.clock.now().toISOString()).toBe("2026-09-02T10:05:00.000Z");
     });
@@ -315,7 +326,7 @@ describe("attempt", () => {
       const out = await h.clock.settle(
         attempt(h.context, producing(h.clock, 1, 280_000), { kind: "image" }),
       );
-      expect(out).toBe("x");
+      expect(out).toEqual({ ok: true, value: "x" });
 
       const tts = harness();
       await expect(
@@ -401,5 +412,42 @@ describe("attempt", () => {
     await h.clock.settle(attempt(context, () => Promise.resolve("bytes"), { kind: "image" }));
 
     expect(h.attempts.rows[0]?.pieceId).toBe("image-3");
+  });
+});
+
+describe("revision dispatch authority", () => {
+  it("holds the next retry when permission changes during backoff", async () => {
+    const h = harness();
+    let allowed = true;
+    let calls = 0;
+    const result = attempt(
+      { ...h.context, maySubmit: () => allowed },
+      async () => {
+        calls += 1;
+        allowed = false;
+        throw providerError({ kind: "other", message: "Try later" });
+      },
+      { kind: "llm" },
+    );
+    expect(await h.clock.settle(result)).toEqual({ ok: false, reason: "held" });
+    expect(calls).toBe(1);
+    expect(h.attempts.rows.map((row) => row.outcome)).toEqual(["other"]);
+  });
+
+  it("accepts a submitted result after future permission is revoked", async () => {
+    const h = harness();
+    let allowed = true;
+    let release = (_text: string): void => {};
+    const response = new Promise<string>((resolve) => {
+      release = resolve;
+    });
+    const pending = attempt({ ...h.context, maySubmit: () => allowed }, () => response, {
+      kind: "llm",
+    });
+    allowed = false;
+    release("Retained result");
+    expect(await pending).toEqual({ ok: true, value: "Retained result" });
+    expect(h.attempts.rows.map((row) => row.outcome)).toEqual(["ok"]);
+    expect(h.attempts.rows[0]?.revisionId).toBe("r1");
   });
 });

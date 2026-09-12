@@ -13,7 +13,6 @@ import type { Log } from "../src/kernel/log.js";
 import { ensureDirs, layout } from "../src/kernel/paths.js";
 import type { Registry } from "../src/kernel/ports/registry.js";
 import type { TtsPort } from "../src/kernel/ports/tts.js";
-import { sqliteAttempts } from "../src/kernel/runner/attempt-repo.js";
 import type { StageContext } from "../src/kernel/runner/index.js";
 import { stageProviders } from "../src/kernel/runner/providers.js";
 import type { RunDraft } from "../src/slices/admission/model.js";
@@ -23,6 +22,7 @@ import type { StorageDeps } from "../src/slices/storage/staging.js";
 import { stageUpload } from "../src/slices/storage/staging.js";
 import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 import { resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
+import { legacyAttempts, legacyStage } from "./legacy-runner.js";
 
 // The end-matter split runs "when the article becomes `done` or `provided`". The event was
 // first wired into the Generate path alone, so this is the other half end to end: a pasted
@@ -156,7 +156,15 @@ describe("a pasted article through Play and the audio stage", () => {
 
     const audio = stages.find((stage) => stage.kind === "audio");
     const context: StageContext = {
-      stage: { id: audio?.id ?? "", projectId: project.id, kind: "audio", state: "running" },
+      ...(() => {
+        const stage = legacyStage({
+          id: audio?.id ?? "",
+          projectId: project.id,
+          kind: "audio",
+          state: "running",
+        });
+        return { stage, work: stage.work, maySubmit: () => true };
+      })(),
       signal: new AbortController().signal,
       emit: (): void => {},
     };
@@ -168,7 +176,7 @@ describe("a pasted article through Play and the audio stage", () => {
       stageProviders(
         {
           registry: registry(tts),
-          attempts: sqliteAttempts(deps.db, deps.ids),
+          attempts: legacyAttempts(deps.db, deps.ids),
           clock,
           log: silent,
         },

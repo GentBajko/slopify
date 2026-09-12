@@ -22,7 +22,7 @@ export function claimWork(db: DatabaseSync, work: WorkRef): boolean {
   return (
     db
       .prepare(
-        `UPDATE revision_work SET state='running' WHERE id=? AND project_id=? AND revision_id=? AND stage_id=? AND kind=? AND fingerprint=? AND state='pending' AND dispatch_state='allowed'`,
+        `UPDATE revision_work SET state='running',progress_current=NULL,progress_total=NULL WHERE id=? AND project_id=? AND revision_id=? AND stage_id=? AND kind=? AND fingerprint=? AND state='pending' AND dispatch_state='allowed'`,
       )
       .run(work.workId, work.projectId, work.revisionId, work.stageId, work.kind, work.fingerprint)
       .changes === 1
@@ -64,9 +64,7 @@ export function finishWork(
 ): void {
   if (!workExists(db, work)) return;
   const normalized = state === "provided" || state === "skipped" ? "done" : state;
-  db.prepare(`UPDATE revision_work SET state=?,failure_reason=? WHERE id=?`).run(
-    normalized,
-    reason,
-    work.workId,
-  );
+  db.prepare(
+    `UPDATE revision_work SET state=?,failure_reason=?,dispatch_state=CASE WHEN ?='pending' THEN 'held' ELSE dispatch_state END WHERE id=?`,
+  ).run(normalized, reason, normalized, work.workId);
 }

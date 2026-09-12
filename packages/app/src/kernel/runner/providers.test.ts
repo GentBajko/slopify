@@ -20,7 +20,18 @@ import type { RunnerStage, StageContext, StageRun, StageStore } from "./index.js
 import { createRunner } from "./index.js";
 import type { TtsStreamEvent } from "./providers.js";
 import { stageProviders } from "./providers.js";
+import type { StageRunResult, WorkRef } from "./work.js";
 
+function fakeWork(projectId: string, kind: StageKind, stageId: string): WorkRef {
+  return {
+    projectId,
+    kind,
+    stageId,
+    revisionId: "r1",
+    workId: `${projectId}-${kind}-r1`,
+    fingerprint: kind,
+  };
+}
 const log: Log = { write: (): void => {} };
 
 interface Recorder extends AttemptStore {
@@ -78,7 +89,15 @@ function registry(ports: Ports): Registry {
 
 function context(kind: StageKind, signal: AbortSignal): StageContext {
   return {
-    stage: { id: `s-${kind}`, projectId: "p1", kind, state: "running" },
+    stage: {
+      id: `s-${kind}`,
+      projectId: "p1",
+      kind,
+      state: "running",
+      work: fakeWork("p1", kind, `s-${kind}`),
+    },
+    work: fakeWork("p1", kind, `s-${kind}`),
+    maySubmit: () => true,
     signal,
     emit: (): void => {},
   };
@@ -95,6 +114,41 @@ function harness(): Harness {
 }
 
 describe("stageProviders", () => {
+  it("does not submit a queued request after its grant is revoked", async () => {
+    const h = harness();
+    const tts = fakeTts({ chunks: ["unused"] });
+    let allowed = true;
+    let release = (): void => {};
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const provider = stageProviders(
+      {
+        registry: registry({ tts }),
+        attempts: h.attempts,
+        clock: h.clock,
+        log,
+        queue: {
+          run: async <T>(
+            _provider: string,
+            _signal: AbortSignal,
+            run: () => Promise<T>,
+          ): Promise<T> => {
+            await waiting;
+            return run();
+          },
+        },
+      },
+      { ...context("audio", h.controller.signal), maySubmit: () => allowed },
+    );
+    const result = provider.tts({ provider: "fake-tts", voiceId: "v1", text: "A" });
+    allowed = false;
+    release();
+    expect(await result).toEqual({ ok: false, reason: "held" });
+    expect(tts.calls()).toBe(0);
+    expect(h.attempts.rows).toHaveLength(0);
+  });
+
   it("gives the stage the whole answer and every event on the way", async () => {
     const h = harness();
     const llm = fakeLlm({ deltas: ["Once ", "upon ", "a time"] });
@@ -111,9 +165,12 @@ describe("stageProviders", () => {
       ),
     );
 
-    expect(answer.text).toBe("Once upon a time");
-    expect(answer.usage).toEqual({ inputTokens: 11, outputTokens: 22 });
-    expect(answer.finishReason).toBe("stop");
+    if (!answer.ok) throw new Error("Unexpected held request");
+    expect(answer.value.text).toBe("Once upon a time");
+
+    expect(answer.value.usage).toEqual({ inputTokens: 11, outputTokens: 22 });
+
+    expect(answer.value.finishReason).toBe("stop");
     expect(events.filter((event) => event.type === "delta")).toHaveLength(3);
     expect(h.attempts.rows.map((row) => row.outcome)).toEqual(["ok"]);
     expect(h.attempts.rows[0]?.stageId).toBe("s-article");
@@ -136,7 +193,8 @@ describe("stageProviders", () => {
       providers.llm({ provider: "fake-llm", model: "fake-model", messages: [] }),
     );
 
-    expect(answer.text).toBe("Hello world");
+    if (!answer.ok) throw new Error("Unexpected held request");
+    expect(answer.value.text).toBe("Hello world");
     expect(llm.calls()).toBe(3);
     expect(h.attempts.rows.map((row) => row.outcome)).toEqual(["rate_limit", "other", "ok"]);
     // The provider's Retry-After, then the schedule's second wait.
@@ -155,8 +213,10 @@ describe("stageProviders", () => {
       providers.tts({ provider: "fake-tts", voiceId: "v1", text: "read this" }),
     );
 
-    expect(new TextDecoder().decode(audio.bytes)).toBe("fake audio");
-    expect(audio.container).toBe("mp3");
+    if (!audio.ok) throw new Error("Unexpected held request");
+    expect(new TextDecoder().decode(audio.value.bytes)).toBe("fake audio");
+
+    expect(audio.value.container).toBe("mp3");
     expect(tts.seen()).toEqual(["read this"]);
   });
 
@@ -206,7 +266,8 @@ describe("stageProviders", () => {
       }),
     );
 
-    expect([...made.bytes]).toEqual([1, 2, 3]);
+    if (!made.ok) throw new Error("Unexpected held request");
+    expect([...made.value.bytes]).toEqual([1, 2, 3]);
     expect(image.seen()[0]?.aspect).toBe("16:9");
     expect(h.attempts.rows[0]?.pieceId).toBe("image-3");
   });
@@ -225,6 +286,7 @@ describe("a stage running through the wrapper", () => {
     const states = new Map<StageKind, { state: StageState; reason: string | null }>();
     // Every other stage is done, so the one under test is the only one the graph starts.
     const rows: RunnerStage[] = stageKinds.map((each) => ({
+      work: fakeWork("p1", each, `s-${each}`),
       id: `s-${each}`,
       projectId: "p1",
       kind: each,
@@ -232,7 +294,8 @@ describe("a stage running through the wrapper", () => {
     }));
     const stages: StageStore = {
       stagesOf: () => rows,
-      claim: (stageId: string): boolean => {
+      maySubmit: () => true,
+      claim: ({ stageId }: WorkRef): boolean => {
         const at = rows.findIndex((row) => row.id === stageId);
         const row = rows[at];
         if (row === undefined || row.state !== "pending") {
@@ -241,7 +304,7 @@ describe("a stage running through the wrapper", () => {
         rows[at] = { ...row, state: "running" };
         return true;
       },
-      finish: (stageId: string, state: StageState, failureReason: string | null): void => {
+      finish: ({ stageId }: WorkRef, state: StageState, failureReason: string | null): void => {
         const at = rows.findIndex((row) => row.id === stageId);
         const row = rows[at];
         if (row !== undefined) {
@@ -273,12 +336,13 @@ describe("a stage running through the wrapper", () => {
     const llm = fakeLlm({ deltas: ["a", "b"], gapMs: 60_000, clock: h.clock });
     const attempts = h.attempts;
     const clock = h.clock;
-    const run: StageRun = async (stageContext: StageContext): Promise<void> => {
+    const run: StageRun = async (stageContext: StageContext): Promise<StageRunResult> => {
       const providers = stageProviders(
         { registry: registry({ llm }), attempts, clock, log },
         stageContext,
       );
       await providers.llm({ provider: "fake-llm", model: "fake-model", messages: [] });
+      return "done";
     };
     const wired = wire("article", run);
 
@@ -299,7 +363,7 @@ describe("a stage running through the wrapper", () => {
     const image = fakeImage({ refuse: "I can't create that image." });
     const attempts = h.attempts;
     const clock = h.clock;
-    const run: StageRun = async (stageContext: StageContext): Promise<void> => {
+    const run: StageRun = async (stageContext: StageContext): Promise<StageRunResult> => {
       const providers = stageProviders(
         { registry: registry({ image }), attempts, clock, log },
         stageContext,
@@ -310,6 +374,7 @@ describe("a stage running through the wrapper", () => {
         prompt: "a cat",
         aspect: "9:16",
       });
+      return "done";
     };
     const wired = wire("images", run);
 
@@ -404,7 +469,8 @@ describe("CLI activity deadlines", () => {
           events.push(event),
         ),
       );
-      expect(answer.text).toBe("The finished article.");
+      if (!answer.ok) throw new Error("Unexpected held request");
+      expect(answer.value.text).toBe("The finished article.");
       expect(events.map((event) => event.type)).toEqual(["delta", "done"]);
       expect(JSON.stringify(events)).not.toContain("private thinking");
       expect(starts).toBe(1);
@@ -454,7 +520,9 @@ describe("live previews through the attempt wrapper", () => {
     expect(h.attempts.rows[0]?.outcome).toBeNull();
     source?.enqueue(new Uint8Array([3]));
     source?.close();
-    expect([...(await pending).bytes]).toEqual([1, 2, 3]);
+    const completed = await pending;
+    if (!completed.ok) throw new Error("Unexpected held request");
+    expect([...completed.value.bytes]).toEqual([1, 2, 3]);
     expect(events.map((event) => event.type)).toEqual(["start", "chunk", "chunk", "complete"]);
     expect(calls).toBe(1);
   });
@@ -495,7 +563,8 @@ describe("live previews through the attempt wrapper", () => {
         throw new Error("preview failed");
       }),
     );
-    expect(new TextDecoder().decode(audio.bytes)).toBe("fake audio");
+    if (!audio.ok) throw new Error("Unexpected held request");
+    expect(new TextDecoder().decode(audio.value.bytes)).toBe("fake audio");
     expect(tts.calls()).toBe(1);
   });
   it("gives parallel LLM calls separate identities and resets only the retrying call", async () => {
@@ -621,7 +690,8 @@ describe("queued narration jobs", () => {
     const answer = await h.clock.settle(
       providers.tts({ provider: "queued", voiceId: "voice", text: "long narration" }),
     );
-    expect(answer.bytes).toEqual(Uint8Array.from([1, 2, 3]));
+    if (!answer.ok) throw new Error("Unexpected held request");
+    expect(answer.value.bytes).toEqual(Uint8Array.from([1, 2, 3]));
     expect(submitted).toBe(1);
     expect(tries).toBe(2);
     expect(h.attempts.rows.map((row) => row.outcome)).toEqual(["other", "ok"]);

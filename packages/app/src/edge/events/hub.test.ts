@@ -220,3 +220,37 @@ describe("live writing reconnects", () => {
     await finished;
   });
 });
+
+it("filters late origin events and stale cached previews at delivery time", async () => {
+  let current = "r1";
+  const h = createHub({
+    ids: counter(),
+    log: recorder().log,
+    acceptEvent: (event) => event.type === "project.updated" || event.revisionId === current,
+  });
+  h.emit("p1", {
+    type: "llm.preview",
+    projectId: "p1",
+    stage: "article",
+    callId: "one",
+    text: "old",
+    revisionId: "r1",
+    workId: "w1",
+  });
+  current = "r2";
+  const sink = fakeStream();
+  const controller = new AbortController();
+  const waiting = h.subscribe("p1", sink.stream, controller.signal);
+  h.emit("p1", {
+    type: "article.delta",
+    projectId: "p1",
+    text: "old delta",
+    revisionId: "r1",
+    workId: "w1",
+  });
+  expect(sink.written).toEqual([]);
+  h.emit("p1", { type: "project.updated", projectId: "p1" });
+  expect(sink.written.map((one) => one.event)).toEqual(["project.updated"]);
+  controller.abort();
+  await waiting;
+});

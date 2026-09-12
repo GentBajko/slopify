@@ -75,6 +75,7 @@ export interface ProjectListBody {
   readonly projects: readonly ProjectListing[];
 }
 export interface ProjectBody {
+  readonly revisionId?: string | null;
   readonly project: ProjectSummary;
   readonly stages: readonly Stage[];
   readonly outputs: readonly Output[];

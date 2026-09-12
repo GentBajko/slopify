@@ -15,7 +15,7 @@ import type { Paths } from "../src/kernel/paths.js";
 import { ensureDirs, layout } from "../src/kernel/paths.js";
 import type { ImagePort } from "../src/kernel/ports/image.js";
 import type { Registry } from "../src/kernel/ports/registry.js";
-import { attemptsOf, sqliteAttempts } from "../src/kernel/runner/attempt-repo.js";
+import { attemptsOf } from "../src/kernel/runner/attempt-repo.js";
 import type { StageContext } from "../src/kernel/runner/index.js";
 import { piecesOf } from "../src/kernel/runner/piece-repo.js";
 import { stageProviders } from "../src/kernel/runner/providers.js";
@@ -23,6 +23,7 @@ import { runImages } from "../src/slices/images/run.js";
 import type { RecordEvent } from "../src/slices/telemetry/model.js";
 import type { Counted } from "../src/slices/telemetry/record.fake.js";
 import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
+import { legacyAttempts, legacyStage } from "./legacy-runner.js";
 
 // The images stage against the real attempt wrapper and the real piece store, which is
 // what a unit test of the slice cannot show: a slice may not reach a registry or an
@@ -120,7 +121,10 @@ function harness(options: HarnessOptions = {}): Harness {
     counted,
     deps: { db, paths, ids, clock, log: silent, count: counted.count },
     context: {
-      stage: { id: "s1", projectId: "p1", kind: "images", state: "running" },
+      ...(() => {
+        const stage = legacyStage({ id: "s1", projectId: "p1", kind: "images", state: "running" });
+        return { stage, work: stage.work, maySubmit: () => true };
+      })(),
       signal: new AbortController().signal,
       emit: (event: ProjectEvent): void => {
         events.push(event);
@@ -142,7 +146,10 @@ function registry(image: ImagePort): Registry {
   };
 }
 
-function run(h: Harness, image: ImagePort): Promise<void> {
+function run(
+  h: Harness,
+  image: ImagePort,
+): Promise<import("../src/kernel/runner/work.js").StageRunResult> {
   return h.clock.settle(
     runImages(
       h.deps,
@@ -150,7 +157,7 @@ function run(h: Harness, image: ImagePort): Promise<void> {
       stageProviders(
         {
           registry: registry(image),
-          attempts: sqliteAttempts(h.db, h.deps.ids),
+          attempts: legacyAttempts(h.db, h.deps.ids),
           clock: h.clock,
           log: silent,
         },

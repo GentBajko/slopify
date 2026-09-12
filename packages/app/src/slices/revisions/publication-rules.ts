@@ -60,18 +60,28 @@ export function validatePublication(
           .get(publication.pieceId, publication.work.workId);
   const revision = revisionById(db, publication.work.projectId, publication.work.revisionId);
   for (const row of outputs) {
-    const retainedWav =
-      authority?.key === "subtitles:files" &&
-      row.workKey === "export:wav" &&
-      row.output.role === "audio_export" &&
+    const retainedMember =
+      ((authority?.key === "subtitles:files" &&
+        ((row.workKey === "export:wav" && row.output.role === "audio_export") ||
+          (row.workKey === "export:video" &&
+            row.output.role === "video" &&
+            row.output.meta.subtitlesMode !== "burn-in"))) ||
+        ((authority?.key === "export:wav" || authority?.key === "export:video") &&
+          row.workKey === "subtitles:files" &&
+          ["subtitles_srt", "subtitles_vtt", "subtitle_ass", "subtitle_font"].includes(
+            row.output.role,
+          ))) &&
       outputsForRevision(db, publication.work.projectId, publication.work.revisionId).some(
         (old) =>
-          old.workKey === "export:wav" &&
+          old.selected &&
+          old.state === "ready" &&
+          old.workKey === row.workKey &&
+          old.output.role === row.output.role &&
           old.assetId === row.asset.id &&
           old.fingerprint === row.fingerprint,
       );
     if (
-      !retainedWav &&
+      !retainedMember &&
       row.fingerprint !== revision?.fingerprints[row.workKey] &&
       !(
         row.workKey === authority?.key &&
@@ -194,8 +204,10 @@ export function validateBundle(authority: string, outputs: readonly PreparedOutp
     ((authority === "export:wav" || authority === "export:video") &&
       ["subtitles:files", "subtitles:cues"].includes(row.workKey)) ||
     (authority === "subtitles:files" &&
-      row.workKey === "export:wav" &&
-      row.output.role === "audio_export");
+      ((row.workKey === "export:wav" && row.output.role === "audio_export") ||
+        (row.workKey === "export:video" &&
+          row.output.role === "video" &&
+          row.output.meta.subtitlesMode !== "burn-in")));
   if (outputs.some((row) => !allowed(row)))
     throw new Error("Publication member is outside its authorized result bundle.");
   const roles = new Set(outputs.map((row) => row.output.role));

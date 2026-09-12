@@ -16,7 +16,7 @@ import type { Paths } from "../src/kernel/paths.js";
 import { ensureDirs, layout } from "../src/kernel/paths.js";
 import type { LlmCompletion } from "../src/kernel/ports/llm.js";
 import type { Registry } from "../src/kernel/ports/registry.js";
-import { attemptsOf, sqliteAttempts } from "../src/kernel/runner/attempt-repo.js";
+import { attemptsOf } from "../src/kernel/runner/attempt-repo.js";
 import type { StageContext } from "../src/kernel/runner/index.js";
 import { createRunner } from "../src/kernel/runner/index.js";
 import { piecesOf } from "../src/kernel/runner/piece-repo.js";
@@ -26,6 +26,7 @@ import { runResearch, webResearchUnsupported } from "../src/slices/research/run.
 import type { RecordEvent } from "../src/slices/telemetry/model.js";
 import type { Counted } from "../src/slices/telemetry/record.fake.js";
 import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
+import { legacyAttempts, legacyStage } from "./legacy-runner.js";
 
 // The research stage against the real attempt wrapper: what `slices/research/run.test.ts`
 // cannot show, because a slice may not reach a registry or an adapter. Nothing here calls
@@ -100,7 +101,15 @@ function harness(): Harness {
     counted,
     deps: { db, paths, ids, clock, log: silent, count: counted.count },
     context: {
-      stage: { id: "s1", projectId: "p1", kind: "research", state: "running" },
+      ...(() => {
+        const stage = legacyStage({
+          id: "s1",
+          projectId: "p1",
+          kind: "research",
+          state: "running",
+        });
+        return { stage, work: stage.work, maySubmit: () => true };
+      })(),
       signal: new AbortController().signal,
       emit: (event: ProjectEvent): void => {
         events.push(event);
@@ -147,14 +156,17 @@ function script(chapter: (req: LlmCompletion, attempt: number) => readonly strin
 
 const good: readonly string[] = ["Found it.\n\nSources\nhttps://example.test/one"];
 
-function run(h: Harness, llm: FakeLlm): Promise<void> {
+function run(
+  h: Harness,
+  llm: FakeLlm,
+): Promise<import("../src/kernel/runner/work.js").StageRunResult> {
   return runResearch(
     h.deps,
     h.context,
     stageProviders(
       {
         registry: registry(llm),
-        attempts: sqliteAttempts(h.db, h.deps.ids),
+        attempts: legacyAttempts(h.db, h.deps.ids),
         clock: h.clock,
         log: silent,
       },
@@ -307,10 +319,11 @@ describe("the research stage through the attempt wrapper", () => {
     const events: ProjectEvent[] = [];
     const runner = createRunner({
       stages: {
-        stagesOf: (projectId) => stagesOf(h.db, projectId),
-        claim: (stageId) => claimStage(h.db, stageId, h.clock.now().toISOString()),
-        finish: (stageId, state, reason) =>
-          finishStage(h.db, stageId, state, reason, h.clock.now().toISOString()),
+        stagesOf: (projectId) => stagesOf(h.db, projectId).map(legacyStage),
+        maySubmit: () => true,
+        claim: (work) => claimStage(h.db, work.stageId, h.clock.now().toISOString()),
+        finish: (work, state, reason) =>
+          finishStage(h.db, work.stageId, state, reason, h.clock.now().toISOString()),
       },
       runs: {
         research: (context) =>
@@ -320,7 +333,7 @@ describe("the research stage through the attempt wrapper", () => {
             stageProviders(
               {
                 registry: registry(llm),
-                attempts: sqliteAttempts(h.db, h.deps.ids),
+                attempts: legacyAttempts(h.db, h.deps.ids),
                 clock: h.clock,
                 log: silent,
               },

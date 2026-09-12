@@ -4,7 +4,13 @@ import type { ProjectState, StageKind, StageState } from "./pipeline.js";
 // runner and the stage slices produce these values and neither may import `edge`;
 // `edge/events/hub.ts` only delivers them.
 
-export interface StageStateEvent {
+export interface EventOrigin {
+  readonly revisionId?: string;
+  readonly workId?: string;
+  readonly workPieceId?: string;
+}
+
+export interface StageStateEvent extends EventOrigin {
   readonly type: "stage.state";
   readonly projectId: string;
   readonly stage: StageKind;
@@ -12,7 +18,7 @@ export interface StageStateEvent {
   readonly failureReason?: string;
 }
 
-export interface StageProgressEvent {
+export interface StageProgressEvent extends EventOrigin {
   readonly type: "stage.progress";
   readonly projectId: string;
   readonly stage: StageKind;
@@ -20,13 +26,13 @@ export interface StageProgressEvent {
   readonly total: number;
 }
 
-export interface ArticleDeltaEvent {
+export interface ArticleDeltaEvent extends EventOrigin {
   readonly type: "article.delta";
   readonly projectId: string;
   readonly text: string;
 }
 
-export interface LlmPreviewEvent {
+export interface LlmPreviewEvent extends EventOrigin {
   readonly type: "llm.preview";
   readonly projectId: string;
   readonly stage: StageKind;
@@ -36,25 +42,25 @@ export interface LlmPreviewEvent {
   readonly reset?: boolean;
 }
 
-export interface ImageLandedEvent {
+export interface ImageLandedEvent extends EventOrigin {
   readonly type: "image.landed";
   readonly projectId: string;
   readonly outputId: string;
   readonly index: number;
 }
 
-export interface ProjectStateEvent {
+export interface ProjectStateEvent extends EventOrigin {
   readonly type: "project.state";
   readonly projectId: string;
   readonly state: ProjectState;
 }
 
-export interface ProjectUpdatedEvent {
+export interface ProjectUpdatedEvent extends EventOrigin {
   readonly type: "project.updated";
   readonly projectId: string;
 }
 
-export interface RunningCountEvent {
+export interface RunningCountEvent extends EventOrigin {
   readonly type: "running.count";
   readonly count: number;
 }

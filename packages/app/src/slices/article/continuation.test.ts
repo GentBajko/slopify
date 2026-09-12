@@ -42,7 +42,9 @@ function fake(script: readonly Answer[]): Fake {
         finishReason: scripted?.finishReason ?? "stop",
       };
       const unusable = call.check?.(answer);
-      return unusable === undefined ? Promise.resolve(answer) : Promise.reject(new Error(unusable));
+      return unusable === undefined
+        ? Promise.resolve({ ok: true as const, value: answer })
+        : Promise.reject(new Error(unusable));
     },
     tts: () => Promise.reject(new Error("the article stage must not narrate")),
     image: () => Promise.reject(new Error("the article stage must not draw")),
@@ -73,7 +75,9 @@ describe("writeArticle", () => {
   it("makes one call and keeps its text when the model finishes on its own", async () => {
     const llm = fake([{ text: "# Rope\n\nAll of it." }]);
 
-    const written = await writeArticle(llm.providers, choice, brief, () => {});
+    const result = await writeArticle(llm.providers, choice, brief, () => {});
+    if (!result.ok) throw new Error("Unexpected held article");
+    const written = result.value;
 
     expect(llm.calls).toHaveLength(1);
     expect(written.markdown).toBe("# Rope\n\nAll of it.");
@@ -95,7 +99,9 @@ describe("writeArticle", () => {
       { text: " passing the end through the bight." },
     ]);
 
-    const written = await writeArticle(llm.providers, choice, brief, () => {});
+    const result = await writeArticle(llm.providers, choice, brief, () => {});
+    if (!result.ok) throw new Error("Unexpected held article");
+    const written = result.value;
 
     expect(llm.calls).toHaveLength(2);
     expect(written.markdown).toBe(
@@ -116,7 +122,9 @@ describe("writeArticle", () => {
       { text: " three" },
     ]);
 
-    const written = await writeArticle(llm.providers, choice, brief, () => {});
+    const result = await writeArticle(llm.providers, choice, brief, () => {});
+    if (!result.ok) throw new Error("Unexpected held article");
+    const written = result.value;
 
     expect(written.markdown).toBe("one two three");
     expect(llm.calls[2]?.[1]?.content).toBe("one two");

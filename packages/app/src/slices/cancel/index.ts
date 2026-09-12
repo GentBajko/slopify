@@ -49,7 +49,13 @@ export async function cancelProject(deps: CancelDeps, projectId: string): Promis
     deps.emit(projectId, { type: "project.updated", projectId });
   }
   const running = before.filter((stage) => stage.state === "running").map((stage) => stage.kind);
-  if (running.length === 0 && !paused) {
+  const admittedPending =
+    deps.db
+      .prepare(
+        "SELECT 1 FROM revision_work w JOIN revision_work_reservations r ON r.work_id=w.id JOIN project_heads h ON h.project_id=r.project_id AND h.revision_id=r.revision_id WHERE w.project_id=? AND w.state='pending' LIMIT 1",
+      )
+      .get(projectId) !== undefined;
+  if (running.length === 0 && !paused && !admittedPending) {
     // A second click is a no-op. Nothing is aborted and no state changes, so
     // the page is simply told what the project already reads.
     return { ok: true, canceled: [], state: derive(before) };
@@ -58,6 +64,16 @@ export async function cancelProject(deps: CancelDeps, projectId: string): Promis
   // Nothing waits for a response. The runner holds the controllers and its own
   // barrier, so a stage that finishes during this does not release its dependents.
   if (running.length > 0) await deps.abort(projectId);
+  deps.db
+    .prepare(
+      "UPDATE revision_work SET state='canceled',dispatch_state='held',failure_reason=? WHERE project_id=? AND state!='done'",
+    )
+    .run(canceledByUser, projectId);
+  deps.db
+    .prepare(
+      "UPDATE revision_work_pieces SET state='held',dispatch_state='held' WHERE work_id IN (SELECT id FROM revision_work WHERE project_id=?) AND state!='done'",
+    )
+    .run(projectId);
 
   // The invariant: after cancel completes no stage of the project is `running`.
   // The runner writes that row as each aborted stage unwinds; this is the path where it

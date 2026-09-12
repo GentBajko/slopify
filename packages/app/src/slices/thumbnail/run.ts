@@ -12,6 +12,7 @@ import type { StageContext } from "../../kernel/runner/index.js";
 import type { StagePiece } from "../../kernel/runner/piece-repo.js";
 import { insertPiece, piecesOf, setPiece } from "../../kernel/runner/piece-repo.js";
 import type { LlmAnswer, StageProviders } from "../../kernel/runner/providers.js";
+import type { AttemptResult, StageRunResult } from "../../kernel/runner/work.js";
 import type { Project, ProviderChoice } from "../admission/model.js";
 import { projectById } from "../admission/repo.js";
 import { outputFileName, outputPath } from "../storage/layout.js";
@@ -58,7 +59,7 @@ export async function runThumbnail(
   deps: ThumbnailDeps,
   context: StageContext,
   providers: StageProviders,
-): Promise<void> {
+): Promise<StageRunResult> {
   const { projectId } = context.stage;
   const project = projectById(deps.db, projectId);
   if (project === undefined) {
@@ -77,11 +78,13 @@ export async function runThumbnail(
     throw new Error("the run has no image provider or model");
   }
 
-  const written =
+  const result =
     source === "from_prompt" ? undefined : await byLlm(deps, context, providers, project);
+  if (result !== undefined && !result.ok) return "held";
+  const written = result?.value;
   const prompt = written?.prompt ?? fromTemplate(project);
 
-  await make(deps, context, providers, project, choice, prompt);
+  if ((await make(deps, context, providers, project, choice, prompt)) === "held") return "held";
   // Tokens are counted with a provider and model name per stage, and a payload names one
   // provider. This stage can use two - the LLM that writes the prompt and the image model
   // that draws it - so the event names whichever one's usage it reports, because both are
@@ -99,6 +102,7 @@ export async function runThumbnail(
     stage: "thumbnail",
     detail: source === "from_prompt" ? "from the picked prompt" : "from the prompt the LLM wrote",
   });
+  return "done";
 }
 
 // The rendered thumbnail template goes to the image provider as it is.
@@ -117,16 +121,19 @@ async function byLlm(
   context: StageContext,
   providers: StageProviders,
   project: Project,
-): Promise<WrittenThumbnailPrompt> {
+): Promise<AttemptResult<WrittenThumbnailPrompt>> {
   const kept = piecesOf(deps.db, context.stage.id, "prompt_written")[0];
   const llm = project.config.llm;
   if (kept !== undefined && kept.state === "done") {
     // The wording the user is looking at does not change under them. No call was
     // made, so this run counts none - the run that wrote the prompt already did.
     return {
-      prompt: payloadOf(kept).prompt,
-      ...(llm === undefined ? {} : named(llm)),
-      tokens: noTokens,
+      ok: true,
+      value: {
+        prompt: payloadOf(kept).prompt,
+        ...(llm === undefined ? {} : named(llm)),
+        tokens: noTokens,
+      },
     };
   }
   if (llm === undefined) {
@@ -143,7 +150,8 @@ async function byLlm(
     check: (given: LlmAnswer): string | undefined => writtenPrompt(given.text),
   });
   // The image prompt is exactly the LLM's output, never edited by the app.
-  const prompt = answer.text.trim();
+  if (!answer.ok) return answer;
+  const prompt = answer.value.text.trim();
   keepWritten(deps, context, kept?.id, prompt, messages);
   // The messages sent are stored beside the article stage's, per stage.
   storeText(deps, {
@@ -152,7 +160,10 @@ async function byLlm(
     role: "instructions",
     text: instructionsText(messages),
   });
-  return { prompt, ...named(llm), tokens: plusUsage(noTokens, answer.usage) };
+  return {
+    ok: true,
+    value: { prompt, ...named(llm), tokens: plusUsage(noTokens, answer.value.usage) },
+  };
 }
 
 function named(choice: ProviderChoice): { provider: string; model: string } {
@@ -217,19 +228,21 @@ async function make(
   project: Project,
   choice: ProviderChoice,
   prompt: string,
-): Promise<void> {
+): Promise<StageRunResult> {
   const { projectId } = context.stage;
   if (outputsOf(deps.db, projectId).some((output) => output.role === "thumbnail")) {
     // The `image-done` sub-step: a retry that failed after the image landed keeps it.
-    return;
+    return "done";
   }
-  const made = await providers.image({
+  const result = await providers.image({
     provider: choice.provider,
     model: choice.model,
     ...(choice.thinking === undefined ? {} : { thinking: choice.thinking }),
     prompt,
     aspect: project.format,
   });
+  if (!result.ok) return "held";
+  const made = result.value;
   const name = outputFileName(
     "thumbnail",
     1,
@@ -263,6 +276,7 @@ async function make(
   // No `image.landed`: the thumbnail stays out of the slideshow, and that event's `index`
   // is a place in it. The stage reaching `done` is what tells the page.
   insertOutput(deps.db, output);
+  return "done";
 }
 
 function write(deps: ThumbnailDeps, projectId: string, name: string, made: GeneratedImage): void {

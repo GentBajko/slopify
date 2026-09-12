@@ -4,6 +4,7 @@ import type { Message } from "../../kernel/ports/llm.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import { insertPiece, piecesOf, setPiece } from "../../kernel/runner/piece-repo.js";
 import type { LlmAnswer, StageProviders } from "../../kernel/runner/providers.js";
+import type { AttemptResult } from "../../kernel/runner/work.js";
 import type { EntryMode, ProviderChoice, RunConfig } from "../admission/model.js";
 import type { EntryCategory } from "../library/model.js";
 import type { Tokens } from "../telemetry/model.js";
@@ -33,13 +34,14 @@ export async function writeSegment(
   category: EntryCategory,
   article: string,
   sent: SentMessages[],
-): Promise<WrittenSegment | undefined> {
+): Promise<AttemptResult<WrittenSegment | undefined>> {
   const picked = config[category];
-  if (picked === undefined) return undefined;
+  if (picked === undefined) return { ok: true, value: undefined };
   const body = config.rendered[category];
   if (body === undefined) throw new Error(`the run has no rendered ${category} text`);
   const common = { category, name: picked.name, mode: picked.mode };
-  if (picked.mode === "text") return { ...common, text: body, tokens: noTokens };
+  if (picked.mode === "text")
+    return { ok: true, value: { ...common, text: body, tokens: noTokens } };
   if (choice === undefined) throw new Error(`the ${category} has no LLM provider or model`);
   const messages = segmentMessages(body, config, article);
   sent.push({ label: category === "intro" ? "Intro" : "Outro", messages });
@@ -51,7 +53,15 @@ export async function writeSegment(
     check: (given: LlmAnswer): string | undefined =>
       given.text.trim() === "" ? `the ${category} answered with nothing` : undefined,
   });
-  return { ...common, text: answer.text.trim(), tokens: plusUsage(noTokens, answer.usage) };
+  if (!answer.ok) return answer;
+  return {
+    ok: true,
+    value: {
+      ...common,
+      text: answer.value.text.trim(),
+      tokens: plusUsage(noTokens, answer.value.usage),
+    },
+  };
 }
 
 export function segmentMessages(
@@ -84,7 +94,7 @@ export function segmentMessages(
 
 export function keepSegment(
   deps: { readonly db: DatabaseSync; readonly ids: Ids },
-  context: Pick<StageContext, "stage">,
+  context: { readonly stage: Pick<StageContext["stage"], "id"> },
   segment: SegmentText,
   idx: number,
 ): void {

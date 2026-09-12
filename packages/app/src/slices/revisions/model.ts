@@ -148,7 +148,7 @@ export interface RevisionDeps {
   readonly ids: Ids;
   readonly clock: Clock;
   readonly log: Log;
-  readonly measureAudio?: ((path: string) => Promise<number>) | undefined;
+  readonly measureAudio?: ((path: string, signal?: AbortSignal) => Promise<number>) | undefined;
 }
 
 export type RevisionOutputRecord = Omit<RevisionOutputView, "available">;

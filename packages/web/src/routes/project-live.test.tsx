@@ -29,7 +29,9 @@ function fakeSource(): FakeSource {
     addEventListener: (type: string, listener: (message: MessageEvent<string>) => void): void => {
       listeners.set(type, [...(listeners.get(type) ?? []), listener]);
     },
-    close: (): void => {},
+    close: (): void => {
+      listeners.clear();
+    },
     emit: (event): void => {
       act(() => {
         for (const listener of listeners.get(event.type) ?? []) {
@@ -81,6 +83,7 @@ function image(index: number): Output {
 // The rows the fake server would answer with now. A test moves them between events, the
 // way a run moves them between the frames it emits.
 interface Server {
+  revisionId?: string;
   landed: number;
   video: StageState;
   textModel?: string;
@@ -90,6 +93,7 @@ interface Server {
 
 function view(server: Server) {
   return {
+    ...(server.revisionId === undefined ? {} : { revisionId: server.revisionId }),
     project: {
       id: "p1",
       title: "Rope Tricks",
@@ -317,4 +321,57 @@ describe("the page under a live run", () => {
       expect(screen.getByText("Oils × 2")).not.toBeNull();
     });
   });
+});
+
+it("switches live revision caches and rejects old text and lifecycle events", async () => {
+  const server: Server = { landed: 0, video: "pending", article: "running", revisionId: "r1" };
+  const { source } = mount(server);
+  const content = await screen.findByRole("region", { name: "Article content" });
+  source.emit({
+    type: "article.delta",
+    projectId: "p1",
+    revisionId: "r1",
+    workId: "w1",
+    text: "Old article.",
+  });
+  await within(content).findByText("Old article.");
+  server.revisionId = "r2";
+  source.emit({ type: "project.updated", projectId: "p1" });
+  await waitFor(() => expect(within(content).queryByText("Old article.")).toBeNull());
+  source.emit({
+    type: "article.delta",
+    projectId: "p1",
+    revisionId: "r2",
+    workId: "w2",
+    text: "Current article.",
+  });
+  await within(content).findByText("Current article.");
+  source.emit({
+    type: "stage.state",
+    projectId: "p1",
+    revisionId: "r1",
+    workId: "w1",
+    stage: "article",
+    state: "running",
+  });
+  source.emit({
+    type: "article.delta",
+    projectId: "p1",
+    revisionId: "r1",
+    workId: "w1",
+    text: "Obsolete ending.",
+  });
+  source.emit({
+    type: "stage.state",
+    projectId: "p1",
+    revisionId: "r2",
+    workId: "w2",
+    stage: "article",
+    state: "done",
+  });
+  expect(within(content).getByText("Current article.")).not.toBeNull();
+  expect(within(content).queryByText(/Obsolete/)).toBeNull();
+  expect(screen.getAllByRole("status").map((live) => live.textContent)).toContain(
+    "Article: running",
+  );
 });

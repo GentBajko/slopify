@@ -156,9 +156,15 @@ describe("optional outputs through the real app", () => {
     expect(bytes.subarray(0, 4).toString()).toBe("RIFF");
     expect(bytes.subarray(8, 12).toString()).toBe("WAVE");
     // The Windows ffmpeg build labels stereo WAV streams as "2 channels".
-    expect(probe(join(app.paths.projects, id, "audio.wav"))).toMatch(
-      /Audio: pcm_s16le.*48000 Hz, (?:stereo|2 channels)/,
-    );
+    expect(
+      probe(
+        join(
+          app.paths.projects,
+          id,
+          view.outputs.find((output) => output.role === "audio_export")?.path ?? "missing",
+        ),
+      ),
+    ).toMatch(/Audio: pcm_s16le.*48000 Hz, (?:stereo|2 channels)/);
   });
 
   it("renders a silent five-second slideshow when narration is Off", async () => {
@@ -171,8 +177,14 @@ describe("optional outputs through the real app", () => {
         provided: { article: "Article", images: [image] },
       }),
     );
-    await finished(app, id);
-    const report = probe(join(app.paths.projects, id, "video.mp4"));
+    const view = await finished(app, id);
+    const report = probe(
+      join(
+        app.paths.projects,
+        id,
+        view.outputs.find((output) => output.role === "video")?.path ?? "missing",
+      ),
+    );
     expect(report).toContain("Video:");
     expect(report).not.toContain("Audio:");
     expect(report).toContain("Duration: 00:00:05.00");

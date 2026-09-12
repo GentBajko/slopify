@@ -4,6 +4,7 @@ import { createAudioPreviewStore } from "../../kernel/audio-preview.js";
 import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
+import { workFixture } from "../../slices/rebuild/work.fake.js";
 import { audioPreviewRoutes } from "./audio-preview.js";
 
 const cleanups: (() => void)[] = [];
@@ -61,6 +62,7 @@ describe("audio preview HTTP", () => {
     store.clear("p1");
     expect((await app.request(`/api/projects/p1/audio-preview/${id}`)).status).toBe(404);
     expect(await (await app.request("/api/projects/p1/audio-preview")).json()).toEqual({
+      revisionId: null,
       previews: [],
     });
   });
@@ -68,7 +70,36 @@ describe("audio preview HTTP", () => {
     const { db } = harness();
     const app = new Hono().route("/api/projects", audioPreviewRoutes({ db }));
     expect(await (await app.request("/api/projects/p1/audio-preview")).json()).toEqual({
+      revisionId: null,
       previews: [],
     });
   });
+});
+
+it("filters both listings and new stream requests against current reservations", async () => {
+  const h = await workFixture();
+  const store = createAudioPreviewStore();
+  try {
+    const app = new Hono().route(
+      "/api/projects",
+      audioPreviewRoutes({ db: h.deps.db, audioPreviews: store }),
+    );
+    const origin = { revisionId: h.work.revisionId, workId: h.work.workId, workPieceId: "piece1" };
+    store.begin(h.projectId, "body", "Retained", origin).append(bytes("old"));
+    const id = store.list(h.projectId)[0]?.id;
+    expect(
+      await (await app.request(`/api/projects/${h.projectId}/audio-preview`)).json(),
+    ).toMatchObject({ revisionId: h.work.revisionId, previews: [{ workId: h.work.workId }] });
+    h.deps.db.exec("DELETE FROM revision_work_reservations");
+    expect(await (await app.request(`/api/projects/${h.projectId}/audio-preview`)).json()).toEqual({
+      revisionId: h.work.revisionId,
+      previews: [],
+    });
+    expect((await app.request(`/api/projects/${h.projectId}/audio-preview/${id}`)).status).toBe(
+      404,
+    );
+  } finally {
+    store.close();
+    h.close();
+  }
 });

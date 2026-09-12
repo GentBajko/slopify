@@ -92,7 +92,29 @@ function harness(over: Partial<RunConfig> = {}) {
   });
   const controller = new AbortController();
   const context: StageContext = {
-    stage: { id: "audio", projectId: "p1", kind: "audio", state: "running" },
+    stage: {
+      id: "audio",
+      projectId: "p1",
+      kind: "audio",
+      state: "running",
+      work: {
+        projectId: "p1",
+        stageId: "audio",
+        kind: "audio",
+        revisionId: "r1",
+        workId: "audio" + "-r1",
+        fingerprint: "audio",
+      },
+    },
+    work: {
+      projectId: "p1",
+      stageId: "audio",
+      kind: "audio",
+      revisionId: "r1",
+      workId: "audio" + "-r1",
+      fingerprint: "audio",
+    },
+    maySubmit: () => true,
     signal: controller.signal,
     emit: () => {},
   };
@@ -110,7 +132,7 @@ function fake(answer: (call: LlmCall) => Promise<string> = async () => "Generate
       const result: LlmAnswer = { text: await answer(call), usage: null, finishReason: "stop" };
       const error = call.check?.(result);
       if (error) throw new Error(error);
-      return result;
+      return { ok: true, value: result };
     },
     tts: async () => {
       throw new Error("Entry preparation must not narrate");

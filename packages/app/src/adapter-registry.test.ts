@@ -87,7 +87,29 @@ async function drain(port: LlmPort): Promise<void> {
 
 function context(signal: AbortSignal): StageContext {
   return {
-    stage: { id: "s1", projectId: "p1", kind: "research", state: "running" },
+    stage: {
+      id: "s1",
+      projectId: "p1",
+      kind: "research",
+      state: "running",
+      work: {
+        projectId: "p1",
+        stageId: "s1",
+        kind: "research",
+        revisionId: "r1",
+        workId: "s1" + "-r1",
+        fingerprint: "research",
+      },
+    },
+    work: {
+      projectId: "p1",
+      stageId: "s1",
+      kind: "research",
+      revisionId: "r1",
+      workId: "s1" + "-r1",
+      fingerprint: "research",
+    },
+    maySubmit: () => true,
     signal,
     emit: (): void => {},
   };

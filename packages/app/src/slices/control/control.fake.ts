@@ -100,11 +100,24 @@ export function harness(
   const log = { write: () => {} };
   const runner = createRunner({
     stages: {
-      stagesOf: (id) => stagesOf(db, id),
+      stagesOf: (id) =>
+        stagesOf(db, id).map((stage) => ({
+          ...stage,
+          work: {
+            projectId: id,
+            revisionId: "r1",
+            workId: `${stage.id}-r1`,
+            stageId: stage.id,
+            kind: stage.kind,
+            fingerprint: stage.kind,
+          },
+        })),
+      maySubmit: () => true,
       paused: (id) => projectPaused(db, id),
       dependenciesOf: (_id, kind) => dependenciesOf(kind, config.sources),
-      claim: (id) => claimStage(db, id, clock.now().toISOString()),
-      finish: (id, state, reason) => finishStage(db, id, state, reason, clock.now().toISOString()),
+      claim: (work) => claimStage(db, work.stageId, clock.now().toISOString()),
+      finish: (work, state, reason) =>
+        finishStage(db, work.stageId, state, reason, clock.now().toISOString()),
     },
     runs,
     emit,

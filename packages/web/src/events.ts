@@ -15,6 +15,7 @@ export interface EventSourceLike {
 export type OpenEvents = (url: string) => EventSourceLike;
 
 export interface ProjectSink {
+  readonly accept?: (event: ProjectEvent) => boolean;
   // On an SSE disconnect the browser reconnects by itself and the events it missed are
   // never replayed, so the page refetches instead of resuming. It is also what
   // fetches the rows an event cannot carry: the output an image landed as, and the files a
@@ -56,6 +57,7 @@ const globalEventNames = [
 
 export function subscribeProject(open: OpenEvents, url: string, sink: ProjectSink): () => void {
   return listen<ProjectEvent>(open, url, projectEventNames, sink.refetch, (event) => {
+    if (sink.accept?.(event) === false) return;
     if (event.type === "llm.preview") {
       sink.previewWriting?.(event);
       return;

@@ -1,5 +1,6 @@
 import type { LlmEvent, Message } from "../../kernel/ports/llm.js";
 import type { LlmAnswer, StageProviders } from "../../kernel/runner/providers.js";
+import type { AttemptResult } from "../../kernel/runner/work.js";
 import type { ProviderChoice } from "../admission/model.js";
 import type { Tokens } from "../telemetry/model.js";
 import { noTokens, plusUsage } from "../telemetry/model.js";
@@ -75,7 +76,7 @@ export async function writeArticle(
   choice: ProviderChoice,
   brief: ArticleBrief,
   onDelta: (text: string) => void,
-): Promise<WrittenArticle> {
+): Promise<AttemptResult<WrittenArticle>> {
   const base = articleMessages(brief);
   const sent: SentMessages[] = [{ label: "Article", messages: base }];
   const stream = (event: LlmEvent): void => {
@@ -84,7 +85,7 @@ export async function writeArticle(
     }
   };
 
-  let answer = await providers.llm(
+  let result = await providers.llm(
     {
       provider: choice.provider,
       model: choice.model,
@@ -94,13 +95,15 @@ export async function writeArticle(
     },
     stream,
   );
+  if (!result.ok) return result;
+  let answer = result.value;
   const pieces = [answer.text];
   let tokens = plusUsage(noTokens, answer.usage);
 
   for (let n = 1; truncated(answer) && n <= continuationLimit; n += 1) {
     const messages = continuationMessages(base, pieces.join(""));
     sent.push({ label: `Continuation ${String(n)}`, messages });
-    answer = await providers.llm(
+    result = await providers.llm(
       {
         provider: choice.provider,
         model: choice.model,
@@ -113,11 +116,13 @@ export async function writeArticle(
       },
       stream,
     );
+    if (!result.ok) return result;
+    answer = result.value;
     pieces.push(answer.text);
     tokens = plusUsage(tokens, answer.usage);
   }
 
-  return { markdown: pieces.join(""), sent, tokens };
+  return { ok: true, value: { markdown: pieces.join(""), sent, tokens } };
 }
 
 function truncated(answer: LlmAnswer): boolean {

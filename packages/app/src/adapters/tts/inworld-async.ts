@@ -26,7 +26,10 @@ export async function* inworldAsync(
   request: TtsRequest,
   key: string,
 ): AsyncGenerator<Uint8Array, void> {
-  if (request.text.length > 100_000) {
+  const saved = request.continuation?.read();
+  if (saved !== undefined && !operationName.test(saved))
+    throw invalid("returned an invalid operation name");
+  if (saved === undefined && request.text.length > 100_000) {
     throw providerError({
       kind: "unsupported",
       message:
@@ -34,8 +37,6 @@ export async function* inworldAsync(
     });
   }
   const headers = { Authorization: `Basic ${key}`, "Content-Type": "application/json" };
-  const saved = request.continuation?.read();
-  if (saved && !operationName.test(saved)) throw invalid("returned an invalid operation name");
   request.signal.throwIfAborted();
   let response = await deps.fetch(
     saved

@@ -182,3 +182,34 @@ describe("the global event stream", () => {
     expect(sink.refetch).toHaveBeenCalledTimes(1);
   });
 });
+
+it("rejects old events before reducing article or writing previews", () => {
+  const source = fakeSource();
+  const sink = {
+    ...projectSink(),
+    previewWriting: vi.fn(),
+    accept: (event: ProjectEvent) => event.type === "project.updated" || event.revisionId === "r2",
+  };
+  const stop = subscribeProject(() => source, "/events", sink);
+  source.emit({
+    type: "article.delta",
+    projectId: "p1",
+    revisionId: "r1",
+    workId: "w1",
+    text: "old",
+  });
+  source.emit({
+    type: "llm.preview",
+    projectId: "p1",
+    revisionId: "r1",
+    workId: "w1",
+    stage: "article",
+    callId: "one",
+    text: "old",
+  });
+  expect(sink.appendArticle).not.toHaveBeenCalled();
+  expect(sink.previewWriting).not.toHaveBeenCalled();
+  source.emit({ type: "project.updated", projectId: "p1" });
+  expect(sink.refetch).toHaveBeenCalledOnce();
+  stop();
+});

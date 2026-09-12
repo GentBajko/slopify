@@ -10,6 +10,7 @@ import type { ControlDeps, ControlResult } from "../../slices/control/index.js";
 import { changeProviders, pauseProject, resumeProject } from "../../slices/control/index.js";
 import { withProjectControl } from "../../slices/control/lock.js";
 import { providerChangesSchema } from "../../slices/control/providers.js";
+import { type RevisionAction, revisionAction } from "../../slices/rebuild/runtime-actions.js";
 import type { RerunDeps, RerunRefusal, RerunResult } from "../../slices/reruns/index.js";
 import {
   deleteImage,
@@ -18,6 +19,8 @@ import {
   rerunStage,
   retryStage,
 } from "../../slices/reruns/index.js";
+import { adoptBaseline } from "../../slices/revisions/adopt.js";
+import { currentRevisionId } from "../../slices/revisions/repo.js";
 import { allowsCustomModel } from "../../slices/settings/models.js";
 import { providerStatuses } from "../../slices/settings/readiness.js";
 import { outputsOf } from "../../slices/storage/repo.js";
@@ -75,6 +78,7 @@ const details: Readonly<Record<RerunRefusal, string>> = {
 // generated from; see stagingRoutes.
 export function actionRoutes(deps: AppDeps) {
   const reruns: RerunDeps = {
+    measureAudio: deps.measureAudio,
     db: deps.db,
     paths: deps.paths,
     ids: deps.ids,
@@ -91,6 +95,7 @@ export function actionRoutes(deps: AppDeps) {
     },
   };
   const control: ControlDeps = {
+    catalogue: deps.catalogue,
     ...reruns,
     runner: deps.runner,
     emit: (projectId, event) => deps.hub.emit(projectId, event),
@@ -98,9 +103,20 @@ export function actionRoutes(deps: AppDeps) {
     allowsCustomModels: deps.catalogue ? () => false : allowsCustomModel,
     modelsFor: deps.modelsFor ?? (() => Promise.reject(new Error("Model catalog unavailable"))),
   };
+  const act = (
+    projectId: string,
+    action: RevisionAction,
+    legacy: () => RerunResult,
+  ): Promise<RerunResult> => {
+    if (deps.catalogue !== undefined) adoptBaseline(deps, projectId);
+    return currentRevisionId(deps.db, projectId) === undefined
+      ? Promise.resolve(legacy())
+      : revisionAction({ ...reruns, catalogue: deps.catalogue }, projectId, action);
+  };
   const view = (projectId: string): Record<string, unknown> => {
     const stages = stagesOf(deps.db, projectId);
     return {
+      revisionId: currentRevisionId(deps.db, projectId) ?? null,
       project: {
         ...projectById(deps.db, projectId),
         status: derive(stages, projectPaused(deps.db, projectId)),
@@ -186,11 +202,23 @@ export function actionRoutes(deps: AppDeps) {
     })
     .post("/:id/stages/:kind/retry", zValidator("param", stageParam, onInvalid), (c) => {
       const { id, kind } = c.req.valid("param");
-      return withProjectControl(deps.db, id, () => started(c, id, retryStage(reruns, id, kind)));
+      return withProjectControl(deps.db, id, async () =>
+        started(
+          c,
+          id,
+          await act(id, { kind: "retry", stage: kind }, () => retryStage(reruns, id, kind)),
+        ),
+      );
     })
     .post("/:id/stages/:kind/rerun", zValidator("param", stageParam, onInvalid), (c) => {
       const { id, kind } = c.req.valid("param");
-      return withProjectControl(deps.db, id, () => started(c, id, rerunStage(reruns, id, kind)));
+      return withProjectControl(deps.db, id, async () =>
+        started(
+          c,
+          id,
+          await act(id, { kind: "rerun", stage: kind }, () => rerunStage(reruns, id, kind)),
+        ),
+      );
     })
     .put(
       "/:id/article",
@@ -198,21 +226,39 @@ export function actionRoutes(deps: AppDeps) {
       zValidator("json", articleBody, onInvalid),
       (c) => {
         const { id } = c.req.valid("param");
-        return withProjectControl(deps.db, id, () =>
-          started(c, id, editArticle(reruns, id, c.req.valid("json").markdown)),
+        return withProjectControl(deps.db, id, async () =>
+          started(
+            c,
+            id,
+            await act(id, { kind: "article", markdown: c.req.valid("json").markdown }, () =>
+              editArticle(reruns, id, c.req.valid("json").markdown),
+            ),
+          ),
         );
       },
     )
     .delete("/:id/images/:outputId", zValidator("param", imageParam, onInvalid), (c) => {
       const { id, outputId } = c.req.valid("param");
-      return withProjectControl(deps.db, id, () =>
-        started(c, id, deleteImage(reruns, id, outputId)),
+      return withProjectControl(deps.db, id, async () =>
+        started(
+          c,
+          id,
+          await act(id, { kind: "delete-image", outputId }, () =>
+            deleteImage(reruns, id, outputId),
+          ),
+        ),
       );
     })
     .post("/:id/images/:outputId/regenerate", zValidator("param", imageParam, onInvalid), (c) => {
       const { id, outputId } = c.req.valid("param");
-      return withProjectControl(deps.db, id, () =>
-        started(c, id, regenerateImage(reruns, id, outputId)),
+      return withProjectControl(deps.db, id, async () =>
+        started(
+          c,
+          id,
+          await act(id, { kind: "regenerate-image", outputId }, () =>
+            regenerateImage(reruns, id, outputId),
+          ),
+        ),
       );
     });
 }

@@ -11,6 +11,7 @@ import type { StageContext } from "../../kernel/runner/index.js";
 import type { StagePiece } from "../../kernel/runner/piece-repo.js";
 import { insertPiece, piecesOf, setPiece } from "../../kernel/runner/piece-repo.js";
 import type { LlmAnswer, StageProviders } from "../../kernel/runner/providers.js";
+import type { AttemptResult, StageRunResult } from "../../kernel/runner/work.js";
 import type { ProviderChoice } from "../admission/model.js";
 import { projectById, setStageProgress } from "../admission/repo.js";
 import { storeText } from "../storage/staging.js";
@@ -48,7 +49,7 @@ export async function runResearch(
   deps: ResearchDeps,
   context: StageContext,
   providers: StageProviders,
-): Promise<void> {
+): Promise<StageRunResult> {
   const { projectId } = context.stage;
   const project = projectById(deps.db, projectId);
   if (project === undefined) {
@@ -64,7 +65,7 @@ export async function runResearch(
   const brief: ResearchBrief = { articlePrompt, values: project.config.values };
 
   try {
-    await research(deps, context, providers, choice, brief);
+    return await research(deps, context, providers, choice, brief);
   } catch (error) {
     // The adapter says the model cannot ground on the web and the wrapper has already
     // made that terminal; this is where it becomes the sentence the user reads.
@@ -81,7 +82,7 @@ async function research(
   providers: StageProviders,
   choice: ProviderChoice,
   brief: ResearchBrief,
-): Promise<void> {
+): Promise<StageRunResult> {
   // Tokens are counted per stage, so the planner, every sub-agent and the synthesis add
   // into one total. A call that was aborted or failed never answers and adds nothing; a
   // provider that reports no usage adds zero, never an estimate.
@@ -89,8 +90,19 @@ async function research(
   const add = (usage: Usage | null): void => {
     tokens = plusUsage(tokens, usage);
   };
-  const chapters = await plan(deps, context, providers, choice, brief, add);
-  const findings = await researchChapters(deps, context, providers, choice, brief, chapters, add);
+  const planned = await plan(deps, context, providers, choice, brief, add);
+  if (!planned.ok) return "held";
+  const researched = await researchChapters(
+    deps,
+    context,
+    providers,
+    choice,
+    brief,
+    planned.value,
+    add,
+  );
+  if (!researched.ok) return "held";
+  const findings = researched.value;
 
   const answer = await providers.llm({
     provider: choice.provider,
@@ -100,12 +112,18 @@ async function research(
     previewLabel: "Writing research notes",
     check: (given: LlmAnswer): string | undefined => sourcedAnswer("the synthesis", given.text),
   });
-  add(answer.usage);
+  if (!answer.ok) return "held";
+  add(answer.value.usage);
 
   const { projectId } = context.stage;
   // The notes and every instruction sent are stored on the project. Each sub-agent's own output
   // stays on its chapter row, which is where the resume reads it.
-  storeText(deps, { projectId, stageKind: "research", role: "notes", text: answer.text.trim() });
+  storeText(deps, {
+    projectId,
+    stageKind: "research",
+    role: "notes",
+    text: answer.value.text.trim(),
+  });
   storeText(deps, {
     projectId,
     stageKind: "research",
@@ -124,6 +142,7 @@ async function research(
     stage: "research",
     detail: `${String(findings.length)} chapters researched`,
   });
+  return "done";
 }
 
 // The chapter list, planned once and kept. A retry after a failure finds the rows the
@@ -135,10 +154,10 @@ async function plan(
   choice: ProviderChoice,
   brief: ResearchBrief,
   add: (usage: Usage | null) => void,
-): Promise<readonly StagePiece[]> {
+): Promise<AttemptResult<readonly StagePiece[]>> {
   const existing = piecesOf(deps.db, context.stage.id, "chapter");
   if (existing.length > 0) {
-    return existing;
+    return { ok: true, value: existing };
   }
   const answer = await providers.llm({
     provider: choice.provider,
@@ -150,10 +169,11 @@ async function plan(
     check: (given: LlmAnswer): string | undefined =>
       chaptersFrom(given.text).length === 0 ? "the planner named no chapters" : undefined,
   });
-  add(answer.usage);
+  if (!answer.ok) return answer;
+  add(answer.value.usage);
   // No cap on the count. The list is the prompt's own section guide as often as
   // not, and capping it would silently drop a section the article asks for.
-  const planned: StagePiece[] = chaptersFrom(answer.text).map((title, index) => ({
+  const planned: StagePiece[] = chaptersFrom(answer.value.text).map((title, index) => ({
     id: deps.ids.next(),
     stageId: context.stage.id,
     kind: "chapter",
@@ -166,7 +186,7 @@ async function plan(
       insertPiece(deps.db, piece);
     }
   });
-  return planned;
+  return { ok: true, value: planned };
 }
 
 // One sub-agent per chapter, all in parallel. A chapter a previous run finished is not
@@ -180,7 +200,7 @@ async function researchChapters(
   brief: ResearchBrief,
   chapters: readonly StagePiece[],
   add: (usage: Usage | null) => void,
-): Promise<readonly Finding[]> {
+): Promise<AttemptResult<readonly Finding[]>> {
   const outline = chapters.map((piece) => payloadOf(piece).title);
   const total = chapters.length;
   let done = chapters.filter((piece) => payloadOf(piece).notes !== undefined).length;
@@ -206,8 +226,12 @@ async function researchChapters(
           check: (given: LlmAnswer): string | undefined =>
             sourcedAnswer(`the researcher on "${kept.title}"`, given.text),
         });
-        add(answer.usage);
-        const notes = answer.text.trim();
+        if (!answer.ok) {
+          setPiece(deps.db, piece.id, "pending", piece.payload);
+          return answer;
+        }
+        add(answer.value.usage);
+        const notes = answer.value.text.trim();
         setPiece(deps.db, piece.id, "done", JSON.stringify({ title: kept.title, notes }));
         done += 1;
         report(deps, context, done, total);
@@ -224,16 +248,18 @@ async function researchChapters(
   const findings: Finding[] = [];
   for (const outcome of outcomes) {
     if (!outcome.ok) {
+      if ("reason" in outcome) return outcome;
       throw outcome.error;
     }
     findings.push(outcome.finding);
   }
-  return findings;
+  return { ok: true, value: findings };
 }
 
 type Outcome =
   | { readonly ok: true; readonly finding: Finding }
-  | { readonly ok: false; readonly error: unknown };
+  | { readonly ok: false; readonly error: unknown }
+  | { readonly ok: false; readonly reason: "held" };
 
 // K of N chapters researched, written as well as emitted, so a page opened mid-stage reads the
 // count off the row rather than waiting for the next chapter.

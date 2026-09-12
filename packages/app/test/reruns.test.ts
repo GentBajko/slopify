@@ -18,7 +18,6 @@ import type { Ids } from "../src/kernel/ids.js";
 import type { Log } from "../src/kernel/log.js";
 import { ensureDirs, layout } from "../src/kernel/paths.js";
 import type { Registry } from "../src/kernel/ports/registry.js";
-import { sqliteAttempts } from "../src/kernel/runner/attempt-repo.js";
 import { derive } from "../src/kernel/runner/graph.js";
 import type { Runner } from "../src/kernel/runner/index.js";
 import { createRunner } from "../src/kernel/runner/index.js";
@@ -35,6 +34,7 @@ import type { Counted } from "../src/slices/telemetry/record.fake.js";
 import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 import { resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
 import { renderVideo } from "../src/slices/video/run.js";
+import { legacyAttempts, legacyStage } from "./legacy-runner.js";
 
 // Re-runs end to end: a run made by the real stages, then an edit and a delete on it, each
 // cascading through the real runner to a fresh render by the real bundled ffmpeg. No
@@ -162,7 +162,7 @@ function harness(): Harness {
   };
   const providers = {
     registry,
-    attempts: sqliteAttempts(db, ids),
+    attempts: legacyAttempts(db, ids),
     clock: systemClock,
     log: silent,
   };
@@ -170,16 +170,20 @@ function harness(): Harness {
   const events: ProjectEvent[] = [];
   const runner = createRunner({
     stages: {
-      stagesOf: (id) => stagesOf(db, id),
-      claim: (stageId) => claimStage(db, stageId, systemClock.now().toISOString()),
-      finish: (stageId, state, failureReason) =>
-        finishStage(db, stageId, state, failureReason, systemClock.now().toISOString()),
+      stagesOf: (id) => stagesOf(db, id).map(legacyStage),
+      maySubmit: () => true,
+      claim: (work) => claimStage(db, work.stageId, systemClock.now().toISOString()),
+      finish: (work, state, failureReason) =>
+        finishStage(db, work.stageId, state, failureReason, systemClock.now().toISOString()),
     },
     runs: {
       article: (context) => runArticle(deps, context, stageProviders(providers, context)),
       audio: (context) => runNarration(video, context, stageProviders(providers, context)),
       images: (context) => runImages(deps, context, stageProviders(providers, context)),
-      video: (context) => renderVideo(video, context),
+      video: async (context) => {
+        await renderVideo(video, context);
+        return "done";
+      },
     },
     emit: (_id, event) => {
       events.push(event);

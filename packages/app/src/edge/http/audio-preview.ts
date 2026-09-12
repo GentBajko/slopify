@@ -1,7 +1,9 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
+import { currentRevisionId } from "../../slices/revisions/repo.js";
 import { projectTitle } from "../../slices/storage/repo.js";
+import { currentWorkOrigin } from "../events/visibility.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
 
@@ -20,7 +22,12 @@ export function audioPreviewRoutes(deps: Pick<AppDeps, "db" | "audioPreviews">) 
       const { projectId } = c.req.valid("param");
       if (projectTitle(deps.db, projectId) === undefined) return missing(c);
       c.header("Cache-Control", "no-store");
-      return c.json({ previews: deps.audioPreviews?.list(projectId) ?? [] });
+      return c.json({
+        revisionId: currentRevisionId(deps.db, projectId) ?? null,
+        previews: (deps.audioPreviews?.list(projectId) ?? []).filter((preview) =>
+          currentWorkOrigin(deps.db, projectId, preview),
+        ),
+      });
     })
     .get(
       "/:projectId/audio-preview/:previewId",
@@ -28,6 +35,9 @@ export function audioPreviewRoutes(deps: Pick<AppDeps, "db" | "audioPreviews">) 
       (c) => {
         const { projectId, previewId } = c.req.valid("param");
         if (projectTitle(deps.db, projectId) === undefined) return missing(c);
+        const preview = deps.audioPreviews?.list(projectId).find((item) => item.id === previewId);
+        if (preview === undefined || !currentWorkOrigin(deps.db, projectId, preview))
+          return missing(c);
         const stream = deps.audioPreviews?.stream(projectId, previewId, c.req.raw.signal);
         if (stream === undefined) return missing(c);
         // A growing MP3 has no final length or seek range. A native audio element

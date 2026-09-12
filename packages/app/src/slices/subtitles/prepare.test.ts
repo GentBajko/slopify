@@ -94,7 +94,29 @@ function fixture(): { deps: VideoDeps; context: StageContext; dir: string; texts
   });
   for (const kind of ["intro", "body", "outro"]) writeFileSync(join(dir, `${kind}.mp3`), kind);
   const context: StageContext = {
-    stage: { id: "s-video", projectId: "p1", kind: "video", state: "running" },
+    stage: {
+      id: "s-video",
+      projectId: "p1",
+      kind: "video",
+      state: "running",
+      work: {
+        projectId: "p1",
+        stageId: "s-video",
+        kind: "video",
+        revisionId: "r1",
+        workId: "s-video" + "-r1",
+        fingerprint: "video",
+      },
+    },
+    work: {
+      projectId: "p1",
+      stageId: "s-video",
+      kind: "video",
+      revisionId: "r1",
+      workId: "s-video" + "-r1",
+      fingerprint: "video",
+    },
+    maySubmit: () => true,
     signal: new AbortController().signal,
     emit: () => {},
   };

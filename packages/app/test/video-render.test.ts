@@ -20,6 +20,7 @@ import type { Counted } from "../src/slices/telemetry/record.fake.js";
 import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 import { resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
 import { renderVideo } from "../src/slices/video/run.js";
+import { legacyStage } from "./legacy-runner.js";
 
 const log: Log = { write: (): void => {} };
 const ffmpeg = resolveFfmpeg(process.env, ffmpegStatic);
@@ -220,7 +221,15 @@ function fixture(options: FixtureOptions = {}): Fixture {
 
 function context(signal: AbortSignal, events: unknown[]): StageContext {
   return {
-    stage: { id: "s-video", projectId: "p1", kind: "video", state: "running" },
+    ...(() => {
+      const stage = legacyStage({
+        id: "s-video",
+        projectId: "p1",
+        kind: "video",
+        state: "running",
+      });
+      return { stage, work: stage.work, maySubmit: () => true };
+    })(),
     signal,
     emit: (event): void => {
       events.push(event);

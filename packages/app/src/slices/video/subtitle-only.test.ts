@@ -31,7 +31,7 @@ function setup() {
     meta: {},
     createdAt: h.deps.clock.now().toISOString(),
   });
-  return h;
+  return { ...h, deps: { ...h.deps, measureAudio: async () => 200 } };
 }
 function configure(h: ReturnType<typeof setup>, mode: SubtitleConfig["mode"], size = 48): void {
   const project = projectById(h.deps.db, "p1");

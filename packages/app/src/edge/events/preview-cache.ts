@@ -12,19 +12,26 @@ export function createPreviewCache(): {
       if (event.type === "stage.state") {
         const calls = projects.get(event.projectId);
         if (calls) {
-          for (const [id, call] of calls) if (call.stage === event.stage) calls.delete(id);
+          for (const [id, call] of calls)
+            if (
+              call.stage === event.stage &&
+              call.revisionId === event.revisionId &&
+              call.workId === event.workId
+            )
+              calls.delete(id);
           if (calls.size === 0) projects.delete(event.projectId);
         }
         return;
       }
       if (event.type !== "llm.preview") return;
       const calls = projects.get(event.projectId) ?? new Map<string, LlmPreviewEvent>();
-      const prior = calls.get(event.callId);
+      const identity = JSON.stringify([event.revisionId, event.workId, event.callId]);
+      const prior = calls.get(identity);
       const text = (event.reset ? event.text : `${prior?.text ?? ""}${event.text}`).slice(
         -64 * 1024,
       );
-      calls.delete(event.callId);
-      calls.set(event.callId, { ...event, text, reset: true });
+      calls.delete(identity);
+      calls.set(identity, { ...event, text, reset: true });
       while (calls.size > 8) {
         const id = calls.keys().next().value;
         if (id !== undefined) calls.delete(id);

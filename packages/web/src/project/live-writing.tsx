@@ -3,28 +3,38 @@ import type { StageKind } from "@app/kernel/pipeline.js";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Picker } from "@/components/ui/picker";
+import { useProjectRevision } from "./live-revision.js";
 
-export const writingKey = (projectId: string) => ["live-writing", projectId] as const;
-export type WritingPreview = Pick<LlmPreviewEvent, "stage" | "callId" | "label" | "text">;
+export const writingKey = (projectId: string, revisionId: string | null = null) =>
+  ["live-writing", projectId, revisionId] as const;
+export type WritingPreview = Pick<
+  LlmPreviewEvent,
+  "stage" | "callId" | "label" | "text" | "revisionId" | "workId" | "workPieceId"
+>;
 
 export function appendWriting(
   previous: readonly WritingPreview[],
   event: LlmPreviewEvent,
 ): readonly WritingPreview[] {
-  const existing = previous.find((one) => one.callId === event.callId);
+  const matches = (one: WritingPreview): boolean =>
+    one.callId === event.callId &&
+    one.revisionId === event.revisionId &&
+    one.workId === event.workId;
+  const existing = previous.find(matches);
   const text = (event.reset ? event.text : `${existing?.text ?? ""}${event.text}`).slice(
     -64 * 1024,
   );
   const next = {
+    ...(event.revisionId === undefined ? {} : { revisionId: event.revisionId }),
+    ...(event.workId === undefined ? {} : { workId: event.workId }),
+    ...(event.workPieceId === undefined ? {} : { workPieceId: event.workPieceId }),
     stage: event.stage,
     callId: event.callId,
     ...(event.label === undefined ? {} : { label: event.label }),
     text,
   };
   return (
-    existing
-      ? previous.map((one) => (one.callId === event.callId ? next : one))
-      : [...previous, next]
+    existing ? previous.map((one) => (matches(one) ? next : one)) : [...previous, next]
   ).slice(-24);
 }
 
@@ -35,8 +45,9 @@ export function LiveWriting({
   readonly projectId: string;
   readonly stage: StageKind;
 }) {
+  const revisionId = useProjectRevision(projectId);
   const previews = useQuery({
-    queryKey: writingKey(projectId),
+    queryKey: writingKey(projectId, revisionId),
     queryFn: (): readonly WritingPreview[] => [],
     enabled: false,
   });

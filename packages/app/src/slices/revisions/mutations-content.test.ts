@@ -175,6 +175,18 @@ it("binds per-image raw templates by stable key through reorder and requires Ima
   expect(valid.view.revision.content.imageDefinitions.first?.templateKey).toBe("image:first");
   expect(
     await saveRevision(h.deps, {
+      ...request(valid.view, "forget-known-template"),
+      edit: {
+        config: valid.view.revision.config,
+        content: {
+          ...valid.view.revision.content,
+          promptTemplates: { ...valid.view.revision.content.promptTemplates, "image:first": null },
+        },
+      },
+    }),
+  ).toMatchObject({ ok: false, reason: "invalid-edit" });
+  expect(
+    await saveRevision(h.deps, {
       ...request(valid.view, "delete"),
       edit: {
         config: valid.view.revision.config,

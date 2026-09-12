@@ -143,12 +143,17 @@ it("does not let a caption bundle replace newly selected WAV audio", async () =>
       ],
       [],
     ).currentAttached,
-  ).toBe(false);
+  ).toBe(true);
   expect(
     getRevisionView(h.deps, h.projectId, h.base.revision.id)?.outputs.find(
       (row) => row.selected && row.output.role === "audio_export",
     )?.assetId,
   ).toBe(next.asset.id);
+  expect(
+    getRevisionView(h.deps, h.projectId, h.base.revision.id)?.outputs.filter(
+      (row) => row.selected && ["subtitles_srt", "subtitles_vtt"].includes(row.output.role),
+    ),
+  ).toHaveLength(2);
 });
 it("requires video render parameters and every declared caption sidecar", async () => {
   const h = await fixture(true);

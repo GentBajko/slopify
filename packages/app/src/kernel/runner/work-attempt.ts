@@ -57,9 +57,9 @@ export function readWorkContinuation(
       "SELECT continuation FROM revision_work_pieces WHERE id=? AND work_id=? AND submitted_at IS NOT NULL",
     )
     .get(pieceId, work.workId);
-  return typeof row?.continuation === "string" && row.continuation.length > 0
-    ? row.continuation
-    : null;
+  // A malformed persisted token still records an accepted operation. Let the adapter
+  // reject it rather than turning corruption into another paid submission.
+  return typeof row?.continuation === "string" ? row.continuation : null;
 }
 export function writeWorkContinuation(
   db: DatabaseSync,

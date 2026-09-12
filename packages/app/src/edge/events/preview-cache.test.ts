@@ -34,3 +34,19 @@ describe("live preview replay", () => {
     expect(cache.snapshot("p19")).toHaveLength(8);
   });
 });
+
+it("does not merge or clear another revision's preview with the same call ID", () => {
+  const cache = createPreviewCache();
+  cache.observe({ ...delta, revisionId: "r1", workId: "w1", text: "Old" });
+  cache.observe({ ...delta, revisionId: "r2", workId: "w2", text: "New" });
+  expect(cache.snapshot("p1").map((one) => one.text)).toEqual(["Old", "New"]);
+  cache.observe({
+    type: "stage.state",
+    projectId: "p1",
+    stage: "research",
+    state: "done",
+    revisionId: "r1",
+    workId: "w1",
+  });
+  expect(cache.snapshot("p1")).toMatchObject([{ revisionId: "r2", workId: "w2", text: "New" }]);
+});

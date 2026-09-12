@@ -37,10 +37,11 @@ async function audio(
   }
   const path = outputPath(deps.paths, output.projectId, output.path);
   const durationMs =
-    output.durationMs ?? (await probeDurationMs(deps.ffmpeg, path, signal, deps.log));
+    output.durationMs ??
+    (deps.measureAudio === undefined
+      ? await probeDurationMs(deps.ffmpeg, path, signal, deps.log)
+      : await deps.measureAudio(path, signal));
   if (output.durationMs === null) {
-    // A provided file arrives with no duration; measuring it once is worth recording.
-    deps.db.prepare("UPDATE outputs SET duration_ms = ? WHERE id = ?").run(durationMs, output.id);
     deps.log.write("info", "video.probe", {
       projectId: output.projectId,
       stage: "video",

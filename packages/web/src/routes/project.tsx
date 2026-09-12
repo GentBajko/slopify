@@ -63,7 +63,7 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
       });
   }, [tutorialStep, projectId, project.data]);
 
-  useLiveProject(projectId);
+  useLiveProject(projectId, project.data?.revisionId ?? null);
 
   if (project.error !== null) {
     return <p className="text-body text-red">{project.error.message}</p>;

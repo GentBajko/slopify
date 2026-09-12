@@ -1,4 +1,8 @@
-import type { AudioPreviewSink, AudioPreviewStore } from "../../kernel/audio-preview.js";
+import type {
+  AudioPreviewOrigin,
+  AudioPreviewSink,
+  AudioPreviewStore,
+} from "../../kernel/audio-preview.js";
 import type { ObserveTts } from "../../kernel/runner/providers.js";
 
 export function observeNarration(
@@ -6,13 +10,14 @@ export function observeNarration(
   projectId: string,
   key: string,
   label: string,
+  origin?: AudioPreviewOrigin,
 ): ObserveTts | undefined {
   if (store === undefined) return undefined;
   let sink: AudioPreviewSink | undefined;
   return (event) => {
     switch (event.type) {
       case "start":
-        sink = store.begin(projectId, key, label);
+        sink = store.begin(projectId, key, label, origin);
         break;
       case "chunk":
         sink?.append(event.bytes);

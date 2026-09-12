@@ -55,26 +55,56 @@ export function commitRevisionOutputs(
         const revision = revisionById(deps.db, publication.work.projectId, target.revisionId);
         if (revision === undefined)
           throw new Error("Publication target disappeared inside its transaction.");
-        const wav =
-          authority.key === "subtitles:files"
-            ? outputs.find((row) => row.output.role === "audio_export")
-            : undefined;
-        const matchesWav =
-          wav === undefined ||
-          outputsForRevision(deps.db, revision.projectId, revision.id).some(
-            (row) =>
-              row.selected &&
-              row.state === "ready" &&
-              row.workKey === "export:wav" &&
-              row.assetId === wav.asset.id &&
-              row.fingerprint === wav.fingerprint,
+        const selected = target.selected;
+        const before = outputsForRevision(deps.db, revision.projectId, revision.id);
+        const exportAuthority = authority.key === "export:wav" || authority.key === "export:video";
+        const selectsMember = (output: PreparedOutput): boolean => {
+          if (!selected) return false;
+          if (
+            authority.key === "subtitles:files" &&
+            (output.output.role === "audio_export" || output.output.role === "video")
+          )
+            return before.some(
+              (row) =>
+                row.selected &&
+                row.state === "ready" &&
+                row.workKey === output.workKey &&
+                row.assetId === output.asset.id &&
+                row.fingerprint === output.fingerprint,
+            );
+          if (!exportAuthority || output.workKey !== "subtitles:files") return true;
+          if ((revision.config.subtitles?.mode ?? "off") === "off") return false;
+          return (
+            revision.fingerprints[output.workKey] === output.fingerprint ||
+            before.some(
+              (row) =>
+                row.selected &&
+                row.state === "ready" &&
+                row.slot === output.slot &&
+                row.assetId === output.asset.id &&
+                row.fingerprint === output.fingerprint,
+            )
           );
-        const selected = target.selected && matchesWav;
+        };
         if (selected)
-          for (const slot of replacementSlots(authority.key, outputs))
+          for (const slot of replacementSlots(authority.key, outputs)) {
+            const captionSlot = [
+              "video:subtitles_srt",
+              "video:subtitles_vtt",
+              "video:subtitle_ass",
+              "video:subtitle_font",
+            ].includes(slot);
+            if (
+              exportAuthority &&
+              captionSlot &&
+              (revision.config.subtitles?.mode ?? "off") !== "off" &&
+              !outputs.some((output) => output.slot === slot && selectsMember(output))
+            )
+              continue;
             deps.db
               .prepare("UPDATE revision_outputs SET selected=0 WHERE revision_id=? AND slot=?")
               .run(revision.id, slot);
+          }
         for (const output of outputs) {
           const row: ManifestOutput = {
             slot: output.slot,
@@ -94,7 +124,7 @@ export function commitRevisionOutputs(
             recordId,
             publication.publicationId,
           );
-          if (selected) selectOutputRecord(deps.db, revision.id, row.slot, recordId);
+          if (selectsMember(output)) selectOutputRecord(deps.db, revision.id, row.slot, recordId);
         }
         for (const piece of pieces) {
           const row: ManifestPiece = {

@@ -54,11 +54,20 @@ describe("pause and resume", () => {
               );
             });
           }
+          return "done";
         },
-        article: async () => {},
-        images: async () => {},
-        thumbnail: async () => {},
-        video: async () => {},
+        article: async () => {
+          return "done";
+        },
+        images: async () => {
+          return "done";
+        },
+        thumbnail: async () => {
+          return "done";
+        },
+        video: async () => {
+          return "done";
+        },
       },
     );
     h.runner.tick("p1");
@@ -111,7 +120,10 @@ describe("pause and resume", () => {
     const h = harness(
       { article: "pending", audio: "pending" },
       {
-        article: () => finish.promise,
+        article: async () => {
+          await finish.promise;
+          return "done";
+        },
         audio: async () => {
           throw new Error("must not start");
         },
@@ -135,9 +147,11 @@ describe("pause and resume", () => {
       {
         research: async () => {
           called.push("research");
+          return "done";
         },
         article: async () => {
           called.push("article");
+          return "done";
         },
       },
     );
@@ -339,7 +353,14 @@ describe("provider changes", () => {
 
   it("bounds a stuck catalog so a queued resume is released with no config mutation", async () => {
     vi.useFakeTimers();
-    const h = harness({ article: "failed" }, { article: async () => {} });
+    const h = harness(
+      { article: "failed" },
+      {
+        article: async () => {
+          return "done";
+        },
+      },
+    );
     const saved = changeProviders({ ...h.deps, modelsFor: () => new Promise(() => {}) }, "p1", {
       llm: { provider: "openrouter", model: "new" },
     });

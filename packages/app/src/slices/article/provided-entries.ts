@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import type { StageContext } from "../../kernel/runner/index.js";
 import { piecesOf } from "../../kernel/runner/piece-repo.js";
 import type { StageProviders } from "../../kernel/runner/providers.js";
+import type { StageRunResult } from "../../kernel/runner/work.js";
 import { projectById, stagesOf } from "../admission/repo.js";
 import { outputPath } from "../storage/layout.js";
 import { outputsOf } from "../storage/repo.js";
@@ -16,13 +17,13 @@ export async function prepareProvidedArticleSegments(
   deps: ArticleDeps,
   audioContext: StageContext,
   providers: StageProviders,
-): Promise<void> {
+): Promise<StageRunResult> {
   const { projectId } = audioContext.stage;
   const project = projectById(deps.db, projectId);
   if (!project) throw new Error(`project ${projectId} has no row`);
   const { config } = project;
-  if (config.sources.article !== "provide" || config.sources.audio !== "generate") return;
-  if (!config.intro && !config.outro) return;
+  if (config.sources.article !== "provide" || config.sources.audio !== "generate") return "done";
+  if (!config.intro && !config.outro) return "done";
   audioContext.signal.throwIfAborted();
   const article = stagesOf(deps.db, projectId).find((stage) => stage.kind === "article");
   if (!article) throw new Error(`project ${projectId} has no article stage`);
@@ -41,8 +42,10 @@ export async function prepareProvidedArticleSegments(
     audioContext.signal.throwIfAborted();
     if (completed.some((piece) => piece.idx === index + 1 && piece.state === "done")) continue;
     const sent: SentMessages[] = [];
-    const segment = await writeSegment(providers, config.llm, config, category, narration, sent);
+    const result = await writeSegment(providers, config.llm, config, category, narration, sent);
     audioContext.signal.throwIfAborted();
+    if (!result.ok) return "held";
+    const segment = result.value;
     if (!segment) continue;
     if (sent.length > 0) {
       instructions += `${instructions === "" ? "" : "\n"}${instructionsText(sent)}`;
@@ -63,4 +66,5 @@ export async function prepareProvidedArticleSegments(
       ...segment.tokens,
     });
   }
+  return "done";
 }

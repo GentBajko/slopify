@@ -3,6 +3,8 @@ import { z } from "zod";
 import type { Ids } from "../ids.js";
 import type { ProviderErrorKind } from "../ports/model.js";
 import { providerErrorKinds } from "../ports/model.js";
+import type { AttemptResult, WorkRef } from "./work.js";
+import { readWorkContinuation, startWorkAttempt, writeWorkContinuation } from "./work-attempt.js";
 
 // One row per provider call attempt. The project page reads the last error text off these rows
 // and Usage counts them, so an attempt is written when it opens rather than when it ends: a
@@ -12,6 +14,11 @@ export const attemptOutcomes = ["ok", "canceled", ...providerErrorKinds] as cons
 export type AttemptOutcome = "ok" | "canceled" | ProviderErrorKind;
 
 export interface AttemptStart {
+  readonly revisionId?: string | null;
+  readonly workId?: string | null;
+  readonly workPieceId?: string | null;
+  readonly work?: WorkRef;
+  readonly operation?: "submit" | "retrieve";
   readonly stageId: string;
   readonly pieceId: string | null;
   readonly n: number;
@@ -36,7 +43,9 @@ export interface Attempt extends AttemptStart {
 
 // The attempt wrapper's only reach into storage, so a test can hand it a recorder.
 export interface AttemptStore {
-  readonly start: (attempt: AttemptStart) => string;
+  readonly start: (attempt: AttemptStart) => string | AttemptResult<string>;
+  readonly readContinuation?: (work: WorkRef, pieceId: string) => string | undefined;
+  readonly writeContinuation?: (work: WorkRef, pieceId: string, token: string) => void;
   readonly end: (id: string, ended: AttemptEnd) => void;
 }
 
@@ -56,7 +65,21 @@ const attemptRow = z.object({
 
 export function sqliteAttempts(db: DatabaseSync, ids: Ids): AttemptStore {
   return {
-    start: (attempt: AttemptStart): string => {
+    readContinuation: (work, pieceId) => readWorkContinuation(db, work, pieceId) ?? undefined,
+    writeContinuation: (work, pieceId, token) => {
+      if (!writeWorkContinuation(db, work, pieceId, token))
+        throw new Error("Could not persist the submitted narration job");
+    },
+    start: (attempt: AttemptStart): string | AttemptResult<string> => {
+      if (attempt.work !== undefined)
+        return startWorkAttempt(
+          db,
+          ids,
+          attempt,
+          attempt.work,
+          attempt.workPieceId ?? null,
+          attempt.operation,
+        );
       const id = ids.next();
       db.prepare(
         "INSERT INTO attempts (id, stage_id, piece_id, n, started_at) VALUES (?, ?, ?, ?, ?)",
@@ -103,4 +126,4 @@ function toAttempt(row: z.infer<typeof attemptRow>): Attempt {
   };
 }
 
-export { readWorkContinuation, startWorkAttempt, writeWorkContinuation } from "./work-attempt.js";
+export { readWorkContinuation, startWorkAttempt, writeWorkContinuation };

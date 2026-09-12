@@ -16,7 +16,6 @@ import type { Log } from "../src/kernel/log.js";
 import { ensureDirs, layout } from "../src/kernel/paths.js";
 import type { LlmCompletion } from "../src/kernel/ports/llm.js";
 import type { Registry } from "../src/kernel/ports/registry.js";
-import { sqliteAttempts } from "../src/kernel/runner/attempt-repo.js";
 import { derive } from "../src/kernel/runner/graph.js";
 import type { Runner } from "../src/kernel/runner/index.js";
 import { createRunner } from "../src/kernel/runner/index.js";
@@ -40,6 +39,7 @@ import { usageOf } from "../src/slices/telemetry/usage.js";
 import { runThumbnail } from "../src/slices/thumbnail/run.js";
 import { resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
 import { renderVideo } from "../src/slices/video/run.js";
+import { legacyAttempts, legacyStage } from "./legacy-runner.js";
 
 // Counting over a whole pipeline: every stage of a run made by the real stages and the real
 // runner, counted through the real `record` into the real queue. No provider is called;
@@ -214,16 +214,17 @@ function harness(): Harness {
   };
   const providers = {
     registry,
-    attempts: sqliteAttempts(db, ids),
+    attempts: legacyAttempts(db, ids),
     clock: systemClock,
     log: silent,
   };
   const runner = createRunner({
     stages: {
-      stagesOf: (id) => stagesOf(db, id),
-      claim: (stageId) => claimStage(db, stageId, systemClock.now().toISOString()),
-      finish: (stageId, state, failureReason) =>
-        finishStage(db, stageId, state, failureReason, systemClock.now().toISOString()),
+      stagesOf: (id) => stagesOf(db, id).map(legacyStage),
+      maySubmit: () => true,
+      claim: (work) => claimStage(db, work.stageId, systemClock.now().toISOString()),
+      finish: (work, state, failureReason) =>
+        finishStage(db, work.stageId, state, failureReason, systemClock.now().toISOString()),
     },
     runs: {
       research: (context) => runResearch(deps, context, stageProviders(providers, context)),
@@ -231,7 +232,10 @@ function harness(): Harness {
       audio: (context) => runNarration(video, context, stageProviders(providers, context)),
       images: (context) => runImages(deps, context, stageProviders(providers, context)),
       thumbnail: (context) => runThumbnail(deps, context, stageProviders(providers, context)),
-      video: (context) => renderVideo(video, context),
+      video: async (context) => {
+        await renderVideo(video, context);
+        return "done";
+      },
     },
     emit: (): void => {},
     emitRunningCount: (): void => {},

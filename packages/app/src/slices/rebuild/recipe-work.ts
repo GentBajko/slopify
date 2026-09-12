@@ -70,17 +70,19 @@ export function planRevisionWork(
   const retained = recipes.flatMap((row) => retainedFor(row, logical, selected, availableAssetIds));
   const rawWork = planDependencies(recipes.map(comparisonRecipe), retained);
   const manualReview = manualCuesNeedReview(logicalContext, logical);
-  const work = rawWork.map(
-    (row): RebuildWork =>
-      manualReview && row.key === "subtitles:cues"
-        ? {
-            ...row,
-            disposition: "review",
-            reason:
-              "Narration or transcript changed. Review the saved manual cues before reusing them.",
-          }
-        : row,
-  );
+  const work = rawWork
+    .filter((row) => revision.content.subtitleCues === undefined || row.key !== "subtitles:timing")
+    .map(
+      (row): RebuildWork =>
+        manualReview && row.key === "subtitles:cues"
+          ? {
+              ...row,
+              disposition: "review",
+              reason:
+                "Narration or transcript changed. Review the saved manual cues before reusing them.",
+            }
+          : row,
+    );
   const changedInputs = work
     .filter((row) => row.disposition !== "reuse")
     .map((row) => ({

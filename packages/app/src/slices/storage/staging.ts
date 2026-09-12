@@ -4,6 +4,7 @@ import { dirname } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { pipeline } from "node:stream/promises";
 import { z } from "zod";
+import type { CatalogueStore } from "../../catalog/store.js";
 import type { Clock } from "../../kernel/clock.js";
 import { transact } from "../../kernel/db/tx.js";
 import type { Ids } from "../../kernel/ids.js";
@@ -29,6 +30,7 @@ import {
 export { prepareStagedFile, prepareText } from "./prepare.js";
 
 export interface StorageDeps {
+  readonly catalogue?: CatalogueStore | undefined;
   readonly db: DatabaseSync;
   readonly paths: Paths;
   readonly ids: Ids;

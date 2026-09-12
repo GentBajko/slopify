@@ -108,7 +108,29 @@ function harness(over: Partial<RunConfig> = {}): Harness {
     deps: { db, paths, ids, clock, log: silent, count: counted.count },
     fileOf: (name: string): string => readFileSync(join(paths.projects, "p1", name), "utf8"),
     context: {
-      stage: { id: "s1", projectId: "p1", kind: "article", state: "running" },
+      stage: {
+        id: "s1",
+        projectId: "p1",
+        kind: "article",
+        state: "running",
+        work: {
+          projectId: "p1",
+          stageId: "s1",
+          kind: "article",
+          revisionId: "r1",
+          workId: "s1" + "-r1",
+          fingerprint: "article",
+        },
+      },
+      work: {
+        projectId: "p1",
+        stageId: "s1",
+        kind: "article",
+        revisionId: "r1",
+        workId: "s1" + "-r1",
+        fingerprint: "article",
+      },
+      maySubmit: () => true,
       signal: new AbortController().signal,
       emit: (event: ProjectEvent): void => {
         events.push(event);
@@ -151,7 +173,9 @@ function fake(script: (prompt: string) => string): Fake {
       }
       const answer: LlmAnswer = { text, usage: null, finishReason: "stop" };
       const unusable = call.check?.(answer);
-      return unusable === undefined ? Promise.resolve(answer) : Promise.reject(new Error(unusable));
+      return unusable === undefined
+        ? Promise.resolve({ ok: true as const, value: answer })
+        : Promise.reject(new Error(unusable));
     },
     tts: () => Promise.reject(new Error("the article stage must not narrate")),
     image: () => Promise.reject(new Error("the article stage must not draw")),

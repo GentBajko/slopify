@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 
-export interface AudioPreview {
+export interface AudioPreviewOrigin {
+  readonly revisionId: string;
+  readonly workId: string;
+  readonly workPieceId: string;
+}
+export interface AudioPreview extends Partial<AudioPreviewOrigin> {
   readonly id: string;
   readonly label: string;
   readonly state: "streaming" | "ready" | "interrupted" | "unavailable";
@@ -12,17 +17,23 @@ export interface AudioPreviewSink {
   readonly interrupt: () => void;
 }
 export interface AudioPreviewStore {
-  readonly begin: (projectId: string, key: string, label: string) => AudioPreviewSink;
+  readonly begin: (
+    projectId: string,
+    key: string,
+    label: string,
+    origin?: AudioPreviewOrigin,
+  ) => AudioPreviewSink;
   readonly list: (projectId: string) => readonly AudioPreview[];
   readonly stream: (
     projectId: string,
     id: string,
     signal: AbortSignal,
   ) => ReadableStream<Uint8Array> | undefined;
-  readonly clear: (projectId: string) => void;
+  readonly clear: (projectId: string, workId?: string) => void;
   readonly close: () => void;
 }
 interface Entry {
+  readonly origin: AudioPreviewOrigin | undefined;
   readonly id: string;
   readonly projectId: string;
   readonly key: string;
@@ -79,11 +90,18 @@ export function createAudioPreviewStore(limits: Limits = {}): AudioPreviewStore 
   const expiry = setInterval(prune, Math.min(keepMs, 30_000));
   expiry.unref();
   const store: AudioPreviewStore = {
-    begin(projectId, key, label) {
+    begin(projectId, key, label, origin) {
       if (closed) return inactive;
       prune();
       for (const entry of entries.values()) {
-        if (entry.projectId === projectId && entry.key === key) remove(entry);
+        if (
+          entry.projectId === projectId &&
+          entry.key === key &&
+          entry.origin?.revisionId === origin?.revisionId &&
+          entry.origin?.workId === origin?.workId &&
+          entry.origin?.workPieceId === origin?.workPieceId
+        )
+          remove(entry);
       }
       // At capacity, completed previews yield to current generation. Otherwise
       // this request has no preview; the normal durable narration still succeeds.
@@ -93,6 +111,7 @@ export function createAudioPreviewStore(limits: Limits = {}): AudioPreviewStore 
       }
       if (entries.size >= maxEntries) return inactive;
       const entry: Entry = {
+        origin,
         id: randomUUID(),
         projectId,
         key,
@@ -138,7 +157,7 @@ export function createAudioPreviewStore(limits: Limits = {}): AudioPreviewStore 
       prune();
       return [...entries.values()]
         .filter((entry) => entry.projectId === projectId)
-        .map(({ id, label, state, bytes }) => ({ id, label, state, bytes }));
+        .map(({ id, label, state, bytes, origin }) => ({ id, label, state, bytes, ...origin }));
     },
     stream(projectId, id, signal) {
       prune();
@@ -152,8 +171,13 @@ export function createAudioPreviewStore(limits: Limits = {}): AudioPreviewStore 
         return undefined;
       return follow(entry, signal);
     },
-    clear(projectId) {
-      for (const entry of entries.values()) if (entry.projectId === projectId) remove(entry);
+    clear(projectId, workId) {
+      for (const entry of entries.values())
+        if (
+          entry.projectId === projectId &&
+          (workId === undefined || entry.origin?.workId === workId)
+        )
+          remove(entry);
     },
     close() {
       closed = true;

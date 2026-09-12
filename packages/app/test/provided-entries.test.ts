@@ -10,7 +10,7 @@ import { openDb } from "../src/kernel/db/index.js";
 import { migrate } from "../src/kernel/db/migrate.js";
 import { ulidIds } from "../src/kernel/ids.js";
 import { ensureDirs, layout } from "../src/kernel/paths.js";
-import { attemptsOf, sqliteAttempts } from "../src/kernel/runner/attempt-repo.js";
+import { attemptsOf } from "../src/kernel/runner/attempt-repo.js";
 import type { StageContext } from "../src/kernel/runner/index.js";
 import { piecesOf } from "../src/kernel/runner/piece-repo.js";
 import { stageProviders } from "../src/kernel/runner/providers.js";
@@ -21,6 +21,7 @@ import { outputsOf } from "../src/slices/storage/repo.js";
 import { recordingCounter } from "../src/slices/telemetry/record.fake.js";
 import { binary, wavParts } from "../src/slices/video/export.fake.js";
 import { renderVideo } from "../src/slices/video/run.js";
+import { legacyAttempts, legacyStage } from "./legacy-runner.js";
 
 it("narrates text and LLM entries around a provided article and includes both in WAV", async () => {
   const paths = layout(mkdtempSync(join(tmpdir(), "slopify-entry-narration-")));
@@ -81,7 +82,9 @@ it("narrates text and LLM entries around a provided article and includes both in
     const video = stages.find((stage) => stage.kind === "video");
     if (!audio || !article || !video) throw new Error("Missing stage");
     const context: StageContext = {
-      stage: audio,
+      stage: legacyStage(audio),
+      work: legacyStage(audio).work,
+      maySubmit: () => true,
       signal: new AbortController().signal,
       emit: () => {},
     };
@@ -95,7 +98,7 @@ it("narrates text and LLM entries around a provided article and includes both in
           },
           list: async () => [],
         },
-        attempts: sqliteAttempts(db, ulidIds),
+        attempts: legacyAttempts(db, ulidIds),
         clock: systemClock,
         log: deps.log,
       },
@@ -103,7 +106,11 @@ it("narrates text and LLM entries around a provided article and includes both in
     );
     await prepareProvidedArticleSegments(deps, context, providers);
     await runNarration(deps, context, providers);
-    await renderVideo(deps, { ...context, stage: video });
+    await renderVideo(deps, {
+      ...context,
+      stage: legacyStage(video),
+      work: legacyStage(video).work,
+    });
 
     expect(llm.calls()).toBe(1);
     expect(tts.seen()).toEqual([

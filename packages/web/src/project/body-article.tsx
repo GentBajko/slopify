@@ -7,6 +7,7 @@ import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { confirmationFor } from "./confirmations.js";
 import { ConfirmedButton } from "./controls.js";
+import { useProjectRevision } from "./live-revision.js";
 import { LiveWriting, type WritingPreview, writingKey } from "./live-writing.js";
 import {
   ActionRow,
@@ -23,6 +24,7 @@ import {
 // Discard and Download; links to the sources and glossary files beside the title;
 // 'Show instructions'.
 export function ArticleBody({ stage, project, outputs, actions, busy }: BodyProps) {
+  const revisionId = useProjectRevision(project.id);
   const mine = outputsOf(outputs, stage);
   const markdown = roleOf(mine, "article_md");
   const sources = roleOf(mine, "sources");
@@ -30,7 +32,7 @@ export function ArticleBody({ stage, project, outputs, actions, busy }: BodyProp
 
   const stored = useOutputText(markdown);
   const previews = useQuery({
-    queryKey: writingKey(project.id),
+    queryKey: writingKey(project.id, revisionId),
     queryFn: (): readonly WritingPreview[] => [],
     enabled: false,
   });
@@ -38,7 +40,7 @@ export function ArticleBody({ stage, project, outputs, actions, busy }: BodyProp
   // The article arrives token by token while the stage runs and is only ever patched into
   // the cache, never fetched: this query exists to read and subscribe to it.
   const streaming = useQuery({
-    queryKey: keys.article(project.id),
+    queryKey: keys.article(project.id, revisionId),
     queryFn: (): string => "",
     enabled: false,
   });
