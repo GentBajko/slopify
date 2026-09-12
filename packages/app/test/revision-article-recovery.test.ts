@@ -7,6 +7,7 @@ import { recoverWork } from "../src/slices/rebuild/repo.js";
 import { executionPlan } from "../src/slices/rebuild/runtime-plan.js";
 import { workPieces } from "../src/slices/rebuild/work-records.js";
 import { findRevisionDownload } from "../src/slices/revisions/downloads.js";
+import { revisionViewSchema } from "../src/slices/revisions/schema.js";
 import { getRevisionView } from "../src/slices/revisions/view.js";
 import { composedFixture, current, deferred, save, start } from "./revision-rebuild.fake.js";
 
@@ -202,6 +203,7 @@ it("retains an accepted partial article as an origin download without completing
       current(h.deps, h.projectId).outputs.some((row) => row.assetId === partial.assetId),
     ).toBe(false);
     if (origin === undefined) throw new Error("Missing origin");
+    expect(revisionViewSchema.safeParse(origin).success).toBe(true);
     expect(
       executionPlan(h.deps, origin, catalogue).work.find((row) => row.key === "article:body")
         ?.disposition,

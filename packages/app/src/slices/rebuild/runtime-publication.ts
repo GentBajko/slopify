@@ -1,6 +1,7 @@
 import { transact } from "../../kernel/db/tx.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StagePiece } from "../../kernel/runner/piece-repo.js";
+import { fingerprint } from "../../kernel/runner/work.js";
 import type { RevisionDeps } from "../revisions/model.js";
 import type { PreparedOutput, PreparedPiece } from "../revisions/publication-model.js";
 import { publicationAuthority } from "../revisions/publication-rules.js";
@@ -171,7 +172,7 @@ export function retainPartialArticle(
   piece: WorkPiece,
   text: string,
 ): void {
-  const publicationId = `${piece.id}:partial`;
+  const publicationId = fingerprint(["partial-article", piece.id]);
   if (
     deps.db
       .prepare("SELECT 1 FROM revision_outputs WHERE revision_id=? AND publication_id=?")
