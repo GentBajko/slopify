@@ -8,6 +8,7 @@ import { CaptionEditor } from "./caption-editor.js";
 import { ImageEditor } from "./image-editor.js";
 import { NarrationEditor } from "./narration-editor.js";
 import { revisionFileUrl } from "./revision-api.js";
+import { captionNarrationDuration } from "./revision-caption-duration.js";
 import { RevisionUpload } from "./revision-upload.js";
 import type { EditorProps } from "./revision-workspace.js";
 
@@ -69,20 +70,7 @@ export function RevisionContentEditors({
     identity ===
       narrationIdentity({ config: view.revision.config, content: view.revision.content });
   const fingerprint = view.revision.fingerprints["subtitles:timing"];
-  const exportRecord = view.outputs.find(
-    (record) =>
-      record.selected &&
-      record.state === "ready" &&
-      record.available &&
-      (record.output.role === "audio_export" || record.output.role === "video") &&
-      record.output.durationMs !== null &&
-      record.output.durationMs > 0,
-  );
-  const milliseconds = exportRecord?.output.durationMs;
-  const duration =
-    currentNarration && milliseconds != null && Number.isFinite(milliseconds)
-      ? milliseconds / 1000
-      : undefined;
+  const duration = currentNarration ? captionNarrationDuration(view) : undefined;
   const ready = duration !== undefined && fingerprint !== undefined && fingerprint !== "";
   const latest = useRef({ edit, onChange, revisionId: view.revision.id, identity });
   latest.current = { edit, onChange, revisionId: view.revision.id, identity };
@@ -243,12 +231,13 @@ export function RevisionContentEditors({
         </Button>
       ) : (
         <>
-          {!ready || captions.audioFingerprint !== fingerprint || duration === undefined ? (
+          {captions.audioFingerprint !== fingerprint ? (
             <p>
-              These caption edits belong to an earlier narration. Discard them or restore its
-              narration before editing.
+              These caption edits belong to an earlier narration. Review their text and timing
+              against the current narration, then apply your corrections and save the project.
             </p>
-          ) : (
+          ) : null}
+          {ready && duration !== undefined ? (
             <CaptionEditor
               key={`${view.revision.id}:${fingerprint}`}
               cues={captions.cues}
@@ -264,7 +253,7 @@ export function RevisionContentEditors({
                   });
               }}
             />
-          )}
+          ) : null}
           <Button
             type="button"
             onClick={() => emit({ ...edit, content: { ...edit.content, subtitleCues: undefined } })}

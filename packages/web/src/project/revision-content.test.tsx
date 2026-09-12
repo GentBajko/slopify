@@ -13,26 +13,38 @@ function timingView(): RevisionView {
   const base = narrationView();
   return {
     ...base,
-    revision: { ...base.revision, fingerprints: { "subtitles:timing": "timing-fingerprint" } },
-    outputs: (["subtitle_words", "audio_export"] as const).map((role) => ({
+    revision: {
+      ...base.revision,
+      fingerprints: {
+        "subtitles:timing": "timing-fingerprint",
+        "audio:body:concat": "audio_body",
+        "export:wav": "audio_export",
+      },
+    },
+    outputs: (["subtitle_words", "audio_export", "audio_body"] as const).map((role) => ({
       recordId: role,
       publicationId: null,
       selected: true,
       slot: role,
-      workKey: role,
+      workKey:
+        role === "audio_body"
+          ? "audio:body:concat"
+          : role === "audio_export"
+            ? "export:wav"
+            : "subtitles:timing",
       assetId: role,
-      fingerprint: role,
+      fingerprint: role === "subtitle_words" ? "timing-fingerprint" : role,
       state: "ready",
       available: true,
       output: {
         id: role,
         projectId: "p1",
-        stageKind: "video",
+        stageKind: role === "audio_body" ? "audio" : "video",
         role,
         path: role,
         originalFilename: null,
         bytes: 10,
-        durationMs: role === "audio_export" ? 2000 : null,
+        durationMs: role === "subtitle_words" ? null : 2000,
         meta: {},
         createdAt: "today",
       },
