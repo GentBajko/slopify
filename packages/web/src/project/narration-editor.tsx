@@ -74,7 +74,7 @@ export function NarrationEditor({
   const { groups, unmapped } = narrationGroups(view);
   const latest = useRef(edit);
   latest.current = edit;
-  const [textEdits, setTextEdits] = useState<Readonly<Record<string, number>>>({});
+  const [uploadResets, setUploadResets] = useState<Readonly<Record<string, number>>>({});
   function emit(next: RevisionEdit): void {
     latest.current = next;
     onChange(next);
@@ -108,7 +108,7 @@ export function NarrationEditor({
                 id={`${editorId}-${chunk.key}-text`}
                 value={override?.kind === "text" ? override.text : chunk.text}
                 onChange={(event) => {
-                  setTextEdits((current) => ({
+                  setUploadResets((current) => ({
                     ...current,
                     [chunk.key]: (current[chunk.key] ?? 0) + 1,
                   }));
@@ -135,7 +135,7 @@ export function NarrationEditor({
               />
             </label>
             <RevisionUpload
-              key={`${chunk.key}:${textEdits[chunk.key] ?? 0}`}
+              key={`${chunk.key}:${uploadResets[chunk.key] ?? 0}`}
               label={`Replace narration chunk ${index + 1}`}
               kind="audio"
               onPending={(pending) => onPending(`narration:${chunk.key}`, pending)}
@@ -156,9 +156,25 @@ export function NarrationEditor({
             />
             <Button
               type="button"
-              onClick={() =>
-                emit({ ...edit, regenerate: [...new Set([...(edit.regenerate ?? []), chunk.key])] })
-              }
+              onClick={() => {
+                const current = getEdit?.() ?? latest.current;
+                const narrationOverrides = { ...current.content.narrationOverrides };
+                if (narrationOverrides[chunk.key]?.kind === "asset")
+                  delete narrationOverrides[chunk.key];
+                setUploadResets((resets) => ({
+                  ...resets,
+                  [chunk.key]: (resets[chunk.key] ?? 0) + 1,
+                }));
+                emit({
+                  ...current,
+                  content: { ...current.content, narrationOverrides },
+                  uploads: current.uploads?.filter(
+                    (one) =>
+                      one.destination.kind !== "narration" || one.destination.key !== chunk.key,
+                  ),
+                  regenerate: [...new Set([...(current.regenerate ?? []), chunk.key])],
+                });
+              }}
             >
               Regenerate narration chunk {index + 1} after review
             </Button>

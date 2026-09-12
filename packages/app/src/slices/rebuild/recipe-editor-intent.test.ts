@@ -41,3 +41,49 @@ it("accepts normalized Audio Off as a silent video and Video Off with subtitle f
     expect(saved.recipes.some((row) => row.key === "export:wav")).toBe(source === "video");
   }
 });
+
+it.each([false, true])(
+  "plans TTS after clearing a narration asset override with text override %s",
+  (textOverride) => {
+    const c = { ...config, sources: { ...config.sources, audio: "generate" as const } };
+    const start = emptyView(c);
+    const initial = planRevision(start, { config: c, content });
+    if (!initial.ok) throw new Error("Expected generated narration fixture.");
+    const input = initial.recipes.find((row) => row.input.kind === "tts")?.input;
+    if (input?.kind !== "tts") throw new Error("Expected TTS request.");
+    const replacement = {
+      ...content,
+      narrationOverrides: {
+        [input.logicalKey]: { kind: "asset" as const, assetId: "saved-replacement" },
+      },
+    };
+    const base = emptyView(c, replacement);
+    const provided = planRevision(base, {
+      config: c,
+      content: replacement,
+      regenerate: [input.logicalKey],
+    });
+    if (!provided.ok) throw new Error("Expected valid replacement.");
+    expect(provided.recipes.find((row) => row.key === `${input.logicalKey}:1`)?.input.kind).toBe(
+      "provided",
+    );
+    const edit: RevisionEdit = {
+      config: c,
+      content: {
+        ...replacement,
+        narrationOverrides: textOverride
+          ? { [input.logicalKey]: { kind: "text", text: "My current narration." } }
+          : {},
+      },
+      regenerate: [input.logicalKey],
+      uploads: [],
+    };
+    const saved = planRevision(base, edit);
+    expect(saved.ok).toBe(true);
+    if (!saved.ok) throw new Error("Expected valid narration regeneration.");
+    const regenerated = saved.recipes.find((row) => row.key === `${input.logicalKey}:1`)?.input;
+    expect(regenerated?.kind).toBe("tts");
+    if (regenerated?.kind !== "tts") throw new Error("Expected TTS after clearing replacement.");
+    expect(regenerated.text).toBe(textOverride ? "My current narration." : input.text);
+  },
+);
