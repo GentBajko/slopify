@@ -195,7 +195,7 @@ export function textRecipes(context: RecipeContext): TextRecipes {
     const choice = config[category];
     if (choice === undefined || config.sources.audio !== "generate") continue;
     const prompt = renderedPrompt(context, category);
-    const key = `entry:${category}:text`;
+    const key = `entry:${category}:text` as const;
     const input: RecipeInput =
       choice.mode === "text"
         ? { kind: "local", version: 1, operation: "entry-text", values: prompt }

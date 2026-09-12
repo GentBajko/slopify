@@ -112,7 +112,12 @@ it("stores exact local recipe inputs and independent publication pieces", async 
     fingerprint: segment,
     requestFingerprint: `request-${segment}`,
     logicalFingerprint: segment,
-    input: { kind: "local" as const, version: 1 as const, operation: "concat", values: [segment] },
+    input: {
+      kind: "local" as const,
+      version: 1 as const,
+      operation: "concat-narration" as const,
+      values: [segment],
+    },
     deferred: false,
     unresolved: false,
     dependsOn: [],

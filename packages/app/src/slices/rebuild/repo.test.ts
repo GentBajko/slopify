@@ -95,7 +95,7 @@ it("holds unfinished work on recovery without modifying completed pieces or cont
       id,
       work.workId,
       id,
-      JSON.stringify({ kind: "local", version: 1, operation: "concat", values: [] }),
+      JSON.stringify({ kind: "local", version: 1, operation: "concat-narration", values: [] }),
       state,
     );
   recoverWork(db);

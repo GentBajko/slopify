@@ -22,6 +22,32 @@ export interface ResolvedRevisionInputs {
     | undefined;
   readonly articleContinuation?: string | undefined;
 }
+export const localOperations = [
+  "export-wav",
+  "wav2vec2-en-a19f851-v2-omissions",
+  "automatic-cues-v1",
+  "manual-cues-v1",
+  "subtitle-files-v1",
+  "render-video",
+  "render-selected-video",
+  "provided-notes",
+  "provided-article",
+  "manual-article",
+  "entry-text",
+  "concat-narration",
+] as const;
+export const deferredOperations = [
+  "research-synthesis",
+  "article",
+  "entry:intro:text",
+  "entry:outro:text",
+  "thumbnail-prompt",
+  "thumbnail-image",
+  "body-narration",
+  "intro-narration",
+  "outro-narration",
+  "resolve-revision-recipe",
+] as const;
 export type RecipeInput =
   | {
       readonly kind: "llm";
@@ -63,13 +89,13 @@ export type RecipeInput =
   | {
       readonly kind: "local";
       readonly version: 1;
-      readonly operation: string;
+      readonly operation: (typeof localOperations)[number];
       readonly values: FingerprintValue;
     }
   | {
       readonly kind: "deferred";
       readonly version: 1;
-      readonly operation: string;
+      readonly operation: (typeof deferredOperations)[number];
       readonly template: FingerprintValue;
     };
 export interface ResolvedWorkRecipe extends WorkRecipe {
