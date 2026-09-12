@@ -35,6 +35,7 @@ import { settingsRoutes } from "./settings.js";
 import { stagingRoutes } from "./staging.js";
 import { subtitleRoutes } from "./subtitles.js";
 import { telemetryRoutes } from "./telemetry.js";
+import { tutorialRoutes } from "./tutorial.js";
 import { updateRoutes } from "./update.js";
 import { usageRoutes } from "./usage.js";
 
@@ -102,6 +103,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/telemetry", telemetryRoutes(deps))
       .route("/usage", usageRoutes(deps))
       .route("/settings", settingsRoutes(deps))
+      .route("/tutorial", tutorialRoutes(deps))
       .route("/providers", providerRoutes(deps))
   );
 }
