@@ -5,6 +5,7 @@ import { estimateRequests } from "../estimate/index.js";
 import type { RevisionDeps, RevisionView } from "../revisions/model.js";
 import { requestHash } from "../revisions/mutation-request.js";
 import type { RebuildPreview, RebuildResult, RebuildSelection } from "./model.js";
+import { previewDetails } from "./preview-details.js";
 import {
   hasSubmittedRequest,
   requiresNewSubmission,
@@ -182,6 +183,7 @@ export function planPreview(
     selection,
     planFingerprint: executionFingerprint(view.revision.id, execution),
     work,
+    review: previewDetails(deps, view, plan.recipes, selected),
     changedInputs: plan.changedInputs.filter((row) => selected.has(row.path)),
     retained: view.outputs
       .filter((row) => row.selected)

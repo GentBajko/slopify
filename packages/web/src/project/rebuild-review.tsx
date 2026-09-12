@@ -38,6 +38,32 @@ export function RebuildReview({
       className="space-y-3 rounded-panel border border-line p-4"
     >
       <h2>Review affected rebuild</h2>
+      {preview.review?.inputChanges.length ? (
+        <details open>
+          <summary>Changed inputs since the previous revision</summary>
+          <dl className="space-y-3">
+            {preview.review.inputChanges.map((change) => (
+              <div key={change.label}>
+                <dt className="font-semibold">{change.label}</dt>
+                <dd className="grid gap-2 sm:grid-cols-2">
+                  <div className="min-w-0">
+                    <span className="text-small text-ink2">Before</span>
+                    <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words text-small">
+                      {change.before ?? "Not set"}
+                    </pre>
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-small text-ink2">After</span>
+                    <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words text-small">
+                      {change.after ?? "Not set"}
+                    </pre>
+                  </div>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </details>
+      ) : null}
       <ul>
         {preview.changedInputs.map((change) => (
           <li key={change.path}>
@@ -55,6 +81,23 @@ export function RebuildReview({
           <li key={work.key}>
             {label(work.key)}: {dispositions[work.disposition]}. {work.reason}
             {work.inflight ? " An already submitted request may still be billed." : ""}
+            {preview.review?.requests
+              .filter((request) => request.key === work.key)
+              .map((request) => (
+                <div key={request.key}>
+                  {request.settings === null ? null : (
+                    <p className="text-small text-ink2">{request.settings}</p>
+                  )}
+                  {request.text === null ? null : (
+                    <details>
+                      <summary>View request text</summary>
+                      <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words text-small">
+                        {request.text}
+                      </pre>
+                    </details>
+                  )}
+                </div>
+              ))}
           </li>
         ))}
       </ul>
@@ -179,5 +222,6 @@ function workLabels(preview: RebuildPreview): (key: string) => string {
     positions.set(name, position);
     labels.set(work.key, (counts.get(name) ?? 0) > 1 ? `${name} ${position}` : name);
   }
+  for (const request of preview.review?.requests ?? []) labels.set(request.key, request.label);
   return (key) => labels.get(key) ?? workName(key);
 }

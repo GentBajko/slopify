@@ -42,6 +42,21 @@ export interface RebuildPreview {
   readonly costs: CostEstimate;
   readonly wholeRequestNotice: string | null;
   readonly warnings: readonly string[];
+  readonly review?:
+    | {
+        readonly inputChanges: readonly {
+          readonly label: string;
+          readonly before: string | null;
+          readonly after: string | null;
+        }[];
+        readonly requests: readonly {
+          readonly key: string;
+          readonly label: string;
+          readonly text: string | null;
+          readonly settings: string | null;
+        }[];
+      }
+    | undefined;
 }
 
 export interface RebuildAdmission {
@@ -155,4 +170,23 @@ export const rebuildPreviewSchema: z.ZodType<RebuildPreview> = z.object({
   costs: costEstimateSchema,
   wholeRequestNotice: z.string().nullable(),
   warnings: z.array(z.string()),
+  review: z
+    .object({
+      inputChanges: z.array(
+        z.object({
+          label: z.string(),
+          before: z.string().nullable(),
+          after: z.string().nullable(),
+        }),
+      ),
+      requests: z.array(
+        z.object({
+          key: z.string(),
+          label: z.string(),
+          text: z.string().nullable(),
+          settings: z.string().nullable(),
+        }),
+      ),
+    })
+    .optional(),
 });

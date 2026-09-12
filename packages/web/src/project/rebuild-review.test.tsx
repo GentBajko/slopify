@@ -113,3 +113,36 @@ it("describes affected outputs without exposing fingerprint or asset identifiers
     screen.getByRole("checkbox", { name: "Keep the provided content for Provided narration" }),
   ).toBeTruthy();
 });
+it("shows actual changed inputs and stable request identity with its text", async () => {
+  const user = userEvent.setup();
+  const key = "audio:body:opaque:1";
+  render(
+    <RebuildReview
+      preview={{
+        ...preview,
+        changedInputs: [{ path: key, before: "old-hash", after: "new-hash" }],
+        work: preview.work.map((row) => ({ ...row, key })),
+        review: {
+          inputChanges: [{ label: "Narration voice", before: "Old voice", after: "New voice" }],
+          requests: [
+            {
+              key,
+              label: "Body narration chunk 5 · request 1",
+              text: "The fifth paragraph.",
+              settings: "inworld · inworld-tts-2 · New voice",
+            },
+          ],
+        },
+      }}
+      pending={false}
+      onStart={() => undefined}
+      onCancel={() => undefined}
+    />,
+  );
+  expect(screen.getByText("Narration voice")).toBeTruthy();
+  expect(screen.getByText("Old voice")).toBeTruthy();
+  expect(screen.getByText("New voice")).toBeTruthy();
+  expect(screen.getByText(/Body narration chunk 5 · request 1: Review required/)).toBeTruthy();
+  await user.click(screen.getByText("View request text"));
+  expect(screen.getByText("The fifth paragraph.")).toBeTruthy();
+});
