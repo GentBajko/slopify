@@ -7,7 +7,12 @@ import type { OutputRole } from "../storage/model.js";
 import { prepareStagedFile, prepareText } from "../storage/prepare.js";
 import { outputSchema } from "../storage/schema.js";
 import type { RevisionDeps, RevisionEdit, RevisionView } from "./model.js";
-import { bindUpload, measureAudio, type PreparedEditAsset } from "./mutation-assets.js";
+import {
+  bindUpload,
+  measureAudio,
+  type PreparedEditAsset,
+  providedAssetSelected,
+} from "./mutation-assets.js";
 
 export interface PreparedEdit {
   readonly edit: RevisionEdit;
@@ -116,8 +121,9 @@ export async function prepareEditAssets(
     for (const kind of ["audio", "thumbnail"] as const) {
       const assetId = content.provided[kind];
       if (
+        edit.config.sources[kind] !== "provide" ||
         assetId === undefined ||
-        assetId === base.revision.content.provided[kind] ||
+        providedAssetSelected(base, kind, assetId) ||
         prepared.some((row) => row.asset.id === assetId)
       )
         continue;

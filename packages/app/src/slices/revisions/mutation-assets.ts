@@ -159,6 +159,23 @@ export function assetPath(deps: RevisionDeps, projectId: string, id: string): st
     ).path;
 }
 
+export function providedAssetSelected(
+  base: RevisionView,
+  kind: "audio" | "thumbnail",
+  assetId: string,
+): boolean {
+  return (
+    base.revision.config.sources[kind] === "provide" &&
+    base.outputs.some(
+      (row) =>
+        row.selected &&
+        row.assetId === assetId &&
+        row.workKey === (kind === "audio" ? "audio:provided" : "thumbnail:image") &&
+        row.output.role === (kind === "audio" ? "audio_body" : "thumbnail"),
+    )
+  );
+}
+
 export function validateReplacementAvailability(
   deps: RevisionDeps,
   base: RevisionView,
@@ -171,6 +188,18 @@ export function validateReplacementAvailability(
       row.kind === "asset" ? [row.assetId] : [],
     ),
   ]);
+  for (const kind of ["audio", "thumbnail"] as const) {
+    const assetId = edit.content.provided[kind];
+    if (
+      assetId !== undefined &&
+      edit.config.sources[kind] === "provide" &&
+      !providedAssetSelected(base, kind, assetId) &&
+      !edit.uploads?.some(
+        (row) => row.destination.kind === "provided" && row.destination.stage === kind,
+      )
+    )
+      previous.delete(assetId);
+  }
   const next = [
     ...Object.values(edit.content.provided),
     ...Object.values(edit.content.imageDefinitions).map((row) => row.assetId),
