@@ -116,9 +116,15 @@ export function validateAssetReferences(
       !prepared.some((row) => row.id === id) &&
       deps.db
         .prepare(
-          "SELECT 1 FROM revision_outputs WHERE project_id=? AND asset_id=? AND json_extract(descriptor,'$.stageKind')=? UNION ALL SELECT 1 FROM revision_pieces WHERE project_id=? AND asset_id=? AND stage_kind=?",
+          "SELECT 1 FROM revision_outputs WHERE project_id=? AND asset_id=? AND json_extract(descriptor,'$.stageKind')=?",
         )
-        .get(projectId, id, kind ?? "", projectId, id, kind ?? "") === undefined
+        .get(projectId, id, kind ?? "") === undefined &&
+      (field.startsWith("content.provided.") ||
+        deps.db
+          .prepare(
+            "SELECT 1 FROM revision_pieces WHERE project_id=? AND asset_id=? AND stage_kind=?",
+          )
+          .get(projectId, id, kind ?? "") === undefined)
     )
       fields.push({ field, message: "Choose an asset for this content stage." });
   }

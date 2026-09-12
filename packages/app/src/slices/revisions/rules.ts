@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 import type { FieldError } from "../admission/rules.js";
 import { buildRecipes } from "../rebuild/recipe-build.js";
-import { normalizeArticleIntent } from "../rebuild/recipe-save.js";
+import { normalizeArticleIntent, validateRevisionEdit } from "../rebuild/recipe-save.js";
 import type { ManualCue, RevisionEdit, RevisionView } from "./model.js";
 
 export function validateCues(cues: readonly ManualCue[], duration: number): readonly FieldError[] {
@@ -82,9 +82,12 @@ export function validateNarrationIntent(
   base: RevisionView,
   edit: RevisionEdit,
 ): readonly FieldError[] {
+  const content = normalizeArticleIntent(base, edit);
+  const invalid = validateRevisionEdit(edit.config, content);
+  if (invalid.length > 0) return invalid;
   const recipes = buildRecipes({
     config: edit.config,
-    content: normalizeArticleIntent(base, edit),
+    content,
     manifest: {
       outputs: base.outputs.filter((row) => row.selected),
       pieces: base.pieces.filter((row) => row.selected),

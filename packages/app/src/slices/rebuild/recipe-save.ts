@@ -53,7 +53,7 @@ export function planRevision(
 ): RevisionPlanResult {
   const content = normalizeImages(normalizeArticleIntent(base, edit));
   const fields = [
-    ...validateEdit(edit.config, content),
+    ...validateRevisionEdit(edit.config, content),
     ...validateCues(content),
     ...validateRecipeInputs(edit.config, content),
   ];
@@ -190,7 +190,10 @@ function normalizeImages(content: RevisionContent): RevisionContent {
     ),
   };
 }
-function validateEdit(config: RunConfig, content: RevisionContent): readonly FieldError[] {
+export function validateRevisionEdit(
+  config: RunConfig,
+  content: RevisionContent,
+): readonly FieldError[] {
   const fields: FieldError[] = [];
   for (const kind of stageKinds)
     if (!allowedSources[kind].includes(config.sources[kind]))
