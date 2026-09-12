@@ -1,9 +1,8 @@
 import type { RevisionEdit, RevisionView } from "@app/slices/revisions/model.js";
 import { useId, useRef, useState } from "react";
-import { useApp } from "@/app-context";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
-import { revisionFileUrl } from "./revision-api.js";
+import { ImagePreview } from "./image-preview.js";
 import { setPrompt } from "./revision-form-state.js";
 import { RevisionUpload } from "./revision-upload.js";
 export function moveImage(
@@ -36,7 +35,6 @@ export function ImageEditor({
   const editorId = useId();
   const [promptEdits, setPromptEdits] = useState<Readonly<Record<string, number>>>({});
   const { content } = edit;
-  const { api } = useApp();
   const latest = useRef(edit);
   latest.current = edit;
   function emit(next: RevisionEdit): void {
@@ -105,25 +103,10 @@ export function ImageEditor({
               Image definition missing: {key}
             </p>
           );
-        const retained = view?.outputs.find(
-          (row) => row.available && row.assetId === image.assetId,
-        );
         return (
           <fieldset key={key} className="space-y-2 rounded-control border border-line2 p-3">
             <legend>Image {index + 1}</legend>
-            {retained === undefined || view === undefined ? null : (
-              <img
-                className="max-h-32 rounded-control object-contain"
-                alt={`Retained scene ${index + 1}`}
-                src={revisionFileUrl(
-                  api,
-                  view.revision.projectId,
-                  view.revision.id,
-                  retained.recordId,
-                )}
-              />
-            )}
-            <p>{image.assetId === null ? "No completed image yet" : "Current image retained"}</p>
+            <ImagePreview edit={edit} view={view} imageKey={key} index={index} />
             {image.source !== "generate" ? null : (
               <label htmlFor={`${editorId}-${key}-prompt`}>
                 Prompt for image {index + 1}
