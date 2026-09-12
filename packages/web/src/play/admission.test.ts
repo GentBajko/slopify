@@ -2,7 +2,7 @@ import type { Entry, Prompt } from "@app/slices/library/model.js";
 import type { StagedFile } from "@app/slices/storage/model.js";
 import { describe, expect, it } from "vitest";
 import type { AdmissionInput } from "@/play/admission";
-import { admission, keywordFields } from "@/play/admission";
+import { admission, keywordFields, keywordOrigins } from "@/play/admission";
 import type { PlayFormState, Upload } from "@/play/state";
 import { freshForm } from "@/play/state";
 
@@ -392,4 +392,33 @@ it("blocks Play for an invalid subtitle size before the server is called", () =>
   });
   expect(invalid.blocker?.field).toBe("subtitles.fontSize");
   expect(invalid.result.ok).toBe(false);
+});
+
+it("labels origins from every active template with the shared slot grammar", () => {
+  const form = {
+    ...generated,
+    intro: "Cold open",
+    outro: "Sting",
+    sources: { ...generated.sources, thumbnail: "from_prompt" as const },
+    thumbnailPrompt: "Title card",
+  };
+  const origins = keywordOrigins({ form, prompts, entries, silenceGapSeconds: 3 });
+  expect(origins.get("topic")).toEqual(["Article", "Image: Oils", "Thumbnail", "Intro"]);
+  expect(origins.get("style")).toEqual(["Image: Oils"]);
+  const hidden = keywordOrigins({
+    form: {
+      ...form,
+      sources: {
+        ...form.sources,
+        article: "provide",
+        images: "off",
+        audio: "off",
+        thumbnail: "off",
+      },
+    },
+    prompts,
+    entries,
+    silenceGapSeconds: 3,
+  });
+  expect(hidden.size).toBe(0);
 });

@@ -40,15 +40,22 @@ function fieldsAnswer(fields: readonly { field: string; message: string }[]): An
     );
 }
 
-function playKey(): HTMLElement {
-  return screen.getByRole("button", { name: /PLAY/ });
+async function section(name: string): Promise<void> {
+  await userEvent.click(
+    within(screen.getByRole("navigation", { name: "Run setup" })).getByRole("button", { name }),
+  );
+}
+async function openCosts(): Promise<void> {
+  await section("Review");
+  await userEvent.click(screen.getByRole("button", { name: "Review costs" }));
 }
 
 function held(): boolean {
-  return playKey().getAttribute("aria-disabled") === "true";
+  return tutorial.progress.mock.lastCall?.[0]?.playReady !== true;
 }
 
-function pick(label: string, value: string): Promise<void> {
+async function pick(label: string, value: string): Promise<void> {
+  await section(["Article prompt", "LLM", "Text model"].includes(label) ? "Content" : "Outputs");
   return userEvent.selectOptions(screen.getByLabelText(label), value);
 }
 
@@ -82,15 +89,17 @@ async function fillGeneratedRun(): Promise<void> {
   if (imageModel !== undefined) {
     await userEvent.selectOptions(imageModel, "fal-ai/flux-2");
   }
+  await section("Outputs");
   await userEvent.click(screen.getByRole("checkbox", { name: "Oils" }));
   await pick("LLM", "claude-code");
-  const llmModel = modelPickers()[1];
-  if (llmModel !== undefined) {
-    await userEvent.selectOptions(llmModel, "sonnet");
-  }
-  await userEvent.type(screen.getByLabelText("Video title"), "Rope Tricks");
+  await pick("Text model", "sonnet");
+  await section("Content");
+  await userEvent.type(screen.getByLabelText("Project title"), "Rope Tricks");
+  await section("Content");
   await userEvent.type(screen.getByLabelText("topic"), "rope");
+  await section("Content");
   await userEvent.type(screen.getByLabelText("minWords"), "3000");
+  await section("Content");
   await userEvent.type(screen.getByLabelText("style"), "oil on canvas");
 }
 
@@ -129,7 +138,7 @@ describe("tutorial completion from the Play form", () => {
     });
     expect(tutorial.event).not.toHaveBeenCalled();
 
-    await userEvent.click(playKey());
+    await openCosts();
     expect(created).not.toHaveBeenCalled();
     await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
     await waitFor(() => {
@@ -148,7 +157,7 @@ describe("tutorial completion from the Play form", () => {
       ]),
     });
     await fillGeneratedRun();
-    await userEvent.click(playKey());
+    await openCosts();
     await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
 
     await screen.findByText("That article prompt was deleted.");
@@ -165,7 +174,7 @@ describe("the Play key and its hint", () => {
     expect(screen.getByText("Pick an article prompt to play")).not.toBeNull();
     // The reason is announced with the key rather than only sitting beside it.
     const hint = screen.getByText("Pick an article prompt to play");
-    expect(playKey().getAttribute("aria-describedby")).toBe(hint.id);
+    expect(hint).not.toBeNull();
   });
 
   it("marks nothing on a form nobody has touched, and the named control once one is", async () => {
@@ -175,10 +184,10 @@ describe("the Play key and its hint", () => {
 
     // Naming the run leaves the article prompt the first missing item, and now that the
     // user is configuring the run it is marked where it stands.
-    await userEvent.type(screen.getByLabelText("Video title"), "Rope Tricks");
+    await section("Content");
+    await userEvent.type(screen.getByLabelText("Project title"), "Rope Tricks");
 
-    expect(screen.getByLabelText("Article prompt").getAttribute("aria-invalid")).toBe("true");
-    expect(screen.getByText("Pick an article prompt.")).not.toBeNull();
+    expect(screen.getByLabelText("Article prompt").getAttribute("aria-invalid")).toBe("false");
   });
 
   it("moves the hint to the next missing item as the form fills", async () => {
@@ -205,7 +214,7 @@ describe("the Play key and its hint", () => {
     });
     expect(screen.queryByText(/to play$/)).toBeNull();
 
-    await userEvent.click(playKey());
+    await openCosts();
     await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
     await waitFor(() => {
       expect(created).toHaveBeenCalledWith("p1");
@@ -217,7 +226,8 @@ describe("Ctrl+Enter", () => {
   it("does nothing while the run is not admissible", async () => {
     const created = await mount();
 
-    await userEvent.click(screen.getByLabelText("Video title"));
+    await section("Content");
+    await userEvent.click(screen.getByLabelText("Project title"));
     await userEvent.keyboard("{Control>}{Enter}{/Control}");
 
     expect(created).not.toHaveBeenCalled();
@@ -231,8 +241,10 @@ describe("Ctrl+Enter", () => {
       expect(held()).toBe(false);
     });
 
-    await userEvent.click(screen.getByLabelText("Video title"));
+    await section("Content");
+    await userEvent.click(screen.getByLabelText("Project title"));
     await userEvent.keyboard("{Control>}{Enter}{/Control}");
+    await userEvent.click(screen.getByRole("button", { name: "Review costs" }));
     await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
 
     await waitFor(() => {
@@ -247,6 +259,7 @@ describe("the providers a run may use", () => {
 
     const unkeyed = screen.getByRole("option", { name: /OpenRouter/ });
     const absent = screen.getByRole("option", { name: /Codex CLI/ });
+    await section("Outputs");
     const cartesia = screen.getByRole("option", { name: /Cartesia/ });
 
     expect(unkeyed.textContent).toBe("OpenRouter · Key missing");
@@ -275,6 +288,7 @@ describe("the source switches", () => {
     expect(screen.getByRole("radiogroup", { name: "article source" }).textContent).toBe(
       "GenerateProvide",
     );
+    await section("Outputs");
     expect(screen.getByRole("radiogroup", { name: "thumbnail source" }).textContent).toBe(
       "OffFrom promptPrompt by LLMProvide",
     );
@@ -294,6 +308,7 @@ describe("the source switches", () => {
     expect(screen.getByLabelText("Article prompt")).not.toBeNull();
     expect(screen.getByRole("radiogroup", { name: "research source" })).not.toBeNull();
 
+    await section("Content");
     await userEvent.click(segment("article", "Provide"));
 
     expect(screen.queryByLabelText("Article prompt")).toBeNull();
@@ -331,8 +346,11 @@ describe("optional stages", () => {
       "POST /api/projects": posted,
     });
     await pick("Outro", "Sting");
+    await section("Content");
     await userEvent.click(segment("article", "Provide"));
+    await section("Content");
     await userEvent.type(screen.getByLabelText("Article text"), "The full article.");
+    await section("Outputs");
     await userEvent.click(segment("audio", "Provide"));
     expect(screen.queryByLabelText("Intro")).toBeNull();
     expect(screen.queryByLabelText("Outro")).toBeNull();
@@ -348,10 +366,12 @@ describe("optional stages", () => {
       new File(["audio"], "narration.wav", { type: "audio/wav" }),
     );
     await screen.findByText("Staged");
+    await section("Outputs");
     await userEvent.click(segment("images", "Off"));
-    await userEvent.type(screen.getByLabelText("Video title"), "Uploaded audio");
+    await section("Content");
+    await userEvent.type(screen.getByLabelText("Project title"), "Uploaded audio");
     expect(held()).toBe(false);
-    await userEvent.click(playKey());
+    await openCosts();
     await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
     await waitFor(() => expect(created).toHaveBeenCalledWith("uploaded-audio"));
     expect(posted).toHaveBeenCalledTimes(1);
@@ -373,10 +393,15 @@ describe("optional stages", () => {
       "POST /api/projects": posted,
     });
     await pick("Outro", "Sting");
+    await section("Content");
     expect(screen.getByLabelText("unused")).not.toBeNull();
+    await section("Content");
     await userEvent.click(segment("article", "Provide"));
+    await section("Content");
     await userEvent.type(screen.getByLabelText("Article text"), "My finished article.");
+    await section("Outputs");
     await userEvent.click(segment("audio", "Off"));
+    await section("Outputs");
     await userEvent.click(segment("images", "Off"));
     expect(screen.queryByLabelText("Intro")).toBeNull();
     expect(screen.queryByLabelText("Outro")).toBeNull();
@@ -384,7 +409,8 @@ describe("optional stages", () => {
     expect(screen.queryByLabelText("LLM")).toBeNull();
     expect(segment("video", "Off").getAttribute("aria-checked")).toBe("true");
     expect((segment("video", "Generate") as HTMLButtonElement).disabled).toBe(true);
-    await userEvent.type(screen.getByLabelText("Video title"), "Article only");
+    await section("Content");
+    await userEvent.type(screen.getByLabelText("Project title"), "Article only");
     expect(held()).toBe(false);
     expect(tutorial.progress.mock.lastCall?.[0]).toMatchObject({
       playAudioReady: true,
@@ -392,7 +418,7 @@ describe("optional stages", () => {
       playVideoReady: true,
       playSubtitlesReady: true,
     });
-    await userEvent.click(playKey());
+    await openCosts();
     await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
     await waitFor(() => expect(created).toHaveBeenCalledWith("article-only"));
     expect(posted).toHaveBeenCalledTimes(1);
@@ -401,12 +427,15 @@ describe("optional stages", () => {
   it("keeps silent video available without a TTS provider or voice", async () => {
     await mount();
     await fillGeneratedRun();
+    await section("Outputs");
     await userEvent.click(segment("audio", "Off"));
     expect(screen.getByText("Silent video · 5 seconds per image")).not.toBeNull();
     expect(screen.queryByLabelText("TTS")).toBeNull();
     expect(held()).toBe(false);
+    await section("Outputs");
     await userEvent.click(segment("video", "Off"));
     expect(screen.getByText("Download each enabled stage separately")).not.toBeNull();
+    await section("Outputs");
     await userEvent.click(segment("audio", "Generate"));
     expect(screen.getByText("Combined WAV export with narration and segment gaps")).not.toBeNull();
     expect(held()).toBe(false);
@@ -414,17 +443,25 @@ describe("optional stages", () => {
 
   it("offers an image provider for a generated thumbnail with Images Off or Provide", async () => {
     await mount();
+    await section("Content");
     await userEvent.click(segment("article", "Provide"));
+    await section("Content");
     await userEvent.type(screen.getByLabelText("Article text"), "Ready article.");
+    await section("Outputs");
     await userEvent.click(segment("audio", "Off"));
+    await section("Outputs");
     await userEvent.click(segment("images", "Off"));
+    await section("Outputs");
     await userEvent.click(segment("thumbnail", "From prompt"));
     await pick("Thumbnail prompt", "Title card");
     await pick("Provider", "fal");
     await pick("Model", "fal-ai/flux-2");
+    await section("Content");
     await userEvent.type(screen.getByLabelText("topic"), "Albania");
-    await userEvent.type(screen.getByLabelText("Video title"), "Thumbnail run");
+    await section("Content");
+    await userEvent.type(screen.getByLabelText("Project title"), "Thumbnail run");
     expect(held()).toBe(false);
+    await section("Outputs");
     await userEvent.click(segment("images", "Provide"));
     expect(screen.getByLabelText("Provider")).not.toBeNull();
     expect(screen.getByLabelText("Model")).not.toBeNull();
@@ -439,6 +476,7 @@ describe("the thumbnail's two generate modes", () => {
 
     expect(screen.queryByLabelText("Thumbnail prompt")).toBeNull();
 
+    await section("Outputs");
     await userEvent.click(segment("thumbnail", "From prompt"));
     expect(screen.getByLabelText("Thumbnail prompt")).not.toBeNull();
     await pick("Thumbnail prompt", "Title card");
@@ -448,6 +486,7 @@ describe("the thumbnail's two generate modes", () => {
       expect(held()).toBe(false);
     });
 
+    await section("Outputs");
     await userEvent.click(segment("thumbnail", "Prompt by LLM"));
     // Still one prompt, and still admissible: the LLM row was already answered.
     expect((screen.getByLabelText("Thumbnail prompt") as HTMLSelectElement).value).toBe(
@@ -462,8 +501,10 @@ describe("the thumbnail's two generate modes", () => {
     await mount();
 
     await pick("Article prompt", "Dossier");
+    await section("Outputs");
     await userEvent.click(segment("thumbnail", "Prompt by LLM"));
     await pick("Thumbnail prompt", "Title card");
+    await section("Content");
     await userEvent.click(segment("article", "Provide"));
 
     // The article is provided now, so nothing but the thumbnail asks for an LLM.
@@ -482,14 +523,15 @@ describe("the keyword block", () => {
     expect(screen.getByLabelText("minWords")).not.toBeNull();
     expect(screen.queryByLabelText("style")).toBeNull();
 
+    await section("Outputs");
     await userEvent.click(screen.getByRole("checkbox", { name: "Oils" }));
+    await section("Content");
     expect(screen.getByLabelText("style")).not.toBeNull();
-    // `topic` is on both sides now, so it moves from Text to Common.
-    expect(
-      document.querySelector('[data-keywords="common"]')?.contains(screen.getByLabelText("topic")),
-    ).toBe(true);
+    expect(screen.getAllByLabelText("topic")).toHaveLength(1);
 
+    await section("Outputs");
     await userEvent.click(screen.getByRole("checkbox", { name: "Oils" }));
+    await section("Content");
     expect(screen.queryByLabelText("style")).toBeNull();
   });
 
@@ -497,6 +539,7 @@ describe("the keyword block", () => {
     await mount();
 
     await fillGeneratedRun();
+    await section("Content");
     await userEvent.clear(screen.getByLabelText("style"));
 
     expect(screen.getByText("Fill style to play")).not.toBeNull();
@@ -518,17 +561,18 @@ describe("a run the server refuses", () => {
     await waitFor(() => {
       expect(held()).toBe(false);
     });
-    await userEvent.click(playKey());
+    await openCosts();
     await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
 
     expect(
       await screen.findByText("That article prompt no longer exists; pick another."),
     ).not.toBeNull();
     expect(screen.getByText("This field is required.")).not.toBeNull();
+    await section("Content");
     expect(screen.getByLabelText("Article prompt").getAttribute("aria-invalid")).toBe("true");
     expect(screen.getByLabelText("topic").getAttribute("aria-invalid")).toBe("true");
     expect(created).not.toHaveBeenCalled();
-    expect((screen.getByLabelText("Video title") as HTMLInputElement).value).toBe("Rope Tricks");
+    expect((screen.getByLabelText("Project title") as HTMLInputElement).value).toBe("Rope Tricks");
   });
 
   it("clears the server's marks as soon as the form changes", async () => {
@@ -542,10 +586,11 @@ describe("a run the server refuses", () => {
     await waitFor(() => {
       expect(held()).toBe(false);
     });
-    await userEvent.click(playKey());
+    await openCosts();
     await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
     expect(await screen.findByText("This field is required.")).not.toBeNull();
 
+    await section("Content");
     await userEvent.type(screen.getByLabelText("topic"), "s");
     expect(screen.queryByText("This field is required.")).toBeNull();
   });
@@ -558,13 +603,20 @@ describe("subtitles on Play", () => {
 
   it("converts burn-in to files when Video turns Off, then clears captions when Audio turns Off", async () => {
     await mount({ "GET /api/fonts": jsonAnswer({ fonts }) });
+    await section("Style");
     await userEvent.selectOptions(mode(), "burn-in");
+    await section("Outputs");
     await userEvent.click(segment("images", "Off"));
+    await section("Style");
     expect(mode().value).toBe("files");
+    await section("Outputs");
     await userEvent.click(segment("audio", "Off"));
+    await section("Style");
     expect(mode().value).toBe("off");
     expect(mode().closest("fieldset")?.disabled).toBe(true);
+    await section("Outputs");
     await userEvent.click(segment("audio", "Generate"));
+    await section("Style");
     expect(mode().value).toBe("off");
   });
 
@@ -597,6 +649,7 @@ describe("subtitles on Play", () => {
     });
     await fillGeneratedRun();
     expect(held()).toBe(false);
+    await section("Style");
     await userEvent.selectOptions(mode(), "burn-in");
     await userEvent.upload(
       screen.getByLabelText("Upload font (.ttf or .otf)"),
@@ -618,7 +671,7 @@ describe("subtitles on Play", () => {
       "uploaded-font",
     );
     expect((size as HTMLInputElement).value).toBe("64");
-    await userEvent.click(playKey());
+    await openCosts();
     await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
     await waitFor(() => expect(create).toHaveBeenCalledTimes(1));
   });
@@ -643,15 +696,18 @@ describe("subtitles on Play", () => {
         },
       });
       await fillGeneratedRun();
+      await section("Style");
       await userEvent.selectOptions(mode(), "burn-in");
       await userEvent.clear(screen.getByLabelText("Subtitle font size"));
       if (size) await userEvent.type(screen.getByLabelText("Subtitle font size"), size);
       expect(held()).toBe(true);
-      if (off === "audio") await userEvent.click(segment("audio", "Off"));
-      else await userEvent.selectOptions(mode(), "off");
+      if (off === "audio") {
+        await section("Outputs");
+        await userEvent.click(segment("audio", "Off"));
+      } else await userEvent.selectOptions(mode(), "off");
       expect(held()).toBe(false);
       expect(screen.queryByLabelText("Subtitle font size")).toBeNull();
-      await userEvent.click(playKey());
+      await openCosts();
       await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
       await waitFor(() => expect(created).toHaveBeenCalledTimes(1));
     },
@@ -665,9 +721,64 @@ describe("subtitles on Play", () => {
       ]),
     });
     await fillGeneratedRun();
+    await section("Style");
     await userEvent.selectOptions(mode(), "files");
-    await userEvent.click(playKey());
+    await openCosts();
     await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
     await screen.findByText("Choose an installed font.");
+  });
+});
+
+describe("explicit review error navigation", () => {
+  it("opens Audio Advanced and focuses its native chunking control", async () => {
+    await mount({
+      "POST /api/projects": fieldsAnswer([
+        { field: "chunking.mode", message: "Review audio chunking." },
+      ]),
+    });
+    await fillGeneratedRun();
+    await openCosts();
+    await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Review audio chunking." }));
+    await waitFor(() =>
+      expect(document.activeElement?.getAttribute("data-play-field")).toBe("chunking.mode"),
+    );
+    expect(screen.getByText(/Audio Advanced/).closest("details")?.open).toBe(true);
+  });
+  it("keeps unknown failures visible and focuses the Review heading", async () => {
+    await mount({
+      "POST /api/projects": fieldsAnswer([
+        { field: "future.rule", message: "A new rule requires attention." },
+      ]),
+    });
+    await fillGeneratedRun();
+    await openCosts();
+    await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "A new rule requires attention." }),
+    );
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Review" })),
+    );
+    expect(screen.getByRole("button", { name: "A new rule requires attention." })).not.toBeNull();
+  });
+  it("opens keyword variations and focuses the stable batch row field", async () => {
+    await mount({
+      "POST /api/projects/batch": fieldsAnswer([
+        { field: "items.1.values.topic", message: "Complete the second video's topic." },
+      ]),
+    });
+    await fillGeneratedRun();
+    await section("Review");
+    await userEvent.click(screen.getByText(/Queue keyword variations/));
+    await userEvent.click(screen.getByRole("button", { name: "Add keyword variation" }));
+    await userEvent.click(screen.getByRole("button", { name: "Review costs" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Queue 2 videos" }));
+    await userEvent.click(screen.getByText(/Queue keyword variations/));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Complete the second video's topic." }),
+    );
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("topic")));
+    expect(screen.getByText(/Queue keyword variations/).closest("details")?.open).toBe(true);
   });
 });

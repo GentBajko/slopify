@@ -28,8 +28,8 @@ export function AudioRail({
         {form.sources.audio === "generate" ? (
           <>
             <ProviderPicker
+              field="audio.provider"
               label="TTS"
-              inline
               family="tts"
               providers={providers}
               value={form.audio.provider}
@@ -41,16 +41,16 @@ export function AudioRail({
               }}
             />
             <ModelPicker
+              field="audio.model"
               label="TTS model"
-              inline
               provider={form.audio.provider}
               value={form.audio.model}
-              problem={undefined}
+              problem={problem("audio.model")}
               onPick={(model) => update({ audio: { ...form.audio, model } })}
             />
             <OptionPicker
+              field="audio.voice"
               label="Voice"
-              inline
               value={form.audio.voice}
               placeholder={mine.length === 0 ? "No voices. Add one in Settings." : "Pick a voice"}
               options={mine.map((voice) => ({ value: voice.voiceId, label: voice.name }))}
@@ -59,18 +59,24 @@ export function AudioRail({
                 update({ audio: { ...form.audio, voice } });
               }}
             />
-            <ChunkingControl
-              value={form.chunking}
-              onPick={(chunking) => {
-                update({ chunking });
-              }}
-            />
+            <details className="col-span-full">
+              <summary className="cursor-pointer py-2">
+                Audio Advanced · {form.chunking.mode}
+              </summary>
+              <ChunkingControl
+                value={form.chunking}
+                onPick={(chunking) => {
+                  update({ chunking });
+                }}
+              />
+            </details>
           </>
         ) : null}
       </div>
       {form.sources.audio === "provide" ? (
         <div className={railBeneath}>
           <FilePick
+            field="provided.audio"
             label="Narration file"
             accept="audio/*"
             uploads={form.provided.audio === undefined ? [] : [form.provided.audio]}
@@ -125,6 +131,7 @@ export function ImagesRail({
       {form.sources.images === "provide" ? (
         <div className={railBeneath}>
           <FilePick
+            field="provided.images"
             label="Slideshow images"
             accept="image/png,image/jpeg,image/webp"
             multiple
@@ -153,8 +160,8 @@ export function ImageProviderControls({
   return (
     <>
       <ProviderPicker
+        field="images.provider"
         label="Provider"
-        inline
         family="image"
         providers={providers}
         value={form.images.provider}
@@ -162,11 +169,11 @@ export function ImageProviderControls({
         onPick={(provider) => update({ images: { provider, model: "" } })}
       />
       <ModelPicker
+        field="images.model"
         label="Model"
-        inline
         provider={form.images.provider}
         value={form.images.model}
-        problem={undefined}
+        problem={problem("images.model")}
         onPick={(model) => update({ images: { ...form.images, model } })}
       />
     </>

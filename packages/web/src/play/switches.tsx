@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 // guards the union lives here and the callback only ever sees a listed value.
 export function InlineSwitch<T extends string>({
   label,
+  field,
   hideLabel = false,
   value,
   options,
@@ -18,6 +19,7 @@ export function InlineSwitch<T extends string>({
   onPick,
 }: {
   readonly label: string;
+  readonly field?: string | undefined;
   // The stage rails name the stage in the row already, so repeating it beside the strip
   // would say it twice; the label stays in the accessibility tree either way.
   readonly hideLabel?: boolean | undefined;
@@ -25,6 +27,7 @@ export function InlineSwitch<T extends string>({
   readonly options: readonly {
     readonly value: T;
     readonly label: string;
+    readonly field?: string | undefined;
     readonly disabled?: boolean;
   }[];
   readonly className?: string | undefined;
@@ -52,6 +55,7 @@ export function InlineSwitch<T extends string>({
           <ToggleGroupItem
             key={option.value}
             value={option.value}
+            data-play-field={option.value === value ? field : undefined}
             disabled={option.disabled === true}
           >
             {option.label}

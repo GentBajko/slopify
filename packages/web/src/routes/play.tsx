@@ -2,18 +2,24 @@ import type { FieldError } from "@app/slices/admission/rules.js";
 import type { QueueEntry } from "@app/slices/batch/index.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { type KeyboardEvent, useState } from "react";
+import { type KeyboardEvent, useLayoutEffect, useRef, useState } from "react";
 import type { UploadKind } from "@/api";
 import { createProject } from "@/api";
 import { useApp } from "@/app-context";
-import { read } from "@/http";
+import { Button } from "@/components/ui/button";
+import { saved } from "@/http";
 import { usePlayDraft } from "@/lib/form-drafts";
 import { admission } from "@/play/admission";
-import { CueSheet } from "@/play/cue-sheet";
+import { ContentSection } from "@/play/content-section";
 import { usePlaySession } from "@/play/draft-context";
 import { DraftList } from "@/play/draft-list";
+import { focusPlayField, playFieldTarget } from "@/play/field-targets";
+import { FormatPicker } from "@/play/format-picker";
+import { OutputsSection } from "@/play/outputs-section";
 import { BatchEditor, RunReview } from "@/play/run-review";
-import { StageRails } from "@/play/stage-rails";
+import { SectionNavigation } from "@/play/section-navigation";
+import { playSections } from "@/play/sections";
+import { SetupSummary } from "@/play/setup-summary";
 import type { PlayFormState, Upload } from "@/play/state";
 import {
   entriesQuery,
@@ -24,13 +30,8 @@ import {
   voicesQuery,
 } from "@/queries";
 import { subtitlesFor } from "@/subtitles/config";
+import { SubtitleControls } from "@/subtitles/controls";
 import { useTutorialEvent, useTutorialProgress } from "@/tutorial/context";
-
-// 06 Play. The stage rails on the left, the cue sheet on the right, and one key at the bottom
-// of it. This file is the composition: it holds the one piece of state the screen has, fetches
-// what the pickers are filled from, stages the files a Provide needs, and posts the draft.
-// Every rule it obeys lives elsewhere - `play/admission.ts` runs the server's own, and the
-// controls are in `play/`.
 
 export function PlayRoute() {
   const navigate = useNavigate();
@@ -63,9 +64,54 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   // What the server marked when it refused the draft: a template deleted since it was
   // picked, or a rule the browser's copy could not see.
   const [refused, setRefused] = useState<readonly FieldError[]>([]);
-  // Whether the user has configured anything yet. A fresh form shows the hint over the key and
-  // nothing else; a form being filled marks the control the hint is naming.
-  const [touched, setTouched] = useState(false);
+  const [touched, setTouched] = useState<ReadonlySet<string>>(new Set());
+  const root = useRef<HTMLDivElement>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const routerNavigate = useNavigate();
+  const touchedDraft = useRef(session.activeId);
+  useLayoutEffect(() => {
+    if (touchedDraft.current !== session.activeId) {
+      touchedDraft.current = session.activeId;
+      setTouched(new Set());
+      setRefused([]);
+    }
+  }, [session.activeId]);
+  const focusSequence = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const reveal = session.reveal;
+    if (!reveal) focusSequence.current = null;
+    if (
+      !reveal ||
+      reveal.sequence === focusSequence.current ||
+      reveal.section !== session.section ||
+      !root.current
+    )
+      return;
+    focusSequence.current = reveal.sequence;
+    if (reveal.field) {
+      const target = [...root.current.querySelectorAll<HTMLElement>("[data-play-field]")].find(
+        (element) => element.dataset.playField === reveal.field,
+      );
+      let ancestor = target?.parentElement;
+      while (ancestor && ancestor !== root.current) {
+        if (ancestor instanceof HTMLDetailsElement) ancestor.open = true;
+        ancestor = ancestor.parentElement;
+      }
+      if (focusPlayField(root.current, reveal.field)) return;
+    }
+    heading.current?.focus();
+  }, [session.reveal, session.section]);
+  const revealField = (field: string): void => {
+    const target = playFieldTarget(field, form, batchItems);
+    setTouched((current) => new Set([...current, field, target.field]));
+    void session.navigate(target.section, target.field);
+  };
+  const library = async (to: "/prompts" | "/settings"): Promise<void> => {
+    if (!(await session.flush())) return;
+    if (to === "/prompts")
+      await routerNavigate({ to: "/prompts/new", search: { kind: "article" } });
+    else await routerNavigate({ to });
+  };
 
   const update = (patch: Partial<PlayFormState>): void => {
     setForm((current) => {
@@ -73,7 +119,6 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
       return { ...next, subtitles: subtitlesFor(next.subtitles, next.sources) };
     });
     setBatchId(crypto.randomUUID());
-    setTouched(true);
     // A refusal stands until the form changes; the next press asks the server again.
     setRefused([]);
   };
@@ -97,7 +142,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   const play = useMutation({
     mutationFn: async () => {
       if (!batchItems.length) return createProject(api, draft);
-      const created = await read<{ queue: QueueEntry[] }>(
+      const created = await saved<{ queue: QueueEntry[] }>(
         await api.fetch(`${api.origin}/api/projects/batch`, {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -111,7 +156,8 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
           }),
         }),
       );
-      const first = created.queue[0];
+      if (!created.ok) return created;
+      const first = created.value.queue[0];
       if (!first) throw new Error("No videos were queued.");
       return { ok: true as const, value: { project: { id: first.projectId } } };
     },
@@ -167,27 +213,17 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     playReady: blocker === undefined && !play.isPending,
   });
 
-  // The refusal to put under one control: every field the server named, and the one the
-  // hint is pointing at once the form has been touched. Nothing else, so a form nobody
-  // has configured yet is not painted red.
   const problem = (field: string): string | undefined => {
-    const named = refused.find((error) => error.field === field);
-    if (named !== undefined) {
-      return named.message;
-    }
-    if (!touched || blocker?.field !== field || result.ok) {
-      return undefined;
-    }
-    return result.fields.find((error) => error.field === field)?.message;
+    const canonical = playFieldTarget(field, form, batchItems).field;
+    return errors.find(
+      (error) =>
+        playFieldTarget(error.field, form, batchItems).field === canonical &&
+        (refused.includes(error) || touched.has(field) || touched.has(canonical)),
+    )?.message;
   };
-
   const submit = (): void => {
-    if (blocker === undefined && !play.isPending) {
-      setReview(true);
-    }
+    void session.navigate("review");
   };
-
-  // Ctrl/Cmd+Enter presses Play from anywhere on the form when it is valid.
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
     if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
@@ -221,69 +257,158 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     (query) => query.error !== null,
   )?.error?.message;
 
+  const controls = {
+    form,
+    providers: providers.data?.providers ?? [],
+    prompts: prompts.data?.prompts ?? [],
+    voices: voices.data?.voices ?? [],
+    silenceGapSeconds: settings.data?.silenceGapSeconds ?? 3,
+    problem,
+    update,
+    onPickFiles,
+    onRemoveFile,
+  };
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: this listens for the form-wide Ctrl/Cmd+Enter shortcut and does not make the container itself operable.
+    // biome-ignore lint/a11y/noStaticElementInteractions: form-wide keyboard shortcut opens Review without starting a run.
     <div
+      ref={root}
       onKeyDown={onKeyDown}
+      onBlurCapture={(event) => {
+        const field = (event.target as HTMLElement).dataset.playField;
+        if (field) setTouched((current) => new Set([...current, field]));
+      }}
       data-play-grid="true"
-      className="mx-auto grid max-w-[1440px] grid-cols-1 items-start gap-6 min-[1180px]:grid-cols-[minmax(0,1fr)_480px]"
+      className="mx-auto max-w-[1320px] [&_input:not([type=checkbox])]:min-h-10 [&_select]:min-h-10 [&_button]:min-h-10 max-[700px]:[&_button]:min-h-11 max-[700px]:[&_input:not([type=checkbox])]:min-h-11 max-[700px]:[&_select]:min-h-11"
     >
-      <div className="min-w-0">
-        <h1 className="mb-1 text-title font-bold tracking-[-0.01em]">New run</h1>
-        <p className="mb-4 text-body text-ink2">
-          Generate or provide an Article. Every other stage can be Off. Choose narration, images,
-          and a video or combined audio export to suit your project.
-        </p>
-
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="mb-1 text-title font-bold tracking-[-0.01em]">New run</h1>
+          <p className="text-body text-ink2">
+            Create the article, choose the outputs, then review.
+          </p>
+        </div>
         <DraftList />
-        {loadError === undefined ? null : <p className="mb-4 text-body text-red">{loadError}</p>}
-
-        <StageRails
-          form={form}
-          providers={providers.data?.providers ?? []}
-          prompts={prompts.data?.prompts ?? []}
-          voices={voices.data?.voices ?? []}
-          silenceGapSeconds={settings.data?.silenceGapSeconds ?? 3}
-          problem={problem}
-          update={update}
-          onPickFiles={onPickFiles}
-          onRemoveFile={onRemoveFile}
-          subtitleSession={{
-            previewText: session.document.previewText,
-            fontUploading: session.fontUploading,
-            fontUpload: session.document.fontUpload,
-            selectFont: session.selectFont,
-            uploadSubtitleFont: session.uploadSubtitleFont,
-          }}
-        />
+      </header>
+      {loadError ? <p className="mb-4 text-body text-red">{loadError}</p> : null}
+      <SectionNavigation
+        section={session.section}
+        onNavigate={(section) => {
+          void session.navigate(section);
+        }}
+      />
+      <div className="grid min-w-0 grid-cols-1 items-start gap-7 min-[1100px]:grid-cols-[minmax(0,1fr)_360px]">
+        <section
+          data-tour={session.section === "content" ? "play-options" : undefined}
+          className="min-w-0"
+        >
+          <h2 ref={heading} tabIndex={-1} className="text-xl font-semibold">
+            {playSections.find((item) => item.id === session.section)?.label}
+          </h2>
+          {session.section === "content" ? (
+            <ContentSection
+              {...controls}
+              fields={fields}
+              entries={entries.data?.entries ?? []}
+              onLibrary={(to) => {
+                void library(to);
+              }}
+            />
+          ) : null}
+          {session.section === "outputs" ? (
+            <OutputsSection
+              {...controls}
+              entries={entries.data?.entries ?? []}
+              missingKeyword={errors.find((error) => error.field.startsWith("values."))?.field}
+              onKeyword={revealField}
+              onSettings={() => {
+                void library("/settings");
+              }}
+            />
+          ) : null}
+          {session.section === "style" ? (
+            <div data-tour="play-subtitles" className="flex flex-col gap-6 py-6">
+              <FormatPicker value={form.format} onPick={(format) => update({ format })} />
+              <SubtitleControls
+                session={{
+                  previewText: session.document.previewText,
+                  fontUploading: session.fontUploading,
+                  fontUpload: session.document.fontUpload,
+                  selectFont: session.selectFont,
+                  uploadSubtitleFont: session.uploadSubtitleFont,
+                }}
+                value={subtitlesFor(form.subtitles, form.sources)}
+                format={form.format}
+                audioEnabled={form.sources.audio !== "off"}
+                videoEnabled={form.sources.video === "generate" && form.sources.images !== "off"}
+                onChange={(subtitles) => update({ subtitles })}
+                problem={problem}
+              />
+            </div>
+          ) : null}
+          {session.section === "review" ? (
+            <div className="flex flex-col gap-5 py-6">
+              {errors.length ? (
+                <ul aria-label="Setup errors" className="text-small text-red">
+                  {errors.map((error) => (
+                    <li key={`${error.field}-${error.message}`}>
+                      <Button variant="ghost" onClick={() => revealField(error.field)}>
+                        {error.message}
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {subtitleUploading ? (
+                <Button variant="ghost" onClick={() => revealField("subtitles.fontId")}>
+                  Wait for the subtitle font upload to finish to play
+                </Button>
+              ) : null}
+              <BatchEditor
+                problem={problem}
+                items={batchItems}
+                fields={fields}
+                title={form.title}
+                values={form.values}
+                onChange={(items) => {
+                  session.edit({
+                    ...session.document,
+                    variants: items.map(({ key, ...item }) => ({ ...item, id: key })),
+                  });
+                  setBatchId(crypto.randomUUID());
+                }}
+              />
+              <Button
+                data-tour="play-start"
+                aria-disabled={blocker !== undefined || play.isPending}
+                onClick={() => {
+                  if (!blocker && !play.isPending) setReview(true);
+                }}
+              >
+                Review costs
+              </Button>
+            </div>
+          ) : (
+            <div className="mt-8 flex justify-end border-t border-line py-6">
+              <Button
+                variant="play"
+                onClick={() => {
+                  const next =
+                    playSections[playSections.findIndex((item) => item.id === session.section) + 1];
+                  if (next) void session.navigate(next.id);
+                }}
+              >
+                Continue to{" "}
+                {
+                  playSections[playSections.findIndex((item) => item.id === session.section) + 1]
+                    ?.label
+                }{" "}
+                →
+              </Button>
+            </div>
+          )}
+        </section>
+        <SetupSummary form={form} blocker={blocker} onReveal={revealField} />
       </div>
-
-      <CueSheet
-        form={form}
-        providers={providers.data?.providers ?? []}
-        entries={entries.data?.entries ?? []}
-        fields={fields}
-        problem={problem}
-        blocker={blocker}
-        failure={play.error === null ? undefined : play.error.message}
-        pending={play.isPending}
-        update={update}
-        onPlay={submit}
-      >
-        <BatchEditor
-          items={batchItems}
-          fields={fields}
-          title={form.title}
-          values={form.values}
-          onChange={(items) => {
-            session.edit({
-              ...session.document,
-              variants: items.map(({ key, ...item }) => ({ ...item, id: key })),
-            });
-            setBatchId(crypto.randomUUID());
-          }}
-        />
-      </CueSheet>
       {review ? (
         <RunReview
           draft={draft}

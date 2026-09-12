@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 // sheet draws it; on the cue sheet it sits above.
 
 export interface FieldProps {
+  readonly field?: string | undefined;
   readonly label: string;
   readonly value: string;
   readonly problem: string | undefined;
@@ -24,27 +25,34 @@ export interface FieldProps {
 
 export function LabelledField({
   label,
+  field,
   problem,
   inline = false,
   children,
 }: {
+  readonly field?: string | undefined;
   readonly label: string;
   readonly problem: string | undefined;
   readonly inline?: boolean | undefined;
   readonly children: (props: {
     readonly id: string;
     readonly describedBy: string | undefined;
+    readonly field: string | undefined;
   }) => ReactNode;
 }) {
   const fieldId = useId();
   const noteId = useId();
 
   return (
-    <div className={cn(inline ? "flex min-w-0 max-w-full items-center gap-[10px]" : "min-w-0")}>
+    <div
+      className={cn(
+        inline ? "flex min-w-0 max-w-full items-center gap-[10px]" : "min-w-0 [&>span]:w-full",
+      )}
+    >
       <Label htmlFor={fieldId} className={inline ? "shrink-0" : "mb-[5px]"}>
         {label}
       </Label>
-      {children({ id: fieldId, describedBy: problem === undefined ? undefined : noteId })}
+      {children({ field, id: fieldId, describedBy: problem === undefined ? undefined : noteId })}
       {problem === undefined ? null : (
         <p id={noteId} className={cn("text-label text-red", inline ? "" : "mt-1")}>
           {problem}
@@ -62,6 +70,7 @@ export interface Option {
 
 export function OptionPicker({
   label,
+  field,
   value,
   problem,
   inline,
@@ -75,10 +84,11 @@ export function OptionPicker({
   readonly disabled?: boolean | undefined;
 }) {
   return (
-    <LabelledField label={label} problem={problem} inline={inline}>
+    <LabelledField field={field} label={label} problem={problem} inline={inline}>
       {({ id, describedBy }) => (
         <Picker
           id={id}
+          data-play-field={field}
           value={value}
           disabled={disabled}
           aria-invalid={problem !== undefined}
@@ -131,6 +141,7 @@ function refusalOf(provider: ProviderStatus): string | undefined {
 
 export function ProviderPicker({
   label,
+  field,
   family,
   providers,
   value,
@@ -143,6 +154,7 @@ export function ProviderPicker({
 }) {
   return (
     <OptionPicker
+      field={field}
       label={label}
       value={value}
       problem={problem}
@@ -165,6 +177,7 @@ export function ModelPicker(props: FieldProps & { readonly provider: string }) {
 
 function ProviderModelPicker({
   label,
+  field,
   provider,
   value,
   problem,
@@ -190,7 +203,7 @@ function ProviderModelPicker({
 
   return (
     <div className="min-w-0 max-w-full">
-      <LabelledField label={label} problem={problem} inline={inline}>
+      <LabelledField field={field} label={label} problem={problem} inline={inline}>
         {({ id, describedBy }) => {
           const described =
             [
@@ -205,6 +218,7 @@ function ProviderModelPicker({
               {typing ? (
                 <Input
                   id={id}
+                  data-play-field={field}
                   value={value}
                   spellCheck={false}
                   placeholder="Type the model id"
@@ -216,6 +230,7 @@ function ProviderModelPicker({
               ) : (
                 <Picker
                   id={id}
+                  data-play-field={field}
                   value={value}
                   disabled={provider === ""}
                   aria-invalid={problem !== undefined}

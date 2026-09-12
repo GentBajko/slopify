@@ -5,21 +5,13 @@ import type { ProviderStatus, Voice } from "@app/slices/settings/model.js";
 import type { ReactNode } from "react";
 import type { UploadKind } from "@/api";
 import { StageGlyph } from "@/components/glyph";
-import { Lamp } from "@/components/lamp";
-import { Rail } from "@/components/rail";
 import { cn } from "@/lib/utils";
 import type { PlayFormState } from "@/play/state";
 import { sourceOptions } from "@/play/state";
 import { InlineSwitch } from "@/play/switches";
 
-// One rail's furniture, shared by the six stages: the reference sheet's five-column grid
-// - lamp, glyph, name, source switch, controls - the second row a Provide opens beneath
-// it, and the switch itself. It lives apart from the rails that use it so neither the
-// plain stages nor the two that carry a provider and a list grow past a screenful.
-
-export const railGrid = "grid grid-cols-[14px_24px_110px_auto_minmax(0,1fr)]";
-export const railControls = "col-start-5 flex flex-wrap items-center justify-end gap-[10px]";
-export const railBeneath = "col-span-4 col-start-2 mt-[10px]";
+export const railControls = "col-span-3 grid min-w-0 grid-cols-1 gap-4 min-[700px]:grid-cols-2";
+export const railBeneath = "col-span-3 min-w-0";
 
 export interface RailProps {
   readonly form: PlayFormState;
@@ -55,14 +47,14 @@ export function StageRail({
   readonly children: ReactNode;
 }) {
   return (
-    <Rail data-tour={`play-${kind}`} className={railGrid}>
-      {/* Unlit: no stage has run yet, and the lamp is here so the rail reads the same
-          before and after Play. */}
-      <Lamp state="pending" />
+    <section
+      data-tour={`play-${kind}`}
+      className="grid grid-cols-[24px_1fr_auto] items-center gap-x-2 gap-y-5 border-b border-line py-6"
+    >
       <StageGlyph kind={kind} className={dim ? "text-ink3" : "text-ink2"} />
-      <span className={cn("font-semibold", dim ? "text-ink3" : undefined)}>{name}</span>
+      <h3 className={cn("text-lg font-semibold", dim ? "text-ink3" : undefined)}>{name}</h3>
       {children}
-    </Rail>
+    </section>
   );
 }
 
@@ -79,8 +71,10 @@ export function SourceSwitch({
 }) {
   return (
     <InlineSwitch<StageSource>
+      field={`sources.${kind}`}
       label={`${kind} source`}
       hideLabel
+      className="max-[700px]:col-span-3 max-[700px]:justify-self-start [&_[data-slot=toggle-group]]:flex-wrap"
       value={form.sources[kind]}
       options={sourceOptions(kind).map((option) => ({
         ...option,

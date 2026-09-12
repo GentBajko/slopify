@@ -35,11 +35,11 @@ export function ImagePrompts({
   }
 
   return (
-    <div className="flex basis-full flex-col items-end gap-[6px]">
+    <div className="flex basis-full flex-col items-start gap-[6px]">
       <span id={listId} className="engraved text-ink3">
         Image prompts
       </span>
-      <ul aria-labelledby={listId} className="flex flex-wrap justify-end gap-x-4 gap-y-2">
+      <ul aria-labelledby={listId} className="flex flex-wrap justify-start gap-x-4 gap-y-2">
         {prompts.map((prompt) => {
           const at = picked.findIndex((choice) => choice.name === prompt.name);
           const choice = at === -1 ? undefined : picked[at];
@@ -100,6 +100,7 @@ function PromptTick({
     <span className="inline-flex items-center gap-2 text-small">
       <input
         id={tickId}
+        data-play-field="imagePrompts"
         type="checkbox"
         checked={number !== undefined}
         className="size-[14px] shrink-0 accent-accent"
@@ -115,6 +116,7 @@ function PromptTick({
       </Label>
       <Input
         id={numberId}
+        data-play-field={`imagePrompts.${name}.number`}
         type="number"
         min={firstNumber}
         max={numberPerPromptMax}

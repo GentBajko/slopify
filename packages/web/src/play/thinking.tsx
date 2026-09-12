@@ -17,6 +17,7 @@ export function ThinkingPicker({
   return (
     <div className="min-w-0">
       <OptionPicker
+        field="llm.thinking"
         label="Thinking"
         value={choice.thinking ?? "default"}
         placeholder="Model default"

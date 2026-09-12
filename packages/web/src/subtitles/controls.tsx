@@ -56,6 +56,7 @@ export function SubtitleControls({
             </Label>
             <select
               id={id}
+              data-play-field="subtitles.mode"
               value={audioEnabled ? value.mode : "off"}
               disabled={uploading}
               aria-describedby={hintId}
@@ -104,6 +105,7 @@ export function SubtitleControls({
                   </Label>
                   <Input
                     id={sizeId}
+                    data-play-field="subtitles.fontSize"
                     type="number"
                     min={16}
                     max={120}
@@ -126,6 +128,7 @@ export function SubtitleControls({
                   </Label>
                   <select
                     id={positionId}
+                    data-play-field="subtitles.position"
                     value={value.position ?? "bottom"}
                     onChange={(event) => {
                       const position = subtitlePositions.find((one) => one === event.target.value);

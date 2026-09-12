@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { ConfirmDialog } from "@/components/confirm";
+import { Button } from "@/components/ui/button";
 import { discardPlayDraft, listPlayDrafts } from "./draft-api";
 import { usePlaySession } from "./draft-context";
 
@@ -49,12 +50,55 @@ export function DraftList(): ReactElement {
     }
   };
   return (
-    <section aria-label="Drafts">
-      <h2>Drafts</h2>
-      <button type="button" onClick={() => void session.newDraft()}>
-        New draft
-      </button>
-      <p role="status">
+    <section aria-label="Drafts" className="min-w-0 max-w-full text-small">
+      <div className="flex flex-wrap items-start gap-2">
+        <details className="max-w-full rounded-control border border-line bg-panel px-3">
+          <summary className="flex min-h-10 cursor-pointer items-center font-semibold">
+            Drafts
+          </summary>
+          {list.isPending ? <p role="status">Loading drafts…</p> : null}
+          {list.error ? (
+            <p role="alert">
+              {list.error.message}
+              <button type="button" onClick={() => void list.refetch()}>
+                Retry
+              </button>
+            </p>
+          ) : null}
+          {list.data?.length === 0 ? <p>No saved drafts</p> : null}
+          <ul className="max-h-72 max-w-[320px] overflow-y-auto pb-2">
+            {list.data?.map((draft) => (
+              <li
+                key={draft.id}
+                className="flex flex-wrap items-center gap-2 border-t border-line py-2"
+              >
+                <button
+                  type="button"
+                  className="min-w-0 flex-1 break-words text-left"
+                  onClick={() => void session.open(draft.id)}
+                >
+                  {draft.title || "Untitled draft"}
+                </button>
+                {!draft.readable ? (
+                  <p>Unsupported or corrupt draft. Try opening it to recover, or discard it.</p>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConfirm(draft);
+                    setError(null);
+                  }}
+                  aria-label={`Discard ${draft.title || "Untitled draft"}`}
+                >
+                  Discard
+                </button>
+              </li>
+            ))}
+          </ul>
+        </details>
+        <Button onClick={() => void session.newDraft()}>New draft</Button>
+      </div>
+      <p role="status" className="mt-2 text-small text-ink3">
         {
           {
             unsaved: "Unsaved",
@@ -65,38 +109,6 @@ export function DraftList(): ReactElement {
           }[session.status]
         }
       </p>
-      {list.isPending ? <p role="status">Loading drafts…</p> : null}
-      {list.error ? (
-        <p role="alert">
-          {list.error.message}
-          <button type="button" onClick={() => void list.refetch()}>
-            Retry
-          </button>
-        </p>
-      ) : null}
-      {list.data?.length === 0 ? <p>No saved drafts</p> : null}
-      <ul>
-        {list.data?.map((draft) => (
-          <li key={draft.id}>
-            <button type="button" onClick={() => void session.open(draft.id)}>
-              {draft.title || "Untitled draft"}
-            </button>
-            {!draft.readable ? (
-              <p>Unsupported or corrupt draft. Try opening it to recover, or discard it.</p>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => {
-                setConfirm(draft);
-                setError(null);
-              }}
-              aria-label={`Discard ${draft.title || "Untitled draft"}`}
-            >
-              Discard
-            </button>
-          </li>
-        ))}
-      </ul>
       <ConfirmDialog
         open={confirm !== null}
         title="Discard draft"

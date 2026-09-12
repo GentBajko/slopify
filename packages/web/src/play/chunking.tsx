@@ -19,6 +19,7 @@ export function ChunkingControl({
   return (
     <>
       <InlineSwitch<ChunkMode>
+        field="chunking.mode"
         label="Chunking"
         className="min-w-0 max-w-full flex-wrap [&_[data-slot=toggle-group]]:max-w-full [&_[data-slot=toggle-group]]:flex-wrap"
         value={value.mode}
@@ -43,6 +44,7 @@ export function ChunkingControl({
           {({ id }) => (
             <Input
               id={id}
+              data-play-field={characterMode ? "chunking.characters" : "chunking.words"}
               type="number"
               min={1}
               max={characterMode ? 1000000 : 10000}

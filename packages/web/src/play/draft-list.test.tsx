@@ -32,6 +32,7 @@ it("lists server drafts with no browser identity and offers recovery for unreada
       }),
     ),
   );
+  fireEvent.click(await screen.findByText("Drafts"));
   await screen.findByText("Recovered");
   expect(screen.getByText(/unsupported or corrupt/i)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Discard Recovered" }));
@@ -73,6 +74,7 @@ it("flushes an active dirty draft before confirmed deletion and clears the sessi
       }),
     ),
   );
+  fireEvent.click(await screen.findByText("Drafts"));
   await screen.findByText("Active");
   await act(() => session?.open(id));
   act(() => {
@@ -112,6 +114,7 @@ it("clears a corrupt remembered identity after explicit list discard", async () 
       ),
     );
     await screen.findByRole("alert");
+    fireEvent.click(screen.getByText("Drafts"));
     fireEvent.click(screen.getByRole("button", { name: "Discard Broken" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm discard" }));
     await waitFor(() => expect(map.has("slopify.play-draft")).toBe(false));

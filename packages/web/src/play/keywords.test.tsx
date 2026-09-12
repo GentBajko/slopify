@@ -25,27 +25,12 @@ function block(over: Partial<Parameters<typeof KeywordBlock>[0]> = {}) {
   );
 }
 
-function group(name: string): HTMLElement {
-  const found = document.querySelector(`[data-keywords="${name}"]`);
-  if (!(found instanceof HTMLElement)) {
-    throw new Error(`no ${name} group is rendered`);
-  }
-  return found;
-}
-
 describe("the keyword block", () => {
-  it("puts Common on top and Text beside Image underneath", () => {
+  it("shows each keyword once in a single labelled list", () => {
     block();
-
-    const headings = screen.getAllByRole("heading", { level: 3 }).map((node) => node.textContent);
-    expect(headings).toEqual(["Common", "Text", "Image"]);
-
-    // Common is its own full-width block; Text and Image are the two columns of the grid
-    // beneath it, with the divider between them.
-    expect(group("common").contains(screen.getByLabelText("topic"))).toBe(true);
-    expect(group("text").contains(screen.getByLabelText("minWords"))).toBe(true);
-    expect(group("image").contains(screen.getByLabelText("era"))).toBe(true);
-    expect(group("sides").childElementCount).toBe(3);
+    expect(screen.getByRole("heading", { name: "Keywords" })).not.toBeNull();
+    expect(screen.getAllByRole("textbox")).toHaveLength(4);
+    expect(screen.getAllByLabelText("topic")).toHaveLength(1);
   });
 
   it("draws nothing at all while no prompt is picked", () => {

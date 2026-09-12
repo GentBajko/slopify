@@ -4,6 +4,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useRef } from "react";
 import type { ProviderStatus } from "@/api";
 import { useApp } from "@/app-context";
+import { usePlaySession } from "@/play/draft-context";
 import { finalOutput } from "@/project/summary";
 import { noticeQuery, projectQuery, providersQuery, voicesQuery } from "@/queries";
 import type { TutorialSession, TutorialStepId } from "./model";
@@ -27,6 +28,7 @@ export function TutorialRunner({
   readonly update: Dispatch<SetStateAction<TutorialSession>>;
 }) {
   const { api } = useApp();
+  const play = usePlaySession();
   const navigate = useNavigate();
   const location = useLocation();
   const notice = useQuery(noticeQuery(api));
@@ -58,7 +60,17 @@ export function TutorialRunner({
         void navigate({ to: "/prompts/new", search: { kind: step.page } });
       }
     }
-    if (step.page === "play" && location.pathname !== "/play") void navigate({ to: "/play" });
+    if (step.page === "play") {
+      const section = ["play-audio", "play-images", "play-video"].includes(step.id)
+        ? "outputs"
+        : step.id === "play-subtitles"
+          ? "style"
+          : step.id === "play-start"
+            ? "review"
+            : "content";
+      void play.navigate(section);
+      if (location.pathname !== "/play") void navigate({ to: "/play" });
+    }
     if (
       step.page === "project" &&
       session.projectId &&
@@ -68,6 +80,7 @@ export function TutorialRunner({
     }
   }, [
     allowed,
+    play.navigate,
     step,
     session.step,
     session.articleId,

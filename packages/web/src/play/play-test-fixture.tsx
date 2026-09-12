@@ -1,5 +1,5 @@
 import type { Entry, Prompt } from "@app/slices/library/model.js";
-import type { DraftView } from "@app/slices/play-drafts/model.js";
+import type { DraftAttachment, DraftView } from "@app/slices/play-drafts/model.js";
 import { createDraftInputSchema, saveDraftInputSchema } from "@app/slices/play-drafts/schema.js";
 import type { ProviderStatus, Voice } from "@app/slices/settings/model.js";
 import { type RenderResult, screen } from "@testing-library/react";
@@ -84,6 +84,8 @@ const voices: readonly Voice[] = [
 export function playRoutes(
   over: Readonly<Record<string, Answer>> = {},
 ): Readonly<Record<string, Answer>> {
+  const saved = new Map<string, DraftView>();
+  const current = (id: string): DraftView => saved.get(id) ?? draftView(id);
   const routes: Readonly<Record<string, Answer>> = {
     "GET /api/providers": jsonAnswer({ providers }),
     "GET /api/providers/claude-code/models": jsonAnswer({
@@ -132,25 +134,29 @@ export function playRoutes(
     "GET /api/drafts": jsonAnswer({ drafts: [] }),
     "POST /api/drafts": async (request) => {
       const body = createDraftInputSchema.parse(await request.json());
-      return jsonAnswer({
-        ...draftView(body.id),
-        draft: { ...draftView(body.id).draft, document: body.document },
-      })(request);
+      const view = {
+        ...current(body.id),
+        draft: { ...current(body.id).draft, document: body.document },
+      };
+      saved.set(body.id, view);
+      return jsonAnswer(view)(request);
     },
     "PUT /api/drafts/:id": async (request) => {
       const id = new URL(request.url).pathname.split("/")[3];
       const body = saveDraftInputSchema.parse({ ...(await request.json()), id });
-      return jsonAnswer({
-        ...draftView(body.id),
+      const view = {
+        ...current(body.id),
         draft: {
-          ...draftView(body.id).draft,
+          ...current(body.id).draft,
           version: body.baseVersion + 1,
           document: body.document,
         },
-      })(request);
+      };
+      saved.set(body.id, view);
+      return jsonAnswer(view)(request);
     },
     "GET /api/drafts/:id": (request) =>
-      jsonAnswer(draftView(new URL(request.url).pathname.split("/")[3] ?? ""))(request),
+      jsonAnswer(current(new URL(request.url).pathname.split("/")[3] ?? ""))(request),
     "POST /api/drafts/:id/review": (request) =>
       jsonAnswer({
         id: "00000000-0000-4000-8000-000000000010",
@@ -160,19 +166,49 @@ export function playRoutes(
         runs: [],
         estimates: [],
       })(request),
+    "POST /api/drafts/:id/start": (request) => {
+      const id = new URL(request.url).pathname.split("/")[3] ?? "";
+      const view = current(id);
+      const start = view.start
+        ? { ...view.start, replayed: true }
+        : {
+            requestId: "00000000-0000-4000-8000-000000000020",
+            projectIds: ["p1"],
+            queue: [],
+            replayed: false,
+          };
+      saved.set(id, { ...view, start });
+      return jsonAnswer(start)(request);
+    },
     "DELETE /api/drafts/:id": jsonAnswer({ discarded: true }),
     ...over,
   };
   return new Proxy(routes, {
     get(target, key: string) {
-      return (
+      const answer =
         target[key] ??
         target[
           key
             .replace(/(\/api\/drafts)\/[a-f0-9-]{36}/, "$1/:id")
             .replace(/(\/attachments)\/[a-f0-9-]{36}/, "$1/:attachmentId")
-        ]
-      );
+        ];
+      if (!answer || !key.includes("/attachments/")) return answer;
+      return async (request: Request) => {
+        const response = await answer(request);
+        if (response.ok && request.method === "PUT") {
+          const attachment = (await response.clone().json()) as DraftAttachment;
+          const id = new URL(request.url).pathname.split("/")[3] ?? "";
+          const view = current(id);
+          saved.set(id, {
+            ...view,
+            attachments: [
+              ...view.attachments.filter((item) => item.id !== attachment.id),
+              attachment,
+            ],
+          });
+        }
+        return response;
+      };
     },
   });
 }

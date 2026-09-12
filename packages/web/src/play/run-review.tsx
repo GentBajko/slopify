@@ -19,12 +19,14 @@ export function BatchEditor({
   fields,
   title,
   values,
+  problem,
   onChange,
 }: {
   readonly items: readonly BatchItem[];
   readonly fields: readonly Field[];
   readonly title: string;
   readonly values: Readonly<Record<string, string>>;
+  readonly problem?: (field: string) => string | undefined;
   readonly onChange: (items: readonly BatchItem[]) => void;
 }) {
   const prefix = useId();
@@ -47,6 +49,8 @@ export function BatchEditor({
             Title
             <Input
               id={`${prefix}-${item.key}-title`}
+              data-play-field={`items.${item.key}.title`}
+              aria-invalid={problem?.(`items.${i + 1}.title`) !== undefined}
               value={item.title}
               maxLength={200}
               onChange={(e) =>
@@ -65,6 +69,8 @@ export function BatchEditor({
               {field.name}
               <Input
                 id={`${prefix}-${item.key}-${encodeURIComponent(field.name)}`}
+                data-play-field={`items.${item.key}.values.${field.name}`}
+                aria-invalid={problem?.(`items.${i + 1}.values.${field.name}`) !== undefined}
                 value={item.values[field.name] ?? values[field.name] ?? ""}
                 onChange={(e) =>
                   onChange(
@@ -181,6 +187,7 @@ export function RunReview({
             Expected article words per video
             <Input
               id={wordsId}
+              data-play-field="expectedWords"
               type="number"
               min={1}
               max={100000}

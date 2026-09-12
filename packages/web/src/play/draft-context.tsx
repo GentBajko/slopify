@@ -4,10 +4,11 @@ import type {
   PlayDraftDocument,
 } from "@app/slices/play-drafts/model.js";
 import { createContext, type ReactElement, type ReactNode, useContext } from "react";
+import type { PlaySection } from "./sections";
 import { useDraftSession } from "./use-draft-session";
 
 export type DraftSaveStatus = "unsaved" | "saving" | "saved" | "error" | "conflict";
-export type PlaySection = "content" | "outputs" | "style" | "review";
+export type { PlaySection } from "./sections";
 export interface PlayNavigation {
   readonly section: PlaySection;
   readonly navigate: (section: PlaySection, field?: string) => Promise<void>;

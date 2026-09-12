@@ -1,33 +1,10 @@
-import { RailGroup } from "@/components/rail";
-import { AudioRail, ImageProviderControls, ImagesRail } from "@/play/media-rails";
+import { ImageProviderControls } from "@/play/media-rails";
 import { OptionPicker } from "@/play/pickers";
 import { FilePick, PasteArea } from "@/play/provided";
 import type { RailProps } from "@/play/rail-frame";
 import { promptNames, railBeneath, railControls, SourceSwitch, StageRail } from "@/play/rail-frame";
-import { subtitlesFor } from "@/subtitles/config";
-import { SubtitleControls } from "@/subtitles/controls";
 
-// The left column of Play: six rails sharing their borders, each with its lamp, glyph,
-// name, source switch and that source's controls.
-
-export function StageRails(props: RailProps) {
-  const { form } = props;
-
-  return (
-    <RailGroup>
-      {/* Research only feeds article writing, so a provided article
-          hides the rail rather than leaving a switch that changes nothing. */}
-      {form.sources.article === "provide" ? null : <ResearchRail {...props} />}
-      <ArticleRail {...props} />
-      <AudioRail {...props} />
-      <ImagesRail {...props} />
-      <ThumbnailRail {...props} />
-      <VideoRail {...props} />
-    </RailGroup>
-  );
-}
-
-function ResearchRail({ form, problem, update }: RailProps) {
+export function ResearchRail({ form, problem, update }: RailProps) {
   return (
     <StageRail kind="research" name="Research" dim={form.sources.research === "off"}>
       <SourceSwitch kind="research" form={form} update={update} />
@@ -39,6 +16,7 @@ function ResearchRail({ form, problem, update }: RailProps) {
       {form.sources.research === "provide" ? (
         <div className={railBeneath}>
           <PasteArea
+            field="provided.research"
             label="Research notes"
             value={form.provided.research}
             placeholder="Paste the notes the article will be written from."
@@ -53,15 +31,15 @@ function ResearchRail({ form, problem, update }: RailProps) {
   );
 }
 
-function ArticleRail({ form, prompts, problem, update }: RailProps) {
+export function ArticleRail({ form, prompts, problem, update }: RailProps) {
   return (
     <StageRail kind="article" name="Article" dim={false}>
       <SourceSwitch kind="article" form={form} update={update} />
-      <div className={railControls}>
+      <div className={`${railBeneath} grid gap-4`}>
         {form.sources.article === "generate" ? (
           <OptionPicker
+            field="articlePrompt"
             label="Article prompt"
-            inline
             value={form.articlePrompt}
             placeholder="Pick a prompt"
             options={promptNames(prompts, "article")}
@@ -75,6 +53,7 @@ function ArticleRail({ form, prompts, problem, update }: RailProps) {
       {form.sources.article === "provide" ? (
         <div className={railBeneath}>
           <PasteArea
+            field="provided.article"
             label="Article text"
             value={form.provided.article}
             placeholder="Paste the article that will be narrated."
@@ -89,7 +68,7 @@ function ArticleRail({ form, prompts, problem, update }: RailProps) {
   );
 }
 
-function ThumbnailRail({
+export function ThumbnailRail({
   form,
   providers,
   prompts,
@@ -115,8 +94,8 @@ function ThumbnailRail({
         ) : null}
         {generating ? (
           <OptionPicker
+            field="thumbnailPrompt"
             label="Thumbnail prompt"
-            inline
             value={form.thumbnailPrompt}
             placeholder="Pick a prompt"
             options={promptNames(prompts, "thumbnail")}
@@ -130,6 +109,7 @@ function ThumbnailRail({
       {form.sources.thumbnail === "provide" ? (
         <div className={railBeneath}>
           <FilePick
+            field="provided.thumbnail"
             label="Thumbnail image"
             accept="image/png,image/jpeg,image/webp"
             uploads={form.provided.thumbnail === undefined ? [] : [form.provided.thumbnail]}
@@ -147,14 +127,7 @@ function ThumbnailRail({
   );
 }
 
-function VideoRail({
-  form,
-  silenceGapSeconds,
-  update,
-  onSubtitleUpload,
-  subtitleSession,
-  problem,
-}: RailProps) {
+export function VideoRail({ form, silenceGapSeconds, update }: RailProps) {
   const explanation =
     form.sources.video === "generate"
       ? form.sources.audio === "off"
@@ -165,23 +138,11 @@ function VideoRail({
         : "Download each enabled stage separately";
 
   return (
-    <StageRail kind="video" name="Video" dim={form.sources.video === "off"}>
+    <StageRail kind="video" name="Export" dim={form.sources.video === "off"}>
       <SourceSwitch kind="video" form={form} update={update} />
       <span className={railControls}>
         <span className="engraved text-ink3">{explanation}</span>
       </span>
-      <div data-tour="play-subtitles" className={railBeneath}>
-        <SubtitleControls
-          {...(subtitleSession ? { session: subtitleSession } : {})}
-          value={subtitlesFor(form.subtitles, form.sources)}
-          format={form.format}
-          audioEnabled={form.sources.audio !== "off"}
-          videoEnabled={form.sources.video === "generate" && form.sources.images !== "off"}
-          onChange={(subtitles) => update({ subtitles })}
-          problem={problem}
-          {...(onSubtitleUpload === undefined ? {} : { onUploading: onSubtitleUpload })}
-        />
-      </div>
       {form.sources.images === "off" ? (
         <p className={`${railBeneath} text-small text-ink2`}>
           Video is Off because Images is Off. Generate or provide images to enable video.

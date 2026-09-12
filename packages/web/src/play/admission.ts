@@ -7,7 +7,7 @@ import {
   titleMax,
 } from "@app/slices/admission/rules.js";
 import type { Field } from "@app/slices/admission/substitute.js";
-import { collectFields } from "@app/slices/admission/substitute.js";
+import { collectFields, detectSlots } from "@app/slices/admission/substitute.js";
 import type { Entry, Prompt } from "@app/slices/library/model.js";
 import type { DraftInput, PlayFormState, Upload } from "@/play/state";
 import { draftOf, stagedOf } from "@/play/state";
@@ -245,4 +245,28 @@ function push(into: string[], body: string | undefined): void {
   if (body !== undefined) {
     into.push(body);
   }
+}
+
+export function keywordOrigins(input: AdmissionInput): ReadonlyMap<string, readonly string[]> {
+  const origins = new Map<string, string[]>();
+  const add = (body: string | undefined, label: string): void => {
+    if (!body) return;
+    for (const name of detectSlots(body).names) {
+      const labels = origins.get(name) ?? [];
+      if (!labels.includes(label)) labels.push(label);
+      origins.set(name, labels);
+    }
+  };
+  const { form, prompts, entries } = input;
+  if (form.sources.article === "generate")
+    add(bodyOf(prompts, "article", form.articlePrompt), "Article");
+  if (form.sources.images === "generate")
+    for (const prompt of form.imagePrompts)
+      add(bodyOf(prompts, "image", prompt.name), `Image: ${prompt.name}`);
+  if (form.sources.thumbnail === "from_prompt" || form.sources.thumbnail === "prompt_by_llm")
+    add(bodyOf(prompts, "thumbnail", form.thumbnailPrompt), "Thumbnail");
+  if (form.sources.audio === "generate")
+    for (const kind of ["intro", "outro"] as const)
+      add(entryBody(entries, kind, form[kind]), kind === "intro" ? "Intro" : "Outro");
+  return origins;
 }

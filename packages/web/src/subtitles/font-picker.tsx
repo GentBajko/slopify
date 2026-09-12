@@ -52,6 +52,7 @@ export function FontPicker({
           </Label>
           <select
             id={id}
+            data-play-field="subtitles.fontId"
             value={value}
             disabled={uploading}
             onChange={(event) => onPick(event.target.value)}
@@ -74,6 +75,7 @@ export function FontPicker({
           </Label>
           <input
             id={uploadId}
+            data-play-field="subtitles.fontUpload"
             type="file"
             accept=".ttf,.otf,font/ttf,font/otf"
             disabled={uploading}

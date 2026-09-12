@@ -29,6 +29,7 @@ export function FormatPicker({
           <ToggleGroupItem
             key={format}
             value={format}
+            data-play-field={value === format ? "format" : undefined}
             aria-label={format}
             className="flex h-24 min-w-0 flex-1 flex-col items-center justify-center gap-2 py-2"
           >

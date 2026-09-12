@@ -13,12 +13,14 @@ const fileInput =
 
 export function PasteArea({
   label,
+  field,
   value,
   placeholder,
   problem,
   onChange,
 }: {
   readonly label: string;
+  readonly field?: string | undefined;
   readonly value: string;
   readonly placeholder: string;
   readonly problem: string | undefined;
@@ -34,6 +36,7 @@ export function PasteArea({
       </Label>
       <Textarea
         id={fieldId}
+        data-play-field={field}
         rows={6}
         value={value}
         placeholder={placeholder}
@@ -54,6 +57,7 @@ export function PasteArea({
 
 export function FilePick({
   label,
+  field,
   accept,
   multiple = false,
   uploads,
@@ -63,6 +67,7 @@ export function FilePick({
   onRemove,
 }: {
   readonly label: string;
+  readonly field?: string | undefined;
   readonly accept: string;
   readonly multiple?: boolean | undefined;
   readonly uploads: readonly Upload[];
@@ -82,6 +87,7 @@ export function FilePick({
       </Label>
       <input
         id={fieldId}
+        data-play-field={field}
         type="file"
         accept={accept}
         multiple={multiple}
