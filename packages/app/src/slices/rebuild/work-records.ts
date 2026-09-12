@@ -9,6 +9,7 @@ export interface WorkPiece {
   readonly requestFingerprint: string;
   readonly fingerprint: string;
   readonly input: RecipeInput;
+  readonly logicalFingerprint?: string | undefined;
   readonly continuation: string | null;
   readonly generationToken: string | null;
   readonly state: "pending" | "running" | "done" | "failed" | "held";
@@ -22,6 +23,7 @@ const pieceRow = z.object({
   request_fingerprint: z.string(),
   fingerprint: z.string(),
   input_json: z.string(),
+  logical_fingerprint: z.string().nullable(),
   continuation: z.string().nullable(),
   generation_token: z.string().nullable(),
   state: z.enum(["pending", "running", "done", "failed", "held"]),
@@ -40,6 +42,9 @@ export function workPieces(db: DatabaseSync, workId: string): readonly WorkPiece
         key: row.work_key,
         requestFingerprint: row.request_fingerprint,
         fingerprint: row.fingerprint,
+        ...(row.logical_fingerprint === null
+          ? {}
+          : { logicalFingerprint: row.logical_fingerprint }),
         input: recipeInputSchema.parse(JSON.parse(row.input_json)),
         continuation: row.continuation,
         generationToken: row.generation_token,
@@ -52,7 +57,7 @@ export function workPieces(db: DatabaseSync, workId: string): readonly WorkPiece
 export function insertWorkPiece(db: DatabaseSync, piece: WorkPiece): void {
   const input = recipeInputSchema.parse(piece.input);
   db.prepare(
-    `INSERT INTO revision_work_pieces(id,work_id,work_key,request_fingerprint,fingerprint,input_json,continuation,generation_token,state,dispatch_state,submitted_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+    `INSERT INTO revision_work_pieces(id,work_id,work_key,request_fingerprint,fingerprint,input_json,continuation,generation_token,state,dispatch_state,submitted_at,logical_fingerprint) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
   ).run(
     piece.id,
     piece.workId,
@@ -65,5 +70,6 @@ export function insertWorkPiece(db: DatabaseSync, piece: WorkPiece): void {
     piece.state,
     piece.dispatchState,
     piece.submittedAt,
+    piece.logicalFingerprint ?? null,
   );
 }

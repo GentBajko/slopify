@@ -14,7 +14,7 @@ import type {
   RevisionView,
 } from "../revisions/model.js";
 import { buildRecipes } from "./recipe-build.js";
-import { type RecipeContext, selectedReference } from "./recipe-model.js";
+import { type RecipeContext, type ResolvedWorkRecipe, selectedReference } from "./recipe-model.js";
 import { validateRecipeInputs } from "./recipe-validation.js";
 
 export type RevisionPlanResult =
@@ -24,6 +24,8 @@ export type RevisionPlanResult =
       readonly content: RevisionContent;
       readonly fingerprints: Readonly<Record<string, string>>;
       readonly manifest: RevisionManifest;
+      readonly baseFingerprints: Readonly<Record<string, string>>;
+      readonly recipes: readonly ResolvedWorkRecipe[];
     }
   | { readonly ok: false; readonly fields: readonly FieldError[] };
 export function normalizeArticleIntent(base: RevisionView, edit: RevisionEdit): RevisionContent {
@@ -44,7 +46,11 @@ export function normalizeArticleIntent(base: RevisionView, edit: RevisionEdit): 
         : (base.revision.content.articleEdited ?? false),
   };
 }
-export function planRevision(base: RevisionView, edit: RevisionEdit): RevisionPlanResult {
+export function planRevision(
+  base: RevisionView,
+  edit: RevisionEdit,
+  prepared: RevisionManifest = { outputs: [], pieces: [] },
+): RevisionPlanResult {
   const content = normalizeImages(normalizeArticleIntent(base, edit));
   const fields = [
     ...validateEdit(edit.config, content),
@@ -89,8 +95,20 @@ export function planRevision(base: RevisionView, edit: RevisionEdit): RevisionPl
     },
   };
   const old = buildRecipes(oldContext);
+  const replacementKeys = new Set(prepared.outputs.map((row) => row.workKey));
+  const proposedManifest: RevisionManifest = {
+    outputs: [
+      ...manifest.outputs.filter((row) => !replacementKeys.has(row.workKey)),
+      ...prepared.outputs,
+    ],
+    pieces: [
+      ...manifest.pieces.filter((row) => !prepared.pieces.some((one) => one.key === row.key)),
+      ...prepared.pieces,
+    ],
+  };
   const proposedContext: RecipeContext = {
     ...oldContext,
+    manifest: proposedManifest,
     config,
     content,
     resolved: { ...oldContext.resolved, researchNotes: config.provided.research ?? null },
@@ -114,8 +132,12 @@ export function planRevision(base: RevisionView, edit: RevisionEdit): RevisionPl
   const desired = buildRecipes({
     ...proposedContext,
     manifest: {
-      outputs: manifest.outputs.filter((row) => !changed.has(row.workKey)),
-      pieces: manifest.pieces.filter((row) => !changed.has(row.key)),
+      outputs: proposedManifest.outputs.filter(
+        (row) => !changed.has(row.workKey) || prepared.outputs.includes(row),
+      ),
+      pieces: proposedManifest.pieces.filter(
+        (row) => !changed.has(row.key) || prepared.pieces.includes(row),
+      ),
     },
     resolved: {
       ...proposedContext.resolved,
@@ -126,7 +148,7 @@ export function planRevision(base: RevisionView, edit: RevisionEdit): RevisionPl
     },
   });
   const fingerprints = Object.fromEntries(desired.map((row) => [row.key, row.fingerprint]));
-  const outputs = manifest.outputs.map((row) => {
+  const outputs = proposedManifest.outputs.map((row) => {
     const next = desired.find((value) => value.key === row.workKey);
     const unchanged =
       next !== undefined &&
@@ -134,7 +156,7 @@ export function planRevision(base: RevisionView, edit: RevisionEdit): RevisionPl
     const state =
       next === undefined
         ? row.state
-        : unchanged && row.state === "ready"
+        : prepared.outputs.includes(row) || (unchanged && row.state === "ready")
           ? "ready"
           : row.fingerprint === next.fingerprint
             ? row.state
@@ -147,14 +169,15 @@ export function planRevision(base: RevisionView, edit: RevisionEdit): RevisionPl
       fingerprint: state === "ready" && next !== undefined ? next.fingerprint : row.fingerprint,
     };
   });
-  const pieces = manifest.pieces.map((row) => {
-    const next = desired.find((value) => value.key === row.key);
-    const unchanged =
-      next !== undefined &&
-      old.find((value) => value.key === row.key)?.fingerprint === next.fingerprint;
-    return unchanged ? { ...row, fingerprint: next.fingerprint } : row;
-  });
-  return { ok: true, config, content, fingerprints, manifest: { outputs, pieces } };
+  return {
+    ok: true,
+    config,
+    content,
+    fingerprints,
+    manifest: { outputs, pieces: proposedManifest.pieces },
+    baseFingerprints: Object.fromEntries(old.map((row) => [row.key, row.fingerprint])),
+    recipes: desired,
+  };
 }
 function normalizeImages(content: RevisionContent): RevisionContent {
   return {

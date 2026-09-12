@@ -121,6 +121,7 @@ export function transitionRevisionWork(
         key,
         requestFingerprint: exact?.requestFingerprint ?? fp,
         fingerprint: fp,
+        ...(exact === undefined ? {} : { logicalFingerprint: exact.logicalFingerprint }),
         input: exact?.input ?? {
           kind: "deferred",
           version: 1,

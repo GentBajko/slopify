@@ -202,6 +202,8 @@ export function updateProjectConfig(
   config: RunConfig,
   at: string,
 ): void {
+  if (db.prepare("SELECT 1 FROM project_heads WHERE project_id=?").get(projectId) !== undefined)
+    throw new Error("Versioned project configuration must be saved through revisions.");
   db.prepare("UPDATE projects SET config = ?, updated_at = ? WHERE id = ?").run(
     JSON.stringify(config),
     at,

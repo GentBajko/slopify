@@ -24,6 +24,7 @@ CREATE TABLE revision_work_pieces (
  request_fingerprint TEXT NOT NULL,
  fingerprint TEXT NOT NULL,
  input_json TEXT NOT NULL CHECK(json_valid(input_json)),
+ logical_fingerprint TEXT,
  continuation TEXT,
  generation_token TEXT,
  state TEXT NOT NULL CHECK(state IN ('pending','running','done','failed','held')),
