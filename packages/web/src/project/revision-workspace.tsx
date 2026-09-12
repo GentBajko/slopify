@@ -4,7 +4,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useRef, useState } from "react";
 import { readProject } from "@/api";
 import { useApp } from "@/app-context";
+import { Button } from "@/components/ui/button";
 import { keys } from "@/queries";
+import { outputLabel } from "./output-label.js";
 import { type RebuildConsent, RebuildReview } from "./rebuild-review.js";
 import {
   prepareRevision,
@@ -180,12 +182,15 @@ export function RevisionWorkspace({
     <section aria-label="Project revisions" className="space-y-4">
       {saved.error === null ? null : <p role="alert">{saved.error.message}</p>}
       {saved.data === undefined ? null : (
-        <ul aria-label="Saved output status">
+        <ul
+          aria-label="Saved output status"
+          className="flex flex-wrap gap-x-4 gap-y-1 text-small text-ink2"
+        >
           {saved.data.outputs
             .filter((output) => output.selected)
             .map((output) => (
               <li key={output.recordId}>
-                {output.slot}:{" "}
+                {outputLabel(output.output)}:{" "}
                 {output.available
                   ? output.state === "ready"
                     ? "Ready"
@@ -198,7 +203,7 @@ export function RevisionWorkspace({
         </ul>
       )}
       <div className="flex flex-wrap gap-3">
-        <button
+        <Button
           type="button"
           disabled={pending || uploading || edit !== undefined || preview !== undefined}
           onClick={() =>
@@ -208,22 +213,22 @@ export function RevisionWorkspace({
           }
         >
           Edit project
-        </button>
-        <button type="button" onClick={() => setHistory(!history)}>
+        </Button>
+        <Button type="button" onClick={() => setHistory(!history)}>
           History
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           disabled={pending || uploading || edit !== undefined || preview !== undefined}
           onClick={() => void perform(review)}
         >
           Rebuild affected outputs
-        </button>
+        </Button>
       </div>
       {error === undefined ? null : <p role="alert">{error}</p>}
       {refusal === undefined ? null : <p role="alert">{refusal.message}</p>}
       {edit === undefined && refusal?.reason === "conflict" ? (
-        <button
+        <Button
           type="button"
           disabled={pending}
           onClick={() =>
@@ -237,13 +242,14 @@ export function RevisionWorkspace({
           }
         >
           Reload current revision
-        </button>
+        </Button>
       ) : null}
       {remoteChanged ? (
         <p role="status">A newer revision is available. Your unsaved changes are kept below.</p>
       ) : null}
       {view === undefined || edit === undefined ? null : (
         <form
+          className="space-y-4 rounded-panel border border-line bg-panel p-4"
           onSubmit={(event) => {
             event.preventDefault();
             void perform(save);
@@ -258,37 +264,39 @@ export function RevisionWorkspace({
               onPending: setUploading,
             })}
           </fieldset>
-          <button type="submit" disabled={pending || uploading}>
-            Save changes
-          </button>
-          <button
-            type="button"
-            disabled={pending || uploading}
-            onClick={() => {
-              setEdit(undefined);
-              setRefusal(undefined);
-              setUploading(false);
-              saveMemory.current = undefined;
-            }}
-          >
-            Discard changes
-          </button>
-          {remoteChanged || refusal?.reason === "conflict" ? (
-            <button
+          <div className="flex flex-wrap gap-3">
+            <Button variant="primary" type="submit" disabled={pending || uploading}>
+              Save changes
+            </Button>
+            <Button
               type="button"
               disabled={pending || uploading}
-              onClick={() =>
-                void perform(async () => {
-                  saveMemory.current = undefined;
-                  setUploading(false);
-                  await prepare(true);
-                  setRefusal(undefined);
-                })
-              }
+              onClick={() => {
+                setEdit(undefined);
+                setRefusal(undefined);
+                setUploading(false);
+                saveMemory.current = undefined;
+              }}
             >
-              Reload current revision and discard my draft
-            </button>
-          ) : null}
+              Discard changes
+            </Button>
+            {remoteChanged || refusal?.reason === "conflict" ? (
+              <Button
+                type="button"
+                disabled={pending || uploading}
+                onClick={() =>
+                  void perform(async () => {
+                    saveMemory.current = undefined;
+                    setUploading(false);
+                    await prepare(true);
+                    setRefusal(undefined);
+                  })
+                }
+              >
+                Reload current revision and discard my draft
+              </Button>
+            ) : null}
+          </div>
         </form>
       )}
       {history ? (

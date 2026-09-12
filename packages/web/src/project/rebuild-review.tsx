@@ -1,5 +1,6 @@
 import type { RebuildPreview } from "@app/slices/rebuild/model.js";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 export interface RebuildConsent {
   readonly acknowledgeUnknownCosts: boolean;
   readonly confirmedProvidedWorkKeys: readonly string[];
@@ -91,21 +92,24 @@ export function RebuildReview({
           I understand that {preview.costs.unknown} cost estimates are unknown.
         </label>
       )}
-      <button
-        type="button"
-        disabled={pending || !allowed}
-        onClick={() =>
-          onStart({
-            acknowledgeUnknownCosts: unknown,
-            confirmedProvidedWorkKeys: confirmed,
-          })
-        }
-      >
-        Start rebuild
-      </button>
-      <button type="button" disabled={pending} onClick={onCancel}>
-        Cancel rebuild
-      </button>
+      <div className="flex flex-wrap gap-3">
+        <Button
+          variant="primary"
+          type="button"
+          disabled={pending || !allowed}
+          onClick={() =>
+            onStart({
+              acknowledgeUnknownCosts: unknown,
+              confirmedProvidedWorkKeys: confirmed,
+            })
+          }
+        >
+          Start rebuild
+        </Button>
+        <Button type="button" disabled={pending} onClick={onCancel}>
+          Cancel rebuild
+        </Button>
+      </div>
     </section>
   );
 }

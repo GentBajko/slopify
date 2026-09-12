@@ -19,7 +19,7 @@ import {
 export function ArticleBody({ stage, project, outputs, actions, busy }: BodyProps) {
   const revisionId = useProjectRevision(project.id);
   const mine = outputsOf(outputs, stage);
-  const markdown = roleOf(mine, "article_md");
+  const markdown = roleOf(mine, "article_md") ?? roleOf(mine, "article_txt");
   const sources = roleOf(mine, "sources");
   const glossary = roleOf(mine, "glossary");
 

@@ -2,8 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { z } from "zod";
 import { useApp } from "@/app-context";
+import { Button } from "@/components/ui/button";
 import { keys } from "@/queries";
 import { OpenFolder } from "./open-folder.js";
+import { outputLabel } from "./output-label.js";
 import { historyOf, revisionFileUrl, revisionImagesUrl, viewOf } from "./revision-api.js";
 
 const retainedTextSchema = z.object({
@@ -58,22 +60,25 @@ export function RevisionHistory({
       (output.output.role === "image" || output.output.role === "thumbnail"),
   );
   return (
-    <section aria-label="Project history" className="space-y-3">
+    <section
+      aria-label="Project history"
+      className="space-y-3 rounded-panel border border-line bg-panel p-4"
+    >
       <h2>Project history</h2>
       {history.error === null ? null : <p role="alert">{history.error.message}</p>}
-      <ol>
+      <ol className="space-y-2">
         {history.data?.map((revision) => (
           <li key={revision.id}>
-            <button type="button" onClick={() => setSelected(revision.id)}>
+            <Button type="button" onClick={() => setSelected(revision.id)}>
               {revision.title} · {revision.createdAt}
               {revision.current ? " · Current" : ""}
-            </button>
+            </Button>
           </li>
         ))}
       </ol>
       {view.error === null ? null : <p role="alert">{view.error.message}</p>}
       {selectedView === undefined ? null : (
-        <div>
+        <div className="space-y-3">
           <h3>{selectedView.revision.config.title}</h3>
           {zipImage === undefined ? null : (
             <span className="inline-flex gap-3">
@@ -87,10 +92,13 @@ export function RevisionHistory({
               />
             </span>
           )}
-          <ul>
+          <ul className="space-y-3">
             {selectedView.outputs.map((output) => (
-              <li key={output.recordId}>
-                {output.slot} · {output.state}
+              <li
+                key={output.recordId}
+                className="space-y-2 rounded-control border border-line p-3"
+              >
+                {outputLabel(output.output)} · {output.state}
                 {output.selected ? "" : " · Earlier result"}:{" "}
                 {output.available ? (
                   <a
@@ -119,6 +127,7 @@ export function RevisionHistory({
                     {output.output.role === "video" ? (
                       // biome-ignore lint/a11y/useMediaCaption: retained revisions may predate subtitles; their original files remain inspectable.
                       <video
+                        className="max-h-[480px] max-w-full"
                         controls
                         preload="metadata"
                         src={revisionFileUrl(
@@ -133,6 +142,7 @@ export function RevisionHistory({
                       ) ? (
                       // biome-ignore lint/a11y/useMediaCaption: retained narration parts have no individual caption track.
                       <audio
+                        className="max-w-full"
                         controls
                         preload="metadata"
                         src={revisionFileUrl(
@@ -144,7 +154,8 @@ export function RevisionHistory({
                       />
                     ) : output.output.role === "image" || output.output.role === "thumbnail" ? (
                       <img
-                        alt={output.slot}
+                        className="max-h-[480px] max-w-full object-contain"
+                        alt={outputLabel(output.output)}
                         loading="lazy"
                         src={revisionFileUrl(
                           api,
@@ -173,6 +184,7 @@ export function RevisionHistory({
                       <summary>Preview retained audio part</summary>
                       {/* biome-ignore lint/a11y/useMediaCaption: retained narration parts have no individual caption track. */}
                       <audio
+                        className="max-w-full"
                         controls
                         preload="metadata"
                         src={revisionFileUrl(
@@ -220,13 +232,13 @@ export function RevisionHistory({
                 </li>
               ))}
           </ul>
-          <button
+          <Button
             type="button"
             disabled={pending}
             onClick={() => onRestore(selectedView.revision.id)}
           >
             Restore this revision
-          </button>
+          </Button>
         </div>
       )}
     </section>

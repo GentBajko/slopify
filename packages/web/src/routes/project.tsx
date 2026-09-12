@@ -10,6 +10,7 @@ import { ProjectHeader } from "@/project/header";
 import { ProjectNavigation, ProjectProgress } from "@/project/navigation";
 import { RefusalLine } from "@/project/parts";
 import { RevisionControlContext } from "@/project/revision-action-context";
+import { RevisionContentEditors } from "@/project/revision-content";
 import { RevisionForm } from "@/project/revision-form";
 import { RevisionMedia } from "@/project/revision-media";
 import { RevisionWorkspace } from "@/project/revision-workspace";
@@ -67,7 +68,8 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
   const primaryOutput =
     outputs.find((output) => output.role === "video" || output.role === "audio_export") ??
     (summary.config.sources.video === "off" && summary.config.sources.audio === "off"
-      ? outputs.find((output) => output.role === "article_md")
+      ? (outputs.find((output) => output.role === "article_md") ??
+        outputs.find((output) => output.role === "article_txt"))
       : undefined);
   const inFlight = stages.some((stage) => stage.state === "running");
   const busy =
@@ -100,7 +102,14 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
             <RevisionWorkspace
               projectId={projectId}
               currentRevisionId={project.data.revisionId}
-              renderEditor={(props) => <RevisionForm {...props} />}
+              renderEditor={(props) => (
+                <RevisionForm
+                  {...props}
+                  renderContent={(contentProps) => (
+                    <RevisionContentEditors key={contentProps.view.revision.id} {...contentProps} />
+                  )}
+                />
+              )}
             />
           </div>
           <BatchQueue />
