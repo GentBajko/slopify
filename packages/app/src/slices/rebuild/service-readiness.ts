@@ -1,5 +1,4 @@
 import type { Catalogue } from "../../catalog/schema.js";
-import type { ProviderFamily } from "../../kernel/ports/model.js";
 import type { FieldError } from "../admission/rules.js";
 import type { RevisionView } from "../revisions/model.js";
 import { cliPathStatus } from "../settings/cli-paths.js";
@@ -7,20 +6,15 @@ import type { ProviderStatus } from "../settings/model.js";
 import { hasKey, listVoices } from "../settings/repo.js";
 import type { ExecutionSnapshot } from "./preview-plan.js";
 import { requiresNewSubmission } from "./preview-retained.js";
+import { type RecipeProviderChoice, recipeProviderChoice } from "./recipe-provider-choice.js";
 import type { RebuildDeps } from "./service.js";
 
-interface Choice {
-  readonly provider: string;
-  readonly model: string;
-  readonly family: ProviderFamily;
-  readonly voice?: string | undefined;
-}
 export function paidChoices(
   snapshot: ExecutionSnapshot,
   view: RevisionView,
   deps: RebuildDeps,
-): readonly Choice[] {
-  const choices: Choice[] = [];
+): readonly RecipeProviderChoice[] {
+  const choices: RecipeProviderChoice[] = [];
   for (const recipe of snapshot.recipes) {
     if (
       recipe.kind !== "provider" ||
@@ -28,24 +22,8 @@ export function paidChoices(
     )
       continue;
     if (!requiresNewSubmission(deps, view.revision.id, recipe.key, recipe.fingerprint)) continue;
-    const input = recipe.input;
-    if (input.kind === "llm" || input.kind === "tts" || input.kind === "image")
-      choices.push({ ...input, family: input.kind });
-    else if (input.kind === "deferred") {
-      const family =
-        recipe.stage === "audio"
-          ? "tts"
-          : recipe.stage === "images" || input.operation === "thumbnail-image"
-            ? "image"
-            : "llm";
-      const choice =
-        family === "tts"
-          ? view.revision.config.audio
-          : family === "image"
-            ? view.revision.config.images
-            : view.revision.config.llm;
-      if (choice !== undefined) choices.push({ ...choice, family });
-    }
+    const choice = recipeProviderChoice(recipe, view.revision.config);
+    if (choice !== undefined) choices.push(choice);
   }
   return [
     ...new Map(

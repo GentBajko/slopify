@@ -14,6 +14,7 @@ import {
 import { providedDependencyFingerprint } from "./provided-review.js";
 import { recipeInputSchema } from "./recipe-input-schema.js";
 import type { ResolvedWorkRecipe } from "./recipe-model.js";
+import { recipeProviderChoice } from "./recipe-provider-choice.js";
 import { priceRecipe } from "./recipe-work.js";
 import { narrationOrdinal } from "./runtime-narration-reuse.js";
 import { executionCatalogue } from "./runtime-plan.js";
@@ -228,21 +229,8 @@ function selectedCatalogue(
 ): Catalogue {
   const uses = new Set(
     recipes.flatMap((row) => {
-      const input = row.input;
-      if (input.kind === "llm" || input.kind === "tts" || input.kind === "image")
-        return [`${input.kind}:${input.provider}:${input.model}`];
-      if (input.kind !== "deferred") return [];
-      const choice =
-        row.stage === "audio"
-          ? view.revision.config.audio
-          : row.stage === "images"
-            ? view.revision.config.images
-            : view.revision.config.llm;
-      return choice === undefined
-        ? []
-        : [
-            `${row.stage === "audio" ? "tts" : row.stage === "images" ? "image" : "llm"}:${choice.provider}:${choice.model}`,
-          ];
+      const choice = recipeProviderChoice(row, view.revision.config);
+      return choice === undefined ? [] : [`${choice.family}:${choice.provider}:${choice.model}`];
     }),
   );
   const selected = {

@@ -132,3 +132,76 @@ it.each(["missing-key", "unavailable-model", "disabled", "deprecated", "ready"] 
     }
   },
 );
+
+it.each(["price", "capabilities", "provider-limit", "unrelated"] as const)(
+  "revalidates the deferred thumbnail catalogue snapshot at Start (%s)",
+  async (change) => {
+    const h = await serviceFixture();
+    try {
+      h.setCatalogue(catalogue);
+      const saved = await saveRevision(h.deps, {
+        projectId: h.projectId,
+        baseRevisionId: h.base.revision.id,
+        idempotencyKey: "thumbnail-catalogue",
+        edit: {
+          config: {
+            ...h.config,
+            sources: { ...h.config.sources, thumbnail: "prompt_by_llm" },
+            llm: { provider: "codex", model: "text" },
+            images: { provider: "fal", model: "image" },
+            rendered: { ...h.config.rendered, thumbnailPrompt: "Describe the landscape." },
+          },
+          content: h.base.revision.content,
+        },
+      });
+      if (!saved.ok) throw new Error(JSON.stringify(saved));
+      const preview = await previewRebuild(h.deps, {
+        projectId: h.projectId,
+        baseRevisionId: saved.view.revision.id,
+        request: { kind: "allAffected" },
+      });
+      if (!preview.ok) throw new Error(JSON.stringify(preview));
+      h.setCatalogue({
+        ...catalogue,
+        updatedAt: "2026-09-13",
+        providers: {
+          ...catalogue.providers,
+          ...(change === "provider-limit" ? { fal: { maxConcurrent: 2 } } : {}),
+        },
+        image:
+          change === "unrelated"
+            ? [
+                ...catalogue.image,
+                ...catalogue.image.map((row) => ({
+                  ...row,
+                  id: "unselected-image",
+                  pricing: { perImage: 100 },
+                })),
+              ]
+            : catalogue.image.map((row) => ({
+                ...row,
+                ...(change === "price" ? { pricing: { perImage: 100 } } : {}),
+                ...(change === "capabilities" ? { image: { aspectRatios: ["16:9"] } } : {}),
+              })),
+      });
+      const result = await startRebuild(h.deps, {
+        projectId: h.projectId,
+        baseRevisionId: saved.view.revision.id,
+        previewId: preview.value.id,
+        idempotencyKey: randomUUID(),
+        acknowledgeUnknownCosts: true,
+        confirmedProvidedWorkKeys: preview.value.providedReuseRequired,
+      });
+      if (change === "unrelated") {
+        expect(result.ok).toBe(true);
+        expect(h.ticks).toEqual([h.projectId]);
+      } else {
+        expect(result).toEqual({ ok: false, reason: "stale-preview" });
+        expect(h.ticks).toEqual([]);
+        expect(h.deps.db.prepare("SELECT count(*) AS n FROM rebuild_admissions").get()?.n).toBe(0);
+      }
+    } finally {
+      h.close();
+    }
+  },
+);
