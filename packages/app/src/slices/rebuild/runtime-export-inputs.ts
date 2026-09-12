@@ -41,7 +41,8 @@ export async function revisionAudio(
   context: StageContext,
   view: RevisionView,
 ): Promise<readonly AudioSegment[]> {
-  if (view.revision.config.sources.audio === "off") return [];
+  const config = view.revision.config;
+  if (config.sources.audio === "off") return [];
   const input = async (role: "audio_body" | "audio_intro" | "audio_outro") => {
     const row = view.outputs.find(
       (one) => one.selected && one.available && one.state === "ready" && one.output.role === role,
@@ -61,11 +62,17 @@ export async function revisionAudio(
   return audioTimeline(
     {
       body,
-      intro: await input("audio_intro"),
-      outro: await input("audio_outro"),
-      gapSeconds: view.revision.config.silenceGapSeconds,
+      intro:
+        config.sources.audio === "generate" && config.intro !== undefined
+          ? await input("audio_intro")
+          : undefined,
+      outro:
+        config.sources.audio === "generate" && config.outro !== undefined
+          ? await input("audio_outro")
+          : undefined,
+      gapSeconds: config.silenceGapSeconds,
     },
-    view.revision.config.sources.video === "off" ? 1 / 48000 : 1 / 30,
+    config.sources.video === "off" ? 1 / 48000 : 1 / 30,
   );
 }
 export function revisionTranscript(
