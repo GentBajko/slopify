@@ -1,0 +1,231 @@
+import { randomUUID } from "node:crypto";
+import { expect, it } from "vitest";
+import type { Entry } from "../library/model.js";
+import { toAdmissionDraft } from "./convert.js";
+import { draftFixture } from "./draft.fake.js";
+import type { DraftAttachment, PlayDraftDocument } from "./model.js";
+
+function convert(
+  document: PlayDraftDocument,
+  attachments: readonly DraftAttachment[] = [],
+  entries: readonly Entry[] = [],
+) {
+  return toAdmissionDraft({ document, attachments, entries, silenceGapSeconds: 7 });
+}
+it("normalizes inactive sources and ignores their unfinished controls without changing the document", () => {
+  const h = draftFixture();
+  try {
+    const document = {
+      ...h.document,
+      form: {
+        ...h.document.form,
+        sources: {
+          ...h.document.form.sources,
+          article: "provide" as const,
+          audio: "off" as const,
+          images: "off" as const,
+        },
+        imagePrompts: [{ name: "Old", number: "invalid" }],
+        chunking: { mode: "words" as const, words: "", characters: "oops" },
+        subtitles: {
+          ...h.document.form.subtitles,
+          mode: "burn-in" as const,
+          fontSize: "",
+          fontId: "",
+        },
+        intro: "Missing",
+      },
+    };
+    const before = JSON.stringify(document);
+    const result = convert(document);
+    expect(result).toMatchObject({
+      ok: true,
+      draft: {
+        sources: { research: "off", video: "off" },
+        imagePrompts: [],
+        chunking: { mode: "whole" },
+        subtitles: { mode: "off", fontSize: 48 },
+        silenceGapSeconds: 7,
+      },
+    });
+    expect(JSON.stringify(document)).toBe(before);
+  } finally {
+    h.close();
+  }
+});
+it.each(["", "abc", "0", "1.5", "1000001"])("rejects active chunk count %j", (raw) => {
+  const h = draftFixture();
+  try {
+    const document = {
+      ...h.document,
+      form: {
+        ...h.document.form,
+        chunking: { mode: "characters" as const, words: "", characters: raw },
+      },
+    };
+    expect(convert(document)).toMatchObject({
+      ok: false,
+      fields: expect.arrayContaining([
+        { field: "chunking.characters", message: expect.any(String) },
+      ]),
+    });
+  } finally {
+    h.close();
+  }
+});
+it("requires exact ready owned upload metadata at every provided slot", () => {
+  const h = draftFixture();
+  try {
+    const file = { attachmentId: randomUUID(), name: "image.png" };
+    const document = {
+      ...h.document,
+      form: {
+        ...h.document.form,
+        sources: {
+          ...h.document.form.sources,
+          audio: "provide" as const,
+          images: "provide" as const,
+          thumbnail: "provide" as const,
+        },
+        provided: { ...h.document.form.provided, audio: file, images: [file], thumbnail: file },
+      },
+    };
+    const missing = convert(document);
+    expect(missing).toMatchObject({
+      ok: false,
+      fields: expect.arrayContaining([
+        expect.objectContaining({ field: "provided.audio" }),
+        expect.objectContaining({ field: "provided.images.0" }),
+        expect.objectContaining({ field: "provided.thumbnail" }),
+      ]),
+    });
+    const attachment: DraftAttachment = {
+      id: file.attachmentId,
+      kind: "images",
+      name: file.name,
+      state: "ready",
+      stagedFileId: "staged",
+      bytes: 3,
+      error: null,
+    };
+    const imagesOnly = {
+      ...document,
+      form: {
+        ...document.form,
+        sources: { ...document.form.sources, audio: "off" as const, thumbnail: "off" as const },
+      },
+    };
+    expect(convert(imagesOnly, [attachment])).toMatchObject({
+      ok: true,
+      draft: { provided: { images: ["staged"] } },
+    });
+    for (const state of ["pending", "copying", "reattach"] as const)
+      expect(convert(imagesOnly, [{ ...attachment, state }])).toMatchObject({ ok: false });
+  } finally {
+    h.close();
+  }
+});
+it("uses saved entry mode and reports deleted active entries", () => {
+  const h = draftFixture();
+  try {
+    const document = { ...h.document, form: { ...h.document.form, intro: "Opening" } };
+    expect(convert(document)).toMatchObject({
+      ok: false,
+      fields: [{ field: "intro", message: expect.any(String) }],
+    });
+    expect(
+      convert(
+        document,
+        [],
+        [
+          {
+            id: "entry",
+            name: "Opening",
+            category: "intro",
+            mode: "llm",
+            body: "Welcome",
+            slots: [],
+            updatedAt: "today",
+          },
+        ],
+      ),
+    ).toMatchObject({ ok: true, draft: { intro: { name: "Opening", mode: "llm" } } });
+  } finally {
+    h.close();
+  }
+});
+
+it.each([
+  ["image", "0", "imagePrompts.0.number"],
+  ["image", "21", "imagePrompts.0.number"],
+  ["font", "15", "subtitles.fontSize"],
+  ["font", "121", "subtitles.fontSize"],
+  ["words", "", "chunking.words"],
+  ["words", "1.5", "chunking.words"],
+  ["words", "10001", "chunking.words"],
+])("checks active %s value %s", (control, raw, field) => {
+  const h = draftFixture();
+  try {
+    const document = {
+      ...h.document,
+      form: {
+        ...h.document.form,
+        imagePrompts: [{ name: "Cover", number: control === "image" ? raw : "1" }],
+        chunking: {
+          mode: "words" as const,
+          words: control === "words" ? raw : "500",
+          characters: "",
+        },
+        subtitles: {
+          ...h.document.form.subtitles,
+          mode: "files" as const,
+          fontSize: control === "font" ? raw : "48",
+        },
+      },
+    };
+    expect(convert(document)).toMatchObject({
+      ok: false,
+      fields: expect.arrayContaining([expect.objectContaining({ field })]),
+    });
+  } finally {
+    h.close();
+  }
+});
+it("retains active provider and research controls and downgrades captions for audio export", () => {
+  const h = draftFixture();
+  try {
+    const document = {
+      ...h.document,
+      form: {
+        ...h.document.form,
+        sources: {
+          ...h.document.form.sources,
+          research: "provide" as const,
+          images: "off" as const,
+          thumbnail: "prompt_by_llm" as const,
+        },
+        subtitles: { ...h.document.form.subtitles, mode: "burn-in" as const },
+        provided: { ...h.document.form.provided, research: "Notes" },
+        thumbnailPrompt: "Cover",
+        imagePrompts: [{ name: "Old", number: "" }],
+      },
+    };
+    expect(convert(document)).toMatchObject({
+      ok: true,
+      draft: {
+        sources: {
+          research: "provide",
+          article: "generate",
+          images: "off",
+          thumbnail: "prompt_by_llm",
+          video: "off",
+        },
+        provided: { research: "Notes" },
+        thumbnailPrompt: "Cover",
+        subtitles: { mode: "files" },
+      },
+    });
+  } finally {
+    h.close();
+  }
+});

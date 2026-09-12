@@ -2,12 +2,14 @@ import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createCatalogueStore } from "../../catalog/store.js";
 import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import { ulidIds } from "../../kernel/ids.js";
 import { ensureDirs, layout } from "../../kernel/paths.js";
-import type { DraftDeps, DraftResult, PlayDraftDocument } from "./model.js";
+import { resolveFont } from "../fonts/index.js";
+import type { DraftDeps, DraftResult, DraftReviewDeps, PlayDraftDocument } from "./model.js";
 export function must<T>(result: DraftResult<T>): T {
   if (!result.ok) throw new Error(`Unexpected fixture refusal: ${result.reason}`);
   return result.value;
@@ -74,6 +76,41 @@ export function draftFixture(): {
     close(): void {
       db.close();
       rmSync(paths.dataDir, { recursive: true, force: true });
+    },
+  };
+}
+
+export function reviewFixture(): Omit<ReturnType<typeof draftFixture>, "deps"> & {
+  readonly deps: DraftReviewDeps;
+} {
+  const h = draftFixture();
+  const catalogue = createCatalogueStore({
+    dataDir: h.deps.paths.dataDir,
+    fetch: async () => {
+      throw new Error("Network is forbidden in this fixture");
+    },
+  });
+  const document: PlayDraftDocument = {
+    ...h.document,
+    form: {
+      ...h.document.form,
+      title: "Supplied",
+      sources: {
+        research: "off",
+        article: "provide",
+        audio: "off",
+        images: "off",
+        thumbnail: "off",
+        video: "off",
+      },
+      provided: { ...h.document.form.provided, article: "A complete supplied article." },
+    },
+  };
+  return {
+    ...h,
+    document,
+    get deps(): DraftReviewDeps {
+      return { ...h.deps, catalogue, resolveFont: (fontId) => resolveFont(h.deps.paths, fontId) };
     },
   };
 }

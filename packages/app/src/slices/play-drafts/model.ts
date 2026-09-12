@@ -1,7 +1,10 @@
+import type { Catalogue } from "../../catalog/schema.js";
+import type { CatalogueStore } from "../../catalog/store.js";
 import type { RunDraft } from "../admission/model.js";
 import type { FieldError } from "../admission/rules.js";
 import type { QueueEntry } from "../batch/index.js";
 import type { CostEstimate } from "../estimate/index.js";
+import type { ResolvedFont } from "../fonts/model.js";
 import type { StorageDeps } from "../storage/staging.js";
 import type { PlayDraftDocument } from "./schema.js";
 
@@ -86,3 +89,20 @@ export type DraftResult<T> =
       readonly fields: readonly FieldError[];
       readonly reviewId?: string;
     };
+
+export interface DraftReviewDeps extends DraftDeps {
+  readonly catalogue: CatalogueStore;
+  readonly resolveFont: (fontId: string) => Promise<ResolvedFont>;
+}
+export interface ResolvedPlayReview {
+  readonly runs: readonly ResolvedPlayRun[];
+  readonly estimates: readonly CostEstimate[];
+  readonly fingerprint: string;
+  readonly catalogue: Catalogue;
+  readonly attachmentIdentity: readonly {
+    readonly id: string;
+    readonly stagedFileId: string;
+    readonly bytes: number;
+  }[];
+  readonly font: ResolvedFont | null;
+}
