@@ -1,5 +1,6 @@
 import type { RevisionEdit, RevisionView } from "@app/slices/revisions/model.js";
 import { saveRevisionSchema } from "@app/slices/revisions/schema.js";
+import { defaultSubtitles } from "@app/slices/subtitles/model.js";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
@@ -100,5 +101,48 @@ it.each([false, true])(
     expect(saves[0]?.content.articleMarkdown).toBe(
       manual ? "My unsaved article." : "Newly regenerated article.",
     );
+  },
+);
+it.each([
+  ["audio", "files", "off"],
+  ["audio", "burn-in", "off"],
+  ["video", "burn-in", "files"],
+  ["images", "burn-in", "files"],
+] as const)(
+  "normalizes subtitles when %s is Off from %s to %s before Save",
+  async (source, before, after) => {
+    const user = userEvent.setup();
+    const base = revisionView();
+    const subtitles = { ...defaultSubtitles, mode: before, fontSize: 64, position: "top" as const };
+    const saves = mount({
+      ...base,
+      revision: {
+        ...base.revision,
+        config: {
+          ...base.revision.config,
+          sources: {
+            ...base.revision.config.sources,
+            audio: "generate",
+            images: "provide",
+            video: "generate",
+          },
+          audio: { provider: "tts", model: "voice-model", voice: "voice" },
+          subtitles,
+        },
+        content: {
+          ...base.revision.content,
+          imageOrder: ["image"],
+          imageDefinitions: { image: { source: "provide", assetId: "image-asset", prompt: null } },
+        },
+      },
+    });
+    await user.click(screen.getByRole("button", { name: "Edit project" }));
+    await user.selectOptions(await screen.findByLabelText(`${source} source`), "off");
+    expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "Subtitles" }).value).toBe(
+      after,
+    );
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(saves).toHaveLength(1));
+    expect(saves[0]?.config.subtitles).toEqual({ ...subtitles, mode: after });
   },
 );

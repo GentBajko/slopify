@@ -2,6 +2,7 @@ import type { StageKind } from "@app/kernel/pipeline.js";
 import type { StageSource } from "@app/slices/admission/model.js";
 import { render } from "@app/slices/admission/substitute.js";
 import type { RevisionEdit, RevisionView } from "@app/slices/revisions/model.js";
+import { subtitlesFor } from "@/subtitles/config";
 export function formOfRevision(view: RevisionView): RevisionEdit {
   return {
     config: structuredClone(view.revision.config),
@@ -45,15 +46,17 @@ export function changeSource(
   kind: StageKind,
   source: StageSource,
 ): RevisionEdit {
+  const sources = {
+    ...edit.config.sources,
+    [kind]: source,
+    ...(kind === "images" && source === "off" ? { video: "off" as const } : {}),
+  };
   return {
     ...edit,
     config: {
       ...edit.config,
-      sources: {
-        ...edit.config.sources,
-        [kind]: source,
-        ...(kind === "images" && source === "off" ? { video: "off" as const } : {}),
-      },
+      sources,
+      subtitles: subtitlesFor(edit.config.subtitles, sources),
     },
   };
 }
