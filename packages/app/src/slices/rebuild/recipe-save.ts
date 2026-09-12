@@ -8,6 +8,7 @@ import {
 } from "../admission/rules.js";
 import { render } from "../admission/substitute.js";
 import type {
+  ManifestOutput,
   RevisionContent,
   RevisionEdit,
   RevisionManifest,
@@ -50,6 +51,7 @@ export function planRevision(
   base: RevisionView,
   edit: RevisionEdit,
   prepared: RevisionManifest = { outputs: [], pieces: [] },
+  inspected: readonly ManifestOutput[] = [],
 ): RevisionPlanResult {
   const content = normalizeImages(normalizeArticleIntent(base, edit));
   const fields = [
@@ -98,7 +100,12 @@ export function planRevision(
   const replacementKeys = new Set(prepared.outputs.map((row) => row.workKey));
   const proposedManifest: RevisionManifest = {
     outputs: [
-      ...manifest.outputs.filter((row) => !replacementKeys.has(row.workKey)),
+      ...manifest.outputs
+        .filter((row) => !replacementKeys.has(row.workKey))
+        .map(
+          (row) =>
+            inspected.find((one) => one.slot === row.slot && one.assetId === row.assetId) ?? row,
+        ),
       ...prepared.outputs,
     ],
     pieces: [

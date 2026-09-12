@@ -98,11 +98,9 @@ export async function saveRevision(
         content: { ...supplied.content, regenerationTokens: tokens },
       };
       const outputAssets = prepared.filter((row) => row.upload?.destination.kind !== "narration");
+      const inspected = measuredOutputs(deps, fresh, durations);
       const preparedManifest = {
         outputs: [
-          ...measuredOutputs(deps, fresh, durations).filter(
-            (row) => !outputAssets.some((one) => one.workKey === row.workKey),
-          ),
           ...outputAssets.map((row) => ({
             slot: row.slot,
             workKey: row.workKey,
@@ -114,7 +112,7 @@ export async function saveRevision(
         ],
         pieces: [],
       };
-      let plan = planRevision(fresh, finalEdit, preparedManifest);
+      let plan = planRevision(fresh, finalEdit, preparedManifest, inspected);
       if (!plan.ok)
         return {
           ok: false,
@@ -149,6 +147,7 @@ export async function saveRevision(
               },
             },
             preparedManifest,
+            inspected,
           );
           if (!plan.ok)
             throw new Error("Validated captions could not bind to their narration timeline.");
