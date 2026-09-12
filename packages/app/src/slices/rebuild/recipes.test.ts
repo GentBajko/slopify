@@ -186,7 +186,7 @@ it("rejects deleting the last active image until Images and Video are both Off",
     }),
   ).toMatchObject({ ok: false, fields: [{ field: "sources.video" }] });
 });
-it("normalizes mixed images and clears provided image prompt provenance", () => {
+it("keeps mixed images and clears provided image prompt provenance", () => {
   const next = {
     ...content,
     imageDefinitions: {
@@ -200,7 +200,7 @@ it("normalizes mixed images and clears provided image prompt provenance", () => 
     },
   };
   const result = planRevision(emptyView(), {
-    config: { ...config, sources: { ...config.sources, images: "provide" } },
+    config: { ...config, sources: { ...config.sources, images: "generate" } },
     content: next,
   });
   expect(result).toMatchObject({

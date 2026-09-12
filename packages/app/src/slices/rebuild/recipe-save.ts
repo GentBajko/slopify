@@ -201,6 +201,14 @@ export function validateRevisionEdit(
         field: `sources.${kind}`,
         message: `The ${kind} stage cannot be set to ${config.sources[kind]}.`,
       });
+  if (
+    config.sources.images === "provide" &&
+    content.imageOrder.some((key) => content.imageDefinitions[key]?.source === "generate")
+  )
+    fields.push({
+      field: "sources.images",
+      message: "Replace or remove generated images before choosing Provide.",
+    });
   if (config.sources.images !== "off" && content.imageOrder.length === 0)
     fields.push({
       field: "content.imageOrder",
