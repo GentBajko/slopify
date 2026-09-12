@@ -43,6 +43,9 @@ describe("migrate", () => {
       "entries",
       "machine",
       "outputs",
+      "play_draft_attachments",
+      "play_drafts",
+      "play_start_receipts",
       "project_assets",
       "project_control_receipts",
       "project_controls",
@@ -72,6 +75,9 @@ describe("migrate", () => {
     expect(names(db, "index")).toEqual([
       "entries_name",
       "outputs_project",
+      "play_draft_attachment_file",
+      "play_draft_attachment_owner",
+      "play_start_receipt_draft",
       "project_queue_state",
       "project_revisions_project",
       "prompts_name",
@@ -99,6 +105,7 @@ describe("migrate", () => {
       { version: 3, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 4, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 5, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 6, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -108,7 +115,7 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 5 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 6 });
   });
 
   it("refuses a database newer than the app knows", () => {
@@ -116,7 +123,7 @@ describe("migrate", () => {
     migrate(db, clock);
     db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(42, clock.now().toISOString());
 
-    expect(() => migrate(db, clock)).toThrow("database schema 42 is newer than this app knows (5)");
+    expect(() => migrate(db, clock)).toThrow("database schema 42 is newer than this app knows (6)");
   });
 
   it("upgrades existing projects without changing their configuration or outputs", () => {
