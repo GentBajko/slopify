@@ -32,7 +32,12 @@ export function paidChoices(
     if (input.kind === "llm" || input.kind === "tts" || input.kind === "image")
       choices.push({ ...input, family: input.kind });
     else if (input.kind === "deferred") {
-      const family = recipe.stage === "audio" ? "tts" : recipe.stage === "images" ? "image" : "llm";
+      const family =
+        recipe.stage === "audio"
+          ? "tts"
+          : recipe.stage === "images" || input.operation === "thumbnail-image"
+            ? "image"
+            : "llm";
       const choice =
         family === "tts"
           ? view.revision.config.audio
