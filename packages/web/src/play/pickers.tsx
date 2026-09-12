@@ -148,7 +148,12 @@ export function ProviderPicker({
       problem={problem}
       inline={inline}
       placeholder="Pick a provider"
-      options={providerOptions(providers, family)}
+      options={[
+        ...(value !== "" && !providers.some((one) => one.id === value && one.family === family)
+          ? [{ value, label: `${value} (saved provider)`, disabled: true }]
+          : []),
+        ...providerOptions(providers, family),
+      ]}
       onPick={onPick}
     />
   );

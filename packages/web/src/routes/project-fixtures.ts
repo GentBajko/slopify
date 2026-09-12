@@ -165,8 +165,3 @@ export async function selectProjectStage(name: string): Promise<HTMLElement> {
   await userEvent.click(within(navigation).getByRole("button", { name: new RegExp(`^${name},`) }));
   return screen.getByRole("region", { name: `${name} workspace` });
 }
-
-export async function openRunSettings(): Promise<void> {
-  const button = await screen.findByRole("button", { name: /^Run settings/ });
-  if (button.getAttribute("aria-expanded") !== "true") await userEvent.click(button);
-}

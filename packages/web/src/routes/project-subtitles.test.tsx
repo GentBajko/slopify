@@ -1,14 +1,11 @@
-import {
-  defaultSubtitles,
-  type SubtitleConfig,
-  subtitleConfigSchema,
-} from "@app/slices/subtitles/model.js";
+import { defaultSubtitles, type SubtitleConfig } from "@app/slices/subtitles/model.js";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { jsonAnswer, problemAnswer, renderRouted, testOrigin } from "@/test-app";
+import { afterEach, describe, expect, it } from "vitest";
+import { jsonAnswer, renderRouted, testOrigin } from "@/test-app";
 import { ProjectRoute } from "./project";
 import { body, deps, output, stage } from "./project-fixtures";
+import { revisionRouteFixture } from "./project-revision.fake.js";
 
 const fonts = [
   { id: "default", name: "Default font", family: "Arial", source: "bundled" },
@@ -46,177 +43,81 @@ function subtitleMode() {
 }
 
 describe("existing project subtitles", () => {
-  it("saves only subtitle settings and keeps the returned font selection after refresh", async () => {
+  it("saves subtitle style with the revision and keeps it after reopening the editor", async () => {
     const user = userEvent.setup();
-    let current = project();
-    const save = vi.fn(async (request: Request) => {
-      const subtitles = (await request.json()) as SubtitleConfig;
-      current = {
-        ...current,
-        project: { ...current.project, config: { ...current.project.config, subtitles } },
-      };
-      return jsonAnswer(current)(request);
-    });
-    const app = deps({
-      ...fontRoute,
-      "GET /api/projects/p1": (request) => jsonAnswer(current)(request),
-      "PATCH /api/projects/p1/subtitles": save,
-    });
-    const mounted = renderRouted(<ProjectRoute projectId="p1" />, app);
-    await screen.findByRole("heading", { name: "Rope Tricks" });
+    const fixture = revisionRouteFixture(project());
+    renderRouted(<ProjectRoute projectId="p1" />, deps({ ...fixture.routes, ...fontRoute }));
+    await user.click(await screen.findByRole("button", { name: "Edit project" }));
+    await screen.findByLabelText("Subtitles", { selector: "select" });
     await user.selectOptions(subtitleMode(), "burn-in");
     await screen.findByRole("option", { name: "Custom font · uploaded" });
     await user.selectOptions(screen.getByLabelText("Subtitle font"), "custom");
-    const size = screen.getByLabelText("Subtitle font size");
-    await user.clear(size);
-    await user.type(size, "64");
+    await user.clear(screen.getByLabelText("Subtitle font size"));
+    await user.type(screen.getByLabelText("Subtitle font size"), "64");
     await user.selectOptions(screen.getByLabelText("Subtitle position"), "upper-middle");
-    await user.click(screen.getByRole("button", { name: "Save subtitles" }));
-    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
-    await waitFor(() =>
-      expect(
-        (screen.getByRole("button", { name: "Save subtitles" }) as HTMLButtonElement).disabled,
-      ).toBe(true),
-    );
-    expect(current.project.config.subtitles).toEqual({
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(screen.queryByLabelText("Project title")).toBeNull());
+    expect(fixture.save).toHaveBeenCalledOnce();
+    expect(fixture.start).not.toHaveBeenCalled();
+    expect(fixture.view().revision.config.subtitles).toEqual({
       ...defaultSubtitles,
       mode: "burn-in",
       fontId: "custom",
       fontSize: 64,
       position: "upper-middle",
     });
-    mounted.unmount();
-    renderRouted(<ProjectRoute projectId="p1" />, app);
-    await screen.findByLabelText("Subtitle font");
-    expect(subtitleMode().value).toBe("burn-in");
-    expect((screen.getByLabelText("Subtitle font") as HTMLSelectElement).value).toBe("custom");
-    expect((screen.getByLabelText("Subtitle font size") as HTMLInputElement).value).toBe("64");
+    await user.click(screen.getByRole("button", { name: "Edit project" }));
+    expect(((await screen.findByLabelText("Subtitle font size")) as HTMLInputElement).value).toBe(
+      "64",
+    );
     expect((screen.getByLabelText("Subtitle position") as HTMLSelectElement).value).toBe(
       "upper-middle",
     );
+    expect(screen.queryByRole("button", { name: "Save subtitles" })).toBeNull();
   });
 
-  it("holds Resume while subtitle edits are unsaved, and saves separately on paused projects", async () => {
+  it("keeps refused subtitle edits and maps the server field path", async () => {
     const user = userEvent.setup();
-    let current = project(defaultSubtitles, "paused");
-    const resume = vi.fn(jsonAnswer(current));
-    const save = vi.fn(async (request: Request) => {
-      const subtitles = (await request.json()) as SubtitleConfig;
-      current = {
-        ...current,
-        project: { ...current.project, config: { ...current.project.config, subtitles } },
-      };
-      return jsonAnswer(current)(request);
-    });
+    const fixture = revisionRouteFixture(project());
+    const refusal = jsonAnswer(
+      {
+        title: "Invalid edit",
+        status: 400,
+        reason: "invalid-edit",
+        fields: [
+          { field: "edit.config.subtitles.fontSize", message: "Use a size from 16 to 120." },
+        ],
+      },
+      400,
+    );
     renderRouted(
       <ProjectRoute projectId="p1" />,
-      deps({
-        ...fontRoute,
-        "GET /api/projects/p1": (request) => jsonAnswer(current)(request),
-        "PATCH /api/projects/p1/subtitles": save,
-        "POST /api/projects/p1/resume": resume,
-      }),
+      deps({ ...fixture.routes, ...fontRoute, "POST /api/projects/p1/revisions": refusal }),
     );
-    await screen.findByRole("button", { name: "Resume" });
+    await user.click(await screen.findByRole("button", { name: "Edit project" }));
+    await screen.findByLabelText("Subtitles", { selector: "select" });
     await user.selectOptions(subtitleMode(), "files");
-    expect((screen.getByRole("button", { name: "Resume" }) as HTMLButtonElement).disabled).toBe(
-      true,
-    );
-    await user.click(screen.getByRole("button", { name: "Discard subtitle changes" }));
-    expect(subtitleMode().value).toBe("off");
-    expect((screen.getByRole("button", { name: "Resume" }) as HTMLButtonElement).disabled).toBe(
-      false,
-    );
-    await user.selectOptions(subtitleMode(), "files");
-    await user.click(screen.getByRole("button", { name: "Save subtitles" }));
-    await waitFor(() =>
-      expect((screen.getByRole("button", { name: "Resume" }) as HTMLButtonElement).disabled).toBe(
-        false,
-      ),
-    );
-    expect(save).toHaveBeenCalledTimes(1);
-    expect(resume).not.toHaveBeenCalled();
+    await user.clear(screen.getByLabelText("Subtitle font size"));
+    await user.type(screen.getByLabelText("Subtitle font size"), "64");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await screen.findByText("edit.config.subtitles.fontSize: Use a size from 16 to 120.");
+    expect((screen.getByLabelText("Subtitle font size") as HTMLInputElement).value).toBe("64");
+    expect(fixture.start).not.toHaveBeenCalled();
   });
 
-  it("keeps refused changes for correction and never enables Save for an invalid font size", async () => {
+  it("allows saving a future subtitle revision while old rendering is active", async () => {
     const user = userEvent.setup();
-    renderRouted(
-      <ProjectRoute projectId="p1" />,
-      deps({
-        ...fontRoute,
-        "GET /api/projects/p1": jsonAnswer(project()),
-        "PATCH /api/projects/p1/subtitles": problemAnswer("Pause the active run first.", 409),
-      }),
+    const fixture = revisionRouteFixture(
+      project({ ...defaultSubtitles, mode: "files" }, "running"),
     );
-    await screen.findByRole("button", { name: "Save subtitles" });
-    await user.selectOptions(subtitleMode(), "files");
-    const size = screen.getByLabelText("Subtitle font size");
-    await user.clear(size);
-    await user.type(size, "150");
-    expect(
-      (screen.getByRole("button", { name: "Save subtitles" }) as HTMLButtonElement).disabled,
-    ).toBe(true);
-    await user.clear(size);
-    await user.type(size, "64");
-    await user.click(screen.getByRole("button", { name: "Save subtitles" }));
-    await screen.findByText("Pause the active run first.");
-    expect(subtitleMode().value).toBe("files");
-    expect((size as HTMLInputElement).value).toBe("64");
-  });
-
-  it.each(["", "150"])(
-    "can disable subtitles after entering an invalid font size '%s'",
-    async (size) => {
-      const user = userEvent.setup();
-      let current = project({ ...defaultSubtitles, mode: "files" }, "paused");
-      const save = vi.fn(async (request: Request) => {
-        const subtitles = subtitleConfigSchema.parse(await request.json());
-        current = {
-          ...current,
-          project: { ...current.project, config: { ...current.project.config, subtitles } },
-        };
-        return jsonAnswer(current)(request);
-      });
-      renderRouted(
-        <ProjectRoute projectId="p1" />,
-        deps({
-          ...fontRoute,
-          "GET /api/projects/p1": (request) => jsonAnswer(current)(request),
-          "PATCH /api/projects/p1/subtitles": save,
-        }),
-      );
-      await screen.findByLabelText("Subtitle font size");
-      await user.clear(screen.getByLabelText("Subtitle font size"));
-      if (size) await user.type(screen.getByLabelText("Subtitle font size"), size);
-      await user.selectOptions(subtitleMode(), "off");
-      expect(screen.queryByLabelText("Subtitle font size")).toBeNull();
-      await user.click(screen.getByRole("button", { name: "Save subtitles" }));
-      await waitFor(() =>
-        expect((screen.getByRole("button", { name: "Resume" }) as HTMLButtonElement).disabled).toBe(
-          false,
-        ),
-      );
-      expect(save).toHaveBeenCalledTimes(1);
-      expect(current.project.config.subtitles).toMatchObject({ mode: "off", fontSize: 48 });
-    },
-  );
-
-  it("disables editing while any stage is active", async () => {
-    renderRouted(
-      <ProjectRoute projectId="p1" />,
-      deps({
-        ...fontRoute,
-        "GET /api/projects/p1": jsonAnswer(
-          project({ ...defaultSubtitles, mode: "files" }, "running"),
-        ),
-      }),
-    );
-    await screen.findByLabelText("Subtitle font");
-    expect(subtitleMode().closest("fieldset")?.disabled).toBe(true);
-    expect(
-      (screen.getByRole("button", { name: "Save subtitles" }) as HTMLButtonElement).disabled,
-    ).toBe(true);
-    expect(screen.getByText(/Pause the run and wait for active requests/)).not.toBeNull();
+    renderRouted(<ProjectRoute projectId="p1" />, deps({ ...fixture.routes, ...fontRoute }));
+    await user.click(await screen.findByRole("button", { name: "Edit project" }));
+    await screen.findByLabelText("Subtitles", { selector: "select" });
+    expect(subtitleMode().closest("fieldset")?.disabled).toBe(false);
+    await user.selectOptions(subtitleMode(), "off");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(fixture.save).toHaveBeenCalledOnce());
+    expect(fixture.start).not.toHaveBeenCalled();
   });
 });
 
@@ -283,7 +184,7 @@ describe("subtitle downloads and playback", () => {
     expect((await screen.findByLabelText("Generated video")).querySelector("track")).not.toBeNull();
   });
 
-  it("keeps file downloads for WAV exports and disables the burn-in option", async () => {
+  it("keeps file downloads for WAV exports without mounting a separate subtitle editor", async () => {
     const current = project({ ...defaultSubtitles, mode: "files" });
     renderRouted(
       <ProjectRoute projectId="p1" />,
@@ -307,10 +208,7 @@ describe("subtitle downloads and playback", () => {
     );
     await screen.findByLabelText("Combined narration");
     expect(screen.getByRole("link", { name: "Download .srt" })).not.toBeNull();
-    expect(
-      (screen.getByRole("option", { name: "Burn into video + files" }) as HTMLOptionElement)
-        .disabled,
-    ).toBe(true);
+    expect(screen.queryByLabelText("Subtitles", { selector: "select" })).toBeNull();
     expect(screen.queryByLabelText("Generated video")).toBeNull();
   });
 });

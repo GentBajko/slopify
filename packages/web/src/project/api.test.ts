@@ -11,6 +11,8 @@ import {
   saveArticle,
 } from "./api.js";
 
+const control = { baseRevisionId: "r1", idempotencyKey: "00000000-0000-4000-8000-000000000001" };
+
 const view = { project: { id: "p1" }, stages: [], outputs: [], redone: ["video"] };
 
 function api(routes: Readonly<Record<string, ReturnType<typeof jsonAnswer>>>) {
@@ -22,6 +24,7 @@ describe("the project page's actions", () => {
     const result = await cancelRun(
       api({ "POST /api/projects/p1/cancel": jsonAnswer({ ...view, canceled: ["video"] }) }),
       "p1",
+      control,
     );
     expect(result.ok).toBe(true);
     expect(result.ok ? result.value.project.id : "").toBe("p1");
@@ -80,7 +83,7 @@ describe("the project page's actions", () => {
 
   it("throws when the server faults, because that is not an answer the page can show", async () => {
     await expect(
-      cancelRun(api({ "POST /api/projects/p1/cancel": problemAnswer("boom", 500) }), "p1"),
+      cancelRun(api({ "POST /api/projects/p1/cancel": problemAnswer("boom", 500) }), "p1", control),
     ).rejects.toThrow("boom");
   });
 

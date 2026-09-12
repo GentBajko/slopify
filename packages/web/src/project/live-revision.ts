@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import type { ProjectBody } from "@/api";
-import { keys } from "@/queries";
+import { useApp } from "@/app-context";
+import { projectQuery } from "@/queries";
 
 export function useProjectRevision(projectId: string): string | null {
-  const current = useQuery<ProjectBody, Error, string | null>({
-    queryKey: keys.project(projectId),
+  const { api } = useApp();
+  const current = useQuery({
+    ...projectQuery(api, projectId),
     enabled: false,
     select: (body) => body.revisionId ?? null,
   });

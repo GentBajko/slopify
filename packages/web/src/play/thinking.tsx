@@ -27,6 +27,9 @@ export function ThinkingPicker({
         }
         options={[
           { value: "default", label: "Model default" },
+          ...(choice.thinking && !modes.includes(choice.thinking)
+            ? [{ value: choice.thinking, label: `${choice.thinking} (saved level)` }]
+            : []),
           ...modes.map((mode) => ({
             value: mode,
             label: mode === "off" ? "Off" : mode.charAt(0).toUpperCase() + mode.slice(1),

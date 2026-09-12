@@ -496,12 +496,13 @@ describe("the tutorial in the real app", () => {
     await user.click(await screen.findByRole("button", { name: "Start run" }));
     await at("project");
     expect(router.state.location.pathname).toBe("/projects/actual-created-project");
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: /^Run settings/ }).getAttribute("aria-expanded"),
-      ).toBe("true"),
-    );
-    expect(screen.getByRole("combobox", { name: "Text provider" })).not.toBeNull();
+    expect(
+      screen
+        .getByRole("button", { name: "Edit project" })
+        .closest('[data-tour="project-controls"]'),
+    ).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Rebuild affected outputs" })).not.toBeNull();
+    expect(screen.queryByRole("button", { name: /^Run settings/ })).toBeNull();
     expect(requests.filter((request) => request === "POST /api/projects")).toHaveLength(1);
     await next(user, "download");
     await screen.findByRole("region", { name: "Video workspace" });

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { jsonAnswer, problemAnswer, renderRouted } from "@/test-app";
 import { ProjectRoute } from "./project.js";
 import { deps, finished, selectProjectStage } from "./project-fixtures.js";
+import { revisionRouteFixture } from "./project-revision.fake.js";
 
 afterEach(cleanup);
 
@@ -105,99 +106,52 @@ describe("the destructive actions", () => {
 });
 
 describe("editing the article", () => {
-  it("confirms the save and sends the edited markdown", async () => {
-    let sent = "";
-    renderRouted(
-      <ProjectRoute projectId="p1" />,
-      deps({
-        "PUT /api/projects/p1/article": async (request) => {
-          sent = ((await request.json()) as { markdown: string }).markdown;
-          return jsonAnswer(finished)(request);
-        },
-      }),
-    );
-
-    await selectProjectStage("Article");
-    await userEvent.click(await screen.findByRole("button", { name: "Edit" }));
-    const editor = await screen.findByLabelText("Article");
+  it("saves the article in a revision without starting a rebuild", async () => {
+    const fixture = revisionRouteFixture(finished);
+    renderRouted(<ProjectRoute projectId="p1" />, fixture.app);
+    await userEvent.click(await screen.findByRole("button", { name: "Edit project" }));
+    const editor = await screen.findByLabelText("Article text");
     await userEvent.clear(editor);
     await userEvent.type(editor, "Rewritten.");
-
-    await userEvent.click(screen.getByRole("button", { name: "Save & update outputs" }));
-    const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("Save the edited article?")).not.toBeNull();
-    expect(sent).toBe("");
-
-    await userEvent.click(within(dialog).getByRole("button", { name: "Save & update outputs" }));
-    await waitFor(() => {
-      expect(sent).toBe("Rewritten.");
-    });
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(fixture.save).toHaveBeenCalledOnce());
+    expect(fixture.view().revision.content.articleMarkdown).toBe("Rewritten.");
+    expect(fixture.start).not.toHaveBeenCalled();
   });
 
-  it("keeps the typing in the editor when the server refuses the save", async () => {
+  it("keeps the typing when the revision save is refused", async () => {
+    const fixture = revisionRouteFixture(finished);
     renderRouted(
       <ProjectRoute projectId="p1" />,
       deps({
-        "PUT /api/projects/p1/article": problemAnswer("An article cannot be saved empty.", 400),
+        ...fixture.routes,
+        "POST /api/projects/p1/revisions": problemAnswer("An article cannot be saved empty.", 400),
       }),
     );
-
-    await selectProjectStage("Article");
-    await userEvent.click(await screen.findByRole("button", { name: "Edit" }));
-    const editor = await screen.findByLabelText("Article");
+    await userEvent.click(await screen.findByRole("button", { name: "Edit project" }));
+    const editor = await screen.findByLabelText("Article text");
     await userEvent.clear(editor);
     await userEvent.type(editor, "Still mine.");
-    await userEvent.click(screen.getByRole("button", { name: "Save & update outputs" }));
-    await userEvent.click(
-      within(await screen.findByRole("dialog")).getByRole("button", {
-        name: "Save & update outputs",
-      }),
-    );
-
-    expect((await screen.findByRole("alert")).textContent).toBe(
-      "An article cannot be saved empty.",
-    );
-    expect((screen.getByLabelText("Article") as HTMLTextAreaElement).value).toBe("Still mine.");
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await screen.findByText("An article cannot be saved empty.");
+    expect((editor as HTMLTextAreaElement).value).toBe("Still mine.");
   });
 
-  it("preserves an unfinished article edit when switching stages", async () => {
-    const save = vi.fn(jsonAnswer(finished));
-    renderRouted(<ProjectRoute projectId="p1" />, deps({ "PUT /api/projects/p1/article": save }));
-    await selectProjectStage("Article");
-    await userEvent.click(await screen.findByRole("button", { name: "Edit" }));
-    const editor = await screen.findByRole("textbox", { name: "Article" });
+  it("keeps an unfinished article edit when switching output stages, until discarded", async () => {
+    const fixture = revisionRouteFixture(finished);
+    renderRouted(<ProjectRoute projectId="p1" />, fixture.app);
+    await userEvent.click(await screen.findByRole("button", { name: "Edit project" }));
+    const editor = await screen.findByLabelText("Article text");
     await userEvent.clear(editor);
     await userEvent.type(editor, "My unfinished changes.");
     await selectProjectStage("Audio");
-    expect(screen.queryByRole("textbox", { name: "Article" })).toBeNull();
-    expect(screen.getByRole("region", { name: "Audio workspace" })).not.toBeNull();
     await selectProjectStage("Article");
-    expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Article" }).value).toBe(
+    expect((screen.getByLabelText("Article text") as HTMLTextAreaElement).value).toBe(
       "My unfinished changes.",
     );
-    expect(screen.getByRole("button", { name: "Save & update outputs" })).not.toBeNull();
-    expect(save).not.toHaveBeenCalled();
-  });
-
-  it("confirms a discard before it throws the typing away", async () => {
-    renderRouted(<ProjectRoute projectId="p1" />, deps());
-
-    await selectProjectStage("Article");
-    await userEvent.click(await screen.findByRole("button", { name: "Edit" }));
-    await userEvent.type(await screen.findByLabelText("Article"), " and mine");
-    await userEvent.click(screen.getByRole("button", { name: "Discard" }));
-
-    const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("Discard these edits?")).not.toBeNull();
-    await userEvent.click(within(dialog).getByRole("button", { name: "Keep editing" }));
-    expect(screen.getByLabelText("Article")).not.toBeNull();
-
-    await userEvent.click(screen.getByRole("button", { name: "Discard" }));
-    await userEvent.click(
-      within(await screen.findByRole("dialog")).getByRole("button", { name: "Discard" }),
-    );
-    await waitFor(() => {
-      expect(screen.queryByLabelText("Article")).toBeNull();
-    });
+    expect(screen.queryByRole("button", { name: "Save & update outputs" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Discard changes" }));
+    expect(screen.queryByLabelText("Article text")).toBeNull();
+    expect(fixture.save).not.toHaveBeenCalled();
   });
 });

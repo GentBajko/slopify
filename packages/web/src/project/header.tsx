@@ -1,7 +1,6 @@
 import type { ProjectSummary } from "@app/slices/admission/model.js";
 import type { Prompt } from "@app/slices/library/model.js";
 import type { Output } from "@app/slices/storage/model.js";
-import { Settings2 } from "lucide-react";
 import { useContext } from "react";
 import { Lamp } from "@/components/lamp";
 import { StateWord } from "@/components/state-word";
@@ -17,9 +16,6 @@ export function ProjectHeader({
   prompts,
   actions,
   inFlight,
-  unsavedProviders,
-  settingsOpen,
-  onToggleSettings,
   primaryOutput,
 }: {
   readonly project: ProjectSummary;
@@ -28,9 +24,6 @@ export function ProjectHeader({
   readonly prompts: readonly Prompt[] | undefined;
   readonly actions: ProjectActions;
   readonly inFlight: boolean;
-  readonly unsavedProviders: boolean;
-  readonly settingsOpen: boolean;
-  readonly onToggleSettings: () => void;
   readonly primaryOutput: Output | undefined;
 }) {
   const revisioned = useContext(RevisionControlContext);
@@ -60,10 +53,6 @@ export function ProjectHeader({
             />
           </span>
         ) : null}
-        <Button aria-expanded={settingsOpen} onClick={onToggleSettings}>
-          <Settings2 aria-hidden="true" className="mr-2 size-4" />
-          Run settings{unsavedProviders ? " •" : ""}
-        </Button>
         {running || project.status === "pending" ? (
           <Button disabled={actions.pending} onClick={() => actions.run({ kind: "pause" })}>
             Pause
@@ -71,7 +60,7 @@ export function ProjectHeader({
         ) : null}
         {!revisioned && (project.status === "paused" || project.status === "failed") ? (
           <Button
-            disabled={actions.pending || inFlight || unsavedProviders}
+            disabled={actions.pending || inFlight}
             onClick={() => actions.run({ kind: "resume" })}
           >
             Resume
@@ -89,11 +78,6 @@ export function ProjectHeader({
           </ConfirmedButton>
         ) : null}
       </div>
-      {unsavedProviders ? (
-        <p className="w-full rounded-control border border-line2 bg-panel2 px-3 py-2 text-small text-ink2">
-          You have unsaved changes. Save or discard them before resuming.
-        </p>
-      ) : null}
     </div>
   );
 }

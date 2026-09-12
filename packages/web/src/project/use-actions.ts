@@ -1,7 +1,8 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
+import type { RevisionControlInput } from "@app/slices/control/revision-control-schema.js";
 import type { SubtitleConfig } from "@app/slices/subtitles/model.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Api, ProjectBody } from "@/api";
 import { useApp } from "@/app-context";
 import { keys } from "@/queries";
@@ -19,18 +20,18 @@ import {
   updateSubtitles,
 } from "./api.js";
 import type { Destructive } from "./confirmations.js";
+import { prepareRevision } from "./revision-api.js";
 
-// Everything the page can ask the server to change, and the one refusal line it shows when
-// the server says no. The answer to every action is the whole project as the server now
-// sees it (`edge/http/actions.ts`), so it is written straight into the cache: the lamps
-// move on the response, not on a second request.
+// Late responses and replayed control receipts belong to their original revision.
+// Refetch the current projection after an action; never paint a stale receipt.
 
 // Discarding an article edit is destructive - it throws the user's typing away, so it
 // confirms - but it changes nothing the server holds, so it is not one of these.
 export type Action =
   | Exclude<Destructive, { readonly kind: "discard-article" }>
   | { readonly kind: "retry"; readonly stage: StageKind }
-  | { readonly kind: "pause" | "resume" }
+  | { readonly kind: "pause" }
+  | { readonly kind: "resume" }
   | { readonly kind: "providers"; readonly choices: ProviderChanges }
   | { readonly kind: "subtitles"; readonly subtitles: SubtitleConfig };
 
@@ -64,27 +65,42 @@ export function useProjectActions(projectId: string): ProjectActions {
   const queryClient = useQueryClient();
   const [refusal, setRefusal] = useState<Refusal | undefined>(undefined);
 
+  const controls = useRef(new Map<string, RevisionControlInput>());
+  const active = useRef(false);
   const mutation = useMutation({
-    mutationFn: (input: MutationInput) => perform(api, input.projectId, input.action),
+    mutationFn: async (input: MutationInput): Promise<ActionResult> => {
+      const kind = input.action.kind;
+      if (kind !== "pause" && kind !== "cancel") return perform(api, input.projectId, input.action);
+      const key = `${input.projectId}:${kind}`;
+      let control = controls.current.get(key);
+      if (!control) {
+        let base = queryClient.getQueryData<ProjectBody>(keys.project(input.projectId))?.revisionId;
+        if (!base) {
+          const prepared = await prepareRevision(api, input.projectId);
+          if (!prepared.ok) return { ok: false, message: prepared.message };
+          base = prepared.value.view.revision.id;
+        }
+        control = { baseRevisionId: base, idempotencyKey: crypto.randomUUID() };
+        controls.current.set(key, control);
+      }
+      // Keep the exact request after a transport/server fault, even if SSE advances the head.
+      const result = await (kind === "pause" ? pauseRun : cancelRun)(api, input.projectId, control);
+      controls.current.delete(key);
+      return result;
+    },
     onMutate: () => {
       setRefusal(undefined);
     },
     onSuccess: async (result, input) => {
       if (!result.ok) {
         setRefusal({ message: result.message, stage: stageOf(input.action) });
-        return;
+      } else {
+        void queryClient.invalidateQueries({ queryKey: keys.projects });
       }
-      const { revisionId, project, stages, outputs } = result.value;
-      queryClient.setQueryData<ProjectBody>(keys.project(input.projectId), {
-        revisionId,
-        project,
-        stages,
-        outputs,
-      });
-      void queryClient.invalidateQueries({ queryKey: keys.projects });
-      // A second tab can change the paused run while this response is in transit.
-      // Reconcile after painting the response so it cannot replace newer SSE data indefinitely.
       await queryClient.invalidateQueries({ queryKey: keys.project(input.projectId) });
+    },
+    onSettled: () => {
+      active.current = false;
     },
     onError: (error: Error, input) => {
       // Nothing is swallowed: a fault reaches the same line a refusal does, because the
@@ -95,6 +111,8 @@ export function useProjectActions(projectId: string): ProjectActions {
 
   return {
     run: (action, onDone) => {
+      if (active.current) return;
+      active.current = true;
       mutation.mutate(
         { projectId, action },
         {
@@ -135,18 +153,18 @@ function stageOf(action: Action): StageKind | undefined {
   }
 }
 
-function perform(api: Api, projectId: string, action: Action): Promise<ActionResult> {
+function perform(
+  api: Api,
+  projectId: string,
+  action: Exclude<Action, { readonly kind: "pause" | "cancel" }>,
+): Promise<ActionResult> {
   switch (action.kind) {
-    case "pause":
-      return pauseRun(api, projectId);
     case "resume":
       return resumeRun(api, projectId);
     case "providers":
       return updateProviders(api, projectId, action.choices);
     case "subtitles":
       return updateSubtitles(api, projectId, action.subtitles);
-    case "cancel":
-      return cancelRun(api, projectId);
     case "retry":
       return retryStage(api, projectId, action.stage);
     case "rerun":

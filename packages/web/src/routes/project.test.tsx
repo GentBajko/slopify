@@ -1,6 +1,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { revisionView } from "@/project/revision-fixture";
 import { jsonAnswer, problemAnswer, renderRouted, testDeps, testOrigin } from "@/test-app";
 import { ProjectRoute } from "./project.js";
 import { body, deps, output, ready, selectProjectStage, stage } from "./project-fixtures.js";
@@ -182,6 +183,11 @@ describe("cancelling a run", () => {
       <ProjectRoute projectId="p1" />,
       deps({
         "GET /api/projects/p1": jsonAnswer(running),
+        "POST /api/projects/p1/revisions/prepare": jsonAnswer({
+          ok: true,
+          view: revisionView(),
+          created: true,
+        }),
         "POST /api/projects/p1/cancel": (request) => {
           canceled();
           return jsonAnswer(running)(request);
@@ -231,14 +237,16 @@ describe("cancelling a run", () => {
     expect(screen.queryByRole("button", { name: "Cancel run" })).toBeNull();
   });
 
-  it("disables every edit and re-run while a stage is running", async () => {
+  it("keeps article output read-only and offers revision editing while a stage runs", async () => {
     renderRouted(
       <ProjectRoute projectId="p1" />,
       deps({ "GET /api/projects/p1": jsonAnswer(running) }),
     );
     await selectProjectStage("Article");
-    const edit = await screen.findByRole("button", { name: "Edit" });
-    expect(edit.hasAttribute("disabled")).toBe(true);
+    expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Edit project" }).hasAttribute("disabled")).toBe(
+      false,
+    );
   });
 });
 
@@ -308,7 +316,7 @@ describe("the stage bodies", () => {
     expect(screen.getByText("A cracked skull with gemstone eyes")).not.toBeNull();
   });
 
-  it("keeps pending export actions unavailable while showing the existing file and subtitle settings", async () => {
+  it("keeps pending export actions unavailable while showing the existing file", async () => {
     renderRouted(
       <ProjectRoute projectId="p1" />,
       deps({
@@ -324,8 +332,6 @@ describe("the stage bodies", () => {
     await screen.findByText("Video");
     expect(screen.queryByRole("button", { name: "Re-render" })).toBeNull();
     expect(screen.getByLabelText("Generated video")).not.toBeNull();
-    expect(
-      screen.getByLabelText("Subtitles", { selector: "select" }).closest("fieldset")?.disabled,
-    ).toBe(true);
+    expect(screen.queryByLabelText("Subtitles", { selector: "select" })).toBeNull();
   });
 });

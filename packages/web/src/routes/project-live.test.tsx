@@ -8,11 +8,12 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createApi } from "@/api";
 import type { AppDeps } from "@/app-context";
 import type { EventSourceLike } from "@/events";
+import { revisionView } from "@/project/revision-fixture";
 import type { Answer } from "@/test-app";
 import { fakeFetch, jsonAnswer, renderRouted, testOrigin } from "@/test-app";
 import { createVersionWatch, watchingFetch } from "@/version";
 import { ProjectRoute } from "./project.js";
-import { openRunSettings, selectProjectStage } from "./project-fixtures.js";
+import { selectProjectStage } from "./project-fixtures.js";
 
 afterEach(cleanup);
 
@@ -129,6 +130,26 @@ function mount(server: Server): {
       return jsonAnswer(view(server))(request);
     },
     "GET /api/providers": jsonAnswer({ providers: [] }),
+    "GET /api/entries": jsonAnswer({ entries: [] }),
+    "GET /api/providers/openrouter/models": jsonAnswer({ models: [], allowsCustom: true }),
+    "POST /api/projects/p1/revisions/prepare": (request) => {
+      const base = revisionView();
+      return jsonAnswer({
+        ok: true,
+        created: false,
+        view: {
+          ...base,
+          revision: {
+            ...base.revision,
+            config: {
+              ...base.revision.config,
+              sources: { ...base.revision.config.sources, article: "generate" },
+              llm: { provider: "openrouter", model: server.textModel ?? "m" },
+            },
+          },
+        },
+      })(request);
+    },
     "GET /api/prompts": jsonAnswer({ prompts: [] }),
     "GET /api/settings/voices": jsonAnswer({ voices: [] }),
     "GET /files/p1/article-md": () => new Response("Body.", { status: 200 }),
@@ -144,19 +165,22 @@ function mount(server: Server): {
 }
 
 describe("the page under a live run", () => {
-  it("refetches saved provider configuration on project.updated", async () => {
+  it("refetches current configuration on project.updated while retaining the open revision draft", async () => {
     const server: Server = { landed: 0, video: "pending", textModel: "model-before" };
     const { source, reads } = mount(server);
-    await openRunSettings();
+    await userEvent.click(await screen.findByRole("button", { name: "Edit project" }));
     const model = await screen.findByLabelText("Text model");
     expect((model as HTMLInputElement).value).toBe("model-before");
     const before = reads();
     server.textModel = "model-after";
     source.emit({ type: "project.updated", projectId: "p1" });
-    await waitFor(() =>
-      expect((screen.getByLabelText("Text model") as HTMLInputElement).value).toBe("model-after"),
+    await waitFor(() => expect(reads()).toBe(before + 1));
+    expect((screen.getByLabelText("Text model") as HTMLSelectElement).value).toBe("model-before");
+    await userEvent.click(screen.getByRole("button", { name: "Discard changes" }));
+    await userEvent.click(screen.getByRole("button", { name: "Edit project" }));
+    expect(((await screen.findByLabelText("Text model")) as HTMLSelectElement).value).toBe(
+      "model-after",
     );
-    expect(reads()).toBe(before + 1);
   });
 
   it("flips a lamp and its state word from the event alone", async () => {

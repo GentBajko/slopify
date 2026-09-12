@@ -1,11 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { ConfirmDialog } from "@/components/confirm";
-import { Button } from "@/components/ui/button";
 import { keys } from "@/queries";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
-import { confirmationFor } from "./confirmations.js";
 import { ConfirmedButton } from "./controls.js";
 import { useProjectRevision } from "./live-revision.js";
 import { LiveWriting, type WritingPreview, writingKey } from "./live-writing.js";
@@ -20,9 +16,6 @@ import {
   useOutputText,
 } from "./parts.js";
 
-// Article: the markdown rendered in a 75 ch measure; Edit with Save & update outputs,
-// Discard and Download; links to the sources and glossary files beside the title;
-// 'Show instructions'.
 export function ArticleBody({ stage, project, outputs, actions, busy }: BodyProps) {
   const revisionId = useProjectRevision(project.id);
   const mine = outputsOf(outputs, stage);
@@ -45,14 +38,11 @@ export function ArticleBody({ stage, project, outputs, actions, busy }: BodyProp
     enabled: false,
   });
 
-  const [draft, setDraft] = useState<string | undefined>(undefined);
-  const [discarding, setDiscarding] = useState(false);
   const text = stored.data ?? "";
   const shown = stage.state === "running" ? (streaming.data ?? "") : text;
   // The article's own heading becomes the body's title line, so it is not typeset twice.
   const split = splitTitle(shown);
   const title = split.title ?? project.title;
-  const discard = confirmationFor({ kind: "discard-article" });
 
   return (
     <StageBody>
@@ -64,63 +54,20 @@ export function ArticleBody({ stage, project, outputs, actions, busy }: BodyProp
         {glossary === undefined ? null : <OutputDownload output={glossary} label="Glossary" />}
       </div>
 
-      {revisionId === null ? null : (
-        <p className="text-small text-ink2">
-          Use Edit project to save changes, then review affected outputs before rebuilding.
-        </p>
-      )}
+      <p className="text-small text-ink2">
+        Use Edit project to save changes, then review affected outputs before rebuilding.
+      </p>
       <ActionRow>
-        {draft === undefined ? (
-          <>
-            {revisionId === null ? (
-              <Button
-                type="button"
-                disabled={busy || markdown === undefined || stored.data === undefined}
-                onClick={() => {
-                  setDraft(text);
-                }}
-              >
-                Edit
-              </Button>
-            ) : null}
-            <ConfirmedButton
-              action={{ kind: "rerun", stage: stage.kind }}
-              run={() => {
-                actions.run({ kind: "rerun", stage: stage.kind });
-              }}
-              disabled={busy}
-              pending={actions.pending}
-            >
-              Re-run
-            </ConfirmedButton>
-            <Instructions output={roleOf(mine, "instructions")} />
-            {markdown === undefined ? null : <OutputDownload output={markdown} />}
-          </>
-        ) : (
-          <>
-            <ConfirmedButton
-              action={{ kind: "save-article", markdown: draft }}
-              run={() => {
-                // The editor closes only once the server has taken the text.
-                actions.run({ kind: "save-article", markdown: draft }, () => {
-                  setDraft(undefined);
-                });
-              }}
-              disabled={busy}
-              pending={actions.pending}
-            >
-              Save &amp; update outputs
-            </ConfirmedButton>
-            <Button
-              type="button"
-              onClick={() => {
-                setDiscarding(true);
-              }}
-            >
-              Discard
-            </Button>
-          </>
-        )}
+        <ConfirmedButton
+          action={{ kind: "rerun", stage: stage.kind }}
+          run={() => actions.run({ kind: "rerun", stage: stage.kind })}
+          disabled={busy}
+          pending={actions.pending}
+        >
+          Re-run
+        </ConfirmedButton>
+        <Instructions output={roleOf(mine, "instructions")} />
+        {markdown === undefined ? null : <OutputDownload output={markdown} />}
       </ActionRow>
 
       {stored.error === null ? null : <p className="text-body text-red">{stored.error.message}</p>}
@@ -131,43 +78,12 @@ export function ArticleBody({ stage, project, outputs, actions, busy }: BodyProp
         tabIndex={0}
         className="max-h-[min(58vh,640px)] min-h-48 overflow-auto pr-3"
       >
-        {draft === undefined ? (
-          stage.state === "running" && hasLivePreview ? (
-            <LiveWriting projectId={project.id} stage="article" />
-          ) : (
-            <Prose markdown={split.body} />
-          )
+        {stage.state === "running" && hasLivePreview ? (
+          <LiveWriting projectId={project.id} stage="article" />
         ) : (
-          <>
-            <label htmlFor="article-editor" className="engraved text-ink3">
-              Article
-            </label>
-            <textarea
-              id="article-editor"
-              value={draft}
-              onChange={(event) => {
-                setDraft(event.target.value);
-              }}
-              className="h-[420px] w-full max-w-[75ch] resize-y rounded-control border border-line2 bg-panel2 p-[10px] font-sans text-body text-ink"
-            />
-          </>
+          <Prose markdown={split.body} />
         )}
       </section>
-
-      <ConfirmDialog
-        open={discarding}
-        title={discard.title}
-        consequence={discard.consequence}
-        verb={discard.verb}
-        dismiss={discard.dismiss}
-        onConfirm={() => {
-          setDiscarding(false);
-          setDraft(undefined);
-        }}
-        onCancel={() => {
-          setDiscarding(false);
-        }}
-      />
     </StageBody>
   );
 }

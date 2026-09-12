@@ -1,28 +1,24 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
-import type { SubtitleConfig } from "@app/slices/subtitles/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { BatchQueue } from "@/components/batch-queue";
 import { Rail, RailGroup } from "@/components/rail";
-import type { ProviderChanges } from "@/project/api";
 import { StageBodyFor } from "@/project/bodies";
 import { ProjectHeader } from "@/project/header";
 import { ProjectNavigation, ProjectProgress } from "@/project/navigation";
 import { RefusalLine } from "@/project/parts";
-import { changedProviderChoices, ProjectProviders } from "@/project/providers";
 import { RevisionControlContext } from "@/project/revision-action-context";
+import { RevisionForm } from "@/project/revision-form";
 import { RevisionMedia } from "@/project/revision-media";
 import { RevisionWorkspace } from "@/project/revision-workspace";
 import { StageRow } from "@/project/stage-row";
-import { ProjectSubtitles } from "@/project/subtitles";
 import { finalOutput } from "@/project/summary";
 import { useProjectActions } from "@/project/use-actions";
 import { useLiveProject } from "@/project/use-live";
 import { suggestedStage } from "@/project/workspace";
 import { projectQuery, promptsQuery, providersQuery } from "@/queries";
-import { sameSubtitles, subtitlesFor } from "@/subtitles/config";
 import { useTutorialProjectStep } from "@/tutorial/context";
 
 // Keep stage bodies mounted when navigating: editors and players retain their local state.
@@ -37,18 +33,9 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
   const providers = useQuery(providersQuery(api));
   const prompts = useQuery(promptsQuery(api));
   const actions = useProjectActions(projectId);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [selection, setSelection] = useState<
     { readonly projectId: string; readonly stage: StageKind } | undefined
   >();
-  const [providerEdits, setProviderEdits] = useState<ProviderChanges>({});
-  const [subtitleEdits, setSubtitleEdits] = useState<
-    { readonly projectId: string; readonly value: SubtitleConfig } | undefined
-  >();
-  const [subtitleUpload, setSubtitleUpload] = useState<
-    { readonly projectId: string; readonly pending: boolean } | undefined
-  >();
-
   const tutorialStep = useTutorialProjectStep(projectId);
   const appliedTutorial = useRef<string | undefined>(undefined);
   useEffect(() => {
@@ -58,7 +45,6 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
     }
     if (project.data === undefined || appliedTutorial.current === tutorialStep) return;
     appliedTutorial.current = tutorialStep;
-    if (tutorialStep === "project") setSettingsOpen(true);
     if (tutorialStep === "download")
       setSelection({
         projectId,
@@ -87,16 +73,6 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
   const busy =
     summary.status === "running" || summary.status === "paused" || inFlight || actions.pending;
 
-  const savedSubtitles = subtitlesFor(summary.config.subtitles, summary.config.sources);
-  const subtitles =
-    subtitleEdits?.projectId === projectId
-      ? subtitlesFor(subtitleEdits.value, summary.config.sources)
-      : savedSubtitles;
-  const subtitlesDirty = !sameSubtitles(subtitles, savedSubtitles);
-  const subtitleUploading = subtitleUpload?.projectId === projectId && subtitleUpload.pending;
-  const discardSubtitles = () =>
-    setSubtitleEdits((current) => (current?.projectId === projectId ? undefined : current));
-
   return (
     <RevisionMedia projectId={projectId} revisionId={project.data.revisionId}>
       <RevisionControlContext value={project.data.revisionId !== null}>
@@ -112,35 +88,8 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
               prompts={prompts.data?.prompts}
               actions={actions}
               inFlight={inFlight}
-              settingsOpen={settingsOpen}
-              onToggleSettings={() => setSettingsOpen(!settingsOpen)}
               primaryOutput={primaryOutput}
-              unsavedProviders={
-                Object.keys(changedProviderChoices(summary.config, providerEdits)).length > 0 ||
-                subtitlesDirty ||
-                subtitleUploading
-              }
             />
-            <div
-              hidden={!settingsOpen}
-              className={settingsOpen ? "mt-4 rounded-panel border border-line bg-panel" : "hidden"}
-            >
-              {project.data.revisionId !== null ? (
-                <p className="p-4 text-small text-ink2">
-                  Use Edit project to change saved settings. Rebuild affected outputs reviews work
-                  before it starts.
-                </p>
-              ) : (
-                <ProjectProviders
-                  project={summary}
-                  providers={providers.data?.providers ?? []}
-                  actions={actions}
-                  inFlight={inFlight}
-                  edits={providerEdits}
-                  setEdits={setProviderEdits}
-                />
-              )}
-            </div>
             {actions.refusal === undefined || actions.refusal.stage !== undefined ? null : (
               // A refused cancel belongs to the project, not to one stage; every other
               // refusal is drawn under the row whose control was pressed.
@@ -148,31 +97,12 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
                 <RefusalLine message={actions.refusal.message} onDismiss={actions.dismissRefusal} />
               </Rail>
             )}
+            <RevisionWorkspace
+              projectId={projectId}
+              currentRevisionId={project.data.revisionId}
+              renderEditor={(props) => <RevisionForm {...props} />}
+            />
           </div>
-
-          <RevisionWorkspace
-            projectId={projectId}
-            currentRevisionId={project.data.revisionId}
-            renderEditor={({ edit, onChange, fields }) => (
-              <label className="block space-y-2">
-                Project title
-                <input
-                  className="block w-full rounded-control border border-line2 bg-panel2 p-2"
-                  value={edit.config.title}
-                  onChange={(event) =>
-                    onChange({ ...edit, config: { ...edit.config, title: event.target.value } })
-                  }
-                />
-                {fields
-                  .filter((field) => field.field === "config.title")
-                  .map((field) => (
-                    <span role="alert" key={field.field}>
-                      {field.message}
-                    </span>
-                  ))}
-              </label>
-            )}
-          />
           <BatchQueue />
           <ProjectProgress stages={stages} project={summary} />
           <div className="grid items-start gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
@@ -200,34 +130,6 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
                     outputs={outputs}
                     actions={actions}
                     busy={busy}
-                    {...(stage.kind === "video" && project.data.revisionId === null
-                      ? {
-                          subtitleControls: (
-                            <ProjectSubtitles
-                              key={projectId}
-                              project={summary}
-                              actions={actions}
-                              inFlight={inFlight}
-                              value={subtitles}
-                              uploading={subtitleUploading}
-                              onChange={(value) =>
-                                setSubtitleEdits({
-                                  projectId,
-                                  value: subtitlesFor(value, summary.config.sources),
-                                })
-                              }
-                              onDiscard={discardSubtitles}
-                              onUploading={(pending) =>
-                                setSubtitleUpload((current) =>
-                                  current?.projectId === projectId && current.pending === pending
-                                    ? current
-                                    : { projectId, pending },
-                                )
-                              }
-                            />
-                          ),
-                        }
-                      : {})}
                   />
                 </StageRow>
               ))}

@@ -1,13 +1,16 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import type { ProviderChoice, VoiceChoice } from "@app/slices/admission/model.js";
+import {
+  type RevisionControlInput,
+  revisionControlSchema,
+} from "@app/slices/control/revision-control-schema.js";
 import type { SubtitleConfig } from "@app/slices/subtitles/model.js";
 import type { Api, ProjectBody } from "@/api";
 import { fileUrl } from "@/api";
 import { errorOf, problemOf, readText } from "@/http";
 
-// The six actions on the project page, and the one read the stage bodies need. Every one
-// answers with the whole project as the server sees it after the change (`edge/http/actions.ts`
-// view()), so the page writes that straight into its cache instead of asking again.
+// Control responses may be replayed receipts for an older revision. Callers refetch
+// the current project instead of publishing these projections into the current cache.
 
 export interface ActionBody extends ProjectBody {
   // The stages the cascade put back to `pending`, or the ones a
@@ -26,8 +29,12 @@ export type ActionResult =
 // is a fault: a 500 is not a sentence for the user to act on.
 const refusals: ReadonlySet<number> = new Set([400, 404, 409]);
 
-export async function cancelRun(api: Api, projectId: string): Promise<ActionResult> {
-  return acted(await api.client.projects[":id"].cancel.$post({ param: { id: projectId } }));
+export async function cancelRun(
+  api: Api,
+  projectId: string,
+  input: RevisionControlInput,
+): Promise<ActionResult> {
+  return controlRun(api, projectId, "cancel", input);
 }
 
 export interface ProviderChanges {
@@ -37,8 +44,12 @@ export interface ProviderChanges {
   readonly images?: ProviderChoice;
 }
 
-export async function pauseRun(api: Api, projectId: string): Promise<ActionResult> {
-  return acted(await api.client.projects[":id"].pause.$post({ param: { id: projectId } }));
+export async function pauseRun(
+  api: Api,
+  projectId: string,
+  input: RevisionControlInput,
+): Promise<ActionResult> {
+  return controlRun(api, projectId, "pause", input);
 }
 
 export async function resumeRun(api: Api, projectId: string): Promise<ActionResult> {
@@ -152,4 +163,20 @@ async function acted(response: Response): Promise<ActionResult> {
     return { ok: false, message: errorOf(response, problem).message };
   }
   throw errorOf(response, problem);
+}
+
+async function controlRun(
+  api: Api,
+  projectId: string,
+  kind: "pause" | "cancel",
+  input: RevisionControlInput,
+): Promise<ActionResult> {
+  const body = revisionControlSchema.parse(input);
+  return acted(
+    await api.fetch(`${api.origin}/api/projects/${encodeURIComponent(projectId)}/${kind}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  );
 }

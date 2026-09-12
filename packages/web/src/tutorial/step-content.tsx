@@ -262,15 +262,16 @@ export function StepContent({
             safely and keep finished work.
           </p>
           <p>
-            While paused or failed, open <strong>Run settings</strong> to change providers, models
-            or voice. Press <strong>Save providers</strong>, then <strong>Resume</strong>{" "}
-            separately. Changing TTS choices restarts unfinished narration to avoid mixing voices;
-            completed outputs stay unchanged.
+            Open <strong>Edit project</strong> to change providers, models, voice, prompts or
+            optional steps.
+            <strong> Save changes</strong> keeps a new revision without starting generation. Then
+            use <strong>Rebuild affected outputs</strong> to review the required work and cost
+            before starting. Finished outputs remain available in <strong>History</strong>.
           </p>
           <p>
             Select a failed stage and open <strong>Error details</strong> to read the provider’s
-            message. <strong>Retry stage</strong> keeps completed outputs. Editing or rerunning
-            earlier work updates only the enabled dependent outputs.
+            message. Review <strong>Rebuild affected outputs</strong> to retry the necessary work.
+            Unchanged outputs are reused.
           </p>
         </>
       );
