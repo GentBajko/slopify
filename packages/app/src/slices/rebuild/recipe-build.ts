@@ -19,7 +19,7 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
       visualRecipes(
         context.config,
         context.content,
-        audio.timelineFingerprint,
+        audio.mediaFingerprint,
         captions?.fingerprint ?? null,
       ),
     ),

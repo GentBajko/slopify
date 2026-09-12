@@ -17,7 +17,7 @@ import type { TextRecipes } from "./recipe-text.js";
 
 export interface AudioRecipes {
   readonly recipes: readonly ResolvedWorkRecipe[];
-  readonly timelineFingerprint: string | null;
+  readonly mediaFingerprint: string | null;
   readonly timeline: FingerprintValue;
   readonly keys: readonly string[];
 }
@@ -25,7 +25,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
   const { config, content } = context;
   const recipes: ResolvedWorkRecipe[] = [];
   if (config.sources.audio === "off")
-    return { recipes, timelineFingerprint: null, timeline: [], keys: [] };
+    return { recipes, mediaFingerprint: null, timeline: [], keys: [] };
   let body: ResolvedWorkRecipe;
   if (config.sources.audio === "provide") {
     body = recipe(
@@ -149,7 +149,11 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
   });
   return {
     recipes,
-    timelineFingerprint: fingerprint(["timeline-v1", timeline, config.silenceGapSeconds]),
+    mediaFingerprint: fingerprint([
+      "audio-media-v1",
+      ordered.map(({ value }) => resourceIdentity(context, value)),
+      config.silenceGapSeconds,
+    ]),
     timeline,
     keys: ordered.map(({ value }) => value.key),
   };

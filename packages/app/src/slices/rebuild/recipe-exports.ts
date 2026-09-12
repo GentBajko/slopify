@@ -12,7 +12,7 @@ export function exportRecipes(
   audio: AudioRecipes,
 ): readonly ResolvedWorkRecipe[] {
   const { config, content } = context;
-  if (audio.timelineFingerprint === null) return [];
+  if (audio.mediaFingerprint === null) return [];
   const recipes: ResolvedWorkRecipe[] = [];
   if (config.sources.video === "off")
     recipes.push(
@@ -25,7 +25,7 @@ export function exportRecipes(
           version: 1,
           operation: "export-wav",
           values: [
-            audio.timelineFingerprint,
+            audio.mediaFingerprint,
             audioExportArgs([{ kind: "body", path: "$body", seconds: 0 }], "$output"),
           ],
         },
