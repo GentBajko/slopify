@@ -7,6 +7,7 @@ import type { RevisionDeps, RevisionView } from "../revisions/model.js";
 import { getRevisionView } from "../revisions/view.js";
 import { outputPath } from "../storage/layout.js";
 import { referencedAssetsAvailable, retainedNarrationPieces } from "./narration-history.js";
+import { applyProvidedReviews } from "./provided-review.js";
 import { planRevisionWork, type RevisionWorkPlan } from "./recipe-work.js";
 
 export function executionCatalogue(catalogue: Catalogue, config: RunConfig): Catalogue {
@@ -74,17 +75,21 @@ export function executionPlan(
       .filter((row) => row.available && row.assetId !== null)
       .flatMap((row) => (row.assetId === null ? [] : [row.assetId])),
   ]);
-  return planRevisionWork(
-    view.revision,
-    view,
-    catalogue,
-    available,
-    {
-      articleMarkdown: view.articleMarkdown ?? textOutput("article_md"),
-      researchNotes: textOutput("notes"),
-      ...(outline.length === 0 ? {} : { research: { outline, findings } }),
-    },
-    history,
+  return applyProvidedReviews(
+    deps.db,
+    view.revision.id,
+    planRevisionWork(
+      view.revision,
+      view,
+      catalogue,
+      available,
+      {
+        articleMarkdown: view.articleMarkdown ?? textOutput("article_md"),
+        researchNotes: textOutput("notes"),
+        ...(outline.length === 0 ? {} : { research: { outline, findings } }),
+      },
+      history,
+    ),
   );
 }
 

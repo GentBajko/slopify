@@ -5,7 +5,6 @@ import type { RevisionDeps } from "../revisions/model.js";
 import { saveRevision } from "../revisions/mutations.js";
 import { currentRevisionId } from "../revisions/repo.js";
 import { getRevisionView } from "../revisions/view.js";
-import { admitPendingRevision } from "./runtime-admission.js";
 import { projectStandings } from "./runtime-store.js";
 
 export interface RuntimeActionDeps extends RevisionDeps {
@@ -24,12 +23,7 @@ export async function revisionAction(
   const revisionId = currentRevisionId(deps.db, projectId);
   const view = revisionId === undefined ? undefined : getRevisionView(deps, projectId, revisionId);
   if (view === undefined) return { ok: false, reason: "no-project" };
-  if (action.kind === "retry") {
-    if (deps.catalogue === undefined) return { ok: false, reason: "not-retryable" };
-    admitPendingRevision(deps, view, deps.catalogue.read(), [action.stage]);
-    projectStandings(deps, projectId);
-    return { ok: true, redone: [action.stage] };
-  }
+  if (action.kind === "retry") return { ok: false, reason: "rebuild-required" };
   const config = view.revision.config;
   const content = view.revision.content;
   const image =
@@ -82,12 +76,10 @@ export async function revisionAction(
     },
   });
   if (!saved.ok) return { ok: false, reason: "not-rerunnable" };
-  if (regenerate !== undefined && deps.catalogue !== undefined)
-    admitPendingRevision(deps, saved.view, deps.catalogue.read());
   projectStandings(deps, projectId);
   return {
     ok: true,
-    redone: regenerate === undefined ? [] : [action.kind === "rerun" ? action.stage : "images"],
+    redone: [],
   };
 }
 function keyStage(key: string): StageKind {

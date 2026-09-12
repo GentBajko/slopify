@@ -2,7 +2,7 @@ import { readFileSync, rmSync } from "node:fs";
 import { expect, it } from "vitest";
 import { saveRevision } from "../revisions/mutations.js";
 import { outputPath } from "../storage/layout.js";
-import { admitPendingRevision } from "./runtime-admission.js";
+import { admitPendingRevision } from "./legacy-admission.fake.js";
 import { narrationCatalogue, narrationFixture } from "./runtime-narration.fake.js";
 import { executionPlan } from "./runtime-plan.js";
 

@@ -1,8 +1,14 @@
 import type { DatabaseSync } from "node:sqlite";
+import { z } from "zod";
 import type { Clock } from "../../kernel/clock.js";
 import type { ProjectEvent } from "../../kernel/events.js";
 import type { Log } from "../../kernel/log.js";
-import type { ProjectState, StageKind } from "../../kernel/pipeline.js";
+import {
+  type ProjectState,
+  projectStates,
+  type StageKind,
+  stageKinds,
+} from "../../kernel/pipeline.js";
 import { derive } from "../../kernel/runner/graph.js";
 import {
   finishStage,
@@ -11,6 +17,13 @@ import {
   setProjectPaused,
   stagesOf,
 } from "../admission/repo.js";
+import { withProjectControl } from "../control/lock.js";
+import {
+  checkRevisionControl,
+  type RevisionControlInput,
+  type RevisionControlRefusal,
+  rememberRevisionControl,
+} from "../control/revision-control.js";
 
 // Cancel on the project header. Every in-flight call of this project is aborted at once, every
 // `done` output and every finished piece is kept for the resume, and the project sits
@@ -26,6 +39,7 @@ export interface CancelDeps {
   // The runner's per-project abort. Taken as a function rather than as the whole runner
   // so a test can drive the barrier without a stage implementation.
   readonly abort: (projectId: string) => Promise<void>;
+  readonly hasInflight?: ((projectId: string) => boolean) | undefined;
   readonly emit: (projectId: string, event: ProjectEvent) => void;
 }
 
@@ -36,9 +50,33 @@ export type CancelResult =
       readonly canceled: readonly StageKind[];
       readonly state: ProjectState;
     }
-  | { readonly ok: false; readonly reason: "no-project" };
+  | { readonly ok: false; readonly reason: RevisionControlRefusal };
 
-export async function cancelProject(deps: CancelDeps, projectId: string): Promise<CancelResult> {
+export function cancelProject(
+  deps: CancelDeps,
+  projectId: string,
+  input?: RevisionControlInput,
+): Promise<CancelResult> {
+  return withProjectControl(deps.db, projectId, async () => {
+    const checked = checkRevisionControl(
+      deps,
+      projectId,
+      "cancel",
+      input,
+      z.object({
+        ok: z.literal(true),
+        canceled: z.array(z.enum(stageKinds)),
+        state: z.enum(projectStates),
+      }),
+    );
+    if (!checked.ok) return checked;
+    if (checked.response !== undefined) return checked.response;
+    const result = await cancel(deps, projectId);
+    if (result.ok) rememberRevisionControl(deps, checked.identity, result);
+    return result;
+  });
+}
+async function cancel(deps: CancelDeps, projectId: string): Promise<CancelResult> {
   if (!projectExists(deps.db, projectId)) {
     return { ok: false, reason: "no-project" };
   }
@@ -55,7 +93,8 @@ export async function cancelProject(deps: CancelDeps, projectId: string): Promis
         "SELECT 1 FROM revision_work w JOIN revision_work_reservations r ON r.work_id=w.id JOIN project_heads h ON h.project_id=r.project_id AND h.revision_id=r.revision_id WHERE w.project_id=? AND w.state='pending' LIMIT 1",
       )
       .get(projectId) !== undefined;
-  if (running.length === 0 && !paused && !admittedPending) {
+  const draining = deps.hasInflight?.(projectId) === true;
+  if (running.length === 0 && !paused && !admittedPending && !draining) {
     // A second click is a no-op. Nothing is aborted and no state changes, so
     // the page is simply told what the project already reads.
     return { ok: true, canceled: [], state: derive(before) };
@@ -63,7 +102,7 @@ export async function cancelProject(deps: CancelDeps, projectId: string): Promis
 
   // Nothing waits for a response. The runner holds the controllers and its own
   // barrier, so a stage that finishes during this does not release its dependents.
-  if (running.length > 0) await deps.abort(projectId);
+  if (running.length > 0 || draining) await deps.abort(projectId);
   deps.db
     .prepare(
       "UPDATE revision_work SET state='canceled',dispatch_state='held',failure_reason=? WHERE project_id=? AND state!='done'",

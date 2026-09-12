@@ -8,7 +8,8 @@ import { claimWork, finishWork, maySubmit } from "../../kernel/runner/work-autho
 import { ensureBaseline } from "../revisions/adopt.js";
 import { saveRevision } from "../revisions/mutations.js";
 import { revisionFixture } from "../revisions/revision.fake.js";
-import { admitInitialRevision, admitPendingRevision } from "./runtime-admission.js";
+import { admitPendingRevision } from "./legacy-admission.fake.js";
+import { admitInitialRevision } from "./runtime-admission.js";
 import { materializeAdmittedWork } from "./runtime-materialize.js";
 import { narrationCatalogue } from "./runtime-narration.fake.js";
 import { runRevisionInvocation } from "./runtime-run.js";

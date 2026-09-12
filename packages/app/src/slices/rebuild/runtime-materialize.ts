@@ -18,6 +18,7 @@ const reservation = z.object({
   desired_fingerprint: z.string().nullable(),
   origin_revision: z.string(),
   recipe_context: z.string(),
+  admission_id: z.string().nullable(),
 });
 type Reservation = z.infer<typeof reservation>;
 
@@ -27,7 +28,7 @@ export function materializeAdmittedWork(deps: RevisionDeps, projectId: string): 
     if (head === undefined) return;
     const reservations = deps.db
       .prepare(
-        `SELECT r.*,w.revision_id AS origin_revision,w.recipe_context FROM revision_work_reservations r JOIN revision_work w ON w.id=r.work_id WHERE r.project_id=? AND r.revision_id=? AND w.dispatch_state='allowed' AND w.recipe_context IS NOT NULL`,
+        `SELECT r.*,w.revision_id AS origin_revision,w.recipe_context,w.admission_id FROM revision_work_reservations r JOIN revision_work w ON w.id=r.work_id WHERE r.project_id=? AND r.revision_id=? AND w.dispatch_state='allowed' AND w.recipe_context IS NOT NULL`,
       )
       .all(projectId, head)
       .map((row) => reservation.parse(row));
@@ -100,6 +101,7 @@ export function materializeAdmittedWork(deps: RevisionDeps, projectId: string): 
           },
           plan.work.find((row) => row.key === recipe.key)?.disposition === "reuse",
           head,
+          anchor.admission_id,
         );
       }
     }

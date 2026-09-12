@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { z } from "zod";
 import type { CatalogueStore } from "../../catalog/store.js";
 import { transact } from "../../kernel/db/tx.js";
 import type { ProjectEvent } from "../../kernel/events.js";
@@ -14,7 +15,6 @@ import {
 } from "../admission/repo.js";
 import type { FieldError } from "../admission/rules.js";
 import { sameChunking } from "../narration/chunk.js";
-import { admitPendingRevision } from "../rebuild/runtime-admission.js";
 import { projectStandings } from "../rebuild/runtime-store.js";
 import type { RerunDeps } from "../reruns/index.js";
 import { clearUnfinishedAudio } from "../reruns/index.js";
@@ -28,6 +28,12 @@ import { hasKey, listVoices } from "../settings/repo.js";
 import { withProjectControl } from "./lock.js";
 import type { ProviderChanges, ProviderValidation } from "./providers.js";
 import { validateLocalProviderChanges, validateProviderChanges } from "./providers.js";
+import {
+  checkRevisionControl,
+  type RevisionControlInput,
+  type RevisionControlRefusal,
+  rememberRevisionControl,
+} from "./revision-control.js";
 
 export interface ControlDeps extends RerunDeps {
   readonly catalogue?: CatalogueStore | undefined;
@@ -75,7 +81,9 @@ export type ControlResult =
         | "running"
         | "not-editable"
         | "invalid-providers"
-        | "catalog-unavailable";
+        | "catalog-unavailable"
+        | "rebuild-required"
+        | RevisionControlRefusal;
       readonly fields?: readonly FieldError[];
     };
 
@@ -90,32 +98,54 @@ function changed(deps: ControlDeps, id: string, wake = false): void {
     });
 }
 
-export function pauseProject(deps: ControlDeps, id: string): Promise<ControlResult> {
+export function pauseProject(
+  deps: ControlDeps,
+  id: string,
+  input?: RevisionControlInput,
+): Promise<ControlResult> {
   return withProjectControl(deps.db, id, async () => {
-    const project = projectById(deps.db, id);
-    if (project === undefined) return { ok: false, reason: "no-project" };
-    const before = stagesOf(deps.db, id);
-    if (before.every((stage) => satisfied(stage.state))) return { ok: true };
-    const running = before.filter((stage) => stage.state === "running").map((stage) => stage.id);
-    if (project.paused === true && running.length === 0 && !deps.runner.hasInflight?.(id))
-      return { ok: true };
-    transact(deps.db, () => setProjectPaused(deps.db, id, true, deps.clock.now().toISOString()));
-    deps.emit(id, { type: "project.updated", projectId: id });
-    await deps.runner.abortProject(id, "pause");
-    // Covers a failed final row write and runners that report interruption as canceled.
-    for (const stage of stagesOf(deps.db, id)) {
-      if (running.includes(stage.id) && (stage.state === "running" || stage.state === "canceled")) {
-        finishStage(deps.db, stage.id, "pending", null, deps.clock.now().toISOString());
-        deps.emit(id, { type: "stage.state", projectId: id, stage: stage.kind, state: "pending" });
-      }
-    }
-    changed(deps, id);
-    return { ok: true };
+    if (deps.catalogue !== undefined) adoptBaseline(deps, id);
+    const checked = checkRevisionControl(
+      deps,
+      id,
+      "pause",
+      input,
+      z.object({ ok: z.literal(true) }),
+    );
+    if (!checked.ok) return checked;
+    if (checked.response !== undefined) return checked.response;
+    const result = await pause(deps, id);
+    if (result.ok) rememberRevisionControl(deps, checked.identity, result);
+    return result;
   });
+}
+async function pause(deps: ControlDeps, id: string): Promise<ControlResult> {
+  const project = projectById(deps.db, id);
+  if (project === undefined) return { ok: false, reason: "no-project" };
+  const before = stagesOf(deps.db, id);
+  if (before.every((stage) => satisfied(stage.state))) return { ok: true };
+  const running = before.filter((stage) => stage.state === "running").map((stage) => stage.id);
+  if (project.paused === true && running.length === 0 && !deps.runner.hasInflight?.(id))
+    return { ok: true };
+  transact(deps.db, () => setProjectPaused(deps.db, id, true, deps.clock.now().toISOString()));
+  deps.emit(id, { type: "project.updated", projectId: id });
+  await deps.runner.abortProject(id, "pause");
+  // Covers a failed final row write and runners that report interruption as canceled.
+  for (const stage of stagesOf(deps.db, id)) {
+    if (running.includes(stage.id) && (stage.state === "running" || stage.state === "canceled")) {
+      finishStage(deps.db, stage.id, "pending", null, deps.clock.now().toISOString());
+      deps.emit(id, { type: "stage.state", projectId: id, stage: stage.kind, state: "pending" });
+    }
+  }
+  changed(deps, id);
+  return { ok: true };
 }
 
 export function resumeProject(deps: ControlDeps, id: string): Promise<ControlResult> {
   return withProjectControl(deps.db, id, () => {
+    if (deps.catalogue !== undefined) adoptBaseline(deps, id);
+    if (currentRevisionId(deps.db, id) !== undefined)
+      return { ok: false, reason: "rebuild-required" };
     const project = projectById(deps.db, id);
     if (project === undefined) return { ok: false, reason: "no-project" };
     const stages = stagesOf(deps.db, id);
@@ -123,12 +153,6 @@ export function resumeProject(deps: ControlDeps, id: string): Promise<ControlRes
       return { ok: true };
     if (project.paused !== true && stages.every((stage) => satisfied(stage.state)))
       return { ok: true };
-    if (deps.catalogue !== undefined) {
-      const baseline = adoptBaseline(deps, id);
-      if (!baseline.ok) return { ok: false, reason: "no-project" };
-      admitPendingRevision(deps, baseline.view, deps.catalogue.read());
-      projectStandings(deps, id);
-    }
     transact(deps.db, () => {
       for (const stage of stages) {
         if (stage.state === "failed" || stage.state === "canceled") resetStage(deps.db, stage.id);

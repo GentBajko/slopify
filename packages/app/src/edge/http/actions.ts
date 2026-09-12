@@ -10,6 +10,10 @@ import type { ControlDeps, ControlResult } from "../../slices/control/index.js";
 import { changeProviders, pauseProject, resumeProject } from "../../slices/control/index.js";
 import { withProjectControl } from "../../slices/control/lock.js";
 import { providerChangesSchema } from "../../slices/control/providers.js";
+import {
+  type RevisionControlInput,
+  revisionControlSchema,
+} from "../../slices/control/revision-control-schema.js";
 import { type RevisionAction, revisionAction } from "../../slices/rebuild/runtime-actions.js";
 import type { RerunDeps, RerunRefusal, RerunResult } from "../../slices/reruns/index.js";
 import {
@@ -26,10 +30,6 @@ import { providerStatuses } from "../../slices/settings/readiness.js";
 import { outputsOf } from "../../slices/storage/repo.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
-
-// The actions on the project header and on each stage: Cancel, Retry, Re-run, Save &
-// re-run, Regenerate one image, Delete one image. Every one changes rows and files through
-// a slice and then ticks the runner; the route itself decides nothing.
 
 const idParam = z.object({
   id: z
@@ -57,6 +57,7 @@ const status: Readonly<Record<RerunRefusal, 400 | 404 | 409>> = {
   running: 409,
   "not-rerunnable": 409,
   "not-retryable": 409,
+  "rebuild-required": 409,
   "no-article": 409,
   "last-image": 409,
 };
@@ -69,6 +70,7 @@ const details: Readonly<Record<RerunRefusal, string>> = {
   running: "This project is still running. Cancel it or wait for it to finish.",
   "not-rerunnable": "Only a stage that has finished, failed, or been canceled can be re-run.",
   "not-retryable": "Only a failed or canceled stage can be retried.",
+  "rebuild-required": "Review the affected outputs and cost before rebuilding this revision.",
   "no-article": "This project has no article to edit yet.",
   // At least one image always remains.
   "last-image": "At least one image must remain, so the last one cannot be deleted.",
@@ -90,6 +92,7 @@ export function actionRoutes(deps: AppDeps) {
     clock: deps.clock,
     log: deps.log,
     abort: (projectId) => deps.runner.abortProject(projectId),
+    hasInflight: deps.runner.hasInflight,
     emit: (projectId, event) => {
       deps.hub.emit(projectId, event);
     },
@@ -125,8 +128,6 @@ export function actionRoutes(deps: AppDeps) {
       outputs: outputsOf(deps.db, projectId),
     };
   };
-  // Every re-run action ends the same way: the rows are written, then the runner is asked
-  // to look at the project. The cascade does the rest by itself.
   const started = (
     c: Parameters<typeof problem>[0],
     projectId: string,
@@ -140,7 +141,12 @@ export function actionRoutes(deps: AppDeps) {
       });
     }
     deps.hub.emit(projectId, { type: "project.updated", projectId });
-    if (!projectPaused(deps.db, projectId)) deps.runner.tick(projectId);
+    if (
+      result.redone.length > 0 &&
+      currentRevisionId(deps.db, projectId) === undefined &&
+      !projectPaused(deps.db, projectId)
+    )
+      deps.runner.tick(projectId);
     return c.json({ ...view(projectId), redone: result.redone });
   };
   const controlled = (
@@ -155,6 +161,10 @@ export function actionRoutes(deps: AppDeps) {
       "not-editable": 409,
       "invalid-providers": 400,
       "catalog-unavailable": 503,
+      "revision-required": 409,
+      conflict: 409,
+      "idempotency-conflict": 409,
+      "rebuild-required": 409,
     } as const;
     const messages = {
       "no-project": "No project has that id.",
@@ -162,6 +172,11 @@ export function actionRoutes(deps: AppDeps) {
       "not-editable": "Providers can be changed only while a project is paused or failed.",
       "invalid-providers": "The provider choices need attention.",
       "catalog-unavailable": "The provider model catalog could not be loaded. Try again.",
+      "revision-required":
+        "Reload the project before using this control. A current revision and request ID are required.",
+      conflict: "The project changed. Reload it before using this control.",
+      "idempotency-conflict": "This request ID has already been used for a different action.",
+      "rebuild-required": "Review the affected outputs and cost before rebuilding this revision.",
     };
     return problem(c, {
       status: codes[result.reason],
@@ -171,10 +186,32 @@ export function actionRoutes(deps: AppDeps) {
     });
   };
 
+  const controlInput = async (
+    c: Parameters<typeof problem>[0],
+    id: string,
+  ): Promise<RevisionControlInput | undefined | Response> => {
+    if (deps.catalogue !== undefined) adoptBaseline(deps, id);
+    if (currentRevisionId(deps.db, id) === undefined) return undefined;
+    let body: unknown;
+    try {
+      body = await c.req.json();
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) throw error;
+      return controlled(c, id, { ok: false, reason: "revision-required" });
+    }
+    const parsed = revisionControlSchema.safeParse(body);
+    return parsed.success
+      ? parsed.data
+      : controlled(c, id, { ok: false, reason: "revision-required" });
+  };
+
   return new Hono()
     .post("/:id/pause", zValidator("param", idParam, onInvalid), async (c) => {
       const { id } = c.req.valid("param");
-      return controlled(c, id, await pauseProject(control, id));
+      const input = await controlInput(c, id);
+      return input instanceof Response
+        ? input
+        : controlled(c, id, await pauseProject(control, id, input));
     })
     .post("/:id/resume", zValidator("param", idParam, onInvalid), async (c) => {
       const { id } = c.req.valid("param");
@@ -191,14 +228,11 @@ export function actionRoutes(deps: AppDeps) {
     )
     .post("/:id/cancel", zValidator("param", idParam, onInvalid), async (c) => {
       const { id } = c.req.valid("param");
-      return withProjectControl(deps.db, id, async () => {
-        const result = await cancelProject(cancel, id);
-        if (!result.ok) {
-          return problem(c, { status: 404, title: titleOf(404), detail: details["no-project"] });
-        }
-        // No tick: a canceled project sits until the user retries a stage.
-        return c.json({ ...view(id), canceled: result.canceled });
-      });
+      const input = await controlInput(c, id);
+      if (input instanceof Response) return input;
+      const result = await cancelProject(cancel, id, input);
+      if (!result.ok) return controlled(c, id, result);
+      return c.json({ ...view(id), canceled: result.canceled });
     })
     .post("/:id/stages/:kind/retry", zValidator("param", stageParam, onInvalid), (c) => {
       const { id, kind } = c.req.valid("param");

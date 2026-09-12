@@ -248,7 +248,10 @@ function retainedFor(
       pieceIds: [],
     }));
 }
-function priceRecipe(work: RebuildWork, value: ResolvedWorkRecipe | undefined): PricedRequest {
+export function priceRecipe(
+  work: RebuildWork,
+  value: ResolvedWorkRecipe | undefined,
+): PricedRequest {
   if (value === undefined || work.disposition !== "generate")
     return {
       kind: "local",

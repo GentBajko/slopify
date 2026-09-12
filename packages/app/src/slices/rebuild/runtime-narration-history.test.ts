@@ -4,8 +4,8 @@ import { expect, it } from "vitest";
 import { saveRevision } from "../revisions/mutations.js";
 import { outputPath } from "../storage/layout.js";
 import { insertStagedFile } from "../storage/repo.js";
+import { admitPendingRevision } from "./legacy-admission.fake.js";
 import { retainedNarrationPieces } from "./narration-history.js";
-import { admitPendingRevision } from "./runtime-admission.js";
 import { narrationCatalogue, narrationFixture } from "./runtime-narration.fake.js";
 import { executionPlan } from "./runtime-plan.js";
 

@@ -44,6 +44,7 @@ describe("migrate", () => {
       "machine",
       "outputs",
       "project_assets",
+      "project_control_receipts",
       "project_controls",
       "project_heads",
       "project_queue",
@@ -56,6 +57,7 @@ describe("migrate", () => {
       "revision_mutations",
       "revision_outputs",
       "revision_pieces",
+      "revision_provided_reviews",
       "revision_work",
       "revision_work_pieces",
       "revision_work_reservations",
@@ -166,9 +168,11 @@ describe("migrate", () => {
     for (const table of [
       "project_revisions",
       "project_assets",
+      "project_control_receipts",
       "project_heads",
       "revision_outputs",
       "revision_pieces",
+      "revision_provided_reviews",
       "revision_mutations",
     ]) {
       expect(db.prepare(`SELECT * FROM ${table}`).all()).toEqual([]);

@@ -121,3 +121,29 @@ it("saves article edits without reading the catalogue or admitting generation", 
     h.close();
   }
 });
+it("requires a reviewed rebuild for retry and saves regeneration without granting work", async () => {
+  const h = await exportFixture(false);
+  try {
+    const catalog = catalogue();
+    expect(
+      await revisionAction({ ...h.deps, catalogue: catalog.store }, h.projectId, {
+        kind: "retry",
+        stage: "audio",
+      }),
+    ).toEqual({ ok: false, reason: "rebuild-required" });
+    expect(
+      await revisionAction({ ...h.deps, catalogue: catalog.store }, h.projectId, {
+        kind: "rerun",
+        stage: "audio",
+      }),
+    ).toEqual({ ok: true, redone: [] });
+    expect(
+      h.deps.db
+        .prepare("SELECT count(*) AS n FROM revision_work WHERE dispatch_state='allowed'")
+        .get()?.n,
+    ).toBe(0);
+    expect(catalog.read).not.toHaveBeenCalled();
+  } finally {
+    h.close();
+  }
+});

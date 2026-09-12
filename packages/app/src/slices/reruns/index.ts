@@ -43,6 +43,7 @@ export interface RerunDeps {
 // Expected outcomes of the rules above, not faults: a refused delete is an answer the
 // page shows, so it comes back as a value.
 export type RerunRefusal =
+  | "rebuild-required"
   | "no-project"
   | "running"
   | "not-rerunnable"

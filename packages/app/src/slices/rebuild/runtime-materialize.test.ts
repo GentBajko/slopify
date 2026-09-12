@@ -7,7 +7,8 @@ import { commitRevisionOutputs } from "../revisions/publish.js";
 import { revisionFixture } from "../revisions/revision.fake.js";
 import { getRevisionView } from "../revisions/view.js";
 import { writeAsset } from "../storage/assets.js";
-import { admitInitialRevision, admitPendingRevision } from "./runtime-admission.js";
+import { admitPendingRevision } from "./legacy-admission.fake.js";
+import { admitInitialRevision } from "./runtime-admission.js";
 import { materializeAdmittedWork } from "./runtime-materialize.js";
 import { workPieces } from "./work-records.js";
 

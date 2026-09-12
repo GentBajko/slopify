@@ -61,6 +61,12 @@ export function checkMutation(
       .get(input.projectId, input.idempotencyKey) !== undefined
   )
     return refusal(deps, input.projectId, "idempotency-conflict");
+  if (
+    db
+      .prepare("SELECT 1 FROM project_control_receipts WHERE project_id=? AND idempotency_key=?")
+      .get(input.projectId, input.idempotencyKey) !== undefined
+  )
+    return refusal(deps, input.projectId, "idempotency-conflict");
   if (db.prepare("SELECT 1 FROM projects WHERE id=?").get(input.projectId) === undefined)
     return refusal(deps, input.projectId, "no-project");
   if (currentRevisionId(db, input.projectId) !== input.baseRevisionId)

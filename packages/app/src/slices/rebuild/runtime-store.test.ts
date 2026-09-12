@@ -8,7 +8,8 @@ import { claimWork, finishWork, maySubmit } from "../../kernel/runner/work-autho
 import { adoptBaseline } from "../revisions/adopt.js";
 import { saveRevision } from "../revisions/mutations.js";
 import { revisionFixture } from "../revisions/revision.fake.js";
-import { admitInitialRevision, admitPendingRevision } from "./runtime-admission.js";
+import { admitPendingRevision } from "./legacy-admission.fake.js";
+import { admitInitialRevision } from "./runtime-admission.js";
 import { executionStages, executionStandings, recordWorkProgress } from "./runtime-store.js";
 
 const catalogue: Catalogue = {

@@ -58,11 +58,15 @@ export function publicationTargets(
     targets.push({ revisionId: currentId, current: true, selected: true });
   return targets;
 }
-export function storePreview(deps: RevisionDeps, preview: RebuildPreview): void {
+export function storePreview(
+  deps: RevisionDeps,
+  preview: RebuildPreview,
+  execution?: import("./preview-plan.js").ExecutionSnapshot,
+): void {
   const parsed = rebuildPreviewSchema.parse(preview);
   deps.db
     .prepare(
-      "INSERT INTO rebuild_previews(id,project_id,revision_id,plan_fingerprint,body_json,created_at) VALUES (?,?,?,?,?,?)",
+      "INSERT INTO rebuild_previews(id,project_id,revision_id,plan_fingerprint,body_json,created_at,execution_json) VALUES (?,?,?,?,?,?,?)",
     )
     .run(
       parsed.id,
@@ -71,6 +75,7 @@ export function storePreview(deps: RevisionDeps, preview: RebuildPreview): void 
       parsed.planFingerprint,
       JSON.stringify(parsed),
       deps.clock.now().toISOString(),
+      execution === undefined ? null : JSON.stringify(execution),
     );
 }
 export function previewById(
@@ -91,3 +96,5 @@ export function recoverWork(db: DatabaseSync): void {
  UPDATE revision_work SET state='pending',dispatch_state='held' WHERE state!='done' AND project_id NOT IN (SELECT project_id FROM project_queue WHERE state='queued');`),
   );
 }
+
+export { admissionReceipt, admitPreview } from "./admission-repo.js";

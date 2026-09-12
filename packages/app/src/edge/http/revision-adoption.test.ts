@@ -84,6 +84,7 @@ it("adopts retained history before a direct legacy article mutation without a pr
         .get()?.n,
     ).toBe(0);
     expect(h.deps.db.prepare("SELECT count(*) AS n FROM attempts").get()?.n).toBe(0);
+    expect(tick).not.toHaveBeenCalled();
   } finally {
     h.close();
   }

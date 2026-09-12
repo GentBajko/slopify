@@ -59,6 +59,7 @@ CREATE TABLE rebuild_previews (
  revision_id TEXT NOT NULL,
  plan_fingerprint TEXT NOT NULL,
  body_json TEXT NOT NULL CHECK(json_valid(body_json)),
+ execution_json TEXT CHECK(execution_json IS NULL OR json_valid(execution_json)),
  created_at TEXT NOT NULL,
  UNIQUE(project_id,revision_id,id),
  FOREIGN KEY(project_id,revision_id) REFERENCES project_revisions(project_id,id) ON DELETE CASCADE
@@ -79,3 +80,24 @@ CREATE TABLE rebuild_admissions (
 ALTER TABLE attempts ADD COLUMN revision_id TEXT REFERENCES project_revisions(id) ON DELETE SET NULL;
 ALTER TABLE attempts ADD COLUMN work_id TEXT REFERENCES revision_work(id) ON DELETE SET NULL;
 ALTER TABLE attempts ADD COLUMN work_piece_id TEXT REFERENCES revision_work_pieces(id) ON DELETE SET NULL;
+
+CREATE TABLE project_control_receipts (
+ project_id TEXT NOT NULL,
+ idempotency_key TEXT NOT NULL,
+ operation TEXT NOT NULL CHECK(operation IN ('pause','cancel')),
+ request_hash TEXT NOT NULL,
+ base_revision_id TEXT NOT NULL,
+ response_json TEXT NOT NULL CHECK(json_valid(response_json)),
+ created_at TEXT NOT NULL,
+ PRIMARY KEY(project_id,idempotency_key),
+ FOREIGN KEY(project_id,base_revision_id) REFERENCES project_revisions(project_id,id) ON DELETE CASCADE
+);
+CREATE TABLE revision_provided_reviews (
+ project_id TEXT NOT NULL,
+ revision_id TEXT NOT NULL,
+ work_key TEXT NOT NULL,
+ dependency_fingerprint TEXT NOT NULL,
+ admission_id TEXT NOT NULL REFERENCES rebuild_admissions(id) ON DELETE CASCADE,
+ PRIMARY KEY(revision_id,work_key),
+ FOREIGN KEY(project_id,revision_id) REFERENCES project_revisions(project_id,id) ON DELETE CASCADE
+);
