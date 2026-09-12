@@ -1,4 +1,5 @@
 import type { Catalogue } from "../../catalog/schema.js";
+import { continuationLimit } from "../article/continuation.js";
 import type { RevisionDeps, RevisionView } from "../revisions/model.js";
 import type { ResolvedWorkRecipe } from "./recipe-model.js";
 import type { RevisionWorkPlan } from "./recipe-work.js";
@@ -100,15 +101,40 @@ export function requiresNewSubmission(
 ): boolean {
   const row = deps.db
     .prepare(
-      `SELECT w.state,w.dispatch_state,p.continuation FROM revision_work_reservations r JOIN revision_work w ON w.id=r.work_id JOIN revision_work_pieces p ON p.id=r.piece_id WHERE r.revision_id=? AND r.work_key=? AND r.fingerprint=? AND w.recipe_context IS NOT NULL`,
+      `SELECT w.id,w.state,w.dispatch_state,p.continuation FROM revision_work_reservations r JOIN revision_work w ON w.id=r.work_id JOIN revision_work_pieces p ON p.id=r.piece_id WHERE r.revision_id=? AND r.work_key=? AND r.fingerprint=? AND w.recipe_context IS NOT NULL`,
     )
     .get(revisionId, key, fingerprint);
   return (
     row === undefined ||
     (row.state !== "running" &&
       !(row.state === "pending" && row.dispatch_state === "allowed") &&
-      row.continuation === null)
+      row.continuation === null &&
+      !(key === "article:body" && cachedArticleComplete(deps, revisionId, String(row.id))))
   );
+}
+
+function cachedArticleComplete(deps: RevisionDeps, revisionId: string, workId: string): boolean {
+  const answers = deps.db
+    .prepare(
+      `SELECT p.work_key,json_extract(p.result_json,'$.finishReason') AS finish_reason
+       FROM revision_work_pieces p
+       JOIN revision_work_reservations r ON r.piece_id=p.id AND r.work_id=p.work_id
+         AND r.work_key=p.work_key AND r.fingerprint=p.fingerprint
+       JOIN project_revisions v ON v.id=r.revision_id
+       JOIN json_each(v.fingerprints) f ON f.key=COALESCE(r.logical_key,r.work_key)
+         AND f.value=COALESCE(r.desired_fingerprint,r.fingerprint)
+       WHERE r.revision_id=? AND p.work_id=? AND p.result_json IS NOT NULL
+         AND json_extract(p.input_json,'$.kind')='llm'
+         AND COALESCE(r.logical_key,r.work_key)='article:body'`,
+    )
+    .all(revisionId, workId);
+  for (let part = 0; part <= continuationLimit; part += 1) {
+    const key = part === 0 ? "article:body" : `article:continuation:${part}`;
+    const answer = answers.find((row) => row.work_key === key);
+    if (answer === undefined) return false;
+    if (answer.finish_reason !== "length") return true;
+  }
+  return false;
 }
 
 export function hasSubmittedRequest(
