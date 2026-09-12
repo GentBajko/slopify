@@ -399,3 +399,58 @@ it("switches live revision caches and rejects old text and lifecycle events", as
     "Article: running",
   );
 });
+
+it("keeps a newly saved pending stage unchanged by old failures, progress, and text", async () => {
+  const server: Server = { landed: 0, video: "pending", article: "running", revisionId: "r1" };
+  const { source, reads } = mount(server);
+  const content = await screen.findByRole("region", { name: "Article content" });
+  source.emit({
+    type: "article.delta",
+    projectId: "p1",
+    revisionId: "r1",
+    workId: "w1",
+    text: "Original article.",
+  });
+  await within(content).findByText("Original article.");
+  server.revisionId = "r2";
+  server.article = "pending";
+  const before = reads();
+  source.emit({ type: "project.updated", projectId: "p1" });
+  await waitFor(() => {
+    expect(reads()).toBeGreaterThan(before);
+    expect(screen.getAllByRole("status").map((live) => live.textContent)).toContain(
+      "Article: pending",
+    );
+  });
+  source.emit({
+    type: "stage.state",
+    projectId: "p1",
+    revisionId: "r1",
+    workId: "w1",
+    stage: "article",
+    state: "failed",
+    failureReason: "Obsolete failure",
+  });
+  source.emit({
+    type: "stage.progress",
+    projectId: "p1",
+    revisionId: "r1",
+    workId: "old-images",
+    stage: "images",
+    current: 99,
+    total: 100,
+  });
+  source.emit({
+    type: "article.delta",
+    projectId: "p1",
+    revisionId: "r1",
+    workId: "w1",
+    text: "Obsolete text.",
+  });
+  expect(screen.getAllByRole("status").map((live) => live.textContent)).toContain(
+    "Article: pending",
+  );
+  expect(screen.queryByText(/Obsolete/)).toBeNull();
+  expect(screen.queryByText("image 99 of 100")).toBeNull();
+  expect(within(content).queryByText("Original article.")).toBeNull();
+});

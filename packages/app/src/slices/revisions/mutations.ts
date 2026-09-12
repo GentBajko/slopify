@@ -5,6 +5,7 @@ import { narrationRegenerationKey } from "../narration/plan.js";
 import { recipeInputSchema } from "../rebuild/recipe-input-schema.js";
 import { planRevision } from "../rebuild/recipe-save.js";
 import { transitionRevisionWork } from "../rebuild/repo.js";
+import { projectStandings } from "../rebuild/runtime-store.js";
 import { discardPreparedAssets } from "../storage/assets.js";
 import { deleteStagedFile } from "../storage/repo.js";
 import { dropStagedSource } from "../storage/staging.js";
@@ -182,6 +183,7 @@ export async function saveRevision(
         recipes: plan.recipes,
       });
       projectSelected(deps.db, revision);
+      projectStandings(deps, revision.projectId);
       insertReceipt(deps, identity, revision.id);
       for (const row of prepared)
         if (row.upload !== undefined) deleteStagedFile(deps.db, row.upload.stagedFileId);

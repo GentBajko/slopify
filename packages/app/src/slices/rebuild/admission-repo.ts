@@ -11,7 +11,7 @@ import {
   type RebuildResult,
   rebuildAdmissionSchema,
 } from "./model.js";
-import { executionSnapshotSchema, planPreview } from "./preview-plan.js";
+import { executionSnapshotSchema, planPreview, reviewStillCovers } from "./preview-plan.js";
 import { previewById } from "./repo.js";
 import { insertInvocation } from "./runtime-admission.js";
 import { bindNarrationReuse } from "./runtime-narration-reuse.js";
@@ -81,7 +81,7 @@ export function admitPreview(
     const view = getRevisionView(deps, preview.projectId, preview.baseRevisionId);
     if (view === undefined) return { ok: false, reason: "no-project" };
     const fresh = planPreview(deps, view, snapshot.catalogue, preview.selection, preview.id);
-    if (!fresh.ok || fresh.value.preview.planFingerprint !== preview.planFingerprint)
+    if (!fresh.ok || !reviewStillCovers(preview, snapshot, fresh.value))
       return { ok: false, reason: "stale-preview" };
     const admissionId = deps.ids.next();
     const workIds: string[] = [];

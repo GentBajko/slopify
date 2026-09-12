@@ -67,3 +67,49 @@ it("blocks unavailable work and locks consent while starting", () => {
   for (const input of screen.getAllByRole("checkbox"))
     expect(input.hasAttribute("disabled")).toBe(true);
 });
+it("describes affected outputs without exposing fingerprint or asset identifiers", () => {
+  const hash = "ab".repeat(32);
+  render(
+    <RebuildReview
+      preview={{
+        ...preview,
+        changedInputs: [{ path: "export:wav", before: null, after: hash }],
+        retained: [
+          { slot: "image:private-asset-key", outputId: "o1", assetId: "a1", state: "ready" },
+        ],
+        work: [
+          ...preview.work,
+          {
+            ...preview.work[0],
+            key: "export:wav",
+            stage: "video",
+            kind: "local",
+            disposition: "local",
+            requestFingerprint: hash,
+            fingerprint: hash,
+            dependsOn: [],
+            reason: "A new export is needed.",
+            inflight: false,
+            pieceIds: [],
+          },
+        ],
+        costs: {
+          ...preview.costs,
+          rows: [{ stage: "export:wav", low: 0, high: 0, detail: "Local export." }],
+        },
+      }}
+      pending={false}
+      onStart={() => undefined}
+      onCancel={() => undefined}
+    />,
+  );
+  const review = screen.getByRole("region", { name: "Review affected rebuild" });
+  expect(review.textContent).toContain("Audio export (WAV): New output");
+  expect(review.textContent).toContain("Retained outputs: Image");
+  expect(review.textContent).not.toContain(hash);
+  expect(review.textContent).not.toContain("export:wav");
+  expect(review.textContent).not.toContain("private-asset-key");
+  expect(
+    screen.getByRole("checkbox", { name: "Keep the provided content for Provided narration" }),
+  ).toBeTruthy();
+});

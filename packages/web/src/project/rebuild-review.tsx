@@ -1,6 +1,7 @@
 import type { RebuildPreview } from "@app/slices/rebuild/model.js";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { outputSlotLabel } from "./output-label.js";
 export interface RebuildConsent {
   readonly acknowledgeUnknownCosts: boolean;
   readonly confirmedProvidedWorkKeys: readonly string[];
@@ -16,6 +17,7 @@ export function RebuildReview({
   readonly onStart: (consent: RebuildConsent) => void;
   readonly onCancel: () => void;
 }): import("react").ReactElement {
+  const label = workLabels(preview);
   const [confirmed, setConfirmed] = useState<readonly string[]>([]);
   const [unknown, setUnknown] = useState(false);
   const money = (value: number | null) =>
@@ -39,24 +41,32 @@ export function RebuildReview({
       <ul>
         {preview.changedInputs.map((change) => (
           <li key={change.path}>
-            {change.path}: {change.before ?? "None"} → {change.after ?? "None"}
+            {label(change.path)}:{" "}
+            {change.after === null
+              ? "Removed"
+              : change.before === null
+                ? "New output"
+                : "Inputs changed"}
           </li>
         ))}
       </ul>
       <ul>
         {preview.work.map((work) => (
           <li key={work.key}>
-            {work.key}: {work.disposition}. {work.reason}
+            {label(work.key)}: {dispositions[work.disposition]}. {work.reason}
             {work.inflight ? " An already submitted request may still be billed." : ""}
           </li>
         ))}
       </ul>
-      <p>Retained outputs: {preview.retained.map((output) => output.slot).join(", ") || "None"}</p>
+      <p>
+        Retained outputs:{" "}
+        {preview.retained.map((output) => outputSlotLabel(output.slot)).join(", ") || "None"}
+      </p>
       {preview.wholeRequestNotice === null ? null : <p>{preview.wholeRequestNotice}</p>}
       <ul>
         {preview.costs.rows.map((row) => (
           <li key={`${row.stage}-${row.detail}`}>
-            {row.stage}: {money(row.low)}–{money(row.high)}. {row.detail}
+            {label(row.stage)}: {money(row.low)}–{money(row.high)}. {row.detail}
           </li>
         ))}
       </ul>
@@ -78,7 +88,7 @@ export function RebuildReview({
               )
             }
           />
-          Keep the provided content for {key}
+          Keep the provided content for {label(key)}
         </label>
       ))}
       {preview.costs.unknown === 0 ? null : (
@@ -112,4 +122,62 @@ export function RebuildReview({
       </div>
     </section>
   );
+}
+
+const dispositions = {
+  reuse: "Reuse",
+  generate: "Generate",
+  local: "Build locally",
+  review: "Review required",
+  blocked: "Unavailable",
+};
+const workNames: Readonly<Record<string, string>> = {
+  "export:wav": "Audio export (WAV)",
+  "export:video": "Video export",
+  "subtitles:timing": "Subtitle timing",
+  "subtitles:cues": "Caption text and timing",
+  "subtitles:files": "Subtitle files",
+  "article:body": "Article",
+  "audio:provided": "Provided narration",
+  "audio:body:concat": "Combined narration",
+  "audio:intro": "Combined intro narration",
+  "audio:outro": "Combined outro narration",
+  "research:planner": "Research plan",
+  "research:notes": "Research notes",
+  "entry:intro:text": "Intro text",
+  "entry:outro:text": "Outro text",
+};
+function workName(key: string): string {
+  const exact = workNames[key];
+  if (exact !== undefined) return exact;
+  const prefix = key.split(":")[0];
+  const families: Readonly<Record<string, string>> = {
+    image: "Image request",
+    images: "Images",
+    audio: "Narration request",
+    article: "Article",
+    research: "Research",
+    thumbnail: "Thumbnail",
+    subtitles: "Subtitles",
+    video: "Video export",
+    export: "Export",
+    entry: "Intro or outro",
+  };
+  return families[prefix ?? ""] ?? "Output";
+}
+function workLabels(preview: RebuildPreview): (key: string) => string {
+  const labels = new Map<string, string>();
+  const counts = new Map<string, number>();
+  for (const work of preview.work) {
+    const name = workName(work.key);
+    counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
+  const positions = new Map<string, number>();
+  for (const work of preview.work) {
+    const name = workName(work.key);
+    const position = (positions.get(name) ?? 0) + 1;
+    positions.set(name, position);
+    labels.set(work.key, (counts.get(name) ?? 0) > 1 ? `${name} ${position}` : name);
+  }
+  return (key) => labels.get(key) ?? workName(key);
 }

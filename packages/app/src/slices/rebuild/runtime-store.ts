@@ -124,7 +124,33 @@ export function executionStandings(
   const work = executionStages(deps, projectId);
   return stageKinds.map((kind) => {
     const source = view.revision.config.sources[kind];
-    const group = work.filter((entry) => entry.kind === kind);
+    const group = work
+      .filter((entry) => entry.kind === kind)
+      .map((entry) => {
+        const pieces = workPieces(deps.db, entry.work.workId);
+        const retained =
+          pieces.length > 0 &&
+          pieces.every(
+            (piece) =>
+              view.outputs.some(
+                (output) =>
+                  output.workKey === piece.key &&
+                  output.selected &&
+                  output.available &&
+                  output.state === "ready",
+              ) ||
+              view.pieces.some(
+                (output) =>
+                  output.key === piece.key &&
+                  output.selected &&
+                  output.available &&
+                  output.piece.state === "done" &&
+                  output.fingerprint === piece.fingerprint,
+              ),
+          );
+        // Save can bind an existing asset without granting its placeholder invocation.
+        return retained ? { ...entry, state: "done" as const } : entry;
+      });
     let state: StageState =
       source === "off" ? "skipped" : source === "provide" ? "provided" : "pending";
     if (group.some((entry) => entry.state === "running")) state = "running";

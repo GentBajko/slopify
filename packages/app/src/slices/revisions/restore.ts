@@ -1,6 +1,7 @@
 import { transact } from "../../kernel/db/tx.js";
 import { planRevision } from "../rebuild/recipe-save.js";
 import { transitionRevisionWork } from "../rebuild/repo.js";
+import { projectStandings } from "../rebuild/runtime-store.js";
 import type { ProjectRevision, RevisionDeps, RevisionMutationResult } from "./model.js";
 import {
   checkMutation,
@@ -64,6 +65,7 @@ export async function restoreRevision(
       logicalKeys: logicalKeys(deps, input.projectId, input.baseRevisionId, revision.fingerprints),
     });
     projectSelected(deps.db, revision);
+    projectStandings(deps, revision.projectId);
     insertReceipt(deps, identity, revision.id);
     return { ok: true, view: requiredView(deps, input.projectId, revision.id), duplicate: false };
   });

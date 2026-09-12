@@ -26,3 +26,9 @@ export function outputLabel(output: Output): string {
     ? `Image ${output.meta.index}`
     : labels[output.role];
 }
+
+export function outputSlotLabel(slot: string): string {
+  if (slot.startsWith("image:")) return "Image";
+  const role = slot.split(":").at(-1);
+  return Object.entries(labels).find(([key]) => key === role)?.[1] ?? "Saved output";
+}

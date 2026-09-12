@@ -110,3 +110,18 @@ export function requiresNewSubmission(
       row.continuation === null)
   );
 }
+
+export function hasSubmittedRequest(
+  deps: RevisionDeps,
+  revisionId: string,
+  key: string,
+  fingerprint: string,
+): boolean {
+  return (
+    deps.db
+      .prepare(
+        `SELECT 1 FROM revision_work_reservations r JOIN revision_work_pieces p ON p.id=r.piece_id WHERE r.revision_id=? AND r.work_key=? AND r.fingerprint=? AND p.submitted_at IS NOT NULL AND p.continuation IS NULL AND p.state!='done'`,
+      )
+      .get(revisionId, key, fingerprint) !== undefined
+  );
+}

@@ -5,7 +5,11 @@ import { estimateRequests } from "../estimate/index.js";
 import type { RevisionDeps, RevisionView } from "../revisions/model.js";
 import { requestHash } from "../revisions/mutation-request.js";
 import type { RebuildPreview, RebuildResult, RebuildSelection } from "./model.js";
-import { requiresNewSubmission, retainedPreviewPlan } from "./preview-retained.js";
+import {
+  hasSubmittedRequest,
+  requiresNewSubmission,
+  retainedPreviewPlan,
+} from "./preview-retained.js";
 import { providedDependencyFingerprint } from "./provided-review.js";
 import { recipeInputSchema } from "./recipe-input-schema.js";
 import type { ResolvedWorkRecipe } from "./recipe-model.js";
@@ -15,6 +19,9 @@ import { executionCatalogue } from "./runtime-plan.js";
 
 export const executionSnapshotSchema = z.object({
   version: z.literal(1),
+  submissions: z
+    .array(z.object({ key: z.string(), submit: z.boolean(), uncertain: z.boolean() }))
+    .default([]),
   catalogue: catalogueSchema,
   recipes: z.array(
     z.object({
@@ -135,8 +142,22 @@ export function planPreview(
     recipes,
     view,
   );
+  const submissions = work
+    .filter((row) => row.kind === "provider")
+    .map((row) => {
+      const submit =
+        row.disposition !== "reuse" &&
+        !row.inflight &&
+        requiresNewSubmission(deps, view.revision.id, row.key, row.fingerprint);
+      return {
+        key: row.key,
+        submit,
+        uncertain: submit && hasSubmittedRequest(deps, view.revision.id, row.key, row.fingerprint),
+      };
+    });
   const execution: ExecutionSnapshot = {
     version: 1,
+    submissions,
     catalogue: snapshot,
     recipes: recipes.map((row) => ({ ...row, dependsOn: [...row.dependsOn] })),
     dispositions: work.map((row) => ({ key: row.key, disposition: row.disposition })),
@@ -159,10 +180,7 @@ export function planPreview(
     projectId: view.revision.projectId,
     baseRevisionId: view.revision.id,
     selection,
-    planFingerprint: requestHash("rebuild-plan-v1", view.revision.id, {
-      ...execution,
-      catalogue: { ...execution.catalogue, updatedAt: "1970-01-01" },
-    }),
+    planFingerprint: executionFingerprint(view.revision.id, execution),
     work,
     changedInputs: plan.changedInputs.filter((row) => selected.has(row.path)),
     retained: view.outputs
@@ -186,7 +204,11 @@ export function planPreview(
       snapshot,
     ),
     wholeRequestNotice: plan.wholeRequestNotice,
-    warnings: [],
+    warnings: submissions.some((row) => row.uncertain)
+      ? [
+          "A previous request was submitted without a saved result or resumable job. Retrying may charge you again.",
+        ]
+      : [],
   };
   return { ok: true, value: { preview, execution } };
 }
@@ -236,4 +258,31 @@ function selectedCatalogue(
       Object.entries(catalogue.providers).filter(([id]) => providers.has(id)),
     ),
   };
+}
+
+function executionFingerprint(revisionId: string, execution: ExecutionSnapshot): string {
+  return requestHash("rebuild-plan-v1", revisionId, {
+    ...execution,
+    catalogue: { ...execution.catalogue, updatedAt: "1970-01-01" },
+  });
+}
+
+export function reviewStillCovers(
+  reviewed: RebuildPreview,
+  snapshot: ExecutionSnapshot,
+  fresh: PreviewPlan,
+): boolean {
+  if (reviewed.planFingerprint === fresh.preview.planFingerprint) return true;
+  const escalated = fresh.execution.submissions.some((current) => {
+    const old = snapshot.submissions.find((row) => row.key === current.key);
+    return current.submit && (old?.submit !== true || (current.uncertain && !old.uncertain));
+  });
+  // A paid request may become a free join while readiness loads, never the reverse.
+  return (
+    !escalated &&
+    executionFingerprint(reviewed.baseRevisionId, {
+      ...fresh.execution,
+      submissions: snapshot.submissions,
+    }) === reviewed.planFingerprint
+  );
 }

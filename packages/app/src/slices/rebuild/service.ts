@@ -16,7 +16,7 @@ import {
   type RebuildSelection,
   startRebuildSchema,
 } from "./model.js";
-import { executionSnapshotSchema, planPreview } from "./preview-plan.js";
+import { executionSnapshotSchema, planPreview, reviewStillCovers } from "./preview-plan.js";
 import { admissionReceipt, admitPreview, previewById, storePreview } from "./repo.js";
 import { checkReadiness, localReadiness } from "./service-readiness.js";
 
@@ -149,7 +149,7 @@ export async function startRebuild(
     if (current === undefined) return { ok: false, reason: "no-project" };
     const catalogue = deps.catalogue.read();
     const fresh = planPreview(deps, current, catalogue, preview.selection, preview.id);
-    if (!fresh.ok || fresh.value.preview.planFingerprint !== preview.planFingerprint)
+    if (!fresh.ok || !reviewStillCovers(preview, snapshot, fresh.value))
       return { ok: false, reason: "stale-preview" };
     const fields = localReadiness(deps, snapshot, current, ready.providers, catalogue);
     if (fields.length > 0) return { ok: false, reason: "readiness", fields };
