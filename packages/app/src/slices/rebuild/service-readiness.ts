@@ -135,10 +135,7 @@ export function localReadiness(
       const model = catalogue.tts.find(
         (row) => row.provider === input.provider && row.id === input.model,
       );
-      const maximum =
-        input.provider === "inworld" && input.model === "inworld-tts-2"
-          ? Math.min(model?.tts.maxCharacters ?? 4000, 4000)
-          : model?.tts.maxCharacters;
+      const maximum = model?.tts.maxCharacters;
       if (maximum !== undefined && input.text.length > maximum)
         fields.push({
           field: `work.${recipe.key}.text`,
