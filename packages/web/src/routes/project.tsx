@@ -12,6 +12,9 @@ import { ProjectHeader } from "@/project/header";
 import { ProjectNavigation, ProjectProgress } from "@/project/navigation";
 import { RefusalLine } from "@/project/parts";
 import { changedProviderChoices, ProjectProviders } from "@/project/providers";
+import { RevisionControlContext } from "@/project/revision-action-context";
+import { RevisionMedia } from "@/project/revision-media";
+import { RevisionWorkspace } from "@/project/revision-workspace";
 import { StageRow } from "@/project/stage-row";
 import { ProjectSubtitles } from "@/project/subtitles";
 import { finalOutput } from "@/project/summary";
@@ -80,8 +83,6 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
     (summary.config.sources.video === "off" && summary.config.sources.audio === "off"
       ? outputs.find((output) => output.role === "article_md")
       : undefined);
-  // No action is offered while a stage of the project is running, and the server refuses
-  // one that gets through anyway.
   const inFlight = stages.some((stage) => stage.state === "running");
   const busy =
     summary.status === "running" || summary.status === "paused" || inFlight || actions.pending;
@@ -97,110 +98,144 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
     setSubtitleEdits((current) => (current?.projectId === projectId ? undefined : current));
 
   return (
-    <div className="mx-auto max-w-[1440px] space-y-5">
-      {/* The back link sits above a detail page's title. */}
-      <Link to="/" className="mb-[10px] block text-small text-ink2 hover:text-ink">
-        &lt; Projects
-      </Link>
+    <RevisionMedia projectId={projectId} revisionId={project.data.revisionId}>
+      <RevisionControlContext value={project.data.revisionId !== null}>
+        <div className="mx-auto max-w-[1440px] space-y-5">
+          {/* The back link sits above a detail page's title. */}
+          <Link to="/" className="mb-[10px] block text-small text-ink2 hover:text-ink">
+            &lt; Projects
+          </Link>
 
-      <div data-tour="project-controls">
-        <ProjectHeader
-          project={summary}
-          prompts={prompts.data?.prompts}
-          actions={actions}
-          inFlight={inFlight}
-          settingsOpen={settingsOpen}
-          onToggleSettings={() => setSettingsOpen(!settingsOpen)}
-          primaryOutput={primaryOutput}
-          unsavedProviders={
-            Object.keys(changedProviderChoices(summary.config, providerEdits)).length > 0 ||
-            subtitlesDirty ||
-            subtitleUploading
-          }
-        />
-        <div
-          hidden={!settingsOpen}
-          className={settingsOpen ? "mt-4 rounded-panel border border-line bg-panel" : "hidden"}
-        >
-          <ProjectProviders
-            project={summary}
-            providers={providers.data?.providers ?? []}
-            actions={actions}
-            inFlight={inFlight}
-            edits={providerEdits}
-            setEdits={setProviderEdits}
+          <div data-tour="project-controls">
+            <ProjectHeader
+              project={summary}
+              prompts={prompts.data?.prompts}
+              actions={actions}
+              inFlight={inFlight}
+              settingsOpen={settingsOpen}
+              onToggleSettings={() => setSettingsOpen(!settingsOpen)}
+              primaryOutput={primaryOutput}
+              unsavedProviders={
+                Object.keys(changedProviderChoices(summary.config, providerEdits)).length > 0 ||
+                subtitlesDirty ||
+                subtitleUploading
+              }
+            />
+            <div
+              hidden={!settingsOpen}
+              className={settingsOpen ? "mt-4 rounded-panel border border-line bg-panel" : "hidden"}
+            >
+              {project.data.revisionId !== null ? (
+                <p className="p-4 text-small text-ink2">
+                  Use Edit project to change saved settings. Rebuild affected outputs reviews work
+                  before it starts.
+                </p>
+              ) : (
+                <ProjectProviders
+                  project={summary}
+                  providers={providers.data?.providers ?? []}
+                  actions={actions}
+                  inFlight={inFlight}
+                  edits={providerEdits}
+                  setEdits={setProviderEdits}
+                />
+              )}
+            </div>
+            {actions.refusal === undefined || actions.refusal.stage !== undefined ? null : (
+              // A refused cancel belongs to the project, not to one stage; every other
+              // refusal is drawn under the row whose control was pressed.
+              <Rail className="py-[10px]">
+                <RefusalLine message={actions.refusal.message} onDismiss={actions.dismissRefusal} />
+              </Rail>
+            )}
+          </div>
+
+          <RevisionWorkspace
+            projectId={projectId}
+            currentRevisionId={project.data.revisionId}
+            renderEditor={({ edit, onChange, fields }) => (
+              <label className="block space-y-2">
+                Project title
+                <input
+                  className="block w-full rounded-control border border-line2 bg-panel2 p-2"
+                  value={edit.config.title}
+                  onChange={(event) =>
+                    onChange({ ...edit, config: { ...edit.config, title: event.target.value } })
+                  }
+                />
+                {fields
+                  .filter((field) => field.field === "config.title")
+                  .map((field) => (
+                    <span role="alert" key={field.field}>
+                      {field.message}
+                    </span>
+                  ))}
+              </label>
+            )}
           />
-        </div>
-        {actions.refusal === undefined || actions.refusal.stage !== undefined ? null : (
-          // A refused cancel belongs to the project, not to one stage; every other
-          // refusal is drawn under the row whose control was pressed.
-          <Rail className="py-[10px]">
-            <RefusalLine message={actions.refusal.message} onDismiss={actions.dismissRefusal} />
-          </Rail>
-        )}
-      </div>
-
-      <BatchQueue />
-      <ProjectProgress stages={stages} project={summary} />
-      <div className="grid items-start gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
-        <ProjectNavigation
-          stages={stages}
-          project={summary}
-          outputs={outputs}
-          selected={selected}
-          onSelect={selectStage}
-        />
-        <div className="min-w-0">
-          {stages.map((stage) => (
-            <StageRow
-              key={stage.id}
-              active={stage.kind === selected}
-              stage={stage}
+          <BatchQueue />
+          <ProjectProgress stages={stages} project={summary} />
+          <div className="grid items-start gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
+            <ProjectNavigation
+              stages={stages}
               project={summary}
               outputs={outputs}
-              providers={providers.data?.providers ?? []}
-              actions={actions}
-            >
-              <StageBodyFor
-                stage={stage}
-                project={summary}
-                outputs={outputs}
-                actions={actions}
-                busy={busy}
-                {...(stage.kind === "video"
-                  ? {
-                      subtitleControls: (
-                        <ProjectSubtitles
-                          key={projectId}
-                          project={summary}
-                          actions={actions}
-                          inFlight={inFlight}
-                          value={subtitles}
-                          uploading={subtitleUploading}
-                          onChange={(value) =>
-                            setSubtitleEdits({
-                              projectId,
-                              value: subtitlesFor(value, summary.config.sources),
-                            })
-                          }
-                          onDiscard={discardSubtitles}
-                          onUploading={(pending) =>
-                            setSubtitleUpload((current) =>
-                              current?.projectId === projectId && current.pending === pending
-                                ? current
-                                : { projectId, pending },
-                            )
-                          }
-                        />
-                      ),
-                    }
-                  : {})}
-              />
-            </StageRow>
-          ))}
+              selected={selected}
+              onSelect={selectStage}
+            />
+            <div className="min-w-0">
+              {stages.map((stage) => (
+                <StageRow
+                  key={stage.id}
+                  active={stage.kind === selected}
+                  stage={stage}
+                  project={summary}
+                  outputs={outputs}
+                  providers={providers.data?.providers ?? []}
+                  actions={actions}
+                >
+                  <StageBodyFor
+                    stage={stage}
+                    project={summary}
+                    outputs={outputs}
+                    actions={actions}
+                    busy={busy}
+                    {...(stage.kind === "video" && project.data.revisionId === null
+                      ? {
+                          subtitleControls: (
+                            <ProjectSubtitles
+                              key={projectId}
+                              project={summary}
+                              actions={actions}
+                              inFlight={inFlight}
+                              value={subtitles}
+                              uploading={subtitleUploading}
+                              onChange={(value) =>
+                                setSubtitleEdits({
+                                  projectId,
+                                  value: subtitlesFor(value, summary.config.sources),
+                                })
+                              }
+                              onDiscard={discardSubtitles}
+                              onUploading={(pending) =>
+                                setSubtitleUpload((current) =>
+                                  current?.projectId === projectId && current.pending === pending
+                                    ? current
+                                    : { projectId, pending },
+                                )
+                              }
+                            />
+                          ),
+                        }
+                      : {})}
+                  />
+                </StageRow>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      </RevisionControlContext>
+    </RevisionMedia>
   );
 }
 

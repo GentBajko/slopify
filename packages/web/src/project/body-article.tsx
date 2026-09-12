@@ -64,18 +64,25 @@ export function ArticleBody({ stage, project, outputs, actions, busy }: BodyProp
         {glossary === undefined ? null : <OutputDownload output={glossary} label="Glossary" />}
       </div>
 
+      {revisionId === null ? null : (
+        <p className="text-small text-ink2">
+          Use Edit project to save changes, then review affected outputs before rebuilding.
+        </p>
+      )}
       <ActionRow>
         {draft === undefined ? (
           <>
-            <Button
-              type="button"
-              disabled={busy || markdown === undefined || stored.data === undefined}
-              onClick={() => {
-                setDraft(text);
-              }}
-            >
-              Edit
-            </Button>
+            {revisionId === null ? (
+              <Button
+                type="button"
+                disabled={busy || markdown === undefined || stored.data === undefined}
+                onClick={() => {
+                  setDraft(text);
+                }}
+              >
+                Edit
+              </Button>
+            ) : null}
             <ConfirmedButton
               action={{ kind: "rerun", stage: stage.kind }}
               run={() => {

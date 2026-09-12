@@ -17,6 +17,10 @@ import {
 // drift apart.
 export const keys = {
   projects: ["projects"] as const,
+  revisions: (id: string) => ["project", id, "revisions"] as const,
+  revision: (id: string, revisionId: string) => ["project", id, "revision", revisionId] as const,
+  revisionFile: (id: string, revisionId: string, recordId: string) =>
+    ["revision-file", id, revisionId, recordId] as const,
   project: (id: string) => ["project", id] as const,
   // The text `article.delta` appends to. It is patched, never fetched.
   article: (id: string, revisionId: string | null = null) =>

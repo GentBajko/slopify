@@ -3,12 +3,16 @@ import { useState } from "react";
 import { useApp } from "@/app-context";
 import { errorOf, problemOf } from "@/http";
 
+import { openRevisionFolder } from "./revision-api.js";
+
 export function OpenFolder({
   projectId,
   asset,
+  folder = null,
 }: {
   readonly projectId: string;
   readonly asset: string;
+  readonly folder?: { readonly revisionId: string; readonly recordId: string } | null;
 }) {
   const { api } = useApp();
   const [pending, setPending] = useState(false);
@@ -17,6 +21,10 @@ export function OpenFolder({
     setPending(true);
     setError(undefined);
     try {
+      if (folder !== null) {
+        await openRevisionFolder(api, projectId, folder.revisionId, folder.recordId);
+        return;
+      }
       const response = await api.client.projects[":id"]["open-folder"].$post({
         param: { id: projectId },
         json: { asset },

@@ -2,12 +2,13 @@ import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
 import type { ProviderStatus } from "@app/slices/settings/model.js";
 import type { Output } from "@app/slices/storage/model.js";
 import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { type ReactNode, useContext } from "react";
 import { StageGlyph } from "@/components/glyph";
 import { StateWord } from "@/components/state-word";
 import { LiveWriting } from "./live-writing.js";
 import { RefusalLine } from "./parts.js";
 import { unreadyFor } from "./readiness.js";
+import { RevisionControlContext } from "./revision-action-context.js";
 import { attempts, stageName, summaryOf } from "./summary.js";
 import type { ProjectActions } from "./use-actions.js";
 
@@ -37,6 +38,7 @@ export function StageRow({
   readonly children: ReactNode;
   readonly active?: boolean;
 }) {
+  const revisioned = useContext(RevisionControlContext);
   const name = stageName(stage.kind, project.config);
   const held = project.status === "paused" ? { ...actions, pending: true } : actions;
   const unready = unreadyFor(stage.kind, project.config, providers);
@@ -109,19 +111,23 @@ export function StageRow({
               {stage.state === "failed" ? `${name} needs attention.` : `${name} was canceled.`}
             </p>
             <span className="text-label text-ink2">{attempts(stage)}</span>
-            <button
-              type="button"
-              disabled={unready !== undefined || held.pending}
-              onClick={() => held.run({ kind: "retry", stage: stage.kind })}
-              className="rounded-control border border-red px-3 py-2 text-small text-ink hover:bg-panel2 disabled:opacity-50"
-            >
-              {unready?.label ?? "Retry stage"}
-            </button>
+            {revisioned ? null : (
+              <button
+                type="button"
+                disabled={unready !== undefined || held.pending}
+                onClick={() => held.run({ kind: "retry", stage: stage.kind })}
+                className="rounded-control border border-red px-3 py-2 text-small text-ink hover:bg-panel2 disabled:opacity-50"
+              >
+                {unready?.label ?? "Retry stage"}
+              </button>
+            )}
           </div>
           <p className="mt-2 text-small text-ink2">
-            {project.status === "paused"
-              ? "Resume the project to continue with its saved settings."
-              : "Retry keeps completed outputs. To change the provider or model, open Run settings."}
+            {revisioned
+              ? "Use Rebuild affected outputs to review the work and cost before retrying."
+              : project.status === "paused"
+                ? "Resume the project to continue with its saved settings."
+                : "Retry keeps completed outputs. To change the provider or model, open Run settings."}
           </p>
           {stage.failureReason ? (
             <details className="mt-3">

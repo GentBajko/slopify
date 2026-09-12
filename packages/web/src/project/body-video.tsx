@@ -1,23 +1,22 @@
-import { assetOf } from "@app/slices/storage/asset-name.js";
-import { fileUrl } from "@/api";
-import { useApp } from "@/app-context";
 import { cn } from "@/lib/utils";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { ConfirmedButton } from "./controls.js";
 import { ActionRow, OutputDownload, StageBody } from "./parts.js";
+import { useOutputMedia } from "./revision-media.js";
 import { duration, percent, preparingSubtitles } from "./summary.js";
 
 // The final stage plays an MP4 or, when Video is Off, the combined narration WAV.
 // The previous file stays playable until ffmpeg successfully replaces it.
 export function VideoBody({ stage, project, outputs, actions, busy, subtitleControls }: BodyProps) {
-  const { api } = useApp();
   const audioExport =
     project.config.sources.video === "off" && project.config.sources.audio !== "off";
   const video = roleOf(outputsOf(outputs, stage), audioExport ? "audio_export" : "video");
   const subtitleOutputs = outputsOf(outputs, stage);
   const srt = roleOf(subtitleOutputs, "subtitles_srt");
   const vtt = roleOf(subtitleOutputs, "subtitles_vtt");
+  const media = useOutputMedia(video);
+  const captions = useOutputMedia(vtt);
   const playedSubtitles = video?.meta.subtitlesMode ?? project.config.subtitles?.mode;
   const rendering = stage.state === "running";
   const done = percent(stage.progressCurrent ?? 0, stage.progressTotal ?? 0);
@@ -50,7 +49,7 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
           controls
           preload="metadata"
           aria-label="Combined narration"
-          src={fileUrl(api, video.projectId, assetOf(video))}
+          src={media?.url}
           className="h-9 w-full max-w-[720px]"
         />
       ) : (
@@ -59,21 +58,21 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
           key={video.id}
           controls
           preload="metadata"
-          src={fileUrl(api, video.projectId, assetOf(video))}
+          src={media?.url}
           aria-label="Generated video"
           className={cn(
             "mx-auto block max-h-[min(58vh,560px)] w-auto max-w-full rounded-control bg-screen",
             project.format === "9:16" ? "aspect-[9/16]" : "aspect-video",
           )}
         >
-          {playedSubtitles === "files" && vtt ? (
+          {playedSubtitles === "files" && vtt && captions ? (
             <track
               key={vtt.id}
               kind="captions"
               srcLang="en"
               label="English"
               default
-              src={fileUrl(api, project.id, "subtitles-vtt")}
+              src={captions?.url}
             />
           ) : null}
         </video>

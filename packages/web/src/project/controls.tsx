@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { ConfirmDialog } from "@/components/confirm";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Destructive } from "./confirmations.js";
 import { confirmationFor } from "./confirmations.js";
+import { RevisionControlContext } from "./revision-action-context.js";
 
 // A control that stops and confirms. Every destructive action on this page goes through it, so
 // none of them can be wired straight to a click by accident.
@@ -28,6 +29,8 @@ export function ConfirmedButton({
 }) {
   const [asking, setAsking] = useState(false);
   const copy = confirmationFor(action);
+  const revisioned = useContext(RevisionControlContext);
+  if (revisioned && action.kind !== "cancel") return null;
 
   return (
     <>

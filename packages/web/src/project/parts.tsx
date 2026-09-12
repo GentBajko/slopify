@@ -7,12 +7,12 @@ import { useState } from "react";
 import type { Components } from "react-markdown";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { fileUrl } from "@/api";
 import { useApp } from "@/app-context";
+import { readText } from "@/http";
 import { cn } from "@/lib/utils";
 import { keys } from "@/queries";
-import { readOutputText } from "./api.js";
 import { OpenFolder } from "./open-folder.js";
+import { useAssetMedia, useOutputMedia } from "./revision-media.js";
 
 // The furniture every stage body is made of: the indented frame under a rundown row, the 75 ch
 // prose measure, a download link, and the "Show instructions" toggle each stage carries. It
@@ -184,18 +184,19 @@ export function DownloadLink({
   readonly asset: string;
   readonly label?: string;
 }) {
-  const { api } = useApp();
+  const media = useAssetMedia(projectId, asset);
+  if (media === undefined) return null;
   return (
     <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
       <a
-        href={fileUrl(api, projectId, asset)}
+        href={media.url}
         download
         className="inline-flex items-center gap-[5px] rounded-control text-small text-ink2 hover:text-ink"
       >
         <DownloadIcon aria-hidden="true" className="size-[14px] shrink-0" />
         {label}
       </a>
-      <OpenFolder projectId={projectId} asset={asset} />
+      <OpenFolder projectId={projectId} asset={asset} folder={media.folder} />
     </span>
   );
 }
@@ -207,12 +208,20 @@ export function OutputDownload({
   readonly output: Output;
   readonly label?: string;
 }) {
+  const media = useOutputMedia(output);
+  if (media === undefined) return null;
   return (
-    <DownloadLink
-      projectId={output.projectId}
-      asset={assetOf(output)}
-      {...(label === undefined ? {} : { label })}
-    />
+    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+      <a
+        href={media.url}
+        download
+        className="inline-flex items-center gap-[5px] rounded-control text-small text-ink2 hover:text-ink"
+      >
+        <DownloadIcon aria-hidden="true" className="size-[14px] shrink-0" />
+        {label ?? "Download"}
+      </a>
+      <OpenFolder projectId={output.projectId} asset={assetOf(output)} folder={media.folder} />
+    </span>
   );
 }
 
@@ -220,11 +229,11 @@ export function OutputDownload({
 // six bodies do not each spell them out.
 export function useOutputText(output: Output | undefined) {
   const { api } = useApp();
+  const media = useOutputMedia(output);
   return useQuery({
-    queryKey: keys.file(output?.projectId ?? "", output?.id ?? ""),
-    queryFn: () =>
-      output === undefined ? "" : readOutputText(api, output.projectId, assetOf(output)),
-    enabled: output !== undefined,
+    queryKey: media?.cacheKey ?? keys.revisionFile("", "", "unavailable"),
+    queryFn: async () => (media === undefined ? "" : readText(await api.fetch(media.url))),
+    enabled: media !== undefined,
     // A file is immutable for as long as its row is, and a re-run replaces a row rather
     // than versioning it, so a changed file always arrives under a new key.
     staleTime: Number.POSITIVE_INFINITY,

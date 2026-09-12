@@ -1,14 +1,12 @@
 import type { Format } from "@app/kernel/pipeline.js";
-import { assetOf } from "@app/slices/storage/asset-name.js";
 import type { Output } from "@app/slices/storage/model.js";
-import { fileUrl } from "@/api";
-import { useApp } from "@/app-context";
 import { cn } from "@/lib/utils";
 import type { BodyProps } from "./body.js";
 import { outputsOf } from "./body.js";
 import { ConfirmedButton } from "./controls.js";
 import { groupImages } from "./image-groups.js";
 import { ActionRow, DownloadLink, EngravedLabel, OutputDownload, StageBody } from "./parts.js";
+import { useOutputMedia } from "./revision-media.js";
 
 // Images: a grid per image prompt, 6 columns at 1440 px, prompt name as an engraved header with
 // '× N'; per image on hover and focus: Download, Regenerate, Delete; 'Download all' and 'Re-run
@@ -75,13 +73,13 @@ function ImageTile({
   readonly actions: BodyProps["actions"];
   readonly busy: boolean;
 }) {
-  const { api } = useApp();
+  const media = useOutputMedia(image);
   const place = image.meta.index === undefined ? "" : ` ${String(image.meta.index)}`;
 
   return (
     <figure className="group relative m-0 overflow-hidden rounded-control border border-line bg-panel2">
       <img
-        src={fileUrl(api, image.projectId, assetOf(image))}
+        src={media?.url}
         alt={image.meta.prompt ?? `Slideshow image${place}`}
         // The image fades in as it lands, which is the grid's whole motion budget.
         className={cn(

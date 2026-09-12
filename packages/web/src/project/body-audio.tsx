@@ -1,9 +1,7 @@
 import type { Chunking } from "@app/slices/narration/chunk.js";
 import { defaultChunkCharacters, defaultChunkWords } from "@app/slices/narration/chunk.js";
-import { assetOf } from "@app/slices/storage/asset-name.js";
 import type { Output, OutputRole } from "@app/slices/storage/model.js";
 import { useQuery } from "@tanstack/react-query";
-import { fileUrl } from "@/api";
 import { useApp } from "@/app-context";
 import { voicesQuery } from "@/queries";
 import type { BodyProps } from "./body.js";
@@ -11,6 +9,7 @@ import { outputsOf, roleOf } from "./body.js";
 import { ConfirmedButton } from "./controls.js";
 import { LiveAudio } from "./live-audio.js";
 import { ActionRow, EngravedLabel, OutputDownload, StageBody } from "./parts.js";
+import { useOutputMedia } from "./revision-media.js";
 import { duration } from "./summary.js";
 
 // Each completed segment keeps its player and download. Historical voice metadata
@@ -71,7 +70,7 @@ export function AudioBody({ stage, project, outputs, actions, busy }: BodyProps)
 }
 
 function Player({ name, output }: { readonly name: string; readonly output: Output }) {
-  const { api } = useApp();
+  const media = useOutputMedia(output);
   const length = duration(output.durationMs ?? undefined);
   return (
     <div className="grid grid-cols-[60px_minmax(0,1fr)_auto] items-center gap-3 text-small">
@@ -82,7 +81,7 @@ function Player({ name, output }: { readonly name: string; readonly output: Outp
         controls
         preload="metadata"
         aria-label={`${name} narration`}
-        src={fileUrl(api, output.projectId, assetOf(output))}
+        src={media?.url}
         className="h-8 w-full max-w-[520px]"
       />
       <span className="flex items-center gap-4">

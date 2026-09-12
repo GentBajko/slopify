@@ -1,23 +1,15 @@
-import { assetOf } from "@app/slices/storage/asset-name.js";
-import { fileUrl } from "@/api";
-import { useApp } from "@/app-context";
 import { cn } from "@/lib/utils";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { aspectOf } from "./body-images.js";
 import { ConfirmedButton } from "./controls.js";
 import { ActionRow, EngravedLabel, Instructions, OutputDownload, StageBody } from "./parts.js";
+import { useOutputMedia } from "./revision-media.js";
 
-// The thumbnail in its own single-cell group with its prompt text. It is a stage of its own
-// here, so it gets a row rather than a corner of the image grid.
-//
-// ceiling: the prompt is shown, not edited. A stored rendered prompt is meant to be
-// editable before a re-run, and `edge/http/actions.ts` has no route that writes one back;
-// the upgrade is a route that replaces `outputs.meta.prompt` and marks the stage stale.
 export function ThumbnailBody({ stage, project, outputs, actions, busy }: BodyProps) {
-  const { api } = useApp();
   const mine = outputsOf(outputs, stage);
   const image = roleOf(mine, "thumbnail");
+  const media = useOutputMedia(image);
   const written = project.config.sources.thumbnail === "prompt_by_llm";
 
   return (
@@ -26,7 +18,7 @@ export function ThumbnailBody({ stage, project, outputs, actions, busy }: BodyPr
         <p className="text-small text-ink2">No thumbnail has landed yet.</p>
       ) : (
         <img
-          src={fileUrl(api, image.projectId, assetOf(image))}
+          src={media?.url}
           alt={image.meta.prompt ?? "Thumbnail"}
           className={cn(
             "block w-full rounded-control border border-line bg-panel2 object-cover",

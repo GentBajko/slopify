@@ -93,7 +93,7 @@ interface Server {
 
 function view(server: Server) {
   return {
-    ...(server.revisionId === undefined ? {} : { revisionId: server.revisionId }),
+    revisionId: server.revisionId ?? null,
     project: {
       id: "p1",
       title: "Rope Tricks",
