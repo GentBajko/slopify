@@ -93,24 +93,10 @@ export function invocationReady(deps: RevisionDeps, work: WorkRef): boolean {
       (value) => value.key === piece.key && value.fingerprint === piece.fingerprint,
     );
     if (recipe === undefined || recipe.unresolved || recipe.deferred) return false;
-    return recipe.dependsOn.every(
-      (key) =>
-        view.outputs.some(
-          (output) =>
-            output.workKey === key &&
-            output.selected &&
-            output.available &&
-            output.state === "ready",
-        ) ||
-        view.pieces.some(
-          (piece) =>
-            piece.key === key &&
-            piece.selected &&
-            piece.available &&
-            piece.piece.state === "done" &&
-            piece.fingerprint === plan.recipes.find((value) => value.key === key)?.fingerprint,
-        ),
-    );
+    return recipe.dependsOn.every((key) => {
+      const dependency = plan.work.find((value) => value.key === key);
+      return dependency?.disposition === "reuse" && !dependency.inflight;
+    });
   });
 }
 
