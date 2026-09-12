@@ -6,9 +6,8 @@ import { probeDurationMs, resolveFfmpeg } from "../video/ffmpeg.js";
 import { exportFixture } from "./runtime-export.fake.js";
 import { executeExportRecipe } from "./runtime-export.js";
 
-it("publishes a playable PCM WAV and a relative render record through the real bundled ffmpeg", async () => {
-  const rate = 8000;
-  const bytes = Buffer.alloc(44 + rate * 2 * 4);
+function pcmBytes(rate: number, seconds: number): Buffer {
+  const bytes = Buffer.alloc(44 + rate * 2 * seconds);
   bytes.write("RIFF", 0);
   bytes.writeUInt32LE(bytes.length - 8, 4);
   bytes.write("WAVEfmt ", 8);
@@ -21,6 +20,35 @@ it("publishes a playable PCM WAV and a relative render record through the real b
   bytes.writeUInt16LE(16, 34);
   bytes.write("data", 36);
   bytes.writeUInt32LE(bytes.length - 44, 40);
+  return bytes;
+}
+
+it.each([8000, 44100, 48000])(
+  "measures a short PCM clip without modifying its bytes at %i Hz",
+  async (rate) => {
+    const bytes = pcmBytes(rate, 0.1);
+    const h = await exportFixture(false, bytes);
+    try {
+      const body = h.view().outputs.find((row) => row.selected && row.output.role === "audio_body");
+      if (body === undefined) throw new Error("Missing provided narration");
+      const path = outputPath(h.deps.paths, h.projectId, body.output.path);
+      expect(
+        await probeDurationMs(
+          resolveFfmpeg({}, ffmpegStatic),
+          path,
+          new AbortController().signal,
+          h.deps.log,
+        ),
+      ).toBe(100);
+      expect(readFileSync(path)).toEqual(bytes);
+    } finally {
+      h.close();
+    }
+  },
+);
+
+it("publishes a playable PCM WAV and a relative render record through the real bundled ffmpeg", async () => {
+  const bytes = pcmBytes(8000, 4);
   const h = await exportFixture(false, bytes);
   try {
     const deps = { ...h.deps, ffmpeg: resolveFfmpeg({}, ffmpegStatic) };

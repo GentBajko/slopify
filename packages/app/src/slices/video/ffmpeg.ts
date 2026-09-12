@@ -275,6 +275,12 @@ export async function probeDurationMs(
       "-nostats",
       "-i",
       file,
+      // Older null muxers report the last packet's start, giving short clips zero
+      // duration. One discarded padding sample places that packet at the real end;
+      // current muxers include it, adding less than 1ms at supported audio rates.
+      // Retire when all supported FFmpeg builds report packet ends.
+      "-af",
+      "apad=pad_len=1",
       "-f",
       "null",
       "-",
