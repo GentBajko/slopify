@@ -180,13 +180,11 @@ function retainedFor(
         pieceIds: [narration.piece.id],
       },
     ];
-  const current = manifest.outputs.find(
-    (one) =>
-      one.workKey === row.key &&
-      one.fingerprint === row.logicalFingerprint &&
-      one.state === "ready" &&
-      available.has(one.assetId),
+  const bundle = manifest.outputs.filter(
+    (one) => one.workKey === row.key && one.fingerprint === row.logicalFingerprint,
   );
+  const complete = bundle.every((one) => one.state === "ready" && available.has(one.assetId));
+  const current = bundle.length > 0 && complete;
   const pieces = manifest.pieces.filter((one) => one.key === row.key);
   const matched = pieces.filter((one) => {
     const request =
@@ -215,7 +213,7 @@ function retainedFor(
         available.has(one.assetId),
     );
   if (
-    current !== undefined ||
+    current ||
     matched.length > 0 ||
     retainedConcat ||
     (row.input.kind === "provided" &&
@@ -229,8 +227,8 @@ function retainedFor(
         requestFingerprint: row.requestFingerprint,
         fingerprint: row.fingerprint,
         available:
-          current !== undefined ||
-          matched.some((one) => one.piece.state === "done") ||
+          current ||
+          (complete && matched.some((one) => one.piece.state === "done")) ||
           retainedConcat ||
           row.input.kind === "provided",
         inflight: matched.some((one) => one.piece.state === "running"),
@@ -243,7 +241,11 @@ function retainedFor(
       key: row.key,
       requestFingerprint: "",
       fingerprint: one.fingerprint,
-      available: available.has(one.assetId),
+      available: manifest.outputs
+        .filter(
+          (sibling) => sibling.workKey === one.workKey && sibling.fingerprint === one.fingerprint,
+        )
+        .every((sibling) => sibling.state === "ready" && available.has(sibling.assetId)),
       inflight: false,
       pieceIds: [],
     }));
