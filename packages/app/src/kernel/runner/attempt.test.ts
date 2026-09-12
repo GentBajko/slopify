@@ -17,7 +17,16 @@ function recorder(): Recorder {
     rows,
     start: (start: AttemptStart): string => {
       const id = `a${rows.length + 1}`;
-      rows.push({ ...start, id, endedAt: null, outcome: null, errorText: null });
+      rows.push({
+        ...start,
+        id,
+        revisionId: null,
+        workId: null,
+        workPieceId: null,
+        endedAt: null,
+        outcome: null,
+        errorText: null,
+      });
       return id;
     },
     end: (id: string, ended: AttemptEnd): void => {
@@ -91,6 +100,9 @@ describe("attempt", () => {
     expect(h.attempts.rows).toEqual([
       {
         id: "a1",
+        revisionId: null,
+        workId: null,
+        workPieceId: null,
         stageId: "s1",
         pieceId: null,
         n: 1,

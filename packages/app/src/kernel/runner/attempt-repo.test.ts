@@ -40,6 +40,9 @@ describe("sqliteAttempts", () => {
     expect(attemptsOf(db, "s1")).toEqual([
       {
         id: "a1",
+        revisionId: null,
+        workId: null,
+        workPieceId: null,
         stageId: "s1",
         pieceId: null,
         n: 1,

@@ -25,6 +25,9 @@ export interface AttemptEnd {
 }
 
 export interface Attempt extends AttemptStart {
+  readonly revisionId: string | null;
+  readonly workId: string | null;
+  readonly workPieceId: string | null;
   readonly id: string;
   readonly endedAt: string | null;
   readonly outcome: AttemptOutcome | null;
@@ -46,6 +49,9 @@ const attemptRow = z.object({
   ended_at: z.string().nullable(),
   outcome: z.enum(attemptOutcomes).nullable(),
   error_text: z.string().nullable(),
+  revision_id: z.string().nullable(),
+  work_id: z.string().nullable(),
+  work_piece_id: z.string().nullable(),
 });
 
 export function sqliteAttempts(db: DatabaseSync, ids: Ids): AttemptStore {
@@ -84,6 +90,9 @@ export function attemptsOf(db: DatabaseSync, stageId: string): readonly Attempt[
 function toAttempt(row: z.infer<typeof attemptRow>): Attempt {
   return {
     id: row.id,
+    revisionId: row.revision_id,
+    workId: row.work_id,
+    workPieceId: row.work_piece_id,
     stageId: row.stage_id,
     pieceId: row.piece_id,
     n: row.n,
@@ -93,3 +102,5 @@ function toAttempt(row: z.infer<typeof attemptRow>): Attempt {
     errorText: row.error_text,
   };
 }
+
+export { readWorkContinuation, startWorkAttempt, writeWorkContinuation } from "./work-attempt.js";
