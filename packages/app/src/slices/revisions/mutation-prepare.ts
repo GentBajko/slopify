@@ -65,6 +65,54 @@ export async function prepareEditAssets(
       prepared.push({ ...item, output: { ...item.output, durationMs } });
       content = bindUpload(content, upload, result.asset.id);
     }
+    for (const [index, key] of content.imageOrder.entries()) {
+      const definition = content.imageDefinitions[key];
+      const assetId = definition?.assetId;
+      const workKey = `image:${key}`;
+      if (
+        definition?.source !== "provide" ||
+        assetId == null ||
+        prepared.some((row) => row.workKey === workKey) ||
+        base.outputs.some(
+          (row) =>
+            row.selected &&
+            row.workKey === workKey &&
+            row.assetId === assetId &&
+            row.output.role === "image",
+        )
+      )
+        continue;
+      const asset = retainedAsset(deps, projectId, assetId);
+      const existing = deps.db
+        .prepare(
+          "SELECT descriptor FROM revision_outputs WHERE project_id=? AND asset_id=? AND json_extract(descriptor,'$.stageKind')='images' AND json_extract(descriptor,'$.role')='image' LIMIT 1",
+        )
+        .get(projectId, assetId);
+      const descriptor =
+        existing === undefined
+          ? {
+              projectId,
+              stageKind: "images" as const,
+              role: "image" as const,
+              path: asset.path,
+              originalFilename: null,
+              bytes: asset.bytes,
+              durationMs: null,
+              meta: {},
+              createdAt: asset.createdAt,
+            }
+          : outputSchema.parse(JSON.parse(z.string().parse(existing.descriptor)));
+      prepared.push({
+        asset,
+        output: {
+          ...descriptor,
+          id: deps.ids.next(),
+          meta: { ...descriptor.meta, index: index + 1 },
+        },
+        workKey,
+        slot: workKey,
+      });
+    }
     for (const kind of ["audio", "thumbnail"] as const) {
       const assetId = content.provided[kind];
       if (
@@ -80,28 +128,10 @@ export async function prepareEditAssets(
         .get(projectId, assetId, kind);
       if (existing === undefined) throw new Error("Validated replacement asset has no descriptor.");
       const descriptor = outputSchema.parse(JSON.parse(z.string().parse(existing.descriptor)));
-      const asset = z
-        .object({
-          id: z.string(),
-          project_id: z.string(),
-          path: z.string(),
-          bytes: z.number(),
-          created_at: z.string(),
-        })
-        .parse(
-          deps.db
-            .prepare("SELECT * FROM project_assets WHERE project_id=? AND id=?")
-            .get(projectId, assetId),
-        );
+      const asset = retainedAsset(deps, projectId, assetId);
       const role = kind === "audio" ? "audio_body" : "thumbnail";
       const item: PreparedEditAsset = {
-        asset: {
-          id: asset.id,
-          projectId: asset.project_id,
-          path: asset.path,
-          bytes: asset.bytes,
-          createdAt: asset.created_at,
-        },
+        asset,
         output: {
           ...descriptor,
           id: deps.ids.next(),
@@ -160,4 +190,27 @@ export async function prepareEditAssets(
     discardPreparedAssets(deps, allocated);
     throw error;
   }
+}
+
+function retainedAsset(deps: RevisionDeps, projectId: string, assetId: string): PreparedAsset {
+  const row = z
+    .object({
+      id: z.string(),
+      project_id: z.string(),
+      path: z.string(),
+      bytes: z.number(),
+      created_at: z.string(),
+    })
+    .parse(
+      deps.db
+        .prepare("SELECT * FROM project_assets WHERE project_id=? AND id=?")
+        .get(projectId, assetId),
+    );
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    path: row.path,
+    bytes: row.bytes,
+    createdAt: row.created_at,
+  };
 }
