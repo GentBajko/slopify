@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import type { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
@@ -41,6 +41,7 @@ import { readVersion } from "./kernel/version.js";
 import { modelSources } from "./model-catalog.js";
 import { projectPaused } from "./slices/admission/repo.js";
 import { pumpQueue, queueWaiting } from "./slices/batch/index.js";
+import { resolveFont } from "./slices/fonts/index.js";
 import { claimWork, finishWork, maySubmit, recoverWork } from "./slices/rebuild/repo.js";
 import { materializeAdmittedWork } from "./slices/rebuild/runtime-materialize.js";
 import { runRevisionInvocation } from "./slices/rebuild/runtime-run.js";
@@ -232,6 +233,24 @@ export async function boot(config: Config): Promise<Boot> {
     };
     const app = createApp({
       rebuild,
+      drafts: {
+        db,
+        paths,
+        ids,
+        clock,
+        log,
+        runner,
+        catalogue,
+        uuid: randomUUID,
+        resolveFont: (fontId) => resolveFont(paths, fontId),
+        providers: rebuild.providers,
+        modelsFor: rebuild.modelsFor,
+        emit: (event) => hub.emitGlobal(event),
+        recordStarted: (projectIds) => {
+          for (const _projectId of projectIds) record(telemetry, "project.created", {});
+          flusher.soon();
+        },
+      },
       ...(rebuild.measureAudio === undefined ? {} : { measureAudio: rebuild.measureAudio }),
       openFolder,
       db,

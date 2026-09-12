@@ -211,3 +211,16 @@ it("returns 409 for direct deletion of a draft-owned staged file", async () => {
   expect(readFileSync(join(paths.staging, "id1"), "utf8")).toBe("owned");
   expect(db.prepare("SELECT id FROM staged_files").all()).toEqual([{ id: "id1" }]);
 });
+
+it("cleans staged bytes when a later multipart part is truncated", async () => {
+  const { app, db, paths } = harness();
+  const response = await app.request("/api/staging/images", {
+    method: "POST",
+    headers: { "content-type": "multipart/form-data; boundary=test" },
+    body: '--test\r\nContent-Disposition: form-data; name="file"; filename="one.png"\r\nContent-Type: image/png\r\n\r\nbytes\r\n--test\r\nContent-Disposition: form-data; name="field"\r\n\r\nunterminated',
+  });
+  expect(response.status).toBe(400);
+  expect(await response.json()).toMatchObject({ detail: expect.stringContaining("multipart") });
+  expect(db.prepare("SELECT id FROM staged_files").all()).toEqual([]);
+  expect(existsSync(join(paths.staging, "id1"))).toBe(false);
+});

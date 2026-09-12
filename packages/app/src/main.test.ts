@@ -117,6 +117,7 @@ describe("boot", () => {
       { version: 3 },
       { version: 4 },
       { version: 5 },
+      { version: 6 },
     ]);
     db.close();
   });
@@ -127,6 +128,9 @@ describe("boot", () => {
     const health = await fetch(`${url}/api/health`);
     expect(health.status).toBe(200);
     expect(health.headers.get("x-slopify-version")).toBe(readVersion());
+    const drafts = await fetch(`${url}/api/drafts`);
+    expect(drafts.status).toBe(200);
+    expect(await drafts.json()).toEqual({ drafts: [] });
     await stop();
 
     await expect(fetch(`${url}/api/health`)).rejects.toThrow();
