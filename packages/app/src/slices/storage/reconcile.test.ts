@@ -1,12 +1,16 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import { ensureDirs, layout } from "../../kernel/paths.js";
+import { retainedOutput, retainedPiece } from "../revisions/downloads.fake.js";
+import { mutationFixture } from "../revisions/mutation.fake.js";
+import { revisionFixture } from "../revisions/revision.fake.js";
+import { outputPath } from "./layout.js";
 import { reconcileStorage } from "./reconcile.js";
 
 const clock = fixedClock("2026-09-02T10:00:00.000Z");
@@ -139,4 +143,94 @@ describe("reconcileStorage", () => {
 
     expect(existsSync(join(paths.projects, "p1", "stray.bin"))).toBe(false);
   });
+});
+
+it("keeps a registered historical file after current outputs are cleared", () => {
+  const h = revisionFixture();
+  try {
+    const { db, paths } = h.deps;
+    const path = "assets/a-old/audio-body.mp3";
+    mkdirSync(dirname(outputPath(paths, "p1", path)), { recursive: true });
+    writeFileSync(outputPath(paths, "p1", path), "old bytes");
+    db.prepare(
+      "INSERT INTO project_assets (id,project_id,path,bytes,created_at) VALUES (?,?,?,?,?)",
+    ).run("a-old", "p1", path, 9, "old");
+    expect(reconcileStorage(db, paths).orphanFiles).toBe(0);
+    expect(readFileSync(outputPath(paths, "p1", path), "utf8")).toBe("old bytes");
+  } finally {
+    h.close();
+  }
+});
+
+it("rejects an invalid registered path before deleting any files", () => {
+  const h = revisionFixture();
+  try {
+    h.deps.db
+      .prepare("INSERT INTO project_assets VALUES (?,?,?,?,?)")
+      .run("invalid", "p1", "../../outside.wav", 1, "old");
+    writeFileSync(join(h.deps.paths.projects, "p1", "scratch"), "untouched");
+    expect(() => reconcileStorage(h.deps.db, h.deps.paths)).toThrow("resolves outside");
+    expect(readFileSync(join(h.deps.paths.projects, "p1", "scratch"), "utf8")).toBe("untouched");
+  } finally {
+    h.close();
+  }
+});
+
+it("keeps archived narration, caption, font and render assets but collects unfinished scratch", async () => {
+  const h = await mutationFixture();
+  try {
+    const outputs = [
+      retainedOutput(
+        h.deps,
+        h.base.revision,
+        "subtitle_words",
+        "captions.json",
+        "[]",
+        "old-captions",
+        false,
+      ),
+      retainedOutput(
+        h.deps,
+        h.base.revision,
+        "subtitle_font",
+        "font.ttf",
+        "font",
+        "old-font",
+        false,
+      ),
+      retainedOutput(
+        h.deps,
+        h.base.revision,
+        "render_params",
+        "render.json",
+        "{}",
+        "old-render",
+        false,
+      ),
+    ];
+    const piece = retainedPiece(h.deps, h.base.revision, "old chunk");
+    h.deps.db.prepare("DELETE FROM outputs WHERE project_id=?").run(h.projectId);
+    const scratch = outputPath(h.deps.paths, h.projectId, "assets/unfinished");
+    mkdirSync(scratch, { recursive: true });
+    for (const filename of ["half-written.mp3", "concat.txt", "export.part.wav"])
+      writeFileSync(join(scratch, filename), "scratch");
+    expect(reconcileStorage(h.deps.db, h.deps.paths)).toEqual({ orphanFiles: 3, stagedFiles: 0 });
+    for (const output of outputs)
+      expect(existsSync(outputPath(h.deps.paths, h.projectId, output.row.output.path))).toBe(true);
+    const asset = h.deps.db
+      .prepare("SELECT path FROM project_assets WHERE id=?")
+      .get(piece.row.assetId);
+    expect(typeof asset?.path).toBe("string");
+    if (typeof asset?.path === "string")
+      expect(readFileSync(outputPath(h.deps.paths, h.projectId, asset.path), "utf8")).toBe(
+        "old chunk",
+      );
+    expect(
+      h.deps.db
+        .prepare("SELECT count(*) AS n FROM revision_outputs WHERE revision_id=?")
+        .get(h.base.revision.id),
+    ).toEqual({ n: 3 });
+  } finally {
+    h.close();
+  }
 });

@@ -91,7 +91,7 @@ export function findDownload(deps: DownloadDeps, projectId: string, asset: strin
       path,
       filename: downloadName(slugOf(title), output),
       bytes: stats,
-      contentType: contentTypes[extname(output.path).toLowerCase()] ?? "application/octet-stream",
+      contentType: contentTypeOf(path),
     },
   };
 }
@@ -130,4 +130,8 @@ export function imagesZip(deps: DownloadDeps, projectId: string): ImagesZipResul
 function sizeOf(path: string): number | undefined {
   const stats = statSync(path, { throwIfNoEntry: false });
   return stats === undefined || !stats.isFile() ? undefined : stats.size;
+}
+
+export function contentTypeOf(path: string): string {
+  return contentTypes[extname(path).toLowerCase()] ?? "application/octet-stream";
 }

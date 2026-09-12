@@ -14,6 +14,7 @@ export interface DeleteDeps {
   readonly db: DatabaseSync;
   readonly paths: Paths;
   readonly log: Log;
+  readonly hasInflight?: ((projectId: string) => boolean) | undefined;
 }
 
 export type DeleteRefusal =
@@ -33,7 +34,10 @@ export function deleteProject(deps: DeleteDeps, projectId: string): DeleteResult
   if (!projectExists(deps.db, projectId)) {
     return { ok: false, reason: "no-project" };
   }
-  if (derive(stagesOf(deps.db, projectId)) === "running") {
+  if (
+    deps.hasInflight?.(projectId) === true ||
+    derive(stagesOf(deps.db, projectId)) === "running"
+  ) {
     return { ok: false, reason: "running" };
   }
 

@@ -56,7 +56,12 @@ export function projectRoutes(deps: AppDeps) {
     log: deps.log,
     appVersion: deps.version,
   };
-  const storageForDelete: DeleteDeps = { db: deps.db, paths: deps.paths, log: deps.log };
+  const storageForDelete: DeleteDeps = {
+    db: deps.db,
+    paths: deps.paths,
+    log: deps.log,
+    hasInflight: deps.runner.hasInflight,
+  };
   const summarise = (project: Project): ProjectSummary => ({
     ...project,
     status: derive(stagesOf(deps.db, project.id), project.paused),

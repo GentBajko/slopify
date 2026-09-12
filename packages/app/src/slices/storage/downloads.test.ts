@@ -201,3 +201,21 @@ describe("imagesZip", () => {
     }
   });
 });
+
+it.each([
+  ["audio.WAV", "audio/wav"],
+  ["captions.VTT", "text/vtt; charset=utf-8"],
+  ["font.custom", "application/octet-stream"],
+])("shares case-insensitive MIME resolution for current %s downloads", (path, contentType) => {
+  const deps = harness("Current");
+  try {
+    place(deps, output({ id: "file", role: "audio_export", path }), "bytes");
+    expect(findDownload(deps, "p1", "audio-export")).toMatchObject({
+      ok: true,
+      download: { contentType },
+    });
+  } finally {
+    deps.db.close();
+    rmSync(deps.paths.dataDir, { recursive: true, force: true });
+  }
+});

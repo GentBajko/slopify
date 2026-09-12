@@ -2,6 +2,7 @@ import { readdirSync, rmSync, unlinkSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import type { Paths } from "../../kernel/paths.js";
+import { outputPath } from "./layout.js";
 
 export interface Reconciled {
   readonly orphanFiles: number;
@@ -21,6 +22,7 @@ export function reconcileStorage(db: DatabaseSync, paths: Paths): Reconciled {
     const projectId = row.project_id;
     const path = row.path;
     if (typeof projectId === "string" && typeof path === "string") {
+      outputPath(paths, projectId, path);
       kept.add(`${projectId}/${slashed(path)}`);
     }
   }
