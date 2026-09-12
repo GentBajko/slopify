@@ -193,3 +193,21 @@ describe("DELETE /api/staging/:id", () => {
     expect(response.headers.get("content-type")).toBe("application/problem+json");
   });
 });
+
+it("returns 409 for direct deletion of a draft-owned staged file", async () => {
+  const { app, db, paths } = harness();
+  await app.request("/api/staging/images", {
+    method: "POST",
+    body: upload("owned", "original.png"),
+  });
+  db.exec(
+    "INSERT INTO play_drafts (id,schema_version,version,title,document_json,creation_hash,created_at,updated_at,state) VALUES ('draft',1,1,'','{}','hash','now','now','active')",
+  );
+  db.exec(
+    "INSERT INTO play_draft_attachments VALUES ('attachment','draft','id1','images','original.png','ready',NULL)",
+  );
+  const response = await app.request("/api/staging/id1", { method: "DELETE" });
+  expect(response.status).toBe(409);
+  expect(readFileSync(join(paths.staging, "id1"), "utf8")).toBe("owned");
+  expect(db.prepare("SELECT id FROM staged_files").all()).toEqual([{ id: "id1" }]);
+});

@@ -5,7 +5,8 @@ import { storeArticleText } from "../article/store.js";
 import { admitInitialRevision } from "../rebuild/runtime-admission.js";
 import { adoptBaseline } from "../revisions/adopt.js";
 import type { StorageDeps } from "../storage/staging.js";
-import { attachStagedFile, dropStagedSource, storeText } from "../storage/staging.js";
+import { attachStagedFile, storeText } from "../storage/staging.js";
+import { releaseStagedFile } from "../storage/staging-refs.js";
 import type { Project, RunConfig, RunDraft, Stage, StageSource } from "./model.js";
 import { insertProject, insertStage } from "./repo.js";
 
@@ -77,7 +78,7 @@ export function startRun(
     }
   });
   for (const source of retainStaged ? [] : moved) {
-    dropStagedSource(deps, source);
+    releaseStagedFile(deps, source);
   }
 
   return { project, stages };
@@ -144,5 +145,5 @@ function attach(
     // the file went away between the check and the write.
     throw new Error(`the ${kind} stage's file could not be attached: ${result.reason}`);
   }
-  collected.push(result.stagedSource);
+  collected.push(stagedFileId);
 }

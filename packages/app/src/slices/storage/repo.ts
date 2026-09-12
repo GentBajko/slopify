@@ -91,7 +91,9 @@ export function stagedFiles(db: DatabaseSync): StagedFile[] {
 }
 
 export function deleteStagedFile(db: DatabaseSync, id: string): void {
-  db.prepare("DELETE FROM staged_files WHERE id = ?").run(id);
+  db.prepare(
+    "DELETE FROM staged_files WHERE id = ? AND NOT EXISTS (SELECT 1 FROM play_draft_attachments WHERE staged_file_id = ?)",
+  ).run(id, id);
 }
 
 export function projectTitle(db: DatabaseSync, projectId: string): string | undefined {

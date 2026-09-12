@@ -1,7 +1,10 @@
+import { randomUUID } from "node:crypto";
 import { existsSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
-import { insertStagedFile } from "../storage/repo.js";
+import { draftFixture, must } from "../play-drafts/draft.fake.js";
+import { createDraft, readDraft } from "../play-drafts/service.js";
+import { insertStagedFile, stagedFileById } from "../storage/repo.js";
 import type { RevisionDeps, RevisionView } from "./model.js";
 import { imageFixture, mutationFixture } from "./mutation.fake.js";
 import { restoreRevision, saveRevision } from "./mutations.js";
@@ -171,4 +174,48 @@ it("restores a new revision sharing a missing asset and keeps later duplicate re
     original.revision.config.title,
   );
   expect(await restoreRevision(h.deps, request)).toMatchObject({ ok: true, duplicate: true });
+});
+
+it("preserves a staged upload owned by a Play draft through revision Save", async () => {
+  const h = await fixture();
+  const draft = draftFixture();
+  try {
+    const path = stage(h.deps);
+    const deps = { ...h.deps, uuid: randomUUID };
+    const id = randomUUID();
+    const attachmentId = randomUUID();
+    const document = {
+      ...draft.document,
+      form: {
+        ...draft.document.form,
+        provided: { ...draft.document.form.provided, audio: { attachmentId, name: "upload.wav" } },
+      },
+    };
+    let release = (_duration: number) => {};
+    const measured = new Promise<number>((resolve) => {
+      release = resolve;
+    });
+    const pending = saveRevision(
+      { ...h.deps, measureAudio: () => measured },
+      {
+        projectId: h.projectId,
+        baseRevisionId: h.base.revision.id,
+        idempotencyKey: "owned-audio",
+        edit: audioEdit(h.base),
+      },
+    );
+    must(createDraft(deps, { id, document }));
+    deps.db
+      .prepare(
+        "UPDATE play_draft_attachments SET staged_file_id='upload',status='ready' WHERE id=?",
+      )
+      .run(attachmentId);
+    release(4200);
+    expect(await pending).toMatchObject({ ok: true });
+    expect(existsSync(path)).toBe(true);
+    expect(stagedFileById(deps.db, "upload")).toBeDefined();
+    expect(must(readDraft(deps, id)).attachments[0]?.state).toBe("ready");
+  } finally {
+    draft.close();
+  }
 });

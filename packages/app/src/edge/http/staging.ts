@@ -66,9 +66,12 @@ export function stagingRoutes(deps: AppDeps) {
       const result = discardStagedFile(storage, c.req.valid("param").id);
       if (!result.ok) {
         return problem(c, {
-          status: 404,
-          title: titleOf(404),
-          detail: "No staged file has that id.",
+          status: result.reason === "in-use" ? 409 : 404,
+          title: titleOf(result.reason === "in-use" ? 409 : 404),
+          detail:
+            result.reason === "in-use"
+              ? "This file is used by a saved draft."
+              : "No staged file has that id.",
         });
       }
       return c.body(null, 204);

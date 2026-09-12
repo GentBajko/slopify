@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -7,11 +8,14 @@ import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import { ensureDirs, layout } from "../../kernel/paths.js";
+import { draftFixture, must } from "../play-drafts/draft.fake.js";
+import { createDraft, readDraft } from "../play-drafts/service.js";
 import { retainedOutput, retainedPiece } from "../revisions/downloads.fake.js";
 import { mutationFixture } from "../revisions/mutation.fake.js";
 import { revisionFixture } from "../revisions/revision.fake.js";
-import { outputPath } from "./layout.js";
+import { outputPath, stagingPath } from "./layout.js";
 import { reconcileStorage } from "./reconcile.js";
+import { insertStagedFile, stagedFileById } from "./repo.js";
 
 const clock = fixedClock("2026-09-02T10:00:00.000Z");
 
@@ -230,6 +234,80 @@ it("keeps archived narration, caption, font and render assets but collects unfin
         .prepare("SELECT count(*) AS n FROM revision_outputs WHERE revision_id=?")
         .get(h.base.revision.id),
     ).toEqual({ n: 3 });
+  } finally {
+    h.close();
+  }
+});
+
+it.each(["copying", "missing", "corrupt"])(
+  "recovers %s owned uploads as Reattach after reopening",
+  (failure) => {
+    const h = draftFixture();
+    try {
+      const id = randomUUID();
+      const attachmentId = randomUUID();
+      const stagedId = h.deps.ids.next();
+      const document = {
+        ...h.document,
+        form: {
+          ...h.document.form,
+          provided: {
+            ...h.document.form.provided,
+            audio: { attachmentId, name: "Original take.wav" },
+          },
+        },
+      };
+      must(createDraft(h.deps, { id, document }));
+      insertStagedFile(h.deps.db, {
+        id: stagedId,
+        path: stagedId,
+        stageKind: "audio",
+        originalFilename: "Original take.wav",
+        state: failure === "copying" ? "copying" : "staged",
+        bytes: 10,
+        createdAt: h.deps.clock.now().toISOString(),
+      });
+      h.deps.db
+        .prepare("UPDATE play_draft_attachments SET status='ready',staged_file_id=? WHERE id=?")
+        .run(stagedId, attachmentId);
+      if (failure !== "missing") writeFileSync(stagingPath(h.deps.paths, stagedId), "partial");
+      h.reopen();
+      reconcileStorage(h.deps.db, h.deps.paths);
+      expect(must(readDraft(h.deps, id)).attachments).toMatchObject([
+        {
+          id: attachmentId,
+          name: "Original take.wav",
+          state: "reattach",
+          stagedFileId: null,
+          error: expect.stringContaining("Reattach"),
+        },
+      ]);
+      expect(stagedFileById(h.deps.db, stagedId)).toBeUndefined();
+      expect(existsSync(stagingPath(h.deps.paths, stagedId))).toBe(false);
+    } finally {
+      h.close();
+    }
+  },
+);
+
+it("marks an unallocated attachment Reattach after restart", () => {
+  const h = draftFixture();
+  try {
+    const id = randomUUID();
+    const attachmentId = randomUUID();
+    const document = {
+      ...h.document,
+      form: {
+        ...h.document.form,
+        provided: { ...h.document.form.provided, images: [{ attachmentId, name: "Waiting.png" }] },
+      },
+    };
+    must(createDraft(h.deps, { id, document }));
+    h.reopen();
+    reconcileStorage(h.deps.db, h.deps.paths);
+    expect(must(readDraft(h.deps, id)).attachments).toMatchObject([
+      { id: attachmentId, name: "Waiting.png", state: "reattach", stagedFileId: null },
+    ]);
   } finally {
     h.close();
   }

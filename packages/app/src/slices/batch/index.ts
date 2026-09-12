@@ -6,9 +6,9 @@ import type { Runner } from "../../kernel/runner/index.js";
 import type { RunDraft } from "../admission/model.js";
 import { projectPaused, stagesOf } from "../admission/repo.js";
 import { startRun } from "../admission/start.js";
-import { stagingPath } from "../storage/layout.js";
-import { deleteStagedFile, stagedFileById } from "../storage/repo.js";
-import { dropStagedSource, type StorageDeps } from "../storage/staging.js";
+import { deleteStagedFile } from "../storage/repo.js";
+import type { StorageDeps } from "../storage/staging.js";
+import { releaseStagedFile } from "../storage/staging-refs.js";
 
 const queueRow = z.object({
   projectId: z.string(),
@@ -63,12 +63,11 @@ export function enqueueBatch(
         for (const id of draft.provided.images ?? []) used.add(id);
     }
     for (const id of used) {
-      const file = stagedFileById(deps.db, id);
-      if (file) sources.add(stagingPath(deps.paths, file.path));
+      sources.add(id);
       deleteStagedFile(deps.db, id);
     }
   });
-  for (const source of sources) dropStagedSource(deps, source);
+  for (const source of sources) releaseStagedFile(deps, source);
   return queueEntries(deps.db, batchId);
 }
 // Only one batch video runs at once. A paused item holds its place; a failed or

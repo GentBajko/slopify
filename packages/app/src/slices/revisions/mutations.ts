@@ -8,7 +8,7 @@ import { transitionRevisionWork } from "../rebuild/repo.js";
 import { projectStandings } from "../rebuild/runtime-store.js";
 import { discardPreparedAssets } from "../storage/assets.js";
 import { deleteStagedFile } from "../storage/repo.js";
-import { dropStagedSource } from "../storage/staging.js";
+import { releaseStagedFile } from "../storage/staging-refs.js";
 import type {
   ProjectRevision,
   RevisionDeps,
@@ -188,8 +188,8 @@ export async function saveRevision(
     });
     if (result.ok && !result.duplicate)
       for (const row of prepared)
-        if (row.stagedSource !== undefined)
-          dropStagedSource({ ...deps, emit: () => undefined }, row.stagedSource);
+        if (row.upload !== undefined)
+          releaseStagedFile({ ...deps, emit: () => undefined }, row.upload.stagedFileId);
     return result;
   } finally {
     discardPreparedAssets(

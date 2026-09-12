@@ -3,6 +3,7 @@ import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import { stagingPath } from "../storage/layout.js";
 import { stagedFileById } from "../storage/repo.js";
+import { releaseStagedFile } from "../storage/staging-refs.js";
 import type {
   DraftAttachment,
   DraftDeps,
@@ -172,7 +173,8 @@ export function createDraft(
 export function saveDraft(deps: DraftDeps, input: DraftSaveInput): DraftResult<DraftView> {
   const parsed = saveDraftInputSchema.safeParse(input);
   if (!parsed.success) return refusal("invalid-edit");
-  return transact(deps.db, () => {
+  const previous = attachmentRows(deps.db, input.id);
+  const result: DraftResult<DraftView> = transact(deps.db, () => {
     const value = parsed.data;
     const row = draftRow(deps.db, value.id);
     const denied = writable(row);
@@ -199,6 +201,11 @@ export function saveDraft(deps: DraftDeps, input: DraftSaveInput): DraftResult<D
     syncAttachments(deps.db, value.id, value.document);
     return readDraft(deps, value.id);
   });
+  if (result.ok)
+    for (const attachment of previous)
+      if (attachment.staged_file_id !== null)
+        releaseStagedFile({ ...deps, emit: () => undefined }, attachment.staged_file_id);
+  return result;
 }
 export function forkDraft(
   deps: DraftDeps,
@@ -258,7 +265,8 @@ export function discardDraft(
 ): DraftResult<{ readonly discarded: true }> {
   const parsed = discardDraftInputSchema.safeParse(input);
   if (!parsed.success) return refusal("invalid-edit");
-  return transact(deps.db, () => {
+  const previous = attachmentRows(deps.db, input.id);
+  const result: DraftResult<{ readonly discarded: true }> = transact(deps.db, () => {
     const row = draftRow(deps.db, input.id);
     if (row === undefined) return refusal("not-found");
     if (row.state === "starting") return refusal("pending-start", row);
@@ -266,4 +274,9 @@ export function discardDraft(
     deps.db.prepare("DELETE FROM play_drafts WHERE id=?").run(input.id);
     return { ok: true, value: { discarded: true } };
   });
+  if (result.ok)
+    for (const attachment of previous)
+      if (attachment.staged_file_id !== null)
+        releaseStagedFile({ ...deps, emit: () => undefined }, attachment.staged_file_id);
+  return result;
 }

@@ -1,16 +1,16 @@
-import { readdirSync, rmSync, unlinkSync } from "node:fs";
+import { readdirSync, rmSync, statSync, unlinkSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import type { Paths } from "../../kernel/paths.js";
-import { outputPath } from "./layout.js";
+import { outputPath, stagingPath } from "./layout.js";
+import { stagedFiles as stagedRows } from "./repo.js";
+import { stagedFileReferenced } from "./staging-refs.js";
 
 export interface Reconciled {
   readonly orphanFiles: number;
   readonly stagedFiles: number;
 }
 
-// Files the database does not know about, and staged uploads that never reached a
-// project, are removed at start.
 export function reconcileStorage(db: DatabaseSync, paths: Paths): Reconciled {
   const projects = idsOf(db, "SELECT id FROM projects", "id");
   const kept = new Set<string>();
@@ -66,12 +66,33 @@ export function reconcileStorage(db: DatabaseSync, paths: Paths): Reconciled {
     }
   }
 
+  const retained = new Set<string>();
+  for (const file of stagedRows(db)) {
+    if (!stagedFileReferenced(db, file.id)) continue;
+    const stat = statSync(stagingPath(paths, file.path), { throwIfNoEntry: false });
+    if (file.state === "staged" && stat?.isFile() && stat.size === file.bytes) {
+      retained.add(file.path);
+      db.prepare(
+        "UPDATE play_draft_attachments SET status='ready',error=NULL WHERE staged_file_id=?",
+      ).run(file.id);
+    } else {
+      db.prepare(
+        "UPDATE play_draft_attachments SET staged_file_id=NULL,status='reattach',error=? WHERE staged_file_id=?",
+      ).run("Upload is missing or incomplete. Reattach the file.", file.id);
+    }
+  }
+  db.prepare(
+    "UPDATE play_draft_attachments SET status='reattach',error=? WHERE status IN ('ready','pending') AND staged_file_id IS NULL",
+  ).run("Upload is missing or incomplete. Reattach the file.");
   let stagedFiles = 0;
   for (const file of filesUnder(paths.staging)) {
+    if (retained.has(file)) continue;
     unlinkSync(join(paths.staging, file));
     stagedFiles += 1;
   }
-  db.exec("DELETE FROM staged_files");
+  db.exec(
+    "DELETE FROM staged_files WHERE NOT EXISTS (SELECT 1 FROM play_draft_attachments WHERE staged_file_id=staged_files.id)",
+  );
 
   return { orphanFiles, stagedFiles };
 }

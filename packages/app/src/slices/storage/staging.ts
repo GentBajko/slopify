@@ -1,6 +1,6 @@
 import type { WriteStream } from "node:fs";
 import { copyFileSync, createWriteStream, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { basename, dirname } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { pipeline } from "node:stream/promises";
 import { z } from "zod";
@@ -26,6 +26,7 @@ import {
   markStagedFileCopied,
   stagedFileById,
 } from "./repo.js";
+import { releaseStagedFile, stagedFileReferenced } from "./staging-refs.js";
 
 export { prepareStagedFile, prepareText } from "./prepare.js";
 
@@ -43,6 +44,7 @@ export interface UploadInput {
   readonly stageKind: StageKind;
   readonly originalFilename: string;
   readonly content: AsyncIterable<Uint8Array>;
+  readonly onAllocated?: (file: StagedFile) => void;
 }
 
 export type StageUploadResult =
@@ -70,18 +72,18 @@ export type AttachResult =
 
 export type DiscardResult =
   | { readonly ok: true }
-  | { readonly ok: false; readonly reason: "unknown-staged-file" };
+  | { readonly ok: false; readonly reason: "unknown-staged-file" | "in-use" };
 
 // The upload's own name is data, never a path component: the file is stored under a
 // generated id, and anything with a separator, a traversal, or a control character is
 // refused rather than sanitised, so nothing silently lands under a name nobody chose.
 const filename = z
   .string()
-  .trim()
+  .refine((name) => name.trim().length > 0)
   .min(1)
   .max(255)
   .refine((name) => !name.includes("/") && !name.includes("\\"))
-  .refine((name) => name !== "." && name !== "..")
+  .refine((name) => name.trim() !== "." && name.trim() !== "..")
   .refine((name) => ![...name].some((character) => (character.codePointAt(0) ?? 0) < 0x20));
 
 // ceiling: progress is coalesced to one event per 200 ms per upload. A page that wants
@@ -96,7 +98,7 @@ export async function stageUpload(
   if (!named.success) {
     return { ok: false, reason: "unsafe-filename" };
   }
-  const originalFilename = named.data;
+  const originalFilename = input.originalFilename;
 
   const id = deps.ids.next();
   const target = stagingPath(deps.paths, id);
@@ -111,7 +113,10 @@ export async function stageUpload(
   };
   // The row exists before the first byte, so a process that dies mid-copy leaves a
   // record reconcile collects rather than an untracked file.
-  insertStagedFile(deps.db, file);
+  transact(deps.db, () => {
+    insertStagedFile(deps.db, file);
+    input.onAllocated?.(file);
+  });
 
   let bytes = 0;
   let lastEmit = 0;
@@ -240,11 +245,7 @@ export function attachStagedFile(deps: StorageDeps, input: AttachInput): AttachR
 // has committed. A failure here is not worth failing the run over, because the file is a
 // duplicate of one the project already holds and the next boot's reconcile clears it.
 export function dropStagedSource(deps: StorageDeps, source: string): void {
-  try {
-    rmSync(source, { force: true });
-  } catch (error) {
-    deps.log.write("warn", "staging.source", { detail: `${source}: ${messageOf(error)}` });
-  }
+  releaseStagedFile(deps, basename(source));
 }
 
 // Writing text needs no staging channel, because the progress events belong to uploads.
@@ -292,11 +293,17 @@ export function discardStagedFile(deps: StorageDeps, id: string): DiscardResult 
   if (staged === undefined) {
     return { ok: false, reason: "unknown-staged-file" };
   }
+  if (stagedFileReferenced(deps.db, id)) return { ok: false, reason: "in-use" };
   discard(deps, id, stagingPath(deps.paths, staged.path), "staging.discarded");
   return { ok: true };
 }
 
 function discard(deps: StorageDeps, id: string, target: string, event: string): void {
+  deps.db
+    .prepare(
+      "UPDATE play_draft_attachments SET staged_file_id=NULL,status='reattach',error=? WHERE staged_file_id=?",
+    )
+    .run("Upload is missing or incomplete. Reattach the file.", id);
   try {
     rmSync(target, { force: true });
   } catch (error) {
