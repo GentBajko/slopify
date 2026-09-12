@@ -11,14 +11,28 @@ import { historyOf, revisionFileUrl, revisionImagesUrl, viewOf } from "./revisio
 const retainedTextSchema = z.object({
   text: z.string().optional(),
   logicalText: z.string().optional(),
+  title: z.string().optional(),
+  notes: z.string().optional(),
+  outline: z.array(z.string()).optional(),
+  prompt: z.string().optional(),
 });
 function retainedText(raw: string | null): string {
   if (raw === null) return "No text was recorded for this part.";
   try {
     const parsed = retainedTextSchema.safeParse(JSON.parse(raw));
-    return parsed.success
-      ? (parsed.data.logicalText ?? parsed.data.text ?? "No text was recorded for this part.")
-      : "Recorded text cannot be decoded.";
+    if (!parsed.success) return "Recorded text cannot be decoded.";
+    const { logicalText, text, title, notes, outline, prompt } = parsed.data;
+    const chapter = notes?.trim()
+      ? [title, notes].filter((part) => part?.trim()).join("\n\n")
+      : undefined;
+    const chapters = outline
+      ?.filter((part) => part.trim())
+      .map((part, index) => `${index + 1}. ${part}`)
+      .join("\n");
+    return (
+      [logicalText, text, chapter, chapters, prompt].find((part) => part?.trim()) ??
+      "No text was recorded for this part."
+    );
   } catch {
     return "Recorded text cannot be decoded.";
   }
