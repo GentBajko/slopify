@@ -53,6 +53,7 @@ export function body(options: {
   readonly outputs: readonly Output[];
 }) {
   return {
+    revisionId: null,
     project: {
       id: "p1",
       title: "Rope Tricks",

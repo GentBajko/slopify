@@ -12,6 +12,7 @@ import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
 import type { ModelInfo, ProviderFamily } from "../../kernel/ports/model.js";
 import type { Runner } from "../../kernel/runner/index.js";
+import type { RebuildDeps } from "../../slices/rebuild/service.js";
 import type { CliProbe } from "../../slices/settings/cli-status.js";
 import type { AppUpdater } from "../../updater/model.js";
 import type { Hub } from "../events/hub.js";
@@ -26,6 +27,8 @@ import { problem, problemFromError, titleOf } from "./problem.js";
 import { projectRoutes } from "./projects.js";
 import { promptRoutes } from "./prompts.js";
 import { providerRoutes } from "./providers.js";
+import { revisionFileRoutes, revisionFolderRoutes } from "./revision-files.js";
+import { revisionRoutes } from "./revisions.js";
 import { settingsRoutes } from "./settings.js";
 import { stagingRoutes } from "./staging.js";
 import { subtitleRoutes } from "./subtitles.js";
@@ -34,6 +37,7 @@ import { updateRoutes } from "./update.js";
 import { usageRoutes } from "./usage.js";
 
 export interface AppDeps {
+  readonly rebuild?: RebuildDeps;
   readonly measureAudio?: ((path: string, signal?: AbortSignal) => Promise<number>) | undefined;
   readonly openFolder?: (path: string) => Promise<void>;
   readonly catalogue?: CatalogueStore;
@@ -79,6 +83,8 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/staging", stagingRoutes(deps))
       .route("/projects", planningRoutes(deps))
       .route("/projects", projectRoutes(deps))
+      .route("/projects", revisionRoutes(deps))
+      .route("/projects", revisionFolderRoutes(deps))
       .route("/projects", openFolderRoutes(deps))
       .route("/projects", audioPreviewRoutes(deps))
       .route("/update", updateRoutes(deps))
@@ -138,6 +144,7 @@ export function createApp(deps: AppDeps): Hono {
     )
     // Files are served by URL, not through the API.
     .route("/", fileRoutes(deps))
+    .route("/", revisionFileRoutes(deps))
     // The API answers for its whole prefix, so an unknown endpoint is a problem+json 404
     // rather than the SPA's index.html with a 200.
     .all("/api/*", missing);

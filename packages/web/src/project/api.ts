@@ -51,7 +51,11 @@ export async function updateProviders(
   choices: ProviderChanges,
 ): Promise<ActionResult> {
   return acted(
-    await api.client.projects[":id"].providers.$patch({ param: { id: projectId }, json: choices }),
+    await api.fetch(`${api.origin}/api/projects/${encodeURIComponent(projectId)}/providers`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(choices),
+    }),
   );
 }
 
@@ -99,7 +103,11 @@ export async function saveArticle(
   markdown: string,
 ): Promise<ActionResult> {
   return acted(
-    await api.client.projects[":id"].article.$put({ param: { id: projectId }, json: { markdown } }),
+    await api.fetch(`${api.origin}/api/projects/${encodeURIComponent(projectId)}/article`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ markdown }),
+    }),
   );
 }
 

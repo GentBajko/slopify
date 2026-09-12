@@ -10,7 +10,7 @@ import { outputPath } from "../../slices/storage/layout.js";
 import { createHub } from "../events/hub.js";
 import { createApp } from "./app.js";
 
-it("adopts retained history before a direct legacy article mutation without a preceding GET", async () => {
+it("prepares retained legacy history without changing outputs or dispatching work", async () => {
   const h = revisionFixture();
   try {
     for (const kind of stageKinds)
@@ -58,23 +58,21 @@ it("adopts retained history before a direct legacy article mutation without a pr
       probe: async () => ({ ran: false, stdout: "" }),
     });
     expect(currentRevisionId(h.deps.db, h.projectId)).toBeUndefined();
-    const response = await app.request(`/api/projects/${h.projectId}/article`, {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ markdown: "New article." }),
+    const response = await app.request(`/api/projects/${h.projectId}/revisions/prepare`, {
+      method: "POST",
     });
     expect(response.status, await response.clone().text()).toBe(200);
     const revisions = h.deps.db
       .prepare("SELECT id FROM project_revisions WHERE project_id=? ORDER BY rowid")
       .all(h.projectId);
-    expect(revisions).toHaveLength(2);
+    expect(revisions).toHaveLength(1);
     const origin = revisions[0]?.id;
     const head = currentRevisionId(h.deps.db, h.projectId);
     if (typeof origin !== "string" || head === undefined) throw new Error("No history");
     expect(getRevisionView(h.deps, h.projectId, origin)?.articleMarkdown?.trim()).toBe(
       "Saved article.",
     );
-    expect(getRevisionView(h.deps, h.projectId, head)?.articleMarkdown).toBe("New article.");
+    expect(head).toBe(origin);
     expect(readFileSync(outputPath(h.deps.paths, h.projectId, "article.md"), "utf8")).toBe(
       "Saved article.",
     );

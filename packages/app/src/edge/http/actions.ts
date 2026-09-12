@@ -1,5 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import { z } from "zod";
 import { stageKinds } from "../../kernel/pipeline.js";
 import { derive } from "../../kernel/runner/graph.js";
@@ -7,22 +7,12 @@ import { projectById, projectPaused, stagesOf } from "../../slices/admission/rep
 import type { CancelDeps } from "../../slices/cancel/index.js";
 import { cancelProject } from "../../slices/cancel/index.js";
 import type { ControlDeps, ControlResult } from "../../slices/control/index.js";
-import { changeProviders, pauseProject, resumeProject } from "../../slices/control/index.js";
-import { withProjectControl } from "../../slices/control/lock.js";
-import { providerChangesSchema } from "../../slices/control/providers.js";
+import { pauseProject } from "../../slices/control/index.js";
 import {
   type RevisionControlInput,
   revisionControlSchema,
 } from "../../slices/control/revision-control-schema.js";
-import { type RevisionAction, revisionAction } from "../../slices/rebuild/runtime-actions.js";
-import type { RerunDeps, RerunRefusal, RerunResult } from "../../slices/reruns/index.js";
-import {
-  deleteImage,
-  editArticle,
-  regenerateImage,
-  rerunStage,
-  retryStage,
-} from "../../slices/reruns/index.js";
+import type { RerunDeps } from "../../slices/reruns/index.js";
 import { adoptBaseline } from "../../slices/revisions/adopt.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
 import { allowsCustomModel } from "../../slices/settings/models.js";
@@ -46,36 +36,6 @@ const imageParam = idParam.extend({
     .max(64)
     .regex(/^[0-9A-Za-z_-]+$/),
 });
-// ceiling: half a megabyte of markdown, which is far past any narratable article and
-// keeps a paste from filling the process's memory. A longer one needs a streamed edit.
-const articleBody = z.object({ markdown: z.string().min(1).max(500_000) });
-
-const status: Readonly<Record<RerunRefusal, 400 | 404 | 409>> = {
-  "no-project": 404,
-  "unknown-image": 404,
-  "empty-article": 400,
-  running: 409,
-  "not-rerunnable": 409,
-  "not-retryable": 409,
-  "rebuild-required": 409,
-  "no-article": 409,
-  "last-image": 409,
-};
-
-const details: Readonly<Record<RerunRefusal, string>> = {
-  "no-project": "No project has that id.",
-  "unknown-image": "This project has no image with that id.",
-  "empty-article": "An article cannot be saved empty.",
-  // The precondition on every re-run: no stage of the project is `running`.
-  running: "This project is still running. Cancel it or wait for it to finish.",
-  "not-rerunnable": "Only a stage that has finished, failed, or been canceled can be re-run.",
-  "not-retryable": "Only a failed or canceled stage can be retried.",
-  "rebuild-required": "Review the affected outputs and cost before rebuilding this revision.",
-  "no-article": "This project has no article to edit yet.",
-  // At least one image always remains.
-  "last-image": "At least one image must remain, so the last one cannot be deleted.",
-};
-
 // The return type is inferred so Hono keeps the route types the SPA's client is
 // generated from; see stagingRoutes.
 export function actionRoutes(deps: AppDeps) {
@@ -106,16 +66,6 @@ export function actionRoutes(deps: AppDeps) {
     allowsCustomModels: deps.catalogue ? () => false : allowsCustomModel,
     modelsFor: deps.modelsFor ?? (() => Promise.reject(new Error("Model catalog unavailable"))),
   };
-  const act = (
-    projectId: string,
-    action: RevisionAction,
-    legacy: () => RerunResult,
-  ): Promise<RerunResult> => {
-    if (deps.catalogue !== undefined) adoptBaseline(deps, projectId);
-    return currentRevisionId(deps.db, projectId) === undefined
-      ? Promise.resolve(legacy())
-      : revisionAction({ ...reruns, catalogue: deps.catalogue }, projectId, action);
-  };
   const view = (projectId: string): Record<string, unknown> => {
     const stages = stagesOf(deps.db, projectId);
     return {
@@ -127,27 +77,6 @@ export function actionRoutes(deps: AppDeps) {
       stages,
       outputs: outputsOf(deps.db, projectId),
     };
-  };
-  const started = (
-    c: Parameters<typeof problem>[0],
-    projectId: string,
-    result: RerunResult,
-  ): Response => {
-    if (!result.ok) {
-      return problem(c, {
-        status: status[result.reason],
-        title: titleOf(status[result.reason]),
-        detail: details[result.reason],
-      });
-    }
-    deps.hub.emit(projectId, { type: "project.updated", projectId });
-    if (
-      result.redone.length > 0 &&
-      currentRevisionId(deps.db, projectId) === undefined &&
-      !projectPaused(deps.db, projectId)
-    )
-      deps.runner.tick(projectId);
-    return c.json({ ...view(projectId), redone: result.redone });
   };
   const controlled = (
     c: Parameters<typeof problem>[0],
@@ -182,7 +111,11 @@ export function actionRoutes(deps: AppDeps) {
       status: codes[result.reason],
       title: titleOf(codes[result.reason]),
       detail: messages[result.reason],
-      ...(result.fields === undefined ? {} : { extensions: { fields: result.fields } }),
+      extensions: {
+        reason: result.reason,
+        currentRevisionId: currentRevisionId(deps.db, id) ?? null,
+        fields: result.fields ?? [],
+      },
     });
   };
 
@@ -213,19 +146,14 @@ export function actionRoutes(deps: AppDeps) {
         ? input
         : controlled(c, id, await pauseProject(control, id, input));
     })
-    .post("/:id/resume", zValidator("param", idParam, onInvalid), async (c) => {
+    .post("/:id/resume", zValidator("param", idParam, onInvalid), (c) => {
       const { id } = c.req.valid("param");
-      return controlled(c, id, await resumeProject(control, id));
+      return controlled(c, id, {
+        ok: false,
+        reason: projectById(deps.db, id) === undefined ? "no-project" : "rebuild-required",
+      });
     })
-    .patch(
-      "/:id/providers",
-      zValidator("param", idParam, onInvalid),
-      zValidator("json", providerChangesSchema, onInvalid),
-      async (c) => {
-        const { id } = c.req.valid("param");
-        return controlled(c, id, await changeProviders(control, id, c.req.valid("json")));
-      },
-    )
+    .patch("/:id/providers", zValidator("param", idParam, onInvalid), revisionRequired)
     .post("/:id/cancel", zValidator("param", idParam, onInvalid), async (c) => {
       const { id } = c.req.valid("param");
       const input = await controlInput(c, id);
@@ -235,64 +163,27 @@ export function actionRoutes(deps: AppDeps) {
       return c.json({ ...view(id), canceled: result.canceled });
     })
     .post("/:id/stages/:kind/retry", zValidator("param", stageParam, onInvalid), (c) => {
-      const { id, kind } = c.req.valid("param");
-      return withProjectControl(deps.db, id, async () =>
-        started(
-          c,
-          id,
-          await act(id, { kind: "retry", stage: kind }, () => retryStage(reruns, id, kind)),
-        ),
-      );
+      const { id } = c.req.valid("param");
+      return controlled(c, id, {
+        ok: false,
+        reason: projectById(deps.db, id) === undefined ? "no-project" : "rebuild-required",
+      });
     })
-    .post("/:id/stages/:kind/rerun", zValidator("param", stageParam, onInvalid), (c) => {
-      const { id, kind } = c.req.valid("param");
-      return withProjectControl(deps.db, id, async () =>
-        started(
-          c,
-          id,
-          await act(id, { kind: "rerun", stage: kind }, () => rerunStage(reruns, id, kind)),
-        ),
-      );
-    })
-    .put(
-      "/:id/article",
-      zValidator("param", idParam, onInvalid),
-      zValidator("json", articleBody, onInvalid),
-      (c) => {
-        const { id } = c.req.valid("param");
-        return withProjectControl(deps.db, id, async () =>
-          started(
-            c,
-            id,
-            await act(id, { kind: "article", markdown: c.req.valid("json").markdown }, () =>
-              editArticle(reruns, id, c.req.valid("json").markdown),
-            ),
-          ),
-        );
-      },
-    )
-    .delete("/:id/images/:outputId", zValidator("param", imageParam, onInvalid), (c) => {
-      const { id, outputId } = c.req.valid("param");
-      return withProjectControl(deps.db, id, async () =>
-        started(
-          c,
-          id,
-          await act(id, { kind: "delete-image", outputId }, () =>
-            deleteImage(reruns, id, outputId),
-          ),
-        ),
-      );
-    })
-    .post("/:id/images/:outputId/regenerate", zValidator("param", imageParam, onInvalid), (c) => {
-      const { id, outputId } = c.req.valid("param");
-      return withProjectControl(deps.db, id, async () =>
-        started(
-          c,
-          id,
-          await act(id, { kind: "regenerate-image", outputId }, () =>
-            regenerateImage(reruns, id, outputId),
-          ),
-        ),
-      );
-    });
+    .post("/:id/stages/:kind/rerun", zValidator("param", stageParam, onInvalid), revisionRequired)
+    .put("/:id/article", zValidator("param", idParam, onInvalid), revisionRequired)
+    .delete("/:id/images/:outputId", zValidator("param", imageParam, onInvalid), revisionRequired)
+    .post(
+      "/:id/images/:outputId/regenerate",
+      zValidator("param", imageParam, onInvalid),
+      revisionRequired,
+    );
+}
+
+function revisionRequired(c: Context): Response {
+  return problem(c, {
+    status: 409,
+    title: titleOf(409),
+    detail: "Open Edit project to save changes, then review the affected rebuild.",
+    extensions: { reason: "revision-required" },
+  });
 }

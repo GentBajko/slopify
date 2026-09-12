@@ -1,8 +1,8 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
@@ -12,12 +12,8 @@ import { ensureDirs, layout } from "../../kernel/paths.js";
 import type { StageKind, StageState } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
 import { projectById, stagesOf } from "../../slices/admission/repo.js";
-import { upsertKey } from "../../slices/settings/repo.js";
 import { createHub } from "../events/hub.js";
 import { createApp } from "./app.js";
-
-// The re-run and cancel routes: what each refusal answers with, and that a successful
-// action is the one thing that ticks the runner.
 
 const clock = fixedClock("2026-09-03T09:00:00.000Z");
 const log: Log = { write: (): void => {} };
@@ -28,13 +24,23 @@ interface Harness {
   readonly db: DatabaseSync;
   readonly ticked: string[];
   readonly aborted: string[];
+  readonly dir: string;
 }
+
+const cleanups: (() => void)[] = [];
+afterEach(() => {
+  for (const close of cleanups.splice(0)) close();
+});
 
 function harness(states: Partial<Record<StageKind, StageState>> = {}): Harness {
   const paths = layout(mkdtempSync(join(tmpdir(), "slopify-actions-")));
   ensureDirs(paths, { mode: 0o700 });
   const db = openDb(paths.db);
   migrate(db, clock);
+  cleanups.push(() => {
+    db.close();
+    rmSync(paths.dataDir, { recursive: true, force: true });
+  });
   const dir = join(paths.projects, projectId);
   mkdirSync(join(dir, "images"), { recursive: true });
 
@@ -121,341 +127,110 @@ function harness(states: Partial<Record<StageKind, StageState>> = {}): Harness {
       { id: "typed/model-id", name: "Typed model" },
     ],
   });
-  return { app, db, ticked, aborted };
+  return { app, db, ticked, aborted, dir };
 }
 
-async function detailOf(response: Response): Promise<string> {
-  expect(response.headers.get("content-type")).toBe("application/problem+json");
-  return String(((await response.json()) as { detail?: unknown }).detail);
-}
-
-describe("re-run and retry", () => {
-  it("re-runs a stage, answers with the project and ticks the runner", async () => {
+describe("retired project mutations", () => {
+  it.each([
+    ["PATCH", "/providers"],
+    ["POST", "/stages/article/rerun"],
+    ["PUT", "/article"],
+    ["DELETE", "/images/o-image-1"],
+    ["POST", "/images/o-image-1/regenerate"],
+    ["PATCH", "/subtitles"],
+  ])("refuses %s %s and preserves completed media and state", async (method, suffix) => {
     const h = harness();
-
-    const response = await h.app.request(`/api/projects/${projectId}/stages/audio/rerun`, {
-      method: "POST",
+    const before = {
+      project: projectById(h.db, projectId),
+      stages: stagesOf(h.db, projectId),
+      outputs: h.db.prepare("SELECT * FROM outputs").all(),
+    };
+    const files = ["article.md", "images/001.png", "images/002.png"].map((path) => ({
+      path,
+      bytes: readFileSync(join(h.dir, path)),
+    }));
+    const response = await h.app.request(`/api/projects/${projectId}${suffix}`, {
+      method,
+      headers: { "content-type": "application/json" },
+      body: "{invalid json",
     });
-
-    expect(response.status).toBe(200);
-    // The status is not asserted here: this runner is a stub that starts nothing, so what
-    // the project derives to afterwards is the stub's doing. The real runner claims the
-    // reset stage inside the same tick, and `test/reruns.test.ts` reads it back there.
-    expect(await response.json()).toMatchObject({
-      redone: ["audio", "video"],
-      project: { id: projectId },
-    });
-    expect(h.ticked).toEqual([projectId]);
-  });
-
-  it("refuses while the project is running, and does not tick", async () => {
-    const h = harness({ video: "running" });
-
-    const response = await h.app.request(`/api/projects/${projectId}/stages/audio/rerun`, {
-      method: "POST",
-    });
-
     expect(response.status).toBe(409);
-    expect(await detailOf(response)).toBe(
-      "This project is still running. Cancel it or wait for it to finish.",
-    );
+    expect(response.headers.get("content-type")).toBe("application/problem+json");
+    expect(await response.json()).toMatchObject({ reason: "revision-required" });
+    expect({
+      project: projectById(h.db, projectId),
+      stages: stagesOf(h.db, projectId),
+      outputs: h.db.prepare("SELECT * FROM outputs").all(),
+    }).toEqual(before);
+    for (const file of files) expect(readFileSync(join(h.dir, file.path))).toEqual(file.bytes);
     expect(h.ticked).toEqual([]);
+    expect(h.aborted).toEqual([]);
   });
-
-  it("answers 404 for a project that does not exist", async () => {
+  it("validates stage identifiers before refusing a retired action", async () => {
     const h = harness();
-
-    const response = await h.app.request("/api/projects/nope/stages/audio/rerun", {
-      method: "POST",
-    });
-
-    expect(response.status).toBe(404);
-    expect(await detailOf(response)).toBe("No project has that id.");
-  });
-
-  it("answers 400 for a stage kind the pipeline does not have", async () => {
-    const h = harness();
-
-    const response = await h.app.request(`/api/projects/${projectId}/stages/captions/rerun`, {
-      method: "POST",
-    });
-
-    expect(response.status).toBe(400);
-  });
-
-  it("refuses to retry a stage that is done", async () => {
-    const h = harness();
-
-    const response = await h.app.request(`/api/projects/${projectId}/stages/audio/retry`, {
-      method: "POST",
-    });
-
-    expect(response.status).toBe(409);
-    expect(await detailOf(response)).toBe("Only a failed or canceled stage can be retried.");
-  });
-
-  it("retries a canceled stage", async () => {
-    const h = harness({ audio: "canceled" });
-
-    const response = await h.app.request(`/api/projects/${projectId}/stages/audio/retry`, {
-      method: "POST",
-    });
-
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ redone: ["audio"] });
+    expect(
+      (await h.app.request(`/api/projects/${projectId}/stages/captions/rerun`, { method: "POST" }))
+        .status,
+    ).toBe(400);
   });
 });
 
-describe("the article editor", () => {
-  it("saves the markdown and re-runs from the audio", async () => {
-    const h = harness();
-
-    const response = await h.app.request(`/api/projects/${projectId}/article`, {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ markdown: "# Knots\n\nRope holds." }),
-    });
-
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ redone: ["audio", "video"] });
-    expect(h.ticked).toEqual([projectId]);
-  });
-
-  it("refuses an article of nothing but whitespace", async () => {
-    const h = harness();
-
-    const response = await h.app.request(`/api/projects/${projectId}/article`, {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ markdown: "   " }),
-    });
-
-    expect(response.status).toBe(400);
-    expect(await detailOf(response)).toBe("An article cannot be saved empty.");
-  });
-
-  it("refuses a body with no markdown at all", async () => {
-    const h = harness();
-
-    const response = await h.app.request(`/api/projects/${projectId}/article`, {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({}),
-    });
-
-    expect(response.status).toBe(400);
-  });
+describe("explicit rebuild is required", () => {
+  it.each(["/resume", "/stages/audio/retry"])(
+    "does not dispatch an unheaded legacy run from %s",
+    async (suffix) => {
+      const h = harness({ audio: "canceled" });
+      const before = stagesOf(h.db, projectId);
+      const response = await h.app.request(`/api/projects/${projectId}${suffix}`, {
+        method: "POST",
+      });
+      expect(response.status).toBe(409);
+      expect(await response.json()).toMatchObject({ reason: "rebuild-required" });
+      expect(stagesOf(h.db, projectId)).toEqual(before);
+      expect(h.ticked).toEqual([]);
+    },
+  );
 });
 
-describe("the image actions", () => {
-  it("deletes one image and re-renders", async () => {
-    const h = harness();
-
-    const response = await h.app.request(`/api/projects/${projectId}/images/o-image-1`, {
-      method: "DELETE",
-    });
-
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ redone: ["video"] });
-  });
-
-  // The image-delete and re-run preconditions, in the words the page shows.
-  it("refuses the last image with the reason", async () => {
-    const h = harness();
-    await h.app.request(`/api/projects/${projectId}/images/o-image-1`, { method: "DELETE" });
-
-    const response = await h.app.request(`/api/projects/${projectId}/images/o-image-2`, {
-      method: "DELETE",
-    });
-
-    expect(response.status).toBe(409);
-    expect(await detailOf(response)).toBe(
-      "At least one image must remain, so the last one cannot be deleted.",
-    );
-  });
-
-  it("answers 404 for an output that is not an image of this project", async () => {
-    const h = harness();
-
-    const response = await h.app.request(`/api/projects/${projectId}/images/o-md`, {
-      method: "DELETE",
-    });
-
-    expect(response.status).toBe(404);
-    expect(await detailOf(response)).toBe("This project has no image with that id.");
-  });
-
-  it("regenerates one image and re-renders", async () => {
-    const h = harness();
-
-    const response = await h.app.request(`/api/projects/${projectId}/images/o-image-1/regenerate`, {
-      method: "POST",
-    });
-
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ redone: ["images", "video"] });
-  });
-});
-
-describe("cancel", () => {
-  it("aborts the project and never ticks it back into life", async () => {
+describe("cancel and pause", () => {
+  it("aborts a running project without dispatching it again", async () => {
     const h = harness({ audio: "running", video: "pending" });
-
     const response = await h.app.request(`/api/projects/${projectId}/cancel`, { method: "POST" });
-
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
       canceled: ["audio"],
       project: { status: "canceled" },
     });
     expect(h.aborted).toEqual([projectId]);
-    // A canceled project never resumes on its own.
     expect(h.ticked).toEqual([]);
   });
-
-  // A second click is a no-op.
-  it("answers a second click without aborting anything", async () => {
+  it("answers a second cancel without aborting anything", async () => {
     const h = harness({ audio: "canceled", video: "pending" });
-
     const response = await h.app.request(`/api/projects/${projectId}/cancel`, { method: "POST" });
-
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ canceled: [] });
     expect(h.aborted).toEqual([]);
   });
-
-  it("answers 404 for a project that does not exist", async () => {
-    const h = harness();
-
-    const response = await h.app.request("/api/projects/nope/cancel", { method: "POST" });
-
-    expect(response.status).toBe(404);
-  });
-});
-
-describe("pause, resume, and provider editing", () => {
-  it("returns a paused project after draining then resumes it with one tick", async () => {
+  it("drains active work when pausing and leaves the project paused", async () => {
     const h = harness({ article: "running", audio: "pending", video: "pending" });
-    const paused = await h.app.request(`/api/projects/${projectId}/pause`, { method: "POST" });
-    expect(paused.status).toBe(200);
-    expect(await paused.json()).toMatchObject({
-      project: { id: projectId, status: "paused", paused: true },
-      stages: expect.arrayContaining([
-        { ...stagesOf(h.db, projectId).find((stage) => stage.kind === "article") },
-      ]),
+    const response = await h.app.request(`/api/projects/${projectId}/pause`, { method: "POST" });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      project: { id: projectId, paused: true, status: "paused" },
     });
     expect(stagesOf(h.db, projectId).find((stage) => stage.kind === "article")?.state).toBe(
       "pending",
     );
     expect(h.aborted).toEqual([projectId]);
     expect(h.ticked).toEqual([]);
-    const resumed = await h.app.request(`/api/projects/${projectId}/resume`, { method: "POST" });
-    expect(resumed.status).toBe(200);
-    expect(await resumed.json()).toMatchObject({ project: { paused: false } });
-    expect(h.ticked).toEqual([projectId]);
   });
-
-  it("updates paused provider choices and preserves the saved run configuration", async () => {
-    const h = harness({ article: "failed" });
-    upsertKey(h.db, "openrouter", "test-key", clock.now().toISOString());
-    await h.app.request(`/api/projects/${projectId}/pause`, { method: "POST" });
-    const before = projectById(h.db, projectId)?.config;
-    const response = await h.app.request(`/api/projects/${projectId}/providers`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ llm: { provider: "openrouter", model: "typed/model-id" } }),
-    });
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
-      project: {
-        status: "paused",
-        config: { ...before, llm: { provider: "openrouter", model: "typed/model-id" } },
-      },
-    });
-    expect(h.ticked).toEqual([]);
-  });
-
-  it("refuses provider edits during active work and returns field errors for unavailable choices", async () => {
-    const h = harness({ article: "running" });
-    const request = () =>
-      h.app.request(`/api/projects/${projectId}/providers`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ llm: { provider: "openrouter", model: "new" } }),
-      });
-    expect((await request()).status).toBe(409);
-    await h.app.request(`/api/projects/${projectId}/pause`, { method: "POST" });
-    const response = await request();
-    expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({
-      fields: [{ field: "llm", message: expect.stringContaining("API key") }],
-    });
-  });
-
-  it.each([{}, { llm: { provider: "openrouter", model: "" } }, { sources: { article: "off" } }])(
-    "rejects a malformed provider patch without touching the project: %j",
-    async (body) => {
-      const h = harness({ article: "failed" });
-      const response = await h.app.request(`/api/projects/${projectId}/providers`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      expect(response.status).toBe(400);
-      expect(h.ticked).toEqual([]);
+  it.each(["pause", "resume", "cancel"])(
+    "answers 404 for %s of an unknown project",
+    async (action) => {
+      const h = harness();
+      expect(
+        (await h.app.request(`/api/projects/missing/${action}`, { method: "POST" })).status,
+      ).toBe(404);
     },
   );
-
-  it.each(["pause", "resume"])("answers 404 for %s of an unknown project", async (action) => {
-    const h = harness();
-    expect(
-      (await h.app.request(`/api/projects/missing/${action}`, { method: "POST" })).status,
-    ).toBe(404);
-  });
-});
-
-describe("subtitle edits", () => {
-  it("rerenders only the local final stage and preserves current outputs", async () => {
-    const one = harness();
-    const before = one.db.prepare("SELECT * FROM outputs").all();
-    const response = await one.app.request("/api/projects/p1/subtitles", {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ mode: "files" }),
-    });
-    expect(response.status).toBe(200);
-    expect(projectById(one.db, "p1")?.config.subtitles?.mode).toBe("files");
-    expect(
-      stagesOf(one.db, "p1")
-        .filter((stage) => stage.state === "pending")
-        .map((stage) => stage.kind),
-    ).toEqual(["video"]);
-    expect(one.db.prepare("SELECT * FROM outputs").all()).toEqual(before);
-    expect(one.ticked).toEqual(["p1"]);
-  });
-  it("saves paused settings without starting any work", async () => {
-    const one = harness({ audio: "failed" });
-    await one.app.request("/api/projects/p1/pause", { method: "POST" });
-    const response = await one.app.request("/api/projects/p1/subtitles", {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ mode: "burn-in" }),
-    });
-    expect(response.status).toBe(200);
-    expect(one.ticked).toEqual([]);
-    expect(projectById(one.db, "p1")?.paused).toBe(true);
-  });
-  it("refuses active work and invalid font paths without changing saved settings", async () => {
-    const one = harness({ audio: "running" });
-    const request = async (fontId: string): Promise<Response> =>
-      one.app.request("/api/projects/p1/subtitles", {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ mode: "files", fontId }),
-      });
-    expect((await request("default")).status).toBe(409);
-    expect((await request("../../secret.ttf")).status).toBe(400);
-    expect(projectById(one.db, "p1")?.config.subtitles).toBeUndefined();
-    expect(one.ticked).toEqual([]);
-  });
 });

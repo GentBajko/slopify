@@ -193,6 +193,7 @@ async function mount(
       const draft = (await request.json()) as RunDraft;
       const id = "actual-created-project";
       created = {
+        revisionId: null,
         project: {
           id,
           title: draft.title,

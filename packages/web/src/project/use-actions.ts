@@ -74,8 +74,9 @@ export function useProjectActions(projectId: string): ProjectActions {
         setRefusal({ message: result.message, stage: stageOf(input.action) });
         return;
       }
-      const { project, stages, outputs } = result.value;
+      const { revisionId, project, stages, outputs } = result.value;
       queryClient.setQueryData<ProjectBody>(keys.project(input.projectId), {
+        revisionId,
         project,
         stages,
         outputs,

@@ -51,7 +51,9 @@ import {
   projectStandings,
   recordWorkProgress,
 } from "./slices/rebuild/runtime-store.js";
+import type { RebuildDeps } from "./slices/rebuild/service.js";
 import { nodeCliProbe } from "./slices/settings/cli-status.js";
+import { providerStatuses } from "./slices/settings/readiness.js";
 import { reconcileStorage } from "./slices/storage/reconcile.js";
 import { collectorEndpoint, httpPostEvents } from "./slices/telemetry/collector-client.js";
 import type { Flusher } from "./slices/telemetry/flush.js";
@@ -214,9 +216,23 @@ export async function boot(config: Config): Promise<Boot> {
         );
       },
     });
-    const app = createApp({
+    const rebuild: RebuildDeps = {
+      db,
+      paths,
+      ids,
+      clock,
+      log,
+      runner,
+      catalogue,
       measureAudio: (path, signal) =>
         probeDurationMs(ffmpeg, path, signal ?? AbortSignal.timeout(30_000), log),
+      providers: () => providerStatuses({ db: updateDb, probe: nodeCliProbe }),
+      modelsFor: modelSources(registry).modelsFor,
+      emit: (projectId, event) => hub.emit(projectId, event),
+    };
+    const app = createApp({
+      rebuild,
+      ...(rebuild.measureAudio === undefined ? {} : { measureAudio: rebuild.measureAudio }),
       openFolder,
       db,
       paths,
