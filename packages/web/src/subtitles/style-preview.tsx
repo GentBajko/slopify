@@ -8,7 +8,9 @@ import { fontUrl } from "./api";
 export function SubtitlePreview({
   value,
   format,
+  text = "Every story begins with a word.",
 }: {
+  readonly text?: string;
   readonly value: SubtitleConfig;
   readonly format: Format;
 }): ReactElement {
@@ -73,7 +75,7 @@ export function SubtitlePreview({
             textShadow: `0 ${100 / frame.width}cqw ${100 / frame.width}cqw #000`,
           }}
         >
-          Every story begins with a word.
+          {text}
         </span>
       </div>
       <figcaption className="mt-2 text-label text-ink3">

@@ -9,6 +9,7 @@ import { AppearanceSkin } from "@/components/theme";
 import { VersionPrompt } from "@/components/version-prompt";
 import { subscribeGlobal } from "@/events";
 import { FormDraftsProvider } from "@/lib/form-drafts";
+import { PlayDraftProvider } from "@/play/draft-context";
 import { coalesce } from "@/project/live";
 import { keys } from "@/queries";
 import { TutorialProvider } from "@/tutorial/context";
@@ -52,9 +53,11 @@ const support = [
 export function Shell() {
   return (
     <FormDraftsProvider>
-      <TutorialProvider>
-        <ShellContent />
-      </TutorialProvider>
+      <PlayDraftProvider>
+        <TutorialProvider>
+          <ShellContent />
+        </TutorialProvider>
+      </PlayDraftProvider>
     </FormDraftsProvider>
   );
 }

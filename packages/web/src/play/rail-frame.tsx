@@ -33,6 +33,13 @@ export interface RailProps {
   readonly update: (patch: Partial<PlayFormState>) => void;
   readonly onPickFiles: (kind: UploadKind, files: readonly File[]) => void;
   readonly onRemoveFile: (kind: UploadKind, key: string) => void;
+  readonly subtitleSession?: {
+    readonly previewText: string;
+    readonly fontUploading: boolean;
+    readonly fontUpload: { readonly name: string } | null;
+    readonly selectFont: (id: string) => void;
+    readonly uploadSubtitleFont: (file: File) => Promise<void>;
+  };
   readonly onSubtitleUpload?: (pending: boolean) => void;
 }
 

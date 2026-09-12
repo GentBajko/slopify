@@ -147,7 +147,14 @@ function ThumbnailRail({
   );
 }
 
-function VideoRail({ form, silenceGapSeconds, update, onSubtitleUpload, problem }: RailProps) {
+function VideoRail({
+  form,
+  silenceGapSeconds,
+  update,
+  onSubtitleUpload,
+  subtitleSession,
+  problem,
+}: RailProps) {
   const explanation =
     form.sources.video === "generate"
       ? form.sources.audio === "off"
@@ -165,6 +172,7 @@ function VideoRail({ form, silenceGapSeconds, update, onSubtitleUpload, problem 
       </span>
       <div data-tour="play-subtitles" className={railBeneath}>
         <SubtitleControls
+          {...(subtitleSession ? { session: subtitleSession } : {})}
           value={subtitlesFor(form.subtitles, form.sources)}
           format={form.format}
           audioEnabled={form.sources.audio !== "off"}

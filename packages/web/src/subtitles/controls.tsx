@@ -17,7 +17,15 @@ export function SubtitleControls({
   onChange,
   onUploading,
   problem,
+  session,
 }: {
+  readonly session?: {
+    readonly previewText: string;
+    readonly fontUploading: boolean;
+    readonly fontUpload: { readonly name: string } | null;
+    readonly selectFont: (id: string) => void;
+    readonly uploadSubtitleFont: (file: File) => Promise<void>;
+  };
   readonly value: SubtitleConfig;
   readonly format?: Format;
   readonly audioEnabled: boolean;
@@ -78,8 +86,13 @@ export function SubtitleControls({
             >
               <div className="flex min-w-0 flex-col gap-4">
                 <FontPicker
+                  {...(session
+                    ? { onUpload: session.uploadSubtitleFont, pending: session.fontUploading }
+                    : {})}
                   value={value.fontId}
-                  onPick={(fontId) => onChange({ ...value, fontId })}
+                  onPick={(fontId) =>
+                    session ? session.selectFont(fontId) : onChange({ ...value, fontId })
+                  }
                   onUploading={(pending) => {
                     setUploading(pending);
                     onUploading?.(pending);
@@ -129,8 +142,15 @@ export function SubtitleControls({
                   </select>
                 </div>
               </div>
-              <SubtitlePreview value={value} format={format} />
+              <SubtitlePreview
+                value={value}
+                format={format}
+                {...(session ? { text: session.previewText } : {})}
+              />
             </div>
+            {session?.fontUpload && !session.fontUploading ? (
+              <p role="alert">Reattach {session.fontUpload.name}, or select a font.</p>
+            ) : null}
             {fontProblem ? (
               <p role="alert" className="text-small text-red">
                 {fontProblem}

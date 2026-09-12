@@ -4,16 +4,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { type KeyboardEvent, useState } from "react";
 import type { UploadKind } from "@/api";
-import { createProject, uploadStaged } from "@/api";
+import { createProject } from "@/api";
 import { useApp } from "@/app-context";
 import { read } from "@/http";
 import { usePlayDraft } from "@/lib/form-drafts";
 import { admission } from "@/play/admission";
 import { CueSheet } from "@/play/cue-sheet";
-import { BatchEditor, type BatchItem, RunReview } from "@/play/run-review";
+import { usePlaySession } from "@/play/draft-context";
+import { DraftList } from "@/play/draft-list";
+import { BatchEditor, RunReview } from "@/play/run-review";
 import { StageRails } from "@/play/stage-rails";
 import type { PlayFormState, Upload } from "@/play/state";
-import { freshForm } from "@/play/state";
 import {
   entriesQuery,
   keys,
@@ -54,10 +55,11 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   const settings = useQuery(settingsQuery(api));
 
   const [form, setForm] = usePlayDraft();
-  const [batchItems, setBatchItems] = useState<readonly BatchItem[]>([]);
+  const session = usePlaySession();
+  const batchItems = session.document.variants.map(({ id, ...item }) => ({ ...item, key: id }));
   const [review, setReview] = useState(false);
   const [batchId, setBatchId] = useState(() => crypto.randomUUID());
-  const [subtitleUploading, setSubtitleUploading] = useState(false);
+  const subtitleUploading = session.fontUploading || session.document.fontUpload !== null;
   // What the server marked when it refused the draft: a template deleted since it was
   // picked, or a rule the browser's copy could not see.
   const [refused, setRefused] = useState<readonly FieldError[]>([]);
@@ -124,8 +126,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
       void queryClient.invalidateQueries({ queryKey: keys.projects });
       void queryClient.invalidateQueries({ queryKey: keys.staging });
       // Upload IDs belong to this run once accepted; the next Play starts fresh.
-      setForm(freshForm);
-      setBatchItems([]);
+      void session.newDraft();
       setBatchId(crypto.randomUUID());
       setReview(false);
       tutorialEvent({ type: "project-created", id: created.value.project.id });
@@ -194,55 +195,9 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     }
   };
 
-  const stage = async (kind: UploadKind, file: File, key: string): Promise<void> => {
-    try {
-      const staged = await uploadStaged(api, kind, file);
-      settle(key, (upload) => ({ ...upload, file: staged }));
-    } catch (error) {
-      settle(key, (upload) => ({ ...upload, error: messageOf(error) }));
-    }
-  };
-
-  const settle = (key: string, done: (upload: Upload) => Upload): void => {
-    setForm((current) => ({
-      ...current,
-      provided: {
-        ...current.provided,
-        audio:
-          current.provided.audio?.key === key
-            ? done(current.provided.audio)
-            : current.provided.audio,
-        thumbnail:
-          current.provided.thumbnail?.key === key
-            ? done(current.provided.thumbnail)
-            : current.provided.thumbnail,
-        images: current.provided.images.map((image) => (image.key === key ? done(image) : image)),
-      },
-    }));
-  };
-
-  // The copy starts the moment the file is picked, in the background, with its progress on
-  // the form. A second pick replaces the first in a single-file slot, and the slideshow
-  // keeps selection order.
   const onPickFiles = (kind: UploadKind, files: readonly File[]): void => {
-    const uploads = files.map(newUpload);
-    const last = uploads[uploads.length - 1];
-    setForm((current) => ({
-      ...current,
-      provided:
-        kind === "images"
-          ? { ...current.provided, images: [...current.provided.images, ...uploads] }
-          : kind === "audio"
-            ? { ...current.provided, audio: last }
-            : { ...current.provided, thumbnail: last },
-    }));
     setRefused([]);
-    for (const [at, upload] of uploads.entries()) {
-      const file = files[at];
-      if (file !== undefined) {
-        void stage(kind, file, upload.key);
-      }
-    }
+    void session.attach(kind, files);
   };
 
   const onRemoveFile = (kind: UploadKind, key: string): void => {
@@ -280,6 +235,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
           and a video or combined audio export to suit your project.
         </p>
 
+        <DraftList />
         {loadError === undefined ? null : <p className="mb-4 text-body text-red">{loadError}</p>}
 
         <StageRails
@@ -292,7 +248,13 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
           update={update}
           onPickFiles={onPickFiles}
           onRemoveFile={onRemoveFile}
-          onSubtitleUpload={setSubtitleUploading}
+          subtitleSession={{
+            previewText: session.document.previewText,
+            fontUploading: session.fontUploading,
+            fontUpload: session.document.fontUpload,
+            selectFont: session.selectFont,
+            uploadSubtitleFont: session.uploadSubtitleFont,
+          }}
         />
       </div>
 
@@ -314,7 +276,10 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
           title={form.title}
           values={form.values}
           onChange={(items) => {
-            setBatchItems(items);
+            session.edit({
+              ...session.document,
+              variants: items.map(({ key, ...item }) => ({ ...item, id: key })),
+            });
             setBatchId(crypto.randomUUID());
           }}
         />
@@ -324,6 +289,8 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
           draft={draft}
           items={batchItems}
           pending={play.isPending}
+          expectedWords={session.document.expectedWords}
+          onExpectedWords={(expectedWords) => session.edit({ ...session.document, expectedWords })}
           failure={play.error?.message ?? refused.map((f) => f.message).join(" ")}
           onClose={() => setReview(false)}
           onStart={() => play.mutate()}
@@ -331,12 +298,4 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
       ) : null}
     </div>
   );
-}
-
-function newUpload(file: File): Upload {
-  return { key: crypto.randomUUID(), name: file.name, file: undefined, error: undefined };
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

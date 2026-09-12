@@ -1,25 +1,20 @@
 import type { PromptDraft } from "@app/slices/library/model.js";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
-import { freshForm, type PlayFormState } from "@/play/state";
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import { usePlaySession } from "@/play/draft-context";
+import type { PlayFormState, Upload } from "@/play/state";
 
 type PromptUpdate = SetStateAction<PromptDraft | undefined>;
 
 interface FormDrafts {
   readonly prompts: ReadonlyMap<string, PromptDraft>;
   readonly updatePrompt: (key: string, update: PromptUpdate) => void;
-  readonly play: PlayFormState;
-  readonly updatePlay: Dispatch<SetStateAction<PlayFormState>>;
 }
 
 const DraftsContext = createContext<FormDrafts | undefined>(undefined);
 
-// Forms survive in-app navigation for this tab's lifetime. Nothing is serialized,
-// and API-key fields never use this provider. Keeping the Play updater here also
-// lets an upload finish while its page is unmounted.
 export function FormDraftsProvider({ children }: { readonly children: ReactNode }) {
   const [prompts, setPrompts] = useState<ReadonlyMap<string, PromptDraft>>(() => new Map());
-  const [play, updatePlay] = useState<PlayFormState>(freshForm);
   const updatePrompt = useCallback((key: string, update: PromptUpdate) => {
     setPrompts((previous) => {
       const before = previous.get(key);
@@ -31,10 +26,7 @@ export function FormDraftsProvider({ children }: { readonly children: ReactNode 
       return next;
     });
   }, []);
-  const value = useMemo(
-    () => ({ prompts, updatePrompt, play, updatePlay }),
-    [prompts, updatePrompt, play],
-  );
+  const value = useMemo(() => ({ prompts, updatePrompt }), [prompts, updatePrompt]);
   return <DraftsContext.Provider value={value}>{children}</DraftsContext.Provider>;
 }
 
@@ -55,7 +47,98 @@ export function usePromptDraft(
 }
 
 export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction<PlayFormState>>] {
-  const context = useContext(DraftsContext);
-  const [local, setLocal] = useState<PlayFormState>(freshForm);
-  return context ? [context.play, context.updatePlay] : [local, setLocal];
+  const session = usePlaySession();
+  const current = useRef(session);
+  current.current = session;
+  const form = session.document.form;
+  const upload = (ref: typeof form.provided.audio): Upload | undefined => {
+    if (!ref) return undefined;
+    const attachment = session.view?.attachments.find((one) => one.id === ref.attachmentId);
+    const file =
+      attachment?.state === "ready" && attachment.stagedFileId
+        ? {
+            id: attachment.stagedFileId,
+            stageKind: attachment.kind,
+            path: attachment.stagedFileId,
+            originalFilename: attachment.name,
+            bytes: attachment.bytes,
+            state: "staged" as const,
+            createdAt: session.view?.draft.createdAt ?? "",
+          }
+        : undefined;
+    return {
+      key: ref.attachmentId,
+      name: ref.name,
+      file,
+      error:
+        attachment?.error ?? (attachment?.state === "reattach" ? "Reattach this file" : undefined),
+    };
+  };
+  const legacy: PlayFormState = {
+    ...form,
+    imagePrompts: form.imagePrompts.map((one) => ({ ...one, number: Number(one.number) })),
+    chunking:
+      form.chunking.mode === "words"
+        ? { mode: "words", words: Number(form.chunking.words) }
+        : form.chunking.mode === "characters"
+          ? { mode: "characters", characters: Number(form.chunking.characters) }
+          : { mode: form.chunking.mode },
+    subtitles: { ...form.subtitles, fontSize: Number(form.subtitles.fontSize) },
+    provided: {
+      ...form.provided,
+      audio: upload(form.provided.audio),
+      thumbnail: upload(form.provided.thumbnail),
+      images: form.provided.images.flatMap((ref) => {
+        const one = upload(ref);
+        return one ? [one] : [];
+      }),
+    },
+  };
+  const latest = useRef(legacy);
+  latest.current = legacy;
+  const update = useCallback((action: SetStateAction<PlayFormState>) => {
+    const before = current.current.document;
+    const next = typeof action === "function" ? action(latest.current) : action;
+    latest.current = next;
+    const rawNumber = (value: number | undefined, raw: string) =>
+      Object.is(value, Number(raw)) ? raw : String(value);
+    const ref = (one: Upload | undefined) =>
+      one ? { attachmentId: one.key, name: one.name } : null;
+    current.current.edit({
+      ...before,
+      form: {
+        ...next,
+        imagePrompts: next.imagePrompts.map((one) => ({
+          ...one,
+          number: rawNumber(
+            one.number,
+            before.form.imagePrompts.find((saved) => saved.name === one.name)?.number ??
+              String(one.number),
+          ),
+        })),
+        chunking: {
+          ...before.form.chunking,
+          mode: next.chunking.mode,
+          ...(next.chunking.mode === "words"
+            ? { words: rawNumber(next.chunking.words, before.form.chunking.words) }
+            : {}),
+          ...(next.chunking.mode === "characters"
+            ? { characters: rawNumber(next.chunking.characters, before.form.chunking.characters) }
+            : {}),
+        },
+        subtitles: {
+          ...before.form.subtitles,
+          ...next.subtitles,
+          fontSize: rawNumber(next.subtitles.fontSize, before.form.subtitles.fontSize),
+        },
+        provided: {
+          ...next.provided,
+          audio: ref(next.provided.audio),
+          thumbnail: ref(next.provided.thumbnail),
+          images: next.provided.images.map((one) => ({ attachmentId: one.key, name: one.name })),
+        },
+      },
+    });
+  }, []);
+  return [legacy, update];
 }

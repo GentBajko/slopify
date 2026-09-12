@@ -1,11 +1,9 @@
-import type { Entry, Prompt } from "@app/slices/library/model.js";
-import type { ProviderStatus, Voice } from "@app/slices/settings/model.js";
 import { subtitleConfigSchema } from "@app/slices/subtitles/model.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type Answer, jsonAnswer, renderApp, testDeps, testVersion } from "@/test-app";
-import { PlayForm } from "./play.js";
+import { entries, mountPlay } from "@/play/play-test-fixture";
+import { type Answer, jsonAnswer, testVersion } from "@/test-app";
 
 const tutorial = vi.hoisted(() => ({
   event: vi.fn(),
@@ -22,124 +20,6 @@ afterEach(() => {
   tutorial.event.mockClear();
   tutorial.progress.mockClear();
 });
-
-const providers: readonly ProviderStatus[] = [
-  {
-    id: "openrouter",
-    family: "llm",
-    displayName: "OpenRouter",
-    readiness: { kind: "keyed", hasKey: false },
-  },
-  {
-    id: "claude-code",
-    family: "llm",
-    displayName: "Claude Code CLI",
-    readiness: { kind: "cli", installed: true, version: "2.1.258" },
-  },
-  {
-    id: "codex",
-    family: "llm",
-    displayName: "Codex CLI",
-    readiness: { kind: "cli", installed: false },
-  },
-  {
-    id: "elevenlabs",
-    family: "tts",
-    displayName: "ElevenLabs",
-    readiness: { kind: "keyed", hasKey: true },
-  },
-  {
-    id: "cartesia",
-    family: "tts",
-    displayName: "Cartesia",
-    readiness: { kind: "keyed", hasKey: false },
-  },
-  { id: "fal", family: "image", displayName: "fal.ai", readiness: { kind: "keyed", hasKey: true } },
-];
-
-function prompt(kind: Prompt["kind"], name: string, body: string): Prompt {
-  return { id: name, kind, name, body, slots: [], updatedAt: "2026-09-03T00:00:00.000Z" };
-}
-
-const prompts: readonly Prompt[] = [
-  prompt("article", "Dossier", "Write about {{topic}} in {{minWords}} words."),
-  prompt("image", "Oils", "An oil painting of {{topic}} in {{style}}."),
-  prompt("image", "Maps", "A map of {{era}}."),
-  prompt("thumbnail", "Title card", "A title card for {{topic}}."),
-];
-
-const entries: readonly Entry[] = [
-  {
-    id: "e1",
-    category: "intro",
-    mode: "text",
-    name: "Cold open",
-    body: "Hook them.",
-    slots: [],
-    updatedAt: "2026-09-03T00:00:00.000Z",
-  },
-  {
-    id: "e2",
-    category: "outro",
-    mode: "llm",
-    name: "Sting",
-    body: "Write a sign-off.",
-    slots: [],
-    updatedAt: "2026-09-03T00:00:00.000Z",
-  },
-];
-
-const voices: readonly Voice[] = [
-  { id: "v1", provider: "elevenlabs", name: "Narrator M", voiceId: "eleven-narrator" },
-  { id: "v2", provider: "cartesia", name: "Other", voiceId: "cartesia-other" },
-];
-
-function playRoutes(over: Readonly<Record<string, Answer>> = {}): Readonly<Record<string, Answer>> {
-  return {
-    "GET /api/providers": jsonAnswer({ providers }),
-    "GET /api/providers/claude-code/models": jsonAnswer({
-      models: [{ id: "sonnet", name: "Claude Sonnet" }],
-      allowsCustom: true,
-    }),
-    "GET /api/providers/elevenlabs/models": jsonAnswer({
-      models: [{ id: "eleven_multilingual_v2", name: "Multilingual v2" }],
-      allowsCustom: true,
-    }),
-    "GET /api/providers/cartesia/models": jsonAnswer({
-      models: [{ id: "sonic-3.5", name: "Sonic 3.5" }],
-      allowsCustom: true,
-    }),
-    "GET /api/providers/fal/models": jsonAnswer({
-      models: [{ id: "fal-ai/flux-2", name: "FLUX.2" }],
-      allowsCustom: false,
-    }),
-    "GET /api/providers/google-image/models": jsonAnswer({
-      models: [{ id: "gemini-3.1-flash-image", name: "Nano Banana 2" }],
-      allowsCustom: true,
-    }),
-
-    "GET /api/prompts": jsonAnswer({ prompts }),
-    "GET /api/entries": jsonAnswer({ entries }),
-    "GET /api/settings/voices": jsonAnswer({ voices }),
-    "GET /api/settings": jsonAnswer({ silenceGapSeconds: 3, appearance: "system" }),
-    "POST /api/projects/estimate": jsonAnswer({
-      estimates: [
-        {
-          currency: "USD",
-          rows: [],
-          low: 0,
-          high: 0,
-          unknown: 0,
-          expectedWords: 1500,
-          catalogueDate: "2026-09-10",
-          assumptions: [],
-        },
-      ],
-    }),
-    "POST /api/projects": jsonAnswer({ project: { id: "p1", status: "running" }, stages: [] }, 201),
-    ...over,
-  };
-}
 
 function fieldsAnswer(fields: readonly { field: string; message: string }[]): Answer {
   return () =>
@@ -185,12 +65,10 @@ function modelPickers(): readonly HTMLElement[] {
   return screen.getAllByLabelText("Model");
 }
 
-async function mount(over: Readonly<Record<string, Answer>> = {}): Promise<() => void> {
-  const created = vi.fn();
-  renderApp(<PlayForm onCreated={created} />, testDeps(playRoutes(over)));
-  // Every picker is filled from a list, so nothing can be chosen until they land.
-  await screen.findByRole("option", { name: "Dossier" });
-  return created;
+async function mount(
+  over: Readonly<Record<string, Answer>> = {},
+): Promise<ReturnType<typeof vi.fn>> {
+  return (await mountPlay(over)).created;
 }
 
 // Fills the form for a run whose every stage is generated.
@@ -440,15 +318,16 @@ describe("optional stages", () => {
     });
     const created = await mount({
       "GET /api/entries": jsonAnswer({ entries: [{ ...entries[1], body: "Write {{unused}}." }] }),
-      "POST /api/staging/audio": jsonAnswer({
-        id: "uploaded-narration",
-        stageKind: "audio",
-        path: "uploaded-narration",
-        originalFilename: "narration.wav",
-        bytes: 5,
-        state: "staged",
-        createdAt: "2026-09-09T20:00:00.000Z",
-      }),
+      "PUT /api/drafts/:id/attachments/:attachmentId/file": (request) =>
+        jsonAnswer({
+          id: new URL(request.url).pathname.split("/")[5],
+          kind: "audio",
+          name: "narration.wav",
+          bytes: 5,
+          state: "ready",
+          stagedFileId: "uploaded-narration",
+          error: null,
+        })(request),
       "POST /api/projects": posted,
     });
     await pick("Outro", "Sting");

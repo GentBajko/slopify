@@ -8,6 +8,7 @@ import type { UserEvent } from "@testing-library/user-event";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProjectBody } from "@/api";
+import { playRoutes } from "@/play/play-test-fixture";
 import { createAppRouter } from "@/router";
 import { type Answer, jsonAnswer, renderApp, testDeps, testVersion } from "@/test-app";
 import { type TutorialStepId, tutorialSteps } from "./model";
@@ -161,7 +162,9 @@ async function mount(
     }),
     "GET /api/prompts": (request) => jsonAnswer({ prompts })(request),
     "GET /api/entries": jsonAnswer({ entries: [] }),
-    ...(options.uploadAudio ? { "POST /api/staging/audio": options.uploadAudio } : {}),
+    ...(options.uploadAudio
+      ? { "PUT /api/drafts/:id/attachments/:attachmentId/file": options.uploadAudio }
+      : {}),
     "POST /api/prompts": async (request) => {
       if (options.refusePrompt) return refusedSave();
       const draft = (await request.json()) as PromptDraft;
@@ -260,15 +263,17 @@ async function mount(
     "GET /api/projects/actual-created-project": (request) => jsonAnswer(created)(request),
     "GET /files/actual-created-project/article-md": () => new Response("My finished article."),
   };
-  const recorded = Object.fromEntries(
-    Object.entries(routes).map(([path, answer]) => [
-      path,
-      (request: Request) => {
-        requests.push(path);
-        return answer(request);
-      },
-    ]),
-  );
+  const recorded = new Proxy(playRoutes(routes), {
+    get(target, key: string) {
+      const answer = target[key];
+      return answer
+        ? (request: Request) => {
+            requests.push(key);
+            return answer(request);
+          }
+        : undefined;
+    },
+  });
   const router = createAppRouter();
   router.update({ history: createMemoryHistory({ initialEntries: [options.initial ?? "/"] }) });
   renderApp(<RouterProvider router={router} />, testDeps(recorded));
@@ -649,12 +654,19 @@ describe("the tutorial in the real app", () => {
   });
 
   it("retains Play configuration and finishes a pending upload while the guide is on Settings", async () => {
+    let attachmentId = "";
     let finish: ((response: Response) => void) | undefined;
     const uploaded = new Promise<Response>((resolve) => {
       finish = resolve;
     });
     const user = userEvent.setup();
-    const { router } = await mount({ initial: "/play", uploadAudio: () => uploaded });
+    const { router } = await mount({
+      initial: "/play",
+      uploadAudio: (request) => {
+        attachmentId = new URL(request.url).pathname.split("/")[5] ?? "";
+        return uploaded;
+      },
+    });
     await fill(user, "Video title", "Draft with narration");
     await user.selectOptions(await screen.findByLabelText("Article prompt"), "My article");
     await user.click(
@@ -671,13 +683,13 @@ describe("the tutorial in the real app", () => {
     await act(async () => {
       finish?.(
         await jsonAnswer({
-          id: "uploaded-audio",
-          stageKind: "audio",
-          path: "uploaded-audio",
-          originalFilename: "narration.wav",
+          id: attachmentId,
+          kind: "audio",
+          name: "narration.wav",
+          stagedFileId: "uploaded-audio",
           bytes: 5,
-          state: "staged",
-          createdAt: now,
+          state: "ready",
+          error: null,
         })(new Request("http://slopify.test")),
       );
     });
@@ -693,12 +705,19 @@ describe("the tutorial in the real app", () => {
   });
 
   it("does not restore an old upload after successful creation clears the Play draft", async () => {
+    let attachmentId = "";
     let finish: ((response: Response) => void) | undefined;
     const uploaded = new Promise<Response>((resolve) => {
       finish = resolve;
     });
     const user = userEvent.setup();
-    const { router, requests } = await mount({ initial: "/play", uploadAudio: () => uploaded });
+    const { router, requests } = await mount({
+      initial: "/play",
+      uploadAudio: (request) => {
+        attachmentId = new URL(request.url).pathname.split("/")[5] ?? "";
+        return uploaded;
+      },
+    });
     const audioSource = () => within(screen.getByRole("radiogroup", { name: "audio source" }));
     await user.click(audioSource().getByRole("radio", { name: "Provide" }));
     await user.upload(
@@ -736,13 +755,13 @@ describe("the tutorial in the real app", () => {
     await act(async () => {
       finish?.(
         await jsonAnswer({
-          id: "old-upload",
-          stageKind: "audio",
-          path: "old-upload",
-          originalFilename: "old-narration.wav",
+          id: attachmentId,
+          kind: "audio",
+          name: "old-narration.wav",
+          stagedFileId: "old-upload",
           bytes: 5,
-          state: "staged",
-          createdAt: now,
+          state: "ready",
+          error: null,
         })(new Request("http://slopify.test")),
       );
     });

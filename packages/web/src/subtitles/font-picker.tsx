@@ -8,7 +8,11 @@ export function FontPicker({
   value,
   onPick,
   onUploading,
+  onUpload,
+  pending,
 }: {
+  readonly onUpload?: (file: File) => Promise<void>;
+  readonly pending?: boolean;
   readonly value: string;
   readonly onPick: (id: string) => void;
   readonly onUploading: (pending: boolean) => void;
@@ -27,13 +31,14 @@ export function FontPicker({
       void queryClient.invalidateQueries({ queryKey: fontsKey });
     },
   });
+  const uploading = pending ?? uploaded.isPending;
   const pick = useRef(onPick);
   pick.current = onPick;
   const notify = useRef(onUploading);
   notify.current = onUploading;
   useEffect(() => {
-    notify.current(uploaded.isPending);
-  }, [uploaded.isPending]);
+    notify.current(uploading);
+  }, [uploading]);
   useEffect(() => () => notify.current(false), []);
   const listed = fonts.data?.fonts ?? [];
   const unknown = value !== "default" && !listed.some((font) => font.id === value);
@@ -48,7 +53,7 @@ export function FontPicker({
           <select
             id={id}
             value={value}
-            disabled={uploaded.isPending}
+            disabled={uploading}
             onChange={(event) => onPick(event.target.value)}
             className="h-8 w-full rounded-control border border-line2 bg-panel2 px-[10px] text-small text-ink"
           >
@@ -71,17 +76,20 @@ export function FontPicker({
             id={uploadId}
             type="file"
             accept=".ttf,.otf,font/ttf,font/otf"
-            disabled={uploaded.isPending}
+            disabled={uploading}
             className="w-full text-small text-ink2 file:mr-2 file:rounded-control file:border file:border-line2 file:bg-panel2 file:px-2 file:py-1 file:text-ink"
             onChange={(event) => {
               const file = event.target.files?.[0];
               event.target.value = "";
-              if (file) uploaded.mutate(file, { onSuccess: ({ font }) => pick.current(font.id) });
+              if (file) {
+                if (onUpload) void onUpload(file);
+                else uploaded.mutate(file, { onSuccess: ({ font }) => pick.current(font.id) });
+              }
             }}
           />
         </div>
       </div>
-      {uploaded.isPending ? (
+      {uploading ? (
         <p role="status" className="text-small text-ink2">
           Uploading font…
         </p>
@@ -90,6 +98,9 @@ export function FontPicker({
         <p role="alert" className="text-small text-red">
           {uploaded.error.message}
         </p>
+      ) : null}
+      {unknown && fonts.data ? (
+        <p role="alert">Saved font is unavailable. Choose another font or upload it again.</p>
       ) : null}
       {fonts.error ? (
         <p role="alert" className="text-small text-red">

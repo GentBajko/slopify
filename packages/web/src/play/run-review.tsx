@@ -108,7 +108,11 @@ export function RunReview({
   failure,
   onStart,
   onClose,
+  expectedWords,
+  onExpectedWords,
 }: {
+  readonly expectedWords?: string;
+  readonly onExpectedWords?: (value: string) => void;
   readonly draft: RunDraft;
   readonly items: readonly BatchItem[];
   readonly pending: boolean;
@@ -121,7 +125,7 @@ export function RunReview({
   const [words, setWords] = useState(1500);
   const input = {
     draft,
-    expectedWords: words,
+    expectedWords: expectedWords === undefined ? words : Number(expectedWords),
     ...(items.length
       ? {
           items: [
@@ -180,9 +184,13 @@ export function RunReview({
               type="number"
               min={1}
               max={100000}
-              value={words}
+              value={expectedWords ?? words}
               disabled={pending}
-              onChange={(e) => setWords(Math.min(100000, Math.max(1, Number(e.target.value) || 1)))}
+              onChange={(e) =>
+                onExpectedWords
+                  ? onExpectedWords(e.target.value)
+                  : setWords(Math.min(100000, Math.max(1, Number(e.target.value) || 1)))
+              }
             />
           </label>
         ) : null}
