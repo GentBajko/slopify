@@ -43,6 +43,7 @@ export function enqueueBatch(
     rendered: Readonly<Record<string, string>>;
     templates?: Readonly<Record<string, string>>;
   }[],
+  retainStaged = false,
 ): QueueEntry[] {
   if (batchExists(deps.db, batchId)) return queueEntries(deps.db, batchId);
   const sources = new Set<string>();
@@ -62,7 +63,7 @@ export function enqueueBatch(
       if (draft.sources.images === "provide")
         for (const id of draft.provided.images ?? []) used.add(id);
     }
-    for (const id of used) {
+    for (const id of retainStaged ? [] : used) {
       sources.add(id);
       deleteStagedFile(deps.db, id);
     }

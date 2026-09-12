@@ -114,3 +114,38 @@ export function reviewFixture(): Omit<ReturnType<typeof draftFixture>, "deps"> &
     },
   };
 }
+
+export function startFixture(): Omit<ReturnType<typeof reviewFixture>, "deps"> & {
+  readonly deps: import("./model.js").DraftStartDeps;
+  readonly ticks: string[];
+  readonly events: string[];
+} {
+  const h = reviewFixture();
+  const ticks: string[] = [];
+  const events: string[] = [];
+  const runner: import("../../kernel/runner/index.js").Runner = {
+    tick: (id) => {
+      ticks.push(id);
+    },
+    settled: async () => undefined,
+    abortProject: async () => undefined,
+    abortAll: async () => undefined,
+  };
+  return {
+    ...h,
+    ticks,
+    events,
+    get deps() {
+      return {
+        ...h.deps,
+        runner,
+        emit: () => undefined,
+        recordStarted: (ids: readonly string[]) => {
+          events.push(...ids);
+        },
+        providers: async () => [],
+        modelsFor: async () => [],
+      };
+    },
+  };
+}

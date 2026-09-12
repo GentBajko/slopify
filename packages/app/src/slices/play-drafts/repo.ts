@@ -42,7 +42,9 @@ export function draftRow(db: DatabaseSync, id: string): DraftRow | undefined {
 }
 export function draftRows(db: DatabaseSync): readonly DraftRow[] {
   return db
-    .prepare("SELECT * FROM play_drafts WHERE state='active' ORDER BY updated_at DESC,id")
+    .prepare(
+      "SELECT * FROM play_drafts WHERE state IN ('active','starting') ORDER BY updated_at DESC,id",
+    )
     .all()
     .map((row) => rowSchema.parse(row));
 }

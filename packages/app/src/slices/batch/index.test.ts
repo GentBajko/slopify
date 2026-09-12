@@ -144,3 +144,29 @@ describe("durable video batches", () => {
     expect(stagedFiles(h.db)).toHaveLength(1);
   });
 });
+it("retains staged bytes and metadata when its caller owns the commit", async () => {
+  const h = harness();
+  const upload = await stageUpload(h, {
+    stageKind: "audio",
+    originalFilename: "a.wav",
+    content: (async function* () {
+      yield new Uint8Array([1, 2, 3]);
+    })(),
+  });
+  if (!upload.ok) throw new Error("Upload failed");
+  enqueueBatch(
+    h,
+    "retained",
+    runs.map((run) => ({
+      ...run,
+      draft: {
+        ...run.draft,
+        sources: { ...run.draft.sources, audio: "provide" as const },
+        provided: { audio: upload.file.id },
+      },
+    })),
+    true,
+  );
+  expect(stagedFiles(h.db)).toHaveLength(1);
+  expect(readFileSync(join(h.paths.staging, upload.file.path))).toEqual(Buffer.from([1, 2, 3]));
+});

@@ -106,3 +106,14 @@ export interface ResolvedPlayReview {
   }[];
   readonly font: ResolvedFont | null;
 }
+
+export interface DraftStartDeps extends DraftReviewDeps {
+  readonly runner: import("../../kernel/runner/index.js").Runner;
+  readonly emit: StorageDeps["emit"];
+  readonly recordStarted: (projectIds: readonly string[]) => void;
+  readonly providers: () => Promise<readonly import("../settings/model.js").ProviderStatus[]>;
+  readonly modelsFor: (
+    provider: string,
+    family: import("../../kernel/ports/model.js").ProviderFamily,
+  ) => Promise<readonly import("../../kernel/ports/model.js").ModelInfo[]>;
+}
