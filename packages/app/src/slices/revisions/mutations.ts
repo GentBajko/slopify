@@ -16,8 +16,6 @@ import type {
   RevisionMutationResult,
 } from "./model.js";
 import {
-  type PreparedEditAsset,
-  prepareEditAssets,
   validateAssetReferences,
   validateReplacementAvailability,
   validateUploads,
@@ -28,6 +26,7 @@ import {
   measuredOutputs,
   validateProposedCues,
 } from "./mutation-cues.js";
+import { prepareEditAssets } from "./mutation-prepare.js";
 import { checkMutation, insertReceipt, requestHash, requiredView } from "./mutation-request.js";
 import { preserveDeferredIntent } from "./mutation-work.js";
 import { cloneManifest, ensureRevisionStages, projectSelected } from "./projection.js";
@@ -84,9 +83,8 @@ export async function saveRevision(
       currentRevisionId: base.revision.id,
       fields: unavailable,
     };
-  const prepared: PreparedEditAsset[] = [];
+  const { edit: supplied, assets: prepared } = await prepareEditAssets(deps, base, edit);
   try {
-    const supplied = await prepareEditAssets(deps, base, edit, prepared);
     const durations = await inspectCueAudio(deps, base, supplied, prepared);
     const result = transact(deps.db, (): RevisionMutationResult => {
       const checked = checkMutation(deps, identity);
