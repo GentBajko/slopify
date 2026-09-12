@@ -3,11 +3,13 @@ import { z } from "zod";
 import type { Catalogue } from "../../catalog/schema.js";
 import { catalogueSchema } from "../../catalog/schema.js";
 import type { RunConfig } from "../admission/model.js";
-import type { RevisionDeps, RevisionView } from "../revisions/model.js";
+import type { ManifestPiece, RevisionDeps, RevisionView } from "../revisions/model.js";
 import { getRevisionView } from "../revisions/view.js";
 import { outputPath } from "../storage/layout.js";
 import { referencedAssetsAvailable, retainedNarrationPieces } from "./narration-history.js";
 import { applyProvidedReviews } from "./provided-review.js";
+import type { RecipeContext, ResolvedRevisionInputs } from "./recipe-model.js";
+import { textRecipes } from "./recipe-text.js";
 import { planRevisionWork, type RevisionWorkPlan } from "./recipe-work.js";
 
 export function executionCatalogue(catalogue: Catalogue, config: RunConfig): Catalogue {
@@ -46,18 +48,20 @@ export function executionPlan(
   const payloads = view.pieces.filter(
     (piece) => piece.selected && piece.piece.state === "done" && piece.piece.payload !== null,
   );
-  const planner = payloads.find((piece) => piece.key === "research:planner");
-  const outline =
-    planner?.piece.payload === undefined || planner.piece.payload === null
-      ? []
-      : z.object({ outline: z.array(z.string()) }).parse(JSON.parse(planner.piece.payload)).outline;
-  const findings = payloads
-    .filter((piece) => piece.key.startsWith("research:chapter:"))
-    .map((piece) =>
-      z
-        .object({ title: z.string(), notes: z.string() })
-        .parse(JSON.parse(piece.piece.payload ?? "{}")),
-    );
+  const resolved = {
+    articleMarkdown: view.articleMarkdown ?? textOutput("article_md"),
+    researchNotes: textOutput("notes"),
+  };
+  const research = matchingResearch(
+    {
+      config: view.revision.config,
+      content: view.revision.content,
+      manifest: view,
+      catalogue,
+      resolved,
+    },
+    payloads,
+  );
   const history = retainedNarrationPieces(deps, view.revision.projectId);
   const available = new Set([
     ...history
@@ -84,9 +88,8 @@ export function executionPlan(
       catalogue,
       available,
       {
-        articleMarkdown: view.articleMarkdown ?? textOutput("article_md"),
-        researchNotes: textOutput("notes"),
-        ...(outline.length === 0 ? {} : { research: { outline, findings } }),
+        ...resolved,
+        ...(research === undefined ? {} : { research }),
       },
       history,
     ),
@@ -119,4 +122,34 @@ export function executionView(
       selected: row.selected || (row.publicationId !== null && carried.has(row.publicationId)),
     })),
   };
+}
+
+function matchingResearch(
+  context: RecipeContext,
+  payloads: readonly ManifestPiece[],
+): ResolvedRevisionInputs["research"] {
+  const planner = textRecipes(context).recipes.find((row) => row.key === "research:planner");
+  if (planner === undefined) return undefined;
+  const savedPlanner = payloads.find(
+    (row) => row.key === planner.key && row.fingerprint === planner.fingerprint,
+  );
+  if (savedPlanner?.piece.payload === undefined || savedPlanner.piece.payload === null)
+    return undefined;
+  const { outline } = z
+    .object({ outline: z.array(z.string()) })
+    .parse(JSON.parse(savedPlanner.piece.payload));
+  const chapters = textRecipes({
+    ...context,
+    resolved: { ...context.resolved, research: { outline, findings: [] } },
+  }).recipes.filter((row) => row.key.startsWith("research:chapter:"));
+  const findings = chapters.flatMap((chapter) => {
+    const saved = payloads.find(
+      (row) => row.key === chapter.key && row.fingerprint === chapter.fingerprint,
+    );
+    if (saved?.piece.payload === undefined || saved.piece.payload === null) return [];
+    return [
+      z.object({ title: z.string(), notes: z.string() }).parse(JSON.parse(saved.piece.payload)),
+    ];
+  });
+  return { outline, findings };
 }
