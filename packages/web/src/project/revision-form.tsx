@@ -90,7 +90,19 @@ export function RevisionForm(
               value={config.sources[kind]}
               onChange={(event) => {
                 const option = sourceOptions(kind).find((one) => one.value === event.target.value);
-                if (option !== undefined) onChange(changeSource(edit, kind, option.value));
+                if (option === undefined) return;
+                const next = changeSource(edit, kind, option.value);
+                onChange(
+                  kind === "article" && option.value === "provide" && !edit.content.articleEdited
+                    ? {
+                        ...next,
+                        content: {
+                          ...next.content,
+                          articleMarkdown: view.articleMarkdown ?? edit.content.articleMarkdown,
+                        },
+                      }
+                    : next,
+                );
               }}
             >
               {sourceOptions(kind).map((option) => (
@@ -209,12 +221,19 @@ export function RevisionForm(
             rows={6}
             maxLength={500000}
             value={
-              edit.content.articleMarkdown ?? view.articleMarkdown ?? config.provided.article ?? ""
+              (edit.content.articleEdited ? edit.content.articleMarkdown : view.articleMarkdown) ??
+              edit.content.articleMarkdown ??
+              config.provided.article ??
+              ""
             }
             onChange={(event) =>
               onChange({
                 ...edit,
-                content: { ...edit.content, articleMarkdown: event.target.value },
+                content: {
+                  ...edit.content,
+                  articleMarkdown: event.target.value,
+                  articleEdited: true,
+                },
               })
             }
           />
