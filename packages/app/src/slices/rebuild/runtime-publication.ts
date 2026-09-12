@@ -1,8 +1,11 @@
+import { transact } from "../../kernel/db/tx.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StagePiece } from "../../kernel/runner/piece-repo.js";
 import type { RevisionDeps } from "../revisions/model.js";
 import type { PreparedOutput, PreparedPiece } from "../revisions/publication-model.js";
+import { publicationAuthority } from "../revisions/publication-rules.js";
 import { commitRevisionOutputs } from "../revisions/publish.js";
+import { insertAsset, insertManifestOutput, revisionById } from "../revisions/repo.js";
 import type { PreparedAsset } from "../storage/assets.js";
 import { discardPreparedAssets, writeAsset } from "../storage/assets.js";
 import type { OutputMeta, OutputRole } from "../storage/model.js";
@@ -160,4 +163,51 @@ function pieceIndex(deps: RevisionDeps, context: StageContext, piece: WorkPiece)
   }
   const last = piece.key.split(":").at(-1);
   return last !== undefined && /^\d+$/.test(last) ? Number(last) : 1;
+}
+
+export function retainPartialArticle(
+  deps: RevisionDeps,
+  context: StageContext,
+  piece: WorkPiece,
+  text: string,
+): void {
+  const publicationId = `${piece.id}:partial`;
+  if (
+    deps.db
+      .prepare("SELECT 1 FROM revision_outputs WHERE revision_id=? AND publication_id=?")
+      .get(context.work.revisionId, publicationId) !== undefined
+  )
+    return;
+  const result = preparedText(deps, context, piece, "article_md", "partial-article.md", text);
+  try {
+    transact(deps.db, () => {
+      const authority = publicationAuthority(deps.db, {
+        work: context.work,
+        pieceId: piece.id,
+        publicationId: piece.id,
+      });
+      if (authority === undefined) return;
+      if (authority.key !== piece.key || authority.fingerprint !== piece.fingerprint)
+        throw new Error("Partial article differs from its durable piece authority.");
+      const revision = revisionById(deps.db, context.work.projectId, context.work.revisionId);
+      if (revision === undefined) throw new Error("Partial article origin disappeared.");
+      insertAsset(deps.db, result.asset);
+      insertManifestOutput(
+        deps.db,
+        revision,
+        {
+          slot: `article:partial:${piece.id}`,
+          workKey: `article:partial:${piece.id}`,
+          assetId: result.asset.id,
+          output: { ...result.output, originalFilename: "partial-article.md" },
+          fingerprint: piece.fingerprint,
+          state: "outdated",
+        },
+        deps.ids.next(),
+        publicationId,
+      );
+    });
+  } finally {
+    discardPreparedAssets(deps, [result.asset]);
+  }
 }

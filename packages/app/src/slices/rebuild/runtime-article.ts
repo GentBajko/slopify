@@ -7,6 +7,7 @@ import { continuationLimit, continuationMessages } from "../article/continuation
 import type { RevisionDeps } from "../revisions/model.js";
 import { currentRevisionId, revisionById } from "../revisions/repo.js";
 import { recipe } from "./recipe-model.js";
+import { retainPartialArticle } from "./runtime-publication.js";
 import { insertWorkPiece, type WorkPiece, workPieces } from "./work-records.js";
 
 const answerSchema = z.object({
@@ -80,6 +81,7 @@ export async function executeArticleRequests(
         ok: true,
         value: { text, finishReason: answer.finishReason, usage: { inputTokens, outputTokens } },
       };
+    retainPartialArticle(deps, context, piece, text);
     const next = continuationPiece(deps, context, initial, part + 1, text);
     if (next === undefined) return { ok: false, reason: "held" };
     piece = next;

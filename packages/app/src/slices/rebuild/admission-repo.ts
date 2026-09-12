@@ -110,9 +110,20 @@ export function admitPreview(
             .run(String(existing.id));
           deps.db
             .prepare(
-              "UPDATE revision_work_pieces SET state='pending',dispatch_state='allowed' WHERE id=? AND state!='done'",
+              `UPDATE revision_work_pieces SET state='pending',dispatch_state='allowed'
+              WHERE work_id=? AND state!='done' AND id IN (
+                SELECT p.id FROM revision_work_pieces p
+                JOIN revision_work_reservations r ON r.piece_id=p.id AND r.work_id=p.work_id
+                  AND r.work_key=p.work_key AND r.fingerprint=p.fingerprint
+                JOIN project_revisions v ON v.id=r.revision_id
+                JOIN json_each(v.fingerprints) f ON f.key=COALESCE(r.logical_key,r.work_key)
+                  AND f.value=COALESCE(r.desired_fingerprint,r.fingerprint)
+                WHERE r.revision_id=? AND (p.id=? OR
+                  (?='article:body' AND p.work_key LIKE 'article:continuation:%'
+                   AND COALESCE(r.logical_key,r.work_key)='article:body'))
+              )`,
             )
-            .run(String(existing.piece_id));
+            .run(String(existing.id), view.revision.id, String(existing.piece_id), recipe.key);
         }
         continue;
       }
