@@ -104,7 +104,11 @@ export function invocationReady(deps: RevisionDeps, work: WorkRef): boolean {
         ) ||
         view.pieces.some(
           (piece) =>
-            piece.key === key && piece.selected && piece.available && piece.piece.state === "done",
+            piece.key === key &&
+            piece.selected &&
+            piece.available &&
+            piece.piece.state === "done" &&
+            piece.fingerprint === plan.recipes.find((value) => value.key === key)?.fingerprint,
         ),
     );
   });

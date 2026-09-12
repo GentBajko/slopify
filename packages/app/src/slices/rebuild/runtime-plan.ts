@@ -6,6 +6,7 @@ import type { RunConfig } from "../admission/model.js";
 import type { RevisionDeps, RevisionView } from "../revisions/model.js";
 import { getRevisionView } from "../revisions/view.js";
 import { outputPath } from "../storage/layout.js";
+import { referencedAssetsAvailable, retainedNarrationPieces } from "./narration-history.js";
 import { planRevisionWork, type RevisionWorkPlan } from "./recipe-work.js";
 
 export function executionCatalogue(catalogue: Catalogue, config: RunConfig): Catalogue {
@@ -56,17 +57,35 @@ export function executionPlan(
         .object({ title: z.string(), notes: z.string() })
         .parse(JSON.parse(piece.piece.payload ?? "{}")),
     );
+  const history = retainedNarrationPieces(deps, view.revision.projectId);
   const available = new Set([
+    ...history
+      .filter((row) => row.available && row.assetId !== null)
+      .flatMap((row) => (row.assetId === null ? [] : [row.assetId])),
+    ...referencedAssetsAvailable(
+      deps,
+      view.revision.projectId,
+      Object.values(view.revision.content.narrationOverrides).flatMap((value) =>
+        value.kind === "asset" ? [value.assetId] : [],
+      ),
+    ),
     ...view.outputs.filter((row) => row.available).map((row) => row.assetId),
     ...view.pieces
       .filter((row) => row.available && row.assetId !== null)
       .flatMap((row) => (row.assetId === null ? [] : [row.assetId])),
   ]);
-  return planRevisionWork(view.revision, view, catalogue, available, {
-    articleMarkdown: view.articleMarkdown ?? textOutput("article_md"),
-    researchNotes: textOutput("notes"),
-    ...(outline.length === 0 ? {} : { research: { outline, findings } }),
-  });
+  return planRevisionWork(
+    view.revision,
+    view,
+    catalogue,
+    available,
+    {
+      articleMarkdown: view.articleMarkdown ?? textOutput("article_md"),
+      researchNotes: textOutput("notes"),
+      ...(outline.length === 0 ? {} : { research: { outline, findings } }),
+    },
+    history,
+  );
 }
 
 export function executionView(

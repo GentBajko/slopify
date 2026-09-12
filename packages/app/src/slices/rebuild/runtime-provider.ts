@@ -8,8 +8,10 @@ import { observeNarration } from "../narration/live.js";
 import { chaptersFrom } from "../research/planner.js";
 import { sourcedAnswer } from "../research/synthesis.js";
 import type { RevisionDeps } from "../revisions/model.js";
-import { writeAsset } from "../storage/assets.js";
+import { discardPreparedAssets, writeAsset } from "../storage/assets.js";
+import { outputPath } from "../storage/layout.js";
 import type { RecordEvent } from "../telemetry/model.js";
+import { probeDurationMs } from "../video/ffmpeg.js";
 import { executeArticleRequests } from "./runtime-article.js";
 import { frozenInstructions } from "./runtime-instructions.js";
 import { executionPlan, executionView, savedCatalogue } from "./runtime-plan.js";
@@ -17,6 +19,7 @@ import { preparedResult, preparedTexts, publishResult } from "./runtime-publicat
 import type { WorkPiece } from "./work-records.js";
 
 export interface ProviderExecutionDeps extends RevisionDeps {
+  readonly ffmpeg?: string | undefined;
   readonly audioPreviews?: AudioPreviewStore | undefined;
   readonly count?: RecordEvent | undefined;
 }
@@ -80,14 +83,50 @@ export async function executeProviderRecipe(
     );
     if (!spoken.ok) return "held";
     const asset = writeAsset(deps, context.work.projectId, "narration.mp3", spoken.value.bytes);
-    await publishResult(
-      deps,
-      context,
-      piece,
-      [],
-      { text: input.text, logicalKey: input.logicalKey, segment: input.segment },
-      asset,
-    );
+    try {
+      const durationMs =
+        deps.count === undefined
+          ? undefined
+          : deps.measureAudio !== undefined
+            ? await deps.measureAudio(
+                outputPath(deps.paths, context.work.projectId, asset.path),
+                context.signal,
+              )
+            : deps.ffmpeg === undefined
+              ? undefined
+              : await probeDurationMs(
+                  deps.ffmpeg,
+                  outputPath(deps.paths, context.work.projectId, asset.path),
+                  context.signal,
+                  deps.log,
+                );
+      await publishResult(
+        deps,
+        context,
+        piece,
+        [],
+        {
+          text: input.text,
+          logicalKey: input.logicalKey,
+          logicalText: input.logicalText,
+          segment: input.segment,
+          provider: input.provider,
+          model: input.model,
+          voice: input.voice,
+          ...(durationMs === undefined ? {} : { durationMs }),
+        },
+        asset,
+      );
+      deps.count?.("stage.completed", {
+        stage: "audio",
+        segment: input.segment,
+        provider: input.provider,
+        model: input.model,
+        ...(durationMs === undefined ? {} : { audioSeconds: durationMs / 1000 }),
+      });
+    } finally {
+      discardPreparedAssets(deps, [asset]);
+    }
     return "done";
   }
   if (input.kind === "image") {

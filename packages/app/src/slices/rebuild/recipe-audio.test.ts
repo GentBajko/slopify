@@ -55,7 +55,7 @@ it("provided narration requires semantic review and missing provided files are b
   });
   expect(missing.work.find((r) => r.key === "audio:provided")?.disposition).toBe("blocked");
 });
-it("changes every physical part of an edited logical request and preserves other chunks", () => {
+it("changes only differing physical inputs of an edited paragraph and preserves other chunks", () => {
   const small = {
     ...catalogue,
     tts: catalogue.tts.map((m) => ({ ...m, tts: { ...m.tts, maxCharacters: 8 } })),
@@ -90,7 +90,7 @@ it("changes every physical part of an edited logical request and preserves other
   expect(
     next.recipes
       .filter((r) => r.input.kind === "tts" && r.input.logicalKey === logicalKey)
-      .every(
+      .some(
         (r) => !oldGroup.some((oldPart) => oldPart.requestFingerprint === r.requestFingerprint),
       ),
   ).toBe(true);
@@ -242,4 +242,31 @@ it("binds every physical request part to its saved logical recipe fingerprint", 
     if (part.input.kind !== "tts") throw new Error("Missing request");
     expect(part.logicalFingerprint).toBe(base.revision.fingerprints[`${part.input.logicalKey}:1`]);
   }
+});
+
+it("keeps repeated logical overrides distinct and normalizes before occurrence keys", () => {
+  const repeated = { ...content, articleMarkdown: "Repeat.\r\n\r\nRepeat." };
+  const base = readyView(narrated, repeated);
+  const original = workFor(base);
+  const parts = original.recipes.filter((row) => row.input.kind === "tts");
+  const first = parts[0];
+  const second = parts[1];
+  if (first?.input.kind !== "tts" || second?.input.kind !== "tts")
+    throw new Error("Missing repeats");
+  const next = workFor(base, narrated, {
+    ...repeated,
+    articleMarkdown: "Repeat.\n\nRepeat.",
+    narrationOverrides: {
+      [first.input.logicalKey]: { kind: "text", text: "First override.\r\nLine." },
+      [second.input.logicalKey]: { kind: "text", text: "Second override." },
+    },
+  });
+  expect(
+    next.recipes
+      .filter((row) => row.input.kind === "tts")
+      .map((row) => [row.key, row.input.kind === "tts" ? row.input.logicalText : ""]),
+  ).toEqual([
+    [first.key, "First override.\nLine."],
+    [second.key, "Second override."],
+  ]);
 });

@@ -16,11 +16,10 @@ import {
   revisionAudio,
 } from "./runtime-export-inputs.js";
 import type { LocalExecutionDeps } from "./runtime-local.js";
-import type { ProviderExecutionDeps } from "./runtime-provider.js";
 import { preparedResult, preparedText, publishResult } from "./runtime-publication.js";
 import type { WorkPiece } from "./work-records.js";
 
-export interface ExportExecutionDeps extends LocalExecutionDeps, ProviderExecutionDeps {
+export interface ExportExecutionDeps extends LocalExecutionDeps {
   readonly alignSubtitles?: SubtitleAligner | undefined;
 }
 export async function executeExportRecipe(

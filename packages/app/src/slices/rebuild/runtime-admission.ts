@@ -1,9 +1,11 @@
 import type { Catalogue } from "../../catalog/schema.js";
 import { transact } from "../../kernel/db/tx.js";
 import type { WorkRef } from "../../kernel/runner/work.js";
+import { narrationRegenerationToken } from "../narration/plan.js";
 import type { RevisionDeps, RevisionView } from "../revisions/model.js";
 import { currentRevisionId } from "../revisions/repo.js";
 import type { ResolvedWorkRecipe } from "./recipe-model.js";
+import { bindNarrationReuse, narrationOrdinal } from "./runtime-narration-reuse.js";
 import { executionCatalogue, executionPlan } from "./runtime-plan.js";
 import { insertWorkPiece, workPieces } from "./work-records.js";
 
@@ -36,6 +38,7 @@ export function admitInitialRevision(
       if (anchor === undefined)
         throw new Error(`Initial work ${recipe.key} has no desired anchor.`);
       const reuse = plan.work.find((row) => row.key === recipe.key)?.disposition === "reuse";
+      if (reuse) bindNarrationReuse(deps, view, recipe, narrationOrdinal(plan.recipes, recipe.key));
       insertInvocation(
         deps,
         view,
@@ -95,7 +98,14 @@ export function insertInvocation(
     logicalFingerprint: recipe.logicalFingerprint,
     input: recipe.input,
     continuation: null,
-    generationToken: view.revision.content.regenerationTokens[recipe.key] ?? null,
+    generationToken:
+      recipe.input.kind === "tts"
+        ? narrationRegenerationToken(
+            view.revision.content.regenerationTokens,
+            recipe.input.logicalKey,
+            recipe.input.segment,
+          )
+        : (view.revision.content.regenerationTokens[recipe.key] ?? null),
     state: completed ? "done" : "pending",
     dispatchState: "allowed",
     submittedAt: null,
@@ -144,7 +154,17 @@ export function admitPendingRevision(
         `SELECT r.*,w.recipe_context,w.kind,w.state FROM revision_work_reservations r JOIN revision_work w ON w.id=r.work_id WHERE r.revision_id=? AND w.recipe_context IS NOT NULL`,
       )
       .all(view.revision.id);
+    const missingCompleted = new Set(
+      retained
+        .filter(
+          (row) =>
+            row.state === "done" &&
+            plan.work.find((work) => work.key === row.work_key)?.disposition !== "reuse",
+        )
+        .map((row) => String(row.work_key)),
+    );
     for (const row of retained) {
+      if (missingCompleted.has(String(row.work_key))) continue;
       const key = String(row.work_key);
       const logicalKey = String(row.logical_key ?? row.work_key);
       if (view.revision.fingerprints[logicalKey] !== (row.desired_fingerprint ?? row.fingerprint))
@@ -178,12 +198,14 @@ export function admitPendingRevision(
       if (
         admittedKeys.has(recipe.key) ||
         (recipe.input.kind === "tts" &&
-          (admittedNarration.has(recipe.input.logicalKey) ||
-            admittedFuture.has(`audio:${recipe.input.segment}:future`)))
+          ((admittedNarration.has(recipe.input.logicalKey) && !missingCompleted.has(recipe.key)) ||
+            (admittedFuture.has(`audio:${recipe.input.segment}:future`) &&
+              view.revision.fingerprints[`${recipe.input.logicalKey}:1`] === undefined)))
       )
         continue;
       const disposition = plan.work.find((row) => row.key === recipe.key)?.disposition;
       if (disposition === "reuse") {
+        bindNarrationReuse(deps, view, recipe, narrationOrdinal(plan.recipes, recipe.key));
         const reused = deps.db
           .prepare(
             "SELECT work_id,piece_id FROM revision_work_reservations WHERE revision_id=? AND work_key=?",
@@ -211,6 +233,7 @@ export function admitPendingRevision(
         .get(view.revision.id, recipe.key);
       if (existing?.state === "running") continue;
       if (
+        existing?.state !== "done" &&
         existing?.piece_fingerprint === recipe.fingerprint &&
         typeof existing.recipe_context === "string"
       ) {

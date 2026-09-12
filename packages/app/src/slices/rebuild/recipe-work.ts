@@ -2,9 +2,10 @@ import { z } from "zod";
 import type { Catalogue } from "../../catalog/schema.js";
 import type { CostEstimate, PricedRequest } from "../estimate/index.js";
 import { estimateRequests } from "../estimate/index.js";
-import type { ProjectRevision, RevisionManifest } from "../revisions/model.js";
+import type { ManifestPiece, ProjectRevision, RevisionManifest } from "../revisions/model.js";
 import { planDependencies, type RetainedWork, type WorkRecipe } from "./dependencies.js";
 import type { RebuildPreview, RebuildWork } from "./model.js";
+import { matchingNarrationPiece } from "./narration-reuse.js";
 import { buildRecipes } from "./recipe-build.js";
 import { manualCuesNeedReview } from "./recipe-exports.js";
 import {
@@ -28,6 +29,7 @@ export function planRevisionWork(
   catalogue: Catalogue,
   availableAssetIds: ReadonlySet<string>,
   resolved: ResolvedRevisionInputs,
+  retainedNarration: readonly ManifestPiece[] = [],
 ): RevisionWorkPlan {
   const selected: RevisionManifest = {
     outputs: manifest.outputs.filter(selectedReference),
@@ -67,7 +69,16 @@ export function planRevisionWork(
       (row.input.kind === "provided" &&
         (row.input.assetId === null || !availableAssetIds.has(row.input.assetId))),
   }));
-  const retained = recipes.flatMap((row) => retainedFor(row, logical, selected, availableAssetIds));
+  const retained = recipes.flatMap((row) =>
+    retainedFor(
+      row,
+      logical,
+      row.input.kind === "tts"
+        ? { ...selected, pieces: [...selected.pieces, ...retainedNarration] }
+        : selected,
+      availableAssetIds,
+    ),
+  );
   const rawWork = planDependencies(recipes.map(comparisonRecipe), retained);
   const manualReview = manualCuesNeedReview(logicalContext, logical);
   const work = rawWork
@@ -130,6 +141,45 @@ function retainedFor(
   manifest: RevisionManifest,
   available: ReadonlySet<string>,
 ): readonly RetainedWork[] {
+  if (
+    row.input.kind === "provided" &&
+    row.key.startsWith("audio:") &&
+    row.key !== "audio:provided"
+  ) {
+    const assetId = row.input.assetId;
+    const previous = manifest.pieces.find(
+      (one) =>
+        one.key === row.key &&
+        one.assetId === assetId &&
+        one.piece.state === "done" &&
+        one.fingerprint !== row.fingerprint &&
+        z.object({ provided: z.literal(true) }).safeParse(JSON.parse(one.piece.payload ?? "null"))
+          .success,
+    );
+    if (previous !== undefined)
+      return [
+        {
+          key: row.key,
+          requestFingerprint: "",
+          fingerprint: previous.fingerprint,
+          available: assetId !== null && available.has(assetId),
+          inflight: false,
+          pieceIds: [previous.piece.id],
+        },
+      ];
+  }
+  const narration = matchingNarrationPiece(row, manifest.pieces, available);
+  if (narration !== undefined)
+    return [
+      {
+        key: row.key,
+        requestFingerprint: row.requestFingerprint,
+        fingerprint: row.fingerprint,
+        available: true,
+        inflight: false,
+        pieceIds: [narration.piece.id],
+      },
+    ];
   const current = manifest.outputs.find(
     (one) =>
       one.workKey === row.key &&

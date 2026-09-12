@@ -23,8 +23,8 @@ import type { AudioSegment, RecordEvent } from "../telemetry/model.js";
 import { probeDurationMs } from "../video/ffmpeg.js";
 import { chunkNarration, defaultChunking } from "./chunk.js";
 import { joinNarration } from "./concat.js";
+import { planLegacyNarration } from "./legacy-plan.js";
 import { observeNarration } from "./live.js";
-import { planNarration } from "./plan.js";
 
 // The narration source is cut per the run's chunking choice, every chunk is synthesized in
 // parallel as a resumable piece, the chunk audio is concatenated in order into one body file,
@@ -96,7 +96,7 @@ export async function runNarration(
     throw new Error(nothingToNarrate);
   }
 
-  const planned = planNarration(
+  const planned = planLegacyNarration(
     deps,
     context.stage.id,
     texts,

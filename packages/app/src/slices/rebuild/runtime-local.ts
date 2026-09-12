@@ -124,7 +124,8 @@ async function concatenate(
   const row = deps.db
     .prepare("SELECT recipe_context FROM revision_work WHERE id=?")
     .get(context.work.workId);
-  const recipe = executionPlan(deps, view, savedCatalogue(row?.recipe_context)).recipes.find(
+  const plan = executionPlan(deps, view, savedCatalogue(row?.recipe_context));
+  const recipe = plan.recipes.find(
     (candidate) => candidate.key === piece.key && candidate.fingerprint === piece.fingerprint,
   );
   if (recipe === undefined)
@@ -135,7 +136,8 @@ async function concatenate(
         candidate.key === key &&
         candidate.selected &&
         candidate.available &&
-        candidate.piece.state === "done",
+        candidate.piece.state === "done" &&
+        candidate.fingerprint === plan.recipes.find((value) => value.key === key)?.fingerprint,
     );
     if (input?.assetId === null || input === undefined)
       throw new Error("A narration part has no retained audio.");
@@ -198,15 +200,6 @@ async function concatenate(
       if (typeof owner?.work_id === "string")
         deps.audioPreviews?.clear(context.work.projectId, owner.work_id);
     }
-    const choice = view.revision.config.audio;
-    if (choice !== undefined)
-      deps.count?.("stage.completed", {
-        stage: "audio",
-        segment: role === "audio_intro" ? "intro" : role === "audio_outro" ? "outro" : "body",
-        provider: choice.provider,
-        model: choice.model,
-        audioSeconds: durationMs / 1000,
-      });
   } finally {
     discardPreparedAssets(deps, [pending]);
   }

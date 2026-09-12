@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { insertPiece, piecesOf } from "../../kernel/runner/piece-repo.js";
 import { harness } from "../control/control.fake.js";
-import { planNarration } from "./plan.js";
+import { planLegacyNarration } from "./legacy-plan.js";
 
 describe("bounded narration plans", () => {
   it("splits an old 82k whole request and preserves completed neighboring audio on retry", () => {
@@ -25,7 +25,7 @@ describe("bounded narration plans", () => {
       state: "done",
       payload: saved,
     });
-    const plan = planNarration(
+    const plan = planLegacyNarration(
       { db: h.db, ids: { next: () => `new-${++n}` } },
       "s-audio",
       [],
@@ -43,7 +43,7 @@ describe("bounded narration plans", () => {
     expect(texts.join("")).toBe(text);
     expect(texts.every((t) => t.length <= 10000)).toBe(true);
     expect(
-      planNarration(
+      planLegacyNarration(
         { db: h.db, ids: { next: () => "never" } },
         "s-audio",
         [],

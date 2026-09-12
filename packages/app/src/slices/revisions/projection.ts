@@ -112,7 +112,14 @@ function desiredPhysicalPiece(
       "SELECT p.input_json FROM revision_work_pieces p JOIN revision_work w ON w.id=p.work_id WHERE p.id=? AND w.project_id=?",
     )
     .get(row.piece.id, revision.projectId);
-  if (piece === undefined) return false;
+  if (piece === undefined) {
+    if (row.stageKind !== "audio" || (row.piece.kind !== "chunk" && row.piece.kind !== "segment"))
+      return false;
+    const payload = z
+      .object({ logicalKey: z.string() })
+      .safeParse(JSON.parse(row.piece.payload ?? "null"));
+    return payload.success && revision.fingerprints[`${payload.data.logicalKey}:1`] !== undefined;
+  }
   const input = recipeInputSchema.parse(JSON.parse(z.string().parse(piece.input_json)));
   return input.kind === "tts" && revision.fingerprints[`${input.logicalKey}:1`] !== undefined;
 }

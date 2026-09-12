@@ -4,6 +4,7 @@ import type { StageKind } from "../../kernel/pipeline.js";
 import type { Message, ThinkingConfig, ThinkingMode } from "../../kernel/ports/llm.js";
 import { type FingerprintValue, fingerprint } from "../../kernel/runner/work.js";
 import type { RunConfig } from "../admission/model.js";
+import { narrationRegenerationToken, narrationRequestFingerprint } from "../narration/plan.js";
 import type { Finding } from "../research/synthesis.js";
 import type {
   ManifestOutput,
@@ -43,6 +44,7 @@ export type RecipeInput =
       readonly logicalText: string;
       readonly segment: "body" | "intro" | "outro";
       readonly pronunciation: null;
+      readonly wholeRequest?: boolean | undefined;
     }
   | {
       readonly kind: "image";
@@ -96,17 +98,28 @@ export function recipe(
     readonly kind?: WorkRecipe["kind"];
   } = {},
 ): ResolvedWorkRecipe {
-  const requestValue = input.kind === "tts" ? { ...input, logicalKey: undefined } : input;
-  const requestFingerprint = fingerprint(
-    JSON.parse(
-      JSON.stringify(requestValue, (_key: string, value: unknown): unknown =>
-        typeof value === "number" ? z.number().finite().parse(value) : value,
-      ),
-    ) as FingerprintValue,
-  );
+  const requestFingerprint =
+    input.kind === "tts"
+      ? narrationRequestFingerprint({
+          ...input,
+          wholeText: input.wholeRequest === true ? input.logicalText : null,
+        })
+      : fingerprint(
+          JSON.parse(
+            JSON.stringify(input, (_key: string, value: unknown): unknown =>
+              typeof value === "number" ? z.number().finite().parse(value) : value,
+            ),
+          ) as FingerprintValue,
+        );
   const workFingerprint = fingerprint([
     requestFingerprint,
-    context.content.regenerationTokens[options.tokenKey ?? key] ?? null,
+    input.kind === "tts"
+      ? narrationRegenerationToken(
+          context.content.regenerationTokens,
+          input.logicalKey,
+          input.segment,
+        )
+      : (context.content.regenerationTokens[options.tokenKey ?? key] ?? null),
   ]);
   return {
     key,
@@ -128,13 +141,21 @@ export function recipe(
     deferred: input.kind === "deferred",
   };
 }
-export function selectedAsset(context: RecipeContext, key: string): string | null {
+export function selectedAsset(
+  context: RecipeContext,
+  key: string,
+  desired?: string,
+): string | null {
   const output = context.manifest.outputs.find(
     (row) => row.workKey === key && row.state === "ready" && selectedReference(row),
   );
   if (output !== undefined) return output.assetId;
   const piece = context.manifest.pieces.find(
-    (row) => row.key === key && row.piece.state === "done" && selectedReference(row),
+    (row) =>
+      row.key === key &&
+      row.piece.state === "done" &&
+      selectedReference(row) &&
+      (desired === undefined || row.fingerprint === desired),
   );
   return piece?.assetId ?? null;
 }
@@ -142,7 +163,7 @@ export function resourceIdentity(
   context: RecipeContext,
   value: ResolvedWorkRecipe,
 ): FingerprintValue {
-  return [value.fingerprint, selectedAsset(context, value.key)];
+  return [value.fingerprint, selectedAsset(context, value.key, value.fingerprint)];
 }
 
 export function selectedReference(value: ManifestOutput | ManifestPiece): boolean {

@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
+import { narrationRegenerationKey } from "../narration/plan.js";
 import { recipeInputSchema } from "../rebuild/recipe-input-schema.js";
 import { planRevision } from "../rebuild/recipe-save.js";
 import { transitionRevisionWork } from "../rebuild/repo.js";
@@ -91,7 +92,8 @@ export async function saveRevision(
       if (checked !== undefined) return checked;
       const fresh = requiredView(deps, input.projectId, input.baseRevisionId);
       const tokens = { ...fresh.revision.content.regenerationTokens };
-      for (const key of edit.regenerate ?? []) tokens[key] = deps.ids.next();
+      for (const key of new Set((edit.regenerate ?? []).map(narrationRegenerationKey)))
+        tokens[key] = deps.ids.next();
       const finalEdit = {
         ...supplied,
         content: { ...supplied.content, regenerationTokens: tokens },

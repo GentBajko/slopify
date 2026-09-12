@@ -1,7 +1,11 @@
-import { splitText } from "../../kernel/ports/text.js";
 import { type FingerprintValue, fingerprint } from "../../kernel/runner/work.js";
 import { chunkNarration, defaultChunking } from "../narration/chunk.js";
 import { concatArgs } from "../narration/concat.js";
+import {
+  narrationRegenerationToken,
+  normalizeNarrationText,
+  planNarration,
+} from "../narration/plan.js";
 import {
   type RecipeContext,
   type ResolvedWorkRecipe,
@@ -42,7 +46,10 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
     const groups =
       text.articleText === null
         ? []
-        : chunkNarration(text.articleText, config.chunking ?? defaultChunking);
+        : chunkNarration(
+            normalizeNarrationText(text.articleText),
+            config.chunking ?? defaultChunking,
+          );
     const occurrences = new Map<string, number>();
     const parts: ResolvedWorkRecipe[] = [];
     for (const logicalText of groups) {
@@ -165,13 +172,16 @@ function narrationParts(
           kind: "provided",
           version: 1,
           assetId: override.assetId,
-          semantic: [originalText, voiceValues(context)],
+          semantic: [normalizeNarrationText(originalText), voiceValues(context)],
         },
         dependsOn,
         { tokenKey: logicalKey },
       ),
     ];
-  const logicalText = (override?.kind === "text" ? override.text : originalText).trim();
+  const logicalText = normalizeNarrationText(
+    override?.kind === "text" ? override.text : originalText,
+  );
+  const wholeRequest = segment !== "body" || (context.config.chunking?.mode ?? "whole") === "whole";
   const choice = context.config.audio;
   const model = context.catalogue?.tts.find(
     (row) =>
@@ -180,14 +190,33 @@ function narrationParts(
       row.enabled &&
       !row.deprecated,
   );
-  const texts =
-    context.catalogue === undefined
-      ? [logicalText]
-      : splitText(logicalText, model?.tts.maxCharacters ?? Math.max(2, logicalText.length));
-  return texts.map((text, index) =>
+  const requests = planNarration({
+    groups: [
+      {
+        key: logicalKey,
+        text: logicalText,
+        segment,
+        wholeRequest,
+        regenerationToken: narrationRegenerationToken(
+          context.content.regenerationTokens,
+          logicalKey,
+          segment,
+        ),
+      },
+    ],
+    provider: choice?.provider ?? "",
+    model: choice?.model ?? "",
+    voice: choice?.voice ?? "",
+    maxCharacters:
+      context.catalogue === undefined
+        ? Math.max(2, logicalText.length)
+        : (model?.tts.maxCharacters ?? Math.max(2, logicalText.length)),
+    retained: [],
+  });
+  return requests.map(({ text, key }) =>
     recipe(
       context,
-      `${logicalKey}:${index + 1}`,
+      key,
       "audio",
       {
         kind: "tts",
@@ -200,6 +229,7 @@ function narrationParts(
         logicalText,
         segment,
         pronunciation: null,
+        wholeRequest,
       },
       dependsOn,
       { tokenKey: logicalKey, unresolved: logicalText.length === 0 },

@@ -5,6 +5,7 @@ import { currentRevisionId } from "../revisions/repo.js";
 import { getRevisionView } from "../revisions/view.js";
 import type { ResolvedWorkRecipe } from "./recipe-model.js";
 import { insertInvocation } from "./runtime-admission.js";
+import { bindNarrationReuse, narrationOrdinal } from "./runtime-narration-reuse.js";
 import { executionPlan, executionView, savedCatalogue } from "./runtime-plan.js";
 import { workPieces } from "./work-records.js";
 
@@ -39,6 +40,11 @@ export function materializeAdmittedWork(deps: RevisionDeps, projectId: string): 
       for (const recipe of plan.recipes) {
         if (!plan.work.some((row) => row.key === recipe.key)) continue;
         if (recipe.deferred || recipe.unresolved) continue;
+        if (recipe.input.kind === "tts") {
+          const current = getRevisionView(deps, projectId, head);
+          const desired = current?.revision.fingerprints[`${recipe.input.logicalKey}:1`];
+          if (desired !== undefined && desired !== recipe.logicalFingerprint) continue;
+        }
         const own = reservations.find(
           (row) => row.work_key === recipe.key && row.origin_revision === origin.origin_revision,
         );
@@ -75,6 +81,14 @@ export function materializeAdmittedWork(deps: RevisionDeps, projectId: string): 
         deps.db
           .prepare("DELETE FROM revision_work_reservations WHERE revision_id=? AND work_key=?")
           .run(head, recipe.key);
+        if (plan.work.find((row) => row.key === recipe.key)?.disposition === "reuse") {
+          const ordinal = narrationOrdinal(plan.recipes, recipe.key);
+          bindNarrationReuse(deps, view, recipe, ordinal);
+          if (head !== view.revision.id) {
+            const current = getRevisionView(deps, projectId, head);
+            if (current !== undefined) bindNarrationReuse(deps, current, recipe, ordinal);
+          }
+        }
         insertInvocation(
           deps,
           view,

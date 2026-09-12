@@ -46,6 +46,7 @@ export const recipeInputSchema: z.ZodType<RecipeInput> = z.discriminatedUnion("k
       logicalText: z.string(),
       segment: z.enum(["body", "intro", "outro"]),
       pronunciation: z.null(),
+      wholeRequest: z.boolean().optional(),
     })
     .strict(),
   z
