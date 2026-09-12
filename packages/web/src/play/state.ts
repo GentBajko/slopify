@@ -15,6 +15,7 @@ import type { Chunking } from "@app/slices/narration/chunk.js";
 import type { StagedFile } from "@app/slices/storage/model.js";
 import { defaultSubtitles, type SubtitleConfig } from "@app/slices/subtitles/model.js";
 import { subtitlesFor } from "@/subtitles/config";
+import { freshDraftDocument } from "./draft-state";
 
 // Everything the Play form holds between one page load and the run it posts. It is a
 // plain value: `routes/play.tsx` keeps one in `useState`, every function here is pure,
@@ -39,7 +40,7 @@ export interface ProvidedState {
   readonly thumbnail: Upload | undefined;
 }
 
-export interface PlayFormState {
+export interface LegacyPlayFormState {
   readonly title: string;
   readonly format: Format;
   readonly sources: Readonly<Record<StageKind, StageSource>>;
@@ -61,28 +62,15 @@ export interface PlayFormState {
   readonly provided: ProvidedState;
 }
 
+// Existing controls keep the numeric representation until their raw-input migration.
+export type PlayFormState = LegacyPlayFormState;
+
 // Format 16:9; intro and outro Off; research Off; thumbnail Off; article, audio and images
 // Generate; nothing else picked. Whole-text chunking is the case that adds nothing the user
 // did not ask for.
 export const freshForm: PlayFormState = {
-  title: "",
-  format: "16:9",
-  sources: {
-    research: "off",
-    article: "generate",
-    audio: "generate",
-    images: "generate",
-    thumbnail: "off",
-    video: "generate",
-  },
-  llm: { provider: "", model: "" },
-  audio: { provider: "", model: "", voice: "" },
-  images: { provider: "", model: "" },
-  articlePrompt: "",
+  ...freshDraftDocument.form,
   imagePrompts: [],
-  thumbnailPrompt: "",
-  intro: "",
-  outro: "",
   chunking: { mode: "whole" },
   subtitles: defaultSubtitles,
   values: {},
