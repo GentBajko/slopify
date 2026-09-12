@@ -3,9 +3,11 @@ import { z } from "zod";
 import type { FieldError } from "../admission/rules.js";
 import type { PreparedAsset } from "../storage/assets.js";
 import { outputPath, stagingPath } from "../storage/layout.js";
+import type { OutputRole } from "../storage/model.js";
 import type { PreparedOutput } from "../storage/prepare.js";
 import { stagedFileById } from "../storage/repo.js";
 import type {
+  ProvidedKind,
   RevisionContent,
   RevisionDeps,
   RevisionEdit,
@@ -87,14 +89,25 @@ export function validateAssetReferences(
   prepared: readonly PreparedAsset[],
 ): readonly FieldError[] {
   const fields: FieldError[] = [];
-  const refs: [string, string][] = [];
-  for (const [key, id] of Object.entries(content.provided))
-    if (id !== undefined) refs.push([`content.provided.${key}`, id]);
+  const refs: [string, string, ProvidedKind | "images", boolean][] = [];
+  for (const key of ["research", "article", "audio", "thumbnail"] as const) {
+    const id = content.provided[key];
+    if (id !== undefined) refs.push([`content.provided.${key}`, id, key, false]);
+  }
   for (const [key, row] of Object.entries(content.imageDefinitions))
-    if (row.assetId !== null) refs.push([`content.imageDefinitions.${key}.assetId`, row.assetId]);
+    if (row.assetId !== null)
+      refs.push([`content.imageDefinitions.${key}.assetId`, row.assetId, "images", true]);
   for (const [key, row] of Object.entries(content.narrationOverrides))
-    if (row.kind === "asset") refs.push([`content.narrationOverrides.${key}.assetId`, row.assetId]);
-  for (const [field, id] of refs) {
+    if (row.kind === "asset")
+      refs.push([`content.narrationOverrides.${key}.assetId`, row.assetId, "audio", true]);
+  const roles: Readonly<Record<ProvidedKind | "images", readonly OutputRole[]>> = {
+    research: ["notes"],
+    article: ["article_md", "article_txt"],
+    audio: ["audio_body", "audio_intro", "audio_outro", "audio_export"],
+    images: ["image"],
+    thumbnail: ["thumbnail"],
+  };
+  for (const [field, id, kind, allowPiece] of refs) {
     if (
       !prepared.some((row) => row.id === id && row.projectId === projectId) &&
       deps.db
@@ -102,24 +115,24 @@ export function validateAssetReferences(
         .get(projectId, id) === undefined
     )
       fields.push({ field, message: "Choose an asset belonging to this project." });
-    const kind = field.startsWith("content.imageDefinitions")
-      ? "images"
-      : field.startsWith("content.narrationOverrides")
-        ? "audio"
-        : field.split(".")[2];
     if (
       !prepared.some((row) => row.id === id) &&
       deps.db
         .prepare(
-          "SELECT 1 FROM revision_outputs WHERE project_id=? AND asset_id=? AND json_extract(descriptor,'$.stageKind')=?",
+          "SELECT 1 FROM revision_outputs WHERE project_id=? AND asset_id=? AND json_extract(descriptor,'$.stageKind')=? AND json_extract(descriptor,'$.role') IN (SELECT value FROM json_each(?))",
         )
-        .get(projectId, id, kind ?? "") === undefined &&
-      (field.startsWith("content.provided.") ||
+        .get(projectId, id, kind, JSON.stringify(roles[kind])) === undefined &&
+      (!allowPiece ||
         deps.db
           .prepare(
-            "SELECT 1 FROM revision_pieces WHERE project_id=? AND asset_id=? AND stage_kind=?",
+            "SELECT 1 FROM revision_pieces WHERE project_id=? AND asset_id=? AND stage_kind=? AND json_extract(descriptor,'$.kind') IN (SELECT value FROM json_each(?))",
           )
-          .get(projectId, id, kind ?? "") === undefined)
+          .get(
+            projectId,
+            id,
+            kind,
+            JSON.stringify(kind === "audio" ? ["chunk", "segment"] : ["image"]),
+          ) === undefined)
     )
       fields.push({ field, message: "Choose an asset for this content stage." });
   }
