@@ -38,7 +38,7 @@ export function SetupSummary({
     ],
   ] as const;
   return (
-    <aside aria-label="Setup summary" className="min-w-0 min-[1100px]:sticky min-[1100px]:top-6">
+    <aside aria-label="Setup summary" className="min-w-0">
       <h2 className="mb-3 font-semibold">This run</h2>
       <dl className="divide-y divide-line">
         {rows.map(([label, value, field]) => (

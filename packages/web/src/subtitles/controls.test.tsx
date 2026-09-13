@@ -6,6 +6,7 @@ import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { jsonAnswer, problemAnswer, renderApp, testDeps } from "@/test-app";
 import { SubtitleControls } from "./controls";
+import { SubtitlePreview } from "./style-preview";
 
 export const fonts = [
   { id: "default", name: "Default", family: "Arial", source: "bundled" },
@@ -206,4 +207,70 @@ it("renders externally owned upload state without releasing it on unmount", asyn
   expect(screen.getByText("Try again")).not.toBeNull();
   mounted.unmount();
   expect(notify).not.toHaveBeenCalled();
+});
+
+it("lets Play suppress the embedded preview while project controls keep it by default", () => {
+  const props = {
+    value: { ...defaultSubtitles, mode: "files" as const },
+    audioEnabled: true,
+    videoEnabled: true,
+    onChange: () => {},
+  };
+  const mounted = renderApp(
+    <SubtitleControls {...props} showPreview={false} />,
+    testDeps({ "GET /api/fonts": jsonAnswer({ fonts }) }),
+  );
+  expect(screen.queryByRole("img", { name: "Subtitle style preview" })).toBeNull();
+  mounted.unmount();
+  renderApp(<SubtitleControls {...props} />, testDeps({ "GET /api/fonts": jsonAnswer({ fonts }) }));
+  expect(screen.getAllByRole("img", { name: "Subtitle style preview" })).toHaveLength(1);
+  expect(screen.getByLabelText("Caption sample").textContent).toBe(
+    "Every story begins with a word.",
+  );
+});
+
+it("reports failed font loading, removes the face, and never adds a late loaded face", async () => {
+  const add = vi.fn();
+  const remove = vi.fn();
+  const descriptor = Object.getOwnPropertyDescriptor(document, "fonts");
+  Object.defineProperty(document, "fonts", { configurable: true, value: { add, delete: remove } });
+  let release: ((value: object) => void) | undefined;
+  const load = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("Unavailable font"))
+    .mockImplementationOnce(
+      () =>
+        new Promise<object>((resolve) => {
+          release = resolve;
+        }),
+    );
+  vi.stubGlobal(
+    "FontFace",
+    vi.fn(function (this: { load: typeof load }) {
+      this.load = load;
+    }),
+  );
+  try {
+    const failed = renderApp(
+      <SubtitlePreview value={defaultSubtitles} format="16:9" />,
+      testDeps({}),
+    );
+    await screen.findByText(/Font preview unavailable/);
+    failed.unmount();
+    expect(remove).toHaveBeenCalledTimes(1);
+    const pending = renderApp(
+      <SubtitlePreview value={defaultSubtitles} format="9:16" />,
+      testDeps({}),
+    );
+    pending.unmount();
+    await act(async () => {
+      release?.({});
+    });
+    expect(remove).toHaveBeenCalledTimes(2);
+    expect(add).not.toHaveBeenCalled();
+  } finally {
+    vi.unstubAllGlobals();
+    if (descriptor) Object.defineProperty(document, "fonts", descriptor);
+    else Reflect.deleteProperty(document, "fonts");
+  }
 });

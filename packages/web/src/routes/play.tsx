@@ -14,13 +14,14 @@ import { ContentSection } from "@/play/content-section";
 import { usePlaySession } from "@/play/draft-context";
 import { DraftList } from "@/play/draft-list";
 import { focusPlayField, playFieldTarget } from "@/play/field-targets";
-import { FormatPicker } from "@/play/format-picker";
+import { OutputPreview, useWidePlayLayout } from "@/play/output-preview";
 import { OutputsSection } from "@/play/outputs-section";
 import { BatchEditor, RunReview } from "@/play/run-review";
 import { SectionNavigation } from "@/play/section-navigation";
 import { playSections } from "@/play/sections";
 import { SetupSummary } from "@/play/setup-summary";
 import type { PlayFormState, Upload } from "@/play/state";
+import { StyleSection } from "@/play/style-section";
 import {
   entriesQuery,
   keys,
@@ -30,7 +31,6 @@ import {
   voicesQuery,
 } from "@/queries";
 import { subtitlesFor } from "@/subtitles/config";
-import { SubtitleControls } from "@/subtitles/controls";
 import { useTutorialEvent, useTutorialProgress } from "@/tutorial/context";
 
 export function PlayRoute() {
@@ -46,6 +46,7 @@ export function PlayRoute() {
 
 export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string) => void }) {
   const { api } = useApp();
+  const wide = useWidePlayLayout();
   const queryClient = useQueryClient();
   const tutorialEvent = useTutorialEvent();
 
@@ -281,11 +282,11 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
         if (field) setTouched((current) => new Set([...current, field]));
       }}
       data-play-grid="true"
-      className="mx-auto max-w-[1320px] [&_input:not([type=checkbox])]:min-h-10 [&_select]:min-h-10 [&_button]:min-h-10 max-[700px]:[&_button]:min-h-11 max-[700px]:[&_input:not([type=checkbox])]:min-h-11 max-[700px]:[&_select]:min-h-11"
+      className="mx-auto max-w-[1320px] pb-[calc(4rem+env(safe-area-inset-bottom))] [&_input:not([type=checkbox])]:min-h-10 [&_select]:min-h-10 [&_button]:min-h-10 max-[1099px]:[&_button]:min-h-11 max-[1099px]:[&_input:not([type=checkbox])]:min-h-11 max-[1099px]:[&_select]:min-h-11"
     >
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="mb-1 text-title font-bold tracking-[-0.01em]">New run</h1>
+          <h1 className="mb-1 text-[36px] font-bold tracking-[-0.01em]">New run</h1>
           <p className="text-body text-ink2">
             Create the article, choose the outputs, then review.
           </p>
@@ -305,8 +306,24 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
           className="min-w-0"
         >
           <h2 ref={heading} tabIndex={-1} className="text-xl font-semibold">
-            {playSections.find((item) => item.id === session.section)?.label}
+            {session.section === "style"
+              ? "Make it look like yours."
+              : playSections.find((item) => item.id === session.section)?.label}
           </h2>
+          {!wide ? (
+            session.section === "style" ? (
+              <div className="mt-5">
+                <OutputPreview />
+              </div>
+            ) : (
+              <details className="my-5 rounded-control border border-line p-3">
+                <summary className="min-h-11 cursor-pointer text-small font-semibold">
+                  Preview · {form.format}
+                </summary>
+                <OutputPreview />
+              </details>
+            )
+          ) : null}
           {session.section === "content" ? (
             <ContentSection
               {...controls}
@@ -328,27 +345,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
               }}
             />
           ) : null}
-          {session.section === "style" ? (
-            <div data-tour="play-subtitles" className="flex flex-col gap-6 py-6">
-              <FormatPicker value={form.format} onPick={(format) => update({ format })} />
-              <SubtitleControls
-                fontUpload={session.fontUpload}
-                session={{
-                  previewText: session.document.previewText,
-                  fontUploading: session.fontUploading,
-                  fontUpload: session.document.fontUpload,
-                  selectFont: session.selectFont,
-                  uploadSubtitleFont: session.uploadSubtitleFont,
-                }}
-                value={subtitlesFor(form.subtitles, form.sources)}
-                format={form.format}
-                audioEnabled={form.sources.audio !== "off"}
-                videoEnabled={form.sources.video === "generate" && form.sources.images !== "off"}
-                onChange={(subtitles) => update({ subtitles })}
-                problem={problem}
-              />
-            </div>
-          ) : null}
+          {session.section === "style" ? <StyleSection problem={problem} /> : null}
           {session.section === "review" ? (
             <div className="flex flex-col gap-5 py-6">
               {errors.length ? (
@@ -411,7 +408,10 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
             </div>
           )}
         </section>
-        <SetupSummary form={form} blocker={blocker} onReveal={revealField} />
+        <div className="flex min-w-0 flex-col gap-6 min-[1100px]:sticky min-[1100px]:top-6">
+          {wide ? <OutputPreview /> : null}
+          <SetupSummary form={form} blocker={blocker} onReveal={revealField} />
+        </div>
       </div>
       {review ? (
         <RunReview

@@ -25,7 +25,7 @@ export function SectionNavigation({
           >
             <span
               aria-hidden="true"
-              className="mr-3 inline-flex size-7 items-center justify-center rounded-full border border-line text-small"
+              className={`mr-3 inline-flex size-7 items-center justify-center rounded-full border text-small ${section === item.id ? "border-accent bg-accent text-accent-ink" : "border-line"}`}
             >
               {index + 1}
             </span>

@@ -78,7 +78,7 @@ it("keeps the font upload lock after leaving Style and preserves concurrent styl
   );
   await userEvent.clear(screen.getByLabelText("Subtitle font size"));
   await userEvent.type(screen.getByLabelText("Subtitle font size"), "64");
-  await userEvent.selectOptions(screen.getByLabelText("Subtitle position"), "center");
+  await userEvent.click(screen.getByRole("radio", { name: "center" }));
   await userEvent.click(screen.getByRole("button", { name: "Review" }));
   expect(screen.queryByRole("list", { name: "Setup errors" })).toBeNull();
   expect(screen.getByRole("button", { name: "Review costs" }).getAttribute("aria-disabled")).toBe(
@@ -99,7 +99,7 @@ it("keeps the font upload lock after leaving Style and preserves concurrent styl
   await userEvent.click(screen.getByRole("button", { name: "Style" }));
   expect((screen.getByLabelText("Subtitle font") as HTMLSelectElement).value).toBe("uploaded-font");
   expect((screen.getByLabelText("Subtitle font size") as HTMLInputElement).value).toBe("64");
-  expect((screen.getByLabelText("Subtitle position") as HTMLSelectElement).value).toBe("center");
+  expect(screen.getByRole("radio", { name: "center" }).getAttribute("aria-checked")).toBe("true");
 });
 it("keeps pending media across Outputs, Style, Content and binds its success once", async () => {
   const pending = deferred();

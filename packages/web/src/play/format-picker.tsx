@@ -14,13 +14,13 @@ export function FormatPicker({
   return (
     <div className="w-full">
       <Label id={id} className="mb-2">
-        Format
+        Frame format
       </Label>
       <ToggleGroup
         type="single"
         value={value}
         aria-labelledby={id}
-        className="w-full"
+        className="w-full max-w-[400px] gap-3 overflow-visible border-0"
         onValueChange={(next) => {
           if (next === "16:9" || next === "9:16") onPick(next);
         }}
@@ -31,7 +31,7 @@ export function FormatPicker({
             value={format}
             data-play-field={value === format ? "format" : undefined}
             aria-label={format}
-            className="flex h-24 min-w-0 flex-1 flex-col items-center justify-center gap-2 py-2"
+            className="flex h-28 min-w-0 flex-1 items-center justify-center gap-4 rounded-control border border-line2 bg-panel p-3 last:border-r data-[state=on]:border-accent data-[state=on]:shadow-none"
           >
             <span className="flex h-12 items-center justify-center" aria-hidden="true">
               <span
@@ -43,7 +43,12 @@ export function FormatPicker({
                 }}
               />
             </span>
-            <span>{format}</span>
+            <span className="text-left">
+              <span className="block text-body font-semibold">{format}</span>
+              <span className="text-label text-ink3">
+                {format === "16:9" ? "Landscape" : "Portrait"}
+              </span>
+            </span>
           </ToggleGroupItem>
         ))}
       </ToggleGroup>

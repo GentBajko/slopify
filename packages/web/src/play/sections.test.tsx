@@ -15,7 +15,11 @@ it("offers four freely reachable sections and focuses only explicit navigation",
   await userEvent.type(screen.getByLabelText("Project title"), "Retained");
   for (const name of ["Style", "Outputs", "Review", "Content"]) {
     await userEvent.click(within(nav).getByRole("button", { name }));
-    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("heading", { name })));
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("heading", { name: name === "Style" ? "Make it look like yours." : name }),
+      ),
+    );
   }
   expect((screen.getByLabelText("Project title") as HTMLInputElement).value).toBe("Retained");
   expect(requests.some((r) => r.url.endsWith("/api/projects") && r.method === "POST")).toBe(false);

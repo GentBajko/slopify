@@ -1,9 +1,10 @@
 import type { Format } from "@app/kernel/pipeline.js";
 import type { SubtitleConfig } from "@app/slices/subtitles/model.js";
 import { subtitlePositions } from "@app/slices/subtitles/model.js";
-import { useId, useState } from "react";
+import { type ReactElement, useId, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { validSubtitleStyle } from "./config";
 import { type ControlledFontUpload, FontPicker } from "./font-picker";
 import { SubtitlePreview } from "./style-preview";
@@ -19,7 +20,13 @@ export function SubtitleControls({
   problem,
   session,
   fontUpload,
+  showPreview = true,
+  illustratedPositions = false,
+  rawFontSize,
 }: {
+  readonly showPreview?: boolean;
+  readonly illustratedPositions?: boolean;
+  readonly rawFontSize?: { readonly value: string; readonly onChange: (value: string) => void };
   readonly fontUpload?: ControlledFontUpload;
   readonly session?: {
     readonly previewText: string;
@@ -36,7 +43,7 @@ export function SubtitleControls({
   readonly onChange: (value: SubtitleConfig) => void;
   readonly onUploading?: (pending: boolean) => void;
   readonly problem?: (field: string) => string | undefined;
-}) {
+}): ReactElement {
   const id = useId();
   const sizeId = useId();
   const hintId = useId();
@@ -99,23 +106,47 @@ export function SubtitleControls({
                     onUploading?.(pending);
                   }}
                 />
-                <div className="max-w-[180px]">
+                <div className={illustratedPositions ? "w-full" : "max-w-[180px]"}>
                   <Label htmlFor={sizeId} className="mb-1">
                     Subtitle font size
                   </Label>
-                  <Input
-                    id={sizeId}
-                    data-play-field="subtitles.fontSize"
-                    type="number"
-                    min={16}
-                    max={120}
-                    step={1}
-                    value={value.fontSize}
-                    aria-invalid={!validSubtitleStyle(value) || sizeProblem !== undefined}
-                    onChange={(event) =>
-                      onChange({ ...value, fontSize: Number(event.target.value) })
-                    }
-                  />
+                  <div className="flex items-center gap-5">
+                    {illustratedPositions ? (
+                      <input
+                        aria-label="Subtitle font size slider"
+                        type="range"
+                        min={16}
+                        max={120}
+                        step={1}
+                        value={Math.max(
+                          16,
+                          Math.min(120, Number.isFinite(value.fontSize) ? value.fontSize : 48),
+                        )}
+                        className="min-w-0 flex-1 accent-accent"
+                        onChange={(event) =>
+                          rawFontSize
+                            ? rawFontSize.onChange(event.target.value)
+                            : onChange({ ...value, fontSize: Number(event.target.value) })
+                        }
+                      />
+                    ) : null}
+                    <Input
+                      className={illustratedPositions ? "w-20" : undefined}
+                      id={sizeId}
+                      data-play-field="subtitles.fontSize"
+                      type="number"
+                      min={16}
+                      max={120}
+                      step={1}
+                      value={rawFontSize?.value ?? value.fontSize}
+                      aria-invalid={!validSubtitleStyle(value) || sizeProblem !== undefined}
+                      onChange={(event) =>
+                        rawFontSize
+                          ? rawFontSize.onChange(event.target.value)
+                          : onChange({ ...value, fontSize: Number(event.target.value) })
+                      }
+                    />
+                  </div>
                   {!validSubtitleStyle(value) || sizeProblem ? (
                     <p role="alert" className="mt-1 text-label text-red">
                       {sizeProblem ?? "Choose a whole font size from 16 to 120."}
@@ -123,33 +154,82 @@ export function SubtitleControls({
                   ) : null}
                 </div>
                 <div>
-                  <Label htmlFor={positionId} className="mb-1">
+                  <Label
+                    htmlFor={illustratedPositions ? undefined : positionId}
+                    id={`${positionId}-label`}
+                    className="mb-1"
+                  >
                     Subtitle position
                   </Label>
-                  <select
-                    id={positionId}
-                    data-play-field="subtitles.position"
-                    value={value.position ?? "bottom"}
-                    onChange={(event) => {
-                      const position = subtitlePositions.find((one) => one === event.target.value);
-                      if (position) onChange({ ...value, position });
-                    }}
-                    className="h-8 w-full rounded-control border border-line2 bg-panel2 px-[10px] text-small text-ink"
-                  >
-                    {subtitlePositions.map((position) => (
-                      <option key={position} value={position}>
-                        {position[0]?.toUpperCase()}
-                        {position.slice(1)}
-                      </option>
-                    ))}
-                  </select>
+                  {illustratedPositions ? (
+                    <ToggleGroup
+                      type="single"
+                      aria-labelledby={`${positionId}-label`}
+                      value={value.position ?? "bottom"}
+                      onValueChange={(next) => {
+                        const position = subtitlePositions.find((one) => one === next);
+                        if (position) onChange({ ...value, position });
+                      }}
+                      className="grid w-full grid-cols-5 gap-2 overflow-visible border-0"
+                    >
+                      {subtitlePositions.map((position, index) => (
+                        <ToggleGroupItem
+                          key={position}
+                          value={position}
+                          aria-label={position}
+                          data-play-field={
+                            (value.position ?? "bottom") === position
+                              ? "subtitles.position"
+                              : undefined
+                          }
+                          className="flex min-w-0 flex-col items-center gap-2 rounded-control border border-line2 bg-panel px-1 py-3 text-[10px] last:border-r data-[state=on]:border-accent data-[state=on]:text-accent data-[state=on]:shadow-none"
+                        >
+                          <span
+                            aria-hidden="true"
+                            className="relative block h-11 w-7 rounded-[2px] border border-current"
+                          >
+                            <span
+                              className="absolute left-1 right-1 h-[3px] bg-current"
+                              style={{ top: `${8 + index * 20}%` }}
+                            />
+                          </span>
+                          <span>
+                            {position[0]?.toUpperCase()}
+                            {position.slice(1)}
+                          </span>
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                  ) : (
+                    <select
+                      id={positionId}
+                      data-play-field="subtitles.position"
+                      value={value.position ?? "bottom"}
+                      onChange={(event) => {
+                        const position = subtitlePositions.find(
+                          (one) => one === event.target.value,
+                        );
+                        if (position) onChange({ ...value, position });
+                      }}
+                      className="h-8 w-full rounded-control border border-line2 bg-panel2 px-[10px] text-small text-ink"
+                    >
+                      {subtitlePositions.map((position) => (
+                        <option key={position} value={position}>
+                          {position[0]?.toUpperCase()}
+                          {position.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
-              <SubtitlePreview
-                value={value}
-                format={format}
-                {...(session ? { text: session.previewText } : {})}
-              />
+              {showPreview ? (
+                <SubtitlePreview
+                  value={value}
+                  format={format}
+                  {...(session ? { sample: session.previewText } : {})}
+                />
+              ) : null}
             </div>
             {session?.fontUpload && !session.fontUploading ? (
               <p role="alert">Reattach {session.fontUpload.name}, or select a font.</p>

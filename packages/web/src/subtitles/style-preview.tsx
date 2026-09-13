@@ -1,16 +1,22 @@
 import type { Format } from "@app/kernel/pipeline.js";
 import { subtitleFrame, subtitlePlacement } from "@app/slices/subtitles/layout.js";
 import type { SubtitleConfig } from "@app/slices/subtitles/model.js";
-import { type ReactElement, useEffect, useId, useState } from "react";
+import { type CSSProperties, type ReactElement, useEffect, useId, useState } from "react";
 import { useApp } from "@/app-context";
 import { fontUrl } from "./api";
 
 export function SubtitlePreview({
   value,
   format,
-  text = "Every story begins with a word.",
+  sample = "Every story begins with a word.",
+  backgroundUrl,
+  showCaptions = true,
+  maxFrameHeight,
 }: {
-  readonly text?: string;
+  readonly sample?: string;
+  readonly backgroundUrl?: string;
+  readonly showCaptions?: boolean;
+  readonly maxFrameHeight?: string;
   readonly value: SubtitleConfig;
   readonly format: Format;
 }): ReactElement {
@@ -41,6 +47,20 @@ export function SubtitlePreview({
   const fontSize = Number.isFinite(value.fontSize)
     ? Math.max(16, Math.min(120, value.fontSize))
     : 48;
+  const captionStyle: CSSProperties = {
+    position: "absolute",
+    left: "50%",
+    top: `${(placement.y / frame.height) * 100}%`,
+    width: `${((frame.width - 120) / frame.width) * 100}%`,
+    transform: `translate(-50%, ${placement.translateY}%)`,
+    fontFamily: `"${family}", sans-serif`,
+    fontSize: `${(fontSize / frame.width) * 100}cqw`,
+    lineHeight: 1.2,
+    overflowWrap: "anywhere",
+    WebkitTextStroke: `${(2.5 / frame.width) * 100}cqw #101010`,
+    paintOrder: "stroke fill",
+    textShadow: `0 ${100 / frame.width}cqw ${100 / frame.width}cqw #000`,
+  };
   return (
     <figure className="min-w-0 self-start">
       <div className="mb-2 flex items-center justify-between gap-2 text-label text-ink2">
@@ -55,28 +75,23 @@ export function SubtitlePreview({
         className="relative mx-auto w-full overflow-hidden rounded-control border border-line2 bg-screen text-center text-white"
         style={{
           aspectRatio: `${frame.width} / ${frame.height}`,
-          maxWidth: format === "9:16" ? 240 : 480,
+          maxWidth:
+            format === "9:16"
+              ? maxFrameHeight
+                ? `min(240px, calc((${maxFrameHeight}) * 9 / 16))`
+                : 240
+              : 480,
           containerType: "inline-size",
         }}
       >
-        <span
-          style={{
-            position: "absolute",
-            left: "50%",
-            top: `${(placement.y / frame.height) * 100}%`,
-            width: `${((frame.width - 120) / frame.width) * 100}%`,
-            transform: `translate(-50%, ${placement.translateY}%)`,
-            fontFamily: `"${family}", sans-serif`,
-            fontSize: `${(fontSize / frame.width) * 100}cqw`,
-            lineHeight: 1.2,
-            overflowWrap: "anywhere",
-            WebkitTextStroke: `${(2.5 / frame.width) * 100}cqw #101010`,
-            paintOrder: "stroke fill",
-            textShadow: `0 ${100 / frame.width}cqw ${100 / frame.width}cqw #000`,
-          }}
-        >
-          {text}
-        </span>
+        {backgroundUrl ? (
+          <img src={backgroundUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        ) : null}
+        {showCaptions ? (
+          <span role="note" aria-label="Caption sample" style={captionStyle}>
+            {sample}
+          </span>
+        ) : null}
       </div>
       <figcaption className="mt-2 text-label text-ink3">
         {frame.width} × {frame.height} · Preview at reduced scale.
