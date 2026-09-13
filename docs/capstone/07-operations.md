@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 7bdb84e3f57e
+generated_at_commit: dad071604385
 generated_date: '2026-09-13'
 capstone_version: 5.2.0
-content_hash: 5eae370b5de2
+content_hash: be140c80c8b3
 paths_covered:
   - :(top)packages/app/src/**
   - :(top)packages/web/src/**
@@ -28,7 +28,7 @@ absorbed_from:
 
 Migration `0007-review-checkpoints.sql` adds durable gate and approval tables. Boot recovery restores held/released checkpoint authority against the current project head. The project PATCH/approve routes publish secret-free project events; approval wakes the in-process runner only after its transaction commits.
 
-Observed source: `7bdb84e3f57e` (2026-09-13). Commands below describe the repository and its packaged entry points; they do not assert that a deployment has occurred. The app requires Node.js 26 or newer (`packages/app/package.json:13`).
+Observed source: `dad071604385` (2026-09-13). Commands below describe the repository and its packaged entry points; they do not assert that a deployment has occurred. The app requires Node.js 26 or newer (`packages/app/package.json:13`).
 
 ## Processes
 
@@ -119,7 +119,7 @@ The repository contains no Dockerfile or Compose manifest. Remote provider APIs,
 | Type checking | `npm run typecheck` → workspace typechecks where present | `package.json:10`; web first emits app declarations through `packages/web/package.json:9` |
 | Tests | `npm test` → `vitest run` | `package.json:11` |
 | Build release artifacts | `npm run build` | SPA Vite build first, then app TypeScript and migration/assets/web copy scripts: `package.json:12`, `packages/app/package.json:25`, `packages/app/scripts/copy-migrations.mjs:1`, `packages/app/scripts/copy-assets.mjs:1`, `packages/app/scripts/copy-web.mjs:1` |
-| Smoke packed install surfaces | `node packages/app/scripts/install-smoke.mjs` after `npm run build` | Packs the app into a temporary archive, globally installs it under a temporary prefix, then launches both the global `slopify` bin and npm-exec form until `/api/health` answers: `packages/app/scripts/install-smoke.mjs:14` |
+| Smoke packed install surfaces | `node packages/app/scripts/install-smoke.mjs` after `npm run build` | Packs the app into a temporary archive, globally installs it under a temporary prefix, then launches both the global `slopify` bin and npm-exec form until `/api/health` answers. Windows invokes npm's generated `.cmd` shim through `ComSpec`; other platforms execute the installed bin directly: `packages/app/scripts/install-smoke.mjs:14` |
 | Dependency audit | `npm audit --audit-level=high` | `.github/workflows/ci.yml:22` |
 | App migrations | `node packages/app/dist/edge/cli.js --data-dir <directory> --no-open` after build starts the app and applies pending migrations | No standalone migration script; boot calls migrate before recovery. SQL files sort by filename, each runs transactionally, and newer unsupported DB versions are refused: `packages/app/src/main.ts:99`, `packages/app/src/kernel/db/migrate.ts:10` |
 | Collector local schema | `npm run schema:local --workspace @slopify/collector` | `wrangler d1 execute slopify-collector --local --file=schema.sql`: `packages/collector/package.json:9` |
