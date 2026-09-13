@@ -76,15 +76,20 @@ export function useUpdate(reload: () => void): UpdateView {
     retry: false,
   });
 
+  const recoveryActive =
+    acceptedVersion !== null ||
+    status.data?.status === "installing" ||
+    status.data?.status === "restarting";
+
   useEffect(() => {
-    if (acceptedVersion === null) return;
+    if (!recoveryActive || recoveryTimedOut) return;
     const timeout = window.setTimeout(() => {
       setAcceptedVersion(null);
       setRecoveryTimedOut(true);
       setRecoveryError("The update did not finish. Restart Slopify and try again.");
     }, updateRecoveryTimeout);
     return () => window.clearTimeout(timeout);
-  }, [acceptedVersion]);
+  }, [recoveryActive, recoveryTimedOut]);
 
   useEffect(() => {
     if (acceptedVersion === null || status.data === undefined) return;

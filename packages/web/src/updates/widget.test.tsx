@@ -189,6 +189,19 @@ it("stops presenting Updating when the replacement never reconnects", async () =
   expect(reload).not.toHaveBeenCalled();
 });
 
+it("recovers a persisted install state after a reload", async () => {
+  fakeTime();
+  renderApp(
+    <UpdateWidget reload={vi.fn()} />,
+    testDeps({ "GET /api/update": jsonAnswer({ ...available, status: "installing" }) }),
+  );
+  await tick(10);
+  expect(control().disabled).toBe(true);
+  await tick(updateRecoveryTimeout);
+  expect(control().disabled).toBe(false);
+  expect(control().title).toContain("The update did not finish");
+});
+
 it("polls every fifteen minutes without installing", async () => {
   const check = vi.fn(jsonAnswer({ ...available, available: false })),
     install = vi.fn();
