@@ -1,7 +1,7 @@
 import type { Appearance, AppSettings } from "@app/slices/settings/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
-import { saveAppSettings } from "@/api";
+import { readStorageUsage, saveAppSettings } from "@/api";
 import { useApp } from "@/app-context";
 import { CatalogueSettings } from "@/components/catalogue";
 import { ProviderKeys } from "@/components/provider-keys";
@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Voices } from "@/components/voices";
 import { keys, settingsQuery } from "@/queries";
+
+const storageQueryKey = ["storage-usage"] as const;
 
 // The bound slices/admission/rules.ts validates a run's gap against, so the field refuses
 // what a run would refuse rather than letting the server say it first.
@@ -36,15 +38,172 @@ export function gapProblem(value: string): string | undefined {
 
 // Keys, voices, and the two playback values, without ceremony.
 export function SettingsRoute() {
+  const { api } = useApp();
   return (
     <div className="flex max-w-[1100px] flex-col gap-6">
-      <h1 className="text-title font-bold tracking-[-0.01em]">Settings</h1>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-title font-bold tracking-[-0.01em]">Settings</h1>
+          <p className="mt-1 text-small text-ink2">
+            Provider readiness is checked again before each run.
+          </p>
+        </div>
+        <Button asChild variant="ghost">
+          <a href={`${api.origin}/api/diagnostics`} download="slopify-diagnostics.json">
+            Download diagnostics
+          </a>
+        </Button>
+      </div>
       <ProviderKeys />
       <Voices />
       <CatalogueSettings />
       <Playback />
+      <StorageTools />
     </div>
   );
+}
+
+function StorageTools() {
+  const { api } = useApp();
+  const queryClient = useQueryClient();
+  const usage = useQuery({
+    queryKey: storageQueryKey,
+    queryFn: () => readStorageUsage(api),
+    staleTime: 30_000,
+  });
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function importBackup(file: File): Promise<void> {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const response = await api.fetch(`${api.origin}/api/storage/import`, {
+        method: "PUT",
+        headers: { "content-type": "application/zip" },
+        body: await file.arrayBuffer(),
+      });
+      const body = (await response.json()) as {
+        detail?: string;
+        templates?: number;
+        stagedFiles?: number;
+      };
+      if (!response.ok) throw new Error(body.detail ?? "The backup could not be imported.");
+      setNotice(
+        `Imported ${body.templates ?? 0} template(s) and ${body.stagedFiles ?? 0} staged file(s).`,
+      );
+      await queryClient.invalidateQueries({ queryKey: storageQueryKey });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The backup could not be imported.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function cleanup(): Promise<void> {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const response = await api.fetch(`${api.origin}/api/storage/cleanup`, { method: "POST" });
+      const body = (await response.json()) as { orphanFiles?: number; stagedFiles?: number };
+      if (!response.ok) throw new Error("Storage cleanup could not finish.");
+      setNotice(
+        `Removed ${body.orphanFiles ?? 0} orphan project file(s) and ${body.stagedFiles ?? 0} stale staged file(s).`,
+      );
+      await queryClient.invalidateQueries({ queryKey: storageQueryKey });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Storage cleanup could not finish.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section
+      aria-labelledby="storage-tools-heading"
+      className="rounded-panel border border-line bg-panel p-4"
+    >
+      <h2 id="storage-tools-heading" className="font-semibold">
+        Backup and storage
+      </h2>
+      <p className="mt-1 max-w-[70ch] text-small text-ink2">
+        Backups include templates, prompts, voices, settings and staged assets. Provider keys and
+        telemetry are never included. Existing projects and their retained revisions stay untouched
+        when a backup is imported.
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button asChild disabled={busy}>
+          <a href={`${api.origin}/api/storage/export`} download="slopify-backup.zip">
+            Export backup
+          </a>
+        </Button>
+        <label className="inline-flex h-8 cursor-pointer items-center rounded-control border border-line2 bg-panel2 px-3 text-body hover:border-ink3">
+          Import backup
+          <input
+            className="sr-only"
+            type="file"
+            accept="application/zip,.zip"
+            disabled={busy}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void importBackup(file);
+              event.target.value = "";
+            }}
+          />
+        </label>
+        <Button type="button" variant="ghost" disabled={busy} onClick={() => void cleanup()}>
+          Clean orphan files
+        </Button>
+      </div>
+      {usage.data ? (
+        <div className="mt-4 border-t border-line pt-3 text-small text-ink2">
+          <p>
+            {formatBytes(usage.data.data)} stored · {formatBytes(usage.data.projects)} project files
+            · {formatBytes(usage.data.staging)} staged files
+          </p>
+          {usage.data.byProject.length > 0 ? (
+            <ul className="mt-2 space-y-1" aria-label="Storage by project">
+              {usage.data.byProject.slice(0, 5).map((project) => (
+                <li key={project.id} className="flex justify-between gap-4">
+                  <span className="truncate">{project.title}</span>
+                  <span className="shrink-0 tabular-nums">{formatBytes(project.bytes)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : usage.error ? (
+        <p className="mt-3 text-small text-ink2">Storage usage is unavailable.</p>
+      ) : null}
+      {notice ? (
+        <p role="status" className="mt-2 text-small text-lamp-run">
+          {notice}
+        </p>
+      ) : null}
+      {error ? (
+        <p role="alert" className="mt-2 text-small text-red">
+          {error}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ["KB", "MB", "GB", "TB"];
+  let value = bytes;
+  let unit = units[0] ?? "KB";
+  for (const candidate of units) {
+    value /= 1024;
+    unit = candidate;
+    if (value < 1024 || candidate === units.at(-1)) break;
+  }
+  const rounded = value >= 10 ? value.toFixed(0) : value.toFixed(1).replace(/\.0$/, "");
+  return `${rounded} ${unit}`;
 }
 
 function Playback() {

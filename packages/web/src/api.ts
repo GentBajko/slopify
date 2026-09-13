@@ -87,6 +87,16 @@ export interface CreatedProjectBody {
 export interface StagingListBody {
   readonly files: readonly StagedFile[];
 }
+export interface StorageUsage {
+  readonly data: number;
+  readonly projects: number;
+  readonly staging: number;
+  readonly byProject: readonly {
+    readonly id: string;
+    readonly title: string;
+    readonly bytes: number;
+  }[];
+}
 export interface NoticeBody {
   readonly seen: boolean;
   // The version the notice names as the one that goes out in each report. Optional so a
@@ -169,6 +179,10 @@ export async function createProject(
 
 export async function listStaged(api: Api): Promise<StagingListBody> {
   return read<StagingListBody>(await api.client.staging.$get());
+}
+
+export async function readStorageUsage(api: Api): Promise<StorageUsage> {
+  return read<StorageUsage>(await api.fetch(`${api.origin}/api/storage`));
 }
 
 export async function uploadStaged(api: Api, kind: UploadKind, file: File): Promise<StagedFile> {

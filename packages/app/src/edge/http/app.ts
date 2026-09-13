@@ -21,6 +21,7 @@ import type { Hub } from "../events/hub.js";
 import { actionRoutes } from "./actions.js";
 import { audioPreviewRoutes } from "./audio-preview.js";
 import { checkpointRoutes } from "./checkpoints.js";
+import { diagnosticsRoutes } from "./diagnostics.js";
 import { draftRoutes } from "./drafts.js";
 import { entryRoutes } from "./entries.js";
 import { fileRoutes } from "./files.js";
@@ -37,6 +38,7 @@ import { revisionRoutes } from "./revisions.js";
 import { scheduleRoutes } from "./schedules.js";
 import { settingsRoutes } from "./settings.js";
 import { stagingRoutes } from "./staging.js";
+import { storageRoutes } from "./storage.js";
 import { subtitleRoutes } from "./subtitles.js";
 import { telemetryRoutes } from "./telemetry.js";
 import { tutorialRoutes } from "./tutorial.js";
@@ -90,7 +92,9 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
         }),
       )
       .route("/staging", stagingRoutes(deps))
+      .route("/storage", storageRoutes(deps))
       .route("/drafts", draftRoutes(deps.drafts))
+      .route("/diagnostics", diagnosticsRoutes(deps))
       .route("/project-templates", projectTemplateRoutes(deps.drafts))
       .route("/schedules", scheduleRoutes(deps.schedules))
       .route("/projects", planningRoutes(deps))
