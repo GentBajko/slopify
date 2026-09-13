@@ -99,6 +99,9 @@ export function OptionPicker({
           }}
         >
           <option value="">{placeholder}</option>
+          {value !== "" && !options.some((option) => option.value === value) ? (
+            <option value={value}>{value} (saved choice)</option>
+          ) : null}
           {options.map((option) => (
             <option key={option.value} value={option.value} disabled={option.disabled === true}>
               {option.label}
