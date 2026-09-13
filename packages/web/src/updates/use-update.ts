@@ -8,6 +8,7 @@ import {
   updateCheckInterval,
   updateKey,
   updateReconnectInterval,
+  updateRecoveryTimeout,
 } from "./api.js";
 
 interface UpdateView {
@@ -25,6 +26,8 @@ export function useUpdate(reload: () => void): UpdateView {
   const { api } = useApp();
   const client = useQueryClient();
   const [acceptedVersion, setAcceptedVersion] = useState<string | null>(null);
+  const [recoveryTimedOut, setRecoveryTimedOut] = useState(false);
+  const [recoveryError, setRecoveryError] = useState<string | undefined>();
   const reloaded = useRef(false);
   const status = useQuery({
     queryKey: updateKey,
@@ -32,10 +35,11 @@ export function useUpdate(reload: () => void): UpdateView {
     staleTime: updateCheckInterval,
     refetchOnWindowFocus: "always",
     refetchInterval: (query) =>
-      acceptedVersion !== null ||
-      query.state.data?.status === "checking" ||
-      query.state.data?.status === "installing" ||
-      query.state.data?.status === "restarting"
+      !recoveryTimedOut &&
+      (acceptedVersion !== null ||
+        query.state.data?.status === "checking" ||
+        query.state.data?.status === "installing" ||
+        query.state.data?.status === "restarting")
         ? updateReconnectInterval
         : updateCheckInterval,
     retry: false,
@@ -43,15 +47,25 @@ export function useUpdate(reload: () => void): UpdateView {
 
   const refresh = useMutation({
     mutationFn: () => checkUpdate(api, true),
-    onMutate: () => client.cancelQueries({ queryKey: updateKey }),
+    onMutate: () => {
+      setRecoveryTimedOut(false);
+      setRecoveryError(undefined);
+      return client.cancelQueries({ queryKey: updateKey });
+    },
     onSuccess: (info) => client.setQueryData(updateKey, info),
     retry: false,
   });
   const install = useMutation({
     mutationFn: () => installUpdate(api),
-    onMutate: () => client.cancelQueries({ queryKey: updateKey }),
+    onMutate: () => {
+      setRecoveryTimedOut(false);
+      setRecoveryError(undefined);
+      return client.cancelQueries({ queryKey: updateKey });
+    },
     onSuccess: (info) => {
       setAcceptedVersion(info.currentVersion);
+      setRecoveryTimedOut(false);
+      setRecoveryError(undefined);
       client.setQueryData(updateKey, info);
     },
     onError: () => {
@@ -63,6 +77,16 @@ export function useUpdate(reload: () => void): UpdateView {
   });
 
   useEffect(() => {
+    if (acceptedVersion === null) return;
+    const timeout = window.setTimeout(() => {
+      setAcceptedVersion(null);
+      setRecoveryTimedOut(true);
+      setRecoveryError("The update did not finish. Restart Slopify and try again.");
+    }, updateRecoveryTimeout);
+    return () => window.clearTimeout(timeout);
+  }, [acceptedVersion]);
+
+  useEffect(() => {
     if (acceptedVersion === null || status.data === undefined) return;
     const activated = status.data.status === "idle" || status.data.status === "error";
     // A replacement answers health checks before its activation commits. Keep this
@@ -70,17 +94,23 @@ export function useUpdate(reload: () => void): UpdateView {
     if (status.data.currentVersion !== acceptedVersion && activated && !reloaded.current) {
       reloaded.current = true;
       setAcceptedVersion(null);
+      setRecoveryTimedOut(false);
+      setRecoveryError(undefined);
       reload();
     } else if (activated) {
       setAcceptedVersion(null);
+      setRecoveryTimedOut(false);
+      setRecoveryError(undefined);
     }
   }, [acceptedVersion, reload, status.data]);
 
   const updating =
-    acceptedVersion !== null ||
-    status.data?.status === "installing" ||
-    status.data?.status === "restarting";
+    !recoveryTimedOut &&
+    (acceptedVersion !== null ||
+      status.data?.status === "installing" ||
+      status.data?.status === "restarting");
   const error =
+    recoveryError ??
     install.error?.message ??
     refresh.error?.message ??
     (updating ? undefined : (status.error?.message ?? status.data?.error));
@@ -94,10 +124,14 @@ export function useUpdate(reload: () => void): UpdateView {
     error,
     refresh: () => {
       install.reset();
+      setRecoveryTimedOut(false);
+      setRecoveryError(undefined);
       refresh.mutate();
     },
     install: () => {
       refresh.reset();
+      setRecoveryTimedOut(false);
+      setRecoveryError(undefined);
       install.mutate();
     },
   };

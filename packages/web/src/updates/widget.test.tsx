@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { jsonAnswer, problemAnswer, renderApp, testDeps } from "@/test-app";
-import type { UpdateInfo } from "./api.js";
+import { type UpdateInfo, updateRecoveryTimeout } from "./api.js";
 import { UpdateWidget } from "./widget.js";
 
 const available: UpdateInfo = {
@@ -162,6 +162,31 @@ it("reconnects through restart and reloads only after activation", async () => {
   expect(reload).not.toHaveBeenCalled();
   await tick();
   expect(reload).toHaveBeenCalledTimes(1);
+});
+
+it("stops presenting Updating when the replacement never reconnects", async () => {
+  let accepted = false;
+  const reload = vi.fn();
+  renderApp(
+    <UpdateWidget reload={reload} />,
+    testDeps({
+      "GET /api/update": (request) =>
+        jsonAnswer(accepted ? { ...available, status: "installing" } : available)(request),
+      "POST /api/update": (request) => {
+        accepted = true;
+        return jsonAnswer({ ...available, status: "installing" }, 202)(request);
+      },
+    }),
+  );
+  await ready();
+  fakeTime();
+  fireEvent.click(control());
+  await tick(10);
+  expect(control().disabled).toBe(true);
+  await tick(updateRecoveryTimeout);
+  expect(control().disabled).toBe(false);
+  expect(control().title).toContain("The update did not finish");
+  expect(reload).not.toHaveBeenCalled();
 });
 
 it("polls every fifteen minutes without installing", async () => {

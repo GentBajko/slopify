@@ -7,6 +7,9 @@ export type { UpdateInfo };
 export const updateKey = ["app-update"] as const;
 export const updateCheckInterval = 15 * 60 * 1000;
 export const updateReconnectInterval = 2_000;
+// The candidate server has the same two-minute activation window. Once it has
+// elapsed, the old tab must stop presenting an endless "Updating" state.
+export const updateRecoveryTimeout = 120 * 1_000;
 
 export async function checkUpdate(
   api: Api,
