@@ -1,14 +1,12 @@
 import type { ProjectSummary } from "@app/slices/admission/model.js";
 import type { Prompt } from "@app/slices/library/model.js";
 import type { Output } from "@app/slices/storage/model.js";
-import { useContext } from "react";
 import { Lamp } from "@/components/lamp";
 import { StateWord } from "@/components/state-word";
 import { Button } from "@/components/ui/button";
 import { startedAt } from "@/lib/utils";
 import { ConfirmedButton } from "./controls.js";
 import { OutputDownload } from "./parts.js";
-import { RevisionControlContext } from "./revision-action-context.js";
 import type { ProjectActions } from "./use-actions.js";
 
 export function ProjectHeader({
@@ -26,7 +24,6 @@ export function ProjectHeader({
   readonly inFlight: boolean;
   readonly primaryOutput: Output | undefined;
 }) {
-  const revisioned = useContext(RevisionControlContext);
   const running = project.status === "running";
   return (
     <div className="flex flex-wrap items-start justify-between gap-5 py-2">
@@ -58,7 +55,7 @@ export function ProjectHeader({
             Pause
           </Button>
         ) : null}
-        {!revisioned && (project.status === "paused" || project.status === "failed") ? (
+        {project.status === "paused" || project.status === "failed" ? (
           <Button
             disabled={actions.pending || inFlight}
             onClick={() => actions.run({ kind: "resume" })}

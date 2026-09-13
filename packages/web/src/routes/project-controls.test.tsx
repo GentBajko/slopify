@@ -42,6 +42,83 @@ const extraProviders = [
 import { revisionRouteFixture } from "./project-revision.fake.js";
 
 describe("project pause and provider changes", () => {
+  it("offers Resume for a failed revisioned project", async () => {
+    const current = paused();
+    const fixture = revisionRouteFixture({
+      ...current,
+      project: { ...current.project, status: "failed" },
+    });
+    renderRouted(<ProjectRoute projectId="p1" />, deps(fixture.routes));
+    expect((await screen.findByRole("button", { name: "Resume" })).hasAttribute("disabled")).toBe(
+      false,
+    );
+  });
+
+  it("resumes a revisioned checkpoint project by keyboard only after the server accepts", async () => {
+    const user = userEvent.setup();
+    const fixture = revisionRouteFixture(paused());
+    let resumed = false;
+    const resume = vi.fn(() => {
+      if (resume.mock.calls.length === 1)
+        return Response.json(
+          { title: "Conflict", status: 409, detail: "The project is still paused." },
+          { status: 409, headers: { "content-type": "application/problem+json" } },
+        );
+      resumed = true;
+      return Response.json({});
+    });
+    const approve = vi.fn(() => Response.json({}));
+    renderRouted(
+      <ProjectRoute projectId="p1" />,
+      deps({
+        ...fixture.routes,
+        "GET /api/projects/p1": () =>
+          Response.json({
+            ...paused(),
+            revisionId: "r1",
+            project: { ...paused().project, status: resumed ? "pending" : "paused" },
+          }),
+        "GET /api/projects/p1/checkpoints": jsonAnswer({
+          revisionId: "r1",
+          checkpoints: [
+            {
+              projectId: "p1",
+              revisionId: "r1",
+              checkpointId: "audio-gate",
+              workId: "w1",
+              stage: "audio",
+              state: "held",
+              fingerprint: "a".repeat(64),
+              currentFingerprint: "a".repeat(64),
+              createdAt: "2026-09-13T00:00:00.000Z",
+              approvedAt: null,
+              dependents: ["video"],
+              workKeys: ["audio:body", "video:main"],
+            },
+          ],
+        }),
+        "POST /api/projects/p1/resume": resume,
+        "POST /api/projects/p1/checkpoints/audio-gate/approve": approve,
+      }),
+    );
+    const approval = await screen.findByRole("button", { name: "Approve Audio checkpoint" });
+    expect(approval.hasAttribute("disabled")).toBe(true);
+    const button = await screen.findByRole("button", { name: "Resume" });
+    button.focus();
+    await user.keyboard("{Enter}");
+    await screen.findByText("The project is still paused.");
+    expect(approval.hasAttribute("disabled")).toBe(true);
+    await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
+    button.focus();
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(approval.hasAttribute("disabled")).toBe(false));
+    expect(screen.getByRole("button", { name: "Pause" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Edit project" })).not.toBeNull();
+    expect(resume).toHaveBeenCalledTimes(2);
+    expect(approve).not.toHaveBeenCalled();
+    expect(fixture.start).not.toHaveBeenCalled();
+  });
+
   it("saves provider and chunking edits through a revision without starting work", async () => {
     const user = userEvent.setup();
     const fixture = revisionRouteFixture(paused());
@@ -81,7 +158,7 @@ describe("project pause and provider changes", () => {
       chunking: { mode: "characters", characters: 1800 },
     });
     expect(fixture.start).not.toHaveBeenCalled();
-    expect(screen.queryByRole("button", { name: "Resume" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Resume" })).not.toBeNull();
   });
 
   it("keeps a pending action bound to its original project after the page switches IDs", async () => {
