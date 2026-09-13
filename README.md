@@ -23,6 +23,16 @@ npx @gentbajko/slopify@latest
 The app serves its UI on `http://127.0.0.1:6969` and opens a browser at it. Node 26
 or newer, nothing else to install.
 
+For a persistent global install, run:
+
+```sh
+npm install -g @gentbajko/slopify
+slopify
+```
+
+Both commands launch the same local app; use `npx` when you want an install-free run,
+or the global command when you want `slopify` available on your `PATH`.
+
 ## How to use it
 
 1. Run the command and open the tab it prints.
