@@ -23,6 +23,7 @@ const sections = [
   { to: "/", label: "Projects", exact: true },
   { to: "/play", label: "Play", exact: true },
   { to: "/templates", label: "Templates", exact: true },
+  { to: "/schedules", label: "Schedules", exact: true },
   { to: "/prompts", label: "Prompts", exact: false },
   { to: "/entries", label: "Intros & Outros", exact: false },
   { to: "/settings", label: "Settings", exact: true },

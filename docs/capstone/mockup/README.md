@@ -33,10 +33,11 @@ Screens as markdown wireframes, one file each, numbered in journey order. `rule:
 | [07 Projects](07-projects.md) | J3, J6 | `packages/web/src/routes/projects.tsx` |
 | [08 Project page](08-project.md) | J3, J4, J5, J6, J7 | `packages/web/src/routes/project.tsx`, `packages/web/src/project/`, checkpoint approval and template capture |
 | 11 Templates (not drawn) | J7 | `packages/web/src/routes/templates.tsx`, `packages/web/src/templates/` |
+| 12 Schedules | J8 | `packages/web/src/routes/schedules.tsx`, `packages/app/src/slices/schedules/` |
 | 09 Intros & Outros library (not drawn) | J2 | `packages/web/src/routes/entries.tsx` |
 | 10 Usage (not drawn) | J6 | `packages/web/src/routes/usage.tsx` |
 
-App shell on 02-08: nav Projects / Play / Prompts / Settings, footer with donation links. Nav order assumed.
+App shell on 02-09: nav Projects / Play / Templates / Schedules / Prompts / Settings, footer with donation links.
 
 ## Journeys
 
@@ -49,6 +50,7 @@ App shell on 02-08: nav Projects / Play / Prompts / Settings, footer with donati
 | J5 revise | 08 → Edit project → Save → Review affected rebuild → Start → download; History → Restore saves a new revision |
 | J6 revisit | 07 → 08 → downloads |
 | J7 reuse a setup | 06/08 → Templates → Apply to Play → Review → Start |
+| J8 unattended runs | Templates → Schedules → save cadence and variants → local scheduler → project history |
 
 ## Scenarios for `logic`
 

@@ -14,6 +14,7 @@ import type { ModelInfo, ProviderFamily } from "../../kernel/ports/model.js";
 import type { Runner } from "../../kernel/runner/index.js";
 import type { DraftStartDeps } from "../../slices/play-drafts/model.js";
 import type { RebuildDeps } from "../../slices/rebuild/service.js";
+import type { ScheduleDeps } from "../../slices/schedules/model.js";
 import type { CliProbe } from "../../slices/settings/cli-status.js";
 import type { AppUpdater } from "../../updater/model.js";
 import type { Hub } from "../events/hub.js";
@@ -33,6 +34,7 @@ import { promptRoutes } from "./prompts.js";
 import { providerRoutes } from "./providers.js";
 import { revisionFileRoutes, revisionFolderRoutes } from "./revision-files.js";
 import { revisionRoutes } from "./revisions.js";
+import { scheduleRoutes } from "./schedules.js";
 import { settingsRoutes } from "./settings.js";
 import { stagingRoutes } from "./staging.js";
 import { subtitleRoutes } from "./subtitles.js";
@@ -43,6 +45,7 @@ import { usageRoutes } from "./usage.js";
 
 export interface AppDeps {
   readonly drafts?: DraftStartDeps;
+  readonly schedules?: ScheduleDeps;
   readonly rebuild?: RebuildDeps;
   readonly measureAudio?: ((path: string, signal?: AbortSignal) => Promise<number>) | undefined;
   readonly openFolder?: (path: string) => Promise<void>;
@@ -89,6 +92,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/staging", stagingRoutes(deps))
       .route("/drafts", draftRoutes(deps.drafts))
       .route("/project-templates", projectTemplateRoutes(deps.drafts))
+      .route("/schedules", scheduleRoutes(deps.schedules))
       .route("/projects", planningRoutes(deps))
       .route("/projects", projectRoutes(deps))
       .route("/projects", checkpointRoutes(deps))

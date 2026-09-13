@@ -48,6 +48,8 @@ import { pumpQueue, queueWaiting } from "./slices/batch/index.js";
 import { approveCheckpoint, type CheckpointRow } from "./slices/checkpoints/index.js";
 import { checkpointDecisionForWork, recoverCheckpointWork } from "./slices/checkpoints/recovery.js";
 import { resolveFont } from "./slices/fonts/index.js";
+import type { DraftStartDeps } from "./slices/play-drafts/model.js";
+import { templateById } from "./slices/project-templates/repo.js";
 import { claimWork, finishWork, maySubmit } from "./slices/rebuild/repo.js";
 import { materializeAdmittedWork } from "./slices/rebuild/runtime-materialize.js";
 import { runRevisionInvocation } from "./slices/rebuild/runtime-run.js";
@@ -59,6 +61,8 @@ import {
   recordWorkProgress,
 } from "./slices/rebuild/runtime-store.js";
 import type { RebuildDeps } from "./slices/rebuild/service.js";
+import type { ScheduleDeps } from "./slices/schedules/model.js";
+import { createScheduleRunner } from "./slices/schedules/scheduler.js";
 import { nodeCliProbe } from "./slices/settings/cli-status.js";
 import { providerStatuses } from "./slices/settings/readiness.js";
 import { reconcileStorage } from "./slices/storage/reconcile.js";
@@ -105,6 +109,7 @@ export async function boot(config: Config): Promise<Boot> {
     });
     db = openDb(paths.db);
     migrate(db, clock);
+    const runtimeDb = db;
     const interrupted = markInterruptedStages(db, clock);
     recoverCheckpointWork(db);
     const reconciled = reconcileStorage(db, paths);
@@ -237,26 +242,34 @@ export async function boot(config: Config): Promise<Boot> {
       modelsFor: modelSources(registry).modelsFor,
       emit: (projectId, event) => hub.emit(projectId, event),
     };
+    const draftDeps: DraftStartDeps = {
+      db,
+      paths,
+      ids,
+      clock,
+      log,
+      runner,
+      catalogue,
+      uuid: randomUUID,
+      resolveFont: (fontId) => resolveFont(paths, fontId),
+      providers: rebuild.providers,
+      modelsFor: rebuild.modelsFor,
+      emit: (event) => hub.emitGlobal(event),
+      recordStarted: (projectIds) => {
+        for (const _projectId of projectIds) record(telemetry, "project.created", {});
+        flusher.soon();
+      },
+    };
+    const scheduleDeps: ScheduleDeps = {
+      ...draftDeps,
+      template: (id, templateVersion) => templateById(runtimeDb, id, templateVersion),
+    };
+    const scheduleRunner = createScheduleRunner(scheduleDeps);
+    scheduleRunner.recover(clock.now());
     const app = createApp({
       rebuild,
-      drafts: {
-        db,
-        paths,
-        ids,
-        clock,
-        log,
-        runner,
-        catalogue,
-        uuid: randomUUID,
-        resolveFont: (fontId) => resolveFont(paths, fontId),
-        providers: rebuild.providers,
-        modelsFor: rebuild.modelsFor,
-        emit: (event) => hub.emitGlobal(event),
-        recordStarted: (projectIds) => {
-          for (const _projectId of projectIds) record(telemetry, "project.created", {});
-          flusher.soon();
-        },
-      },
+      drafts: draftDeps,
+      schedules: scheduleDeps,
       ...(rebuild.measureAudio === undefined ? {} : { measureAudio: rebuild.measureAudio }),
       openFolder,
       db,
@@ -287,6 +300,14 @@ export async function boot(config: Config): Promise<Boot> {
         release();
       }
     }, 1000);
+    const scheduleTimer = setInterval(() => {
+      void scheduleRunner.tick().catch(() => {
+        log.write("error", "schedule.tick", { detail: "Scheduled jobs could not be advanced." });
+      });
+    }, 15_000);
+    void scheduleRunner.tick().catch(() => {
+      log.write("error", "schedule.tick", { detail: "Scheduled jobs could not be advanced." });
+    });
     listeningPort = portOf(server) ?? config.port;
     // Whatever last run left queued goes out at start. Nothing waits for
     // it, and an unreachable collector costs one refused socket.
@@ -297,6 +318,7 @@ export async function boot(config: Config): Promise<Boot> {
     shutdown = (): Promise<void> => {
       stopping ??= (async () => {
         clearInterval(queueTimer);
+        clearInterval(scheduleTimer);
         stopActivation();
         audioPreviews.close();
         try {

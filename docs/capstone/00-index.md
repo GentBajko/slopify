@@ -15,7 +15,7 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | Provider ports and adapters | `packages/app/src/kernel/ports/`, `packages/app/src/adapters/{llm,tts,image,alignment,fake}/` |
 | Pipeline slices | `packages/app/src/slices/{research,article,narration,images,thumbnail,video,subtitles,fonts,reruns,cancel,control,admission,storage,library,settings,telemetry,checkpoints,project-templates}/` |
 | Curated model catalogue, pricing and limits | `packages/app/src/catalog/store.ts:24`, `packages/app/src/catalog/registry.ts:7` |
-| Batch admission and scheduling | `packages/app/src/edge/http/planning.ts:32`, `packages/app/src/slices/batch/index.ts:73` |
+| Batch admission and scheduling | `packages/app/src/edge/http/planning.ts:32`, `packages/app/src/edge/http/schedules.ts`, `packages/app/src/slices/{batch,schedules}/` |
 | Request scheduling | `packages/app/src/kernel/runner/queue.ts:12` |
 | Cost arithmetic | `packages/app/src/slices/estimate/index.ts:21` |
 | App updates | `packages/app/src/updater/service.ts:1`, `packages/app/src/edge/http/update.ts:6` |
@@ -64,6 +64,7 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | logic | [logic/22-play-drafts.md](logic/22-play-drafts.md) |
 | logic | [logic/23-review-checkpoints.md](logic/23-review-checkpoints.md) |
 | logic | [logic/24-project-templates.md](logic/24-project-templates.md) |
+| logic | [logic/25-scheduled-jobs.md](logic/25-scheduled-jobs.md) |
 
 ## Companion docs
 
@@ -79,6 +80,7 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | [mockup/06-play.md](mockup/06-play.md) | Screen: durable drafts, templates, Content / Outputs / Style / Review and explicit Start |
 | [mockup/07-projects.md](mockup/07-projects.md) | Screen: projects list |
 | [mockup/08-project.md](mockup/08-project.md) | Screen: retained project revisions, template capture, content/media/caption edits, History and explicit rebuild |
+| [mockup/09-schedules.md](mockup/09-schedules.md) | Screen: local scheduled template runs, policies, variants and history |
 | [uiux/README.md](uiux/README.md) | UI/UX design index: direction, system, experience, assumed items |
 | [uiux/01-direction.md](uiux/01-direction.md) | Design read, mode map, the control-room direction contract |
 | [uiux/02-system.md](uiux/02-system.md) | Tokens: type, colour per theme, spacing, icons, motion, component library, implementation constraints |

@@ -11,6 +11,7 @@ import { ProjectRoute } from "@/routes/project";
 import { ProjectsRoute } from "@/routes/projects";
 import { PromptEditorRoute } from "@/routes/prompt-editor";
 import { PromptsRoute } from "@/routes/prompts";
+import { SchedulesRoute } from "@/routes/schedules";
 import { SettingsRoute } from "@/routes/settings";
 import { TemplatesRoute } from "@/routes/templates";
 import { UsageRoute } from "@/routes/usage";
@@ -55,6 +56,12 @@ const templatesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "templates",
   component: TemplatesPage,
+});
+
+const schedulesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "schedules",
+  component: SchedulesRoute,
 });
 function TemplatesPage(): import("react").ReactElement {
   const session = usePlaySession();
@@ -244,6 +251,7 @@ const routeTree = rootRoute.addChildren({
   projectsRoute,
   playRoute,
   templatesRoute,
+  schedulesRoute,
   projectRoute,
   promptsRoute,
   newPromptRoute,

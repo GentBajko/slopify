@@ -14,6 +14,7 @@ paths_covered:
   - :(top)packages/web/src/routes/play.tsx
   - :(top)packages/web/src/subtitles/**
   - :(top)packages/web/src/tutorial/**
+  - :(top)packages/web/src/routes/schedules.tsx
 content_hash: 2b9dab9b7f7b
 ---
 
@@ -22,7 +23,7 @@ content_hash: 2b9dab9b7f7b
 The frontend design: direction, system, experience rules. `05-dependencies.md` honours
 `02-system.md`, and the shipped SPA implements the Implementation constraints.
 
-The three shared design chapters remain authoritative for direction, tokens and interaction rules. The observed [screen references](screens/03-project.md) were restored by mapping the shipped UI; they describe current code, including the retained-revision project editor and review checkpoint panel. `packages/web/src/routes/` and `packages/web/src/play/` implement the screens; `packages/web/src/styles/index.css` carries the palette. The planned Play redesign is separate from these observed references.
+The three shared design chapters remain authoritative for direction, tokens and interaction rules. The observed [screen references](screens/03-project.md) were restored by mapping the shipped UI; they describe current code, including the retained-revision project editor and review checkpoint panel. `packages/web/src/routes/` and `packages/web/src/play/` implement the screens; `packages/web/src/styles/index.css` carries the palette. The shipped Play redesign is recorded in [screens/02-play.md](screens/02-play.md), and schedules in [screens/13-schedules.md](screens/13-schedules.md).
 
 ## Chapters
 
@@ -33,6 +34,7 @@ The three shared design chapters remain authoritative for direction, tokens and 
 | [03-experience.md](03-experience.md) | all | 01, 02, 04, 12, 13, 17 |
 | [screens/02-play.md](screens/02-play.md) | 06 Play, current implementation | 04, 05, 17, 18, 23 |
 | [screens/03-project.md](screens/03-project.md) | 08 Project, retained revisions, explicit rebuild and checkpoints | 01, 08, 09, 11, 12, 14, 17, 23 |
+| [screens/13-schedules.md](screens/13-schedules.md) | 09 Schedules, local recurring runs and history | 25 |
 
 ## Assets
 
@@ -62,3 +64,5 @@ Play now uses durable local drafts, explicit Review/Start and four setup section
 Templates are available from the Templates navigation item and from a project header; they preserve setup snapshots without execution state. See [project templates](../logic/24-project-templates.md).
 
 Review checkpoints are documented in [scenario 23](../logic/23-review-checkpoints.md) and use the existing project panel language and focus/reload behavior.
+
+Schedules are documented in [scenario 25](../logic/25-scheduled-jobs.md); the form keeps cadence, timezone, policies and variants together, while history stays collapsed until requested.

@@ -84,6 +84,11 @@ function testRouter(ui: ReactNode) {
     routeTree: rootRoute.addChildren({
       projects: createRoute({ getParentRoute: () => rootRoute, path: "/", component: nowhere }),
       play: createRoute({ getParentRoute: () => rootRoute, path: "play", component: nowhere }),
+      schedules: createRoute({
+        getParentRoute: () => rootRoute,
+        path: "schedules",
+        component: nowhere,
+      }),
       settings: createRoute({
         getParentRoute: () => rootRoute,
         path: "settings",
