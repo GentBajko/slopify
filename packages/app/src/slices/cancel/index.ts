@@ -113,6 +113,11 @@ async function cancel(deps: CancelDeps, projectId: string): Promise<CancelResult
       "UPDATE revision_work_pieces SET state='held',dispatch_state='held' WHERE work_id IN (SELECT id FROM revision_work WHERE project_id=?) AND state!='done'",
     )
     .run(projectId);
+  deps.db
+    .prepare(
+      "UPDATE review_checkpoints SET state='canceled',approved_at=NULL WHERE project_id=? AND revision_id=(SELECT revision_id FROM project_heads WHERE project_id=?) AND state IN ('configured','pending-review','held')",
+    )
+    .run(projectId, projectId);
 
   // The invariant: after cancel completes no stage of the project is `running`.
   // The runner writes that row as each aborted stage unwinds; this is the path where it

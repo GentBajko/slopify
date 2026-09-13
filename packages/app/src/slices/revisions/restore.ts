@@ -1,4 +1,5 @@
 import { transact } from "../../kernel/db/tx.js";
+import { carryCheckpointGates } from "../checkpoints/recovery.js";
 import { planRevision } from "../rebuild/recipe-save.js";
 import { transitionRevisionWork } from "../rebuild/repo.js";
 import { projectStandings } from "../rebuild/runtime-store.js";
@@ -64,6 +65,7 @@ export async function restoreRevision(
       ...(comparison.ok ? { baseFingerprints: comparison.baseFingerprints } : {}),
       logicalKeys: logicalKeys(deps, input.projectId, input.baseRevisionId, revision.fingerprints),
     });
+    carryCheckpointGates(deps, input.baseRevisionId, revision);
     projectSelected(deps.db, revision);
     projectStandings(deps, revision.projectId);
     insertReceipt(deps, identity, revision.id);

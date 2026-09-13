@@ -3,12 +3,15 @@ import type { StageContext } from "../../kernel/runner/index.js";
 import { projectDir } from "../storage/layout.js";
 import { outputsOf } from "../storage/repo.js";
 import { prepareSubtitles } from "../subtitles/prepare.js";
+import { audioExportArgs } from "./audio-export-args.js";
 import { audioInputs } from "./audio-inputs.js";
-import { type AudioSegment, audioTimeline } from "./plan.js";
+import { audioTimeline } from "./plan.js";
 import { reusableAudioExport } from "./reuse-audio.js";
 import type { VideoDeps } from "./run.js";
 import { writeExport } from "./write-export.js";
 import { writeSubtitles } from "./write-subtitles.js";
+
+export { audioExportArgs } from "./audio-export-args.js";
 
 const rate = 48000;
 
@@ -53,44 +56,4 @@ export async function exportAudioWav(
     subtitles,
     args: (part) => audioExportArgs(audio, part),
   });
-}
-
-export function audioExportArgs(audio: readonly AudioSegment[], output: string): string[] {
-  const inputs = audio.flatMap((segment) =>
-    segment.path === null
-      ? ["-f", "lavfi", "-t", segment.seconds.toFixed(6), "-i", `anullsrc=r=${rate}:cl=stereo`]
-      : ["-i", segment.path],
-  );
-  const chains = audio.map(
-    (_segment, index) =>
-      `[${index}:a]aformat=sample_fmts=s16:sample_rates=${rate}:channel_layouts=stereo,asetpts=PTS-STARTPTS[a${index}]`,
-  );
-  chains.push(
-    `${audio.map((_segment, index) => `[a${index}]`).join("")}concat=n=${audio.length}:v=0:a=1[a]`,
-  );
-  return [
-    "-hide_banner",
-    "-nostdin",
-    "-loglevel",
-    "error",
-    "-progress",
-    "pipe:1",
-    "-nostats",
-    "-y",
-    ...inputs,
-    "-filter_complex",
-    chains.join(";"),
-    "-map",
-    "[a]",
-    "-vn",
-    "-c:a",
-    "pcm_s16le",
-    "-ar",
-    String(rate),
-    "-ac",
-    "2",
-    "-f",
-    "wav",
-    output,
-  ];
 }

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import { startRun } from "../admission/start.js";
 import { enqueueBatch, pumpQueue } from "../batch/index.js";
-import { admitReviewedCheckpoints } from "../rebuild/recipe-checkpoints.js";
+import { admitReviewedCheckpoints } from "../rebuild/runtime-checkpoints.js";
 import { releaseStagedFile } from "../storage/staging-refs.js";
 import type { DraftResult, DraftStartDeps, PlayStartInput, PlayStartResult } from "./model.js";
 import { checkDraftReadiness, localDraftReadiness } from "./readiness.js";

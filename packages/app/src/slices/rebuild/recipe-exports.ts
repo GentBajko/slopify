@@ -1,4 +1,4 @@
-import { audioExportArgs } from "../video/audio-export.js";
+import { audioExportArgs } from "../video/audio-export-args.js";
 import type { AudioRecipes } from "./recipe-audio.js";
 import {
   type RecipeContext,

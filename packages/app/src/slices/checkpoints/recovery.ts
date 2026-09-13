@@ -28,6 +28,9 @@ export function checkpointDecisionForWork(deps: RevisionDeps, work: WorkRef): Ch
       )
       .get(work.projectId, revision.id, work.workId);
     if (!owned || gate.state === "canceled") return { kind: "refused", reason: "conflict" };
+    // A release authorizes this immutable revision, including artifacts produced by its work.
+    // New revisions revalidate the reviewed inputs in carryCheckpointGates.
+    if (gate.state === "released" && gate.approvedAt !== null) continue;
     if (!isApprovalCurrent(gate, revision, gate.currentFingerprint)) held.push(gate.checkpointId);
   }
   return held.length ? { kind: "held", checkpointIds: held.sort() } : { kind: "eligible" };
