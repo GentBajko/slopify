@@ -7,6 +7,144 @@ import { CheckpointPanel } from "./checkpoint-panel.js";
 import { useLiveProject } from "./use-live.js";
 
 afterEach(cleanup);
+
+it("adds and removes pending gates with explicit revision-bound saves", async () => {
+  const user = userEvent.setup();
+  let selected: string[] = [];
+  const read = () => ({
+    revisionId: "r1",
+    checkpoints: selected.map((stage) => ({ ...gate, checkpointId: `${stage}-gate`, stage })),
+  });
+  const changes: unknown[] = [];
+  const patch = vi.fn(async (request: Request) => {
+    const input: unknown = await request.json();
+    changes.push(input);
+    selected = changes.length === 1 ? ["audio"] : [];
+    return Response.json(read());
+  });
+  const post = vi.fn(jsonAnswer(released()));
+  renderApp(
+    <CheckpointPanel
+      projectId="p1"
+      revisionId="r1"
+      paused
+      stages={[
+        { kind: "audio", state: "pending", source: "generate" },
+        { kind: "images", state: "pending", source: "generate" },
+        { kind: "video", state: "pending", source: "off" },
+      ]}
+    />,
+    testDeps({
+      "GET /api/projects/p1/checkpoints": () => Response.json(read()),
+      "PATCH /api/projects/p1/checkpoints": patch,
+      [path]: post,
+    }),
+  );
+  const audio = await screen.findByRole("checkbox", { name: "Before Audio" });
+  expect(
+    screen.getByRole("checkbox", { name: "Before Video / export" }).hasAttribute("disabled"),
+  ).toBe(false);
+  audio.focus();
+  await user.keyboard(" ");
+  expect(patch).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Save checkpoints" }));
+  await screen.findByText("Checkpoint choices saved.");
+  expect(changes[0]).toEqual({ revisionId: "r1", stages: ["audio"] });
+  expect(
+    (await screen.findByRole("button", { name: "Approve Audio checkpoint" })).hasAttribute(
+      "disabled",
+    ),
+  ).toBe(true);
+  await user.click(screen.getByRole("checkbox", { name: "Before Audio" }));
+  await user.click(screen.getByRole("button", { name: "Save checkpoints" }));
+  await waitFor(() => expect(changes).toHaveLength(2));
+  expect(changes[1]).toEqual({ revisionId: "r1", stages: [] });
+  expect(post).not.toHaveBeenCalled();
+});
+
+it("keeps running and unavailable checkpoint choices disabled", async () => {
+  renderApp(
+    <CheckpointPanel
+      projectId="p1"
+      revisionId="r1"
+      paused={false}
+      stages={[
+        { kind: "audio", state: "running", source: "generate" },
+        { kind: "images", state: "provided", source: "provide" },
+        { kind: "video", state: "skipped", source: "off" },
+      ]}
+    />,
+    testDeps({ "GET /api/projects/p1/checkpoints": jsonAnswer(status) }),
+  );
+  for (const name of ["Before Audio", "Before Images", "Before Video / export"])
+    expect((await screen.findByRole("checkbox", { name })).hasAttribute("disabled")).toBe(true);
+});
+
+it("keeps refused choices frozen until an explicit reload and restores keyboard focus", async () => {
+  const user = userEvent.setup();
+  const patch = vi.fn(() =>
+    Response.json(
+      {
+        title: "Conflict",
+        status: 409,
+        reason: "conflict",
+        detail: "This stage has already started.",
+      },
+      { status: 409 },
+    ),
+  );
+  renderApp(
+    <CheckpointPanel
+      projectId="p1"
+      revisionId="r1"
+      paused={false}
+      stages={[{ kind: "audio", state: "pending", source: "generate" }]}
+    />,
+    testDeps({
+      "GET /api/projects/p1/checkpoints": jsonAnswer(status),
+      "PATCH /api/projects/p1/checkpoints": patch,
+    }),
+  );
+  await user.click(await screen.findByRole("checkbox", { name: "Before Audio" }));
+  await user.click(screen.getByRole("button", { name: "Save checkpoints" }));
+  const alert = await screen.findByRole("alert");
+  expect(alert.textContent).toContain("This stage has already started.");
+  expect(document.activeElement).toBe(alert);
+  expect(screen.getByRole("button", { name: "Save checkpoints" }).hasAttribute("disabled")).toBe(
+    true,
+  );
+  await user.click(screen.getByRole("button", { name: "Reload checkpoint choices" }));
+  await waitFor(() =>
+    expect(
+      (screen.getByRole("checkbox", { name: "Before Audio" }) as HTMLInputElement).checked,
+    ).toBe(true),
+  );
+  expect(document.activeElement).toBe(screen.getByRole("group", { name: "Checkpoint choices" }));
+  expect(patch).toHaveBeenCalledOnce();
+});
+
+it("shows a released gate as authorized when generated outputs change its fingerprint", async () => {
+  renderApp(
+    panel(),
+    testDeps({
+      "GET /api/projects/p1/checkpoints": jsonAnswer({
+        ...status,
+        checkpoints: [
+          {
+            ...gate,
+            state: "released",
+            approvedAt: "2026-09-13T01:00:00.000Z",
+            currentFingerprint: "b".repeat(64),
+          },
+        ],
+      }),
+    }),
+  );
+  expect(await screen.findByText(/Authorized for this revision/)).not.toBeNull();
+  expect(screen.queryByText(/Inputs changed/)).toBeNull();
+  expect(screen.queryByRole("button", { name: "Approve Audio checkpoint" })).toBeNull();
+});
+
 const gate = {
   projectId: "p1",
   revisionId: "r1",
@@ -158,25 +296,45 @@ it("keeps project pause authoritative and rejects another revision's status", as
   expect(screen.queryByRole("button", { name: "Approve Audio checkpoint" })).toBeNull();
 });
 
-it.each(["running", "done", "provided", "skipped", "canceled"] as const)(
-  "disables approval for an %s stage",
-  async (state) => {
-    renderApp(
-      <CheckpointPanel
-        projectId="p1"
-        revisionId="r1"
-        paused={false}
-        stages={[{ kind: "audio", state }]}
-      />,
-      testDeps({ "GET /api/projects/p1/checkpoints": jsonAnswer(status) }),
-    );
-    expect(
-      (await screen.findByRole("button", { name: "Approve Audio checkpoint" })).hasAttribute(
-        "disabled",
-      ),
-    ).toBe(true);
-  },
-);
+it.each(["running", "canceled"] as const)("disables approval for an %s stage", async (state) => {
+  renderApp(
+    <CheckpointPanel
+      projectId="p1"
+      revisionId="r1"
+      paused={false}
+      stages={[{ kind: "audio", state }]}
+    />,
+    testDeps({ "GET /api/projects/p1/checkpoints": jsonAnswer(status) }),
+  );
+  expect(
+    (await screen.findByRole("button", { name: "Approve Audio checkpoint" })).hasAttribute(
+      "disabled",
+    ),
+  ).toBe(true);
+});
+
+it("allows a held gate to be approved after its stage completes while dependent work is pending", async () => {
+  renderApp(
+    <CheckpointPanel
+      projectId="p1"
+      revisionId="r1"
+      paused={false}
+      stages={[
+        { kind: "audio", state: "done", source: "generate" },
+        { kind: "video", state: "pending", source: "generate" },
+      ]}
+    />,
+    testDeps({ "GET /api/projects/p1/checkpoints": jsonAnswer(status) }),
+  );
+  expect(
+    (await screen.findByRole("button", { name: "Approve Audio checkpoint" })).hasAttribute(
+      "disabled",
+    ),
+  ).toBe(false);
+  expect(screen.getByRole("checkbox", { name: "Before Audio" }).hasAttribute("disabled")).toBe(
+    true,
+  );
+});
 
 it("refreshes checkpoints on project events and reconnect without approving", async () => {
   const source = new EventTarget();

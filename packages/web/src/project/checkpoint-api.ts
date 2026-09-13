@@ -1,7 +1,11 @@
 import { stageKinds } from "@app/kernel/pipeline.js";
 import type { CheckpointStatus as ServerCheckpointStatus } from "@app/slices/checkpoints/change.js";
 import type { CheckpointRefusal } from "@app/slices/checkpoints/model.js";
-import { checkpointApprovalSchema, checkpointRowSchema } from "@app/slices/checkpoints/schema.js";
+import {
+  checkpointApprovalSchema,
+  checkpointRowSchema,
+  checkpointStageSchema,
+} from "@app/slices/checkpoints/schema.js";
 import { z } from "zod";
 import type { Api } from "@/api";
 import { errorOf } from "@/http";
@@ -18,6 +22,21 @@ const statusSchema = z.object({
 }) satisfies z.ZodType<ServerCheckpointStatus>;
 export type CheckpointStatus = z.infer<typeof statusSchema>;
 export type CheckpointGate = CheckpointStatus["checkpoints"][number];
+const changeSchema = z
+  .object({
+    revisionId: z
+      .string()
+      .min(1)
+      .max(64)
+      .regex(/^[0-9A-Za-z_-]+$/),
+    stages: z
+      .array(checkpointStageSchema)
+      .max(3)
+      .refine((stages) => new Set(stages).size === stages.length)
+      .readonly(),
+  })
+  .strict();
+export type CheckpointChange = z.infer<typeof changeSchema>;
 export interface ApprovalIdentity {
   readonly revisionId: string;
   readonly fingerprint: string;
@@ -76,5 +95,20 @@ export async function approveCheckpoint(
       },
     ),
     z.object({ checkpoint: checkpointRowSchema, replayed: z.boolean() }),
+  );
+}
+
+export async function changeCheckpointChoices(
+  api: Api,
+  projectId: string,
+  input: CheckpointChange,
+) {
+  return reply(
+    await api.fetch(`${api.origin}/api/projects/${encodeURIComponent(projectId)}/checkpoints`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(changeSchema.parse(input)),
+    }),
+    statusSchema,
   );
 }
