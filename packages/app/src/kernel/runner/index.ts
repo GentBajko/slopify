@@ -1,6 +1,7 @@
 import type { EmitProject, ProjectEvent } from "../events.js";
 import type { Log } from "../log.js";
 import type { ProjectState, StageKind, StageState } from "../pipeline.js";
+import type { CheckpointAuthority } from "./checkpoint-authority.js";
 import { derive, deps as graph, satisfied } from "./graph.js";
 import type { StageRunResult, WorkRef } from "./work.js";
 
@@ -36,6 +37,7 @@ export interface StageContext {
 export type StageRun = (context: StageContext) => Promise<StageRunResult>;
 
 export interface RunnerDeps {
+  readonly checkpoints?: CheckpointAuthority;
   readonly stages: StageStore;
   readonly runs: Readonly<Partial<Record<StageKind, StageRun>>>;
   readonly emit: (projectId: string, event: ProjectEvent) => void;
@@ -44,6 +46,7 @@ export interface RunnerDeps {
 }
 
 export interface Runner {
+  readonly checkpoints?: CheckpointAuthority;
   readonly tick: (projectId: string) => void;
   readonly settled: () => Promise<void>;
   // Abort one project's in-flight calls and wait; others keep running.
@@ -136,7 +139,13 @@ export function createRunner(deps: RunnerDeps): Runner {
       const result = await run({
         stage,
         work: stage.work,
-        maySubmit: (pieceId) => deps.stages.maySubmit(stage.work, pieceId),
+        maySubmit: (pieceId) =>
+          !shuttingDown &&
+          !stopped.has(stage.projectId) &&
+          !deps.stages.paused?.(stage.projectId) &&
+          (deps.checkpoints === undefined ||
+            deps.checkpoints.beforeClaim(stage.work).kind === "eligible") &&
+          deps.stages.maySubmit(stage.work, pieceId),
         signal: controller.signal,
         emit: (event: ProjectEvent): void => {
           deps.emit(stage.projectId, {
@@ -230,6 +239,9 @@ export function createRunner(deps: RunnerDeps): Runner {
       ) {
         continue;
       }
+      if (deps.stages.paused?.(projectId)) return;
+      if (deps.checkpoints && deps.checkpoints.beforeClaim(stage.work).kind !== "eligible")
+        continue;
       // Nothing is awaited here: the fan-out starts audio, images and thumbnail together.
       if (deps.stages.claim(stage.work)) {
         start({ ...stage, state: "running" });
@@ -254,6 +266,7 @@ export function createRunner(deps: RunnerDeps): Runner {
   }
 
   return {
+    ...(deps.checkpoints === undefined ? {} : { checkpoints: deps.checkpoints }),
     tick,
     settled,
     hasInflight: (projectId) =>

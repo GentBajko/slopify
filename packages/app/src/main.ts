@@ -32,6 +32,10 @@ import type { Paths } from "./kernel/paths.js";
 import { ensureDirs, layout } from "./kernel/paths.js";
 import type { Registry } from "./kernel/ports/registry.js";
 import { sqliteAttempts } from "./kernel/runner/attempt-repo.js";
+import {
+  type CheckpointAuthority,
+  createCheckpointAuthority,
+} from "./kernel/runner/checkpoint-authority.js";
 import type { Runner } from "./kernel/runner/index.js";
 import { createRunner } from "./kernel/runner/index.js";
 import type { ProviderDeps } from "./kernel/runner/providers.js";
@@ -41,9 +45,16 @@ import { readVersion } from "./kernel/version.js";
 import { modelSources } from "./model-catalog.js";
 import { projectPaused } from "./slices/admission/repo.js";
 import { pumpQueue, queueWaiting } from "./slices/batch/index.js";
+import {
+  approveCheckpoint,
+  type CheckpointRow,
+  checkpointForWork,
+} from "./slices/checkpoints/index.js";
+import { checkpointDecision } from "./slices/checkpoints/rules.js";
 import { resolveFont } from "./slices/fonts/index.js";
 import { claimWork, finishWork, maySubmit, recoverWork } from "./slices/rebuild/repo.js";
 import { materializeAdmittedWork } from "./slices/rebuild/runtime-materialize.js";
+import { executionPlan, executionView, savedCatalogue } from "./slices/rebuild/runtime-plan.js";
 import { runRevisionInvocation } from "./slices/rebuild/runtime-run.js";
 import {
   executionStages,
@@ -355,7 +366,7 @@ export function wireRunner({
   registry,
   catalogue,
   ffmpeg,
-}: Wiring): Runner {
+}: Wiring): Runner & { readonly checkpoints: CheckpointAuthority<CheckpointRow> } {
   // A stage counts what it did and the queue is flushed after each new event. `record`
   // swallows its own failures, so this can neither fail a stage nor widen what leaves the
   // machine - the payload allow-list is checked inside it.
@@ -375,7 +386,33 @@ export function wireRunner({
       (provider) => catalogue.read().providers[provider]?.maxConcurrent ?? 1,
     ),
   };
-  return createRunner({
+  const checkpoints = createCheckpointAuthority<CheckpointRow>({
+    decide: (work) => {
+      const rows = checkpointForWork(db, work.workId);
+      if (rows.length === 0) return { kind: "eligible" };
+      const view = executionView(execution, work.projectId, work.revisionId);
+      const stored = db
+        .prepare(
+          "SELECT recipe_context FROM revision_work WHERE id=? AND project_id=? AND revision_id=?",
+        )
+        .get(work.workId, work.projectId, work.revisionId);
+      if (!view || stored?.recipe_context == null) return { kind: "refused", reason: "not-found" };
+      const plan = executionPlan(execution, view, savedCatalogue(stored.recipe_context));
+      return checkpointDecision(work, rows, view.revision, plan.recipes);
+    },
+    approve: (projectId, checkpointId, identity) =>
+      approveCheckpoint(db, {
+        ...identity,
+        projectId,
+        checkpointId,
+        approvedAt: clock.now().toISOString(),
+      }),
+    inTransaction: () => db.isTransaction,
+    wake: (projectId) => runner.tick(projectId),
+    log,
+  });
+  const runner = createRunner({
+    checkpoints,
     stages: {
       stagesOf: (projectId) => {
         materializeAdmittedWork(execution, projectId);
@@ -417,6 +454,7 @@ export function wireRunner({
     },
     log,
   });
+  return { ...runner, checkpoints };
 }
 
 function listen(app: Hono, config: Config, log: Log): Promise<ServerType> {
