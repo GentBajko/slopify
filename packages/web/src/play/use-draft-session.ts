@@ -35,6 +35,7 @@ export function useDraftSession(): PlaySession {
     let drainRequested = false;
     let operation = 0;
     let forking = false;
+    let discardingId: string | null = null;
     let alive = true;
     const publish = (patch: Partial<DraftSessionState>) => {
       state.current = { ...state.current, ...patch };
@@ -76,7 +77,12 @@ export function useDraftSession(): PlaySession {
     const drain = async (): Promise<boolean> => {
       const selected = operation;
       while (state.current.clock.edited > state.current.clock.acknowledged) {
-        if (state.current.status === "conflict" || selected !== operation) return false;
+        if (
+          state.current.status === "conflict" ||
+          selected !== operation ||
+          (discardingId !== null && discardingId === state.current.id)
+        )
+          return false;
         const current = state.current;
         const id = current.id ?? crypto.randomUUID();
         const pending =
@@ -127,6 +133,7 @@ export function useDraftSession(): PlaySession {
       if (running) return running;
       if (state.current.clock.edited === state.current.clock.acknowledged)
         return Promise.resolve(true);
+      if (discardingId !== null && discardingId === state.current.id) return Promise.resolve(false);
       running = drain().finally(() => {
         running = null;
       });
@@ -161,7 +168,13 @@ export function useDraftSession(): PlaySession {
           current.status === "conflict" || current.status === "error" ? current.status : "unsaved",
       });
       cancelTimer();
-      if (forking || current.status === "conflict" || current.status === "error") return;
+      if (
+        forking ||
+        (discardingId !== null && discardingId === current.id) ||
+        current.status === "conflict" ||
+        current.status === "error"
+      )
+        return;
       if (!current.id) {
         drainRequested = false;
         void begin();
@@ -204,27 +217,28 @@ export function useDraftSession(): PlaySession {
       review.reset();
       rememberDraft(null);
     };
-    const discard = async (): Promise<void> => {
-      if (review.state().starting || review.state().uncertain || review.state().created) return;
+    const discard: PlaySession["discard"] = async ({ id, version }) => {
+      if (review.state().starting || review.state().uncertain || review.state().created)
+        throw new Error("Resolve the pending Start before discarding a draft");
+      if (forking || discardingId !== null)
+        throw new Error("Wait for the current draft operation before discarding");
       const selected = operation;
-      if (!(await flush()) || selected !== operation) return;
-      const { id, clock } = state.current;
-      if (!id) return;
+      discardingId = id;
+      if ((state.current.id ?? state.current.recoveryId) === id) cancelTimer();
       try {
-        const reply = await discardPlayDraft(api, { id, baseVersion: clock.version });
-        if (selected !== operation || state.current.id !== id) return;
-        if (!reply.ok) {
-          publish({ error: reply.message });
-          return;
-        }
+        if (running) await running;
+        const reply = await discardPlayDraft(api, { id, baseVersion: version });
+        if (!reply.ok && reply.reason !== "not-found") throw new Error(reply.message);
+        invalidate();
+        if (selected !== operation || (state.current.id ?? state.current.recoveryId) !== id) return;
+        cancelTimer();
         operation++;
         fork = null;
         publish(emptySession());
         review.reset();
         rememberDraft(null);
-        invalidate();
-      } catch (error) {
-        if (selected === operation) fail(error);
+      } finally {
+        discardingId = null;
       }
     };
     let fork: {
@@ -236,7 +250,7 @@ export function useDraftSession(): PlaySession {
     const saveAsNew = async (): Promise<void> => {
       if (review.state().starting || review.state().uncertain || review.state().created) return;
       cancelTimer();
-      if (forking) return;
+      if (forking || discardingId !== null) return;
       if (running) await running;
       const current = state.current;
       if (!current.id || (!current.view && current.status !== "conflict")) {

@@ -44,7 +44,7 @@ it("lists server drafts with no browser identity and offers recovery for unreada
   await screen.findByText("Cannot discard");
   expect(screen.getByText("Recovered")).toBeTruthy();
 });
-it("flushes an active dirty draft before confirmed deletion and clears the session only after success", async () => {
+it("discards an active dirty draft at the confirmed version without saving discarded edits", async () => {
   const id = "00000000-0000-4000-8000-000000000001";
   const calls: string[] = [];
   let session: PlaySession | undefined;
@@ -79,7 +79,7 @@ it("flushes an active dirty draft before confirmed deletion and clears the sessi
         },
         [`DELETE /api/drafts/${id}`]: async (request) => {
           calls.push("delete");
-          expect(await request.json()).toEqual({ baseVersion: 2 });
+          expect(await request.json()).toEqual({ baseVersion: 1 });
           return jsonAnswer({ discarded: true })(request);
         },
       }),
@@ -97,7 +97,7 @@ it("flushes an active dirty draft before confirmed deletion and clears the sessi
   fireEvent.click(screen.getByRole("button", { name: "Confirm discard" }));
   await waitFor(() => expect(session?.view).toBeNull());
   expect(session?.document.form.title).toBe("");
-  expect(calls).toEqual(["save", "delete"]);
+  expect(calls).toEqual(["delete"]);
 });
 it("clears a corrupt remembered identity after explicit list discard", async () => {
   const id = "00000000-0000-4000-8000-000000000001";

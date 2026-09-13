@@ -143,7 +143,7 @@ it("does not clear a new selection when an older discard completes", async () =>
   await act(() => session.open(first));
   let discarded = Promise.resolve();
   act(() => {
-    discarded = session.discard();
+    discarded = session.discard({ id: first, version: 1 });
   });
   await act(() => session.open(second));
   await act(async () => {

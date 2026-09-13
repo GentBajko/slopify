@@ -1,19 +1,16 @@
 import type { DraftSummary } from "@app/slices/play-drafts/model.js";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactElement, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
 import { ConfirmDialog } from "@/components/confirm";
 import { Button } from "@/components/ui/button";
 import { startedAt } from "@/lib/utils";
-import { discardPlayDraft, listPlayDrafts } from "./draft-api";
+import { listPlayDrafts } from "./draft-api";
 import { usePlaySession } from "./draft-context";
 
 export function DraftList(): ReactElement {
   const { api } = useApp();
   const session = usePlaySession();
-  const current = useRef(session);
-  current.current = session;
-  const client = useQueryClient();
   const [confirm, setConfirm] = useState<DraftSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -30,20 +27,8 @@ export function DraftList(): ReactElement {
     setBusy(true);
     setError(null);
     try {
-      if (session.activeId === confirm.id && session.view) {
-        await session.discard();
-        setConfirm(null);
-        return;
-      }
-      const reply = await discardPlayDraft(api, { id: confirm.id, baseVersion: confirm.version });
-      if (!reply.ok) {
-        setError(reply.message);
-        return;
-      }
-      if (current.current.activeId === confirm.id && !current.current.view)
-        await current.current.newDraft();
+      await session.discard({ id: confirm.id, version: confirm.version });
       setConfirm(null);
-      await client.invalidateQueries({ queryKey: ["play-drafts"] });
     } catch (error) {
       setError(error instanceof Error ? error.message : "Couldn't discard draft");
     } finally {

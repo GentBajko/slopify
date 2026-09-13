@@ -110,41 +110,49 @@ it("releases a failed first-save reservation without requiring a server view", a
   expect(session.attachmentUploading(ref.attachmentId)).toBe(false);
 });
 
-it("aborts a switched draft's upload and ignores its late settlement", async () => {
-  const { act, waitFor } = await import("@testing-library/react");
-  const { deferred, mountSession } = await import("./play-test-fixture");
-  const held = deferred();
-  let session: import("./draft-context").PlaySession | undefined;
-  let request: Request | undefined;
-  mountSession(
-    (next) => {
-      session = next;
-    },
-    {
-      "PUT /api/drafts/:id/attachments/:attachmentId/file": (sent) => {
-        request = sent;
-        return held.promise;
+it.each(["new", "discard"] as const)(
+  "aborts upload after %s draft and ignores its late settlement",
+  async (action) => {
+    const { act, waitFor } = await import("@testing-library/react");
+    const { deferred, mountSession } = await import("./play-test-fixture");
+    const held = deferred();
+    let session: import("./draft-context").PlaySession | undefined;
+    let request: Request | undefined;
+    mountSession(
+      (next) => {
+        session = next;
       },
-    },
-  );
-  let attached: Promise<void> | undefined;
-  act(() => {
-    attached = session?.attach("audio", [new File(["wav"], "old.wav")]);
-  });
-  await waitFor(() => expect(request).toBeDefined());
-  const id = session?.document.form.provided.audio?.attachmentId;
-  if (!id || !request) throw new Error("Missing upload");
-  expect(session?.attachmentUploading(id)).toBe(true);
-  await act(() => session?.newDraft());
-  expect(request.signal.aborted).toBe(true);
-  expect(session?.attachmentUploading(id)).toBe(false);
-  await act(async () => {
-    if (request) held.resolve(response(ready(request)));
-    await attached;
-  });
-  expect(session?.view).toBeNull();
-  expect(session?.document.form.provided.audio).toBeNull();
-});
+      {
+        "PUT /api/drafts/:id/attachments/:attachmentId/file": (sent) => {
+          request = sent;
+          return held.promise;
+        },
+      },
+    );
+    let attached: Promise<void> | undefined;
+    act(() => {
+      attached = session?.attach("audio", [new File(["wav"], "old.wav")]);
+    });
+    await waitFor(() => expect(request).toBeDefined());
+    const id = session?.document.form.provided.audio?.attachmentId;
+    if (!id || !request) throw new Error("Missing upload");
+    expect(session?.attachmentUploading(id)).toBe(true);
+    await act(() => {
+      if (action === "new") return session?.newDraft();
+      if (session?.view)
+        return session.discard({ id: session.view.draft.id, version: session.view.draft.version });
+      throw new Error("Missing saved draft");
+    });
+    expect(request.signal.aborted).toBe(true);
+    expect(session?.attachmentUploading(id)).toBe(false);
+    await act(async () => {
+      if (request) held.resolve(response(ready(request)));
+      await attached;
+    });
+    expect(session?.view).toBeNull();
+    expect(session?.document.form.provided.audio).toBeNull();
+  },
+);
 
 it.each(["media", "font"] as const)(
   "does not begin %s bytes after unmount during prerequisite Save",
