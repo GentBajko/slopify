@@ -136,3 +136,24 @@ describe("the image prompt tick list", () => {
     expect(screen.getByText("No image prompts saved. Write one on Prompts.")).not.toBeNull();
   });
 });
+
+it.each([{ available: prompts }, { available: [] }])(
+  "retains a missing selected prompt until explicitly removed",
+  async ({ available }) => {
+    const onPick = vi.fn();
+    render(
+      <ImagePrompts
+        prompts={available}
+        picked={[{ name: "Deleted", number: 3 }]}
+        problem={() => undefined}
+        onPick={onPick}
+      />,
+    );
+    expect(screen.getByText("Deleted")).not.toBeNull();
+    expect(screen.getByText(/Missing template/)).not.toBeNull();
+    expect(numberFor("Deleted").value).toBe("3");
+    expect(onPick).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("checkbox", { name: "Deleted" }));
+    expect(onPick).toHaveBeenCalledWith([]);
+  },
+);

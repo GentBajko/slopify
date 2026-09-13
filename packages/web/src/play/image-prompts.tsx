@@ -26,7 +26,13 @@ export function ImagePrompts({
   const listId = useId();
   const total = picked.reduce((sum, choice) => sum + choice.number, 0);
 
-  if (prompts.length === 0) {
+  const missing = picked.filter((choice) => !prompts.some((prompt) => prompt.name === choice.name));
+  const options = [
+    ...prompts.map((prompt) => ({ name: prompt.name, missing: false })),
+    ...missing.map((choice) => ({ name: choice.name, missing: true })),
+  ];
+
+  if (options.length === 0) {
     return (
       <p className="basis-full text-right text-small text-ink3">
         No image prompts saved. Write one on Prompts.
@@ -40,11 +46,16 @@ export function ImagePrompts({
         Image prompts
       </span>
       <ul aria-labelledby={listId} className="flex flex-wrap justify-start gap-x-4 gap-y-2">
-        {prompts.map((prompt) => {
+        {options.map((prompt) => {
           const at = picked.findIndex((choice) => choice.name === prompt.name);
           const choice = at === -1 ? undefined : picked[at];
           return (
-            <li key={prompt.id}>
+            <li key={prompt.name}>
+              {prompt.missing ? (
+                <span className="block text-label text-red">
+                  Missing template · untick to remove
+                </span>
+              ) : null}
               <PromptTick
                 name={prompt.name}
                 number={choice?.number}
