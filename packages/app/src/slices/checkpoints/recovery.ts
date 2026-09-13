@@ -21,13 +21,13 @@ export function checkpointDecisionForWork(deps: RevisionDeps, work: WorkRef): Ch
   for (const row of rows) {
     const gate = refreshCheckpointGate(deps, row);
     if (!gate) return { kind: "refused", reason: "conflict" };
-    if (gate.stage !== work.kind && !gate.dependents.includes(work.kind)) continue;
     const owned = deps.db
       .prepare(
-        "SELECT 1 FROM revision_work_reservations WHERE project_id=? AND revision_id=? AND work_id=?",
+        "SELECT work_key FROM revision_work_reservations WHERE project_id=? AND revision_id=? AND work_id=?",
       )
-      .get(work.projectId, revision.id, work.workId);
-    if (!owned || gate.state === "canceled") return { kind: "refused", reason: "conflict" };
+      .all(work.projectId, revision.id, work.workId);
+    if (!owned.some((entry) => gate.workKeys.includes(z.string().parse(entry.work_key)))) continue;
+    if (gate.state === "canceled") return { kind: "refused", reason: "conflict" };
     // A release authorizes this immutable revision, including artifacts produced by its work.
     // New revisions revalidate the reviewed inputs in carryCheckpointGates.
     if (gate.state === "released" && gate.approvedAt !== null) continue;
@@ -69,7 +69,12 @@ export function carryCheckpointGates(
     };
     const resolved = resolvedGate(deps, next);
     if (!resolved) throw new Error("Checkpoint inputs could not be resolved");
-    const same = gate.fingerprint === resolved.currentFingerprint;
+    const before = resolvedGate(deps, gate, true);
+    const after = resolvedGate(deps, next, true);
+    const same =
+      before !== undefined &&
+      after !== undefined &&
+      before.currentFingerprint === after.currentFingerprint;
     if (!same && gate.state !== "canceled")
       deps.db
         .prepare(
@@ -99,7 +104,7 @@ export function recoverCheckpointWork(db: DatabaseSync): void {
       .prepare(`SELECT DISTINCT w.id FROM revision_work w
       JOIN revision_work_reservations r ON r.work_id=w.id
       JOIN project_heads h ON h.project_id=r.project_id AND h.revision_id=r.revision_id
-      JOIN review_checkpoints c ON c.project_id=w.project_id AND c.revision_id=w.revision_id
+      JOIN review_checkpoints c ON c.project_id=h.project_id AND c.revision_id=h.revision_id
       WHERE w.state='pending' AND w.dispatch_state='allowed'
       AND c.state IN ('held','pending-review','released')
       AND (w.kind=c.stage OR w.kind='video')

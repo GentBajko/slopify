@@ -28,6 +28,7 @@ export async function checkpointFixture(ports: Partial<Registry> = {}) {
     });
   return {
     ...h,
+    app,
     send,
     admit: (keys: readonly string[] = ["image:one", "image:two"]) =>
       start({ ...h.deps, runner: { ...h.runner, tick: () => undefined } }, h.projectId, keys),

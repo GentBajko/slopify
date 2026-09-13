@@ -5,6 +5,7 @@ import {
   changeCheckpoints,
   checkpointChangeSchema,
   readCheckpointStatus,
+  replayCheckpointApproval,
   validateCheckpointApproval,
 } from "../../slices/checkpoints/change.js";
 import { checkpointApprovalSchema, checkpointRowSchema } from "../../slices/checkpoints/schema.js";
@@ -66,6 +67,11 @@ export function checkpointRoutes(deps: AppDeps) {
         const { id: projectId, checkpointId } = c.req.valid("param");
         const identity = c.req.valid("json");
         return withProjectControl(deps.db, projectId, () => {
+          const replay = replayCheckpointApproval(deps, { ...identity, projectId, checkpointId });
+          if (replay)
+            return replay.ok
+              ? c.json({ checkpoint: replay.value, replayed: true })
+              : refused(c, replay.reason);
           const valid = validateCheckpointApproval(deps, { ...identity, projectId, checkpointId });
           if (!valid.ok) return refused(c, valid.reason);
           const authority = deps.runner.checkpoints;

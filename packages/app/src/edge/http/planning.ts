@@ -81,6 +81,12 @@ export function planningRoutes(deps: AppDeps) {
     })
     .post("/batch", zValidator("json", batchBody, onInvalid), async (c) => {
       const input = c.req.valid("json");
+      if (input.draft.checkpoints?.length)
+        return problem(c, {
+          status: 409,
+          title: titleOf(409),
+          detail: "Queue checkpoint-enabled projects through Play Review.",
+        });
       if (batchExists(deps.db, input.requestId))
         return c.json({ queue: queueEntries(deps.db, input.requestId) });
       const subtitles = input.draft.subtitles;

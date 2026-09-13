@@ -70,6 +70,12 @@ export function projectRoutes(deps: AppDeps) {
   return (
     new Hono()
       .post("/", zValidator("json", runDraftSchema, onInvalid), async (c) => {
+        if (c.req.valid("json").checkpoints?.length)
+          return problem(c, {
+            status: 409,
+            title: titleOf(409),
+            detail: "Start checkpoint-enabled projects through Play Review.",
+          });
         const requestedSubtitles = c.req.valid("json").subtitles;
         if (requestedSubtitles !== undefined && requestedSubtitles.mode !== "off") {
           try {

@@ -51,6 +51,7 @@ function current(
 export function resolvedGate(
   deps: RevisionDeps,
   row: CheckpointRow,
+  currentInputs = false,
 ): CheckpointStatus["checkpoints"][number] | undefined {
   try {
     const stored = deps.db
@@ -65,7 +66,17 @@ export function resolvedGate(
     const closure = checkpointClosure(row.stage, plan.recipes);
     return {
       ...row,
-      currentFingerprint: checkpointFingerprint(view.revision, closure),
+      currentFingerprint: checkpointFingerprint(
+        currentInputs
+          ? {
+              ...view.revision,
+              fingerprints: Object.fromEntries(
+                plan.recipes.map((recipe) => [recipe.key, recipe.fingerprint]),
+              ),
+            }
+          : view.revision,
+        closure,
+      ),
       dependents: [...new Set(closure.map((recipe) => recipe.stage))]
         .filter((stage) => stage !== row.stage)
         .sort(),
@@ -137,21 +148,62 @@ export function validateCheckpointApproval(
   if (!row) return { ok: false, reason: "not-found" };
   const stage = stagesOf(deps.db, input.projectId).find((stage) => stage.kind === row.stage);
   const work = deps.db.prepare("SELECT state FROM revision_work WHERE id=?").get(row.workId);
+  const resolved = resolvedGate(deps, row);
+  const outstanding =
+    resolved !== undefined &&
+    deps.db
+      .prepare(`SELECT r.work_key FROM revision_work_reservations r
+    JOIN revision_work w ON w.id=r.work_id WHERE r.project_id=? AND r.revision_id=? AND w.state IN ('pending','running')`)
+      .all(input.projectId, input.revisionId)
+      .some((entry) => resolved.workKeys.includes(z.string().parse(entry.work_key)));
   if (
     !stage ||
     !work ||
-    ["done", "provided", "skipped", "canceled"].includes(stage.state) ||
+    stage.state === "canceled" ||
+    (["done", "provided", "skipped"].includes(stage.state) && !outstanding) ||
     work.state === "canceled"
   )
     return { ok: false, reason: "conflict" };
   if ((stage.state === "running" || work.state === "running") && row.state !== "released")
     return { ok: false, reason: "conflict" };
-  if (
-    row.fingerprint !== input.fingerprint ||
-    resolvedGate(deps, row)?.currentFingerprint !== input.fingerprint
-  )
+  if (row.fingerprint !== input.fingerprint || resolved?.currentFingerprint !== input.fingerprint)
     return { ok: false, reason: "conflict" };
   return { ok: true, value: row };
+}
+
+export function replayCheckpointApproval(
+  deps: RevisionDeps,
+  input: {
+    readonly projectId: string;
+    readonly revisionId: string;
+    readonly checkpointId: string;
+    readonly fingerprint: string;
+    readonly idempotencyKey: string;
+  },
+): CheckpointResult<CheckpointRow> | undefined {
+  const receipt = deps.db
+    .prepare(
+      "SELECT revision_id,checkpoint_id,fingerprint FROM review_checkpoint_approvals WHERE project_id=? AND idempotency_key=?",
+    )
+    .get(input.projectId, input.idempotencyKey);
+  if (!receipt) return undefined;
+  const valid = current(deps, input.projectId, input.revisionId);
+  if (!valid.ok) return { ok: false, reason: valid.reason };
+  if (
+    receipt.revision_id !== input.revisionId ||
+    receipt.checkpoint_id !== input.checkpointId ||
+    receipt.fingerprint !== input.fingerprint
+  )
+    return { ok: false, reason: "conflict" };
+  const row = listCheckpoints(deps.db, input.projectId, input.revisionId).find(
+    (gate) => gate.checkpointId === input.checkpointId,
+  );
+  return row &&
+    row.fingerprint === input.fingerprint &&
+    row.approvedAt !== null &&
+    ["released", "satisfied"].includes(row.state)
+    ? { ok: true, value: row }
+    : { ok: false, reason: "conflict" };
 }
 
 export function changeCheckpoints(
