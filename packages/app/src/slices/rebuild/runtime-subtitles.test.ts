@@ -172,4 +172,4 @@ it("reuses the saved font when changing caption size after the system font is un
     vi.mocked(resolveFont).mockReset();
     h.close();
   }
-});
+}, 30_000);

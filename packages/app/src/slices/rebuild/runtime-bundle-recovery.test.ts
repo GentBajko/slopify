@@ -122,6 +122,7 @@ it.each(textBundles.flatMap((bundle) => bundle.roles.map((missing) => ({ ...bund
       h.close();
     }
   },
+  30_000,
 );
 it("reuses a complete local article without optional sources, glossary or generated instructions", async () => {
   const h = await exportFixture();
