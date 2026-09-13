@@ -31,7 +31,7 @@ export function FormatPicker({
             value={format}
             data-play-field={value === format ? "format" : undefined}
             aria-label={format}
-            className="flex h-28 min-w-0 flex-1 items-center justify-center gap-4 rounded-control border border-line2 bg-panel p-3 last:border-r data-[state=on]:border-accent data-[state=on]:shadow-none"
+            className="flex h-28 min-w-0 flex-1 items-center justify-center gap-4 rounded-control border border-line2 bg-panel p-3 last:border-r data-[state=on]:border-focus data-[state=on]:shadow-none"
           >
             <span className="flex h-12 items-center justify-center" aria-hidden="true">
               <span

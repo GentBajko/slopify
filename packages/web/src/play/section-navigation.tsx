@@ -15,13 +15,13 @@ export function SectionNavigation({
       {playSections.map((item, index) => (
         <div
           key={item.id}
-          className={`border-b-2 py-4 ${section === item.id ? "border-accent" : "border-transparent"}`}
+          className={`border-b-2 py-4 ${section === item.id ? "border-focus" : "border-transparent"}`}
         >
           <button
             type="button"
             aria-current={section === item.id ? "step" : undefined}
             onClick={() => onNavigate(item.id)}
-            className={`min-h-11 w-full text-left font-semibold ${section === item.id ? "text-accent" : "text-ink"}`}
+            className={`min-h-11 w-full text-left font-semibold ${section === item.id ? "text-run-text" : "text-ink"}`}
           >
             <span
               aria-hidden="true"

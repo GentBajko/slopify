@@ -48,7 +48,7 @@ export function ContentSection(
             <details className="min-w-0 flex-1">
               <summary
                 data-play-field="articlePrompt.preview"
-                className="cursor-pointer py-2 text-small text-accent"
+                className="cursor-pointer py-2 text-small text-run-text"
               >
                 View prompt
               </summary>

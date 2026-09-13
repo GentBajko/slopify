@@ -182,7 +182,7 @@ export function SubtitleControls({
                               ? "subtitles.position"
                               : undefined
                           }
-                          className="flex min-w-0 flex-col items-center gap-2 rounded-control border border-line2 bg-panel px-1 py-3 text-[10px] last:border-r data-[state=on]:border-accent data-[state=on]:text-accent data-[state=on]:shadow-none"
+                          className="flex min-w-0 flex-col items-center gap-2 rounded-control border border-line2 bg-panel px-1 py-3 text-[10px] last:border-r data-[state=on]:border-focus data-[state=on]:text-run-text data-[state=on]:shadow-none"
                         >
                           <span
                             aria-hidden="true"

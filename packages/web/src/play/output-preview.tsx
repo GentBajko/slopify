@@ -47,7 +47,7 @@ export function OutputPreview(): ReactElement {
         <h2 className="text-small font-semibold">Output preview</h2>
         <Button
           variant="ghost"
-          className="text-accent"
+          className="text-run-text"
           onClick={() => void session.navigate("style")}
         >
           Edit style ↗
