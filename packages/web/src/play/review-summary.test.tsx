@@ -87,6 +87,17 @@ it("explains when a run only uses supplied content", async () => {
   ).not.toBeNull();
 });
 
+it("links a missing CLI back to the provider control", async () => {
+  const harness = reviewHarness();
+  await harness.prepare({
+    ...generated,
+    form: { ...generated.form, llm: { provider: "codex", model: "gpt-5" } },
+  });
+  const readiness = within(screen.getByRole("region", { name: "Run readiness summary" }));
+  expect(readiness.getByText("CLI not found")).not.toBeNull();
+  expect(readiness.getByRole("button", { name: "Edit ↗" })).not.toBeNull();
+});
+
 it("shows supplied filenames in order and hides dormant generation choices", async () => {
   const harness = reviewHarness();
   await harness.prepare({
