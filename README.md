@@ -40,16 +40,22 @@ or the global command when you want `slopify` available on your `PATH`.
    `~/.slopify/slopify.db` and go to the provider you picked, nowhere else.
 3. Prompts is where the article, image and thumbnail prompts are written once, with
    `{{keywords}}` where the subject goes.
-4. Play is the cue sheet: pick the prompts, fill in the keywords, choose a voice and
-   a format, press the key. Any stage you would rather do yourself, you upload
-   instead, and that stage is skipped.
+4. Play keeps an autosaved setup across Content, Outputs, Style and Review. Pick the
+   prompts, fill in the keywords, choose a voice and format, review the estimated cost,
+   then Start. Any optional stage you would rather do yourself can be skipped or supplied.
 5. The project workspace shows total progress and lets you inspect one stage at a time,
    read writing as it arrives, and listen to streamed narration. Download the article,
    audio, images or final export. Pause unfinished work to change providers.
 6. Subtitles can use a bundled, system or uploaded font. Preview size and one of five
    positions in the selected landscape or portrait frame before saving.
-7. The floating update button checks for new releases and installs an update when you
-   choose it. Active projects must finish or be paused first.
+7. Edit a completed or paused project without losing its history. Save creates a retained
+   revision; Slopify shows exactly which outputs are affected and rebuilds only when you ask.
+8. Save a Play setup or project revision as a template. Apply it to make a fresh editable
+   draft, or schedule one-off, daily or weekly runs with keyword variants and a spend ceiling.
+9. Add review checkpoints before Audio, Images or Video when you want to inspect upstream
+   work first. Independent stages continue while the selected step and its dependents wait.
+10. The floating update button checks for new releases and installs an update when you
+    choose it. Active projects must finish or be paused first.
 
 ## Inworld narration
 

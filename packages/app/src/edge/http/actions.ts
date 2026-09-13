@@ -6,6 +6,7 @@ import { derive } from "../../kernel/runner/graph.js";
 import { projectById, projectPaused, stagesOf } from "../../slices/admission/repo.js";
 import type { CancelDeps } from "../../slices/cancel/index.js";
 import { cancelProject } from "../../slices/cancel/index.js";
+import { settleReleasedCheckpoints } from "../../slices/checkpoints/recovery.js";
 import type { ControlDeps, ControlResult } from "../../slices/control/index.js";
 import { pauseProject } from "../../slices/control/index.js";
 import {
@@ -53,6 +54,7 @@ export function actionRoutes(deps: AppDeps) {
     log: deps.log,
     abort: (projectId) => deps.runner.abortProject(projectId),
     hasInflight: deps.runner.hasInflight,
+    settleCheckpoints: (projectId) => settleReleasedCheckpoints(deps, projectId),
     emit: (projectId, event) => {
       deps.hub.emit(projectId, event);
     },

@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
@@ -7,6 +7,7 @@ import {
   activeUpdateEntry,
   installDirectory,
   installedEntry,
+  pruneUpdateArtifacts,
   updateCommitted,
 } from "./plan.js";
 
@@ -70,4 +71,45 @@ it("requires both the candidate version and private token in the atomic activati
   expect(await updateCommitted(f.root, "0.6.2", token)).toBe(true);
   expect(await updateCommitted(f.root, "0.6.2", "b".repeat(64))).toBe(false);
   expect(await updateCommitted(f.root, "0.6.1", token)).toBe(false);
+});
+
+it("prunes only obsolete updater-owned installs and backups after activation", async () => {
+  const root = await mkdtemp(join(tmpdir(), "slopify-update-prune-"));
+  directories.push(root);
+  const updates = join(root, "updates");
+  for (const version of ["0.6.0", "0.6.1", "0.6.2"])
+    await mkdir(join(updates, version), { recursive: true });
+  for (const name of [
+    "before-0.6.0-1.db",
+    "before-0.6.1-2.db",
+    "before-0.6.2-3.db",
+    "current.json",
+    "operator-notes.txt",
+  ])
+    await writeFile(join(updates, name), name);
+  await mkdir(join(updates, "npm-cache"));
+  const rollbackBackup = join(updates, "before-0.6.2-3.db");
+
+  await pruneUpdateArtifacts(root, "0.6.2", "0.6.1", rollbackBackup);
+
+  expect((await readdir(updates)).sort()).toEqual([
+    "0.6.1",
+    "0.6.2",
+    "before-0.6.2-3.db",
+    "current.json",
+    "npm-cache",
+    "operator-notes.txt",
+  ]);
+});
+
+it("refuses to prune anything without a valid retained database backup", async () => {
+  const root = await mkdtemp(join(tmpdir(), "slopify-update-prune-"));
+  directories.push(root);
+  const obsolete = join(root, "updates", "0.5.0");
+  await mkdir(obsolete, { recursive: true });
+
+  await expect(
+    pruneUpdateArtifacts(root, "0.6.2", "0.6.1", join(root, "updates", "before-0.6.2-999.db")),
+  ).rejects.toThrow("retained update backup is missing");
+  expect(await readdir(join(root, "updates"))).toEqual(["0.5.0"]);
 });

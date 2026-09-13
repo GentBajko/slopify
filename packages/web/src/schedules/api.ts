@@ -69,12 +69,9 @@ export async function readSchedule(
 
 export async function createSchedule(
   api: Api,
-  input: Omit<ScheduleCreate, "id">,
+  input: ScheduleCreate,
 ): Promise<ScheduleReply<ScheduleSummary>> {
-  return responseOf(
-    await api.fetch(root(api), json("POST", { id: crypto.randomUUID(), ...input })),
-    scheduleSummarySchema,
-  );
+  return responseOf(await api.fetch(root(api), json("POST", input)), scheduleSummarySchema);
 }
 
 export async function updateSchedule(

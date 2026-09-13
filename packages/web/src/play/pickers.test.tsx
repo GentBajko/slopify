@@ -25,6 +25,17 @@ const providers: readonly ProviderStatus[] = [
     displayName: "Codex CLI",
     readiness: { kind: "cli", installed: false },
   },
+  {
+    id: "gemini",
+    family: "llm",
+    displayName: "Gemini CLI",
+    readiness: {
+      kind: "cli",
+      installed: true,
+      version: "0.148.0",
+      issue: "Gemini CLI update required.",
+    },
+  },
   { id: "fal", family: "image", displayName: "fal.ai", readiness: { kind: "keyed", hasKey: true } },
 ];
 
@@ -51,7 +62,7 @@ describe("the provider picker", () => {
 
     // The placeholder plus the three LLM providers; the image provider is another
     // family's and is not on this list.
-    expect(screen.getAllByRole("option")).toHaveLength(4);
+    expect(screen.getAllByRole("option")).toHaveLength(5);
     expect(screen.queryByRole("option", { name: /fal\.ai/ })).toBeNull();
   });
 
@@ -87,6 +98,23 @@ describe("the provider picker", () => {
     const absent = option(/Codex CLI/);
     expect(absent.textContent).toBe("Codex CLI · CLI missing");
     expect(absent.disabled).toBe(true);
+  });
+
+  it("greys an installed CLI with a compatibility issue and says an update is required", () => {
+    render(
+      <ProviderPicker
+        label="LLM"
+        family="llm"
+        providers={providers}
+        value=""
+        problem={undefined}
+        onPick={vi.fn()}
+      />,
+    );
+
+    const outdated = option(/Gemini CLI/);
+    expect(outdated.textContent).toBe("Gemini CLI · CLI update required");
+    expect(outdated.disabled).toBe(true);
   });
 
   it("leaves an installed CLI and a keyed provider selectable, with no reason beside them", async () => {

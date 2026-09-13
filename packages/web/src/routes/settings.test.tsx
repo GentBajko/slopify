@@ -1,10 +1,17 @@
+import { QueryClient } from "@tanstack/react-query";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { AppearanceSkin } from "@/components/theme";
 import type { Answer } from "@/test-app";
 import { jsonAnswer, problemAnswer, renderApp, testDeps } from "@/test-app";
-import { gapProblem, SettingsRoute } from "./settings.js";
+import {
+  gapProblem,
+  portableImportQueryKeys,
+  portableMaxUploadBytes,
+  refreshPortableImportQueries,
+  SettingsRoute,
+} from "./settings.js";
 
 afterEach(() => {
   cleanup();
@@ -108,6 +115,64 @@ describe("the settings screen", () => {
     expect(await screen.findByText(/1 MB stored/)).not.toBeNull();
     expect(screen.getByText("A finished run")).not.toBeNull();
     expect(screen.getByRole("button", { name: "Clean orphan files" })).not.toBeNull();
+  });
+
+  it("refreshes every resource a portable backup can restore", async () => {
+    const client = new QueryClient();
+    const concreteKeys = portableImportQueryKeys.map((queryKey) =>
+      queryKey[0] === "provider-models" ? (["provider-models", "codex"] as const) : queryKey,
+    );
+    for (const [index, queryKey] of concreteKeys.entries()) {
+      client.setQueryData(queryKey, { before: index });
+      expect(client.getQueryState(queryKey)?.isInvalidated).toBe(false);
+    }
+
+    await refreshPortableImportQueries(client);
+
+    for (const queryKey of concreteKeys) {
+      expect(client.getQueryState(queryKey)?.isInvalidated).toBe(true);
+    }
+  });
+
+  it("sends an accepted backup as a file without buffering it in the page", async () => {
+    const user = userEvent.setup();
+    let received = "";
+    renderApp(
+      <SettingsRoute />,
+      deps({
+        "PUT /api/storage/import": async (request) => {
+          received = await request.text();
+          return jsonAnswer({ templates: 0, fonts: 0, stagedFiles: 0 })(request);
+        },
+      }),
+    );
+
+    const file = new File(["portable zip"], "slopify.zip", { type: "application/zip" });
+    await user.upload(await screen.findByLabelText("Import backup"), file);
+
+    expect(await screen.findByText(/Imported 0 template/)).not.toBeNull();
+    expect(received).toBe("portable zip");
+  });
+
+  it("rejects an oversized backup before sending or reading it", async () => {
+    const user = userEvent.setup();
+    let requests = 0;
+    renderApp(
+      <SettingsRoute />,
+      deps({
+        "PUT /api/storage/import": (request) => {
+          requests += 1;
+          return jsonAnswer({ templates: 0, fonts: 0, stagedFiles: 0 })(request);
+        },
+      }),
+    );
+    const file = new File(["zip"], "too-large.zip", { type: "application/zip" });
+    Object.defineProperty(file, "size", { value: portableMaxUploadBytes + 1 });
+
+    await user.upload(await screen.findByLabelText("Import backup"), file);
+
+    expect(await screen.findByText("The backup must be between 1 byte and 100 MB.")).not.toBeNull();
+    expect(requests).toBe(0);
   });
 });
 

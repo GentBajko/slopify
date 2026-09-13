@@ -17,12 +17,12 @@ const keyed = (id: string, hasKey: boolean): ProviderStatus =>
     readiness: { kind: "keyed", hasKey },
   }) as unknown as ProviderStatus;
 
-const cli = (id: string, installed: boolean): ProviderStatus =>
+const cli = (id: string, installed: boolean, issue?: string): ProviderStatus =>
   ({
     id,
     family: "llm",
     displayName: id,
-    readiness: { kind: "cli", installed },
+    readiness: { kind: "cli", installed, ...(issue === undefined ? {} : { issue }) },
   }) as unknown as ProviderStatus;
 
 describe("which provider a stage's retry would go to", () => {
@@ -43,6 +43,12 @@ describe("a stage whose provider is not ready", () => {
   it("says which of the two is missing", () => {
     expect(unreadyFor("images", config, [keyed("fal", false)])?.label).toBe("Key missing");
     expect(unreadyFor("article", config, [cli("claude-code", false)])?.label).toBe("CLI missing");
+  });
+
+  it("requires an update when an installed CLI has a compatibility issue", () => {
+    expect(
+      unreadyFor("article", config, [cli("claude-code", true, "Update this CLI.")])?.label,
+    ).toBe("CLI update required");
   });
 
   it("says nothing when the key is stored or the binary answers", () => {

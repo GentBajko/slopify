@@ -12,7 +12,8 @@ import type { Log, LogFields, LogLevel } from "../../kernel/log.js";
 import { ensureDirs, layout } from "../../kernel/paths.js";
 import type { Hub } from "../events/hub.js";
 import { createHub } from "../events/hub.js";
-import { createApp } from "./app.js";
+import { type AppDeps, createApp } from "./app.js";
+import { createMutationLifecycle } from "./mutations.js";
 
 interface Recorded {
   readonly level: LogLevel;
@@ -52,6 +53,7 @@ function built(): { app: ReturnType<typeof createApp>; hub: Hub; lines: Recorded
 function harness(
   webDist: string,
   wrap: (hub: Hub) => Hub = (hub) => hub,
+  extra: Pick<AppDeps, "mutations"> = {},
 ): {
   app: ReturnType<typeof createApp>;
   hub: Hub;
@@ -88,6 +90,7 @@ function harness(
     flushSoon: (): void => {},
     // These routes never probe; the CLI status routes carry their own harness.
     probe: () => Promise.resolve({ ran: false, stdout: "" }),
+    ...extra,
   });
   return { app, hub, lines };
 }
@@ -165,6 +168,19 @@ describe("createApp", () => {
       detail: "GET /api/nothing/here is not a route of this API.",
       instance: "/api/nothing/here",
     });
+  });
+
+  it("refuses new writes after shutdown admission closes while health remains readable", async () => {
+    const mutations = createMutationLifecycle();
+    const { app } = harness(missingDir(), (hub) => hub, { mutations });
+    await mutations.stop();
+
+    const write = await app.request("/api/settings", { method: "PATCH" });
+    expect(write.status).toBe(503);
+    expect(await write.json()).toMatchObject({
+      detail: "Slopify is shutting down. Wait for it to restart before making changes.",
+    });
+    expect((await app.request("/api/health")).status).toBe(200);
   });
 
   it("never lets an API path fall through to the SPA", async () => {

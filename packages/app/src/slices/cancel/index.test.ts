@@ -11,6 +11,8 @@ import type { Log } from "../../kernel/log.js";
 import type { StageKind, StageState } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
 import { projectPaused, setProjectPaused, stagesOf } from "../admission/repo.js";
+import { settleCheckpointClosures } from "../checkpoints/repo.js";
+import { activeRun } from "../schedules/repo.js";
 import type { CancelDeps } from "./index.js";
 import { canceledByUser, cancelProject } from "./index.js";
 
@@ -59,6 +61,7 @@ function harness(
         abort(db);
         return Promise.resolve();
       },
+      settleCheckpoints: () => {},
       emit: (_projectId, event) => {
         events.push(event);
       },
@@ -73,6 +76,26 @@ function concludes(db: DatabaseSync): void {
   ).run(canceledByUser);
 }
 
+function scheduleProject(db: DatabaseSync): void {
+  db.prepare(
+    "INSERT INTO project_templates(id,head_version,creation_hash,created_at) VALUES ('t1',1,'hash',?)",
+  ).run(clock.now().toISOString());
+  db.prepare(
+    `INSERT INTO schedules
+     (id,name,template_id,template_version,cadence_json,timezone,missed_policy,overlap_policy,
+      spend_limit_cents,items_json,status,version,creation_hash,next_run_at,created_at,updated_at,
+      mutation_id,mutation_hash,deleted_at)
+     VALUES ('schedule','Daily','t1',1,'{"kind":"daily","time":"09:00"}','UTC','skip','skip',
+             NULL,'[]','active',1,'hash','2026-09-04T09:00:00.000Z',?,?,NULL,NULL,NULL)`,
+  ).run(clock.now().toISOString(), clock.now().toISOString());
+  db.prepare(
+    `INSERT INTO schedule_runs
+     (id,schedule_id,scheduled_for,status,request_id,project_ids_json,estimate_json,
+      started_at,ended_at,projects_settled_at,error)
+     VALUES ('run','schedule','2026-09-03T09:00:00.000Z','succeeded',NULL,?,NULL,?,?,NULL,NULL)`,
+  ).run(JSON.stringify([projectId]), clock.now().toISOString(), clock.now().toISOString());
+}
+
 describe("cancelProject", () => {
   // Each `running` stage is marked `canceled`, `pending` stages stay `pending`, and the
   // project reads `canceled`.
@@ -84,6 +107,34 @@ describe("cancelProject", () => {
     expect(result).toEqual({ ok: true, canceled: ["audio", "images"], state: "canceled" });
     expect(h.stateOf("video")).toBe("pending");
     expect(h.stateOf("article")).toBe("done");
+  });
+
+  it("settles a scheduled occurrence before a later edit can reopen its canceled project", async () => {
+    const h = harness({ audio: "running", article: "done" });
+    scheduleProject(h.db);
+
+    await cancelProject(h.deps, projectId);
+    expect(
+      h.db.prepare("SELECT projects_settled_at FROM schedule_runs WHERE id='run'").get(),
+    ).toEqual({ projects_settled_at: clock.now().toISOString() });
+
+    h.db.prepare("UPDATE stages SET state='pending' WHERE project_id=?").run(projectId);
+    expect(activeRun(h.db, "schedule", "2026-09-04T09:00:00.000Z")).toBe(false);
+  });
+
+  it("rolls back its fallback terminal stage if schedule settlement cannot commit", async () => {
+    const h = harness({ audio: "running", article: "done" }, () => {});
+    scheduleProject(h.db);
+    h.db.exec(`CREATE TRIGGER reject_schedule_settlement
+      BEFORE UPDATE OF projects_settled_at ON schedule_runs
+      BEGIN SELECT RAISE(ABORT, 'settlement unavailable'); END`);
+
+    await expect(cancelProject(h.deps, projectId)).rejects.toThrow("settlement unavailable");
+
+    expect(h.stateOf("audio")).toBe("running");
+    expect(
+      h.db.prepare("SELECT projects_settled_at FROM schedule_runs WHERE id='run'").get(),
+    ).toEqual({ projects_settled_at: null });
   });
 
   // A stage whose output was stored in the same instant as the cancel stays `done`; cancel
@@ -174,6 +225,71 @@ describe("cancelProject", () => {
     expect(projectPaused(h.db, projectId)).toBe(false);
     expect(h.stateOf("article")).toBe("done");
     expect(h.stateOf("audio")).toBe("canceled");
+  });
+
+  it("satisfies a released gate after cancel terminalizes its last pending work", async () => {
+    const h = harness({ audio: "running", video: "pending" });
+    const fingerprint = "a".repeat(64);
+    h.db
+      .prepare("INSERT INTO project_revisions VALUES ('r1',?,NULL,NULL,'{}','{}','{}',?)")
+      .run(projectId, clock.now().toISOString());
+    h.db.prepare("INSERT INTO project_heads VALUES (?,'r1')").run(projectId);
+    for (const kind of ["audio", "video"] as const)
+      h.db
+        .prepare(`INSERT INTO revision_work
+        (id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,created_at)
+        VALUES (?,?,?,?,?,?,?,'allowed',?)`)
+        .run(
+          `w-${kind}`,
+          projectId,
+          "r1",
+          `s-${kind}`,
+          kind,
+          fingerprint,
+          kind === "audio" ? "running" : "pending",
+          clock.now().toISOString(),
+        );
+    for (const [key, workId] of [
+      ["audio:body", "w-audio"],
+      ["video:export", "w-video"],
+    ] as const)
+      h.db
+        .prepare(`INSERT INTO revision_work_reservations
+        (project_id,revision_id,work_key,work_id,piece_id,fingerprint,logical_key,desired_fingerprint)
+        VALUES (?,'r1',?,?,NULL,?,NULL,NULL)`)
+        .run(projectId, key, workId, fingerprint);
+    h.db
+      .prepare(`INSERT INTO review_checkpoints
+      (project_id,revision_id,checkpoint_id,stage,work_id,fingerprint,state,created_at,approved_at)
+      VALUES (?,'r1','audio-gate','audio','w-audio',?,'released',?,?)`)
+      .run(projectId, fingerprint, clock.now().toISOString(), clock.now().toISOString());
+
+    let settled: readonly unknown[] = [];
+    await cancelProject(
+      {
+        ...h.deps,
+        settleCheckpoints: () => {
+          settled = settleCheckpointClosures(h.db, [
+            {
+              projectId,
+              revisionId: "r1",
+              checkpointId: "audio-gate",
+              workKeys: ["audio:body", "video:export"],
+            },
+          ]);
+        },
+      },
+      projectId,
+      {
+        baseRevisionId: "r1",
+        idempotencyKey: "11111111-1111-4111-8111-111111111111",
+      },
+    );
+
+    expect(settled).toMatchObject([{ checkpointId: "audio-gate", state: "satisfied" }]);
+    expect(h.db.prepare("SELECT state FROM review_checkpoints").get()).toEqual({
+      state: "satisfied",
+    });
   });
 
   it("answers no-project for an id that has none", async () => {

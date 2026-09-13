@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { setImmediate } from "node:timers";
 import type { AppUpdater, UpdateInfo, UpdateStatus } from "./model.js";
 import { isStableVersion, isUpdateToken, newerVersion } from "./model.js";
 
@@ -9,6 +10,7 @@ interface UpdateDeps {
     readonly token: string;
     readonly pending: boolean;
     readonly committed: () => Promise<boolean>;
+    readonly settle?: () => void | Promise<void>;
   };
   readonly latest: () => Promise<string>;
   readonly now: () => number;
@@ -28,6 +30,7 @@ export function createUpdater(deps: UpdateDeps): AppUpdater {
     : undefined;
   let error: string | undefined = installError;
   let checking: Promise<void> | undefined;
+  let settling: Promise<void> | undefined;
   let mutations = 0;
   const busyNow = () => deps.busy() || mutations > 0;
   const locked = () => status === "installing" || status === "restarting";
@@ -89,11 +92,31 @@ export function createUpdater(deps: UpdateDeps): AppUpdater {
     activate: async (token) => {
       if (!ready(token) || deps.candidate === undefined) return false;
       if (activated) return true;
+      if (settling !== undefined) return true;
       const committed = await deps.candidate.committed();
       if (activated) return true;
+      if (settling !== undefined) return true;
       if (!committed) return false;
-      activated = true;
-      status = "idle";
+      if (deps.candidate.settle === undefined) {
+        activated = true;
+        status = "idle";
+        return true;
+      }
+      // Acknowledge the committed pointer before a potentially long filesystem sweep.
+      // Mutations remain locked until the deferred settlement finishes.
+      settling = new Promise<void>((resolve) => setImmediate(resolve))
+        .then(() => deps.candidate?.settle?.())
+        .catch(() => {
+          try {
+            deps.report("Storage reconciliation failed after update activation.");
+          } catch {
+            // The pointer is committed; reporting must not strand the candidate lock.
+          }
+        })
+        .finally(() => {
+          activated = true;
+          status = "idle";
+        });
       return true;
     },
     check,

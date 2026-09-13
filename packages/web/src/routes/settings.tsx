@@ -1,5 +1,5 @@
 import type { Appearance, AppSettings } from "@app/slices/settings/model.js";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import { readStorageUsage, saveAppSettings } from "@/api";
 import { useApp } from "@/app-context";
@@ -12,8 +12,29 @@ import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Voices } from "@/components/voices";
 import { keys, settingsQuery } from "@/queries";
+import { fontsKey } from "@/subtitles/api";
+import { templatesKey } from "@/templates/api";
 
 const storageQueryKey = ["storage-usage"] as const;
+export const portableMaxUploadBytes = 100 * 1024 * 1024;
+export const portableImportQueryKeys = [
+  storageQueryKey,
+  keys.settings,
+  keys.providers,
+  keys.voices,
+  keys.prompts,
+  keys.entries,
+  keys.staging,
+  templatesKey,
+  fontsKey,
+  ["provider-models"] as const,
+] as const;
+
+export async function refreshPortableImportQueries(queryClient: QueryClient): Promise<void> {
+  await Promise.all(
+    portableImportQueryKeys.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+  );
+}
 
 // The bound slices/admission/rules.ts validates a run's gap against, so the field refuses
 // what a run would refuse rather than letting the server say it first.
@@ -76,6 +97,11 @@ function StorageTools() {
   const [error, setError] = useState<string | null>(null);
 
   async function importBackup(file: File): Promise<void> {
+    if (file.size === 0 || file.size > portableMaxUploadBytes) {
+      setNotice(null);
+      setError("The backup must be between 1 byte and 100 MB.");
+      return;
+    }
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -83,18 +109,20 @@ function StorageTools() {
       const response = await api.fetch(`${api.origin}/api/storage/import`, {
         method: "PUT",
         headers: { "content-type": "application/zip" },
-        body: await file.arrayBuffer(),
+        body: file,
       });
       const body = (await response.json()) as {
         detail?: string;
         templates?: number;
+        fonts?: number;
+        fontFallbacks?: number;
         stagedFiles?: number;
       };
       if (!response.ok) throw new Error(body.detail ?? "The backup could not be imported.");
       setNotice(
-        `Imported ${body.templates ?? 0} template(s) and ${body.stagedFiles ?? 0} staged file(s).`,
+        `Imported ${body.templates ?? 0} template(s), ${body.fonts ?? 0} uploaded font(s), and ${body.stagedFiles ?? 0} staged file(s).${body.fontFallbacks ? ` ${body.fontFallbacks} missing legacy font reference(s) now use the default font.` : ""}`,
       );
-      await queryClient.invalidateQueries({ queryKey: storageQueryKey });
+      await refreshPortableImportQueries(queryClient);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The backup could not be imported.");
     } finally {

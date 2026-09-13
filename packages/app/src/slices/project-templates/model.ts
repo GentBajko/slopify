@@ -9,5 +9,10 @@ export type TemplateResult<T> =
   | { readonly ok: true; readonly value: T }
   | {
       readonly ok: false;
-      readonly reason: "not-found" | "conflict" | "invalid-input" | "missing-prompt";
+      readonly reason:
+        | "not-found"
+        | "conflict"
+        | "invalid-input"
+        | "missing-prompt"
+        | "referenced-by-schedule";
     };

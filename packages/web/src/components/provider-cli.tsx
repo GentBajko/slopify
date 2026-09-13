@@ -1,3 +1,4 @@
+import { readinessIsUsable } from "@app/kernel/ports/model.js";
 import type { ProviderStatus } from "@app/slices/settings/model.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useEffect, useId, useState } from "react";
@@ -31,6 +32,7 @@ export function CliProviderRow({
   const defaultCommand = provider.id === "claude-code" ? "claude" : provider.id;
   const command = provider.cliPath?.command ?? defaultCommand;
   const value = draft ?? configured ?? "";
+  const usable = readinessIsUsable(readiness);
   const save = useMutation({
     mutationFn: (path: string) => saveProviderPath(api, provider.id, path),
     onMutate: () => setSaved(false),
@@ -59,18 +61,15 @@ export function CliProviderRow({
 
   return (
     <div
-      data-ready={readiness.installed}
+      data-ready={usable}
       className="grid gap-[14px] border-t border-line px-4 py-[14px] first:border-t-0 sm:grid-cols-[140px_1fr]"
     >
-      <span
-        id={nameId}
-        className={cn("font-semibold", readiness.installed ? "text-ink" : "text-ink3")}
-      >
+      <span id={nameId} className={cn("font-semibold", usable ? "text-ink" : "text-ink3")}>
         {provider.displayName}
       </span>
       <div className="min-w-0">
         <p className="flex flex-wrap items-center gap-2 text-small text-ink2" aria-live="polite">
-          <Lamp state={readiness.installed ? "done" : "pending"} />
+          <Lamp state={usable ? "done" : "pending"} />
           <span>{statusOf(readiness, configured)}</span>
         </p>
         <p className="mt-1 break-all text-label text-ink3">
@@ -132,11 +131,12 @@ export function CliProviderRow({
 }
 
 function statusOf(
-  readiness: { readonly installed: boolean; readonly version?: string },
+  readiness: { readonly installed: boolean; readonly version?: string; readonly issue?: string },
   configured: string | null,
 ): string {
   if (!readiness.installed) {
     return configured === null ? "Not found on PATH" : "Not found at saved path";
   }
+  if (readiness.issue !== undefined) return readiness.issue;
   return readiness.version === undefined ? "Installed" : `Installed, version ${readiness.version}`;
 }

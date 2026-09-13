@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { thinkingModes } from "../../kernel/ports/llm.js";
-import type { ModelInfo, ProviderFamily } from "../../kernel/ports/model.js";
+import {
+  type ModelInfo,
+  type ProviderFamily,
+  readinessIsUsable,
+} from "../../kernel/ports/model.js";
 import type { ProviderChoice, VoiceChoice } from "../admission/model.js";
 import type { FieldError } from "../admission/rules.js";
 import type { Chunking } from "../narration/chunk.js";
@@ -62,14 +66,13 @@ export function validateLocalProviderChanges(
       fields.push({ field: key, message: "Choose a provider for this kind of generation." });
       continue;
     }
-    const usable =
-      provider.readiness.kind === "cli" ? provider.readiness.installed : provider.readiness.hasKey;
+    const usable = readinessIsUsable(provider.readiness);
     if (!usable) {
       fields.push({
         field: key,
         message:
           provider.readiness.kind === "cli"
-            ? "Install and sign in to this CLI first."
+            ? (provider.readiness.issue ?? "Install and sign in to this CLI first.")
             : "Save this provider's API key in Settings first.",
       });
     }

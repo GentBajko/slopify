@@ -7,6 +7,7 @@ import type { WorkRef } from "../../kernel/runner/work.js";
 import type { RevisionDeps } from "../revisions/model.js";
 import { currentRevisionId } from "../revisions/repo.js";
 import { getRevisionView } from "../revisions/view.js";
+import { settleScheduleRunsForProject } from "../schedules/repo.js";
 import { executionPlan, executionView, savedCatalogue } from "./runtime-plan.js";
 import { workPieces } from "./work-records.js";
 
@@ -191,6 +192,7 @@ export function projectStandings(deps: RevisionDeps, projectId: string): void {
         stage.kind,
       );
   }
+  settleScheduleRunsForProject(deps.db, projectId, deps.clock.now().toISOString());
 }
 
 export function recordWorkProgress(deps: RevisionDeps, event: StageProgressEvent): void {

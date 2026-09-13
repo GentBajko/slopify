@@ -26,6 +26,7 @@ import { draftRoutes } from "./drafts.js";
 import { entryRoutes } from "./entries.js";
 import { fileRoutes } from "./files.js";
 import { fontsRoutes } from "./fonts.js";
+import type { MutationLifecycle } from "./mutations.js";
 import { openFolderRoutes } from "./open-folder.js";
 import { planningRoutes } from "./planning.js";
 import { problem, problemFromError, titleOf } from "./problem.js";
@@ -53,6 +54,7 @@ export interface AppDeps {
   readonly openFolder?: (path: string) => Promise<void>;
   readonly catalogue?: CatalogueStore;
   readonly updater?: AppUpdater;
+  readonly mutations?: Pick<MutationLifecycle, "begin">;
   readonly audioPreviews?: AudioPreviewStore;
   readonly db: DatabaseSync;
   readonly paths: Paths;
@@ -130,25 +132,35 @@ export function createApp(deps: AppDeps): Hono {
       await next();
     })
     .use("/api/*", async (c, next) => {
-      if (
-        deps.updater === undefined ||
-        ["GET", "HEAD", "OPTIONS"].includes(c.req.method) ||
-        ["/api/update", "/api/update/", "/api/update/activate", "/api/update/activate/"].includes(
-          c.req.path,
-        )
-      )
-        return next();
-      const release = deps.updater.beginMutation();
-      if (release === undefined)
+      if (["GET", "HEAD", "OPTIONS"].includes(c.req.method)) return next();
+      const releaseRequest = deps.mutations?.begin();
+      if (deps.mutations !== undefined && releaseRequest === undefined)
+        return problem(c, {
+          status: 503,
+          title: titleOf(503),
+          detail: "Slopify is shutting down. Wait for it to restart before making changes.",
+        });
+      const updateRoute = [
+        "/api/update",
+        "/api/update/",
+        "/api/update/activate",
+        "/api/update/activate/",
+      ].includes(c.req.path);
+      const releaseUpdate =
+        deps.updater === undefined || updateRoute ? undefined : deps.updater.beginMutation();
+      if (deps.updater !== undefined && !updateRoute && releaseUpdate === undefined) {
+        releaseRequest?.();
         return problem(c, {
           status: 409,
           title: titleOf(409),
           detail: "Slopify is updating. Wait for it to restart before making changes.",
         });
+      }
       try {
         await next();
       } finally {
-        release();
+        releaseUpdate?.();
+        releaseRequest?.();
       }
     })
     .onError((error, c) => problemFromError(c, error, deps))

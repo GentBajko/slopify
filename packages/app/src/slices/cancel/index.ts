@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import type { Clock } from "../../kernel/clock.js";
+import { transact } from "../../kernel/db/tx.js";
 import type { ProjectEvent } from "../../kernel/events.js";
 import type { Log } from "../../kernel/log.js";
 import {
@@ -24,6 +25,7 @@ import {
   type RevisionControlRefusal,
   rememberRevisionControl,
 } from "../control/revision-control.js";
+import { settleScheduleRunsForProject } from "../schedules/repo.js";
 
 // Cancel on the project header. Every in-flight call of this project is aborted at once, every
 // `done` output and every finished piece is kept for the resume, and the project sits
@@ -40,6 +42,7 @@ export interface CancelDeps {
   // so a test can drive the barrier without a stage implementation.
   readonly abort: (projectId: string) => Promise<void>;
   readonly hasInflight?: ((projectId: string) => boolean) | undefined;
+  readonly settleCheckpoints: (projectId: string) => void;
   readonly emit: (projectId: string, event: ProjectEvent) => void;
 }
 
@@ -82,10 +85,6 @@ async function cancel(deps: CancelDeps, projectId: string): Promise<CancelResult
   }
   const before = stagesOf(deps.db, projectId);
   const paused = projectPaused(deps.db, projectId);
-  if (paused) {
-    setProjectPaused(deps.db, projectId, false, deps.clock.now().toISOString());
-    deps.emit(projectId, { type: "project.updated", projectId });
-  }
   const running = before.filter((stage) => stage.state === "running").map((stage) => stage.kind);
   const admittedPending =
     deps.db
@@ -103,79 +102,87 @@ async function cancel(deps: CancelDeps, projectId: string): Promise<CancelResult
   // Nothing waits for a response. The runner holds the controllers and its own
   // barrier, so a stage that finishes during this does not release its dependents.
   if (running.length > 0 || draining) await deps.abort(projectId);
-  deps.db
-    .prepare(
-      "UPDATE revision_work SET state='canceled',dispatch_state='held',failure_reason=? WHERE project_id=? AND state!='done'",
-    )
-    .run(canceledByUser, projectId);
-  deps.db
-    .prepare(
-      "UPDATE revision_work_pieces SET state='held',dispatch_state='held' WHERE work_id IN (SELECT id FROM revision_work WHERE project_id=?) AND state!='done'",
-    )
-    .run(projectId);
-  deps.db
-    .prepare(
-      "UPDATE review_checkpoints SET state='canceled',approved_at=NULL WHERE project_id=? AND revision_id=(SELECT revision_id FROM project_heads WHERE project_id=?) AND state IN ('configured','pending-review','held')",
-    )
-    .run(projectId, projectId);
+  const at = deps.clock.now().toISOString();
+  const transition = transact(deps.db, () => {
+    if (paused) setProjectPaused(deps.db, projectId, false, at);
+    deps.db
+      .prepare(
+        "UPDATE revision_work SET state='canceled',dispatch_state='held',failure_reason=? WHERE project_id=? AND state!='done'",
+      )
+      .run(canceledByUser, projectId);
+    deps.db
+      .prepare(
+        "UPDATE revision_work_pieces SET state='held',dispatch_state='held' WHERE work_id IN (SELECT id FROM revision_work WHERE project_id=?) AND state!='done'",
+      )
+      .run(projectId);
+    deps.db
+      .prepare(
+        "UPDATE review_checkpoints SET state='canceled',approved_at=NULL WHERE project_id=? AND revision_id=(SELECT revision_id FROM project_heads WHERE project_id=?) AND state IN ('configured','pending-review','held')",
+      )
+      .run(projectId, projectId);
+    deps.settleCheckpoints(projectId);
 
-  // The invariant: after cancel completes no stage of the project is `running`.
-  // The runner writes that row as each aborted stage unwinds; this is the path where it
-  // could not - a failed write is logged there and the run is left mid-flight otherwise.
-  const after = stagesOf(deps.db, projectId);
-  for (const stage of after) {
-    if (stage.state !== "running") {
-      continue;
+    // The invariant: after cancel commits no stage of the project is `running`.
+    // Usually the aborted runner already wrote these rows; the sweep covers a failed
+    // unwinding write and shares this transaction with schedule settlement.
+    const after = stagesOf(deps.db, projectId);
+    const swept = [] as StageKind[];
+    for (const stage of after) {
+      if (stage.state !== "running") continue;
+      finishStage(deps.db, stage.id, "canceled", canceledByUser, at);
+      swept.push(stage.kind);
     }
+
+    // An abort can race a successful stage completion. Mark one remaining pending
+    // stage canceled so cancellation is explicit, rather than guessing from any
+    // completed stage (independent images can now finish before Article).
+    const stopped = stagesOf(deps.db, projectId);
+    const waiting = stopped.find((stage) => stage.state === "pending");
+    const waitingCanceled =
+      !stopped.some((stage) => stage.state === "canceled") && waiting !== undefined;
+    if (waitingCanceled) finishStage(deps.db, waiting.id, "canceled", canceledByUser, at);
+    const settled = stagesOf(deps.db, projectId);
+    const state = derive(settled);
+    settleScheduleRunsForProject(deps.db, projectId, at);
+    return { settled, state, swept, waiting: waitingCanceled ? waiting : undefined };
+  });
+
+  if (paused) deps.emit(projectId, { type: "project.updated", projectId });
+  for (const kind of transition.swept) {
     deps.log.write("warn", "cancel.sweep", {
       projectId,
-      stage: stage.kind,
+      stage: kind,
       detail: "the stage was still running after its calls stopped",
     });
-    finishStage(deps.db, stage.id, "canceled", canceledByUser, deps.clock.now().toISOString());
     deps.emit(projectId, {
       type: "stage.state",
       projectId,
-      stage: stage.kind,
+      stage: kind,
       state: "canceled",
       failureReason: canceledByUser,
     });
   }
-
-  // An abort can race a successful stage completion. Mark one remaining pending
-  // stage canceled so cancellation is explicit, rather than guessing from any
-  // completed stage (independent images can now finish before Article).
-  const stopped = stagesOf(deps.db, projectId);
-  const waiting = stopped.find((stage) => stage.state === "pending");
-  if (!stopped.some((stage) => stage.state === "canceled") && waiting !== undefined) {
-    finishStage(deps.db, waiting.id, "canceled", canceledByUser, deps.clock.now().toISOString());
+  if (transition.waiting !== undefined)
     deps.emit(projectId, {
       type: "stage.state",
       projectId,
-      stage: waiting.kind,
+      stage: transition.waiting.kind,
       state: "canceled",
       failureReason: canceledByUser,
     });
-  }
-  const settled = stagesOf(deps.db, projectId);
-  const state = derive(settled);
-  if (
-    paused ||
-    after.some((stage) => stage.state === "running") ||
-    (waiting !== undefined && !stopped.some((stage) => stage.state === "canceled"))
-  ) {
+  if (paused || transition.swept.length > 0 || transition.waiting !== undefined) {
     // Only when the sweep above moved a row: the runner already announced the state it
     // left the project in, and repeating it would tell every open page the same thing
     // twice.
-    deps.emit(projectId, { type: "project.state", projectId, state });
+    deps.emit(projectId, { type: "project.state", projectId, state: transition.state });
   }
   return {
     ok: true,
     // A stage whose output was stored in the same instant as the cancel stays
     // `done`, so what was stopped is read back rather than assumed from what was running.
-    canceled: settled
+    canceled: transition.settled
       .filter((stage) => stage.state === "canceled" && running.includes(stage.kind))
       .map((stage) => stage.kind),
-    state,
+    state: transition.state,
   };
 }

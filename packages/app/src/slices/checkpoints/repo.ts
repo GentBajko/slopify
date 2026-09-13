@@ -29,6 +29,56 @@ export function checkpointForWork(db: DatabaseSync, workId: string): readonly Ch
     .all(workId)
     .map((row) => checkpointRowSchema.parse(row));
 }
+
+export interface CheckpointClosureSettlement {
+  readonly projectId: string;
+  readonly revisionId: string;
+  readonly checkpointId: string;
+  readonly workKeys: readonly string[];
+}
+
+/**
+ * Marks released checkpoints satisfied once every reservation in their exact
+ * reviewed closure has reached a terminal state. Missing reservations keep a
+ * checkpoint released: an incomplete materialization must never look complete.
+ */
+export function settleCheckpointClosures(
+  db: DatabaseSync,
+  closures: readonly CheckpointClosureSettlement[],
+): readonly CheckpointRow[] {
+  const settle = (): readonly CheckpointRow[] => {
+    const satisfied: CheckpointRow[] = [];
+    for (const closure of closures) {
+      if (
+        closure.workKeys.length === 0 ||
+        new Set(closure.workKeys).size !== closure.workKeys.length
+      )
+        continue;
+      const terminal = db.prepare(`SELECT 1 FROM revision_work_reservations r
+        JOIN revision_work w ON w.id=r.work_id
+        WHERE r.project_id=? AND r.revision_id=? AND r.work_key=?
+        AND w.state IN ('done','failed','canceled')`);
+      if (
+        !closure.workKeys.every(
+          (key) => terminal.get(closure.projectId, closure.revisionId, key) !== undefined,
+        )
+      )
+        continue;
+      const changed = db
+        .prepare(`UPDATE review_checkpoints SET state='satisfied'
+          WHERE project_id=? AND revision_id=? AND checkpoint_id=?
+          AND state='released' AND approved_at IS NOT NULL`)
+        .run(closure.projectId, closure.revisionId, closure.checkpointId);
+      if (Number(changed.changes) !== 1) continue;
+      const row = listCheckpoints(db, closure.projectId, closure.revisionId).find(
+        (candidate) => candidate.checkpointId === closure.checkpointId,
+      );
+      if (row !== undefined) satisfied.push(row);
+    }
+    return satisfied;
+  };
+  return db.isTransaction ? settle() : transact(db, settle);
+}
 export function saveCheckpointSet(
   db: DatabaseSync,
   input: CheckpointSetInput,
@@ -122,7 +172,8 @@ export function approveCheckpoint(
       .get(value.projectId);
     if (head?.revision_id !== value.revisionId || row.fingerprint !== value.fingerprint)
       return { ok: false, reason: "conflict" };
-    if (row.state === "released") return { ok: false, reason: "duplicate", value: row };
+    if (row.state === "released" || (row.state === "satisfied" && receipt))
+      return { ok: false, reason: "duplicate", value: row };
     if (receipt) return { ok: false, reason: "conflict" };
     if (row.state !== "held" && row.state !== "pending-review")
       return { ok: false, reason: "conflict" };

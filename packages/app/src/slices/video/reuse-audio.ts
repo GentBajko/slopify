@@ -13,6 +13,9 @@ const planSchema = z.object({
   audio: z.array(z.object({ kind: z.string(), path: z.string().nullable(), seconds: z.number() })),
   output: z.string(),
   sourceIds: z.array(z.string()).optional(),
+  sourceHashes: z
+    .array(z.object({ id: z.string(), sha256: z.string().regex(/^[a-f0-9]{64}$/) }))
+    .optional(),
 });
 export type AudioExportRecord = z.infer<typeof planSchema>;
 
@@ -32,11 +35,13 @@ export function reusableAudioExport(
     saved = planSchema.parse(
       JSON.parse(readFileSync(outputPath(paths, projectId, record.path), "utf8")),
     );
-    const { sourceIds: previousIds, ...previousPlan } = saved;
-    const { sourceIds, ...currentPlan } = plan;
+    const { sourceIds: previousIds, sourceHashes: previousHashes, ...previousPlan } = saved;
+    const { sourceIds, sourceHashes, ...currentPlan } = plan;
     if (
       JSON.stringify(previousPlan) !== JSON.stringify(currentPlan) ||
-      (previousIds !== undefined && JSON.stringify(previousIds) !== JSON.stringify(sourceIds))
+      (previousIds !== undefined && JSON.stringify(previousIds) !== JSON.stringify(sourceIds)) ||
+      (previousHashes !== undefined &&
+        JSON.stringify(previousHashes) !== JSON.stringify(sourceHashes))
     )
       return undefined;
     const wav = statSync(outputPath(paths, projectId, media.path));
@@ -60,7 +65,11 @@ export function reusableAudioExport(
       )
         return undefined;
       const file = statSync(outputPath(paths, projectId, source.path));
-      if (!file.isFile() || file.size !== source.bytes || file.mtimeMs > wav.mtimeMs)
+      if (
+        !file.isFile() ||
+        file.size !== source.bytes ||
+        (previousHashes === undefined && file.mtimeMs > wav.mtimeMs)
+      )
         return undefined;
     }
     return media;

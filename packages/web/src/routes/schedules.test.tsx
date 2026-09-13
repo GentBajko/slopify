@@ -22,6 +22,7 @@ const summary = {
   nextRunAt: "2026-09-14T09:00:00.000Z",
   createdAt: "2026-09-12T00:00:00.000Z",
   updatedAt: "2026-09-12T00:00:00.000Z",
+  deletedAt: null,
 };
 
 it("shows schedules and sends a pause action with the current version", async () => {

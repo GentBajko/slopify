@@ -86,7 +86,7 @@ describe("optional media exports with real ffmpeg", () => {
     await renderVideo(h.deps, h.context());
     const before = readFileSync(join(h.dir, "audio.wav"));
     const row = outputsOf(h.deps.db, "p1").find((output) => output.role === "audio_export");
-    writeFileSync(body, "broken source");
+    writeFileSync(body, Buffer.alloc(source.length));
     await expect(renderVideo(h.deps, h.context())).rejects.toThrow(/ffmpeg/);
     expect(readFileSync(join(h.dir, "audio.wav"))).toEqual(before);
     expect(outputsOf(h.deps.db, "p1").find((output) => output.role === "audio_export")).toEqual(
@@ -101,7 +101,7 @@ describe("optional media exports with real ffmpeg", () => {
     await renderVideo(h.deps, h.context());
     const replaced = outputsOf(h.deps.db, "p1").filter((output) => output.role === "audio_export");
     expect(replaced).toHaveLength(1);
-    expect(replaced[0]?.id).not.toBe(row?.id);
+    expect(replaced[0]?.id).toBe(row?.id);
     expect(readFileSync(join(h.dir, "audio.wav"))).toEqual(before);
     expect(h.counted.events()).toEqual([]);
   });

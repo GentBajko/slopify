@@ -17,6 +17,7 @@ const plan: UpdatePlan = {
 };
 function harness(failure?: "install" | "health") {
   const calls: string[] = [];
+  const reports: string[] = [];
   const deps: UpdateFlowDeps = {
     install: async () => {
       calls.push("install");
@@ -45,10 +46,17 @@ function harness(failure?: "install" | "health") {
     activate: async () => {
       calls.push("activate");
     },
-    release: async () => {},
-    report: () => {},
+    release: async () => {
+      calls.push("release");
+    },
+    prune: async () => {
+      calls.push("prune");
+    },
+    report: (message) => {
+      reports.push(message);
+    },
   };
-  return { calls, deps };
+  return { calls, deps, reports };
 }
 describe("update handoff", () => {
   it("installs and verifies first, backs up after shutdown, and activates only a healthy new server", async () => {
@@ -60,7 +68,9 @@ describe("update handoff", () => {
       "backup",
       "start:/new/cli.js",
       "health:0.6.2",
+      "prune",
       "activate",
+      "release",
     ]);
   });
   it("never stops the serving application after a failed npm install", async () => {
@@ -126,6 +136,54 @@ describe("update handoff", () => {
     expect(h.calls).not.toContain("restore");
     expect(h.calls).not.toContain("stop");
     expect(h.calls).toContain("activate");
+    expect(h.calls).toContain("prune");
+  });
+  it("does not publish the activation pointer until artifact cleanup has settled", async () => {
+    const h = harness();
+    let finishPruning = () => {};
+    const pruning = new Promise<void>((resolve) => {
+      finishPruning = resolve;
+    });
+    const operation = runUpdateFlow(plan, {
+      ...h.deps,
+      prune: async () => {
+        h.calls.push("prune");
+        await pruning;
+      },
+    });
+
+    await expect
+      .poll(() => h.calls)
+      .toEqual(["install", "handoff", "backup", "start:/new/cli.js", "health:0.6.2", "prune"]);
+    expect(h.calls).not.toContain("activate");
+
+    finishPruning();
+    await operation;
+    expect(h.calls.slice(-2)).toEqual(["activate", "release"]);
+  });
+  it("keeps a committed update successful when obsolete-file cleanup fails", async () => {
+    const h = harness();
+    await runUpdateFlow(plan, {
+      ...h.deps,
+      prune: async () => {
+        h.calls.push("prune");
+        throw new Error("locked file");
+      },
+    });
+    expect(h.calls).toEqual([
+      "install",
+      "handoff",
+      "backup",
+      "start:/new/cli.js",
+      "health:0.6.2",
+      "prune",
+      "activate",
+      "release",
+    ]);
+    expect(h.reports).toEqual([
+      "The update started, but obsolete update files could not be removed.",
+      "Slopify 0.6.2 started successfully.",
+    ]);
   });
   it("pins the trusted package and registry and passes startup values as literal arguments", () => {
     const args = installArgs("C:\\Users\\A & B\\updates", "0.6.2");

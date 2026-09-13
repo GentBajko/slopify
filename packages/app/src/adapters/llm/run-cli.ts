@@ -28,7 +28,7 @@ export interface CliRun {
   // Never rejects. A caller that throws before the process ends must not leave an
   // unhandled rejection behind it.
   readonly ended: Promise<CliEnded>;
-  readonly kill: () => void;
+  readonly kill: (force?: boolean) => void;
 }
 
 export interface CliOptions {
@@ -47,6 +47,7 @@ export type RunCli = (
 // says why it stopped. Streaming stderr to the log is the upgrade if a provider ever
 // buries its reason in the first line of a long report.
 export const stderrMax = 8192;
+export const cliTerminationGraceMs = 1_000;
 
 export function nodeRunCli(
   binary: string,
@@ -61,9 +62,10 @@ export function nodeRunCli(
   // SIGTERM when the stage is cancelled, so no agent session outlives the run that started it.
   const command = cliCommand(binary);
   const child = spawn(command.file, [...command.args, ...args], {
-    signal,
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
+    // A private POSIX process group lets force cleanup include helpers spawned by a CLI.
+    detached: process.platform !== "win32",
     ...options,
   });
 
@@ -84,25 +86,81 @@ export function nodeRunCli(
     spawnError = error;
   });
 
+  let settled = false;
   const ended = new Promise<CliEnded>((resolve) => {
     const settle = (code: number | null): void => {
+      settled = true;
       resolve({ code, error: spawnError });
     };
     child.once("close", settle);
     // Close follows an error too; waiting for it keeps cleanup behind process exit.
   });
 
+  const terminate = (force = false): void => {
+    if (settled) return;
+    const pid = child.pid;
+    if (process.platform === "win32") {
+      if (force && pid !== undefined) {
+        const killer = spawn("taskkill", ["/pid", String(pid), "/t", "/f"], {
+          stdio: "ignore",
+          windowsHide: true,
+        });
+        killer.on("error", () => {});
+        killer.unref();
+      }
+      child.kill(force ? "SIGKILL" : "SIGTERM");
+    } else if (pid !== undefined) {
+      try {
+        process.kill(-pid, force ? "SIGKILL" : "SIGTERM");
+      } catch {
+        child.kill(force ? "SIGKILL" : "SIGTERM");
+      }
+    }
+    if (force) {
+      child.stdout?.destroy();
+      child.stderr?.destroy();
+    }
+  };
+  const abort = (): void => terminate();
+  if (signal.aborted) abort();
+  else signal.addEventListener("abort", abort, { once: true });
+  void ended.then(() => signal.removeEventListener("abort", abort));
+
   return {
     pid: child.pid,
     stdout: child.stdout === null ? nothing : bytesOf(child.stdout),
     stderr: (): string => stderr,
     ended,
-    kill: (): void => {
-      if (child.exitCode === null && child.signalCode === null) {
-        child.kill();
-      }
-    },
+    kill: terminate,
   };
+}
+
+/** Stop a CLI without letting a resistant process wedge pause, cancel, or app shutdown. */
+export async function stopCliRun(
+  run: CliRun,
+  graceMs = cliTerminationGraceMs,
+  forceMs = cliTerminationGraceMs,
+): Promise<CliEnded | undefined> {
+  run.kill();
+  const graceful = await endedWithin(run.ended, graceMs);
+  if (graceful !== undefined) return graceful;
+  run.kill(true);
+  return endedWithin(run.ended, forceMs);
+}
+
+async function endedWithin(
+  ended: Promise<CliEnded>,
+  timeoutMs: number,
+): Promise<CliEnded | undefined> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const result = await Promise.race([
+    ended,
+    new Promise<undefined>((resolve) => {
+      timer = setTimeout(() => resolve(undefined), timeoutMs);
+    }),
+  ]);
+  if (timer !== undefined) clearTimeout(timer);
+  return result;
 }
 
 // ceiling: both CLIs take one prompt string, so a system or assistant turn is flattened

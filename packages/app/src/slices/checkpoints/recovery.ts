@@ -7,8 +7,8 @@ import { recoverWork } from "../rebuild/repo.js";
 import type { ProjectRevision, RevisionDeps } from "../revisions/model.js";
 import { currentRevisionId, revisionById } from "../revisions/repo.js";
 import { refreshCheckpointGate, resolvedGate } from "./change.js";
-import type { CheckpointDecision } from "./model.js";
-import { listCheckpoints } from "./repo.js";
+import type { CheckpointDecision, CheckpointRow } from "./model.js";
+import { listCheckpoints, settleCheckpointClosures } from "./repo.js";
 import { isApprovalCurrent } from "./rules.js";
 
 export function checkpointDecisionForWork(deps: RevisionDeps, work: WorkRef): CheckpointDecision {
@@ -96,6 +96,30 @@ export function carryCheckpointGates(
         same && gate.state !== "canceled" ? gate.approvedAt : null,
       );
   }
+  settleReleasedCheckpoints(deps, revision.projectId, revision.id);
+}
+
+export function settleReleasedCheckpoints(
+  deps: RevisionDeps,
+  projectId: string,
+  revisionId = currentRevisionId(deps.db, projectId),
+): readonly CheckpointRow[] {
+  if (revisionId === undefined || currentRevisionId(deps.db, projectId) !== revisionId) return [];
+  const closures = listCheckpoints(deps.db, projectId, revisionId).flatMap((row) => {
+    if (row.state !== "released" || row.approvedAt === null) return [];
+    const resolved = resolvedGate(deps, row);
+    return resolved === undefined
+      ? []
+      : [
+          {
+            projectId,
+            revisionId,
+            checkpointId: row.checkpointId,
+            workKeys: resolved.workKeys,
+          },
+        ];
+  });
+  return settleCheckpointClosures(deps.db, closures);
 }
 
 export function recoverCheckpointWork(db: DatabaseSync): void {

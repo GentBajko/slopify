@@ -4,6 +4,7 @@ import { fakeImage } from "../../src/adapters/fake/image.js";
 import { fakeTts } from "../../src/adapters/fake/tts.js";
 import { setProjectPaused } from "../../src/slices/admission/repo.js";
 import { cancelProject } from "../../src/slices/cancel/index.js";
+import { settleReleasedCheckpoints } from "../../src/slices/checkpoints/recovery.js";
 import { restoreRevision } from "../../src/slices/revisions/mutations.js";
 import { current, deferred, save, tone } from "../revision-rebuild.fake.js";
 import { checkpointFixture } from "./review-checkpoints.http.js";
@@ -179,6 +180,7 @@ it("cancels a held checkpoint durably and refuses approval without leaking priva
       {
         ...h.deps,
         abort: h.runner.abortProject,
+        settleCheckpoints: (projectId) => settleReleasedCheckpoints(h.deps, projectId),
         emit: () => undefined,
       },
       h.projectId,

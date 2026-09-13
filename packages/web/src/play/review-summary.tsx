@@ -1,3 +1,4 @@
+import { readinessIsUsable } from "@app/kernel/ports/model.js";
 import type { Field } from "@app/slices/admission/substitute.js";
 import type { Entry } from "@app/slices/library/model.js";
 import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
@@ -28,7 +29,7 @@ function readiness(provider: ProviderStatus | undefined): {
 } {
   if (provider === undefined) return { ok: false, text: "Provider status unavailable" };
   if (provider.readiness.kind === "cli")
-    return provider.readiness.installed
+    return readinessIsUsable(provider.readiness)
       ? {
           ok: true,
           text:
@@ -36,7 +37,7 @@ function readiness(provider: ProviderStatus | undefined): {
               ? "CLI ready"
               : `CLI ready · ${provider.readiness.version}`,
         }
-      : { ok: false, text: "CLI not found" };
+      : { ok: false, text: provider.readiness.issue ?? "CLI not found" };
   return provider.readiness.hasKey
     ? { ok: true, text: "API key saved" }
     : { ok: false, text: "API key missing" };

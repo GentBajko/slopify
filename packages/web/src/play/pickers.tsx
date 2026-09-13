@@ -1,3 +1,4 @@
+import { readinessIsUsable } from "@app/kernel/ports/model.js";
 import type { ProviderFamily, ProviderStatus } from "@app/slices/settings/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
@@ -115,8 +116,8 @@ export function OptionPicker({
 
 // Every supported provider is listed, and one that cannot be
 // used is greyed with the reason beside its name rather than being hidden. The two
-// reasons are the two ways a provider is authorised - a stored key, or the CLI's own
-// login - so they read "Key missing" and "CLI missing".
+// reasons distinguish a stored-key problem, a missing executable, and an installed CLI that
+// cannot satisfy the adapter contract.
 export function providerOptions(
   providers: readonly ProviderStatus[],
   family: ProviderFamily,
@@ -137,7 +138,8 @@ export function providerOptions(
 function refusalOf(provider: ProviderStatus): string | undefined {
   const { readiness } = provider;
   if (readiness.kind === "cli") {
-    return readiness.installed ? undefined : "CLI missing";
+    if (readiness.issue !== undefined) return "CLI update required";
+    return readinessIsUsable(readiness) ? undefined : "CLI missing";
   }
   return readiness.hasKey ? undefined : "Key missing";
 }

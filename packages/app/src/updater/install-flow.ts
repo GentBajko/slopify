@@ -10,6 +10,7 @@ export interface UpdateFlowDeps {
   readonly restore: () => Promise<void>;
   readonly activate: () => Promise<void>;
   readonly release: () => Promise<void>;
+  readonly prune: () => Promise<void>;
   readonly report: (message: string) => void;
 }
 
@@ -23,6 +24,26 @@ export async function runUpdateFlow(plan: UpdatePlan, deps: UpdateFlowDeps): Pro
     backedUp = true;
     await deps.start(entry);
     await deps.healthy(plan.version);
+  } catch {
+    await deps.stopCandidate();
+    if (backedUp) await deps.restore();
+    await deps.start(plan.oldEntry);
+    await deps.healthy(plan.previousVersion);
+    deps.report("The update did not start; the previous version and database were restored.");
+    throw new Error("The previous Slopify version was restored.");
+  }
+  // Prune before publishing the activation pointer. The candidate's recovery watcher uses
+  // that pointer as its unlock signal, so publishing it first could admit a second update
+  // while this worker is still deleting artifacts. The pruner retains both runnable
+  // versions and the fresh rollback backup, so a later activation failure remains safe.
+  let pruneFailed = false;
+  try {
+    await deps.prune();
+  } catch {
+    // Cleanup is maintenance and must never prevent a healthy candidate from activating.
+    pruneFailed = true;
+  }
+  try {
     await deps.activate();
   } catch {
     await deps.stopCandidate();
@@ -32,8 +53,10 @@ export async function runUpdateFlow(plan: UpdatePlan, deps: UpdateFlowDeps): Pro
     deps.report("The update did not start; the previous version and database were restored.");
     throw new Error("The previous Slopify version was restored.");
   }
-  // The pointer rename commits the new database. The candidate may already observe
-  // it and accept writes, so a lost unlock acknowledgement can never trigger rollback.
+  if (pruneFailed)
+    deps.report("The update started, but obsolete update files could not be removed.");
+  // The pointer rename commits the new database. A lost unlock acknowledgement cannot
+  // safely roll it back; the candidate's watcher observes the same pointer and recovers.
   await deps.release();
   deps.report(`Slopify ${plan.version} started successfully.`);
 }

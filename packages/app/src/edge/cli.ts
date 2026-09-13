@@ -5,6 +5,7 @@ import { readVersion } from "../kernel/version.js";
 import { boot } from "../main.js";
 import { forwardManagedUpdate } from "../updater/forward.js";
 import { openBrowser } from "./open-browser.js";
+import { installSignalShutdown } from "./signal-shutdown.js";
 
 const { values } = parseArgs({
   options: {
@@ -38,11 +39,10 @@ try {
       console.warn(message);
     });
   }
-  process.on("SIGINT", () => {
-    stop().then(
-      () => process.exit(0),
-      () => process.exit(1),
-    );
+  installSignalShutdown({
+    on: (signal, listener) => process.on(signal, listener),
+    stop,
+    exit: (code) => process.exit(code),
   });
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));

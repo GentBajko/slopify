@@ -103,7 +103,12 @@ it("shares control receipt keys with save and refuses unreviewed resume", async 
 it("cancels historical draining work once even without a current running stage", async () => {
   const h = await fixture();
   try {
-    const deps = { ...h.deps, abort: h.abort, hasInflight: () => true };
+    const deps = {
+      ...h.deps,
+      abort: h.abort,
+      hasInflight: () => true,
+      settleCheckpoints: () => {},
+    };
     const first = await cancelProject(deps, h.projectId, h.request);
     expect(first.ok).toBe(true);
     expect(h.abort).toHaveBeenCalledTimes(1);

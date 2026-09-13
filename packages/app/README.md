@@ -13,17 +13,39 @@
 
 A prompt and a few keywords in. A narrated slideshow video out. Your keys, your machine, free.
 
+*Start contributing to the internet's enshittification today!*
+
 ```sh
 npx @gentbajko/slopify@latest
 ```
 
-That opens a browser at `http://127.0.0.1:6969`. Nothing to configure first; add
-provider keys on the Settings screen when you want a stage to generate rather than
-take what you paste in.
+That opens a browser at `http://127.0.0.1:6969`. Node 26 or newer is required.
 
-Six stages run as a graph: research, article, narration, images, thumbnail, video.
-Generate any of them, or provide the output yourself and that stage is skipped. The
-video is a slideshow with alternating zoom over the narration, rendered with ffmpeg.
+For a persistent install that makes `slopify` available everywhere:
+
+```sh
+npm install -g @gentbajko/slopify
+slopify
+```
+
+Both commands launch the same local app.
+
+## How to use it
+
+1. Add provider keys and voices in Settings. They stay in your local Slopify database.
+2. Write reusable article, image and thumbnail prompts in Prompts, using `{{keywords}}`
+   where each video's subject belongs.
+3. In Play, build an autosaved setup across Content, Outputs, Style and Review. Supply
+   or skip optional stages, preview subtitles, and inspect the estimated cost before Start.
+4. Follow total and per-stage progress in the project workspace. Pause unfinished work
+   to change providers, add review checkpoints, or edit a paused or completed project as
+   a retained revision. Saving does not rebuild until you explicitly ask.
+5. Save Play setups or project revisions as templates. Apply one to a fresh draft or
+   schedule one-off, daily or weekly jobs with keyword variants and a spend ceiling.
+
+The article is the only required output. Slopify can make a narrated or silent slideshow,
+an audio-only WAV, locally timed English subtitles, or just the intermediate results you
+select. Uploaded and already completed outputs are reused when their inputs still match.
 
 ## Inworld narration
 

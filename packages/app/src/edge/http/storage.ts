@@ -1,5 +1,10 @@
 import { Hono } from "hono";
-import { exportPortable, importPortable, storageUsage } from "../../slices/storage/portable.js";
+import {
+  exportPortable,
+  importPortable,
+  portableMaxArchiveBytes,
+  storageUsage,
+} from "../../slices/storage/portable.js";
 import { reconcileStorage } from "../../slices/storage/reconcile.js";
 import type { AppDeps } from "./app.js";
 import { problem, titleOf } from "./problem.js";
@@ -36,8 +41,8 @@ export function storageRoutes(deps: AppDeps) {
           title: titleOf(415),
           detail: "Upload a Slopify backup ZIP.",
         });
-      const bytes = new Uint8Array(await c.req.raw.arrayBuffer());
-      if (bytes.byteLength === 0 || bytes.byteLength > 100 * 1024 * 1024)
+      const upload = await readPortableUpload(c.req.raw);
+      if (!upload.ok)
         return problem(c, {
           status: 413,
           title: titleOf(413),
@@ -51,7 +56,7 @@ export function storageRoutes(deps: AppDeps) {
             ids: deps.ids,
             now: () => deps.clock.now().toISOString(),
           },
-          bytes,
+          upload.bytes,
         );
         return c.json(imported);
       } catch {
@@ -63,4 +68,48 @@ export function storageRoutes(deps: AppDeps) {
       }
     })
     .post("/cleanup", (c) => c.json(reconcileStorage(deps.db, deps.paths)));
+}
+
+async function readPortableUpload(
+  request: Request,
+): Promise<{ readonly ok: true; readonly bytes: Uint8Array } | { readonly ok: false }> {
+  const declared = request.headers.get("content-length");
+  if (declared !== null && /^\d+$/.test(declared) && Number(declared) > portableMaxArchiveBytes) {
+    try {
+      await request.body?.cancel();
+    } catch {
+      // The request is already rejected; cancellation only releases transport resources sooner.
+    }
+    return { ok: false };
+  }
+  if (request.body === null) return { ok: false };
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const next = await reader.read();
+      if (next.done) break;
+      if (next.value.byteLength > portableMaxArchiveBytes - total) {
+        try {
+          await reader.cancel();
+        } catch {
+          // The response is already decided; an upload transport failing cancellation is harmless.
+        }
+        return { ok: false };
+      }
+      total += next.value.byteLength;
+      chunks.push(next.value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  if (total === 0) return { ok: false };
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return { ok: true, bytes };
 }

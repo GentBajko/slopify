@@ -1,4 +1,5 @@
 import type { Catalogue } from "../../catalog/schema.js";
+import { readinessIsUsable } from "../../kernel/ports/model.js";
 import type { FieldError } from "../admission/rules.js";
 import type { RevisionView } from "../revisions/model.js";
 import { cliPathStatus } from "../settings/cli-paths.js";
@@ -47,13 +48,14 @@ export async function checkReadiness(
     const provider = providers.find(
       (row) => row.id === choice.provider && row.family === choice.family,
     );
-    if (
-      provider === undefined ||
-      (provider.readiness.kind === "cli"
-        ? !provider.readiness.installed
-        : !provider.readiness.hasKey)
-    ) {
-      fields.push({ field: choice.family, message: "Configure this provider before rebuilding." });
+    if (provider === undefined || !readinessIsUsable(provider.readiness)) {
+      fields.push({
+        field: choice.family,
+        message:
+          provider?.readiness.kind === "cli" && provider.readiness.issue
+            ? provider.readiness.issue
+            : "Configure this provider before rebuilding.",
+      });
       continue;
     }
     const models = await deps.modelsFor(choice.provider, choice.family);

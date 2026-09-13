@@ -25,13 +25,15 @@ const id = z.object({ id: z.uuid() });
 function refused(c: Context, result: Extract<ScheduleResult<never>, { ok: false }>): Response {
   const status = ["not-found", "missing-template"].includes(result.reason)
     ? 404
-    : ["conflict", "spend-limit", "unsupported-media"].includes(result.reason)
+    : ["conflict", "cancel-required", "spend-limit", "unsupported-media"].includes(result.reason)
       ? 409
       : 400;
   const detail: Record<string, string> = {
     "invalid-input": "Check the schedule fields and try again.",
     "not-found": "The schedule was not found.",
     conflict: "The schedule changed elsewhere. Reload it before trying again.",
+    "cancel-required":
+      "Cancel this schedule before deleting it. Completed schedules can be deleted directly.",
     "missing-template": "The selected template version is no longer available.",
     "unsupported-media": "This template contains provided media and cannot run unattended.",
     "not-due": "Choose a future one-off time.",

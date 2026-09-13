@@ -26,14 +26,21 @@ import { onInvalid, problem, titleOf } from "./problem.js";
 
 const param = z.object({ id: z.uuid() });
 function refused(c: Context, result: Extract<TemplateResult<never>, { ok: false }>): Response {
-  const status = result.reason === "not-found" ? 404 : result.reason === "conflict" ? 409 : 400;
+  const status =
+    result.reason === "not-found"
+      ? 404
+      : ["conflict", "referenced-by-schedule"].includes(result.reason)
+        ? 409
+        : 400;
   return problem(c, {
     status,
     title: titleOf(status),
     detail:
-      result.reason === "missing-prompt"
-        ? "A selected prompt or entry is unavailable. Choose another before saving the template."
-        : "Reload the template and check its setup before trying again.",
+      result.reason === "referenced-by-schedule"
+        ? "Cancel and delete the schedules using this template before deleting it. Their run history will be retained."
+        : result.reason === "missing-prompt"
+          ? "A selected prompt or entry is unavailable. Choose another before saving the template."
+          : "Reload the template and check its setup before trying again.",
     extensions: { reason: result.reason },
   });
 }

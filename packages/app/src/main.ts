@@ -15,6 +15,7 @@ import { type CatalogueStore, createCatalogueStore } from "./catalog/store.js";
 import { createHub } from "./edge/events/hub.js";
 import { currentProjectEvent } from "./edge/events/visibility.js";
 import { createApp } from "./edge/http/app.js";
+import { createMutationLifecycle, drainMutationsWithDeadline } from "./edge/http/mutations.js";
 import { openFolder } from "./edge/open-folder.js";
 import type { AudioPreviewStore } from "./kernel/audio-preview.js";
 import { createAudioPreviewStore } from "./kernel/audio-preview.js";
@@ -23,6 +24,7 @@ import { systemClock } from "./kernel/clock.js";
 import type { Config } from "./kernel/config/index.js";
 import { openDb } from "./kernel/db/index.js";
 import { migrate } from "./kernel/db/migrate.js";
+import { transact } from "./kernel/db/tx.js";
 import type { Ids } from "./kernel/ids.js";
 import { ulidIds } from "./kernel/ids.js";
 import { acquireInstanceLock } from "./kernel/lock.js";
@@ -46,7 +48,11 @@ import { modelSources } from "./model-catalog.js";
 import { projectPaused } from "./slices/admission/repo.js";
 import { pumpQueue, queueWaiting } from "./slices/batch/index.js";
 import { approveCheckpoint, type CheckpointRow } from "./slices/checkpoints/index.js";
-import { checkpointDecisionForWork, recoverCheckpointWork } from "./slices/checkpoints/recovery.js";
+import {
+  checkpointDecisionForWork,
+  recoverCheckpointWork,
+  settleReleasedCheckpoints,
+} from "./slices/checkpoints/recovery.js";
 import { resolveFont } from "./slices/fonts/index.js";
 import type { DraftStartDeps } from "./slices/play-drafts/model.js";
 import { templateById } from "./slices/project-templates/repo.js";
@@ -62,6 +68,7 @@ import {
 } from "./slices/rebuild/runtime-store.js";
 import type { RebuildDeps } from "./slices/rebuild/service.js";
 import type { ScheduleDeps } from "./slices/schedules/model.js";
+import { settleTerminalScheduleRuns } from "./slices/schedules/repo.js";
 import { createScheduleRunner } from "./slices/schedules/scheduler.js";
 import { nodeCliProbe } from "./slices/settings/cli-status.js";
 import { providerStatuses } from "./slices/settings/readiness.js";
@@ -86,6 +93,7 @@ import { createUpdater } from "./updater/service.js";
 // stay queued.
 const flushDelayMs = 1000;
 const collectorTimeoutMs = 10_000;
+const mutationDrainTimeoutMs = 5_000;
 
 export interface Boot {
   readonly paths: Paths;
@@ -93,10 +101,63 @@ export interface Boot {
   readonly stop: () => Promise<void>;
 }
 
+export interface ScheduleTickLifecycle {
+  readonly tick: () => Promise<void>;
+  readonly stop: () => Promise<void>;
+}
+
+export function createScheduleTickLifecycle(deps: {
+  readonly beginMutation: () => (() => void) | undefined;
+  readonly tick: () => Promise<void>;
+  readonly report: () => void;
+}): ScheduleTickLifecycle {
+  let stopping = false;
+  let inflight: Promise<void> | undefined;
+  const tick = (): Promise<void> => {
+    if (stopping) return Promise.resolve();
+    if (inflight !== undefined) return inflight;
+    const release = deps.beginMutation();
+    if (release === undefined) return Promise.resolve();
+    const running = (async () => {
+      try {
+        await deps.tick();
+      } catch {
+        try {
+          deps.report();
+        } catch {
+          // A logging failure must not turn a timer callback into an unhandled rejection.
+        }
+      } finally {
+        release();
+      }
+    })();
+    inflight = running;
+    void running.then(
+      () => {
+        if (inflight === running) inflight = undefined;
+      },
+      () => {
+        if (inflight === running) inflight = undefined;
+      },
+    );
+    return running;
+  };
+  return {
+    tick,
+    stop: () => {
+      stopping = true;
+      return inflight ?? Promise.resolve();
+    },
+  };
+}
+
 export async function boot(config: Config): Promise<Boot> {
   const clock: Clock = systemClock;
   const ids = ulidIds;
   const paths = layout(config.dataDir);
+  const candidateToken = process.env.SLOPIFY_UPDATE_TOKEN ?? "";
+  const pendingActivation =
+    isUpdateToken(candidateToken) && process.env.SLOPIFY_UPDATE_PENDING === "1";
   ensureDirs(paths, { mode: 0o700 });
   const lock = acquireInstanceLock(paths.lock);
   let db: DatabaseSync | undefined;
@@ -112,10 +173,17 @@ export async function boot(config: Config): Promise<Boot> {
     const runtimeDb = db;
     const interrupted = markInterruptedStages(db, clock);
     recoverCheckpointWork(db);
-    const reconciled = reconcileStorage(db, paths);
+    const settledSchedules = settleTerminalScheduleRuns(db, clock.now().toISOString());
+    // The updater can restore the database after a failed candidate boot, but it cannot
+    // restore files deleted by reconciliation. Leave the filesystem untouched until the
+    // candidate's committed activation pointer has been verified.
+    const reconciled = pendingActivation ? undefined : reconcileStorage(db, paths);
     const log = openLog(paths.logs, clock);
     log.write("info", "boot", {
-      detail: `interrupted stages ${interrupted}, orphan files ${reconciled.orphanFiles}, staged files ${reconciled.stagedFiles}`,
+      detail:
+        reconciled === undefined
+          ? `interrupted stages ${interrupted}, settled schedules ${settledSchedules}, storage reconciliation deferred during update activation`
+          : `interrupted stages ${interrupted}, settled schedules ${settledSchedules}, orphan files ${reconciled.orphanFiles}, staged files ${reconciled.stagedFiles}`,
     });
     const eventDb = db;
     const hub = createHub({
@@ -175,9 +243,6 @@ export async function boot(config: Config): Promise<Boot> {
       throw new Error("The server is not ready.");
     };
     let listeningPort = config.port;
-    const candidateToken = process.env.SLOPIFY_UPDATE_TOKEN ?? "";
-    const pendingActivation =
-      isUpdateToken(candidateToken) && process.env.SLOPIFY_UPDATE_PENDING === "1";
     const updater = createUpdater({
       ...(isUpdateToken(candidateToken)
         ? {
@@ -185,6 +250,20 @@ export async function boot(config: Config): Promise<Boot> {
               token: candidateToken,
               pending: pendingActivation,
               committed: () => updateCommitted(paths.dataDir, version, candidateToken),
+              settle: () => {
+                try {
+                  const settled = reconcileStorage(updateDb, paths);
+                  log.write("info", "update", {
+                    detail: `activation storage reconciliation removed ${settled.orphanFiles} orphan files and ${settled.stagedFiles} staged files`,
+                  });
+                } catch {
+                  // The pointer is already committed, so storage maintenance can no longer
+                  // safely reject or roll back this candidate. A normal restart retries it.
+                  log.write("error", "update", {
+                    detail: "Storage reconciliation failed after update activation.",
+                  });
+                }
+              },
             },
           }
         : {}),
@@ -266,6 +345,15 @@ export async function boot(config: Config): Promise<Boot> {
     };
     const scheduleRunner = createScheduleRunner(scheduleDeps);
     scheduleRunner.recover(clock.now());
+    const scheduleTicks = createScheduleTickLifecycle({
+      beginMutation: updater.beginMutation,
+      tick: scheduleRunner.tick,
+      report: () =>
+        log.write("error", "schedule.tick", {
+          detail: "Scheduled jobs could not be advanced.",
+        }),
+    });
+    const mutations = createMutationLifecycle();
     const app = createApp({
       rebuild,
       drafts: draftDeps,
@@ -277,6 +365,7 @@ export async function boot(config: Config): Promise<Boot> {
       hub,
       runner,
       updater,
+      mutations,
       audioPreviews,
       ...modelSources(registry),
       catalogue,
@@ -301,13 +390,9 @@ export async function boot(config: Config): Promise<Boot> {
       }
     }, 1000);
     const scheduleTimer = setInterval(() => {
-      void scheduleRunner.tick().catch(() => {
-        log.write("error", "schedule.tick", { detail: "Scheduled jobs could not be advanced." });
-      });
+      void scheduleTicks.tick();
     }, 15_000);
-    void scheduleRunner.tick().catch(() => {
-      log.write("error", "schedule.tick", { detail: "Scheduled jobs could not be advanced." });
-    });
+    void scheduleTicks.tick();
     listeningPort = portOf(server) ?? config.port;
     // Whatever last run left queued goes out at start. Nothing waits for
     // it, and an unreachable collector costs one refused socket.
@@ -319,24 +404,35 @@ export async function boot(config: Config): Promise<Boot> {
       stopping ??= (async () => {
         clearInterval(queueTimer);
         clearInterval(scheduleTimer);
+        const mutationDrain = mutations.stop();
+        const scheduleDrain = scheduleTicks.stop();
+        const serverClose = beginServerClose(server);
         stopActivation();
         audioPreviews.close();
         try {
-          // The listener goes first. Aborting the runner while the socket still accepted
-          // requests let a Play arriving during the await start a stage under a fresh
-          // controller nobody had aborted, which abortAll would then have waited out.
-          // Only once nothing new can arrive is the runner drained and the database shut.
-          await close(server);
+          // Admission closes before the listener. Requests already admitted keep the
+          // database until their response settles; anything racing shutdown receives 503.
+          await drainMutationsWithDeadline(
+            mutationDrain,
+            serverClose.terminate,
+            mutationDrainTimeoutMs,
+          );
+          await scheduleDrain;
           await runner.abortAll();
         } finally {
-          // The pending timer is cancelled rather than awaited: a shutdown must not wait
-          // on the collector. A flush already in flight may land after the database
-          // closes and fail to mark its batch delivered, which costs one re-send that
-          // the collector deduplicates by event id.
-          flusher.stop();
-          log.write("info", "shutdown");
-          open.close();
-          lock.release();
+          serverClose.terminate();
+          try {
+            await serverClose.closed;
+          } finally {
+            // The pending timer is cancelled rather than awaited: a shutdown must not wait
+            // on the collector. A flush already in flight may land after the database
+            // closes and fail to mark its batch delivered, which costs one re-send that
+            // the collector deduplicates by event id.
+            flusher.stop();
+            log.write("info", "shutdown");
+            open.close();
+            lock.release();
+          }
         }
       })();
       return stopping;
@@ -434,9 +530,12 @@ export function wireRunner({
       },
       maySubmit: (work, pieceId) => maySubmit(db, work, pieceId),
       finish: (work, state, reason) => {
-        finishWork(db, work, state, reason);
-        materializeAdmittedWork(execution, work.projectId);
-        projectStandings(execution, work.projectId);
+        transact(db, () => {
+          finishWork(db, work, state, reason);
+          materializeAdmittedWork(execution, work.projectId);
+          projectStandings(execution, work.projectId);
+          settleReleasedCheckpoints(execution, work.projectId);
+        });
       },
     },
     runs: Object.fromEntries(
@@ -475,13 +574,13 @@ function listen(app: Hono, config: Config, log: Log): Promise<ServerType> {
   });
 }
 
-function close(server: ServerType): Promise<void> {
+function beginServerClose(server: ServerType): {
+  readonly closed: Promise<void>;
+  readonly terminate: () => void;
+} {
   // An SSE response never ends by itself, and close() waits for every open connection,
-  // so a shutdown that only called close() would hang for as long as a page is open.
-  if ("closeAllConnections" in server) {
-    server.closeAllConnections();
-  }
-  return new Promise<void>((resolve, reject) => {
+  // so admitted mutations drain first and then the remaining sockets are terminated.
+  const closed = new Promise<void>((resolve, reject) => {
     server.close((error) => {
       if (error === undefined || error === null) {
         resolve();
@@ -490,6 +589,12 @@ function close(server: ServerType): Promise<void> {
       reject(error);
     });
   });
+  return {
+    closed,
+    terminate: () => {
+      if ("closeAllConnections" in server) server.closeAllConnections();
+    },
+  };
 }
 
 function portOf(server: ServerType): number | undefined {

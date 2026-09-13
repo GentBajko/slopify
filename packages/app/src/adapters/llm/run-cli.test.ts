@@ -6,7 +6,15 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { isProviderError } from "../../kernel/ports/model.js";
 import type { CliRun } from "./run-cli.js";
-import { cliEvent, cliShaped, endedWithout, nodeRunCli, promptOf, stderrMax } from "./run-cli.js";
+import {
+  cliEvent,
+  cliShaped,
+  endedWithout,
+  nodeRunCli,
+  promptOf,
+  stderrMax,
+  stopCliRun,
+} from "./run-cli.js";
 import { lines } from "./sse-lines.js";
 
 // These tests spawn real processes: the point of them is that the seam does what the
@@ -90,6 +98,28 @@ describe("nodeRunCli", () => {
       await delay(20);
     }
     expect(alive(run.pid)).toBe(false);
+  });
+
+  it("bounds graceful and forced cleanup even when a process never reports its exit", async () => {
+    const kills: boolean[] = [];
+    const ended = new Promise<never>(() => {});
+    const result = await stopCliRun(
+      {
+        pid: 42,
+        stdout: {
+          async *[Symbol.asyncIterator](): AsyncGenerator<Uint8Array> {
+            // no output
+          },
+        },
+        stderr: () => "",
+        ended,
+        kill: (force = false) => kills.push(force),
+      },
+      1,
+      1,
+    );
+    expect(result).toBeUndefined();
+    expect(kills).toEqual([false, true]);
   });
 
   it("keeps what the CLI wrote to stderr and the code it exited with", async () => {

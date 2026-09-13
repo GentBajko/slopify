@@ -20,6 +20,9 @@ export type CliProbe = (
 // Gemini's Node startup can take several seconds on Windows. Providers are probed in
 // parallel; a hung process is bounded without treating ordinary startup as missing.
 export const cliProbeTimeoutMs = 15_000;
+// The content adapter's isolation flags and feature gates were verified against this release.
+// Older Codex binaries must fail before admission instead of failing every generation attempt.
+export const minimumCodexCliVersion = "0.149.1";
 const probeOutputMax = 64 * 1024;
 
 // Known Windows package-manager shims are resolved to an executable plus fixed args;
@@ -52,17 +55,60 @@ export function nodeCliProbe(
 }
 
 export async function cliReadiness(probe: CliProbe, provider: CliProvider): Promise<Readiness> {
-  return readinessFromProbe(await probe(provider.binary, provider.versionArgs, cliProbeTimeoutMs));
+  return readinessFromProbe(
+    await probe(provider.binary, provider.versionArgs, cliProbeTimeoutMs),
+    provider,
+  );
 }
 
-export function readinessFromProbe(result: CliProbeResult): Readiness {
+export function readinessFromProbe(result: CliProbeResult, provider: CliProvider): Readiness {
   if (!result.ran) {
     return { kind: "cli", installed: false };
   }
   const version = versionFrom(result.stdout);
-  return version === undefined
-    ? { kind: "cli", installed: true }
-    : { kind: "cli", installed: true, version };
+  if (provider.id !== "codex")
+    return version === undefined
+      ? { kind: "cli", installed: true }
+      : { kind: "cli", installed: true, version };
+  if (version === undefined)
+    return {
+      kind: "cli",
+      installed: true,
+      issue: `Slopify could not verify this Codex CLI version. Install Codex CLI ${minimumCodexCliVersion} or newer, then try again.`,
+    };
+  if (!versionAtLeast(version, minimumCodexCliVersion))
+    return {
+      kind: "cli",
+      installed: true,
+      version,
+      issue: `Codex CLI ${minimumCodexCliVersion} or newer is required; version ${version} is installed. Update Codex CLI and try again.`,
+    };
+  return { kind: "cli", installed: true, version };
+}
+
+function versionAtLeast(version: string, minimum: string): boolean {
+  const candidate = comparableVersion(version);
+  const floor = comparableVersion(minimum);
+  if (candidate === undefined || floor === undefined) return false;
+  for (let index = 0; index < 3; index++) {
+    const current = candidate.parts[index] ?? 0n;
+    const required = floor.parts[index] ?? 0n;
+    if (current !== required) return current > required;
+  }
+  return !(candidate.prerelease && !floor.prerelease);
+}
+
+function comparableVersion(
+  version: string,
+): { readonly parts: readonly bigint[]; readonly prerelease: boolean } | undefined {
+  const parsed = /^(\d+)\.(\d+)(?:\.(\d+))?(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/.exec(
+    version,
+  );
+  if (parsed === null) return undefined;
+  return {
+    parts: [BigInt(parsed[1] ?? "0"), BigInt(parsed[2] ?? "0"), BigInt(parsed[3] ?? "0")],
+    prerelease: parsed[4] !== undefined,
+  };
 }
 
 // `claude --version` answers "2.1.258 (Claude Code)" and `codex --version` answers

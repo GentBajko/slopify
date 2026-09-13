@@ -1,5 +1,9 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+import { transact } from "../../kernel/db/tx.js";
+import { derive } from "../../kernel/runner/graph.js";
+import { projectPaused, stagesOf } from "../admission/repo.js";
+import { readStartReceipt } from "../play-drafts/start-repo.js";
 import {
   type ScheduleRun,
   type ScheduleSummary,
@@ -23,13 +27,15 @@ const rowSchema = z.object({
   next_run_at: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
+  deleted_at: z.string().nullable(),
 });
 
 export function scheduleById(db: DatabaseSync, id: string): ScheduleSummary | undefined {
   const row = db
     .prepare(
       `SELECT id,name,template_id,template_version,cadence_json,timezone,missed_policy,
-       overlap_policy,spend_limit_cents,items_json,status,version,next_run_at,created_at,updated_at
+       overlap_policy,spend_limit_cents,items_json,status,version,next_run_at,created_at,updated_at,
+       deleted_at
        FROM schedules WHERE id=?`,
     )
     .get(id);
@@ -40,7 +46,8 @@ export function scheduleRows(db: DatabaseSync): readonly ScheduleSummary[] {
   return db
     .prepare(
       `SELECT id,name,template_id,template_version,cadence_json,timezone,missed_policy,
-       overlap_policy,spend_limit_cents,items_json,status,version,next_run_at,created_at,updated_at
+       overlap_policy,spend_limit_cents,items_json,status,version,next_run_at,created_at,updated_at,
+       deleted_at
        FROM schedules ORDER BY created_at DESC,id`,
     )
     .all()
@@ -51,8 +58,10 @@ export function dueSchedules(db: DatabaseSync, now: string): readonly ScheduleSu
   return db
     .prepare(
       `SELECT id,name,template_id,template_version,cadence_json,timezone,missed_policy,
-       overlap_policy,spend_limit_cents,items_json,status,version,next_run_at,created_at,updated_at
-       FROM schedules WHERE status='active' AND next_run_at IS NOT NULL AND next_run_at <= ?
+       overlap_policy,spend_limit_cents,items_json,status,version,next_run_at,created_at,updated_at,
+       deleted_at
+       FROM schedules WHERE deleted_at IS NULL AND status='active' AND next_run_at IS NOT NULL
+       AND next_run_at <= ?
        ORDER BY next_run_at,id`,
     )
     .all(now)
@@ -67,8 +76,9 @@ export function insertSchedule(
   db.prepare(
     `INSERT INTO schedules
       (id,name,template_id,template_version,cadence_json,timezone,missed_policy,overlap_policy,
-       spend_limit_cents,items_json,status,version,creation_hash,next_run_at,created_at,updated_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       spend_limit_cents,items_json,status,version,creation_hash,next_run_at,created_at,updated_at,
+       deleted_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
   ).run(
     schedule.id,
     schedule.name,
@@ -86,6 +96,7 @@ export function insertSchedule(
     schedule.nextRunAt,
     schedule.createdAt,
     schedule.updatedAt,
+    schedule.deletedAt,
   );
 }
 
@@ -101,7 +112,7 @@ export function updateScheduleRow(
       `UPDATE schedules SET name=?,template_id=?,template_version=?,cadence_json=?,timezone=?,
        missed_policy=?,overlap_policy=?,spend_limit_cents=?,items_json=?,status=?,version=?,
        next_run_at=?,updated_at=?,mutation_id=?,mutation_hash=?
-       WHERE id=? AND version=?`,
+       WHERE id=? AND version=? AND deleted_at IS NULL`,
     )
     .run(
       schedule.name,
@@ -125,8 +136,18 @@ export function updateScheduleRow(
   return Number(changed.changes) === 1;
 }
 
-export function deleteScheduleRow(db: DatabaseSync, id: string, version: number): boolean {
-  const changed = db.prepare("DELETE FROM schedules WHERE id=? AND version=?").run(id, version);
+export function tombstoneScheduleRow(
+  db: DatabaseSync,
+  id: string,
+  version: number,
+  deletedAt: string,
+): boolean {
+  const changed = db
+    .prepare(
+      `UPDATE schedules SET deleted_at=?,next_run_at=NULL,version=version+1,updated_at=?
+       WHERE id=? AND version=? AND deleted_at IS NULL`,
+    )
+    .run(deletedAt, deletedAt, id, version);
   return Number(changed.changes) === 1;
 }
 
@@ -140,7 +161,8 @@ export function setScheduleStatus(
 ): boolean {
   const changed = db
     .prepare(
-      "UPDATE schedules SET status=?,next_run_at=?,version=version+1,updated_at=? WHERE id=? AND version=?",
+      `UPDATE schedules SET status=?,next_run_at=?,version=version+1,updated_at=?
+       WHERE id=? AND version=? AND deleted_at IS NULL`,
     )
     .run(status, nextRunAt, updatedAt, id, version);
   return Number(changed.changes) === 1;
@@ -186,6 +208,37 @@ export function updateRun(db: DatabaseSync, run: ScheduleRun): void {
   );
 }
 
+export function recordRunStartIdentity(db: DatabaseSync, run: ScheduleRun): void {
+  if (run.requestId === null) throw new Error("A scheduled Start requires a request identity.");
+  const changed = db
+    .prepare(
+      `UPDATE schedule_runs SET request_id=?,estimate_json=?
+       WHERE id=? AND status='running' AND request_id IS NULL AND project_ids_json='[]'`,
+    )
+    .run(run.requestId, run.estimate === null ? null : JSON.stringify(run.estimate), run.id);
+  if (Number(changed.changes) !== 1)
+    throw new Error("The scheduled run could not persist its Start identity.");
+}
+
+export function recordRunDispatch(db: DatabaseSync, run: ScheduleRun, recordedAt: string): void {
+  transact(db, () => {
+    const changed = db
+      .prepare(
+        `UPDATE schedule_runs SET request_id=?,project_ids_json=?,estimate_json=?
+         WHERE id=? AND status='running'`,
+      )
+      .run(
+        run.requestId,
+        JSON.stringify(run.projectIds),
+        run.estimate === null ? null : JSON.stringify(run.estimate),
+        run.id,
+      );
+    if (Number(changed.changes) !== 1)
+      throw new Error("The scheduled run could not record its admitted projects.");
+    for (const projectId of run.projectIds) settleScheduleRunsForProject(db, projectId, recordedAt);
+  });
+}
+
 export function runsForSchedule(db: DatabaseSync, scheduleId: string): readonly ScheduleRun[] {
   return db
     .prepare(
@@ -196,19 +249,134 @@ export function runsForSchedule(db: DatabaseSync, scheduleId: string): readonly 
     .map(parseRun);
 }
 
-export function activeRun(db: DatabaseSync, scheduleId: string): boolean {
-  return (
-    db
-      .prepare("SELECT 1 FROM schedule_runs WHERE schedule_id=? AND status='running' LIMIT 1")
-      .get(scheduleId) !== undefined
-  );
+export function activeRun(db: DatabaseSync, scheduleId: string, settledAt: string): boolean {
+  return transact(db, () => {
+    if (
+      db
+        .prepare("SELECT 1 FROM schedule_runs WHERE schedule_id=? AND status='running' LIMIT 1")
+        .get(scheduleId) !== undefined
+    )
+      return true;
+    const occurrences = db
+      .prepare(
+        `SELECT id,project_ids_json FROM schedule_runs
+         WHERE schedule_id=? AND projects_settled_at IS NULL
+         AND json_array_length(project_ids_json)>0
+         ORDER BY scheduled_for,started_at,id`,
+      )
+      .all(scheduleId)
+      .map((row) => z.object({ id: z.string(), project_ids_json: z.string() }).parse(row));
+    let anyActive = false;
+    for (const occurrence of occurrences) {
+      const ids = z.array(z.string()).parse(JSON.parse(occurrence.project_ids_json));
+      if (ids.some((id) => projectIsActive(db, id))) {
+        anyActive = true;
+        continue;
+      }
+      db.prepare(
+        "UPDATE schedule_runs SET projects_settled_at=? WHERE id=? AND projects_settled_at IS NULL",
+      ).run(settledAt, occurrence.id);
+    }
+    return anyActive;
+  });
 }
 
-export function recoverRunningRuns(db: DatabaseSync, endedAt: string): number {
-  const changed = db
-    .prepare("UPDATE schedule_runs SET status='failed',ended_at=?,error=? WHERE status='running'")
-    .run(endedAt, "The app stopped while this scheduled run was active.");
-  return Number(changed.changes);
+/**
+ * Permanently settles every scheduled occurrence containing `projectId` once all projects
+ * admitted by that occurrence are terminal. The runner calls this in the same transaction as
+ * its terminal work write, so a later edit creates a new revision without reopening history.
+ */
+export function settleScheduleRunsForProject(
+  db: DatabaseSync,
+  projectId: string,
+  settledAt: string,
+): number {
+  return transact(db, () => {
+    const occurrences = db
+      .prepare(
+        `SELECT DISTINCT schedule_runs.id, schedule_runs.project_ids_json
+         FROM schedule_runs, json_each(schedule_runs.project_ids_json) AS admitted
+         WHERE schedule_runs.projects_settled_at IS NULL AND admitted.value=?`,
+      )
+      .all(projectId)
+      .map((row) => z.object({ id: z.string(), project_ids_json: z.string() }).parse(row));
+    let settled = 0;
+    for (const occurrence of occurrences) {
+      const ids = z.array(z.string()).parse(JSON.parse(occurrence.project_ids_json));
+      if (ids.some((id) => projectIsActive(db, id))) continue;
+      const changed = db
+        .prepare(
+          "UPDATE schedule_runs SET projects_settled_at=? WHERE id=? AND projects_settled_at IS NULL",
+        )
+        .run(settledAt, occurrence.id);
+      settled += Number(changed.changes);
+    }
+    return settled;
+  });
+}
+
+/** Freeze every terminal admitted occurrence during boot/migration recovery before the UI can
+ * create a new revision on one of its projects. */
+export function settleTerminalScheduleRuns(db: DatabaseSync, settledAt: string): number {
+  return transact(db, () => {
+    const projectIds = db
+      .prepare(
+        `SELECT DISTINCT admitted.value AS project_id
+         FROM schedule_runs, json_each(schedule_runs.project_ids_json) AS admitted
+         WHERE schedule_runs.projects_settled_at IS NULL`,
+      )
+      .all()
+      .map((row) => z.object({ project_id: z.string() }).parse(row).project_id);
+    let settled = 0;
+    for (const projectId of projectIds)
+      settled += settleScheduleRunsForProject(db, projectId, settledAt);
+    return settled;
+  });
+}
+
+function projectIsActive(db: DatabaseSync, projectId: string): boolean {
+  if (db.prepare("SELECT 1 FROM projects WHERE id=?").get(projectId) === undefined) return false;
+  const state = derive(stagesOf(db, projectId), projectPaused(db, projectId));
+  return state !== "done" && state !== "failed" && state !== "canceled";
+}
+
+export function recoverRunningRuns(
+  db: DatabaseSync,
+  endedAt: string,
+  error = "The app stopped while this scheduled run was active.",
+): number {
+  return transact(db, () => {
+    const pending = db
+      .prepare(
+        `SELECT id,request_id FROM schedule_runs
+         WHERE status='running' AND request_id IS NOT NULL AND project_ids_json='[]'`,
+      )
+      .all()
+      .map((row) => z.object({ id: z.string(), request_id: z.string() }).parse(row));
+    for (const row of pending) {
+      const receipt = readStartReceipt(db, row.request_id);
+      if (receipt === undefined || receipt.result.requestId !== row.request_id) continue;
+      db.prepare(
+        `UPDATE schedule_runs SET project_ids_json=?
+         WHERE id=? AND status='running' AND request_id=? AND project_ids_json='[]'`,
+      ).run(JSON.stringify(receipt.result.projectIds), row.id, row.request_id);
+    }
+    const admitted = db
+      .prepare(
+        `SELECT project_ids_json FROM schedule_runs
+         WHERE status='running' AND json_array_length(project_ids_json)>0`,
+      )
+      .all()
+      .flatMap((row) => {
+        const parsed = z.object({ project_ids_json: z.string() }).parse(row);
+        return z.array(z.string()).parse(JSON.parse(parsed.project_ids_json));
+      });
+    const changed = db
+      .prepare("UPDATE schedule_runs SET status='failed',ended_at=?,error=? WHERE status='running'")
+      .run(endedAt, error);
+    for (const projectId of admitted) settleScheduleRunsForProject(db, projectId, endedAt);
+    return Number(changed.changes);
+  });
 }
 
 function parseSchedule(row: unknown): ScheduleSummary {
@@ -229,6 +397,7 @@ function parseSchedule(row: unknown): ScheduleSummary {
     nextRunAt: value.next_run_at,
     createdAt: value.created_at,
     updatedAt: value.updated_at,
+    deletedAt: value.deleted_at,
   });
 }
 

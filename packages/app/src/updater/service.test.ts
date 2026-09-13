@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { newerVersion } from "./model.js";
 import { createUpdater } from "./service.js";
 
@@ -145,12 +145,25 @@ describe("app updater", () => {
   });
   it("keeps candidate mutations blocked until the authenticated pointer commit, including concurrent unlocks", async () => {
     let committed = false;
+    let settled = 0;
+    let finishSettlement = () => {};
+    const settlement = new Promise<void>((resolve) => {
+      finishSettlement = resolve;
+    });
     const token = "a".repeat(64);
     const updater = createUpdater({
       currentVersion: "0.6.2",
       now: () => 0,
       busy: () => false,
-      candidate: { token, pending: true, committed: async () => committed },
+      candidate: {
+        token,
+        pending: true,
+        committed: async () => committed,
+        settle: async () => {
+          settled++;
+          await settlement;
+        },
+      },
       latest: async () => "0.6.3",
       unsupported: () => undefined,
       install: async () => {},
@@ -168,6 +181,11 @@ describe("app updater", () => {
       true,
       true,
     ]);
+    expect(updater.beginMutation()).toBeUndefined();
+    await vi.waitFor(() => expect(settled).toBe(1));
+    expect(updater.beginMutation()).toBeUndefined();
+    finishSettlement();
+    await vi.waitFor(() => expect(updater.locked()).toBe(false));
     const release = updater.beginMutation();
     expect(release).toBeTypeOf("function");
     release?.();

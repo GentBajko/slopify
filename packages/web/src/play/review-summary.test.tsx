@@ -2,6 +2,7 @@ import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import { act, cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it } from "vitest";
+import { jsonAnswer } from "@/test-app";
 import { freshDraftDocument } from "./draft-state";
 import { reviewHarness, reviewStorage, suppliedDocument } from "./review-test-harness";
 
@@ -95,6 +96,43 @@ it("links a missing CLI back to the provider control", async () => {
   });
   const readiness = within(screen.getByRole("region", { name: "Run readiness summary" }));
   expect(readiness.getByText("CLI not found")).not.toBeNull();
+  expect(readiness.getByRole("button", { name: "Edit ↗" })).not.toBeNull();
+});
+
+it("shows actionable guidance for an installed but incompatible CLI", async () => {
+  const issue =
+    "Codex CLI 0.149.1 or newer is required; version 0.148.0 is installed. Update Codex CLI and try again.";
+  const harness = reviewHarness(undefined, {
+    "GET /api/providers": jsonAnswer({
+      providers: [
+        {
+          id: "codex",
+          family: "llm",
+          displayName: "Codex CLI",
+          readiness: { kind: "cli", installed: true, version: "0.148.0", issue },
+        },
+        {
+          id: "elevenlabs",
+          family: "tts",
+          displayName: "ElevenLabs",
+          readiness: { kind: "keyed", hasKey: true },
+        },
+        {
+          id: "fal",
+          family: "image",
+          displayName: "fal.ai",
+          readiness: { kind: "keyed", hasKey: true },
+        },
+      ],
+    }),
+  });
+  await harness.prepare({
+    ...generated,
+    form: { ...generated.form, llm: { provider: "codex", model: "gpt-5" } },
+  });
+
+  const readiness = within(screen.getByRole("region", { name: "Run readiness summary" }));
+  expect(readiness.getByText(issue)).not.toBeNull();
   expect(readiness.getByRole("button", { name: "Edit ↗" })).not.toBeNull();
 });
 

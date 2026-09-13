@@ -37,7 +37,11 @@ it("creates, reads and pauses a schedule through the HTTP contract", async () =>
       body: JSON.stringify(body),
     });
     expect(created.status).toBe(201);
-    expect(await created.json()).toMatchObject({ id, nextRunAt: "2026-09-12T00:01:00.000Z" });
+    expect(await created.json()).toMatchObject({
+      id,
+      nextRunAt: "2026-09-12T00:01:00.000Z",
+      deletedAt: null,
+    });
     expect((await app.request("/api/schedules")).status).toBe(200);
     expect((await app.request(`/api/schedules/${id}`)).status).toBe(200);
     const paused = await app.request(`/api/schedules/${id}/pause`, {

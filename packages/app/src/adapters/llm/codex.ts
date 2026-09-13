@@ -1,10 +1,13 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { z } from "zod";
 import { redact } from "../../kernel/log.js";
 import type { LlmCompletion, LlmEvent, LlmPort, Usage } from "../../kernel/ports/llm.js";
 import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
-import type { RunCli } from "./run-cli.js";
-import { cliEvent, cliShaped, endedWithout, promptOf } from "./run-cli.js";
+import type { CliEnded, CliOptions, RunCli } from "./run-cli.js";
+import { cliEvent, cliShaped, endedWithout, promptOf, stopCliRun } from "./run-cli.js";
 import { lines } from "./sse-lines.js";
 
 // The local-agent adapter for the Codex CLI. Same shape as Claude Code's and a different
@@ -23,19 +26,76 @@ export interface CodexDeps {
   readonly readModels?: (() => Promise<readonly ModelInfo[]>) | undefined;
 }
 
-// `codex exec --help` (0.149.1) for the flags. `-c web_search=<mode>` is a TOML override, and
-// the binary's own error names the modes: "unknown variant `bogus`, expected one of `disabled`,
-// `cached`, `indexed`, `live`". `live` is the grounded mode research asks for and `disabled` is
-// what every other stage runs under, so none grounds itself by accident. `--ephemeral` keeps no
-// session file, `--skip-git-repo-check` lets it run in the data directory, and the quotes in
-// the value are part of the argv element because the override is parsed as TOML, where a bare
-// `live` is not a string.
-export function codexArgs(req: LlmCompletion): string[] {
+const writingRole =
+  "You are the writing and research component of Slopify, a video creation app. " +
+  "Produce the text requested in the supplied conversation: articles, narration scripts, " +
+  "research notes or image prompts. Follow the requested topic, language, tone, length and format. " +
+  "Return only the requested content, without progress updates or introductory remarks. " +
+  "Use web search when it is available and needed for the requested research. " +
+  "Do not inspect or modify local files.";
+
+// Codex is a coding agent by default, while this adapter is a content provider. These supported
+// feature gates remove every local or account-connected tool exposed by 0.149.1. Native web
+// search is controlled separately below, so grounded research still works without a shell.
+const disabledFeatures = [
+  "shell_tool",
+  "unified_exec",
+  "code_mode_host",
+  "hooks",
+  "apps",
+  "plugins",
+  "remote_plugin",
+  "skill_search",
+  "multi_agent",
+  "computer_use",
+  "browser_use",
+  "image_generation",
+  "view_image",
+  "workspace_dependencies",
+] as const;
+
+// `codex exec --help` (0.149.1) for the flags. `--ignore-user-config` retains authentication
+// while excluding config.toml, `--ignore-rules` excludes user/project exec policy, and strict
+// config makes an older CLI fail closed if it cannot apply a hardening override. A private cwd
+// plus a zero project-doc budget excludes AGENTS.md and project `.codex` context. Read-only is
+// defense in depth if a future release exposes a new filesystem tool. The TOML strings keep their
+// quotes because each `-c` value is parsed as TOML rather than as a shell expression.
+export function codexArgs(req: LlmCompletion, directory: string): string[] {
   return [
     "exec",
     "--json",
     "--ephemeral",
+    "--ignore-user-config",
+    "--ignore-rules",
+    "--strict-config",
     "--skip-git-repo-check",
+    "--sandbox",
+    "read-only",
+    "--cd",
+    directory,
+    ...disabledFeatures.flatMap((feature) => ["--disable", feature]),
+    "-c",
+    "project_doc_max_bytes=0",
+    "-c",
+    "skills.include_instructions=false",
+    "-c",
+    "skills.bundled.enabled=false",
+    "-c",
+    "orchestrator.skills.enabled=false",
+    "-c",
+    "orchestrator.mcp.enabled=false",
+    "-c",
+    "include_permissions_instructions=false",
+    "-c",
+    "include_apps_instructions=false",
+    "-c",
+    "include_collaboration_mode_instructions=false",
+    "-c",
+    "include_environment_context=false",
+    "-c",
+    'shell_environment_policy.inherit="none"',
+    "-c",
+    `instructions=${JSON.stringify(writingRole)}`,
     "-c",
     `web_search="${req.webSearch === true ? "live" : "disabled"}"`,
     ...(req.thinkingConfig?.effort
@@ -67,8 +127,12 @@ export function codexLlm(deps: CodexDeps): LlmPort {
   const binary = deps.binary ?? codexBinary;
 
   async function* complete(req: LlmCompletion): AsyncGenerator<LlmEvent> {
-    const run = deps.run(binary, codexArgs(req), req.signal);
+    req.signal.throwIfAborted();
+    const workspace = codexWorkspace();
+    let run: ReturnType<RunCli> | undefined;
+    let ended: CliEnded | undefined;
     try {
+      run = deps.run(binary, codexArgs(req, workspace.directory), req.signal, workspace.options);
       for await (const line of lines(run.stdout, req.signal)) {
         if (line.trim() === "") {
           continue;
@@ -112,7 +176,11 @@ export function codexLlm(deps: CodexDeps): LlmPort {
       req.signal.throwIfAborted();
       throw error;
     } finally {
-      run.kill();
+      try {
+        if (run !== undefined) ended = await stopCliRun(run);
+      } finally {
+        workspace.remove();
+      }
     }
     // A cancelled run ends its stream the same way an exhausted one does: the child was
     // killed, so stdout simply stopped. An aborted call counts as nothing, so it must not
@@ -121,7 +189,10 @@ export function codexLlm(deps: CodexDeps): LlmPort {
     // The stream ended with neither a completed turn nor a failure.
     throw providerError({
       kind: "other",
-      message: endedWithout(binary, await run.ended, run.stderr()),
+      message:
+        ended === undefined
+          ? `the ${binary} CLI did not stop after forced termination`
+          : endedWithout(binary, ended, run.stderr()),
     });
   }
 
@@ -131,6 +202,33 @@ export function codexLlm(deps: CodexDeps): LlmPort {
     capabilities: { streams: true, reportsUsage: true, webSearch: true },
     models: deps.readModels ?? (() => Promise.resolve(codexModels)),
     complete,
+  };
+}
+
+function codexWorkspace(): {
+  readonly directory: string;
+  readonly options: CliOptions;
+  readonly remove: () => void;
+} {
+  const directory = mkdtempSync(join(tmpdir(), "slopify-codex-"));
+  // npm sets INIT_CWD to the directory from which the app was launched. Do not hand that path,
+  // an old shell directory or Git's explicit worktree pointers to the content subprocess.
+  const env = { ...process.env };
+  delete env.INIT_CWD;
+  delete env.OLDPWD;
+  delete env.GIT_DIR;
+  delete env.GIT_WORK_TREE;
+  env.PWD = directory;
+  return {
+    directory,
+    options: { cwd: directory, env },
+    remove: () =>
+      rmSync(directory, {
+        recursive: true,
+        force: true,
+        maxRetries: 3,
+        retryDelay: 50,
+      }),
   };
 }
 

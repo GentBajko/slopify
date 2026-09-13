@@ -14,6 +14,7 @@ export {
   checkpointForWork,
   listCheckpoints,
   saveCheckpointSet,
+  settleCheckpointClosures,
 } from "./repo.js";
 export {
   checkpointApprovalSchema,

@@ -5,16 +5,32 @@ on:
     tags:
       - 'v*'
 
-# id-token is what authenticates the publish and signs the provenance attestation:
-# the npmjs.com package must have this workflow registered as a trusted publisher,
-# because no NPM_TOKEN is set here.
 permissions:
   contents: read
-  id-token: write
 
 jobs:
-  publish:
+  metadata:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - name: Verify tag matches package version
+        run: node -e "const version=require('./packages/app/package.json').version; if (!/^\d+\.\d+\.\d+$/.test(version) || process.env.GITHUB_REF_NAME !== 'v' + version) { throw new Error('Stable tag ' + process.env.GITHUB_REF_NAME + ' does not match package version ' + version); }"
+
+  verify:
+    needs: metadata
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    # OIDC authenticates npm trusted publishing and signs provenance. Keep it off the
+    # dependency-installing verification jobs, which need only read the repository.
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

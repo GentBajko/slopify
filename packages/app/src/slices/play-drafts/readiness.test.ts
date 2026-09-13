@@ -32,6 +32,39 @@ it("supplied-only runs require no provider discovery", async () => {
   }
 });
 
+it("refuses an installed CLI with an incompatible-version issue", async () => {
+  const h = startFixture();
+  try {
+    const run = generated(h, "llm");
+    const choice = run.draft.llm;
+    if (!choice) throw new Error("Missing choice");
+    const issue = "Codex CLI 0.149.1 or newer is required. Update Codex CLI and try again.";
+    const result = await checkDraftReadiness(
+      {
+        ...h.deps,
+        providers: async () => [
+          {
+            id: "codex",
+            family: "llm",
+            displayName: "Codex CLI",
+            readiness: { kind: "cli", installed: true, version: "0.148.0", issue },
+          },
+        ],
+      },
+      [
+        {
+          ...run,
+          draft: { ...run.draft, llm: { ...choice, provider: "codex" } },
+        },
+      ],
+    );
+
+    expect(result.fields).toContainEqual({ field: "llm", message: issue });
+  } finally {
+    h.close();
+  }
+});
+
 function generated(
   h: ReturnType<typeof startFixture>,
   family: "llm" | "tts" | "image",

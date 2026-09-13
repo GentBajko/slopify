@@ -2,10 +2,15 @@ import { z } from "zod";
 import { cadenceSchema, validTimeZone } from "./calendar.js";
 
 const id = z.uuid();
+const keywordName = z
+  .string()
+  .min(1)
+  .max(200)
+  .refine((value) => value === value.trim(), "Keyword names cannot start or end with spaces.");
 const item = z
   .object({
     title: z.string().trim().min(1).max(200),
-    values: z.record(z.string().max(200), z.string().max(10000)).readonly(),
+    values: z.record(keywordName, z.string().max(10000)).readonly(),
   })
   .strict()
   .readonly();
@@ -55,6 +60,7 @@ export const scheduleSummarySchema = z
     nextRunAt: z.string().datetime({ offset: true }).nullable(),
     createdAt: z.string(),
     updatedAt: z.string(),
+    deletedAt: z.string().datetime({ offset: true }).nullable(),
   })
   .strict()
   .readonly();

@@ -1,4 +1,4 @@
-import { readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { readFileSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 import { projectById, updateProjectConfig } from "../admission/repo.js";
@@ -57,11 +57,18 @@ it.each([false, true])(
       const p = join(h.dir, "render.json");
       const plan = JSON.parse(readFileSync(p, "utf8"));
       delete plan.sourceIds;
+      delete plan.sourceHashes;
       writeFileSync(p, JSON.stringify(plan));
     }
     const wav = join(h.dir, "audio.wav"),
       before = readFileSync(wav),
       mtime = statSync(wav).mtimeMs;
+    // Modern records bind the WAV to source hashes. A backup tool or filesystem
+    // timestamp correction must not force a needless audio re-encode.
+    if (!legacy) {
+      const later = new Date(Date.now() + 60_000);
+      utimesSync(join(h.dir, "audio_body.wav"), later, later);
+    }
     const original = outputsOf(h.deps.db, "p1").find((o) => o.role === "audio_export");
     const align = vi.fn(async () => aligned);
     const deps: VideoDeps = { ...h.deps, ffmpeg: "must-not-launch-ffmpeg", alignSubtitles: align };
@@ -81,6 +88,21 @@ it.each([false, true])(
     expect(statSync(wav).mtimeMs).toBe(mtime);
   },
 );
+
+it("re-encodes an older ID-only plan when its source became newer than the WAV", async () => {
+  const h = setup();
+  await renderVideo(h.deps, h.context());
+  const record = join(h.dir, "render.json");
+  const plan = JSON.parse(readFileSync(record, "utf8"));
+  delete plan.sourceHashes;
+  writeFileSync(record, JSON.stringify(plan));
+  const later = new Date(Date.now() + 60_000);
+  utimesSync(join(h.dir, "audio_body.wav"), later, later);
+
+  await expect(
+    renderVideo({ ...h.deps, ffmpeg: "must-run-new-export" }, h.context()),
+  ).rejects.toThrow();
+});
 
 it("rolls back subtitle replacement without touching the retained WAV or captions", async () => {
   const h = setup();

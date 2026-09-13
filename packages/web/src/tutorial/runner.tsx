@@ -1,3 +1,4 @@
+import { readinessIsUsable } from "@app/kernel/ports/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import type { Dispatch, SetStateAction } from "react";
@@ -13,9 +14,7 @@ import { Spotlight } from "./spotlight";
 import { StepContent } from "./step-content";
 
 function ready(provider: ProviderStatus): boolean {
-  return provider.readiness.kind === "cli"
-    ? provider.readiness.installed
-    : provider.readiness.hasKey;
+  return readinessIsUsable(provider.readiness);
 }
 
 export function TutorialRunner({

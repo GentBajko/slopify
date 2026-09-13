@@ -9,6 +9,8 @@ import {
   activeRun,
   dueSchedules,
   insertRun,
+  recordRunDispatch,
+  recordRunStartIdentity,
   recoverRunningRuns,
   scheduleById,
   updateRun,
@@ -29,9 +31,18 @@ export function createScheduleRunner(deps: ScheduleDeps): ScheduleRunner {
       if (ticking) return;
       ticking = true;
       try {
+        recoverRunningRuns(
+          deps.db,
+          now.toISOString(),
+          "The previous schedule tick could not record this run's result.",
+        );
         const due = dueSchedules(deps.db, now.toISOString());
         const claimed = due.flatMap((schedule) => claim(deps, schedule, now));
-        await Promise.allSettled(claimed.map((entry) => execute(deps, entry)));
+        const settled = await Promise.allSettled(claimed.map((entry) => execute(deps, entry)));
+        const failed = settled.find(
+          (result): result is PromiseRejectedResult => result.status === "rejected",
+        );
+        if (failed) throw failed.reason;
       } finally {
         ticking = false;
       }
@@ -66,7 +77,8 @@ function claim(
       current.status !== "active"
     )
       return [];
-    const skip = occurrence || activeRun(deps.db, schedule.id);
+    const overlapping = activeRun(deps.db, schedule.id, now.toISOString());
+    const skip = occurrence || overlapping;
     const run: ScheduleRun = {
       id: deps.uuid(),
       scheduleId: schedule.id,
@@ -78,7 +90,7 @@ function claim(
       startedAt: now.toISOString(),
       endedAt: skip ? now.toISOString() : null,
       error: skip
-        ? activeRun(deps.db, schedule.id)
+        ? overlapping
           ? "Skipped because another occurrence is still running."
           : "Skipped because the app missed this occurrence."
         : null,
@@ -121,6 +133,12 @@ async function execute(deps: ScheduleDeps, claimed: ClaimedScheduleRun): Promise
         high * 100 > claimed.schedule.spendLimitCents)
     )
       throw new ScheduleDispatchError("spend-limit");
+    run = {
+      ...run,
+      requestId: review.value.id,
+      estimate: review.value.estimates,
+    };
+    recordRunStartIdentity(deps.db, run);
     const started = await startPlayDraft(deps, {
       draftId: draft.value.draft.id,
       baseVersion: 1,
@@ -129,10 +147,13 @@ async function execute(deps: ScheduleDeps, claimed: ClaimedScheduleRun): Promise
     if (!started.ok) throw new ScheduleDispatchError(started.reason);
     run = {
       ...run,
-      status: "succeeded",
       requestId: started.value.requestId,
       projectIds: started.value.projectIds,
-      estimate: review.value.estimates,
+    };
+    recordRunDispatch(deps.db, run, deps.clock.now().toISOString());
+    run = {
+      ...run,
+      status: "succeeded",
       endedAt: deps.clock.now().toISOString(),
     };
   } catch (error) {

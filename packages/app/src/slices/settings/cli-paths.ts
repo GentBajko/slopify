@@ -104,7 +104,7 @@ async function save(deps: CliPathDeps, id: ProviderId, raw: string): Promise<Sav
   }
   const command = configured ?? provider.binary;
   const probed = await deps.probe(command, provider.versionArgs, cliProbeTimeoutMs);
-  const readiness = readinessFromProbe(probed);
+  const readiness = readinessFromProbe(probed, provider);
   if (configured !== null && readiness.kind === "cli" && !readiness.installed)
     return {
       ok: false,

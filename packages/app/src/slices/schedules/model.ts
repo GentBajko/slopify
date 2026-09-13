@@ -14,6 +14,7 @@ export type ScheduleResult<T> =
         | "invalid-input"
         | "not-found"
         | "conflict"
+        | "cancel-required"
         | "missing-template"
         | "unsupported-media"
         | "not-due"

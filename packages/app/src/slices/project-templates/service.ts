@@ -110,6 +110,12 @@ export function deleteTemplate(
     const previous = templateById(deps.db, parsed.data.id);
     if (!previous) return { ok: false, reason: "not-found" };
     if (previous.version !== parsed.data.baseVersion) return { ok: false, reason: "conflict" };
+    if (
+      deps.db
+        .prepare("SELECT 1 FROM schedules WHERE template_id=? AND deleted_at IS NULL LIMIT 1")
+        .get(parsed.data.id)
+    )
+      return { ok: false, reason: "referenced-by-schedule" };
     deps.db.prepare("DELETE FROM project_templates WHERE id=?").run(parsed.data.id);
     return { ok: true, value: { deleted: true } };
   });

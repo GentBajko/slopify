@@ -4,12 +4,12 @@ import { requestHash } from "../play-drafts/repo.js";
 import { nextOccurrence } from "./calendar.js";
 import type { ScheduleDeps, ScheduleResult } from "./model.js";
 import {
-  deleteScheduleRow,
   insertSchedule,
   runsForSchedule,
   scheduleById,
   scheduleRows,
   setScheduleStatus,
+  tombstoneScheduleRow,
   updateScheduleRow,
 } from "./repo.js";
 import {
@@ -31,8 +31,9 @@ export function listScheduleRuns(
   id: string,
 ): ScheduleResult<readonly ScheduleRun[]> {
   if (!z.uuid().safeParse(id).success) return { ok: false, reason: "invalid-input" };
-  if (!scheduleById(deps.db, id)) return { ok: false, reason: "not-found" };
-  return { ok: true, value: runsForSchedule(deps.db, id) };
+  const runs = runsForSchedule(deps.db, id);
+  if (!scheduleById(deps.db, id) && runs.length === 0) return { ok: false, reason: "not-found" };
+  return { ok: true, value: runs };
 }
 
 export function createSchedule(
@@ -41,21 +42,26 @@ export function createSchedule(
 ): ScheduleResult<ScheduleSummary> {
   const parsed = scheduleCreateSchema.safeParse(input);
   if (!parsed.success) return { ok: false, reason: "invalid-input" };
-  const checked = checkTemplate(deps, parsed.data.templateId, parsed.data.templateVersion);
-  if (!checked.ok) return checked;
-  const now = deps.clock.now();
-  const next = nextOccurrence(parsed.data.cadence, parsed.data.timezone, now);
-  if (next === null) return { ok: false, reason: "not-due" };
-  const value = summary(parsed.data, next.toISOString(), now.toISOString());
   const hash = requestHash(parsed.data);
   return transact(deps.db, () => {
-    const old = deps.db.prepare("SELECT creation_hash FROM schedules WHERE id=?").get(value.id);
+    const old = deps.db
+      .prepare("SELECT creation_hash,deleted_at FROM schedules WHERE id=?")
+      .get(parsed.data.id);
     if (old !== undefined) {
-      const oldHash = z.object({ creation_hash: z.string() }).parse(old).creation_hash;
-      return oldHash === hash
-        ? { ok: true, value: scheduleById(deps.db, value.id) as ScheduleSummary }
+      const saved = z
+        .object({ creation_hash: z.string(), deleted_at: z.string().nullable() })
+        .parse(old);
+      if (saved.deleted_at !== null) return { ok: false, reason: "conflict" };
+      return saved.creation_hash === hash
+        ? { ok: true, value: scheduleById(deps.db, parsed.data.id) as ScheduleSummary }
         : { ok: false, reason: "conflict" };
     }
+    const checked = checkTemplate(deps, parsed.data.templateId, parsed.data.templateVersion);
+    if (!checked.ok) return checked;
+    const now = deps.clock.now();
+    const next = nextOccurrence(parsed.data.cadence, parsed.data.timezone, now);
+    if (next === null) return { ok: false, reason: "not-due" };
+    const value = summary(parsed.data, next.toISOString(), now.toISOString());
     insertSchedule(deps.db, value, hash);
     return { ok: true, value };
   });
@@ -67,40 +73,42 @@ export function updateSchedule(
 ): ScheduleResult<ScheduleSummary> {
   const parsed = scheduleUpdateSchema.safeParse(input);
   if (!parsed.success) return { ok: false, reason: "invalid-input" };
-  const previous = scheduleById(deps.db, parsed.data.id);
-  if (!previous) return { ok: false, reason: "not-found" };
-  if (previous.version !== parsed.data.baseVersion) return { ok: false, reason: "conflict" };
-  if (previous.status === "canceled") return { ok: false, reason: "conflict" };
-  const checked = checkTemplate(deps, parsed.data.templateId, parsed.data.templateVersion);
-  if (!checked.ok) return checked;
-  const now = deps.clock.now();
-  const next =
-    previous.status === "active"
-      ? nextOccurrence(parsed.data.cadence, parsed.data.timezone, now)
-      : previous.nextRunAt === null
-        ? null
-        : nextOccurrence(parsed.data.cadence, parsed.data.timezone, now);
-  const value = summary(
-    parsed.data,
-    next?.toISOString() ?? null,
-    now.toISOString(),
-    previous.status,
-    previous.version + 1,
-  );
   const hash = requestHash(parsed.data);
   return transact(deps.db, () => {
+    const previous = scheduleById(deps.db, parsed.data.id);
+    if (!previous) return { ok: false, reason: "not-found" };
     const row = deps.db
       .prepare("SELECT mutation_id,mutation_hash FROM schedules WHERE id=?")
-      .get(value.id);
+      .get(previous.id);
     if (row !== undefined) {
       const saved = z
         .object({ mutation_id: z.string().nullable(), mutation_hash: z.string().nullable() })
         .parse(row);
       if (saved.mutation_id === parsed.data.mutationId)
         return saved.mutation_hash === hash
-          ? { ok: true, value: scheduleById(deps.db, value.id) as ScheduleSummary }
+          ? { ok: true, value: previous }
           : { ok: false, reason: "conflict" };
     }
+    if (previous.deletedAt !== null) return { ok: false, reason: "conflict" };
+    if (previous.version !== parsed.data.baseVersion) return { ok: false, reason: "conflict" };
+    if (previous.status === "canceled" || previous.status === "completed")
+      return { ok: false, reason: "conflict" };
+    const checked = checkTemplate(deps, parsed.data.templateId, parsed.data.templateVersion);
+    if (!checked.ok) return checked;
+    const now = deps.clock.now();
+    const next =
+      previous.status === "active"
+        ? nextOccurrence(parsed.data.cadence, parsed.data.timezone, now)
+        : previous.nextRunAt === null
+          ? null
+          : nextOccurrence(parsed.data.cadence, parsed.data.timezone, now);
+    const value = summary(
+      parsed.data,
+      next?.toISOString() ?? null,
+      now.toISOString(),
+      previous.status,
+      previous.version + 1,
+    );
     if (!updateScheduleRow(deps.db, value, parsed.data.mutationId, hash, parsed.data.baseVersion))
       return { ok: false, reason: "conflict" };
     return { ok: true, value };
@@ -119,6 +127,7 @@ export function resumeSchedule(
   if (!parsed.success) return { ok: false, reason: "invalid-input" };
   const previous = scheduleById(deps.db, parsed.data.id);
   if (!previous) return { ok: false, reason: "not-found" };
+  if (previous.deletedAt !== null) return { ok: false, reason: "conflict" };
   if (previous.version !== parsed.data.baseVersion || previous.status !== "paused")
     return { ok: false, reason: "conflict" };
   const next = nextOccurrence(previous.cadence, previous.timezone, deps.clock.now());
@@ -152,9 +161,13 @@ export function deleteSchedule(
   if (!parsed.success) return { ok: false, reason: "invalid-input" };
   const previous = scheduleById(deps.db, parsed.data.id);
   if (!previous) return { ok: false, reason: "not-found" };
+  if (previous.deletedAt !== null) return { ok: true, value: { deleted: true } };
   if (previous.version !== parsed.data.baseVersion) return { ok: false, reason: "conflict" };
+  if (previous.status !== "completed" && previous.status !== "canceled")
+    return { ok: false, reason: "cancel-required" };
+  const deletedAt = deps.clock.now().toISOString();
   return transact(deps.db, () =>
-    deleteScheduleRow(deps.db, previous.id, previous.version)
+    tombstoneScheduleRow(deps.db, previous.id, previous.version, deletedAt)
       ? { ok: true, value: { deleted: true } }
       : { ok: false, reason: "conflict" },
   );
@@ -169,7 +182,11 @@ function control(
   if (!parsed.success) return { ok: false, reason: "invalid-input" };
   const previous = scheduleById(deps.db, parsed.data.id);
   if (!previous) return { ok: false, reason: "not-found" };
-  if (previous.version !== parsed.data.baseVersion || previous.status !== "active")
+  if (previous.deletedAt !== null) return { ok: false, reason: "conflict" };
+  if (
+    previous.version !== parsed.data.baseVersion ||
+    (previous.status !== "active" && !(status === "canceled" && previous.status === "paused"))
+  )
     return { ok: false, reason: "conflict" };
   const next = status === "canceled" ? null : previous.nextRunAt;
   if (
@@ -223,5 +240,6 @@ function summary(
     nextRunAt,
     createdAt: now,
     updatedAt: now,
+    deletedAt: null,
   };
 }

@@ -113,7 +113,7 @@ it("preserves an Audio approval after output materialization and a title-only sa
       config: { ...base.revision.config, title: "Only a title" },
       content: base.revision.content,
     });
-    expect((await h.status()).checkpoints[0]?.state).toBe("released");
+    expect((await h.status()).checkpoints[0]?.state).toBe("satisfied");
   } finally {
     await h.dispose();
   }

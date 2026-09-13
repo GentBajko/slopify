@@ -11,6 +11,7 @@ import {
   installArgs,
   installDirectory,
   installedEntry,
+  pruneUpdateArtifacts,
   restartArgs,
 } from "./plan.js";
 import { candidateReady } from "./readiness.js";
@@ -118,6 +119,7 @@ export async function performUpdate(plan: UpdatePlan, handoff: () => Promise<voi
       if (!response.ok)
         throw new Error("The committed update could not acknowledge activation. Restart Slopify.");
     },
+    prune: () => pruneUpdateArtifacts(plan.dataDir, plan.version, plan.previousVersion, backup),
     report: (message) => {
       void log(message).catch(() => console.error("The update log could not be written."));
     },

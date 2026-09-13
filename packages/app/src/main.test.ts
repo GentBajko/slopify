@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
@@ -8,7 +8,7 @@ import type { Config } from "./kernel/config/index.js";
 import { openDb } from "./kernel/db/index.js";
 import { migrate } from "./kernel/db/migrate.js";
 import { readVersion } from "./kernel/version.js";
-import { boot, markInterruptedStages, urlOf } from "./main.js";
+import { boot, createScheduleTickLifecycle, markInterruptedStages, urlOf } from "./main.js";
 
 const clock = fixedClock("2026-09-02T10:00:00.000Z");
 
@@ -78,6 +78,62 @@ describe("markInterruptedStages", () => {
   });
 });
 
+describe("schedule tick lifecycle", () => {
+  it("holds the updater mutation lease for the full tick and drains it before stop resolves", async () => {
+    const events: string[] = [];
+    let finish = () => {};
+    const pending = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    const ticks = createScheduleTickLifecycle({
+      beginMutation: () => {
+        events.push("lease");
+        return () => {
+          events.push("release");
+        };
+      },
+      tick: async () => {
+        events.push("tick");
+        await pending;
+        events.push("done");
+      },
+      report: () => {
+        throw new Error("Unexpected schedule failure");
+      },
+    });
+
+    const running = ticks.tick();
+    const duplicate = ticks.tick();
+    expect(events).toEqual(["lease", "tick"]);
+    let stopped = false;
+    const stopping = ticks.stop().then(() => {
+      stopped = true;
+    });
+    await Promise.resolve();
+    expect(stopped).toBe(false);
+
+    finish();
+    await Promise.all([running, duplicate, stopping]);
+    expect(events).toEqual(["lease", "tick", "done", "release"]);
+    expect(stopped).toBe(true);
+  });
+
+  it("does not start a tick while updates are locked or after stopping begins", async () => {
+    const tick = vi.fn(async () => undefined);
+    const ticks = createScheduleTickLifecycle({
+      beginMutation: () => undefined,
+      tick,
+      report: () => undefined,
+    });
+
+    await ticks.tick();
+    await ticks.stop();
+    await ticks.tick();
+
+    expect(tick).not.toHaveBeenCalled();
+  });
+});
+
 describe("boot", () => {
   const running: Array<() => Promise<void>> = [];
 
@@ -121,8 +177,36 @@ describe("boot", () => {
       { version: 7 },
       { version: 8 },
       { version: 9 },
+      { version: 10 },
     ]);
     db.close();
+  });
+
+  it("leaves project files untouched until a provisional update is committed", async () => {
+    const dir = dataDir();
+    const orphan = join(dir, "projects", "orphan", "media.wav");
+    mkdirSync(join(dir, "projects", "orphan"), { recursive: true });
+    writeFileSync(orphan, "must survive a failed candidate");
+    vi.stubEnv("SLOPIFY_UPDATE_TOKEN", "a".repeat(64));
+    vi.stubEnv("SLOPIFY_UPDATE_PENDING", "1");
+
+    const candidate = await boot(config(dir));
+    expect(existsSync(orphan)).toBe(true);
+    mkdirSync(join(dir, "updates"), { recursive: true });
+    writeFileSync(
+      join(dir, "updates", "current.json"),
+      JSON.stringify({ version: readVersion(), token: "a".repeat(64) }),
+    );
+    expect(
+      (
+        await fetch(`${candidate.url}/api/update/activate`, {
+          method: "POST",
+          headers: { "X-Slopify-Update-Token": "a".repeat(64) },
+        })
+      ).status,
+    ).toBe(200);
+    await vi.waitFor(() => expect(existsSync(orphan)).toBe(false));
+    running.push(candidate.stop);
   });
 
   it("serves the HTTP app at the URL it returns and stops it again", async () => {

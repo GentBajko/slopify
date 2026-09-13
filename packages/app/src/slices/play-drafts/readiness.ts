@@ -1,4 +1,5 @@
 import { modelFields } from "../../catalog/validate.js";
+import { readinessIsUsable } from "../../kernel/ports/model.js";
 import type { FieldError } from "../admission/rules.js";
 import { cliPathStatus } from "../settings/cli-paths.js";
 import type { ProviderStatus } from "../settings/model.js";
@@ -53,13 +54,14 @@ export async function checkDraftReadiness(
   const fields: FieldError[] = [];
   for (const c of selected) {
     const provider = providers.find((p) => p.id === c.provider && p.family === c.family);
-    if (
-      !provider ||
-      (provider.readiness.kind === "cli"
-        ? !provider.readiness.installed
-        : !provider.readiness.hasKey)
-    ) {
-      fields.push({ field: c.field, message: "Configure this provider before starting." });
+    if (!provider || !readinessIsUsable(provider.readiness)) {
+      fields.push({
+        field: c.field,
+        message:
+          provider?.readiness.kind === "cli" && provider.readiness.issue
+            ? provider.readiness.issue
+            : "Configure this provider before starting.",
+      });
       continue;
     }
     const models = await deps.modelsFor(c.provider, c.family);

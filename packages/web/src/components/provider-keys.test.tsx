@@ -66,6 +66,27 @@ describe("the API key rails", () => {
     expect(await screen.findByText("Installed")).not.toBeNull();
   });
 
+  it("shows an installed but incompatible CLI as unusable with upgrade guidance", async () => {
+    const issue =
+      "Codex CLI 0.149.1 or newer is required; version 0.148.0 is installed. Update Codex CLI and try again.";
+    renderApp(
+      <ProviderKeys />,
+      testDeps({
+        "GET /api/providers": listing([
+          cli("codex", "Codex CLI", {
+            kind: "cli",
+            installed: true,
+            version: "0.148.0",
+            issue,
+          }),
+        ]),
+      }),
+    );
+
+    expect(await screen.findByText(issue)).not.toBeNull();
+    expect(screen.getByText("Codex CLI").closest("div")?.dataset.ready).toBe("false");
+  });
+
   it("greys a CLI that is not on PATH and says what to do about it", async () => {
     renderApp(
       <ProviderKeys />,

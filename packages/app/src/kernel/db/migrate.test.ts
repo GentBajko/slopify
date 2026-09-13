@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, statSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -120,6 +120,7 @@ describe("migrate", () => {
       { version: 7, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 8, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 9, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 10, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -129,7 +130,7 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 9 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 10 });
   });
 
   it("refuses a database newer than the app knows", () => {
@@ -137,7 +138,9 @@ describe("migrate", () => {
     migrate(db, clock);
     db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(42, clock.now().toISOString());
 
-    expect(() => migrate(db, clock)).toThrow("database schema 42 is newer than this app knows (9)");
+    expect(() => migrate(db, clock)).toThrow(
+      "database schema 42 is newer than this app knows (10)",
+    );
   });
 
   it("upgrades existing projects without changing their configuration or outputs", () => {
@@ -156,6 +159,54 @@ describe("migrate", () => {
     db.exec("DELETE FROM projects WHERE id = 'p1'");
     expect(db.prepare("SELECT * FROM project_controls").all()).toEqual([]);
     db.close();
+  });
+
+  it("upgrades version 9 schedules to FK-free tombstones with retained occurrences", () => {
+    const db = openDb(":memory:");
+    try {
+      const directory = new URL("./migrations/", import.meta.url);
+      for (const file of readdirSync(directory)
+        .filter((name) => name.endsWith(".sql") && Number(name.slice(0, 4)) <= 9)
+        .sort()) {
+        db.exec(readFileSync(new URL(file, directory), "utf8"));
+        db.prepare("INSERT INTO schema_migrations VALUES (?,?)").run(
+          Number(file.slice(0, 4)),
+          clock.now().toISOString(),
+        );
+      }
+      db.exec(
+        "INSERT INTO project_templates(id,head_version,creation_hash,created_at) VALUES('t1',1,'hash','old')",
+      );
+      db.exec(`INSERT INTO schedules(id,name,template_id,template_version,cadence_json,timezone,
+        missed_policy,overlap_policy,items_json,status,version,creation_hash,created_at,updated_at)
+        VALUES('s1','Saved','t1',1,'{}','UTC','skip','skip','[]','completed',2,'hash','old','old')`);
+      db.exec(`INSERT INTO schedule_runs(id,schedule_id,scheduled_for,status,request_id,project_ids_json,estimate_json,started_at,ended_at,error)
+        VALUES('r1','s1','old','succeeded','request1','["project1"]','[]','start','end',NULL)`);
+      const scheduleColumns = `id,name,template_id,template_version,cadence_json,timezone,
+        missed_policy,overlap_policy,spend_limit_cents,items_json,status,version,creation_hash,
+        next_run_at,created_at,updated_at,mutation_id,mutation_hash`;
+      const beforeSchedule = db.prepare(`SELECT ${scheduleColumns} FROM schedules`).all();
+      const runColumns = `id,schedule_id,scheduled_for,status,request_id,project_ids_json,
+        estimate_json,started_at,ended_at,error`;
+      const before = db.prepare(`SELECT ${runColumns} FROM schedule_runs`).all();
+      migrate(db, clock);
+      expect(db.prepare(`SELECT ${scheduleColumns} FROM schedules`).all()).toEqual(beforeSchedule);
+      expect(db.prepare("SELECT deleted_at FROM schedules WHERE id='s1'").get()).toEqual({
+        deleted_at: null,
+      });
+      db.exec("UPDATE schedules SET deleted_at='deleted',next_run_at=NULL WHERE id='s1'");
+      db.exec("DELETE FROM project_templates WHERE id='t1'");
+      expect(db.prepare("SELECT id,template_id,deleted_at FROM schedules").all()).toEqual([
+        { id: "s1", template_id: "t1", deleted_at: "deleted" },
+      ]);
+      expect(db.prepare(`SELECT ${runColumns} FROM schedule_runs`).all()).toEqual(before);
+      expect(db.prepare("SELECT projects_settled_at FROM schedule_runs").all()).toEqual([
+        { projects_settled_at: null },
+      ]);
+      expect(db.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+    } finally {
+      db.close();
+    }
   });
 
   it.each([1, 3])("keeps schema %i legacy rows intact and revision storage empty", (version) => {

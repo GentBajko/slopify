@@ -41,7 +41,7 @@ export function UpdateWidget({ reload }: { readonly reload: () => void }): React
           else update.refresh();
         }}
         className={cn(
-          "fixed right-5 z-30 flex size-10 items-center justify-center rounded-full bg-transparent text-ink2 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+          "fixed right-0 z-30 flex size-10 items-center justify-center rounded-full bg-transparent text-ink2 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:right-5",
           error && "text-amber",
         )}
       >

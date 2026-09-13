@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { CliProbe, CliProbeResult } from "./cli-status.js";
-import { cliProbeTimeoutMs, cliReadiness, nodeCliProbe, versionFrom } from "./cli-status.js";
+import {
+  cliProbeTimeoutMs,
+  cliReadiness,
+  minimumCodexCliVersion,
+  nodeCliProbe,
+  versionFrom,
+} from "./cli-status.js";
 import type { CliProvider } from "./model.js";
 import { providerById } from "./model.js";
 
@@ -53,13 +59,50 @@ describe("cliReadiness", () => {
     });
   });
 
-  // Installed is what the lamp shows; the version is only the status line's detail.
-  it("reports a binary that answers without a version as installed", async () => {
+  // Other CLIs have no adapter-specific compatibility floor yet.
+  it("reports a non-Codex binary that answers without a version as installed", async () => {
+    const probe: CliProbe = () => Promise.resolve({ ran: true, stdout: "claude" });
+
+    expect(await cliReadiness(probe, cliProvider("claude-code"))).toEqual({
+      kind: "cli",
+      installed: true,
+    });
+  });
+
+  it.each(["0.149.1", "0.150.0", "1.0.0", "0.149.1+windows"])(
+    "accepts supported Codex CLI version %s",
+    async (version) => {
+      const probe: CliProbe = () => Promise.resolve({ ran: true, stdout: `codex-cli ${version}` });
+
+      expect(await cliReadiness(probe, cliProvider("codex"))).toEqual({
+        kind: "cli",
+        installed: true,
+        version,
+      });
+    },
+  );
+
+  it.each(["0.149.0", "0.148.9", "0.149.1-beta.1"])(
+    "requires a Codex CLI upgrade from version %s",
+    async (version) => {
+      const probe: CliProbe = () => Promise.resolve({ ran: true, stdout: `codex-cli ${version}` });
+
+      expect(await cliReadiness(probe, cliProvider("codex"))).toEqual({
+        kind: "cli",
+        installed: true,
+        version,
+        issue: `Codex CLI ${minimumCodexCliVersion} or newer is required; version ${version} is installed. Update Codex CLI and try again.`,
+      });
+    },
+  );
+
+  it("fails closed with upgrade guidance when Codex does not print a version", async () => {
     const probe: CliProbe = () => Promise.resolve({ ran: true, stdout: "codex" });
 
     expect(await cliReadiness(probe, cliProvider("codex"))).toEqual({
       kind: "cli",
       installed: true,
+      issue: `Slopify could not verify this Codex CLI version. Install Codex CLI ${minimumCodexCliVersion} or newer, then try again.`,
     });
   });
 

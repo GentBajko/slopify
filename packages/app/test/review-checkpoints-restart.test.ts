@@ -6,7 +6,10 @@ import { openDb } from "../src/kernel/db/index.js";
 import { setProjectPaused } from "../src/slices/admission/repo.js";
 import { cancelProject } from "../src/slices/cancel/index.js";
 import { changeCheckpoints, readCheckpointStatus } from "../src/slices/checkpoints/change.js";
-import { recoverCheckpointWork } from "../src/slices/checkpoints/recovery.js";
+import {
+  recoverCheckpointWork,
+  settleReleasedCheckpoints,
+} from "../src/slices/checkpoints/recovery.js";
 import { listCheckpoints } from "../src/slices/checkpoints/repo.js";
 import { pauseProject, resumeProject } from "../src/slices/control/index.js";
 import { restoreRevision } from "../src/slices/revisions/restore.js";
@@ -44,7 +47,11 @@ it.each(["save", "restore"] as const)(
       expect(
         (
           await cancelProject(
-            { ...h.deps, abort: (id) => h.runner.abortProject(id) },
+            {
+              ...h.deps,
+              abort: (id) => h.runner.abortProject(id),
+              settleCheckpoints: (projectId) => settleReleasedCheckpoints(h.deps, projectId),
+            },
             h.projectId,
             { baseRevisionId: base.revision.id, idempotencyKey: randomUUID() },
           )
@@ -131,7 +138,7 @@ it("restores a held multi-invocation gate and keeps pause authoritative after ap
       next.runner.tick(h.projectId);
       await next.runner.settled();
       expect(images.calls()).toBe(2);
-      expect(listCheckpoints(reopened, h.projectId, revisionId)[0]?.state).toBe("released");
+      expect(listCheckpoints(reopened, h.projectId, revisionId)[0]?.state).toBe("satisfied");
     } finally {
       await next.runner.settled();
       next.audioPreviews.close();

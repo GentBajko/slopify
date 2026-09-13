@@ -1,10 +1,10 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
+import { readinessIsUsable } from "@app/kernel/ports/model.js";
 import type { RunConfig } from "@app/slices/admission/model.js";
 import type { ProviderStatus } from "@app/slices/settings/model.js";
 
-// A stage whose provider has no key, or whose agent CLI is not on PATH, cannot be retried
-// or re-run, and the control says which of the two it is with a link to Settings. Pure: the
-// row only has to draw what this decides.
+// A stage whose provider has no key or usable agent CLI cannot be retried or re-run. The control
+// distinguishes a missing executable from one that needs an upgrade and links to Settings.
 
 export interface Unready {
   // What the disabled control reads instead of its verb.
@@ -47,5 +47,7 @@ export function unreadyFor(
   if (status.readiness.kind === "keyed") {
     return status.readiness.hasKey ? undefined : { label: "Key missing", provider: id };
   }
-  return status.readiness.installed ? undefined : { label: "CLI missing", provider: id };
+  return readinessIsUsable(status.readiness)
+    ? undefined
+    : { label: status.readiness.issue ? "CLI update required" : "CLI missing", provider: id };
 }

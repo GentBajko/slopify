@@ -159,6 +159,7 @@ function harness(images: number, port: ImagePort): Harness {
           clock: systemClock,
           log: silent,
           abort: (id) => runner.abortProject(id),
+          settleCheckpoints: () => {},
           emit: (): void => {},
         },
         projectId,

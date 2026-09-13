@@ -5,6 +5,7 @@ import { templateById } from "../project-templates/repo.js";
 import { createTemplate } from "../project-templates/service.js";
 import type { ScheduleCreate } from "./model.js";
 import { createScheduleRunner } from "./scheduler.js";
+import { scheduleCreateSchema } from "./schema.js";
 import { createSchedule, pauseSchedule, resumeSchedule, updateSchedule } from "./service.js";
 
 function scheduleInput(
@@ -24,6 +25,15 @@ function scheduleInput(
     items: [{ title: "Arda", values: { topic: "Arda" } }],
   };
 }
+
+it("rejects scheduled keyword names with surrounding whitespace", () => {
+  expect(
+    scheduleCreateSchema.safeParse({
+      ...scheduleInput(randomUUID()),
+      items: [{ title: "Arda", values: { " topic": "Arda" } }],
+    }).success,
+  ).toBe(false);
+});
 
 it("creates, pauses, resumes and updates a schedule with a timezone preview", () => {
   const h = startFixture();
@@ -62,6 +72,41 @@ it("creates, pauses, resumes and updates a schedule with a timezone preview", ()
       name: "Updated schedule",
     });
     expect(updated.ok && updated.value.name).toBe("Updated schedule");
+  } finally {
+    h.close();
+  }
+});
+
+it("replays a committed update when its response was lost", () => {
+  const h = startFixture();
+  try {
+    const templateId = randomUUID();
+    expect(
+      createTemplate(h.deps, {
+        id: templateId,
+        name: "Supplied article",
+        document: h.document,
+      }).ok,
+    ).toBe(true);
+    const deps = {
+      ...h.deps,
+      template: (id: string, version: number) => templateById(h.deps.db, id, version),
+    };
+    const created = createSchedule(deps, scheduleInput(templateId));
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    const request = {
+      ...scheduleInput(templateId, created.value.id),
+      baseVersion: created.value.version,
+      mutationId: randomUUID(),
+      name: "Saved despite lost response",
+    };
+
+    const first = updateSchedule(deps, request);
+    const replay = updateSchedule(deps, request);
+
+    expect(first.ok && first.value.version).toBe(2);
+    expect(replay).toEqual(first);
   } finally {
     h.close();
   }

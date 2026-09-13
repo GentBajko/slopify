@@ -11,12 +11,24 @@ export interface ModelInfo {
   readonly name: string;
 }
 
-// What Settings and Play both read per provider. `hasKey` and `installed` are the two ways
-// a provider can be usable; neither carries key material. It lives here because the
-// registry lists it and the kernel may not import the settings slice that fills it in.
+// What Settings and Play both read per provider. `installed` describes the executable itself;
+// `issue` keeps a detected but incompatible CLI from being treated as usable. Neither branch
+// carries key material. It lives here because the registry lists it and the kernel may not import
+// the settings slice that fills it in.
 export type Readiness =
   | { readonly kind: "keyed"; readonly hasKey: boolean }
-  | { readonly kind: "cli"; readonly installed: boolean; readonly version?: string };
+  | {
+      readonly kind: "cli";
+      readonly installed: boolean;
+      readonly version?: string;
+      readonly issue?: string;
+    };
+
+export function readinessIsUsable(readiness: Readiness): boolean {
+  return readiness.kind === "keyed"
+    ? readiness.hasKey
+    : readiness.installed && readiness.issue === undefined;
+}
 
 export const providerErrorKinds = [
   "auth",

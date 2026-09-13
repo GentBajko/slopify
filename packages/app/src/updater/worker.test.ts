@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -53,6 +53,9 @@ it.each([false, true])(
     const oldEntry = join(root, "old.mjs");
     const installer = join(root, "fixture-npm.cjs");
     try {
+      await mkdir(join(root, "updates", "0.5.0"), { recursive: true });
+      await mkdir(join(root, "updates", "0.6.1"), { recursive: true });
+      await writeFile(join(root, "updates", "before-0.5.0-1.db"), "obsolete backup");
       await writeFile(join(root, "slopify.db"), "original database");
       await writeFile(oldEntry, serverScript("0.6.1", false));
       await writeFile(
@@ -103,6 +106,17 @@ it.each([false, true])(
           version: "0.6.2",
           token: "a".repeat(64),
         });
+      const artifacts = await readdir(join(root, "updates"));
+      if (fail) {
+        expect(artifacts).toContain("0.5.0");
+        expect(artifacts).toContain("before-0.5.0-1.db");
+      } else {
+        expect(artifacts).not.toContain("0.5.0");
+        expect(artifacts).not.toContain("before-0.5.0-1.db");
+        expect(artifacts).toContain("0.6.1");
+        expect(artifacts).toContain("0.6.2");
+        expect(artifacts.filter((name) => /^before-0\.6\.2-\d+\.db$/.test(name))).toHaveLength(1);
+      }
     } finally {
       server.close();
       try {

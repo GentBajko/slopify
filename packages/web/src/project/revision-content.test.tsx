@@ -120,7 +120,7 @@ it("loads immutable timing on explicit request and preserves newer unrelated dra
     cues: [{ id: expect.any(String), text: "Hello.", start: 0, end: 1 }],
   });
   expect(called).toHaveBeenCalledTimes(1);
-  expect(pending).toHaveBeenLastCalledWith(false);
+  await waitFor(() => expect(pending).toHaveBeenLastCalledWith(false));
 });
 it.each(["Change narration", "Change revision"])(
   "rejects late timing when %s changes its identity",

@@ -1,6 +1,15 @@
 import { constants } from "node:fs";
-import { access, readFile, realpath, rename, writeFile } from "node:fs/promises";
-import { delimiter, dirname, join } from "node:path";
+import {
+  access,
+  lstat,
+  readdir,
+  readFile,
+  realpath,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import { basename, delimiter, dirname, join, resolve } from "node:path";
 import { z } from "zod";
 import type { CliCommand } from "../kernel/cli-command.js";
 import { cliCommand } from "../kernel/cli-command.js";
@@ -117,6 +126,38 @@ export async function activateUpdate(
   const temporary = `${pointer}.${process.pid}.tmp`;
   await writeFile(temporary, JSON.stringify({ version, token }), { mode: 0o600 });
   await rename(temporary, pointer);
+}
+
+const updateBackup = /^before-(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)-\d+\.db$/;
+
+export async function pruneUpdateArtifacts(
+  dataDir: string,
+  currentVersion: string,
+  rollbackVersion: string,
+  rollbackBackup: string,
+): Promise<void> {
+  if (!isStableVersion(currentVersion) || !isStableVersion(rollbackVersion))
+    throw new Error("Invalid retained update version.");
+  const updates = resolve(dataDir, "updates");
+  const backup = resolve(rollbackBackup);
+  const backupName = basename(backup);
+  if (dirname(backup) !== updates || !updateBackup.test(backupName))
+    throw new Error("Invalid retained update backup.");
+  let backupIsFile = false;
+  try {
+    backupIsFile = (await lstat(backup)).isFile();
+  } catch {
+    // Refuse all cleanup unless the rollback database is present as a regular file.
+  }
+  if (!backupIsFile) throw new Error("The retained update backup is missing.");
+
+  for (const entry of await readdir(updates, { withFileTypes: true })) {
+    const retainedVersion = entry.name === currentVersion || entry.name === rollbackVersion;
+    const obsoleteInstall = isStableVersion(entry.name) && !retainedVersion;
+    const obsoleteBackup = updateBackup.test(entry.name) && entry.name !== backupName;
+    if (obsoleteInstall || obsoleteBackup)
+      await rm(join(updates, entry.name), { recursive: true, force: true });
+  }
 }
 
 export async function npmCommand(): Promise<CliCommand> {

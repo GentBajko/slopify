@@ -10,6 +10,7 @@ import {
   checkpointForWork,
   listCheckpoints,
   saveCheckpointSet,
+  settleCheckpointClosures,
 } from "./index.js";
 
 const at = "2026-09-13T12:00:00.000Z";
@@ -207,4 +208,60 @@ it("enforces scoped work ownership and state constraints in SQLite", () => {
     db.exec("UPDATE review_checkpoints SET revision_id='missing' WHERE checkpoint_id='audio-gate'"),
   ).toThrow();
   expect(db.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+});
+
+it.each(["done", "failed", "canceled"] as const)(
+  "satisfies a released closure after every reservation settles as %s",
+  (terminal) => {
+    const { db } = fixture();
+    saveCheckpointSet(db, setup);
+    approveCheckpoint(db, approval);
+    for (const [key, workId] of [
+      ["audio:body", "r1-audio"],
+      ["video:export", "r1-video"],
+    ] as const)
+      db.prepare(`INSERT INTO revision_work_reservations
+        (project_id,revision_id,work_key,work_id,piece_id,fingerprint,logical_key,desired_fingerprint)
+        VALUES ('p','r1',?,?,NULL,?,NULL,NULL)`).run(key, workId, fingerprint);
+    const closure = {
+      projectId: "p",
+      revisionId: "r1",
+      checkpointId: "audio-gate",
+      workKeys: ["audio:body", "video:export"],
+    };
+    db.exec("UPDATE revision_work SET state='done' WHERE id='r1-audio'");
+    expect(settleCheckpointClosures(db, [closure])).toEqual([]);
+    expect(listCheckpoints(db, "p", "r1")[0]?.state).toBe("released");
+    db.prepare("UPDATE revision_work SET state=? WHERE id='r1-video'").run(terminal);
+    expect(settleCheckpointClosures(db, [closure])).toMatchObject([
+      { checkpointId: "audio-gate", state: "satisfied" },
+    ]);
+    expect(approveCheckpoint(db, approval)).toMatchObject({
+      ok: false,
+      reason: "duplicate",
+      value: { state: "satisfied" },
+    });
+    expect(settleCheckpointClosures(db, [closure])).toEqual([]);
+  },
+);
+
+it("keeps a released checkpoint open when any reviewed reservation is missing", () => {
+  const { db } = fixture();
+  saveCheckpointSet(db, setup);
+  approveCheckpoint(db, approval);
+  db.prepare(`INSERT INTO revision_work_reservations
+    (project_id,revision_id,work_key,work_id,piece_id,fingerprint,logical_key,desired_fingerprint)
+    VALUES ('p','r1','audio:body','r1-audio',NULL,?,NULL,NULL)`).run(fingerprint);
+  db.exec("UPDATE revision_work SET state='done' WHERE id='r1-audio'");
+  expect(
+    settleCheckpointClosures(db, [
+      {
+        projectId: "p",
+        revisionId: "r1",
+        checkpointId: "audio-gate",
+        workKeys: ["audio:body", "video:missing"],
+      },
+    ]),
+  ).toEqual([]);
+  expect(listCheckpoints(db, "p", "r1")[0]?.state).toBe("released");
 });

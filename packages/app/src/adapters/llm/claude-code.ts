@@ -3,8 +3,8 @@ import { redact } from "../../kernel/log.js";
 import type { LlmCompletion, LlmEvent, LlmPort, Usage } from "../../kernel/ports/llm.js";
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
-import type { RunCli } from "./run-cli.js";
-import { cliEvent, cliShaped, endedWithout, promptOf } from "./run-cli.js";
+import type { CliEnded, RunCli } from "./run-cli.js";
+import { cliEvent, cliShaped, endedWithout, promptOf, stopCliRun } from "./run-cli.js";
 import { lines } from "./sse-lines.js";
 
 // The local-agent adapter for Claude Code: spawned non-interactively, authenticated by the
@@ -94,6 +94,7 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
 
   async function* complete(req: LlmCompletion): AsyncGenerator<LlmEvent> {
     const run = deps.run(binary, claudeCodeArgs(req), req.signal);
+    let ended: CliEnded | undefined;
     try {
       for await (const line of lines(run.stdout, req.signal)) {
         if (line.trim() === "") {
@@ -139,7 +140,7 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
     } finally {
       // The consumer can also abandon the generator - a retry, a timeout - and an agent
       // session left running would keep spending the user's subscription.
-      run.kill();
+      ended = await stopCliRun(run);
     }
     // A cancelled run ends its stream the same way an exhausted one does: the child was
     // killed, so stdout simply stopped. An aborted call counts as nothing, so it must not
@@ -148,7 +149,10 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
     // The stream ended with no result event at all.
     throw providerError({
       kind: "other",
-      message: endedWithout(binary, await run.ended, run.stderr()),
+      message:
+        ended === undefined
+          ? `the ${binary} CLI did not stop after forced termination`
+          : endedWithout(binary, ended, run.stderr()),
     });
   }
 

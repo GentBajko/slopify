@@ -4,8 +4,8 @@ import type { LlmCompletion, LlmEvent, LlmPort } from "../../kernel/ports/llm.js
 import { type ModelInfo, providerError } from "../../kernel/ports/model.js";
 import { geminiModels } from "./gemini-models.js";
 import { geminiWorkspace } from "./gemini-workspace.js";
-import type { RunCli } from "./run-cli.js";
-import { cliEvent, cliShaped, endedWithout, promptOf } from "./run-cli.js";
+import type { CliEnded, RunCli } from "./run-cli.js";
+import { cliEvent, cliShaped, endedWithout, promptOf, stopCliRun } from "./run-cli.js";
 import { lines } from "./sse-lines.js";
 
 export const geminiBinary = "gemini";
@@ -55,6 +55,7 @@ export function geminiLlm(deps: GeminiDeps): LlmPort {
     req.signal.throwIfAborted();
     const workspace = geminiWorkspace(req.webSearch === true, req);
     let run: ReturnType<RunCli> | undefined;
+    let ended: CliEnded | undefined;
     try {
       run = deps.run(
         binary,
@@ -91,18 +92,21 @@ export function geminiLlm(deps: GeminiDeps): LlmPort {
           return;
         }
       }
-      req.signal.throwIfAborted();
-      const ended = await run.ended;
-      if (authRequired(run.stderr())) throw authFailure();
-      throw failure(endedWithout(binary, ended, run.stderr()));
     } catch (error) {
       req.signal.throwIfAborted();
       throw error;
     } finally {
-      run?.kill();
-      if (run !== undefined) await run.ended;
+      if (run !== undefined) ended = await stopCliRun(run);
       workspace.remove();
     }
+    req.signal.throwIfAborted();
+    if (run === undefined) throw failure(`the ${binary} CLI could not be started`);
+    if (authRequired(run.stderr())) throw authFailure();
+    throw failure(
+      ended === undefined
+        ? `the ${binary} CLI did not stop after forced termination`
+        : endedWithout(binary, ended, run.stderr()),
+    );
   }
   return {
     id: "gemini",

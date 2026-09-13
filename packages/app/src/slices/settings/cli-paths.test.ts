@@ -6,7 +6,7 @@ import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import { cliBinary, cliPathStatus, saveCliPath } from "./cli-paths.js";
-import type { CliProbe } from "./cli-status.js";
+import { type CliProbe, minimumCodexCliVersion } from "./cli-status.js";
 
 const clock = fixedClock("2026-09-10T10:00:00.000Z");
 const installed: CliProbe = async () => ({ ran: true, stdout: "1.2.3" });
@@ -67,6 +67,24 @@ describe("CLI executable paths", () => {
       status: { cliPath: { configured: null, command: "codex" }, readiness: { installed: false } },
     });
     expect(cliBinary(deps.db, "codex")).toBe("codex");
+  });
+
+  it("stores a valid Codex path while returning actionable incompatible-version status", async () => {
+    const deps = harness(async () => ({ ran: true, stdout: "codex-cli 0.148.0" }));
+    const path = executable("old-codex");
+
+    expect(await saveCliPath(deps, "codex", path)).toMatchObject({
+      ok: true,
+      status: {
+        readiness: {
+          kind: "cli",
+          installed: true,
+          version: "0.148.0",
+          issue: expect.stringContaining(`Codex CLI ${minimumCodexCliVersion} or newer`),
+        },
+      },
+    });
+    expect(cliBinary(deps.db, "codex")).toBe(path);
   });
 
   it.each(["codex --help", "./codex", "x".repeat(4097), "/tmp/cli\u0000name"])(
