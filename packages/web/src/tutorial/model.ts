@@ -55,29 +55,29 @@ export const tutorialSteps = [
     page: "image",
   },
   { id: "image-save", title: "10. Save your image prompt", target: "prompt-save", page: "image" },
-  { id: "play-article", title: "11. Choose what to write", target: "play-article", page: "play" },
-  { id: "play-audio", title: "12. Choose the narration", target: "play-audio", page: "play" },
-  { id: "play-images", title: "13. Choose the images", target: "play-images", page: "play" },
-  { id: "play-video", title: "14. Choose your final output", target: "play-video", page: "play" },
-  {
-    id: "play-subtitles",
-    title: "15. Add optional subtitles",
-    target: "play-subtitles",
-    page: "play",
-  },
   {
     id: "play-options",
-    title: "16. Name and configure your project",
+    title: "11. Name the project and choose text generation",
     target: "play-options",
     page: "play",
   },
+  { id: "play-article", title: "12. Choose your article", target: "play-article", page: "play" },
   {
     id: "play-keywords",
-    title: "17. Fill in your keywords",
+    title: "13. Fill in your keywords",
     target: "play-keywords",
     page: "play",
   },
-  { id: "play-start", title: "18. Review and press PLAY", target: "play-start", page: "play" },
+  { id: "play-audio", title: "14. Choose narration", target: "play-audio", page: "play" },
+  { id: "play-images", title: "15. Choose images", target: "play-images", page: "play" },
+  { id: "play-video", title: "16. Choose video output", target: "play-video", page: "play" },
+  {
+    id: "play-subtitles",
+    title: "17. Style optional subtitles",
+    target: "play-subtitles",
+    page: "play",
+  },
+  { id: "play-start", title: "18. Review and start your run", target: "play-start", page: "play" },
   {
     id: "project",
     title: "19. Follow and control the run",
@@ -106,3 +106,19 @@ export function receiveTutorialEvent(
   if (event.kind === "image") return { ...session, imageId: event.id };
   return session;
 }
+
+export function tutorialStepIndex(stepId: string): number | undefined {
+  const index = tutorialSteps.findIndex((step) => step.id === stepId);
+  return index < 0 ? undefined : index;
+}
+
+export const playTargetSection = {
+  "play-options": "content",
+  "play-article": "content",
+  "play-keywords": "content",
+  "play-audio": "outputs",
+  "play-images": "outputs",
+  "play-video": "outputs",
+  "play-subtitles": "style",
+  "play-start": "review",
+} as const;

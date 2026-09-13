@@ -1,14 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import type { Dispatch, SetStateAction } from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ProviderStatus } from "@/api";
 import { useApp } from "@/app-context";
 import { usePlaySession } from "@/play/draft-context";
 import { finalOutput } from "@/project/summary";
 import { noticeQuery, projectQuery, providersQuery, voicesQuery } from "@/queries";
 import type { TutorialSession, TutorialStepId } from "./model";
-import { tutorialSteps } from "./model";
+import { playTargetSection, tutorialSteps } from "./model";
 import { Spotlight } from "./spotlight";
 import { StepContent } from "./step-content";
 
@@ -38,6 +38,7 @@ export function TutorialRunner({
     ...projectQuery(api, session.projectId ?? ""),
     enabled: session.projectId !== undefined,
   });
+  const [revealed, setRevealed] = useState<string | null>(null);
   const entered = useRef<number | null>(null);
   const step = tutorialSteps[session.step];
   const allowed = notice.data?.seen === true;
@@ -61,14 +62,6 @@ export function TutorialRunner({
       }
     }
     if (step.page === "play") {
-      const section = ["play-audio", "play-images", "play-video"].includes(step.id)
-        ? "outputs"
-        : step.id === "play-subtitles"
-          ? "style"
-          : step.id === "play-start"
-            ? "review"
-            : "content";
-      void play.navigate(section);
       if (location.pathname !== "/play") void navigate({ to: "/play" });
     }
     if (
@@ -80,7 +73,6 @@ export function TutorialRunner({
     }
   }, [
     allowed,
-    play.navigate,
     step,
     session.step,
     session.articleId,
@@ -91,6 +83,18 @@ export function TutorialRunner({
     navigate,
   ]);
 
+  useEffect(() => {
+    if (!allowed || step?.page !== "play" || location.pathname !== "/play") return;
+    let current = true;
+    setRevealed(null);
+    void play.navigate(playTargetSection[step.id]).then(() => {
+      if (current) setRevealed(step.id);
+    });
+    return () => {
+      current = false;
+    };
+  }, [allowed, step, location.pathname, play.navigate]);
+
   // Save callbacks report only confirmed resource IDs. Wait for the editor's normal
   // successful-save navigation before moving to the next page, including when going Back.
   useEffect(() => {
@@ -98,7 +102,7 @@ export function TutorialRunner({
     if (step?.id === "image-prompt" && session.imageId) {
       update((current) => ({
         ...current,
-        step: tutorialSteps.findIndex((one) => one.id === "play-article"),
+        step: tutorialSteps.findIndex((one) => one.id === "play-options"),
       }));
     } else if (
       (step?.id === "article-save" && session.articleId) ||
@@ -109,6 +113,8 @@ export function TutorialRunner({
   }, [location.pathname, step?.id, session.articleId, session.imageId, update]);
 
   if (!allowed || !step) return null;
+  if (step.page === "play" && (revealed !== step.id || play.section !== playTargetSection[step.id]))
+    return null;
   const listed = providers.data?.providers ?? [];
   const familyReady = (family: ProviderStatus["family"]) =>
     listed.some((provider) => provider.family === family && ready(provider));
@@ -173,7 +179,7 @@ export function TutorialRunner({
         waitingForSave
           ? "Use Save in the editor"
           : step.id === "play-start"
-            ? "Use PLAY on the page"
+            ? "Use Start run / Queue N on the page"
             : step.id === "download"
               ? "Finish tutorial"
               : "Next"

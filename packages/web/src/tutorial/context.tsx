@@ -8,9 +8,11 @@ import {
   useRef,
   useState,
 } from "react";
-import type { TutorialEvent, TutorialSession } from "./model";
+import { Button } from "@/components/ui/button";
+import type { TutorialEvent } from "./model";
 import { receiveTutorialEvent, tutorialSteps } from "./model";
 import { TutorialRunner } from "./runner";
+import { useTutorialSession } from "./use-session";
 
 interface TutorialContextValue {
   readonly active: boolean;
@@ -25,13 +27,8 @@ interface TutorialContextValue {
 const TutorialContext = createContext<TutorialContextValue | undefined>(undefined);
 
 export function TutorialProvider({ children }: { readonly children: ReactNode }) {
-  // Only completion flags and resource IDs live here. Form text and API keys stay in
-  // their existing editors, and the tutorial writes nothing to browser storage.
-  const [session, setSession] = useState<TutorialSession>({ active: false, step: 0 });
+  const { session, update, start, retry, restart, error } = useTutorialSession();
   const [progress, setProgress] = useState<Readonly<Record<string, boolean>>>({});
-  const start = useCallback(() => {
-    setSession({ active: true, step: 0 });
-  }, []);
   const report = useCallback((next: Readonly<Record<string, boolean>>) => {
     setProgress((previous) =>
       Object.entries(next).every(([name, value]) => previous[name] === value)
@@ -44,9 +41,12 @@ export function TutorialProvider({ children }: { readonly children: ReactNode })
       Object.fromEntries(Object.entries(previous).filter(([name]) => !fields.includes(name))),
     );
   }, []);
-  const event = useCallback((next: TutorialEvent) => {
-    setSession((previous) => receiveTutorialEvent(previous, next));
-  }, []);
+  const event = useCallback(
+    (next: TutorialEvent) => {
+      update((previous) => receiveTutorialEvent(previous, next));
+    },
+    [update],
+  );
   const step = tutorialSteps[session.step]?.id;
   const projectStep =
     session.active && (step === "project" || step === "download") ? step : undefined;
@@ -66,8 +66,22 @@ export function TutorialProvider({ children }: { readonly children: ReactNode })
   return (
     <TutorialContext.Provider value={context}>
       {children}
+      {error ? (
+        <div
+          role="alert"
+          className="fixed bottom-4 left-4 z-[100] rounded-panel border border-line bg-panel p-4 text-ink"
+        >
+          <p>{error}</p>
+          <Button type="button" onClick={retry}>
+            Retry tutorial save
+          </Button>
+          <Button type="button" onClick={restart}>
+            Restart tutorial
+          </Button>
+        </div>
+      ) : null}
       {session.active ? (
-        <TutorialRunner session={session} progress={progress} update={setSession} />
+        <TutorialRunner session={session} progress={progress} update={update} />
       ) : null}
     </TutorialContext.Provider>
   );

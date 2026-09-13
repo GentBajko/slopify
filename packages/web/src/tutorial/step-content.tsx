@@ -202,19 +202,18 @@ export function StepContent({
       return (
         <>
           <p>
-            Enter a <strong>Video title</strong>, such as “A quick trip to Albania.” Choose{" "}
-            <strong>16:9</strong> for landscape or <strong>9:16</strong> for portrait.
+            Enter a <strong>Project title</strong>, such as “A quick trip to Albania.” Set the title
+            in Content.
           </p>
           <p>
-            Select the text <strong>LLM</strong> and <strong>Model</strong>. The model list loads
-            for your provider. Use <strong>Refresh</strong> for updated choices or{" "}
+            Select the text <strong>LLM</strong> and <strong>Text model</strong>. The model list
+            loads for your provider. Use <strong>Refresh</strong> for updated choices or{" "}
             <strong>Custom ID</strong>
             to enter an exact model ID when supported.
           </p>
           <p>
-            Leave <strong>Intro</strong> and <strong>Outro</strong> Off for this first run. They are
-            available only when Audio is Generate. The LLM controls appear only when an enabled
-            stage needs text generation.
+            Intro and Outro are available in Outputs when Audio is Generate. The LLM controls appear
+            only when an enabled stage needs text generation.
           </p>
         </>
       );
@@ -240,12 +239,13 @@ export function StepContent({
       return (
         <>
           <p>
-            Check the hint above PLAY. If anything is missing, use Back to fix the highlighted
-            section.
+            Review the enabled outputs, costs and readiness in Review. If anything is missing, use
+            Back to fix the highlighted section.
           </p>
           <p>
-            When ready, press the real <strong>PLAY</strong> button. This creates a project and
-            sends generation requests to your chosen providers, which may charge your account.
+            When ready, press the real <strong>Start run</strong> or <strong>Queue N</strong>{" "}
+            button. This creates a project and sends generation requests to your chosen providers,
+            which may charge your account.
           </p>
           <p>
             The tour will follow you to the project. You can also finish the tutorial without
