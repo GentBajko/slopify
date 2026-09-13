@@ -145,7 +145,7 @@ export function DraftList(): ReactElement {
           <button
             type="button"
             onClick={() => {
-              if (session.view) void session.open(session.view.draft.id);
+              if (session.activeId) void session.open(session.activeId);
             }}
           >
             Reload saved draft

@@ -163,7 +163,9 @@ export function createDraft(
     const hash = requestHash(value);
     const old = draftRow(deps.db, value.id);
     if (old !== undefined)
-      return old.creation_hash === hash ? readDraft(deps, value.id) : refusal("conflict", old);
+      return old.creation_hash === hash && old.version === 1 && old.state === "active"
+        ? readDraft(deps, value.id)
+        : refusal("conflict", old);
     if (!validRefs(deps, value.id, value.document)) return refusal("invalid-edit");
     insertDraft(deps.db, value.id, value.document, hash, deps.clock.now().toISOString());
     syncAttachments(deps.db, value.id, value.document);
@@ -218,7 +220,9 @@ export function forkDraft(
     const hash = requestHash(value);
     const old = draftRow(deps.db, value.id);
     if (old !== undefined)
-      return old.creation_hash === hash ? readDraft(deps, value.id) : refusal("conflict", old);
+      return old.creation_hash === hash && old.version === 1 && old.state === "active"
+        ? readDraft(deps, value.id)
+        : refusal("conflict", old);
     const source = draftRow(deps.db, value.sourceId);
     const denied = writable(source);
     if (denied !== null) return denied;

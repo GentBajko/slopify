@@ -239,7 +239,7 @@ export function useDraftSession(): PlaySession {
       if (forking) return;
       if (running) await running;
       const current = state.current;
-      if (!current.id || !current.view) {
+      if (!current.id || (!current.view && current.status !== "conflict")) {
         await flush();
         return;
       }
@@ -260,7 +260,10 @@ export function useDraftSession(): PlaySession {
           document: attempt.document,
         });
         if (selected !== operation) return;
-        if (!accept(reply)) return;
+        if (!accept(reply)) {
+          if (reply.reason === "conflict") fork = null;
+          return;
+        }
         const newer =
           state.current.clock.edited > attempt.generation ? state.current.document : null;
         operation++;
