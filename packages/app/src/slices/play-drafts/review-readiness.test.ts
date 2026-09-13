@@ -8,6 +8,7 @@ import type { ResolvedFont } from "../fonts/model.js";
 import { must, reviewFixture } from "./draft.fake.js";
 import { reviewDraft } from "./review.js";
 import { createDraft, readDraft, saveDraft } from "./service.js";
+import { executionSchema } from "./start-repo.js";
 
 function narrated(h: ReturnType<typeof reviewFixture>) {
   const tts = h.deps.catalogue.read().tts[0];
@@ -82,10 +83,12 @@ it("coalesces concurrent font-await reviews to one UUID and keeps font paths pri
       must(results[1] ?? { ok: false, reason: "not-found", currentVersion: null, fields: [] }).id,
     );
     expect(ids).toBe(1);
-    expect(JSON.stringify(must(readDraft(h.deps, id)))).not.toContain(font.path);
-    expect(
-      h.deps.db.prepare("SELECT review_json FROM play_drafts WHERE id=?").get(id)?.review_json,
-    ).toContain(font.path);
+    expect(JSON.stringify(must(readDraft(h.deps, id)))).not.toContain(JSON.stringify(font.path));
+    const stored = h.deps.db
+      .prepare("SELECT review_json FROM play_drafts WHERE id=?")
+      .get(id)?.review_json;
+    if (typeof stored !== "string") throw new Error("Missing stored review");
+    expect(executionSchema.parse(JSON.parse(stored)).execution.font?.path).toBe(font.path);
   } finally {
     h.close();
   }
