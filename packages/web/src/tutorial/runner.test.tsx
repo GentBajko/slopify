@@ -358,7 +358,9 @@ describe("the tutorial in the real app", () => {
     await next(user, "audio-key");
     expect(nextHeld()).toBe(true);
     expect(guide().queryByText(/test-only-key/)).toBeNull();
-    expect(requests.filter((request) => request === "POST /api/projects")).toHaveLength(0);
+    expect(
+      requests.filter((request) => /^POST \/api\/drafts\/[^/]+\/start$/.test(request)),
+    ).toHaveLength(0);
   });
 
   it("supports Back, skipping unfinished work, exit and restarting from step one", async () => {
@@ -489,10 +491,14 @@ describe("the tutorial in the real app", () => {
     await fill(user, "topic", "Albanian mountains");
     await next(user, "play-start");
     expect(requests).not.toContain("POST /api/projects");
-    expect(screen.getByRole("button", { name: "Review costs" }).getAttribute("aria-disabled")).toBe(
-      "false",
+    expect(
+      String((screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled),
+    ).toBe("false");
+    await waitFor(() =>
+      expect(
+        (screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled,
+      ).toBe(false),
     );
-    await user.click(screen.getByRole("button", { name: "Review costs" }));
     await user.click(await screen.findByRole("button", { name: "Start run" }));
     await at("project");
     expect(router.state.location.pathname).toBe("/projects/actual-created-project");
@@ -503,7 +509,9 @@ describe("the tutorial in the real app", () => {
     ).not.toBeNull();
     expect(screen.getByRole("button", { name: "Rebuild affected outputs" })).not.toBeNull();
     expect(screen.queryByRole("button", { name: /^Run settings/ })).toBeNull();
-    expect(requests.filter((request) => request === "POST /api/projects")).toHaveLength(1);
+    expect(
+      requests.filter((request) => /^POST \/api\/drafts\/[^/]+\/start$/.test(request)),
+    ).toHaveLength(1);
     await next(user, "download");
     await screen.findByRole("region", { name: "Video workspace" });
     expect(
@@ -512,7 +520,9 @@ describe("the tutorial in the real app", () => {
     expect(screen.queryByRole("region", { name: "Article workspace" })).toBeNull();
     await user.click(guide().getByRole("button", { name: "Finish tutorial" }));
     expect(screen.queryByRole("region", { name: "Interactive getting started guide" })).toBeNull();
-    expect(requests.filter((request) => request === "POST /api/projects")).toHaveLength(1);
+    expect(
+      requests.filter((request) => /^POST \/api\/drafts\/[^/]+\/start$/.test(request)),
+    ).toHaveLength(1);
     await act(() => router.navigate({ to: "/play" }));
     expect(((await screen.findByLabelText("Project title")) as HTMLInputElement).value).toBe("");
     expect((screen.getByLabelText("Article prompt") as HTMLSelectElement).value).toBe("");
@@ -565,7 +575,11 @@ describe("the tutorial in the real app", () => {
       await next(user, "play-keywords");
       await next(user, "play-start");
       expect(requests).not.toContain("POST /api/projects");
-      await user.click(screen.getByRole("button", { name: "Review costs" }));
+      await waitFor(() =>
+        expect(
+          (screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled,
+        ).toBe(false),
+      );
       await user.click(await screen.findByRole("button", { name: "Start run" }));
       await at("project");
       await next(user, "download");
@@ -591,7 +605,9 @@ describe("the tutorial in the real app", () => {
         expect(clicked).toHaveBeenCalledTimes(1);
       }
       await user.click(guide().getByRole("button", { name: "Finish tutorial" }));
-      expect(requests.filter((request) => request === "POST /api/projects")).toHaveLength(1);
+      expect(
+        requests.filter((request) => /^POST \/api\/drafts\/[^/]+\/start$/.test(request)),
+      ).toHaveLength(1);
     },
   );
 
@@ -746,7 +762,11 @@ describe("the tutorial in the real app", () => {
     await user.selectOptions(screen.getByLabelText("Text model"), "sonnet");
     await fill(user, "topic", "Mountains");
     await user.click(screen.getByRole("button", { name: "Review" }));
-    await user.click(screen.getByRole("button", { name: "Review costs" }));
+    await waitFor(() =>
+      expect(
+        (screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled,
+      ).toBe(false),
+    );
     await user.click(await screen.findByRole("button", { name: "Start run" }));
     await waitFor(() =>
       expect(router.state.location.pathname).toBe("/projects/actual-created-project"),
@@ -771,6 +791,8 @@ describe("the tutorial in the real app", () => {
     await user.click(audioSource().getByRole("radio", { name: "Provide" }));
     expect(screen.queryByText("old-narration.wav")).toBeNull();
     expect(screen.queryByText("Staged")).toBeNull();
-    expect(requests.filter((request) => request === "POST /api/projects")).toHaveLength(1);
+    expect(
+      requests.filter((request) => /^POST \/api\/drafts\/[^/]+\/start$/.test(request)),
+    ).toHaveLength(1);
   });
 });

@@ -9,6 +9,7 @@ import { PlayForm } from "@/routes/play";
 import { type Answer, jsonAnswer, renderApp, renderRouted, testDeps } from "@/test-app";
 import { PlayDraftProvider, type PlaySession, usePlaySession } from "./draft-context";
 import { freshDraftDocument } from "./draft-state";
+import { legacyFixtureStart, reviewFixture } from "./review-test-fixture";
 
 const providers: readonly ProviderStatus[] = [
   {
@@ -155,6 +156,7 @@ export function playRoutes(
       const body = saveDraftInputSchema.parse({ ...(await request.json()), id });
       const view = {
         ...current(body.id),
+        review: null,
         draft: {
           ...current(body.id).draft,
           version: body.baseVersion + 1,
@@ -175,28 +177,44 @@ export function playRoutes(
     },
     "GET /api/drafts/:id": (request) =>
       jsonAnswer(current(new URL(request.url).pathname.split("/")[3] ?? ""))(request),
-    "POST /api/drafts/:id/review": (request) =>
-      jsonAnswer({
-        id: "00000000-0000-4000-8000-000000000010",
-        draftId: new URL(request.url).pathname.split("/")[3],
-        draftVersion: 1,
-        fingerprint: "fixture",
-        runs: [],
-        estimates: [],
-      })(request),
-    "POST /api/drafts/:id/start": (request) => {
+    "POST /api/drafts/:id/review": async (request) => {
       const id = new URL(request.url).pathname.split("/")[3] ?? "";
       const view = current(id);
-      const start = view.start
-        ? { ...view.start, replayed: true }
-        : {
-            requestId: "00000000-0000-4000-8000-000000000020",
-            projectIds: ["p1"],
+      const listedPrompts = await routes["GET /api/prompts"]?.(request);
+      const listedEntries = await routes["GET /api/entries"]?.(request);
+      const promptData = listedPrompts
+        ? ((await listedPrompts.json()) as { prompts: readonly Prompt[] })
+        : { prompts };
+      const entryData = listedEntries
+        ? ((await listedEntries.json()) as { entries: readonly Entry[] })
+        : { entries };
+      const review = reviewFixture(view, entryData.entries, promptData.prompts);
+      saved.set(id, { ...view, review });
+      return jsonAnswer(review)(request);
+    },
+    "POST /api/drafts/:id/start": async (request) => {
+      const id = new URL(request.url).pathname.split("/")[3] ?? "";
+      const view = current(id);
+      const body = (await request.clone().json()) as { baseVersion: number; reviewId: string };
+      if (
+        !view.review ||
+        body.baseVersion !== view.review.draftVersion ||
+        body.reviewId !== view.review.id
+      )
+        return jsonAnswer({ title: "Conflict", status: 409, reason: "stale-review" }, 409)(request);
+      if (view.start) return jsonAnswer({ ...view.start, replayed: true })(request);
+      const batch = view.review.runs.length > 1;
+      const callback = routes[batch ? "POST /api/projects/batch" : "POST /api/projects"];
+      const response = callback
+        ? await legacyFixtureStart(request, view.review, callback, batch)
+        : await jsonAnswer({
+            requestId: view.review.id,
+            projectIds: view.review.runs.map((_run, index) => `p${index + 1}`),
             queue: [],
             replayed: false,
-          };
-      saved.set(id, { ...view, start });
-      return jsonAnswer(start)(request);
+          })(request);
+      if (response.ok) saved.set(id, { ...view, start: await response.clone().json() });
+      return response;
     },
     "DELETE /api/drafts/:id": jsonAnswer({ discarded: true }),
     ...over,

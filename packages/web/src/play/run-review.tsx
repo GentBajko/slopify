@@ -1,13 +1,8 @@
-import type { RunDraft } from "@app/slices/admission/model.js";
 import type { Field } from "@app/slices/admission/substitute.js";
 import type { CostEstimate } from "@app/slices/estimate/index.js";
-import { useQuery } from "@tanstack/react-query";
-import { useId, useState } from "react";
-import { useApp } from "@/app-context";
+import { type ReactElement, useId } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { read } from "@/http";
 
 export interface BatchItem {
   readonly key: string;
@@ -28,7 +23,7 @@ export function BatchEditor({
   readonly values: Readonly<Record<string, string>>;
   readonly problem?: (field: string) => string | undefined;
   readonly onChange: (items: readonly BatchItem[]) => void;
-}) {
+}): ReactElement {
   const prefix = useId();
   return (
     <details className="rounded-control border border-line p-3">
@@ -71,7 +66,7 @@ export function BatchEditor({
                 id={`${prefix}-${item.key}-${encodeURIComponent(field.name)}`}
                 data-play-field={`items.${item.key}.values.${field.name}`}
                 aria-invalid={problem?.(`items.${i + 1}.values.${field.name}`) !== undefined}
-                value={item.values[field.name] ?? values[field.name] ?? ""}
+                value={item.values[field.name] ?? ""}
                 onChange={(e) =>
                   onChange(
                     items.map((x) =>
@@ -108,52 +103,10 @@ export function BatchEditor({
   );
 }
 export function RunReview({
-  draft,
-  items,
-  pending,
-  failure,
-  onStart,
-  onClose,
-  expectedWords,
-  onExpectedWords,
+  estimates,
 }: {
-  readonly expectedWords?: string;
-  readonly onExpectedWords?: (value: string) => void;
-  readonly draft: RunDraft;
-  readonly items: readonly BatchItem[];
-  readonly pending: boolean;
-  readonly failure?: string | undefined;
-  readonly onStart: () => void;
-  readonly onClose: () => void;
-}) {
-  const { api } = useApp();
-  const wordsId = useId();
-  const [words, setWords] = useState(1500);
-  const input = {
-    draft,
-    expectedWords: expectedWords === undefined ? words : Number(expectedWords),
-    ...(items.length
-      ? {
-          items: [
-            { title: draft.title, values: draft.values },
-            ...items.map(({ title, values }) => ({ title, values })),
-          ],
-        }
-      : {}),
-  };
-  const costs = useQuery({
-    queryKey: ["run-estimate", input],
-    retry: false,
-    queryFn: async () =>
-      read<{ estimates: readonly CostEstimate[] }>(
-        await api.fetch(`${api.origin}/api/projects/estimate`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(input),
-        }),
-      ),
-  });
-  const estimates = costs.data?.estimates ?? [];
+  readonly estimates: readonly CostEstimate[];
+}): ReactElement {
   const low = estimates.reduce((n, e) => n + e.low, 0);
   const high = estimates.reduce((n, e) => n + e.high, 0);
   const unknown = estimates.reduce((n, e) => n + e.unknown, 0);
@@ -168,106 +121,53 @@ export function RunReview({
         : estimates.reduce((n, e) => n + (e.rows[i]?.high ?? 0), 0),
     })) ?? [];
   return (
-    <Dialog
-      open
-      onOpenChange={(open) => {
-        if (!open && !pending) onClose();
-      }}
-    >
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
-        <DialogTitle>
-          Review {items.length ? `${items.length + 1} queued videos` : "run cost"}
-        </DialogTitle>
-        <DialogDescription>
-          Estimated provider charges in USD. Starting authorizes the selected jobs; this estimate
-          does not cap spending.
-        </DialogDescription>
-        {draft.sources.article === "generate" ? (
-          <label htmlFor={wordsId} className="text-body">
-            Expected article words per video
-            <Input
-              id={wordsId}
-              data-play-field="expectedWords"
-              type="number"
-              min={1}
-              max={100000}
-              value={expectedWords ?? words}
-              disabled={pending}
-              onChange={(e) =>
-                onExpectedWords
-                  ? onExpectedWords(e.target.value)
-                  : setWords(Math.min(100000, Math.max(1, Number(e.target.value) || 1)))
-              }
-            />
-          </label>
-        ) : null}
-        {costs.isFetching ? (
-          <p role="status" className="text-body text-ink2">
-            Calculating estimate…
+    <div className="flex flex-col gap-4">
+      {" "}
+      {estimates.length ? (
+        <>
+          <p className="text-title font-bold">
+            {unknown ? "Known subtotal: " : "Estimated total: "}
+            {money(low, high)}
           </p>
-        ) : null}
-        {costs.error ? (
-          <p role="alert" className="text-body text-red">
-            {costs.error.message}
-          </p>
-        ) : null}
-        {costs.data ? (
-          <>
-            <p className="text-title font-bold">
-              {unknown ? "Known subtotal: " : "Estimated total: "}
-              {money(low, high)}
+          {unknown ? (
+            <p className="text-body text-ink2">
+              Plus {unknown} stage charge{unknown === 1 ? "" : "s"} with unavailable pricing.
             </p>
-            {unknown ? (
-              <p className="text-body text-ink2">
-                Plus {unknown} stage charge{unknown === 1 ? "" : "s"} with unavailable pricing.
-              </p>
-            ) : null}
-            <div className="divide-y divide-line">
-              {rows.map((r) => (
-                <div key={r.stage} className="py-2">
-                  <div className="flex justify-between gap-4 text-body">
-                    <span>{r.stage}</span>
-                    <span>
-                      {r.low === null || r.high === null ? "Unknown" : money(r.low, r.high)}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-small text-ink2">{r.detail}</p>
+          ) : null}
+          <div className="divide-y divide-line">
+            {rows.map((r) => (
+              <div key={r.stage} className="py-2">
+                <div className="flex justify-between gap-4 text-body">
+                  <span>{r.stage}</span>
+                  <span>
+                    {r.low === null || r.high === null ? "Unknown" : money(r.low, r.high)}
+                  </span>
                 </div>
+              </div>
+            ))}
+          </div>
+          <details className="border-t border-line py-3">
+            <summary className="cursor-pointer text-small">Assumptions and stage details</summary>
+            <div className="mt-3 flex flex-col gap-2">
+              {rows.map((row) => (
+                <p key={row.stage} className="text-small text-ink2">
+                  {row.stage}: {row.detail}
+                </p>
+              ))}
+              {[...new Set(estimates.flatMap((estimate) => estimate.assumptions))].map((note) => (
+                <p key={note} className="text-small text-ink2">
+                  {note}
+                </p>
               ))}
             </div>
-            {estimates[0]?.assumptions.map((note) => (
-              <p key={note} className="text-small text-ink2">
-                {note}
-              </p>
-            ))}
-            <p className="text-small text-ink3">
-              Catalogue verified {estimates[0]?.catalogueDate ?? "date unavailable"}. Batch rows
-              show combined costs.
-            </p>
-          </>
-        ) : null}
-        {failure ? (
-          <p role="alert" className="text-body text-red">
-            {failure}
+          </details>
+          <p className="text-small text-ink3">
+            Catalogue verified {estimates[0]?.catalogueDate ?? "date unavailable"}. Batch rows show
+            combined costs.
           </p>
-        ) : null}
-        <div className="flex justify-end gap-2">
-          <Button disabled={pending} onClick={onClose}>
-            Back
-          </Button>
-          <Button
-            disabled={pending || costs.isFetching || !costs.data || costs.isError}
-            onClick={onStart}
-          >
-            {pending
-              ? "Starting…"
-              : items.length
-                ? `Queue ${items.length + 1} videos`
-                : "Start run"}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </>
+      ) : null}
+    </div>
   );
 }
 function money(low: number, high: number): string {

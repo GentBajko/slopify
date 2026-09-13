@@ -2,6 +2,7 @@ import type {
   DraftAttachment,
   DraftView,
   PlayDraftDocument,
+  PlayStartResult,
 } from "@app/slices/play-drafts/model.js";
 import { createContext, type ReactElement, type ReactNode, useContext } from "react";
 import type { ControlledFontUpload } from "@/subtitles/font-picker";
@@ -20,6 +21,11 @@ export interface RevealRequest {
   readonly sequence: number;
 }
 export interface PlaySession extends PlayNavigation {
+  readonly review: import("./review-state").ReviewState;
+  readonly reviewDraft: () => Promise<void>;
+  readonly startRun: () => Promise<void>;
+  readonly invalidateReview: (clearFields?: boolean) => void;
+  readonly takeCreated: () => PlayStartResult | null;
   readonly activeId: string | null;
   readonly fontUpload: ControlledFontUpload;
   readonly fontUploading: boolean;

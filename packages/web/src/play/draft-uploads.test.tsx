@@ -81,9 +81,9 @@ it("keeps the font upload lock after leaving Style and preserves concurrent styl
   await userEvent.click(screen.getByRole("radio", { name: "center" }));
   await userEvent.click(screen.getByRole("button", { name: "Review" }));
   expect(screen.queryByRole("list", { name: "Setup errors" })).toBeNull();
-  expect(screen.getByRole("button", { name: "Review costs" }).getAttribute("aria-disabled")).toBe(
-    "true",
-  );
+  expect(
+    String((screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled),
+  ).toBe("true");
   await act(async () =>
     pending.resolve(
       response({
@@ -92,9 +92,15 @@ it("keeps the font upload lock after leaving Style and preserves concurrent styl
     ),
   );
   await waitFor(() =>
-    expect(screen.getByRole("button", { name: "Review costs" }).getAttribute("aria-disabled")).toBe(
-      "false",
-    ),
+    expect(
+      (screen.getByRole("button", { name: "Refresh review" }) as HTMLButtonElement).disabled,
+    ).toBe(false),
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Refresh review" }));
+  await waitFor(() =>
+    expect(
+      String((screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled),
+    ).toBe("false"),
   );
   await userEvent.click(screen.getByRole("button", { name: "Style" }));
   expect((screen.getByLabelText("Subtitle font") as HTMLSelectElement).value).toBe("uploaded-font");
@@ -119,9 +125,9 @@ it("keeps pending media across Outputs, Style, Content and binds its success onc
   expect((screen.getByLabelText("Narration file") as HTMLInputElement).value).toBe("");
   for (const name of ["Style", "Content", "Review"])
     await userEvent.click(screen.getByRole("button", { name }));
-  expect(screen.getByRole("button", { name: "Review costs" }).getAttribute("aria-disabled")).toBe(
-    "true",
-  );
+  expect(
+    String((screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled),
+  ).toBe("true");
   await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
   expect(screen.getByText("pending.wav")).not.toBeNull();
   await act(async () => {
@@ -129,8 +135,10 @@ it("keeps pending media across Outputs, Style, Content and binds its success onc
   });
   await screen.findByText("Staged");
   await userEvent.click(screen.getByRole("button", { name: "Review" }));
-  expect(screen.getByRole("button", { name: "Review costs" }).getAttribute("aria-disabled")).toBe(
-    "false",
+  await waitFor(() =>
+    expect(
+      String((screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled),
+    ).toBe("false"),
   );
   expect(
     mounted.requests.filter((one) => one.url.endsWith("/file") && one.method === "PUT"),
@@ -175,15 +183,36 @@ it("shows a failed font after revisiting Style and recovers by selecting a font"
   await act(async () =>
     pending.resolve(await problemAnswer("Invalid font")(new Request("http://test"))),
   );
-  expect(screen.getByRole("button", { name: "Review costs" }).getAttribute("aria-disabled")).toBe(
-    "true",
-  );
+  expect(
+    String((screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled),
+  ).toBe("true");
   await userEvent.click(screen.getByRole("button", { name: "Style" }));
   expect(screen.getByText("Invalid font")).not.toBeNull();
   expect(screen.getByText("Reattach broken.ttf, or select a font.")).not.toBeNull();
   await userEvent.selectOptions(screen.getByLabelText("Subtitle font"), "default");
   await userEvent.click(screen.getByRole("button", { name: "Review" }));
-  expect(screen.getByRole("button", { name: "Review costs" }).getAttribute("aria-disabled")).toBe(
-    "false",
+  await waitFor(() =>
+    expect(
+      String((screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled),
+    ).toBe("false"),
   );
+});
+
+it("ignores dormant missing narration after Audio is turned Off", async () => {
+  const { created } = await mountSupplied({}, true);
+  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+  const { within } = await import("@testing-library/react");
+  await userEvent.click(
+    within(screen.getByRole("radiogroup", { name: "audio source" })).getByRole("radio", {
+      name: "Off",
+    }),
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Review" }));
+  await waitFor(() =>
+    expect((screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled).toBe(
+      false,
+    ),
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Start run" }));
+  await waitFor(() => expect(created).toHaveBeenCalledTimes(1));
 });

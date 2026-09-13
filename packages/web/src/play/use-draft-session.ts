@@ -20,7 +20,9 @@ import {
   remapForkEdits,
   retainUploadSettlements,
 } from "./draft-save";
+import { createReviewOwner } from "./review-state";
 import { useDraftUploads } from "./use-draft-uploads";
+import { useReviewChoices } from "./use-review-choices";
 
 export function useDraftSession(): PlaySession {
   const { api } = useApp();
@@ -59,6 +61,7 @@ export function useDraftSession(): PlaySession {
       return false;
     };
     const install = (view: DraftView) => {
+      review.restore(view);
       publish({
         ...emptySession(),
         document: view.draft.document,
@@ -134,7 +137,21 @@ export function useDraftSession(): PlaySession {
       drainRequested = true;
       return begin();
     };
+    const review = createReviewOwner({
+      api,
+      queryClient,
+      current: () => state.current,
+      flush,
+      render: () => {
+        if (alive) render();
+      },
+    });
     const edit = (document: PlayDraftDocument) => {
+      if (review.state().starting || review.state().uncertain || review.state().created) return;
+      review.invalidate(
+        JSON.stringify({ ...document, section: state.current.document.section }) !==
+          JSON.stringify(state.current.document),
+      );
       const current = state.current;
       publish({
         document,
@@ -154,6 +171,7 @@ export function useDraftSession(): PlaySession {
         }, 500);
     };
     const open = async (id: string): Promise<void> => {
+      if (review.state().starting || review.state().uncertain || review.state().created) return;
       if ((state.current.id !== id || state.current.status !== "conflict") && !(await flush()))
         return;
       const selected = ++operation;
@@ -177,14 +195,17 @@ export function useDraftSession(): PlaySession {
       }
     };
     const newDraft = async (): Promise<void> => {
+      if (review.state().starting || review.state().uncertain || review.state().created) return;
       const selected = operation;
       if (!(await flush()) || selected !== operation) return;
       operation++;
       fork = null;
       publish(emptySession());
+      review.reset();
       rememberDraft(null);
     };
     const discard = async (): Promise<void> => {
+      if (review.state().starting || review.state().uncertain || review.state().created) return;
       const selected = operation;
       if (!(await flush()) || selected !== operation) return;
       const { id, clock } = state.current;
@@ -199,6 +220,7 @@ export function useDraftSession(): PlaySession {
         operation++;
         fork = null;
         publish(emptySession());
+        review.reset();
         rememberDraft(null);
         invalidate();
       } catch (error) {
@@ -212,6 +234,7 @@ export function useDraftSession(): PlaySession {
       readonly generation: number;
     } | null = null;
     const saveAsNew = async (): Promise<void> => {
+      if (review.state().starting || review.state().uncertain || review.state().created) return;
       cancelTimer();
       if (forking) return;
       if (running) await running;
@@ -266,6 +289,18 @@ export function useDraftSession(): PlaySession {
       });
     };
     return {
+      review,
+      takeCreated: () => {
+        const created = review.state().created;
+        if (!created) return null;
+        operation++;
+        publish(emptySession());
+        review.reset();
+        rememberDraft(null);
+        for (const key of [["projects"], ["staging"], ["play-drafts"]])
+          void queryClient.invalidateQueries({ queryKey: key });
+        return created;
+      },
       edit,
       flush,
       open,
@@ -290,6 +325,7 @@ export function useDraftSession(): PlaySession {
     owner.start();
     return owner.stop;
   }, [owner]);
+  useReviewChoices(api, queryClient, owner.review);
   const uploads = useDraftUploads({
     api,
     queryClient,
@@ -303,6 +339,11 @@ export function useDraftSession(): PlaySession {
   const current = state.current;
   return {
     ...uploads,
+    review: owner.review.state(),
+    reviewDraft: owner.review.review,
+    startRun: owner.review.start,
+    invalidateReview: owner.review.invalidate,
+    takeCreated: owner.takeCreated,
     document: current.document,
     section: current.document.section,
     view: current.view,

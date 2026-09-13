@@ -1,13 +1,9 @@
-import type { FieldError } from "@app/slices/admission/rules.js";
-import type { QueueEntry } from "@app/slices/batch/index.js";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { type KeyboardEvent, useLayoutEffect, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { UploadKind } from "@/api";
-import { createProject } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/ui/button";
-import { saved } from "@/http";
 import { usePlayDraft } from "@/lib/form-drafts";
 import { admission } from "@/play/admission";
 import { ContentSection } from "@/play/content-section";
@@ -16,20 +12,13 @@ import { DraftList } from "@/play/draft-list";
 import { focusPlayField, playFieldTarget } from "@/play/field-targets";
 import { OutputPreview, useWidePlayLayout } from "@/play/output-preview";
 import { OutputsSection } from "@/play/outputs-section";
-import { BatchEditor, RunReview } from "@/play/run-review";
+import { ReviewSection } from "@/play/review-section";
 import { SectionNavigation } from "@/play/section-navigation";
 import { playSections } from "@/play/sections";
 import { SetupSummary } from "@/play/setup-summary";
 import type { PlayFormState, Upload } from "@/play/state";
 import { StyleSection } from "@/play/style-section";
-import {
-  entriesQuery,
-  keys,
-  promptsQuery,
-  providersQuery,
-  settingsQuery,
-  voicesQuery,
-} from "@/queries";
+import { entriesQuery, promptsQuery, providersQuery, settingsQuery, voicesQuery } from "@/queries";
 import { subtitlesFor } from "@/subtitles/config";
 import { useTutorialEvent, useTutorialProgress } from "@/tutorial/context";
 
@@ -47,7 +36,6 @@ export function PlayRoute() {
 export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string) => void }) {
   const { api } = useApp();
   const wide = useWidePlayLayout();
-  const queryClient = useQueryClient();
   const tutorialEvent = useTutorialEvent();
 
   const providers = useQuery(providersQuery(api));
@@ -59,12 +47,10 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   const [form, setForm] = usePlayDraft();
   const session = usePlaySession();
   const batchItems = session.document.variants.map(({ id, ...item }) => ({ ...item, key: id }));
-  const [review, setReview] = useState(false);
-  const [batchId, setBatchId] = useState(() => crypto.randomUUID());
   const subtitleUploading = session.fontUploading || session.document.fontUpload !== null;
   // What the server marked when it refused the draft: a template deleted since it was
   // picked, or a rule the browser's copy could not see.
-  const [refused, setRefused] = useState<readonly FieldError[]>([]);
+  const refused = session.review.fields;
   const [touched, setTouched] = useState<ReadonlySet<string>>(new Set());
   const root = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -74,7 +60,6 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     if (touchedDraft.current !== session.activeId) {
       touchedDraft.current = session.activeId;
       setTouched(new Set());
-      setRefused([]);
     }
   }, [session.activeId]);
   const focusSequence = useRef<number | null>(null);
@@ -119,14 +104,12 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
       const next = { ...current, ...patch };
       return { ...next, subtitles: subtitlesFor(next.subtitles, next.sources) };
     });
-    setBatchId(crypto.randomUUID());
     // A refusal stands until the form changes; the next press asks the server again.
-    setRefused([]);
+    session.invalidateReview(true);
   };
 
   const {
     fields,
-    draft,
     result,
     blocker: admissionBlocker,
   } = admission({
@@ -140,46 +123,14 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     ? { field: "subtitles.fontId", hint: "Wait for the subtitle font upload to finish to play" }
     : admissionBlocker;
 
-  const play = useMutation({
-    mutationFn: async () => {
-      if (!batchItems.length) return createProject(api, draft);
-      const created = await saved<{ queue: QueueEntry[] }>(
-        await api.fetch(`${api.origin}/api/projects/batch`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            requestId: batchId,
-            draft,
-            items: [
-              { title: draft.title, values: draft.values },
-              ...batchItems.map(({ title, values }) => ({ title, values })),
-            ],
-          }),
-        }),
-      );
-      if (!created.ok) return created;
-      const first = created.value.queue[0];
-      if (!first) throw new Error("No videos were queued.");
-      return { ok: true as const, value: { project: { id: first.projectId } } };
-    },
-    onSuccess: (created) => {
-      if (!created.ok) {
-        // The server names every failing field, and each one is marked
-        // where it stands rather than being summarised over the key.
-        setRefused(created.fields);
-        setReview(false);
-        return;
-      }
-      void queryClient.invalidateQueries({ queryKey: keys.projects });
-      void queryClient.invalidateQueries({ queryKey: keys.staging });
-      // Upload IDs belong to this run once accepted; the next Play starts fresh.
-      void session.newDraft();
-      setBatchId(crypto.randomUUID());
-      setReview(false);
-      tutorialEvent({ type: "project-created", id: created.value.project.id });
-      onCreated(created.value.project.id);
-    },
-  });
+  useEffect(() => {
+    if (!session.review.created) return;
+    const created = session.takeCreated();
+    const id = created?.projectIds[0];
+    if (!id) return;
+    tutorialEvent({ type: "project-created", id });
+    onCreated(id);
+  }, [session.review.created, session.takeCreated, tutorialEvent, onCreated]);
 
   // Completion follows the same field rules as PLAY, with selected prompts checked
   // against the loaded library and pending uploads kept incomplete.
@@ -211,7 +162,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     playOptionsReady: clear("title", "format", "llm", "intro", "outro"),
     playHasKeywords: fields.length > 0,
     playKeywordsReady: clear("values"),
-    playReady: blocker === undefined && !play.isPending,
+    playReady: blocker === undefined && !session.review.starting,
   });
 
   const problem = (field: string): string | undefined => {
@@ -233,7 +184,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   };
 
   const onPickFiles = (kind: UploadKind, files: readonly File[]): void => {
-    setRefused([]);
+    session.invalidateReview(true);
     void session.attach(kind, files);
   };
 
@@ -347,47 +298,12 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
           ) : null}
           {session.section === "style" ? <StyleSection problem={problem} /> : null}
           {session.section === "review" ? (
-            <div className="flex flex-col gap-5 py-6">
-              {errors.length ? (
-                <ul aria-label="Setup errors" className="text-small text-red">
-                  {errors.map((error) => (
-                    <li key={`${error.field}-${error.message}`}>
-                      <Button variant="ghost" onClick={() => revealField(error.field)}>
-                        {error.message}
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-              {subtitleUploading ? (
-                <Button variant="ghost" onClick={() => revealField("subtitles.fontId")}>
-                  Wait for the subtitle font upload to finish to play
-                </Button>
-              ) : null}
-              <BatchEditor
-                problem={problem}
-                items={batchItems}
-                fields={fields}
-                title={form.title}
-                values={form.values}
-                onChange={(items) => {
-                  session.edit({
-                    ...session.document,
-                    variants: items.map(({ key, ...item }) => ({ ...item, id: key })),
-                  });
-                  setBatchId(crypto.randomUUID());
-                }}
-              />
-              <Button
-                data-tour="play-start"
-                aria-disabled={blocker !== undefined || play.isPending}
-                onClick={() => {
-                  if (!blocker && !play.isPending) setReview(true);
-                }}
-              >
-                Review costs
-              </Button>
-            </div>
+            <ReviewSection
+              fields={fields}
+              errors={errors}
+              problem={problem}
+              onReveal={revealField}
+            />
           ) : (
             <div className="mt-8 flex justify-end border-t border-line py-6">
               <Button
@@ -413,18 +329,6 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
           <SetupSummary form={form} blocker={blocker} onReveal={revealField} />
         </div>
       </div>
-      {review ? (
-        <RunReview
-          draft={draft}
-          items={batchItems}
-          pending={play.isPending}
-          expectedWords={session.document.expectedWords}
-          onExpectedWords={(expectedWords) => session.edit({ ...session.document, expectedWords })}
-          failure={play.error?.message ?? refused.map((f) => f.message).join(" ")}
-          onClose={() => setReview(false)}
-          onStart={() => play.mutate()}
-        />
-      ) : null}
     </div>
   );
 }

@@ -47,7 +47,12 @@ async function section(name: string): Promise<void> {
 }
 async function openCosts(): Promise<void> {
   await section("Review");
-  await userEvent.click(screen.getByRole("button", { name: "Review costs" }));
+  await waitFor(() =>
+    expect(
+      (screen.getByRole("button", { name: /^(Start run|Queue .* videos)$/ }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false),
+  );
 }
 
 function held(): boolean {
@@ -244,7 +249,12 @@ describe("Ctrl+Enter", () => {
     await section("Content");
     await userEvent.click(screen.getByLabelText("Project title"));
     await userEvent.keyboard("{Control>}{Enter}{/Control}");
-    await userEvent.click(screen.getByRole("button", { name: "Review costs" }));
+    await waitFor(() =>
+      expect(
+        (screen.getByRole("button", { name: /^(Start run|Queue .* videos)$/ }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(false),
+    );
     await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
 
     await waitFor(() => {
@@ -660,7 +670,7 @@ describe("subtitles on Play", () => {
     const size = screen.getByLabelText("Subtitle font size");
     await userEvent.clear(size);
     await userEvent.type(size, "64");
-    await userEvent.selectOptions(screen.getByLabelText("Subtitle position"), "top");
+    await userEvent.click(screen.getByRole("radio", { name: "top" }));
     release?.(
       new Response(JSON.stringify({ font: custom }), {
         headers: { "content-type": "application/json", "X-Slopify-Version": testVersion },
@@ -772,7 +782,13 @@ describe("explicit review error navigation", () => {
     await section("Review");
     await userEvent.click(screen.getByText(/Queue keyword variations/));
     await userEvent.click(screen.getByRole("button", { name: "Add keyword variation" }));
-    await userEvent.click(screen.getByRole("button", { name: "Review costs" }));
+    await userEvent.click(screen.getByRole("button", { name: "Refresh review" }));
+    await waitFor(() =>
+      expect(
+        (screen.getByRole("button", { name: /^(Start run|Queue .* videos)$/ }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(false),
+    );
     await userEvent.click(await screen.findByRole("button", { name: "Queue 2 videos" }));
     await userEvent.click(screen.getByText(/Queue keyword variations/));
     await userEvent.click(
