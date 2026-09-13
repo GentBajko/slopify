@@ -7,6 +7,7 @@ import { modelsKey, type ProviderModels } from "@/lib/models";
 import { entriesQuery, providersQuery, voicesQuery } from "@/queries";
 import { type FontSummary, fontsKey } from "@/subtitles/api";
 import { usePlaySession } from "./draft-context";
+import { CheckpointReview } from "./run-review";
 import { sourceLabels } from "./state";
 
 function SummaryGroup({
@@ -33,7 +34,7 @@ export function ReviewSummary({
   readonly onReveal: (field: string) => void;
   readonly children: ReactNode;
 }): ReactElement {
-  const { document } = usePlaySession();
+  const { document, review } = usePlaySession();
   const { form } = document;
   const { api } = useApp();
   // Disabled observers would block Review's explicit catalogue refresh.
@@ -195,6 +196,19 @@ export function ReviewSummary({
             : null}
           {row("Video", "sources.video", sourceLabels[form.sources.video])}
         </dl>
+      </SummaryGroup>
+      <SummaryGroup name="Checkpoints">
+        <CheckpointReview
+          selected={form.checkpoints}
+          reviewed={review.valid ? review.receipt?.checkpointSet : undefined}
+        />
+        <Button
+          variant="ghost"
+          aria-label="Edit checkpoints"
+          onClick={() => onReveal("checkpoints")}
+        >
+          Edit checkpoints ↗
+        </Button>
       </SummaryGroup>
       <SummaryGroup name="Style">
         <dl className="text-body">

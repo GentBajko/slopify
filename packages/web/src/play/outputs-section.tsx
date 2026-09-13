@@ -1,6 +1,7 @@
 import type { Entry } from "@app/slices/library/model.js";
 import type { ReactElement } from "react";
 import { Button } from "@/components/ui/button";
+import { CheckpointControls } from "./checkpoints";
 import { usePlaySession } from "./draft-context";
 import { AudioRail, ImagesRail } from "./media-rails";
 import { OptionPicker } from "./pickers";
@@ -80,6 +81,7 @@ export function OutputsSection(
       />
       <ThumbnailRail {...props} />
       <VideoRail {...props} />
+      <CheckpointControls problem={problem} />
       {props.missingKeyword ? (
         <p className="py-4 text-small text-ink2">
           A selected template needs keywords.{" "}

@@ -6,6 +6,7 @@ import { useApp } from "@/app-context";
 import { Button } from "@/components/ui/button";
 import { usePlayDraft } from "@/lib/form-drafts";
 import { admission } from "@/play/admission";
+import { checkpointTarget } from "@/play/checkpoints";
 import { ContentSection } from "@/play/content-section";
 import { usePlaySession } from "@/play/draft-context";
 import { DraftList } from "@/play/draft-list";
@@ -88,7 +89,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     heading.current?.focus();
   }, [session.reveal, session.section]);
   const revealField = (field: string): void => {
-    const target = playFieldTarget(field, form, batchItems);
+    const target = checkpointTarget(field, form) ?? playFieldTarget(field, form, batchItems);
     setTouched((current) => new Set([...current, field, target.field]));
     void session.navigate(target.section, target.field);
   };
@@ -166,10 +167,12 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   });
 
   const problem = (field: string): string | undefined => {
-    const canonical = playFieldTarget(field, form, batchItems).field;
+    const canonical = (checkpointTarget(field, form) ?? playFieldTarget(field, form, batchItems))
+      .field;
     return errors.find(
       (error) =>
-        playFieldTarget(error.field, form, batchItems).field === canonical &&
+        (checkpointTarget(error.field, form) ?? playFieldTarget(error.field, form, batchItems))
+          .field === canonical &&
         (refused.includes(error) || touched.has(field) || touched.has(canonical)),
     )?.message;
   };

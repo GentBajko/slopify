@@ -17,10 +17,6 @@ import { defaultSubtitles, type SubtitleConfig } from "@app/slices/subtitles/mod
 import { subtitlesFor } from "@/subtitles/config";
 import { freshDraftDocument } from "./draft-state";
 
-// Everything the Play form holds between one page load and the run it posts. It is a
-// plain value: `routes/play.tsx` keeps one in `useState`, every function here is pure,
-// and `draftOf` is the only place that turns it into the body the server reads.
-
 // One picked file and how far its copy into staging got. A file starts copying the moment it is
 // picked; until the copy finishes the run cannot start. The whole staged row is kept rather
 // than its id, because the admission rule the form runs live is handed the same rows the
@@ -41,6 +37,7 @@ export interface ProvidedState {
 }
 
 export interface LegacyPlayFormState {
+  readonly checkpoints?: RunDraft["checkpoints"];
   readonly title: string;
   readonly format: Format;
   readonly sources: Readonly<Record<StageKind, StageSource>>;
@@ -137,6 +134,7 @@ export interface DraftInput {
 export function draftOf(input: DraftInput): RunDraft {
   const { form } = input;
   return {
+    ...(form.checkpoints === undefined ? {} : { checkpoints: form.checkpoints }),
     title: form.title,
     format: form.format,
     sources: {

@@ -1,8 +1,50 @@
 import type { Field } from "@app/slices/admission/substitute.js";
 import type { CostEstimate } from "@app/slices/estimate/index.js";
+import type { PlayReview } from "@app/slices/play-drafts/model.js";
 import { type ReactElement, useId } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { checkpointOptions } from "./checkpoints";
+import type { PlayFormState } from "./state";
+
+export function CheckpointReview({
+  selected,
+  reviewed,
+}: {
+  readonly selected: PlayFormState["checkpoints"];
+  readonly reviewed: PlayReview["checkpointSet"];
+}): ReactElement {
+  const label = (stage: string) =>
+    checkpointOptions.find((option) => option.stage === stage)?.label ?? stage;
+  if (!selected?.length)
+    return <p className="text-body text-ink2">No review checkpoints selected.</p>;
+  return (
+    <div className="space-y-3 text-body">
+      {reviewed?.length ? (
+        reviewed.map((gate) => (
+          <div key={`${gate.runIndex}-${gate.checkpointId}`}>
+            <p className="font-medium">
+              Run {gate.runIndex + 1} · Before {label(gate.stage)}
+            </p>
+            <p className="text-small text-ink2">
+              {gate.dependents.length
+                ? `Also holds: ${gate.dependents.map(label).join(", ")}.`
+                : "No dependent steps."}
+            </p>
+          </div>
+        ))
+      ) : (
+        <p>
+          Selected: {selected.map((stage) => `Before ${label(stage)}`).join(", ")}. Refresh review
+          to confirm dependent steps.
+        </p>
+      )}
+      <p className="text-small text-ink2">
+        Approval required on the project page. Starting this run does not approve these checkpoints.
+      </p>
+    </div>
+  );
+}
 
 export interface BatchItem {
   readonly key: string;
