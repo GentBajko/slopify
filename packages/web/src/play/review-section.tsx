@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { usePlaySession } from "./draft-context";
 import { pendingReviewUpload } from "./review-state";
+import { ReviewSummary } from "./review-summary";
 import { BatchEditor, RunReview } from "./run-review";
 
 export function ReviewSection({
@@ -52,41 +53,7 @@ export function ReviewSection({
           {review.error}
         </p>
       ) : null}
-      <div className="border-t border-line pt-5">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-semibold">Content</h3>
-          <Button variant="ghost" onClick={() => onReveal("title")}>
-            Edit content ↗
-          </Button>
-        </div>
-        <dl className="grid grid-cols-[100px_minmax(0,1fr)] gap-x-4 gap-y-2 text-body sm:grid-cols-[145px_minmax(0,1fr)]">
-          <dt className="text-ink2">Project</dt>
-          <dd className="break-words font-medium">{form.title || "Untitled run"}</dd>
-          <dt className="text-ink2">Article</dt>
-          <dd>
-            {form.sources.article === "generate"
-              ? `Generate · ${form.articlePrompt}`
-              : "Your article"}
-          </dd>
-          <dt className="text-ink2">Research</dt>
-          <dd>{form.sources.research}</dd>
-          {form.sources.article === "generate" || form.sources.thumbnail === "prompt_by_llm" ? (
-            <>
-              <dt className="text-ink2">Text provider</dt>
-              <dd>
-                {form.llm.provider} · {form.llm.model}
-              </dd>
-            </>
-          ) : null}
-          {Object.entries(form.values)
-            .filter(([name]) => fields.some((field) => field.name === name))
-            .map(([name, value]) => (
-              <div key={name} className="contents">
-                <dt className="break-words text-ink2">{name}</dt>
-                <dd className="whitespace-pre-wrap break-words">{value}</dd>
-              </div>
-            ))}
-        </dl>
+      <ReviewSummary fields={fields} onReveal={onReveal}>
         <details className="mt-5 border-t border-line py-3">
           <summary className="cursor-pointer text-small">
             {form.sources.article === "provide"
@@ -116,42 +83,7 @@ export function ReviewSection({
             </p>
           )}
         </details>
-      </div>
-      <div className="border-t border-line pt-5">
-        <div className="mb-4 flex justify-between">
-          <h3 className="font-semibold">Outputs &amp; style</h3>
-          <Button variant="ghost" onClick={() => onReveal("sources.audio")}>
-            Edit outputs ↗
-          </Button>
-        </div>
-        <dl className="grid grid-cols-[100px_minmax(0,1fr)] gap-2 text-body sm:grid-cols-[145px_minmax(0,1fr)]">
-          <dt className="text-ink2">Narration</dt>
-          <dd>
-            {form.sources.audio}
-            {form.sources.audio === "generate"
-              ? ` · ${form.audio.provider} · ${form.audio.voice}`
-              : ""}
-          </dd>
-          <dt className="text-ink2">Images</dt>
-          <dd>
-            {form.sources.images}
-            {form.sources.images === "generate"
-              ? ` · ${form.imagePrompts.reduce((n, p) => n + Number(p.number || 0), 0)} images`
-              : ""}
-          </dd>
-          <dt className="text-ink2">Video</dt>
-          <dd>{form.sources.video}</dd>
-          <dt className="text-ink2">Frame</dt>
-          <dd>{form.format}</dd>
-          <dt className="text-ink2">Subtitles</dt>
-          <dd>
-            {form.subtitles.mode}
-            {form.subtitles.mode === "off"
-              ? ""
-              : ` · ${form.subtitles.fontId} · ${form.subtitles.fontSize} px`}
-          </dd>
-        </dl>
-      </div>
+      </ReviewSummary>
       <fieldset disabled={locked} className="min-w-0">
         <BatchEditor
           fields={fields}
