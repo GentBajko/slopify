@@ -1,6 +1,6 @@
 import { stageKinds } from "@app/kernel/pipeline.js";
 import type { CheckpointStatus as ServerCheckpointStatus } from "@app/slices/checkpoints/change.js";
-import type { CheckpointRefusal } from "@app/slices/checkpoints/model.js";
+import type { CheckpointRefusal, CheckpointRow } from "@app/slices/checkpoints/model.js";
 import {
   checkpointApprovalSchema,
   checkpointRowSchema,
@@ -73,7 +73,10 @@ async function reply<T>(response: Response, schema: z.ZodType<T>): Promise<Check
     message: problem.data.detail ?? problem.data.title,
   };
 }
-export async function checkpointStatus(api: Api, projectId: string) {
+export async function checkpointStatus(
+  api: Api,
+  projectId: string,
+): Promise<CheckpointReply<CheckpointStatus>> {
   return reply(
     await api.fetch(`${api.origin}/api/projects/${encodeURIComponent(projectId)}/checkpoints`),
     statusSchema,
@@ -84,7 +87,7 @@ export async function approveCheckpoint(
   projectId: string,
   checkpointId: string,
   identity: ApprovalIdentity,
-) {
+): Promise<CheckpointReply<{ readonly checkpoint: CheckpointRow; readonly replayed: boolean }>> {
   return reply(
     await api.fetch(
       `${api.origin}/api/projects/${encodeURIComponent(projectId)}/checkpoints/${encodeURIComponent(checkpointId)}/approve`,
@@ -102,7 +105,7 @@ export async function changeCheckpointChoices(
   api: Api,
   projectId: string,
   input: CheckpointChange,
-) {
+): Promise<CheckpointReply<CheckpointStatus>> {
   return reply(
     await api.fetch(`${api.origin}/api/projects/${encodeURIComponent(projectId)}/checkpoints`, {
       method: "PATCH",

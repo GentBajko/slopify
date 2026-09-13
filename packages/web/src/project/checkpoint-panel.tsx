@@ -1,34 +1,28 @@
-import type { StageKind, StageState } from "@app/kernel/pipeline.js";
-import type { StageSource } from "@app/slices/admission/model.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { type ComponentProps, type ReactElement, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/ui/button";
 import { keys } from "@/queries";
 import {
   type ApprovalIdentity,
   approveCheckpoint,
-  type CheckpointChange,
   type CheckpointGate,
   type CheckpointStatus,
-  changeCheckpointChoices,
   checkpointKey,
   checkpointRevisionKey,
   checkpointStatus,
 } from "./checkpoint-api.js";
+
+import { CheckpointChoices } from "./checkpoint-choices.js";
 
 const label = (stage: string): string => stage.charAt(0).toUpperCase() + stage.slice(1);
 interface Props {
   readonly projectId: string;
   readonly revisionId: string | null;
   readonly paused: boolean;
-  readonly stages: readonly {
-    readonly kind: StageKind;
-    readonly state: StageState;
-    readonly source?: StageSource;
-  }[];
+  readonly stages: ComponentProps<typeof CheckpointChoices>["stages"];
 }
-export function CheckpointPanel(props: Props) {
+export function CheckpointPanel(props: Props): ReactElement | null {
   if (props.revisionId === null) return null;
   return (
     <CurrentCheckpoints
@@ -43,7 +37,7 @@ function CurrentCheckpoints({
   revisionId,
   paused,
   stages,
-}: Props & { readonly revisionId: string }) {
+}: Props & { readonly revisionId: string }): ReactElement | null {
   const { api } = useApp();
   const client = useQueryClient();
   const status = useQuery({
@@ -133,7 +127,7 @@ function Gate({
   readonly gate: CheckpointGate;
   readonly disabled: boolean;
   readonly reload: () => Promise<boolean>;
-}) {
+}): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
   const identity = useRef<ApprovalIdentity | null>(null);
@@ -154,7 +148,7 @@ function Gate({
   const eligible =
     ["configured", "pending-review", "held"].includes(gate.state) &&
     gate.fingerprint === gate.currentFingerprint;
-  async function approve() {
+  async function approve(): Promise<void> {
     if (
       active.current ||
       disabled ||
@@ -255,152 +249,6 @@ function Gate({
           }}
         >
           Reload checkpoints
-        </Button>
-      ) : null}
-    </div>
-  );
-}
-
-const choices = [
-  { stage: "audio", name: "Audio" },
-  { stage: "images", name: "Images" },
-  { stage: "video", name: "Video / export" },
-] as const;
-function CheckpointChoices({
-  projectId,
-  revisionId,
-  gates,
-  stages,
-  reload,
-  saved,
-}: {
-  readonly projectId: string;
-  readonly revisionId: string;
-  readonly gates: readonly CheckpointGate[];
-  readonly stages: Props["stages"];
-  readonly reload: () => Promise<CheckpointStatus | undefined>;
-  readonly saved: (status: CheckpointStatus) => void;
-}) {
-  const { api } = useApp();
-  const [draft, setDraft] = useState<CheckpointChange["stages"] | null>(null);
-  const [pending, setPending] = useState(false);
-  const [outcome, setOutcome] = useState<Outcome>(null);
-  const active = useRef(false);
-  const mounted = useRef(true);
-  const feedback = useRef<HTMLParagraphElement>(null);
-  const group = useRef<HTMLFieldSetElement>(null);
-  const selected = draft ?? gates.map((gate) => gate.stage);
-  const dirty = choices.some(
-    ({ stage }) => selected.includes(stage) !== gates.some((gate) => gate.stage === stage),
-  );
-  const refused = outcome !== null && outcome.kind !== "success";
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-  useEffect(() => {
-    if (outcome) feedback.current?.focus();
-  }, [outcome]);
-  async function save() {
-    if (active.current || !dirty || refused) return;
-    active.current = true;
-    setPending(true);
-    try {
-      const result = await changeCheckpointChoices(api, projectId, {
-        revisionId,
-        stages: selected,
-      });
-      if (!mounted.current) return;
-      if (!result.ok)
-        setOutcome({ kind: "refused", message: `${result.message} (${result.reason})` });
-      else if (result.value.revisionId !== revisionId)
-        setOutcome({
-          kind: "refused",
-          message: "The project revision changed. Reload checkpoint choices.",
-        });
-      else {
-        saved(result.value);
-        setDraft(null);
-        setOutcome({ kind: "success", message: "Checkpoint choices saved." });
-      }
-    } catch (error) {
-      if (mounted.current)
-        setOutcome({
-          kind: "transport",
-          message: `${error instanceof Error ? error.message : "Checkpoint response unavailable."} Reload checkpoint choices before making another change.`,
-        });
-    } finally {
-      active.current = false;
-      if (mounted.current) setPending(false);
-    }
-  }
-  async function refresh() {
-    if (active.current) return;
-    active.current = true;
-    setPending(true);
-    try {
-      const next = await reload();
-      if (mounted.current && next) {
-        setDraft(null);
-        setOutcome(null);
-        group.current?.focus();
-      }
-    } finally {
-      active.current = false;
-      if (mounted.current) setPending(false);
-    }
-  }
-  return (
-    <div className="space-y-2">
-      <fieldset ref={group} tabIndex={-1} className="space-y-2">
-        <legend>Checkpoint choices</legend>
-        <p>
-          Change checkpoints before a step starts. Removing one lets its already-admitted work
-          continue when ready; project pause still applies.
-        </p>
-        {choices.map(({ stage, name }) => {
-          const current = stages.find((one) => one.kind === stage);
-          const enabled =
-            current?.state === "pending" &&
-            (stage === "video"
-              ? current.source !== "off" ||
-                stages.some(
-                  (one) => one.kind === "audio" && one.source !== "off" && one.state !== "skipped",
-                )
-              : (current.source ?? "generate") === "generate");
-          return (
-            <label key={stage} className="flex min-h-10 items-center gap-3">
-              <input
-                type="checkbox"
-                checked={selected.includes(stage)}
-                disabled={!enabled || pending || refused}
-                onChange={(event) => {
-                  setDraft(
-                    event.target.checked
-                      ? [...selected, stage]
-                      : selected.filter((one) => one !== stage),
-                  );
-                  setOutcome(null);
-                }}
-              />
-              Before {name}
-            </label>
-          );
-        })}
-      </fieldset>
-      {outcome ? (
-        <p ref={feedback} tabIndex={-1} role={outcome.kind === "success" ? "status" : "alert"}>
-          {outcome.message}
-        </p>
-      ) : null}
-      <Button type="button" disabled={!dirty || pending || refused} onClick={() => void save()}>
-        {pending ? "Saving…" : "Save checkpoints"}
-      </Button>
-      {refused ? (
-        <Button type="button" disabled={pending} onClick={() => void refresh()}>
-          Reload checkpoint choices
         </Button>
       ) : null}
     </div>

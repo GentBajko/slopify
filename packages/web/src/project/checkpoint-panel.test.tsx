@@ -8,6 +8,77 @@ import { useLiveProject } from "./use-live.js";
 
 afterEach(cleanup);
 
+it("requires reconciliation when another tab changes the checkpoint set during local edits", async () => {
+  const user = userEvent.setup();
+  const source = new EventTarget();
+  const events: EventSourceLike = {
+    addEventListener: (type, listener) => source.addEventListener(type, listener as EventListener),
+    close: vi.fn(),
+  };
+  let current = status;
+  const changes: unknown[] = [];
+  const patch = vi.fn(async (request: Request) => {
+    changes.push(await request.json());
+    return Response.json(current);
+  });
+  function Subject() {
+    useLiveProject("p1", "r1");
+    return (
+      <CheckpointPanel
+        projectId="p1"
+        revisionId="r1"
+        paused
+        stages={[
+          { kind: "audio", state: "pending", source: "generate" },
+          { kind: "images", state: "pending", source: "generate" },
+          { kind: "video", state: "pending", source: "generate" },
+        ]}
+      />
+    );
+  }
+  renderApp(<Subject />, {
+    ...testDeps({
+      "GET /api/projects/p1/checkpoints": () => Response.json(current),
+      "PATCH /api/projects/p1/checkpoints": patch,
+    }),
+    openEvents: () => events,
+  });
+  await user.click(await screen.findByRole("checkbox", { name: "Before Images" }));
+  current = {
+    ...status,
+    checkpoints: [gate, { ...gate, stage: "video", checkpointId: "video-gate" }],
+  };
+  act(() =>
+    source.dispatchEvent(
+      new MessageEvent("project.updated", {
+        data: JSON.stringify({ type: "project.updated", projectId: "p1", revisionId: "r1" }),
+      }),
+    ),
+  );
+  const alert = await screen.findByRole("alert");
+  expect(alert.textContent).toContain("Checkpoint choices changed elsewhere");
+  expect(alert.textContent).toContain("conflict");
+  expect(document.activeElement).toBe(alert);
+  const save = screen.getByRole("button", { name: "Save checkpoints" });
+  expect(save.hasAttribute("disabled")).toBe(true);
+  fireEvent.click(save);
+  expect(patch).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Reload checkpoint choices" }));
+  await waitFor(() =>
+    expect(
+      (screen.getByRole("checkbox", { name: "Before Video / export" }) as HTMLInputElement).checked,
+    ).toBe(true),
+  );
+  expect(
+    (screen.getByRole("checkbox", { name: "Before Images" }) as HTMLInputElement).checked,
+  ).toBe(false);
+  expect(document.activeElement).toBe(screen.getByRole("group", { name: "Checkpoint choices" }));
+  await user.click(screen.getByRole("checkbox", { name: "Before Images" }));
+  await user.click(save);
+  await waitFor(() => expect(patch).toHaveBeenCalledOnce());
+  expect(changes[0]).toEqual({ revisionId: "r1", stages: ["audio", "video", "images"] });
+});
+
 it("adds and removes pending gates with explicit revision-bound saves", async () => {
   const user = userEvent.setup();
   let selected: string[] = [];
