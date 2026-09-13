@@ -13,7 +13,7 @@ depends_on:
 - 05-provided-outputs
 - 07-article-writing
 generated_date: '2026-09-13'
-generated_at_commit: 7bdb84e3f57e
+generated_at_commit: 4cfe3473f74d
 capstone_version: 5.2.0
 paths_covered:
   - :(top)packages/app/src/slices/narration/**
@@ -22,7 +22,7 @@ paths_covered:
   - :(top)packages/app/src/adapters/tts/**
   - :(top)packages/web/src/play/**
   - :(top)packages/web/src/project/**
-content_hash: 65fe5f7d919b
+content_hash: 15c07d068892
 ---
 
 # 08 Narration

@@ -1,8 +1,8 @@
 ---
-generated_at_commit: f4c4f7b3295a
+generated_at_commit: 4cfe3473f74d
 generated_date: '2026-09-13'
 capstone_version: 5.2.0
-content_hash: f552bff2fd27
+content_hash: 149e46c2276e
 paths_covered:
   - :(top)packages/app/src/**
   - :(top)packages/web/src/**
@@ -27,7 +27,7 @@ Inspected production source at `f4c4f7b3295a9d3218c543107e71c86ff9129bd3` (2026-
 
 Review checkpoints are a slice-level policy boundary. `slices/checkpoints/` owns durable gate identities, dependency closures, approval receipts and restart recovery; the kernel runner asks its authority immediately before claims. HTTP and the React project panel depend on the slice, while provider adapters remain unaware of checkpoint state.
 
-- `kernel` owns shared contracts, infrastructure, SQLite, and the runner. Its runner imports only kernel modules and receives its stage implementations through `RunnerDeps.runs`. Biome forbids kernel imports from `slices`, `edge`, and `adapter-registry`. `packages/app/src/kernel/runner/index.ts:1` `packages/app/src/kernel/runner/index.ts:38` `biome.json:44`
+- `kernel` owns shared contracts, infrastructure, SQLite, and the runner. Its runner imports only kernel modules and receives its stage implementations through `RunnerDeps.runs`. Biome forbids kernel imports from `slices`, `edge`, and `adapter-registry`. `packages/app/src/kernel/runner/index.ts:1` `packages/app/src/kernel/runner/index.ts:39` `biome.json:44`
 - `slices` implements feature behavior using kernel contracts and other slices. Biome forbids imports from `edge`, `adapters`, `kernel/ports/registry.js`, and `adapter-registry.js`; provider-using slices receive wrapped `StageProviders`. Cross-slice imports are used directly: revision execution imports article parsing, narration previews, research parsing, storage, and telemetry helpers. `biome.json:70` `packages/app/src/kernel/runner/providers.ts:63` `packages/app/src/slices/rebuild/runtime-provider.ts:1`
 - `adapters` implements external providers and local media integrations. Biome forbids adapter imports from slices, edge, the adapter registry, and kernel modules except ports, clock, log, CLI-command utilities, and the clock test double. The CLI runner imports the allowed command resolver, logger, and port contracts. `biome.json:99` `packages/app/src/adapters/llm/run-cli.ts:1`
 - `edge` exposes CLI, HTTP, SSE, browser/folder launchers, and the update-worker entrypoint. The application composition root imports and connects edge, adapters, kernel, slices, catalogue, and updater modules through typed dependencies. `packages/app/src/edge/cli.ts:1` `packages/app/src/edge/http/app.ts:20` `packages/app/src/main.ts:9`

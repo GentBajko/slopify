@@ -1,6 +1,6 @@
 ---
 generated_date: '2026-09-13'
-generated_at_commit: 7bdb84e3f57e
+generated_at_commit: 4cfe3473f74d
 capstone_version: 5.2.0
 absorbed_from:
   - features/2026-09-10-editable-projects@2026-09-12
@@ -11,7 +11,7 @@ paths_covered:
   - :(top)packages/site/**
   - :(top)packages/app/src/**
   - :(top)packages/app/package.json
-content_hash: 9291be0dbed5
+content_hash: 6c7688e07dfc
 surfaces:
   - web
   - cli

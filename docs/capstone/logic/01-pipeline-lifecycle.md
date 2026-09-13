@@ -14,7 +14,7 @@ cited_by_forward:
   - 13-cancel
   - 16-telemetry
 generated_date: '2026-09-13'
-generated_at_commit: 7bdb84e3f57e
+generated_at_commit: 4cfe3473f74d
 capstone_version: 5.2.0
 paths_covered:
   - :(top)packages/app/src/kernel/runner/**
@@ -22,7 +22,7 @@ paths_covered:
   - :(top)packages/app/src/slices/rebuild/**
   - :(top)packages/app/src/slices/revisions/**
   - :(top)packages/app/src/main.ts
-content_hash: 16a212d5b9d4
+content_hash: 46074f475e10
 ---
 
 # 01 Pipeline lifecycle

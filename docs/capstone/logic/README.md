@@ -1,5 +1,5 @@
 ---
-generated_at_commit: 7bdb84e3f57e
+generated_at_commit: 4cfe3473f74d
 capstone_version: 5.2.0
 generated_date: '2026-09-13'
 absorbed_from:
@@ -9,7 +9,7 @@ absorbed_from:
 paths_covered:
   - :(top)packages/app/src/**
   - :(top)packages/web/src/**
-content_hash: c3017bd35918
+content_hash: 72c29c1023b2
 ---
 
 # Business logic index

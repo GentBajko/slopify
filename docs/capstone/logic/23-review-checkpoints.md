@@ -11,9 +11,9 @@ depends_on:
   - 04-run-admission
   - 12-reruns-and-edits
 generated_date: '2026-09-13'
-generated_at_commit: 7bdb84e3f57e
+generated_at_commit: 4cfe3473f74d
 capstone_version: 5.2.0
-content_hash: 4c25ea3db1a8
+content_hash: 59bb4430a1e6
 paths_covered:
   - :(top)packages/app/src/slices/checkpoints/**
   - :(top)packages/app/src/slices/rebuild/**

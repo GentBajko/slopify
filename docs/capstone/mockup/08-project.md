@@ -12,7 +12,7 @@ journeys:
 - J5-revise
 - J6-revisit
 generated_date: '2026-09-13'
-generated_at_commit: 7bdb84e3f57e
+generated_at_commit: 4cfe3473f74d
 capstone_version: 5.2.0
 paths_covered:
   - :(top)packages/web/src/project/**
@@ -21,7 +21,7 @@ paths_covered:
   - :(top)packages/app/src/slices/rebuild/**
   - :(top)packages/app/src/slices/checkpoints/**
   - :(top)packages/app/src/slices/project-templates/**
-content_hash: 99be2f08d405
+content_hash: a37e02ecfc8e
 ---
 
 # 08 Project page

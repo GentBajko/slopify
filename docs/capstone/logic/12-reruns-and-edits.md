@@ -17,7 +17,7 @@ depends_on:
 - 10-thumbnail-prompt-by-llm
 - 11-video-assembly
 generated_date: '2026-09-13'
-generated_at_commit: 7bdb84e3f57e
+generated_at_commit: 4cfe3473f74d
 capstone_version: 5.2.0
 paths_covered:
   - :(top)packages/app/src/slices/revisions/**
@@ -25,7 +25,7 @@ paths_covered:
   - :(top)packages/app/src/slices/checkpoints/**
   - :(top)packages/app/src/slices/project-templates/**
   - :(top)packages/web/src/project/**
-content_hash: c2bd10fa441e
+content_hash: 889127dea7b9
 ---
 
 # 12 Project edits and retained revisions

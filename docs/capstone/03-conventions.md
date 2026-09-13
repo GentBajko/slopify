@@ -1,8 +1,8 @@
 ---
-generated_at_commit: f4c4f7b3295a
+generated_at_commit: 4cfe3473f74d
 generated_date: 2026-09-13
 capstone_version: 5.2.0
-content_hash: f552bff2fd27
+content_hash: 149e46c2276e
 paths_covered:
   - ":(top)packages/app/src/**"
   - ":(top)packages/web/src/**"

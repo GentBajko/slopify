@@ -1,8 +1,8 @@
 ---
-generated_at_commit: f4c4f7b3295a
+generated_at_commit: 4cfe3473f74d
 generated_date: '2026-09-13'
 capstone_version: 5.2.0
-content_hash: 2d01030d453e
+content_hash: b42211738f09
 paths_covered:
   - :(top)packages/*/src/**
   - :(top)packages/app/test/**
@@ -23,7 +23,7 @@ absorbed_from:
 
 Review checkpoint acceptance covers zero/three gate setup, independent closure dispatch, typed approval/refusal/replay, add/remove before start, title-only Save carry, materialization retirement, pause/resume, restart recovery, late results, concurrent project tabs and secret-free resolver diagnostics (`packages/app/test/review-checkpoints-*.test.ts`, `packages/web/src/project/checkpoint-panel.test.tsx`).
 
-Inspected source and test configuration at `f4c4f7b3295a9d3218c543107e71c86ff9129bd3` on 2026-09-13. Test-run evidence below identifies its own source checkpoint; the file inventory is the current checkout.
+Inspected source and test configuration at `4cfe3473f74d` on 2026-09-13. Test-run evidence below identifies its own source checkpoint; the file inventory is the current checkout.
 
 ## Layout
 
@@ -98,6 +98,8 @@ npx vitest run packages/app/src/kernel/cli-command.test.ts packages/app/src/adap
 npx vitest run packages/app/src/catalog packages/app/src/kernel/runner/queue.test.ts packages/app/src/slices/batch packages/app/src/slices/narration/plan.test.ts packages/app/src/slices/narration/chunk.test.ts packages/app/src/edge/open-folder.test.ts packages/app/src/edge/http/files.test.ts packages/app/src/edge/http/storage.test.ts packages/app/src/edge/http/diagnostics.test.ts packages/app/src/edge/http/schedules.test.ts packages/app/src/slices/schedules packages/app/src/slices/video/subtitle-only.test.ts
 npx vitest run packages/app/src/slices/storage/assets.test.ts packages/app/src/slices/storage/prepare.test.ts packages/app/src/slices/storage/reconcile.test.ts packages/app/src/slices/revisions packages/app/src/slices/rebuild packages/app/test/revision-rebuild.test.ts packages/app/test/revision-narration.test.ts packages/app/test/revision-provided.test.ts packages/app/test/revision-restart.test.ts packages/app/test/revision-article-recovery.test.ts packages/app/test/revision-bundle-recovery.test.ts packages/app/test/revision-research-rebuild.test.ts
 ```
+
+The bundle-completeness matrix and saved-font subtitle recovery case use a 30-second per-test deadline because each composes temporary storage, SQLite revisions and publication work; the global five-second Vitest default still applies elsewhere. `packages/app/src/slices/rebuild/runtime-bundle-recovery.test.ts:67` `packages/app/src/slices/rebuild/runtime-subtitles.test.ts:141`
 
 ## Doubles
 
