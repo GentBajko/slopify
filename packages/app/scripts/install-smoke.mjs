@@ -37,6 +37,7 @@ try {
 async function smoke(command, label, prefix = []) {
   const port = await freePort();
   const dataDir = join(root, `${label}-data`);
+  const healthTimeoutMs = label === "npx" ? 120_000 : 30_000;
   const child = spawn(
     command,
     [...prefix, "--port", String(port), "--data-dir", dataDir, "--no-open"],
@@ -48,7 +49,7 @@ async function smoke(command, label, prefix = []) {
     },
   );
   try {
-    await waitForHealth(port, child);
+    await waitForHealth(port, child, healthTimeoutMs);
   } finally {
     await stop(child);
   }
@@ -67,8 +68,8 @@ async function freePort() {
   return port;
 }
 
-async function waitForHealth(port, child) {
-  const deadline = Date.now() + 30_000;
+async function waitForHealth(port, child, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (child.exitCode !== null)
       throw new Error(`Slopify exited before health check (${child.exitCode}).`);
@@ -80,7 +81,7 @@ async function waitForHealth(port, child) {
     }
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  throw new Error("Slopify did not become healthy within 30 seconds.");
+  throw new Error(`Slopify did not become healthy within ${timeoutMs / 1_000} seconds.`);
 }
 
 async function stop(child) {

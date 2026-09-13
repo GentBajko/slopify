@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - '*.*.*'
 
 permissions:
   contents: read
@@ -17,7 +17,7 @@ jobs:
         with:
           node-version: '26'
       - name: Verify tag matches package version
-        run: node -e "const version=require('./packages/app/package.json').version; if (!/^\d+\.\d+\.\d+$/.test(version) || process.env.GITHUB_REF_NAME !== 'v' + version) { throw new Error('Stable tag ' + process.env.GITHUB_REF_NAME + ' does not match package version ' + version); }"
+        run: node -e "const version=require('./packages/app/package.json').version; if (!/^\d+\.\d+\.\d+$/.test(version) || process.env.GITHUB_REF_NAME !== version) { throw new Error('Stable tag ' + process.env.GITHUB_REF_NAME + ' does not match package version ' + version); }"
 
   verify:
     needs: metadata
