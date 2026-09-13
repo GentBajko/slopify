@@ -1,4 +1,7 @@
 import type { Field } from "@app/slices/admission/substitute.js";
+import type { Entry } from "@app/slices/library/model.js";
+import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
+import type { ProviderFamily, ProviderStatus, Voice } from "@app/slices/settings/model.js";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
 import { useApp } from "@/app-context";
@@ -9,6 +12,88 @@ import { type FontSummary, fontsKey } from "@/subtitles/api";
 import { usePlaySession } from "./draft-context";
 import { CheckpointReview } from "./run-review";
 import { sourceLabels } from "./state";
+
+interface RequiredProvider {
+  readonly field: string;
+  readonly family: ProviderFamily;
+  readonly label: string;
+  readonly provider: string;
+  readonly model: string;
+  readonly voice?: string;
+}
+
+function readiness(provider: ProviderStatus | undefined): {
+  readonly ok: boolean;
+  readonly text: string;
+} {
+  if (provider === undefined) return { ok: false, text: "Provider status unavailable" };
+  if (provider.readiness.kind === "cli")
+    return provider.readiness.installed
+      ? {
+          ok: true,
+          text:
+            provider.readiness.version === undefined
+              ? "CLI ready"
+              : `CLI ready · ${provider.readiness.version}`,
+        }
+      : { ok: false, text: "CLI not found" };
+  return provider.readiness.hasKey
+    ? { ok: true, text: "API key saved" }
+    : { ok: false, text: "API key missing" };
+}
+
+function requiredProviders(
+  form: PlayDraftDocument["form"],
+  entries: readonly Entry[],
+): readonly RequiredProvider[] {
+  const generatedAudio = form.sources.audio === "generate";
+  const generatedThumbnail = ["from_prompt", "prompt_by_llm"].includes(form.sources.thumbnail);
+  const generatedText =
+    form.sources.article === "generate" ||
+    form.sources.thumbnail === "prompt_by_llm" ||
+    (generatedAudio &&
+      (["intro", "outro"] as const).some((kind) =>
+        entries.some(
+          (entry) => entry.category === kind && entry.name === form[kind] && entry.mode === "llm",
+        ),
+      ));
+  return [
+    ...(generatedText && form.llm
+      ? [
+          {
+            field: "llm.provider",
+            family: "llm" as const,
+            label: "Text generation",
+            provider: form.llm.provider,
+            model: form.llm.model,
+          },
+        ]
+      : []),
+    ...(generatedAudio && form.audio
+      ? [
+          {
+            field: "audio.provider",
+            family: "tts" as const,
+            label: "Narration",
+            provider: form.audio.provider,
+            model: form.audio.model,
+            voice: form.audio.voice,
+          },
+        ]
+      : []),
+    ...((form.sources.images === "generate" || generatedThumbnail) && form.images
+      ? [
+          {
+            field: "images.provider",
+            family: "image" as const,
+            label: "Images",
+            provider: form.images.provider,
+            model: form.images.model,
+          },
+        ]
+      : []),
+  ];
+}
 
 function SummaryGroup({
   name,
@@ -22,6 +107,98 @@ function SummaryGroup({
       <h3 className="mb-4 font-semibold">{name}</h3>
       {children}
     </section>
+  );
+}
+
+function PreflightSummary({
+  form,
+  entries,
+  providers,
+  voices,
+  textModels,
+  audioModels,
+  imageModels,
+  onReveal,
+}: {
+  readonly form: PlayDraftDocument["form"];
+  readonly entries: readonly Entry[];
+  readonly providers: readonly ProviderStatus[] | undefined;
+  readonly voices: readonly Voice[] | undefined;
+  readonly textModels: ProviderModels | undefined;
+  readonly audioModels: ProviderModels | undefined;
+  readonly imageModels: ProviderModels | undefined;
+  readonly onReveal: (field: string) => void;
+}): ReactElement {
+  const required = requiredProviders(form, entries);
+  if (!required.length)
+    return (
+      <SummaryGroup name="Run readiness">
+        <p className="text-body text-ink2">
+          No generated providers required. Supplied content is ready for processing.
+        </p>
+      </SummaryGroup>
+    );
+  const modelLists: Readonly<Record<ProviderFamily, ProviderModels | undefined>> = {
+    llm: textModels,
+    tts: audioModels,
+    image: imageModels,
+  };
+  return (
+    <SummaryGroup name="Run readiness">
+      <p className="mb-3 text-small text-ink2">
+        These checks are refreshed with Review and checked again when you start.
+      </p>
+      <ul className="divide-y divide-line" aria-label="Run readiness checks">
+        {required.map((choice) => {
+          const provider = providers?.find(
+            (candidate) => candidate.id === choice.provider && candidate.family === choice.family,
+          );
+          const providerCheck = readiness(provider);
+          const models = modelLists[choice.family];
+          const model = models?.models.find((candidate) => candidate.id === choice.model);
+          const modelCheck =
+            models === undefined
+              ? { ok: true, text: "Model checked at Start" }
+              : model !== undefined || models.allowsCustom
+                ? { ok: true, text: "Model available" }
+                : { ok: false, text: "Model unavailable" };
+          const voiceCheck =
+            choice.voice === undefined
+              ? undefined
+              : voices === undefined
+                ? { ok: false, text: "Voice list unavailable" }
+                : voices.some(
+                      (voice) =>
+                        voice.provider === choice.provider && voice.voiceId === choice.voice,
+                    )
+                  ? { ok: true, text: "Voice saved" }
+                  : { ok: false, text: "Voice missing" };
+          const checks = [providerCheck, modelCheck, ...(voiceCheck ? [voiceCheck] : [])];
+          const ready = checks.every((check) => check.ok);
+          return (
+            <li
+              key={`${choice.family}:${choice.provider}`}
+              className="flex flex-wrap items-center justify-between gap-3 py-3"
+            >
+              <span className="font-medium">{choice.label}</span>
+              <span className={ready ? "text-lime" : "text-red"}>
+                {ready
+                  ? "Ready"
+                  : checks
+                      .filter((check) => !check.ok)
+                      .map((check) => check.text)
+                      .join(" · ")}
+              </span>
+              {!ready ? (
+                <Button variant="ghost" onClick={() => onReveal(choice.field)}>
+                  Edit ↗
+                </Button>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    </SummaryGroup>
   );
 }
 
@@ -81,6 +258,16 @@ export function ReviewSummary({
       : null;
   return (
     <>
+      <PreflightSummary
+        form={form}
+        entries={entries?.entries ?? []}
+        providers={providers?.providers}
+        voices={voices?.voices}
+        textModels={textModels}
+        audioModels={audioModels}
+        imageModels={imageModels}
+        onReveal={onReveal}
+      />
       <SummaryGroup name="Content">
         <dl className="text-body">
           {row("Project", "title", form.title || "Untitled run")}

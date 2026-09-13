@@ -39,6 +39,8 @@ const generated: PlayDraftDocument = {
 it("summarizes active generated choices with raw counts and exact edit destinations", async () => {
   const harness = reviewHarness();
   await harness.prepare(generated);
+  const readiness = screen.getByRole("region", { name: "Run readiness summary" });
+  expect(within(readiness).getAllByText("Ready")).toHaveLength(3);
   const outputs = screen.getByRole("region", { name: "Outputs summary" });
   for (const text of [
     "ElevenLabs",
@@ -73,6 +75,16 @@ it("summarizes active generated choices with raw counts and exact edit destinati
       await harness.session().navigate("review");
     });
   }
+});
+
+it("explains when a run only uses supplied content", async () => {
+  const harness = reviewHarness();
+  await harness.prepare(suppliedDocument);
+  expect(
+    within(screen.getByRole("region", { name: "Run readiness summary" })).getByText(
+      "No generated providers required. Supplied content is ready for processing.",
+    ),
+  ).not.toBeNull();
 });
 
 it("shows supplied filenames in order and hides dormant generation choices", async () => {
