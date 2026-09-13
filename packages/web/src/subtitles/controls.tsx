@@ -2,6 +2,7 @@ import type { Format } from "@app/kernel/pipeline.js";
 import type { SubtitleConfig } from "@app/slices/subtitles/model.js";
 import { subtitlePositions } from "@app/slices/subtitles/model.js";
 import { type ReactElement, useId, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -248,6 +249,27 @@ export function SubtitleControls({
           </>
         ) : null}
       </fieldset>
+      {session?.fontUpload && (value.mode === "off" || !audioEnabled) ? (
+        <div className="flex flex-col items-start gap-3">
+          <p role={session.fontUploading ? "status" : "alert"} className="text-small text-ink2">
+            {session.fontUploading
+              ? `Uploading ${session.fontUpload.name}…`
+              : `Unfinished font upload: ${session.fontUpload.name}`}
+          </p>
+          {fontUpload?.error ? (
+            <p role="alert" className="text-small text-red">
+              {fontUpload.error}
+            </p>
+          ) : null}
+          <Button
+            data-play-field="subtitles.fontUpload"
+            disabled={disabled}
+            onClick={() => session.selectFont(value.fontId)}
+          >
+            Keep current font
+          </Button>
+        </div>
+      ) : null}
       {modeProblem ? (
         <p role="alert" className="text-small text-red">
           {modeProblem}

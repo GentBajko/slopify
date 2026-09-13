@@ -244,7 +244,7 @@ export function pendingReviewUpload(
   document: PlayDraftDocument,
   view: DraftView | null,
 ): string | undefined {
-  if (document.fontUpload !== null) return "subtitles.fontId";
+  if (document.fontUpload !== null) return "subtitles.fontUpload";
   const { sources, provided } = document.form;
   const active = [
     ...(sources.audio === "provide" && provided.audio

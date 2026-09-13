@@ -120,7 +120,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   });
 
   const blocker = subtitleUploading
-    ? { field: "subtitles.fontId", hint: "Wait for the subtitle font upload to finish to play" }
+    ? { field: "subtitles.fontUpload", hint: "Wait for the subtitle font upload to finish to play" }
     : admissionBlocker;
 
   useEffect(() => {
