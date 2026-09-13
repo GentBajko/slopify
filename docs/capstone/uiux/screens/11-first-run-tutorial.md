@@ -1,15 +1,13 @@
 ---
-generated_at_commit: 89db8f6d8981
+generated_at_commit: 7bdb84e3f57e
 generated_date: '2026-09-13'
-content_hash: 2b9dab9b7f7b
+capstone_version: 5.2.0
+content_hash: 8fd18b27d198
 paths_covered:
-  - :(top)packages/app/src/slices/play-drafts/**
-  - :(top)packages/app/src/slices/storage/**
-  - :(top)packages/app/src/slices/settings/tutorial*
-  - :(top)packages/web/src/play/**
-  - :(top)packages/web/src/routes/play.tsx
-  - :(top)packages/web/src/subtitles/**
   - :(top)packages/web/src/tutorial/**
+  - :(top)packages/web/src/components/notice.tsx
+  - :(top)packages/web/src/components/shell.tsx
+  - :(top)packages/app/src/slices/settings/tutorial*
 absorbed_from:
   - features/2026-09-10-play-redesign-drafts@2026-09-13
 ---

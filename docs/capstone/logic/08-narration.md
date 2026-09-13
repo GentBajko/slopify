@@ -12,8 +12,17 @@ depends_on:
 - 02-provider-credentials
 - 05-provided-outputs
 - 07-article-writing
-generated_date: '2026-09-12'
-generated_at_commit: 29b88494eb40
+generated_date: '2026-09-13'
+generated_at_commit: 7bdb84e3f57e
+capstone_version: 5.2.0
+paths_covered:
+  - :(top)packages/app/src/slices/narration/**
+  - :(top)packages/app/src/slices/rebuild/**
+  - :(top)packages/app/src/kernel/runner/**
+  - :(top)packages/app/src/adapters/tts/**
+  - :(top)packages/web/src/play/**
+  - :(top)packages/web/src/project/**
+content_hash: 65fe5f7d919b
 ---
 
 # 08 Narration
@@ -34,7 +43,7 @@ Audio Generate needs a resolved article and any selected entry text. New provide
 6. Concatenate physical parts in saved order into the body/entry output. A single part can be copied unchanged; multiple parts use FFmpeg. Intro and outro have independent text dependencies and their own logical group/request pieces with the same narration selection. Provided whole narration does not synthesize extra entries (`slices/rebuild/recipe-audio.ts`, `runtime-local.ts`).
 7. Publish immutable audio, durations and request descriptors to the originating revision. A matching current revision may also select the result; an unrelated newer edit cannot be overwritten by an old completion (`slices/revisions/publish.ts`).
 
-## Editing and rebuild review
+## Branches
 
 - Edit one logical chunk's text, upload its replacement audio, or request Regenerate in the project editor. Save retains the edit without admitting work. Regenerate removes an incompatible asset override and staged upload, preserves a text override, and cancels late upload completion (`web/project/narration-editor.tsx`).
 - Changes to normalized text or provider/model/voice prevent incompatible reuse. A paragraph edit can change neighboring boundaries; the preview shows the resulting affected pieces rather than promising one paragraph equals one request.
@@ -42,7 +51,7 @@ Audio Generate needs a resolved article and any selected entry text. New provide
 - Review labels retain original logical chunk numbers even for a selected subset. Expand request text and inspect provider/model/voice before explicit Start (`slices/rebuild/preview-details.ts`, `web/project/rebuild-review.tsx`).
 - Changing only image order, subtitle style or manual caption timings retains compatible narration. Caption/export rebuilds are local unless other selected missing inputs require a provider.
 
-## Unhappy paths and recovery
+## Unhappy paths
 
 - Provider failure follows the attempt policy; completed physical pieces remain available for explicit retry. Reuse does not depend on the current provider still offering an old model when no new submission is needed.
 - A current catalogue limit reduction may refuse new text above that limit. Readiness and request planning use the same catalogue maximum, including Inworld asynchronous requests above its streaming threshold (`service-request-limits.test.ts`).
@@ -51,8 +60,20 @@ Audio Generate needs a resolved article and any selected entry text. New provide
 - Empty normalized narration is unresolved/invalid and cannot silently produce a completed export.
 - If final concatenation or WAV export fails, retained pieces and previous completed exports remain available. Missing export bytes are rebuilt locally from intact narration after review; surviving metadata alone is not a complete export bundle.
 
-## Invariants and evidence
+## State transitions
+
+Logical narration starts as a planned request set; physical pieces move from pending to running and then done, or return to pending when a held provider attempt does not complete. The stage becomes done only after ordered concatenation and publication; pause or revision invalidation prevents further dispatch while already completed pieces remain reusable (`packages/app/src/slices/narration/run.ts:133`, `packages/app/src/slices/narration/run.ts:156`).
+
+## Invariants
 
 Save never performs provider or final-render work. Reuse requires exact request identity and actual available bytes. Each result retains original revision ownership. Audio Off permits silent video and turns incompatible subtitles Off; Video Off with active narration produces WAV.
 
 Behavior is covered by `recipe-audio.test.ts`, `runtime-narration-{reuse,history,regenerate}.test.ts`, `service-request-limits.test.ts`, web `narration-regeneration.test.tsx`, and composed `test/revision-narration.test.ts` / `revision-bundle-recovery.test.ts`. Exact Windows durations are checked against real FFmpeg, including short clips and WAV recovery.
+
+## Outcomes & side effects
+
+Successful narration writes immutable physical part files, publishes ordered body/intro/outro outputs and records their durations. Live audio preview is bounded and keyed to the active project/work piece; reading it creates no provider request (`packages/app/src/slices/narration/run.ts:64`, `packages/app/src/slices/narration/run.ts:165`).
+
+## Dimensions not in play
+
+Narration has no automatic transcription, translation or voice cloning. English sentence segmentation is fixed for word/character chunk boundaries, while provider hard limits can split a long logical sentence into physical requests afterward (`packages/app/src/slices/narration/chunk.ts:72`, `packages/app/src/slices/narration/chunk.ts:85`).

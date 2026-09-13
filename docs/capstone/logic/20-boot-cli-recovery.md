@@ -1,12 +1,15 @@
 ---
-generated_at_commit: 3a9796eb7fec
-generated_date: 2026-09-10
-content_hash: e293a0b5e022
+generated_at_commit: 7bdb84e3f57e
+capstone_version: 5.2.0
+generated_date: '2026-09-13'
+content_hash: 46ed5c2a3757
 paths_covered:
-  - ":(top)packages/app/src/**"
-  - ":(top)packages/web/src/**"
-  - ":(top)packages/collector/**"
-  - ":(top)packages/site/**"
+  - :(top)packages/app/src/edge/cli.ts
+  - :(top)packages/app/src/kernel/config/**
+  - :(top)packages/app/src/main.ts
+  - :(top)packages/app/src/edge/http/diagnostics.ts
+  - :(top)packages/app/scripts/install-smoke.mjs
+  - :(top)packages/app/package.json
 ---
 
 # Local boot, CLI and runtime recovery
@@ -18,16 +21,17 @@ paths_covered:
 
 ## Steps
 
-1. CLI parses configuration and optionally opens the browser (`packages/app/src/edge/cli.ts`; `packages/app/src/kernel/config/`).
-2. Boot creates paths, acquires the instance lock, prepares FFmpeg, opens/migrates SQLite, marks interrupted stages, reconciles files, builds the registry and starts the server (`packages/app/src/main.ts:83-142`).
-3. Settings validates saved CLI paths and runs a 15-second readiness probe; blank resets to PATH (`packages/app/src/slices/settings/cli-paths.ts`; `packages/app/src/slices/settings/cli-status.ts`).
-4. Each new call resolves the current executable; running children retain the executable selected at start (`packages/app/src/adapter-registry.ts`; `packages/app/src/slices/settings/cli-paths.ts`).
+1. The published package exposes the `slopify` binary and requires Node 26 or newer. Both `npm install -g @gentbajko/slopify` and `npm exec --package ... -- slopify` are exercised by the install smoke (`packages/app/package.json:13`, `packages/app/package.json:16`, `packages/app/scripts/install-smoke.mjs:17`).
+2. CLI parses host, port, data-directory and no-open flags, forwards a managed installed update when present, boots, prints local paths and optionally opens the browser (`packages/app/src/edge/cli.ts:9`, `packages/app/src/edge/cli.ts:18`).
+3. Boot creates paths, acquires the instance lock, prepares FFmpeg, opens/migrates SQLite, marks interrupted stages, recovers checkpoint work, reconciles files and builds the provider registry (`packages/app/src/main.ts:96`).
+4. Settings validates saved CLI paths and runs a bounded readiness probe; blank resets to PATH. Each new call resolves the current executable, while a running child retains its launch command (`packages/app/src/slices/settings/cli-paths.ts:1`, `packages/app/src/slices/settings/cli-status.ts:1`).
+5. Boot recovers interrupted schedule-run claims, ticks schedules immediately and every 15 seconds, and pumps the persisted batch queue every second (`packages/app/src/main.ts:263`, `packages/app/src/main.ts:292`).
 
 ## Branches
 
 - PATH command, absolute executable, or readable JS/MJS/CJS entry file use the supported launcher (`packages/app/src/kernel/cli-command.ts`).
 - Recognized Windows Node shims resolve to Node plus entry; unknown batch files are rejected.
-- Interrupted standalone work requires manual resume; authorized pending batch entries may start and persisted pause holds the queue (`packages/app/src/main.ts:432-470`).
+- Interrupted standalone work requires manual resume; authorized pending batch entries may start, and schedules recover their own unfinished claims before the first tick (`packages/app/src/main.ts:263`, `packages/app/src/main.ts:292`).
 
 ## Unhappy paths
 
@@ -48,7 +52,7 @@ paths_covered:
 
 ## Outcomes & side effects
 
-Boot writes lock/log/database/filesystem state and starts HTTP/child-process capabilities. Readiness writes the saved path setting only after validation.
+Boot writes lock/log/database/filesystem state and starts HTTP/child-process capabilities. Readiness writes a saved CLI path only after validation. Diagnostics can download the app/schema/platform, provider readiness and CLI paths, project count and catalogue status without provider keys (`packages/app/src/edge/http/diagnostics.ts:10`).
 
 ## Dimensions not in play
 

@@ -1,10 +1,12 @@
 ---
-generated_at_commit: 3a9796eb7fec
-generated_date: 2026-09-10
-content_hash: 40c8389cfe58
+generated_at_commit: 7bdb84e3f57e
+generated_date: '2026-09-13'
+capstone_version: 5.2.0
+content_hash: a04caaa062b0
 paths_covered:
-  - ":(top)packages/web/src/**"
-  - ":(top)packages/site/**"
+  - :(top)packages/web/src/routes/entries.tsx
+  - :(top)packages/web/src/components/rail.tsx
+  - :(top)packages/web/src/components/confirm.tsx
 ---
 
 # Intros and outros

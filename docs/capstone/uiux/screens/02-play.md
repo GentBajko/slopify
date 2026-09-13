@@ -1,15 +1,13 @@
 ---
-generated_at_commit: 803bd5555d76
+generated_at_commit: 7bdb84e3f57e
 generated_date: '2026-09-13'
-content_hash: 2b9dab9b7f7b
+capstone_version: 5.2.0
+content_hash: a67d2e78a040
 paths_covered:
-  - :(top)packages/app/src/slices/play-drafts/**
-  - :(top)packages/app/src/slices/storage/**
-  - :(top)packages/app/src/slices/settings/tutorial*
-  - :(top)packages/web/src/play/**
   - :(top)packages/web/src/routes/play.tsx
+  - :(top)packages/web/src/play/**
   - :(top)packages/web/src/subtitles/**
-  - :(top)packages/web/src/tutorial/**
+  - :(top)packages/web/src/router.tsx
 absorbed_from:
   - features/2026-09-10-play-redesign-drafts@2026-09-13
   - features/2026-09-10-review-checkpoints@2026-09-13
@@ -50,4 +48,4 @@ New run; Content; Outputs; Style; Review; Continue to…; This run; Start run/Qu
 
 ## Not in play
 
-No fabricated checkpoint/template/schedule controls. No website change or new provider integration. Existing project Save and Rebuild remain separate. No provider generation is used for the preview or draft persistence.
+Template capture and schedule management live on their own routes. Existing-project Save and Rebuild live on the project route. Preview and draft persistence do not call generation providers (`packages/web/src/router.tsx:55-65`, `packages/web/src/routes/play.tsx`, `packages/web/src/play/output-preview.tsx`).

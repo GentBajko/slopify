@@ -1,10 +1,14 @@
 ---
-generated_at_commit: 803bd5555d76
-generated_date: '2026-09-12'
-content_hash: 4e57ddc2cb32
+generated_at_commit: 7bdb84e3f57e
+generated_date: '2026-09-13'
+capstone_version: 5.2.0
+content_hash: 2d16c7712ec0
 paths_covered:
-- :(top)packages/web/src/**
-- :(top)packages/site/**
+  - :(top)packages/web/src/routes/project.tsx
+  - :(top)packages/web/src/project/**
+  - :(top)packages/web/src/components/batch-queue.tsx
+  - :(top)packages/web/src/router.tsx
+  - :(top)packages/web/src/routes/settings.tsx
 absorbed_from:
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-review-checkpoints@2026-09-13
@@ -53,7 +57,4 @@ Actions distinguish Edit project, Save changes, Discard changes, Rebuild affecte
 
 ## Not in play
 
-Review checkpoints and reusable templates are available on this project surface. The header's
-Save as template action captures the displayed revision without rebuilding; template listing
-and Apply live on the Templates navigation surface. Scheduling and storage cleanup remain
-separate release work.
+The header's Save as template action captures the displayed revision without rebuilding; template listing and Apply live on the Templates route. Schedule creation lives on the Schedules route, and backup/cleanup controls live in Settings (`packages/web/src/project/save-template.tsx`, `packages/web/src/router.tsx:55-65`, `packages/web/src/routes/settings.tsx:126-191`).

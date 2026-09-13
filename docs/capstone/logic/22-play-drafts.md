@@ -1,15 +1,14 @@
 ---
-generated_at_commit: 89db8f6d8981
+generated_at_commit: 7bdb84e3f57e
+capstone_version: 5.2.0
 generated_date: '2026-09-13'
 paths_covered:
   - :(top)packages/app/src/slices/play-drafts/**
   - :(top)packages/app/src/slices/storage/**
-  - :(top)packages/app/src/slices/settings/tutorial*
+  - :(top)packages/app/src/slices/project-templates/**
   - :(top)packages/web/src/play/**
-  - :(top)packages/web/src/routes/play.tsx
-  - :(top)packages/web/src/subtitles/**
-  - :(top)packages/web/src/tutorial/**
-content_hash: 2b9dab9b7f7b
+  - :(top)packages/web/src/routes/templates.tsx
+content_hash: e09069d018ba
 absorbed_from:
   - features/2026-09-10-play-redesign-drafts@2026-09-13
 ---
@@ -37,6 +36,7 @@ A local user edits Play, restores a saved draft, or follows the tutorial. Draft 
 - New draft first saves existing edits; it does not silently abandon a conflict or network failure.
 - Drafts can be incomplete without being admissible. Only active generation/media choices impose admission requirements, except an owned unfinished font operation needs explicit recovery.
 - One run uses ordinary scheduling; variants enter the existing batch queue. Drafts are individual editable setups, not reusable templates.
+- Applying a template creates a fresh draft with copied setup and fresh attachment references. It records the template origin, resets variants and requires provided files to be reattached; Apply never starts a run (`packages/app/src/slices/project-templates/setup.ts:37`, `packages/app/src/slices/project-templates/service.ts:117`).
 
 These rules are in `packages/web/src/play/use-draft-session.ts`, `packages/app/src/slices/play-drafts/convert.ts` and `packages/app/src/slices/play-drafts/start.ts:23`.
 
@@ -58,4 +58,4 @@ Durable draft/review/attachment records, retained staged files and tutorial curs
 
 ## Dimensions not in play
 
-No multi-user account sharing, automatic draft expiration, reusable-template lifecycle, scheduled execution, storage quota enforcement or external notifications. Existing project revision Save/Rebuild remains separate.
+No multi-user account sharing, automatic draft expiration, storage quota enforcement or external notification. Template updates do not mutate drafts already instantiated from an older revision, and recurring schedules create fresh drafts rather than reusing one draft's state (`packages/app/src/slices/project-templates/service.ts:66`, `packages/app/src/slices/schedules/scheduler.ts:96`).

@@ -1,15 +1,13 @@
 ---
 generated_date: '2026-09-13'
-generated_at_commit: 89db8f6d8981
+capstone_version: 5.2.0
+generated_at_commit: 7bdb84e3f57e
 paths_covered:
-  - :(top)packages/app/src/slices/play-drafts/**
-  - :(top)packages/app/src/slices/storage/**
-  - :(top)packages/app/src/slices/settings/tutorial*
-  - :(top)packages/web/src/play/**
+  - :(top)packages/web/src/styles/index.css
+  - :(top)packages/web/src/components/shell.tsx
   - :(top)packages/web/src/routes/play.tsx
-  - :(top)packages/web/src/subtitles/**
-  - :(top)packages/web/src/tutorial/**
-content_hash: 2b9dab9b7f7b
+  - :(top)packages/site/**
+content_hash: 9ee7978e0e9e
 absorbed_from:
   - features/2026-09-10-play-redesign-drafts@2026-09-13
 ---
@@ -34,8 +32,10 @@ absorbed_from:
 | 08 project page | Operate | 4 / 3 / 6 |
 | 09 intros and outros | Operate | 4 / 3 / 6 |
 | 10 usage | Operate | 4 / 3 / 6 |
+| Templates | Operate | 4 / 3 / 6 |
+| Schedules | Operate | 4 / 3 / 6 |
 
-Dial reasoning: the app is used for hours while runs progress, so density and calm outrank expression; the landing has one job, getting the command copied, so it affords asymmetry and one authored motion moment. Other asymmetric layouts collapse below 900 px; Play uses its own 1100 px breakpoint.
+The app renders its control-room direction through shared matte surfaces, rail borders, Barlow faces, tally lamps and the green accent (`packages/web/src/styles/index.css:7-63`, `packages/web/src/components/shell.tsx:94-164`). The landing carries the same palette and faces in a wider persuasive composition (`packages/site/public/styles.css:57-105`, `packages/site/public/styles.css:340-413`). Play uses a separate 1100 px composition breakpoint (`packages/web/src/routes/play.tsx`).
 
 ## Brand facts
 

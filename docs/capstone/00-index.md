@@ -100,7 +100,7 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | [uiux/screens/10-marketing.md](uiux/screens/10-marketing.md) | Observed implemented surface |
 | [uiux/screens/11-first-run-tutorial.md](uiux/screens/11-first-run-tutorial.md) | Observed implemented surface |
 | [uiux/screens/12-updater.md](uiux/screens/12-updater.md) | Observed implemented surface |
+| [uiux/screens/13-schedules.md](uiux/screens/13-schedules.md) | Observed schedule creation, editing, controls and retained history surface |
+| [uiux/screens/14-templates.md](uiux/screens/14-templates.md) | Observed template capture, application and deletion surface |
 
 | [features/](features/) | Local working specifications and plans for the 1.0 feature chain |
-
-Play draft behavior: [22-play-drafts](logic/22-play-drafts.md). The Play refresh covers architecture, models, data flow, testing, operations and the affected scenario/screen references at `89db8f6`. Unrelated legacy reference drift remains outside this feature acceptance.

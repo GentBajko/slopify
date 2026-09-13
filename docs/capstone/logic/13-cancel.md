@@ -4,19 +4,26 @@ scenario: cancel
 mockup_row: S11
 screens: [08-project]
 depends_on: [01-pipeline-lifecycle, 06-research, 07-article-writing, 08-narration, 09-image-generation, 10-thumbnail-prompt-by-llm, 11-video-assembly, 12-reruns-and-edits]
-generated_date: 2026-09-09
+generated_date: '2026-09-13'
+generated_at_commit: 7bdb84e3f57e
 capstone_version: 5.2.0
+paths_covered:
+  - :(top)packages/app/src/slices/control/**
+  - :(top)packages/app/src/kernel/runner/**
+  - :(top)packages/app/src/main.ts
+  - :(top)packages/web/src/project/**
+content_hash: 007fd8cd8012
 ---
 
 # 13 Pause, resume and cancel
 
 Stopping a running project: what is aborted, what survives, and how it resumes.
 
-## Pause and resume
+## Trigger & preconditions
 
-Pause is available while a run is pending or running. It persists a pause flag before aborting active provider calls and local exports, waits for them to drain, and returns interrupted stages to pending. Completed outputs, research chapters, narration chunks, images and generated text checkpoints survive. Partially streamed text and partial exports are discarded. No new work is claimed while paused, including after app restart.
+Pause is available while project work is pending or running. It persists the pause before aborting active provider calls and local exports, waits for them to drain, and returns interrupted stages to pending. Completed outputs and physical pieces survive; partially streamed text and partial exports do not become finished outputs (`packages/app/src/slices/control/index.ts:1`, `packages/app/src/kernel/runner/index.ts:1`).
 
-Resume clears the pause, resets failed/canceled stages and schedules unfinished work together. Repeated pause/resume requests are idempotent and serialized per project. Paused and failed projects allow provider changes under scenario 12; saving choices does not resume. The header presents a distinct Paused state while stage rows keep their individual progress.
+Resume clears the pause and schedules eligible unfinished work. Repeated pause/resume requests are idempotent and serialized per project. Paused and failed projects allow revision/provider edits under scenario 12; saving choices does not resume (`packages/app/src/slices/control/revision-control.ts:1`, `packages/web/src/project/project-controls.tsx:1`).
 
 ## Cancel trigger & preconditions
 
@@ -65,7 +72,7 @@ Resume clears the pause, resets failed/canceled stages and schedules unfinished 
 - D1 authority: one local actor.
 - D4 computation: nothing computed.
 - D5 money: nothing charged in-app.
-- D6 limits: none.
-- D7 time: nothing scheduled or expiring.
+- D6 limits: queue and provider limits remain unchanged.
+- D7 time: a recurring schedule's own pause/resume state is handled by the schedule service, not the project control (`packages/app/src/slices/schedules/service.ts:110`).
 - D13 notification: no channel.
 - D14 effects on others: other projects are untouched.

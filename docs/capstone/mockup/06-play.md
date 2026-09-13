@@ -11,16 +11,15 @@ journeys:
   - J3-make-a-video
   - J4-bring-your-own
 generated_date: '2026-09-13'
-generated_at_commit: 803bd5555d76
+generated_at_commit: 7bdb84e3f57e
+capstone_version: 5.2.0
 paths_covered:
   - :(top)packages/app/src/slices/play-drafts/**
-  - :(top)packages/app/src/slices/storage/**
-  - :(top)packages/app/src/slices/settings/tutorial*
+  - :(top)packages/app/src/slices/project-templates/**
   - :(top)packages/web/src/play/**
   - :(top)packages/web/src/routes/play.tsx
-  - :(top)packages/web/src/subtitles/**
-  - :(top)packages/web/src/tutorial/**
-content_hash: 2b9dab9b7f7b
+  - :(top)packages/web/src/routes/schedules.tsx
+content_hash: fb14e2c26cf1
 ---
 
 # 06 Play
@@ -30,6 +29,30 @@ Configure an editable local draft, review the resolved setup/costs, then explici
 ## Layout
 
 The existing application navigation sits above New run, draft save state, Drafts and New draft. Four directly reachable sections follow: Content, Outputs, Style and Review. Desktop uses a flexible editor plus a360px sticky preview/summary column inside a1320px maximum width. Rows/dividers group related choices; the page uses existing matte surfaces, Barlow type and green actions (`packages/web/src/routes/play.tsx:235`, `packages/web/src/play/section-navigation.tsx:3`).
+
+## Elements
+
+| Element | Action and destination |
+|---|---|
+| Drafts / New draft | Selects a durable setup or saves the current edits before opening a fresh one |
+| Content / Outputs / Style / Review | Opens the named setup section without submitting work |
+| Generate / Provide / Off controls | Changes the active source and reveals only applicable fields |
+| Edit ↗ in Review | Returns to and focuses the owning setup field |
+| Review draft | Flushes edits, refreshes provider/model choices and resolves cost/readiness |
+| Start run / Queue videos | Submits the current review identity and opens the created project after confirmed admission |
+
+The Review page includes a Run readiness group for each active LLM, TTS and image choice; unavailable providers, models or voices expose an Edit action (`packages/web/src/play/review-summary.tsx:147`, `packages/web/src/play/review-state.ts:151`).
+
+## States
+
+- **Incomplete draft:** raw inputs remain editable and autosaved; Review reveals applicable field errors.
+- **Saving / Saved / Couldn't save / Changed elsewhere:** the page shows the draft write state and conflict recovery actions.
+- **Reviewing:** current provider/model data and the saved draft are being resolved; Start remains unavailable.
+- **Ready to start:** costs, assumptions, selected checkpoints and run readiness are visible.
+- **Starting / uncertain:** the original review identity is retained while its receipt is recovered; a new chargeable identity is not offered.
+- **Started:** confirmed project IDs replace the draft destination and navigation opens the project.
+
+These states come from the draft and Review state machines (`packages/web/src/play/draft-save.ts:1`, `packages/web/src/play/review-state.ts:130`).
 
 ## Content
 
@@ -70,4 +93,4 @@ draft, apply a snapshot into a fresh draft, or delete a template. Apply returns 
 keywords and choices ready for Review; it never starts a run. Provided media is called out for
 reattachment.
 
-Clock scheduling, storage management and release controls remain separate 1.0 work.
+Schedules is a separate implemented screen that consumes saved template revisions; editing Play itself does not choose a recurrence (`packages/web/src/routes/schedules.tsx:133`).

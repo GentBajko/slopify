@@ -1,28 +1,33 @@
 ---
-generated_at_commit: 3a9796eb7fec
-generated_date: 2026-09-10
-content_hash: 40c8389cfe58
+generated_at_commit: 7bdb84e3f57e
+generated_date: '2026-09-13'
+capstone_version: 5.2.0
+content_hash: 6cd8484b5dcf
 paths_covered:
-  - ":(top)packages/web/src/**"
-  - ":(top)packages/site/**"
+  - :(top)packages/web/src/routes/settings.tsx
+  - :(top)packages/web/src/components/catalogue.tsx
+  - :(top)packages/web/src/components/provider-cli.tsx
+  - :(top)packages/web/src/components/provider-keys.tsx
+  - :(top)packages/web/src/components/voices.tsx
+  - :(top)packages/web/src/components/theme.tsx
 ---
 
 # Settings
 
 ## Mode & job
-Operate surface for playback, provider readiness/keys, CLI paths, voices, catalogue status, and appearance settings. Source: packages/web/src/routes/settings.tsx:38-50; packages/web/src/components/catalogue.tsx; packages/web/src/components/provider-cli.tsx.
+Operate surface for diagnostics, playback, provider readiness/keys, editable CLI paths, voices, catalogue status, appearance, backups and local storage cleanup (`packages/web/src/routes/settings.tsx:40-58`, `packages/web/src/routes/settings.tsx:126-191`, `packages/web/src/components/provider-cli.tsx`, `packages/web/src/components/catalogue.tsx`).
 
 ## Composition
-The Settings heading leads stacked sections for playback, provider keys/CLI paths, voices, catalogue, and appearance. CatalogueSettings is a bordered Models and request limits panel with explanatory copy, local path, verified date, refresh button, and status/error text. Source: packages/web/src/routes/settings.tsx:38-50; packages/web/src/routes/settings.tsx:50-200.
+The Settings heading and Download diagnostics action lead stacked rails for playback, provider keys/CLI paths, voices, catalogue, appearance and storage tools. Storage tools expose backup import/export, per-project usage and cleanup (`packages/web/src/routes/settings.tsx:40-58`, `packages/web/src/routes/settings.tsx:126-191`, `packages/web/src/routes/settings.tsx:250-350`).
 
 ## States
-Input validation, provider key/path save/reset, readiness errors, voice loading, catalogue loading/error/refresh success, and theme selection are represented. Catalogue refresh polls every 30 seconds and invalidates provider-model queries after success. Source: packages/web/src/routes/settings.tsx:38-200; packages/web/src/components/provider-cli.tsx; packages/web/src/components/provider-keys.tsx; packages/web/src/components/catalogue.tsx.
+Input validation, provider key/path save/reset, readiness errors, voice loading, catalogue loading/error/refresh success, theme selection, backup confirmation, storage calculation and cleanup outcomes are represented (`packages/web/src/routes/settings.tsx:76-191`, `packages/web/src/components/provider-cli.tsx`, `packages/web/src/components/provider-keys.tsx`, `packages/web/src/components/catalogue.tsx`).
 
 ## Motion
-No route-specific motion found. Source: packages/web/src/routes/settings.tsx:38-200.
+No route-specific authored motion is implemented (`packages/web/src/routes/settings.tsx:40-350`).
 
 ## Copy
-The primary heading is Settings; section labels come from the playback, provider, voice, catalogue, and appearance components. Source: packages/web/src/routes/settings.tsx:41-50.
+Primary copy is Settings, Download diagnostics and Storage tools; individual rails name playback, providers, voices, models/request limits and appearance (`packages/web/src/routes/settings.tsx:45-58`, `packages/web/src/routes/settings.tsx:126-191`, `packages/web/src/routes/settings.tsx:264-350`).
 
 ## Not in play
-Permission-denied is not rendered. Source: packages/web/src/routes/settings.tsx:38-200.
+Authentication and permission-denied states are absent (`packages/web/src/routes/settings.tsx:40-350`).

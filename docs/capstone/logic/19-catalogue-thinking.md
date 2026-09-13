@@ -1,12 +1,14 @@
 ---
-generated_at_commit: 3a9796eb7fec
-generated_date: 2026-09-10
-content_hash: e293a0b5e022
+generated_at_commit: 7bdb84e3f57e
+capstone_version: 5.2.0
+generated_date: '2026-09-13'
+content_hash: cdabf2573a8d
 paths_covered:
-  - ":(top)packages/app/src/**"
-  - ":(top)packages/web/src/**"
-  - ":(top)packages/collector/**"
-  - ":(top)packages/site/**"
+  - :(top)packages/app/src/catalog/**
+  - :(top)packages/app/src/assets/models.yaml
+  - :(top)packages/app/src/adapters/**
+  - :(top)packages/app/src/edge/http/providers.ts
+  - :(top)packages/web/src/components/catalogue.tsx
 ---
 
 # Model catalogue reload and thinking controls
@@ -21,8 +23,9 @@ paths_covered:
 1. `createCatalogueStore` seeds `<data-dir>/models.yaml` from the bundled file and keeps parsed state in memory (`packages/app/src/catalog/store.ts:24-35`).
 2. Reads detect local mtime/size changes; invalid or oversized YAML retains the last valid catalogue and sets a warning (`packages/app/src/catalog/store.ts:38-52`).
 3. Refresh fetches the pinned GitHub raw source with a 15-second timeout, bounds the body to 1 MiB, parses it, writes `.previous`, atomically renames `.next`, and updates status (`packages/app/src/catalog/store.ts:54-92`).
-4. `catalogue.models` returns only enabled, non-deprecated models; provider routes expose status and model choices (`packages/app/src/catalog/store.ts:88-92`; `packages/app/src/edge/http/providers.ts:38-70`).
-5. LLM request construction forwards the selected thinking mode; OpenRouter maps effort to `reasoning.effort` (`packages/app/src/adapters/llm/openrouter.ts:65-78`). Gemini 3 uses thinking level; Gemini 2.5 uses thinking budget. Gemini 3.8 minimal is unsupported and Gemini 3.1 Pro cannot disable thinking (Google Gemini thinking documentation).
+4. `catalogue.models` returns only enabled, non-deprecated models; provider routes expose status and model choices (`packages/app/src/catalog/store.ts:88`, `packages/app/src/edge/http/providers.ts:38`).
+5. YAML entries carry provider/model IDs, search keywords and pricing. Family-specific fields describe LLM context/search/thinking settings, image aspect ratios, TTS request limits/streaming, and per-provider concurrency from one validated schema (`packages/app/src/catalog/schema.ts:5`, `packages/app/src/catalog/schema.ts:25`, `packages/app/src/catalog/schema.ts:48`, `packages/app/src/catalog/schema.ts:58`, `packages/app/src/catalog/schema.ts:69`).
+6. The registry rejects disabled models, unsupported web search/thinking/aspect ratio and oversized new narration requests before invoking the adapter. Retrieval of an already accepted TTS continuation remains allowed (`packages/app/src/catalog/registry.ts:7`, `packages/app/src/catalog/registry.ts:40`, `packages/app/src/catalog/registry.ts:63`, `packages/app/src/catalog/registry.ts:79`).
 
 ## Branches
 
@@ -43,7 +46,7 @@ paths_covered:
 
 - Catalogue writes are atomic and bounded.
 - Deprecated or disabled entries are excluded from `catalogue.models`.
-- Thinking modes are model-specific; Gemini 3.8 does not use `thinkingBudget: 0` as a generic off switch.
+- Thinking choices and adapter-specific mappings come from the selected model's validated catalogue entry; unsupported modes are not silently substituted (`packages/app/src/catalog/registry.ts:48`).
 
 ## Outcomes & side effects
 

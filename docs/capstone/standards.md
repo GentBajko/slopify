@@ -43,6 +43,10 @@ capstone_version: 5.2.0
 - Name files kebab-case, values camelCase, types PascalCase.
 - Comment only constraints the code cannot show; no narration, no doc-comments on internals.
 
+## Documentation
+
+- Generated architecture reference lives under `docs/capstone/`; code comments record only constraints the code cannot show.
+
 ## Testing
 
 - Write the failing test first, then the minimum code to green, then verify, then commit.
@@ -55,6 +59,34 @@ capstone_version: 5.2.0
 
 - One formatter and one linter, the linter carrying the kernel → slices → edge import-boundary rule; both run as a pre-commit hook and in CI.
 - Typecheck in CI on Node 26. The exact tools are recorded by `stack`.
+
+## CI gates
+
+- CI runs formatting/linting, type checking, tests, the release build, and the dependency audit; release tags publish only after the same verification passes.
+
+## Security
+
+- Provider credentials never appear in errors, logs, responses, telemetry, tests, or chat.
+
+## Logging and privacy
+
+- Caught infrastructure and provider errors carry project and stage context after credential redaction; telemetry carries only allowed anonymous counters.
+
+## API conventions
+
+- Expected domain refusals use typed results inside slices; edge handlers translate them to validated HTTP problem responses.
+
+## Accessibility
+
+- No project-specific rule was set; `code-craft.md` governs this domain.
+
+## Performance budgets
+
+- No project-specific budget was set; `code-craft.md` governs this domain.
+
+## Versioning and release
+
+- Stable releases use semantic versions; a release tag matches the npm package version and passes CI before publication.
 
 ## Process
 
@@ -72,6 +104,6 @@ An AI assistant working in this repository must:
 - never edit or reorder existing entries in `docs/capstone/changelog.md`;
 - always run the tests before claiming a task done.
 
-## Ruled out
+## Not in play
 
 - A licence that charges companies and not individuals: withdrawn; MIT stands. PolyForm Small Business 1.0.0, BSL 1.1 with an Additional Use Grant, and AGPL + commercial were the options examined.

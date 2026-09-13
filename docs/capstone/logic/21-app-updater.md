@@ -1,12 +1,14 @@
 ---
-generated_at_commit: 3a9796eb7fec
-generated_date: 2026-09-10
-content_hash: e293a0b5e022
+generated_at_commit: 7bdb84e3f57e
+capstone_version: 5.2.0
+generated_date: '2026-09-13'
+content_hash: 097ad2f70c73
 paths_covered:
-  - ":(top)packages/app/src/**"
-  - ":(top)packages/web/src/**"
-  - ":(top)packages/collector/**"
-  - ":(top)packages/site/**"
+  - :(top)packages/app/src/updater/**
+  - :(top)packages/app/src/edge/http/update.ts
+  - :(top)packages/app/src/edge/update-worker.ts
+  - :(top)packages/web/src/updates/**
+  - :(top)packages/app/src/main.ts
 ---
 
 # In-app updater
@@ -18,10 +20,11 @@ paths_covered:
 
 ## Steps
 
-1. Updater checks the npm latest tag and compares stable semantic versions (`packages/app/src/updater/registry.ts`; `packages/app/src/updater/service.ts:21-74`).
-2. Start obtains the update mutation barrier, validates the exact version, writes an update plan and launches the detached update worker (`packages/app/src/updater/plan.ts:28-64`; `packages/app/src/updater/worker.ts:32-58`).
-3. Worker installs the exact package under `<data-dir>/updates/<version>`, starts the candidate with host/port/data-dir and private token, and waits for readiness (`packages/app/src/updater/worker.ts:32-112`).
-4. Candidate calls the activation endpoint; successful activation commits `updates/current.json` and the launcher forwards future starts (`packages/app/src/updater/worker.ts:100-142`; `packages/app/src/updater/plan.ts:83-119`).
+1. Updater checks the npm latest tag, validates stable versions and caches non-forced checks for 15 minutes (`packages/app/src/updater/registry.ts:1`, `packages/app/src/updater/service.ts:55`).
+2. Start refuses active work/mutations, discovers npm, validates the exact version and launches the detached update worker (`packages/app/src/updater/service.ts:108`, `packages/app/src/updater/plan.ts:122`).
+3. Worker installs the exact package under `<data-dir>/updates/<version>`, backs up SQLite, starts a provisional candidate with the same host/port/data directory and private token, and gives it 60 seconds to become healthy; provisional boot defers destructive storage reconciliation (`packages/app/src/updater/plan.ts:28`, `packages/app/src/updater/worker.ts:18`, `packages/app/src/updater/worker.ts:147`).
+4. After health, cleanup retains the current and rollback installations plus the newest database backup; cleanup failure is nonfatal. An atomic `updates/current.json` pointer then commits the candidate. The candidate acknowledges promptly, performs deferred storage reconciliation while mutations remain locked, and future CLI starts forward to the installed managed entry (`packages/app/src/updater/plan.ts:91`, `packages/app/src/updater/plan.ts:109`, `packages/app/src/updater/candidate.ts:3`).
+5. The floating icon polls every 15 minutes while idle and every two seconds during recovery. It shows only rounded arrows plus an update dot, offsets itself above the footer, checks on click when current, installs on click when an update is available, and stops showing Updating after a two-minute recovery timeout (`packages/web/src/updates/use-update.ts:32`, `packages/web/src/updates/use-update.ts:79`, `packages/web/src/updates/widget.tsx:7`).
 
 ## Branches
 
@@ -35,6 +38,7 @@ paths_covered:
 - Candidate health, version, or token mismatch prevents activation and stops the candidate (`packages/app/src/updater/candidate.ts`; `packages/app/src/edge/update-worker.ts:5-40`).
 - Pre-activation failure restores the previous package entry and SQLite backup (`packages/app/src/updater/install-flow.ts`; `packages/app/src/updater/worker.ts`).
 - Lost post-activation acknowledgement requires restart; accepted edits are not rolled back (`packages/app/src/updater/worker.ts:112-142`).
+- A browser that observes persisted installing/restarting state without successful recovery clears its local updating state after two minutes and tells the user to restart and retry (`packages/web/src/updates/use-update.ts:79`).
 
 ## State transitions
 
@@ -44,7 +48,8 @@ paths_covered:
 
 - Only stable semantic versions pass the update plan schema.
 - The candidate must prove its private startup token and expected version before activation.
-- Existing database data is backed up before replacement.
+- Existing database data is backed up before replacement; storage reconciliation does not delete files until committed activation is verified.
+- Artifact pruning accepts only strict stable-version install directories and valid update-backup filenames, and retains both runnable versions plus the newest rollback copy.
 
 ## Outcomes & side effects
 

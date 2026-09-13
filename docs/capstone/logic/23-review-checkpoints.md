@@ -11,14 +11,14 @@ depends_on:
   - 04-run-admission
   - 12-reruns-and-edits
 generated_date: '2026-09-13'
-generated_at_commit: 803bd5555d76
-content_hash: 942b3c2747be
+generated_at_commit: 7bdb84e3f57e
+capstone_version: 5.2.0
+content_hash: 4c25ea3db1a8
 paths_covered:
   - :(top)packages/app/src/slices/checkpoints/**
+  - :(top)packages/app/src/slices/rebuild/**
   - :(top)packages/app/src/kernel/runner/**
-  - :(top)packages/app/src/edge/http/checkpoints.ts
-  - :(top)packages/web/src/project/checkpoint-*.tsx
-  - :(top)packages/web/src/play/checkpoints.tsx
+  - :(top)packages/web/src/project/**
 ---
 
 # 23 Review checkpoints
@@ -63,4 +63,4 @@ Checkpoint rows, approval receipts and gate identities persist in SQLite. Releas
 
 ## Dimensions not in play
 
-Reusable templates, schedules, automatic approval, arbitrary timeline editing and new provider integrations remain separate work.
+There is no automatic approval, arbitrary timeline breakpoint or remote approver. Templates preserve selected checkpoint choices in reusable setup, while each scheduled occurrence receives fresh revision-bound gates and cannot approve them on the user's behalf (`packages/app/src/slices/project-templates/setup.ts:6`, `packages/app/src/slices/schedules/scheduler.ts:96`).

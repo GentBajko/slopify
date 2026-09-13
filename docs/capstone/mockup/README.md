@@ -1,112 +1,100 @@
 ---
 generated_date: '2026-09-13'
-generated_at_commit: 803bd5555d76
+generated_at_commit: 7bdb84e3f57e
+capstone_version: 5.2.0
 absorbed_from:
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-play-redesign-drafts@2026-09-13
   - features/2026-09-10-review-checkpoints@2026-09-13
 paths_covered:
-  - :(top)packages/app/src/slices/play-drafts/**
-  - :(top)packages/app/src/slices/storage/**
-  - :(top)packages/app/src/slices/settings/tutorial*
-  - :(top)packages/web/src/play/**
-  - :(top)packages/web/src/routes/play.tsx
-  - :(top)packages/web/src/subtitles/**
-  - :(top)packages/web/src/tutorial/**
-content_hash: 2b9dab9b7f7b
+  - :(top)packages/web/src/**
+  - :(top)packages/site/**
+  - :(top)packages/app/src/**
+  - :(top)packages/app/package.json
+content_hash: 9291be0dbed5
+surfaces:
+  - web
+  - cli
 ---
 
 # Slopify mockup
 
-Screens as markdown wireframes, one file each, numbered in journey order. `rule: logic (S<n>-...)` marks a state whose rule a logic scenario settles, owned by exactly one row of the Scenarios table below.
+## Product brief
+
+- **Purpose:** turn a prompt and keyword values into a narrated slideshow, silent video, WAV or article using local orchestration and the user's provider access (`packages/site/public/index.html:84`, `packages/web/src/play/review-summary.tsx:205`).
+- **Audience:** people producing repeatable article-led media who want to configure, review, revise and download runs from a local browser interface (`packages/web/src/routes/play.tsx:235`, `packages/web/src/routes/project.tsx:1`).
+- **Positioning:** “Your keys, your machine, free”; the package is MIT-licensed, installed with npx or globally with npm, and the global install launches as `slopify` (`packages/site/public/index.html:89`, `packages/site/public/index.html:94`, `packages/app/package.json:5`).
+- **Success measures:** the product surfaces per-install Usage and public aggregate creation counters; no numeric release target is encoded in the product surfaces (`packages/site/public/index.html:170`, `packages/web/src/routes/usage.tsx:1`).
+- **Commercial model:** the software has no paid application tier. Users bring provider keys or authenticated local CLIs and bear those provider costs; Review shows known estimates and unpriced charges (`packages/site/public/index.html:89`, `packages/web/src/play/review-section.tsx:11`).
+- **Constraints:** Node 26 or newer; local SQLite/data-directory ownership; scheduled work runs only while Slopify is open; provider readiness and current catalogue choices are checked again at Start (`packages/app/package.json:13`, `packages/app/src/main.ts:96`, `packages/app/src/main.ts:303`, `packages/app/src/slices/play-drafts/start.ts:92`).
+- **Non-goals:** no hosted account/project sync, payment ledger or machine wake-up scheduler is represented by the current routes (`packages/app/src/kernel/config/index.ts:20`, `packages/app/src/slices/schedules/scheduler.ts:25`).
+
+`rule: logic (S<n>-...)` markers in screen files point to the single owning scenario below. Implemented behavior is detailed in the matching file under `../logic/`.
 
 ## Screens
 
-| Screen | Journeys served | Built as |
+| Screen | Journeys served | Implemented surface |
 |---|---|---|
-| [01 Marketing page](01-marketing-page.md) | J1 | `packages/site/public/index.html` |
-| [02 First-run notice](02-first-run-notice.md) | J1, J2 | `packages/web/src/components/notice.tsx` |
-| [03 Settings](03-settings.md) | J1, J2 | `packages/web/src/routes/settings.tsx` |
-| [04 Prompts](04-prompts.md) | J2 | `packages/web/src/routes/prompts.tsx` |
-| [05 Prompt editor](05-prompt-editor.md) | J2 | `packages/web/src/routes/prompt-editor.tsx` |
-| [06 Play](06-play.md) | J2, J3, J4, J7 | `packages/web/src/routes/play.tsx`, `packages/web/src/play/`, checkpoint setup |
-| [07 Projects](07-projects.md) | J3, J6 | `packages/web/src/routes/projects.tsx` |
-| [08 Project page](08-project.md) | J3, J4, J5, J6, J7 | `packages/web/src/routes/project.tsx`, `packages/web/src/project/`, checkpoint approval and template capture |
-| 11 Templates (not drawn) | J7 | `packages/web/src/routes/templates.tsx`, `packages/web/src/templates/` |
-| 12 Schedules | J8 | `packages/web/src/routes/schedules.tsx`, `packages/app/src/slices/schedules/` |
-| 09 Intros & Outros library (not drawn) | J2 | `packages/web/src/routes/entries.tsx` |
-| 10 Usage (not drawn) | J6 | `packages/web/src/routes/usage.tsx` |
-
-App shell on 02-09: nav Projects / Play / Templates / Schedules / Prompts / Settings, footer with donation links.
+| [01 Marketing](01-marketing-page.md) | J1 | Static site, install options and public counters |
+| [02 First-run notice](02-first-run-notice.md) | J1, J2 | Local telemetry/tutorial entry |
+| [03 Settings](03-settings.md) | J2, J6 | Keys, CLI paths, voices, catalogue, storage and diagnostics |
+| [04 Prompts](04-prompts.md) | J2 | Prompt library |
+| [05 Prompt editor](05-prompt-editor.md) | J2 | Prompt body and slots |
+| [06 Play](06-play.md) | J2, J3, J4, J7 | Durable draft, Review, readiness and Start |
+| [07 Projects](07-projects.md) | J3, J6 | Project list |
+| [08 Project](08-project.md) | J3, J4, J5, J6, J7 | Progress, editors, rebuild, checkpoints and history |
+| Templates (not separately drawn) | J7, J8 | `packages/web/src/routes/templates.tsx` |
+| [09 Schedules](09-schedules.md) | J8 | Local recurring template admission |
+| Entries (not separately drawn) | J2 | `packages/web/src/routes/entries.tsx` |
+| Usage (not separately drawn) | J6 | `packages/web/src/routes/usage.tsx` |
 
 ## Journeys
 
 | Journey | Path |
 |---|---|
-| J1 discover and install | 01 → terminal `npx @gentbajko/slopify@latest` → 02 → 03 |
-| J2 first-run setup | 02 → 03 (keys, voices, outro text) → 04 → 05 → 04 → 06 |
-| J3 make a video | 07 → 06 → 08 (stages run) → download mp4 |
-| J4 bring your own | 06 (Provide on any stage) → 08 |
-| J5 revise | 08 → Edit project → Save → Review affected rebuild → Start → download; History → Restore saves a new revision |
-| J6 revisit | 07 → 08 → downloads |
-| J7 reuse a setup | 06/08 → Templates → Apply to Play → Review → Start |
-| J8 unattended runs | Templates → Schedules → save cadence and variants → local scheduler → project history |
+| J1 Discover and install | 01 → npx/global install → 02 → 03 |
+| J2 First-run setup | 02 → 03 → 04/05 → 06 |
+| J3 Make an output | 07 → 06 Content/Outputs/Style/Review → 08 → download |
+| J4 Bring local content | 06 Provide → Review/Start → 08 |
+| J5 Revise | 08 Edit → Save → Review affected rebuild → Start → History |
+| J6 Revisit and maintain | 07 → 08; 03 for storage/diagnostics/update readiness |
+| J7 Reuse setup | 06 or 08 → Templates → Apply to Play → Review/Start |
+| J8 Run on a cadence | Templates → 09 → due admission → 07/08 |
 
 ## Scenarios for `logic`
 
-One row per behavior the product decides. Screens: where it surfaces. Open threads: the questions each raised, all of them settled by the numbered scenario in `../logic/`.
-
-| # | Behavior | Screens | Open threads |
+| # | Behavior | Screens | Settled reference |
 |---|---|---|---|
-| S1 | Placeholder substitution | 05, 06 | `{{name}}` detection rules; malformed slots; merge of a name shared across article, image, and thumbnail prompts; empty value at play; a value containing `{{` |
-| S2 | Run admission | 06 | Required fields and what blocks Play; a second play while a project runs; whether the form persists after submit |
-| S3 | Provided outputs | 06, 08 | Per-stage validation of pasted text and uploaded audio/images (formats, sizes, counts, empty); recording prompts and slots when a stage is provided; a run with everything provided but video |
-| S4 | Research stage | 06, 08 | What research through the LLM does and produces; behavior when the chosen model cannot research; toggle scope (run) |
-| S5 | Article writing | 08 | How the rendered prompt and research notes are sent; whether research feeds "Sources Consulted"; output form; length-control misses |
-| S6 | Narration | 08 | Which article sections are narrated (end matter stripped or read); pronunciation glossary as TTS hints; long-text chunking |
-| S7 | Image generation | 06, 08 | Number sends per prompt and how images vary; thumbnail derivation (runs once, assumed); aspect ratio following 16:9 / 9:16; fitting a mismatched image |
-| S8 | Video assembly | 06, 08 | Image duration vs audio length; alternating zoom-out → zoom-in → cut → zoom-out pattern rules; intro/outro card durations and text; 9:16 rendering |
-| S9 | Pipeline lifecycle | 07, 08 | Stage order and status transitions; progress a stage reports; failure handling (retry, resume from stage, restart) and what a failed stage shows; project-level status derivation |
-| S10 | Re-runs and edits | 08 | Effect of an article edit or a stage re-run on downstream outputs (invalidate, keep, cascade); regenerate-one-image against the existing video; re-render inputs |
-| S11 | Cancel | 08 | Which in-flight provider calls stop; which outputs survive; project state after cancel |
-| S12 | Telemetry | 01, 02, 08 | Machine ID generation and reset; counters per stage and their units; report timing (per stage vs per run); offline queueing; first-run notice trigger; counter refresh interval and unavailable state on the marketing page |
-| S13 | Provider credentials and voices | 03, 06 | Key verification on save; unkeyed providers on Play (hidden, disabled, blocked); removing a key a project used; empty voice list on Play |
-| S14 | Storage and downloads | 07, 08 | Where outputs live on the machine; download naming; "download all" packaging; deleting a project (and a running one) |
-| S15 | Prompt management | 04, 08 | Deleting a prompt a past project used; what the project header shows afterwards |
-| S16 | Thumbnail prompt written by the LLM | 06, 08 | The LLM writes the thumbnail's image prompt from the thumbnail template and the article; settled in `logic/10-thumbnail-prompt-by-llm.md` |
+| S1 | Placeholder substitution | 05, 06 | [03](../logic/03-placeholder-substitution.md) |
+| S2 | Run admission | 06 | [04](../logic/04-run-admission.md) |
+| S3 | Provided outputs | 06, 08 | [05](../logic/05-provided-outputs.md) |
+| S4 | Research | 06, 08 | [06](../logic/06-research.md) |
+| S5 | Article writing | 08 | [07](../logic/07-article-writing.md) |
+| S6 | Narration | 06, 08 | [08](../logic/08-narration.md) |
+| S7 | Image generation | 06, 08 | [09](../logic/09-image-generation.md) |
+| S8 | Video assembly | 06, 08 | [11](../logic/11-video-assembly.md) |
+| S9 | Pipeline lifecycle | 07, 08 | [01](../logic/01-pipeline-lifecycle.md) |
+| S10 | Project edits and retained revisions | 08 | [12](../logic/12-reruns-and-edits.md) |
+| S11 | Pause, resume and cancel | 08 | [13](../logic/13-cancel.md) |
+| S12 | Telemetry | 01, 02, 08 | [16](../logic/16-telemetry.md) |
+| S13 | Provider credentials and voices | 03, 06 | [02](../logic/02-provider-credentials.md) |
+| S14 | Storage and downloads | 03, 07, 08 | [14](../logic/14-storage-and-downloads.md) |
+| S15 | Prompt management | 04, 05, 08 | [15](../logic/15-prompt-management.md) |
+| S16 | Thumbnail prompt by LLM | 06, 08 | [10](../logic/10-thumbnail-prompt-by-llm.md) |
+| S17 | Subtitles and fonts | 06, 08 | [17](../logic/17-subtitles.md) |
+| S18 | Cost review and batch queue | 06 | [18](../logic/18-cost-review-batch.md) |
+| S19 | Model catalogue and thinking | 03, 06, 08 | [19](../logic/19-catalogue-thinking.md) |
+| S20 | Boot, CLI paths and recovery | 03, 06, 08 | [20](../logic/20-boot-cli-recovery.md) |
+| S21 | In-app updater | Shell | [21](../logic/21-app-updater.md) |
+| S22 | Play drafts and uploads | 06 | [22](../logic/22-play-drafts.md) |
+| S23 | Review checkpoints | 06, 08 | [23](../logic/23-review-checkpoints.md) |
+| S24 | Project templates | 06, 08, Templates | [24](../logic/24-project-templates.md) |
+| S25 | Scheduled jobs | 09 | [25](../logic/25-scheduled-jobs.md) |
 
-Every `rule: logic` marker in 01-08 names exactly one of S1-S15; S16 was added during `logic` and has no marker of its own.
+## Assumptions retained from discovery
 
-## Handed to `stack`
+The remaining explicit assumptions live on 01 Marketing, 02 First-run notice, 03 Settings, 04 Prompts, 05 Prompt editor and 07 Projects. They cover counter ordering, modal/landing presentation, provider row and masking presentation, prompt table actions/slot columns, prompt-editor slot display and project-list columns/delete placement. Implemented logic and UI chapters outrank these early wireframe assumptions where they differ.
 
-- LLM access through OpenRouter.
-- TTS and image-generation providers: unnamed; 03 and 06 show placeholder rows.
-- Audio container for download (drawn as `.mp3` on 08).
+## Open questions and deferrals
 
-## Assumed
-
-Items invented to complete a wireframe; each is marked "assumed" inline and in its screen's frontmatter. Confirm or strike before `uiux` and `logic` build on them.
-
-- 01: counter set (videos, audio hours, images, tokens, installs); section order.
-- 02: modal presentation; dismissing lands on 03 when no key is saved.
-- 03: a voice entry names its TTS provider; provider rows are placeholders; outro card fields live here; keys masked after save.
-- 04: Delete and Duplicate per prompt; a slots column in the list.
-- 05: live "Detected slots" line; kind chosen in the editor.
-- 06: research and thumbnail have Off / Generate / Provide; video always generated; provider dropdowns list keyed providers only; model dropdowns fetched from the provider; thumbnail prompt runs once; Video title required and names the project; LLM row shown only while research or article is Generate; keyword group order; Templates is a first-class navigation surface for saving and applying reusable setup snapshots.
-- 07: columns title / status / format / created; Delete per project; landing screen after first run.
-- 08: "provided" and "skipped" labels; header contents; "Download all" is one archive; inline article editor with Save & continue; Save as template captures the displayed current revision without rebuilding.
-- Shell: nav order Projects / Play / Templates / Prompts / Settings.
-
-## Amendments from `logic` (applied at the readback, 2026-09-02)
-
-Applied to the wireframes above; kept as the trail of what changed.
-
-- Intro/outro library: a new section of its own (own nav entry, assumed) holding entries with name, category (intro/outro), mode (Text/LLM), and a `{{keyword}}` body. Not drawn.
-- 06 Play: intro and outro card toggles replaced by pickers (Off / one saved entry each); thumbnail control reads Off / From prompt / Prompt by LLM / Provide; audio block gains a Chunking control (Whole / Per paragraph / Every N words, default 500); keyword fields are single-line inputs capped at 200 characters, laid out Common Fields on top then Article Fields | Image Fields.
-- 03 Settings: channel name and closing line removed; a "silence between segments" field in seconds, default 3, added.
-- 08 Project page: article stage gains sources and pronunciation-glossary files; audio stage holds body, intro, and outro files; intro/outro cards no longer exist, the slideshow spans the whole video; research stage shows "k of N chapters" progress and the sent instructions.
-- Provider dropdowns list every supported provider with unkeyed ones greyed out, superseding 06's assumption.
-- Usage page: a new screen showing this install's own all-time telemetry totals. Not drawn.
-- 02 First-run notice: its tracked-counters list must match `logic/16-telemetry.md` steps 3-4 exactly (tokens per stage with provider and model, audio seconds, images, thumbnails, videos, projects; app version), superseding the shorter list drawn.
-
-Play now uses durable local drafts, explicit Review/Start and four setup sections. See [draft lifecycle](../logic/22-play-drafts.md).
+No unowned `rule: logic` marker remains in this mockup inventory. Templates, Entries and Usage are implemented routes without dedicated mockup screen chapters; their current compositions are documented by the UI/UX reference and source routes.

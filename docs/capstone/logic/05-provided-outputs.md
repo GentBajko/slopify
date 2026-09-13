@@ -12,16 +12,17 @@ generated_date: '2026-09-13'
 absorbed_from:
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-play-redesign-drafts@2026-09-13
-generated_at_commit: 89db8f6d8981
+generated_at_commit: 7bdb84e3f57e
+capstone_version: 5.2.0
 paths_covered:
   - :(top)packages/app/src/slices/play-drafts/**
   - :(top)packages/app/src/slices/storage/**
-  - :(top)packages/app/src/slices/settings/tutorial*
+  - :(top)packages/app/src/slices/revisions/**
+  - :(top)packages/app/src/slices/project-templates/**
+  - :(top)packages/app/src/slices/schedules/**
   - :(top)packages/web/src/play/**
-  - :(top)packages/web/src/routes/play.tsx
-  - :(top)packages/web/src/subtitles/**
-  - :(top)packages/web/src/tutorial/**
-content_hash: 2b9dab9b7f7b
+  - :(top)packages/web/src/project/**
+content_hash: cc56ad23132d
 ---
 
 # 05 Provided outputs
@@ -44,6 +45,12 @@ The user chooses Provide during Play or project editing. Text is pasted; audio/i
 
 Switching from supplied audio/thumbnail to generation and back reselects the original supplied asset when available. An inactive saved reference does not replace the generated selection. Newly reactivated missing originals produce field errors before Save; unchanged missing references do not block unrelated edits (`packages/app/src/slices/revisions/mutation-assets.ts:162`, `packages/app/src/slices/revisions/mutations-source-return.test.ts:1`).
 
+## Branches
+
+Play stores draft-owned attachment references and copies inputs only at explicit admission. Project revision Save instead imports new staged bytes into registered immutable assets. Inactive source choices retain their raw references without becoming active generation requirements. A Play fork gives references new IDs while sharing ready staged bytes; discarding one draft cannot remove another owner's bytes (`packages/app/src/slices/play-drafts/service.ts:212`, `packages/app/src/slices/storage/staging-refs.ts:1`).
+
+Templates preserve provided-file placeholders but require reattachment in the fresh draft. Scheduled jobs reject templates whose active setup still provides whole audio, images or thumbnail because unattended reattachment is unavailable (`packages/app/src/slices/project-templates/setup.ts:37`, `packages/app/src/slices/schedules/service.ts:189`).
+
 ## Unhappy paths
 
 - Empty text, incorrect media kind, invalid image definition/order, duplicate/unsupported upload destination or inaccessible replacement: typed field errors; no new revision/provider work.
@@ -52,10 +59,6 @@ Switching from supplied audio/thumbnail to generation and back reselects the ori
 - Local copy/probe/DB failure: retain the previous revision/downloads. Error classification does not hide an infrastructure failure as user validation.
 - Missing previously supplied bytes: retain history metadata and report unavailable. Do not silently substitute a generated provider request; supply a replacement or change source explicitly.
 - In Play, completed draft-owned attachments survive restart. Interrupted/missing uploads keep their filenames and require Reattach/Remove; failed prerequisite saves do not pretend a copy is live. Unreferenced abandoned staging can be cleaned, but shared draft references retain ready bytes (`packages/app/src/slices/play-drafts/uploads.ts`, `packages/app/src/slices/storage/staging-refs.ts`, `packages/app/src/slices/storage/reconcile.ts`, `packages/web/src/play/use-draft-uploads.ts`).
-
-## Branches
-
-Play stores draft-owned attachment references and copies inputs only at explicit admission. Project revision Save instead imports new staged bytes into registered immutable assets. Inactive source choices retain their raw references without becoming active generation requirements. A Play fork gives references new IDs while sharing ready staged bytes; discarding one draft cannot remove another owner's bytes (`packages/app/src/slices/play-drafts/service.ts:212`, `packages/app/src/slices/storage/staging-refs.ts`).
 
 ## State transitions
 
@@ -71,7 +74,7 @@ Successful Play admission copies shared supplied inputs into each created projec
 
 ## Dimensions not in play
 
-No automatic draft expiration or storage quotas. No provider charge is implied by choosing a supplied source. Reusable templates/scheduling and storage cleanup UI remain separate features.
+No automatic draft expiration or storage quota is imposed. Choosing a supplied source does not imply a provider charge, and recurring schedules do not support unattended local-file reattachment (`packages/app/src/slices/schedules/service.ts:189`).
 
 ## Verification
 

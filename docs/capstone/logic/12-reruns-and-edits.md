@@ -16,8 +16,16 @@ depends_on:
 - 09-image-generation
 - 10-thumbnail-prompt-by-llm
 - 11-video-assembly
-generated_date: '2026-09-12'
-generated_at_commit: 803bd5555d76
+generated_date: '2026-09-13'
+generated_at_commit: 7bdb84e3f57e
+capstone_version: 5.2.0
+paths_covered:
+  - :(top)packages/app/src/slices/revisions/**
+  - :(top)packages/app/src/slices/rebuild/**
+  - :(top)packages/app/src/slices/checkpoints/**
+  - :(top)packages/app/src/slices/project-templates/**
+  - :(top)packages/web/src/project/**
+content_hash: c2bd10fa441e
 ---
 
 # 12 Project edits and retained revisions
@@ -26,13 +34,13 @@ An existing project can change its setup, text, media and captions while retaini
 
 Review checkpoints are an additional revision-bound hold. The project page can add or remove a pending Audio, Images or Video/export gate with an explicit Save; approval is a separate exact-fingerprint transaction and never starts a rebuild.
 
-## Trigger and preconditions
+## Trigger & preconditions
 
 The project page exposes Edit project, revision history and Rebuild affected outputs. Article remains required. Editing does not require idle stages or current provider credentials: readiness is checked when paid work is admitted. A legacy project acquires a baseline revision without generation before entering this flow.
 
 Save and Restore carry the current base revision and a UUID idempotency key. A stale base returns a recoverable conflict rather than replacing another edit. Repeating an accepted request returns its original receipt even if the project subsequently advanced; the client reloads the actual current head instead of displaying the old receipt as current.
 
-## Save
+## Steps
 
 1. Edit configuration and content locally: title, aspect ratio, source choices, keyword values, project prompt snapshots, providers/models/voice, chunking, entries, silence and subtitles. The saved prompt library is not modified. Unavailable saved model/library choices remain visible until explicitly replaced.
 2. Uploads stage separately. Save binds each ready staged file to an explicit output or narration destination; incomplete uploads and invalid edits stay unsaved with field errors.
@@ -41,7 +49,7 @@ Save and Restore carry the current base revision and a UUID idempotency key. A s
 5. Compare dependency fingerprints and physical request identities. Unchanged completed media is shared. Affected outputs are outdated or missing; prior finished files remain available. Supplied ready content is projected immediately, without a provider call.
 6. Saving grants no new work and starts no renderer. Changed work that has not been submitted loses authority. Already submitted work may still be billed and can finish only under its original ownership. Independent unchanged work can continue and attach to the new revision when its inputs still match.
 
-## Dependency and cost review
+## Branches
 
 Rebuild affected outputs prepares a preview for the saved revision. The preview identifies changed inputs, affected work, reusable outputs, provided content requiring confirmation, and known/unknown charges. The execution snapshot binds recipes, inputs, request settings, catalogue data and whether selected work requires a new submission. Unknown charges are not displayed as free.
 
@@ -78,7 +86,7 @@ Restore creates a new current revision whose parent is the previous head and who
 
 No automatic history purge occurs here. Explicit project deletion removes that project's history and assets through the existing deletion flow. Storage management is a separate capability.
 
-## Controls, recovery and failures
+## Unhappy paths
 
 - Pause and Cancel carry their own base revision and UUID. An uncertain control response retains that identity even if live events advance the head.
 - Unconditional legacy article/provider/subtitle/rerun/image mutations refuse with a revision-required response. Legacy Resume/Retry refuses with rebuild-required; current unfinished work uses reviewed rebuild admission.
@@ -90,8 +98,20 @@ No automatic history purge occurs here. Explicit project deletion removes that p
 - Live text/audio events are filtered by current work ownership and matching inputs, not just the project ID. An old revision's preview cannot overwrite current content.
 - Checkpoint status and gate choices reconcile revision and gate-set identity across tabs. A selected closure stays held through restart; unchanged approvals carry across immutable revisions while affected inputs invalidate them.
 
-## Invariants and evidence
+## State transitions
+
+A successful Save advances the project head to a new immutable revision and removes authority from affected unsubmitted reservations. Rebuild review creates no work; accepted Start creates or joins revision-bound work. Restore creates another new head that references the selected historical revision's retained records (`packages/app/src/slices/revisions/mutations.ts:47`, `packages/app/src/slices/revisions/restore.ts:1`).
+
+## Invariants
 
 Save and Restore never initiate generation. Accepted work executes under revision/piece authority, and only matching results may attach to the current revision. History is append-only until explicit project deletion. Library edits cannot silently replace a saved project prompt snapshot. Last finished exports remain accessible until successful replacement.
 
 The revision API and mutation rules are implemented in `packages/app/src/edge/http/revisions.ts` and `packages/app/src/slices/revisions/`. Rebuild review/admission and execution are in `packages/app/src/slices/rebuild/`. The project editor and immutable-media client are in `packages/web/src/project/`. Composed race/restart tests are `packages/app/test/revision-*.test.ts`; actual boot, legacy migration, staged MP3, explicit WAV, restore and immutable-download acceptance is `packages/app/test/e2e/editable-projects.test.ts`.
+
+## Outcomes & side effects
+
+Save and Restore persist a revision, manifest references and an idempotent receipt. Rebuild Start persists work/admission state and wakes the runner after commit. Save as template snapshots the displayed current revision into template history without rebuilding the project (`packages/app/src/slices/revisions/mutations.ts:47`, `packages/app/src/slices/project-templates/from-project.ts:25`).
+
+## Dimensions not in play
+
+Revisions do not overwrite history, alter the prompt library or synchronize between installations. Scheduling consumes a saved template version and creates fresh projects; it does not mutate an existing project's revision chain (`packages/app/src/slices/project-templates/from-project.ts:67`, `packages/app/src/slices/schedules/scheduler.ts:96`).

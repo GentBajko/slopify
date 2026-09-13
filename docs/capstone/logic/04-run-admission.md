@@ -14,16 +14,14 @@ depends_on:
   - 02-provider-credentials
   - 03-placeholder-substitution
 generated_date: '2026-09-13'
-generated_at_commit: 803bd5555d76
+generated_at_commit: 7bdb84e3f57e
+capstone_version: 5.2.0
 paths_covered:
   - :(top)packages/app/src/slices/play-drafts/**
-  - :(top)packages/app/src/slices/storage/**
-  - :(top)packages/app/src/slices/settings/tutorial*
+  - :(top)packages/app/src/slices/admission/**
   - :(top)packages/web/src/play/**
   - :(top)packages/web/src/routes/play.tsx
-  - :(top)packages/web/src/subtitles/**
-  - :(top)packages/web/src/tutorial/**
-content_hash: 2b9dab9b7f7b
+content_hash: 7c9779e384e7
 ---
 
 # 04 Run admission
@@ -40,8 +38,8 @@ The local user opens Play and moves freely through Content, Outputs, Style and R
 2. Content owns title, article prompt or supplied text, shared keyword values, text provider/model/thinking and optional Research. Providing Article normalizes Research Off. Text generation remains required for active LLM thumbnail/entry work even with a supplied article (`packages/web/src/play/content-section.tsx:16`, `packages/app/src/slices/play-drafts/convert.ts`).
 3. Outputs select generated/provided/off media and applicable providers. Article cannot be Off. Images Off normalizes Video Off; Audio Off permits silent MP4; Video Off with Audio enabled produces combined WAV; both off retain individual outputs. Inactive generation selections and supplied media do not impose active admission requirements (`packages/app/src/slices/play-drafts/convert.ts`, `packages/app/src/slices/admission/rules.ts`).
 4. Active validation retains title1–200, keyword values≤200, integer image counts1–20 per prompt and total≤60, expected words1–100000, at most50 runs, and active subtitle font/size16–120 validation. Fonts and media must be available. A retained font upload needs explicit completion/recovery even when captions are turned off (`packages/app/src/slices/play-drafts/review-inputs.ts:39`, `packages/web/src/subtitles/controls.tsx:252`).
-5. Review flushes the draft, converts active inputs, resolves current template bodies/keywords, calculates catalogue estimates and stores a UUID-bound review. The server rechecks draft identity after asynchronous font work. Setup/template/catalogue changes invalidate the review (`packages/app/src/slices/play-drafts/review.ts:18`, `packages/app/src/slices/play-drafts/review-inputs.ts:39`).
-6. Start posts draft ID, base version and review ID. The server replays a committed receipt first; otherwise it claims the reviewed draft, checks readiness and commits project(s), revision context and receipt transactionally. Supplied bytes are copied before draft references are released (`packages/app/src/slices/play-drafts/start.ts:23`, `packages/app/src/slices/play-drafts/start-repo.ts:51`).
+5. Review refreshes provider and model choices, flushes the draft, resolves current template bodies/keywords, calculates catalogue estimates and stores a UUID-bound review. Its Run readiness summary classifies the active LLM, TTS and image requirements and links failed checks back to the field; Start repeats readiness against the catalogue snapshot (`packages/web/src/play/review-state.ts:151`, `packages/web/src/play/review-summary.tsx:147`, `packages/app/src/slices/play-drafts/start.ts:82`).
+6. Start posts draft ID, base version and review ID. The server replays a committed receipt first; otherwise it claims the reviewed draft, checks provider and local readiness, and commits project(s), checkpoint set and receipt transactionally. Supplied bytes are copied before draft references are released (`packages/app/src/slices/play-drafts/start.ts:32`, `packages/app/src/slices/play-drafts/start.ts:92`, `packages/app/src/slices/play-drafts/start.ts:115`).
 7. Confirmed creation clears the active draft selection and opens the created project. A transport-uncertain Start retains the same identity for recovery; it never offers a fresh chargeable submission first (`packages/web/src/play/review-state.ts`, `packages/web/src/play/use-draft-session.ts`).
 
 ## Branches
@@ -73,4 +71,4 @@ Drafts and reviews are durable SQLite records. Explicit Start creates project/re
 
 ## Dimensions not in play
 
-No multi-user collaboration, payment transfer, automatic scheduled Start or external notification is introduced. Multiple tabs are writers protected by CAS; scheduling remains a later feature.
+Play does not edit an existing project or choose a recurring clock. Multiple tabs are writers protected by CAS; recurring admission is configured separately from an immutable template revision on Schedules (`packages/app/src/slices/play-drafts/schema.ts:90`, `packages/app/src/slices/schedules/schema.ts:13`).

@@ -1,7 +1,8 @@
 ---
-generated_at_commit: 803bd5555d76
+generated_at_commit: 7bdb84e3f57e
 generated_date: '2026-09-13'
-content_hash: 6a3fde2f33f5
+capstone_version: 5.2.0
+content_hash: 5eae370b5de2
 paths_covered:
   - :(top)packages/app/src/**
   - :(top)packages/web/src/**
@@ -27,11 +28,11 @@ absorbed_from:
 
 Migration `0007-review-checkpoints.sql` adds durable gate and approval tables. Boot recovery restores held/released checkpoint authority against the current project head. The project PATCH/approve routes publish secret-free project events; approval wakes the in-process runner only after its transaction commits.
 
-Observed source: `89db8f6` (2026-09-13). Commands below describe the repository and its packaged entry points; they do not assert that a deployment has occurred. The app requires Node.js 26 or newer (`packages/app/package.json:13`).
+Observed source: `7bdb84e3f57e` (2026-09-13). Commands below describe the repository and its packaged entry points; they do not assert that a deployment has occurred. The app requires Node.js 26 or newer (`packages/app/package.json:13`).
 
 ## Processes
 
-There are no repository container commands or Compose services. The app server owns HTTP, SSE, the stage runner, batch pumping, telemetry flushing and provider dispatch in one Node process; media, CLI-provider, alignment and update work can create child processes (`packages/app/src/main.ts:86`, `packages/app/src/main.ts:254`, `packages/app/src/main.ts:326`).
+There are no repository container commands or Compose services. The app server owns HTTP, SSE, the stage runner, batch pumping, local schedule ticks, telemetry flushing and provider dispatch in one Node process; media, CLI-provider, alignment and update work can create child processes (`packages/app/src/main.ts:96`, `packages/app/src/main.ts:292`, `packages/app/src/main.ts:303`, `packages/app/src/main.ts:411`).
 
 | Process | Exact local command or internal launch | Dependencies and ownership | Source |
 |---|---|---|---|
@@ -118,6 +119,7 @@ The repository contains no Dockerfile or Compose manifest. Remote provider APIs,
 | Type checking | `npm run typecheck` → workspace typechecks where present | `package.json:10`; web first emits app declarations through `packages/web/package.json:9` |
 | Tests | `npm test` → `vitest run` | `package.json:11` |
 | Build release artifacts | `npm run build` | SPA Vite build first, then app TypeScript and migration/assets/web copy scripts: `package.json:12`, `packages/app/package.json:25`, `packages/app/scripts/copy-migrations.mjs:1`, `packages/app/scripts/copy-assets.mjs:1`, `packages/app/scripts/copy-web.mjs:1` |
+| Smoke packed install surfaces | `node packages/app/scripts/install-smoke.mjs` after `npm run build` | Packs the app into a temporary archive, globally installs it under a temporary prefix, then launches both the global `slopify` bin and npm-exec form until `/api/health` answers: `packages/app/scripts/install-smoke.mjs:14` |
 | Dependency audit | `npm audit --audit-level=high` | `.github/workflows/ci.yml:22` |
 | App migrations | `node packages/app/dist/edge/cli.js --data-dir <directory> --no-open` after build starts the app and applies pending migrations | No standalone migration script; boot calls migrate before recovery. SQL files sort by filename, each runs transactionally, and newer unsupported DB versions are refused: `packages/app/src/main.ts:99`, `packages/app/src/kernel/db/migrate.ts:10` |
 | Collector local schema | `npm run schema:local --workspace @slopify/collector` | `wrangler d1 execute slopify-collector --local --file=schema.sql`: `packages/collector/package.json:9` |
@@ -138,19 +140,21 @@ Revision subtitle/export execution prepares immutable caption, font and media as
 
 Saved executable paths and 15-second readiness probes cover Claude Code, Codex and Gemini. The launcher resolves supported Windows Node shims and refuses unknown batch commands; process argv is passed without shell interpolation (`packages/app/src/slices/settings/cli-paths.ts:35`, `packages/app/src/slices/settings/cli-status.ts:22`, `packages/app/src/kernel/cli-command.ts:11`, `packages/app/src/adapters/llm/run-cli.ts:63`).
 
-Claude uses JSON streaming with partial-message activity, safe mode, a writing role and strict MCP configuration. Codex uses JSON execution, ephemeral sessions and explicit web-search/thinking settings. Gemini receives temporary workspace/system configuration and a restricted tool/MCP configuration; cleanup waits for its child to end (`packages/app/src/adapters/llm/claude-code.ts:43`, `packages/app/src/adapters/llm/codex.ts:33`, `packages/app/src/adapters/llm/gemini-workspace.ts:10`, `packages/app/src/adapters/llm/gemini.ts:23`).
+Claude uses JSON streaming with partial-message activity, safe mode, a writing role and strict MCP configuration. Codex 0.149.1+ runs JSON execution in a private temporary directory with user rules, local tools and account connectors disabled. Gemini receives temporary workspace/system configuration and a restricted tool/MCP configuration. Cancel/shutdown gives each CLI one second for graceful exit and one second after force-killing its POSIX process group or Windows process tree (`packages/app/src/adapters/llm/claude-code.ts:43`, `packages/app/src/adapters/llm/codex.ts:33`, `packages/app/src/adapters/llm/gemini-workspace.ts:10`, `packages/app/src/adapters/llm/gemini.ts:23`).
 
 Production model choices come from validated YAML. Enabled, non-deprecated models are selected by family/provider; manual refresh obtains the configured GitHub raw source with a 15-second timeout and 1 MB limit, and keeps the previous file. Legacy discovery helpers still read Codex model cache and installed Gemini metadata/aliases (`packages/app/src/catalog/store.ts:7`, `packages/app/src/catalog/store.ts:54`, `packages/app/src/catalog/store.ts:94`, `packages/app/src/adapters/llm/codex-models.ts:29`, `packages/app/src/adapters/llm/gemini-models.ts:6`).
 
 Batch planning estimates before confirmation, validates up to 50 items and transactionally creates queued projects. Batch pumping runs at one-second intervals and processes one batch item at a time: paused items hold the queue; done/failed/canceled items release it after in-flight calls drain. Provider dispatch separately permits at most five concurrent calls globally, bounded further by each provider's catalogue limit (`packages/app/src/edge/http/planning.ts:15`, `packages/app/src/slices/batch/index.ts:38`, `packages/app/src/slices/batch/index.ts:76`, `packages/app/src/main.ts:254`, `packages/app/src/main.ts:355`, `packages/app/src/kernel/runner/queue.ts:12`).
 
-Schedules are local-only and require the app process to be running. Migration 0009 adds `schedules` and `schedule_runs`; boot marks abandoned scheduled runs failed, and a 15-second scheduler tick claims due rows before handing fresh template drafts to Play review/Start and the existing provider-aware queue. One-off, daily and weekly occurrences are calculated in the saved IANA timezone. Missed occurrences follow the saved skip/run-once policy, overlapping runs are skipped, and an optional spend ceiling refuses unknown or over-limit estimates (`packages/app/src/kernel/db/migrations/0009-scheduled-jobs.sql:1`, `packages/app/src/main.ts:291`, `packages/app/src/slices/schedules/scheduler.ts:1`).
+Schedules are local-only and require the app process to be running. Migration 0010 removes schedule/template cascade deletion, adds terminal tombstones and records when admitted projects settle; boot marks abandoned scheduled runs failed and freezes terminal occurrences. A 15-second scheduler tick under the updater mutation gate claims due rows before handing fresh template drafts to Play review/Start and the existing provider-aware queue. One-off, daily and weekly occurrences are calculated in the saved IANA timezone. Missed occurrences follow the saved skip/run-once policy, overlapping runs are skipped, and an optional spend ceiling refuses unknown or over-limit estimates (`packages/app/src/kernel/db/migrations/0009-scheduled-jobs.sql:1`, `packages/app/src/main.ts:291`, `packages/app/src/slices/schedules/scheduler.ts:1`).
 
 ## In-app updates
 
 The updater checks npm registry version state and obtains a mutation barrier before installation. It installs an exact stable version under the private update tree, releases the old listener, backs up SQLite, starts a detached candidate with the internal token protocol, verifies readiness and atomically writes the active installation pointer. Pre-activation failure can stop the candidate, restore the database and restart the previous entry; post-commit activation acknowledgement failure is reported for restart (`packages/app/src/updater/service.ts:21`, `packages/app/src/updater/install-flow.ts:1`, `packages/app/src/updater/worker.ts:18`, `packages/app/src/updater/plan.ts:111`).
 
 The worker's npm installation has a 15-minute timeout. Candidate startup waits up to 60 seconds, using authenticated readiness checks; npm absence disables in-app installation without preventing the app from starting (`packages/app/src/updater/worker.ts:129`, `packages/app/src/updater/worker.ts:146`, `packages/app/src/main.ts:155`).
+
+The browser checks every 15 minutes while idle and every two seconds after an accepted install or persisted installing/restarting status. It stops presenting recovery after 120 seconds with a restart instruction, and reloads only after a different activated version answers in an idle/error state (`packages/web/src/updates/api.ts:8`, `packages/web/src/updates/use-update.ts:79`, `packages/web/src/updates/use-update.ts:84`, `packages/web/src/updates/use-update.ts:94`).
 
 ## Live previews and recovery
 
@@ -169,6 +173,12 @@ Save/Restore advance the project head with compare-and-swap while retaining prio
 Boot marks interrupted stages, then runs `recoverWork` before dispatch wiring. Unfinished revision pieces/work are held for explicit reviewed resumption, except projects still marked `queued` in the batch queue. Recovery leaves completed pieces and saved continuation data intact; an unknown submitted result participates in preview warnings before a new submission (`packages/app/src/main.ts:100`, `packages/app/src/slices/rebuild/repo.ts:95`, `packages/app/src/slices/rebuild/preview-retained.ts:96`, `packages/app/src/slices/rebuild/preview-retained.ts:140`).
 
 Storage reconciliation retains all registered project assets and legacy output/piece files. It removes unregistered project files. Referenced completed Play uploads survive startup when disk size matches recorded bytes; interrupted or missing files become reattach entries, and unreferenced staging files/rows are removed. No automatic revision-history purge is implemented here (`packages/app/src/slices/storage/reconcile.ts:69`). Revision downloads require project-owned registered records and reflect missing files as unavailable. Explicit project deletion refuses running or draining work, removes the directory first and deletes cascading records only after filesystem success (`packages/app/src/slices/storage/reconcile.ts:14`, `packages/app/src/slices/revisions/downloads.ts:1`, `packages/app/src/slices/storage/delete-project.ts:36`).
+
+## Portable backup and diagnostics
+
+Settings exposes storage totals, per-project sizes, cleanup, a portable ZIP export/import, and a diagnostics JSON download. The backup contains settings, prompts, entries, voices, current template revisions and present staged files. It excludes provider keys, projects/revision history, schedules, logs, update installations and the model cache. Import is capped at 100 MiB and preserves existing templates with colliding IDs while upserting other resource IDs (`packages/app/src/edge/http/storage.ts:7`, `packages/app/src/slices/storage/portable.ts:45`, `packages/app/src/slices/storage/portable.ts:85`, `packages/app/src/slices/storage/portable.ts:135`, `packages/web/src/routes/settings.tsx:52`, `packages/web/src/routes/settings.tsx:139`).
+
+Diagnostics is a no-store attachment containing app/schema/Node/platform metadata, secret-free provider readiness, project count and catalogue status. It does not include API-key values, project content, prompts, output paths or logs (`packages/app/src/edge/http/diagnostics.ts:10`).
 
 ## Play drafts and tutorial recovery
 

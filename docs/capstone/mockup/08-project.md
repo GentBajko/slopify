@@ -11,8 +11,17 @@ journeys:
 - J4-bring-your-own
 - J5-revise
 - J6-revisit
-generated_date: '2026-09-12'
-generated_at_commit: 803bd5555d76
+generated_date: '2026-09-13'
+generated_at_commit: 7bdb84e3f57e
+capstone_version: 5.2.0
+paths_covered:
+  - :(top)packages/web/src/project/**
+  - :(top)packages/web/src/routes/project.tsx
+  - :(top)packages/app/src/slices/revisions/**
+  - :(top)packages/app/src/slices/rebuild/**
+  - :(top)packages/app/src/slices/checkpoints/**
+  - :(top)packages/app/src/slices/project-templates/**
+content_hash: 99be2f08d405
 ---
 
 # 08 Project page
@@ -47,6 +56,34 @@ Video or Audio export
 The stage navigator remains sticky at the left on desktop and becomes a compact grid above the selected workspace on narrow screens. Each entry retains its status and summary. Initial selection follows a failed stage, an active stage, then completed export; an explicit user selection takes control until the project changes.
 
 The overall bar excludes skipped stages, counts supplied/done stages as complete, and incorporates measured partial progress. It is execution progress rather than a time estimate. The header exposes the available MP4, WAV or article download.
+
+## Elements
+
+| Element | Action and destination |
+|---|---|
+| Pause / Resume / Cancel | Controls current project execution while preserving completed outputs |
+| Overall progress and stage navigator | Shows aggregate work and opens one stage workspace |
+| Edit project / Save changes | Opens the unified revision form and persists a new revision without rebuilding |
+| Review affected rebuild / Start rebuild | Shows dependency/cost/reuse effects and explicitly admits reviewed work |
+| Review checkpoint / Approve | Holds or releases one selected dependency closure |
+| History / Restore this revision | Opens retained revision outputs or creates a new head from one |
+| Download / Open folder | Retrieves a revision-specific file or reveals its host directory |
+| Save as template | Captures the displayed current revision as reusable setup |
+
+The route composes project controls, current revision editor, rebuild review, checkpoint controls, history and media workspaces from `packages/web/src/project/` (`packages/web/src/routes/project.tsx:1`).
+
+## States
+
+- **Pending/running:** overall and stage progress update; live text/audio appears only for matching current work.
+- **Paused:** no new project work dispatches; provider/revision choices remain editable.
+- **Failed/canceled:** retained completed outputs stay available and the affected rebuild flow offers reviewed continuation.
+- **Needs rebuild:** current desired inputs differ from retained selected output; the old file remains visible.
+- **Review held:** one checkpoint closure is held while independent stages can continue.
+- **Editing/conflict:** local fields and uploads remain visible; Reload current revision explicitly resolves a changed head.
+- **Rebuild review/uncertain Start:** reviewed costs, reuse and confirmations stay bound to the original request identity.
+- **History/file missing:** the selected revision remains inspectable; unavailable files have no working download.
+
+The displayed states are derived from revision projection, rebuild preview and checkpoint status rather than a mutable stage-only record (`packages/app/src/slices/revisions/projection.ts:1`, `packages/app/src/slices/rebuild/preview-plan.ts:1`, `packages/app/src/slices/checkpoints/index.ts:1`).
 
 ## Editing
 

@@ -1,7 +1,8 @@
 ---
-generated_at_commit: 803bd5555d76
+generated_at_commit: 7bdb84e3f57e
 generated_date: '2026-09-13'
-content_hash: 25ec77679706
+capstone_version: 5.2.0
+content_hash: f4bb259d9079
 paths_covered:
   - :(top)packages/app/src/**
   - :(top)packages/web/src/**
@@ -20,7 +21,7 @@ absorbed_from:
 
 # Architecture
 
-Inspected production source at `89db8f6d89816b7e2457cb8abd6dade8acb42aa5` (2026-09-13). This chapter describes current code, including editable-project revisions, durable four-section Play creation and versioned project templates.
+Inspected production source at `7bdb84e3f57ec19c11e21b43cb6502a720156e9f` (2026-09-13). This chapter describes current code, including retained project revisions, durable four-section Play creation, review checkpoints, versioned project templates, local schedules, portable backups and diagnostics.
 
 ## Layers
 
@@ -129,8 +130,9 @@ Boot reconciliation keeps referenced completed files only when bytes exist and s
 | Process or lifetime | Entry and ownership |
 | --- | --- |
 | Installed CLI | `edge/cli.ts` parses options, resolves config, forwards managed updates when applicable, calls `boot`, opens the browser, and handles SIGINT. `packages/app/src/edge/cli.ts:9` `packages/app/src/edge/cli.ts:41` |
-| Application HTTP server | `boot(config)` constructs the app; `listen` passes `app.fetch`, host, and port to `@hono/node-server`. `packages/app/src/main.ts:86` `packages/app/src/main.ts:422` |
-| Batch timer | Boot calls `pumpQueue` once per second inside the updater mutation gate. It is an in-process timer, not a separate scheduling worker. `packages/app/src/main.ts:273` |
+| Application HTTP server | `boot(config)` constructs the app; `listen` passes `app.fetch`, host, and port to `@hono/node-server`. `packages/app/src/main.ts:96` `packages/app/src/main.ts:291` |
+| Batch timer | Boot calls `pumpQueue` once per second inside the updater mutation gate. It is an in-process timer, not a separate worker. `packages/app/src/main.ts:292` |
+| Schedule timer | Boot recovers interrupted scheduled runs, calls the scheduler once after startup, and calls it every 15 seconds until shutdown. `packages/app/src/main.ts:267` `packages/app/src/main.ts:303` `packages/app/src/main.ts:320` |
 | Alignment child | The alignment adapter forks its worker; `adapters/alignment/worker.ts` receives one IPC input and returns progress/words/omissions/error messages. `packages/app/src/adapters/alignment/runner.ts:20` `packages/app/src/adapters/alignment/worker.ts:13` |
 | Detached update child | `edge/update-worker.ts` reads a validated plan path from its first argument and coordinates installation/handoff through IPC. `packages/app/src/edge/update-worker.ts:5` |
 | Browser SPA | `packages/web/src/main.tsx` creates the React root on `#root`. `packages/web/src/main.tsx:22` `packages/web/src/main.tsx:41` |
@@ -163,6 +165,11 @@ Except where specified, GETs have no body, POST/PUT/PATCH use JSON, and successf
 | Legacy files/folder | Output GETs return file bytes or image ZIP. POST `/api/projects/:id/open-folder`, `{asset:string}` → `{opened:true}` after resolving the output and checking a supplied Origin. `packages/web/src/api.ts:204` `packages/web/src/project/open-folder.tsx:20` `packages/app/src/edge/http/files.ts:33` `packages/app/src/edge/http/open-folder.ts:35` |
 | Live audio | GET `/api/projects/:projectId/audio-preview` → `{revisionId:string|null,previews:AudioPreview[]}` filtered by current work authority. GET `/:previewId` → growing `audio/mpeg` stream, no ranges, no-store; invalid/obsolete preview → 404. `AudioPreview` has `id,label,state,bytes` and optional `revisionId,workId,workPieceId`. `packages/web/src/project/live-audio.tsx:19` `packages/app/src/edge/http/audio-preview.ts:19` `packages/app/src/kernel/audio-preview.ts:3` |
 | Staging | GET `/api/staging` → `{files:StagedFile[]}`; POST `/:kind` multipart `file` → `StagedFile`; DELETE `/:id` → 204. `packages/web/src/api.ts:170` `packages/web/src/api.ts:174` `packages/web/src/api.ts:181` `packages/app/src/edge/http/staging.ts:31` |
+| Storage and portable backup | GET `/api/storage` → `StorageUsage`; GET `/export` → `slopify-backup.zip`; PUT `/import` accepts a 1 byte–100 MiB ZIP and returns `PortableImportResult`; POST `/cleanup` → reconciliation counts. The backup includes settings, prompts, entries, voices, current template heads and referenced staged files, but excludes provider keys, project history and schedules. `packages/app/src/edge/http/storage.ts:7` `packages/app/src/slices/storage/portable.ts:45` `packages/app/src/slices/storage/portable.ts:85` `packages/app/src/slices/storage/portable.ts:135` |
+| Diagnostics | GET `/api/diagnostics` → a no-store JSON download with app/schema/runtime versions, secret-free provider readiness, project count and catalogue status. `packages/app/src/edge/http/diagnostics.ts:10` |
+| Project templates | GET/POST `/api/project-templates`; POST `/from-project/:projectId`; GET/PUT/DELETE `/:id`; POST `/:id/instantiate`. Writes use UUID identities and version compares; Apply returns a fresh `DraftView`. `packages/app/src/edge/http/project-templates.ts:40` `packages/app/src/slices/project-templates/schema.ts:4` |
+| Schedules | GET/POST `/api/schedules`; GET/PUT/DELETE `/:id`; POST `/:id/pause`, `/resume`, or `/cancel`. Responses carry `ScheduleSummary`, with GET by ID also returning `ScheduleRun[]`. `packages/app/src/edge/http/schedules.ts:49` `packages/app/src/slices/schedules/schema.ts:41` |
+| Review checkpoints | GET/PATCH `/api/projects/:id/checkpoints`; POST `/:id/checkpoints/:checkpointId/approve`. Changes and approvals compare revision/fingerprint identities under the project-control lock and return checkpoint status or a problem refusal. `packages/app/src/edge/http/checkpoints.ts:36` |
 | Prompts/entries | GET collections → `{prompts:Prompt[]}` / `{entries:Entry[]}`. Prompt POST/PUT input `{kind,name,body}` → `Prompt`; entry POST/PUT `{category,mode,name,body}` → `Entry`; DELETE → 204. `packages/web/src/api.ts:310` `packages/web/src/api.ts:334` `packages/app/src/edge/http/prompts.ts:30` `packages/app/src/edge/http/entries.ts:30` |
 | Providers/models/catalogue | GET `/api/providers` → `{providers:ProviderStatus[]}`; GET `/:id/models` → `ModelCatalog {models:ModelInfo[],allowsCustom:boolean,warning?:string,notice?:string}` (production uses curated entries and `allowsCustom:false`). GET `/catalogue` and bodyless POST `/catalogue/refresh` → `{updatedAt,path,warning:string|null,source}` when available. `packages/web/src/api.ts:208` `packages/web/src/components/catalogue.tsx:16` `packages/app/src/edge/http/providers.ts:38` `packages/app/src/slices/settings/models.ts:3` |
 | Provider credentials/path | PUT `/:id/key`, `{key:string}` → `{provider,hasKey,masked}`; DELETE key → 204. PUT `/:id/path`, `{path:string}` → `ProviderStatus`. Keys are not returned. `packages/web/src/api.ts:214` `packages/web/src/api.ts:224` `packages/app/src/edge/http/providers.ts:81` |
@@ -181,7 +188,7 @@ The HTTP surface continues to include the older project-create, estimate, batch,
 
 ### Complete API router registry
 
-The chained `/api` registry is: inline `/health`; `/staging` stagingRoutes; `/drafts` draftRoutes; `/projects` planningRoutes, projectRoutes, revisionRoutes, revisionFolderRoutes, openFolderRoutes, audioPreviewRoutes, actionRoutes, subtitleRoutes; `/update` updateRoutes; `/fonts` fontsRoutes; `/prompts` promptRoutes; `/entries` entryRoutes; `/telemetry` telemetryRoutes; `/usage` usageRoutes; `/settings` settingsRoutes; `/tutorial` tutorialRoutes; `/providers` providerRoutes. Existing global/project SSE and current/revision file routers are registered outside that chain. `packages/app/src/edge/http/app.ts:77`, `:145`, `:152`.
+The chained `/api` registry is: inline `/health`; `/staging`; `/storage`; `/drafts`; `/diagnostics`; `/project-templates`; `/schedules`; `/projects` planning, project, checkpoint, revision, revision-folder, open-folder, audio-preview, action and subtitle routers; `/update`; `/fonts`; `/prompts`; `/entries`; `/telemetry`; `/usage`; `/settings`; `/tutorial`; and `/providers`. Global/project SSE and current/revision file routers are registered outside that chain. `packages/app/src/edge/http/app.ts:84` `packages/app/src/edge/http/app.ts:123`.
 
 ### Draft DTOs used below
 
@@ -262,13 +269,13 @@ Live audio is a bounded, disposable copy of the TTS request already running. Pro
 
 ## Composition
 
-`boot()` acquires the instance lock, prepares FFmpeg, opens and migrates SQLite, marks interrupted stages, recovers durable work, and reconciles storage. It constructs log/hub/telemetry, the catalogue and curated provider registry, audio previews, and the runner before wiring updater and HTTP. `packages/app/src/main.ts:86` `packages/app/src/main.ts:126`
+`boot()` acquires the instance lock, prepares FFmpeg, opens and migrates SQLite, marks interrupted stages, recovers checkpoint/work state, and reconciles storage. It constructs log/hub/telemetry, the catalogue and curated provider registry, audio previews, the runner, template-backed scheduler, updater and HTTP app. `packages/app/src/main.ts:96` `packages/app/src/main.ts:113` `packages/app/src/main.ts:137` `packages/app/src/main.ts:263`
 
 `wireRunner()` supplies `createRunner` with revision execution operations: materialize admitted work; project current standings; determine invocation readiness; enforce project pause and batch waiting; claim work; check each physical submission; finish work and materialize dependents. It injects shared media dependencies, a single provider queue backed by catalogue limits, SQLite attempts, wrapped providers, and event emitters. `packages/app/src/main.ts:345`
 
 HTTP receives typed `RebuildDeps` containing catalogue, runner, provider readiness, model discovery, emitter, and bounded FFmpeg duration probing. The folder-opening edge adapter is injected and launches the host file manager (including WSL path conversion). `packages/app/src/main.ts:220` `packages/app/src/edge/open-folder.ts:7`
 
-Shutdown clears the batch timer, activation watcher, and preview store; closes the listener before aborting/draining the runner; then stops telemetry, closes SQLite, and releases the lock. `packages/app/src/main.ts:288`
+Shutdown stops new HTTP mutations and timers, gives admitted mutations five seconds before force-closing their sockets, drains the active schedule tick, aborts runner work, and then closes telemetry, SQLite and the instance lock. A second SIGINT/SIGTERM forces exit. `packages/app/src/main.ts:403` `packages/app/src/edge/http/mutations.ts:35` `packages/app/src/edge/signal-shutdown.ts:3`
 
 Boot passes `DraftStartDeps` to `createApp`: shared db/paths/ids/clock/log/runner/catalogue, `randomUUID`, a font resolver bound to local paths, the same readiness/model-list functions used by rebuilds, global hub event emission, and a project-created telemetry callback. Tutorial routes receive the existing database dependency through `AppDeps`. `packages/app/src/main.ts:234`; `packages/app/src/slices/play-drafts/model.ts:12`, `:93`, `:110`; `packages/app/src/edge/http/app.ts:106`; `packages/app/src/edge/http/tutorial.ts:13`.
 
@@ -278,7 +285,7 @@ The browser composition remains one React root with QueryClient, AppProvider and
 
 The local UI is a client-rendered React 19/Vite SPA. Its composition root creates the API/version watcher, EventSource factory, React Query client, application provider, and TanStack Router. Hono serves built assets and falls back browser routes to `index.html`. `packages/web/package.json:21` `packages/web/package.json:37` `packages/web/src/main.tsx:22` `packages/app/src/edge/http/app.ts:160`
 
-Routes are `/`, `/play`, `/projects/$projectId`, `/prompts`, `/prompts/new`, `/prompts/$promptId`, `/entries`, `/entries/new`, `/entries/$entryId`, `/settings`, and `/usage`. Prompt kind and entry category are validated URL search state. `packages/web/src/router.tsx:42` `packages/web/src/router.tsx:60` `packages/web/src/router.tsx:83` `packages/web/src/router.tsx:106`
+Routes are `/`, `/play`, `/projects/$projectId`, `/templates`, `/schedules`, `/prompts`, `/prompts/new`, `/prompts/$promptId`, `/entries`, `/entries/new`, `/entries/$entryId`, `/settings`, and `/usage`. Prompt kind and entry category are validated URL search state. `packages/web/src/router.tsx:43` `packages/web/src/router.tsx:49` `packages/web/src/router.tsx:55` `packages/web/src/router.tsx:61` `packages/web/src/router.tsx:87` `packages/web/src/router.tsx:93` `packages/web/src/router.tsx:116` `packages/web/src/router.tsx:141`
 
 The design system uses Tailwind theme tokens for color, typography, radii, and animations, with dark defaults and light/system overrides. Barlow/Barlow Condensed are loaded at startup and Radix supplies primitives. `packages/web/src/styles/index.css:1` `packages/web/src/styles/index.css:68` `packages/web/src/main.tsx:1` `packages/web/package.json:20`
 

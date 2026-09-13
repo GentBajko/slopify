@@ -1,7 +1,8 @@
 ---
-generated_at_commit: 803bd5555d76
+generated_at_commit: 7bdb84e3f57e
 generated_date: '2026-09-13'
-content_hash: 2be48ff3dea6
+capstone_version: 5.2.0
+content_hash: 4d249b710857
 paths_covered:
   - :(top)packages/app/src/**
   - :(top)packages/web/src/**
@@ -16,7 +17,7 @@ absorbed_from:
 
 # Models
 
-Observed source: `803bd55` (2026-09-13). This chapter includes retained project revisions/rebuild admission, durable incomplete Play drafts with owned attachments and reviewed Start receipts, persisted tutorial progress, review checkpoint rows/approval receipts, reusable project template heads/revisions, and scheduled jobs/runs (`packages/app/src/kernel/db/migrations/0007-review-checkpoints.sql:1`, `packages/app/src/kernel/db/migrations/0008-project-templates.sql:1`, `packages/app/src/kernel/db/migrations/0009-scheduled-jobs.sql:1`).
+Observed source: `7bdb84e3f57e` (2026-09-13). This chapter includes retained project revisions/rebuild admission, durable incomplete Play drafts with owned attachments and reviewed Start receipts, persisted tutorial progress, review checkpoint rows/approval receipts, reusable project template heads/revisions, scheduled jobs/runs, and portable backup projections (`packages/app/src/kernel/db/migrations/0007-review-checkpoints.sql:1`, `packages/app/src/kernel/db/migrations/0008-project-templates.sql:1`, `packages/app/src/kernel/db/migrations/0009-scheduled-jobs.sql:1`, `packages/app/src/slices/storage/portable.ts:58`).
 
 ## Entities
 
@@ -78,8 +79,9 @@ Observed source: `803bd55` (2026-09-13). This chapter includes retained project 
 | RevisionUpload | `packages/app/src/slices/revisions/model.ts:52` | Save request; refers to `staged_files` | RevisionUpload data contract |
 | RevisionEdit | `packages/app/src/slices/revisions/model.ts:59` | Save request | Proposed saved setup/content and optional regeneration/upload intentions |
 | ProjectRevision | `packages/app/src/slices/revisions/model.ts:65` | `project_revisions` | Retained setup/content, ancestry and desired fingerprints |
-| CheckpointRow | `packages/app/src/slices/checkpoints/model.ts:1` | `review_checkpoints` | Revision-bound dependency gate and approval state |
-| CheckpointApproval | `packages/app/src/slices/checkpoints/model.ts:1` | `review_checkpoint_approvals` | Idempotent exact approval receipt |
+| CheckpointRow | `packages/app/src/slices/checkpoints/model.ts:12` | `review_checkpoints` | Revision-bound dependency gate and approval state |
+| CheckpointApprovalInput | `packages/app/src/slices/checkpoints/model.ts:35` | Request persisted in `review_checkpoint_approvals` | Idempotent exact approval identity |
+| CheckpointStatus | `packages/app/src/slices/checkpoints/change.ts:31` | HTTP DTO | Current checkpoint rows with recalculated closure data |
 | ProjectAsset | `packages/app/src/slices/revisions/model.ts:75` | `project_assets` and immutable file | Registered immutable file identity shared by retained revisions |
 | ManifestOutput | `packages/app/src/slices/revisions/model.ts:82` | `revision_outputs` descriptor and selection metadata | ManifestOutput data contract |
 | ManifestPiece | `packages/app/src/slices/revisions/model.ts:90` | `revision_pieces` descriptor and selection metadata | ManifestPiece data contract |
@@ -138,10 +140,15 @@ Observed source: `803bd55` (2026-09-13). This chapter includes retained project 
 | ResolvedPlayReview | `packages/app/src/slices/play-drafts/model.ts:97` | In-memory resolution; private review execution JSON | Resolved review plus captured execution dependencies |
 | DraftResult | `packages/app/src/slices/play-drafts/model.ts:75` | In-memory service result | Typed expected success/refusal |
 | DraftRow | `packages/app/src/slices/play-drafts/repo.ts:23` | play_drafts | Parsed SQL row |
-| ProjectTemplate | `packages/app/src/slices/project-templates/model.ts:5` | project_templates + project_template_revisions | Named immutable reusable Play setup |
-| TemplateSummary | `packages/app/src/slices/project-templates/model.ts:6` | Current template head HTTP listing | Template identity, version and timestamps |
+| ProjectTemplate | `packages/app/src/slices/project-templates/model.ts:6` | project_templates + project_template_revisions | Named immutable reusable Play setup |
+| TemplateSummary | `packages/app/src/slices/project-templates/model.ts:7` | Current template head HTTP listing | Template identity, version and timestamps |
+| Cadence | `packages/app/src/slices/schedules/calendar.ts:16` | Nested in schedules | One-off, daily, or weekly local-time recurrence |
+| ScheduleCreate | `packages/app/src/slices/schedules/schema.ts:76` | HTTP create input | New local schedule definition |
+| ScheduleUpdate | `packages/app/src/slices/schedules/schema.ts:77` | HTTP update input | Versioned schedule replacement and mutation identity |
 | ScheduleSummary | `packages/app/src/slices/schedules/schema.ts:41` | `schedules` and HTTP DTO | Local cadence, policy, template revision and next occurrence |
 | ScheduleRun | `packages/app/src/slices/schedules/schema.ts:61` | `schedule_runs` and HTTP history | Claimed dispatch status, projects, estimate and safe error |
+| PortableImportResult | `packages/app/src/slices/storage/portable.ts:65` | HTTP import response | Counts of imported portable resources |
+| StorageUsage | `packages/app/src/slices/storage/portable.ts:74` | HTTP storage response | Total and per-project byte counts |
 | AttachmentRow | `packages/app/src/slices/play-drafts/repo.ts:33` | play_draft_attachments | Parsed owned attachment SQL row |
 | AttachmentRef | `packages/app/src/slices/play-drafts/repo.ts:34` | In-memory traversal of PlayDraftDocument | File reference with inferred slot kind |
 | StoredStartReceipt | `packages/app/src/slices/play-drafts/start-repo.ts:23` | play_start_receipts projection | Canonical durable replay authority |
@@ -2007,6 +2014,179 @@ Definition: `packages/web/src/tutorial/model.ts:90`.
 | target | string | yes | data-tour target literal |
 | page | "settings" ∣ "article" ∣ "image" ∣ "play" ∣ "project" | yes | accepted: settings, article, image, play, project |
 
+### CheckpointRow
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| projectId | `string` | yes | Project identity |
+| revisionId | `string` | yes | Origin revision identity |
+| checkpointId | `string` | yes | Stable gate identity |
+| stage | `"audio" \| "images" \| "video"` | yes | accepted: audio, images, video |
+| workId | `string` | yes | Work held by the gate |
+| fingerprint | `string` | yes | 64-character lowercase hexadecimal dependency fingerprint |
+| state | `CheckpointState` | yes | accepted: configured, pending-review, held, released, satisfied, invalidated, canceled |
+| createdAt | `string` | yes | ISO timestamp |
+| approvedAt | `string \| null` | yes | ISO timestamp after approval |
+
+Source: `packages/app/src/slices/checkpoints/model.ts:12`.
+
+### CheckpointApprovalInput
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| projectId | `string` | yes | Project identity |
+| revisionId | `string` | yes | Reviewed revision identity |
+| checkpointId | `string` | yes | Gate identity |
+| fingerprint | `string` | yes | Exact reviewed dependency fingerprint |
+| idempotencyKey | `string` | yes | UUID request identity |
+| approvedAt | `string` | yes | ISO approval timestamp |
+
+Source: `packages/app/src/slices/checkpoints/model.ts:35`.
+
+### CheckpointStatus
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| revisionId | `string` | yes | Current project revision |
+| checkpoints | `readonly (CheckpointRow & { currentFingerprint: string; dependents: readonly StageKind[]; workKeys: readonly string[] })[]` | yes | Stored gates with recalculated dependency closure |
+
+Source: `packages/app/src/slices/checkpoints/change.ts:31`.
+
+### ProjectTemplate
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| id | `string` | yes | UUID template identity |
+| name | `string` | yes | Trimmed name, 1–200 characters on writes |
+| version | `number` | yes | Positive immutable revision number |
+| createdAt | `string` | yes | Head creation timestamp |
+| updatedAt | `string` | yes | Selected revision timestamp |
+| document | `PlayDraftDocument` | yes | Credential-free reusable Play setup |
+
+Source: `packages/app/src/slices/project-templates/schema.ts:28`.
+
+### TemplateSummary
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| id | `string` | yes | UUID template identity |
+| name | `string` | yes | Current name |
+| version | `number` | yes | Current head version |
+| createdAt | `string` | yes | Template creation timestamp |
+| updatedAt | `string` | yes | Head revision timestamp |
+
+Source: `packages/app/src/slices/project-templates/model.ts:7`.
+
+### Cadence
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| kind | `"once" \| "daily" \| "weekly"` | yes | Discriminator |
+| at | `string` | no | Offset ISO timestamp for `once` |
+| time | `string` | no | `HH:mm` local time for `daily` and `weekly` |
+| days | `readonly number[]` | no | One to seven weekday numbers 0–6 for `weekly` |
+
+Source: `packages/app/src/slices/schedules/calendar.ts:3`.
+
+### ScheduleCreate
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| id | `string` | yes | UUID schedule identity |
+| name | `string` | yes | Trimmed name, 1–200 characters |
+| templateId | `string` | yes | UUID template identity |
+| templateVersion | `number` | yes | Positive pinned template revision |
+| cadence | `Cadence` | yes | Recurrence definition |
+| timezone | `string` | yes | Valid IANA timezone |
+| missedPolicy | `"skip" \| "run-once"` | yes | Defaults to `skip` |
+| overlapPolicy | `"skip"` | yes | Overlap behavior |
+| spendLimitCents | `number \| null` | yes | Nonnegative ceiling; null means no ceiling |
+| items | `readonly { title: string; values: Readonly<Record<string,string>> }[]` | yes | At most 49 variant rows |
+
+Source: `packages/app/src/slices/schedules/schema.ts:13`.
+
+### ScheduleUpdate
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| id | `string` | yes | UUID schedule identity |
+| name | `string` | yes | Trimmed name, 1–200 characters |
+| templateId | `string` | yes | UUID template identity |
+| templateVersion | `number` | yes | Positive pinned template revision |
+| cadence | `Cadence` | yes | Recurrence definition |
+| timezone | `string` | yes | Valid IANA timezone |
+| missedPolicy | `"skip" \| "run-once"` | yes | Missed occurrence behavior |
+| overlapPolicy | `"skip"` | yes | Overlap behavior |
+| spendLimitCents | `number \| null` | yes | Nonnegative ceiling; null means no ceiling |
+| items | `readonly { title: string; values: Readonly<Record<string,string>> }[]` | yes | At most 49 variant rows |
+| baseVersion | `number` | yes | Positive compare-and-swap version |
+| mutationId | `string` | yes | UUID mutation identity |
+
+Source: `packages/app/src/slices/schedules/schema.ts:28`.
+
+### ScheduleSummary
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| id | `string` | yes | UUID schedule identity |
+| name | `string` | yes | Schedule name |
+| templateId | `string` | yes | Referenced template identity |
+| templateVersion | `number` | yes | Pinned template revision |
+| cadence | `Cadence` | yes | Recurrence definition |
+| timezone | `string` | yes | IANA timezone |
+| missedPolicy | `"skip" \| "run-once"` | yes | Missed occurrence behavior |
+| overlapPolicy | `"skip"` | yes | Overlap behavior |
+| spendLimitCents | `number \| null` | yes | Optional per-occurrence estimate ceiling |
+| items | `readonly { title: string; values: Readonly<Record<string,string>> }[]` | yes | Variant keyword rows |
+| status | `"active" \| "paused" \| "completed" \| "canceled"` | yes | Durable schedule lifecycle |
+| version | `number` | yes | Positive row version |
+| nextRunAt | `string \| null` | yes | Offset ISO occurrence time |
+| createdAt | `string` | yes | Creation timestamp |
+| updatedAt | `string` | yes | Last mutation timestamp |
+
+Source: `packages/app/src/slices/schedules/schema.ts:41`.
+
+### ScheduleRun
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| id | `string` | yes | UUID occurrence identity |
+| scheduleId | `string` | yes | Owning schedule |
+| scheduledFor | `string` | yes | Offset ISO occurrence time |
+| status | `"running" \| "succeeded" \| "failed" \| "skipped"` | yes | Dispatch result |
+| requestId | `string \| null` | yes | Play Start request identity after success |
+| projectIds | `readonly string[]` | yes | Created project identities |
+| estimate | `unknown \| null` | yes | Stored cost estimate payload |
+| startedAt | `string` | yes | ISO claim timestamp |
+| endedAt | `string \| null` | yes | ISO terminal timestamp |
+| error | `string \| null` | yes | Safe failure or skip reason |
+
+Source: `packages/app/src/slices/schedules/schema.ts:61`.
+
+### PortableImportResult
+
+| Field | Type | Required |
+|---|---|---|
+| settings | `number` | yes |
+| prompts | `number` | yes |
+| entries | `number` | yes |
+| voices | `number` | yes |
+| templates | `number` | yes |
+| stagedFiles | `number` | yes |
+
+Source: `packages/app/src/slices/storage/portable.ts:65`.
+
+### StorageUsage
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| data | `number` | yes | Bytes under the data directory, including project/staging bytes |
+| projects | `number` | yes | Bytes under project directories |
+| staging | `number` | yes | Bytes under staging |
+| byProject | `readonly { id: string; title: string; bytes: number }[]` | yes | Per-project directory totals |
+
+Source: `packages/app/src/slices/storage/portable.ts:74`.
+
 ## Relationships
 
 `review_checkpoints` belongs to one project/revision and anchors one admitted work identity. Its closure contains reserved work keys for the selected stage and transitive dependents. `review_checkpoint_approvals` is keyed by project and idempotency key and records the exact revision, checkpoint and fingerprint that was released (`packages/app/src/kernel/db/migrations/0007-review-checkpoints.sql:1`).
@@ -2024,6 +2204,9 @@ Definition: `packages/web/src/tutorial/model.ts:90`.
 - PlayReview contains one ResolvedPlayRun and CostEstimate per base/variant run. Its UUID is PlayStartInput.reviewId and PlayStartResult.requestId; Start stores a receipt keyed by that UUID and unique on draft_id/draft_version. Receipt draft_id deliberately has no foreign key, so an explicit draft deletion does not delete the accepted replay receipt (`packages/app/src/slices/play-drafts/model.ts:43`, `packages/app/src/slices/play-drafts/start-repo.ts:66`, `packages/app/src/kernel/db/migrations/0006-play-drafts.sql:29`).
 - DraftAttachment.copying is a view state inferred from staged_files.state, not an allowed AttachmentRow.status. Read projects missing/size-mismatched staged bytes as reattach; restart reconciliation retains complete referenced staging and unbinds interrupted/missing bytes (`packages/app/src/slices/play-drafts/service.ts:79`, `packages/app/src/slices/storage/reconcile.ts:69`).
 - TutorialSession uses optional plain-string prompt/project references inside settings JSON without SQL foreign keys. Restore validates article/image IDs against the current prompt list and reads a referenced project (`packages/app/src/slices/settings/tutorial-schema.ts:29`, `packages/web/src/tutorial/use-session.ts:106`).
+- `project_templates` selects an immutable head in `project_template_revisions`; deleting a template cascades its revisions. `project_template_instantiations` is owned by a Play draft and records template provenance, while its template identity/version are plain columns so historical provenance survives template revision rules (`packages/app/src/kernel/db/migrations/0008-project-templates.sql:1`).
+- `schedules.template_id` references the template head record, while `template_version` pins an immutable revision by value. `schedule_runs` retains schedule identity after soft deletion, is unique by schedule/occurrence and non-null Start request identity, and records when every admitted project became terminal. Schedule rows use tombstones and no longer hold template foreign keys, so run history survives template/schedule deletion (`packages/app/src/kernel/db/migrations/0010-retain-schedule-history.sql:1`).
+- Portable backups serialize current settings, libraries, voices, template heads and staged files into a version-1 manifest and ZIP entries. Import upserts settings/library/voice identities, inserts only missing templates, and allocates new staged-file identities; it does not add a database relation or restore projects and schedules (`packages/app/src/slices/storage/portable.ts:85`, `packages/app/src/slices/storage/portable.ts:135`).
 
 ## Boundaries
 
@@ -2054,8 +2237,11 @@ Definition: `packages/web/src/tutorial/model.ts:90`.
 | Start receipt SQL ↔ domain | request_hash binds the exact input; result_json parses as PlayStartResult. created_at is retained in SQL but omitted from StoredStartReceipt. Replay checks UUID/draft/version/hash/result identity before returning replayed:true. | `packages/app/src/slices/play-drafts/start-repo.ts:16`, `packages/app/src/slices/play-drafts/start-repo.ts:51`, `packages/app/src/slices/play-drafts/start-repo.ts:66`, `packages/app/src/slices/play-drafts/start-repo.ts:119` |
 | Tutorial settings JSON ↔ DTO | settings key tutorial.session stores strict {version,session,mutationId,requestHash}; no named code model represents the complete envelope. readTutorial returns version/session/readable, uses version 0/inactive text-key fallback for absent/unreadable data, and does not overwrite unreadable JSON. CAS writes replace the envelope; DELETE removes only that settings key. | `packages/app/src/slices/settings/tutorial.ts:25`, `packages/app/src/slices/settings/tutorial.ts:48`, `packages/app/src/slices/settings/tutorial.ts:57`, `packages/app/src/slices/settings/tutorial.ts:80` |
 | Tutorial HTTP ↔ browser cursor | GET/PUT use TutorialView; PUT uses TutorialWrite and errors with 409 conflict/unreadable; DELETE returns 204. Browser serializes numeric step through tutorialSteps[next.step].id and converts restored stepId through tutorialStepIndex. | `packages/app/src/edge/http/tutorial.ts:13`, `packages/web/src/tutorial/session-api.ts:10`, `packages/web/src/tutorial/use-session.ts:41`, `packages/web/src/tutorial/use-session.ts:98` |
+| Template SQLite ↔ domain | The join selects a template head or exact version; document_json is decoded and parsed as `ProjectTemplate`, while current listings parse a document-free `TemplateSummary`. Writes encode the Play document into an immutable revision row. | `packages/app/src/slices/project-templates/repo.ts:6`, `packages/app/src/slices/project-templates/repo.ts:17`, `packages/app/src/slices/project-templates/repo.ts:31`, `packages/app/src/slices/project-templates/repo.ts:46` |
+| Schedule SQLite ↔ domain | cadence/items/estimate/project IDs are JSON columns. Repository readers convert snake_case rows, decode JSON and parse `ScheduleSummary`/`ScheduleRun`; writes encode those nested values and use row versions or occurrence uniqueness for concurrency. | `packages/app/src/slices/schedules/repo.ts:10`, `packages/app/src/slices/schedules/repo.ts:62`, `packages/app/src/slices/schedules/repo.ts:149`, `packages/app/src/slices/schedules/repo.ts:214` |
+| Portable ZIP ↔ local resources | `manifest.json` is parsed through a strict version-1 Zod schema. Export writes stored rows plus referenced staged bytes; import validates the manifest before applying resource rows and writes staged bytes under newly allocated IDs. | `packages/app/src/slices/storage/portable.ts:45`, `packages/app/src/slices/storage/portable.ts:85`, `packages/app/src/slices/storage/portable.ts:135` |
 
-For revision-aware exports, render record paths reference immutable registered assets. WAV records retain sample rate/channels/codec/gap/duration/audio timeline; current revision export records omit the legacy optional sourceIds field. Subtitle timing writes `{key,words,omissions}`; cues are a separate `{cues,omissions}` artifact/piece; prepared subtitle files retain font identity in piece payload. Changing subtitle files can republish the retained WAV asset with updated metadata without encoding another WAV (`packages/app/src/slices/rebuild/runtime-export.ts:101`, `packages/app/src/slices/rebuild/runtime-subtitles.ts:25`, `packages/app/src/slices/rebuild/runtime-subtitles.ts:121`, `packages/app/src/slices/rebuild/runtime-subtitles.ts:261`).
+For revision-aware exports, render record paths reference immutable registered assets. WAV records retain sample rate/channels/codec/gap/duration/audio timeline; new export records retain source IDs and SHA-256 hashes; legacy records may omit hashes. Subtitle timing writes `{key,words,omissions}`; cues are a separate `{cues,omissions}` artifact/piece; prepared subtitle files retain font identity in piece payload. Changing subtitle files can republish the retained WAV asset with updated metadata without encoding another WAV (`packages/app/src/slices/rebuild/runtime-export.ts:101`, `packages/app/src/slices/rebuild/runtime-subtitles.ts:25`, `packages/app/src/slices/rebuild/runtime-subtitles.ts:121`, `packages/app/src/slices/rebuild/runtime-subtitles.ts:261`).
 
 Legacy subtitle preparation still uses a `{key,words,font,omissions}` timing cache and the versioned `wav2vec2-en-a19f851-v2-omissions` key; legacy `writeSubtitles` updates a mutable Output row and replaces sidecars. Those functions describe the legacy video slice, while the revision runtime above supplies retained publication behavior (`packages/app/src/slices/subtitles/prepare.ts:56`, `packages/app/src/slices/subtitles/prepare.ts:149`, `packages/app/src/slices/video/write-subtitles.ts:12`).
 
@@ -2069,19 +2255,21 @@ Legacy subtitle preparation still uses a `{key,words,font,omissions}` timing cac
 - Publication validates invocation/piece authority, output bundles, registered asset identities, fingerprint match and idempotent publication before selecting a retained output. Submission authority additionally checks allowed dispatch and current-head ownership (`packages/app/src/slices/revisions/publication-rules.ts:13`, `packages/app/src/slices/revisions/publication-rules.ts:42`, `packages/app/src/kernel/runner/work-authority.ts:31`).
 - Catalogue schemas reject unknown provider/family combinations, duplicate provider/model IDs and missing provider concurrency settings. They validate nonnegative finite prices, family-specific fields, flags and model limits (`packages/app/src/catalog/schema.ts:4`).
 - SQLite migration checks are exactly those shown below. JSON validity checks ensure valid JSON text, not the full TypeScript/Zod shape. Some legacy columns (stage source, piece kind/state, attempt outcome, output role) have no SQL enum check, so repositories/domain boundaries supply their validation (`packages/app/src/kernel/db/migrations/0001-init.sql:2`, `packages/app/src/kernel/db/migrations/0004-project-revisions.sql:1`, `packages/app/src/kernel/db/migrations/0005-revision-work.sql:1`, `packages/app/src/kernel/db/migrations/0006-play-drafts.sql:1`).
-- Font IDs/configuration are validated before generation and fonts resolve on disk; output metadata validates nonnegative finite subtitle omission times. Alignment worker messages add a stricter 1–10,000 character bound to omission text. Legacy AudioExportRecord parsing allows absent sourceIds; reuse also compares timeline/file size/duration/source timestamps (`packages/app/src/slices/subtitles/model.ts:11`, `packages/app/src/edge/http/projects.ts:74`, `packages/app/src/slices/storage/schema.ts:4`, `packages/app/src/adapters/alignment/protocol.ts:9`, `packages/app/src/slices/video/reuse-audio.ts:7`).
-- Incomplete Play drafts persist in play_drafts with owned attachments in play_draft_attachments and accepted Start results in play_start_receipts. Browser storage retains only the active draft UUID; prompt-editor drafts remain an in-memory map. Tutorial progress persists under settings key tutorial.session. These additions do not add checkpoint, reusable project-template or scheduled-job tables (`packages/app/src/kernel/db/migrations/0006-play-drafts.sql:1`, `packages/web/src/play/draft-restore.ts:6`, `packages/web/src/lib/form-drafts.tsx:10`, `packages/app/src/slices/settings/tutorial.ts:35`).
+- Font IDs/configuration are validated before generation and fonts resolve on disk; output metadata validates nonnegative finite subtitle omission times. Alignment worker messages add a stricter 1–10,000 character bound to omission text. AudioExportRecord parsing allows legacy absent source IDs/hashes; hashed records compare source bytes, while legacy records fall back to source timestamps (`packages/app/src/slices/subtitles/model.ts:11`, `packages/app/src/edge/http/projects.ts:74`, `packages/app/src/slices/storage/schema.ts:4`, `packages/app/src/adapters/alignment/protocol.ts:9`, `packages/app/src/slices/video/reuse-audio.ts:7`).
+- Incomplete Play drafts persist in play_drafts with owned attachments in play_draft_attachments and accepted Start results in play_start_receipts. Browser storage retains only the active draft UUID; prompt-editor drafts remain an in-memory map. Tutorial progress persists under settings key tutorial.session. Migrations 0007–0010 add checkpoints, reusable project templates, scheduled jobs and retained schedule history (`packages/app/src/kernel/db/migrations/0006-play-drafts.sql:1`, `packages/app/src/kernel/db/migrations/0007-review-checkpoints.sql:1`, `packages/app/src/kernel/db/migrations/0008-project-templates.sql:1`, `packages/app/src/kernel/db/migrations/0009-scheduled-jobs.sql:1`).
 
 - Draft document/form schemas are strict and versioned; identity values use UUID validation. Raw fields remain strings, including image counts, chunk amounts, font size and expected words; unknown enum values and extra object fields fail schema parsing. Save/Discard baseVersion must be positive; Save mutationId must be UUID. Create/Fork/Discard/Review inputs use anonymous inferred structural schemas, not additional named DTO aliases (`packages/app/src/slices/play-drafts/schema.ts:9`, `packages/app/src/slices/play-drafts/schema.ts:80`, `packages/app/src/slices/play-drafts/schema.ts:81`, `packages/app/src/edge/http/drafts.ts:29`).
 - Service validation rejects duplicate attachment IDs and references belonging to another draft/kind/name; malformed/unsupported persisted documents return invalid-draft and remain listed. Creation/Fork replay is accepted only for matching creation hash on an active version-1 target; changed targets refuse conflict. Save records its latest mutation/hash and uses CAS (`packages/app/src/slices/play-drafts/service.ts:55`, `packages/app/src/slices/play-drafts/service.ts:74`, `packages/app/src/slices/play-drafts/service.ts:155`, `packages/app/src/slices/play-drafts/service.ts:175`, `packages/app/src/slices/play-drafts/service.ts:212`).
 - Review additionally validates active numeric requirements, prompt/model availability, keyword variants, expectedWords 1–100000 and at most 50 total runs. Any retained fontUpload blocks review independently of current subtitle/audio applicability. Explicit inactive recovery clears that marker through selecting the existing font; normal source changes do not clear it (`packages/app/src/slices/play-drafts/review-inputs.ts:53`, `packages/app/src/slices/play-drafts/convert.ts:22`, `packages/web/src/subtitles/controls.tsx:252`, `packages/web/src/play/use-draft-uploads.ts:180`).
 - Tutorial session/write schemas reject extra fields and unknown stable step IDs. baseVersion is a nonnegative integer; mutationId is UUID. The private stored record requires positive version and a 64-character lowercase hex request hash; invalid record JSON/schema is retained as unreadable. Same mutation/hash replays its accepted response; conflicting mutation/body/base version refuses (`packages/app/src/slices/settings/tutorial-schema.ts:3`, `packages/app/src/slices/settings/tutorial.ts:25`, `packages/app/src/slices/settings/tutorial.ts:57`).
+- Template schemas require UUID identities, names of 1–200 trimmed characters, positive versions and strict version-1 Play documents. Schedule schemas require a future offset timestamp or `HH:mm` recurrence, a valid IANA timezone, at most 49 variants, skip-only overlap behavior and a nullable nonnegative cent ceiling (`packages/app/src/slices/project-templates/schema.ts:4`, `packages/app/src/slices/schedules/calendar.ts:3`, `packages/app/src/slices/schedules/schema.ts:13`).
+- Portable import accepts only a strict version-1 manifest after ZIP decompression. The HTTP route limits the upload to 1 byte–100 MiB and returns a generic invalid-backup problem when ZIP, JSON, schema, or referenced content parsing fails (`packages/app/src/slices/storage/portable.ts:45`, `packages/app/src/edge/http/storage.ts:31`).
 
 ## Schema
 
-The per-table DDL below is copied directly from migrations 0001–0006 and the collector schema, including later ALTER statements and indexes. Migrations run in numeric filename order, each in a transaction, and record their version; a newer unknown database version is refused (`packages/app/src/kernel/db/migrate.ts:10`).
+The per-table DDL below is copied directly from migrations 0001–0010 and the collector schema, including later ALTER statements and indexes. Migrations run in numeric filename order, each in a transaction, and record their version; a newer unknown database version is refused (`packages/app/src/kernel/db/migrate.ts:10`).
 
-DB records without dedicated exported domain row models are provider_keys, settings, schema_migrations, project_controls, batches, project_heads, revision_mutations, revision_work_reservations, project_control_receipts and revision_provided_reviews. WorkRef is an identity subset of revision_work; RebuildPreview/ExecutionSnapshot and RebuildAdmission are JSON projections rather than complete table rows. Collector aggregates is a key/value table, while Aggregates is the response object. The exact remaining columns are included below. DraftRow and AttachmentRow represent the complete play_drafts and play_draft_attachments table projections. StoredStartReceipt omits SQL created_at, so play_start_receipts has no complete exported row model. The tutorial record is a strict unnamed JSON envelope inside settings, not a separate table (`packages/app/src/slices/play-drafts/repo.ts:6`, `packages/app/src/slices/play-drafts/start-repo.ts:16`, `packages/app/src/kernel/db/migrations/0006-play-drafts.sql:29`, `packages/app/src/slices/settings/tutorial.ts:25`).
+DB records without dedicated exported domain row models are provider_keys, settings, schema_migrations, project_controls, batches, project_heads, revision_mutations, revision_work_reservations, project_control_receipts, revision_provided_reviews and project-template instantiation receipts. WorkRef is an identity subset of revision_work; RebuildPreview/ExecutionSnapshot and RebuildAdmission are JSON projections rather than complete table rows. Collector aggregates is a key/value table, while Aggregates is the response object. The exact remaining columns are included below. DraftRow and AttachmentRow represent the complete play_drafts and play_draft_attachments table projections. StoredStartReceipt omits SQL created_at, so play_start_receipts has no complete exported row model. The tutorial record is a strict unnamed JSON envelope inside settings, not a separate table (`packages/app/src/slices/play-drafts/repo.ts:6`, `packages/app/src/slices/play-drafts/start-repo.ts:16`, `packages/app/src/kernel/db/migrations/0006-play-drafts.sql:29`, `packages/app/src/slices/settings/tutorial.ts:25`).
 
 ### projects
 
@@ -2696,6 +2884,143 @@ CREATE TABLE play_start_receipts (
  UNIQUE(draft_id,draft_version)
 );
 CREATE INDEX play_start_receipt_draft ON play_start_receipts(draft_id);
+```
+
+### review_checkpoints
+
+Source: `packages/app/src/kernel/db/migrations/0007-review-checkpoints.sql:1`.
+
+```sql
+CREATE UNIQUE INDEX revision_work_revision_identity ON revision_work(project_id,revision_id,id);
+CREATE TABLE review_checkpoints (
+ project_id TEXT NOT NULL,
+ revision_id TEXT NOT NULL,
+ checkpoint_id TEXT NOT NULL,
+ stage TEXT NOT NULL CHECK(stage IN ('audio','images','video')),
+ work_id TEXT NOT NULL,
+ fingerprint TEXT NOT NULL CHECK(length(fingerprint)=64),
+ state TEXT NOT NULL CHECK(state IN ('configured','pending-review','held','released','satisfied','invalidated','canceled')),
+ created_at TEXT NOT NULL,
+ approved_at TEXT,
+ PRIMARY KEY(project_id,revision_id,checkpoint_id),
+ UNIQUE(project_id,revision_id,stage),
+ FOREIGN KEY(project_id,revision_id) REFERENCES project_revisions(project_id,id) ON DELETE CASCADE,
+ FOREIGN KEY(project_id,revision_id,work_id) REFERENCES revision_work(project_id,revision_id,id) ON DELETE CASCADE
+);
+CREATE INDEX review_checkpoint_work ON review_checkpoints(work_id);
+```
+
+### review_checkpoint_approvals
+
+Source: `packages/app/src/kernel/db/migrations/0007-review-checkpoints.sql:18`.
+
+```sql
+CREATE TABLE review_checkpoint_approvals (
+ project_id TEXT NOT NULL,
+ idempotency_key TEXT NOT NULL,
+ revision_id TEXT NOT NULL,
+ checkpoint_id TEXT NOT NULL,
+ fingerprint TEXT NOT NULL CHECK(length(fingerprint)=64),
+ approved_at TEXT NOT NULL,
+ PRIMARY KEY(project_id,idempotency_key),
+ UNIQUE(project_id,revision_id,checkpoint_id),
+ FOREIGN KEY(project_id,revision_id,checkpoint_id) REFERENCES review_checkpoints(project_id,revision_id,checkpoint_id) ON DELETE CASCADE
+);
+```
+
+### project_templates
+
+Source: `packages/app/src/kernel/db/migrations/0008-project-templates.sql:1`.
+
+```sql
+CREATE TABLE project_templates (
+ id TEXT PRIMARY KEY,
+ head_version INTEGER NOT NULL CHECK(head_version >= 1),
+ creation_hash TEXT NOT NULL,
+ created_at TEXT NOT NULL,
+ mutation_id TEXT,
+ mutation_hash TEXT
+);
+```
+
+### project_template_revisions
+
+Source: `packages/app/src/kernel/db/migrations/0008-project-templates.sql:9`.
+
+```sql
+CREATE TABLE project_template_revisions (
+ template_id TEXT NOT NULL REFERENCES project_templates(id) ON DELETE CASCADE,
+ version INTEGER NOT NULL CHECK(version >= 1),
+ name TEXT NOT NULL CHECK(length(trim(name)) BETWEEN 1 AND 200),
+ document_json TEXT NOT NULL CHECK(json_valid(document_json)),
+ created_at TEXT NOT NULL,
+ PRIMARY KEY(template_id,version)
+);
+```
+
+### project_template_instantiations
+
+Source: `packages/app/src/kernel/db/migrations/0008-project-templates.sql:17`.
+
+```sql
+CREATE TABLE project_template_instantiations (
+ draft_id TEXT PRIMARY KEY REFERENCES play_drafts(id) ON DELETE CASCADE,
+ template_id TEXT NOT NULL,
+ template_version INTEGER NOT NULL CHECK(template_version >= 1)
+);
+```
+
+### schedules
+
+Final schema source: `packages/app/src/kernel/db/migrations/0010-retain-schedule-history.sql:28`.
+
+```sql
+CREATE TABLE schedules (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL CHECK(length(trim(name)) BETWEEN 1 AND 200),
+  template_id TEXT NOT NULL,
+  template_version INTEGER NOT NULL CHECK(template_version >= 1),
+  cadence_json TEXT NOT NULL CHECK(json_valid(cadence_json)),
+  timezone TEXT NOT NULL,
+  missed_policy TEXT NOT NULL CHECK(missed_policy IN ('skip','run-once')),
+  overlap_policy TEXT NOT NULL CHECK(overlap_policy IN ('skip')),
+  spend_limit_cents INTEGER CHECK(spend_limit_cents IS NULL OR spend_limit_cents >= 0),
+  items_json TEXT NOT NULL CHECK(json_valid(items_json)),
+  status TEXT NOT NULL CHECK(status IN ('active','paused','completed','canceled')),
+  version INTEGER NOT NULL CHECK(version >= 1),
+  creation_hash TEXT NOT NULL,
+  next_run_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  mutation_id TEXT,
+  mutation_hash TEXT,
+  deleted_at TEXT,
+  CHECK(deleted_at IS NULL OR (status IN ('completed','canceled') AND next_run_at IS NULL))
+);
+CREATE INDEX schedules_due ON schedules(status, next_run_at) WHERE deleted_at IS NULL;
+```
+
+### schedule_runs
+
+Final schema source: `packages/app/src/kernel/db/migrations/0010-retain-schedule-history.sql:1`.
+
+```sql
+CREATE TABLE schedule_runs (
+  id TEXT PRIMARY KEY,
+  schedule_id TEXT NOT NULL,
+  scheduled_for TEXT NOT NULL,
+  status TEXT NOT NULL CHECK(status IN ('running','succeeded','failed','skipped')),
+  request_id TEXT,
+  project_ids_json TEXT NOT NULL CHECK(json_valid(project_ids_json)),
+  estimate_json TEXT CHECK(estimate_json IS NULL OR json_valid(estimate_json)),
+  started_at TEXT NOT NULL,
+  ended_at TEXT,
+  projects_settled_at TEXT,
+  error TEXT,
+  UNIQUE(schedule_id, scheduled_for),
+  UNIQUE(request_id)
+);
+CREATE INDEX schedule_runs_schedule ON schedule_runs(schedule_id, started_at DESC);
 ```
 
 ### collector.events

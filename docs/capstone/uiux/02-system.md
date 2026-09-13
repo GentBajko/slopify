@@ -1,11 +1,24 @@
 ---
-generated_date: 2026-09-02
+generated_date: '2026-09-13'
 capstone_version: 5.2.0
+generated_at_commit: 7bdb84e3f57e
+paths_covered:
+  - :(top)packages/web/src/styles/index.css
+  - :(top)packages/web/src/components/ui/**
+  - :(top)packages/web/src/components/rail.tsx
+  - :(top)packages/web/src/components/lamp.tsx
+  - :(top)packages/web/src/components/confirm.tsx
+  - :(top)packages/web/src/components/theme.tsx
+  - :(top)packages/web/src/assets/**
+  - :(top)packages/web/public/**
+  - :(top)packages/site/public/styles.css
+  - :(top)packages/site/public/assets/**
+content_hash: eb5721b4bea8
 ---
 
 # 02 System
 
-What `stack` and `build` consume. Every value below is locked unless a screen chapter cites an exception, and none does.
+The implemented design system is defined by the web token sheet, shared UI primitives and static-site token sheet (`packages/web/src/styles/index.css:7-63`, `packages/site/public/styles.css:57-105`).
 
 ## Typography
 
@@ -118,3 +131,17 @@ Project-specific additions:
 The rendered ten-screen reference the user supplied on 2026-09-03 ("this is exactly how the page has to look like") governed every screen step and was removed with the rest of `assets/` once they were built. Its palette and its state styling live on as `packages/web/src/styles/index.css`'s `@theme` tokens and `[data-theme]` blocks, which were measured against it; git history holds the file.
 
 One amendment the user made at the same time and which still stands: the marketing page's hero is a **video** of a real run, not the still the reference drew.
+
+## Assets
+
+| Asset | File | Source | Status |
+|---|---|---|---|
+| App logo mark | `packages/web/src/assets/logo-mark.svg` | repository | present |
+| App favicon | `packages/web/public/favicon.svg` | repository | present |
+| App icon | `packages/web/public/app-icon.svg` | repository | present |
+| Stage glyphs | `packages/web/src/assets/stage-*.svg` | repository | present |
+| Site logo mark | `packages/site/public/assets/logo-mark.svg` | repository | present |
+| Site favicon | `packages/site/public/assets/favicon.svg` | repository | present |
+| Social preview | `packages/site/public/assets/og.png` | repository | present |
+| Showcase poster | `packages/site/public/assets/play-run-poster.jpg` | repository | present |
+| Showcase recording | `packages/site/public/assets/play-run.mp4` | repository | present |
