@@ -19,6 +19,7 @@ import { playSections } from "@/play/sections";
 import { SetupSummary } from "@/play/setup-summary";
 import type { PlayFormState, Upload } from "@/play/state";
 import { StyleSection } from "@/play/style-section";
+import { templateLibrary } from "@/play/template-library";
 import { entriesQuery, promptsQuery, providersQuery, settingsQuery, voicesQuery } from "@/queries";
 import { subtitlesFor } from "@/subtitles/config";
 import { useTutorialEvent, useTutorialProgress } from "@/tutorial/context";
@@ -47,6 +48,11 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
 
   const [form, setForm] = usePlayDraft();
   const session = usePlaySession();
+  const choices = templateLibrary(
+    session.document.librarySnapshot,
+    prompts.data?.prompts ?? [],
+    entries.data?.entries ?? [],
+  );
   const batchItems = session.document.variants.map(({ id, ...item }) => ({ ...item, key: id }));
   const subtitleUploading = session.fontUploading || session.document.fontUpload !== null;
   // What the server marked when it refused the draft: a template deleted since it was
@@ -115,8 +121,8 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     blocker: admissionBlocker,
   } = admission({
     form,
-    prompts: prompts.data?.prompts ?? [],
-    entries: entries.data?.entries ?? [],
+    prompts: choices.prompts,
+    entries: choices.entries,
     silenceGapSeconds: settings.data?.silenceGapSeconds ?? 3,
   });
 
@@ -141,7 +147,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
       prefixes.some((prefix) => error.field === prefix || error.field.startsWith(`${prefix}.`)),
     );
   const promptExists = (kind: "article" | "image", name: string): boolean =>
-    (prompts.data?.prompts ?? []).some((prompt) => prompt.kind === kind && prompt.name === name);
+    choices.prompts.some((prompt) => prompt.kind === kind && prompt.name === name);
   const uploadReady = (upload: Upload | undefined): boolean =>
     upload?.file !== undefined && upload.error === undefined;
   useTutorialProgress({
@@ -215,7 +221,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   const controls = {
     form,
     providers: providers.data?.providers ?? [],
-    prompts: prompts.data?.prompts ?? [],
+    prompts: choices.prompts,
     voices: voices.data?.voices ?? [],
     silenceGapSeconds: settings.data?.silenceGapSeconds ?? 3,
     problem,
@@ -282,7 +288,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
             <ContentSection
               {...controls}
               fields={fields}
-              entries={entries.data?.entries ?? []}
+              entries={choices.entries}
               onLibrary={(to) => {
                 void library(to);
               }}
@@ -291,7 +297,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
           {session.section === "outputs" ? (
             <OutputsSection
               {...controls}
-              entries={entries.data?.entries ?? []}
+              entries={choices.entries}
               missingKeyword={errors.find((error) => error.field.startsWith("values."))?.field}
               onKeyword={revealField}
               onSettings={() => {

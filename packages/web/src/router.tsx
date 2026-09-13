@@ -3,6 +3,7 @@ import { createRootRoute, createRoute, createRouter, useNavigate } from "@tansta
 import { Shell } from "@/components/shell";
 import { categoryOf } from "@/lib/entry-options";
 import { kindOf } from "@/lib/prompt-kinds";
+import { usePlaySession } from "@/play/draft-context";
 import { EntriesRoute } from "@/routes/entries";
 import { EntryEditorRoute } from "@/routes/entry-editor";
 import { PlayRoute } from "@/routes/play";
@@ -11,6 +12,7 @@ import { ProjectsRoute } from "@/routes/projects";
 import { PromptEditorRoute } from "@/routes/prompt-editor";
 import { PromptsRoute } from "@/routes/prompts";
 import { SettingsRoute } from "@/routes/settings";
+import { TemplatesRoute } from "@/routes/templates";
 import { UsageRoute } from "@/routes/usage";
 
 // A code-based route tree: a handful of screens need no file convention, and the
@@ -48,6 +50,32 @@ const playRoute = createRoute({
   path: "play",
   component: PlayRoute,
 });
+
+const templatesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "templates",
+  component: TemplatesPage,
+});
+function TemplatesPage(): import("react").ReactElement {
+  const session = usePlaySession();
+  const navigate = useNavigate();
+  return (
+    <TemplatesRoute
+      getGeneration={session.generation}
+      blocked={
+        session.review.starting || session.review.uncertain || session.review.created !== null
+      }
+      beforeApply={session.flush}
+      onApplied={async (draftId, isCurrent) => {
+        if (!isCurrent()) return false;
+        if (!(await session.open(draftId, isCurrent))) return false;
+        if (!isCurrent()) return false;
+        await navigate({ to: "/play" });
+        return isCurrent();
+      }}
+    />
+  );
+}
 
 const projectRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -215,6 +243,7 @@ function useLeaveEntries(): (category: EntryCategory) => void {
 const routeTree = rootRoute.addChildren({
   projectsRoute,
   playRoute,
+  templatesRoute,
   projectRoute,
   promptsRoute,
   newPromptRoute,

@@ -4,6 +4,7 @@ absorbed_from:
 - features/2026-09-10-subtitles-fonts@2026-09-10
 - features/2026-09-10-editable-projects@2026-09-12
 - features/2026-09-10-review-checkpoints@2026-09-13
+- features/2026-09-10-project-templates@2026-09-13
 screen: project page
 journeys:
 - J3-make-a-video
@@ -48,6 +49,10 @@ The stage navigator remains sticky at the left on desktop and becomes a compact 
 The overall bar excludes skipped stages, counts supplied/done stages as complete, and incorporates measured partial progress. It is execution progress rather than a time estimate. The header exposes the available MP4, WAV or article download.
 
 ## Editing
+
+The header includes **Save as template** when a current revision exists. It asks for a name and
+captures setup and source text into a reusable template; it does not rebuild or change this
+project.
 
 Edit project opens the unified form using the current revision. Title, aspect ratio, source modes, project prompt snapshots and keywords, providers/models/voice, chunking, intro/outro, silence and subtitle controls remain part of this single save. Content editors support article text, individual images, logical narration groups and manual caption cues.
 

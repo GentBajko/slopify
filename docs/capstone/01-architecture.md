@@ -20,7 +20,7 @@ absorbed_from:
 
 # Architecture
 
-Inspected production source at `89db8f6d89816b7e2457cb8abd6dade8acb42aa5` (2026-09-13). This chapter describes current code, including editable-project revisions and durable four-section Play creation.
+Inspected production source at `89db8f6d89816b7e2457cb8abd6dade8acb42aa5` (2026-09-13). This chapter describes current code, including editable-project revisions, durable four-section Play creation and versioned project templates.
 
 ## Layers
 
@@ -35,6 +35,8 @@ Review checkpoints are a slice-level policy boundary. `slices/checkpoints/` owns
 The implemented feature follows the existing tiers. HTTP edge imports the draft slice's service/model/schema/review/start/upload functions and translates typed results to responses; it does not construct provider adapters. `packages/app/src/edge/http/drafts.ts:5`, `packages/app/src/edge/http/draft-files.ts:7`.
 
 `slices/play-drafts` imports SQLite transactions and shared runner contracts from kernel, and admission, batch, estimate, library, fonts, settings, and storage slices for orchestration. The public dependency types inject catalogue/font/provider-readiness/model-list/runner capabilities. The service has no imports from edge or adapters. This is both observed in imports and covered by the existing slice restrictions against edge, adapters and provider registry imports. `packages/app/src/slices/play-drafts/service.ts:1`, `packages/app/src/slices/play-drafts/review-inputs.ts:1`, `packages/app/src/slices/play-drafts/start.ts:1`, `packages/app/src/slices/play-drafts/model.ts:1`, `biome.json:70`.
+
+`slices/project-templates` stores immutable setup revisions and idempotent instantiation receipts. It snapshots selected library bodies, strips credentials and media ownership, and delegates fresh draft creation to `slices/play-drafts`. The project conversion operation reads the selected current project revision and excludes outputs, approvals and generated media. HTTP exposes the template lifecycle under `/api/project-templates`; the React Templates screen and project header are preparation surfaces only. `packages/app/src/slices/project-templates/service.ts`, `packages/app/src/slices/project-templates/setup.ts`, `packages/app/src/slices/project-templates/from-project.ts`, `packages/app/src/edge/http/project-templates.ts`, `packages/web/src/routes/templates.tsx`.
 
 The browser imports browser-safe shared draft Zod schemas and model types; runtime service, filesystem, and database modules stay server-side. Tutorial uses the separate browser-safe `settings/tutorial-schema.ts`, while settings persistence imports SQLite transaction/settings repository helpers. `packages/web/src/play/draft-api.ts:1`, `packages/web/src/tutorial/session-api.ts:1`, `packages/app/src/slices/settings/tutorial.ts:1`.
 

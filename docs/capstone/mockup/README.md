@@ -29,9 +29,10 @@ Screens as markdown wireframes, one file each, numbered in journey order. `rule:
 | [03 Settings](03-settings.md) | J1, J2 | `packages/web/src/routes/settings.tsx` |
 | [04 Prompts](04-prompts.md) | J2 | `packages/web/src/routes/prompts.tsx` |
 | [05 Prompt editor](05-prompt-editor.md) | J2 | `packages/web/src/routes/prompt-editor.tsx` |
-| [06 Play](06-play.md) | J2, J3, J4 | `packages/web/src/routes/play.tsx`, `packages/web/src/play/`, checkpoint setup |
+| [06 Play](06-play.md) | J2, J3, J4, J7 | `packages/web/src/routes/play.tsx`, `packages/web/src/play/`, checkpoint setup |
 | [07 Projects](07-projects.md) | J3, J6 | `packages/web/src/routes/projects.tsx` |
-| [08 Project page](08-project.md) | J3, J4, J5, J6 | `packages/web/src/routes/project.tsx`, `packages/web/src/project/`, checkpoint approval |
+| [08 Project page](08-project.md) | J3, J4, J5, J6, J7 | `packages/web/src/routes/project.tsx`, `packages/web/src/project/`, checkpoint approval and template capture |
+| 11 Templates (not drawn) | J7 | `packages/web/src/routes/templates.tsx`, `packages/web/src/templates/` |
 | 09 Intros & Outros library (not drawn) | J2 | `packages/web/src/routes/entries.tsx` |
 | 10 Usage (not drawn) | J6 | `packages/web/src/routes/usage.tsx` |
 
@@ -47,6 +48,7 @@ App shell on 02-08: nav Projects / Play / Prompts / Settings, footer with donati
 | J4 bring your own | 06 (Provide on any stage) → 08 |
 | J5 revise | 08 → Edit project → Save → Review affected rebuild → Start → download; History → Restore saves a new revision |
 | J6 revisit | 07 → 08 → downloads |
+| J7 reuse a setup | 06/08 → Templates → Apply to Play → Review → Start |
 
 ## Scenarios for `logic`
 
@@ -88,10 +90,10 @@ Items invented to complete a wireframe; each is marked "assumed" inline and in i
 - 03: a voice entry names its TTS provider; provider rows are placeholders; outro card fields live here; keys masked after save.
 - 04: Delete and Duplicate per prompt; a slots column in the list.
 - 05: live "Detected slots" line; kind chosen in the editor.
-- 06: research and thumbnail have Off / Generate / Provide; video always generated; provider dropdowns list keyed providers only; model dropdowns fetched from the provider; thumbnail prompt runs once; Video title required and names the project; LLM row shown only while research or article is Generate; keyword group order.
+- 06: research and thumbnail have Off / Generate / Provide; video always generated; provider dropdowns list keyed providers only; model dropdowns fetched from the provider; thumbnail prompt runs once; Video title required and names the project; LLM row shown only while research or article is Generate; keyword group order; Templates is a first-class navigation surface for saving and applying reusable setup snapshots.
 - 07: columns title / status / format / created; Delete per project; landing screen after first run.
-- 08: "provided" and "skipped" labels; header contents; "Download all" is one archive; inline article editor with Save & continue.
-- Shell: nav order Projects / Play / Prompts / Settings.
+- 08: "provided" and "skipped" labels; header contents; "Download all" is one archive; inline article editor with Save & continue; Save as template captures the displayed current revision without rebuilding.
+- Shell: nav order Projects / Play / Templates / Prompts / Settings.
 
 ## Amendments from `logic` (applied at the readback, 2026-09-02)
 

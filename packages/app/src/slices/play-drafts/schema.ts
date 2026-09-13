@@ -4,6 +4,7 @@ import { thinkingModes } from "../../kernel/ports/llm.js";
 import { stageSources } from "../admission/model.js";
 import { runDraftSchema } from "../admission/schema.js";
 import { checkpointRowSchema, checkpointStageSchema } from "../checkpoints/schema.js";
+import { librarySnapshotSchema } from "../library/snapshot.js";
 import { chunkModes } from "../narration/chunk.js";
 import { subtitleModes, subtitlePositions } from "../subtitles/model.js";
 
@@ -69,6 +70,12 @@ export const playDraftFormSchema = z
 export const playDraftDocumentSchema = z
   .object({
     schemaVersion: z.literal(1),
+    librarySnapshot: librarySnapshotSchema.optional(),
+    templateSource: z
+      .object({ id, version: z.number().int().positive() })
+      .strict()
+      .readonly()
+      .optional(),
     form: playDraftFormSchema,
     section: z.enum(["content", "outputs", "style", "review"]),
     variants: z.array(z.object({ id, title: text, values }).strict().readonly()).readonly(),

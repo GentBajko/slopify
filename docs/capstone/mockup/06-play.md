@@ -4,6 +4,7 @@ absorbed_from:
   - features/2026-09-10-subtitles-fonts@2026-09-10
   - features/2026-09-10-play-redesign-drafts@2026-09-13
   - features/2026-09-10-review-checkpoints@2026-09-13
+  - features/2026-09-10-project-templates@2026-09-13
 screen: play (new project)
 journeys:
   - J2-first-run-setup
@@ -62,6 +63,11 @@ Below1100px the page has one column. Style places its sole expanded preview befo
 
 The spotlight guide reveals the relevant section and disclosure before targeting a real control. Its stable cursor restores after reload. Settings/Create prompt return to the same draft. Start success goes to the created project. The guide never starts generation itself (`packages/web/src/tutorial/model.ts:115`, `packages/web/src/tutorial/use-session.ts:8`).
 
-## Not included
+## Templates
 
-No checkpoints, reusable templates, clock scheduling, storage manager or release controls are implied by this screen. These remain separate1.0 features.
+The Templates navigation surface lists immutable setup snapshots. It can save an acknowledged
+draft, apply a snapshot into a fresh draft, or delete a template. Apply returns to Play with
+keywords and choices ready for Review; it never starts a run. Provided media is called out for
+reattachment.
+
+Clock scheduling, storage management and release controls remain separate 1.0 work.

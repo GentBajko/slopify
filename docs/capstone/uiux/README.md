@@ -3,6 +3,7 @@ absorbed_from:
   - features/2026-09-10-subtitles-fonts@2026-09-10
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-play-redesign-drafts@2026-09-13
+  - features/2026-09-10-project-templates@2026-09-13
 generated_date: '2026-09-13'
 generated_at_commit: 803bd5555d76
 paths_covered:
@@ -58,5 +59,6 @@ settled by shipping; each now has code to read instead of a claim to confirm.
 Subtitle controls live in `packages/web/src/subtitles/`, reused by Play and the final project stage. Scenario [17](../logic/17-subtitles.md) records their modes, font lifecycle and save/export behavior. The [project screen reference](screens/03-project.md) records current revision editing, History, explicit rebuild review and caption correction without a finished export.
 
 Play now uses durable local drafts, explicit Review/Start and four setup sections. See [draft lifecycle](../logic/22-play-drafts.md).
+Templates are available from the Templates navigation item and from a project header; they preserve setup snapshots without execution state. See [project templates](../logic/24-project-templates.md).
 
 Review checkpoints are documented in [scenario 23](../logic/23-review-checkpoints.md) and use the existing project panel language and focus/reload behavior.

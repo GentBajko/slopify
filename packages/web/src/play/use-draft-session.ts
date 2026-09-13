@@ -183,28 +183,33 @@ export function useDraftSession(): PlaySession {
           void flush();
         }, 500);
     };
-    const open = async (id: string): Promise<void> => {
-      if (review.state().starting || review.state().uncertain || review.state().created) return;
+    const open = async (id: string, isCurrent: () => boolean = () => true): Promise<boolean> => {
+      if (review.state().starting || review.state().uncertain || review.state().created)
+        return false;
       if ((state.current.id !== id || state.current.status !== "conflict") && !(await flush()))
-        return;
+        return false;
+      if (!isCurrent()) return false;
       const selected = ++operation;
       const generation = state.current.clock.edited;
       cancelTimer();
       try {
         const reply = await readPlayDraft(api, id);
-        if (selected !== operation || generation !== state.current.clock.edited) return;
+        if (selected !== operation || generation !== state.current.clock.edited || !isCurrent())
+          return false;
         if (!accept(reply)) {
           if (!state.current.id) publish({ recoveryId: id });
-          return;
+          return false;
         }
         fork = null;
         install(reply.value);
         await refreshDraftChoices(api, queryClient);
+        return isCurrent();
       } catch (error) {
         if (selected === operation && generation === state.current.clock.edited) {
           fail(error);
           if (!state.current.id) publish({ recoveryId: id });
         }
+        return false;
       }
     };
     const newDraft = async (): Promise<void> => {
@@ -372,6 +377,7 @@ export function useDraftSession(): PlaySession {
     edit: owner.edit,
     flush: owner.flush,
     open: owner.open,
+    generation: owner.generation,
     newDraft: owner.newDraft,
     discard: owner.discard,
     saveAsNew: owner.saveAsNew,

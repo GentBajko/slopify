@@ -6,8 +6,9 @@ paths_covered:
 - :(top)packages/web/src/**
 - :(top)packages/site/**
 absorbed_from:
-- features/2026-09-10-editable-projects@2026-09-12
-- features/2026-09-10-review-checkpoints@2026-09-13
+  - features/2026-09-10-editable-projects@2026-09-12
+  - features/2026-09-10-review-checkpoints@2026-09-13
+  - features/2026-09-10-project-templates@2026-09-13
 ---
 
 # Project workspace
@@ -52,4 +53,7 @@ Actions distinguish Edit project, Save changes, Discard changes, Rebuild affecte
 
 ## Not in play
 
-This screen does not implement configurable review checkpoints, reusable setup templates, scheduling or storage cleanup. The separate Play redesign is not part of the editable-project screen. These remain release features outside the shipped revision controls.
+Review checkpoints and reusable templates are available on this project surface. The header's
+Save as template action captures the displayed revision without rebuilding; template listing
+and Apply live on the Templates navigation surface. Scheduling and storage cleanup remain
+separate release work.

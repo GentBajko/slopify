@@ -1,6 +1,7 @@
 import type { ProjectSummary } from "@app/slices/admission/model.js";
 import type { Prompt } from "@app/slices/library/model.js";
 import type { Output } from "@app/slices/storage/model.js";
+import type { ReactNode } from "react";
 import { Lamp } from "@/components/lamp";
 import { StateWord } from "@/components/state-word";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ export function ProjectHeader({
   actions,
   inFlight,
   primaryOutput,
+  children,
 }: {
   readonly project: ProjectSummary;
   // Undefined until the library has arrived: a prompt cannot be called deleted just
@@ -23,6 +25,7 @@ export function ProjectHeader({
   readonly actions: ProjectActions;
   readonly inFlight: boolean;
   readonly primaryOutput: Output | undefined;
+  readonly children?: ReactNode;
 }) {
   const running = project.status === "running";
   return (
@@ -36,6 +39,7 @@ export function ProjectHeader({
         <p className="mt-2 text-small text-ink2">{subtitle(project, prompts)}</p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
+        {children}
         {primaryOutput ? (
           <span className="rounded-control border border-accent bg-accent px-4 py-2 [&_a]:font-semibold [&_a]:text-accent-ink">
             <OutputDownload

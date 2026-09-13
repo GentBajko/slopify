@@ -51,6 +51,7 @@ Posture: stop and confirm. A dialog precedes each of these, names the consequenc
 ## Progressive disclosure
 
 - Play groups configuration into Content, Outputs, Style and Review. Active source controls disclose their inputs; project stage rails remain a separate progress surface.
+- Templates are a first-class navigation item. The Templates screen saves an acknowledged Play draft or applies a named immutable snapshot into a fresh draft; applying never starts work. Project headers offer Save as template for the displayed current revision and explain that it does not rebuild the project.
 - Review checkpoints use the same explicit-save and refusal-focus language: Audio, Images and Video/export can be held from Play, while the project panel shows dependents, revision identity, approval and cross-tab reload state.
 - Research and thumbnail default to Off and read as one line until switched on.
 - Subtitles default Off; selecting files or burn-in reveals font, size, upload and a reduced-scale preview. Audio Off disables caption configuration, Video Off permits files only. An unfinished font upload remains recoverable outside inactive controls through Keep current font. The active controls explain local English timing and the first-use model download (`packages/web/src/subtitles/controls.tsx`).
@@ -87,6 +88,11 @@ Deadpan and literal, owning "slop" without winking twice: "New run", "Play", "Re
 ## Optional getting-started guide
 
 `packages/web/src/tutorial/model.ts` defines 20 steps over the real Settings, prompt editors, Play and project pages. Step 17 spotlights the optional subtitle controls, including upload and preview; Audio Off still lets the guide continue after explaining why captions are unavailable. A versioned server tutorial session stores stable step IDs, readiness and saved resource IDs; resources are revalidated on restore. It stores no keys, font bytes or form text. Play reveals the required section and disclosure before spotlight measurement. The guide neither generates subtitles nor starts a project (`tutorial/runner.tsx`, `step-content.tsx`).
+
+## Not in play
+
+Templates are local setup snapshots; scheduling, sharing and storage cleanup remain separate
+release work.
 
 
 ## Editing an existing project

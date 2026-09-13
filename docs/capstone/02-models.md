@@ -11,11 +11,12 @@ absorbed_from:
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-play-redesign-drafts@2026-09-13
   - features/2026-09-10-review-checkpoints@2026-09-13
+  - features/2026-09-10-project-templates@2026-09-13
 ---
 
 # Models
 
-Observed source: `803bd55` (2026-09-13). This chapter includes retained project revisions/rebuild admission, durable incomplete Play drafts with owned attachments and reviewed Start receipts, persisted tutorial progress, and review checkpoint rows/approval receipts (`packages/app/src/kernel/db/migrations/0007-review-checkpoints.sql:1`). Reusable project templates and scheduled jobs remain separate.
+Observed source: `803bd55` (2026-09-13). This chapter includes retained project revisions/rebuild admission, durable incomplete Play drafts with owned attachments and reviewed Start receipts, persisted tutorial progress, review checkpoint rows/approval receipts, and reusable project template heads/revisions (`packages/app/src/kernel/db/migrations/0007-review-checkpoints.sql:1`, `packages/app/src/kernel/db/migrations/0008-project-templates.sql:1`). Scheduled jobs remain separate.
 
 ## Entities
 
@@ -137,6 +138,8 @@ Observed source: `803bd55` (2026-09-13). This chapter includes retained project 
 | ResolvedPlayReview | `packages/app/src/slices/play-drafts/model.ts:97` | In-memory resolution; private review execution JSON | Resolved review plus captured execution dependencies |
 | DraftResult | `packages/app/src/slices/play-drafts/model.ts:75` | In-memory service result | Typed expected success/refusal |
 | DraftRow | `packages/app/src/slices/play-drafts/repo.ts:23` | play_drafts | Parsed SQL row |
+| ProjectTemplate | `packages/app/src/slices/project-templates/model.ts:5` | project_templates + project_template_revisions | Named immutable reusable Play setup |
+| TemplateSummary | `packages/app/src/slices/project-templates/model.ts:6` | Current template head HTTP listing | Template identity, version and timestamps |
 | AttachmentRow | `packages/app/src/slices/play-drafts/repo.ts:33` | play_draft_attachments | Parsed owned attachment SQL row |
 | AttachmentRef | `packages/app/src/slices/play-drafts/repo.ts:34` | In-memory traversal of PlayDraftDocument | File reference with inferred slot kind |
 | StoredStartReceipt | `packages/app/src/slices/play-drafts/start-repo.ts:23` | play_start_receipts projection | Canonical durable replay authority |

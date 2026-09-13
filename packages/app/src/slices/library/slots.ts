@@ -8,7 +8,7 @@ import type { EntryChoice, RunDraft } from "../admission/model.js";
 import { type FieldError, normaliseDraft } from "../admission/rules.js";
 import { collectFields, render } from "../admission/substitute.js";
 import type { Entry, EntryCategory, PromptKind } from "./model.js";
-import { entryByName, promptByName } from "./repo.js";
+import { type LibrarySnapshot, snapshotEntry, snapshotPrompt } from "./snapshot.js";
 
 export interface PickedBody {
   // The key this body's rendered text takes in `projects.config.rendered`, named after
@@ -30,7 +30,11 @@ export interface PickedTemplates {
   readonly missing: readonly FieldError[];
 }
 
-export function pickTemplates(db: DatabaseSync, input: RunDraft): PickedTemplates {
+export function pickTemplates(
+  db: DatabaseSync,
+  input: RunDraft,
+  snapshot?: LibrarySnapshot,
+): PickedTemplates {
   const draft = normaliseDraft(input);
   const { sources } = draft;
   const missing: FieldError[] = [];
@@ -40,18 +44,27 @@ export function pickTemplates(db: DatabaseSync, input: RunDraft): PickedTemplate
   const image: PickedBody[] = [];
 
   if (sources.article === "generate") {
-    body(db, "article", draft.articlePrompt, "articlePrompt", missing, text, "article");
+    body(db, "article", draft.articlePrompt, "articlePrompt", missing, text, "article", snapshot);
   }
 
-  const intro = pickEntry(db, "intro", draft.intro, missing);
-  const outro = pickEntry(db, "outro", draft.outro, missing);
+  const intro = pickEntry(db, "intro", draft.intro, missing, snapshot);
+  const outro = pickEntry(db, "outro", draft.outro, missing, snapshot);
   push(text, "intro", intro);
   push(text, "outro", outro);
 
   if (sources.images === "generate") {
     for (const [index, picked] of draft.imagePrompts.entries()) {
       const field = `imagePrompts.${String(index)}.name`;
-      body(db, "image", picked.name, field, missing, image, `imagePrompts.${String(index)}`);
+      body(
+        db,
+        "image",
+        picked.name,
+        field,
+        missing,
+        image,
+        `imagePrompts.${String(index)}`,
+        snapshot,
+      );
     }
   }
 
@@ -66,6 +79,7 @@ export function pickTemplates(db: DatabaseSync, input: RunDraft): PickedTemplate
       missing,
       image,
       "thumbnailPrompt",
+      snapshot,
     );
   }
 
@@ -102,13 +116,14 @@ function body(
   missing: FieldError[],
   into: PickedBody[],
   key: string,
+  snapshot?: LibrarySnapshot,
 ): void {
   // An unpicked prompt is admission's rule to state ("Pick an article prompt."), so this
   // says nothing about it and the form marks the field once.
   if (name === undefined || name.trim() === "") {
     return;
   }
-  const prompt = promptByName(db, kind, name);
+  const prompt = snapshotPrompt(db, snapshot, kind, name);
   if (prompt === undefined) {
     missing.push({ field, message: `That ${kind} prompt no longer exists; pick another.` });
     return;
@@ -121,11 +136,12 @@ function pickEntry(
   category: EntryCategory,
   choice: EntryChoice | undefined,
   missing: FieldError[],
+  snapshot?: LibrarySnapshot,
 ): Entry | undefined {
   if (choice === undefined) {
     return undefined;
   }
-  const entry = entryByName(db, category, choice.name);
+  const entry = snapshotEntry(db, snapshot, category, choice.name);
   if (entry === undefined) {
     missing.push({
       field: category,

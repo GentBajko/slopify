@@ -27,6 +27,7 @@ import { fontsRoutes } from "./fonts.js";
 import { openFolderRoutes } from "./open-folder.js";
 import { planningRoutes } from "./planning.js";
 import { problem, problemFromError, titleOf } from "./problem.js";
+import { projectTemplateRoutes } from "./project-templates.js";
 import { projectRoutes } from "./projects.js";
 import { promptRoutes } from "./prompts.js";
 import { providerRoutes } from "./providers.js";
@@ -87,6 +88,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       )
       .route("/staging", stagingRoutes(deps))
       .route("/drafts", draftRoutes(deps.drafts))
+      .route("/project-templates", projectTemplateRoutes(deps.drafts))
       .route("/projects", planningRoutes(deps))
       .route("/projects", projectRoutes(deps))
       .route("/projects", checkpointRoutes(deps))

@@ -15,6 +15,7 @@ import { RevisionContentEditors } from "@/project/revision-content";
 import { RevisionForm } from "@/project/revision-form";
 import { RevisionMedia } from "@/project/revision-media";
 import { RevisionWorkspace } from "@/project/revision-workspace";
+import { SaveProjectTemplate } from "@/project/save-template";
 import { StageRow } from "@/project/stage-row";
 import { finalOutput } from "@/project/summary";
 import { useProjectActions } from "@/project/use-actions";
@@ -92,7 +93,13 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
               actions={actions}
               inFlight={inFlight}
               primaryOutput={primaryOutput}
-            />
+            >
+              <SaveProjectTemplate
+                projectId={projectId}
+                revisionId={project.data.revisionId}
+                title={summary.title}
+              />
+            </ProjectHeader>
             {actions.refusal === undefined || actions.refusal.stage !== undefined ? null : (
               // A refused cancel belongs to the project, not to one stage; every other
               // refusal is drawn under the row whose control was pressed.

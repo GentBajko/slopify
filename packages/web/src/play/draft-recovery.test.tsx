@@ -24,7 +24,7 @@ afterEach(() => {
 it("does not apply a late restore over edits made while it was loading", async () => {
   const response = deferred();
   mount({ [`GET /api/drafts/${first}`]: () => response.promise });
-  let opened = Promise.resolve();
+  let opened: Promise<boolean> = Promise.resolve(true);
   act(() => {
     opened = session.open(first);
   });

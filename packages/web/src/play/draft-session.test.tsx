@@ -172,7 +172,7 @@ it("ignores a delayed open after selecting a different draft", async () => {
     [`GET /api/drafts/${first}`]: () => slow.promise,
     [`GET /api/drafts/${second}`]: jsonAnswer(draftView(second, "Second")),
   });
-  let opened: Promise<void> = Promise.resolve();
+  let opened: Promise<boolean> = Promise.resolve(true);
   act(() => {
     opened = session.open(first);
   });

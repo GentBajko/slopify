@@ -13,7 +13,7 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | Immutable project revisions and execution | `packages/app/src/slices/revisions/index.ts`, `packages/app/src/slices/rebuild/service.ts`, `packages/app/src/main.ts:326` |
 | CLI executable settings and launchers | `packages/app/src/slices/settings/cli-paths.ts`, `packages/app/src/kernel/cli-command.ts`, `packages/app/src/adapters/llm/` |
 | Provider ports and adapters | `packages/app/src/kernel/ports/`, `packages/app/src/adapters/{llm,tts,image,alignment,fake}/` |
-| Pipeline slices | `packages/app/src/slices/{research,article,narration,images,thumbnail,video,subtitles,fonts,reruns,cancel,control,admission,storage,library,settings,telemetry,checkpoints}/` |
+| Pipeline slices | `packages/app/src/slices/{research,article,narration,images,thumbnail,video,subtitles,fonts,reruns,cancel,control,admission,storage,library,settings,telemetry,checkpoints,project-templates}/` |
 | Curated model catalogue, pricing and limits | `packages/app/src/catalog/store.ts:24`, `packages/app/src/catalog/registry.ts:7` |
 | Batch admission and scheduling | `packages/app/src/edge/http/planning.ts:32`, `packages/app/src/slices/batch/index.ts:73` |
 | Request scheduling | `packages/app/src/kernel/runner/queue.ts:12` |
@@ -61,6 +61,9 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | logic | [logic/19-catalogue-thinking.md](logic/19-catalogue-thinking.md) |
 | logic | [logic/20-boot-cli-recovery.md](logic/20-boot-cli-recovery.md) |
 | logic | [logic/21-app-updater.md](logic/21-app-updater.md) |
+| logic | [logic/22-play-drafts.md](logic/22-play-drafts.md) |
+| logic | [logic/23-review-checkpoints.md](logic/23-review-checkpoints.md) |
+| logic | [logic/24-project-templates.md](logic/24-project-templates.md) |
 
 ## Companion docs
 
@@ -73,9 +76,9 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | [mockup/03-settings.md](mockup/03-settings.md) | Screen: API keys, CLI executable paths, voices, playback settings |
 | [mockup/04-prompts.md](mockup/04-prompts.md) | Screen: prompts list by kind |
 | [mockup/05-prompt-editor.md](mockup/05-prompt-editor.md) | Screen: prompt editor with `{{keyword}}` slots |
-| [mockup/06-play.md](mockup/06-play.md) | Screen: durable drafts, Content / Outputs / Style / Review and explicit Start |
+| [mockup/06-play.md](mockup/06-play.md) | Screen: durable drafts, templates, Content / Outputs / Style / Review and explicit Start |
 | [mockup/07-projects.md](mockup/07-projects.md) | Screen: projects list |
-| [mockup/08-project.md](mockup/08-project.md) | Screen: retained project revisions, content/media/caption edits, History and explicit rebuild |
+| [mockup/08-project.md](mockup/08-project.md) | Screen: retained project revisions, template capture, content/media/caption edits, History and explicit rebuild |
 | [uiux/README.md](uiux/README.md) | UI/UX design index: direction, system, experience, assumed items |
 | [uiux/01-direction.md](uiux/01-direction.md) | Design read, mode map, the control-room direction contract |
 | [uiux/02-system.md](uiux/02-system.md) | Tokens: type, colour per theme, spacing, icons, motion, component library, implementation constraints |

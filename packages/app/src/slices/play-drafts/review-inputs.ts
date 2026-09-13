@@ -70,7 +70,7 @@ export function resolveReviewInputs(
   const converted = toAdmissionDraft({
     document,
     attachments: fresh.value.attachments,
-    entries: listEntries(deps.db),
+    entries: [...(document.librarySnapshot?.entries ?? []), ...listEntries(deps.db)],
     silenceGapSeconds: readSettings(deps).silenceGapSeconds,
   });
   if (!converted.ok) fields.push(...converted.fields);
@@ -85,7 +85,7 @@ export function resolveReviewInputs(
       ),
   };
   const staged = stagedFiles(deps.db);
-  const basePicked = pickTemplates(deps.db, converted.draft);
+  const basePicked = pickTemplates(deps.db, converted.draft, document.librarySnapshot);
   const drafts = [
     basePicked.draft,
     ...document.variants.map((variant) => ({

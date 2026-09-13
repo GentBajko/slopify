@@ -46,7 +46,8 @@ export interface PlaySession extends PlayNavigation {
   ) => Promise<void>;
   readonly edit: (document: PlayDraftDocument) => void;
   readonly flush: () => Promise<boolean>;
-  readonly open: (id: string) => Promise<void>;
+  readonly open: (id: string, isCurrent?: () => boolean) => Promise<boolean>;
+  readonly generation: () => number;
   readonly newDraft: () => Promise<void>;
   readonly discard: (target: { readonly id: string; readonly version: number }) => Promise<void>;
   readonly saveAsNew: () => Promise<void>;

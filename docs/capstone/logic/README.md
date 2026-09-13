@@ -18,7 +18,7 @@ content_hash: 2b9dab9b7f7b
 
 # Business logic index
 
-These scenarios describe the implemented app. Editable-project behavior is absorbed in scenarios 01, 05, 08, 09, 11, 12, 14 and 17. Review checkpoint behavior is absorbed in scenario 23. Templates and scheduled jobs remain separate release work.
+These scenarios describe the implemented app. Editable-project behavior is absorbed in scenarios 01, 05, 08, 09, 11, 12, 14 and 17. Review checkpoint behavior is absorbed in scenario 23. Project templates are absorbed in scenario 24; scheduled jobs remain separate release work.
 
 | Scenario | Reference |
 |---|---|
@@ -45,5 +45,7 @@ These scenarios describe the implemented app. Editable-project behavior is absor
 | In-app updater | [21-app-updater.md](21-app-updater.md) |
 | Play drafts, uploads and uncertain Start | [22-play-drafts.md](22-play-drafts.md) |
 | Review checkpoints and approval gates | [23-review-checkpoints.md](23-review-checkpoints.md) |
+| Project templates | [24-project-templates.md](24-project-templates.md) |
 
 Play now uses durable local drafts, explicit Review/Start and four setup sections. See [draft lifecycle](22-play-drafts.md).
+Templates preserve reusable Play setups without credentials, generated outputs or media bytes. See [project templates](24-project-templates.md).
