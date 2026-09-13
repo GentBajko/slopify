@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 7bdb84e3f57e
+generated_at_commit: f4c4f7b3295a
 generated_date: 2026-09-13
 capstone_version: 5.2.0
-content_hash: f4bb259d9079
+content_hash: f552bff2fd27
 paths_covered:
   - ":(top)packages/app/src/**"
   - ":(top)packages/web/src/**"
@@ -20,7 +20,7 @@ paths_covered:
 
 # Dependencies
 
-Manifest and lockfile snapshot: `7bdb84e3f57e` (2026-09-13).
+Manifest and lockfile snapshot: `f4c4f7b3295a` (2026-09-13).
 
 ## Runtime and frameworks
 
@@ -77,7 +77,7 @@ Manifest and lockfile snapshot: `7bdb84e3f57e` (2026-09-13).
 | @testing-library/react | 16.3 | MIT | component tests (stack) |
 | happy-dom | 20 | MIT | DOM for component tests (stack) |
 | @biomejs/biome | 2.5.11 installed | MIT OR Apache-2.0 | formatter and linter; `noRestrictedImports` patterns enforce kernel → slices → edge |
-| GitHub Actions | hosted | n/a | lint, typecheck, test on Node 26; tag → `npm publish --provenance` |
+| GitHub Actions | hosted | n/a | lint, typecheck, test on Node 26; matching plain `x.y.z` tag → `npm publish --provenance` |
 | @types/node | 26.5.0 installed | MIT | Node 26 type surface for the Node 26 runtime |
 | @types/react, @types/react-dom | 19.2.18 / 19.2.7 installed | MIT | React TypeScript declarations |
 | Dependabot | hosted | n/a | weekly updates; `npm audit` fails CI on high severity |

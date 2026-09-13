@@ -1,8 +1,8 @@
 ---
-generated_at_commit: dad071604385
+generated_at_commit: f4c4f7b3295a
 capstone_version: 5.2.0
 generated_date: '2026-09-13'
-content_hash: 90dbc3499338
+content_hash: 2f86287329cb
 paths_covered:
   - :(top)packages/app/src/edge/cli.ts
   - :(top)packages/app/src/kernel/config/**
@@ -21,7 +21,7 @@ paths_covered:
 
 ## Steps
 
-1. The published package exposes the `slopify` binary and requires Node 26 or newer. Both `npm install -g @gentbajko/slopify` and `npm exec --package ... -- slopify` are exercised by the install smoke; Windows runs npm's generated `.cmd` shim through `ComSpec`, while other platforms execute the installed bin directly (`packages/app/package.json:13`, `packages/app/package.json:16`, `packages/app/scripts/install-smoke.mjs:17`).
+1. The published package exposes the `slopify` binary and requires Node 26 or newer. Both `npm install -g @gentbajko/slopify` and `npm exec --package ... -- slopify` are exercised by the install smoke; Windows runs npm's generated `.cmd` shim through `ComSpec`, while other platforms execute the installed bin directly. The direct launch has a 30-second health deadline; the npm-exec path allows 120 seconds for its cold package installation (`packages/app/package.json:13`, `packages/app/package.json:16`, `packages/app/scripts/install-smoke.mjs:17`).
 2. CLI parses host, port, data-directory and no-open flags, forwards a managed installed update when present, boots, prints local paths and optionally opens the browser (`packages/app/src/edge/cli.ts:9`, `packages/app/src/edge/cli.ts:18`).
 3. Boot creates paths, acquires the instance lock, prepares FFmpeg, opens/migrates SQLite, marks interrupted stages, recovers checkpoint work, reconciles files and builds the provider registry (`packages/app/src/main.ts:96`).
 4. Settings validates saved CLI paths and runs a bounded readiness probe; blank resets to PATH. Each new call resolves the current executable, while a running child retains its launch command (`packages/app/src/slices/settings/cli-paths.ts:1`, `packages/app/src/slices/settings/cli-status.ts:1`).

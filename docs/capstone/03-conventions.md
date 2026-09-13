@@ -1,8 +1,8 @@
 ---
-generated_at_commit: 7bdb84e3f57e
+generated_at_commit: f4c4f7b3295a
 generated_date: 2026-09-13
 capstone_version: 5.2.0
-content_hash: f4bb259d9079
+content_hash: f552bff2fd27
 paths_covered:
   - ":(top)packages/app/src/**"
   - ":(top)packages/web/src/**"
@@ -17,7 +17,7 @@ paths_covered:
 
 # Conventions
 
-Observed source: `7bdb84e3f57e` (2026-09-13).
+Observed source: `f4c4f7b3295a` (2026-09-13).
 
 ## Paradigm
 

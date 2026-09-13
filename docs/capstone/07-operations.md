@@ -1,8 +1,8 @@
 ---
-generated_at_commit: dad071604385
+generated_at_commit: f4c4f7b3295a
 generated_date: '2026-09-13'
 capstone_version: 5.2.0
-content_hash: be140c80c8b3
+content_hash: f9cf47bb782f
 paths_covered:
   - :(top)packages/app/src/**
   - :(top)packages/web/src/**
@@ -28,7 +28,7 @@ absorbed_from:
 
 Migration `0007-review-checkpoints.sql` adds durable gate and approval tables. Boot recovery restores held/released checkpoint authority against the current project head. The project PATCH/approve routes publish secret-free project events; approval wakes the in-process runner only after its transaction commits.
 
-Observed source: `dad071604385` (2026-09-13). Commands below describe the repository and its packaged entry points; they do not assert that a deployment has occurred. The app requires Node.js 26 or newer (`packages/app/package.json:13`).
+Observed source: `f4c4f7b3295a` (2026-09-13). Commands below describe the repository and its packaged entry points; they do not assert that a deployment has occurred. The app requires Node.js 26 or newer (`packages/app/package.json:13`).
 
 ## Processes
 
@@ -126,7 +126,7 @@ The repository contains no Dockerfile or Compose manifest. Remote provider APIs,
 | Collector remote schema | `npm run schema:remote --workspace @slopify/collector` | `wrangler d1 execute slopify-collector --remote --file=schema.sql`: `packages/collector/package.json:12` |
 | Validate Cloudflare deployment artifacts | `npm run deploy:check` | Collector then site `wrangler deploy --dry-run`: `package.json:17` |
 | Deploy Cloudflare artifacts | `npm run deploy` | Collector then site: `package.json:16`; D1 schema is not applied by this script |
-| Publish package | `npm publish --provenance --access public --workspace @gentbajko/slopify` | Release workflow builds and publishes on pushed `v*` tags using npm trusted publishing/OIDC: `.github/workflows/release.yml:3`, `.github/workflows/release.yml:11`, `.github/workflows/release.yml:27` |
+| Publish package | `npm publish --provenance --access public --workspace @gentbajko/slopify` | Release workflow verifies a pushed plain `x.y.z` tag exactly matches the package version, reruns CI, then publishes through npm trusted publishing/OIDC: `.github/workflows/release.yml:3`, `.github/workflows/release.yml:11`, `.github/workflows/release.yml:23` |
 
 The collector's initial setup is documented as Wrangler login, D1 creation, configured database identity, remote schema application and deployment. The checked-in Wrangler config already supplies a database identity; the README's placeholder replacement is initial-setup prose (`README.md:183`, `packages/collector/wrangler.jsonc:23`). Marketing counters choose local collector port 8787 on loopback origins; the README records an observed Wrangler browser-polling disconnect separately from production behavior (`README.md:157`, `packages/site/public/main.js:7`).
 
@@ -196,4 +196,4 @@ Tutorial progress uses the server settings key `tutorial.session`, with schema/v
 
 Linux CI runs `npm ci`, lint, typecheck, the full Vitest suite, build and high-severity audit on Node 26. Windows CI builds, then runs separate native FFmpeg/alignment/font/subtitle, CLI-provider, catalogue/queue/batch, optional-output, Play draft restart/admission and retained-revision/rebuild/restart suites. The Windows media command includes `packages/app/test/e2e/play-drafts.test.ts` (`.github/workflows/ci.yml:35`). The last Windows command includes both revision slices and seven production revision integration files; its complete exact path list lives in the workflow (`.github/workflows/ci.yml:8`, `.github/workflows/ci.yml:24`, `.github/workflows/ci.yml:40`).
 
-Pushed `v*` tags trigger the package release workflow, whose publish job installs, builds and publishes via npm trusted publishing with provenance. That workflow does not deploy Cloudflare assets or repeat the CI checks; the site and collector deploy through their separate workspace scripts (`.github/workflows/release.yml:3`, `.github/workflows/release.yml:15`, `package.json:16`).
+Pushed plain `x.y.z` tags trigger the package release workflow. Metadata requires the tag to equal the stable package version, the reusable CI workflow runs Linux and Windows verification, and only then does the publish job install, build and publish through npm trusted publishing with provenance. Cloudflare deployment remains a separate workspace command (`.github/workflows/release.yml:3`, `.github/workflows/release.yml:13`, `.github/workflows/release.yml:23`, `package.json:16`).
