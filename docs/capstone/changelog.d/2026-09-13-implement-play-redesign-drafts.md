@@ -1,0 +1,203 @@
+## 2026-09-13 - implement: 2026-09-10-play-redesign-drafts
+key: implement/2026-09-10-play-redesign-drafts@Q5
+
+- What: A four-section Play workspace with durable local setup drafts, responsive media/subtitle preview and explicit reviewed admission.
+- Approach: Reuse the existing SQLite, staging, provider/catalogue, cost and rendering boundaries; add versioned documents, attachment ownership and durable Start receipts without new dependencies.
+- Alternative rejected: A long collapsible form retains the separation between editing controls and preview.
+- Alternative rejected: An all-visible form retains crowding.
+- Alternative rejected: Browser-only persistence cannot safely retain uploaded bytes through server restarts.
+- Decision: Save incomplete raw editor values; server acknowledgement alone means Saved on this computer. Browser storage holds only the active draft ID.
+- Decision: CAS conflicts retain local input and offer Reload or Save as new. Ready shared staging survives restarts and is released only after its last owner.
+- Decision: Review resolves exact inputs and costs; only explicit Start/Queue admits work. Lost responses recover the same receipt, without a new chargeable identity.
+- Limitation: Post-commit telemetry, staging release and dispatch failures are caught separately. Receipt replay does not repeat dispatch; broader execution recovery remains reliability work.
+- Decision: Desktop shows editor plus sticky preview/summary. Below 1100 px Preview is an in-flow disclosure before the editor; the additional This run summary follows the section/action.
+- Decision: Unfinished font uploads retain explicit Keep current font recovery even when audio or captions are inactive.
+- Decision: The tutorial persists a stable server cursor and reveals hidden controls before spotlight measurement; it never starts a run.
+- Out of scope: Review checkpoints.
+- Out of scope: Reusable project templates.
+- Out of scope: Scheduled/background jobs.
+- Out of scope: Broader reliability/preflight, including the unresolved legacy WAV reuse test.
+- Out of scope: Portability, backups and storage cleanup.
+- Out of scope: Final 1.0 release acceptance.
+- Out of scope: Website changes, version bump, push and publication.
+- Task 1 completed: Durable editor documents, CAS CRUD and attachment topology.
+- Task 2 completed: Owned uploads and restart-safe staging.
+- Task 3 completed: Resolve and persist review from exact acknowledged inputs.
+- Task 4 completed: Durable Start intent and atomic one/batch receipt.
+- Task 5 completed: Typed HTTP draft/upload/review/start and owned preview file routes.
+- Task 6 completed: Persist a recoverable tutorial cursor.
+- Task 7 completed: Typed client and serializable form boundary.
+- Task 8 completed: One session owner, autosave, restore/conflicts and Drafts controls.
+- Task 9 completed: Four sections, content/output groups, one summary and exact error navigation.
+- Task 10 completed: Durable media/upload ownership and pending font lifetime.
+- Task 11 completed: Persistent responsive style preview without changing project editor behavior.
+- Task 12 completed: Full-page bound review, batch persistence and uncertain Start recovery.
+- Task 13 completed: Tutorial reload state and reveal-before-measurement.
+- Task 14 completed: Prove real app restart, asset retention and one-time admission.
+- Task 15 completed: Verify the approved layout, review the full diff and absorb references.
+- Reference absorbed/refreshed: `01-architecture.md` — draft/tutorial HTTP contracts, dependency boundaries and Play composition.
+- Reference absorbed/refreshed: `02-models.md` — draft documents, owned attachments, reviews, receipts and tutorial schemas.
+- Reference absorbed/refreshed: `04-data-flow.md` — autosave, owned uploads, explicit review/admission and recovery lifecycles.
+- Reference absorbed/refreshed: `06-testing.md` — draft/Play test inventory and real restart/Windows coverage.
+- Reference absorbed/refreshed: `07-operations.md` — migration, retained staging, durable recovery and verification commands.
+- Reference absorbed/refreshed: `logic/04-run-admission.md` — explicit bound Review and Start.
+- Reference absorbed/refreshed: `logic/05-provided-outputs.md` — draft ownership and restart retention.
+- Reference absorbed/refreshed: `logic/18-cost-review-batch.md` — reviewed keyword variants and same-identity batch admission.
+- Reference absorbed/refreshed: `logic/22-play-drafts.md` — durable editing, conflicts, uploads, discard and uncertain Start.
+- Reference absorbed/refreshed: `mockup/06-play.md` — four-section composition and responsive preview.
+- Reference absorbed/refreshed: `uiux/01-direction.md` — approved Play control-room composition.
+- Reference absorbed/refreshed: `uiux/03-experience.md` — autosave feedback, keyboard flow and durable tutorial.
+- Reference absorbed/refreshed: `uiux/screens/02-play.md` — observed controls and responsive layout.
+- Reference absorbed/refreshed: `uiux/screens/11-first-run-tutorial.md` — stable cursor and reveal-before-spotlight.
+- Reference absorbed/refreshed: `logic/README.md` — draft scenario index.
+- Reference absorbed/refreshed: `mockup/README.md` — draft companion link.
+- Reference absorbed/refreshed: `uiux/README.md` — draft companion link.
+- Reference absorbed/refreshed: `00-index.md` — draft module and companion references.
+- Review loop: Nine full-diff rounds; twelve named confirmed finding groups fixed, plus the related upload-unmount lifetime case. Two pre-review accessibility corrections also landed. Rounds 8 and 9 had zero new confirmed findings at 89db8f6d89816b7e2457cb8abd6dade8acb42aa5.
+- Review findings fixed: complete Review disclosure; exact error targets; missing selected image prompt; empty chunk count; upload prerequisite retry; raw numeric retention; draft timestamp; create/fork replay authority; actual Reload after lost creation acknowledgement; unavailable generic choices; confirmed discard recovery; inactive font recovery.
+- Review refutation: One explicit narrow-summary layout hypothesis was refuted against the approved mockup and Task 11; the shipped arrangement is recorded above.
+- Validation: Final Linux suite 362 files, 2,886 passed and one existing skip; affected font-recovery suite 260 passed; workspace types, lint and build passed.
+- Validation: Native Windows draft/media/revision suites 695 passed and one existing skip on identical backend source; final exact-source web/app build passed.
+- Validation: Real app restart/receipt tests plus actual browser save retry, lost acknowledgements, conflict fork, upload races, tutorial recovery, both themes at 1440 and 390 px, native 200% zoom and both aspect ratios.
+- Scope limitation: Targeted reference absorption is complete; unrelated legacy map/schema drift is retained for release acceptance.
+- Diff baseline: 29b88494eb404ea36f797929599db6a6e4ac8603..89db8f6d89816b7e2457cb8abd6dade8acb42aa5; 27 source commits, 140 paths.
+- Diff: `.github/workflows/ci.yml`.
+- Diff: `packages/app/src/edge/http/app.ts`.
+- Diff: `packages/app/src/edge/http/draft-files.test.ts`.
+- Diff: `packages/app/src/edge/http/draft-files.ts`.
+- Diff: `packages/app/src/edge/http/draft-problem.ts`.
+- Diff: `packages/app/src/edge/http/drafts.test.ts`.
+- Diff: `packages/app/src/edge/http/drafts.ts`.
+- Diff: `packages/app/src/edge/http/multipart.ts`.
+- Diff: `packages/app/src/edge/http/staging.test.ts`.
+- Diff: `packages/app/src/edge/http/staging.ts`.
+- Diff: `packages/app/src/edge/http/tutorial.test.ts`.
+- Diff: `packages/app/src/edge/http/tutorial.ts`.
+- Diff: `packages/app/src/kernel/db/migrate.test.ts`.
+- Diff: `packages/app/src/kernel/db/migrations/0006-play-drafts.sql`.
+- Diff: `packages/app/src/main.test.ts`.
+- Diff: `packages/app/src/main.ts`.
+- Diff: `packages/app/src/slices/admission/start.ts`.
+- Diff: `packages/app/src/slices/batch/index.test.ts`.
+- Diff: `packages/app/src/slices/batch/index.ts`.
+- Diff: `packages/app/src/slices/play-drafts/attachments.test.ts`.
+- Diff: `packages/app/src/slices/play-drafts/convert.test.ts`.
+- Diff: `packages/app/src/slices/play-drafts/convert.ts`.
+- Diff: `packages/app/src/slices/play-drafts/creation-replay.test.ts`.
+- Diff: `packages/app/src/slices/play-drafts/draft.fake.ts`.
+- Diff: `packages/app/src/slices/play-drafts/model.ts`.
+- Diff: `packages/app/src/slices/play-drafts/readiness.test.ts`.
+- Diff: `packages/app/src/slices/play-drafts/readiness.ts`.
+- Diff: `packages/app/src/slices/play-drafts/recovery.test.ts`.
+- Diff: `packages/app/src/slices/play-drafts/repo.ts`.
+- Diff: `packages/app/src/slices/play-drafts/review-inputs.ts`.
+- Diff: `packages/app/src/slices/play-drafts/review-readiness.test.ts`.
+- Diff: `packages/app/src/slices/play-drafts/review.test.ts`.
+- Diff: `packages/app/src/slices/play-drafts/review.ts`.
+- Diff: `packages/app/src/slices/play-drafts/schema.test.ts`.
+- Diff: `packages/app/src/slices/play-drafts/schema.ts`.
+- Diff: `packages/app/src/slices/play-drafts/service.test.ts`.
+- Diff: `packages/app/src/slices/play-drafts/service.ts`.
+- Diff: `packages/app/src/slices/play-drafts/start-repo.ts`.
+- Diff: `packages/app/src/slices/play-drafts/start.test.ts`.
+- Diff: `packages/app/src/slices/play-drafts/start.ts`.
+- Diff: `packages/app/src/slices/play-drafts/uploads.test.ts`.
+- Diff: `packages/app/src/slices/play-drafts/uploads.ts`.
+- Diff: `packages/app/src/slices/revisions/mutations-media.test.ts`.
+- Diff: `packages/app/src/slices/revisions/mutations.ts`.
+- Diff: `packages/app/src/slices/settings/tutorial-schema.ts`.
+- Diff: `packages/app/src/slices/settings/tutorial.test.ts`.
+- Diff: `packages/app/src/slices/settings/tutorial.ts`.
+- Diff: `packages/app/src/slices/storage/reconcile.test.ts`.
+- Diff: `packages/app/src/slices/storage/reconcile.ts`.
+- Diff: `packages/app/src/slices/storage/repo.ts`.
+- Diff: `packages/app/src/slices/storage/staging-refs.test.ts`.
+- Diff: `packages/app/src/slices/storage/staging-refs.ts`.
+- Diff: `packages/app/src/slices/storage/staging.ts`.
+- Diff: `packages/app/test/e2e/play-drafts.http.ts`.
+- Diff: `packages/app/test/e2e/play-drafts.test.ts`.
+- Diff: `packages/web/src/components/shell.tsx`.
+- Diff: `packages/web/src/lib/form-drafts.tsx`.
+- Diff: `packages/web/src/play/admission.test.ts`.
+- Diff: `packages/web/src/play/admission.ts`.
+- Diff: `packages/web/src/play/chunking-draft.test.tsx`.
+- Diff: `packages/web/src/play/chunking.tsx`.
+- Diff: `packages/web/src/play/content-section.tsx`.
+- Diff: `packages/web/src/play/creation-replay.test.tsx`.
+- Diff: `packages/web/src/play/cue-sheet.tsx`.
+- Diff: `packages/web/src/play/draft-api.test.ts`.
+- Diff: `packages/web/src/play/draft-api.ts`.
+- Diff: `packages/web/src/play/draft-compat.test.tsx`.
+- Diff: `packages/web/src/play/draft-context.tsx`.
+- Diff: `packages/web/src/play/draft-discard-conflict.test.tsx`.
+- Diff: `packages/web/src/play/draft-list.test.tsx`.
+- Diff: `packages/web/src/play/draft-list.tsx`.
+- Diff: `packages/web/src/play/draft-recovery.test.tsx`.
+- Diff: `packages/web/src/play/draft-restore.ts`.
+- Diff: `packages/web/src/play/draft-save.ts`.
+- Diff: `packages/web/src/play/draft-session.test.tsx`.
+- Diff: `packages/web/src/play/draft-sqlite-fixture.ts`.
+- Diff: `packages/web/src/play/draft-state.test.ts`.
+- Diff: `packages/web/src/play/draft-state.ts`.
+- Diff: `packages/web/src/play/draft-upload-races.test.tsx`.
+- Diff: `packages/web/src/play/draft-upload-retry.test.tsx`.
+- Diff: `packages/web/src/play/draft-upload-test-fixture.ts`.
+- Diff: `packages/web/src/play/draft-uploads.test.tsx`.
+- Diff: `packages/web/src/play/draft-uploads.ts`.
+- Diff: `packages/web/src/play/field-targets.test.tsx`.
+- Diff: `packages/web/src/play/field-targets.ts`.
+- Diff: `packages/web/src/play/font-recovery.test.tsx`.
+- Diff: `packages/web/src/play/format-picker.tsx`.
+- Diff: `packages/web/src/play/image-prompts-draft.test.tsx`.
+- Diff: `packages/web/src/play/image-prompts.test.tsx`.
+- Diff: `packages/web/src/play/image-prompts.tsx`.
+- Diff: `packages/web/src/play/keywords.test.tsx`.
+- Diff: `packages/web/src/play/keywords.tsx`.
+- Diff: `packages/web/src/play/media-rails.tsx`.
+- Diff: `packages/web/src/play/missing-options.test.tsx`.
+- Diff: `packages/web/src/play/output-preview.tsx`.
+- Diff: `packages/web/src/play/outputs-section.tsx`.
+- Diff: `packages/web/src/play/pickers.tsx`.
+- Diff: `packages/web/src/play/play-test-fixture.tsx`.
+- Diff: `packages/web/src/play/provided.tsx`.
+- Diff: `packages/web/src/play/rail-frame.tsx`.
+- Diff: `packages/web/src/play/raw-numbers-draft.test.tsx`.
+- Diff: `packages/web/src/play/refusal-focus.test.tsx`.
+- Diff: `packages/web/src/play/review-section.tsx`.
+- Diff: `packages/web/src/play/review-state.ts`.
+- Diff: `packages/web/src/play/review-summary.test.tsx`.
+- Diff: `packages/web/src/play/review-summary.tsx`.
+- Diff: `packages/web/src/play/review-test-fixture.ts`.
+- Diff: `packages/web/src/play/review-test-harness.tsx`.
+- Diff: `packages/web/src/play/review.test.tsx`.
+- Diff: `packages/web/src/play/run-review.tsx`.
+- Diff: `packages/web/src/play/section-navigation.tsx`.
+- Diff: `packages/web/src/play/sections.test.tsx`.
+- Diff: `packages/web/src/play/sections.ts`.
+- Diff: `packages/web/src/play/setup-summary.tsx`.
+- Diff: `packages/web/src/play/stage-rails.tsx`.
+- Diff: `packages/web/src/play/start.test.tsx`.
+- Diff: `packages/web/src/play/state.ts`.
+- Diff: `packages/web/src/play/style-section.test.tsx`.
+- Diff: `packages/web/src/play/style-section.tsx`.
+- Diff: `packages/web/src/play/switches.tsx`.
+- Diff: `packages/web/src/play/thinking.tsx`.
+- Diff: `packages/web/src/play/use-draft-session.ts`.
+- Diff: `packages/web/src/play/use-draft-uploads.ts`.
+- Diff: `packages/web/src/play/use-review-choices.ts`.
+- Diff: `packages/web/src/routes/play.test.tsx`.
+- Diff: `packages/web/src/routes/play.tsx`.
+- Diff: `packages/web/src/subtitles/controls.test.tsx`.
+- Diff: `packages/web/src/subtitles/controls.tsx`.
+- Diff: `packages/web/src/subtitles/font-picker.tsx`.
+- Diff: `packages/web/src/subtitles/style-preview.tsx`.
+- Diff: `packages/web/src/tutorial/context.tsx`.
+- Diff: `packages/web/src/tutorial/model.ts`.
+- Diff: `packages/web/src/tutorial/play-navigation.test.tsx`.
+- Diff: `packages/web/src/tutorial/runner.test.tsx`.
+- Diff: `packages/web/src/tutorial/runner.tsx`.
+- Diff: `packages/web/src/tutorial/session-api.ts`.
+- Diff: `packages/web/src/tutorial/session.test.tsx`.
+- Diff: `packages/web/src/tutorial/step-content.tsx`.
+- Diff: `packages/web/src/tutorial/test-fixture.tsx`.
+- Diff: `packages/web/src/tutorial/use-session.ts`.

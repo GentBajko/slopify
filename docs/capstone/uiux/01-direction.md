@@ -1,6 +1,17 @@
 ---
-generated_date: 2026-09-02
-capstone_version: 5.2.0
+generated_date: '2026-09-13'
+generated_at_commit: 89db8f6d8981
+paths_covered:
+  - :(top)packages/app/src/slices/play-drafts/**
+  - :(top)packages/app/src/slices/storage/**
+  - :(top)packages/app/src/slices/settings/tutorial*
+  - :(top)packages/web/src/play/**
+  - :(top)packages/web/src/routes/play.tsx
+  - :(top)packages/web/src/subtitles/**
+  - :(top)packages/web/src/tutorial/**
+content_hash: 2b9dab9b7f7b
+absorbed_from:
+  - features/2026-09-10-play-redesign-drafts@2026-09-13
 ---
 
 # 01 Direction
@@ -24,7 +35,7 @@ capstone_version: 5.2.0
 | 09 intros and outros | Operate | 4 / 3 / 6 |
 | 10 usage | Operate | 4 / 3 / 6 |
 
-Dial reasoning: the app is used for hours while runs progress, so density and calm outrank expression; the landing has one job, getting the command copied, so it affords asymmetry and one authored motion moment. Asymmetric layouts collapse to a single column below 900 px.
+Dial reasoning: the app is used for hours while runs progress, so density and calm outrank expression; the landing has one job, getting the command copied, so it affords asymmetry and one authored motion moment. Other asymmetric layouts collapse below 900 px; Play uses its own 1100 px breakpoint.
 
 ## Brand facts
 
@@ -35,7 +46,7 @@ Slopify is a self-aware pun on "slop", the pejorative for AI-generated media, an
 1. Mechanism: one press turns a prompt and a handful of keywords into a narrated slideshow video: research, article, voice, images, cut, on the user's own keys, on the user's own machine.
 2. Scene: a solo operator at a desk in the evening, second monitor beside a video editor, queueing the next video while the last one renders.
 3. Cultural home: faceless-channel YouTube and its tooling (DAW and NLE transport bars and meters), the creator spreadsheet, and the meme culture that coined "slop", which this product answers by wearing the word.
-4. What the flagship must prove: a full video is one configured form and one button away, and nothing about the machine is hidden.
+4. What the flagship must prove: a saved setup leads through explicit Review to Start, with providers, outputs and estimated costs visible before admission.
 
 ## Struck
 
@@ -53,11 +64,11 @@ The edit bay (matte console hardware); the control room (tally lamps and engrave
 
 **OWN-WORLD.** Off-black matte surfaces in dark, off-white paper-board surfaces in light; engraved-label typography (Barlow Condensed, uppercase, tracked) beside plain Barlow values; tally lamps as the status language (unlit pending, pulsing slime running, steady dim green done, red failed, amber canceled); horizontal rails and rundown sheets instead of cards; one saturated fill per screen, the Play key or the active lamp; the mark's slime green as the only accent. Recognizable with all content removed by the rail rhythm, the lamp dots, and the small tracked labels.
 
-**STORY.** The visitor understands that a video is a rundown of six stages they control; believes nothing is hidden because every provider, prompt, and keyword is on the sheet before they press play; and does one thing: fills the sheet and presses the key, then watches the lamps light.
+**STORY.** Configure Content, Outputs and Style, inspect Review, then explicitly Start. Saved drafts let the operator return without reconstructing the setup. The project page carries the running stages and their lamps.
 
-**FIRST VIEWPORT (06 play, 1440 px).** Two columns. Left: six stage rails stacked, each a full-width row: lamp, glyph, name, a segmented source switch styled as a hardware selector, then that stage's controls inline; a provided stage collapses to its filename, an Off stage to one line. Right, sticky: the cue sheet: video title, format, intro, outro, LLM provider and model; then Keywords with a centered "Common" header and its fields, then a "Text" | "Image" split with a vertical divider; at the bottom the Play key, a large physical-looking key carrying the mark, the only saturated fill on the screen besides the lamps. Memory test: "the form with the lamps and the big green key with the dripping play logo".
+**FIRST VIEWPORT (06 play, 1440 px).** New run, save status and draft actions lead into four numbered section links. A flexible active editor sits beside a 360 px sticky preview and read-only setup summary, inside a 1320 px maximum width. Style shows the actual 16:9 or 9:16 frame, font, size and caption position. Below 1100 px the preview becomes an in-flow disclosure before the editor; the additional This run summary follows the section and its action. Continue and Review guide setup; only explicit Start or Queue admits work. See `screens/02-play.md` and `packages/web/src/routes/play.tsx`.
 
-**Signature interaction: going on air.** Pressing Play depresses the key; on the project page each stage's lamp lights when it starts, its state word flips to RUNNING, a thin meter under the row fills with k of N, and the lamp settles to steady on done. Cancel kills every lamp at once.
+**Signature interaction: going on air.** Review presents the resolved setup and costs. Explicit Start creates the project; the project page then exposes each stage's state and progress. Autosave, section navigation and preview never start work.
 
 **Honest risk.** Signage kitsch. The discipline: flat surfaces, no bevels, no fake screws; a lamp is a dot and a colour, a label is a type style; nothing else pretends to be hardware.
 
@@ -74,7 +85,7 @@ Use-scene sentence: "A solo operator at a desk in the evening, second monitor be
 - No gradient anywhere, no glass, no glow beyond the lamp halo, no sparkle icon, no "magic" copy.
 - No cards as page structure; rails, rundown sheets, and dividers group content.
 - No serif, no monospace costume; tabular figures carry timecodes and counts.
-- No eyebrow labels; no section numbers; no hero-metric template on the landing: the tally board is a real live instrument, not decoration.
+- No decorative eyebrow labels or section numbers; Play uses numbered navigation to communicate its four setup sections. No hero-metric template on the landing: the tally board is a real live instrument, not decoration.
 - The premium-consumer palette and the AI-purple palette are not used.
 
 ## Alternates and canon declined

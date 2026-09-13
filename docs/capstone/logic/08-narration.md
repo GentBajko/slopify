@@ -1,77 +1,58 @@
 ---
-absorbed_from: features/2026-09-09-pausable-optional-runs@2026-09-10
+absorbed_from:
+- features/2026-09-09-pausable-optional-runs@2026-09-10
+- features/2026-09-10-editable-projects@2026-09-12
 scenario: narration
 mockup_row: S6
-screens: [06-play, 08-project]
-depends_on: [01-pipeline-lifecycle, 02-provider-credentials, 05-provided-outputs, 07-article-writing]
-generated_date: 2026-09-10
-capstone_version: 5.2.0
+screens:
+- 06-play
+- 08-project
+depends_on:
+- 01-pipeline-lifecycle
+- 02-provider-credentials
+- 05-provided-outputs
+- 07-article-writing
+generated_date: '2026-09-12'
+generated_at_commit: 29b88494eb40
 ---
 
 # 08 Narration
 
-The audio stage: end matter split out, the body chunked per the user's choice, synthesized in parallel, concatenated into one file.
+Generated narration is planned as logical chunks and exact physical provider requests. Revisions share matching completed requests; changed text or request settings require an explicitly reviewed rebuild. Whole supplied audio follows the provided-content rules in scenario05.
 
 ## Trigger & preconditions
 
-- Trigger: scenario 01 step 4 starts the audio stage when the article is `done` or `provided` and the audio source is Generate.
-- Preconditions: TTS provider keyed, voice chosen from the settings list, chunking mode chosen (scenarios 02, 04); plain-text narration source on the project (scenario 05, scenario 07).
-- Actor: none beyond the pipeline.
+Audio Generate needs a resolved article and any selected entry text. New provider submissions require an enabled model, configured provider and saved voice. Save alone never starts narration; initial run admission or explicit rebuild supplies dispatch authority (`slices/rebuild/service.ts`, `service-readiness.ts`).
 
 ## Steps
 
-1. End-matter split, run once when the article becomes `done` or `provided`: find the first section whose heading is "Sources Consulted" or "Pronunciation Glossary" (case-insensitive); that section and everything after it are removed from the narration source and written as two separate files on the project, sources and glossary, each shown and downloadable beside the article. Chapter headings stay and are spoken. The glossary is a file only; its IPA is never sent to the TTS.
-2. Chunk the narration source per the run's chunking choice: Whole text = one request; Per paragraph = one request per paragraph; Every ~N words = consecutive chunks, each ending at the last sentence boundary at or before N words, default N = 500. Every N characters uses the same sentence-boundary rule with a Unicode character count (including internal spaces), default N = 3000; the user can set 1–1,000,000 characters. A single sentence longer than the chosen budget stays whole until provider-limit planning.
-3. Schedule every chunk through the app-wide provider queue, at most five active calls with lower per-provider limits, using the chosen provider and voice; stream into the page when the provider streams (scenario 01).
-4. Concatenate the chunk audio in chunk order with no added silence; provider default sample rate; one output file whose container is `stack`'s (drawn as mp3 in the mockup).
-5. Intro and outro: each picked segment's text is one TTS request with the same provider and voice, stored as its own audio file with its duration; body chunking does not apply to them. A failed request fails the audio stage under the same rules.
-6. Store on the project: the text sent per chunk and per segment, provider, voice, chunking choice, and every audio duration. Durations feed scenario 11 (video timing) and scenario 16 (audio hours).
-7. Mark the stage `done`.
+1. Split Sources Consulted and Pronunciation Glossary end matter from the article. Preserve those sections as separate downloadable text; normalize the spoken body to plain text. Chapter headings remain spoken (`slices/article/split.ts`, `plain.ts`).
+2. Choose logical body chunks: whole text, paragraphs, sentence-bounded word budget (default500), or sentence-bounded Unicode character budget (default3000). A sentence longer than the selected logical budget remains whole until provider-limit planning. Character budget supports1–1,000,000 (`slices/narration/chunk.ts`).
+3. Assign stable logical identities from normalized text plus duplicate occurrence. Apply a saved text or provided-audio override for that logical chunk. Plan exact physical request pieces against the selected model's catalogue limit before dispatch; adapters do not invisibly split requests (`slices/rebuild/recipe-audio.ts`, `slices/narration/plan.ts`).
+4. Request identity covers normalized text, provider/model/voice, segment and whole-text context when applicable. An explicit regeneration token prevents ordinary exact-request reuse. Reuse only matching completed pieces with available registered bytes; files from retained revisions can satisfy a new revision without another request (`slices/rebuild/narration-reuse.ts`, `runtime-narration-reuse.ts`).
+5. Submit through the attempt wrapper and app-wide provider queue: at most five concurrent requests, with lower provider-specific limits. Check current work authority after waiting and before each new submission. Stream bounded audio previews when supported; key them by revision/work/piece (`kernel/runner/providers.ts`, `slices/rebuild/runtime-provider.ts`).
+6. Concatenate physical parts in saved order into the body/entry output. A single part can be copied unchanged; multiple parts use FFmpeg. Intro and outro have independent text dependencies and their own logical group/request pieces with the same narration selection. Provided whole narration does not synthesize extra entries (`slices/rebuild/recipe-audio.ts`, `runtime-local.ts`).
+7. Publish immutable audio, durations and request descriptors to the originating revision. A matching current revision may also select the result; an unrelated newer edit cannot be overwritten by an old completion (`slices/revisions/publish.ts`).
 
-## Branches
+## Editing and rebuild review
 
-- Article has the end-matter headings → files written and body trimmed; no such headings → nothing split, no files.
-- Chunking mode → step 2's four cases.
+- Edit one logical chunk's text, upload its replacement audio, or request Regenerate in the project editor. Save retains the edit without admitting work. Regenerate removes an incompatible asset override and staged upload, preserves a text override, and cancels late upload completion (`web/project/narration-editor.tsx`).
+- Changes to normalized text or provider/model/voice prevent incompatible reuse. A paragraph edit can change neighboring boundaries; the preview shows the resulting affected pieces rather than promising one paragraph equals one request.
+- Whole-text mode is one logical chunk and binds physical request identity to that entire text. Editing it invalidates the whole logical request context even if the provider limit required several physical requests; the rebuild review explains this limitation.
+- Review labels retain original logical chunk numbers even for a selected subset. Expand request text and inspect provider/model/voice before explicit Start (`slices/rebuild/preview-details.ts`, `web/project/rebuild-review.tsx`).
+- Changing only image order, subtitle style or manual caption timings retains compatible narration. Caption/export rebuilds are local unless other selected missing inputs require a provider.
 
-## Unhappy paths
+## Unhappy paths and recovery
 
-- Chunk call fails → scenario 01's retry policy per chunk, idle timeout when streamed.
-- One chunk exhausts its retries → the whole stage fails; manual retry keeps completed chunks and re-runs only failed or not-started ones, then concatenates.
-- Voice ID rejected by the provider → the error names the voice ID (scenario 02).
-- Text longer than the model's request limit → provider-limit planning splits unfinished chunks before synthesis; completed chunks are preserved. A stricter account limit can still return a provider error.
-- Narration source empty after the split → immediate stage failure "nothing to narrate", no retries.
-- Interrupted process → stage failed "interrupted" (scenario 01); completed chunks kept for the retry.
-- Cancel → scenario 13.
+- Provider failure follows the attempt policy; completed physical pieces remain available for explicit retry. Reuse does not depend on the current provider still offering an old model when no new submission is needed.
+- A current catalogue limit reduction may refuse new text above that limit. Readiness and request planning use the same catalogue maximum, including Inworld asynchronous requests above its streaming threshold (`service-request-limits.test.ts`).
+- Accepted asynchronous jobs persist their continuation token on the exact piece. Recovery retrieves accepted work instead of creating a replacement job. A changed/revoked revision can retain its completion in history without enabling further requests.
+- Interrupted or uncertain work remains explicitly resumable; uncertain paid submissions may need an additional repeat-charge acknowledgement. This is not a guarantee of exactly-once execution at an external provider.
+- Empty normalized narration is unresolved/invalid and cannot silently produce a completed export.
+- If final concatenation or WAV export fails, retained pieces and previous completed exports remain available. Missing export bytes are rebuilt locally from intact narration after review; surviving metadata alone is not a complete export bundle.
 
-## State transitions
+## Invariants and evidence
 
-- Stage: per scenario 01.
-- Per chunk, persisted for resume: `pending` → `running` → `done` | `failed`.
+Save never performs provider or final-render work. Reuse requires exact request identity and actual available bytes. Each result retains original revision ownership. Audio Off permits silent video and turns incompatible subtitles Off; Video Off with active narration produces WAV.
 
-## Invariants
-
-- Narration never contains end matter.
-- Chunk order is preserved in the output file.
-- Audio duration is recorded before the video stage starts (scenario 01 step 5).
-- The concatenated body file plus the picked intro and outro files are the project's only audio outputs.
-
-## Outcomes & side effects
-
-- Success: one audio file, its duration, the per-chunk record, the sources and glossary files on the project; video may start once images and thumbnail are also ready.
-- Failure: stage `failed` with the provider's error text (scenario 01).
-- Audio hours counted by scenario 16 telemetry.
-
-## Dimensions not in play
-
-- D1 authority: no actor beyond the pipeline.
-- D5 money: nothing charged in-app.
-- D6 limits: no cap on text length or chunk count; the provider's own limits surface as errors.
-- D13 notification: no channel.
-
-## Provided-content entry preparation (0.5.1)
-
-When Article is provided and Audio is generated, the Audio stage first prepares selected intro/outro text from the supplied article. Text-mode entries need no LLM; LLM-mode entries use the saved text provider. Entry text is checkpointed on the Article stage so retries and voice changes retain finished text, while synthesis uses the current voice. Uploaded narration (Audio Provide) is used as a complete file; intro/outro pickers apply only to generated narration.
-
-## Editable chunk budgets (0.8.1)
-
-Paused or failed generated narration can switch to character chunking or change N in Run providers. Save validates and stores the choice without starting generation. A changed mode or effective count clears unfinished narration pieces; saving an unchanged effective budget preserves them. Finished audio remains intact. Resume remains a separate action (`packages/app/src/slices/control/index.ts:184`, `packages/web/src/project/providers.tsx:137`).
+Behavior is covered by `recipe-audio.test.ts`, `runtime-narration-{reuse,history,regenerate}.test.ts`, `service-request-limits.test.ts`, web `narration-regeneration.test.tsx`, and composed `test/revision-narration.test.ts` / `revision-bundle-recovery.test.ts`. Exact Windows durations are checked against real FFmpeg, including short clips and WAV recovery.

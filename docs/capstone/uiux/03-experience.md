@@ -1,7 +1,20 @@
 ---
-absorbed_from: features/2026-09-10-subtitles-fonts@2026-09-10
-generated_date: 2026-09-02
-capstone_version: 5.2.0
+absorbed_from:
+  - features/2026-09-10-subtitles-fonts@2026-09-10
+  - features/2026-09-10-editable-projects@2026-09-12
+  - features/2026-09-10-play-redesign-drafts@2026-09-13
+  - features/2026-09-10-review-checkpoints@2026-09-13
+generated_date: '2026-09-13'
+generated_at_commit: 803bd5555d76
+paths_covered:
+  - :(top)packages/app/src/slices/play-drafts/**
+  - :(top)packages/app/src/slices/storage/**
+  - :(top)packages/app/src/slices/settings/tutorial*
+  - :(top)packages/web/src/play/**
+  - :(top)packages/web/src/routes/play.tsx
+  - :(top)packages/web/src/subtitles/**
+  - :(top)packages/web/src/tutorial/**
+content_hash: 2b9dab9b7f7b
 ---
 
 # 03 Experience
@@ -19,42 +32,43 @@ Rules every screen applies rather than re-decides. `build` reads this beside `02
 
 - Optimistic and immediate: switching a source, ticking a prompt, toggling theme, changing a select.
 - Waits with inline confirmation: Save in Settings, Prompts, and Intros & Outros shows a "Saved" tick beside the button for 2 s.
-- Play navigates to the project page at once; the first lamp lights when the first stage starts.
+- Play navigates only after confirmed explicit Start. Review and autosave never admit work; uncertain Start recovers the same durable receipt.
 - Anything longer than about one second shows a skeleton in the final layout's shape; no spinners in content.
 - Stage progress is the lamp, the state word, and the meter: article text streams into its rail, images appear in their grid one by one with a count, audio shows chunk k of M, research shows k of N chapters, video shows a render percentage (`logic/01`).
 
 ## Destructive actions
 
-Posture: stop and confirm. A dialog precedes each of these, names the consequence in one sentence, and offers the action verb and Cancel: delete project ("Deletes the project and every file it produced."), delete prompt or entry ("Projects that used it keep their text."), delete image ("Removed from the slideshow; the video re-renders."), cancel run ("Stops every running stage; finished outputs are kept."), discard article edit, remove key ("Projects that used this provider cannot retry until a key is saved."), remove voice. Undo is not offered; the dialog is the safety net. Dialogs are the only modal surface in the app besides the first-run notice.
+Posture: stop and confirm. A dialog precedes each of these, names the consequence in one sentence, and offers the action verb and Cancel: delete project ("Deletes the project and every file it produced."), delete prompt or entry ("Projects that used it keep their text."), cancel run ("Stops every running stage; finished outputs are kept."), discard article edit, remove key ("Projects that used this provider cannot retry until a key is saved."), remove voice. Undo is not offered; the dialog is the safety net. Dialogs are the only modal surface in the app besides the first-run notice.
 
 ## Error recovery
 
-- The user's work is never lost by a failure: the Play form keeps its values, an article edit in progress stays in the editor, staged uploads stay staged.
-- A failed stage shows the provider's error text verbatim and the attempt count under its rail, with "Retry stage" as the recovery (`logic/01`). Nothing retries silently beyond the four automatic attempts.
+- Play keeps unsaved values visible after a failed write and exposes Retry. Saved on this computer means server acknowledgement; only acknowledged content survives a process/browser loss. Conflicts offer explicit Reload or Save as a new draft.
+- Failed work displays its error and current-revision attempt count. Retry/Resume opens a fresh dependency/cost review; completed matching work is retained. Unknown submitted outcomes warn that retry may incur another charge. Save alone does not start work (`project/use-actions.ts`, `project/rebuild-review.tsx`, `logic/12`).
 - Local errors (disk, creation) show inline where the action was taken, with the OS message.
-- Subtitle alignment/render/save failure leaves the last finished export and caption downloads visible; saved output metadata decides whether the player adds native VTT captions. Font-preview failure labels the fallback. Paused projects require Save or Discard of subtitle edits before Resume (`packages/web/src/project/{subtitles,body-video}.tsx`, `subtitles/font-picker.tsx`).
+- Subtitle alignment/render/save failure leaves the last finished export and caption downloads visible; saved output metadata decides whether the player adds native VTT captions. Font-preview failure labels the fallback. Revision edits require Save or Discard before rebuilding. Cue text/timing uses complete current narration even when export has not finished; retained cues from earlier narration remain visible for explicit correction once the new timeline is available (`packages/web/src/project/revision-content.tsx`, `project/revision-caption-duration.ts`, `project/body-video.tsx`, `subtitles/font-picker.tsx`).
 - A "Key missing" stage shows the disabled control with that label and a link to Settings (`logic/02`).
 
 ## Progressive disclosure
 
-- A stage rail shows only the controls of its active source; Off and Provide collapse the rail to one line (the filename for Provide).
+- Play groups configuration into Content, Outputs, Style and Review. Active source controls disclose their inputs; project stage rails remain a separate progress surface.
+- Review checkpoints use the same explicit-save and refusal-focus language: Audio, Images and Video/export can be held from Play, while the project panel shows dependents, revision identity, approval and cross-tab reload state.
 - Research and thumbnail default to Off and read as one line until switched on.
-- Subtitles default Off; selecting files or burn-in reveals font, size, upload and a reduced-scale preview. Audio Off disables the section, Video Off permits files only. The active controls explain local English timing and the first-use model download (`packages/web/src/subtitles/controls.tsx`).
+- Subtitles default Off; selecting files or burn-in reveals font, size, upload and a reduced-scale preview. Audio Off disables caption configuration, Video Off permits files only. An unfinished font upload remains recoverable outside inactive controls through Keep current font. The active controls explain local English timing and the first-use model download (`packages/web/src/subtitles/controls.tsx`).
 - On the project page, the instructions sent to the LLM sit behind a "Show instructions" toggle per stage; sources and glossary files are links beside the article, not inline.
 - Dialogs carry no secondary options.
 
 ## Input burden
 
-- The Play form remembers the last run's choices for the browser tab's life (`logic/04`); nothing is remembered across restarts.
+- Play autosaves incomplete editor documents in SQLite after 500 ms idle. The browser stores only the active draft ID; Drafts restores acknowledged fields and completed owned uploads across restarts (`logic/22`).
 - Nothing is asked twice: a slot shared by several prompts is one field; provider and model are asked only where a stage generates.
 - Defaults are fixed by `logic/04`; the interface never invents others.
 
 ## Keyboard, pointer, touch
 
-- Desktop first. Tab order: top bar, stage rails top to bottom with their controls left to right, then the cue sheet, then Play.
-- Ctrl/Cmd+Enter presses Play from anywhere on the form when it is valid; Esc closes any dialog; Enter confirms a dialog's primary action only when its button has focus.
-- Pointer targets at least 32 px tall; no hover-only information.
-- Touch: layouts collapse to a single column below 900 px with the cue sheet after the rails and Play sticky at the bottom; no touch-specific gestures.
+- Play tab order follows section navigation and visible content. On narrow screens the in-flow Preview disclosure precedes the editor; the additional setup summary follows the section action.
+- Ctrl/Cmd+Enter opens Review; it never starts a run. Esc closes dialogs; Enter confirms a dialog action only when its button has focus.
+- Play pointer targets are at least 40 px, increasing to 44 px on narrow screens; no hover-only information.
+- Play collapses to one column below 1100 px, with an in-flow Preview disclosure and action controls; no touch-specific gestures.
 
 ## Accessibility floor
 
@@ -72,4 +86,15 @@ Deadpan and literal, owning "slop" without winking twice: "New run", "Play", "Re
 
 ## Optional getting-started guide
 
-`packages/web/src/tutorial/model.ts` defines 20 steps over the real Settings, prompt editors, Play and project pages. Step 15 spotlights the optional subtitle controls, including upload and preview; Audio Off still lets the guide continue after explaining why captions are unavailable. Progress stores readiness booleans and saved resource IDs, never keys, font bytes or form text. The guide neither generates subtitles nor starts a project (`tutorial/runner.tsx`, `step-content.tsx`).
+`packages/web/src/tutorial/model.ts` defines 20 steps over the real Settings, prompt editors, Play and project pages. Step 17 spotlights the optional subtitle controls, including upload and preview; Audio Off still lets the guide continue after explaining why captions are unavailable. A versioned server tutorial session stores stable step IDs, readiness and saved resource IDs; resources are revalidated on restore. It stores no keys, font bytes or form text. Play reveals the required section and disclosure before spotlight measurement. The guide neither generates subtitles nor starts a project (`tutorial/runner.tsx`, `step-content.tsx`).
+
+
+## Editing an existing project
+
+- Edit project mounts a local draft; Save commits a retained revision without provider calls. Rebuild affected outputs presents changed inputs, request identities in human-readable form, retained outputs and costs before Start rebuild.
+- A remote revision change preserves the draft and displays a conflict notice. Reload/discard is explicit. Identical failed request retries retain their idempotency key.
+- Replacing/removing/reordering an image changes the draft; Save marks affected output stale and keeps its last finished media. Explicit rebuild produces the replacement.
+- History opens immutable retained outputs and text parts, including partial research. Restore creates a new current revision using those retained assets, without automatic generation. Externally missing files are labeled unavailable.
+- Pending uploads hold Save/Discard. Cancellation waits for cleanup of the exact upload and cannot overwrite later draft state.
+
+Sources: `packages/web/src/project/revision-workspace.tsx`, `revision-history.tsx`, `revision-upload.tsx`, `rebuild-review.tsx`, `image-editor.tsx`.

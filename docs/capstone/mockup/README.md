@@ -1,6 +1,19 @@
 ---
-generated_date: 2026-09-02
-capstone_version: 5.2.0
+generated_date: '2026-09-13'
+generated_at_commit: 803bd5555d76
+absorbed_from:
+  - features/2026-09-10-editable-projects@2026-09-12
+  - features/2026-09-10-play-redesign-drafts@2026-09-13
+  - features/2026-09-10-review-checkpoints@2026-09-13
+paths_covered:
+  - :(top)packages/app/src/slices/play-drafts/**
+  - :(top)packages/app/src/slices/storage/**
+  - :(top)packages/app/src/slices/settings/tutorial*
+  - :(top)packages/web/src/play/**
+  - :(top)packages/web/src/routes/play.tsx
+  - :(top)packages/web/src/subtitles/**
+  - :(top)packages/web/src/tutorial/**
+content_hash: 2b9dab9b7f7b
 ---
 
 # Slopify mockup
@@ -16,9 +29,9 @@ Screens as markdown wireframes, one file each, numbered in journey order. `rule:
 | [03 Settings](03-settings.md) | J1, J2 | `packages/web/src/routes/settings.tsx` |
 | [04 Prompts](04-prompts.md) | J2 | `packages/web/src/routes/prompts.tsx` |
 | [05 Prompt editor](05-prompt-editor.md) | J2 | `packages/web/src/routes/prompt-editor.tsx` |
-| [06 Play](06-play.md) | J2, J3, J4 | `packages/web/src/routes/play.tsx`, `packages/web/src/play/` |
+| [06 Play](06-play.md) | J2, J3, J4 | `packages/web/src/routes/play.tsx`, `packages/web/src/play/`, checkpoint setup |
 | [07 Projects](07-projects.md) | J3, J6 | `packages/web/src/routes/projects.tsx` |
-| [08 Project page](08-project.md) | J3, J4, J5, J6 | `packages/web/src/routes/project.tsx`, `packages/web/src/project/` |
+| [08 Project page](08-project.md) | J3, J4, J5, J6 | `packages/web/src/routes/project.tsx`, `packages/web/src/project/`, checkpoint approval |
 | 09 Intros & Outros library (not drawn) | J2 | `packages/web/src/routes/entries.tsx` |
 | 10 Usage (not drawn) | J6 | `packages/web/src/routes/usage.tsx` |
 
@@ -32,7 +45,7 @@ App shell on 02-08: nav Projects / Play / Prompts / Settings, footer with donati
 | J2 first-run setup | 02 → 03 (keys, voices, outro text) → 04 → 05 → 04 → 06 |
 | J3 make a video | 07 → 06 → 08 (stages run) → download mp4 |
 | J4 bring your own | 06 (Provide on any stage) → 08 |
-| J5 revise | 08 → edit article / re-run audio / regenerate image / re-render → 08 → download |
+| J5 revise | 08 → Edit project → Save → Review affected rebuild → Start → download; History → Restore saves a new revision |
 | J6 revisit | 07 → 08 → downloads |
 
 ## Scenarios for `logic`
@@ -91,3 +104,5 @@ Applied to the wireframes above; kept as the trail of what changed.
 - Provider dropdowns list every supported provider with unkeyed ones greyed out, superseding 06's assumption.
 - Usage page: a new screen showing this install's own all-time telemetry totals. Not drawn.
 - 02 First-run notice: its tracked-counters list must match `logic/16-telemetry.md` steps 3-4 exactly (tokens per stage with provider and model, audio seconds, images, thumbnails, videos, projects; app version), superseding the shorter list drawn.
+
+Play now uses durable local drafts, explicit Review/Start and four setup sections. See [draft lifecycle](../logic/22-play-drafts.md).

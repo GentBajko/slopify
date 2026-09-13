@@ -10,14 +10,17 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | Composition root | `packages/app/src/main.ts:86` |
 | HTTP API and SSE | `packages/app/src/edge/http/*.ts`, `packages/app/src/edge/events/*.ts` |
 | Stage-graph runner and retry wrapper | `packages/app/src/kernel/runner/` |
+| Immutable project revisions and execution | `packages/app/src/slices/revisions/index.ts`, `packages/app/src/slices/rebuild/service.ts`, `packages/app/src/main.ts:326` |
 | CLI executable settings and launchers | `packages/app/src/slices/settings/cli-paths.ts`, `packages/app/src/kernel/cli-command.ts`, `packages/app/src/adapters/llm/` |
 | Provider ports and adapters | `packages/app/src/kernel/ports/`, `packages/app/src/adapters/{llm,tts,image,alignment,fake}/` |
-| Pipeline slices | `packages/app/src/slices/{research,article,narration,images,thumbnail,video,subtitles,fonts,reruns,cancel,control,admission,storage,library,settings,telemetry}/` |
+| Pipeline slices | `packages/app/src/slices/{research,article,narration,images,thumbnail,video,subtitles,fonts,reruns,cancel,control,admission,storage,library,settings,telemetry,checkpoints}/` |
 | Curated model catalogue, pricing and limits | `packages/app/src/catalog/store.ts:24`, `packages/app/src/catalog/registry.ts:7` |
 | Batch admission and scheduling | `packages/app/src/edge/http/planning.ts:32`, `packages/app/src/slices/batch/index.ts:73` |
 | Request scheduling | `packages/app/src/kernel/runner/queue.ts:12` |
 | Cost arithmetic | `packages/app/src/slices/estimate/index.ts:21` |
 | App updates | `packages/app/src/updater/service.ts:1`, `packages/app/src/edge/http/update.ts:6` |
+| Durable Play drafts and admission receipts | `packages/app/src/slices/play-drafts/`, `packages/app/src/edge/http/drafts.ts` |
+| Review checkpoint persistence, authority and project controls | `packages/app/src/slices/checkpoints/`, `packages/app/src/edge/http/checkpoints.ts`, `packages/web/src/project/checkpoint-*.tsx` |
 | SQLite and migrations | `packages/app/src/kernel/db/` |
 | React SPA | `packages/web/src/main.tsx` |
 | Marketing site | `packages/site/` |
@@ -63,15 +66,16 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 
 | File | What it is |
 |---|---|
+| [logic/README.md](logic/README.md) | Implemented business scenarios, including retained revisions |
 | [mockup/README.md](mockup/README.md) | Mockup index: screens, journeys, scenarios handed to `logic`, assumed items |
 | [mockup/01-marketing-page.md](mockup/01-marketing-page.md) | Screen: slopify.stream marketing page |
 | [mockup/02-first-run-notice.md](mockup/02-first-run-notice.md) | Screen: once-per-machine telemetry notice |
 | [mockup/03-settings.md](mockup/03-settings.md) | Screen: API keys, CLI executable paths, voices, playback settings |
 | [mockup/04-prompts.md](mockup/04-prompts.md) | Screen: prompts list by kind |
 | [mockup/05-prompt-editor.md](mockup/05-prompt-editor.md) | Screen: prompt editor with `{{keyword}}` slots |
-| [mockup/06-play.md](mockup/06-play.md) | Screen: run configuration, subtitle fonts and play |
+| [mockup/06-play.md](mockup/06-play.md) | Screen: durable drafts, Content / Outputs / Style / Review and explicit Start |
 | [mockup/07-projects.md](mockup/07-projects.md) | Screen: projects list |
-| [mockup/08-project.md](mockup/08-project.md) | Screen: project pipeline, subtitle restyling and downloads |
+| [mockup/08-project.md](mockup/08-project.md) | Screen: retained project revisions, content/media/caption edits, History and explicit rebuild |
 | [uiux/README.md](uiux/README.md) | UI/UX design index: direction, system, experience, assumed items |
 | [uiux/01-direction.md](uiux/01-direction.md) | Design read, mode map, the control-room direction contract |
 | [uiux/02-system.md](uiux/02-system.md) | Tokens: type, colour per theme, spacing, icons, motion, component library, implementation constraints |
@@ -81,7 +85,7 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | [changelog.md](changelog.md) | Append-only ledger of every stage run and its decisions |
 | [uiux/screens/01-projects.md](uiux/screens/01-projects.md) | Observed implemented surface |
 | [uiux/screens/02-play.md](uiux/screens/02-play.md) | Observed implemented surface |
-| [uiux/screens/03-project.md](uiux/screens/03-project.md) | Observed implemented surface |
+| [uiux/screens/03-project.md](uiux/screens/03-project.md) | Current revision workspace, granular editors, retained media and review |
 | [uiux/screens/04-prompts.md](uiux/screens/04-prompts.md) | Observed implemented surface |
 | [uiux/screens/05-prompt-editor.md](uiux/screens/05-prompt-editor.md) | Observed implemented surface |
 | [uiux/screens/06-entries.md](uiux/screens/06-entries.md) | Observed implemented surface |
@@ -91,4 +95,7 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | [uiux/screens/10-marketing.md](uiux/screens/10-marketing.md) | Observed implemented surface |
 | [uiux/screens/11-first-run-tutorial.md](uiux/screens/11-first-run-tutorial.md) | Observed implemented surface |
 | [uiux/screens/12-updater.md](uiux/screens/12-updater.md) | Observed implemented surface |
-| [capstone.json](capstone.json) | Shared reference configuration |
+
+| [features/](features/) | Local working specifications and plans for the 1.0 feature chain |
+
+Play draft behavior: [22-play-drafts](logic/22-play-drafts.md). The Play refresh covers architecture, models, data flow, testing, operations and the affected scenario/screen references at `89db8f6`. Unrelated legacy reference drift remains outside this feature acceptance.

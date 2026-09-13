@@ -1,107 +1,88 @@
 ---
 absorbed_from:
- - features/2026-09-09-pausable-optional-runs@2026-09-10
- - features/2026-09-10-subtitles-fonts@2026-09-10
+- features/2026-09-09-pausable-optional-runs@2026-09-10
+- features/2026-09-10-subtitles-fonts@2026-09-10
+- features/2026-09-10-editable-projects@2026-09-12
+- features/2026-09-10-review-checkpoints@2026-09-13
 screen: project page
-journeys: [J3-make-a-video, J4-bring-your-own, J5-revise, J6-revisit]
-assumed:
- - a provided stage is labelled "provided"; Off stages are skipped, except Video Off with active Audio becomes an Audio export stage
- - header shows title, project status, format, created time, the prompts used
- - "Download all" for images is one archive
- - the article editor is inline with Save & continue
-generated_date: 2026-09-09
-capstone_version: 5.2.0
+journeys:
+- J3-make-a-video
+- J4-bring-your-own
+- J5-revise
+- J6-revisit
+generated_date: '2026-09-12'
+generated_at_commit: 803bd5555d76
 ---
 
 # 08 Project page
 
-A focused workspace for one project, with overall progress and a persistent stage navigator.
+One project workspace contains current outputs, a unified edit form, explicit rebuild review and retained revision history. Editing saves first; rebuilding starts only after a separate review and Start action.
 
 ## Layout
 
 ```text
-+--------------------------------------------------------------------+
-| App navigation                                                     |
-+--------------------------------------------------------------------+
-| < Projects                                                         |
-| DONE / RUNNING / PAUSED / FAILED                                    |
-| Project title                 [Download video] [Run settings]       |
-| Prompt · format · started                     [Pause] [Cancel]     |
-|                                                                    |
-| Overall progress · 3 of 6 stages finished                    58%    |
-| [====================================------------------------]     |
-|                                                                    |
-| STAGES              | Selected stage workspace                     |
-| Research      done  | Heading · status · individual progress       |
-| Article       done  |                                              |
-| Audio      running  | Output / editor / live preview                |
-| Images     running  |                                              |
-| Thumbnail  pending  | Contextual actions and downloads               |
-| Video      pending  |                                              |
-+--------------------------------------------------------------------+
-| Free. Your keys, your machine.                       [Update icon]  |
-+--------------------------------------------------------------------+
+Slopify navigation
+
+< Projects
+Project title                              Download final output
+Status · aspect ratio · started            Pause / Cancel
+
+Edit project     History     Rebuild affected outputs
+Saved outputs: ready / needs rebuild / provided review / file missing
+
+[Project edit form, revision history or rebuild review when opened]
+Batch queue (when present)
+Overall progress
+
+Stage navigator          Selected stage workspace
+Research                 Heading · status · progress
+Article                  Retained output / live preview / downloads
+Audio
+Images
+Thumbnail
+Video or Audio export
 ```
 
-The navigator is a sticky left column on desktop and a compact grid above the workspace on narrow screens. Its buttons retain each stage's status and summary. The selected pane initially follows a failed stage, then an active stage, then the completed export. Selecting a stage takes control of navigation until the project changes. Stage panes remain mounted while hidden so unsaved article and provider edits survive navigation.
+The stage navigator remains sticky at the left on desktop and becomes a compact grid above the selected workspace on narrow screens. Each entry retains its status and summary. Initial selection follows a failed stage, an active stage, then completed export; an explicit user selection takes control until the project changes.
 
-The header offers the completed MP4, WAV or article download directly. Run settings reveals provider/model/voice controls, with existing pause, resume and unsaved-change rules. The overall bar excludes skipped stages, counts done/provided stages as complete, and incorporates measurable partial stage progress. All included stages have equal weight; unknown work contributes zero and the bar cannot reach 100% until every included stage finishes. It is not a remaining-time estimate.
+The overall bar excludes skipped stages, counts supplied/done stages as complete, and incorporates measured partial progress. It is execution progress rather than a time estimate. The header exposes the available MP4, WAV or article download.
 
-Research and article actions appear above bounded, keyboard-scrollable reading regions. The final player is centered with a bounded height; subtitle and font editing sits under the Subtitles & fonts disclosure. Failed stages put Retry stage and provider-change guidance before collapsed Error details, which preserves the complete provider error.
+## Editing
 
-Live writing displays visible response text as it arrives, with a selector for concurrent research calls and a Follow output toggle. Reconnects receive a bounded snapshot of the current attempt; retries replace that attempt's preview. Reasoning and prompts are excluded. Live narration offers a separate native player for each body part, intro or outro while Audio runs. Pressing Play listens from that part's beginning, including retained bytes. Previews never create extra provider calls or autoplay; completed output players remain the durable playback/download path.
+Edit project opens the unified form using the current revision. Title, aspect ratio, source modes, project prompt snapshots and keywords, providers/models/voice, chunking, intro/outro, silence and subtitle controls remain part of this single save. Content editors support article text, individual images, logical narration groups and manual caption cues.
 
-The app-wide floating update icon opens installed/latest versions, Check again and an explicit Update Slopify action. Checks run every 15 minutes and on window focus. Active work blocks installation; accepted updates restart the local server and reload the tab when the new version responds. The icon shows availability, installation and failure states.
+Article accepts Generate or Provide. Other stages can be disabled as their source rules permit. Silent video has Audio Off; Video Off with Audio enabled produces WAV. Disabling the last image also requires Video Off or a replacement. The saved prompt library remains unchanged; adopting another template or replacing saved rendered wording is explicit.
 
-## Elements
+Generated images expose their prompt and explicit regeneration choice; provided replacements stage their bytes before Save. Images can be added, reordered or removed. Narration groups expose their retained text with text override, replacement audio and regeneration choices. Whole-request narration remains one group. Caption text/start/end edits preserve invalid draft values for correction and apply within the same save/rebuild flow.
 
-| Label | Does | Leads to |
-|---|---|---|
-| Pause / Resume | Pause drains active work and retains completed outputs; Resume continues unfinished stages | Stays |
-| Run settings | Available on paused/failed projects; save provider/model/voice choices without resuming; Resume waits until edits are saved or explicitly discarded | Stays |
-| Cancel | Stops the running project | Stays; stage statuses update |
-| Download.txt (research) | Saves the research notes | File |
-| Edit (article) | Opens the text inline for editing | Stays |
-| Save & re-run from audio | Replaces the article and re-runs dependent audio, LLM-written thumbnail and final export | Stays |
-| Discard | Drops edits | Stays |
-| Download.txt (article) | Saves the article | File |
-| Sources, Glossary | Saves the end-matter files split out for narration | File |
-| Audio players | Play the body narration and, when picked, the intro and outro segments | None |
-| Download.mp3 | Saves the audio; container format `for: stack` | File |
-| Re-run with voice | Regenerates audio with the picked voice | Stays |
-| Image grid, per image: Download, Regenerate | Saves one image; regenerates that one image | File / stays |
-| Download all | Saves every image and the thumbnail, one archive (assumed) | File |
-| Re-run (images) | Regenerates the whole image stage | Stays |
-| Video player | Plays the slideshow with alternating 100%–122.5% zoom; a native English VTT track appears only for files-mode output | None |
-| Download.mp4 / Download.wav | Saves the selected final export | File |
-| Download.srt / Download.vtt | Saves the timed subtitle files beside the final export, when produced | File |
-| Save subtitles | Saves mode/font/size and rebuilds only the final export from existing narration/images; on a paused project waits for Resume | Stays |
-| Discard subtitle changes | Restores saved subtitle settings; Resume waits for unsaved subtitle changes to be saved or discarded | Stays |
-| Re-render | Rebuilds the video from the current article, audio, images | Stays |
+Save changes commits the revision without provider requests or rendering. Discard changes drops the local draft. Uploads, font work and unapplied caption edits block Save until resolved. Remote revisions do not overwrite unsaved fields: a conflict offers Reload current revision and discard my draft. Missing saved models, voices or library entries remain visible instead of silently selecting replacements.
 
-## States
+## Rebuild review
 
-Per stage, one of: pending / running / done / failed, plus provided and skipped.
+The progress view includes Review checkpoints beside stage meters. Pending Audio, Images and Video/export gates show their dependent closure and reviewed revision; Approve releases only that branch. Gate choices can be saved while the selected stage is pending, and Save never starts a rebuild.
 
-- Pending: dependency guidance in the selected workspace; actions disabled.
-- Running: individual and overall progress shown; live writing/audio previews when bytes arrive; what progress a stage can report `rule: logic (S9-pipeline-lifecycle)`.
-- Done: output is available in its selected workspace; a completed final export opens first.
-- Failed: the stage's error; retry, resume, or restart, and what downstream stages show `rule: logic (S9-pipeline-lifecycle)`.
-- Provided: the user's own output shown in place; no re-run of that stage.
-- Skipped: labelled Off in navigation, with an explanatory empty state when selected.
-- Paused project: a distinct Paused status, Resume action and editable provider panel; each stage retains its own state and completed work.
-- Failed project: provider choices can be saved, then Resume retries unfinished stages.
-- Subtitle edits: active work locks controls; upload/save failures remain inline. Preview loads the selected font file, reports fallback if unavailable, and labels its reduced scale. SRT/VTT retain portable timing/text rather than embedded styling (`packages/web/src/subtitles/font-picker.tsx`, `project/subtitles.tsx`).
-- Rebuilding subtitles: previous media and subtitle links remain playable until success; the player follows actual `output.meta.subtitlesMode`, not unsaved/current requested settings, so an old burned export never gains a duplicate native track (`project/body-video.tsx`).
-- Audio export: Video Off with active Audio shows the WAV player and download. With both Off, the tutorial ends at Article download.
-- Research through the LLM: the shape of the notes, and behavior when the model cannot research `rule: logic (S4-research)`.
-- Article generated: how the rendered prompt and any research notes are sent, the output form, and what happens when the length control is missed `rule: logic (S5-article-writing)`.
-- Article narrated: which sections the audio narrates, whether "Sources Consulted" and the pronunciation glossary are stripped or used as hints `rule: logic (S6-narration)`.
-- Images from a prompt: how Number sends are made and how the thumbnail is derived `rule: logic (S7-image-generation)`.
-- Image aspect vs format: whether 9:16 / 16:9 drives the image request, and how a mismatched image is fitted `rule: logic (S7-image-generation)`.
-- Video timing: image durations against audio length, zoom pattern and unchanged per-image slots `rule: logic (S8-video-assembly)`.
-- After an edit or re-run: which downstream outputs are invalidated, kept, or cascaded; regenerate-one-image against the existing video `rule: logic (S10-reruns)`.
-- Canceling: which in-flight calls stop, which outputs survive, project status afterwards `rule: logic (S11-cancel)`.
-- Telemetry after a stage: which counters this project contributes and when they are sent `rule: logic (S12-telemetry)`.
-- Storage: where outputs live on this machine and how downloads are named `rule: logic (S14-storage-and-downloads)`.
-- Prompt deleted since the run: what the header's prompts line shows `rule: logic (S15-prompt-management)`.
+Rebuild affected outputs is available after local edits are saved or discarded. It opens Review affected rebuild with changed input labels, affected work, retained outputs, known estimate range, unknown costs and any whole-request narration limitation. Supplied dependent content requires explicit reuse confirmation when its inputs changed. An already submitted request is identified as potentially billable.
+
+Start rebuild is the only action here that admits work. Blocked work, missing required confirmations or unacknowledged unknown costs keep it disabled. Cancel rebuild closes the review without starting. A stale preview is refused and must be reviewed again. Retrying an uncertain Start preserves its request identity.
+
+## History
+
+History lists revision title, creation time and current marker. Selecting a revision exposes its retained outputs, earlier results, physical narration parts and retained text parts. Available files have Download and Open folder; image/thumbnail archives have Download all images. Media previews are bounded, and text uses wrapped retained content or a file download.
+
+Missing files are labelled File missing and have no functioning download link. Restore this revision creates a new current revision referencing that history; it never rewrites or deletes the chosen revision and starts no work. Restore is disabled while an edit, upload or rebuild review is active.
+
+Both current and historical downloads use revision-specific output records. Historical filenames retain their revision title. A title-only edit can share media while presenting a new current download name. Old completed media remains usable while a replacement is pending or failed.
+
+## Stage workspaces and live state
+
+Research and Article use bounded readable text regions with current downloads. Audio exposes completed narration segments and live part players when bytes are available. Images and Thumbnail show completed media and downloads. The final workspace chooses a video or WAV player according to available output; files-mode video captions use the VTT associated with that retained export.
+
+Live writing shows response text with concurrent-call selection and Follow output. Live audio starts from the selected part's beginning, never autoplays, and makes no additional provider call. Current work ownership filters late preview events; an old revision cannot paint over a new revision.
+
+Stages show pending, running, done, failed, provided or skipped. Outdated retained media remains visible with Needs rebuild rather than disappearing. Failed alignment, rendering or provider work retains previous successful output. Paused/interrupted work is continued through the explicit rebuild review; retired direct rerun/provider/subtitle controls do not bypass it.
+
+Pause and Cancel retain completed outputs and carry revision-aware request identities. Error details stay expandable; actionable errors appear near the relevant form or review. The app-wide update affordance stays independent from project editing.
+
+## Source and acceptance
+
+The route is `packages/web/src/routes/project.tsx`; revision form, history, review, media and upload behavior is in `packages/web/src/project/`. Mounted route/editor tests cover current and historical files, conflicts, control identity, upload races, and caption validation. Disposable browser acceptance covers supplied article/audio/images, Save without admission, explicit local WAV, retained history, desktop and narrow layout. Real boot/upgrade/restore/restart acceptance is `packages/app/test/e2e/editable-projects.test.ts`.

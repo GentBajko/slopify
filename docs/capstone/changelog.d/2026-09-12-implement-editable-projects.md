@@ -1,0 +1,462 @@
+## 2026-09-12 - implement: 2026-09-10-editable-projects
+key: implement/2026-09-10-editable-projects@Q4
+
+- What: Existing projects can change configuration, article, narration, images and captions while retaining completed media and history.
+- Approach: Immutable configuration/content revisions share registered media; exact physical request/dependency identities drive reuse and current publication authority.
+- Alternative rejected: Copying a whole project per edit duplicates large media and fragments the editing workspace.
+- Alternative rejected: Overwriting outputs in place cannot preserve reliable history or protect newer edits against late results.
+- Decision: Save and Restore create revisions without admitting providers or rendering; explicit affected-output and cost review precedes Start rebuild.
+- Decision: Already submitted affected work may still be billed and finishes under its origin; matching independent work continues. This does not promise exactly-once external submissions.
+- Decision: Article stays required; optional sources may change after completion. Silent video is allowed; Video Off with Audio enabled produces WAV; both media Off retains article download.
+- Decision: Narration reuse compares actual text/provider/model/voice/request context. Whole-request edits invalidate that logical request; chunks, intro and outro retain independent identities.
+- Decision: Subtitle style/manual cues keep compatible narration and unchanged WAV/non-burned media; caption editing uses complete current narration without requiring a final export.
+- Decision: Manual cues remain reviewable after narration changes and require explicit correction or input-bound reuse confirmation; alignment does not silently overwrite them.
+- Decision: Restore creates a new current revision, and history has no automatic purge. Full-project deletion retains the existing explicit flow.
+- Decision: Saved project prompt snapshots remain independent of the prompt library; unavailable original template provenance is exposed rather than reconstructed.
+- Out of scope: Review checkpoints remain a separate feature; accepted policy holds the selected step and dependents while independent work continues.
+- Out of scope: Complete Play redesign and restart-safe setup drafts remain first among the next features; current Play drafts are still memory-only.
+- Out of scope: Reusable project templates and template lifecycle remain separate; future template changes must not mutate created projects.
+- Out of scope: Local one-off/recurring schedules, background operation, timezone/missed-run/overlap/spend behavior remain separate.
+- Out of scope: Expanded preflight, costs/diagnostics and reliability acceptance remain separate; retain the unexplained legacy WAV test failure for that work.
+- Out of scope: Portability, backups and storage/history cleanup remain separate.
+- Out of scope: Final installation/update/rollback acceptance, cross-app accessibility/wording and 1.0 publication remain separate.
+- Out of scope: No new provider integration or free-form video timeline.
+- Task 1 completed: Persist revisions, file identities, manifests and receipts.
+- Task 2 completed: Compute exact request identities and reusable work.
+- Task 3 completed: Build revision recipes and exact affected-work previews.
+- Task 4 completed: Make every writer allocate immutable files.
+- Task 5 completed: Adopt a lazy baseline without copying retained media.
+- Task 6 completed: Persist work grants, reservations, and preview admission.
+- Task 7 completed: Commit save/restore with CAS, receipts and safe publication.
+- Task 8 completed: Pin runner context and defer revoked requests without canceling submitted work.
+- Task 9 completed: Reuse narration by request identity and rebuild entry text independently.
+- Task 10 completed: Admit explicit rebuilds once and preserve save-only semantics.
+- Task 11 completed: Preserve history on restart, downloads and explicit deletion.
+- Task 12 completed: Add validated revision and rebuild HTTP routes.
+- Task 13 completed: Preserve client edits, isolate events and review rebuilds.
+- Task 14 completed: Edit configuration and frozen prompts without lossy conversion.
+- Task 15 completed: Edit narration pieces, images and manual caption cues.
+- Task 16 completed: Prove late publication, retry, restart, and failure preservation end to end.
+- Task 17 completed: Verify legacy upgrade, explicit rebuild, restore and WAV retention through the real app.
+- Reference absorption: `docs/capstone/01-architecture.md` records revision boundaries, complete contracts/dispatch and current project editor.
+- Reference absorption: `docs/capstone/02-models.md` records revision/work/asset entities, exact schema and public review/request contracts.
+- Reference absorption: `docs/capstone/04-data-flow.md` records Save/Restore/admission, origin publication, physical reuse and failure paths.
+- Reference absorption: `docs/capstone/06-testing.md` records test inventory, revision acceptance, Linux/Windows evidence and limits.
+- Reference absorption: `docs/capstone/07-operations.md` records migration, workers, restart/queued batch recovery, retained storage and exact commands.
+- Reference absorption: `docs/capstone/logic/01-pipeline-lifecycle.md` records current work authority, independent dispatch, recovery and retained results.
+- Reference absorption: `docs/capstone/logic/05-provided-outputs.md` records typed supplied-asset validation, source reactivation and no implicit generation.
+- Reference absorption: `docs/capstone/logic/08-narration.md` records logical/physical request identity, overrides, independent entries and continuation.
+- Reference absorption: `docs/capstone/logic/09-image-generation.md` records stable image order, per-image regeneration/replacement and thumbnail readiness.
+- Reference absorption: `docs/capstone/logic/11-video-assembly.md` records current narration/image timeline, immutable export bundles and caption-only reuse.
+- Reference absorption: `docs/capstone/logic/12-reruns-and-edits.md` records save-only revisions, explicit review/start, granular dependencies and history restore.
+- Reference absorption: `docs/capstone/logic/14-storage-and-downloads.md` records immutable registered assets, historical downloads, cleanup and deletion limits.
+- Reference absorption: `docs/capstone/logic/17-subtitles.md` records local timing/cue/file recipes, manual review, font snapshots and retained WAV.
+- Reference absorption: `docs/capstone/mockup/08-project.md` records current editor, retained media, History, explicit rebuild and progress composition.
+- Reference absorption: `docs/capstone/uiux/screens/03-project.md` records as-built revision workspace states, image preview and caption correction.
+- Reference absorption: `docs/capstone/uiux/03-experience.md` records draft conflicts, upload cancellation, explicit Save/rebuild and retained history.
+- Reference absorption: `docs/capstone/logic/README.md` records implemented scenario index.
+- Reference absorption: `docs/capstone/mockup/README.md` records revision journey and current project reference.
+- Reference absorption: `docs/capstone/uiux/README.md` records restored observed screen references and current shared design chapter role.
+- Reference absorption: `docs/capstone/00-index.md` records module and companion references for revisions and scenario index.
+- Review loop: Nine complete original-diff rounds. Rounds 1–7 confirmed 12, 4, 3, 4, 3, 3 and 1 new issues respectively; all 30 fixed in scoped source commits.
+- Review loop: Rounds 8 and 9 each had zero new confirmed findings across specification, code quality and failure/recovery lenses; two consecutive dry rounds close review at 29b8849.
+- Review refutations: Round 8 recorded 22 and round 9 recorded 22 investigated/refuted or deduplicated hypotheses; these are dispositions, not 44 unique bugs. Prior fixed findings were excluded before counting each round.
+- Review refutations: Rechecked manual-article preservation, manual-cue alignment bypass, active-entry dependencies, source reactivation, revision-scoped events/files, Save/Restore dispatch authority, mutation replay/cleanup, complete bundle dependencies and accepted-job retrieval. No new material defect survived those checks.
+- Validation: Exact source29b8849 full Linux rerun passed 2586 tests with one existing skip across320files; build, typecheck and lint passed.
+- Validation: Native Windows backend/media passed568tests with one skip at239418c; only browser image presentation changed afterward. This is not an exact29b8849 native rerun claim.
+- Validation limitation: Initial29b8849 Linux run failed the legacy WAV reuse sentinel once; native-enabled isolated4/4 and unchanged-source full reruns passed. Cause remains unexplained, and no fix or environmental attribution is claimed.
+- Validation: Real app acceptance uses temporary legacy SQLite/media and actual HTTP/FFmpeg for adoption, save-only staged inputs, explicit WAV rebuild, history restore and restart; provider behavior uses fake ports.
+- Validation: Last clean review added44focused tests/10files and61focused tests/sixfiles; no live paid providers or real user projects were used.
+- Release state: Source remains on codex/slopify-1.0 at29b8849, package0.8.5. No new push, tag, main merge, npm publication or website deployment belongs to this completion.
+- Confirmed and fixed R1-01: Missing bundle member incorrectly reused.
+- Confirmed and fixed R1-02: Invalid image edit throws before typed validation.
+- Confirmed and fixed R1-03: Regenerated article reopens with earlier text.
+- Confirmed and fixed R1-04: Audio Off retains hidden incompatible subtitle mode.
+- Confirmed and fixed R1-05: Narration regeneration keeps provided replacement override.
+- Confirmed and fixed R1-06: Explicit resumed article continuation remains held.
+- Confirmed and fixed R1-07: Valid retained narration piece rejected as missing output descriptor.
+- Confirmed and fixed R1-08: Recipe operation types accept arbitrary strings.
+- Confirmed and fixed R1-09: Prepared-asset accumulator mutates a slice input.
+- Confirmed and fixed R1-10: Inworld async request limit conflicts with rebuild readiness.
+- Confirmed and fixed R1-11: Paid partial article result absent from origin history.
+- Confirmed and fixed R1-12: Human rebuild review lacks actual changed input and stable part identity.
+- Confirmed and fixed R2-01: Removed entry audio remains in export timeline.
+- Confirmed and fixed R2-02: Deferred thumbnail image skips image-provider readiness.
+- Confirmed and fixed R2-03: Cached completed article recovery requires unavailable provider.
+- Confirmed and fixed R2-04: Partial publication ID violates client revision schema.
+- Confirmed and fixed R3-01: Empty edited generated article is accepted as complete.
+- Confirmed and fixed R3-02: Retained entry descriptor reused with wrong supplied-body role.
+- Confirmed and fixed R3-03: Images Provide selection silently becomes Generate.
+- Confirmed and fixed R4-01: Deferred thumbnail omits image catalogue snapshot.
+- Confirmed and fixed R4-02: Export starts before incomplete subtitle dependency repairs.
+- Confirmed and fixed R4-03: Retained instructions accepted as supplied thumbnail.
+- Confirmed and fixed R4-04: Duration inspection falsely authorizes changed narration reuse.
+- Confirmed and fixed R5-01: Caption-only duration inspection invalidates unchanged media.
+- Confirmed and fixed R5-02: Moving retained image reference loses current media descriptor.
+- Confirmed and fixed R5-03: Research rebuild stalls when a new outline shrinks.
+- Confirmed and fixed R6-01: Caption editor depends on final export instead of complete narration.
+- Confirmed and fixed R6-02: History decoder hides retained research text.
+- Confirmed and fixed R6-03: Reactivating a dormant provided asset fails destination rebinding.
+- Confirmed and fixed R7-01: Image editor ignores completed generated image descriptors.
+- Source diff: `.github/workflows/ci.yml` (017b25c..29b8849).
+- Source diff: `package-lock.json` (017b25c..29b8849).
+- Source diff: `packages/app/package.json` (017b25c..29b8849).
+- Source diff: `packages/app/src/adapter-registry.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/adapters/tts/inworld-async.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/adapters/tts/inworld-text.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/adapters/tts/inworld.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/adapters/tts/inworld.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/catalog/registry.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/catalog/registry.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/edge/events/hub.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/edge/events/hub.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/edge/events/preview-cache.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/edge/events/preview-cache.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/edge/events/visibility.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/edge/events/visibility.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/edge/http/actions.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/edge/http/actions.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/edge/http/app.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/edge/http/audio-preview.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/edge/http/audio-preview.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/edge/http/planning.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/edge/http/projects.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/edge/http/revision-adoption.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/edge/http/revision-controls.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/edge/http/revision-delete.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/edge/http/revision-files.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/edge/http/revision-files.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/edge/http/revisions-rebuild.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/edge/http/revisions.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/edge/http/revisions.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/edge/http/subtitles.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/kernel/audio-preview.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/kernel/audio-preview.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/kernel/db/migrate.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/kernel/db/migrations/0004-project-revisions.sql` (017b25c..29b8849).
+- Source diff: `packages/app/src/kernel/db/migrations/0005-revision-work.sql` (017b25c..29b8849).
+- Source diff: `packages/app/src/kernel/events.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/kernel/ports/llm.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/kernel/runner/attempt-repo.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/kernel/runner/attempt-repo.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/kernel/runner/attempt.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/kernel/runner/attempt.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/kernel/runner/index.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/kernel/runner/index.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/kernel/runner/providers.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/kernel/runner/providers.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/kernel/runner/work-attempt.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/kernel/runner/work-authority.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/kernel/runner/work.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/kernel/runner/work.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/main.activation.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/main.pipeline.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/main.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/main.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/admission/repo.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/admission/schema.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/admission/start.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/article/continuation.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/article/continuation.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/article/provided-entries.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/article/provided-entries.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/article/run.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/article/run.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/article/segments.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/batch/index.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/batch/revision-admission.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/cancel/index.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/control/control.fake.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/control/index.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/control/index.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/control/revision-control-schema.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/control/revision-control.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/control/revision-controls.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/estimate/index.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/estimate/index.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/estimate/requests.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/estimate/requests.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/images/run.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/narration/legacy-plan.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/narration/live.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/narration/plan.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/narration/plan.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/narration/reuse.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/narration/run.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/admission-repo.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/attempt-origin.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/dependencies.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/dependencies.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/legacy-admission.fake.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/model.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/model.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/narration-history.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/narration-reuse.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/preview-details.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/preview-details.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/preview-plan.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/preview-retained.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/provided-review.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/recipe-audio.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/recipe-audio.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/recipe-build.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/recipe-editor-intent.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/recipe-exports.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/recipe-fixture.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/recipe-input-schema.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/recipe-legacy-images.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/recipe-legacy.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/recipe-legacy.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/recipe-model.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/recipe-model.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/recipe-provider-choice.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/recipe-save-provenance.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/recipe-save.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/recipe-text.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/recipe-text.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/recipe-validation.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/recipe-visual.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/recipe-work.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/recipe-work.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/recipes.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/recipes.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/repo.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/repo.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-actions.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-actions.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-admission.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-admission.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-article.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-article.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-bundle-recovery.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-dependency-recovery.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-entry-reuse.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-export-entries.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-export-identity.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-export-inputs.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-export-native.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-export.fake.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-export.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-export.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-instructions.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-local.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-materialize.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-materialize.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-narration-history.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-narration-regenerate.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-narration-reuse.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-narration-reuse.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-narration.fake.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-plan.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-provider.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-provider.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-publication.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-publication.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-run.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-store.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-store.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-subtitles.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/runtime-subtitles.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/service-accepted.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/service-cached-article.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/service-concurrency.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/service-confirmations.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/service-future.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/service-readiness.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/service-request-limits.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/service-reuse.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/service-thumbnail-readiness.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/service-validation.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/service.fake.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/service.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/service.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/transition-repo.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/transition-repo.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/work-records.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/work-schema.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/rebuild/work.fake.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/reruns/index.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/research/run.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/research/run.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/adopt-assets.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/adopt-content.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/adopt-history.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/adopt-images.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/adopt-planning.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/adopt.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/adopt.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/download-permissions.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/downloads.fake.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/downloads.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/downloads.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/index.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/manifest-repo.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/model.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/mutation-assets.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/mutation-cues.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/mutation-prepare.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/mutation-prepare.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/mutation-request.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/mutation-work.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/mutation.fake.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/mutations-article-required.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/mutations-asset-kind.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/mutations-content.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/mutations-cue-voice.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/mutations-cues.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/mutations-image-source.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/mutations-media.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/mutations-projection.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/mutations-provided-role.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/mutations-retained-images.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/mutations-source-return.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/mutations-validation.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/mutations-work.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/mutations.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/mutations.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/projection.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/publication-bundles.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/publication-integrity.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/publication-model.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/publication-rules.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/publish.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/publish.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/repo.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/repo.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/restore.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/revision.fake.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/rules.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/rules.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/schema.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/schema.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/view.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/revisions/view.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/storage/assets.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/storage/assets.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/storage/delete-history.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/storage/delete-project.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/storage/delete-project.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/storage/downloads.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/storage/downloads.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/storage/prepare.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/storage/prepare.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/storage/reconcile.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/storage/reconcile.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/storage/repo.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/storage/schema.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/storage/staging.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/subtitles/prepare.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/thumbnail/run.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/video/audio-inputs.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/video/audio-inputs.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/video/export.fake.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/video/ffmpeg.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/video/run.ts` (017b25c..29b8849).
+- Source diff: `packages/app/src/slices/video/subtitle-only.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/article-run.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/cancel.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/e2e/editable-projects.fixture.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/e2e/editable-projects.http.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/e2e/editable-projects.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/e2e/optional-outputs.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/e2e/skeleton.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/images-run.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/intro-outro-render.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/legacy-runner.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/narration-run.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/provided-article.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/provided-entries.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/reruns.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/research-run.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/revision-article-recovery.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/revision-bundle-recovery.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/revision-narration.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/revision-provided.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/revision-rebuild.fake.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/revision-rebuild.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/revision-research-rebuild.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/revision-restart.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/telemetry-counters.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/thumbnail-run.test.ts` (017b25c..29b8849).
+- Source diff: `packages/app/test/video-render.test.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/api.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/events.test.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/events.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/play/pickers.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/play/thinking.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/api.test.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/api.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/body-article.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/body-article.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/body-audio.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/body-images.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/body-thumbnail.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/body-video.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/caption-editor.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/caption-editor.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/controls.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/header.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/image-editor.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/image-editor.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/image-preview.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/image-preview.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/live-audio.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/live-audio.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/live-revision.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/live-writing.test.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/live-writing.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/live.test.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/narration-editor.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/narration-editor.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/narration-regeneration.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/open-folder.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/output-label.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/parts.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/providers.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/rebuild-review.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/rebuild-review.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-action-context.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-api.test.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-api.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-caption-duration.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-caption-recovery.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-content.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-content.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-editor-test-fixtures.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-fixture.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-form-save.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-form-state.test.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-form-state.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-form.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-form.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-history.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-history.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-media.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-media.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-prompts.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-providers.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-requests.test.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-requests.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-upload.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-upload.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-workspace.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/revision-workspace.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/stage-row.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/subtitles.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/use-actions.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/use-actions.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/project/use-live.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/queries.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/routes/project-actions.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/routes/project-controls.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/routes/project-fixtures.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/routes/project-live.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/routes/project-revision.fake.ts` (017b25c..29b8849).
+- Source diff: `packages/web/src/routes/project-revisions.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/routes/project-subtitles.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/routes/project.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/routes/project.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/tutorial/runner.test.tsx` (017b25c..29b8849).
+- Source diff: `packages/web/src/tutorial/step-content.tsx` (017b25c..29b8849).
+- Documentation validation: All20 affected reference/index paths passed frontmatter/absorption/source-hash/link checks; five required topic contracts and100unique indexed entities passed; whitespace checks passed. Feature marked implemented locally after those outputs existed.
+- Integration pending: Source commits remain local and refreshed docs remain dirty for normal branch integration. Feature scaffolding is retained until that branch is finished; no push/publication was performed.

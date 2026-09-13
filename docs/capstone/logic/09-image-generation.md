@@ -1,44 +1,56 @@
 ---
-absorbed_from: features/2026-09-09-pausable-optional-runs@2026-09-10
+absorbed_from:
+- features/2026-09-09-pausable-optional-runs@2026-09-10
+- features/2026-09-10-editable-projects@2026-09-12
 scenario: image-generation
 mockup_row: S7
-screens: [06-play, 08-project]
-depends_on: [01-pipeline-lifecycle, 02-provider-credentials, 03-placeholder-substitution, 04-run-admission, 05-provided-outputs]
-generated_date: 2026-09-09
-capstone_version: 5.2.0
+screens:
+- 06-play
+- 08-project
+depends_on:
+- 01-pipeline-lifecycle
+- 02-provider-credentials
+- 03-placeholder-substitution
+- 04-run-admission
+- 05-provided-outputs
+generated_date: '2026-09-12'
+generated_at_commit: 29b88494eb40
 ---
 
 # 09 Image generation
 
-The images stage and the prompt-driven thumbnail: Number parallel sends per prompt, sized to the run's aspect, resumable per image. The LLM-written thumbnail prompt is scenario 10.
+The images stage and prompt-driven thumbnail use revision-bound image recipes, sized to the selected aspect and reusable per request. The LLM-written thumbnail prompt is scenario 10.
 
 ## Trigger & preconditions
 
 - Trigger: the scheduler starts saved-prompt images and a `from_prompt` thumbnail as soon as the project is admitted, in parallel with research or writing. Their templates and keywords were rendered before admission; they do not depend on generated Article text. A `prompt_by_llm` thumbnail still waits for Article.
 - Preconditions: image provider keyed and model chosen; at least one image prompt ticked with a Number 1-20, total ≤ 60 (scenarios 02, 04); rendered prompt texts on the project (scenario 03); for the thumbnail, a thumbnail prompt selected.
-- Actor: none beyond the pipeline.
+- Edits: the user changes individual prompts, replaces images, removes rows or reorders the image list. Save retains media history and does not submit provider requests. Explicit preview/Start authorizes affected work (`slices/revisions/mutations.ts`, `slices/rebuild/service.ts`, `packages/web/src/project/image-editor.tsx`).
 
 ## Steps
 
 1. Size: request the provider's closest supported size to the run's aspect, 16:9 or 9:16. Any remaining mismatch is fitted by scenario 11.
 2. For each ticked image prompt, send its rendered text Number times as independent parallel calls; provider default quality and style; no seed control. Total images = sum of Numbers (scenario 04).
-3. Each returned image is stored as received (png or jpg) with its prompt text, prompt name, index within the prompt, provider, and model, and appears on the project page as it lands, k of N (scenario 01).
+3. Each returned image is written as an immutable project asset and published to authorized revision owners with prompt/provider/model metadata. Compatible current owners receive it; incompatible results stay in the original revision. Image recipe identity includes rendered prompt, selected provider/model and aspect (`slices/rebuild/{recipe-visual,runtime-provider,runtime-publication}.ts`, `slices/revisions/publish.ts`).
 4. Thumbnail from a thumbnail prompt: one call, same aspect rule, same storage fields, stored apart from the slideshow images.
-5. Slideshow order = image prompts in selection order, then index within each prompt; the thumbnail is never in the slideshow.
-6. Mark the stage `done` when every requested image is stored; the thumbnail stage is marked independently.
+5. Initial order follows selected prompts and repetition index; edited revisions use stable `imageOrder` keys. Reordering changes slideshow assembly without regenerating unchanged images. Replacing or changing one image affects that image and dependent rendering. The thumbnail is never in the slideshow (`slices/rebuild/recipe-visual.ts`, `slices/revisions/projection.ts`).
+6. Project standings derive from current revision work, preserving separate image/thumbnail stages and exact per-request state. Retained media may remain visible while its replacement is outdated, pending or failed (`slices/rebuild/runtime-store.ts`, `packages/web/src/project/body-images.tsx`).
 
 ## Branches
 
 - Thumbnail source: Off → skipped; Generate with a thumbnail prompt → step 4; Generate via LLM → scenario 10; Provide → scenario 05.
-- Provider returns a refusal → step "refusal" below; any other error → retries.
+- Mixed generated/supplied rows are supported under Images Generate. Selecting Images Provide while generated rows remain returns a field error telling the user to replace/remove them; Save does not silently choose Generate (`slices/rebuild/recipe-save.ts`).
+- Owned instruction text cannot serve as image or thumbnail media. Retained references require corresponding media roles or image piece kinds (`slices/revisions/mutation-assets.ts`).
+- Deferred LLM-written thumbnail images still include the selected image provider/model in readiness and stale-preview catalogue snapshots (`slices/rebuild/{recipe-provider-choice,preview-plan,service-readiness}.ts`).
+- Provider refusal and other errors follow classified retry policy (scenario 01).
 
 ## Unhappy paths
 
 - Call fails → scenario 01's retry policy with a 300 s per-call timeout for image calls.
 - One image exhausts its retries → the stage fails; completed images are kept; manual retry generates only the missing images.
 - Content-policy refusal → that image fails immediately with the refusal text, no retries; the user edits the prompt and re-runs the stage (scenario 12).
-- Thumbnail call fails → the thumbnail stage fails on its own; images and audio unaffected; MP4 waits, WAV can continue (scenario 01 step 5).
-- Interrupted process → stage failed "interrupted" (scenario 01); stored images kept.
+- Thumbnail call fails → its own work fails; unrelated narration/images and exports follow their explicit recipe dependencies. Thumbnail artwork is not a slideshow-render input (`slices/rebuild/recipe-visual.ts`).
+- Interrupted submitted request → durable recovery state requires explicit preview/retry when outcome is uncertain; completed assets and revision history remain retained (`slices/rebuild/repo.ts`, scenario 01).
 - Cancel → scenario 13.
 
 ## State transitions
@@ -48,10 +60,10 @@ The images stage and the prompt-driven thumbnail: Number parallel sends per prom
 
 ## Invariants
 
-- When the images stage is `done`, stored image count = sum of Numbers.
-- Slideshow order is deterministic from selection order and index.
+- Current output completeness follows current image definitions; removed images remain historical assets, not active work.
+- Slideshow order follows saved stable keys.
 - The thumbnail is never part of the slideshow.
-- Video never starts before images and thumbnail are `done`, `provided`, or `skipped` (scenario 01 step 5).
+- Video waits for its complete image/audio/caption dependencies; a surviving member of an incomplete required bundle does not make that dependency ready (`slices/rebuild/runtime-store.ts`).
 
 ## Outcomes & side effects
 
@@ -61,7 +73,7 @@ The images stage and the prompt-driven thumbnail: Number parallel sends per prom
 
 ## Dimensions not in play
 
-- D1 authority: no actor beyond the pipeline.
-- D4 computation: nothing beyond the total count.
+- No retained-media asset picker is implied by the owned-asset API contract.
+- No image editing/generation provider beyond the selected configured models.
 - D5 money: nothing charged in-app.
 - D13 notification: no channel.

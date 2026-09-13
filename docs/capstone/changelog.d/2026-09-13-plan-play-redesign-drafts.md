@@ -1,0 +1,61 @@
+## 2026-09-13 - plan: 2026-09-10-play-redesign-drafts
+key: plan/2026-09-10-play-redesign-drafts@Q5
+
+- `features/2026-09-10-play-redesign-drafts/plan.md`: approved 15-task implementation plan; user authorized execution with “Yep go”.
+- Pinned: exact approved specification hash 852754d5ef5945ed7d81a8e099ad5a03861f6b5a.
+- Execution: previously selected subagents; source-only task commits on codex/slopify-1.0.
+- Pinned: raw incomplete editor values, SQLite CAS drafts, relational upload ownership and retained completed media.
+- Pinned: review UUID is Start identity; pending intents exclude edits and duplicate admissions; original single/batch scheduling semantics preserved.
+- Pinned: four freely navigable sections, one responsive renderer-based preview, explicit full-page cost review and persistent tutorial cursor.
+- Constraints: strict typing/no any or enums, immutable slice input, typed refusals, injected dependencies, secret-free errors, existing libraries, append-only migrations and test-first source commits.
+- Scope: no website change, version bump, push, publication or automatic docs commit; remaining 1.0 features retain their separate chains.
+- Task 1: Durable editor documents, CAS CRUD and attachment topology.
+- Task 2: Owned uploads and restart-safe staging.
+- Task 3: Resolve and persist review from exact acknowledged inputs.
+- Task 4: Durable Start intent and atomic one/batch receipt.
+- Task 5: Typed HTTP draft/upload/review/start and owned preview file routes.
+- Task 6: Persist a recoverable tutorial cursor.
+- Task 7: Typed client and serializable form boundary.
+- Task 8: One session owner, autosave, restore/conflicts and Drafts controls.
+- Task 9: Four sections, content/output groups, one summary and exact error navigation.
+- Task 10: Durable media/upload ownership and pending font lifetime.
+- Task 11: Persistent responsive style preview without changing project editor behavior.
+- Task 12: Full-page bound review, batch persistence and uncertain Start recovery.
+- Task 13: Tutorial reload state and reveal-before-measurement.
+- Task 14: Prove real app restart, asset retention and one-time admission.
+- Task 15: Verify the approved layout, review the full diff and absorb references.
+- File map: packages/app/src/kernel/db/migrations/0006-play-drafts.sql — Append durable draft, attachment and Start receipt tables — 1.
+- File map: packages/app/src/slices/play-drafts/schema.ts, model.ts — Shared strict document, view, request and response contracts — 1.
+- File map: packages/app/src/slices/play-drafts/repo.ts, service.ts — SQLite reads/CAS and create/save/fork/discard lifecycle — 1.
+- File map: packages/app/src/slices/play-drafts/draft.fake.ts, schema.test.ts, service.test.ts — Disposable migrated database fixture and document/CAS proofs — 1.
+- File map: packages/app/src/slices/play-drafts/uploads.ts, uploads.test.ts — Draft-scoped stream ownership and late completion — 2.
+- File map: packages/app/src/slices/storage/staging-refs.ts, staging-refs.test.ts — Shared-reference-aware release — 2.
+- File map: packages/app/src/slices/storage/staging.ts, repo.ts, reconcile.ts, reconcile.test.ts — Allocation binding, guarded deletion and restart retention — 2.
+- File map: packages/app/src/slices/admission/start.ts; packages/app/src/slices/revisions/mutations.ts; packages/app/src/slices/batch/index.ts — Protect existing consumers and defer source cleanup through outer commit — 2,4.
+- File map: packages/app/src/slices/play-drafts/review.ts, review.test.ts, convert.ts, convert.test.ts — Resolve acknowledged inputs and persist exact cost review — 3.
+- File map: packages/app/src/slices/play-drafts/start.ts, start-repo.ts, readiness.ts, start.test.ts, readiness.test.ts — Pending intent, receipt lookup, atomic admission and replay — 4.
+- File map: packages/app/src/edge/http/drafts.ts, draft-files.ts, drafts.test.ts; packages/app/src/edge/http/staging.ts — Validated local draft API and owned preview streams — 5.
+- File map: packages/app/src/edge/http/app.ts; packages/app/src/main.ts — Register typed routes and inject existing runtime dependencies — 5,6.
+- File map: packages/app/src/slices/settings/tutorial.ts, tutorial.test.ts — Stable tutorial cursor/settings persistence — 6.
+- File map: packages/app/src/edge/http/tutorial.ts, tutorial.test.ts — Typed tutorial GET/PUT with version checks — 6.
+- File map: packages/web/src/play/draft-api.ts, draft-api.test.ts — Parse server contracts and typed refusals — 7.
+- File map: packages/web/src/play/draft-state.ts, draft-state.test.ts; state.ts — Raw editor DTO conversion and source normalization — 7.
+- File map: packages/web/src/play/draft-context.tsx, use-draft-session.ts, draft-save.ts — One Shell-lived session, serialized saves and navigation — 8.
+- File map: packages/web/src/play/draft-list.tsx, draft-list.test.tsx, draft-session.test.tsx — Restore/new/discard/conflict UI and race tests — 8.
+- File map: packages/web/src/play/play-test-fixture.tsx — Schema-valid public HTTP/controller UI fixture — 8.
+- File map: packages/web/src/components/shell.tsx; packages/web/src/lib/form-drafts.tsx — Mount new Play owner, retain prompt-editor drafts — 8.
+- File map: packages/web/src/play/sections.ts, section-navigation.tsx, field-targets.ts — Finite section registry and explicit reveal/focus — 9.
+- File map: packages/web/src/play/content-section.tsx, outputs-section.tsx, setup-summary.tsx — Approved Content/Outputs controls and readonly summary — 9.
+- File map: packages/web/src/play/sections.test.tsx, field-targets.test.tsx — Source combinations, navigation and exact targets — 9.
+- File map: packages/web/src/play/rail-frame.tsx, stage-rails.tsx, media-rails.tsx, keywords.tsx, pickers.tsx, provided.tsx, admission.ts, chunking.tsx — Reuse leaf controls, above-field labels, raw counts, origins and active validation — 9,10.
+- File map: packages/web/src/play/cue-sheet.tsx — Remove retired cue-sheet composition after callers migrate — 9.
+- File map: packages/web/src/routes/play.tsx, play.test.tsx — Four-section route composition and preserved run behaviors — 9,12.
+- File map: packages/web/src/play/draft-uploads.ts, draft-uploads.test.tsx — Long-lived media/font ownership and locks — 10.
+- File map: packages/web/src/subtitles/font-picker.tsx, controls.tsx, controls.test.tsx — Controlled Play upload branch and external preview option; preserve project defaults — 10,11.
+- File map: packages/web/src/play/style-section.tsx, output-preview.tsx, style-section.test.tsx — Single responsive output preview and caption controls — 11.
+- File map: packages/web/src/subtitles/style-preview.tsx — Shared arithmetic with controlled sample/ready image — 11.
+- File map: packages/web/src/play/review-section.tsx, review-state.ts, review.test.tsx, start.test.tsx — Full-page cost review and duplicate-safe explicit Start — 12.
+- File map: packages/web/src/play/run-review.tsx — Retain BatchEditor/cost rows, remove nested dialog — 12.
+- File map: packages/web/src/tutorial/session-api.ts, session.test.tsx, play-navigation.test.tsx — Persist guide state and test reveal/reload — 13.
+- File map: packages/web/src/tutorial/model.ts, context.tsx, runner.tsx, step-content.tsx, runner.test.tsx — Stable step IDs, section-aware guide and updated copy — 13.
+- File map: packages/app/test/e2e/play-drafts.test.ts, play-drafts.http.ts; .github/workflows/ci.yml — Real app restart/receipt/media acceptance on Linux and Windows — 14.

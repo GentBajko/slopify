@@ -1,67 +1,312 @@
 ---
-generated_at_commit: 3a9796eb7fec
-generated_date: 2026-09-10
-content_hash: beea3c3da582
+generated_at_commit: 803bd5555d76
+generated_date: '2026-09-13'
+content_hash: 25ec77679706
 paths_covered:
-  - ":(top)packages/app/src/**"
-  - ":(top)packages/web/src/**"
-  - ":(top)packages/collector/**"
-  - ":(top)packages/site/**"
-  - ":(top)package*.json"
-  - ":(top)packages/*/package.json"
-  - ":(top)biome.json"
-  - ":(top)tsconfig*.json"
-  - ":(top).github/workflows/**"
+  - :(top)packages/app/src/**
+  - :(top)packages/web/src/**
+  - :(top)packages/collector/**
+  - :(top)packages/site/**
+  - :(top)package*.json
+  - :(top)packages/*/package.json
+  - :(top)biome.json
+  - :(top)tsconfig*.json
+  - :(top).github/workflows/**
+absorbed_from:
+  - features/2026-09-10-editable-projects@2026-09-12
+  - features/2026-09-10-play-redesign-drafts@2026-09-13
+  - features/2026-09-10-review-checkpoints@2026-09-13
 ---
 
 # Architecture
 
+Inspected production source at `89db8f6d89816b7e2457cb8abd6dade8acb42aa5` (2026-09-13). This chapter describes current code, including editable-project revisions and durable four-section Play creation.
+
 ## Layers
 
-- `packages/app/src/kernel` owns DB, config, clocks, IDs, locks, logs, ports, and runner; it imports no slices, edge, or adapter registry. `biome.json:40-62` `packages/app/src/kernel/runner/index.ts:1-52`
-- `packages/app/src/slices` owns feature modules and uses kernel contracts; it cannot import edge, adapters, or the adapter registry. `biome.json:66-87`
-- `packages/app/src/adapters` implements provider, alignment, and FFmpeg integrations; it may import only approved kernel ports/utilities. `biome.json:95-116`
-- `packages/app/src/edge` owns CLI, Hono routes, SSE hub, browser launcher, and update worker. `packages/app/src/edge/http/app.ts:69-91`
-- `packages/web` is the React SPA; `packages/collector` is a separately deployed worker with D1; `packages/site` is a static marketing site. `packages/web/src/main.tsx:1-37` `packages/collector/src/index.ts:19-32` `packages/site/package.json:1-14`
+Review checkpoints are a slice-level policy boundary. `slices/checkpoints/` owns durable gate identities, dependency closures, approval receipts and restart recovery; the kernel runner asks its authority immediately before claims. HTTP and the React project panel depend on the slice, while provider adapters remain unaware of checkpoint state.
+
+- `kernel` owns shared contracts, infrastructure, SQLite, and the runner. Its runner imports only kernel modules and receives its stage implementations through `RunnerDeps.runs`. Biome forbids kernel imports from `slices`, `edge`, and `adapter-registry`. `packages/app/src/kernel/runner/index.ts:1` `packages/app/src/kernel/runner/index.ts:38` `biome.json:44`
+- `slices` implements feature behavior using kernel contracts and other slices. Biome forbids imports from `edge`, `adapters`, `kernel/ports/registry.js`, and `adapter-registry.js`; provider-using slices receive wrapped `StageProviders`. Cross-slice imports are used directly: revision execution imports article parsing, narration previews, research parsing, storage, and telemetry helpers. `biome.json:70` `packages/app/src/kernel/runner/providers.ts:63` `packages/app/src/slices/rebuild/runtime-provider.ts:1`
+- `adapters` implements external providers and local media integrations. Biome forbids adapter imports from slices, edge, the adapter registry, and kernel modules except ports, clock, log, CLI-command utilities, and the clock test double. The CLI runner imports the allowed command resolver, logger, and port contracts. `biome.json:99` `packages/app/src/adapters/llm/run-cli.ts:1`
+- `edge` exposes CLI, HTTP, SSE, browser/folder launchers, and the update-worker entrypoint. The application composition root imports and connects edge, adapters, kernel, slices, catalogue, and updater modules through typed dependencies. `packages/app/src/edge/cli.ts:1` `packages/app/src/edge/http/app.ts:20` `packages/app/src/main.ts:9`
+- The React application, public static site, and collector are separate packages. The application serves the built SPA. Cloudflare serves the site assets and runs the collector against its D1 binding. `packages/app/src/edge/http/app.ts:160` `packages/web/src/main.tsx:10` `packages/collector/wrangler.jsonc:4` `packages/collector/wrangler.jsonc:22` `packages/site/wrangler.jsonc:9`
+
+The implemented feature follows the existing tiers. HTTP edge imports the draft slice's service/model/schema/review/start/upload functions and translates typed results to responses; it does not construct provider adapters. `packages/app/src/edge/http/drafts.ts:5`, `packages/app/src/edge/http/draft-files.ts:7`.
+
+`slices/play-drafts` imports SQLite transactions and shared runner contracts from kernel, and admission, batch, estimate, library, fonts, settings, and storage slices for orchestration. The public dependency types inject catalogue/font/provider-readiness/model-list/runner capabilities. The service has no imports from edge or adapters. This is both observed in imports and covered by the existing slice restrictions against edge, adapters and provider registry imports. `packages/app/src/slices/play-drafts/service.ts:1`, `packages/app/src/slices/play-drafts/review-inputs.ts:1`, `packages/app/src/slices/play-drafts/start.ts:1`, `packages/app/src/slices/play-drafts/model.ts:1`, `biome.json:70`.
+
+The browser imports browser-safe shared draft Zod schemas and model types; runtime service, filesystem, and database modules stay server-side. Tutorial uses the separate browser-safe `settings/tutorial-schema.ts`, while settings persistence imports SQLite transaction/settings repository helpers. `packages/web/src/play/draft-api.ts:1`, `packages/web/src/tutorial/session-api.ts:1`, `packages/app/src/slices/settings/tutorial.ts:1`.
+
+Database migration `0006-play-drafts.sql` adds `play_drafts`, `play_draft_attachments`, and `play_start_receipts`; the existing kernel migration loader discovers sorted `.sql` files and applies unapplied versions transactionally. Draft attachment rows reference draft ownership and staged storage; receipts retain draft identifiers without a draft foreign key. `packages/app/src/kernel/db/migrations/0006-play-drafts.sql:1`, `:18`, `:29`; `packages/app/src/kernel/db/migrate.ts:10`.
 
 ## Module boundaries
 
-- Ports are `LlmPort`, `TtsPort`, `ImagePort`, `SubtitleAligner`, and `Registry`; stages receive wrapped `StageProviders`, never adapters. `packages/app/src/kernel/ports/llm.ts:1-80` `packages/app/src/kernel/runner/providers.ts:1-59`
-- Stage dispatch registers `research`, `article`, `audio`, `images`, `thumbnail`, and `video`. `packages/app/src/main.ts:331-386`
-- Adapter registry registers LLM `openrouter`, `claude-code`, `codex`, `gemini`; TTS `elevenlabs`, `openai-tts`, `cartesia`, `inworld`; image `fal`, `replicate`, `openai-image`, `google-image`. `packages/app/src/adapter-registry.ts:51-89`
-- Catalogue curation validates model, aspect, web-search, thinking, and TTS splitting capabilities. `packages/app/src/catalog/registry.ts:5-86`
+### Runner, revisions, and rebuilds
+
+`kernel/runner` exposes `createRunner`, `Runner`, `StageContext`, and injected `StageStore`/`StageRun` contracts. `Runner` provides `tick`, `settled`, `abortProject`, optional `hasInflight`, and `abortAll`. `StageContext` carries `work: WorkRef`, stage, `AbortSignal`, `maySubmit(pieceId?)`, and an event emitter. `WorkRef` identifies project, originating revision, work, stage, stage kind, and fingerprint. The runner tracks inflight invocations by work identity; SQLite work authority is supplied from the composition root. `kernel/db.openDb` owns the SQLite connection, foreign-key enforcement, five-second busy timeout, WAL mode, and database/sidecar permissions. `packages/app/src/kernel/db/index.ts:8` `packages/app/src/kernel/runner/index.ts:7` `packages/app/src/kernel/runner/index.ts:27` `packages/app/src/kernel/runner/index.ts:46` `packages/app/src/kernel/runner/work.ts:15` `packages/app/src/main.ts:378`
+
+`slices/revisions/index.ts` exports baseline preparation, Save, Restore, history/view access, publication, and their public types. Revisions preserve config/content snapshots and manifests referencing registered assets. Save validates edits and prepared uploads before its transaction; Restore creates a new revision with a new parent and `restoredFromId`, copies the chosen manifest, advances the current head, transitions work, and projects selected outputs. Neither operation calls the runner to admit new generation. `packages/app/src/slices/revisions/index.ts:1` `packages/app/src/slices/revisions/schema.ts:107` `packages/app/src/slices/revisions/mutations.ts:47` `packages/app/src/slices/revisions/restore.ts:23`
+
+`slices/rebuild/service.ts` exposes `previewRebuild`, `startRebuild`, and `RebuildDeps`. Preview stores both a public `RebuildPreview` and a private exact execution snapshot. Start checks the idempotency receipt, current revision, preview identity, reuse/cost consent, and provider/local readiness, then revalidates under the project-control lock before admitting work and waking the runner. `packages/app/src/slices/rebuild/service.ts:23` `packages/app/src/slices/rebuild/service.ts:46` `packages/app/src/slices/rebuild/service.ts:79` `packages/app/src/slices/rebuild/service.ts:140`
+
+Save preparation now has a separate `mutation-prepare.ts` boundary: it owns staged-file allocation/cleanup, prepares edited article derivatives, binds selected retained image assets, and reactivates retained provided audio/thumbnail assets when the current selected binding differs. Presence of a dormant asset ID alone is not treated as an active provided selection; retained audio is measured through the injected `RevisionDeps.measureAudio` capability. `packages/app/src/slices/revisions/mutations.ts:86` `packages/app/src/slices/revisions/mutation-prepare.ts:23` `packages/app/src/slices/revisions/mutation-prepare.ts:65` `packages/app/src/slices/revisions/mutation-prepare.ts:115` `packages/app/src/slices/revisions/mutation-assets.ts:141` `packages/app/src/slices/revisions/mutation-assets.ts:162`
+
+All six production stage IDs—`research`, `article`, `audio`, `images`, `thumbnail`, and `video`—dispatch through `runRevisionInvocation`. The composition root no longer binds those IDs directly to the old per-stage `run` functions. The complete invocation dispatch is: `packages/app/src/main.ts:400` `packages/app/src/slices/rebuild/runtime-run.ts:10`
+
+| Piece | Execution path |
+| --- | --- |
+| Already `done` | Skip the piece. `packages/app/src/slices/rebuild/runtime-run.ts:19` |
+| Input kind `deferred` | Return `held`, leaving future materialization to admitted-work planning. `packages/app/src/slices/rebuild/runtime-run.ts:20` |
+| Key starts `subtitles:` | `executeSubtitleRecipe`: `subtitles:timing`, `subtitles:cues`, or `subtitles:files`. `packages/app/src/slices/rebuild/runtime-run.ts:22` `packages/app/src/slices/rebuild/runtime-subtitles.ts:49` |
+| Key starts `export:` | `executeExportRecipe`: `export:wav` or `export:video`. `packages/app/src/slices/rebuild/runtime-run.ts:24` `packages/app/src/slices/rebuild/runtime-export.ts:25` |
+| Input kind `llm`, `tts`, or `image` | `executeProviderRecipe` through `providers.forPiece(piece.id)`; article body uses `executeArticleRequests` for its continuation requests. `packages/app/src/slices/rebuild/runtime-run.ts:26` `packages/app/src/slices/rebuild/runtime-provider.ts:27` |
+| Other concrete input | `executeLocalRecipe` handles retained provided assets and the local operations `concat-narration`, `provided-article`, `manual-article`, `provided-notes`, and `entry-text`. `packages/app/src/slices/rebuild/runtime-run.ts:28` `packages/app/src/slices/rebuild/runtime-local.ts:27` |
+
+`article:continuation:` pieces are excluded from the outer loop and managed by article execution. Piece failures are persisted as `failed`, or reset to `pending` when aborted. `packages/app/src/slices/rebuild/runtime-run.ts:15` `packages/app/src/slices/rebuild/runtime-run.ts:30`
+
+Durable `RecipeInput` distinguishes LLM, TTS, image, provided, local, and deferred inputs. Its local/deferred operation strings are finite unions, also enforced by Zod at the persisted-input boundary. The full local operation set is `export-wav`, `wav2vec2-en-a19f851-v2-omissions`, `automatic-cues-v1`, `manual-cues-v1`, `subtitle-files-v1`, `render-video`, `render-selected-video`, `provided-notes`, `provided-article`, `manual-article`, `entry-text`, and `concat-narration`. The full deferred set is `research-synthesis`, `article`, `entry:intro:text`, `entry:outro:text`, `thumbnail-prompt`, `thumbnail-image`, `body-narration`, `intro-narration`, `outro-narration`, and `resolve-revision-recipe`. `packages/app/src/slices/rebuild/recipe-model.ts:25` `packages/app/src/slices/rebuild/recipe-input-schema.ts:70`
+
+Invocation readiness resolves dependencies through the current execution plan's reusable, non-inflight work dispositions. Research materialization accepts retained planner/chapter payloads only when their keys and fingerprints match newly derived recipes. Article continuations reuse persisted provider results, retain partial text as an outdated output in the originating revision, and check durable submission authority before creating the next continuation. `packages/app/src/slices/rebuild/runtime-store.ts:73` `packages/app/src/slices/rebuild/runtime-plan.ts:127` `packages/app/src/slices/rebuild/runtime-article.ts:34` `packages/app/src/slices/rebuild/runtime-article.ts:79` `packages/app/src/slices/rebuild/runtime-article.ts:99` `packages/app/src/slices/rebuild/runtime-publication.ts:169`
+
+Narration planning separates `AudioRecipes.mediaFingerprint` (ordered media resource identities and gaps) from its transcript/duration-bearing `timeline`. WAV/video recipes use media identity; subtitle recipes receive the timing inputs separately. Reading a duration or changing transcript metadata therefore does not itself become a new audio-media identity. Runtime export assembly includes intro/outro audio only when the saved generated-audio configuration enables the corresponding entry; provided audio supplies the body without old generated entries. `packages/app/src/slices/rebuild/recipe-audio.ts:140` `packages/app/src/slices/rebuild/recipe-build.ts:14` `packages/app/src/slices/rebuild/recipe-exports.ts:15` `packages/app/src/slices/rebuild/runtime-export-inputs.ts:44` `packages/app/src/slices/rebuild/runtime-export-inputs.ts:62`
+
+### Provider and catalogue boundaries
+
+`kernel/ports` defines `LlmPort`, `TtsPort`, `ImagePort`, `Registry`, and `SubtitleAligner`. `Registry` resolves LLM/TTS/image adapters; subtitle alignment is injected separately. `packages/app/src/kernel/ports/registry.ts:1` `packages/app/src/kernel/ports/subtitles.ts:9` `packages/app/src/main.ts:366`
+
+The complete provider registry is: `packages/app/src/adapter-registry.ts:45`
+
+| Family | Provider IDs |
+| --- | --- |
+| LLM | `openrouter`, `claude-code`, `codex`, `gemini`. `packages/app/src/adapter-registry.ts:60` |
+| TTS | `elevenlabs`, `openai-tts`, `cartesia`, `inworld`. `packages/app/src/adapter-registry.ts:76` |
+| Image | `fal`, `replicate`, `openai-image`, `google-image`. `packages/app/src/adapter-registry.ts:85` |
+
+Keys are read per request. CLI paths resolve at invocation time through `cliBinary`, so a saved path affects the next attempt. Settings owns `cli.path.<provider>`; blank configuration selects the provider's default binary. `kernel/cli-command.ts` resolves Windows executables and supported npm batch shims to a JavaScript entry executed with Node and an argv array. `packages/app/src/adapter-registry.ts:49` `packages/app/src/adapter-registry.ts:54` `packages/app/src/slices/settings/cli-paths.ts:31` `packages/app/src/kernel/cli-command.ts:11`
+
+`catalog/store.ts` loads bundled/local YAML, watches local file metadata on reads, keeps the last valid catalogue after invalid changes, and refreshes from the configured GitHub source with backup/atomic replacement. `models(provider,family)` filters to enabled, nondeprecated entries. `catalog/registry.ts` checks model availability, LLM research/thinking support, image aspect ratio, and maximum physical TTS request length. It does not silently split a TTS request; physical splitting belongs to revision planning. Retrieval of an already accepted TTS continuation bypasses new-submission catalogue rejection. `packages/app/src/catalog/store.ts:24` `packages/app/src/catalog/store.ts:38` `packages/app/src/catalog/store.ts:54` `packages/app/src/catalog/store.ts:90` `packages/app/src/catalog/registry.ts:7` `packages/app/src/catalog/registry.ts:79`
+
+`recipeProviderChoice` is the shared resolver for concrete and deferred rebuild requests. It returns `RecipeProviderChoice {provider:string,model:string,family:ProviderFamily,voice?:string}`; deferred `thumbnail-image` uses the image family while thumbnail prompt work uses LLM. Both selected catalogue capture and paid-request readiness consume this choice, so the execution snapshot and readiness checks use the same provider family. `packages/app/src/slices/rebuild/recipe-provider-choice.ts:5` `packages/app/src/slices/rebuild/recipe-provider-choice.ts:12` `packages/app/src/slices/rebuild/preview-plan.ts:232` `packages/app/src/slices/rebuild/service-readiness.ts:12`
+
+### Other feature modules
+
+- `slices/admission/start.ts` creates a project, six stage rows, supplied content, initial revision, and initial work admission in one transaction. `slices/library` supplies selected prompt/entry bodies and rendered values at creation time. `packages/app/src/slices/admission/start.ts:29` `packages/app/src/slices/admission/start.ts:68` `packages/app/src/edge/http/projects.ts:93`
+- `slices/batch/index.ts` owns batch receipts and SQLite queue order. Its public surface includes `enqueueBatch`, `queueEntries`, `batchExists`, `queueWaiting`, and `pumpQueue`. Only one batch project advances at a time; pause holds its position, and terminal status advances after inflight work drains. `packages/app/src/slices/batch/index.ts:19` `packages/app/src/slices/batch/index.ts:38` `packages/app/src/slices/batch/index.ts:74`
+- `slices/estimate` supplies `estimateRun` to the planning endpoint; rebuilds expose a `CostEstimate` attached to their selected work preview. `packages/app/src/edge/http/planning.ts:65` `packages/app/src/slices/rebuild/model.ts:23`
+- `slices/storage` manages staging, registered immutable assets, reconciliation, and deletion. `slices/revisions/downloads.ts` resolves historical manifest records to registered files; both current and historical files remain addressable by revision identity. `packages/app/src/edge/http/staging.ts:17` `packages/app/src/slices/revisions/downloads.ts:1` `packages/app/src/main.ts:104`
+- `slices/control` and `slices/cancel` handle pause/cancel and project-control synchronization. Legacy edit/rerun handlers remain as refusal endpoints; the current HTTP edit path is revision Save followed by explicit rebuild. `packages/app/src/edge/http/actions.ts:142` `packages/app/src/edge/http/actions.ts:156` `packages/app/src/edge/http/subtitles.ts:15`
+- `slices/subtitles` and `slices/fonts` supply alignment/cue/font operations to revision media execution. Timing, cues, subtitle files, and final media are separate work keys, allowing ready narration/export assets to be retained when only subtitle work changes. `packages/app/src/slices/rebuild/runtime-subtitles.ts:49` `packages/app/src/slices/rebuild/runtime-export.ts:25`
+- `slices/telemetry` records allowed counters and flushes them to the collector independently of user work. `updater/service.ts` exposes `AppUpdater` and its mutation gate; boot injects release lookup, busy detection, install, and shutdown callbacks. `packages/app/src/main.ts:116` `packages/app/src/main.ts:170` `packages/app/src/updater/model.ts:20`
+
+### Durable Play drafts
+
+- `service.ts` exposes `readDraft`, `listDrafts`, `createDraft`, `saveDraft`, `forkDraft`, and `discardDraft`. It validates document shape and attachment ownership, stores raw setup independently of runnable `RunDraft`, and returns `DraftResult<T>`. Save requires the current version and an idempotency mutation ID; replaying the most recently recorded mutation requires the same request hash. Successful Save increments version and clears the stored review. Starting/started drafts reject editing. `packages/app/src/slices/play-drafts/service.ts:49`, `:55`, `:104`, `:146`, `:155`, `:175`, `:212`, `:266`.
+- Fork creates a new draft and new attachment IDs. Ready source attachments share their completed staged file; unresolved attachments become `reattach`. Discard checks version, refuses a draft with a pending Start, deletes the draft, then attempts release of its former staging references. `packages/app/src/slices/play-drafts/service.ts:230`, `:251`, `:266`.
+- `review.ts` exposes `resolvePlayReview`, `reviewDraft`, and re-exports `resolveReviewInputs`. It resolves font availability asynchronously, checks the version/binding again, then stores the public review plus private execution snapshot. `review-inputs.ts` converts raw controls at admission time, resolves selected prompt/entry bodies and keyword substitutions, snapshots catalogue choices, computes each run's estimate, and binds active attachment identities plus the selected font's file hash. `packages/app/src/slices/play-drafts/review.ts:17`, `:49`; `packages/app/src/slices/play-drafts/review-inputs.ts:39`, `:68`, `:85`, `:124`, `:130`, `:153`.
+- `start.ts` exposes `startPlayDraft`. It checks a durable receipt first, claims the reviewed draft as `starting`, verifies exact saved review identity, checks readiness, and revalidates inside the final transaction. Project creation, queue insertion where applicable, receipt creation, and release of draft attachment ownership happen inside that transaction. Only after commit does it record telemetry, release unused staging, and wake the runner/batch queue. `packages/app/src/slices/play-drafts/start.ts:23`, `:31`, `:60`, `:74`, `:91`, `:95`, `:109`, `:123`.
+- `uploads.ts` exposes `uploadDraftAttachment`; its input is `{draftId:string, attachmentId:string, content:AsyncIterable<Uint8Array>}`, and its result is `Promise<DraftResult<DraftAttachment>>`. The caller must already own a pending attachment on an active draft. The storage allocation callback binds the staged row before bytes stream; completion records ready state. Draft uploads supply a no-op storage event emitter and return their completion through HTTP. `packages/app/src/slices/play-drafts/uploads.ts:8`, `:28`, `:37`, `:42`, `:60`.
+- The slice is not an independent provider or runner registry. It calls existing admission/batch functions with captured inputs; provider generation still follows the existing revision runner. Slice import restrictions remain the existing Biome rules, not an additional newly introduced per-file boundary. `packages/app/src/slices/play-drafts/start.ts:1`, `:109`; `biome.json:70`.
+
+### Staging ownership shared with existing project operations
+
+`stagedFileReferenced` and `releaseStagedFile` centralize release eligibility. Release does nothing inside an outer transaction, while a draft references the staged row, or while its upload stream is copying. Otherwise it removes bytes and deletes the row; filesystem failure is logged and leaves cleanup retryable. `packages/app/src/slices/storage/staging-refs.ts:7`, `:14`.
+
+Admission still creates initial immutable revisions and work through the existing path. `startRun` accepts `retainStaged=false`; Play Start passes `true` so the surrounding transaction owns release. Batch admission similarly retains each item's source during creation and supports the outer caller retaining final release. Existing revision Save releases adopted upload sources through the same reference-aware helper, preserving completed bytes still owned by drafts. `packages/app/src/slices/admission/start.ts:29`, `:73`, `:80`; `packages/app/src/slices/batch/index.ts:38`, `:66`; `packages/app/src/slices/revisions/mutations.ts:192`; `packages/app/src/slices/play-drafts/start.ts:109`.
+
+Boot reconciliation keeps referenced completed files only when bytes exist and size matches the stored value; it marks interrupted/missing attachments `reattach` and removes unreferenced staging. This extends staging lifetime without changing immutable project asset/history ownership. `packages/app/src/slices/storage/reconcile.ts:69`, `:84`, `:88`.
+
+### Tutorial persistence
+
+`settings/tutorial.ts` exposes `readTutorial`, `saveTutorial`, `resetTutorial`, and browser-safe schema/type re-exports. It stores a versioned session under SQLite settings key `tutorial.session`, using base version, mutation ID and request hash to distinguish matching retries from conflicts. Unreadable saved JSON produces a readable=false view; reset removes that setting. `packages/app/src/slices/settings/tutorial.ts:14`, `:34`, `:48`, `:57`, `:80`.
 
 ## Entry points
 
-- CLI: `packages/app/src/edge/cli.ts:1-39`; boot/server: `packages/app/src/main.ts:86-256`; HTTP listen: `packages/app/src/main.ts:431-445`.
-- Batch timer: `packages/app/src/main.ts:218-236`; alignment worker: `packages/app/src/adapters/alignment/worker.ts:1-80`; update worker: `packages/app/src/edge/update-worker.ts:1-120`.
-- Collector fetch worker: `packages/collector/src/index.ts:19-32`; site is static Wrangler output. `packages/site/package.json:1-14`
+| Process or lifetime | Entry and ownership |
+| --- | --- |
+| Installed CLI | `edge/cli.ts` parses options, resolves config, forwards managed updates when applicable, calls `boot`, opens the browser, and handles SIGINT. `packages/app/src/edge/cli.ts:9` `packages/app/src/edge/cli.ts:41` |
+| Application HTTP server | `boot(config)` constructs the app; `listen` passes `app.fetch`, host, and port to `@hono/node-server`. `packages/app/src/main.ts:86` `packages/app/src/main.ts:422` |
+| Batch timer | Boot calls `pumpQueue` once per second inside the updater mutation gate. It is an in-process timer, not a separate scheduling worker. `packages/app/src/main.ts:273` |
+| Alignment child | The alignment adapter forks its worker; `adapters/alignment/worker.ts` receives one IPC input and returns progress/words/omissions/error messages. `packages/app/src/adapters/alignment/runner.ts:20` `packages/app/src/adapters/alignment/worker.ts:13` |
+| Detached update child | `edge/update-worker.ts` reads a validated plan path from its first argument and coordinates installation/handoff through IPC. `packages/app/src/edge/update-worker.ts:5` |
+| Browser SPA | `packages/web/src/main.tsx` creates the React root on `#root`. `packages/web/src/main.tsx:22` `packages/web/src/main.tsx:41` |
+| Collector worker | `packages/collector/src/index.ts` exports Cloudflare's fetch handler for `/events` and `/aggregates`. `packages/collector/src/index.ts:21` |
+| Public website | Wrangler serves `packages/site/public`; browser `main.js` starts aggregate polling and showcase/copy interactions. `packages/site/wrangler.jsonc:9` `packages/site/public/main.js:133` `packages/site/public/main.js:175` |
+
+The Play draft session is an additional browser lifetime, not a worker: `PlayDraftProvider` in the root Shell owns `useDraftSession` across route navigation. No additional process entrypoint is introduced. `packages/web/src/components/shell.tsx:53` `packages/web/src/play/draft-context.tsx:55`.
 
 ## Communication
 
-- Hono registers `/api/health`, staging, project planning/project/preview/actions/subtitles, update, fonts, prompts, entries, telemetry, usage, settings, and providers. `packages/app/src/edge/http/app.ts:69-91`
-- Project routes carry `RunDraft`, `ProjectListBody`, `ProjectBody`, and `CreatedProjectBody`; planning carries `CostEstimate` and `QueueEntry`; actions carry action-specific JSON. `packages/app/src/edge/http/projects.ts:64-158` `packages/app/src/edge/http/planning.ts:15-104` `packages/web/src/api.ts:68-87`
-- Staging carries `StagedFile` or multipart `file`; prompts/entries carry `Prompt`/`PromptDraft` and `Entry`/`EntryDraft`; providers carry `ProviderStatus`, model arrays, and masked key status. `packages/app/src/edge/http/staging.ts:33-70` `packages/app/src/edge/http/prompts.ts:37-57` `packages/app/src/edge/http/entries.ts:34-52` `packages/app/src/edge/http/providers.ts:38-128`
-- Project SSE `/api/events/projects/:id` carries `ProjectEvent` union: stage state/progress, article delta, LLM preview, image landed, project state/update. `packages/app/src/edge/http/app.ts:128-134` `packages/app/src/kernel/events.ts:3-71`
-- Global SSE `/api/events/global` carries running count, staging events, and project state/update. `packages/app/src/edge/events/hub.ts:20-29` `packages/app/src/edge/events/hub.ts:119-141`
-- Provider calls use an in-process queue capped at five globally and per-provider catalogue limits; LLM streams `LlmEvent`, TTS streams audio bytes, and images return `GeneratedImage`. `packages/app/src/kernel/runner/queue.ts:12-77` `packages/app/src/kernel/runner/providers.ts:79-222`
-- Batch ordering is SQLite `batches`/`project_queue`, advanced by `pumpQueue`; no broker or external queue service exists. `packages/app/src/slices/batch/index.ts:19-57` `packages/app/src/main.ts:218-236`
-- Telemetry posts `{events: CollectorEvent[]}` to collector `/events` and receives `{ok, accepted}`; site reads `{aggregates: Aggregates}` from `/aggregates`. `packages/app/src/slices/telemetry/collector-client.ts:1-90` `packages/collector/src/index.ts:43-78` `packages/collector/src/index.ts:102-117`
+### HTTP
+
+Hono composes API routers under `/api`, SSE under `/api/events`, and file routes under `/files`. Unknown API endpoints produce problem JSON before SPA fallback. All non-read API mutations except update control routes acquire the updater's mutation gate. `packages/app/src/edge/http/app.ts:77` `packages/app/src/edge/http/app.ts:120` `packages/app/src/edge/http/app.ts:144`
+
+Except where specified, GETs have no body, POST/PUT/PATCH use JSON, and successful responses are JSON. `?` below means optional; named types are shared domain models. Expected refusal payloads are problem JSON rather than successful response bodies.
+
+| Boundary | Request → response; client send/receive and server receive/send |
+| --- | --- |
+| Health | `GET /api/health` → `{status:"ok",version:string,uptimeMs:number}`. `packages/app/src/edge/http/app.ts:80` |
+| Create project | `POST /api/projects`, `RunDraft` → 201 `{project:ProjectSummary,stages:Stage[]}`. Server re-reads chosen templates, validates draft/models/font, snapshots raw and rendered prompts, commits initial work, then ticks the runner. `packages/web/src/api.ts:159` `packages/app/src/edge/http/projects.ts:72` |
+| List/read/delete project | GET collection → `{projects:ProjectListing[]}`; GET `/:id` → `{revisionId:string|null,project:ProjectSummary,stages:Stage[],outputs:Output[]}`; DELETE `/:id` → 204. Reads can lazily adopt a legacy baseline when a catalogue is wired. `packages/web/src/api.ts:139` `packages/web/src/api.ts:143` `packages/web/src/api.ts:152` `packages/app/src/edge/http/projects.ts:135` |
+| Estimate | `POST /api/projects/estimate`, `{draft:RunDraft,expectedWords?:number,items?:{title:string,values:Record<string,string>}[]}` → `{estimates:CostEstimate[]}`; omitted expected words defaults to 1500. `packages/web/src/play/run-review.tsx:134` `packages/app/src/edge/http/planning.ts:15` `packages/app/src/edge/http/planning.ts:65` |
+| Batch/queue | POST `/api/projects/batch` adds `requestId:UUID` to estimate input → `{queue:QueueEntry[]}` (201 on creation; 200 on replay). GET `/api/projects/queue` → same wrapper. `QueueEntry` has `projectId`, `batchId`, numeric `position`, and `state:"queued"|"active"|"finished"`. `packages/web/src/routes/play.tsx:95` `packages/web/src/components/batch-queue.tsx:12` `packages/app/src/edge/http/planning.ts:82` `packages/app/src/slices/batch/index.ts:13` |
+| Prepare/history/view revisions | POST `/:id/revisions/prepare` (no required fields) → `{ok:true,view:RevisionView,created:boolean}`. GET `/:id/revisions` → `{revisions:RevisionSummary[]}`. GET `/:id/revisions/:revisionId` → `{view:RevisionView}`. `packages/web/src/project/revision-api.ts:93` `packages/web/src/project/revision-api.ts:133` `packages/app/src/edge/http/revisions.ts:67` |
+| Save/restore revision | POST `/:id/revisions`, `{baseRevisionId,idempotencyKey:UUID,edit:RevisionEdit}`; POST `/:id/revisions/restore`, `{baseRevisionId,idempotencyKey:UUID,targetRevisionId}` → `{ok:true,view:RevisionView,duplicate:boolean}`. `packages/web/src/project/revision-api.ts:99` `packages/web/src/project/revision-api.ts:116` `packages/app/src/edge/http/revisions.ts:85` `packages/app/src/slices/revisions/schema.ts:92` |
+| Preview/start rebuild | POST `/:id/rebuild/preview`, `{baseRevisionId,request:{kind:"allAffected"}|{kind:"selected",workKeys:string[]}}` → `{ok:true,value:RebuildPreview}`. POST `/:id/rebuild`, `{baseRevisionId,idempotencyKey:UUID,previewId,acknowledgeUnknownCosts:boolean,confirmedProvidedWorkKeys:string[]}` → 202 `{ok:true,value:RebuildAdmission}`. `packages/web/src/project/revision-api.ts:156` `packages/app/src/edge/http/revisions.ts:109` `packages/app/src/slices/rebuild/model.ts:96` |
+| Pause/cancel | POST `/:id/pause` or `/:id/cancel`, `RevisionControlInput {baseRevisionId:string,idempotencyKey:UUID}` for revision-backed projects → current project/stages/outputs view including `revisionId`; cancel adds `canceled`. Production adopts legacy baselines before validating control input. `packages/web/src/project/use-actions.ts:63` `packages/app/src/edge/http/actions.ts:69` `packages/app/src/edge/http/actions.ts:122` |
+| Retired mutations | Provider PATCH, article PUT, stage rerun POST, image DELETE/regenerate POST, and subtitles PATCH return 409 `reason:"revision-required"`. Resume and stage retry POST return 409 `reason:"rebuild-required"` for existing projects, 404 for missing ones. They do not launch work. `packages/app/src/edge/http/actions.ts:149` `packages/app/src/edge/http/subtitles.ts:15` |
+| Revision downloads/folder | GET `/files/:projectId/revisions/:revisionId/:recordId` → registered file bytes with MIME, size, and saved-revision filename; GET sibling `images.zip` → ordered selected image ZIP. POST `/api/projects/:id/revisions/:revisionId/:recordId/open-folder` (no body) → `{opened:true}`. A supplied Origin must match the app origin. `packages/web/src/project/revision-api.ts:191` `packages/web/src/project/revision-api.ts:200` `packages/app/src/edge/http/revision-files.ts:20` `packages/app/src/edge/http/revision-files.ts:53` |
+| Legacy files/folder | Output GETs return file bytes or image ZIP. POST `/api/projects/:id/open-folder`, `{asset:string}` → `{opened:true}` after resolving the output and checking a supplied Origin. `packages/web/src/api.ts:204` `packages/web/src/project/open-folder.tsx:20` `packages/app/src/edge/http/files.ts:33` `packages/app/src/edge/http/open-folder.ts:35` |
+| Live audio | GET `/api/projects/:projectId/audio-preview` → `{revisionId:string|null,previews:AudioPreview[]}` filtered by current work authority. GET `/:previewId` → growing `audio/mpeg` stream, no ranges, no-store; invalid/obsolete preview → 404. `AudioPreview` has `id,label,state,bytes` and optional `revisionId,workId,workPieceId`. `packages/web/src/project/live-audio.tsx:19` `packages/app/src/edge/http/audio-preview.ts:19` `packages/app/src/kernel/audio-preview.ts:3` |
+| Staging | GET `/api/staging` → `{files:StagedFile[]}`; POST `/:kind` multipart `file` → `StagedFile`; DELETE `/:id` → 204. `packages/web/src/api.ts:170` `packages/web/src/api.ts:174` `packages/web/src/api.ts:181` `packages/app/src/edge/http/staging.ts:31` |
+| Prompts/entries | GET collections → `{prompts:Prompt[]}` / `{entries:Entry[]}`. Prompt POST/PUT input `{kind,name,body}` → `Prompt`; entry POST/PUT `{category,mode,name,body}` → `Entry`; DELETE → 204. `packages/web/src/api.ts:310` `packages/web/src/api.ts:334` `packages/app/src/edge/http/prompts.ts:30` `packages/app/src/edge/http/entries.ts:30` |
+| Providers/models/catalogue | GET `/api/providers` → `{providers:ProviderStatus[]}`; GET `/:id/models` → `ModelCatalog {models:ModelInfo[],allowsCustom:boolean,warning?:string,notice?:string}` (production uses curated entries and `allowsCustom:false`). GET `/catalogue` and bodyless POST `/catalogue/refresh` → `{updatedAt,path,warning:string|null,source}` when available. `packages/web/src/api.ts:208` `packages/web/src/components/catalogue.tsx:16` `packages/app/src/edge/http/providers.ts:38` `packages/app/src/slices/settings/models.ts:3` |
+| Provider credentials/path | PUT `/:id/key`, `{key:string}` → `{provider,hasKey,masked}`; DELETE key → 204. PUT `/:id/path`, `{path:string}` → `ProviderStatus`. Keys are not returned. `packages/web/src/api.ts:214` `packages/web/src/api.ts:224` `packages/app/src/edge/http/providers.ts:81` |
+| Settings/voices | Settings GET/PUT reads/writes `AppSettings {silenceGapSeconds:number,appearance}`. GET voices → `{voices:Voice[]}`; POST `{provider,name,voiceId}` → `Voice` (201); DELETE → 204. `packages/web/src/api.ts:241` `packages/web/src/api.ts:249` `packages/web/src/api.ts:268` `packages/app/src/edge/http/settings.ts:21` |
+| Fonts | GET `/api/fonts` → `{fonts:FontSummary[]}`; multipart upload POST → `{font:FontSummary}`; preview GET → binary font content. `packages/web/src/subtitles/api.ts:14` `packages/app/src/edge/http/fonts.ts:27` `packages/app/src/edge/http/fonts.ts:58` |
+| Usage/notice | Usage GET → `Usage`; telemetry notice GET/bodyless POST → `{seen:boolean,appVersion:string}`. `packages/web/src/api.ts:190` `packages/app/src/edge/http/usage.ts:14` `packages/app/src/edge/http/telemetry.ts:22` |
+| Update | GET `/api/update`, optional `refresh=1`; bodyless POST starts installation. Both return `UpdateInfo`; accepted POST is 202. `UpdateInfo` has `currentVersion`, nullable `latestVersion`, `available,busy,canUpdate`, `status`, optional `blockedReason,error`. `packages/web/src/updates/api.ts:11` `packages/app/src/edge/http/update.ts:31` `packages/app/src/updater/model.ts:3` |
+
+`RevisionEdit` contains required `config:RunConfig` and `content:RevisionContent`, optional `regenerate:string[]`, and optional staged-upload bindings `{stagedFileId,destination}`. Destinations are provided audio/thumbnail, a stable image key, or a logical narration key. Content includes optional edited article text, selected provided assets, image order/definitions, narration text/asset overrides, optional audio-bound subtitle cues, regeneration tokens, and frozen raw prompt templates. `packages/app/src/slices/revisions/schema.ts:26` `packages/app/src/slices/revisions/schema.ts:68`
+
+`RevisionView` contains the immutable revision, nullable article text, selected/available output and piece manifests, and a `current` flag. `RebuildPreview` contains selected work/dependencies/dispositions, changed inputs, retained outputs, provided-work consent keys, costs, warnings, and the plan fingerprint. `RebuildAdmission` contains `revisionId`, `admissionId`, `workIds`, and `replayed`. Expected revision/rebuild refusals return 400/404/409 problem JSON with `reason`, nullable `currentRevisionId`, and `fields:{field,message}[]`; missing rebuild wiring returns 503. `packages/app/src/slices/revisions/schema.ts:125` `packages/app/src/slices/rebuild/model.ts:10` `packages/app/src/slices/rebuild/model.ts:62` `packages/app/src/edge/http/revisions.ts:24` `packages/web/src/project/revision-api.ts:47`
+
+`RebuildPreview.review?` adds human-readable input comparisons and request details: `inputChanges:{label:string,before:string|null,after:string|null}[]` and `requests:{key:string,label:string,text:string|null,settings:string|null}[]`. Preview construction compares the saved revision with its parent and describes the selected exact recipes, including physical narration request text and provider/model/voice. The browser renders these details alongside dependencies, dispositions, costs, and reuse consent; they do not replace the execution snapshot used by Start. Server production: `packages/app/src/slices/rebuild/preview-details.ts:9` `packages/app/src/slices/rebuild/preview-plan.ts:180`; shared payload/schema: `packages/app/src/slices/rebuild/model.ts:45` `packages/app/src/slices/rebuild/model.ts:173`; client receive/render: `packages/web/src/project/revision-api.ts:156` `packages/web/src/project/rebuild-review.tsx:41`.
+
+The HTTP surface continues to include the older project-create, estimate, batch, revision, settings, and storage routes; the new Play UI uses `/api/drafts` for Save/Review/Start. Server mount sites: `packages/app/src/edge/http/app.ts:87`, `:88`, `:89`, `:106`.
+
+### Complete API router registry
+
+The chained `/api` registry is: inline `/health`; `/staging` stagingRoutes; `/drafts` draftRoutes; `/projects` planningRoutes, projectRoutes, revisionRoutes, revisionFolderRoutes, openFolderRoutes, audioPreviewRoutes, actionRoutes, subtitleRoutes; `/update` updateRoutes; `/fonts` fontsRoutes; `/prompts` promptRoutes; `/entries` entryRoutes; `/telemetry` telemetryRoutes; `/usage` usageRoutes; `/settings` settingsRoutes; `/tutorial` tutorialRoutes; `/providers` providerRoutes. Existing global/project SSE and current/revision file routers are registered outside that chain. `packages/app/src/edge/http/app.ts:77`, `:145`, `:152`.
+
+### Draft DTOs used below
+
+The source DTOs are in `packages/app/src/slices/play-drafts/model.ts:15` and schemas in `schema.ts:67`. `RunDraft`, `CostEstimate`, and `QueueEntry` retain their existing domain meanings.
+
+- `PlayDraftDocument`: `{schemaVersion:1, form:PlayDraftForm, section:"content"|"outputs"|"style"|"review", variants:{id:string,title:string,values:Record<string,string>}[], expectedWords:string, previewText:string, fontUpload:{operationId:string,name:string}|null}`. UUID fields are schema-validated. `packages/app/src/slices/play-drafts/schema.ts:67`.
+- `PlayDraftForm` contains title/format; six sources (research/article/audio/images/thumbnail/video); LLM/audio/images provider choices; article/thumbnail prompt selections; image prompt selections with raw `number:string`; intro/outro selections; keyword values; raw chunking word/character strings; subtitles with raw font-size string; provided research/article strings and audio/thumbnail/images attachment references `{attachmentId:string,name:string}`. Inactive choices and raw numeric edits are document state, not normalized admission output. Exact schema: `packages/app/src/slices/play-drafts/schema.ts:14`, `:35`, `:39`, `:43`, `:54`.
+- `DraftSummary`: `{id:string,title:string,version:number,updatedAt:string,readable:boolean}`. `PlayDraft`: `{id:string,version:number,createdAt:string,updatedAt:string,document:PlayDraftDocument}`. `packages/app/src/slices/play-drafts/model.ts:15`, `:22`.
+- `DraftAttachment`: `{id:string,kind:"audio"|"images"|"thumbnail",name:string,state:"pending"|"copying"|"ready"|"reattach",stagedFileId:string|null,bytes:number,error:string|null}`. `packages/app/src/slices/play-drafts/model.ts:29`.
+- `PlayReview`: `{id:string,draftId:string,draftVersion:number,fingerprint:string,runs:{draft:RunDraft,rendered:Record<string,string>,templates:Record<string,string>}[],estimates:CostEstimate[]}`. `packages/app/src/slices/play-drafts/model.ts:38`.
+- `PlayStartResult`: `{requestId:string,projectIds:string[],queue:QueueEntry[],replayed:boolean}`; each queue item is `{projectId:string,batchId:string,position:number,state:"queued"|"active"|"finished"}`. `packages/app/src/slices/play-drafts/model.ts:51`, `packages/app/src/slices/play-drafts/schema.ts:122`.
+- `DraftView`: `{draft:PlayDraft,attachments:DraftAttachment[],review:PlayReview|null,pendingStart:{reviewId:string,draftVersion:number}|null,start:PlayStartResult|null}`. `packages/app/src/slices/play-drafts/model.ts:57`.
+
+### Complete new draft HTTP registry
+
+All identifiers in these route parameters/request IDs are UUIDs; baseVersion is a positive integer. JSON response validation uses shared Zod schemas on both server and browser. `packages/app/src/edge/http/drafts.ts:29`; `packages/web/src/play/draft-api.ts:66`.
+
+| Channel | Request → response; send/receive evidence |
+| --- | --- |
+| `GET /api/drafts` | No body → `{drafts:DraftSummary[]}`. Client `packages/web/src/play/draft-api.ts:113`; server `packages/app/src/edge/http/drafts.ts:56`. |
+| `POST /api/drafts` | `{id:string,document:PlayDraftDocument}` → `DraftView`, 201 new / 200 matching replay. Client `packages/web/src/play/draft-api.ts:118`; server `packages/app/src/edge/http/drafts.ts:57`. |
+| `GET /api/drafts/:id` | Path id, no body → `DraftView`. Client `packages/web/src/play/draft-api.ts:124`; server `packages/app/src/edge/http/drafts.ts:65`. |
+| `PUT /api/drafts/:id` | Path id + `{baseVersion:number,mutationId:string,document:PlayDraftDocument}` → `DraftView`. Client `packages/web/src/play/draft-api.ts:127`; server `packages/app/src/edge/http/drafts.ts:69`. |
+| `POST /api/drafts/:id/fork` | Path source id + `{id:string,document:PlayDraftDocument}` → `DraftView`, 201 new / 200 matching replay. Client `packages/web/src/play/draft-api.ts:134`; server `packages/app/src/edge/http/drafts.ts:81`. |
+| `DELETE /api/drafts/:id` | Path id + `{baseVersion:number}` → `{discarded:true}`. Client `packages/web/src/play/draft-api.ts:141`; server `packages/app/src/edge/http/drafts.ts:94`. |
+| `POST /api/drafts/:id/review` | Path id + `{baseVersion:number}` → `PlayReview`. Client `packages/web/src/play/draft-api.ts:154`; server `packages/app/src/edge/http/drafts.ts:113`. |
+| `POST /api/drafts/:id/start` | Path id + `{baseVersion:number,reviewId:string}` → `PlayStartResult`, 201 new / 200 replay. Client `packages/web/src/play/draft-api.ts:161`; server `packages/app/src/edge/http/drafts.ts:125`. |
+| `PUT /api/drafts/:id/attachments/:attachmentId/file` | Path owning IDs + multipart `file:File` → `DraftAttachment`. Client `packages/web/src/play/draft-api.ts:171`; server `packages/app/src/edge/http/draft-files.ts:30`; streaming receiver `packages/app/src/slices/play-drafts/uploads.ts:8`. |
+| `GET /api/drafts/:id/attachments/:attachmentId/file` | Path owning IDs, no body → raw ready image/thumbnail bytes with image MIME, content-length, nosniff and no-store. Audio, non-ready, unknown-image-extension or wrong staging-kind requests are 404. Client URL construction `packages/web/src/play/draft-api.ts:168`, preview consumer `packages/web/src/play/output-preview.tsx:41`; server `packages/app/src/edge/http/draft-files.ts:50`. |
+
+Draft service refusals become problem JSON: standard status/title/detail plus `{reason:string,currentVersion:number|null,fields:{field:string,message:string}[],reviewId?:string}`. `not-found` maps to404; `invalid-edit` and `readiness` map to400; other typed reasons map to409. The browser turns expected400/404/409 responses into `DraftRefusal {ok:false,reason,message,currentVersion,fields,reviewId?}`; malformed/unexpected failures throw. `packages/app/src/edge/http/draft-problem.ts:5`; `packages/web/src/play/draft-api.ts:24`, `:66`.
+
+### Tutorial HTTP and internal channels
+
+Tutorial wire session is `{schemaVersion:1,active:boolean,stepId:TutorialStepId,articleId?:string,imageId?:string,projectId?:string}`. Its response view is `{version:number,session:TutorialSession,readable:boolean}`. The complete persisted step registry is `text-key`, `audio-key`, `image-key`, `voice`, `article-name`, `article-body`, `article-keywords`, `article-save`, `image-prompt`, `image-save`, `play-options`, `play-article`, `play-keywords`, `play-audio`, `play-images`, `play-video`, `play-subtitles`, `play-start`, `project`, `download`. `packages/app/src/slices/settings/tutorial-schema.ts:3`, `:43`.
+
+| Channel | Request → response; send/receive evidence |
+| --- | --- |
+| `GET /api/tutorial` | No body → tutorial view. Client `packages/web/src/tutorial/session-api.ts:17`; server `packages/app/src/edge/http/tutorial.ts:15`. |
+| `PUT /api/tutorial` | `{baseVersion:number,mutationId:string,session:TutorialSession}`, nonnegative base version and UUID mutation → tutorial view; conflicts/unreadable saved state return409 problem JSON with `reason:"conflict"|"unreadable"`. Client `packages/web/src/tutorial/session-api.ts:27`; server `packages/app/src/edge/http/tutorial.ts:16`; schema `packages/app/src/slices/settings/tutorial-schema.ts:34`. |
+| `DELETE /api/tutorial` | No body →204 empty. Client `packages/web/src/tutorial/session-api.ts:30`; server `packages/app/src/edge/http/tutorial.ts:30`. |
+| UI tutorial event callback | `{type:"prompt-saved",id:string,kind:"article"|"image"|"thumbnail"}` or `{type:"project-created",id:string}` → no direct return; reducer returns updated client tutorial session `{active:boolean,step:number,articleId?:string,imageId?:string,projectId?:string}`, queued for durable save. Senders `packages/web/src/routes/prompt-editor.tsx:87`, `packages/web/src/routes/play.tsx:131`; receiver `packages/web/src/tutorial/context.tsx:44`, `packages/web/src/tutorial/model.ts:93`; persistence sender `packages/web/src/tutorial/use-session.ts:33`. |
+| Tutorial → Play navigation callback | `(section:"content"|"outputs"|"style"|"review", field?:string)` → `Promise<void>`; owning session flushes edits before publishing a reveal request `{section,field?,sequence:number}`. Caller `packages/web/src/tutorial/runner.tsx:86`; contract `packages/web/src/play/draft-context.tsx:14`; receiver `packages/web/src/play/use-draft-session.ts:294`. |
+
+### Internal Start dispatch
+
+Reviewed single-run dispatch passes `(deps, RunDraft, rendered:Record<string,string>, retainStaged:true, templates:Record<string,string>)` to `startRun` and receives `StartedRun {project,stages}`; batch dispatch passes `(deps,batchId:string,runs:ResolvedPlayRun[],retainStaged:true)` to `enqueueBatch` and receives `QueueEntry[]`. After durable commit, a single run calls `runner.tick(projectId:string)` with no return value; a batch calls `pumpQueue(db,runner)`, which ticks the first eligible queued project. No new message broker, websocket, or draft SSE channel is introduced. Draft attachment upload explicitly suppresses the existing storage emitter. `packages/app/src/slices/play-drafts/start.ts:109`, `:126`; `packages/app/src/slices/admission/start.ts:29`, `:84`; `packages/app/src/slices/batch/index.ts:38`, `:76`; `packages/app/src/slices/play-drafts/uploads.ts:37`.
+
+### SSE and previews
+
+The browser opens EventSource with no request body at `/api/events/projects/:id` or `/api/events/global`. The hub sends named frames with `event=payload.type`, JSON `data`, and generated event IDs. A project subscription replays retained writing previews; a global subscription replays the running count. Reconnection triggers client refetch rather than replaying all historical events. `packages/web/src/main.tsx:26` `packages/app/src/edge/events/hub.ts:79` `packages/app/src/edge/events/hub.ts:119` `packages/web/src/events.ts:98`
+
+Every project event carries `projectId:string` and optional `EventOrigin {revisionId,workId,workPieceId}`. The full project-event union is: `packages/app/src/kernel/events.ts:7`
+
+| Event | Additional fields |
+| --- | --- |
+| `stage.state` | `stage:StageKind,state:StageState,failureReason?:string` |
+| `stage.progress` | `stage:StageKind,current:number,total:number` |
+| `article.delta` | `text:string` |
+| `llm.preview` | `stage:StageKind,callId:string,text:string,label?:string,reset?:boolean` |
+| `image.landed` | `outputId:string,index:number` |
+| `project.state` | `state:ProjectState` |
+| `project.updated` | No additional fields |
+
+The runner emits to the hub; the hub's injected `currentProjectEvent` checks current-head identity and work reservations/fingerprints before forwarding scoped updates. Unscoped `project.updated` always invalidates; unscoped project-state controls also pass. Old work can finish into its originating revision without painting another head as its result. The browser independently filters stale revision frames, keys streamed article/writing caches by revision, and coalesces refetches; work-scoped stage updates cause refetch instead of blindly overwriting aggregate standings. `packages/app/src/main.ts:110` `packages/app/src/main.ts:411` `packages/app/src/edge/events/visibility.ts:5` `packages/web/src/project/use-live.ts:18`
+
+Global `/api/events/global` carries `running.count {count:number}`, project state/update events, and staging events. `staging.progress` carries `stagedFileId,stageKind,originalFilename,bytes,state`; `staging.failed` carries `stagedFileId,stageKind,originalFilename,detail` (without bytes/state). The browser updates its tally or refetches project/staging data. `packages/app/src/kernel/events.ts:63` `packages/app/src/slices/storage/model.ts:79` `packages/app/src/edge/events/hub.ts:149` `packages/web/src/events.ts:84`
+
+Live audio is a bounded, disposable copy of the TTS request already running. Provider execution registers revision/work/piece origin; `observeNarration` copies bytes into `AudioPreviewStore`. Browser listeners retrieve the current authorized preview stream over HTTP. Preview reads never start synthesis or persist final audio and do not backpressure the provider. `packages/app/src/slices/rebuild/runtime-provider.ts:73` `packages/app/src/kernel/audio-preview.ts:56` `packages/app/src/edge/http/audio-preview.ts:21`
+
+### Queues, workers, and external boundaries
+
+- Provider work passes through `StageProviders`, the shared queue, and the attempt wrapper. `llm(LlmCall,onEvent?)` resolves `AttemptResult<LlmAnswer>` (`text`, nullable usage and finish reason); `tts(TtsCall,observe?)` resolves `AttemptResult<NarratedAudio>` (MP3 bytes); `image(ImageCall)` resolves `AttemptResult<GeneratedImage>`. Each result can instead be `{ok:false,reason:"held"}` when authority no longer permits submission. `forPiece` binds calls to a durable physical piece. Queue input is `(provider,signal,work callback)` and result is the callback's promise; at most five callbacks run globally and lower per-provider limits apply. Waiting does not start an attempt's timer. `packages/app/src/kernel/runner/providers.ts:19` `packages/app/src/kernel/runner/providers.ts:63` `packages/app/src/kernel/runner/providers.ts:86` `packages/app/src/kernel/runner/queue.ts:10` `packages/app/src/kernel/runner/work.ts:30`
+- Alignment IPC sends `WorkerInput {modelPath:string,pcmPath:string,text:string}`. Replies are `progress {current,total}`, `done {words:{text,start,end,confidence?}[]}`, `omission {start,text}`, or `error {message}`. Parent sends/receives in `runner.ts`; child receives/sends in `worker.ts`; protocol is Zod-validated. `packages/app/src/adapters/alignment/protocol.ts:3` `packages/app/src/adapters/alignment/runner.ts:49` `packages/app/src/adapters/alignment/worker.ts:13`
+- Alignment omissions receive timeline offsets during subtitle execution and pass into subtitle files/output metadata as `subtitleOmissions`; the video panel renders the omitted text with its time. `packages/app/src/slices/rebuild/runtime-subtitles.ts:74` `packages/app/src/slices/rebuild/runtime-subtitles.ts:267` `packages/web/src/project/body-video.tsx:106`
+- Update launch writes `UpdatePlan {token,version,previousVersion,oldEntry,dataDir,cwd,host,port,npm:{file,args}}` and passes the file path to its detached worker. Child sends `{type:"installed"}`; parent answers `{type:"handoff"}` or `{type:"abort"}`. Candidate readiness (`GET /api/update/ready`) and activation (`POST /api/update/activate`) send the `X-Slopify-Update-Token` header with no request body and returns `{status:"ok",version}` when successful. `packages/app/src/updater/plan.ts:15` `packages/app/src/updater/install.ts:13` `packages/app/src/edge/update-worker.ts:25` `packages/app/src/updater/worker.ts:112` `packages/app/src/edge/http/update.ts:17`
+- Telemetry sends `{events:CollectorEvent[]}` to collector `POST /events`; collector validates and responds `{ok:true,accepted:number}`. The app consumes HTTP success/failure, not the response fields; failed delivery leaves queued events for later. Public-site GET `/aggregates` consumes `{aggregates:Aggregates}`. App sender/receiver: `packages/app/src/slices/telemetry/collector-client.ts:40`; collector receiver/sender: `packages/collector/src/index.ts:21` `packages/collector/src/index.ts:41`; site sender/receiver: `packages/site/public/main.js:60`.
 
 ## Composition
 
-- `boot()` constructs database, catalogue, registry, hub, telemetry, updater, runner, and Hono app; `wire()` injects stage implementations and provider wrappers. `packages/app/src/main.ts:86-214` `packages/app/src/main.ts:286-386`
-- No DI container or service locator is used; dependencies are typed parameters and closures. `packages/app/src/main.ts:286-386`
+`boot()` acquires the instance lock, prepares FFmpeg, opens and migrates SQLite, marks interrupted stages, recovers durable work, and reconciles storage. It constructs log/hub/telemetry, the catalogue and curated provider registry, audio previews, and the runner before wiring updater and HTTP. `packages/app/src/main.ts:86` `packages/app/src/main.ts:126`
+
+`wireRunner()` supplies `createRunner` with revision execution operations: materialize admitted work; project current standings; determine invocation readiness; enforce project pause and batch waiting; claim work; check each physical submission; finish work and materialize dependents. It injects shared media dependencies, a single provider queue backed by catalogue limits, SQLite attempts, wrapped providers, and event emitters. `packages/app/src/main.ts:345`
+
+HTTP receives typed `RebuildDeps` containing catalogue, runner, provider readiness, model discovery, emitter, and bounded FFmpeg duration probing. The folder-opening edge adapter is injected and launches the host file manager (including WSL path conversion). `packages/app/src/main.ts:220` `packages/app/src/edge/open-folder.ts:7`
+
+Shutdown clears the batch timer, activation watcher, and preview store; closes the listener before aborting/draining the runner; then stops telemetry, closes SQLite, and releases the lock. `packages/app/src/main.ts:288`
+
+Boot passes `DraftStartDeps` to `createApp`: shared db/paths/ids/clock/log/runner/catalogue, `randomUUID`, a font resolver bound to local paths, the same readiness/model-list functions used by rebuilds, global hub event emission, and a project-created telemetry callback. Tutorial routes receive the existing database dependency through `AppDeps`. `packages/app/src/main.ts:234`; `packages/app/src/slices/play-drafts/model.ts:12`, `:93`, `:110`; `packages/app/src/edge/http/app.ts:106`; `packages/app/src/edge/http/tutorial.ts:13`.
+
+The browser composition remains one React root with QueryClient, AppProvider and RouterProvider. Shell now nests `FormDraftsProvider` → `PlayDraftProvider` → `TutorialProvider` → route outlet; Play save/upload/review ownership therefore survives navigation to prompt editors/settings inside that Shell. The tutorial can call the same Play session navigation seam. `packages/web/src/main.tsx:22`, `:30`; `packages/web/src/components/shell.tsx:53`; `packages/web/src/play/draft-context.tsx:55`; `packages/web/src/tutorial/runner.tsx:31`.
 
 ## Frontend
 
-- The local app serves a client-rendered React 19/Vite SPA and falls back SPA paths to `index.html`. `packages/web/src/main.tsx:1-37` `packages/app/src/edge/http/app.ts:142-150`
-- Routes are `/`, `/play`, `/projects/$projectId`, prompts, entries, settings, and usage; prompt kind and entry category are URL search state. `packages/web/src/router.tsx:20-115` `packages/web/src/router.tsx:215-233`
-- The client uses React Query, TanStack Router, Radix-based UI primitives, Tailwind styling, and Barlow fonts. `packages/web/src/main.tsx:20-37` `packages/web/package.json:19-31`
-- The API seam is generated `hc<AppType>` at `${origin}/api`; EventSource carries SSE and same-origin URLs serve files. `packages/web/src/api.ts:60-132` `packages/web/src/events.ts:50-118`
+The local UI is a client-rendered React 19/Vite SPA. Its composition root creates the API/version watcher, EventSource factory, React Query client, application provider, and TanStack Router. Hono serves built assets and falls back browser routes to `index.html`. `packages/web/package.json:21` `packages/web/package.json:37` `packages/web/src/main.tsx:22` `packages/app/src/edge/http/app.ts:160`
 
-### Planning and event payloads
+Routes are `/`, `/play`, `/projects/$projectId`, `/prompts`, `/prompts/new`, `/prompts/$promptId`, `/entries`, `/entries/new`, `/entries/$entryId`, `/settings`, and `/usage`. Prompt kind and entry category are validated URL search state. `packages/web/src/router.tsx:42` `packages/web/src/router.tsx:60` `packages/web/src/router.tsx:83` `packages/web/src/router.tsx:106`
 
-Planning requests are `{draft: RunDraft, expectedWords?: number, items?: {title: string, values: Record<string,string>}[]}`; batch creation additionally requires `requestId: UUID`. Estimate returns `{estimates: CostEstimate[]}`; batch and queue listing return `{queue: QueueEntry[]}` (`packages/app/src/edge/http/planning.ts:15`). Provider catalogue status returns `{updatedAt, path, warning, source}`; refresh takes no body. Provider model listing returns `{models, allowsCustom: false, notice, warning?}` (`packages/app/src/edge/http/providers.ts:38`).
+The design system uses Tailwind theme tokens for color, typography, radii, and animations, with dark defaults and light/system overrides. Barlow/Barlow Condensed are loaded at startup and Radix supplies primitives. `packages/web/src/styles/index.css:1` `packages/web/src/styles/index.css:68` `packages/web/src/main.tsx:1` `packages/web/package.json:20`
 
-Project SSE payloads share projectId: stage.state adds stage/state/failureReason?; stage.progress adds stage/current/total; article.delta adds text; llm.preview adds stage/callId/text/label?/reset?; image.landed adds outputId/index; project.state adds state; project.updated has no extra field. Global running.count carries count. These are server-to-client events; the client sends no SSE body (`packages/app/src/kernel/events.ts:7`, `packages/web/src/events.ts:50`).
+The API seam combines `hc<AppType>` at `${origin}/api`, shared domain response models, and injected fetch for multipart/explicit URLs. Revision APIs validate both outgoing inputs and incoming responses with shared schemas, distinguish expected refusals from transport failures, and address immutable media by project/revision/record. `packages/web/src/api.ts:62` `packages/web/src/api.ts:120` `packages/web/src/project/revision-api.ts:47` `packages/web/src/project/revision-api.ts:191`
+
+Vite builds the SPA with React and Tailwind plugins; development proxies `/api` and `/files` to the app server, while production serves the built SPA directly. Play adds no separate HTML or server-rendered entry. `packages/web/vite.config.ts:12` `packages/web/src/main.tsx:30` `packages/app/src/edge/http/app.ts:160`.
+
+Draft operations use injected `api.fetch` with browser-safe shared input/response Zod schemas; tutorial operations use the Hono typed client and its shared session schema. `packages/web/src/play/draft-api.ts:94` `packages/web/src/tutorial/session-api.ts:17`.
+
+### Current Play creation
+
+
+`PlayRoute` renders `Content`, `Outputs`, `Style`, and `Review` through an explicit four-item section registry. Only the active section's controls mount. The main grid is one column below 1100px and editor plus 360px sidebar at/above 1100px, capped at 1320px. Desktop sidebar contains OutputPreview and SetupSummary; on narrow screens a native Preview disclosure precedes the active controls, with the full preview expanded in Style, while SetupSummary follows the editor. One preview mounts for the active breakpoint. `packages/web/src/play/sections.ts:1`; `packages/web/src/routes/play.tsx:235`, `:254`, `:264`, `:278`, `:327`; `packages/web/src/play/output-preview.tsx:8`.
+
+`OutputPreview` shares the actual subtitle renderer and current format, sample text and style values. Its optional backdrop is the first ready supplied image belonging to the active draft, served by the scoped attachment URL; it does not generate preview imagery. `packages/web/src/play/output-preview.tsx:23`, `:27`, `:41`, `:57`.
+
+`useDraftSession` owns the raw document, acknowledged server view/version, serialized save request, autosave timer, review attempt, upload operations and explicit navigation. First edit starts draft creation; later edits debounce 500ms. `flush` cancels the debounce and drains edits before guarded transitions. Save responses acknowledge their captured edit generation rather than replacing newer typed document contents. Browser localStorage stores only the active UUID under `slopify.play-draft`; draft payloads and attachment bytes are server-side. `packages/web/src/play/use-draft-session.ts:105`, `:131`, `:142`, `:156`, `:178`; `packages/web/src/play/draft-restore.ts:6`; `packages/app/src/kernel/db/migrations/0006-play-drafts.sql:1`.
+
+Media selection reserves attachment IDs in the raw document and flushes them before PUTting bytes. Upload completion is accepted only for its draft/attachment and active generation/lifetime; leaving an owning draft/removing the reference aborts obsolete work. Completed bytes are independently restorable; incomplete uploads are represented as reattachment state. `packages/web/src/play/use-draft-uploads.ts:38`, `:57`, `:77`, `:110`, `:125`; `packages/app/src/slices/play-drafts/service.ts:79`.
+
+Review refreshes current choices and provider models, flushes the draft, requests its exact saved version, and accepts the response only for the same local generation. Start is a separate action within Review, unavailable for stale review or pending uploads; uncertain responses retain the original Start identity and read/retry that same receipt. Ctrl/Cmd+Enter opens Review and does not create a run. `packages/web/src/play/review-state.ts:151`, `:191`, `:213`; `packages/web/src/play/review-section.tsx:127`, `:145`; `packages/web/src/routes/play.tsx:176`.
+
+Tutorial persistence uses stable step IDs, with UI indices converted only at the browser boundary. The complete Play target map is: options/article/keywords → Content; audio/images/video → Outputs; subtitles → Style; Start → Review. Tutorial waits for Play navigation/reveal completion before displaying that spotlight. It advances to a created project only through the normal successful creation event. `packages/web/src/tutorial/use-session.ts:41`; `packages/web/src/tutorial/model.ts:115`; `packages/web/src/tutorial/runner.tsx:86`, `:115`; `packages/web/src/routes/play.tsx:131`.
+
+### Current project workspace
+
+The project route renders header controls, `RevisionWorkspace`, queue, total progress, stage navigation, and stage bodies. Bodies remain mounted while changing the selected stage, preserving player/editor state; project identity resets the workspace. `RevisionMedia` surrounds the route so downloads/players use selected available records from the current immutable revision. `packages/web/src/routes/project.tsx:25` `packages/web/src/routes/project.tsx:78` `packages/web/src/project/revision-media.tsx:23`
+
+`RevisionWorkspace` owns editable copies, Save/Restore/rebuild review, history, conflict reporting, upload locks, and separate idempotent request memories. Save and rebuild are separate actions. `RevisionForm` edits config and frozen prompt templates; `RevisionContentEditors` edits article/media/narration/cues. Historical manifests remain viewable while the current revision changes. Client refusal handling retains local edits rather than silently replacing them with a changed head. `packages/web/src/project/revision-workspace.tsx:29` `packages/web/src/project/revision-workspace.tsx:116` `packages/web/src/routes/project.tsx:102`
+
+Image editor previews resolve generated scenes by selected stable work key and provided scenes by the draft's explicit asset selection. Their URLs identify immutable revision records; staged replacements keep an honest pre-Save status, and missing selected generated media is not replaced with an unrelated historic image. `packages/web/src/project/image-preview.tsx:19` `packages/web/src/project/image-preview.tsx:38` `packages/web/src/project/image-preview.tsx:59`
+
+Caption editing derives duration from every enabled, current, ready narration segment plus configured gaps; a current final export is only a fallback for older complete narration whose duration metadata is absent. It does not require generating the final WAV/video first. Draft narration-identity changes disable use of stale timing; retained manually edited cues from another narration remain reviewable/editable against a complete current narration, with their old binding kept until Save validates and rebinds them. `packages/web/src/project/revision-caption-duration.ts:3` `packages/web/src/project/revision-content.tsx:30` `packages/web/src/project/revision-content.tsx:67` `packages/web/src/project/revision-content.tsx:234` `packages/app/src/slices/revisions/mutations.ts:130`
+
+History decodes retained logical/plain text, research planner outlines, titled research notes, and legacy thumbnail prompts, rendering escaped text with a clear fallback for missing or malformed payloads. Media and narration parts continue to use their retained revision record URLs. `packages/web/src/project/revision-history.tsx:11` `packages/web/src/project/revision-history.tsx:119` `packages/web/src/project/revision-history.tsx:189` `packages/web/src/project/revision-history.tsx:233`

@@ -1,74 +1,60 @@
 ---
 absorbed_from:
- - features/2026-09-09-pausable-optional-runs@2026-09-10
- - features/2026-09-10-subtitles-fonts@2026-09-10
+- features/2026-09-09-pausable-optional-runs@2026-09-10
+- features/2026-09-10-subtitles-fonts@2026-09-10
+- features/2026-09-10-editable-projects@2026-09-12
 scenario: storage-and-downloads
 mockup_row: S14
-screens: [07-projects, 08-project]
-depends_on: [01-pipeline-lifecycle, 05-provided-outputs, 12-reruns-and-edits]
-generated_date: 2026-09-09
-capstone_version: 5.2.0
+screens:
+- 07-projects
+- 08-project
+depends_on:
+- 01-pipeline-lifecycle
+- 05-provided-outputs
+- 12-reruns-and-edits
+generated_date: '2026-09-12'
+generated_at_commit: 29b88494eb40
 ---
 
 # 14 Storage and downloads
 
-Where everything lives on the user's machine, how downloads are named, and how a project is deleted.
+Project revisions retain immutable media in the local data directory. Saving or restoring configuration shares unchanged assets; only successful new work adds replacements. There is no automatic revision purge.
 
 ## Trigger & preconditions
 
-- Trigger: app launch (data directory resolution), any stage writing an output, a download click, Delete on a project.
-- Preconditions for Delete: the project is not `running`.
-- Actor: the single local user.
+App startup reconciles disk records. Save, provider settlement and local rendering prepare assets for transactional publication. Current outputs and History expose downloads. Delete requires no running stage or in-flight work for the project (`slices/storage/delete-project.ts`).
 
 ## Steps
 
-1. Data directory: `~/.slopify/` by default, overridable by a launch flag or environment variable. Inside: the SQLite database (scenario 02), `projects/`, `staging/`, `fonts/` for uploaded fonts and `models/english-subtitles/` for verified local speech weights (scenario 17). Nothing is written next to where `npx` was run.
-2. Project folder `projects/<id>/`: `article.md`, `article.txt` (narration source), `sources.txt`, `glossary.txt`, `research.txt`, audio files for body, intro, outro, images named `<prompt-name>-<index>`, the thumbnail, `video.mp4` or the combined `audio.wav`, `render.json` (scenario 11 parameters). Captioned exports also own a `captions-*` directory with SRT, VTT, ASS, word timing JSON and a copied font under `fonts/` (`packages/app/src/slices/subtitles/prepare.ts`). Provided files are copied in under the same names with their original filenames recorded (scenario 05).
-3. Subtitle roles are `subtitles_srt`, `subtitles_vtt`, `subtitle_words`, `subtitle_ass`, `subtitle_font`; SRT/VTT download at `/files/<id>/subtitles-srt` and `/files/<id>/subtitles-vtt` with their text MIME types. WAV export uses output role `audio_export`, asset URL `/files/<id>/audio-export`, and `audio/wav` content type. Downloads: single files as `<title-slug>-<asset>.<ext>`; "download all" images as `<title-slug>-images.zip`, thumbnail included.
-4. Delete project: refused while `running`; otherwise removes the database rows and the folder; irreversible; only from the app. Confirmation dialog is `uiux`'s.
-5. Retention: projects are kept until the user deletes them; no automatic cleanup ever. Staging files never attached to a project are removed at app start (scenario 05).
-6. Single instance: a second app instance on the same data directory refuses to start with an error.
+1. Resolve the data directory from launch settings, default `~/.slopify`; create SQLite, `projects/`, `staging/`, logs, fonts, local alignment models and managed-update storage. Acquire its single-instance lock (`kernel/paths.ts`, `main.ts`).
+2. Allocate a unique immutable project asset path, write/copy/probe its bytes, then register it with the revision manifest transaction. Keep original filenames and media metadata in descriptors. Revisions share registered assets instead of copying unchanged bytes (`slices/storage/assets.ts`, `prepare.ts`, `slices/revisions/mutations.ts`).
+3. A revision output record identifies a role/slot, originating work, asset and fingerprint. Current selection can change while previous records remain retained. Narration pieces also have immutable revision records; accepted partial article results are retained as unselected outdated history without satisfying a complete article (`slices/revisions/manifest-repo.ts`, `slices/rebuild/runtime-publication.ts`).
+4. Serve a specific retained record through `/files/:projectId/revisions/:revisionId/:recordId`. Resolve project, revision and record ownership before looking up bytes; build its download name from that revision's title and stored descriptor, so newer title edits do not rename old downloads. `/files/:projectId/revisions/:revisionId/images.zip` follows that revision's selected image order and includes its selected thumbnail (`slices/revisions/downloads.ts`, `edge/http/revision-files.ts`).
+5. Open folder uses the same retained-record ownership lookup and opens its containing directory on the machine hosting Slopify. It accepts an identified record, not an arbitrary filesystem path; cross-origin requests are refused (`edge/http/revision-files.ts`).
+6. On startup retain all legacy output paths, registered project assets and completed legacy piece paths. Remove unregistered orphan files and unattached staging data. Registry retention includes historical revisions, not merely the latest selection (`slices/storage/reconcile.ts`).
+7. Delete removes the project folder first; only after successful removal delete the project row and cascade its revisions, manifests, assets, grants, previews and admissions. A file-manager/OS lock leaves the project listed with a recoverable deletion error (`slices/storage/delete-project.ts`, kernel migrations 0004/0005).
 
-## Branches
+## Branches and unhappy paths
 
-- Flag or environment variable set → that directory is used; unset → `~/.slopify/`.
-- Project `running` → Delete disabled; otherwise enabled.
-
-## Unhappy paths
-
-- A replacement export fails while writing parameters or committing caption rows → the previous media/parameters are restored and old output rows remain. Failed restoration retains the `.previous` backup; successful replacement removes obsolete caption/font files (`packages/app/src/slices/video/write-export.ts`).
-- Local write failure (disk full, permissions) → the writing stage fails with the OS error text; manual retry per scenario 01.
-- Data directory not writable at launch → the app refuses to start with the path and the error (follows).
-- Delete fails midway (a file locked) → the project stays listed with an error; Delete can be repeated. The delete itself stays irreversible.
-- Download of a file that is missing on disk → error on the project page; the stage can be re-run (scenario 12).
-
-## State transitions
-
-- Project: any non-running state → deleted (gone from list and disk).
-- Staged file: → discarded at app start when unattached (scenario 05).
+- Missing externally deleted bytes: retain their history/metadata but mark them unavailable. A direct download returns a structured404; image ZIP skips unavailable entries and refuses an empty archive. Explicit affected rebuild can recreate missing work; it does not silently start on download or restore.
+- A multi-file export is reusable only if all retained bundle members are available and ready. Surviving render metadata alone cannot suppress a missing WAV/video rebuild (`slices/rebuild/recipe-work.ts`).
+- Disk/DB failure before publication: preserve the previous committed revision and its downloads; discard only newly allocated, unreferenced assets. Shared or committed assets are never cleanup candidates (`slices/storage/assets.ts`, `slices/revisions/mutation-prepare.ts`).
+- Replacement failure: old completed media remains selected/downloadable, marked outdated where inputs changed. Successful replacement selects new records while retaining old history.
+- Whole-project deletion is irreversible. Partial filesystem deletion may already remove some bytes before an OS error; the record remains so deletion can be retried. The operation does not promise filesystem rollback.
+- File-manager launch failure: return503 with desktop-session guidance; retained media stays untouched.
 
 ## Invariants
 
-- Every output of a project lives in its own folder.
-- The app writes nowhere outside the data directory.
-- A deleted project leaves no files or rows.
-
-## Outcomes & side effects
-
-- Downloads are served from the project folder; nothing is copied elsewhere.
-- Deleting a project does not change telemetry already sent or counted (scenario 16).
-
-## Dimensions not in play
-
-- D1 authority: one local actor.
-- D4 computation: nothing computed.
-- D5 money: nothing charged.
-- D6 limits: no cap on disk use or project count.
-- D7 time: no retention clock; deletion is manual only.
-- D10 external failure: no external call; local write failures handled above.
-- D13 notification: no channel.
-- D14 effects on others: deletion touches only the project itself.
+- Every project asset is contained under its project directory; asset/record ownership is checked in addition to path containment.
+- Save, Restore and downloads never submit providers. An explicit reviewed rebuild is required for missing/outdated work.
+- No automatic project/history expiration or intermediate cleanup policy is introduced here.
+- Historical and currently selected references both protect assets during startup reconciliation.
+- Known active work prevents full-project deletion even if an old revision's visible stage state is no longer running.
 
 ## Font and model lifetime
 
-System fonts are read from bounded standard OS directories; uploaded `.ttf`/`.otf` files are limited to 32 MiB, validated and stored by content hash. No raw path is accepted by the font API and no font-delete API exists (`packages/app/src/slices/fonts/`, `edge/http/fonts.ts`). Each completed caption export snapshots its selected font into the project, so later style changes can reuse that file after the system font is removed (`slices/subtitles/prepare.ts`). Deleting a project removes its caption snapshots and timing cache but leaves shared uploads and the verified model cache available to other projects.
+System fonts are read from bounded standard OS directories; uploaded `.ttf`/`.otf` files are limited to32MiB, validated and stored by content hash. Each caption export retains its font snapshot, so history remains usable after a system font disappears. Project deletion leaves shared font uploads and the verified English alignment-model cache available to other projects (`slices/fonts/`, `slices/subtitles/prepare.ts`).
+
+## Verification
+
+`storage/delete-history.test.ts`, `storage/reconcile.test.ts`, `revisions/downloads.test.ts`, `download-permissions.test.ts`, `edge/http/revision-files.test.ts`, `revision-delete.test.ts`, and composed `test/revision-restart.test.ts` / `revision-bundle-recovery.test.ts` cover retained ownership, missing files, restart, deletion and real WAV recovery. Native Windows acceptance exercises the composed paths with real FFmpeg.

@@ -1,81 +1,76 @@
 ---
 absorbed_from:
- - features/2026-09-09-pausable-optional-runs@2026-09-10
- - features/2026-09-10-subtitles-fonts@2026-09-10
+  - features/2026-09-09-pausable-optional-runs@2026-09-10
+  - features/2026-09-10-subtitles-fonts@2026-09-10
+  - features/2026-09-10-play-redesign-drafts@2026-09-13
+  - features/2026-09-10-review-checkpoints@2026-09-13
 scenario: run-admission
 mockup_row: S2
-screens: [06-play, 08-project]
-depends_on: [01-pipeline-lifecycle, 02-provider-credentials, 03-placeholder-substitution]
-generated_date: 2026-09-09
-capstone_version: 5.2.0
+screens:
+  - 06-play
+  - 08-project
+depends_on:
+  - 01-pipeline-lifecycle
+  - 02-provider-credentials
+  - 03-placeholder-substitution
+generated_date: '2026-09-13'
+generated_at_commit: 803bd5555d76
+paths_covered:
+  - :(top)packages/app/src/slices/play-drafts/**
+  - :(top)packages/app/src/slices/storage/**
+  - :(top)packages/app/src/slices/settings/tutorial*
+  - :(top)packages/web/src/play/**
+  - :(top)packages/web/src/routes/play.tsx
+  - :(top)packages/web/src/subtitles/**
+  - :(top)packages/web/src/tutorial/**
+content_hash: 2b9dab9b7f7b
 ---
 
 # 04 Run admission
 
-What Play requires before a project exists, and what one click produces.
+Play saves an editable setup before it creates any project. Review resolves that exact saved setup and optional dependency gates; Start explicitly admits one run or a batch. Existing-project Save/Rebuild is a separate workflow.
 
 ## Trigger & preconditions
 
-- Trigger: the user opens `mockup/06-play.md` and presses Play.
-- Preconditions: none to open the form. To press Play: the form is valid per Steps 2-4.
-- Actor: the single local user.
+The local user opens Play and moves freely through Content, Outputs, Style and Review. Opening, editing, autosaving and reviewing do not start generation. Start requires an acknowledged draft, valid current review and ready active inputs (`packages/web/src/routes/play.tsx:36`, `packages/web/src/play/review-state.ts:152`, `packages/app/src/slices/play-drafts/start.ts:23`).
 
 ## Steps
 
-1. Fresh form defaults: format 16:9; intro and outro Off; research Off; thumbnail Off; article, audio, images and video Generate; no prompts, providers, models, or voice selected; keywords empty; Subtitles Off, English, bundled default font, size 48 (`packages/app/src/slices/subtitles/model.ts`).
-2. Required set:
- - title: non-empty, at most 200 characters; duplicates across projects allowed;
- - format: one of 16:9, 9:16;
- - for each stage set to Generate: its prompt(s) selected; a provider that has a key (scenario 02); a model (scenario 02's fetched list); for audio, a voice from the settings list; for images, a Number per ticked prompt;
- - the LLM provider and model only when research or article is Generate, the thumbnail source is Prompt by LLM (scenario 10), or an generated-audio intro or outro entry is LLM-mode;
- - intro and outro: optional picks, Off or one saved entry each, used only when Audio is Generate; hidden and ignored for Off or Provide;
- - every keyword field valid per scenario 03 (non-empty, ≤200 characters);
- - for each stage set to Provide: its content present (scenario 05 validates it);
- - enabled subtitles require active narration, an available catalog font and integer font size 16–120 (scenario 17); Video Off permits files mode only.
-3. Limits: Number per image prompt 1-20 inclusive; total images per run = sum of Numbers ≤ 60; exactly 20 and exactly 60 are valid.
-4. Article is required (Generate or Provide). Research, Audio, Images and Thumbnail can be Off; Video can Generate or be Off. Images Off normalizes Video Off. Audio Off with Video Generate is valid and produces silent video. Video Off with active Audio produces WAV; both Off permits article-only output. Disabled prompts, uploads, voices and intro/outro entries do not impose requirements.
-5. Validation is live: Play is disabled until every check passes; each failing field is marked in place; no error is shown after a click.
-6. On click: disable the button while submitting; create exactly one project carrying the full configuration, the keyword values, and the prompt bodies as saved at the moment of the click, rendered per scenario 03; scenario 01 step 1 marks stages and starts the run.
-7. Navigate to `mockup/08-project.md` for the new project. The form keeps its values for the next run while the app tab is open; a restart returns the defaults of step 1.
+1. Defaults remain Article/Audio/Images/Video Generate; Research/Thumbnail Off; 16:9; empty title, keywords and generation selections; intro/outro Off; subtitles Off, English, default font and size48. Expected words defaults1500. Incomplete raw values can be saved (`packages/app/src/slices/play-drafts/schema.ts:16`, `packages/app/src/slices/play-drafts/schema.ts:67`).
+2. Content owns title, article prompt or supplied text, shared keyword values, text provider/model/thinking and optional Research. Providing Article normalizes Research Off. Text generation remains required for active LLM thumbnail/entry work even with a supplied article (`packages/web/src/play/content-section.tsx:16`, `packages/app/src/slices/play-drafts/convert.ts`).
+3. Outputs select generated/provided/off media and applicable providers. Article cannot be Off. Images Off normalizes Video Off; Audio Off permits silent MP4; Video Off with Audio enabled produces combined WAV; both off retain individual outputs. Inactive generation selections and supplied media do not impose active admission requirements (`packages/app/src/slices/play-drafts/convert.ts`, `packages/app/src/slices/admission/rules.ts`).
+4. Active validation retains title1–200, keyword values≤200, integer image counts1–20 per prompt and total≤60, expected words1–100000, at most50 runs, and active subtitle font/size16–120 validation. Fonts and media must be available. A retained font upload needs explicit completion/recovery even when captions are turned off (`packages/app/src/slices/play-drafts/review-inputs.ts:39`, `packages/web/src/subtitles/controls.tsx:252`).
+5. Review flushes the draft, converts active inputs, resolves current template bodies/keywords, calculates catalogue estimates and stores a UUID-bound review. The server rechecks draft identity after asynchronous font work. Setup/template/catalogue changes invalidate the review (`packages/app/src/slices/play-drafts/review.ts:18`, `packages/app/src/slices/play-drafts/review-inputs.ts:39`).
+6. Start posts draft ID, base version and review ID. The server replays a committed receipt first; otherwise it claims the reviewed draft, checks readiness and commits project(s), revision context and receipt transactionally. Supplied bytes are copied before draft references are released (`packages/app/src/slices/play-drafts/start.ts:23`, `packages/app/src/slices/play-drafts/start-repo.ts:51`).
+7. Confirmed creation clears the active draft selection and opens the created project. A transport-uncertain Start retains the same identity for recovery; it never offers a fresh chargeable submission first (`packages/web/src/play/review-state.ts`, `packages/web/src/play/use-draft-session.ts`).
 
 ## Branches
 
-- Research or article Generate → LLM row required; both Provide/Off → LLM row hidden and not required.
-- A stage set to Provide → its generation controls hidden, its content required instead.
-- Thumbnail Off → no thumbnail requirement; From prompt or Prompt by LLM → thumbnail prompt required, both require an image provider/model even when Images is Off or Provide; the latter also the LLM row (scenario 10); Provide → one file required.
-- Prompt body changed between selection and click → fields and rendering rebuilt from the saved body at click time.
+- Selected Audio, Images and Video/export checkpoints are persisted with the reviewed Start identity. They hold only that closure until explicit project-page approval; independent work can continue.
+
+- One resolved run uses ordinary independent project scheduling. More than one enters the existing sequential batch queue; this does not serialize the independent stages of a single run.
+- Generated thumbnail/LLM entries can require providers even when the corresponding main article/images sources are supplied or off.
+- Review errors reveal their section/disclosure and focus the correcting control. Untouched fresh fields do not start covered in errors.
+- A saved unavailable option stays visible until explicitly cleared or replaced; no paid provider/model/voice is silently substituted.
+
+These branches are implemented in `packages/web/src/routes/play.tsx:36`, `packages/web/src/play/field-targets.ts`, `packages/web/src/play/pickers.tsx` and `packages/app/src/slices/play-drafts/start.ts:23`.
 
 ## Unhappy paths
 
-- Any check fails → Play disabled, field marked; no project.
-- Unkeyed provider chosen → impossible: greyed out per scenario 02.
-- Model list unavailable → Play blocked for that provider per scenario 02.
-- Empty voice list with audio Generate → voice required, so Play stays disabled (scenario 02).
-- Double click → the second click finds the button disabled; one project.
-- Active subtitle font removed since selection → 400 before project creation or provider work, with a `subtitles.fontId` field problem (`packages/app/src/edge/http/projects.ts`).
-- Local project creation fails (disk error) → no project; the error is shown on Play.
+Invalid/missing active input returns typed field errors and creates no project. Stale review or failed readiness keeps the setup for correction. Lost Start acknowledgement recovers the original receipt. Save conflicts retain local edits with Reload/Save as new; confirmed Discard uses its exact displayed version. Disk/copy failures clean uncommitted allocations without treating an uncertain committed Start as a new submission (`packages/app/src/slices/play-drafts/start.ts:23`, `packages/web/src/play/review-state.ts`, `packages/web/src/play/use-draft-session.ts`).
 
 ## State transitions
 
-- Project: (none) → created with stages marked per scenario 01 step 1 and status `running`.
+Draft state is active → starting → started. Review exists only for an exact saved version/input identity. A committed Start receipt survives release of draft attachments and is replayed before readiness/consumed-file checks (`packages/app/src/kernel/db/migrations/0006-play-drafts.sql`, `packages/app/src/slices/play-drafts/start-repo.ts:51`).
 
 ## Invariants
 
-- No project is created from an invalid form.
-- One click creates exactly one project.
-- Every project has an Article source. An MP4 requires images; a WAV requires audio.
+Saving/reviewing does not dispatch providers. Article is required. An MP4 needs images; combined WAV needs audio. One reviewed Start identity yields its original result rather than duplicate projects. This is local admission idempotency, not an exactly-once billing guarantee for external providers.
 
 ## Outcomes & side effects
 
-- Success: a project record with configuration, keyword values, rendered prompts (scenario 03), and stage statuses (scenario 01); the run starts; the page changes to the project.
-- Failure: nothing persisted; Play shows the local error.
-- Record: the project record is the durable trace; the form's kept values are tab-session state only.
+Drafts and reviews are durable SQLite records. Explicit Start creates project/revision records and owned media, then wakes ordinary execution. Failed editing/review retains the draft. See [draft lifetime and recovery](22-play-drafts.md) and [cost/batch behavior](18-cost-review-batch.md).
 
 ## Dimensions not in play
 
-- D1 authority: one local actor.
-- D5 money: nothing charged before or by creation.
-- D7 time: nothing scheduled or expiring.
-- D10 failure and recovery of external calls: no external call happens before the project exists; the only failure is local creation.
-- D13 notification: no channel.
-- D14 effects on others: nothing outside the new project is touched.
+No multi-user collaboration, payment transfer, automatic scheduled Start or external notification is introduced. Multiple tabs are writers protected by CAS; scheduling remains a later feature.

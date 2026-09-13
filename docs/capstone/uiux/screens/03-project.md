@@ -1,37 +1,55 @@
 ---
-generated_at_commit: f4d66867e39f
-generated_date: 2026-09-10
-content_hash: accbad5ecbe4
+generated_at_commit: 803bd5555d76
+generated_date: '2026-09-12'
+content_hash: 4e57ddc2cb32
 paths_covered:
-  - ":(top)packages/web/src/**"
-  - ":(top)packages/site/**"
+- :(top)packages/web/src/**
+- :(top)packages/site/**
+absorbed_from:
+- features/2026-09-10-editable-projects@2026-09-12
+- features/2026-09-10-review-checkpoints@2026-09-13
 ---
 
 # Project workspace
 
+The progress area includes a Review checkpoints panel. It exposes held dependents, revision-bound approval, pending gate add/remove controls and explicit reload when another tab changes the gate set. Approval releases only the selected closure and never starts a rebuild.
+
 ## Mode & job
-Operate surface for monitoring a project, reviewing outputs, and editing controls. Source: packages/web/src/routes/project.tsx:27-79.
+
+Monitor the current revision, inspect retained outputs, edit project inputs/content, and explicitly review/start affected work. The route composes header, revision workspace, batch queue, total progress, stage navigation and active stage body. `packages/web/src/routes/project.tsx:95`, `project/revision-workspace.tsx:29`.
 
 ## Composition
 
-Subtitle preparation is labeled separately from WAV encoding. Editing subtitle files on an unchanged audio-only project retains its WAV and updates only caption outputs.
+The header and revision actions precede progress. Desktop places stage navigation beside the active output; narrow layouts put navigation above it. The active body contains research/article text, narration, images, thumbnail or export. Downloads resolve current selected revision records through `RevisionMedia`; historical downloads belong to the inspected revision. `routes/project.tsx:105`, `project/revision-media.tsx`, `project/revision-history.tsx`.
 
-When subtitle alignment recovers from a short missing passage, the final output shows a persistent expandable review note with each timestamp and unmatched transcript passage. Caption downloads remain available; the note explicitly says the audio is unchanged.
+Edit project opens an inline configuration/content form. Save changes commits a revision without starting generation; Discard changes closes the draft. Rebuild affected outputs is a separate action and unavailable while a draft/upload/rebuild review is open. The editor includes source modes, providers/models, prompt snapshots and keywords, frame format, narration chunking/entries, images and subtitle settings. Article remains required; optional outputs may change after completion. `project/revision-workspace.tsx:210`, `project/revision-form.tsx`, `project/revision-content.tsx`.
 
-Every output Download action has an adjacent Open folder button, including the image archive and subtitle downloads. It opens the saved output directory on the server machine through its native file manager (Windows Explorer, including WSL; Finder; or Linux xdg-open). Pending state disables the folder action; failures appear inline and leave Download available. The API accepts an existing project asset, never an arbitrary client-supplied path.
+The content area supports direct article edits, image prompt/order/removal/replacement, narration text or replacement media, individual regeneration intent, and manual caption cue edits. Pending uploads prevent Save/Discard until cancellation or completion settles. Captions use the complete current narration duration, including generated entries and gaps; provided whole audio uses its body only. Missing/stale narration blocks cue editing; a completed final export is not required. After narration changes, retained cues display a review warning and remain correctable once current narration is complete. Applying cue corrections changes the draft; Save validates/rebinds their timeline. `project/revision-upload.tsx`, `project/image-editor.tsx`, `project/narration-editor.tsx`, `project/revision-caption-duration.ts:3`, `project/revision-content.tsx:218`.
 
-Narration chunking offers Whole, Paragraph, Every N words and Every N characters. The selected counted mode displays a numeric field; character mode explains sentence boundaries and oversized-sentence behavior. Options wrap at narrow widths (`packages/web/src/play/chunking.tsx:7`).
+Generated image previews use the current selected work-key record; supplied choices use their explicit retained asset. Missing, outdated, review-required and staged replacement states remain visible (`packages/web/src/project/image-preview.tsx:5`).
 
-The workspace centers the selected output/player and keeps stage navigation, rundown, live output, run settings, subtitle editing, and action controls around it. The final output chooses video, audio export, or article. Source: packages/web/src/routes/project.tsx:31-208; packages/web/src/project/.
+Rebuild review shows before/after input values, affected work with human labels and request text/settings, retained outputs, known/unknown costs and in-flight billing notices. Required provided-content confirmations and unknown-cost acknowledgement gate Start rebuild. Cancel rebuild dismisses review without admission. `project/rebuild-review.tsx:11`.
+
+History lists retained revisions and opens their outputs and text parts. Research plans/chapters, article/narration text and legacy thumbnail prompts are readable even without a completed aggregate output. Restore creates a new current revision referencing the chosen history; no automatic generation starts. Restore is held while editing/uploading/reviewing. `project/revision-history.tsx:17`, `project/revision-workspace.tsx:169`.
 
 ## States
-Loading skeleton, live stage progress, finished/failed/canceled status, pause/resume, retry, provider changes, subtitle save, output replacement, and retained prior output are represented by route and project components. Source: packages/web/src/routes/project.tsx:79-208; packages/web/src/routes/project-live.test.tsx; packages/web/src/routes/project-controls.test.tsx; packages/web/src/routes/project-subtitles.test.tsx.
+
+Selected outputs are Ready, Needs rebuild with retained output available, Provided content needs review, or Retained file missing. Errors remain inline. A newer revision does not replace a mounted unsaved draft: a status notice explains the change; reload/discard is explicit. Failed Save retains the draft and request identity; retries replay the same mutation. Stale rebuild previews close and require fresh review. `project/revision-workspace.tsx:60`, `project/revision-workspace.tsx:188`, `project/revision-requests.ts`.
+
+Paused/canceled/recovered work resumes through current-revision dependency/cost review. In-flight results settle into their origin history and update the current revision only when still reserved for matching inputs. Live writing/audio and attempt counts are scoped to active revision work. `project/use-actions.ts`, `project/live-revision.ts`, `project/live-writing.tsx`, `project/live-audio.tsx`.
+
+Subtitle preparation is separate from WAV encoding. Caption-file edits retain unchanged WAV/non-burned MP4 media; burn-in changes require a new visual render. Finished output and caption downloads remain available after failed replacement. Alignment recovery notes identify unmatched passages without claiming the audio changed. `project/body-video.tsx`.
+
+Download actions have adjacent Open folder actions for server-owned media, archives and subtitles. Pending folder opens disable that action; errors remain inline. Folder paths are resolved on the server, not supplied by the browser. `project/open-folder.tsx`, `project/revision-api.ts`.
 
 ## Motion
-Live writing/audio and SSE state changes update the workspace. Source: packages/web/src/project/live-writing.tsx; packages/web/src/project/live-audio.test.tsx; packages/web/src/project/live.test.ts.
+
+SSE refreshes the current project, selected revision and scoped previews. The workspace uses inline pending states, active controls and the loading skeleton rather than replacing a mounted draft with remote state. `routes/project.tsx:152`, `project/use-live.ts`, `events.ts`.
 
 ## Copy
-The route composes project title, stage labels, output actions, and failure recovery messages from child components. Source: packages/web/src/routes/project.tsx:31-208.
+
+Actions distinguish Edit project, Save changes, Discard changes, Rebuild affected outputs, Start rebuild, Cancel rebuild and Restore this revision. Output status and warnings describe retained/missing/outdated media and uncertain costs. Revision and request identities stay in API paths/state; review renders human part labels. `project/revision-workspace.tsx`, `project/rebuild-review.tsx`, `project/output-label.ts`.
 
 ## Not in play
-The route does not render a separate permission-denied screen. Source: packages/web/src/routes/project.tsx:27-208.
+
+This screen does not implement configurable review checkpoints, reusable setup templates, scheduling or storage cleanup. The separate Play redesign is not part of the editable-project screen. These remain release features outside the shipped revision controls.
