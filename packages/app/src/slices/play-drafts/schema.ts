@@ -3,6 +3,7 @@ import { formats } from "../../kernel/pipeline.js";
 import { thinkingModes } from "../../kernel/ports/llm.js";
 import { stageSources } from "../admission/model.js";
 import { runDraftSchema } from "../admission/schema.js";
+import { checkpointRowSchema, checkpointStageSchema } from "../checkpoints/schema.js";
 import { chunkModes } from "../narration/chunk.js";
 import { subtitleModes, subtitlePositions } from "../subtitles/model.js";
 
@@ -16,6 +17,7 @@ const file = z.object({ attachmentId: id, name: text }).strict().readonly();
 export const playDraftFormSchema = z
   .object({
     title: text,
+    checkpoints: runDraftSchema.shape.checkpoints,
     format: z.enum(formats),
     sources: z
       .object({
@@ -121,6 +123,10 @@ export const playDraftSchema = z
   .readonly();
 export const playStartResultSchema = z
   .object({
+    checkpointSet: z
+      .array(checkpointRowSchema.unwrap().extend({ reviewedFingerprint: text }).strict().readonly())
+      .readonly()
+      .optional(),
     requestId: id,
     projectIds: z.array(text).readonly(),
     queue: z
@@ -167,6 +173,24 @@ const costEstimateSchema = z
   .readonly();
 export const playReviewSchema = z
   .object({
+    checkpointSet: z
+      .array(
+        z
+          .object({
+            runIndex: z.number().int().nonnegative(),
+            checkpointId: text,
+            stage: checkpointStageSchema,
+            fingerprint: text,
+            workKeys: z.array(text).readonly(),
+            dependents: z
+              .array(z.enum(["research", "article", "audio", "images", "thumbnail", "video"]))
+              .readonly(),
+          })
+          .strict()
+          .readonly(),
+      )
+      .readonly()
+      .optional(),
     id,
     draftId: id,
     draftVersion: z.number().int().positive(),

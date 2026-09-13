@@ -75,6 +75,9 @@ export async function reviewDraft(
     )
       return { ok: true, value: old };
     const review = playReviewSchema.parse({
+      ...(final.value.checkpointSet === undefined
+        ? {}
+        : { checkpointSet: final.value.checkpointSet }),
       id: deps.uuid(),
       draftId: parsed.data.id,
       draftVersion: parsed.data.baseVersion,

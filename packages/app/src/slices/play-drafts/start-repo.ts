@@ -103,6 +103,9 @@ export function requireStartingIdentity(
   const { fingerprint: _fingerprint, ...current } = resolved.value;
   if (
     requestHash({
+      ...(stored.review.checkpointSet === undefined
+        ? {}
+        : { checkpointSet: stored.review.checkpointSet }),
       runs: stored.review.runs,
       estimates: stored.review.estimates,
       ...stored.execution,

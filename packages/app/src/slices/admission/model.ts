@@ -53,6 +53,7 @@ export interface ProvidedFiles {
 
 // What Play posts. Everything a run is configured with, before any rule has looked at it.
 export interface RunDraft {
+  readonly checkpoints?: readonly import("../checkpoints/model.js").CheckpointStage[] | undefined;
   readonly title: string;
   readonly format: Format;
   readonly sources: Readonly<Record<StageKind, StageSource>>;

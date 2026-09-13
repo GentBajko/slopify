@@ -2,6 +2,7 @@ import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import { startRun } from "../admission/start.js";
 import { enqueueBatch, pumpQueue } from "../batch/index.js";
+import { admitReviewedCheckpoints } from "../rebuild/recipe-checkpoints.js";
 import { releaseStagedFile } from "../storage/staging-refs.js";
 import type { DraftResult, DraftStartDeps, PlayStartInput, PlayStartResult } from "./model.js";
 import { checkDraftReadiness, localDraftReadiness } from "./readiness.js";
@@ -111,7 +112,19 @@ export async function startPlayDraft(
       runs.length === 1
         ? [startRun(captured, first.draft, first.rendered, true, first.templates).project.id]
         : queue.map((e) => e.projectId);
-    const value = { requestId: input.reviewId, projectIds, queue, replayed: false };
+    const checkpointSet = admitReviewedCheckpoints(
+      captured,
+      projectIds,
+      starting.value.checkpointSet ?? [],
+      catalogue,
+    );
+    const value = {
+      requestId: input.reviewId,
+      projectIds,
+      queue,
+      replayed: false,
+      ...(checkpointSet.length ? { checkpointSet } : {}),
+    };
     insertStartReceipt(deps, input, value);
     markDraftStartedAndReleaseRefs(deps.db, input);
     return { ok: true, value };

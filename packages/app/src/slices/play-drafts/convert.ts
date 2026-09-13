@@ -73,6 +73,7 @@ export function toAdmissionDraft(input: {
         : form.subtitles.mode;
   const chunkMode = sources.audio === "generate" ? form.chunking.mode : "whole";
   const draft: RunDraft = {
+    ...(form.checkpoints === undefined ? {} : { checkpoints: form.checkpoints }),
     title: form.title,
     format: form.format,
     sources,

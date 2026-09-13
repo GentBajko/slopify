@@ -3,6 +3,7 @@ import type { CatalogueStore } from "../../catalog/store.js";
 import type { RunDraft } from "../admission/model.js";
 import type { FieldError } from "../admission/rules.js";
 import type { QueueEntry } from "../batch/index.js";
+import type { CheckpointRow, CheckpointStage } from "../checkpoints/model.js";
 import type { CostEstimate } from "../estimate/index.js";
 import type { ResolvedFont } from "../fonts/model.js";
 import type { StorageDeps } from "../storage/staging.js";
@@ -41,6 +42,7 @@ export interface ResolvedPlayRun {
   readonly templates: Readonly<Record<string, string>>;
 }
 export interface PlayReview {
+  readonly checkpointSet?: readonly ReviewedCheckpoint[] | undefined;
   readonly id: string;
   readonly draftId: string;
   readonly draftVersion: number;
@@ -49,6 +51,9 @@ export interface PlayReview {
   readonly estimates: readonly CostEstimate[];
 }
 export interface PlayStartResult {
+  readonly checkpointSet?:
+    | readonly (CheckpointRow & { readonly reviewedFingerprint: string })[]
+    | undefined;
   readonly requestId: string;
   readonly projectIds: readonly string[];
   readonly queue: readonly QueueEntry[];
@@ -95,6 +100,7 @@ export interface DraftReviewDeps extends DraftDeps {
   readonly resolveFont: (fontId: string) => Promise<ResolvedFont>;
 }
 export interface ResolvedPlayReview {
+  readonly checkpointSet?: readonly ReviewedCheckpoint[] | undefined;
   readonly runs: readonly ResolvedPlayRun[];
   readonly estimates: readonly CostEstimate[];
   readonly fingerprint: string;
@@ -105,6 +111,15 @@ export interface ResolvedPlayReview {
     readonly bytes: number;
   }[];
   readonly font: ResolvedFont | null;
+}
+
+export interface ReviewedCheckpoint {
+  readonly runIndex: number;
+  readonly checkpointId: string;
+  readonly stage: CheckpointStage;
+  readonly fingerprint: string;
+  readonly workKeys: readonly string[];
+  readonly dependents: readonly import("../../kernel/pipeline.js").StageKind[];
 }
 
 export interface DraftStartDeps extends DraftReviewDeps {

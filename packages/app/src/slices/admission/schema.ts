@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { thinkingModes } from "../../kernel/ports/llm.js";
+import { checkpointStageSchema } from "../checkpoints/schema.js";
 import { chunkModes } from "../narration/chunk.js";
 import { subtitleConfigSchema } from "../subtitles/model.js";
 import { entryModes, formats, stageSources } from "./model.js";
@@ -14,6 +15,12 @@ const entryChoice = z.object({ name: z.string(), mode: z.enum(entryModes) });
 // The shape Play posts and the shape `projects.config` holds, in one place: the second
 // is the first plus the rendered prompt texts.
 export const runDraftSchema = z.object({
+  checkpoints: z
+    .array(checkpointStageSchema)
+    .max(3)
+    .refine((stages) => new Set(stages).size === stages.length)
+    .readonly()
+    .optional(),
   title: z.string(),
   format: z.enum(formats),
   // Spelled out rather than built from stageKinds, so the inferred type carries the six

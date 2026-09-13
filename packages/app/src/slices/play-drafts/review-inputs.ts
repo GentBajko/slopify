@@ -8,6 +8,7 @@ import { estimateRun } from "../estimate/index.js";
 import type { ResolvedFont } from "../fonts/model.js";
 import { listEntries } from "../library/repo.js";
 import { pickTemplates, renderPicked } from "../library/slots.js";
+import { reviewCheckpointSet } from "../rebuild/recipe-checkpoints.js";
 import { readSettings } from "../settings/playback.js";
 import { stagedFiles } from "../storage/repo.js";
 import { toAdmissionDraft } from "./convert.js";
@@ -30,6 +31,7 @@ export function reviewRefusal(
 }
 export function reviewBinding(value: ResolvedPlayReview): string {
   return requestHash({
+    ...(value.checkpointSet === undefined ? {} : { checkpointSet: value.checkpointSet }),
     runs: value.runs,
     estimates: value.estimates,
     catalogue: value.catalogue,
@@ -151,6 +153,26 @@ export function resolveReviewInputs(
   }
   if (fields.length) return reviewRefusal(view, fields);
   const estimates = runs.map((run) => estimateRun(run.draft, run.rendered, words.data, captured));
-  const resolved = { runs, estimates, catalogue, attachmentIdentity, font };
+  for (const run of runs)
+    for (const stage of run.draft.checkpoints ?? [])
+      if (
+        stage === "video"
+          ? run.draft.sources.video === "off" && run.draft.sources.audio === "off"
+          : run.draft.sources[stage] !== "generate"
+      )
+        fields.push({
+          field: `checkpoints.${stage}`,
+          message: "Choose a checkpoint only before an enabled generated stage or export.",
+        });
+  if (fields.length) return reviewRefusal(view, fields);
+  const checkpointSet = reviewCheckpointSet(runs, catalogue, attachmentIdentity, fontHash);
+  const resolved = {
+    runs,
+    estimates,
+    catalogue,
+    attachmentIdentity,
+    font,
+    ...(checkpointSet.length ? { checkpointSet } : {}),
+  };
   return { ok: true, value: { ...resolved, fingerprint: requestHash({ ...resolved, fontHash }) } };
 }
