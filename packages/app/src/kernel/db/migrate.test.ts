@@ -57,6 +57,8 @@ describe("migrate", () => {
       "provider_keys",
       "rebuild_admissions",
       "rebuild_previews",
+      "review_checkpoint_approvals",
+      "review_checkpoints",
       "revision_mutations",
       "revision_outputs",
       "revision_pieces",
@@ -81,6 +83,7 @@ describe("migrate", () => {
       "project_queue_state",
       "project_revisions_project",
       "prompts_name",
+      "review_checkpoint_work",
       "revision_outputs_publication",
       "revision_outputs_revision",
       "revision_outputs_selected",
@@ -89,6 +92,7 @@ describe("migrate", () => {
       "revision_pieces_revision",
       "revision_pieces_selected",
       "revision_work_dispatch",
+      "revision_work_revision_identity",
       "revision_work_stage",
       "stages_project_identity",
     ]);
@@ -106,6 +110,7 @@ describe("migrate", () => {
       { version: 4, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 5, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 6, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 7, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -115,7 +120,7 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 6 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 7 });
   });
 
   it("refuses a database newer than the app knows", () => {
@@ -123,7 +128,7 @@ describe("migrate", () => {
     migrate(db, clock);
     db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(42, clock.now().toISOString());
 
-    expect(() => migrate(db, clock)).toThrow("database schema 42 is newer than this app knows (6)");
+    expect(() => migrate(db, clock)).toThrow("database schema 42 is newer than this app knows (7)");
   });
 
   it("upgrades existing projects without changing their configuration or outputs", () => {
@@ -181,6 +186,8 @@ describe("migrate", () => {
       "revision_pieces",
       "revision_provided_reviews",
       "revision_mutations",
+      "review_checkpoints",
+      "review_checkpoint_approvals",
     ]) {
       expect(db.prepare(`SELECT * FROM ${table}`).all()).toEqual([]);
     }
