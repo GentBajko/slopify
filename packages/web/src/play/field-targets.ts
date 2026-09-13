@@ -15,6 +15,8 @@ export function playFieldTarget(
   items: readonly { readonly key: string }[],
 ): { section: PlaySection; field: string } {
   let target = field;
+  if (field === "fontUpload") target = "subtitles.fontUpload";
+  if (/^provided\.images\.\d+$/.test(field)) target = "provided.images";
   if (field === "subtitles") target = "subtitles.mode";
   if (field === "chunking") target = "chunking.mode";
   if (["audio", "llm", "images"].includes(field)) target = `${field}.provider`;
@@ -37,6 +39,8 @@ export function playFieldTarget(
     target = form.imagePrompts[0]
       ? `imagePrompts.${form.imagePrompts[0].name}.number`
       : "imagePrompts";
+  const variant = /^variants\.(\d+)\.(.+)$/.exec(field);
+  if (variant) target = `items.${items[Number(variant[1])]?.key ?? variant[1]}.${variant[2]}`;
   const item = /^items\.(\d+)\.(.+)$/.exec(field);
   if (item)
     target =
@@ -56,7 +60,7 @@ export function playFieldTarget(
     "values",
   ])
     ? "content"
-    : matches(["format", "subtitles"])
+    : matches(["format", "subtitles", "fontUpload"])
       ? "style"
       : matches([
             "audio",
