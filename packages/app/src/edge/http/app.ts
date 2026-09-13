@@ -19,6 +19,7 @@ import type { AppUpdater } from "../../updater/model.js";
 import type { Hub } from "../events/hub.js";
 import { actionRoutes } from "./actions.js";
 import { audioPreviewRoutes } from "./audio-preview.js";
+import { checkpointRoutes } from "./checkpoints.js";
 import { draftRoutes } from "./drafts.js";
 import { entryRoutes } from "./entries.js";
 import { fileRoutes } from "./files.js";
@@ -88,6 +89,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/drafts", draftRoutes(deps.drafts))
       .route("/projects", planningRoutes(deps))
       .route("/projects", projectRoutes(deps))
+      .route("/projects", checkpointRoutes(deps))
       .route("/projects", revisionRoutes(deps))
       .route("/projects", revisionFolderRoutes(deps))
       .route("/projects", openFolderRoutes(deps))
