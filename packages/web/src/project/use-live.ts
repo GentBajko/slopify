@@ -5,6 +5,7 @@ import { eventsUrl } from "@/api";
 import { useApp } from "@/app-context";
 import { subscribeProject } from "@/events";
 import { keys } from "@/queries";
+import { checkpointKey } from "./checkpoint-api.js";
 import { coalesce, patchProject } from "./live.js";
 import { appendWriting, type WritingPreview, writingKey } from "./live-writing.js";
 
@@ -27,6 +28,7 @@ export function useLiveProject(projectId: string, revisionId: string | null = nu
     const refetch = coalesce(() => {
       void queryClient.invalidateQueries({ queryKey: keys.project(projectId) });
       void queryClient.invalidateQueries({ queryKey: keys.projects });
+      void queryClient.invalidateQueries({ queryKey: checkpointKey(projectId) });
     }, burstMs);
 
     const unsubscribe = subscribeProject(openEvents, eventsUrl(api, `projects/${projectId}`), {

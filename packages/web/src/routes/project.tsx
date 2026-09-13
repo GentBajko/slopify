@@ -6,6 +6,7 @@ import { useApp } from "@/app-context";
 import { BatchQueue } from "@/components/batch-queue";
 import { Rail, RailGroup } from "@/components/rail";
 import { StageBodyFor } from "@/project/bodies";
+import { CheckpointPanel } from "@/project/checkpoint-panel";
 import { ProjectHeader } from "@/project/header";
 import { ProjectNavigation, ProjectProgress } from "@/project/navigation";
 import { RefusalLine } from "@/project/parts";
@@ -114,6 +115,12 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
           </div>
           <BatchQueue />
           <ProjectProgress stages={stages} project={summary} />
+          <CheckpointPanel
+            projectId={projectId}
+            revisionId={project.data.revisionId}
+            paused={summary.status === "paused"}
+            stages={stages}
+          />
           <div className="grid items-start gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
             <ProjectNavigation
               stages={stages}
