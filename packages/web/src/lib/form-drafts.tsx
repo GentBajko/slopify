@@ -79,9 +79,17 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
     imagePrompts: form.imagePrompts.map((one) => ({ ...one, number: Number(one.number) })),
     chunking:
       form.chunking.mode === "words"
-        ? { mode: "words", words: Number(form.chunking.words) }
+        ? {
+            mode: "words",
+            ...(form.chunking.words === "" ? {} : { words: Number(form.chunking.words) }),
+          }
         : form.chunking.mode === "characters"
-          ? { mode: "characters", characters: Number(form.chunking.characters) }
+          ? {
+              mode: "characters",
+              ...(form.chunking.characters === ""
+                ? {}
+                : { characters: Number(form.chunking.characters) }),
+            }
           : { mode: form.chunking.mode },
     subtitles: { ...form.subtitles, fontSize: Number(form.subtitles.fontSize) },
     provided: {
@@ -101,7 +109,7 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
     const next = typeof action === "function" ? action(latest.current) : action;
     latest.current = next;
     const rawNumber = (value: number | undefined, raw: string) =>
-      Object.is(value, Number(raw)) ? raw : String(value);
+      value === undefined ? "" : Object.is(value, Number(raw)) ? raw : String(value);
     const ref = (one: Upload | undefined) =>
       one ? { attachmentId: one.key, name: one.name } : null;
     current.current.edit({
