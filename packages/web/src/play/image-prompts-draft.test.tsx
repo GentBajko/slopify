@@ -28,7 +28,7 @@ it("restores a missing image selection and keeps its raw count until explicit re
   });
   expect(screen.getByText(/Missing template/)).not.toBeNull();
   expect((screen.getByLabelText("Number for Deleted image prompt") as HTMLInputElement).value).toBe(
-    "3",
+    "03",
   );
   await userEvent.click(screen.getByRole("checkbox", { name: "Maps" }));
   expect(h.session().document.form.imagePrompts[0]).toEqual(picked[0]);

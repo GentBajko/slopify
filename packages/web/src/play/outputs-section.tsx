@@ -1,6 +1,7 @@
 import type { Entry } from "@app/slices/library/model.js";
 import type { ReactElement } from "react";
 import { Button } from "@/components/ui/button";
+import { usePlaySession } from "./draft-context";
 import { AudioRail, ImagesRail } from "./media-rails";
 import { OptionPicker } from "./pickers";
 import type { RailProps } from "./rail-frame";
@@ -13,10 +14,33 @@ export function OutputsSection(
     readonly onSettings: () => void;
   },
 ): ReactElement {
+  const session = usePlaySession();
+  const document = session.document;
   const { form, entries, problem, update } = props;
   return (
     <>
-      <AudioRail {...props} />
+      <AudioRail
+        {...props}
+        rawCounts={{
+          ...document.form.chunking,
+          onChange: (mode, amount) =>
+            session.edit({
+              ...document,
+              form: {
+                ...document.form,
+                chunking: {
+                  ...document.form.chunking,
+                  mode,
+                  ...(mode === "words"
+                    ? { words: amount }
+                    : mode === "characters"
+                      ? { characters: amount }
+                      : {}),
+                },
+              },
+            }),
+        }}
+      />
       {form.sources.audio === "generate" ? (
         <div className="grid grid-cols-1 gap-4 border-b border-line py-4 min-[700px]:grid-cols-2">
           {(["intro", "outro"] as const).map((kind) => (
@@ -38,7 +62,22 @@ export function OutputsSection(
           </Button>
         </div>
       ) : null}
-      <ImagesRail {...props} />
+      <ImagesRail
+        {...props}
+        rawNumbers={{
+          values: document.form.imagePrompts,
+          onChange: (name, number) =>
+            session.edit({
+              ...document,
+              form: {
+                ...document.form,
+                imagePrompts: document.form.imagePrompts.map((entry) =>
+                  entry.name === name ? { ...entry, number } : entry,
+                ),
+              },
+            }),
+        }}
+      />
       <ThumbnailRail {...props} />
       <VideoRail {...props} />
       {props.missingKeyword ? (

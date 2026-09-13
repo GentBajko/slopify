@@ -17,7 +17,12 @@ export function ImagePrompts({
   picked,
   problem,
   onPick,
+  rawNumbers,
 }: {
+  readonly rawNumbers?: {
+    readonly values: readonly { readonly name: string; readonly number: string }[];
+    readonly onChange: (name: string, number: string) => void;
+  };
   readonly prompts: readonly Prompt[];
   readonly picked: readonly ImagePromptChoice[];
   readonly problem: (field: string) => string | undefined;
@@ -59,6 +64,16 @@ export function ImagePrompts({
               <PromptTick
                 name={prompt.name}
                 number={choice?.number}
+                rawNumber={
+                  rawNumbers
+                    ? {
+                        value:
+                          rawNumbers.values.find((entry) => entry.name === prompt.name)?.number ??
+                          "",
+                        onChange: (number) => rawNumbers.onChange(prompt.name, number),
+                      }
+                    : undefined
+                }
                 problem={at === -1 ? undefined : problem(`imagePrompts.${String(at)}.number`)}
                 onTick={(ticked) => {
                   onPick(
@@ -83,7 +98,9 @@ export function ImagePrompts({
       </ul>
       {picked.length === 0 ? null : (
         <span className="text-label text-ink3 tabular-nums">
-          {`${String(total)} of ${String(imagesPerRunMax)} images`}
+          {Number.isFinite(total)
+            ? `${String(total)} of ${String(imagesPerRunMax)} images`
+            : "Complete image counts to see the total"}
         </span>
       )}
     </div>
@@ -96,7 +113,11 @@ function PromptTick({
   problem,
   onTick,
   onNumber,
+  rawNumber,
 }: {
+  readonly rawNumber:
+    | { readonly value: string; readonly onChange: (number: string) => void }
+    | undefined;
   readonly name: string;
   readonly number: number | undefined;
   readonly problem: string | undefined;
@@ -128,7 +149,7 @@ function PromptTick({
       <Input
         id={numberId}
         data-play-field={`imagePrompts.${name}.number`}
-        type="number"
+        type={rawNumber ? "text" : "number"}
         min={firstNumber}
         max={numberPerPromptMax}
         inputMode="numeric"
@@ -138,8 +159,12 @@ function PromptTick({
         className="w-[64px] tabular-nums"
         // Nought is drawn as an empty box: it is what an emptied box reports, and
         // showing a 0 the user did not type would fight the next keystroke.
-        value={number === undefined || number === 0 ? "" : String(number)}
+        value={rawNumber?.value ?? (number === undefined || number === 0 ? "" : String(number))}
         onChange={(event) => {
+          if (rawNumber) {
+            rawNumber.onChange(event.target.value);
+            return;
+          }
           const typed = Number.parseInt(event.target.value, 10);
           // An emptied box is a Number of nought, which the admission rule refuses by
           // name; nothing is silently corrected under the user's hands.

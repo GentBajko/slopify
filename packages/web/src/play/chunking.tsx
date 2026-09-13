@@ -7,7 +7,13 @@ import { InlineSwitch } from "@/play/switches";
 export function ChunkingControl({
   value,
   onPick,
+  rawCounts,
 }: {
+  readonly rawCounts?: {
+    readonly words: string;
+    readonly characters: string;
+    readonly onChange: (mode: ChunkMode, amount: string) => void;
+  };
   readonly value: Chunking;
   readonly onPick: (next: Chunking) => void;
 }) {
@@ -26,10 +32,20 @@ export function ChunkingControl({
         options={[
           { value: "whole", label: "Whole" },
           { value: "paragraph", label: "Paragraph" },
-          { value: "words", label: `Every ${String(words)} words` },
-          { value: "characters", label: `Every ${String(characters)} characters` },
+          { value: "words", label: `Every ${String(rawCounts?.words ?? words)} words` },
+          {
+            value: "characters",
+            label: `Every ${String(rawCounts?.characters ?? characters)} characters`,
+          },
         ]}
         onPick={(mode) => {
+          if (rawCounts) {
+            rawCounts.onChange(
+              mode,
+              mode === "characters" ? rawCounts.characters : rawCounts.words,
+            );
+            return;
+          }
           onPick(
             mode === "words"
               ? { mode, words }
@@ -45,13 +61,25 @@ export function ChunkingControl({
             <Input
               id={id}
               data-play-field={characterMode ? "chunking.characters" : "chunking.words"}
-              type="number"
+              type={rawCounts ? "text" : "number"}
               min={1}
               max={characterMode ? 1000000 : 10000}
               inputMode="numeric"
               className="w-[100px] tabular-nums"
-              value={count === undefined ? "" : String(count)}
+              value={
+                rawCounts
+                  ? characterMode
+                    ? rawCounts.characters
+                    : rawCounts.words
+                  : count === undefined
+                    ? ""
+                    : String(count)
+              }
               onChange={(event) => {
+                if (rawCounts) {
+                  rawCounts.onChange(value.mode, event.target.value);
+                  return;
+                }
                 const typed = Number.parseInt(event.target.value, 10);
                 const valid = Number.isFinite(typed) && typed > 0;
                 onPick(

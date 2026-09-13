@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import { ChunkingControl } from "@/play/chunking";
 import { ImagePrompts } from "@/play/image-prompts";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
@@ -19,7 +20,8 @@ export function AudioRail({
   onPickFiles,
   onRemoveFile,
   onReattachFile,
-}: RailProps) {
+  rawCounts,
+}: RailProps & { readonly rawCounts?: ComponentProps<typeof ChunkingControl>["rawCounts"] }) {
   const mine = voices.filter((voice) => voice.provider === form.audio.provider);
 
   return (
@@ -65,6 +67,7 @@ export function AudioRail({
                 Audio Advanced · {form.chunking.mode}
               </summary>
               <ChunkingControl
+                {...(rawCounts ? { rawCounts } : {})}
                 value={form.chunking}
                 onPick={(chunking) => {
                   update({ chunking });
@@ -109,7 +112,8 @@ export function ImagesRail({
   onPickFiles,
   onRemoveFile,
   onReattachFile,
-}: RailProps) {
+  rawNumbers,
+}: RailProps & { readonly rawNumbers?: ComponentProps<typeof ImagePrompts>["rawNumbers"] }) {
   return (
     <StageRail kind="images" name="Images" dim={form.sources.images === "off"}>
       <SourceSwitch kind="images" form={form} update={update} />
@@ -124,6 +128,7 @@ export function ImagesRail({
             />
             <ImagePrompts
               prompts={prompts.filter((prompt) => prompt.kind === "image")}
+              {...(rawNumbers ? { rawNumbers } : {})}
               picked={form.imagePrompts}
               problem={problem}
               onPick={(imagePrompts) => {
