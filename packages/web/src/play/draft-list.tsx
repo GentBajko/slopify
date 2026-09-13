@@ -4,6 +4,7 @@ import { type ReactElement, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { ConfirmDialog } from "@/components/confirm";
 import { Button } from "@/components/ui/button";
+import { startedAt } from "@/lib/utils";
 import { discardPlayDraft, listPlayDrafts } from "./draft-api";
 import { usePlaySession } from "./draft-context";
 
@@ -72,13 +73,18 @@ export function DraftList(): ReactElement {
                 key={draft.id}
                 className="flex flex-wrap items-center gap-2 border-t border-line py-2"
               >
-                <button
-                  type="button"
-                  className="min-w-0 flex-1 break-words text-left"
-                  onClick={() => void session.open(draft.id)}
-                >
-                  {draft.title || "Untitled draft"}
-                </button>
+                <div className="min-w-0 flex-1">
+                  <button
+                    type="button"
+                    className="w-full break-words text-left"
+                    onClick={() => void session.open(draft.id)}
+                  >
+                    <span className="block">{draft.title || "Untitled draft"}</span>
+                  </button>
+                  <time dateTime={draft.updatedAt} className="block text-label text-ink3">
+                    Last edited {startedAt(draft.updatedAt)}
+                  </time>
+                </div>
                 {!draft.readable ? (
                   <p>Unsupported or corrupt draft. Try opening it to recover, or discard it.</p>
                 ) : null}

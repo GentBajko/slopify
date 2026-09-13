@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import { startedAt } from "@/lib/utils";
 import { jsonAnswer, renderApp, testDeps } from "@/test-app";
 import { PlayDraftProvider, type PlaySession, usePlaySession } from "./draft-context";
 import { DraftList } from "./draft-list";
@@ -34,6 +35,8 @@ it("lists server drafts with no browser identity and offers recovery for unreada
   );
   fireEvent.click(await screen.findByText("Drafts"));
   await screen.findByText("Recovered");
+  const edited = screen.getByText(`Last edited ${startedAt("2026-09-13")}`);
+  expect(edited.getAttribute("datetime")).toBe("2026-09-13");
   expect(screen.getByText(/unsupported or corrupt/i)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Discard Recovered" }));
   expect(remove).not.toHaveBeenCalled();
@@ -56,7 +59,15 @@ it("flushes an active dirty draft before confirmed deletion and clears the sessi
     testDeps(
       playRoutes({
         "GET /api/drafts": jsonAnswer({
-          drafts: [{ id, title: "Active", version: 1, updatedAt: "today", readable: true }],
+          drafts: [
+            {
+              id,
+              title: "Active",
+              version: 1,
+              updatedAt: "2026-09-13T10:00:00.000Z",
+              readable: true,
+            },
+          ],
         }),
         "PUT /api/drafts/:id": async (request) => {
           calls.push("save");
@@ -107,7 +118,15 @@ it("clears a corrupt remembered identity after explicit list discard", async () 
       testDeps(
         playRoutes({
           "GET /api/drafts": jsonAnswer({
-            drafts: [{ id, title: "Broken", version: 1, updatedAt: "today", readable: false }],
+            drafts: [
+              {
+                id,
+                title: "Broken",
+                version: 1,
+                updatedAt: "2026-09-13T10:00:00.000Z",
+                readable: false,
+              },
+            ],
           }),
           [`GET /api/drafts/${id}`]: jsonAnswer({ broken: true }),
         }),
