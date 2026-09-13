@@ -138,8 +138,17 @@ export function playRoutes(
         ...current(body.id),
         draft: { ...current(body.id).draft, document: body.document },
       };
-      saved.set(body.id, view);
-      return jsonAnswer(view)(request);
+      const provided = body.document.form.provided;
+      const owned = {
+        ...view,
+        attachments: view.attachments.filter((attachment) =>
+          [provided.audio, provided.thumbnail, ...provided.images].some(
+            (ref) => ref?.attachmentId === attachment.id,
+          ),
+        ),
+      };
+      saved.set(body.id, owned);
+      return jsonAnswer(owned)(request);
     },
     "PUT /api/drafts/:id": async (request) => {
       const id = new URL(request.url).pathname.split("/")[3];
@@ -152,8 +161,17 @@ export function playRoutes(
           document: body.document,
         },
       };
-      saved.set(body.id, view);
-      return jsonAnswer(view)(request);
+      const provided = body.document.form.provided;
+      const owned = {
+        ...view,
+        attachments: view.attachments.filter((attachment) =>
+          [provided.audio, provided.thumbnail, ...provided.images].some(
+            (ref) => ref?.attachmentId === attachment.id,
+          ),
+        ),
+      };
+      saved.set(body.id, owned);
+      return jsonAnswer(owned)(request);
     },
     "GET /api/drafts/:id": (request) =>
       jsonAnswer(current(new URL(request.url).pathname.split("/")[3] ?? ""))(request),
@@ -192,13 +210,30 @@ export function playRoutes(
             .replace(/(\/api\/drafts)\/[a-f0-9-]{36}/, "$1/:id")
             .replace(/(\/attachments)\/[a-f0-9-]{36}/, "$1/:attachmentId")
         ];
-      if (!answer || !key.includes("/attachments/")) return answer;
+      if (!answer) return answer;
+      if (/^GET \/api\/drafts\/[a-f0-9-]{36}$/.test(key))
+        return async (request: Request) => {
+          const response = await answer(request);
+          if (response.ok) {
+            const view = (await response.clone().json()) as DraftView;
+            saved.set(view.draft.id, view);
+          }
+          return response;
+        };
+      if (!key.includes("/attachments/")) return answer;
       return async (request: Request) => {
         const response = await answer(request);
         if (response.ok && request.method === "PUT") {
           const attachment = (await response.clone().json()) as DraftAttachment;
           const id = new URL(request.url).pathname.split("/")[3] ?? "";
           const view = current(id);
+          const provided = view.draft.document.form.provided;
+          if (
+            ![provided.audio, provided.thumbnail, ...provided.images].some(
+              (ref) => ref?.attachmentId === attachment.id,
+            )
+          )
+            return response;
           saved.set(id, {
             ...view,
             attachments: [

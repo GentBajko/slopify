@@ -18,6 +18,7 @@ export function AudioRail({
   update,
   onPickFiles,
   onRemoveFile,
+  onReattachFile,
 }: RailProps) {
   const mine = voices.filter((voice) => voice.provider === form.audio.provider);
 
@@ -84,6 +85,9 @@ export function AudioRail({
             onPick={(files) => {
               onPickFiles("audio", files);
             }}
+            onReattach={
+              onReattachFile ? (key, file) => onReattachFile("audio", key, file) : undefined
+            }
             onRemove={(key) => {
               onRemoveFile("audio", key);
             }}
@@ -104,6 +108,7 @@ export function ImagesRail({
   update,
   onPickFiles,
   onRemoveFile,
+  onReattachFile,
 }: RailProps) {
   return (
     <StageRail kind="images" name="Images" dim={form.sources.images === "off"}>
@@ -141,6 +146,9 @@ export function ImagesRail({
             onPick={(files) => {
               onPickFiles("images", files);
             }}
+            onReattach={
+              onReattachFile ? (key, file) => onReattachFile("images", key, file) : undefined
+            }
             onRemove={(key) => {
               onRemoveFile("images", key);
             }}

@@ -5,7 +5,7 @@ import { useId, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { validSubtitleStyle } from "./config";
-import { FontPicker } from "./font-picker";
+import { type ControlledFontUpload, FontPicker } from "./font-picker";
 import { SubtitlePreview } from "./style-preview";
 
 export function SubtitleControls({
@@ -18,7 +18,9 @@ export function SubtitleControls({
   onUploading,
   problem,
   session,
+  fontUpload,
 }: {
+  readonly fontUpload?: ControlledFontUpload;
   readonly session?: {
     readonly previewText: string;
     readonly fontUploading: boolean;
@@ -58,7 +60,7 @@ export function SubtitleControls({
               id={id}
               data-play-field="subtitles.mode"
               value={audioEnabled ? value.mode : "off"}
-              disabled={uploading}
+              disabled={fontUpload?.pending ?? uploading}
               aria-describedby={hintId}
               aria-invalid={modeProblem !== undefined}
               onChange={(event) =>
@@ -87,9 +89,7 @@ export function SubtitleControls({
             >
               <div className="flex min-w-0 flex-col gap-4">
                 <FontPicker
-                  {...(session
-                    ? { onUpload: session.uploadSubtitleFont, pending: session.fontUploading }
-                    : {})}
+                  {...(fontUpload ? { upload: fontUpload } : {})}
                   value={value.fontId}
                   onPick={(fontId) =>
                     session ? session.selectFont(fontId) : onChange({ ...value, fontId })

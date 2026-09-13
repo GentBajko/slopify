@@ -1,27 +1,30 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useRef } from "react";
+import { type ReactElement, useEffect, useId, useRef } from "react";
 import { useApp } from "@/app-context";
 import { Label } from "@/components/ui/label";
 import { type FontSummary, fontsKey, listFonts, uploadFont } from "./api";
 
-export function FontPicker({
-  value,
-  onPick,
-  onUploading,
-  onUpload,
-  pending,
-}: {
-  readonly onUpload?: (file: File) => Promise<void>;
-  readonly pending?: boolean;
+export interface ControlledFontUpload {
+  readonly pending: boolean;
+  readonly error: string | undefined;
+  readonly pick: (file: File) => void;
+}
+interface FontPickerProps {
+  readonly upload?: ControlledFontUpload;
   readonly value: string;
   readonly onPick: (id: string) => void;
   readonly onUploading: (pending: boolean) => void;
-}) {
+}
+export function FontPicker(props: FontPickerProps): ReactElement {
+  return props.upload ? (
+    <FontPickerFields value={props.value} onPick={props.onPick} upload={props.upload} />
+  ) : (
+    <SelfManagedFontPicker {...props} />
+  );
+}
+function SelfManagedFontPicker({ value, onPick, onUploading }: FontPickerProps): ReactElement {
   const { api } = useApp();
   const queryClient = useQueryClient();
-  const id = useId();
-  const uploadId = useId();
-  const fonts = useQuery({ queryKey: fontsKey, queryFn: () => listFonts(api), staleTime: 60_000 });
   const uploaded = useMutation({
     mutationFn: (file: File) => uploadFont(api, file),
     onSuccess: ({ font }) => {
@@ -31,7 +34,7 @@ export function FontPicker({
       void queryClient.invalidateQueries({ queryKey: fontsKey });
     },
   });
-  const uploading = pending ?? uploaded.isPending;
+  const uploading = uploaded.isPending;
   const pick = useRef(onPick);
   pick.current = onPick;
   const notify = useRef(onUploading);
@@ -40,6 +43,32 @@ export function FontPicker({
     notify.current(uploading);
   }, [uploading]);
   useEffect(() => () => notify.current(false), []);
+  return (
+    <FontPickerFields
+      value={value}
+      onPick={onPick}
+      upload={{
+        pending: uploading,
+        error: uploaded.error?.message,
+        pick: (file) => uploaded.mutate(file, { onSuccess: ({ font }) => pick.current(font.id) }),
+      }}
+    />
+  );
+}
+function FontPickerFields({
+  value,
+  onPick,
+  upload,
+}: {
+  readonly value: string;
+  readonly onPick: (id: string) => void;
+  readonly upload: ControlledFontUpload;
+}): ReactElement {
+  const { api } = useApp();
+  const id = useId();
+  const uploadId = useId();
+  const fonts = useQuery({ queryKey: fontsKey, queryFn: () => listFonts(api), staleTime: 60_000 });
+  const uploading = upload.pending;
   const listed = fonts.data?.fonts ?? [];
   const unknown = value !== "default" && !listed.some((font) => font.id === value);
 
@@ -83,10 +112,7 @@ export function FontPicker({
             onChange={(event) => {
               const file = event.target.files?.[0];
               event.target.value = "";
-              if (file) {
-                if (onUpload) void onUpload(file);
-                else uploaded.mutate(file, { onSuccess: ({ font }) => pick.current(font.id) });
-              }
+              if (file) upload.pick(file);
             }}
           />
         </div>
@@ -96,9 +122,9 @@ export function FontPicker({
           Uploading font…
         </p>
       ) : null}
-      {uploaded.error ? (
+      {upload.error ? (
         <p role="alert" className="text-small text-red">
-          {uploaded.error.message}
+          {upload.error}
         </p>
       ) : null}
       {unknown && fonts.data ? (

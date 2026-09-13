@@ -267,6 +267,9 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     update,
     onPickFiles,
     onRemoveFile,
+    onReattachFile: (kind: UploadKind, key: string, file: File) => {
+      void session.attach(kind, [file], key);
+    },
   };
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: form-wide keyboard shortcut opens Review without starting a run.
@@ -329,6 +332,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
             <div data-tour="play-subtitles" className="flex flex-col gap-6 py-6">
               <FormatPicker value={form.format} onPick={(format) => update({ format })} />
               <SubtitleControls
+                fontUpload={session.fontUpload}
                 session={{
                   previewText: session.document.previewText,
                   fontUploading: session.fontUploading,

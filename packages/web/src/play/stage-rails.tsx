@@ -76,6 +76,7 @@ export function ThumbnailRail({
   update,
   onPickFiles,
   onRemoveFile,
+  onReattachFile,
 }: RailProps) {
   const generating =
     form.sources.thumbnail === "from_prompt" || form.sources.thumbnail === "prompt_by_llm";
@@ -117,6 +118,9 @@ export function ThumbnailRail({
             onPick={(files) => {
               onPickFiles("thumbnail", files);
             }}
+            onReattach={
+              onReattachFile ? (key, file) => onReattachFile("thumbnail", key, file) : undefined
+            }
             onRemove={(key) => {
               onRemoveFile("thumbnail", key);
             }}

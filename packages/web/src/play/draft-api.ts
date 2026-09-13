@@ -173,11 +173,16 @@ export async function uploadPlayDraftAttachment(
   draftId: string,
   attachmentId: string,
   file: File,
+  signal?: AbortSignal,
 ): Promise<DraftReply<DraftAttachment>> {
   const body = new FormData();
   body.set("file", file);
   return responseOf(
-    await api.fetch(draftAttachmentUrl(api, draftId, attachmentId), { method: "PUT", body }),
+    await api.fetch(draftAttachmentUrl(api, draftId, attachmentId), {
+      method: "PUT",
+      body,
+      ...(signal ? { signal } : {}),
+    }),
     draftAttachmentSchema,
   );
 }

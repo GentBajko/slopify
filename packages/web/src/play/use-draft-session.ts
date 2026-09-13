@@ -18,6 +18,7 @@ import {
   emptySession,
   freezeSave,
   remapForkEdits,
+  retainUploadSettlements,
 } from "./draft-save";
 import { useDraftUploads } from "./use-draft-uploads";
 
@@ -101,7 +102,7 @@ export function useDraftSession(): PlaySession {
           publish({
             clock,
             view: {
-              ...reply.value,
+              ...retainUploadSettlements(reply.value, state.current),
               review: clock.edited > clock.acknowledged ? null : reply.value.review,
             },
             pending: null,

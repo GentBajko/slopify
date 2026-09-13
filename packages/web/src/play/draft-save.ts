@@ -99,3 +99,25 @@ export function remapForkEdits(
     },
   };
 }
+
+export function retainUploadSettlements(saved: DraftView, current: DraftSessionState): DraftView {
+  if (saved.draft.id !== current.id) return saved;
+  const provided = current.document.form.provided;
+  const owned = new Set(
+    [provided.audio, provided.thumbnail, ...provided.images].flatMap((ref) =>
+      ref ? [ref.attachmentId] : [],
+    ),
+  );
+  return {
+    ...saved,
+    attachments: saved.attachments
+      .filter((attachment) => owned.has(attachment.id))
+      .map((attachment) => {
+        const settled = current.view?.attachments.find((one) => one.id === attachment.id);
+        return (attachment.state === "pending" || attachment.state === "copying") &&
+          (settled?.state === "ready" || settled?.state === "reattach")
+          ? settled
+          : attachment;
+      }),
+  };
+}

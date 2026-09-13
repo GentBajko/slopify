@@ -1,11 +1,12 @@
 import type { DraftAttachment, PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import type { QueryClient } from "@tanstack/react-query";
-import { type RefObject, useRef } from "react";
+import { type RefObject, useEffect, useRef } from "react";
 import type { Api } from "@/api";
 import { fontsKey, uploadFont } from "@/subtitles/api";
 import { uploadPlayDraftAttachment } from "./draft-api";
 import type { PlaySession } from "./draft-context";
 import type { DraftSessionState } from "./draft-save";
+import { sameUploadOwner, type UploadOwner } from "./draft-uploads";
 
 export function useDraftUploads({
   api,
@@ -25,10 +26,53 @@ export function useDraftUploads({
   readonly generation: () => number;
   readonly publish: (patch: Partial<DraftSessionState>) => void;
   readonly render: () => void;
-}): Pick<PlaySession, "attach" | "selectFont" | "uploadSubtitleFont" | "fontUploading"> {
+}): Pick<
+  PlaySession,
+  "attach" | "selectFont" | "uploadSubtitleFont" | "fontUploading" | "fontUpload"
+> {
   const fontOperation = useRef<string | null>(null);
-  const attach = async (kind: DraftAttachment["kind"], files: readonly File[]): Promise<void> => {
-    const refs = files.map((file) => ({ attachmentId: crypto.randomUUID(), name: file.name }));
+  const fontError = useRef<{ operationId: string; message: string } | null>(null);
+  const operations = useRef(
+    new Map<string, { owner: UploadOwner; controller: AbortController; generation: number }>(),
+  );
+  const owns = (sent: UploadOwner): boolean => {
+    const provided = state.current.document.form.provided;
+    const ref = [provided.audio, provided.thumbnail, ...provided.images].find(
+      (one) => one?.attachmentId === sent.attachmentId,
+    );
+    return sameUploadOwner(
+      ref && state.current.id
+        ? { draftId: state.current.id, attachmentId: ref.attachmentId }
+        : undefined,
+      sent,
+    );
+  };
+  useEffect(() => {
+    for (const [id, operation] of operations.current) {
+      if (!owns(operation.owner) || operation.generation !== generation()) {
+        operation.controller.abort();
+        operations.current.delete(id);
+      }
+    }
+  });
+  useEffect(() => {
+    const pending = operations.current;
+    return () => {
+      for (const operation of pending.values()) operation.controller.abort();
+      pending.clear();
+    };
+  }, []);
+  const attach = async (
+    kind: DraftAttachment["kind"],
+    files: readonly File[],
+    replaceId?: string,
+  ): Promise<void> => {
+    if (files.length === 0) return;
+    const selectedFiles = kind === "images" && !replaceId ? files : files.slice(-1);
+    const refs = selectedFiles.map((file) => ({
+      attachmentId: crypto.randomUUID(),
+      name: file.name,
+    }));
     const current = state.current.document;
     const provided = current.form.provided;
     edit({
@@ -37,7 +81,14 @@ export function useDraftUploads({
         ...current.form,
         provided:
           kind === "images"
-            ? { ...provided, images: [...provided.images, ...refs] }
+            ? {
+                ...provided,
+                images: replaceId
+                  ? provided.images.flatMap((ref) =>
+                      ref.attachmentId === replaceId ? refs : [ref],
+                    )
+                  : [...provided.images, ...refs],
+              }
             : { ...provided, [kind]: refs.at(-1) ?? null },
       },
     });
@@ -47,18 +98,15 @@ export function useDraftUploads({
     if (!id) return;
     await Promise.all(
       refs.map(async (ref, index) => {
-        const file = files[index];
-        if (!file) return;
+        const file = selectedFiles[index];
+        const sent = { draftId: id, attachmentId: ref.attachmentId };
+        if (!file || !owns(sent)) return;
+        const controller = new AbortController();
+        operations.current.set(ref.attachmentId, { owner: sent, controller, generation: selected });
         const settle = (attachment: DraftAttachment) => {
           const view = state.current.view;
           if (selected !== generation() || view?.draft.id !== id) return;
-          const kept = state.current.document.form.provided;
-          if (
-            ![kept.audio, kept.thumbnail, ...kept.images].some(
-              (one) => one?.attachmentId === ref.attachmentId,
-            )
-          )
-            return;
+          if (!owns(sent) || controller.signal.aborted) return;
           publish({
             view: {
               ...view,
@@ -71,7 +119,13 @@ export function useDraftUploads({
           });
         };
         try {
-          const reply = await uploadPlayDraftAttachment(api, id, ref.attachmentId, file);
+          const reply = await uploadPlayDraftAttachment(
+            api,
+            id,
+            ref.attachmentId,
+            file,
+            controller.signal,
+          );
           if (reply.ok) settle(reply.value);
           else
             settle({
@@ -93,6 +147,8 @@ export function useDraftUploads({
             bytes: 0,
             error: error instanceof Error ? error.message : "Reattach this file",
           });
+        } finally {
+          operations.current.delete(ref.attachmentId);
         }
       }),
     );
@@ -112,10 +168,11 @@ export function useDraftUploads({
     edit({ ...state.current.document, fontUpload: { operationId, name: file.name } });
     const selected = generation();
     if (!(await flush()) || selected !== generation()) {
-      fontOperation.current = null;
+      if (fontOperation.current === operationId) fontOperation.current = null;
       render();
       return;
     }
+    if (state.current.document.fontUpload?.operationId !== operationId) return;
     try {
       const { font } = await uploadFont(api, file);
       if (
@@ -131,8 +188,16 @@ export function useDraftUploads({
       selectFont(font.id);
       await flush();
     } catch (error) {
-      if (selected === generation())
-        publish({ error: error instanceof Error ? error.message : "Reattach this font" });
+      if (
+        selected === generation() &&
+        state.current.document.fontUpload?.operationId === operationId
+      ) {
+        fontError.current = {
+          operationId,
+          message: error instanceof Error ? error.message : "Reattach this font",
+        };
+        render();
+      }
     } finally {
       if (fontOperation.current === operationId) {
         fontOperation.current = null;
@@ -140,12 +205,23 @@ export function useDraftUploads({
       }
     }
   };
+  const fontUploading =
+    fontOperation.current !== null &&
+    fontOperation.current === state.current.document.fontUpload?.operationId;
   return {
+    fontUpload: {
+      pending: fontUploading,
+      error:
+        fontError.current?.operationId === state.current.document.fontUpload?.operationId
+          ? fontError.current?.message
+          : undefined,
+      pick: (file) => {
+        void uploadSubtitleFont(file);
+      },
+    },
     attach,
     selectFont,
     uploadSubtitleFont,
-    fontUploading:
-      fontOperation.current !== null &&
-      fontOperation.current === state.current.document.fontUpload?.operationId,
+    fontUploading,
   };
 }

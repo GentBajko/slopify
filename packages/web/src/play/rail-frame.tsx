@@ -24,6 +24,7 @@ export interface RailProps {
   readonly problem: (field: string) => string | undefined;
   readonly update: (patch: Partial<PlayFormState>) => void;
   readonly onPickFiles: (kind: UploadKind, files: readonly File[]) => void;
+  readonly onReattachFile?: (kind: UploadKind, key: string, file: File) => void;
   readonly onRemoveFile: (kind: UploadKind, key: string) => void;
   readonly subtitleSession?: {
     readonly previewText: string;

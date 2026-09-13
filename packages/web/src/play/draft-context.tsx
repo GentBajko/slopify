@@ -4,6 +4,7 @@ import type {
   PlayDraftDocument,
 } from "@app/slices/play-drafts/model.js";
 import { createContext, type ReactElement, type ReactNode, useContext } from "react";
+import type { ControlledFontUpload } from "@/subtitles/font-picker";
 import type { PlaySection } from "./sections";
 import { useDraftSession } from "./use-draft-session";
 
@@ -20,6 +21,7 @@ export interface RevealRequest {
 }
 export interface PlaySession extends PlayNavigation {
   readonly activeId: string | null;
+  readonly fontUpload: ControlledFontUpload;
   readonly fontUploading: boolean;
   readonly selectFont: (fontId: string) => void;
   readonly uploadSubtitleFont: (file: File) => Promise<void>;
@@ -30,7 +32,11 @@ export interface PlaySession extends PlayNavigation {
   readonly edited: number;
   readonly acknowledged: number;
   readonly reveal: RevealRequest | null;
-  readonly attach: (kind: DraftAttachment["kind"], files: readonly File[]) => Promise<void>;
+  readonly attach: (
+    kind: DraftAttachment["kind"],
+    files: readonly File[],
+    replaceId?: string,
+  ) => Promise<void>;
   readonly edit: (document: PlayDraftDocument) => void;
   readonly flush: () => Promise<boolean>;
   readonly open: (id: string) => Promise<void>;

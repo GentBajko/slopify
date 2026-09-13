@@ -187,3 +187,23 @@ it("previews all five saved positions in the selected video frame", async () => 
     "1920 / 1080",
   );
 });
+
+it("renders externally owned upload state without releasing it on unmount", async () => {
+  const notify = vi.fn();
+  const pick = vi.fn();
+  const mounted = renderApp(
+    <SubtitleControls
+      value={{ ...defaultSubtitles, mode: "files" }}
+      audioEnabled
+      videoEnabled
+      onChange={() => {}}
+      onUploading={notify}
+      fontUpload={{ pending: true, error: "Try again", pick }}
+    />,
+    testDeps({ "GET /api/fonts": jsonAnswer({ fonts }) }),
+  );
+  expect(screen.getByText("Uploading font…")).not.toBeNull();
+  expect(screen.getByText("Try again")).not.toBeNull();
+  mounted.unmount();
+  expect(notify).not.toHaveBeenCalled();
+});
