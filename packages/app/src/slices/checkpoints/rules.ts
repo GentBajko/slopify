@@ -42,8 +42,7 @@ export function checkpointDecision(
       return { kind: "refused", reason: "conflict" };
     const closure = checkpointClosure(row.stage, recipes);
     if (!closure.some((recipe) => recipe.stage === work.kind)) continue;
-    if (row.state === "canceled" || (row.stage === work.kind && row.workId !== work.workId))
-      return { kind: "refused", reason: "conflict" };
+    if (row.state === "canceled") return { kind: "refused", reason: "conflict" };
     if (!isApprovalCurrent(row, revision, checkpointFingerprint(revision, closure)))
       held.add(row.checkpointId);
   }

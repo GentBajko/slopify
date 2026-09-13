@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
+import { carryCheckpointGates } from "../checkpoints/recovery.js";
 import { narrationRegenerationKey } from "../narration/plan.js";
 import { recipeInputSchema } from "../rebuild/recipe-input-schema.js";
 import { planRevision } from "../rebuild/recipe-save.js";
@@ -179,6 +180,7 @@ export async function saveRevision(
         logicalKeys: logicalKeys(deps, input.projectId, input.baseRevisionId, plan.fingerprints),
         recipes: plan.recipes,
       });
+      carryCheckpointGates(deps, input.baseRevisionId, revision);
       projectSelected(deps.db, revision);
       projectStandings(deps, revision.projectId);
       insertReceipt(deps, identity, revision.id);

@@ -48,7 +48,7 @@ function current(
   return { ok: true, value: true };
 }
 
-function resolvedGate(
+export function resolvedGate(
   deps: RevisionDeps,
   row: CheckpointRow,
 ): CheckpointStatus["checkpoints"][number] | undefined {
@@ -85,11 +85,39 @@ export function readCheckpointStatus(
   if (!revisionId) return { ok: false, reason: "not-found" };
   const checkpoints: CheckpointStatus["checkpoints"][number][] = [];
   for (const row of listCheckpoints(deps.db, projectId, revisionId)) {
-    const resolved = resolvedGate(deps, row);
+    const resolved = refreshCheckpointGate(deps, row);
     if (!resolved) return { ok: false, reason: "conflict" };
     checkpoints.push(resolved);
   }
   return { ok: true, value: { revisionId, checkpoints } };
+}
+
+export function refreshCheckpointGate(
+  deps: RevisionDeps,
+  row: CheckpointRow,
+): CheckpointStatus["checkpoints"][number] | undefined {
+  const resolved = resolvedGate(deps, row);
+  if (
+    !resolved ||
+    resolved.currentFingerprint === row.fingerprint ||
+    row.approvedAt !== null ||
+    !["held", "pending-review"].includes(row.state)
+  )
+    return resolved;
+  const changed = deps.db
+    .prepare(
+      "UPDATE review_checkpoints SET fingerprint=? WHERE project_id=? AND revision_id=? AND checkpoint_id=? AND fingerprint=? AND approved_at IS NULL AND state IN ('held','pending-review')",
+    )
+    .run(
+      resolved.currentFingerprint,
+      row.projectId,
+      row.revisionId,
+      row.checkpointId,
+      row.fingerprint,
+    );
+  return Number(changed.changes) === 1
+    ? { ...resolved, fingerprint: resolved.currentFingerprint }
+    : undefined;
 }
 
 export function validateCheckpointApproval(
@@ -113,7 +141,7 @@ export function validateCheckpointApproval(
     !stage ||
     !work ||
     ["done", "provided", "skipped", "canceled"].includes(stage.state) ||
-    ["done", "canceled"].includes(String(work.state))
+    work.state === "canceled"
   )
     return { ok: false, reason: "conflict" };
   if ((stage.state === "running" || work.state === "running") && row.state !== "released")

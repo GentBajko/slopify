@@ -142,7 +142,7 @@ it("refuses foreign invocation authority, gate scope and canceled gates", () => 
       revision,
       recipes,
     ),
-  ).toEqual({ kind: "refused", reason: "conflict" });
+  ).toEqual({ kind: "held", checkpointIds: [gate.checkpointId] });
   expect(
     checkpointDecision(work("audio"), [{ ...gate, state: "canceled" }], revision, recipes),
   ).toEqual({ kind: "refused", reason: "conflict" });

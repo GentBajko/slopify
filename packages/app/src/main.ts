@@ -45,16 +45,11 @@ import { readVersion } from "./kernel/version.js";
 import { modelSources } from "./model-catalog.js";
 import { projectPaused } from "./slices/admission/repo.js";
 import { pumpQueue, queueWaiting } from "./slices/batch/index.js";
-import {
-  approveCheckpoint,
-  type CheckpointRow,
-  checkpointForWork,
-} from "./slices/checkpoints/index.js";
-import { checkpointDecision } from "./slices/checkpoints/rules.js";
+import { approveCheckpoint, type CheckpointRow } from "./slices/checkpoints/index.js";
+import { checkpointDecisionForWork, recoverCheckpointWork } from "./slices/checkpoints/recovery.js";
 import { resolveFont } from "./slices/fonts/index.js";
-import { claimWork, finishWork, maySubmit, recoverWork } from "./slices/rebuild/repo.js";
+import { claimWork, finishWork, maySubmit } from "./slices/rebuild/repo.js";
 import { materializeAdmittedWork } from "./slices/rebuild/runtime-materialize.js";
-import { executionPlan, executionView, savedCatalogue } from "./slices/rebuild/runtime-plan.js";
 import { runRevisionInvocation } from "./slices/rebuild/runtime-run.js";
 import {
   executionStages,
@@ -111,7 +106,7 @@ export async function boot(config: Config): Promise<Boot> {
     db = openDb(paths.db);
     migrate(db, clock);
     const interrupted = markInterruptedStages(db, clock);
-    recoverWork(db);
+    recoverCheckpointWork(db);
     const reconciled = reconcileStorage(db, paths);
     const log = openLog(paths.logs, clock);
     log.write("info", "boot", {
@@ -387,19 +382,7 @@ export function wireRunner({
     ),
   };
   const checkpoints = createCheckpointAuthority<CheckpointRow>({
-    decide: (work) => {
-      const rows = checkpointForWork(db, work.workId);
-      if (rows.length === 0) return { kind: "eligible" };
-      const view = executionView(execution, work.projectId, work.revisionId);
-      const stored = db
-        .prepare(
-          "SELECT recipe_context FROM revision_work WHERE id=? AND project_id=? AND revision_id=?",
-        )
-        .get(work.workId, work.projectId, work.revisionId);
-      if (!view || stored?.recipe_context == null) return { kind: "refused", reason: "not-found" };
-      const plan = executionPlan(execution, view, savedCatalogue(stored.recipe_context));
-      return checkpointDecision(work, rows, view.revision, plan.recipes);
-    },
+    decide: (work) => checkpointDecisionForWork(execution, work),
     approve: (projectId, checkpointId, identity) =>
       approveCheckpoint(db, {
         ...identity,

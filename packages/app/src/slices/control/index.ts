@@ -14,6 +14,7 @@ import {
   updateProjectConfig,
 } from "../admission/repo.js";
 import type { FieldError } from "../admission/rules.js";
+import { listCheckpoints } from "../checkpoints/repo.js";
 import { sameChunking } from "../narration/chunk.js";
 import { projectStandings } from "../rebuild/runtime-store.js";
 import type { RerunDeps } from "../reruns/index.js";
@@ -144,8 +145,16 @@ async function pause(deps: ControlDeps, id: string): Promise<ControlResult> {
 export function resumeProject(deps: ControlDeps, id: string): Promise<ControlResult> {
   return withProjectControl(deps.db, id, () => {
     if (deps.catalogue !== undefined) adoptBaseline(deps, id);
-    if (currentRevisionId(deps.db, id) !== undefined)
-      return { ok: false, reason: "rebuild-required" };
+    const revisionId = currentRevisionId(deps.db, id);
+    if (revisionId !== undefined) {
+      if (listCheckpoints(deps.db, id, revisionId).length === 0)
+        return { ok: false, reason: "rebuild-required" };
+      if (stagesOf(deps.db, id).some((stage) => stage.state === "canceled"))
+        return { ok: false, reason: "rebuild-required" };
+      setProjectPaused(deps.db, id, false, deps.clock.now().toISOString());
+      changed(deps, id, true);
+      return { ok: true };
+    }
     const project = projectById(deps.db, id);
     if (project === undefined) return { ok: false, reason: "no-project" };
     const stages = stagesOf(deps.db, id);
