@@ -28,10 +28,17 @@ export function useDraftUploads({
   readonly render: () => void;
 }): Pick<
   PlaySession,
-  "attach" | "selectFont" | "uploadSubtitleFont" | "fontUploading" | "fontUpload"
+  | "attachmentUploading"
+  | "attach"
+  | "selectFont"
+  | "uploadSubtitleFont"
+  | "fontUploading"
+  | "fontUpload"
 > {
+  const lifetime = useRef(0);
   const fontOperation = useRef<string | null>(null);
   const fontError = useRef<{ operationId: string; message: string } | null>(null);
+  const reservations = useRef(new Map<string, number>());
   const operations = useRef(
     new Map<string, { owner: UploadOwner; controller: AbortController; generation: number }>(),
   );
@@ -48,6 +55,8 @@ export function useDraftUploads({
     );
   };
   useEffect(() => {
+    for (const [id, selected] of reservations.current)
+      if (selected !== generation()) reservations.current.delete(id);
     for (const [id, operation] of operations.current) {
       if (!owns(operation.owner) || operation.generation !== generation()) {
         operation.controller.abort();
@@ -57,7 +66,10 @@ export function useDraftUploads({
   });
   useEffect(() => {
     const pending = operations.current;
+    const reserved = reservations.current;
     return () => {
+      lifetime.current++;
+      reserved.clear();
       for (const operation of pending.values()) operation.controller.abort();
       pending.clear();
     };
@@ -73,6 +85,9 @@ export function useDraftUploads({
       attachmentId: crypto.randomUUID(),
       name: file.name,
     }));
+    const selectedLifetime = lifetime.current;
+    const selected = generation();
+    for (const ref of refs) reservations.current.set(ref.attachmentId, selected);
     const current = state.current.document;
     const provided = current.form.provided;
     edit({
@@ -92,8 +107,12 @@ export function useDraftUploads({
             : { ...provided, [kind]: refs.at(-1) ?? null },
       },
     });
-    const selected = generation();
-    if (!(await flush()) || selected !== generation()) return;
+    const saved = await flush();
+    for (const ref of refs) reservations.current.delete(ref.attachmentId);
+    if (!saved || selected !== generation() || selectedLifetime !== lifetime.current) {
+      render();
+      return;
+    }
     const id = state.current.id;
     if (!id) return;
     await Promise.all(
@@ -105,7 +124,12 @@ export function useDraftUploads({
         operations.current.set(ref.attachmentId, { owner: sent, controller, generation: selected });
         const settle = (attachment: DraftAttachment) => {
           const view = state.current.view;
-          if (selected !== generation() || view?.draft.id !== id) return;
+          if (
+            selected !== generation() ||
+            selectedLifetime !== lifetime.current ||
+            view?.draft.id !== id
+          )
+            return;
           if (!owns(sent) || controller.signal.aborted) return;
           publish({
             view: {
@@ -166,8 +190,9 @@ export function useDraftUploads({
     const operationId = crypto.randomUUID();
     fontOperation.current = operationId;
     edit({ ...state.current.document, fontUpload: { operationId, name: file.name } });
+    const selectedLifetime = lifetime.current;
     const selected = generation();
-    if (!(await flush()) || selected !== generation()) {
+    if (!(await flush()) || selected !== generation() || selectedLifetime !== lifetime.current) {
       if (fontOperation.current === operationId) fontOperation.current = null;
       render();
       return;
@@ -177,6 +202,7 @@ export function useDraftUploads({
       const { font } = await uploadFont(api, file);
       if (
         selected !== generation() ||
+        selectedLifetime !== lifetime.current ||
         state.current.document.fontUpload?.operationId !== operationId
       )
         return;
@@ -190,6 +216,7 @@ export function useDraftUploads({
     } catch (error) {
       if (
         selected === generation() &&
+        selectedLifetime === lifetime.current &&
         state.current.document.fontUpload?.operationId === operationId
       ) {
         fontError.current = {
@@ -209,6 +236,16 @@ export function useDraftUploads({
     fontOperation.current !== null &&
     fontOperation.current === state.current.document.fontUpload?.operationId;
   return {
+    attachmentUploading: (id) => {
+      const operation = operations.current.get(id);
+      return (
+        reservations.current.get(id) === generation() ||
+        (operation !== undefined &&
+          operation.generation === generation() &&
+          owns(operation.owner) &&
+          !operation.controller.signal.aborted)
+      );
+    },
     fontUpload: {
       pending: fontUploading,
       error:

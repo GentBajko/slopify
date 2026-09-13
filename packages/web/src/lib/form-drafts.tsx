@@ -71,7 +71,11 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
       name: ref.name,
       file,
       error:
-        attachment?.error ?? (attachment?.state === "reattach" ? "Reattach this file" : undefined),
+        attachment?.error ??
+        (attachment?.state === "reattach" ||
+        (!file && !session.attachmentUploading(ref.attachmentId))
+          ? "Reattach this file"
+          : undefined),
     };
   };
   const legacy: PlayFormState = {

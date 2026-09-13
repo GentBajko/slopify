@@ -29,6 +29,7 @@ export interface PlaySession extends PlayNavigation {
   readonly activeId: string | null;
   readonly fontUpload: ControlledFontUpload;
   readonly fontUploading: boolean;
+  readonly attachmentUploading: (attachmentId: string) => boolean;
   readonly selectFont: (fontId: string) => void;
   readonly uploadSubtitleFont: (file: File) => Promise<void>;
   readonly document: PlayDraftDocument;
