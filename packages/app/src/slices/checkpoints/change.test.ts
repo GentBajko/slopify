@@ -1,8 +1,8 @@
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { config, emptyView } from "../rebuild/recipe-fixture.js";
 import { insertRevision } from "../revisions/repo.js";
 import { revisionFixture } from "../revisions/revision.fake.js";
-import { changeCheckpoints } from "./change.js";
+import { changeCheckpoints, readCheckpointStatus } from "./change.js";
 import { listCheckpoints } from "./repo.js";
 
 const catalogue = {
@@ -14,6 +14,28 @@ const catalogue = {
   tts: [],
 };
 const closers: (() => void)[] = [];
+it("logs only bounded gate identity when a work snapshot cannot be resolved", () => {
+  const h = fixture();
+  expect(
+    changeCheckpoints(h.deps, {
+      projectId: h.projectId,
+      revisionId: h.revisionId,
+      stages: ["images"],
+    }).ok,
+  ).toBe(true);
+  h.deps.db
+    .prepare("UPDATE revision_work SET recipe_context=?")
+    .run('{"secret":"private-payload"}');
+  const write = vi.fn();
+  expect(readCheckpointStatus({ ...h.deps, log: { write } }, h.projectId)).toEqual({
+    ok: false,
+    reason: "conflict",
+  });
+  expect(write).toHaveBeenCalledExactlyOnceWith("warn", "checkpoint.resolve", {
+    projectId: h.projectId,
+    stage: "images",
+  });
+});
 afterEach(() => {
   for (const close of closers.splice(0)) close();
 });

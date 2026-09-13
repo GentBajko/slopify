@@ -1,4 +1,6 @@
 import { z } from "zod";
+import type { Catalogue } from "../../catalog/schema.js";
+import type { CatalogueStore } from "../../catalog/store.js";
 import { transact } from "../../kernel/db/tx.js";
 import type { StageKind } from "../../kernel/pipeline.js";
 import { projectExists, stagesOf } from "../admission/repo.js";
@@ -52,6 +54,7 @@ export function resolvedGate(
   deps: RevisionDeps,
   row: CheckpointRow,
   currentInputs = false,
+  catalogue?: Catalogue,
 ): CheckpointStatus["checkpoints"][number] | undefined {
   try {
     const stored = deps.db
@@ -60,9 +63,9 @@ export function resolvedGate(
       )
       .get(row.workId, row.projectId, row.revisionId);
     const view = executionView(deps, row.projectId, row.revisionId);
-    if (!view || stored?.recipe_context == null)
+    if (!view || (catalogue === undefined && stored?.recipe_context == null))
       throw new Error("Checkpoint work snapshot is missing");
-    const plan = executionPlan(deps, view, savedCatalogue(stored.recipe_context));
+    const plan = executionPlan(deps, view, catalogue ?? savedCatalogue(stored?.recipe_context));
     const closure = checkpointClosure(row.stage, plan.recipes);
     return {
       ...row,
@@ -83,6 +86,7 @@ export function resolvedGate(
       workKeys: closure.map((recipe) => recipe.key),
     };
   } catch {
+    deps.log.write("warn", "checkpoint.resolve", { projectId: row.projectId, stage: row.stage });
     return undefined;
   }
 }
@@ -207,7 +211,7 @@ export function replayCheckpointApproval(
 }
 
 export function changeCheckpoints(
-  deps: RevisionDeps,
+  deps: RevisionDeps & { readonly catalogue?: Pick<CatalogueStore, "read"> },
   input: { readonly projectId: string } & z.infer<typeof checkpointChangeSchema>,
 ): CheckpointResult<{ readonly changed: boolean; readonly released: boolean }> {
   const parsed = checkpointChangeSchema.safeParse({
@@ -223,6 +227,7 @@ export function changeCheckpoints(
     const add = parsed.data.stages.filter((stage) => !existing.some((row) => row.stage === stage));
     const changedStages = new Set([...remove.map((row) => row.stage), ...add]);
     const additions: CheckpointRow[] = [];
+    const contexts = new Map<string, Catalogue>();
     const stages = stagesOf(deps.db, input.projectId);
     for (const kind of changedStages) {
       const stage = stages.find((row) => row.kind === kind);
@@ -231,6 +236,7 @@ export function changeCheckpoints(
         (w.revision_id=? OR EXISTS (SELECT 1 FROM revision_work_reservations r WHERE r.work_id=w.id AND r.revision_id=?)) ORDER BY w.id`)
         .all(input.projectId, kind, input.revisionId, input.revisionId);
       const submitted = work.some((row) => {
+        if (row.revision_id !== input.revisionId && row.state === "done") return false;
         const workId = z.string().parse(row.id);
         if (
           row.state === "done" &&
@@ -252,10 +258,10 @@ export function changeCheckpoints(
       if (!stage || canChangeCheckpoint(stage.state, submitted).kind !== "eligible")
         return { ok: false, reason: "conflict" };
       if (!add.includes(kind)) continue;
-      const anchor = work.find(
-        (row) => row.revision_id === input.revisionId && typeof row.recipe_context === "string",
-      );
+      const anchor = work.find((row) => row.revision_id === input.revisionId);
       if (typeof anchor?.id !== "string") return { ok: false, reason: "conflict" };
+      const catalogue = anchor.recipe_context == null ? deps.catalogue?.read() : undefined;
+      if (catalogue !== undefined) contexts.set(anchor.id, catalogue);
       const row: CheckpointRow = {
         projectId: input.projectId,
         revisionId: input.revisionId,
@@ -267,12 +273,16 @@ export function changeCheckpoints(
         createdAt: deps.clock.now().toISOString(),
         approvedAt: null,
       };
-      const resolved = resolvedGate(deps, row);
+      const resolved = resolvedGate(deps, row, false, catalogue);
       if (!resolved || resolved.workKeys.length === 0) return { ok: false, reason: "conflict" };
       additions.push(
         checkpointRowSchema.parse({ ...row, fingerprint: resolved.currentFingerprint }),
       );
     }
+    for (const [workId, catalogue] of contexts)
+      deps.db
+        .prepare("UPDATE revision_work SET recipe_context=? WHERE id=? AND recipe_context IS NULL")
+        .run(JSON.stringify(catalogue), workId);
     for (const row of remove)
       deps.db
         .prepare(

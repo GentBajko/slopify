@@ -33,7 +33,11 @@ function refused(c: Context, reason: string): Response {
   });
 }
 
-export function checkpointRoutes(deps: AppDeps) {
+export function checkpointRoutes(deps: AppDeps): ReturnType<typeof buildCheckpointRoutes> {
+  return buildCheckpointRoutes(deps);
+}
+
+function buildCheckpointRoutes(deps: AppDeps) {
   const notify = (projectId: string, revisionId: string, wake: boolean) => {
     try {
       deps.hub.emit(projectId, { type: "project.updated", projectId, revisionId });

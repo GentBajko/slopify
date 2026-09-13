@@ -147,7 +147,13 @@ export function resumeProject(deps: ControlDeps, id: string): Promise<ControlRes
     if (deps.catalogue !== undefined) adoptBaseline(deps, id);
     const revisionId = currentRevisionId(deps.db, id);
     if (revisionId !== undefined) {
-      if (listCheckpoints(deps.db, id, revisionId).length === 0)
+      const admitted =
+        projectById(deps.db, id)?.paused === true &&
+        deps.db
+          .prepare(`SELECT 1 FROM revision_work w JOIN revision_work_reservations r ON r.work_id=w.id
+        WHERE r.project_id=? AND r.revision_id=? AND w.state='pending' AND w.dispatch_state='allowed' LIMIT 1`)
+          .get(id, revisionId) !== undefined;
+      if (listCheckpoints(deps.db, id, revisionId).length === 0 && !admitted)
         return { ok: false, reason: "rebuild-required" };
       if (stagesOf(deps.db, id).some((stage) => stage.state === "canceled"))
         return { ok: false, reason: "rebuild-required" };

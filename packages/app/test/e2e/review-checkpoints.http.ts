@@ -6,7 +6,13 @@ import type { Registry } from "../../src/kernel/ports/registry.js";
 import { checkpointRowSchema } from "../../src/slices/checkpoints/schema.js";
 import { composedFixture, current, start } from "../revision-rebuild.fake.js";
 
-export async function checkpointFixture(ports: Partial<Registry> = {}) {
+export function checkpointFixture(
+  ports: Partial<Registry> = {},
+): ReturnType<typeof buildCheckpointFixture> {
+  return buildCheckpointFixture(ports);
+}
+
+async function buildCheckpointFixture(ports: Partial<Registry>) {
   const h = await composedFixture(ports);
   const app = createApp({
     ...h.deps,
