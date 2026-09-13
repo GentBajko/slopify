@@ -233,7 +233,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
         if (field) setTouched((current) => new Set([...current, field]));
       }}
       data-play-grid="true"
-      className="mx-auto max-w-[1320px] pb-[calc(4rem+env(safe-area-inset-bottom))] [&_input:not([type=checkbox])]:min-h-10 [&_select]:min-h-10 [&_button]:min-h-10 max-[1099px]:[&_button]:min-h-11 max-[1099px]:[&_input:not([type=checkbox])]:min-h-11 max-[1099px]:[&_select]:min-h-11"
+      className="mx-auto max-w-[1320px] pb-[calc(4rem+env(safe-area-inset-bottom))] [&_input:not([type=checkbox])]:min-h-10 [&_select]:min-h-10 [&_button]:min-h-10 [&_summary]:min-h-10 max-[1099px]:[&_button]:min-h-11 max-[1099px]:[&_input:not([type=checkbox])]:min-h-11 max-[1099px]:[&_select]:min-h-11 max-[1099px]:[&_summary]:min-h-11"
     >
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
