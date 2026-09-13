@@ -178,15 +178,25 @@ export function changeCheckpoints(
         .prepare(`SELECT w.* FROM revision_work w WHERE w.project_id=? AND w.kind=? AND
         (w.revision_id=? OR EXISTS (SELECT 1 FROM revision_work_reservations r WHERE r.work_id=w.id AND r.revision_id=?)) ORDER BY w.id`)
         .all(input.projectId, kind, input.revisionId, input.revisionId);
-      const submitted = work.some(
-        (row) =>
+      const submitted = work.some((row) => {
+        const workId = z.string().parse(row.id);
+        if (
+          row.state === "done" &&
+          row.dispatch_state === "held" &&
+          deps.db
+            .prepare("SELECT 1 FROM revision_work_pieces WHERE work_id=? LIMIT 1")
+            .get(workId) === undefined
+        )
+          return false;
+        return (
           row.state !== "pending" ||
           deps.db
             .prepare(
               "SELECT 1 FROM revision_work_pieces WHERE work_id=? AND (submitted_at IS NOT NULL OR state IN ('running','done')) LIMIT 1",
             )
-            .get(z.string().parse(row.id)) !== undefined,
-      );
+            .get(workId) !== undefined
+        );
+      });
       if (!stage || canChangeCheckpoint(stage.state, submitted).kind !== "eligible")
         return { ok: false, reason: "conflict" };
       if (!add.includes(kind)) continue;

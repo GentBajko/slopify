@@ -70,7 +70,7 @@ export function carryCheckpointGates(
     const resolved = resolvedGate(deps, next);
     if (!resolved) throw new Error("Checkpoint inputs could not be resolved");
     const same = gate.fingerprint === resolved.currentFingerprint;
-    if (!same)
+    if (!same && gate.state !== "canceled")
       deps.db
         .prepare(
           "UPDATE review_checkpoints SET state='invalidated',approved_at=NULL WHERE project_id=? AND revision_id=? AND checkpoint_id=?",
@@ -86,9 +86,9 @@ export function carryCheckpointGates(
         gate.stage,
         anchor,
         resolved.currentFingerprint,
-        same ? gate.state : "held",
+        same && gate.state !== "canceled" ? gate.state : "held",
         revision.createdAt,
-        same ? gate.approvedAt : null,
+        same && gate.state !== "canceled" ? gate.approvedAt : null,
       );
   }
 }

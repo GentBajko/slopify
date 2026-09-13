@@ -4,12 +4,80 @@ import { expect, it } from "vitest";
 import { fakeImage } from "../src/adapters/fake/image.js";
 import { openDb } from "../src/kernel/db/index.js";
 import { setProjectPaused } from "../src/slices/admission/repo.js";
+import { cancelProject } from "../src/slices/cancel/index.js";
 import { changeCheckpoints, readCheckpointStatus } from "../src/slices/checkpoints/change.js";
 import { recoverCheckpointWork } from "../src/slices/checkpoints/recovery.js";
 import { listCheckpoints } from "../src/slices/checkpoints/repo.js";
 import { pauseProject, resumeProject } from "../src/slices/control/index.js";
+import { restoreRevision } from "../src/slices/revisions/restore.js";
 import { getRevisionView } from "../src/slices/revisions/view.js";
+import { checkpointFixture } from "./e2e/review-checkpoints.http.js";
 import { composedFixture, current, deferred, save, start } from "./revision-rebuild.fake.js";
+
+it("allows removal and re-adding an unstarted gate after a title-only Save", async () => {
+  const h = await checkpointFixture();
+  try {
+    await h.admit();
+    expect((await h.change(["images"])).status).toBe(200);
+    const base = current(h.deps, h.projectId);
+    await save(h.deps, h.projectId, {
+      config: { ...base.revision.config, title: "New title" },
+      content: base.revision.content,
+    });
+    setProjectPaused(h.deps.db, h.projectId, true, h.deps.clock.now().toISOString());
+    expect((await h.change([])).status).toBe(200);
+    expect((await h.change(["images"])).status).toBe(200);
+    expect(h.deps.db.prepare("SELECT count(*) AS n FROM attempts").get()?.n).toBe(0);
+  } finally {
+    await h.dispose();
+  }
+});
+
+it.each(["save", "restore"] as const)(
+  "makes canceled gates reviewable on a new revision from %s",
+  async (operation) => {
+    const h = await checkpointFixture();
+    try {
+      await h.admit();
+      expect((await h.change(["images"])).status).toBe(200);
+      const base = current(h.deps, h.projectId);
+      expect(
+        (
+          await cancelProject(
+            { ...h.deps, abort: (id) => h.runner.abortProject(id) },
+            h.projectId,
+            { baseRevisionId: base.revision.id, idempotencyKey: randomUUID() },
+          )
+        ).ok,
+      ).toBe(true);
+      if (operation === "save")
+        await save(h.deps, h.projectId, {
+          config: { ...base.revision.config, title: "Retry" },
+          content: base.revision.content,
+        });
+      else
+        expect(
+          (
+            await restoreRevision(h.deps, {
+              projectId: h.projectId,
+              baseRevisionId: base.revision.id,
+              targetRevisionId: base.revision.id,
+              idempotencyKey: randomUUID(),
+            })
+          ).ok,
+        ).toBe(true);
+      await h.admit();
+      const gate = (await h.status()).checkpoints[0];
+      if (!gate) throw new Error("Missing successor gate");
+      expect(gate).toMatchObject({ state: "held", approvedAt: null });
+      expect(listCheckpoints(h.deps.db, h.projectId, base.revision.id)[0]?.state).toBe("canceled");
+      expect((await h.approve(gate)).status).toBe(200);
+      await h.runner.settled();
+    } finally {
+      await h.dispose();
+    }
+  },
+);
 
 it("restores a held multi-invocation gate and keeps pause authoritative after approval", async () => {
   const images = fakeImage();
