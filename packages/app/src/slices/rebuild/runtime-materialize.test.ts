@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Catalogue } from "../../catalog/schema.js";
 import { stageKinds } from "../../kernel/pipeline.js";
+import { changeCheckpoints } from "../checkpoints/change.js";
 import { ensureBaseline } from "../revisions/adopt.js";
 import { saveRevision } from "../revisions/mutations.js";
 import { commitRevisionOutputs } from "../revisions/publish.js";
@@ -116,6 +117,28 @@ async function fixture() {
 }
 
 describe("deferred admitted work", () => {
+  it("removes a held Audio gate after materialization retires unsubmitted placeholders", async () => {
+    const h = await fixture();
+    try {
+      const input = { projectId: h.projectId, revisionId: h.base.revision.id };
+      expect(changeCheckpoints(h.deps, { ...input, stages: ["audio"] }).ok).toBe(true);
+      materializeAdmittedWork(h.deps, h.projectId);
+      expect(
+        h.deps.db
+          .prepare(`SELECT count(*) AS n FROM revision_work w WHERE kind='audio' AND state='done'
+        AND NOT EXISTS(SELECT 1 FROM revision_work_reservations r WHERE r.work_id=w.id)
+        AND NOT EXISTS(SELECT 1 FROM revision_work_pieces p WHERE p.work_id=w.id AND p.submitted_at IS NOT NULL)`)
+          .get()?.n,
+      ).toBeGreaterThan(0);
+      expect(changeCheckpoints(h.deps, { ...input, stages: [] })).toEqual({
+        ok: true,
+        value: { changed: true, released: true },
+      });
+      expect(h.deps.db.prepare("SELECT count(*) AS n FROM attempts").get()?.n).toBe(0);
+    } finally {
+      h.close();
+    }
+  });
   it("materializes every provider part under the original revision after a title-only save", async () => {
     const h = await fixture();
     try {

@@ -4,6 +4,34 @@ import { pauseProject, resumeProject } from "../src/slices/control/index.js";
 import { checkpointFixture } from "./e2e/review-checkpoints.http.js";
 import { current, save } from "./revision-rebuild.fake.js";
 
+it("adds a gate when all unsubmitted work was carried across a title-only Save", async () => {
+  const h = await checkpointFixture();
+  try {
+    await h.admit();
+    const before = h.deps.db
+      .prepare(
+        "SELECT work_id,piece_id FROM revision_work_reservations WHERE revision_id=? ORDER BY work_key",
+      )
+      .all(current(h.deps, h.projectId).revision.id);
+    const base = current(h.deps, h.projectId);
+    await save(h.deps, h.projectId, {
+      config: { ...base.revision.config, title: "Title only" },
+      content: base.revision.content,
+    });
+    expect((await h.change(["images"])).status).toBe(200);
+    expect(
+      h.deps.db
+        .prepare(
+          "SELECT work_id,piece_id FROM revision_work_reservations WHERE revision_id=? ORDER BY work_key",
+        )
+        .all(current(h.deps, h.projectId).revision.id),
+    ).toEqual(before);
+    expect(h.deps.db.prepare("SELECT count(*) AS n FROM attempts").get()?.n).toBe(0);
+  } finally {
+    await h.dispose();
+  }
+});
+
 it.each([false, true])(
   "adds a gate before rebuilding saved images (all changed=%s)",
   async (all) => {

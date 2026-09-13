@@ -226,8 +226,11 @@ export function changeCheckpoints(
     const remove = existing.filter((row) => !parsed.data.stages.includes(row.stage));
     const add = parsed.data.stages.filter((stage) => !existing.some((row) => row.stage === stage));
     const changedStages = new Set([...remove.map((row) => row.stage), ...add]);
-    const additions: CheckpointRow[] = [];
-    const contexts = new Map<string, Catalogue>();
+    const additions: {
+      readonly row: CheckpointRow;
+      readonly catalogue: Catalogue | undefined;
+      readonly newStageId: string | undefined;
+    }[] = [];
     const stages = stagesOf(deps.db, input.projectId);
     for (const kind of changedStages) {
       const stage = stages.find((row) => row.kind === kind);
@@ -240,10 +243,16 @@ export function changeCheckpoints(
         const workId = z.string().parse(row.id);
         if (
           row.state === "done" &&
-          row.dispatch_state === "held" &&
           deps.db
-            .prepare("SELECT 1 FROM revision_work_pieces WHERE work_id=? LIMIT 1")
-            .get(workId) === undefined
+            .prepare(
+              "SELECT 1 FROM revision_work_pieces WHERE work_id=? AND (submitted_at IS NOT NULL OR state='done') LIMIT 1",
+            )
+            .get(workId) === undefined &&
+          deps.db
+            .prepare(
+              "SELECT 1 FROM revision_work_reservations WHERE revision_id=? AND work_id=? LIMIT 1",
+            )
+            .get(input.revisionId, workId) === undefined
         )
           return false;
         return (
@@ -258,10 +267,26 @@ export function changeCheckpoints(
       if (!stage || canChangeCheckpoint(stage.state, submitted).kind !== "eligible")
         return { ok: false, reason: "conflict" };
       if (!add.includes(kind)) continue;
-      const anchor = work.find((row) => row.revision_id === input.revisionId);
+      let anchor = work.find((row) => row.revision_id === input.revisionId);
+      let synthetic = false;
+      if (!anchor) {
+        const carried = work.find((row) => typeof row.recipe_context === "string");
+        if (!carried) return { ok: false, reason: "conflict" };
+        anchor = { ...carried, id: deps.ids.next(), revision_id: input.revisionId };
+        synthetic = true;
+      }
       if (typeof anchor?.id !== "string") return { ok: false, reason: "conflict" };
-      const catalogue = anchor.recipe_context == null ? deps.catalogue?.read() : undefined;
-      if (catalogue !== undefined) contexts.set(anchor.id, catalogue);
+      let catalogue: Catalogue | undefined;
+      try {
+        catalogue = synthetic
+          ? savedCatalogue(anchor.recipe_context)
+          : anchor.recipe_context == null
+            ? deps.catalogue?.read()
+            : undefined;
+      } catch {
+        deps.log.write("warn", "checkpoint.resolve", { projectId: input.projectId, stage: kind });
+        return { ok: false, reason: "conflict" };
+      }
       const row: CheckpointRow = {
         projectId: input.projectId,
         revisionId: input.revisionId,
@@ -275,21 +300,43 @@ export function changeCheckpoints(
       };
       const resolved = resolvedGate(deps, row, false, catalogue);
       if (!resolved || resolved.workKeys.length === 0) return { ok: false, reason: "conflict" };
-      additions.push(
-        checkpointRowSchema.parse({ ...row, fingerprint: resolved.currentFingerprint }),
-      );
+      additions.push({
+        row: checkpointRowSchema.parse({ ...row, fingerprint: resolved.currentFingerprint }),
+        catalogue,
+        newStageId: synthetic ? stage.id : undefined,
+      });
     }
-    for (const [workId, catalogue] of contexts)
-      deps.db
-        .prepare("UPDATE revision_work SET recipe_context=? WHERE id=? AND recipe_context IS NULL")
-        .run(JSON.stringify(catalogue), workId);
+    for (const { row: gate, catalogue, newStageId: stageId } of additions) {
+      if (catalogue === undefined) continue;
+      if (stageId !== undefined)
+        deps.db
+          .prepare(
+            "INSERT INTO revision_work(id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,recipe_context,created_at) VALUES (?,?,?,?,?,?,'done','held',?,?)",
+          )
+          .run(
+            gate.workId,
+            input.projectId,
+            input.revisionId,
+            stageId,
+            gate.stage,
+            gate.fingerprint,
+            JSON.stringify(catalogue),
+            gate.createdAt,
+          );
+      else
+        deps.db
+          .prepare(
+            "UPDATE revision_work SET recipe_context=? WHERE id=? AND recipe_context IS NULL",
+          )
+          .run(JSON.stringify(catalogue), gate.workId);
+    }
     for (const row of remove)
       deps.db
         .prepare(
           "DELETE FROM review_checkpoints WHERE project_id=? AND revision_id=? AND checkpoint_id=?",
         )
         .run(row.projectId, row.revisionId, row.checkpointId);
-    for (const row of additions)
+    for (const { row } of additions)
       deps.db
         .prepare(
           "INSERT INTO review_checkpoints(project_id,revision_id,checkpoint_id,stage,work_id,fingerprint,state,created_at,approved_at) VALUES (?,?,?,?,?,?,?,?,?)",
