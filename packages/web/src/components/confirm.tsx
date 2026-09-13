@@ -39,10 +39,10 @@ export function ConfirmDialog({
         <DialogTitle>{title}</DialogTitle>
         <DialogDescription>{consequence}</DialogDescription>
         <div className="flex justify-end gap-[10px]">
-          <Button autoFocus onClick={onCancel}>
+          <Button type="button" autoFocus onClick={onCancel}>
             {dismiss}
           </Button>
-          <Button variant="danger" disabled={pending} onClick={onConfirm}>
+          <Button type="button" variant="danger" disabled={pending} onClick={onConfirm}>
             {verb}
           </Button>
         </div>

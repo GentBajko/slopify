@@ -1,5 +1,5 @@
 import type { DraftSummary } from "@app/slices/play-drafts/model.js";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
 import { ConfirmDialog } from "@/components/confirm";
@@ -11,6 +11,7 @@ import { usePlaySession } from "./draft-context";
 export function DraftList(): ReactElement {
   const { api } = useApp();
   const session = usePlaySession();
+  const queryClient = useQueryClient();
   const [confirm, setConfirm] = useState<DraftSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -24,11 +25,16 @@ export function DraftList(): ReactElement {
   });
   const discard = async () => {
     if (!confirm || busy) return;
+    const discardedId = confirm.id;
     setBusy(true);
     setError(null);
     try {
       await session.discard({ id: confirm.id, version: confirm.version });
       setConfirm(null);
+      await queryClient.cancelQueries({ queryKey: ["play-drafts"] });
+      queryClient.setQueryData<readonly DraftSummary[]>(["play-drafts"], (current) =>
+        current?.filter((draft) => draft.id !== discardedId),
+      );
     } catch (error) {
       setError(error instanceof Error ? error.message : "Couldn't discard draft");
     } finally {
