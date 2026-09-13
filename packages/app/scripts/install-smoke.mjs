@@ -24,7 +24,11 @@ try {
     globalPrefix,
     process.platform === "win32" ? "slopify.cmd" : "bin/slopify",
   );
-  await smoke(globalBin, "global");
+  await smoke(
+    process.platform === "win32" ? (process.env.ComSpec ?? "cmd.exe") : globalBin,
+    "global",
+    process.platform === "win32" ? ["/d", "/s", "/c", "call", globalBin] : [],
+  );
   await smoke(npm, "npx", [npmCli, "exec", "--yes", "--package", archive, "--", "slopify"]);
 } finally {
   await rm(root, { recursive: true, force: true });
