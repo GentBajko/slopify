@@ -3,9 +3,11 @@ set -euo pipefail
 
 smoke_container="slopify-container-smoke-$$"
 smoke_volume="slopify-container-smoke-$$"
+offline_container="${smoke_container}-offline"
 previous_id=""
 
 cleanup() {
+  docker rm -f "$offline_container" >/dev/null 2>&1 || true
   docker rm -f "$smoke_container" >/dev/null 2>&1 || true
   if [[ -n "$previous_id" ]]; then docker rm -f "$previous_id" >/dev/null 2>&1 || true; fi
   docker volume rm "$smoke_volume" >/dev/null 2>&1 || true
@@ -23,15 +25,32 @@ start_container() {
 }
 
 wait_for_health() {
+  local target="${1:-$smoke_container}"
   for _attempt in {1..180}; do
-    if [[ "$(docker inspect --format '{{.State.Health.Status}}' "$smoke_container")" == "healthy" ]]; then
+    if [[ "$(docker inspect --format '{{.State.Health.Status}}' "$target")" == "healthy" ]]; then
       return 0
     fi
     sleep 1
   done
-  docker logs "$smoke_container" >&2
+  docker logs "$target" >&2
   return 1
 }
+
+# No host executable or first-boot download may supply the image's FFmpeg.
+docker run --rm --network none --entrypoint node slopify:smoke -e '
+  const fs = require("node:fs");
+  const cp = require("node:child_process");
+  const bin = require("ffmpeg-static");
+  for (const path of [bin, bin + ".LICENSE", bin + ".README"]) {
+    if (!fs.statSync(path).size) throw new Error("Missing FFmpeg file: " + path);
+  }
+  cp.execFileSync(bin, ["-v", "error", "-f", "lavfi", "-i", "color=s=64x64:d=0.1", "-c:v", "libx264", "-f", "null", "-"]);
+'
+docker run -d --name "$offline_container" --network none --tmpfs /data:uid=1000,gid=1000,mode=0700 \
+  slopify:smoke >/dev/null
+wait_for_health "$offline_container"
+docker exec "$offline_container" sh -c 'test ! -d /data/bin'
+docker rm -f "$offline_container" >/dev/null
 
 start_container
 wait_for_health

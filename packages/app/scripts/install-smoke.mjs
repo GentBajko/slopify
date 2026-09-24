@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -30,20 +30,65 @@ try {
     process.platform === "win32" ? ["/d", "/s", "/c", "call", globalBin] : [],
   );
   await smoke(npm, "npx", [npmCli, "exec", "--yes", "--package", archive, "--", "slopify"]);
+  const skippedPrefix = join(root, "skipped-scripts");
+  await run(npm, [
+    npmCli,
+    "install",
+    "--global",
+    "--ignore-scripts",
+    "--prefix",
+    skippedPrefix,
+    archive,
+  ]);
+  const skippedPackage = join(
+    skippedPrefix,
+    process.platform === "win32" ? "node_modules" : "lib/node_modules",
+    "@gentbajko/slopify",
+  );
+  const skippedCli = join(skippedPackage, "dist/edge/cli.js");
+  await smoke(npm, "skipped-scripts", [skippedCli]);
+  const cached = join(root, "skipped-scripts-data/bin");
+  const [build] = await readdir(cached);
+  if (!build?.startsWith("ffmpeg-static-"))
+    throw new Error("FFmpeg was not installed automatically.");
+  const binary = join(cached, build, process.platform === "win32" ? "ffmpeg.exe" : "ffmpeg");
+  for (const path of [binary, `${binary}.LICENSE`, `${binary}.README`]) {
+    if (!(await exists(path))) throw new Error(`Missing FFmpeg installation file: ${path}`);
+  }
+  await run(binary, [
+    "-v",
+    "error",
+    "-f",
+    "lavfi",
+    "-i",
+    "color=s=64x64:d=0.1",
+    "-c:v",
+    "libx264",
+    "-f",
+    "null",
+    "-",
+  ]);
+  await smoke(npm, "skipped-scripts", [skippedCli], { FFMPEG_BINARIES_URL: "http://127.0.0.1:1" });
 } finally {
   await rm(root, { recursive: true, force: true });
 }
 
-async function smoke(command, label, prefix = []) {
+async function smoke(command, label, prefix = [], extraEnv = {}) {
   const port = await freePort();
   const dataDir = join(root, `${label}-data`);
-  const healthTimeoutMs = label === "npx" ? 120_000 : 30_000;
+  const healthTimeoutMs = 210_000;
   const child = spawn(
     command,
     [...prefix, "--port", String(port), "--data-dir", dataDir, "--no-open"],
     {
       cwd: repo,
-      env: { ...process.env, SLOPIFY_SKIP_MANAGED_UPDATE: "1" },
+      env: {
+        ...process.env,
+        SLOPIFY_FFMPEG: "",
+        FFMPEG_BIN: "",
+        SLOPIFY_SKIP_MANAGED_UPDATE: "1",
+        ...extraEnv,
+      },
       stdio: "ignore",
       windowsHide: true,
     },

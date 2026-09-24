@@ -35,6 +35,9 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/* \
     && npm ci --ignore-scripts --omit=dev --workspace @gentbajko/slopify --include-workspace-root=false \
+    && XDG_CACHE_HOME=/tmp/slopify-ffmpeg-cache node node_modules/ffmpeg-static/install.js \
+    && node -e "const fs=require('node:fs'); const bin=require('ffmpeg-static'); for (const path of [bin, bin+'.LICENSE', bin+'.README']) { if (!fs.statSync(path).size) throw new Error('Missing FFmpeg file: '+path); } require('node:child_process').execFileSync(bin, ['-version']);" \
+    && rm -rf /tmp/slopify-ffmpeg-cache \
     && mkdir -p /data/home /opt/host-clis/codex /opt/host-clis/gemini \
     && touch /opt/host-clis/claude \
     && ln -s /opt/host-clis/codex/bin/codex.js /usr/local/bin/codex \

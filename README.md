@@ -59,8 +59,8 @@ docker run -d --name slopify --restart always \
 ```
 
 Open `http://127.0.0.1:6969`. Keep the `127.0.0.1` binding: Slopify has no
-login, and anyone who can reach its port can control it. The first start needs
-internet access to download ffmpeg into the volume; later starts reuse it.
+login, and anyone who can reach its port can control it. FFmpeg is already installed
+in the image; starting the container does not need a separate download or install command.
 The container does not run npm updates from the UI. Pull a new image, remove the
 old container, and run the command again with the same volume to update it.
 
@@ -161,7 +161,7 @@ SLOPIFY_PORT=5000 SLOPIFY_NO_OPEN=1 npx @gentbajko/slopify@latest
 
 ## ffmpeg and its licence
 
-The video is cut by ffmpeg. Slopify installs one through
+No separate FFmpeg installation is required. Native Slopify installs it through
 [`ffmpeg-static`](https://www.npmjs.com/package/ffmpeg-static), which fetches a
 platform binary at `npm install` time, and never falls back to an ffmpeg on your
 `PATH`: the binary that ships is the binary that is tested. Point `SLOPIFY_FFMPEG` at
@@ -171,6 +171,8 @@ Slopify checks that ffmpeg runs before starting. If the install-time download is
 missing, it downloads the same platform build into `<data-dir>/bin/`, keeping the
 licence and source notice beside it. Later launches reuse that copy. If recovery
 fails, check your connection and antivirus quarantine, or choose your own executable.
+Docker includes the same platform build, licence and source notice in the image;
+it is downloaded and checked when the image is built, not on first launch.
 
 ```sh
 SLOPIFY_FFMPEG=/usr/bin/ffmpeg npx @gentbajko/slopify@latest

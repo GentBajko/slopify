@@ -91,8 +91,9 @@ Everything lives in one SQLite file and one directory tree under the data direct
 
 ## ffmpeg and the GPL
 
-Slopify renders video with ffmpeg. The `ffmpeg-static` dependency downloads a
-prebuilt binary to `node_modules/ffmpeg-static/` at install time.
+No separate FFmpeg installation is required. The `ffmpeg-static` dependency downloads
+a prebuilt binary to `node_modules/ffmpeg-static/` at install time. Docker includes
+the checked binary, licence and source notice in the image, ready on first launch.
 
 Slopify checks that ffmpeg runs before starting. If the install-time download is
 missing, it downloads the same platform build into `<data-dir>/bin/`, keeping the
