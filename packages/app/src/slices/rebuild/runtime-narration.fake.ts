@@ -2,9 +2,11 @@ import ffmpegStatic from "ffmpeg-static";
 import { expect, vi } from "vitest";
 import type { Catalogue } from "../../catalog/schema.js";
 import { stageKinds } from "../../kernel/pipeline.js";
+import type { Message } from "../../kernel/ports/llm.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageProviders } from "../../kernel/runner/providers.js";
 import { claimWork, finishWork, maySubmit } from "../../kernel/runner/work-authority.js";
+import type { RunConfig } from "../admission/model.js";
 import { ensureBaseline } from "../revisions/adopt.js";
 import type { RevisionView } from "../revisions/model.js";
 import { currentRevisionId } from "../revisions/repo.js";
@@ -34,6 +36,18 @@ export const narrationCatalogue: Catalogue = {
   ],
   image: [],
 };
+export const preparationCatalogue: Catalogue = {
+  ...narrationCatalogue,
+  providers: { ...narrationCatalogue.providers, inworld: { maxConcurrent: 5 } },
+  tts: [
+    {
+      ...model,
+      provider: "inworld",
+      id: "inworld-tts-2",
+      tts: { maxCharacters: 24, streaming: true },
+    },
+  ],
+};
 function narrationBytes(): Uint8Array {
   const bytes = Buffer.alloc(44 + 1600);
   bytes.write("RIFF");
@@ -50,13 +64,20 @@ function narrationBytes(): Uint8Array {
   bytes.writeUInt32LE(1600, 40);
   return bytes;
 }
-export async function narrationFixture(text = "abcdefgh"): Promise<
+export async function narrationFixture(
+  text = "abcdefgh",
+  options: {
+    readonly config?: Partial<RunConfig>;
+    readonly catalogue?: Catalogue;
+    readonly answer?: (key: string, messages: readonly Message[]) => string;
+  } = {},
+): Promise<
   ReturnType<typeof revisionFixture> & {
     readonly deps: ReturnType<typeof revisionFixture>["deps"] & { readonly ffmpeg: string };
     readonly count: ReturnType<typeof vi.fn>;
     readonly calls: { kind: string; key: string; text: string }[];
     readonly view: () => RevisionView;
-    readonly pump: () => Promise<void>;
+    readonly pump: (limit?: number) => Promise<void>;
   }
 > {
   const h = revisionFixture();
@@ -68,6 +89,7 @@ export async function narrationFixture(text = "abcdefgh"): Promise<
     audio: { provider: "openai-tts", model: "tts", voice: "voice" },
     chunking: { mode: "paragraph" as const },
     provided: { article: text },
+    ...options.config,
   };
   deps.db
     .prepare("UPDATE projects SET config=? WHERE id=?")
@@ -86,16 +108,20 @@ export async function narrationFixture(text = "abcdefgh"): Promise<
     llm: async (input) => {
       const prompt = input.messages[0]?.content ?? "";
       calls.push({ kind: "llm", key: activeKey, text: prompt });
+      const value = {
+        text:
+          options.answer?.(activeKey, input.messages) ??
+          (activeKey === "article:body"
+            ? "The completed article body."
+            : (prompt.split("\n")[0] ?? "")),
+        finishReason: "stop" as const,
+        usage: { inputTokens: 1, outputTokens: 2 },
+      };
+      const issue = input.check?.(value);
+      if (issue !== undefined) throw new Error(issue);
       return {
         ok: true,
-        value: {
-          text:
-            activeKey === "article:body"
-              ? "The completed article body."
-              : (prompt.split("\n")[0] ?? ""),
-          finishReason: "stop",
-          usage: { inputTokens: 1, outputTokens: 2 },
-        },
+        value,
       };
     },
     tts: async (input) => {
@@ -117,8 +143,8 @@ export async function narrationFixture(text = "abcdefgh"): Promise<
     if (current === undefined) throw new Error("Missing current revision");
     return current;
   };
-  const pump = async (): Promise<void> => {
-    for (let pass = 0; pass < 30; pass++) {
+  const pump = async (limit?: number): Promise<void> => {
+    for (let pass = 0; pass < (limit ?? 100); pass++) {
       materializeAdmittedWork(deps, h.projectId);
       const stage = executionStages(deps, h.projectId).find(
         (row) => row.kind !== "video" && row.state === "pending" && invocationReady(deps, row.work),
@@ -135,8 +161,8 @@ export async function narrationFixture(text = "abcdefgh"): Promise<
       expect(await runRevisionInvocation(deps, context, providers)).toBe("done");
       finishWork(deps.db, stage.work, "done", null);
     }
-    throw new Error("Entry fixture did not settle");
+    if (limit === undefined) throw new Error("Entry fixture did not settle");
   };
-  admitInitialRevision(deps, base.view, narrationCatalogue);
+  admitInitialRevision(deps, base.view, options.catalogue ?? narrationCatalogue);
   return { ...h, deps, count, calls, view, pump };
 }

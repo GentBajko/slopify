@@ -29,6 +29,35 @@ const draft: RunDraft = {
   silenceGapSeconds: 0,
 };
 describe("cost planning", () => {
+  it("counts preparation groups using the shared LLM and preserves unknown CLI rates", () => {
+    const selected = {
+      ...draft,
+      narrationPrompt: "Delivery",
+      llm: { provider: "codex", model: "test" },
+      provided: { article: "First paragraph.\n\nSecond paragraph." },
+      chunking: { mode: "paragraph" as const },
+    };
+    const estimate = estimateRun(selected, { narration: "Calm." }, 1500, catalogue);
+    expect(estimate.rows.find((row) => row.stage === "Narration Preparation")?.low).toBeNull();
+    expect(estimate.rows.find((row) => row.stage === "Narration Preparation")?.detail).toContain(
+      "2 LLM calls",
+    );
+    expect(estimate.rows.find((row) => row.stage === "Delivery cue overhead")?.low).toBeNull();
+    expect(
+      estimateRun({ ...selected, narrationPrompt: "" }, {}, 1500, catalogue).rows.some(
+        (row) => row.stage === "Narration Preparation",
+      ),
+    ).toBe(false);
+    const generated = estimateRun(
+      { ...selected, sources: { ...selected.sources, article: "generate" as const } },
+      {},
+      1500,
+      catalogue,
+    );
+    expect(generated.rows.find((row) => row.stage === "Narration Preparation")?.detail).toContain(
+      "future",
+    );
+  });
   it("prices a supplied article by characters and gives local/off stages zero API charges", () => {
     const estimate = estimateRun(draft, {}, 1500, catalogue);
     expect(estimate.low).toBe(0.25);

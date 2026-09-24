@@ -121,6 +121,8 @@ function desiredAnchor(
   );
 }
 function futureKey(recipe: ResolvedWorkRecipe): string {
+  if (recipe.input.kind === "llm" && recipe.input.preparation !== undefined)
+    return `narration:prepare:${recipe.input.preparation.segment}:future`;
   if (recipe.input.kind === "tts") return `audio:${recipe.input.segment}:future`;
   if (recipe.key.startsWith("research:chapter:")) return "research:planner";
   if (recipe.key === "article:continuation") return "article:body";

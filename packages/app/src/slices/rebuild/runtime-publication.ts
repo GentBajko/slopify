@@ -119,6 +119,7 @@ export async function publishResult(
   }
 }
 function pieceKind(piece: WorkPiece): StagePiece["kind"] {
+  if (piece.input.kind === "llm" && piece.input.preparation !== undefined) return "prompt_written";
   if (piece.input.kind === "tts") return piece.input.segment === "body" ? "chunk" : "segment";
   if (piece.input.kind === "provided" && /^audio:body:.+:\d+$/.test(piece.key)) return "chunk";
   if (piece.input.kind === "provided" && /^audio:(intro|outro):\d+$/.test(piece.key))
@@ -130,6 +131,8 @@ function pieceKind(piece: WorkPiece): StagePiece["kind"] {
   return "article_written";
 }
 function pieceIndex(deps: RevisionDeps, context: StageContext, piece: WorkPiece): number {
+  if (piece.input.kind === "llm" && piece.input.preparation?.segment === "intro") return 1;
+  if (piece.input.kind === "llm" && piece.input.preparation?.segment === "outro") return 2;
   // Intro and outro can resolve independently. Reserve alternating ordinals so a
   // late intro part cannot collide with an outro that was already published.
   const segment = /^audio:(intro|outro):(\d+)$/.exec(piece.key);
@@ -157,10 +160,16 @@ function pieceIndex(deps: RevisionDeps, context: StageContext, piece: WorkPiece)
     const keys = executionPlan(deps, view, savedCatalogue(row.recipe_context)).recipes.filter(
       (recipe) =>
         recipe.stage === context.work.kind &&
+        (piece.input.kind !== "llm" ||
+          piece.input.preparation?.segment !== "body" ||
+          (recipe.input.kind === "llm" && recipe.input.preparation?.segment === "body")) &&
         pieceKind({ ...piece, key: recipe.key, input: recipe.input }) === pieceKind(piece),
     );
     const index = keys.findIndex((recipe) => recipe.key === piece.key);
-    if (index >= 0) return index + 1;
+    if (index >= 0)
+      return (
+        index + (piece.input.kind === "llm" && piece.input.preparation?.segment === "body" ? 3 : 1)
+      );
   }
   const last = piece.key.split(":").at(-1);
   return last !== undefined && /^\d+$/.test(last) ? Number(last) : 1;

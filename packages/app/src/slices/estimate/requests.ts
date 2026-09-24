@@ -18,6 +18,7 @@ const requestSchema = z.discriminatedUnion("kind", [
   provider.extend({ kind: z.literal("tts-estimate"), characters: quantity }).strict(),
   provider.extend({ kind: z.literal("image") }).strict(),
   common.extend({ kind: z.literal("local") }).strict(),
+  common.extend({ kind: z.literal("unknown") }).strict(),
 ]);
 export type PricedRequest = Readonly<z.infer<typeof requestSchema>>;
 
@@ -63,6 +64,13 @@ export function groupEstimateRows(estimate: CostEstimate): CostEstimate {
 }
 
 function price(request: PricedRequest, catalogue: Catalogue): CostRow {
+  if (request.kind === "unknown")
+    return {
+      stage: request.stage,
+      low: null,
+      high: null,
+      detail: request.detail ?? "Request size is not available yet.",
+    };
   if (request.kind === "local")
     return {
       stage: request.stage,

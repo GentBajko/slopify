@@ -101,9 +101,11 @@ export function validateNarrationIntent(
     recipes.flatMap((row) =>
       row.input.kind === "tts"
         ? [row.input.logicalKey]
-        : row.stage === "audio" && row.key.endsWith(":1")
-          ? [row.key.slice(0, -2)]
-          : [],
+        : row.input.kind === "llm" && row.input.preparation !== undefined
+          ? [row.input.preparation.logicalKey]
+          : row.stage === "audio" && row.key.endsWith(":1")
+            ? [row.key.slice(0, -2)]
+            : [],
     ),
   );
   const fields: FieldError[] = [];

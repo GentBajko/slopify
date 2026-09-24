@@ -67,15 +67,18 @@ export function previewDetails(
     }
     if (input.kind === "llm") {
       const peers = allRecipes.filter((one) => one.stage === row.stage && one.input.kind === "llm");
-      const category = row.key.startsWith("entry:intro")
-        ? "Intro text"
-        : row.key.startsWith("entry:outro")
-          ? "Outro text"
-          : row.stage === "article"
-            ? "Article"
-            : row.stage === "research"
-              ? "Research"
-              : "Thumbnail prompt";
+      const category =
+        input.preparation !== undefined
+          ? "Narration Preparation"
+          : row.key.startsWith("entry:intro")
+            ? "Intro text"
+            : row.key.startsWith("entry:outro")
+              ? "Outro text"
+              : row.stage === "article"
+                ? "Article"
+                : row.stage === "research"
+                  ? "Research"
+                  : "Thumbnail prompt";
       return [
         {
           key: row.key,
@@ -143,6 +146,7 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
     add(`${name} thinking`, a?.thinking, b?.thinking);
   }
   add("Narration voice", before.audio?.voice, after.audio?.voice);
+  add("Narration Preparation", before.narrationPrompt, after.narrationPrompt);
   add("Narration chunking", before.chunking, after.chunking);
   add("Silence gap (seconds)", before.silenceGapSeconds, after.silenceGapSeconds);
   add("Intro", before.intro, after.intro);

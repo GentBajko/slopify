@@ -35,6 +35,7 @@ export function executionStages(deps: RevisionDeps, projectId: string): readonly
       .all(head)
       .map((row) => String(row.work_key)),
   );
+  const futureKeys = new Map<string, ReadonlySet<string>>();
   return rows
     .filter((row) =>
       workPieces(deps.db, String(row.id)).some((piece) => {
@@ -42,12 +43,19 @@ export function executionStages(deps: RevisionDeps, projectId: string): readonly
         if (piece.key === "subtitles:timing" && view?.revision.content.subtitleCues !== undefined)
           return false;
         if (piece.input.kind === "deferred" && piece.key.endsWith(":future")) {
-          const prefix = piece.key.slice(0, -"future".length);
-          return !rows.some((candidate) =>
-            workPieces(deps.db, String(candidate.id)).some(
-              (part) => part.input.kind === "tts" && part.key.startsWith(prefix),
-            ),
-          );
+          const cacheKey = String(row.id);
+          let deferred = futureKeys.get(cacheKey);
+          if (deferred === undefined) {
+            const origin = executionView(deps, projectId, String(row.revision_id));
+            if (origin === undefined || row.recipe_context === null) return true;
+            deferred = new Set(
+              executionPlan(deps, origin, savedCatalogue(row.recipe_context))
+                .recipes.filter((recipe) => recipe.deferred)
+                .map((recipe) => recipe.key),
+            );
+            futureKeys.set(cacheKey, deferred);
+          }
+          return deferred.has(piece.key);
         }
         return true;
       }),

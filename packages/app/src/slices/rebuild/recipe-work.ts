@@ -92,7 +92,13 @@ export function planRevisionWork(
               reason:
                 "Narration or transcript changed. Review the saved manual cues before reusing them.",
             }
-          : row,
+          : recipes.find((recipe) => recipe.key === row.key)?.refusal !== undefined
+            ? {
+                ...row,
+                disposition: "blocked",
+                reason: recipes.find((recipe) => recipe.key === row.key)?.refusal ?? row.reason,
+              }
+            : row,
     );
   const changedInputs = work
     .filter((row) => row.disposition !== "reuse")
@@ -264,6 +270,13 @@ export function priceRecipe(
           : "Local, provided, or blocked work; no admitted generation charge.",
     };
   const input = value.input;
+  if (input.kind === "deferred" && input.operation === "narration-preparation")
+    return {
+      kind: "unknown",
+      stage: work.key,
+      detail:
+        "Narration Preparation: one LLM call per future logical chunk or entry; source length is not yet known.",
+    };
   if (input.kind === "llm")
     return {
       kind: "llm",

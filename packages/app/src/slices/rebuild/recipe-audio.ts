@@ -1,11 +1,9 @@
 import { type FingerprintValue, fingerprint } from "../../kernel/runner/work.js";
+import { usesNarrationPreparation } from "../admission/rules.js";
 import { chunkNarration, defaultChunking } from "../narration/chunk.js";
 import { concatArgs } from "../narration/concat.js";
-import {
-  narrationRegenerationToken,
-  normalizeNarrationText,
-  planNarration,
-} from "../narration/plan.js";
+import { normalizeNarrationText } from "../narration/plan.js";
+import { narrationParts, voiceValues } from "./recipe-audio-parts.js";
 import {
   type RecipeContext,
   type ResolvedWorkRecipe,
@@ -13,6 +11,7 @@ import {
   resourceIdentity,
   selectedReference,
 } from "./recipe-model.js";
+import { preparationFuture, preparationTemplate } from "./recipe-preparation.js";
 import type { TextRecipes } from "./recipe-text.js";
 
 export interface AudioRecipes {
@@ -52,14 +51,28 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
           );
     const occurrences = new Map<string, number>();
     const parts: ResolvedWorkRecipe[] = [];
+    let pending = text.articleText === null;
     for (const logicalText of groups) {
       const hash = fingerprint(logicalText).slice(0, 20);
       const occurrence = (occurrences.get(hash) ?? 0) + 1;
       occurrences.set(hash, occurrence);
       const logicalKey = `audio:body:${hash}-${occurrence}`;
-      parts.push(...narrationParts(context, logicalKey, logicalText, "body", [text.article.key]));
+      const group = narrationParts(
+        context,
+        logicalKey,
+        logicalText,
+        "body",
+        [text.article.key],
+        recipes,
+      );
+      if (group.length === 0) pending = true;
+      parts.push(...group);
     }
-    if (text.articleText === null)
+    if (text.articleText === null && usesNarrationPreparation(config))
+      recipes.push(preparationFuture(context, "body", text.article));
+    // Physical ordinals are stable only after every logical group's cue plan is known.
+    if (pending && usesNarrationPreparation(config)) parts.length = 0;
+    if (pending)
       parts.push(
         recipe(
           context,
@@ -69,7 +82,12 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
             kind: "deferred",
             version: 1,
             operation: "body-narration",
-            template: [text.article.fingerprint, voiceValues(context), chunkingValues(context)],
+            template: [
+              text.article.fingerprint,
+              voiceValues(context),
+              chunkingValues(context),
+              ...(usesNarrationPreparation(config) ? [preparationTemplate(context)] : []),
+            ],
           },
           [text.article.key],
         ),
@@ -101,6 +119,8 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
     }
     const entry = text.entries[category];
     if (entry === undefined) continue;
+    if (entry.text === null && usesNarrationPreparation(config))
+      recipes.push(preparationFuture(context, category, entry.recipe));
     const parts =
       entry.text === null
         ? [
@@ -112,12 +132,42 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
                 kind: "deferred",
                 version: 1,
                 operation: `${category}-narration`,
-                template: [entry.recipe.fingerprint, voiceValues(context)],
+                template: [
+                  entry.recipe.fingerprint,
+                  voiceValues(context),
+                  ...(usesNarrationPreparation(config) ? [preparationTemplate(context)] : []),
+                ],
               },
               [entry.recipe.key],
             ),
           ]
-        : narrationParts(context, `audio:${category}`, entry.text, category, [entry.recipe.key]);
+        : narrationParts(
+            context,
+            `audio:${category}`,
+            entry.text,
+            category,
+            [entry.recipe.key],
+            recipes,
+          );
+    if (parts.length === 0 && usesNarrationPreparation(config))
+      parts.push(
+        recipe(
+          context,
+          `audio:${category}:future`,
+          "audio",
+          {
+            kind: "deferred",
+            version: 1,
+            operation: `${category}-narration`,
+            template: [
+              entry.recipe.fingerprint,
+              voiceValues(context),
+              preparationTemplate(context),
+            ],
+          },
+          [entry.recipe.key],
+        ),
+      );
     recipes.push(...parts);
     const audio = recipe(
       context,
@@ -157,96 +207,6 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
     timeline,
     keys: ordered.map(({ value }) => value.key),
   };
-}
-function narrationParts(
-  context: RecipeContext,
-  logicalKey: string,
-  originalText: string,
-  segment: "body" | "intro" | "outro",
-  dependsOn: readonly string[],
-): readonly ResolvedWorkRecipe[] {
-  const override = context.content.narrationOverrides[logicalKey];
-  if (override?.kind === "asset")
-    return [
-      recipe(
-        context,
-        `${logicalKey}:1`,
-        "audio",
-        {
-          kind: "provided",
-          version: 1,
-          assetId: override.assetId,
-          semantic: [normalizeNarrationText(originalText), voiceValues(context)],
-        },
-        dependsOn,
-        { tokenKey: logicalKey },
-      ),
-    ];
-  const logicalText = normalizeNarrationText(
-    override?.kind === "text" ? override.text : originalText,
-  );
-  const wholeRequest = segment !== "body" || (context.config.chunking?.mode ?? "whole") === "whole";
-  const choice = context.config.audio;
-  const model = context.catalogue?.tts.find(
-    (row) =>
-      row.provider === choice?.provider &&
-      row.id === choice.model &&
-      row.enabled &&
-      !row.deprecated,
-  );
-  const requests = planNarration({
-    groups: [
-      {
-        key: logicalKey,
-        text: logicalText,
-        segment,
-        wholeRequest,
-        regenerationToken: narrationRegenerationToken(
-          context.content.regenerationTokens,
-          logicalKey,
-          segment,
-        ),
-      },
-    ],
-    provider: choice?.provider ?? "",
-    model: choice?.model ?? "",
-    voice: choice?.voice ?? "",
-    maxCharacters:
-      context.catalogue === undefined
-        ? Math.max(2, logicalText.length)
-        : (model?.tts.maxCharacters ?? Math.max(2, logicalText.length)),
-    retained: [],
-  });
-  return requests.map(({ text, key }) =>
-    recipe(
-      context,
-      key,
-      "audio",
-      {
-        kind: "tts",
-        version: 1,
-        provider: choice?.provider ?? "",
-        model: choice?.model ?? "",
-        voice: choice?.voice ?? "",
-        text,
-        logicalKey,
-        logicalText,
-        segment,
-        pronunciation: null,
-        wholeRequest,
-      },
-      dependsOn,
-      { tokenKey: logicalKey, unresolved: logicalText.length === 0 },
-    ),
-  );
-}
-function voiceValues(context: RecipeContext): FingerprintValue {
-  return [
-    context.config.audio?.provider ?? null,
-    context.config.audio?.model ?? null,
-    context.config.audio?.voice ?? null,
-    null,
-  ];
 }
 function chunkingValues(context: RecipeContext): FingerprintValue {
   const chunking = context.config.chunking ?? defaultChunking;

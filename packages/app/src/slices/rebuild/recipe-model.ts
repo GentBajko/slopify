@@ -5,6 +5,7 @@ import type { Message, ThinkingConfig, ThinkingMode } from "../../kernel/ports/l
 import { type FingerprintValue, fingerprint } from "../../kernel/runner/work.js";
 import type { RunConfig } from "../admission/model.js";
 import { narrationRegenerationToken, narrationRequestFingerprint } from "../narration/plan.js";
+import type { PreparationSource } from "../narration/preparation.js";
 import type { Finding } from "../research/synthesis.js";
 import type {
   ManifestOutput,
@@ -37,6 +38,7 @@ export const localOperations = [
   "concat-narration",
 ] as const;
 export const deferredOperations = [
+  "narration-preparation",
   "research-synthesis",
   "article",
   "entry:intro:text",
@@ -58,6 +60,7 @@ export type RecipeInput =
       readonly thinkingConfig: ThinkingConfig | null;
       readonly messages: readonly Message[];
       readonly webSearch: boolean;
+      readonly preparation?: PreparationSource | undefined;
     }
   | {
       readonly kind: "tts";
@@ -66,6 +69,7 @@ export type RecipeInput =
       readonly model: string;
       readonly voice: string;
       readonly text: string;
+      readonly spokenText?: string | undefined;
       readonly logicalKey: string;
       readonly logicalText: string;
       readonly segment: "body" | "intro" | "outro";
@@ -99,6 +103,7 @@ export type RecipeInput =
       readonly template: FingerprintValue;
     };
 export interface ResolvedWorkRecipe extends WorkRecipe {
+  readonly refusal?: string | undefined;
   readonly input: RecipeInput;
   readonly logicalFingerprint: string;
   readonly deferred: boolean;
@@ -122,6 +127,7 @@ export function recipe(
     readonly tokenKey?: string;
     readonly logicalFingerprint?: string;
     readonly kind?: WorkRecipe["kind"];
+    readonly refusal?: string | undefined;
   } = {},
 ): ResolvedWorkRecipe {
   const requestFingerprint =
@@ -165,6 +171,7 @@ export function recipe(
     dependsOn,
     unresolved: options.unresolved ?? false,
     deferred: input.kind === "deferred",
+    ...(options.refusal === undefined ? {} : { refusal: options.refusal }),
   };
 }
 export function selectedAsset(

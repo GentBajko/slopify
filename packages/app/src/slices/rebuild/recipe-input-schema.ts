@@ -32,6 +32,16 @@ export const recipeInputSchema: z.ZodType<RecipeInput> = z.discriminatedUnion("k
         .nullable(),
       messages: z.array(z.object({ role: z.enum(messageRoles), content: z.string() }).strict()),
       webSearch: z.boolean(),
+      preparation: z
+        .object({
+          format: z.literal("inworld-tts-2"),
+          version,
+          source: z.string(),
+          logicalKey: z.string(),
+          segment: z.enum(["body", "intro", "outro"]),
+        })
+        .strict()
+        .optional(),
     })
     .strict(),
   z
@@ -42,6 +52,7 @@ export const recipeInputSchema: z.ZodType<RecipeInput> = z.discriminatedUnion("k
       model: z.string(),
       voice: z.string(),
       text: z.string(),
+      spokenText: z.string().optional(),
       logicalKey: z.string(),
       logicalText: z.string(),
       segment: z.enum(["body", "intro", "outro"]),

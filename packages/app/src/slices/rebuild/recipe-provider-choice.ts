@@ -19,11 +19,13 @@ export function recipeProviderChoice(
     return { ...input, family: input.kind };
   if (input.kind !== "deferred") return undefined;
   const family =
-    recipe.stage === "audio"
-      ? "tts"
-      : recipe.stage === "images" || input.operation === "thumbnail-image"
-        ? "image"
-        : "llm";
+    input.operation === "narration-preparation"
+      ? "llm"
+      : recipe.stage === "audio"
+        ? "tts"
+        : recipe.stage === "images" || input.operation === "thumbnail-image"
+          ? "image"
+          : "llm";
   const choice = family === "tts" ? config.audio : family === "image" ? config.images : config.llm;
   return choice === undefined ? undefined : { ...choice, family };
 }

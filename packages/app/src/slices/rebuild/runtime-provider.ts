@@ -5,6 +5,8 @@ import type { StageRunResult } from "../../kernel/runner/work.js";
 import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
 import { observeNarration } from "../narration/live.js";
+import { validatePreparation } from "../narration/preparation.js";
+import { prepareRequests } from "../narration/steering.js";
 import { chaptersFrom } from "../research/planner.js";
 import { sourcedAnswer } from "../research/synthesis.js";
 import type { RevisionDeps } from "../revisions/model.js";
@@ -50,7 +52,8 @@ export async function executeProviderRecipe(
             messages: input.messages,
             webSearch: input.webSearch,
             previewLabel: piece.key,
-            check: (value) => checkAnswer(piece, value),
+            check: (value) =>
+              checkAnswer(piece, value) ?? checkPreparation(deps, context, piece, value),
           });
     if (!answer.ok) return "held";
     await publishText(deps, context, piece, answer.value);
@@ -107,6 +110,7 @@ export async function executeProviderRecipe(
         [],
         {
           text: input.text,
+          ...(input.spokenText === undefined ? {} : { spokenText: input.spokenText }),
           logicalKey: input.logicalKey,
           logicalText: input.logicalText,
           segment: input.segment,
@@ -187,6 +191,17 @@ async function publishText(
   piece: WorkPiece,
   answer: LlmAnswer,
 ): Promise<void> {
+  if (piece.input.kind === "llm" && piece.input.preparation !== undefined) {
+    const checked = validatePreparation(answer.text, piece.input.preparation.source);
+    if (!checked.ok) throw new Error(checked.reason);
+    await publishResult(deps, context, piece, [], {
+      text: answer.text,
+      preparation: piece.input.preparation,
+      cues: checked.cues,
+      logicalFingerprint: piece.logicalFingerprint ?? piece.fingerprint,
+    });
+    return;
+  }
   if (piece.key === "article:body") {
     const parts = splitEndMatter(answer.text);
     await publishResult(
@@ -264,4 +279,24 @@ function narrationLabel(deps: RevisionDeps, context: StageContext, piece: WorkPi
   );
   const index = parts.findIndex((recipe) => recipe.key === piece.key);
   return parts.length > 1 && index >= 0 ? `${name} part ${index + 1} of ${parts.length}` : name;
+}
+
+function checkPreparation(
+  deps: RevisionDeps,
+  context: StageContext,
+  piece: WorkPiece,
+  answer: LlmAnswer,
+): string | undefined {
+  if (piece.input.kind !== "llm" || piece.input.preparation === undefined) return undefined;
+  const source = piece.input.preparation.source;
+  const checked = validatePreparation(answer.text, source);
+  if (!checked.ok) return checked.reason;
+  const row = deps.db
+    .prepare("SELECT recipe_context FROM revision_work WHERE id=?")
+    .get(context.work.workId);
+  const model = savedCatalogue(row?.recipe_context).tts.find(
+    (model) => model.provider === "inworld" && model.id === "inworld-tts-2",
+  );
+  const prepared = prepareRequests(source, checked.cues, model?.tts.maxCharacters ?? 4000);
+  return prepared.ok ? undefined : prepared.reason;
 }

@@ -2,6 +2,13 @@ import { z } from "zod";
 import type { Message } from "../../kernel/ports/llm.js";
 
 export type NarrationSegment = "body" | "intro" | "outro";
+export interface PreparationSource {
+  readonly format: "inworld-tts-2";
+  readonly version: 1;
+  readonly source: string;
+  readonly logicalKey: string;
+  readonly segment: NarrationSegment;
+}
 export interface SourceSentence {
   readonly sentence: number;
   readonly text: string;
