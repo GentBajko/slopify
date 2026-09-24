@@ -14,6 +14,7 @@ paths_covered:
   - :(top).github/workflows/**
   - :(top)packages/site/*.test.js
 absorbed_from:
+  - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-play-redesign-drafts@2026-09-13
   - features/2026-09-10-review-checkpoints@2026-09-13
@@ -29,7 +30,7 @@ Inspected source and test configuration at `4cfe3473f74d` on 2026-09-13. Test-ru
 
 `npm test` runs `vitest run` from the workspace root. Root Vitest discovers `packages/*/vitest.config.ts`. There are four configured projects: `app` includes `src/**/*.test.ts` and `test/**/*.test.ts`; `web` includes `src/**/*.test.ts` and `src/**/*.test.tsx` under `happy-dom`; `collector` includes `src/**/*.test.ts`; `site` includes root-level `*.test.js`. Application/unit tests are colocated with production modules, while composed application tests live under `packages/app/test` and real HTTP/media journeys under its `e2e` subdirectory. `package.json:11` `vitest.config.ts:3` `packages/app/vitest.config.ts:3` `packages/web/vitest.config.ts:5` `packages/collector/vitest.config.ts:3` `packages/site/vitest.config.ts:3` `packages/app/test/revision-rebuild.test.ts:11` `packages/app/test/e2e/editable-projects.test.ts:39`
 
-The complete test-bearing directory inventory below contains 398 test files. Counts are file counts from the tracked tree, not instrumented statement/branch coverage. All listed test files match one of the four configured inclusion rules; no discovered `.spec.ts`, `.spec.tsx`, or `.spec.js` files sit outside them. Each row cites a concrete member, while the config pointers above establish runner inclusion.
+The historical test-bearing directory inventory below records 398 test files at its full-map checkpoint. Counts are file counts from the tracked tree, not instrumented statement/branch coverage. All listed test files match one of the four configured inclusion rules; no discovered `.spec.ts`, `.spec.tsx`, or `.spec.js` files sit outside them. Each row cites a concrete member, while the config pointers above establish runner inclusion.
 
 | Directory | Test files | Example source |
 | --- | ---: | --- |
@@ -115,6 +116,10 @@ The bundle-completeness matrix and saved-font subtitle recovery case use a 30-se
 - Collector tests implement `CollectorDb`/`CollectorStatement` over an in-memory `node:sqlite` database and invoke `worker.fetch` directly. Website tests pass structural fetch and UI doubles to the public site's functions. Neither fixture proves the deployed Cloudflare binding or actual browser layout. `packages/collector/src/index.test.ts:11` `packages/collector/src/index.test.ts:58` `packages/site/main.test.js:23` `packages/site/main.test.js:66`
 
 ## Coverage shape
+
+Narration tests added 2026-09-24 cover strict cues, exact-source UTF-16 splitting, Off identities, invalidation/reuse, late edits, pause/cancel, durable database reopen, uncertain submissions, partial TTS failure and pending-file cleanup. Composed acceptance covers fresh/0010-upgraded databases, generated entries and six downloads (`packages/app/src/slices/narration/{preparation,steering}.test.ts`, `packages/app/src/slices/rebuild/runtime-{preparation,narration-text}.test.ts`, `packages/app/test/revision-preparation*.test.ts`). Frozen prompts survive portable/template/schedule paths (`packages/app/test/preparation-saved-workflows.test.ts:1`). Mounted components verify slots, refusal, preserved choices and historical URLs; isolated desktop/390px browser checks verify controls and Codex images without paid generation.
+
+Windows CI includes the pure and composed narration suites. Fake CLI tests validate Codex private-output safety; site tests cover both Docker copy commands (`.github/workflows/ci.yml:42`, `packages/app/src/adapters/image/codex.test.ts:1`, `packages/site/install.test.js:1`). This feature-scoped update leaves the historical inventory checkpoint unchanged.
 
 The inventory is broadest by direct test-file count in rebuild (44), Play UI (32), project UI (32), HTTP routes (30), retained revisions (28), and composed app tests outside e2e (26). Runner, adapters, storage, admission, settings, updater, templates, schedules and telemetry also have colocated suites. These counts describe test distribution, not measured coverage percentages; no coverage provider/threshold is configured in the root or package Vitest configs. `vitest.config.ts:3` `packages/app/vitest.config.ts:3` `packages/web/vitest.config.ts:5` `packages/collector/vitest.config.ts:3` `packages/site/vitest.config.ts:3`
 

@@ -1,4 +1,6 @@
 ---
+absorbed_from:
+  - features/2026-09-24-narration-preparation@2026-09-24
 screen: prompt editor
 journeys: [J2-first-run-setup]
 assumed:
@@ -22,6 +24,7 @@ One prompt: name, kind, body with `{{keyword}}` slots.
 | Name [ Documentary dossier ] Kind (•)Article |
 | ( )Image |
 | ( )Thumbnail |
+| ( )Narration Preparation |
 | Body |
 | +--------------------------------------------------------------+ |
 | | Compose a {{minWords}}-{{maxWords}}-word, documentary-style | |
@@ -55,12 +58,14 @@ Element tree:
 | Label | Does | Leads to |
 |---|---|---|
 | Name | Display name used in the pickers on 06 Play | Stays |
-| Kind: Article / Image / Thumbnail | Which picker on 06 offers this prompt | Stays |
+| Kind: Article / Image / Thumbnail / Narration Preparation | Which picker on 06 offers this prompt | Stays |
 | Body | Free text; every `{{name}}` becomes a per-run field on 06 | Stays |
 | Detected slots (assumed) | Read-only list of distinct slot names found in the body | None |
 | Save | Persists; the prompt appears in 04 and in 06's pickers | 04 Prompts |
 | Cancel | Discards edits | 04 Prompts |
 | Delete | Removes the prompt | 04 Prompts |
+
+The narration editor offers Use documentary starter: it fills the unsaved body with restrained cue-only instructions and asks before replacing nonempty text. It never saves automatically (`packages/web/src/routes/prompt-editor.tsx`, `packages/web/src/lib/narration-starter.ts`).
 
 ## States
 

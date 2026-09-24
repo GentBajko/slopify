@@ -9,6 +9,7 @@ paths_covered:
   - :(top)packages/collector/**
   - :(top)packages/site/**
 absorbed_from:
+  - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-play-redesign-drafts@2026-09-13
   - features/2026-09-10-review-checkpoints@2026-09-13
@@ -177,6 +178,38 @@ Observed source: `7bdb84e3f57e` (2026-09-13). This chapter includes retained pro
 
 ## Fields and types
 
+### PreparationSource
+
+| Field | Type | Required |
+|---|---|---|
+| format | `"inworld-tts-2"` | yes |
+| version | `1` | yes |
+| source | `string` | yes |
+| logicalKey | `string` | yes |
+| segment | `"body" ∣ "intro" ∣ "outro"` | yes |
+
+Source: `packages/app/src/slices/narration/preparation.ts:5`.
+
+### Cue
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| sentence | positive integer | yes | 1-based, nondecreasing and in range |
+| kind | `"instruction" ∣ "reset" ∣ "sound"` | yes | At most one instruction/reset per sentence |
+| text | `string` | instruction only | 1–240 UTF-16 units; no brackets, controls or markup |
+| sound | `"laugh" ∣ "breathe" ∣ "clear throat" ∣ "sigh" ∣ "cough" ∣ "yawn"` | sound only | No duplicates per sentence |
+
+Unknown fields are rejected (`packages/app/src/slices/narration/preparation.ts:16`).
+
+### PreparedRequest
+
+| Field | Type | Required |
+|---|---|---|
+| text | `string` | yes |
+| spokenText | `string` | yes |
+
+Exact tagged request and unchanged source slice (`packages/app/src/slices/narration/steering.ts:3`).
+
 Each table uses the code spelling and declared type. “Required” describes the property, so a required nullable property remains required. Inherited interface fields are included. Defaulted Zod output fields are required after parsing even when omitted by input.
 
 ### ProviderChoice
@@ -248,6 +281,7 @@ Source: `packages/app/src/slices/admission/model.ts:48`.
 | audio | `VoiceChoice \| undefined` | no |
 | images | `ProviderChoice \| undefined` | no |
 | articlePrompt | `string \| undefined` | no |
+| narrationPrompt | `string \| undefined` | no |
 | imagePrompts | `readonly ImagePromptChoice[]` | yes |
 | thumbnailPrompt | `string \| undefined` | no |
 | intro | `EntryChoice \| undefined` | no |
@@ -271,6 +305,7 @@ Source: `packages/app/src/slices/admission/model.ts:55`.
 | audio | `VoiceChoice \| undefined` | no |
 | images | `ProviderChoice \| undefined` | no |
 | articlePrompt | `string \| undefined` | no |
+| narrationPrompt | `string \| undefined` | no |
 | imagePrompts | `readonly ImagePromptChoice[]` | yes |
 | thumbnailPrompt | `string \| undefined` | no |
 | intro | `EntryChoice \| undefined` | no |
@@ -387,6 +422,7 @@ Source: `packages/app/src/slices/admission/substitute.ts:9`.
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
+| segment | `"body" ∣ "intro" ∣ "outro" ∣ undefined` | no | Distinguishes per-segment narration text and scripts |
 | subtitleOmissions | `\| readonly { readonly start: number; readonly text: string }[] \| undefined` | no |  |
 | subtitlesMode | `"off" \| "files" \| "burn-in" \| undefined` | no | accepted: off, files, burn-in |
 | promptName | `string \| undefined` | no |  |
@@ -1361,8 +1397,10 @@ Source: `packages/app/src/slices/control/revision-control-schema.ts:3`. Notes: s
 | thinkingConfig | `ThinkingConfig \| null` | yes | llm branch |
 | messages | `readonly Message[]` | yes | llm branch |
 | webSearch | `boolean` | yes | llm branch |
+| preparation | `PreparationSource ∣ undefined` | no | Source-bound cue metadata on llm branch |
 | voice | `string` | yes | tts branch |
-| text | `string` | yes | tts branch |
+| text | `string` | yes | tts branch, including validated delivery tags |
+| spokenText | `string ∣ undefined` | no | tts branch; exact clean source, required for prepared requests |
 | logicalKey | `string` | yes | tts branch |
 | logicalText | `string` | yes | tts branch |
 | segment | `"body" \| "intro" \| "outro"` | yes | tts branch; accepted: body, intro, outro |
@@ -1378,7 +1416,7 @@ Source: `packages/app/src/slices/control/revision-control-schema.ts:3`. Notes: s
 
 Source: `packages/app/src/slices/rebuild/recipe-model.ts:51`. Notes: `recipeInputSchema` is a strict version-1 discriminated union. FingerprintValue admits null, booleans, finite numbers, strings, recursive arrays and records; it does not admit undefined (`packages/app/src/slices/rebuild/recipe-input-schema.ts:6`).
 
-Finite local operations: export-wav, wav2vec2-en-a19f851-v2-omissions, automatic-cues-v1, manual-cues-v1, subtitle-files-v1, render-video, render-selected-video, provided-notes, provided-article, manual-article, entry-text, concat-narration. Deferred operations: research-synthesis, article, entry:intro:text, entry:outro:text, thumbnail-prompt, thumbnail-image, body-narration, intro-narration, outro-narration, resolve-revision-recipe. Unknown operation strings fail the persisted recipe schema (`packages/app/src/slices/rebuild/recipe-model.ts:26`, `packages/app/src/slices/rebuild/recipe-input-schema.ts:70`).
+Finite local operations: export-wav, wav2vec2-en-a19f851-v2-omissions, automatic-cues-v1, manual-cues-v1, subtitle-files-v1, render-video, render-selected-video, provided-notes, provided-article, manual-article, entry-text, concat-narration, narration-files-v1. Deferred operations: narration-preparation, research-synthesis, article, entry:intro:text, entry:outro:text, thumbnail-prompt, thumbnail-image, body-narration, intro-narration, outro-narration, resolve-revision-recipe. Unknown operation strings fail the persisted recipe schema (`packages/app/src/slices/rebuild/recipe-model.ts:26`, `packages/app/src/slices/rebuild/recipe-input-schema.ts:70`).
 
 ### RecipeProviderChoice
 
@@ -1472,8 +1510,8 @@ CatalogueModel is a union with one required llm, image or tts family object. Def
 
 - Format is `16:9` or `9:16`. StageKind is research, article, audio, images, thumbnail or video. StageState is pending, running, done, failed, canceled, provided or skipped; ProjectState adds paused and excludes provided/skipped (`packages/app/src/kernel/pipeline.ts:6`). StageSource is generate, provide, off, from_prompt or prompt_by_llm; admission applies stage-specific restrictions (`packages/app/src/slices/admission/model.ts:11`, `packages/app/src/slices/admission/rules.ts:46`).
 - ProviderFamily is llm, tts or image. Provider IDs are openrouter, claude-code, codex, gemini, elevenlabs, openai-tts, cartesia, inworld, fal, replicate, openai-image and google-image (`packages/app/src/kernel/ports/model.ts:4`, `packages/app/src/slices/settings/model.ts:12`). ThinkingMode is off, low, medium, high or xhigh; model-specific availability comes from Catalogue (`packages/app/src/kernel/ports/llm.ts:41`, `packages/app/src/catalog/schema.ts:25`).
-- OutputRole accepts notes, article_md, article_txt, sources, glossary, audio_body, audio_intro, audio_outro, audio_export, image, thumbnail, video, render_params, subtitles_srt, subtitles_vtt, subtitle_words, subtitle_ass, subtitle_font and instructions. StagedFileState is copying or staged; output paths are project-relative (`packages/app/src/slices/storage/model.ts:6`, `packages/app/src/slices/storage/model.ts:33`, `packages/app/src/slices/storage/model.ts:57`). PieceKind accepts chapter, chunk, segment, image, prompt_written and article_written; PieceState accepts pending, running, done and failed. The nullable payload remains a JSON string at the StagePiece boundary (`packages/app/src/kernel/runner/piece-repo.ts:9`, `packages/app/src/kernel/runner/piece-repo.ts:19`).
-- Prompt.kind accepts article/image/thumbnail; Entry.category accepts intro/outro and mode text/llm. Their detected slots are serialized arrays, not references to another table (`packages/app/src/slices/library/model.ts:4`, `packages/app/src/slices/library/model.ts:12`, `packages/app/src/slices/library/repo.ts:171`).
+- OutputRole accepts notes, article_md, article_txt, narration_txt, tts_script, sources, glossary, audio_body, audio_intro, audio_outro, audio_export, image, thumbnail, video, render_params, subtitles_srt, subtitles_vtt, subtitle_words, subtitle_ass, subtitle_font and instructions. StagedFileState is copying or staged; output paths are project-relative (`packages/app/src/slices/storage/model.ts:6`, `packages/app/src/slices/storage/model.ts:33`, `packages/app/src/slices/storage/model.ts:57`). PieceKind accepts chapter, chunk, segment, image, prompt_written and article_written; PieceState accepts pending, running, done and failed. The nullable payload remains a JSON string at the StagePiece boundary (`packages/app/src/kernel/runner/piece-repo.ts:9`, `packages/app/src/kernel/runner/piece-repo.ts:19`).
+- Prompt.kind accepts article/image/thumbnail/narration; Entry.category accepts intro/outro and mode text/llm. Their detected slots are serialized arrays, not references to another table (`packages/app/src/slices/library/model.ts:4`, `packages/app/src/slices/library/model.ts:12`, `packages/app/src/slices/library/repo.ts:171`).
 - RevisionContent uses stable image keys and a separate imageOrder; generated definitions can retain raw-template identity in templateKey. Raw promptTemplates can be null when an old project has only rendered wording. Manual subtitle cues bind to an audioFingerprint. OutputState is ready/outdated/review (`packages/app/src/slices/revisions/model.ts:15`, `packages/app/src/slices/revisions/model.ts:26`).
 - Attempt.revisionId/workId/workPieceId are required nullable values on repository reads. The inherited work/operation fields are optional call-context inputs; they are not columns in attempts and `toAttempt` does not return them (`packages/app/src/kernel/runner/attempt-repo.ts:16`, `packages/app/src/kernel/runner/attempt-repo.ts:114`). AttemptOutcome adds ok and canceled to provider faults auth/missing_key/rate_limit/refusal/unsupported/timeout/other (`packages/app/src/kernel/runner/attempt-repo.ts:13`, `packages/app/src/kernel/ports/model.ts:21`).
 - RebuildWork.kind accepts provider/local/provided, while disposition distinguishes reuse/generate/local/review/blocked. Physical work can be held independently of a pending state: WorkPiece.state and dispatchState are separate persisted dimensions (`packages/app/src/slices/rebuild/model.ts:10`, `packages/app/src/slices/rebuild/work-records.ts:5`).
@@ -1494,6 +1532,7 @@ Definition: `packages/app/src/slices/play-drafts/schema.ts:79`.
 | audio | { provider: string; model: string; thinking?: ThinkingMode; voice: string } | yes | thinking optional; accepted: off, low, medium, high, xhigh |
 | images | { provider: string; model: string; thinking?: ThinkingMode } | yes | thinking optional; accepted: off, low, medium, high, xhigh |
 | articlePrompt | string | yes | Saved prompt name, including empty/unavailable choice |
+| narrationPrompt | string ∣ undefined | no | Empty or absent is Off; hidden selections persist |
 | imagePrompts | { name: string; number: string }[] | yes | Order retained; number stays raw text |
 | thumbnailPrompt | string | yes | Saved prompt name |
 | intro | string | yes | Entry name; empty string represents Off |
@@ -1919,6 +1958,7 @@ Definition: `packages/web/src/play/state.ts:43`.
 | audio | VoiceChoice | yes | Narration model/voice |
 | images | ProviderChoice | yes | Image model |
 | articlePrompt | string | yes | Name |
+| narrationPrompt | string ∣ undefined | no | Optional saved preparation prompt |
 | imagePrompts | ImagePromptChoice[] | yes | Numeric counts |
 | thumbnailPrompt | string | yes | Name |
 | intro | string | yes | Name or empty |
@@ -1952,6 +1992,7 @@ Definition: `packages/web/src/play/state.ts:66; packages/web/src/play/draft-stat
 | audio | VoiceChoice | yes | Narration model/voice |
 | images | ProviderChoice | yes | Image model |
 | articlePrompt | string | yes | Name |
+| narrationPrompt | string ∣ undefined | no | Optional saved preparation prompt |
 | imagePrompts | ImagePromptChoice[] | yes | Numeric counts |
 | thumbnailPrompt | string | yes | Name |
 | intro | string | yes | Name or empty |
@@ -1974,6 +2015,7 @@ The first table is `state.ts`’s alias of LegacyPlayFormState. `draft-state.ts`
 | audio | { provider: string; model: string; thinking?: ThinkingMode; voice: string } | yes | thinking optional; accepted: off, low, medium, high, xhigh |
 | images | { provider: string; model: string; thinking?: ThinkingMode } | yes | thinking optional; accepted: off, low, medium, high, xhigh |
 | articlePrompt | string | yes | Saved prompt name, including empty/unavailable choice |
+| narrationPrompt | string ∣ undefined | no | Empty or absent is Off; hidden selections persist |
 | imagePrompts | { name: string; number: string }[] | yes | Order retained; number stays raw text |
 | thumbnailPrompt | string | yes | Saved prompt name |
 | intro | string | yes | Entry name; empty string represents Off |
@@ -2210,6 +2252,8 @@ Source: `packages/app/src/slices/storage/portable.ts:74`.
 
 ## Boundaries
 
+Narration changes verified 2026-09-24: optional `narrationPrompt` selects frozen `rendered.narration`/`promptTemplates.narration`; absent or blank remains Off. LLM `RecipeInput.preparation` pins source, logical key, segment and format version. TTS `text` is the exact tagged request; optional `spokenText` is its clean source substring (`packages/app/src/slices/rebuild/recipe-model.ts:53`). New `narration_txt` and `tts_script` roles use `OutputMeta.segment` and immutable asset/slot IDs (`packages/app/src/slices/storage/model.ts:7`, `packages/app/src/slices/rebuild/runtime-narration-text.ts:82`). The broad historical snapshot above is not advanced.
+
 | Boundary | Conversion and representation | Implementation |
 |---|---|---|
 | Project/stage SQLite ↔ domain | RunConfig is JSON; snake_case rows become camelCase Project/Stage; pause is read as a boolean from project_controls | `packages/app/src/slices/admission/repo.ts:43`, `packages/app/src/slices/admission/repo.ts:160`, `packages/app/src/slices/admission/repo.ts:199` |
@@ -2267,7 +2311,7 @@ Legacy subtitle preparation still uses a `{key,words,font,omissions}` timing cac
 
 ## Schema
 
-The per-table DDL below is copied directly from migrations 0001–0010 and the collector schema, including later ALTER statements and indexes. Migrations run in numeric filename order, each in a transaction, and record their version; a newer unknown database version is refused (`packages/app/src/kernel/db/migrate.ts:10`).
+The per-table DDL below is derived from migrations 0001–0011 and the collector schema, including later ALTER statements and indexes. Migrations run in numeric filename order, each in a transaction, and record their version; a newer unknown database version is refused (`packages/app/src/kernel/db/migrate.ts:10`).
 
 DB records without dedicated exported domain row models are provider_keys, settings, schema_migrations, project_controls, batches, project_heads, revision_mutations, revision_work_reservations, project_control_receipts, revision_provided_reviews and project-template instantiation receipts. WorkRef is an identity subset of revision_work; RebuildPreview/ExecutionSnapshot and RebuildAdmission are JSON projections rather than complete table rows. Collector aggregates is a key/value table, while Aggregates is the response object. The exact remaining columns are included below. DraftRow and AttachmentRow represent the complete play_drafts and play_draft_attachments table projections. StoredStartReceipt omits SQL created_at, so play_start_receipts has no complete exported row model. The tutorial record is a strict unnamed JSON envelope inside settings, not a separate table (`packages/app/src/slices/play-drafts/repo.ts:6`, `packages/app/src/slices/play-drafts/start-repo.ts:16`, `packages/app/src/kernel/db/migrations/0006-play-drafts.sql:29`, `packages/app/src/slices/settings/tutorial.ts:25`).
 
@@ -2348,10 +2392,12 @@ CREATE INDEX outputs_project ON outputs(project_id, stage_kind);
 
 ### prompts
 
+Migration 0011 copies all prior fields and recreates the table/index transactionally; the DDL below includes that fourth kind (`packages/app/src/kernel/db/migrations/0011-narration-prompts.sql:1`).
+
 Source: `packages/app/src/kernel/db/migrations/0001-init.sql:7`.
 
 ```sql
-CREATE TABLE prompts (id TEXT PRIMARY KEY, kind TEXT NOT NULL CHECK(kind IN ('article','image','thumbnail')), name TEXT NOT NULL, body TEXT NOT NULL, slots TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE prompts (id TEXT PRIMARY KEY, kind TEXT NOT NULL CHECK(kind IN ('article','image','thumbnail','narration')), name TEXT NOT NULL, body TEXT NOT NULL, slots TEXT NOT NULL, updated_at TEXT NOT NULL);
 ```
 
 Source: `packages/app/src/kernel/db/migrations/0001-init.sql:8`.

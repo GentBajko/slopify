@@ -1,5 +1,6 @@
 ---
 absorbed_from:
+  - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-10-subtitles-fonts@2026-09-10
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-play-redesign-drafts@2026-09-13
@@ -25,7 +26,7 @@ The SPA has eight top-level navigation destinations, three routed detail familie
 | [02-system.md](02-system.md) | all | all |
 | [03-experience.md](03-experience.md) | all | 01, 02, 04, 12, 13, 17, 21-25 |
 | [screens/01-projects.md](screens/01-projects.md) | 07 Projects | 01, 13, 14 |
-| [screens/02-play.md](screens/02-play.md) | 06 Play | 04, 05, 17, 18, 22, 23 |
+| [screens/02-play.md](screens/02-play.md) | 06 Play | 04, 05, 08, 15, 17, 18, 22, 23 |
 | [screens/03-project.md](screens/03-project.md) | 08 Project | 01, 08, 09, 11, 12, 14, 17, 23 |
 | [screens/04-prompts.md](screens/04-prompts.md) | 04 Prompts | 15 |
 | [screens/05-prompt-editor.md](screens/05-prompt-editor.md) | 05 Prompt editor | 03, 15 |

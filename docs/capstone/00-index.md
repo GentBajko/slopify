@@ -72,14 +72,14 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 |---|---|
 | [logic/README.md](logic/README.md) | Implemented business scenarios, including retained revisions |
 | [mockup/README.md](mockup/README.md) | Mockup index: screens, journeys, scenarios handed to `logic`, assumed items |
-| [mockup/01-marketing-page.md](mockup/01-marketing-page.md) | Screen: slopify.stream marketing page |
+| [mockup/01-marketing-page.md](mockup/01-marketing-page.md) | Screen: marketing page with native and Docker commands |
 | [mockup/02-first-run-notice.md](mockup/02-first-run-notice.md) | Screen: once-per-machine telemetry notice |
 | [mockup/03-settings.md](mockup/03-settings.md) | Screen: API keys, CLI executable paths, voices, playback settings |
-| [mockup/04-prompts.md](mockup/04-prompts.md) | Screen: prompts list by kind |
-| [mockup/05-prompt-editor.md](mockup/05-prompt-editor.md) | Screen: prompt editor with `{{keyword}}` slots |
-| [mockup/06-play.md](mockup/06-play.md) | Screen: durable drafts, templates, Content / Outputs / Style / Review and explicit Start |
+| [mockup/04-prompts.md](mockup/04-prompts.md) | Screen: four prompt kinds including Narration Preparation |
+| [mockup/05-prompt-editor.md](mockup/05-prompt-editor.md) | Screen: prompt editor with `{{keyword}}` slots and explicit narration starter |
+| [mockup/06-play.md](mockup/06-play.md) | Screen: durable drafts, optional narration preparation, templates, Review and explicit Start |
 | [mockup/07-projects.md](mockup/07-projects.md) | Screen: projects list |
-| [mockup/08-project.md](mockup/08-project.md) | Screen: retained project revisions, template capture, content/media/caption edits, History and explicit rebuild |
+| [mockup/08-project.md](mockup/08-project.md) | Screen: retained revisions, frozen narration preparation, separate transcript/script downloads, History and rebuild |
 | [mockup/09-schedules.md](mockup/09-schedules.md) | Screen: local scheduled template runs, policies, variants and history |
 | [uiux/README.md](uiux/README.md) | UI/UX design index: direction, system, experience, assumed items |
 | [uiux/01-direction.md](uiux/01-direction.md) | Design read, mode map, the control-room direction contract |

@@ -9,6 +9,7 @@ paths_covered:
   - :(top)packages/web/src/subtitles/**
   - :(top)packages/web/src/router.tsx
 absorbed_from:
+  - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-10-play-redesign-drafts@2026-09-13
   - features/2026-09-10-review-checkpoints@2026-09-13
 ---
@@ -29,6 +30,8 @@ Operate surface for configuring a durable local draft, reviewing resolved inputs
 - Content groups title/article/keywords/text generation/Research. Outputs groups Audio/Images/Thumbnail/Export with applicable sources and contextual provider/keyword links. Advanced audio holds chunking/entries and exposes a nondefault summary (`packages/web/src/play/content-section.tsx:16`, `packages/web/src/play/outputs-section.tsx:9`).
 - Style holds shaped ratios, captions, font/upload/size/five positions/sample. Preview uses shared renderer sizing/placement and a ready supplied image or neutral frame; it generates no asset (`packages/web/src/play/style-section.tsx`, `packages/web/src/play/output-preview.tsx:23`).
 - Review is a full page with grouped exact choices/edit links, resolved prompts, ordered supplied names, providers/models/chunking/entries/style, variants and expected-word cost estimates. Explicit Start run/Queue N videos is the creation action (`packages/web/src/play/review-section.tsx:11`, `packages/web/src/play/review-summary.tsx`).
+
+Generated Audio contains Narration Preparation: Off or a saved prompt, View/Create, keyword correction and Choose text generation links. Only Inworld TTS-2 supports it. Shared LLM controls remain visible with a supplied article when preparation is active. Review explains preparation calls and unknown added TTS characters; source switches preserve hidden choices without activating them (`packages/web/src/play/narration-preparation.tsx`, `content-section.tsx`, `review-summary.tsx`).
 
 ## States
 

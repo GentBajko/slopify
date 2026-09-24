@@ -19,6 +19,7 @@ paths_covered:
   - :(top)packages/app/scripts/**
   - :(top)packages/web/vite.config.ts
 absorbed_from:
+  - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-play-redesign-drafts@2026-09-13
   - features/2026-09-10-review-checkpoints@2026-09-13
@@ -32,7 +33,7 @@ Observed source: `f4c4f7b3295a` (2026-09-13). Commands below describe the reposi
 
 ## Processes
 
-There are no repository container commands or Compose services. The app server owns HTTP, SSE, the stage runner, batch pumping, local schedule ticks, telemetry flushing and provider dispatch in one Node process; media, CLI-provider, alignment and update work can create child processes (`packages/app/src/main.ts:96`, `packages/app/src/main.ts:292`, `packages/app/src/main.ts:303`, `packages/app/src/main.ts:411`).
+The Linux Docker launcher is `npx @gentbajko/slopify@latest --docker`; it supplies background execution, restart-always, localhost port 6969 and the `slopify-data` volume. It detects host CLI executables and mounts them read-only; container login remains separate (`packages/app/scripts/docker-run.sh:1`). The app server owns HTTP, SSE, the stage runner, batch pumping, local schedule ticks, telemetry flushing and provider dispatch in one Node process; media, CLI-provider, alignment and update work can create child processes (`packages/app/src/main.ts:96`, `packages/app/src/main.ts:292`, `packages/app/src/main.ts:303`, `packages/app/src/main.ts:411`).
 
 | Process | Exact local command or internal launch | Dependencies and ownership | Source |
 |---|---|---|---|
@@ -53,7 +54,7 @@ There are no repository container commands or Compose services. The app server o
 | CLI text providers | Resolved `claude` plus `claudeCodeArgs(request)`, `codex` plus `codexArgs(request)`, or `gemini` plus `geminiArgs(request, allowlist)` | Argument-array launches; installed/logged-in CLI or saved executable path required. Arguments depend on prompt, model, thinking and web-search selection | `packages/app/src/adapters/llm/run-cli.ts:63`, `packages/app/src/adapters/llm/claude-code.ts:43`, `packages/app/src/adapters/llm/codex.ts:33`, `packages/app/src/adapters/llm/gemini.ts:23` |
 | Browser/folder integration | Browser: `open <url>`, `cmd /c start "" <url>`, `cmd.exe /c start "" <url>` on WSL, or `xdg-open <url>`. Folder: `explorer.exe <path>`, `open <path>`, or `xdg-open <path>`; WSL first runs `wslpath -w <path>` | Host graphical session/integration utilities; browser failure does not fail app boot | `packages/app/src/edge/open-browser.ts:32`, `packages/app/src/edge/open-folder.ts:8` |
 
-`SIGINT` awaits app shutdown. Normal packaged startup has no daemon/detach flag; detachment is external to its four CLI options (`packages/app/src/edge/cli.ts:9`, `packages/app/src/edge/cli.ts:42`).
+`SIGINT` awaits shutdown. Normal server startup is foreground; `--docker` delegates to the background container launcher (`packages/app/src/edge/cli.ts:1`, `packages/app/scripts/docker-run.sh:1`).
 
 ## Configuration
 
@@ -107,9 +108,13 @@ Home directories use Node's `os.homedir()`; the application does not parse a sep
 | Telemetry collector | Cloudflare Worker `slopify-collector`, entry `src/index.ts`, compatibility date `2026-08-01`, custom domain `collector.slopify.stream`; D1 binding `DB`, database name `slopify-collector` | Observability enabled; no configured Compose profile/image/volume/healthcheck. `/events` ingestion and `/aggregates` counters are its application endpoints | `packages/collector/wrangler.jsonc:3`, `packages/collector/wrangler.jsonc:14`, `packages/collector/wrangler.jsonc:22`, `packages/collector/src/index.ts:20` |
 | Marketing site | Cloudflare static assets Worker `slopify-site`, `./public`, compatibility date `2026-08-01`, custom domain `slopify.stream` | No server-side entry, configured container/profile or healthcheck | `packages/site/wrangler.jsonc:3` |
 
-The repository contains no Dockerfile or Compose manifest. Remote provider APIs, npm registry, the catalogue's GitHub raw URL and the pinned Hugging Face model URL are network dependencies used by the relevant features; they are not locally provisioned services (`packages/app/src/adapter-registry.ts:1`, `packages/app/src/updater/model.ts:30`, `packages/app/src/catalog/store.ts:7`, `packages/app/src/adapters/alignment/cache.ts:24`).
+The root Dockerfile builds the SPA/app and a non-root Node image with FFmpeg and notices installed and verified during image construction; no Compose manifest is required. First boot needs no FFmpeg download. Native npm installs automatically recover skipped dependency downloads into the data directory before boot (`Dockerfile`, `packages/app/src/adapters/ffmpeg.ts`). Remote provider APIs, npm registry, the catalogue's GitHub raw URL and the pinned Hugging Face model URL are network dependencies used by the relevant features; they are not locally provisioned services (`packages/app/src/adapter-registry.ts:1`, `packages/app/src/updater/model.ts:30`, `packages/app/src/catalog/store.ts:7`, `packages/app/src/adapters/alignment/cache.ts:24`).
 
 ## Developer workflow
+
+Narration Preparation: save a prompt of that kind, then select it under generated Audio with Inworld TTS-2 and a text LLM. Off is default; Flash/other models reject active preparation. Review discloses extra LLM work and unknown cue overhead (`packages/web/src/play/narration-preparation.tsx:6`, `packages/app/src/slices/estimate/index.ts:111`).
+
+Release smoke commands: `node packages/app/scripts/install-smoke.mjs`, `docker build -t slopify:smoke .`, `bash packages/app/scripts/container-smoke.sh`. Disposable containers do not replace the user's instance. Tags run Linux/Windows/container verification before npm and multi-architecture GHCR publication (`.github/workflows/release.yml:1`). Marketing Docker commands are in `packages/site/public/index.html:166`; site-only deployment uses `npm run deploy --workspace @slopify/site`.
 
 | Action | Exact command | Definition/evidence |
 |---|---|---|
@@ -142,7 +147,7 @@ Saved executable paths and 15-second readiness probes cover Claude Code, Codex a
 
 Claude uses JSON streaming with partial-message activity, safe mode, a writing role and strict MCP configuration. Codex 0.149.1+ runs JSON execution in a private temporary directory with user rules, local tools and account connectors disabled. Gemini receives temporary workspace/system configuration and a restricted tool/MCP configuration. Cancel/shutdown gives each CLI one second for graceful exit and one second after force-killing its POSIX process group or Windows process tree (`packages/app/src/adapters/llm/claude-code.ts:43`, `packages/app/src/adapters/llm/codex.ts:33`, `packages/app/src/adapters/llm/gemini-workspace.ts:10`, `packages/app/src/adapters/llm/gemini.ts:23`).
 
-Production model choices come from validated YAML. Enabled, non-deprecated models are selected by family/provider; manual refresh obtains the configured GitHub raw source with a 15-second timeout and 1 MB limit, and keeps the previous file. Legacy discovery helpers still read Codex model cache and installed Gemini metadata/aliases (`packages/app/src/catalog/store.ts:7`, `packages/app/src/catalog/store.ts:54`, `packages/app/src/catalog/store.ts:94`, `packages/app/src/adapters/llm/codex-models.ts:29`, `packages/app/src/adapters/llm/gemini-models.ts:6`).
+API-key provider choices use validated YAML. CLI choices come from live installed-provider discovery rather than YAML. Codex image generation uses the registered `codex-image` family with built-in model `codex-imagegen`, sharing Codex's executable and login (`packages/app/src/catalog/runtime-models.ts`, `packages/app/src/catalog/registry.ts`, `packages/app/src/slices/settings/cli-paths.ts`).
 
 Batch planning estimates before confirmation, validates up to 50 items and transactionally creates queued projects. Batch pumping runs at one-second intervals and processes one batch item at a time: paused items hold the queue; done/failed/canceled items release it after in-flight calls drain. Provider dispatch separately permits at most five concurrent calls globally, bounded further by each provider's catalogue limit (`packages/app/src/edge/http/planning.ts:15`, `packages/app/src/slices/batch/index.ts:38`, `packages/app/src/slices/batch/index.ts:76`, `packages/app/src/main.ts:254`, `packages/app/src/main.ts:355`, `packages/app/src/kernel/runner/queue.ts:12`).
 

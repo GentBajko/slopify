@@ -9,6 +9,7 @@ paths_covered:
   - :(top)packages/collector/**
   - :(top)packages/site/**
 absorbed_from:
+  - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-play-redesign-drafts@2026-09-13
   - features/2026-09-10-review-checkpoints@2026-09-13
@@ -20,6 +21,8 @@ absorbed_from:
 Source snapshot: `7bdb84e3f57ec19c11e21b43cb6502a720156e9f` (2026-09-13). This chapter describes the current implementation.
 
 ## Lifecycles
+
+Narration flow verified 2026-09-24: Markdown → plain body → logical chunks/text overrides → cue-only LLM work → bounded tagged TTS paired with exact clean substrings → audio and segment-scoped text downloads. All body preparations settle before physical ordinals materialize (`packages/app/src/slices/rebuild/recipe-audio.ts:46`, `packages/app/src/slices/rebuild/recipe-preparation.ts:55`). Captions join clean source slices, never bracket-stripped scripts (`packages/app/src/slices/rebuild/runtime-narration-text.ts:18`, `packages/app/src/slices/rebuild/runtime-export-inputs.ts:85`). The broad historical snapshot is not advanced.
 
 Checkpoint setup is saved with the reviewed draft or through the project PATCH route. Start persists gate closures and approval fingerprints with the revision. Runner claims consult the current reservation work keys; independent work proceeds while the selected closure waits. Approval commits under the project lock, emits a scoped update and wakes the runner after commit. Save/revision carry compares reviewed inputs, and restart restores held/released rows without a new provider submission.
 
@@ -93,6 +96,8 @@ Portable storage flows through Settings. Export reads current settings, prompts,
 - SQLite admission/receipt/ownership is atomic; asset copy/text writes are synchronous disk effects within nested savepoint callbacks and cannot be rolled back by SQLite. Copies preserve staging originals on rollback; reconciliation collects project orphans. Post-commit telemetry, cleanup and dispatch are independent effects. (`packages/app/src/slices/storage/staging.ts:206`, `packages/app/src/slices/storage/staging.ts:269`, `packages/app/src/slices/admission/start.ts:64`, `packages/app/src/slices/play-drafts/start.ts:123`, `packages/app/src/slices/storage/reconcile.ts:47`.)
 
 ## Failure paths
+
+Preparation uses bounded answer-validation retries; malformed or unrenderable cues submit no TTS. Preparation-only rebuilds retain the selected TTS cap. Recovery reuses completed cues/audio and requires review for uncertain submissions; late article/override edits remain origin-only. Failed text-file publication removes pending files and keeps earlier audio (`packages/app/src/slices/rebuild/runtime-provider.ts:282`, `packages/app/src/slices/rebuild/preview-plan.ts:226`, `packages/app/test/revision-preparation-restart.test.ts:13`, `packages/app/src/slices/rebuild/runtime-narration-text.test.ts`).
 
 - **Save/create/fork/restore transport and conflicts:** API JSON parsing and unexpected response shapes throw; expected 400/404/409 problem bodies become typed replies. Session drain catches network/schema exceptions into error state and retains the frozen pending request; its `finally` releases the running guard. Conflict does not install server values. Restore checks selection/generation before applying; fork keeps its stable attempt across exceptions, catches into error state and clears only its running guard. Discard propagates errors to its caller while `finally` releases the discard guard, retaining input until confirmed deletion. Timer teardown cancels the debounce and suppresses React renders, without a final autosave guarantee on browser shutdown. (`packages/web/src/play/draft-api.ts:66`, `packages/web/src/play/use-draft-session.ts:57`, `packages/web/src/play/use-draft-session.ts:124`, `packages/web/src/play/use-draft-session.ts:137`, `packages/web/src/play/use-draft-session.ts:203`, `packages/web/src/play/use-draft-session.ts:228`, `packages/web/src/play/use-draft-session.ts:288`, `packages/web/src/play/use-draft-session.ts:335`.) Browser storage exceptions only warn; independent choices-refresh failures warn through allSettled. (`packages/web/src/play/draft-restore.ts:7`, `packages/web/src/play/draft-restore.ts:23`.)
 - **Invalid/corrupt data:** stored draft JSON syntax or unsupported schema gives invalid-draft without deletion; missing or wrong-size attachments appear reattach. Other stat/database exceptions propagate from read/CRUD without service-local catch to HTTP `onError`. Save/discard database writes commit before reference cleanup; cleanup skips shared/copying/transaction-bound files and logs disk-removal failure, but uncaught DB/log failures can still turn a committed operation into an HTTP failure. (`packages/app/src/slices/play-drafts/service.ts:66`, `packages/app/src/slices/play-drafts/service.ts:79`, `packages/app/src/slices/play-drafts/service.ts:206`, `packages/app/src/slices/play-drafts/service.ts:281`, `packages/app/src/slices/storage/staging-refs.ts:14`, `packages/app/src/edge/http/app.ts:142`, `packages/app/src/edge/http/problem.ts:43`.)

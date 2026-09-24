@@ -1,4 +1,6 @@
 ---
+absorbed_from:
+  - features/2026-09-24-narration-preparation@2026-09-24
 generated_at_commit: 7bdb84e3f57e
 generated_date: '2026-09-13'
 capstone_version: 5.2.0
@@ -19,6 +21,8 @@ Operate surface for editing and deleting one prompt. Source: packages/web/src/ro
 
 ## Composition
 The editor heading and back link precede name/body fields, detected-slot notices, Save, and Delete in a single editor column. Source: packages/web/src/routes/prompt-editor.tsx:154-270.
+
+Narration Preparation exposes Use documentary starter. It fills only the unsaved body; replacing nonempty text requires confirmation. Cancel keeps the original text and Save remains explicit. The starter describes cue-only documentary delivery, not article rewriting (`packages/web/src/routes/prompt-editor.tsx`, `packages/web/src/lib/narration-starter.ts`).
 
 ## States
 Loading, validation/slot notices, save pending/error, and delete confirmation are represented. Source: packages/web/src/routes/prompt-editor.tsx:154-270.

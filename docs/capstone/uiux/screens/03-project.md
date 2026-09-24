@@ -10,6 +10,7 @@ paths_covered:
   - :(top)packages/web/src/router.tsx
   - :(top)packages/web/src/routes/settings.tsx
 absorbed_from:
+  - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-review-checkpoints@2026-09-13
   - features/2026-09-10-project-templates@2026-09-13
@@ -36,6 +37,8 @@ Generated image previews use the current selected work-key record; supplied choi
 Rebuild review shows before/after input values, affected work with human labels and request text/settings, retained outputs, known/unknown costs and in-flight billing notices. Required provided-content confirmations and unknown-cost acknowledgement gate Start rebuild. Cancel rebuild dismisses review without admission. `project/rebuild-review.tsx:11`.
 
 History lists retained revisions and opens their outputs and text parts. Research plans/chapters, article/narration text and legacy thumbnail prompts are readable even without a completed aggregate output. Restore creates a new current revision referencing the chosen history; no automatic generation starts. Restore is held while editing/uploading/reviewing. `project/revision-history.tsx:17`, `project/revision-workspace.tsx:169`.
+
+Generated Audio's editor retains optional Narration Preparation and a frozen prompt-body editor. Save does not modify the library or call providers. Current and historical Audio expose distinct Body/Intro/Outro narration text and TTS script links with revision-owned files, without audio-player or progress-count duplication (`packages/web/src/project/revision-narration.tsx`, `narration-downloads.tsx`, `revision-history.tsx`).
 
 ## States
 

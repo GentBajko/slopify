@@ -1,4 +1,6 @@
 ---
+absorbed_from:
+  - features/2026-09-24-narration-preparation@2026-09-24
 absorbed_from: features/2026-09-10-subtitles-fonts@2026-09-10
 screen: marketing page (slopify.stream)
 journeys: [J1-discover-and-install]
@@ -63,6 +65,8 @@ Element tree:
 | Live counters | Aggregate telemetry across all installs, refreshed every few seconds | None |
 | Slopify, in action | Plays the existing 1920×1080 silent edited recording: prompt keyword, unsaved cue sheet, output choice, then a cut to completed article/narration/image/video and downloads | None |
 | How to use | Static walkthrough: keys, prompts, keywords, play options, project page | None |
+
+The hero also offers Run in Docker · Linux with `npx @gentbajko/slopify@latest --docker`, Copy and a Docker guide anchor. The guide distinguishes the host-CLI launcher from `docker run -d --name slopify --restart always -p 127.0.0.1:6969:6969 -v slopify-data:/data ghcr.io/gentbajko/slopify:latest`; it explains Linux/Node/Docker requirements, separate container login and localhost safety (`packages/site/public/index.html`, `install.test.js`).
 
 ## States
 

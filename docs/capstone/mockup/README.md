@@ -3,6 +3,7 @@ generated_date: '2026-09-13'
 generated_at_commit: 4cfe3473f74d
 capstone_version: 5.2.0
 absorbed_from:
+  - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-play-redesign-drafts@2026-09-13
   - features/2026-09-10-review-checkpoints@2026-09-13
@@ -35,12 +36,12 @@ surfaces:
 
 | Screen | Journeys served | Implemented surface |
 |---|---|---|
-| [01 Marketing](01-marketing-page.md) | J1 | Static site, install options and public counters |
+| [01 Marketing](01-marketing-page.md) | J1 | Static site, native/Docker commands and public counters |
 | [02 First-run notice](02-first-run-notice.md) | J1, J2 | Local telemetry/tutorial entry |
 | [03 Settings](03-settings.md) | J2, J6 | Keys, CLI paths, voices, catalogue, storage and diagnostics |
-| [04 Prompts](04-prompts.md) | J2 | Prompt library |
-| [05 Prompt editor](05-prompt-editor.md) | J2 | Prompt body and slots |
-| [06 Play](06-play.md) | J2, J3, J4, J7 | Durable draft, Review, readiness and Start |
+| [04 Prompts](04-prompts.md) | J2 | Four prompt kinds, including Narration Preparation |
+| [05 Prompt editor](05-prompt-editor.md) | J2 | Prompt body, slots and explicit narration starter |
+| [06 Play](06-play.md) | J2, J3, J4, J7 | Durable draft, optional narration preparation, Review and Start |
 | [07 Projects](07-projects.md) | J3, J6 | Project list |
 | [08 Project](08-project.md) | J3, J4, J5, J6, J7 | Progress, editors, rebuild, checkpoints and history |
 | Templates (not separately drawn) | J7, J8 | `packages/web/src/routes/templates.tsx` |

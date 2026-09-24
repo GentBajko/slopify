@@ -1,5 +1,6 @@
 ---
 absorbed_from:
+  - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-09-pausable-optional-runs@2026-09-10
   - features/2026-09-10-subtitles-fonts@2026-09-10
   - features/2026-09-10-play-redesign-drafts@2026-09-13
@@ -61,6 +62,8 @@ Project title, generated article prompt or supplied article text, View/Create pr
 ## Outputs
 
 Audio, Images, Thumbnail and Export have applicable Generate/Provide/Off choices. Audio includes provider/model/voice, intro/outro and Advanced Whole/Paragraph/Every N words/Every N characters controls. Image prompts have individual counts; supplied files retain names and order with Remove/Reattach actions. Export explains MP4, silent MP4, combined WAV or individual outputs. Active thumbnail generation can expose its own providers (`packages/web/src/play/outputs-section.tsx:9`, `packages/web/src/play/media-rails.tsx`).
+
+Narration Preparation appears under generated Audio, defaulting to Off. Selecting a saved prompt reveals View/Create and shared-keyword links, explains the extra LLM call per logical group/entry and shows an actionable Inworld TTS-2 compatibility error. Shared text-generation controls remain reachable for a supplied article. Hidden choices persist but are inactive with Audio Off/Provide. Review includes the frozen prompt, LLM cost and unknown steering-character overhead (`packages/web/src/play/narration-preparation.tsx`, `content-section.tsx`, `review-summary.tsx`).
 
 ## Style
 

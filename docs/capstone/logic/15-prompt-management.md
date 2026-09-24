@@ -1,4 +1,6 @@
 ---
+absorbed_from:
+  - features/2026-09-24-narration-preparation@2026-09-24
 scenario: prompt-management
 mockup_row: S15
 screens: [04-prompts, 05-prompt-editor, 06-play, 08-project]
@@ -19,7 +21,7 @@ Creating, editing, duplicating, and deleting prompts and intro/outro entries, an
 
 ## Steps
 
-1. Entities: prompts of kind article, image, thumbnail; intro/outro entries with a category (intro or outro) and a mode (Text or LLM). One rule set for all.
+1. Entities: prompts of kind article, image, thumbnail and narration (labelled Narration Preparation); intro/outro entries with a category (intro or outro) and a mode (Text or LLM). One rule set for all.
 2. Save: name required and unique within its kind or category, compared case-insensitively; body required, non-empty; Save blocked while a lint error exists (scenario 03); kind or category may be changed after creation. A save overwrites; no version history.
 3. Duplicate: a copy named "<name> copy"; if that name exists, the user renames before saving (follows the uniqueness rule).
 4. Delete: removes the template. Existing projects keep their stored rendered text (scenario 03) and show the stored name marked "(deleted)" in the project header. A prompt selected on an open Play form is deselected and its fields disappear (assumed; scenario 04 rebuilds from saved bodies at click).
@@ -27,6 +29,8 @@ Creating, editing, duplicating, and deleting prompts and intro/outro entries, an
 
 ## Branches
 
+- Narration Preparation's editor offers Use documentary starter. It fills only the unsaved draft, asks before replacing a nonempty body, and never installs or overwrites a library prompt automatically (`packages/web/src/routes/prompt-editor.tsx`, `lib/narration-starter.ts`).
+- Missing selected narration prompts stay visible for explicit replacement or Off. Project revisions and saved template/schedule snapshots retain the original body independently of library edits/deletion. Migration 0011 preserves existing prompt rows and case-insensitive uniqueness while adding the fourth kind (`packages/app/src/kernel/db/migrations/0011-narration-prompts.sql`, `packages/web/src/play/narration-preparation.tsx`).
 - Name collides within kind → Save refused with the field marked.
 - Prompt used by projects → deletable anyway; projects unaffected.
 

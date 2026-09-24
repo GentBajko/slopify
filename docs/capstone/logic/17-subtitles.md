@@ -1,5 +1,6 @@
 ---
 absorbed_from:
+- features/2026-09-24-narration-preparation@2026-09-24
 - features/2026-09-10-subtitles-fonts@2026-09-10
 - features/2026-09-10-editable-projects@2026-09-12
 scenario: subtitles
@@ -24,7 +25,7 @@ Local English captions align saved spoken text to actual narration. They belong 
 
 - Play chooses Off (default), subtitle files, or burn-in plus files. Active subtitles require narration; WAV permits files only. Font defaults to bundled Barlow Regular, size 48; valid sizes are integers 16–120 (`slices/subtitles/model.ts`, `slices/admission/rules.ts`).
 - Subtitle style and manual cues save in a new project revision, including during active work. Save does not start alignment, narration or rendering. The explicit affected-output preview and Start action authorize local work; changed dependencies remain outdated until then. Earlier work retains its origin revision and publication authority (`slices/revisions/mutations.ts`, `slices/rebuild/{recipe-save,service}.ts`).
-- Uploaded narration must match the saved English article. Generated narration uses its recorded TTS chunk text; intro/outro use the saved segment text (`slices/subtitles/transcript.ts`).
+- Uploaded narration must match the saved English article. Prepared generated narration uses exact saved `spokenText` for body/intro/outro, never delivery tags or bracket stripping; missing required clean payload is an error. Off/legacy requests retain their plain request-text path (`slices/rebuild/runtime-export-inputs.ts`, `slices/subtitles/transcript.ts`).
 
 ## Steps
 

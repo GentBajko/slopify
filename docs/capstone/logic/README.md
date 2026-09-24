@@ -3,6 +3,7 @@ generated_at_commit: 4cfe3473f74d
 capstone_version: 5.2.0
 generated_date: '2026-09-13'
 absorbed_from:
+  - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-play-redesign-drafts@2026-09-13
   - features/2026-09-10-review-checkpoints@2026-09-13
@@ -31,7 +32,7 @@ Use a scenario when changing one of the listed workflows. Article is the only re
 | 05 Provided outputs | [05-provided-outputs.md](05-provided-outputs.md) |
 | 06 Research | [06-research.md](06-research.md) |
 | 07 Article writing | [07-article-writing.md](07-article-writing.md) |
-| 08 Narration | [08-narration.md](08-narration.md) |
+| 08 Narration, optional cue preparation and clean/script downloads | [08-narration.md](08-narration.md) |
 | 09 Image generation | [09-image-generation.md](09-image-generation.md) |
 | 10 Thumbnail prompt by LLM | [10-thumbnail-prompt-by-llm.md](10-thumbnail-prompt-by-llm.md) |
 | 11 Video assembly | [11-video-assembly.md](11-video-assembly.md) |

@@ -1,5 +1,6 @@
 ---
 absorbed_from:
+  - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-10-subtitles-fonts@2026-09-10
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-play-redesign-drafts@2026-09-13
@@ -55,6 +56,8 @@ Posture: stop and confirm. A dialog precedes each of these, names the consequenc
 - Subtitles default Off; selecting files or burn-in reveals font, size, upload and a reduced-scale preview. Audio Off disables caption configuration, Video Off permits files only. An unfinished font upload remains recoverable outside inactive controls through Keep current font. The active controls explain local English timing and the first-use model download (`packages/web/src/subtitles/controls.tsx`).
 - On the project page, the instructions sent to the LLM sit behind a "Show instructions" toggle per stage; sources and glossary files are links beside the article, not inline.
 - Dialogs carry no secondary options.
+
+Narration Preparation follows optional Audio disclosure: Off by default, a named saved prompt when enabled, a link to shared text generation for supplied articles, and focused correction for missing prompts/slots or unsupported TTS models. Current and historical downloads distinguish unchanged narration text from tagged TTS script (`packages/web/src/play/narration-preparation.tsx`, `packages/web/src/project/narration-downloads.tsx`).
 
 ## Input burden
 

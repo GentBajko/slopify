@@ -1,5 +1,6 @@
 ---
 absorbed_from:
+- features/2026-09-24-narration-preparation@2026-09-24
 - features/2026-09-09-pausable-optional-runs@2026-09-10
 - features/2026-09-10-subtitles-fonts@2026-09-10
 - features/2026-09-10-editable-projects@2026-09-12
@@ -98,6 +99,8 @@ Article accepts Generate or Provide. Other stages can be disabled as their sourc
 Generated images expose their prompt and explicit regeneration choice; provided replacements stage their bytes before Save. Images can be added, reordered or removed. Narration groups expose their retained text with text override, replacement audio and regeneration choices. Whole-request narration remains one group. Caption text/start/end edits preserve invalid draft values for correction and apply within the same save/rebuild flow.
 
 Save changes commits the revision without provider requests or rendering. Discard changes drops the local draft. Uploads, font work and unapplied caption edits block Save until resolved. Remote revisions do not overwrite unsaved fields: a conflict offers Reload current revision and discard my draft. Missing saved models, voices or library entries remain visible instead of silently selecting replacements.
+
+Generated Audio edits include optional Narration Preparation and its frozen prompt body. Save retains it without editing the library or starting work. Current Audio and History expose separate Body/Intro/Outro narration text and TTS script downloads; text roles do not mount audio players or inflate audio counts (`packages/web/src/project/revision-narration.tsx`, `narration-downloads.tsx`, `revision-history.tsx`).
 
 ## Rebuild review
 
