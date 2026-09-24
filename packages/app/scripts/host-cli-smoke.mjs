@@ -63,7 +63,7 @@ async function stopHelper() {
 try {
   console.log("Packing and installing the candidate host helper without install scripts...");
   await mkdir(bin, { recursive: true });
-  await mkdir(state);
+  await mkdir(state, { mode: 0o700 });
   await writeFile(join(home, "fixture-only"), "test-owned home");
   const png = Buffer.from(
     "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000b49444154789c636000020000050001a5f645400000000049454e44ae426082",
