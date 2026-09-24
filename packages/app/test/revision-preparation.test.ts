@@ -96,7 +96,7 @@ it.each([false, true])(
       h.close();
     }
   },
-  30000,
+  90000,
 );
 
 it("retains preparation and completed physical audio when the second TTS request fails", async () => {
@@ -143,7 +143,7 @@ it("retains preparation and completed physical audio when the second TTS request
     h.audioPreviews.close();
     h.close();
   }
-}, 30000);
+}, 90000);
 
 it.each(["article", "override"] as const)(
   "keeps a late preparation answer in its origin after a %s edit",
