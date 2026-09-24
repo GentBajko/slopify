@@ -34,7 +34,7 @@ interface Harness {
 
 function harness(
   probe: CliProbe = notFound,
-  models: Pick<AppDeps, "modelsFor" | "fallbackModelsFor" | "catalogue"> = {},
+  models: Pick<AppDeps, "modelsFor" | "fallbackModelsFor" | "catalogue" | "hostCliStatus"> = {},
 ): Harness {
   const paths = layout(mkdtempSync(join(tmpdir(), "slopify-providers-")));
   ensureDirs(paths, { mode: 0o700 });
@@ -194,6 +194,37 @@ describe("DELETE /api/providers/:id/key", () => {
 });
 
 describe("GET /api/providers", () => {
+  it("shows host-managed readiness in providers and diagnostics, and refuses host path edits", async () => {
+    const h = harness(
+      async () => {
+        throw new Error("Local probe must not run");
+      },
+      {
+        hostCliStatus: async (id) => ({
+          id,
+          command: "/host/cli",
+          installed: true,
+          login: "signed-in",
+        }),
+      },
+    );
+    try {
+      const expected = {
+        cliPath: { configured: null, command: "/host/cli", managedOnHost: true },
+        readiness: { kind: "cli", installed: true },
+      };
+      expect(statusOf(await (await h.app.request("/api/providers")).json(), "codex")).toMatchObject(
+        expected,
+      );
+      expect(
+        statusOf(await (await h.app.request("/api/diagnostics")).json(), "codex"),
+      ).toMatchObject(expected);
+      expect((await savePath(h.app, "codex", "/arbitrary/command")).status).toBe(400);
+      expect(cliBinary(h.db, "codex")).toBe("codex");
+    } finally {
+      h.db.close();
+    }
+  });
   it("lists every provider with its readiness and no key material", async () => {
     const { app } = harness();
     await saveKey(app, "openrouter", standIn);

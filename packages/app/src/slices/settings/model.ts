@@ -1,5 +1,6 @@
 // The provider catalogue and the settings domain types.
 
+import type { HostCliId } from "../../kernel/ports/host-cli.js";
 import type { ProviderFamily, Readiness } from "../../kernel/ports/model.js";
 
 export type { ProviderFamily } from "../../kernel/ports/model.js";
@@ -26,7 +27,7 @@ export const providerIds = [
 ] as const;
 export type ProviderId = (typeof providerIds)[number];
 
-export function isLocalCliProvider(id: string): boolean {
+export function isLocalCliProvider(id: string): id is HostCliId {
   return id === "claude-code" || id === "codex" || id === "gemini" || id === "codex-image";
 }
 
@@ -112,7 +113,11 @@ export interface ProviderStatus {
   readonly family: ProviderFamily;
   readonly displayName: string;
   readonly readiness: Readiness;
-  readonly cliPath?: { readonly configured: string | null; readonly command: string };
+  readonly cliPath?: {
+    readonly configured: string | null;
+    readonly command: string;
+    readonly managedOnHost?: boolean;
+  };
 }
 
 export interface Voice {

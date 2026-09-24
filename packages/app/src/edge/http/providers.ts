@@ -24,7 +24,11 @@ const keyBody = z.object({ key: z.string().min(1).max(4096) });
 // generated from; see stagingRoutes.
 export function providerRoutes(deps: AppDeps) {
   const keys: KeysDeps = { db: deps.db, clock: deps.clock };
-  const readiness: ReadinessDeps = { db: deps.db, probe: deps.probe };
+  const readiness: ReadinessDeps = {
+    db: deps.db,
+    probe: deps.probe,
+    hostCliStatus: deps.hostCliStatus,
+  };
   const catalog = createModelCatalog({
     load: deps.modelsFor ?? (() => Promise.reject(new Error("Model catalog unavailable"))),
     fallback: deps.fallbackModelsFor ?? (() => []),

@@ -9,6 +9,7 @@ import type { Hono } from "hono";
 import { buildRegistry } from "./adapter-registry.js";
 import { alignSubtitles } from "./adapters/alignment/index.js";
 import { prepareFfmpeg } from "./adapters/ffmpeg.js";
+import { createHostCliClient } from "./adapters/host-cli/index.js";
 import { nodeRunCli } from "./adapters/llm/run-cli.js";
 import { curateRegistry } from "./catalog/registry.js";
 import { type CatalogueStore, createCatalogueStore } from "./catalog/store.js";
@@ -204,6 +205,10 @@ export async function boot(config: Config): Promise<Boot> {
       flushDelayMs,
     );
     const catalogue = createCatalogueStore({ dataDir: paths.dataDir, fetch: globalThis.fetch });
+    const hostCli =
+      process.env.SLOPIFY_CONTAINER === "1" || process.env.SLOPIFY_HOST_CLI_DIR
+        ? createHostCliClient({ directory: process.env.SLOPIFY_HOST_CLI_DIR })
+        : undefined;
     const registry = curateRegistry(
       buildRegistry({
         db,
@@ -211,6 +216,7 @@ export async function boot(config: Config): Promise<Boot> {
         spawn: nodeRunCli,
         clock,
         probe: nodeCliProbe,
+        hostCli,
       }),
       catalogue,
     );
@@ -323,7 +329,8 @@ export async function boot(config: Config): Promise<Boot> {
       catalogue,
       measureAudio: (path, signal) =>
         probeDurationMs(ffmpeg, path, signal ?? AbortSignal.timeout(30_000), log),
-      providers: () => providerStatuses({ db: updateDb, probe: nodeCliProbe }),
+      providers: () =>
+        providerStatuses({ db: updateDb, probe: nodeCliProbe, hostCliStatus: hostCli?.status }),
       modelsFor: modelSources(registry).modelsFor,
       emit: (projectId, event) => hub.emit(projectId, event),
     };
@@ -382,6 +389,7 @@ export async function boot(config: Config): Promise<Boot> {
       webDist: fileURLToPath(new URL("../dist/web", import.meta.url)),
       flushSoon: flusher.soon,
       probe: nodeCliProbe,
+      hostCliStatus: hostCli?.status,
     });
     const server = await listen(app, config, log);
     const queueTimer = setInterval(() => {

@@ -9,7 +9,11 @@ import type { AppDeps } from "./app.js";
  */
 export function diagnosticsRoutes(deps: AppDeps) {
   return new Hono().get("/", async (c) => {
-    const providers = await providerStatuses({ db: deps.db, probe: deps.probe });
+    const providers = await providerStatuses({
+      db: deps.db,
+      probe: deps.probe,
+      hostCliStatus: deps.hostCliStatus,
+    });
     const projectCount = deps.db.prepare("SELECT count(*) AS count FROM projects").get();
     const schema = deps.db.prepare("SELECT max(version) AS version FROM schema_migrations").get();
     c.header("Cache-Control", "no-store");

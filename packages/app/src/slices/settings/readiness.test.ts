@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
-import { saveCliPath } from "./cli-paths.js";
+import { cliBinary, saveCliPath } from "./cli-paths.js";
 import type { CliProbe } from "./cli-status.js";
 import { saveProviderKey } from "./keys.js";
 import type { ProviderId, ProviderStatus } from "./model.js";
@@ -32,6 +32,37 @@ function statusOf(statuses: readonly ProviderStatus[], id: ProviderId): Provider
 }
 
 describe("providerStatuses", () => {
+  it("uses host readiness and rejects path changes without erasing native overrides", async () => {
+    const deps = harness(installed);
+    await saveCliPath(deps, "codex", process.execPath);
+    const host = {
+      ...deps,
+      probe: async () => {
+        throw new Error("Container probe");
+      },
+      hostCliStatus: async (id: import("../../kernel/ports/host-cli.js").HostCliId) => ({
+        id,
+        command: "/host/codex",
+        installed: true,
+        login: "signed-out" as const,
+        issueKind: "login" as const,
+        issue: "Sign in on the host.",
+      }),
+    };
+    try {
+      expect(statusOf(await providerStatuses(host), "codex")).toMatchObject({
+        cliPath: { configured: null, command: "/host/codex", managedOnHost: true },
+        readiness: { issueKind: "login", issue: "Sign in on the host." },
+      });
+      expect(await saveCliPath(host, "codex", "/never-stat-this")).toMatchObject({
+        ok: false,
+        message: expect.stringContaining("host"),
+      });
+      expect(cliBinary(deps.db, "codex")).toBe(process.execPath);
+    } finally {
+      deps.db.close();
+    }
+  });
   // Listed, not hidden, so Play can grey a row with a reason.
   it("lists every supported provider whether it is ready or not", async () => {
     const statuses = await providerStatuses(harness(notFound));

@@ -91,6 +91,7 @@ describe("cliReadiness", () => {
         kind: "cli",
         installed: true,
         version,
+        issueKind: "version",
         issue: `Codex CLI ${minimumCodexCliVersion} or newer is required; version ${version} is installed. Update Codex CLI and try again.`,
       });
     },
@@ -102,6 +103,7 @@ describe("cliReadiness", () => {
     expect(await cliReadiness(probe, cliProvider("codex"))).toEqual({
       kind: "cli",
       installed: true,
+      issueKind: "version",
       issue: `Slopify could not verify this Codex CLI version. Install Codex CLI ${minimumCodexCliVersion} or newer, then try again.`,
     });
   });

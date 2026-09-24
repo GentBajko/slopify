@@ -1,14 +1,16 @@
 import type { DatabaseSync } from "node:sqlite";
+import type { HostCliPorts } from "../../kernel/ports/host-cli.js";
 import { cliPathStatus } from "./cli-paths.js";
 import type { CliProbe, CliProbeResult } from "./cli-status.js";
 import { cliProbeTimeoutMs, readinessFromProbe } from "./cli-status.js";
 import type { ProviderId, ProviderStatus, Readiness } from "./model.js";
-import { providers } from "./model.js";
+import { isLocalCliProvider, providers } from "./model.js";
 import { keyedProviders } from "./repo.js";
 
 export interface ReadinessDeps {
   readonly db: DatabaseSync;
   readonly probe: CliProbe;
+  readonly hostCliStatus?: HostCliPorts["status"] | undefined;
 }
 
 // Every supported provider is listed, keyed or not, found or not, so Play can grey one out with
@@ -22,6 +24,20 @@ export async function providerStatuses(deps: ReadinessDeps): Promise<readonly Pr
       const base = { id: provider.id, family: provider.family, displayName: provider.displayName };
       if (provider.auth !== "cli")
         return { ...base, readiness: keyedReadiness(keyed, provider.id) };
+      if (deps.hostCliStatus && isLocalCliProvider(provider.id)) {
+        const status = await deps.hostCliStatus(provider.id);
+        return {
+          ...base,
+          cliPath: { configured: null, command: status.command, managedOnHost: true },
+          readiness: {
+            kind: "cli",
+            installed: status.installed,
+            ...(status.version === undefined ? {} : { version: status.version }),
+            ...(status.issueKind === undefined ? {} : { issueKind: status.issueKind }),
+            ...(status.issue === undefined ? {} : { issue: status.issue }),
+          },
+        };
+      }
       const cliPath = cliPathStatus(deps.db, provider.id);
       const probeKey = JSON.stringify([cliPath.command, provider.versionArgs]);
       let result = probes.get(probeKey);

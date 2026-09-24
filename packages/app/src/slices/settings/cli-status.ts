@@ -74,6 +74,7 @@ export function readinessFromProbe(result: CliProbeResult, provider: CliProvider
     return {
       kind: "cli",
       installed: true,
+      issueKind: "version",
       issue: `Slopify could not verify this Codex CLI version. Install Codex CLI ${minimumCodexCliVersion} or newer, then try again.`,
     };
   if (!versionAtLeast(version, minimumCodexCliVersion))
@@ -81,6 +82,7 @@ export function readinessFromProbe(result: CliProbeResult, provider: CliProvider
       kind: "cli",
       installed: true,
       version,
+      issueKind: "version",
       issue: `Codex CLI ${minimumCodexCliVersion} or newer is required; version ${version} is installed. Update Codex CLI and try again.`,
     };
   return { kind: "cli", installed: true, version };

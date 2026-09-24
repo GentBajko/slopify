@@ -3,6 +3,7 @@ import { access, stat } from "node:fs/promises";
 import { extname, isAbsolute } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+import type { HostCliPorts } from "../../kernel/ports/host-cli.js";
 import { type CliProbe, cliProbeTimeoutMs, readinessFromProbe } from "./cli-status.js";
 import { type ProviderId, type ProviderStatus, providerById } from "./model.js";
 import { readSetting, writeSetting } from "./repo.js";
@@ -27,6 +28,7 @@ export interface CliPathStatus {
 export interface CliPathDeps {
   readonly db: DatabaseSync;
   readonly probe: CliProbe;
+  readonly hostCliStatus?: HostCliPorts["status"] | undefined;
 }
 export type SaveCliPathResult =
   | { readonly ok: true; readonly status: ProviderStatus }
@@ -50,6 +52,12 @@ export async function saveCliPath(
   id: ProviderId,
   raw: string,
 ): Promise<SaveCliPathResult> {
+  if (deps.hostCliStatus)
+    return {
+      ok: false,
+      message:
+        "CLI paths are managed on the host. Rerun the Docker launcher after changing installations.",
+    };
   // A slow version probe must not overwrite a later Save or Reset from another tab.
   let queue = saves.get(deps.db);
   if (queue === undefined) {

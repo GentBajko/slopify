@@ -17,6 +17,7 @@ import { elevenLabsTts } from "./adapters/tts/elevenlabs.js";
 import { inworldTts } from "./adapters/tts/inworld.js";
 import { openAiTts } from "./adapters/tts/openai.js";
 import type { Clock } from "./kernel/clock.js";
+import { type HostCliPorts, hostLlmIds } from "./kernel/ports/host-cli.js";
 import type { ImagePort } from "./kernel/ports/image.js";
 import type { LlmPort } from "./kernel/ports/llm.js";
 import type { ProviderFamily } from "./kernel/ports/model.js";
@@ -35,6 +36,7 @@ import { providerStatuses } from "./slices/settings/readiness.js";
 // it does the registry type.
 
 export interface RegistryDeps {
+  readonly hostCli?: HostCliPorts | undefined;
   readonly db: DatabaseSync;
   // Injected rather than reached for, so a test can build the registry without a network
   // or a child process and `main.ts` owns the real ones.
@@ -107,6 +109,11 @@ export function buildRegistry(deps: RegistryDeps): Registry {
     ["codex-image", codexImage({ run: cliFor("codex") })],
   ]);
 
+  if (deps.hostCli) {
+    for (const id of hostLlmIds) llms.set(id, deps.hostCli.llm(id));
+    images.set("codex-image", deps.hostCli.image);
+  }
+
   return {
     llm: (id: string): LlmPort => resolve(llms, "llm", id),
     tts: (id: string): TtsPort => resolve(ttses, "tts", id),
@@ -114,7 +121,13 @@ export function buildRegistry(deps: RegistryDeps): Registry {
     // Every supported provider, keyed or not, found or not, so Play
     // can grey one out with a reason instead of hiding it.
     list: async (): Promise<readonly ProviderListing[]> =>
-      (await providerStatuses({ db: deps.db, probe: deps.probe })).map((status) => ({
+      (
+        await providerStatuses({
+          db: deps.db,
+          probe: deps.probe,
+          hostCliStatus: deps.hostCli?.status,
+        })
+      ).map((status) => ({
         family: status.family,
         id: status.id,
         name: status.displayName,

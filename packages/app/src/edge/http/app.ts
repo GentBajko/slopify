@@ -47,6 +47,9 @@ import { updateRoutes } from "./update.js";
 import { usageRoutes } from "./usage.js";
 
 export interface AppDeps {
+  readonly hostCliStatus?:
+    | import("../../kernel/ports/host-cli.js").HostCliPorts["status"]
+    | undefined;
   readonly drafts?: DraftStartDeps;
   readonly schedules?: ScheduleDeps;
   readonly rebuild?: RebuildDeps;

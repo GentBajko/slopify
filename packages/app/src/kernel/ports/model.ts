@@ -23,6 +23,7 @@ export type Readiness =
       readonly installed: boolean;
       readonly version?: string;
       readonly issue?: string;
+      readonly issueKind?: "missing" | "version" | "login" | "bridge";
     };
 
 export function readinessIsUsable(readiness: Readiness): boolean {
