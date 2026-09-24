@@ -14,6 +14,18 @@ export interface ReservationAnchor {
   readonly fingerprint: string;
 }
 
+export function reservationKey(recipe: ResolvedWorkRecipe, view: RevisionView): string {
+  const key = recipe.input.kind === "tts" ? `${recipe.input.logicalKey}:1` : recipe.key;
+  if (view.revision.fingerprints[key] !== undefined) return key;
+  const future =
+    recipe.input.kind === "tts"
+      ? `audio:${recipe.input.segment}:future`
+      : recipe.input.kind === "llm" && recipe.input.preparation
+        ? `narration:prepare:${recipe.input.preparation.segment}:future`
+        : key;
+  return view.revision.fingerprints[future] === undefined ? key : future;
+}
+
 export function admitInitialRevision(
   deps: RevisionDeps,
   view: RevisionView,

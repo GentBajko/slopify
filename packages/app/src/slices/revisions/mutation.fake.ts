@@ -9,10 +9,10 @@ import { saveRevision } from "./mutations.js";
 import type { PreparedOutput } from "./publish.js";
 import { revisionFixture } from "./revision.fake.js";
 
-export async function mutationFixture(): Promise<
-  ReturnType<typeof revisionFixture> & { readonly base: RevisionView }
-> {
-  const h = revisionFixture();
+export async function mutationFixture(
+  upgradeFrom10 = false,
+): Promise<ReturnType<typeof revisionFixture> & { readonly base: RevisionView }> {
+  const h = revisionFixture(upgradeFrom10);
   const baseline = await ensureBaseline(h.deps, h.projectId);
   if (!baseline.ok) throw new Error("Expected baseline.");
   return { ...h, base: baseline.view };

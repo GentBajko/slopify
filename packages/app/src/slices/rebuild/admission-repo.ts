@@ -13,7 +13,7 @@ import {
 } from "./model.js";
 import { executionSnapshotSchema, planPreview, reviewStillCovers } from "./preview-plan.js";
 import { previewById } from "./repo.js";
-import { insertInvocation } from "./runtime-admission.js";
+import { insertInvocation, reservationKey } from "./runtime-admission.js";
 import { bindNarrationReuse } from "./runtime-narration-reuse.js";
 import { projectStandings } from "./runtime-store.js";
 
@@ -132,7 +132,7 @@ export function admitPreview(
       deps.db
         .prepare("DELETE FROM revision_work_reservations WHERE revision_id=? AND work_key=?")
         .run(view.revision.id, recipe.key);
-      const key = recipe.input.kind === "tts" ? `${recipe.input.logicalKey}:1` : recipe.key;
+      const key = reservationKey(recipe, view);
       const fingerprint = snapshot.anchors[key];
       if (fingerprint === undefined)
         throw new Error("Selected work has no reviewed desired anchor.");

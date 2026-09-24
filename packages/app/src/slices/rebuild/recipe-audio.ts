@@ -90,7 +90,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
               ...(usesNarrationPreparation(config) ? [preparationTemplate(context)] : []),
             ],
           },
-          [text.article.key],
+          [text.article.key, ...preparationKeys(recipes, "body")],
         ),
       );
     recipes.push(...parts);
@@ -140,7 +140,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
                   ...(usesNarrationPreparation(config) ? [preparationTemplate(context)] : []),
                 ],
               },
-              [entry.recipe.key],
+              [entry.recipe.key, ...preparationKeys(recipes, category)],
             ),
           ]
         : narrationParts(
@@ -167,7 +167,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
               preparationTemplate(context),
             ],
           },
-          [entry.recipe.key],
+          [entry.recipe.key, ...preparationKeys(recipes, category)],
         ),
       );
     recipes.push(...parts);
@@ -222,4 +222,10 @@ function chunkingValues(context: RecipeContext): FingerprintValue {
         ? (chunking.characters ?? 3000)
         : null,
   ];
+}
+
+function preparationKeys(recipes: readonly ResolvedWorkRecipe[], segment: string): string[] {
+  return recipes
+    .filter((row) => row.key.startsWith(`narration:prepare:${segment}:`))
+    .map((row) => row.key);
 }

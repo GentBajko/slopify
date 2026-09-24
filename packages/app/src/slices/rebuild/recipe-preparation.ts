@@ -26,6 +26,7 @@ export function preparationTemplate(context: RecipeContext): FingerprintValue {
     "inworld-tts-2",
     1,
     JSON.parse(JSON.stringify({ ...input, thinkingConfig: null })) as FingerprintValue,
+    JSON.parse(JSON.stringify(context.content.narrationOverrides)) as FingerprintValue,
   ];
 }
 
@@ -46,7 +47,6 @@ export function preparationFuture(
         dependency.fingerprint,
         preparationTemplate(context),
         JSON.parse(JSON.stringify(context.config.chunking ?? null)) as FingerprintValue,
-        JSON.parse(JSON.stringify(context.content.narrationOverrides)) as FingerprintValue,
       ],
     },
     [dependency.key],

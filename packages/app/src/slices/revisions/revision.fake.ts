@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fixedClock } from "../../kernel/clock.fake.js";
@@ -26,7 +26,7 @@ const config: RunConfig = {
   silenceGapSeconds: 0,
   rendered: {},
 };
-export function revisionFixture(): {
+export function revisionFixture(upgradeFrom10 = false): {
   readonly deps: RevisionDeps;
   readonly config: RunConfig;
   readonly projectId: string;
@@ -36,6 +36,21 @@ export function revisionFixture(): {
   ensureDirs(paths, { mode: 0o700 });
   const db = openDb(":memory:");
   const clock = fixedClock("2026-09-10T00:00:00.000Z");
+  if (upgradeFrom10) {
+    const directory = new URL("../../kernel/db/migrations/", import.meta.url);
+    for (const file of readdirSync(directory)
+      .filter((name) => name.endsWith(".sql") && Number(name.slice(0, 4)) <= 10)
+      .sort()) {
+      db.exec(readFileSync(new URL(file, directory), "utf8"));
+      db.prepare("INSERT INTO schema_migrations VALUES (?,?)").run(
+        Number(file.slice(0, 4)),
+        clock.now().toISOString(),
+      );
+    }
+    db.prepare(
+      "INSERT INTO prompts VALUES ('original','article','Original','Keep every original detail.','[]','old')",
+    ).run();
+  }
   migrate(db, clock);
   let next = 0;
   const deps: RevisionDeps = {

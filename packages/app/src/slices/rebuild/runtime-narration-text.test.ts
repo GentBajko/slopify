@@ -1,4 +1,5 @@
-import { readFileSync, rmSync } from "node:fs";
+import { readdirSync, readFileSync, rmSync } from "node:fs";
+import { join } from "node:path";
 import { expect, it } from "vitest";
 import { plainText } from "../article/plain.js";
 import { saveRevision } from "../revisions/mutations.js";
@@ -162,6 +163,40 @@ it("refuses missing clean metadata instead of leaking delivery cues into caption
       ),
     };
     expect(() => narrationTextParts(incomplete, plan, "body")).toThrow(/exact clean transcript/);
+  } finally {
+    h.close();
+  }
+});
+
+it("cleans a failed text bundle publication without regenerating or losing audio", async () => {
+  const h = await narrationFixture("Exact narration.", {
+    config,
+    catalogue: preparationCatalogue,
+    answer: () => cues,
+  });
+  try {
+    await h.pump();
+    const old = h.view();
+    const text = old.outputs.find((row) => row.selected && row.output.role === "narration_txt");
+    const audio = old.outputs.find((row) => row.selected && row.output.role === "audio_body");
+    if (!text || !audio) throw new Error("Missing outputs");
+    rmSync(outputPath(h.deps.paths, h.projectId, text.output.path));
+    const directory = join(h.deps.paths.projects, h.projectId, "assets");
+    const before = readdirSync(directory).sort();
+    h.deps.db.exec(
+      "CREATE TRIGGER reject_script BEFORE INSERT ON revision_outputs WHEN json_extract(NEW.descriptor,'$.role')='tts_script' BEGIN SELECT RAISE(ABORT,'script publication failed'); END",
+    );
+    h.calls.length = 0;
+    admitPendingRevision(h.deps, h.view(), preparationCatalogue);
+    await expect(h.pump()).rejects.toThrow("script publication failed");
+    expect(h.calls).toEqual([]);
+    expect(readdirSync(directory).sort()).toEqual(before);
+    expect(
+      h.view().outputs.find((row) => row.selected && row.output.role === "audio_body")?.assetId,
+    ).toBe(audio.assetId);
+    expect(
+      h.view().outputs.find((row) => row.selected && row.output.role === "audio_body")?.available,
+    ).toBe(true);
   } finally {
     h.close();
   }

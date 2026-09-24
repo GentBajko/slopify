@@ -59,8 +59,8 @@ export function createRebuildDeps(base: RevisionDeps, initial: Catalogue = expor
     },
   };
 }
-export async function serviceFixture() {
-  const h = await mutationFixture();
+export async function serviceFixture(upgradeFrom10 = false) {
+  const h = await mutationFixture(upgradeFrom10);
   for (const kind of stageKinds)
     h.deps.db
       .prepare(
@@ -69,8 +69,8 @@ export async function serviceFixture() {
       .run(kind, h.projectId, kind);
   return { ...h, ...createRebuildDeps(h.deps) };
 }
-export async function paidServiceFixture() {
-  const h = await serviceFixture();
+export async function paidServiceFixture(upgradeFrom10 = false) {
+  const h = await serviceFixture(upgradeFrom10);
   const { saveRevision } = await import("../revisions/mutations.js");
   const base = await saveRevision(h.deps, {
     projectId: h.projectId,

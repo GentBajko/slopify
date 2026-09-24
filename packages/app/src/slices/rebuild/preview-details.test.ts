@@ -5,6 +5,40 @@ import { ensureBaseline } from "../revisions/adopt.js";
 import { saveRevision } from "../revisions/mutations.js";
 import { revisionFixture } from "../revisions/revision.fake.js";
 import { planPreview } from "./preview-plan.js";
+import { preparationCatalogue } from "./runtime-narration.fake.js";
+
+it("pins the TTS limit when only unresolved preparation is selected", async () => {
+  const h = revisionFixture();
+  try {
+    h.deps.db.prepare("UPDATE projects SET config=? WHERE id=?").run(
+      JSON.stringify({
+        ...h.config,
+        sources: { ...h.config.sources, article: "generate", audio: "generate" },
+        provided: {},
+        articlePrompt: "Article",
+        narrationPrompt: "Delivery",
+        rendered: { article: "Write a documentary.", narration: "Restrained." },
+        llm: { provider: "openrouter", model: "llm" },
+        audio: { provider: "inworld", model: "inworld-tts-2", voice: "v" },
+      }),
+      h.projectId,
+    );
+    const baseline = await ensureBaseline(h.deps, h.projectId);
+    if (!baseline.ok) throw new Error(JSON.stringify(baseline));
+    const result = planPreview(
+      h.deps,
+      baseline.view,
+      preparationCatalogue,
+      { kind: "selected", workKeys: ["narration:prepare:body:future"] },
+      "selected",
+    );
+    if (!result.ok) throw new Error(JSON.stringify(result));
+    expect(result.value.execution.catalogue.tts).toEqual(preparationCatalogue.tts);
+    expect(result.value.execution.recipes.some((row) => row.input.kind === "tts")).toBe(false);
+  } finally {
+    h.close();
+  }
+});
 
 it("identifies the original narration chunk and changed voice in a selected rebuild", async () => {
   const h = revisionFixture();

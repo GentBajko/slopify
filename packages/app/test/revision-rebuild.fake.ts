@@ -49,8 +49,8 @@ export function tone(): Uint8Array {
   return bytes;
 }
 
-export async function composedFixture(ports: Partial<Registry> = {}) {
-  const h = await paidServiceFixture();
+export async function composedFixture(ports: Partial<Registry> = {}, upgradeFrom10 = false) {
+  const h = await paidServiceFixture(upgradeFrom10);
   for (const voice of ["first", "second", "third", "changed"])
     insertVoice(h.deps.db, { id: voice, name: voice, provider: "openai-tts", voiceId: voice });
   const catalogue = {

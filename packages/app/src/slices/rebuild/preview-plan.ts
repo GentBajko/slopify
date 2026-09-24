@@ -16,6 +16,7 @@ import { recipeInputSchema } from "./recipe-input-schema.js";
 import type { ResolvedWorkRecipe } from "./recipe-model.js";
 import { recipeProviderChoice } from "./recipe-provider-choice.js";
 import { priceRecipe } from "./recipe-work.js";
+import { reservationKey } from "./runtime-admission.js";
 import { narrationOrdinal } from "./runtime-narration-reuse.js";
 import { executionCatalogue } from "./runtime-plan.js";
 
@@ -172,7 +173,7 @@ export function planPreview(
     ),
     anchors: Object.fromEntries(
       recipes.map((recipe) => {
-        const key = recipe.input.kind === "tts" ? `${recipe.input.logicalKey}:1` : recipe.key;
+        const key = reservationKey(recipe, view);
         return [key, view.revision.fingerprints[key] ?? recipe.logicalFingerprint];
       }),
     ),
@@ -233,6 +234,16 @@ function selectedCatalogue(
       return choice === undefined ? [] : [`${choice.family}:${choice.provider}:${choice.model}`];
     }),
   );
+  const audio = view.revision.config.audio;
+  if (
+    audio &&
+    recipes.some(
+      (row) =>
+        (row.input.kind === "llm" && row.input.preparation) ||
+        (row.input.kind === "deferred" && row.input.operation === "narration-preparation"),
+    )
+  )
+    uses.add(`tts:${audio.provider}:${audio.model}`);
   const selected = {
     llm: catalogue.llm.filter((row) => uses.has(`llm:${row.provider}:${row.id}`)),
     tts: catalogue.tts.filter((row) => uses.has(`tts:${row.provider}:${row.id}`)),

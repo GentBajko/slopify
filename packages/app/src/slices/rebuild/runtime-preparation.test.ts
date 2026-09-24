@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import { saveRevision } from "../revisions/mutations.js";
+import { outputPath } from "../storage/layout.js";
 import { admitPendingRevision } from "./legacy-admission.fake.js";
 import { narrationFixture, preparationCatalogue } from "./runtime-narration.fake.js";
 import { executionPlan } from "./runtime-plan.js";
@@ -118,6 +120,13 @@ it("bypasses preparation and TTS for an uploaded logical group", async () => {
     admitPendingRevision(h.deps, saved.view, preparationCatalogue);
     await h.pump();
     expect(h.calls).toEqual([]);
+    for (const role of ["narration_txt", "tts_script"]) {
+      const file = h.view().outputs.find((row) => row.selected && row.output.role === role);
+      if (!file) throw new Error("Missing uploaded narration transcript");
+      expect(readFileSync(outputPath(h.deps.paths, h.projectId, file.output.path), "utf8")).toBe(
+        role === "narration_txt" ? "A short sentence." : "",
+      );
+    }
     expect(
       executionPlan(h.deps, h.view(), preparationCatalogue).recipes.some((row) =>
         row.key.startsWith("narration:prepare:"),
@@ -142,7 +151,7 @@ it("does not submit TTS for invalid cue answers", async () => {
   }
 });
 
-it.each(["title", "voice", "prompt", "source", "regenerate"] as const)(
+it.each(["title", "voice", "prompt", "source", "model", "regenerate"] as const)(
   "preserves preparation appropriately after a %s edit",
   async (change) => {
     const h = await narrationFixture("First sentence. Second sentence.", {
@@ -165,6 +174,7 @@ it.each(["title", "voice", "prompt", "source", "regenerate"] as const)(
             ...old.revision.config,
             ...(change === "title" ? { title: "Renamed" } : {}),
             ...(change === "voice" ? { audio: { ...prepared.audio, voice: "new" } } : {}),
+            ...(change === "model" ? { llm: { ...prepared.llm, model: "another-model" } } : {}),
             ...(change === "prompt"
               ? { rendered: { ...old.revision.config.rendered, narration: "Different style." } }
               : {}),
@@ -186,7 +196,7 @@ it.each(["title", "voice", "prompt", "source", "regenerate"] as const)(
       admitPendingRevision(h.deps, saved.view, preparationCatalogue);
       await h.pump();
       expect(h.calls.filter((call) => call.kind === "llm")).toHaveLength(
-        change === "prompt" || change === "source" ? 1 : 0,
+        change === "prompt" || change === "source" || change === "model" ? 1 : 0,
       );
       expect(
         h
