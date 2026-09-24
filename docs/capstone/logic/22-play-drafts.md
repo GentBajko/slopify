@@ -32,6 +32,8 @@ A local user edits Play, restores a saved draft, or follows the tutorial. Draft 
 
 ## Branches
 
+Host-managed CLI commands are validated through host readiness without comparing their absolute paths with container-local settings. Native path changes still invalidate admission. This check is shared with project rebuilds through `cliPathChanged` (1.4.1 regression correction).
+
 - Reload explicitly adopts saved content. Save as a new draft preserves local edits and forks references; a refused stale fork identity is retired so the next explicit fork can recover safely.
 - New draft first saves existing edits; it does not silently abandon a conflict or network failure.
 - Drafts can be incomplete without being admissible. Only active generation/media choices impose admission requirements, except an owned unfinished font operation needs explicit recovery.

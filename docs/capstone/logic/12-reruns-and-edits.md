@@ -55,6 +55,8 @@ Rebuild affected outputs prepares a preview for the saved revision. The preview 
 
 Start checks the same base, preview identity and acknowledgements again. Changed inputs, expired readiness or a free in-flight join that has become a paid retry require a fresh review. Work that can now be joined without another charge can be reused. Provider readiness runs outside the database transaction, followed by a final atomic recheck before admission.
 
+Host-managed CLI paths are checked by the host helper, not compared with the container's local path settings. Native CLI paths still receive the final change check. Both rebuild and Play admission use `cliPathChanged` in `packages/app/src/slices/settings/cli-paths.ts` (1.4.1 regression correction).
+
 Completed requests and assets within the revision are reused. Retained asynchronous provider jobs can be retrieved without submitting again; their retrieval does not require admitting a replacement job under a changed model or key. An unknown prior submission is reported before an explicit retry because it may already have been billed.
 
 A duplicate Start returns the same admission and work IDs. Transport failure preserves the client's exact request body and idempotency key. A response lost after acceptance cannot authorize a second chargeable start.
