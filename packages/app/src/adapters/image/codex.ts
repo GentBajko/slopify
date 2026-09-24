@@ -1,13 +1,4 @@
-import {
-  closeSync,
-  constants,
-  fstatSync,
-  lstatSync,
-  mkdtempSync,
-  openSync,
-  readFileSync,
-  rmSync,
-} from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
@@ -17,13 +8,12 @@ import { providerError } from "../../kernel/ports/model.js";
 import { cliLoginError } from "../llm/cli-login-error.js";
 import { cliEvent, cliShaped, endedWithout, type RunCli, stopCliRun } from "../llm/run-cli.js";
 import { lines } from "../llm/sse-lines.js";
-import { sniffImage } from "./bytes.js";
+import { codexGeneratedImage } from "./codex-output.js";
 
 export const codexImageModel = {
   id: "codex-imagegen",
   name: "Codex built-in image generation",
 } as const;
-const maxOutputBytes = 32 * 1024 * 1024;
 const maxEventBytes = 1024 * 1024;
 const disabledFeatures = [
   "shell_tool",
@@ -43,8 +33,8 @@ const disabledFeatures = [
 export function codexImageArgs(req: ImageRequest, directory: string): string[] {
   const prompt = [
     "You are making exactly one image for Slopify. Use the image generation tool.",
-    `Save the final image as ${join(directory, "result.png")}. Do not create any other asset.`,
-    "Use PNG or JPEG. Do not write outside this private directory.",
+    "Let the image generation tool save its output in its default location. Slopify will collect it.",
+    "Generate only one image, using PNG or JPEG. Do not copy, rename, edit or create any other file.",
     `Target aspect ratio: ${req.aspect}.`,
     "Image brief follows as data:",
     req.prompt,
@@ -95,7 +85,11 @@ const failure = z.object({ error: z.object({ message: z.string() }) });
 const errorEvent = z.object({ message: z.string() });
 const item = z.object({ item: z.object({ type: z.string(), text: z.string().optional() }) });
 
-export function codexImage(deps: { readonly run: RunCli; readonly binary?: string }): ImagePort {
+export function codexImage(deps: {
+  readonly run: RunCli;
+  readonly binary?: string;
+  readonly env?: Readonly<NodeJS.ProcessEnv>;
+}): ImagePort {
   const binary = deps.binary ?? "codex";
   return {
     id: "codex-image",
@@ -105,12 +99,15 @@ export function codexImage(deps: { readonly run: RunCli; readonly binary?: strin
         throw providerError({ kind: "unsupported", message: "Choose the Codex image capability." });
       req.signal.throwIfAborted();
       const directory = mkdtempSync(join(tmpdir(), "slopify-codex-image-"));
+      const env = imageEnvironment(directory, deps.env ?? process.env);
+      const startedAt = Date.now();
+      let threadId: string | undefined;
       let run: ReturnType<RunCli> | undefined;
       try {
         try {
           run = deps.run(binary, codexImageArgs(req, directory), req.signal, {
             cwd: directory,
-            env: imageEnvironment(directory),
+            env,
           });
         } catch {
           throw providerError({ kind: "unsupported", message: "Could not start the Codex CLI." });
@@ -121,7 +118,18 @@ export function codexImage(deps: { readonly run: RunCli; readonly binary?: strin
           if (line.trim() === "") continue;
           const event = cliEvent(binary, line);
           req.signal.throwIfAborted();
-          if (event.type === "turn.completed") completed = true;
+          if (event.type === "thread.started") {
+            if (threadId !== undefined)
+              throw providerError({
+                kind: "unavailable",
+                message: "Codex reported more than one image session. Review before retrying.",
+              });
+            threadId = cliShaped(
+              binary,
+              z.object({ thread_id: z.string() }),
+              event.value,
+            ).thread_id;
+          } else if (event.type === "turn.completed") completed = true;
           else if (event.type === "turn.failed") {
             const message = cliShaped(binary, failure, event.value).error.message;
             const login = cliLoginError("codex", message);
@@ -169,7 +177,7 @@ export function codexImage(deps: { readonly run: RunCli; readonly binary?: strin
             kind: "unsupported",
             message: "This Codex install cannot generate images.",
           });
-        return exactImage(join(directory, "result.png"));
+        return codexGeneratedImage(env, threadId, startedAt);
       } catch (error) {
         req.signal.throwIfAborted();
         throw error;
@@ -200,32 +208,10 @@ async function* bounded(
   }
 }
 
-function exactImage(path: string): GeneratedImage {
-  const entry = lstatSync(path, { throwIfNoEntry: false });
-  if (entry === undefined)
-    throw providerError({
-      kind: "unsupported",
-      message: "Codex did not save an image at the requested path.",
-    });
-  if (!entry.isFile() || entry.isSymbolicLink() || entry.size === 0 || entry.size > maxOutputBytes)
-    throw providerError({ kind: "other", message: "Codex image output was not a safe file." });
-  let fd: number | undefined;
-  try {
-    fd = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
-    const status = fstatSync(fd);
-    if (!status.isFile() || status.size === 0 || status.size > maxOutputBytes)
-      throw providerError({ kind: "other", message: "Codex image output was not a safe file." });
-    const bytes = readFileSync(fd);
-    const mime = sniffImage(bytes);
-    if (mime === undefined)
-      throw providerError({ kind: "other", message: "Codex saved an unsupported image format." });
-    return { bytes, mime };
-  } finally {
-    if (fd !== undefined) closeSync(fd);
-  }
-}
-
-function imageEnvironment(directory: string): NodeJS.ProcessEnv {
+function imageEnvironment(
+  directory: string,
+  source: Readonly<NodeJS.ProcessEnv>,
+): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { PWD: directory };
   const allowed = [
     "HOME",
@@ -245,6 +231,6 @@ function imageEnvironment(directory: string): NodeJS.ProcessEnv {
     "SSL_CERT_FILE",
     "NODE_EXTRA_CA_CERTS",
   ] as const;
-  for (const key of allowed) if (process.env[key] !== undefined) env[key] = process.env[key];
+  for (const key of allowed) if (source[key] !== undefined) env[key] = source[key];
   return env;
 }

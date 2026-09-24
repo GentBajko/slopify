@@ -56,7 +56,12 @@ export function createHostRuntime(
                 ...(directory === undefined ? {} : { PWD: directory }),
               },
             });
-          yield* factories[id]({ run, binary, readModels: () => models(id) }).complete({
+          yield* factories[id]({
+            run,
+            binary,
+            env: deps.env,
+            readModels: () => models(id),
+          }).complete({
             ...request,
             ...(id === "codex" && request.thinking !== undefined
               ? {
@@ -76,7 +81,7 @@ export function createHostRuntime(
       models: () => codexImage({ run: deps.run }).models(),
       generate: async (request) => {
         const binary = await command("codex-image");
-        return codexImage({ run: deps.run, binary }).generate(request);
+        return codexImage({ run: deps.run, binary, env: deps.env }).generate(request);
       },
     },
   };

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { once } from "node:events";
 import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -239,18 +240,45 @@ try {
   await stopHelper();
   await startHelper(entry);
   await imageRun();
+  console.log("Reading independent documents through all three packaged host CLI adapters...");
+  await run("docker", [
+    "exec",
+    name,
+    "node",
+    "--input-type=module",
+    "-e",
+    `import assert from "node:assert/strict";
+     import {createHostCliClient} from "./packages/app/dist/adapters/host-cli/index.js";
+     const client=createHostCliClient({directory:"/opt/slopify-host"});
+     for(const id of ["claude-code","codex","gemini"]) {
+       let text="";
+       for await(const event of client.llm(id).complete({
+         model:"fixture",messages:[{role:"user",content:"Read the supplied original report."}],
+         documents:[{id:"research-1",title:"Original report",content:"ç🌊".repeat(50000)}],
+         signal:AbortSignal.timeout(30000)
+       })) if(event.type==="delta") text+=event.text;
+       assert.equal(text,"Host fixture answer.");
+     }`,
+  ]);
   const calls = (await readFile(join(home, "calls.jsonl"), "utf8"))
     .trim()
     .split("\n")
     .map(JSON.parse);
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 5);
+  for (const call of calls.slice(2))
+    assert.deepEqual(call.documents, [
+      {
+        id: "research-1",
+        sha256: createHash("sha256").update("ç🌊".repeat(50000)).digest("hex"),
+      },
+    ]);
   assert(
     calls.every(
       (row) => row.home === home && row.uid === process.getuid() && row.cwd !== resolve("."),
     ),
   );
   console.log(
-    "Packaged host bridge smoke passed: host processes, image publication, stable socket mount, no real credentials or paid calls.",
+    "Packaged host bridge smoke passed: host processes, image publication, complete document reads, stable socket mount, no real credentials or paid calls.",
   );
 } finally {
   await exec("docker", ["rm", "-f", name]).catch(() => {});

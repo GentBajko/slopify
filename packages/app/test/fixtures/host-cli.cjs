@@ -1,4 +1,6 @@
-const { appendFileSync, existsSync, readFileSync, writeFileSync } = require("node:fs");
+const { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } = require("node:fs");
+const { createHash, randomUUID } = require("node:crypto");
+const { createRequire } = require("node:module");
 const { basename, join } = require("node:path");
 const { spawn } = require("node:child_process");
 
@@ -29,7 +31,76 @@ if (args.includes("--version")) {
     });
   });
 } else {
-  const prompt = args.at(-1);
+  if (!(provider === "codex" && args[args.indexOf("image_generation") - 1] === "--enable")) {
+    let prompt = "";
+    process.stdin.setEncoding("utf8");
+    process.stdin.on("data", (text) => {
+      prompt += text;
+    });
+    process.stdin.on("end", () => generate(prompt).catch(fail));
+  } else generate(args.at(-1)).catch(fail);
+}
+function fail(error) {
+  console.error(error);
+  process.exitCode = 1;
+}
+async function readDocuments(prompt) {
+  let config;
+  if (provider === "claude" && args.includes("--mcp-config"))
+    config = JSON.parse(readFileSync(args[args.indexOf("--mcp-config") + 1], "utf8")).mcpServers
+      .slopify_research;
+  else if (
+    provider === "codex" &&
+    args.some((arg) => arg.startsWith("mcp_servers.slopify_research.command="))
+  ) {
+    const value = (key) =>
+      JSON.parse(
+        args
+          .find((arg) => arg.startsWith(`mcp_servers.slopify_research.${key}=`))
+          .split("=")
+          .slice(1)
+          .join("="),
+      );
+    config = { command: value("command"), args: value("args") };
+  } else if (provider === "gemini")
+    config = JSON.parse(
+      readFileSync(join(process.env.GEMINI_CLI_HOME, ".gemini", "settings.json"), "utf8"),
+    ).mcpServers?.slopify_research;
+  if (!config) return [];
+  const fromApp = createRequire(config.args[0]);
+  const { Client } = fromApp("@modelcontextprotocol/sdk/client/index.js");
+  const { StdioClientTransport } = fromApp("@modelcontextprotocol/sdk/client/stdio.js");
+  const index = JSON.parse(/Research document index[^\n]*\n([^\n]+)/.exec(prompt)[1]);
+  const client = new Client({ name: "fixture-cli", version: "1" });
+  const documents = [];
+  try {
+    await client.connect(new StdioClientTransport(config));
+    for (const document of index) {
+      let offset = 0;
+      let content = "";
+      do {
+        const result = await client.callTool({
+          name: "read_document",
+          arguments: { id: document.id, offset },
+        });
+        if (result.isError) throw new Error("Fixture document read failed");
+        const page = JSON.parse(result.content[0].text);
+        content += page.text;
+        offset = page.nextOffset;
+      } while (offset !== null);
+      documents.push({
+        id: document.id,
+        sha256: createHash("sha256").update(content).digest("hex"),
+      });
+    }
+  } finally {
+    await client.close();
+  }
+  return documents;
+}
+async function generate(prompt) {
+  const documents = await readDocuments(prompt);
+  const threadId = randomUUID();
   const held = /HOLD_(CANCEL|FINISH|DROP)/.exec(prompt)?.[0];
   const child = held
     ? spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "ignore" })
@@ -44,8 +115,10 @@ if (args.includes("--version")) {
       cwd: process.cwd(),
       home,
       held,
+      documents,
     })}\n`,
   );
+  if (provider === "codex") emit({ type: "thread.started", thread_id: threadId });
   process.on("SIGTERM", () => {
     if (!child) process.exit(0);
     child.once("exit", () => process.exit(0));
@@ -53,9 +126,14 @@ if (args.includes("--version")) {
   });
   const finish = () => {
     if (provider === "codex") {
-      if (args[args.indexOf("image_generation") - 1] === "--enable")
-        writeFileSync(join(process.cwd(), "result.png"), readFileSync(join(home, "image.png")));
-      else
+      if (args[args.indexOf("image_generation") - 1] === "--enable") {
+        const directory = join(home, ".codex", "generated_images", threadId);
+        mkdirSync(directory, { recursive: true });
+        writeFileSync(
+          join(directory, `exec-${randomUUID()}.png`),
+          readFileSync(join(home, "image.png")),
+        );
+      } else
         emit({
           type: "item.completed",
           item: { type: "agent_message", text: "Host fixture answer." },
@@ -66,7 +144,7 @@ if (args.includes("--version")) {
         type: "assistant",
         message: { content: [{ type: "text", text: "Host fixture answer." }] },
       });
-      emit({ type: "result", subtype: "success" });
+      emit({ type: "result", subtype: "success", result: "Host fixture answer." });
     } else {
       emit({ type: "message", role: "assistant", content: "Host fixture answer." });
       emit({ type: "result", status: "success" });

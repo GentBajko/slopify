@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
@@ -32,6 +32,7 @@ const evidence = z.object({
   cwd: z.string(),
   home: z.string(),
   held: z.string().optional(),
+  documents: z.array(z.object({ id: z.string(), sha256: z.string() })),
 });
 async function fixture() {
   const root = await mkdtemp(join(tmpdir(), "sb-e2e-"));
@@ -116,6 +117,34 @@ function alive(pid: number) {
 }
 
 describe.skipIf(process.platform === "win32")("real host processes over the Unix bridge", () => {
+  it.each(["claude-code", "codex", "gemini"] as const)(
+    "delivers independent documents intact through %s and the real reader",
+    async (id) => {
+      const f = await fixture();
+      await f.start();
+      const documents = [
+        {
+          id: "research-1",
+          title: "Original report",
+          content: `${"ç🌊".repeat(50000)}\nSources\nhttps://one.test`,
+        },
+        { id: "editorial-notes", title: "Editorial notes", content: "Keep the originals." },
+      ];
+      const events = await collect(
+        f.client
+          .llm(id)
+          .complete({ ...request("Write an article from all attached documents."), documents }),
+      );
+      expect(events).toContainEqual({ type: "delta", text: "Host fixture answer." });
+      expect((await f.calls())[0]?.documents).toEqual(
+        documents.map((d) => ({
+          id: d.id,
+          sha256: createHash("sha256").update(d.content).digest("hex"),
+        })),
+      );
+      for (const call of await f.calls()) expect(existsSync(call.cwd)).toBe(false);
+    },
+  );
   it("admits five generations, refuses a sixth, and drains them on shutdown", async () => {
     const f = await fixture();
     const server = await f.start();
