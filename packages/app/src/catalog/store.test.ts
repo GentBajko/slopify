@@ -6,15 +6,43 @@ import { createCatalogueStore, parseCatalogue } from "./store.js";
 
 const bundled = readFileSync(new URL("../assets/models.yaml", import.meta.url), "utf8");
 describe("model catalogue", () => {
-  it("ships only valid families, a hard five-request ceiling, and current Gemini IDs", () => {
+  it("ships only API-backed models and a hard five-request ceiling", () => {
     const c = parseCatalogue(bundled);
-    expect(c.llm.filter((m) => m.provider === "gemini").map((m) => m.id)).toEqual([
-      "gemini-3.8-flash",
-      "gemini-3.1-pro-preview",
-    ]);
+    expect(c.llm.filter((m) => ["claude-code", "codex", "gemini"].includes(m.provider))).toEqual(
+      [],
+    );
     expect(c.tts.find((m) => m.id === "inworld-tts-2")?.tts.maxCharacters).toBe(10000);
     expect(() => parseCatalogue(bundled.replace("maxConcurrent: 5", "maxConcurrent: 6"))).toThrow();
     expect(() => parseCatalogue(bundled.replace("provider: inworld", "provider: codex"))).toThrow();
+  });
+  it("accepts an old private catalogue but makes its CLI rows inert", () => {
+    const old = `schemaVersion: 1
+updatedAt: 2026-09-24
+providers:
+  codex: { maxConcurrent: 5 }
+  openrouter: { maxConcurrent: 3 }
+llm:
+  - provider: codex
+    id: stale
+    name: Stale
+    source: https://example.com/old
+    pricing: { inputPerMillionTokens: 999 }
+    llm: { webSearch: true }
+  - provider: openrouter
+    id: api-model
+    name: API Model
+    source: https://example.com/api
+    llm: { webSearch: false }
+image: []
+tts: []
+`;
+    const parsed = parseCatalogue(old);
+    expect(parsed.llm.map((row) => row.id)).toEqual(["api-model"]);
+    expect(parsed.providers).toEqual({ openrouter: { maxConcurrent: 3 } });
+    const dataDir = mkdtempSync(join(tmpdir(), "slopify-old-models-"));
+    const store = createCatalogueStore({ dataDir, bundled: old, fetch: globalThis.fetch });
+    expect(store.models("codex", "llm")).toEqual([]);
+    expect(readFileSync(store.status().path, "utf8")).toBe(old);
   });
   it("creates an editable local file, reloads valid edits, and retains the last good catalogue", () => {
     const dataDir = mkdtempSync(join(tmpdir(), "slopify-models-"));

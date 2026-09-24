@@ -1,4 +1,5 @@
 import type { ModelInfo, ProviderFamily } from "../../kernel/ports/model.js";
+import { isLocalCliProvider } from "./model.js";
 
 export interface ModelCatalog {
   readonly models: readonly ModelInfo[];
@@ -17,7 +18,7 @@ interface CatalogDeps {
 // These marketplaces host models with different input schemas. Discovery alone cannot
 // make an arbitrary endpoint compatible with our image request.
 export function allowsCustomModel(provider: string): boolean {
-  return provider !== "fal" && provider !== "replicate";
+  return provider !== "fal" && provider !== "replicate" && provider !== "codex-image";
 }
 
 const ttlMs = 5 * 60_000;
@@ -59,13 +60,17 @@ export function createModelCatalog(deps: CatalogDeps): {
           // A catalogue is metadata, not generation. Never expose an upstream response
           // here: it can quote credentials that belong only inside its adapter.
           deps.report(provider);
-          const saved = previous?.value.models;
+          const local = isLocalCliProvider(provider);
+          const saved = local ? undefined : previous?.value.models;
           value = {
-            models: saved ?? deps.fallback(provider),
+            models: local ? [] : (saved ?? deps.fallback(provider)),
             ...catalogNotice(provider),
             allowsCustom: allowsCustomModel(provider),
-            warning:
-              saved === undefined
+            warning: local
+              ? provider === "codex-image"
+                ? "Could not check the Codex image capability. Refresh after checking the CLI."
+                : "Could not discover models from this CLI. Enter an exact model ID manually or refresh."
+              : saved === undefined
                 ? "Could not load the model list. Showing bundled choices; refresh to try again."
                 : "Could not refresh the model list. Showing the last loaded choices.",
           };

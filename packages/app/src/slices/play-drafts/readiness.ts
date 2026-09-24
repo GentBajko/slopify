@@ -1,3 +1,4 @@
+import { checkRuntimeModel } from "../../catalog/runtime-models.js";
 import { modelFields } from "../../catalog/validate.js";
 import { readinessIsUsable } from "../../kernel/ports/model.js";
 import type { FieldError } from "../admission/rules.js";
@@ -6,7 +7,7 @@ import type { ProviderStatus } from "../settings/model.js";
 import { hasKey, listVoices } from "../settings/repo.js";
 import type { DraftStartDeps, ResolvedPlayRun } from "./model.js";
 
-function choices(runs: readonly ResolvedPlayRun[]) {
+export function choices(runs: readonly ResolvedPlayRun[]) {
   const selected = runs
     .flatMap(
       ({ draft: d }) =>
@@ -64,11 +65,22 @@ export async function checkDraftReadiness(
       });
       continue;
     }
-    const models = await deps.modelsFor(c.provider, c.family);
-    if (!models.some((m) => m.id === c.model))
+    const result = await checkRuntimeModel(
+      deps.modelsFor,
+      c.provider,
+      c.family,
+      c.model,
+      c.thinking,
+    );
+    if (result === "missing")
       fields.push({
         field: `${c.field}.model`,
         message: "Choose an available model before starting.",
+      });
+    else if (result === "thinking")
+      fields.push({
+        field: `${c.field}.thinking`,
+        message: "Choose a supported thinking setting.",
       });
   }
   return { fields: [...fields, ...localDraftReadiness(deps, runs, providers)], providers };

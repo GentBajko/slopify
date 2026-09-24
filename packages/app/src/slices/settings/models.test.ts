@@ -45,7 +45,7 @@ describe("model catalog", () => {
     expect(JSON.stringify(result)).not.toContain("private");
     expect(reports).toEqual(["elevenlabs"]);
   });
-  it("uses bundled models on a first failure and invalidates them after settings change", async () => {
+  it("does not revive a bundled local CLI list on a discovery failure", async () => {
     let failed = true;
     const catalog = createModelCatalog({
       load: async () => {
@@ -56,10 +56,31 @@ describe("model catalog", () => {
       now: () => 0,
       report: () => {},
     });
-    expect((await catalog.get("gemini", "llm")).models[0]?.id).toBe("default");
+    const failedList = await catalog.get("gemini", "llm");
+    expect(failedList.models).toEqual([]);
+    expect(failedList.allowsCustom).toBe(true);
+    expect(failedList.warning).toContain("manual");
     failed = false;
     catalog.invalidate("gemini");
     expect((await catalog.get("gemini", "llm")).models).toEqual(first);
+  });
+  it("does not present a stale successful CLI list after refresh fails", async () => {
+    let failed = false;
+    const catalog = createModelCatalog({
+      load: async () => {
+        if (failed) throw Error("private discovery detail");
+        return first;
+      },
+      fallback: () => [{ id: "stale", name: "Stale" }],
+      now: () => 0,
+      report: () => {},
+    });
+    await catalog.get("codex", "llm");
+    failed = true;
+    const result = await catalog.get("codex", "llm", true);
+    expect(result.models).toEqual([]);
+    expect(result.warning).toContain("manual");
+    expect(JSON.stringify(result)).not.toContain("private");
   });
   it("does not let a request started before invalidation replace newer models", async () => {
     let finish = (_value: readonly { id: string; name: string }[]) => {};

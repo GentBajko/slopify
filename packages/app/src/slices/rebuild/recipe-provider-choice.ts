@@ -7,6 +7,7 @@ export interface RecipeProviderChoice {
   readonly model: string;
   readonly family: ProviderFamily;
   readonly voice?: string | undefined;
+  readonly thinking?: import("../../kernel/ports/llm.js").ThinkingMode | null | undefined;
 }
 
 export function recipeProviderChoice(

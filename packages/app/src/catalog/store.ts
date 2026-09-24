@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSyn
 import { join } from "node:path";
 import { parse } from "yaml";
 import type { ProviderFamily } from "../kernel/ports/model.js";
+import { isLocalCliProvider } from "../slices/settings/model.js";
 import { type Catalogue, type CatalogueModel, catalogueSchema } from "./schema.js";
 
 export const catalogueSource =
@@ -19,7 +20,16 @@ export interface CatalogueStore {
 }
 export function parseCatalogue(text: string): Catalogue {
   if (Buffer.byteLength(text) > 1024 * 1024) throw new Error("Model catalogue exceeds 1 MB");
-  return catalogueSchema.parse(parse(text, { maxAliasCount: 20, uniqueKeys: true }));
+  const parsed = catalogueSchema.parse(parse(text, { maxAliasCount: 20, uniqueKeys: true }));
+  return {
+    ...parsed,
+    providers: Object.fromEntries(
+      Object.entries(parsed.providers).filter(([id]) => !isLocalCliProvider(id)),
+    ),
+    llm: parsed.llm.filter((row) => !isLocalCliProvider(row.provider)),
+    image: parsed.image.filter((row) => !isLocalCliProvider(row.provider)),
+    tts: parsed.tts.filter((row) => !isLocalCliProvider(row.provider)),
+  };
 }
 export function createCatalogueStore(deps: {
   readonly dataDir: string;

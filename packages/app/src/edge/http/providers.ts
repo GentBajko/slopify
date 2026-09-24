@@ -6,7 +6,7 @@ import { cliPathMaxLength, saveCliPath } from "../../slices/settings/cli-paths.j
 import type { KeysDeps } from "../../slices/settings/keys.js";
 import { keyStatus, removeProviderKey, saveProviderKey } from "../../slices/settings/keys.js";
 import type { ProviderId } from "../../slices/settings/model.js";
-import { providerById, providerIds } from "../../slices/settings/model.js";
+import { isLocalCliProvider, providerById, providerIds } from "../../slices/settings/model.js";
 import { createModelCatalog } from "../../slices/settings/models.js";
 import type { ReadinessDeps } from "../../slices/settings/readiness.js";
 import { providerStatuses } from "../../slices/settings/readiness.js";
@@ -57,7 +57,7 @@ export function providerRoutes(deps: AppDeps) {
       .get("/", async (c) => c.json({ providers: await providerStatuses(readiness) }))
       .get("/:id/models", zValidator("param", providerParam, onInvalid), async (c) => {
         const { id } = c.req.valid("param");
-        if (deps.catalogue)
+        if (deps.catalogue && !isLocalCliProvider(id))
           return c.json({
             models: deps.catalogue.models(id, providerById(id).family).map((m) => ({
               ...m,

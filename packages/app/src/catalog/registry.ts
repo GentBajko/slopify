@@ -2,6 +2,7 @@ import type { LlmEvent } from "../kernel/ports/llm.js";
 import { providerError } from "../kernel/ports/model.js";
 import type { Registry } from "../kernel/ports/registry.js";
 import type { TtsAudio } from "../kernel/ports/tts.js";
+import { isLocalCliProvider } from "../slices/settings/model.js";
 import type { CatalogueStore } from "./store.js";
 
 export function curateRegistry(registry: Registry, catalogue: CatalogueStore): Registry {
@@ -23,6 +24,51 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
     list: registry.list,
     llm: (id) => {
       const port = registry.llm(id);
+      if (isLocalCliProvider(id)) {
+        return {
+          ...port,
+          models: () => port.models(),
+          complete: async function* (request): AsyncGenerator<LlmEvent> {
+            if (request.model.trim() === "")
+              throw providerError({ kind: "unsupported", message: "Choose a model ID." });
+            let models: Awaited<ReturnType<typeof port.models>> | undefined;
+            try {
+              models = await port.models();
+            } catch {
+              // A failed metadata read permits an exact manual ID; generation still
+              // decides whether the installed CLI/account accepts it.
+            }
+            const selected = models?.find((model) => model.id === request.model);
+            if (models !== undefined && selected === undefined)
+              throw providerError({
+                kind: "unsupported",
+                message: "This model is not available in the installed CLI.",
+              });
+            if (
+              request.thinking !== undefined &&
+              selected !== undefined &&
+              !selected.thinkingModes?.includes(request.thinking)
+            )
+              throw providerError({
+                kind: "unsupported",
+                message: "This model does not support the selected thinking setting.",
+              });
+            if (request.webSearch && !port.capabilities.webSearch)
+              throw providerError({
+                kind: "unsupported",
+                message: "This CLI does not support research web search.",
+              });
+            const thinkingConfig =
+              id === "codex" && request.thinking !== undefined
+                ? { effort: request.thinking === "off" ? ("none" as const) : request.thinking }
+                : undefined;
+            yield* port.complete({
+              ...request,
+              ...(request.thinkingConfig === undefined && thinkingConfig ? { thinkingConfig } : {}),
+            });
+          },
+        };
+      }
       return {
         ...port,
         models: async () =>
@@ -62,6 +108,20 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
     },
     image: (id) => {
       const port = registry.image(id);
+      if (id === "codex-image") {
+        return {
+          ...port,
+          models: () => port.models(),
+          generate: async (request) => {
+            if (!(await port.models()).some((model) => model.id === request.model))
+              throw providerError({
+                kind: "unsupported",
+                message: "The Codex image capability is unavailable.",
+              });
+            return port.generate(request);
+          },
+        };
+      }
       return {
         ...port,
         models: async () => catalogue.models(id, "image"),

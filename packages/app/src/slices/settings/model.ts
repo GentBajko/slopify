@@ -25,6 +25,10 @@ export const providerIds = [
 ] as const;
 export type ProviderId = (typeof providerIds)[number];
 
+export function isLocalCliProvider(id: string): boolean {
+  return id === "claude-code" || id === "codex" || id === "gemini" || id === "codex-image";
+}
+
 interface ProviderBase {
   readonly id: ProviderId;
   readonly family: ProviderFamily;

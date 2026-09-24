@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { checkRuntimeModel } from "../../catalog/runtime-models.js";
 import { thinkingModes } from "../../kernel/ports/llm.js";
 import {
   type ModelInfo,
@@ -100,15 +101,16 @@ export async function validateProviderChanges(
     const picked = changes[key];
     if (picked === undefined || fields.some((field) => field.field === key)) continue;
     if (current.allowsCustomModels?.(picked.provider) === true) continue;
-    const models = await current.modelsFor(picked.provider, families[key]);
-    const model = models.find((model) => model.id === picked.model);
-    if (!model) {
+    const result = await checkRuntimeModel(
+      current.modelsFor,
+      picked.provider,
+      families[key],
+      picked.model,
+      picked.thinking,
+    );
+    if (result === "missing") {
       fields.push({ field: `${key}.model`, message: "Choose a model supported by this provider." });
-    } else if (
-      key === "llm" &&
-      picked.thinking &&
-      !model.thinkingModes?.includes(picked.thinking)
-    ) {
+    } else if (result === "thinking") {
       fields.push({ field: `${key}.thinking`, message: "Choose a supported thinking setting." });
     }
   }

@@ -11,7 +11,10 @@ import { ensureDirs, layout } from "../../kernel/paths.js";
 import { resolveFont } from "../fonts/index.js";
 import type { DraftDeps, DraftResult, DraftReviewDeps, PlayDraftDocument } from "./model.js";
 export function must<T>(result: DraftResult<T>): T {
-  if (!result.ok) throw new Error(`Unexpected fixture refusal: ${result.reason}`);
+  if (!result.ok)
+    throw new Error(
+      `Unexpected fixture refusal: ${result.reason} ${JSON.stringify(result.fields)}`,
+    );
   return result.value;
 }
 export function draftFixture(): {
@@ -110,7 +113,23 @@ export function reviewFixture(): Omit<ReturnType<typeof draftFixture>, "deps"> &
     ...h,
     document,
     get deps(): DraftReviewDeps {
-      return { ...h.deps, catalogue, resolveFont: (fontId) => resolveFont(h.deps.paths, fontId) };
+      return {
+        ...h.deps,
+        catalogue,
+        resolveFont: (fontId) => resolveFont(h.deps.paths, fontId),
+        modelsFor: async (provider, family) =>
+          catalogue.models(provider, family).map((model) => ({
+            id: model.id,
+            name: model.name,
+            ...(family === "llm" && "llm" in model
+              ? {
+                  thinkingModes: Object.keys(
+                    model.llm.thinking ?? {},
+                  ) as import("../../kernel/ports/llm.js").ThinkingMode[],
+                }
+              : {}),
+          })),
+      };
     },
   };
 }
@@ -144,7 +163,7 @@ export function startFixture(): Omit<ReturnType<typeof reviewFixture>, "deps"> &
           events.push(...ids);
         },
         providers: async () => [],
-        modelsFor: async () => [],
+        modelsFor: h.deps.modelsFor,
       };
     },
   };

@@ -39,6 +39,7 @@ it.each(cases)(
           const result = resolveReviewInputs(
             {
               ...fixture.deps,
+              modelsFor: async () => unexpected(),
               resolveFont: async () => unexpected(),
               catalogue: {
                 read: unexpected,

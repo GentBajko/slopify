@@ -1,9 +1,11 @@
+import { checkRuntimeModel } from "../../catalog/runtime-models.js";
 import type { Catalogue } from "../../catalog/schema.js";
 import { readinessIsUsable } from "../../kernel/ports/model.js";
 import type { FieldError } from "../admission/rules.js";
 import type { RevisionView } from "../revisions/model.js";
 import { cliPathStatus } from "../settings/cli-paths.js";
 import type { ProviderStatus } from "../settings/model.js";
+import { isLocalCliProvider } from "../settings/model.js";
 import { hasKey, listVoices } from "../settings/repo.js";
 import type { ExecutionSnapshot } from "./preview-plan.js";
 import { requiresNewSubmission } from "./preview-retained.js";
@@ -58,11 +60,22 @@ export async function checkReadiness(
       });
       continue;
     }
-    const models = await deps.modelsFor(choice.provider, choice.family);
-    if (!models.some((row) => row.id === choice.model))
+    const result = await checkRuntimeModel(
+      deps.modelsFor,
+      choice.provider,
+      choice.family,
+      choice.model,
+      choice.family === "llm" ? (choice.thinking ?? undefined) : undefined,
+    );
+    if (result === "missing")
       fields.push({
         field: `${choice.family}.model`,
         message: "Choose an available model before rebuilding.",
+      });
+    else if (result === "thinking")
+      fields.push({
+        field: `${choice.family}.thinking`,
+        message: "Choose a supported thinking setting.",
       });
   }
   return { fields, providers };
@@ -83,7 +96,7 @@ export function localReadiness(
         row.enabled &&
         !row.deprecated,
     );
-    if (model === undefined)
+    if (model === undefined && !isLocalCliProvider(choice.provider))
       fields.push({
         field: `${choice.family}.model`,
         message: "The selected model is no longer available.",
@@ -128,6 +141,7 @@ export function localReadiness(
             "This saved physical request exceeds the current model limit. Regenerate this narration group to plan new parts.",
         });
     } else if (input.kind === "llm") {
+      if (isLocalCliProvider(input.provider)) continue;
       const model = catalogue.llm.find(
         (row) => row.provider === input.provider && row.id === input.model,
       );

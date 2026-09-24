@@ -1,7 +1,8 @@
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { stringify } from "yaml";
 import { createCatalogueStore } from "../../catalog/store.js";
 import type { RunDraft } from "../admission/model.js";
 import { estimateRun } from "./index.js";
@@ -63,6 +64,47 @@ describe("cost planning", () => {
     expect(estimate.unknown).toBe(1);
     expect(estimate.rows.find((r) => r.stage === "Article")?.low).toBeNull();
     expect(estimate.high).toBeGreaterThan(estimate.low);
+  });
+  it("does not price a local CLI from a legacy private YAML row", () => {
+    const dataDir = mkdtempSync(join(tmpdir(), "slopify-legacy-estimate-"));
+    try {
+      const old = catalogue.read().llm[0];
+      if (!old) throw new Error("Missing LLM fixture");
+      const legacy = createCatalogueStore({
+        dataDir,
+        fetch: globalThis.fetch,
+        bundled: stringify({
+          ...catalogue.read(),
+          providers: { ...catalogue.read().providers, codex: { maxConcurrent: 5 } },
+          llm: [
+            ...catalogue.read().llm,
+            {
+              ...old,
+              provider: "codex",
+              id: "priced",
+              pricing: {
+                inputPerMillionTokens: 1,
+                outputPerMillionTokens: 1,
+              },
+            },
+          ],
+        }),
+      });
+      const estimate = estimateRun(
+        {
+          ...draft,
+          sources: { ...draft.sources, article: "generate" },
+          llm: { provider: "codex", model: "priced" },
+        },
+        {},
+        1500,
+        legacy,
+      );
+      expect(estimate.rows.find((row) => row.stage === "Article")?.low).toBeNull();
+      expect(estimate.unknown).toBe(1);
+    } finally {
+      rmSync(dataDir, { recursive: true, force: true });
+    }
   });
   it("keeps missing-catalogue charges unknown rather than reporting a free job", () => {
     const estimate = estimateRun(draft, {}, 1500);

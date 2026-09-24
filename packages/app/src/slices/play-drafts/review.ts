@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { checkRuntimeModel } from "../../catalog/runtime-models.js";
 import { transact } from "../../kernel/db/tx.js";
 import { isMissingFont } from "../fonts/index.js";
 import type { ResolvedFont } from "../fonts/model.js";
@@ -9,6 +10,7 @@ import type {
   PlayReview,
   ResolvedPlayReview,
 } from "./model.js";
+import { choices } from "./readiness.js";
 import { draftRow } from "./repo.js";
 import { resolveReviewInputs, reviewBinding, reviewRefusal } from "./review-inputs.js";
 import { draftViewSchema, playReviewSchema } from "./schema.js";
@@ -41,6 +43,27 @@ export async function resolvePlayReview(
   }
   const after = resolveReviewInputs(deps, parsed.data, font);
   if (!after.ok) return after;
+  const fields = [];
+  for (const choice of choices(after.value.runs)) {
+    const result = await checkRuntimeModel(
+      deps.modelsFor,
+      choice.provider,
+      choice.family,
+      choice.model,
+      choice.thinking,
+    );
+    if (result === "missing")
+      fields.push({
+        field: `${choice.field}.model`,
+        message: "Choose an available model before reviewing.",
+      });
+    else if (result === "thinking")
+      fields.push({
+        field: `${choice.field}.thinking`,
+        message: "Choose a supported thinking setting.",
+      });
+  }
+  if (fields.length) return reviewRefusal(view, fields);
   return reviewBinding(before.value) === reviewBinding(after.value)
     ? after
     : reviewRefusal(view, [], "stale-review");

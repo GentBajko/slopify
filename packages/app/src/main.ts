@@ -71,6 +71,7 @@ import type { ScheduleDeps } from "./slices/schedules/model.js";
 import { settleTerminalScheduleRuns } from "./slices/schedules/repo.js";
 import { createScheduleRunner } from "./slices/schedules/scheduler.js";
 import { nodeCliProbe } from "./slices/settings/cli-status.js";
+import { isLocalCliProvider } from "./slices/settings/model.js";
 import { providerStatuses } from "./slices/settings/readiness.js";
 import { reconcileStorage } from "./slices/storage/reconcile.js";
 import { collectorEndpoint, httpPostEvents } from "./slices/telemetry/collector-client.js";
@@ -495,8 +496,8 @@ export function wireRunner({
     attempts: sqliteAttempts(db, ids),
     clock,
     log,
-    queue: createProviderQueue(
-      (provider) => catalogue.read().providers[provider]?.maxConcurrent ?? 1,
+    queue: createProviderQueue((provider) =>
+      isLocalCliProvider(provider) ? 3 : (catalogue.read().providers[provider]?.maxConcurrent ?? 1),
     ),
   };
   const checkpoints = createCheckpointAuthority<CheckpointRow>({

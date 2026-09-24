@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { inworldTts } from "../adapters/tts/inworld.js";
 import { fixedClock } from "../kernel/clock.fake.js";
+import type { ImagePort } from "../kernel/ports/image.js";
 import type { LlmCompletion, LlmPort } from "../kernel/ports/llm.js";
 import type { Registry } from "../kernel/ports/registry.js";
 import type { TtsPort, TtsRequest } from "../kernel/ports/tts.js";
@@ -14,7 +15,7 @@ const catalogue = createCatalogueStore({
   dataDir: mkdtempSync(join(tmpdir(), "slopify-registry-")),
   fetch: globalThis.fetch,
 });
-function registry(llm?: LlmPort, tts?: TtsPort): Registry {
+function registry(llm?: LlmPort, tts?: TtsPort, image?: ImagePort): Registry {
   return {
     list: async () => [],
     llm: () => {
@@ -26,7 +27,8 @@ function registry(llm?: LlmPort, tts?: TtsPort): Registry {
       return tts;
     },
     image: () => {
-      throw Error("No image");
+      if (!image) throw Error("No image");
+      return image;
     },
   };
 }
@@ -34,7 +36,7 @@ describe("curated provider requests", () => {
   it("forwards supported thinking and rejects unsupported settings before a provider call", async () => {
     const requests: LlmCompletion[] = [];
     const port: LlmPort = {
-      id: "gemini",
+      id: "openrouter",
       capabilities: { streams: true, webSearch: true, reportsUsage: false },
       models: async () => [],
       complete: async function* (r) {
@@ -42,10 +44,10 @@ describe("curated provider requests", () => {
         yield { type: "done", usage: null, finishReason: null };
       },
     };
-    const curated = curateRegistry(registry(port), catalogue).llm("gemini");
+    const curated = curateRegistry(registry(port), catalogue).llm("openrouter");
     const consume = async (thinking: "low" | "off"): Promise<void> => {
       for await (const _event of curated.complete({
-        model: "gemini-3.8-flash",
+        model: "google/gemini-3.8-flash",
         thinking,
         messages: [],
         signal: new AbortController().signal,
@@ -53,7 +55,7 @@ describe("curated provider requests", () => {
       }
     };
     await consume("low");
-    expect(requests[0]?.thinkingConfig).toEqual({ level: "low" });
+    expect(requests[0]?.thinkingConfig).toEqual({ effort: "low" });
     await expect(consume("off")).rejects.toThrow(/thinking/);
     expect(requests).toHaveLength(1);
   });
@@ -160,7 +162,7 @@ describe("curated provider requests", () => {
   it("keeps frozen thinking configuration while the catalogue mapping changes", async () => {
     const requests: LlmCompletion[] = [];
     const port: LlmPort = {
-      id: "gemini",
+      id: "openrouter",
       capabilities: { streams: true, webSearch: true, reportsUsage: false },
       models: async () => [],
       complete: async function* (request) {
@@ -179,10 +181,10 @@ describe("curated provider requests", () => {
               : model,
           ),
     };
-    const curated = curateRegistry(registry(port), live).llm("gemini");
+    const curated = curateRegistry(registry(port), live).llm("openrouter");
     for (const thinkingConfig of [{ level: "low" } as const, null]) {
       for await (const _event of curated.complete({
-        model: "gemini-3.8-flash",
+        model: "google/gemini-3.8-flash",
         thinking: "low",
         thinkingConfig,
         messages: [],
@@ -191,6 +193,95 @@ describe("curated provider requests", () => {
       }
     }
     expect(requests.map((request) => request.thinkingConfig)).toEqual([{ level: "low" }, null]);
+  });
+
+  it("uses discovered Codex choices, thinking and exact IDs instead of YAML", async () => {
+    const requests: LlmCompletion[] = [];
+    const port: LlmPort = {
+      id: "codex",
+      capabilities: { streams: true, webSearch: true, reportsUsage: true },
+      models: async () => [{ id: "installed", name: "Installed", thinkingModes: ["low"] }],
+      complete: async function* (request) {
+        requests.push(request);
+        yield { type: "done", usage: null, finishReason: null };
+      },
+    };
+    const curated = curateRegistry(registry(port), catalogue).llm("codex");
+    expect(await curated.models()).toEqual([
+      { id: "installed", name: "Installed", thinkingModes: ["low"] },
+    ]);
+    const run = async (model: string, thinking?: "low" | "high"): Promise<void> => {
+      for await (const _event of curated.complete({
+        model,
+        ...(thinking ? { thinking } : {}),
+        messages: [],
+        signal: new AbortController().signal,
+      })) {
+      }
+    };
+    await run("installed", "low");
+    expect(requests[0]?.thinkingConfig).toEqual({ effort: "low" });
+    await expect(run("installed", "high")).rejects.toMatchObject({
+      fault: { kind: "unsupported" },
+    });
+    await expect(run("gpt-6-astra")).rejects.toMatchObject({
+      fault: { kind: "unsupported" },
+    });
+    expect(requests).toHaveLength(1);
+  });
+
+  it("allows an exact local LLM ID only when discovery fails", async () => {
+    const requests: LlmCompletion[] = [];
+    const port: LlmPort = {
+      id: "claude-code",
+      capabilities: { streams: true, webSearch: true, reportsUsage: false },
+      models: async () => {
+        throw Error("metadata unavailable");
+      },
+      complete: async function* (request) {
+        requests.push(request);
+        yield { type: "done", usage: null, finishReason: null };
+      },
+    };
+    const curated = curateRegistry(registry(port), catalogue).llm("claude-code");
+    for await (const _event of curated.complete({
+      model: "exact-cli-id",
+      messages: [],
+      signal: new AbortController().signal,
+    })) {
+    }
+    expect(requests[0]?.model).toBe("exact-cli-id");
+  });
+
+  it("validates the adapter-owned Codex image capability outside YAML", async () => {
+    const requests: string[] = [];
+    const port: ImagePort = {
+      id: "codex-image",
+      models: async () => [{ id: "codex-imagegen", name: "Codex built-in image generation" }],
+      generate: async (request) => {
+        requests.push(request.model);
+        return { bytes: new Uint8Array([137, 80, 78, 71]), mime: "image/png" };
+      },
+    };
+    const curated = curateRegistry(registry(undefined, undefined, port), catalogue).image(
+      "codex-image",
+    );
+    expect(await curated.models()).toEqual(await port.models());
+    await curated.generate({
+      model: "codex-imagegen",
+      prompt: "Blue circle",
+      aspect: "16:9",
+      signal: new AbortController().signal,
+    });
+    await expect(
+      curated.generate({
+        model: "stale",
+        prompt: "Blue circle",
+        aspect: "16:9",
+        signal: new AbortController().signal,
+      }),
+    ).rejects.toMatchObject({ fault: { kind: "unsupported" } });
+    expect(requests).toEqual(["codex-imagegen"]);
   });
 });
 

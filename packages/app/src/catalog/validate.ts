@@ -1,5 +1,6 @@
 import type { RunDraft } from "../slices/admission/model.js";
 import type { FieldError } from "../slices/admission/rules.js";
+import { isLocalCliProvider } from "../slices/settings/model.js";
 import type { CatalogueStore } from "./store.js";
 export function modelFields(draft: RunDraft, catalogue?: CatalogueStore): FieldError[] {
   if (!catalogue) return [];
@@ -28,7 +29,7 @@ export function modelFields(draft: RunDraft, catalogue?: CatalogueStore): FieldE
     },
   ] as const;
   for (const { field, family, choice, needed } of checks) {
-    if (!needed || !choice) continue;
+    if (!needed || !choice || isLocalCliProvider(choice.provider)) continue;
     const model = catalogue.models(choice.provider, family).find((m) => m.id === choice.model);
     if (!model)
       fields.push({ field, message: "Choose an enabled model from the current catalogue." });

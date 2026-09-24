@@ -98,6 +98,10 @@ export type DraftResult<T> =
 export interface DraftReviewDeps extends DraftDeps {
   readonly catalogue: CatalogueStore;
   readonly resolveFont: (fontId: string) => Promise<ResolvedFont>;
+  readonly modelsFor: (
+    provider: string,
+    family: import("../../kernel/ports/model.js").ProviderFamily,
+  ) => Promise<readonly import("../../kernel/ports/model.js").ModelInfo[]>;
 }
 export interface ResolvedPlayReview {
   readonly checkpointSet?: readonly ReviewedCheckpoint[] | undefined;
@@ -127,8 +131,4 @@ export interface DraftStartDeps extends DraftReviewDeps {
   readonly emit: StorageDeps["emit"];
   readonly recordStarted: (projectIds: readonly string[]) => void;
   readonly providers: () => Promise<readonly import("../settings/model.js").ProviderStatus[]>;
-  readonly modelsFor: (
-    provider: string,
-    family: import("../../kernel/ports/model.js").ProviderFamily,
-  ) => Promise<readonly import("../../kernel/ports/model.js").ModelInfo[]>;
 }

@@ -5,10 +5,79 @@ import { expect, it } from "vitest";
 import { stringify } from "yaml";
 import { missingFont } from "../fonts/catalog.js";
 import type { ResolvedFont } from "../fonts/model.js";
-import { must, reviewFixture } from "./draft.fake.js";
+import { must, reviewFixture, startFixture } from "./draft.fake.js";
 import { reviewDraft } from "./review.js";
 import { createDraft, readDraft, saveDraft } from "./service.js";
+import { startPlayDraft } from "./start.js";
 import { executionSchema } from "./start-repo.js";
+
+it("uses installed CLI discovery for Review and Start without rewriting the saved ID", async () => {
+  const h = startFixture();
+  try {
+    h.deps.db
+      .prepare("INSERT INTO prompts VALUES (?, 'article', 'Story', 'About {{topic}}', ?, ?)")
+      .run("prompt", JSON.stringify(["topic"]), "same");
+    const id = randomUUID();
+    must(
+      createDraft(h.deps, {
+        id,
+        document: {
+          ...h.document,
+          form: {
+            ...h.document.form,
+            sources: { ...h.document.form.sources, article: "generate" },
+            articlePrompt: "Story",
+            llm: { provider: "codex", model: "exact-saved-id" },
+            values: { topic: "Slopify" },
+          },
+        },
+      }),
+    );
+    const input = { id, baseVersion: 1 };
+    const missing = await reviewDraft({ ...h.deps, modelsFor: async () => [] }, input);
+    expect(missing).toMatchObject({ ok: false, fields: [{ field: "llm.model" }] });
+    const review = must(
+      await reviewDraft(
+        { ...h.deps, modelsFor: async () => [{ id: "exact-saved-id", name: "Saved" }] },
+        input,
+      ),
+    );
+    expect(review.runs[0]?.draft.llm?.model).toBe("exact-saved-id");
+    const base = {
+      ...h.deps,
+      providers: async () => [
+        {
+          id: "codex" as const,
+          family: "llm" as const,
+          displayName: "Codex CLI",
+          readiness: { kind: "cli" as const, installed: true },
+        },
+      ],
+    };
+    expect(
+      await startPlayDraft(
+        { ...base, modelsFor: async () => [] },
+        {
+          draftId: id,
+          baseVersion: 1,
+          reviewId: review.id,
+        },
+      ),
+    ).toMatchObject({ ok: false, reason: "readiness", fields: [{ field: "llm.model" }] });
+    const started = await startPlayDraft(
+      {
+        ...base,
+        modelsFor: async () => {
+          throw new Error("discovery unavailable");
+        },
+      },
+      { draftId: id, baseVersion: 1, reviewId: review.id },
+    );
+    expect(started).toMatchObject({ ok: true });
+  } finally {
+    h.close();
+  }
+});
 
 function narrated(h: ReturnType<typeof reviewFixture>) {
   const tts = h.deps.catalogue.read().tts[0];

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { createCatalogueStore } from "../../catalog/store.js";
 import { fixedClock } from "../../kernel/clock.fake.js";
 import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
@@ -33,7 +34,7 @@ interface Harness {
 
 function harness(
   probe: CliProbe = notFound,
-  models: Pick<AppDeps, "modelsFor" | "fallbackModelsFor"> = {},
+  models: Pick<AppDeps, "modelsFor" | "fallbackModelsFor" | "catalogue"> = {},
 ): Harness {
   const paths = layout(mkdtempSync(join(tmpdir(), "slopify-providers-")));
   ensureDirs(paths, { mode: 0o700 });
@@ -376,11 +377,36 @@ describe("GET /api/providers/:id/models", () => {
     const response = await app.request("/api/providers/gemini/models");
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
-      models: [{ id: "alias", name: "Latest" }],
+      models: [],
       notice: expect.any(String),
       allowsCustom: true,
       warning: expect.any(String),
     });
     expect((await app.request("/api/providers/unknown/models")).status).toBe(400);
+  });
+  it("uses runtime discovery for CLI providers even with a production catalogue", async () => {
+    const catalogue = createCatalogueStore({
+      dataDir: mkdtempSync(join(tmpdir(), "slopify-route-catalogue-")),
+      fetch: globalThis.fetch,
+    });
+    const calls: string[] = [];
+    const { app } = harness(notFound, {
+      catalogue,
+      modelsFor: async (provider) => {
+        calls.push(provider);
+        return [{ id: "installed-id", name: "Installed" }];
+      },
+      fallbackModelsFor: () => [{ id: "stale", name: "Stale" }],
+    });
+    expect(await (await app.request("/api/providers/codex/models")).json()).toMatchObject({
+      models: [{ id: "installed-id", name: "Installed" }],
+      allowsCustom: true,
+    });
+    expect(calls).toEqual(["codex"]);
+    expect(await (await app.request("/api/providers/openrouter/models")).json()).toMatchObject({
+      allowsCustom: false,
+      notice: expect.stringContaining("models.yaml"),
+    });
+    expect(calls).toEqual(["codex"]);
   });
 });
