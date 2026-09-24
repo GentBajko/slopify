@@ -1,4 +1,7 @@
 ---
+host_cli_verified_at_commit: 9bd6517
+absorbed_from:
+  - features/2026-09-24-host-cli-bridge@2026-09-24
 generated_at_commit: f4c4f7b3295a
 capstone_version: 5.2.0
 generated_date: '2026-09-13'
@@ -28,6 +31,11 @@ paths_covered:
 5. Boot recovers interrupted schedule-run claims, ticks schedules immediately and every 15 seconds, and pumps the persisted batch queue every second (`packages/app/src/main.ts:263`, `packages/app/src/main.ts:292`).
 
 ## Branches
+
+- `--docker` detects host CLIs before container mutation. Detected CLIs require one-time helper/startup consent (including lingering); non-interactive use requires --accept-host-cli or explicit --host-cli=off. No CLI means API-only without helper install. Managed setup is Linux/systemd, non-root user only (`packages/app/src/edge/docker.ts:23`).
+- Setup checks/pulls a protocol-compatible image, takes a 30-second lock, installs an exact-version stable helper with scripts disabled, writes only allowlisted paths and activates the dedicated unit. Existing owned healthy configuration is reused. Upgrades pause admissions, refuse active generation and resume on failure; startup waits 30 seconds, then rolls back owned configuration/service with a separate 35-second budget even when setup was canceled. The old native Slopify service is never touched (`packages/app/src/host-cli/install.ts:52`, `packages/app/src/host-cli/service.ts:124`).
+- Docker mounts only the private socket/token share directory read-only, with no home, executable, credential or Docker-socket mount. Container boot never falls back to local CLI execution if helper setup is missing/broken. Directory mounting permits helper restart and fresh requests without container recreation. Existing volumes and completed assets remain; failed content is never silently retried (`packages/app/scripts/docker-run.sh:22`, `packages/app/src/main.ts:208`).
+- Status/disable commands target only slopify-cli-bridge.service. Disabling leaves Docker/API providers, data and host logins intact; it does not disable lingering. Native installs remain direct and need no helper. Full setup/limits/permission details are in [operations](../07-operations.md#processes).
 
 - PATH command, absolute executable, or readable JS/MJS/CJS entry file use the supported launcher (`packages/app/src/kernel/cli-command.ts`).
 - Recognized Windows Node shims resolve to Node plus entry; unknown batch files are rejected.

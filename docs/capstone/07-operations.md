@@ -1,4 +1,5 @@
 ---
+host_cli_verified_at_commit: 9bd6517
 generated_at_commit: 4cfe3473f74d
 generated_date: '2026-09-13'
 capstone_version: 5.2.0
@@ -19,6 +20,7 @@ paths_covered:
   - :(top)packages/app/scripts/**
   - :(top)packages/web/vite.config.ts
 absorbed_from:
+  - features/2026-09-24-host-cli-bridge@2026-09-24
   - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-play-redesign-drafts@2026-09-13
@@ -33,7 +35,17 @@ Observed source: `f4c4f7b3295a` (2026-09-13). Commands below describe the reposi
 
 ## Processes
 
-The Linux Docker launcher is `npx @gentbajko/slopify@latest --docker`; it supplies background execution, restart-always, localhost port 6969 and the `slopify-data` volume. It detects host CLI executables and mounts them read-only; container login remains separate (`packages/app/scripts/docker-run.sh:1`). The app server owns HTTP, SSE, the stage runner, batch pumping, local schedule ticks, telemetry flushing and provider dispatch in one Node process; media, CLI-provider, alignment and update work can create child processes (`packages/app/src/main.ts:96`, `packages/app/src/main.ts:292`, `packages/app/src/main.ts:303`, `packages/app/src/main.ts:411`).
+The Linux Docker launcher is `npx @gentbajko/slopify@latest --docker`; it supplies background execution, restart-always, localhost port 6969 and the `slopify-data` volume. When host CLIs are found, it sets up a dedicated host helper after consent. Docker mounts only its socket/token export directory; the actual CLI processes and logins stay on the host. The app server retains HTTP, SSE, SQLite, runner, schedules, telemetry, API providers and asset publication (`packages/app/src/edge/docker.ts:23`, `packages/app/scripts/docker-run.sh:22`, `packages/app/src/main.ts:208`).
+
+Host CLI scope verified at `9bd6517` on 2026-09-24; unrelated operations retain their historical stamp. Managed setup requires Linux/systemd, Node 26+, Docker access and a non-root invoking user. First consent covers host CLI use and unattended user-service startup, including lingering. Non-interactive setup requires `--accept-host-cli`; `--host-cli=off` selects API-only and skips helper setup. No detected CLIs also means API-only. Plain `docker run` does not install a host service; native installs need no helper (`packages/app/src/edge/cli.ts:25`, `packages/app/src/edge/docker.ts:23`).
+
+The helper root is `$XDG_DATA_HOME/slopify/host-cli` or `~/.local/share/slopify/host-cli`, mode 0700. Stable packages live under `versions/<version>`; configuration/consent are private JSON. Only HOME, PATH, CODEX_HOME, CLAUDE_CONFIG_DIR, XDG configuration/data/cache and certificate paths are captured. Secret environment authentication must be configured on the host; the launcher does not copy API keys or logins. The short Unix socket path is limited to 100 bytes; unsafe ownership, exposed roots and symlinks fail closed. Inner share/token/socket modes permit a different container UID behind the private parent (`packages/app/src/host-cli/environment.ts:1`, `packages/app/src/host-cli/paths.ts:12`).
+
+Setup checks the image's `io.slopify.host-cli-protocol=1` label, pulling once if needed, before changing services. It takes a bounded installer lock, installs the exact package version with dependency scripts disabled, enables only `slopify-cli-bridge.service` and waits up to 30 seconds for health. An unchanged healthy helper is reused. Upgrades pause admissions with SIGHUP, refuse active work and resume with SIGUSR2 on refusal; failed handoff restores owned unit/config state using an independent bounded rollback signal. No old native server service is re-enabled, and lingering is never disabled automatically (`packages/app/src/edge/docker.ts:71`, `packages/app/src/host-cli/install.ts:52`, `packages/app/src/host-cli/service.ts:124`).
+
+The service uses restart-on-failure, control-group cleanup and a five-second shutdown budget. It refuses any live socket listener (a conservative connection check, not an authenticated takeover); only its own stale socket can be removed. Mounting the directory permits reconnect after helper restart. Container reconciliation preserves the named data volume and stopped previous container; it never restarts failed projects (`packages/app/src/host-cli/server.ts:10`, `packages/app/scripts/docker-run.sh:39`).
+
+Update with `docker pull ghcr.io/gentbajko/slopify:latest` followed by `npx @gentbajko/slopify@latest --docker`. Check with `systemctl --user status slopify-cli-bridge.service`; disable with `systemctl --user disable --now slopify-cli-bridge.service`. Disable preserves data, Docker/API providers, credentials and lingering. Rerun the launcher to refresh captured host search/config paths after changing CLI installations (`README.md`, `packages/app/src/host-cli/service.ts:124`).
 
 | Process | Exact local command or internal launch | Dependencies and ownership | Source |
 |---|---|---|---|

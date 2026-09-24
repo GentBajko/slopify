@@ -1,8 +1,10 @@
 ---
+host_cli_verified_at_commit: 9bd6517
 generated_at_commit: 4cfe3473f74d
 capstone_version: 5.2.0
 generated_date: '2026-09-13'
 absorbed_from:
+  - features/2026-09-24-host-cli-bridge@2026-09-24
   - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-play-redesign-drafts@2026-09-13
@@ -26,7 +28,7 @@ Use a scenario when changing one of the listed workflows. Article is the only re
 | Scenario | Reference |
 |---|---|
 | 01 Pipeline lifecycle | [01-pipeline-lifecycle.md](01-pipeline-lifecycle.md) |
-| 02 Provider credentials and voices | [02-provider-credentials.md](02-provider-credentials.md) |
+| 02 Provider credentials, host CLI readiness and voices | [02-provider-credentials.md](02-provider-credentials.md) |
 | 03 Placeholder substitution | [03-placeholder-substitution.md](03-placeholder-substitution.md) |
 | 04 Run admission | [04-run-admission.md](04-run-admission.md) |
 | 05 Provided outputs | [05-provided-outputs.md](05-provided-outputs.md) |
@@ -44,7 +46,7 @@ Use a scenario when changing one of the listed workflows. Article is the only re
 | 17 Subtitles and fonts | [17-subtitles.md](17-subtitles.md) |
 | 18 Cost review and batch queue | [18-cost-review-batch.md](18-cost-review-batch.md) |
 | 19 Model catalogue and thinking controls | [19-catalogue-thinking.md](19-catalogue-thinking.md) |
-| 20 Local boot, CLI and recovery | [20-boot-cli-recovery.md](20-boot-cli-recovery.md) |
+| 20 Local boot, Docker host helper and recovery | [20-boot-cli-recovery.md](20-boot-cli-recovery.md) |
 | 21 In-app updater | [21-app-updater.md](21-app-updater.md) |
 | 22 Play drafts and uploads | [22-play-drafts.md](22-play-drafts.md) |
 | 23 Review checkpoints | [23-review-checkpoints.md](23-review-checkpoints.md) |

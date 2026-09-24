@@ -1,4 +1,5 @@
 ---
+host_cli_verified_at_commit: 9bd6517
 generated_at_commit: 4cfe3473f74d
 generated_date: '2026-09-13'
 capstone_version: 5.2.0
@@ -14,6 +15,7 @@ paths_covered:
   - :(top).github/workflows/**
   - :(top)packages/site/*.test.js
 absorbed_from:
+  - features/2026-09-24-host-cli-bridge@2026-09-24
   - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-play-redesign-drafts@2026-09-13
@@ -27,6 +29,12 @@ Review checkpoint acceptance covers zero/three gate setup, independent closure d
 Inspected source and test configuration at `4cfe3473f74d` on 2026-09-13. Test-run evidence below identifies its own source checkpoint; the file inventory is the current checkout.
 
 ## Layout
+
+Host CLI verification (2026-09-24): colocated protocol/client/status/runtime/service tests plus `packages/app/test/host-cli-e2e.test.ts` exercise real local sockets and fake host child processes without paid calls. Coverage includes auth-before-parse, request/response limits, concurrent metadata/generation gates, cancel isolation, consumer abandonment, deadlines, shutdown, helper restart, one persisted unavailable attempt after lost acceptance, consent, service ownership, busy upgrades and rollback after canceled setup. `systemd-analyze verify` validates a temporary unit without installing it (`packages/app/src/host-cli/service.test.ts:15`).
+
+`packages/app/scripts/host-cli-smoke.mjs` packs the candidate, installs it with scripts disabled under a disposable prefix, runs fake CLIs under a test HOME and connects a disposable container using only its share mount. It checks another container UID, model/status reads, generated image API publication and actual volume bytes, then restarts the helper without recreating Docker. Socket acceptance separately covers cancellation/lost responses. CI runs this after build and the API-only container/FFmpeg/storage smoke; native package and Windows tests remain (`.github/workflows/ci.yml:45`).
+
+Final 1.4.0 candidate: 435 files, 3,357 passing tests and one skipped. Lint/typecheck/build, zero-vulnerability audit, native install smoke and both Docker smokes passed. Real Claude/Codex login status and all three model catalogues were checked read-only; Gemini auth remains unknown. Real paid text/image generation and persistent systemd installation were not tested. The broader historical inventory below is retained, not claimed current.
 
 `npm test` runs `vitest run` from the workspace root. Root Vitest discovers `packages/*/vitest.config.ts`. There are four configured projects: `app` includes `src/**/*.test.ts` and `test/**/*.test.ts`; `web` includes `src/**/*.test.ts` and `src/**/*.test.tsx` under `happy-dom`; `collector` includes `src/**/*.test.ts`; `site` includes root-level `*.test.js`. Application/unit tests are colocated with production modules, while composed application tests live under `packages/app/test` and real HTTP/media journeys under its `e2e` subdirectory. `package.json:11` `vitest.config.ts:3` `packages/app/vitest.config.ts:3` `packages/web/vitest.config.ts:5` `packages/collector/vitest.config.ts:3` `packages/site/vitest.config.ts:3` `packages/app/test/revision-rebuild.test.ts:11` `packages/app/test/e2e/editable-projects.test.ts:39`
 

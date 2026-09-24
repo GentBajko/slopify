@@ -7,6 +7,8 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | Module | Entry point |
 |---|---|
 | CLI and boot sequence | `packages/app/src/edge/cli.ts:19` |
+| Linux Docker launcher and host setup | `packages/app/src/edge/docker.ts:23`, `packages/app/scripts/docker-run.sh:1` |
+| Host CLI helper and authenticated socket transport | `packages/app/src/edge/host-cli.ts:15`, `packages/app/src/host-cli/runtime.ts:16`, `packages/app/src/adapters/host-cli/index.ts:26` |
 | Composition root | `packages/app/src/main.ts:86` |
 | HTTP API and SSE | `packages/app/src/edge/http/*.ts`, `packages/app/src/edge/events/*.ts` |
 | Stage-graph runner and retry wrapper | `packages/app/src/kernel/runner/` |
@@ -74,7 +76,7 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | [mockup/README.md](mockup/README.md) | Mockup index: screens, journeys, scenarios handed to `logic`, assumed items |
 | [mockup/01-marketing-page.md](mockup/01-marketing-page.md) | Screen: marketing page with native and Docker commands |
 | [mockup/02-first-run-notice.md](mockup/02-first-run-notice.md) | Screen: once-per-machine telemetry notice |
-| [mockup/03-settings.md](mockup/03-settings.md) | Screen: API keys, CLI executable paths, voices, playback settings |
+| [mockup/03-settings.md](mockup/03-settings.md) | Screen: API keys, native executable paths, read-only host CLIs, voices, playback |
 | [mockup/04-prompts.md](mockup/04-prompts.md) | Screen: four prompt kinds including Narration Preparation |
 | [mockup/05-prompt-editor.md](mockup/05-prompt-editor.md) | Screen: prompt editor with `{{keyword}}` slots and explicit narration starter |
 | [mockup/06-play.md](mockup/06-play.md) | Screen: durable drafts, optional narration preparation, templates, Review and explicit Start |
@@ -85,7 +87,6 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | [uiux/01-direction.md](uiux/01-direction.md) | Design read, mode map, the control-room direction contract |
 | [uiux/02-system.md](uiux/02-system.md) | Tokens: type, colour per theme, spacing, icons, motion, component library, implementation constraints |
 | [uiux/03-experience.md](uiux/03-experience.md) | Interaction rules every screen applies |
-| [implementation.md](implementation.md) | The approved build plan: module layout, load-bearing code sketches, 25-step build order with verifications, coverage table |
 | [standards.md](standards.md) | Binding code standards the user set; outranks generic best practice |
 | [changelog.md](changelog.md) | Append-only ledger of every stage run and its decisions |
 | [uiux/screens/01-projects.md](uiux/screens/01-projects.md) | Observed implemented surface |
@@ -95,7 +96,7 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | [uiux/screens/05-prompt-editor.md](uiux/screens/05-prompt-editor.md) | Observed implemented surface |
 | [uiux/screens/06-entries.md](uiux/screens/06-entries.md) | Observed implemented surface |
 | [uiux/screens/07-entry-editor.md](uiux/screens/07-entry-editor.md) | Observed implemented surface |
-| [uiux/screens/08-settings.md](uiux/screens/08-settings.md) | Observed implemented surface |
+| [uiux/screens/08-settings.md](uiux/screens/08-settings.md) | Settings with native/host CLI distinction and actionable readiness |
 | [uiux/screens/09-usage.md](uiux/screens/09-usage.md) | Observed implemented surface |
 | [uiux/screens/10-marketing.md](uiux/screens/10-marketing.md) | Observed implemented surface |
 | [uiux/screens/11-first-run-tutorial.md](uiux/screens/11-first-run-tutorial.md) | Observed implemented surface |
@@ -103,4 +104,4 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | [uiux/screens/13-schedules.md](uiux/screens/13-schedules.md) | Observed schedule creation, editing, controls and retained history surface |
 | [uiux/screens/14-templates.md](uiux/screens/14-templates.md) | Observed template capture, application and deletion surface |
 
-| [features/](features/) | Local working specifications and plans for the 1.0 feature chain |
+| [features/](features/) | Local working specifications and plans, including the host CLI bridge |

@@ -1,5 +1,7 @@
 ---
+host_cli_verified_at_commit: 9bd6517
 absorbed_from:
+  - features/2026-09-24-host-cli-bridge@2026-09-24
   - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-10-subtitles-fonts@2026-09-10
   - features/2026-09-10-editable-projects@2026-09-12
@@ -32,7 +34,7 @@ The SPA has eight top-level navigation destinations, three routed detail familie
 | [screens/05-prompt-editor.md](screens/05-prompt-editor.md) | 05 Prompt editor | 03, 15 |
 | [screens/06-entries.md](screens/06-entries.md) | Intros & Outros | 08, 15 |
 | [screens/07-entry-editor.md](screens/07-entry-editor.md) | Intro/outro editor | 03, 08, 15 |
-| [screens/08-settings.md](screens/08-settings.md) | 03 Settings | 02, 16, 19-21 |
+| [screens/08-settings.md](screens/08-settings.md) | 03 Settings; native paths and host-managed CLI status | 02, 16, 19-21 |
 | [screens/09-usage.md](screens/09-usage.md) | Usage | 16 |
 | [screens/10-marketing.md](screens/10-marketing.md) | 01 Marketing page | 16 |
 | [screens/11-first-run-tutorial.md](screens/11-first-run-tutorial.md) | 02 First-run notice and guide | 02, 15, 22 |

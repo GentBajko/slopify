@@ -1,4 +1,7 @@
 ---
+host_cli_verified_at_commit: 9bd6517
+absorbed_from:
+  - features/2026-09-24-host-cli-bridge@2026-09-24
 scenario: provider-credentials
 mockup_row: S13
 screens: [03-settings, 06-play, 08-project]
@@ -35,7 +38,11 @@ The web query is keyed by provider and cached for five minutes. Changing provide
 
 ## Local agent CLI providers
 
-Claude Code, Codex and Gemini CLI are LLM providers without stored API keys (`packages/app/src/slices/settings/model.ts`):
+Docker host mode (verified 2026-09-24) overrides the native path behavior below: resolve the three fixed commands on host PATH, use host login/config and expose read-only effective commands. `cliPath.managedOnHost=true` removes path editing; PUT path is refused without erasing saved native overrides. One injected status source serves Settings, Play, registry, admission, rebuild and diagnostics (`packages/app/src/slices/settings/readiness.ts:27`, `packages/app/src/slices/settings/cli-paths.ts:55`).
+
+Host status probes installation/version and bounded Claude/Codex auth status without generation. Codex text/image share a coalesced five-second cache. Signed-out blocks generation; unknown Gemini auth stays unknown. Login expiry fails once with terminal missing_key guidance. Missing command, login, helper and version issues are separate labels, not all “CLI Update Required”; helper failure never falls back to container executables (`packages/app/src/host-cli/status.ts:80`, `packages/app/src/host-cli/runtime.ts:20`, `packages/web/src/lib/provider-status.ts:3`).
+
+In native mode, Claude Code, Codex and Gemini CLI are LLM providers without stored API keys (`packages/app/src/slices/settings/model.ts`):
 
 - Readiness is computed at request time from the saved executable override or the default PATH command (`claude`, `codex`, `gemini`). A successful `--version` exit marks it installed; a parsed version is optional. Probes run concurrently with a 15-second timeout to allow slower CLI startup. The CLI's own login is used; readiness does not verify authentication (`slices/settings/{readiness,cli-status}.ts`).
 - Settings lists status (installed/version, not found on PATH, or not found at saved path), effective command, Executable path, Save path and login guidance. Pending saves show Checking; failures keep the entered text and previous saved setting. An API key is never requested for these rows (`packages/web/src/components/provider-cli.tsx`).

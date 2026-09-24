@@ -1,4 +1,5 @@
 ---
+host_cli_verified_at_commit: 9bd6517
 generated_at_commit: 4cfe3473f74d
 generated_date: '2026-09-13'
 capstone_version: 5.2.0
@@ -9,6 +10,7 @@ paths_covered:
   - :(top)packages/collector/**
   - :(top)packages/site/**
 absorbed_from:
+  - features/2026-09-24-host-cli-bridge@2026-09-24
   - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-play-redesign-drafts@2026-09-13
@@ -518,15 +520,37 @@ Source: `packages/app/src/slices/settings/model.ts:40`.
 
 ### ProviderStatus
 
+Provider metadata fields below were rechecked against source on 2026-09-24. Host-managed readiness folds known login and helper failures into actionable issues; native readiness keeps its version probe. The broader chapter stamp remains historical.
+
 | Field | Type | Required |
 |---|---|---|
 | id | `ProviderId` | yes |
 | family | `ProviderFamily` | yes |
 | displayName | `string` | yes |
 | readiness | `Readiness` | yes |
-| cliPath | `{ readonly configured: string \| null; readonly command: string }` | no |
+| cliPath | `{ readonly configured: string \| null; readonly command: string; readonly managedOnHost?: boolean }` | no |
 
-Source: `packages/app/src/slices/settings/model.ts:97`.
+Source: `packages/app/src/slices/settings/model.ts:111`. Host mode returns configured=null and managedOnHost=true; saved native overrides remain in SQLite.
+
+### HostCliStatus
+
+| Field | Type | Required |
+|---|---|---|
+| id | `claude-code \| codex \| gemini \| codex-image` | yes |
+| command | `string`, bounded to 4096 characters | yes |
+| installed | `boolean` | yes |
+| version | bounded string | no |
+| login | `signed-in \| signed-out \| unknown` | yes |
+| issueKind | `missing \| version \| login \| bridge` | no |
+| issue | `string`, at most 4096 characters | no |
+
+Source: `packages/app/src/kernel/ports/host-cli.ts:25`. No key/token/raw auth output is returned.
+
+### Host CLI protocol
+
+Strict Zod schemas define protocol 1. LLM body contains model, 1–128 role/content messages, optional thinking and webSearch. Image body contains only model=`codex-imagegen`, prompt and aspect=`16:9|9:16`. Model metadata preserves id/name/group/thinkingModes, capped at 1000 models. Health returns protocol/version/active/accepting. Stream frames are delta, activity, done (usage/finishReason), or typed error; an error caps message text at 4096 characters. No arbitrary command, environment or path fields cross the wire (`packages/app/src/kernel/ports/host-cli.ts:38`).
+
+Byte limits: request 16 MiB, status 64 KiB, models 1 MiB, event including newline 4 MiB, complete stream 64 MiB, image 32 MiB. Prompt/message strings are at most 2 Mi UTF-16 code units and IDs 256 characters; total UTF-8 byte limits still apply. Concurrency is five generations and eight metadata requests. `unavailable` joins provider faults and is terminal in the attempt wrapper; no database migration is needed (`packages/app/src/kernel/ports/host-cli.ts:12`, `packages/app/src/kernel/runner/attempt.ts:28`).
 
 ### Voice
 
@@ -564,6 +588,7 @@ Source: `packages/app/src/slices/settings/cli-paths.ts:19`.
 | thinkingModes | `readonly import("./llm.js").ThinkingMode[]` | no |
 | id | `string` | yes |
 | name | `string` | yes |
+| group | `string` | no |
 
 Source: `packages/app/src/kernel/ports/model.ts:8`.
 
@@ -1499,8 +1524,10 @@ Source: `packages/app/src/slices/rebuild/model.ts:69`. Notes: T is RebuildPrevie
 | hasKey | `boolean` | yes | keyed branch |
 | installed | `boolean` | yes | cli branch |
 | version | `string` | no | cli branch only |
+| issue | `string` | no | cli branch; a detected but incompatible executable is not usable |
+| issueKind | `missing \| version \| login \| bridge` | no | cli branch; distinguishes setup and account failures |
 
-Source: `packages/app/src/kernel/ports/model.ts:17`. Notes: readiness DTOs contain key presence, not key values.
+Source: `packages/app/src/kernel/ports/model.ts:21`. Notes: readiness DTOs contain key presence, not key values. `readinessIsUsable` requires installed and no issue. The host status reader maps known signed-out state into a login issue, blocking use; unknown Gemini login does not claim signed-in. `codex-image` is also a supported provider ID (`packages/app/src/slices/settings/readiness.ts:27`).
 
 **Notes on field values**
 

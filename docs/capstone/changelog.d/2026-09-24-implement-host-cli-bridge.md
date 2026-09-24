@@ -1,0 +1,120 @@
+## 2026-09-24 - implement: host CLI bridge
+key: implement/2026-09-24-host-cli-bridge@Q4
+
+- What: Linux Docker users can use their existing host Claude Code, Codex and Gemini processes and logins for text/research and Codex images.
+- Approach: exact-version host helper, dedicated systemd user service, authenticated bounded Unix-socket domain API; app retains attempts, queue and asset publication.
+- Rejected: manual helper startup adds a reboot step.
+- Rejected: executable mounts execute in the wrong environment.
+- Rejected: credential mounts do not implement host execution.
+- Rejected: arbitrary command RPC, privileged containers and Docker-socket access grant unnecessary host authority.
+- Out of scope: Windows/macOS service installation, remote hosts, SSH and new login automation.
+- Out of scope: new model/image engines, general host commands and copied provider credentials.
+- Out of scope: paid canary generation, live container replacement and retries of the user's failed content.
+- Release: user separately authorized version bump, push and publication after verification; 1.4.0 is the new-feature release.
+- Task 1: terminal missing-login/unavailable failures without changing API retry rules.
+- Task 2: host status, typed schemas and reused adapter composition.
+- Task 3: private token/socket server, bounded routes and cancellation.
+- Task 4: validated port clients without automatic replay or container fallback.
+- Task 5: common host readiness injected into all provider/admission/rebuild/diagnostic callers.
+- Task 6: one-command permission, stable helper install, service lifecycle and volume-preserving Docker reconciliation.
+- Task 7: read-only host commands and distinct readiness labels; install guidance explains host helper versus API-only Docker.
+- Task 8: real fake-CLI/socket acceptance, packed host/container image publication/restart, native/FFmpeg smoke and CI.
+- Verification: final full suite 435 files, 3,357 passed and one skipped; lint, strict typecheck, build and zero-vulnerability audit passed. Native package and Docker smokes run against the 1.4.0 candidate. Temporary systemd unit verification passed; no persistent service installed.
+- Verification: read-only real Claude 2.1.281 and Codex 0.155.1 signed-in; Gemini 0.61.0 auth unknown. All three installed model catalogues read successfully. Paid real-provider generation is not claimed tested.
+- Review loop: four rounds; four confirmed findings fixed (two Important, two Minor), one refuted; final two rounds dry. Fixes cover rollback after setup cancellation, exposed private roots, exact NDJSON bounds and fixture permissions.
+- Divergence: live socket detection refuses any listener conservatively, not only an authenticated helper; only an owned stale socket is removed.
+- Divergence: cancellation/loss acceptance runs with real local sockets and child processes; the Docker harness separately proves package, mount, UID, image storage and restart behavior.
+- Reference scope: absorbed this feature with explicit source checkpoint 9bd6517, preserving unrelated historical broad stamps instead of claiming a repository-wide refresh.
+- Chapter/scenario: `01-architecture.md` — host composition, socket protocol and app/host ownership.
+- Chapter/scenario: `02-models.md` — host status, strict protocol limits and terminal unavailable.
+- Chapter/scenario: `04-data-flow.md` — host execution, cancellation and container image publication.
+- Chapter/scenario: `06-testing.md` — real-socket/fake-process and packaged Docker evidence, with live-call limits.
+- Chapter/scenario: `07-operations.md` — consent, install/upgrade/rollback, private paths and disable/update commands.
+- Chapter/scenario: `logic/02-provider-credentials.md` — host readiness and read-only paths.
+- Chapter/scenario: `logic/09-image-generation.md` — host image-byte transfer and terminal uncertain failures.
+- Chapter/scenario: `logic/13-cancel.md` — per-request host cancellation, cleanup and deadline ownership.
+- Chapter/scenario: `logic/19-catalogue-thinking.md` — host CLI discovery distinct from YAML API catalogues.
+- Chapter/scenario: `logic/20-boot-cli-recovery.md` — one-command helper setup, lifecycle and no container fallback.
+- Chapter/scenario: `mockup/03-settings.md` — read-only host commands versus editable native paths.
+- Chapter/scenario: `uiux/screens/08-settings.md` — host/login/helper error states without an installer UI.
+- Chapter/scenario: `logic/README.md` — updated scenario descriptions.
+- Chapter/scenario: `mockup/README.md` — updated Settings scope.
+- Chapter/scenario: `uiux/README.md` — updated Settings scope.
+- Chapter/scenario: `00-index.md` — host helper/module entries and Settings companion rows.
+- Diff: `.github/workflows/ci.yml`.
+- Diff: `Dockerfile`.
+- Diff: `README.md`.
+- Diff: `packages/app/README.md`.
+- Diff: `packages/app/scripts/container-smoke.sh`.
+- Diff: `packages/app/scripts/docker-run.sh`.
+- Diff: `packages/app/scripts/host-cli-smoke.mjs`.
+- Diff: `packages/app/src/adapter-registry-host.test.ts`.
+- Diff: `packages/app/src/adapter-registry.ts`.
+- Diff: `packages/app/src/adapters/host-cli/index.test.ts`.
+- Diff: `packages/app/src/adapters/host-cli/index.ts`.
+- Diff: `packages/app/src/adapters/host-cli/transport.test.ts`.
+- Diff: `packages/app/src/adapters/host-cli/transport.ts`.
+- Diff: `packages/app/src/adapters/image/codex.test.ts`.
+- Diff: `packages/app/src/adapters/image/codex.ts`.
+- Diff: `packages/app/src/adapters/llm/claude-code-models.test.ts`.
+- Diff: `packages/app/src/adapters/llm/claude-code-models.ts`.
+- Diff: `packages/app/src/adapters/llm/claude-code.test.ts`.
+- Diff: `packages/app/src/adapters/llm/claude-code.ts`.
+- Diff: `packages/app/src/adapters/llm/cli-login-error.test.ts`.
+- Diff: `packages/app/src/adapters/llm/cli-login-error.ts`.
+- Diff: `packages/app/src/adapters/llm/codex.test.ts`.
+- Diff: `packages/app/src/adapters/llm/codex.ts`.
+- Diff: `packages/app/src/edge/cli.ts`.
+- Diff: `packages/app/src/edge/docker.test.ts`.
+- Diff: `packages/app/src/edge/docker.ts`.
+- Diff: `packages/app/src/edge/host-cli.ts`.
+- Diff: `packages/app/src/edge/http/actions.ts`.
+- Diff: `packages/app/src/edge/http/app.ts`.
+- Diff: `packages/app/src/edge/http/diagnostics.ts`.
+- Diff: `packages/app/src/edge/http/host-cli.test.ts`.
+- Diff: `packages/app/src/edge/http/host-cli.ts`.
+- Diff: `packages/app/src/edge/http/providers.test.ts`.
+- Diff: `packages/app/src/edge/http/providers.ts`.
+- Diff: `packages/app/src/host-cli/environment.ts`.
+- Diff: `packages/app/src/host-cli/install.test.ts`.
+- Diff: `packages/app/src/host-cli/install.ts`.
+- Diff: `packages/app/src/host-cli/paths.test.ts`.
+- Diff: `packages/app/src/host-cli/paths.ts`.
+- Diff: `packages/app/src/host-cli/runtime.test.ts`.
+- Diff: `packages/app/src/host-cli/runtime.ts`.
+- Diff: `packages/app/src/host-cli/server.test.ts`.
+- Diff: `packages/app/src/host-cli/server.ts`.
+- Diff: `packages/app/src/host-cli/service.test.ts`.
+- Diff: `packages/app/src/host-cli/service.ts`.
+- Diff: `packages/app/src/host-cli/status.test.ts`.
+- Diff: `packages/app/src/host-cli/status.ts`.
+- Diff: `packages/app/src/kernel/ports/host-cli.test.ts`.
+- Diff: `packages/app/src/kernel/ports/host-cli.ts`.
+- Diff: `packages/app/src/kernel/ports/model.ts`.
+- Diff: `packages/app/src/kernel/runner/attempt.test.ts`.
+- Diff: `packages/app/src/kernel/runner/attempt.ts`.
+- Diff: `packages/app/src/main.ts`.
+- Diff: `packages/app/src/slices/settings/cli-paths.ts`.
+- Diff: `packages/app/src/slices/settings/cli-status.test.ts`.
+- Diff: `packages/app/src/slices/settings/cli-status.ts`.
+- Diff: `packages/app/src/slices/settings/model.ts`.
+- Diff: `packages/app/src/slices/settings/readiness.test.ts`.
+- Diff: `packages/app/src/slices/settings/readiness.ts`.
+- Diff: `packages/app/test/docker-launcher.test.ts`.
+- Diff: `packages/app/test/fixtures/host-cli.cjs`.
+- Diff: `packages/app/test/host-cli-e2e.test.ts`.
+- Diff: `packages/app/test/host-cli-readiness.test.ts`.
+- Diff: `packages/site/install.test.js`.
+- Diff: `packages/site/public/index.html`.
+- Diff: `packages/web/src/components/provider-cli.test.tsx`.
+- Diff: `packages/web/src/components/provider-cli.tsx`.
+- Diff: `packages/web/src/lib/provider-status.test.ts`.
+- Diff: `packages/web/src/lib/provider-status.ts`.
+- Diff: `packages/web/src/play/pickers.test.tsx`.
+- Diff: `packages/web/src/play/pickers.tsx`.
+- Diff: `packages/web/src/project/readiness.test.ts`.
+- Diff: `packages/web/src/project/readiness.ts`.
+- Diff: `packages/web/src/routes/play.test.tsx`.
+- Diff: `packages/web/src/routes/project.test.tsx`.
+- Diff: `packages/app/package.json` and `package-lock.json` carry the separately authorized 1.4.0 bump.
+- Local history: feature spec/plan/review remain ignored; three pre-existing Codex-image fragments remain untouched. Ledger fragments are retained on the feature branch.

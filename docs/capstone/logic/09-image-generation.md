@@ -1,7 +1,9 @@
 ---
+host_cli_verified_at_commit: 9bd6517
 absorbed_from:
-- features/2026-09-09-pausable-optional-runs@2026-09-10
-- features/2026-09-10-editable-projects@2026-09-12
+  - features/2026-09-24-host-cli-bridge@2026-09-24
+  - features/2026-09-09-pausable-optional-runs@2026-09-10
+  - features/2026-09-10-editable-projects@2026-09-12
 scenario: image-generation
 mockup_row: S7
 screens:
@@ -37,6 +39,9 @@ The images stage and prompt-driven thumbnail use revision-bound image recipes, s
 6. Project standings derive from current revision work, preserving separate image/thumbnail stages and exact per-request state. Retained media may remain visible while its replacement is outdated, pending or failed (`slices/rebuild/runtime-store.ts`, `packages/web/src/project/body-images.tsx`).
 
 ## Branches
+
+- Codex CLI is an image provider without a stored API key. Docker sends a strict model/prompt/aspect request to the host helper. The existing Codex adapter owns a private workspace, safe exact-file validation and cleanup; only verified PNG/JPEG bytes up to 32 MiB return. No caller-chosen output path or host filesystem mount is accepted (`packages/app/src/host-cli/runtime.ts:72`, `packages/app/src/edge/http/host-cli.ts:248`).
+- Container publication still writes immutable project-owned assets; completed images survive host-helper loss. Missing/expired CLI login is terminal missing_key, and helper/protocol/truncated-response failure is terminal unavailable without automatic replay. After a submitted connection is lost, the message warns that generation may already have happened and requires reviewed rebuilding (`packages/app/src/adapters/host-cli/index.ts:140`, `packages/app/src/kernel/runner/attempt.ts:28`).
 
 - Thumbnail source: Off → skipped; Generate with a thumbnail prompt → step 4; Generate via LLM → scenario 10; Provide → scenario 05.
 - Mixed generated/supplied rows are supported under Images Generate. Selecting Images Provide while generated rows remain returns a field error telling the user to replace/remove them; Save does not silently choose Generate (`slices/rebuild/recipe-save.ts`).

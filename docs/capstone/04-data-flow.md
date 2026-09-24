@@ -1,4 +1,5 @@
 ---
+host_cli_verified_at_commit: 9bd6517
 generated_at_commit: 4cfe3473f74d
 generated_date: '2026-09-13'
 capstone_version: 5.2.0
@@ -9,6 +10,7 @@ paths_covered:
   - :(top)packages/collector/**
   - :(top)packages/site/**
 absorbed_from:
+  - features/2026-09-24-host-cli-bridge@2026-09-24
   - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-play-redesign-drafts@2026-09-13
@@ -21,6 +23,12 @@ absorbed_from:
 Source snapshot: `7bdb84e3f57ec19c11e21b43cb6502a720156e9f` (2026-09-13). This chapter describes the current implementation.
 
 ## Lifecycles
+
+Host CLI flow verified 2026-09-24 at `9bd6517`: reviewed app work → existing queue/attempt wrapper → bridge-backed port → authenticated Unix socket → host runtime → existing CLI adapter/private workspace → validated events or image bytes → existing container publication. The helper never admits project work or stores a second job ledger. Setup/status/model reads never submit generation (`packages/app/src/main.ts:208`, `packages/app/src/adapters/host-cli/index.ts:26`, `packages/app/src/host-cli/runtime.ts:16`).
+
+Abort, disconnect, abandoned streams and deadlines destroy the matching transport, abort the host job and await adapter process-group/workspace cleanup. Generation slots remain held through cleanup and response completion, so an upgrade cannot treat a draining request as idle. LLM idle time is 120 seconds, reset only by actual events; images have a 300-second total limit. Partial/truncated replies and lost submitted responses become terminal unavailable; explicit user cancellation remains canceled. The client never replays POSTs (`packages/app/src/edge/http/host-cli.ts:134`, `packages/app/src/adapters/host-cli/transport.ts:38`, `packages/app/src/kernel/runner/attempt.ts:146`).
+
+Image results cross as verified PNG/JPEG bytes, never host paths. Existing revision authority decides current versus historical publication; completed assets survive helper loss, and setup/restart does not retry failed content. Unrelated historical data-flow coverage below is not restamped (`packages/app/src/adapters/host-cli/index.ts:140`, `packages/app/src/slices/revisions/publish.ts:1`).
 
 Narration flow verified 2026-09-24: Markdown → plain body → logical chunks/text overrides → cue-only LLM work → bounded tagged TTS paired with exact clean substrings → audio and segment-scoped text downloads. All body preparations settle before physical ordinals materialize (`packages/app/src/slices/rebuild/recipe-audio.ts:46`, `packages/app/src/slices/rebuild/recipe-preparation.ts:55`). Captions join clean source slices, never bracket-stripped scripts (`packages/app/src/slices/rebuild/runtime-narration-text.ts:18`, `packages/app/src/slices/rebuild/runtime-export-inputs.ts:85`). The broad historical snapshot is not advanced.
 

@@ -1,5 +1,8 @@
 ---
-absorbed_from: features/2026-09-09-pausable-optional-runs@2026-09-10
+host_cli_verified_at_commit: 9bd6517
+absorbed_from:
+  - features/2026-09-09-pausable-optional-runs@2026-09-10
+  - features/2026-09-24-host-cli-bridge@2026-09-24
 scenario: cancel
 mockup_row: S11
 screens: [08-project]
@@ -41,6 +44,9 @@ Resume clears the pause and schedules eligible unfinished work. Repeated pause/r
 6. Telemetry counts only calls that completed before the abort; aborted calls contribute nothing.
 
 ## Branches
+
+- Host CLI calls: abort, disconnect, attempt deadline and consumer abandonment close the matching connection and abort only that host operation. The reused adapter terminates its process group and removes its private workspace; helper generation slots remain occupied until cleanup and response completion. Concurrent unrelated jobs remain alive (`packages/app/src/edge/http/host-cli.ts:134`, `packages/app/src/host-cli/runtime.ts:40`, `packages/app/test/host-cli-e2e.test.ts:243`).
+- Host LLM idle limit is 120 seconds, reset by actual activity only; image total limit is 300 seconds. Helper shutdown closes admissions, aborts active jobs and allows five seconds before service control-group cleanup. Connection uncertainty remains terminal unavailable even when an app deadline expires concurrently; explicit user cancellation remains canceled. There is no automatic transport replay (`packages/app/src/host-cli/server.ts:49`, `packages/app/src/kernel/runner/attempt.ts:146`).
 
 - Cancel during a cascade (scenario 12) → same rules; the stages the cascade had not reached stay `pending`.
 - A stage whose output was stored in the same instant as the cancel stays `done`; cancel never rolls back a stored output.

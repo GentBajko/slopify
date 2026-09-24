@@ -1,4 +1,5 @@
 ---
+host_cli_verified_at_commit: 9bd6517
 generated_at_commit: 4cfe3473f74d
 generated_date: '2026-09-13'
 capstone_version: 5.2.0
@@ -14,6 +15,7 @@ paths_covered:
   - :(top)tsconfig*.json
   - :(top).github/workflows/**
 absorbed_from:
+  - features/2026-09-24-host-cli-bridge@2026-09-24
   - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-play-redesign-drafts@2026-09-13
@@ -81,6 +83,12 @@ Narration planning separates `AudioRecipes.mediaFingerprint` (ordered media reso
 
 ### Provider and catalogue boundaries
 
+Host CLI scope verified 2026-09-24 at `9bd6517`: Docker uses a separate host composition root, not mounted executables. `edge/host-cli.ts` loads an allowlisted host environment and composes existing CLI adapters without booting SQLite, FFmpeg or the app. `main.ts` injects bridge-backed ports and the same host-status reader into registry, HTTP, admission, rebuild and diagnostics when `SLOPIFY_CONTAINER=1` or a helper directory is configured. Native installs retain direct adapters and saved paths; API providers stay in the app (`packages/app/src/edge/host-cli.ts:15`, `packages/app/src/host-cli/runtime.ts:16`, `packages/app/src/main.ts:208`, `packages/app/src/adapter-registry.ts:112`). Unrelated chapter coverage retains its historical stamp.
+
+The Linux launcher detects commands on the host PATH, obtains one-time consent, checks the image's protocol label, installs an exact-version helper outside the npx cache and activates `slopify-cli-bridge.service`. It mounts only a private socket/token export directory read-only into Docker. The host user's home, credentials, executables and Docker socket are not mounted. The helper owns command construction; callers cannot provide executable, argv, environment, cwd or file paths (`packages/app/src/edge/docker.ts:23`, `packages/app/src/host-cli/install.ts:52`, `packages/app/src/host-cli/service.ts:124`, `packages/app/scripts/docker-run.sh:22`).
+
+Protocol 1 is authenticated HTTP over a Unix socket only. GET health/status/models returns validated metadata; POST LLM streams typed NDJSON; POST image returns bounded PNG/JPEG bytes. The existing app attempt wrapper remains the only retry/job owner. Helper loss is terminal `unavailable`, never an automatic fallback or replay. Completed images enter the existing container-owned asset publication path (`packages/app/src/edge/http/host-cli.ts:100`, `packages/app/src/adapters/host-cli/index.ts:26`, `packages/app/src/kernel/runner/attempt.ts:28`).
+
 `kernel/ports` defines `LlmPort`, `TtsPort`, `ImagePort`, `Registry`, and `SubtitleAligner`. `Registry` resolves LLM/TTS/image adapters; subtitle alignment is injected separately. `packages/app/src/kernel/ports/registry.ts:1` `packages/app/src/kernel/ports/subtitles.ts:9` `packages/app/src/main.ts:366`
 
 The complete provider registry is: `packages/app/src/adapter-registry.ts:45`
@@ -89,9 +97,11 @@ The complete provider registry is: `packages/app/src/adapter-registry.ts:45`
 | --- | --- |
 | LLM | `openrouter`, `claude-code`, `codex`, `gemini`. `packages/app/src/adapter-registry.ts:60` |
 | TTS | `elevenlabs`, `openai-tts`, `cartesia`, `inworld`. `packages/app/src/adapter-registry.ts:76` |
-| Image | `fal`, `replicate`, `openai-image`, `google-image`. `packages/app/src/adapter-registry.ts:85` |
+| Image | `fal`, `replicate`, `openai-image`, `google-image`, `codex-image`. `packages/app/src/adapter-registry.ts:99` |
 
 Keys are read per request. CLI paths resolve at invocation time through `cliBinary`, so a saved path affects the next attempt. Settings owns `cli.path.<provider>`; blank configuration selects the provider's default binary. `kernel/cli-command.ts` resolves Windows executables and supported npm batch shims to a JavaScript entry executed with Node and an argv array. `packages/app/src/adapter-registry.ts:49` `packages/app/src/adapter-registry.ts:54` `packages/app/src/slices/settings/cli-paths.ts:31` `packages/app/src/kernel/cli-command.ts:11`
+
+CLI-backed model discovery bypasses the YAML catalogue. Host mode invokes the same installed-CLI readers on the host; native mode invokes them locally. Codex images share Codex's command/login and expose their own image capability. Native readiness probes installation/version; host readiness additionally uses bounded Claude/Codex login-status commands, while Gemini login remains unknown until a call reports otherwise (`packages/app/src/host-cli/runtime.ts:31`, `packages/app/src/host-cli/status.ts:55`, `packages/app/src/slices/settings/readiness.ts:27`).
 
 `catalog/store.ts` loads bundled/local YAML, watches local file metadata on reads, keeps the last valid catalogue after invalid changes, and refreshes from the configured GitHub source with backup/atomic replacement. `models(provider,family)` filters to enabled, nondeprecated entries. `catalog/registry.ts` checks model availability, LLM research/thinking support, image aspect ratio, and maximum physical TTS request length. It does not silently split a TTS request; physical splitting belongs to revision planning. Retrieval of an already accepted TTS continuation bypasses new-submission catalogue rejection. `packages/app/src/catalog/store.ts:24` `packages/app/src/catalog/store.ts:38` `packages/app/src/catalog/store.ts:54` `packages/app/src/catalog/store.ts:90` `packages/app/src/catalog/registry.ts:7` `packages/app/src/catalog/registry.ts:79`
 

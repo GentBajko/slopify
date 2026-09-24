@@ -1,4 +1,7 @@
 ---
+host_cli_verified_at_commit: 9bd6517
+absorbed_from:
+  - features/2026-09-24-host-cli-bridge@2026-09-24
 screen: settings
 journeys: [J1-discover-and-install, J2-first-run-setup]
 assumed:
@@ -26,7 +29,8 @@ API keys per provider, the voice list, and the outro card text. Where a fresh in
 | Claude Code CLI Installed, 2.1.89 |
 | Codex CLI Not found on PATH |
 | Gemini CLI Installed, 0.16.0 |
-| Per CLI: Command, Executable path [ ] [Save path] |
+| Native CLI: Command, Executable path [ ] [Save path] |
+| Docker CLI: Command, Runs on your host (read-only) |
 | Text to speech |
 | <TTS provider A> [ ] [Save] |
 | <TTS provider B> [ ] [Save] |
@@ -70,6 +74,8 @@ Provider names are placeholders: `for: stack`. OpenRouter is the one name surfac
 
 ## States
 
+- Docker host-managed CLI rows show the effective host command and “Runs on your host” guidance, without an Executable path input or Save path button. Known login/helper/version/missing errors retain their distinct guidance. Native rows keep editable paths. Play and project controls use “Sign In Required”, “Host Helper Unavailable”, “CLI Update Required” or “CLI Missing” as appropriate (`packages/web/src/components/provider-cli.tsx:84`, `packages/web/src/lib/provider-status.ts:3`).
+
 - CLI provider not found: status line "Not found on PATH" or "Not found at saved path"; greyed out on Play. The entered path remains editable. Checking disables that row until the version probe settles; errors appear inline and leave the previous saved path intact (`packages/web/src/components/provider-cli.tsx`, `logic/02`).
 
 - No keys saved (fresh install): every field empty; whether Play is reachable `rule: logic (S13-credentials)`.
@@ -78,4 +84,4 @@ Provider names are placeholders: `for: stack`. OpenRouter is the one name surfac
 - Removing a key a past project used: effect on that project's re-runs `rule: logic (S13-credentials)`.
 - Voice list empty: TTS Generate cannot pick a voice on 06; what 06 shows `rule: logic (S13-credentials)`.
 
-CLI readiness confirms launch/version only; it does not validate the account's ability to generate. Gemini sign-in is completed in the user's terminal, never by opening browser authentication from a Slopify run. An account/license denial appears on the stage with the adapter's guidance (`packages/app/src/adapters/llm/gemini.ts`).
+Native readiness confirms launch/version only. Host-managed Claude/Codex additionally expose known login failures; Gemini auth status remains unknown rather than guessed. No status check proves paid generation eligibility. Sign-in is completed in the user's host terminal, never by opening authentication from a job (`packages/app/src/host-cli/status.ts:55`, `packages/app/src/adapters/llm/gemini.ts`).

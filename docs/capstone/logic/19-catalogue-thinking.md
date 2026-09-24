@@ -1,4 +1,7 @@
 ---
+host_cli_verified_at_commit: 9bd6517
+absorbed_from:
+  - features/2026-09-24-host-cli-bridge@2026-09-24
 generated_at_commit: 7bdb84e3f57e
 capstone_version: 5.2.0
 generated_date: '2026-09-13'
@@ -30,7 +33,7 @@ paths_covered:
 ## Branches
 
 - Valid local catalogue replaces the current value; failed refresh leaves the prior valid value and returns a visible HTTP error (`packages/app/src/catalog/store.ts:76-92`).
-- Production choices come from the YAML catalogue; legacy discovery remains only when AppDeps has no catalogue (`packages/app/src/edge/http/providers.ts:61`).
+- API-provider choices come from the YAML catalogue. CLI providers bypass YAML and use installed-CLI discovery; Docker invokes the same readers on the host, retaining exact IDs, names, groups and thinking choices. The existing five-minute app model cache, refresh and stale-response protection remain. No CLI model catalogue is hardcoded into the bridge (`packages/app/src/host-cli/runtime.ts:31`, `packages/app/src/adapters/host-cli/index.ts:81`, `packages/app/src/catalog/registry.ts:26`).
 - Saved model IDs may remain visible in the picker, but disabled/unknown IDs are rejected before new calls (`packages/app/src/catalog/validate.ts:35`).
 
 ## Unhappy paths
