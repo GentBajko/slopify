@@ -11,8 +11,10 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
+import { redact } from "../../kernel/log.js";
 import type { GeneratedImage, ImagePort, ImageRequest } from "../../kernel/ports/image.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { cliLoginError } from "../llm/cli-login-error.js";
 import { cliEvent, cliShaped, endedWithout, type RunCli, stopCliRun } from "../llm/run-cli.js";
 import { lines } from "../llm/sse-lines.js";
 import { sniffImage } from "./bytes.js";
@@ -122,17 +124,21 @@ export function codexImage(deps: { readonly run: RunCli; readonly binary?: strin
           if (event.type === "turn.completed") completed = true;
           else if (event.type === "turn.failed") {
             const message = cliShaped(binary, failure, event.value).error.message;
+            const login = cliLoginError("codex", message);
+            if (login) throw login;
             throw providerError({
               kind: /refus|content.policy|safety/i.test(message) ? "refusal" : "other",
-              message: "Codex image generation did not complete.",
+              message: redact(message),
             });
           } else if (event.type === "error") {
             const message = cliShaped(binary, errorEvent, event.value).message;
+            const login = cliLoginError("codex", message);
+            if (login) throw login;
             throw providerError({
               kind: /image.generation|image tool|feature.*unavailable/i.test(message)
                 ? "unsupported"
                 : "other",
-              message: "Codex image generation is unavailable.",
+              message: redact(message),
             });
           } else if (event.type === "item.completed") {
             const { item: value } = cliShaped(binary, item, event.value);
@@ -151,10 +157,13 @@ export function codexImage(deps: { readonly run: RunCli; readonly binary?: strin
         if (ended.error !== null)
           throw providerError({ kind: "unsupported", message: "Could not start the Codex CLI." });
         if (ended.code !== 0 || !completed)
-          throw providerError({
-            kind: unavailable ? "unsupported" : "other",
-            message: endedWithout(binary, ended, run.stderr()),
-          });
+          throw (
+            cliLoginError("codex", run.stderr()) ??
+            providerError({
+              kind: unavailable ? "unsupported" : "other",
+              message: endedWithout(binary, ended, run.stderr()),
+            })
+          );
         if (unavailable)
           throw providerError({
             kind: "unsupported",

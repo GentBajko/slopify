@@ -10,6 +10,22 @@ const png = Buffer.from(
   "base64",
 );
 const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xd9]);
+it.each(["turn.failed", "error"])(
+  "preserves actionable %s details and classifies missing login",
+  async (type) => {
+    for (const message of [
+      "Not logged in. Run codex login",
+      "Image tool unavailable for this account",
+    ]) {
+      const event = type === "error" ? { type, message } : { type, error: { message } };
+      const fake = fakeRun(() => {}, JSON.stringify(event) + "\n");
+      const result = codexImage({ run: fake.run }).generate(request());
+      if (message.startsWith("Not"))
+        await expect(result).rejects.toMatchObject({ fault: { kind: "missing_key" } });
+      else await expect(result).rejects.toThrow(message);
+    }
+  },
+);
 const request = (signal = new AbortController().signal) => ({
   model: "codex-imagegen",
   prompt: "A moonlit castle",

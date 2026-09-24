@@ -98,6 +98,36 @@ function alwaysFails(error: unknown): ProviderCall<string> {
 }
 
 describe("attempt", () => {
+  it.each(["missing_key", "unavailable"] as const)("does not retry %s", async (kind) => {
+    const h = harness();
+    await expect(
+      h.clock.settle(
+        attempt(h.context, alwaysFails(providerError({ kind, message: "Review the rebuild." })), {
+          kind: "image",
+        }),
+      ),
+    ).rejects.toThrow("Review");
+    expect(h.attempts.rows).toHaveLength(1);
+  });
+  it("keeps an uncertain host timeout terminal", async () => {
+    const h = harness();
+    const call: ProviderCall<string> = (signal) =>
+      new Promise((_resolve, reject) => {
+        signal.addEventListener(
+          "abort",
+          () =>
+            reject(
+              providerError({ kind: "unavailable", message: "The host result may be uncertain." }),
+            ),
+          { once: true },
+        );
+      });
+    await expect(h.clock.settle(attempt(h.context, call, { kind: "image" }))).rejects.toThrow(
+      "uncertain",
+    );
+    expect(h.attempts.rows).toHaveLength(1);
+    expect(h.attempts.rows[0]?.outcome).toBe("unavailable");
+  });
   it("answers with the first result and records one attempt", async () => {
     const h = harness();
 

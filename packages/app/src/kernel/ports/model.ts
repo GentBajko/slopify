@@ -36,6 +36,7 @@ export const providerErrorKinds = [
   // Distinct from `auth`, a key the provider rejected: a bad key runs the whole retry
   // policy, an absent one fails immediately.
   "missing_key",
+  "unavailable",
   "rate_limit",
   "refusal",
   "unsupported",

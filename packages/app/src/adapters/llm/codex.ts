@@ -6,6 +6,7 @@ import { redact } from "../../kernel/log.js";
 import type { LlmCompletion, LlmEvent, LlmPort, Usage } from "../../kernel/ports/llm.js";
 import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { cliLoginError } from "./cli-login-error.js";
 import { nodeCodexModels } from "./codex-models.js";
 import type { CliEnded, CliOptions, RunCli } from "./run-cli.js";
 import { cliEvent, cliShaped, endedWithout, promptOf, stopCliRun } from "./run-cli.js";
@@ -157,12 +158,19 @@ export function codexLlm(deps: CodexDeps): LlmPort {
           return;
         }
         if (event.type === "turn.failed") {
+          const login = cliLoginError(
+            "codex",
+            cliShaped(binary, turnFailed, event.value).error.message,
+          );
+          if (login) throw login;
           throw providerError({
             kind: "other",
             message: redact(cliShaped(binary, turnFailed, event.value).error.message),
           });
         }
         if (event.type === "error") {
+          const login = cliLoginError("codex", cliShaped(binary, errorEvent, event.value).message);
+          if (login) throw login;
           throw providerError({
             kind: "other",
             message: redact(cliShaped(binary, errorEvent, event.value).message),
@@ -184,6 +192,8 @@ export function codexLlm(deps: CodexDeps): LlmPort {
     // be reported as the provider failing.
     req.signal.throwIfAborted();
     // The stream ended with neither a completed turn nor a failure.
+    const login = cliLoginError("codex", run.stderr());
+    if (login) throw login;
     throw providerError({
       kind: "other",
       message:

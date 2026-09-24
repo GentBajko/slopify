@@ -4,6 +4,7 @@ import type { LlmCompletion, LlmEvent, LlmPort, Usage } from "../../kernel/ports
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import { nodeClaudeCodeModels } from "./claude-code-models.js";
+import { cliLoginError } from "./cli-login-error.js";
 import type { CliEnded, RunCli } from "./run-cli.js";
 import { cliEvent, cliShaped, endedWithout, promptOf, stopCliRun } from "./run-cli.js";
 import { lines } from "./sse-lines.js";
@@ -113,6 +114,8 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
         }
         const result = cliShaped(binary, resultEvent, event.value);
         if (result.is_error === true || result.subtype !== "success") {
+          const login = cliLoginError("claude-code", result.result ?? result.subtype);
+          if (login) throw login;
           throw providerError({
             kind: kindOf(result.api_error_status ?? null),
             message: redact(result.result ?? result.subtype),
@@ -140,6 +143,8 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
     // be reported as the provider failing.
     req.signal.throwIfAborted();
     // The stream ended with no result event at all.
+    const login = cliLoginError("claude-code", run.stderr());
+    if (login) throw login;
     throw providerError({
       kind: "other",
       message:

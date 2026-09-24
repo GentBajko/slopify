@@ -298,7 +298,8 @@ describe("codexLlm.complete", () => {
     const error: unknown = await drain("", { code: 1, error: null }, "not logged in").catch(
       (thrown: unknown) => thrown,
     );
-    expect(String(error)).toBe("Error: the codex CLI exited 1 without answering: not logged in");
+    expect(isProviderError(error) && error.fault.kind).toBe("missing_key");
+    expect(String(error)).toContain("codex login");
   });
 
   it("says so plainly when the binary is not there at all", async () => {

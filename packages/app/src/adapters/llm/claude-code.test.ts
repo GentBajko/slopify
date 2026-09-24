@@ -77,6 +77,18 @@ async function drain(text: string, ended?: CliEnded, stderr?: string): Promise<L
 }
 
 describe("claudeCodeArgs", () => {
+  it("recognizes a sign-in refusal without an HTTP status", async () => {
+    await expect(
+      drain(
+        JSON.stringify({
+          type: "result",
+          subtype: "success",
+          is_error: true,
+          result: "Not logged in · Please run /login",
+        }) + "\n",
+      ),
+    ).rejects.toMatchObject({ fault: { kind: "missing_key" } });
+  });
   it("gives content jobs a writing role with local coding customizations disabled", () => {
     const args = claudeCodeArgs(
       request({ messages: [{ role: "user", content: "Write a travel article about Albania." }] }),

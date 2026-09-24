@@ -25,7 +25,12 @@ export const timeoutMs: Readonly<Record<ProviderCallKind, number>> = {
 // spends the user's money again. The third is a key removed mid-run, which leaves nothing
 // to call with. A key the provider rejected is different: that is an `auth` failure,
 // retried like any other.
-const terminalKinds: readonly ProviderErrorKind[] = ["refusal", "unsupported", "missing_key"];
+const terminalKinds: readonly ProviderErrorKind[] = [
+  "refusal",
+  "unsupported",
+  "missing_key",
+  "unavailable",
+];
 
 export type ProviderCallKind = "llm" | "tts" | "image";
 
@@ -138,6 +143,10 @@ function classify(
   opts: AttemptOptions,
   limit: number,
 ): ProviderError {
+  // Losing a submitted host request cannot prove that generation never happened.
+  if (isProviderError(error) && error.fault.kind === "unavailable") {
+    return providerError({ kind: "unavailable", message: redact(error.message) });
+  }
   if (expired) {
     const seconds = Math.round(limit / 1000);
     return providerError({
