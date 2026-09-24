@@ -1,0 +1,31 @@
+# Research documents and Codex image collection
+
+- Key: implement/2026-09-24-research-documents@Q4.
+- What: preserve original research for the editor and article writer, repair Codex native image collection, and release/update Slopify 1.5.0.
+- Approach: immutable report assets and legacy payload reuse; typed document contents in durable recipes; fixed request-only SDK stdio reader for CLIs; complete labelled HTTP messages for API providers; stdin for CLI prompts.
+- Rejected: stdin-only delivery, because it does not give the writer independent originals.
+- Rejected: removing editorial consolidation or supplying only its summary, because the user explicitly kept that step and wanted originals available too.
+- Rejected: general filesystem/shell tools or mounted host credentials, because document access must stay request-scoped.
+- Rejected: paid regeneration for image recovery; the original files were already present and verifiable.
+- Out of scope: arbitrary attachments, a document browser, new providers/models and broader research-method changes.
+- Out of scope: paid verification calls and automatic retries of the user's paused project.
+- Task 1: froze ordered originals and editorial notes into requests, retained them across continuations, published new report assets and included document contents in audit/cost review.
+- Task 2: implemented validated private workspaces, bounded read-only MCP pages, complete-read checks, stdin delivery and cleanup for Claude, Codex and Gemini.
+- Task 3: verified strict host/API delivery, Unicode preservation, scope/tamper/failure cases, package contents and real CLI metadata-only connections.
+- Task 4: rehearsed and recovered six saved images, preserved 13 completed reports, published 1.5.0 and updated the idle local Docker/container helper with hash-based data checks.
+- Diff: packages/app/src/kernel/{ports,runner/providers.ts}; adapters/{llm,host-cli,image}; host-cli/runtime.ts and tests; slices/{research,rebuild}; composed host/research tests and fixture; packaged host smoke; app manifest/lockfile; scoped reference/ledger files.
+- Architecture refreshed: 01-architecture-research.md describes provider isolation and document ownership.
+- Models refreshed: 02-models-research.md records bounds, IDs, reader receipts and legacy compatibility.
+- Flow refreshed: 04-data-flow-research.md records originals → editor → article/continuation delivery and failures.
+- Conventions refreshed: 03-conventions.md adds the scoped typed-document and stdin rules.
+- Dependencies refreshed: 05-dependencies.md records the official MCP SDK and JSONC parser.
+- Testing refreshed: 06-testing.md records 3,395 passing tests, one skip, reader/host regressions and metadata-only real CLI checks.
+- Operations refreshed: 07-operations.md records private Gemini CLI configuration, Claude's restricted document profile and native Codex artifact collection.
+- Scenario absorbed: logic/06-research.md retains editorial consolidation and independent report assets.
+- Scenario absorbed: logic/07-article-writing.md gives the writer and continuations originals plus notes.
+- Scenario absorbed: logic/09-image-generation.md records session-bound artifact validation and no automatic replay after uncertain collection.
+- Scenario absorbed: logic/12-reruns-and-edits.md records reviewed document inputs and unchanged chapter identities.
+- Indexes refreshed: 00-index.md and logic/README.md identify the scoped references and scenarios.
+- Review loop: two consecutive dry rounds after verification fixes; three confirmed/fixed findings (Claude safe-mode MCP exclusion, Gemini settings isolation, Windows composed-test deadline), two refuted concerns (chapter identity drift, arbitrary host reads), no unresolved implementation findings.
+- Deviations: real CLI checks required restricted Claude document calls and private Gemini CLI home rather than the initial safe-mode/system-settings assumptions. The Windows integration test retains every assertion with a 30-second deadline.
+- Local history: ignored feature plan/interview/review records are retained. Unrelated local planning fragments were not staged or folded.
