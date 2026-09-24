@@ -68,7 +68,13 @@ export function buildRegistry(deps: RegistryDeps): Registry {
         readModels: () => nodeClaudeCodeModels(cliBinary(deps.db, "claude-code")),
       }),
     ],
-    ["codex", codexLlm({ run: cliFor("codex"), readModels: () => nodeCodexModels() })],
+    [
+      "codex",
+      codexLlm({
+        run: cliFor("codex"),
+        readModels: () => nodeCodexModels(process.env, cliBinary(deps.db, "codex")),
+      }),
+    ],
     [
       "gemini",
       geminiLlm({

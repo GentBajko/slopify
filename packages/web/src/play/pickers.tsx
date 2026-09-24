@@ -200,6 +200,7 @@ function ProviderModelPicker({
     onSuccess: (next) => client.setQueryData(modelsKey(provider), next),
   });
   const listed = catalogue.data?.models ?? [];
+  const groups = [...new Set(listed.flatMap((model) => (model.group ? [model.group] : [])))];
   const allowsCustom = catalogue.data?.allowsCustom ?? customModelFallback(provider);
   const typing = custom && allowsCustom;
   const refreshing = catalogue.isFetching || refresh.isPending;
@@ -251,10 +252,23 @@ function ProviderModelPicker({
                         : "Pick a model"}
                   </option>
                   {selectedMissing ? <option value={value}>{value} (saved model)</option> : null}
-                  {listed.map((model) => (
-                    <option key={model.id} value={model.id}>
-                      {model.name}
-                    </option>
+                  {listed
+                    .filter((model) => !model.group)
+                    .map((model) => (
+                      <option key={model.id} value={model.id}>
+                        {model.name}
+                      </option>
+                    ))}
+                  {groups.map((group) => (
+                    <optgroup key={group} label={group}>
+                      {listed
+                        .filter((model) => model.group === group)
+                        .map((model) => (
+                          <option key={model.id} value={model.id}>
+                            {model.name}
+                          </option>
+                        ))}
+                    </optgroup>
                   ))}
                 </Picker>
               )}

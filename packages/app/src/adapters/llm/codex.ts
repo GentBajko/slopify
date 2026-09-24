@@ -197,7 +197,7 @@ export function codexLlm(deps: CodexDeps): LlmPort {
     id: "codex",
     // Prose arrives as whole messages; other JSONL events carry activity separately.
     capabilities: { streams: true, reportsUsage: true, webSearch: true },
-    models: deps.readModels ?? (() => nodeCodexModels()),
+    models: deps.readModels ?? (() => nodeCodexModels(process.env, binary)),
     complete,
   };
 }

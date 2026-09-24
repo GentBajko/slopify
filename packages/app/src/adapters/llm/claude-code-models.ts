@@ -33,6 +33,8 @@ const responseSchema = z.object({
             value: modelId,
             resolvedModel: modelId.optional(),
             displayName: modelName,
+            description: z.string().max(4096).optional(),
+            disabled: z.boolean().optional(),
             supportedEffortLevels: z.array(z.string()).max(10).optional(),
           }),
         )
@@ -83,29 +85,41 @@ function choices(event: unknown, requestId: string): readonly ModelInfo[] {
   if (!parsed.success || parsed.data.response.request_id !== requestId) throw unavailable();
   const models = new Map<string, ModelInfo>();
   for (const row of parsed.data.response.response.models) {
+    if (row.disabled) continue;
     const modes = row.supportedEffortLevels?.filter((value): value is ThinkingMode =>
       supportedEfforts.includes(value as ThinkingMode),
     );
     const thinking = modes?.length ? { thinkingModes: modes } : {};
-    if (!models.has(row.value))
-      models.set(row.value, {
+    const target = row.resolvedModel ?? row.value;
+    const context = /\[([^\]]+)\]/.exec(row.value)?.[1] ?? /\[([^\]]+)\]/.exec(target)?.[1];
+    const key = target.replace(/\[[^\]]+\]/g, "") + (context ? `[${context}]` : "");
+    // Default and Opus can resolve to the same model. Keep the named CLI choice,
+    // preserving its accepted value (including context modifiers) for generation.
+    if (!models.has(key) || models.get(key)?.id === "default")
+      models.set(key, {
         id: row.value,
         name:
-          row.resolvedModel === undefined || row.resolvedModel === row.value
-            ? row.displayName
-            : `${row.displayName} → ${row.resolvedModel}`,
-        ...thinking,
-      });
-    // Claude advertises stable aliases and their current concrete targets.
-    // Offer both so the user can choose a moving alias or pin a version.
-    if (row.resolvedModel !== undefined && !models.has(row.resolvedModel))
-      models.set(row.resolvedModel, {
-        id: row.resolvedModel,
-        name: `${row.resolvedModel} (exact model)`,
+          claudeModelName(target, row.description, row.displayName) +
+          (context ? ` (${context.toUpperCase()} context)` : ""),
         ...thinking,
       });
   }
+  if (models.size === 0) throw unavailable();
   return [...models.values()];
+}
+
+function claudeModelName(
+  target: string,
+  description: string | undefined,
+  fallback: string,
+): string {
+  const version = /^claude-(opus|sonnet|haiku|fable)-(\d+)(?:-(\d{1,2})(?=-|\[|$))?/i.exec(target);
+  if (version) {
+    const family = version[1] ?? "";
+    return `${family[0]?.toUpperCase()}${family.slice(1)} ${version[2]}${version[3] ? `.${version[3]}` : ""}`;
+  }
+  const advertised = /\b(?:Opus|Sonnet|Haiku|Fable) \d+(?:\.\d+)?\b/i.exec(description ?? "");
+  return advertised?.[0] ?? fallback.replace(/\s*\([^)]*context\)/i, "");
 }
 
 // The installed CLI has no model-list command; initialize is a no-prompt

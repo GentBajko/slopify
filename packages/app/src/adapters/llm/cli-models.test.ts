@@ -65,9 +65,9 @@ describe("Codex installed model catalogue", () => {
       }
       if (kind === "empty") await cache(home, [{ slug: "internal", visibility: "hide" }]);
       if (kind === "directory") await mkdir(path);
-      await expect(nodeCodexModels({ CODEX_HOME: home })).rejects.toThrow(
-        /^Codex model metadata is unavailable\./,
-      );
+      await expect(
+        nodeCodexModels({ CODEX_HOME: home }, join(home, "missing-codex")),
+      ).rejects.toThrow(/^Codex model metadata is unavailable\./);
     },
   );
 });
@@ -103,6 +103,38 @@ export const DEFAULT_GEMINI_DUPLICATE_MODEL = 'gemini-2.5-pro';
 `;
 
 describe("Gemini installed model catalogue", () => {
+  it("discovers the latest and base model constants used by Gemini CLI 0.61", async () => {
+    const install = await geminiInstall(await directory());
+    await writeFile(
+      install.metadata,
+      [
+        'var BASE_GEMINI_FLASH_MODEL = "gemini-3.5-flash";',
+        'var LATEST_GEMINI_FLASH_MODEL = "gemini-3.8-flash";',
+        'var BASE_GEMINI_FLASH_LITE_MODEL = "gemini-3.1-flash-lite";',
+        'var LATEST_GEMINI_FLASH_LITE_MODEL = "gemini-3.5-flash-lite";',
+        "var DEFAULT_GEMINI_FLASH_MODEL = BASE_GEMINI_FLASH_MODEL;",
+        "var DEFAULT_GEMINI_FLASH_LITE_MODEL = BASE_GEMINI_FLASH_LITE_MODEL;",
+        'var PREVIEW_GEMINI_3_1_MODEL = "gemini-3.1-pro-preview";',
+        'var SECONDARY_GEMINI_3_5_FLASH_MODEL = "gemini-3-flash";',
+      ].join("\n"),
+    );
+    expect(await nodeGeminiModels(install.entry)).toEqual([
+      { id: "auto", name: "Automatic (CLI default)" },
+      { id: "gemini-3.8-flash", name: "Gemini 3.8 Flash", group: "Latest in installed CLI" },
+      {
+        id: "gemini-3.5-flash-lite",
+        name: "Gemini 3.5 Flash-Lite",
+        group: "Latest in installed CLI",
+      },
+      { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash", group: "Other versions" },
+      {
+        id: "gemini-3.1-pro-preview",
+        name: "Gemini 3.1 Pro (Preview)",
+        group: "Latest in installed CLI",
+      },
+      { id: "gemini-3.1-flash-lite", name: "Gemini 3.1 Flash-Lite", group: "Other versions" },
+    ]);
+  });
   it("reads model constants from the installed CLI's bundled chunks", async () => {
     const root = await directory();
     const bundle = join(root, "node_modules/@google/gemini-cli/bundle");
@@ -117,19 +149,27 @@ describe("Gemini installed model catalogue", () => {
         'var DEFAULT_GEMINI_MODEL = "gemini-2.5-pro";',
         'var DEFAULT_GEMINI_FLASH_MODEL = "gemini-2.5-flash";',
         'var DEFAULT_GEMINI_FLASH_LITE_MODEL = "gemini-2.5-flash-lite";',
+        'var PREVIEW_GEMINI_3_1_CUSTOM_TOOLS_MODEL = "gemini-3.1-pro-preview-customtools";',
+        'var SECONDARY_GEMINI_3_5_FLASH_MODEL = "gemini-3-flash";',
+        'var GEMMA_4_31B_IT_MODEL = "gemma-4-31b-it";',
         'var DEFAULT_GEMINI_EMBEDDING_MODEL = "gemini-embedding-001";',
         '/* var DEFAULT_GEMINI_FAKE_MODEL = "gemini-fake"; */',
       ].join("\n"),
     );
     expect(await nodeGeminiModels(entry)).toEqual([
-      { id: "auto", name: "Gemini Auto (CLI default)" },
-      { id: "pro", name: "Gemini Pro (CLI alias)" },
-      { id: "flash", name: "Gemini Flash (CLI alias)" },
-      { id: "flash-lite", name: "Gemini Flash-Lite (CLI alias)" },
-      { id: "gemini-3-pro-preview", name: "gemini-3-pro-preview" },
-      { id: "gemini-2.5-pro", name: "gemini-2.5-pro" },
-      { id: "gemini-2.5-flash", name: "gemini-2.5-flash" },
-      { id: "gemini-2.5-flash-lite", name: "gemini-2.5-flash-lite" },
+      { id: "auto", name: "Automatic (CLI default)" },
+      {
+        id: "gemini-3-pro-preview",
+        name: "Gemini 3 Pro (Preview)",
+        group: "Latest in installed CLI",
+      },
+      { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", group: "Other versions" },
+      {
+        id: "gemini-2.5-flash-lite",
+        name: "Gemini 2.5 Flash-Lite",
+        group: "Latest in installed CLI",
+      },
+      { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", group: "Latest in installed CLI" },
     ]);
   });
   it.each([false, true])(
@@ -138,11 +178,13 @@ describe("Gemini installed model catalogue", () => {
       const install = await geminiInstall(await directory(), nested);
       await writeFile(install.metadata, installedModels);
       expect(await nodeGeminiModels(install.entry)).toEqual([
-        { id: "auto", name: "Gemini Auto (CLI default)" },
-        { id: "pro", name: "Gemini Pro (CLI alias)" },
-        { id: "flash", name: "Gemini Flash (CLI alias)" },
-        { id: "gemini-2.5-pro", name: "gemini-2.5-pro" },
-        { id: "gemini-3.1-flash-preview", name: "gemini-3.1-flash-preview" },
+        { id: "auto", name: "Automatic (CLI default)" },
+        {
+          id: "gemini-3.1-flash-preview",
+          name: "Gemini 3.1 Flash (Preview)",
+          group: "Latest in installed CLI",
+        },
+        { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", group: "Latest in installed CLI" },
       ]);
     },
   );
@@ -160,20 +202,20 @@ describe("Gemini installed model catalogue", () => {
       expect(
         (await nodeGeminiModels("gemini")).some((model) => model.id === "gemini-2.5-pro"),
       ).toBe(true);
-      await writeFile(install.metadata, "export const DEFAULT_GEMINI_MODEL = 'gemini-new';");
+      await writeFile(install.metadata, "export const DEFAULT_GEMINI_MODEL = 'gemini-9-pro';");
       expect(await nodeGeminiModels("gemini")).toEqual([
-        { id: "auto", name: "Gemini Auto (CLI default)" },
-        { id: "gemini-new", name: "gemini-new" },
+        { id: "auto", name: "Automatic (CLI default)" },
+        { id: "gemini-9-pro", name: "Gemini 9 Pro", group: "Latest in installed CLI" },
       ]);
     },
   );
   it("switches catalogues with the configured executable", async () => {
     const first = await geminiInstall(await directory());
     const second = await geminiInstall(await directory());
-    await writeFile(first.metadata, "export const DEFAULT_GEMINI_MODEL = 'gemini-first';");
-    await writeFile(second.metadata, "export const DEFAULT_GEMINI_MODEL = 'gemini-second';");
-    expect((await nodeGeminiModels(first.entry)).at(-1)?.id).toBe("gemini-first");
-    expect((await nodeGeminiModels(second.entry)).at(-1)?.id).toBe("gemini-second");
+    await writeFile(first.metadata, "export const DEFAULT_GEMINI_MODEL = 'gemini-8-pro';");
+    await writeFile(second.metadata, "export const DEFAULT_GEMINI_MODEL = 'gemini-9-pro';");
+    expect((await nodeGeminiModels(first.entry)).at(-1)?.id).toBe("gemini-8-pro");
+    expect((await nodeGeminiModels(second.entry)).at(-1)?.id).toBe("gemini-9-pro");
   });
   it.each(["missing", "malformed", "oversized"])(
     "reports %s installed metadata so the API can mark the alias fallback",

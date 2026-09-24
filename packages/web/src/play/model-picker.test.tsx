@@ -50,6 +50,31 @@ const catalogue = (id = "new-model", name = "New model", allowsCustom = true) =>
   jsonAnswer({ models: [{ id, name }], allowsCustom });
 
 describe("provider model discovery", () => {
+  it("groups installed versions while submitting the exact model ID", async () => {
+    renderApp(
+      <Subject initialProvider="gemini" />,
+      testDeps({
+        "GET /api/providers/gemini/models": jsonAnswer({
+          models: [
+            { id: "auto", name: "Automatic (CLI default)" },
+            { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash", group: "Latest in installed CLI" },
+            { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", group: "Other versions" },
+          ],
+          allowsCustom: true,
+        }),
+      }),
+    );
+    await screen.findByRole("option", { name: "Gemini 3.5 Flash" });
+    expect(screen.getByRole("group", { name: "Latest in installed CLI" }).textContent).toBe(
+      "Gemini 3.5 Flash",
+    );
+    expect(screen.getByRole("group", { name: "Other versions" }).textContent).toBe(
+      "Gemini 2.5 Flash",
+    );
+    await userEvent.selectOptions(screen.getByLabelText("Model"), "gemini-3.5-flash");
+    expect(screen.getByTestId("selection").textContent).toBe("gemini-3.5-flash");
+  });
+
   it("does not request models before a provider is selected", async () => {
     let calls = 0;
     renderApp(

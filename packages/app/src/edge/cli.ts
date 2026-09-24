@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { configFrom } from "../kernel/config/index.js";
 import { readVersion } from "../kernel/version.js";
@@ -13,10 +15,30 @@ const { values } = parseArgs({
     host: { type: "string" },
     "data-dir": { type: "string" },
     "no-open": { type: "boolean" },
+    docker: { type: "boolean" },
   },
 });
 
 try {
+  if (values.docker) {
+    if (values.host !== undefined || values["data-dir"] !== undefined)
+      throw new Error(
+        "Docker stores data in the slopify-data volume and binds to localhost. Use --port to change its port.",
+      );
+    const result = spawnSync(
+      "bash",
+      [fileURLToPath(new URL("../../scripts/docker-run.sh", import.meta.url))],
+      {
+        stdio: "inherit",
+        env: {
+          ...process.env,
+          ...(values.port === undefined ? {} : { SLOPIFY_DOCKER_HOST_PORT: values.port }),
+        },
+      },
+    );
+    if (result.error) throw result.error;
+    process.exit(result.status ?? 1);
+  }
   const config = configFrom(values, process.env);
   const forwarded = await forwardManagedUpdate(
     config.dataDir,

@@ -65,9 +65,6 @@ async function bundledModels(entry: string): Promise<readonly ModelInfo[]> {
 
 function parseGeminiModels(source: string): readonly ModelInfo[] {
   const models = new Map<string, ModelInfo>();
-  let pro = false;
-  let flash = false;
-  let flashLite = false;
   // Read literal model constants only. Never import or execute an
   // installed package, parse comments as entries, or inspect login/settings.
   const declarations =
@@ -81,23 +78,35 @@ function parseGeminiModels(source: string): readonly ModelInfo[] {
       id === undefined ||
       !name.includes("MODEL") ||
       name.includes("EMBEDDING") ||
-      !/^(?:gemini|gemma)-[a-z0-9.-]+$/.test(id)
+      !/^gemini-\d+(?:\.\d+)?-(?:pro|flash|flash-lite)(?:-preview(?:-\d{2}-\d{2})?)?$/.test(id)
     )
       continue;
-    if (!/^(?:(?:PREVIEW|DEFAULT|SECONDARY)_GEMINI_|GEMMA_)/.test(name)) continue;
-    models.set(id, { id, name: id });
-    if (name.includes("FLASH_LITE") || id.includes("flash-lite")) flashLite = true;
-    else if (name.includes("FLASH") || id.includes("flash")) flash = true;
-    else if (name.includes("PRO") || id.includes("-pro")) pro = true;
+    // SECONDARY and CUSTOM_TOOLS constants are routing aliases, not separate
+    // picker choices. Gemma and embedding models use different availability rules.
+    // In 0.61+, DEFAULT_FLASH points at a BASE constant while new releases
+    // use LATEST constants. Read both literal sources without evaluating JS.
+    if (!/^(?:PREVIEW|DEFAULT|BASE|LATEST)_GEMINI_/.test(name) || name.includes("CUSTOM_TOOLS"))
+      continue;
+    const parts = /^gemini-(\d+(?:\.\d+)?)-(pro|flash-lite|flash)/.exec(id);
+    if (!parts) continue;
+    const tier = parts[2] === "pro" ? "Pro" : parts[2] === "flash-lite" ? "Flash-Lite" : "Flash";
+    models.set(id, {
+      id,
+      name: `Gemini ${parts[1]} ${tier}${id.includes("-preview") ? " (Preview)" : ""}`,
+    });
   }
   if (models.size === 0) return [];
-  return [
-    { id: "auto", name: "Gemini Auto (CLI default)" },
-    ...(pro ? [{ id: "pro", name: "Gemini Pro (CLI alias)" }] : []),
-    ...(flash ? [{ id: "flash", name: "Gemini Flash (CLI alias)" }] : []),
-    ...(flashLite ? [{ id: "flash-lite", name: "Gemini Flash-Lite (CLI alias)" }] : []),
-    ...models.values(),
-  ];
+  const sorted = [...models.values()].sort((a, b) =>
+    b.id.localeCompare(a.id, "en", { numeric: true }),
+  );
+  const tiers = new Set<string>();
+  const choices = sorted.map((model) => {
+    const tier = /-(pro|flash-lite|flash)(?:-|$)/.exec(model.id)?.[1] ?? model.id;
+    const group = tiers.has(tier) ? "Other versions" : "Latest in installed CLI";
+    tiers.add(tier);
+    return { ...model, group };
+  });
+  return [{ id: "auto", name: "Automatic (CLI default)" }, ...choices];
 }
 
 async function executablePath(binary: string): Promise<string> {

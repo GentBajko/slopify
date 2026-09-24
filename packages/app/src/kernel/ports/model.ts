@@ -9,6 +9,7 @@ export interface ModelInfo {
   readonly thinkingModes?: readonly import("./llm.js").ThinkingMode[];
   readonly id: string;
   readonly name: string;
+  readonly group?: string;
 }
 
 // What Settings and Play both read per provider. `installed` describes the executable itself;

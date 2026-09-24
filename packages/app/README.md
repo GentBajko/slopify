@@ -30,6 +30,14 @@ slopify
 
 Both commands launch the same local app.
 
+For Docker on Linux, use `slopify --docker` or
+`npx @gentbajko/slopify@latest --docker`. The launcher detects installed Codex,
+Claude Code, and Gemini CLIs and mounts them read-only. It runs in the background,
+restarts with Docker, and keeps your data in `slopify-data`. Run it again after
+upgrading a CLI to refresh its mounts. Add `--port 7070` to change the default port.
+CLI credentials stay separate; sign in once inside the container. See the
+[Docker setup guide](https://github.com/GentBajko/slopify#docker) for login commands.
+
 ## How to use it
 
 1. Add provider keys and voices in Settings. They stay in your local Slopify database.
@@ -72,6 +80,7 @@ for account limits. Both model IDs are bundled; Inworld's LLM catalogue does not
 | `--host` | `SLOPIFY_HOST` | `127.0.0.1` |
 | `--data-dir` | `SLOPIFY_DATA_DIR` | `~/.slopify` |
 | `--no-open` | `SLOPIFY_NO_OPEN` | the browser opens |
+| `--docker` | — | run locally; with the flag, launch Docker with host CLI detection |
 | — | `SLOPIFY_FFMPEG` | the bundled binary |
 
 There is no login. Binding to anything but `127.0.0.1` hands the app and every key in

@@ -35,8 +35,21 @@ or the global command when you want `slopify` available on your `PATH`.
 
 ## Docker
 
-The image runs in the background and starts again when Docker starts. This command
-stores the database, projects, downloads, and CLI login state in a named volume:
+On Linux, start Slopify in Docker with automatic detection of your installed
+Codex, Claude Code, and Gemini CLIs:
+
+```sh
+npx @gentbajko/slopify@latest --docker
+```
+
+With Slopify installed globally, use `slopify --docker`. The launcher finds the
+CLIs, mounts their installations read-only, and opens port 6969 on localhost.
+It runs in the background, restarts with Docker, and keeps your data in the
+`slopify-data` volume. Use `--port 7070` to change the port. Run the same command
+after a CLI update; it refreshes changed mounts and retains the previous container
+stopped for recovery. Running it again with the same configuration reuses the container.
+
+For API-key providers without host CLI bridging, you can run the image directly:
 
 ```sh
 docker run -d --name slopify --restart always \
@@ -51,20 +64,20 @@ internet access to download ffmpeg into the volume; later starts reuse it.
 The container does not run npm updates from the UI. Pull a new image, remove the
 old container, and run the command again with the same volume to update it.
 
-The image does **not** bundle Codex, Claude Code, or Gemini CLI. On a Linux host
-with those CLIs installed, run the helper from this repository instead of the
-plain `docker run` command:
+The image does **not** bundle Codex, Claude Code, or Gemini CLI. Plain `docker run`
+cannot see host installations. The `--docker` launcher includes the bridge; from
+a source checkout, the same launcher is also available as:
 
 ```sh
 bash packages/app/scripts/docker-run.sh
 ```
 
 It resolves the host Codex and Gemini npm packages and the native Claude binary,
-mounts only those installations read-only, and gives the container its own
+mounts those installations and Codex's model catalogue read-only, and gives the container its own
 persistent CLI home in `slopify-data`. Install the CLIs on the host first, then
 recreate the container after installing or upgrading one; the mounts refer to
-the resolved installation paths. Linux executables from a macOS or Windows host
-cannot run inside this Linux image. API-key providers work without the helper.
+the resolved installation paths. macOS or Windows executables cannot run inside
+this Linux image. API-key providers work without the helper.
 
 The host's CLI login files are **not** mounted. Sign in to Codex and Claude
 once inside the container; those credentials stay in the named volume across

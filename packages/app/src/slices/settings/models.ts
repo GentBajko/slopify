@@ -108,12 +108,11 @@ function uniqueModels(models: readonly ModelInfo[]): readonly ModelInfo[] {
 
 function catalogNotice(provider: string): { readonly notice?: string } {
   const notices: Readonly<Record<string, string>> = {
-    codex:
-      "Models come from Codex's local catalogue. Open Codex to refresh that catalogue, then refresh this list.",
+    codex: "Models come from your Codex installation. Refresh to check again.",
     gemini:
-      "Models and aliases come from the installed Gemini CLI. Update that CLI to discover newer models.",
+      "Models come from your installed Gemini CLI, not an account access check. Missing a new model? Update Gemini CLI, rerun the Docker launcher if applicable, then refresh this list.",
     "claude-code":
-      "These aliases follow Claude Code's model families. You can also enter an exact model ID.",
+      "Models come from Claude Code. Missing a new model? Update Claude Code, rerun the Docker launcher if applicable, then refresh this list. You can also enter an exact model ID.",
     inworld: "These are Inworld’s documented TTS models. You can also enter a compatible model ID.",
     cartesia:
       "Cartesia has no model-list API. These are bundled compatible choices; you can enter a newer model ID.",

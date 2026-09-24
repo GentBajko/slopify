@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { z } from "zod";
 import type { ModelInfo } from "../../kernel/ports/model.js";
 import { readCatalogueFile } from "./catalogue-files.js";
+import { codexModelName, nodeCodexServerModels } from "./codex-server-models.js";
 
 const safeText = z
   .string()
@@ -31,10 +32,13 @@ const model = z.object({
 
 export async function nodeCodexModels(
   env: Readonly<Record<string, string | undefined>> = process.env,
+  binary = "codex",
+  timeoutMs = 15_000,
 ): Promise<readonly ModelInfo[]> {
   try {
     const directory = env.CODEX_HOME?.trim() || join(homedir(), ".codex");
-    const source = await readCatalogueFile(join(directory, "models_cache.json"), 8 * 1024 * 1024);
+    const path = env.SLOPIFY_CODEX_MODELS_FILE?.trim() || join(directory, "models_cache.json");
+    const source = await readCatalogueFile(path, 8 * 1024 * 1024);
     const parsed = cache.parse(JSON.parse(source));
     const models = parsed.models
       .flatMap((entry) => {
@@ -52,7 +56,7 @@ export async function nodeCodexModels(
           );
         unique.set(item.slug, {
           id: item.slug,
-          name: item.display_name ?? item.slug,
+          name: codexModelName(item.display_name ?? item.slug),
           ...(thinkingModes?.length ? { thinkingModes } : {}),
         });
       }
@@ -60,9 +64,13 @@ export async function nodeCodexModels(
     if (unique.size === 0) throw new Error("No visible models");
     return [...unique.values()];
   } catch {
-    // Do not expose cache contents, home paths or raw JSON errors to the browser.
-    throw new Error(
-      "Codex model metadata is unavailable. Open Codex once to refresh its model list, or enter a custom model ID.",
-    );
+    try {
+      return await nodeCodexServerModels(binary, env, timeoutMs);
+    } catch {
+      // Do not expose cache contents, home paths or raw JSON errors to the browser.
+      throw new Error(
+        "Codex model metadata is unavailable. Check the CLI and refresh, or enter a custom model ID.",
+      );
+    }
   }
 }

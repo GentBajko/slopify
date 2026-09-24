@@ -95,7 +95,9 @@ export function ContentSection(
               family="llm"
               providers={props.providers}
               value={form.llm.provider}
-              problem={problem("llm") ?? problem("llm.provider")}
+              problem={
+                problem("llm.provider") ?? (form.llm.provider === "" ? problem("llm") : undefined)
+              }
               onPick={(provider) => update({ llm: { provider, model: "" } })}
             />
             <ModelPicker
@@ -103,7 +105,10 @@ export function ContentSection(
               label="Text model"
               provider={form.llm.provider}
               value={form.llm.model}
-              problem={problem("llm.model")}
+              problem={
+                problem("llm.model") ??
+                (form.llm.provider !== "" && problem("llm") ? "Pick a text model." : undefined)
+              }
               onPick={(model) => update({ llm: { ...form.llm, model } })}
             />
             <ThinkingPicker choice={form.llm} onChange={(llm) => update({ llm })} />
