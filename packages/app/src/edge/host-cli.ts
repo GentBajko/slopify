@@ -2,8 +2,8 @@ import { constants } from "node:fs";
 import { open } from "node:fs/promises";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
-import { z } from "zod";
 import { nodeRunCli } from "../adapters/llm/run-cli.js";
+import { hostEnvironmentSchema } from "../host-cli/environment.js";
 import { ensureBridgeToken, prepareHostPaths } from "../host-cli/paths.js";
 import { createHostRuntime } from "../host-cli/runtime.js";
 import { startHostServer } from "../host-cli/server.js";
@@ -27,24 +27,7 @@ try {
     (process.getuid && stat.uid !== process.getuid())
   )
     throw new Error("Unsafe host environment file.");
-  const path = z
-    .string()
-    .max(16384)
-    .refine((value) => !/[\p{Cc}]/u.test(value));
-  const environment = z
-    .object({
-      HOME: path,
-      PATH: path,
-      CODEX_HOME: path.optional(),
-      CLAUDE_CONFIG_DIR: path.optional(),
-      XDG_CONFIG_HOME: path.optional(),
-      XDG_DATA_HOME: path.optional(),
-      XDG_CACHE_HOME: path.optional(),
-      SSL_CERT_FILE: path.optional(),
-      NODE_EXTRA_CA_CERTS: path.optional(),
-    })
-    .strict()
-    .parse(JSON.parse(await file.readFile("utf8")));
+  const environment = hostEnvironmentSchema.parse(JSON.parse(await file.readFile("utf8")));
   Object.assign(process.env, environment);
 } finally {
   await file.close();

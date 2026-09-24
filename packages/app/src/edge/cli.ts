@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { configFrom } from "../kernel/config/index.js";
@@ -16,15 +19,50 @@ const { values } = parseArgs({
     "data-dir": { type: "string" },
     "no-open": { type: "boolean" },
     docker: { type: "boolean" },
+    "host-cli": { type: "string" },
+    "accept-host-cli": { type: "boolean" },
   },
 });
 
 try {
+  if (
+    (values["host-cli"] !== undefined || values["accept-host-cli"] !== undefined) &&
+    !values.docker
+  )
+    throw new Error("Host CLI options require --docker.");
+  if (values["host-cli"] !== undefined && values["host-cli"] !== "off")
+    throw new Error("The --host-cli override supports only off (API-only Docker).");
   if (values.docker) {
     if (values.host !== undefined || values["data-dir"] !== undefined)
       throw new Error(
         "Docker stores data in the slopify-data volume and binds to localhost. Use --port to change its port.",
       );
+    const { prepareDockerHostCli } = await import("./docker.js");
+    const { nodeHostSetupRunner } = await import("../host-cli/install.js");
+    const bridge = await prepareDockerHostCli({
+      root: join(process.env.XDG_DATA_HOME ?? join(homedir(), ".local/share"), "slopify/host-cli"),
+      version: readVersion(),
+      image: process.env.SLOPIFY_DOCKER_IMAGE ?? "ghcr.io/gentbajko/slopify:latest",
+      disabled: values["host-cli"] === "off",
+      accepted: values["accept-host-cli"] === true,
+      interactive: process.stdin.isTTY === true,
+      env: process.env,
+      signal: AbortSignal.timeout(20 * 60_000),
+      runner: nodeHostSetupRunner,
+      prompt: async (message) => {
+        const terminal = createInterface({ input: process.stdin, output: process.stdout });
+        try {
+          return /^(?:y|yes)$/i.test((await terminal.question(message)).trim());
+        } finally {
+          terminal.close();
+        }
+      },
+    });
+    console.log(
+      bridge.directory
+        ? "Host CLI helper ready. Existing CLI logins stay on the host."
+        : "Starting API-only Docker. Rerun the launcher after installing host CLIs to enable them.",
+    );
     const result = spawnSync(
       "bash",
       [fileURLToPath(new URL("../../scripts/docker-run.sh", import.meta.url))],
@@ -32,6 +70,7 @@ try {
         stdio: "inherit",
         env: {
           ...process.env,
+          SLOPIFY_HOST_CLI_DIR: bridge.directory ?? "",
           ...(values.port === undefined ? {} : { SLOPIFY_DOCKER_HOST_PORT: values.port }),
         },
       },

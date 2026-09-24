@@ -14,7 +14,8 @@ FROM node:26-bookworm-slim
 
 LABEL org.opencontainers.image.source="https://github.com/GentBajko/slopify" \
       org.opencontainers.image.description="Local prompt-to-video studio" \
-      org.opencontainers.image.licenses="MIT"
+      org.opencontainers.image.licenses="MIT" \
+      io.slopify.host-cli-protocol="1"
 
 ENV NODE_ENV=production \
     HOME=/data/home \
@@ -23,7 +24,8 @@ ENV NODE_ENV=production \
     SLOPIFY_DATA_DIR=/data \
     SLOPIFY_NO_OPEN=1 \
     SLOPIFY_SKIP_MANAGED_UPDATE=1 \
-    SLOPIFY_DISABLE_UPDATES=1
+    SLOPIFY_DISABLE_UPDATES=1 \
+    SLOPIFY_CONTAINER=1
 
 WORKDIR /opt/slopify
 COPY package.json package-lock.json ./
@@ -38,11 +40,7 @@ RUN apt-get update \
     && XDG_CACHE_HOME=/tmp/slopify-ffmpeg-cache node node_modules/ffmpeg-static/install.js \
     && node -e "const fs=require('node:fs'); const bin=require('ffmpeg-static'); for (const path of [bin, bin+'.LICENSE', bin+'.README']) { if (!fs.statSync(path).size) throw new Error('Missing FFmpeg file: '+path); } require('node:child_process').execFileSync(bin, ['-version']);" \
     && rm -rf /tmp/slopify-ffmpeg-cache \
-    && mkdir -p /data/home /opt/host-clis/codex /opt/host-clis/gemini \
-    && touch /opt/host-clis/claude \
-    && ln -s /opt/host-clis/codex/bin/codex.js /usr/local/bin/codex \
-    && ln -s /opt/host-clis/gemini/bundle/gemini.js /usr/local/bin/gemini \
-    && ln -s /opt/host-clis/claude /usr/local/bin/claude \
+    && mkdir -p /data/home \
     && chown -R node:node /data
 COPY --from=build /src/packages/app/dist packages/app/dist
 
