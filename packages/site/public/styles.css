@@ -434,6 +434,18 @@ h1 {
   font-size: 14px;
 }
 
+.docker-command {
+  max-width: none;
+  align-items: flex-start;
+  margin-bottom: calc(var(--step) * 3);
+}
+
+.docker-command code {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+
 .key {
   display: inline-flex;
   align-items: center;
@@ -723,7 +735,7 @@ h1 {
   top: 1px;
 }
 
-.rundown-row > span:last-child {
+.rundown-row > :last-child {
   max-width: 75ch;
   text-wrap: pretty;
 }
@@ -759,6 +771,14 @@ h1 {
 /* Four columns need about 700 px before the sentence column starts wrapping every other
    word, so below that each option becomes a card and the header row goes away. */
 @media (max-width: 700px) {
+  .docker-command {
+    flex-direction: column;
+  }
+
+  .docker-command .key {
+    align-self: flex-end;
+  }
+
   .options,
   .options tbody,
   .options tr,
@@ -876,7 +896,7 @@ h1 {
     row-gap: calc(var(--step));
   }
 
-  .rundown-row > span:last-child {
+  .rundown-row > :last-child {
     grid-column: 2;
   }
 }

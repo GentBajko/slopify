@@ -163,6 +163,17 @@
             </div>
                 <p class="install-hint">Then type <code>slopify</code> to launch.</p>
               </div>
+              <div>
+                <p class="install-label">Run in Docker · Linux</p>
+                <div class="command">
+                  <code>npx @gentbajko/slopify@latest --docker</code>
+                  <button class="key" type="button" data-copy="npx @gentbajko/slopify@latest --docker">
+                    <span data-copy-label>Copy</span>
+                    <span class="visually-hidden"> the Docker launcher command</span>
+                  </button>
+                </div>
+                <p class="install-hint">Runs in the background and restarts with Docker. <a href="#docker">Docker setup</a></p>
+              </div>
             </div>
             <span class="visually-hidden" role="status" data-copy-status></span>
           </div>
@@ -332,6 +343,33 @@
                 there is no prompt to answer. Update it with
                 <code>npm install -g @gentbajko/slopify@latest</code>.
               </span>
+            </li>
+            <li class="rundown-row" id="docker">
+              <span class="lamp" data-lamp="done" aria-hidden="true"></span>
+              <span class="engraved engraved-strong">Docker</span>
+              <div>
+                <p class="step-line">
+                  On Linux with Docker and Node 26+, run <code>npx @gentbajko/slopify@latest --docker</code>
+                  or <code>slopify --docker</code> after a global install. The launcher detects installed
+                  Codex, Claude Code and Gemini CLIs and mounts their executables read-only.
+                  Sign in to the CLIs inside the container; host login files are not copied.
+                </p>
+                <p class="step-line">
+                  For API-key providers without host CLI bridging, run the image directly:
+                </p>
+                <div class="command docker-command">
+                  <code>docker run -d --name slopify --restart always -p 127.0.0.1:6969:6969 -v slopify-data:/data ghcr.io/gentbajko/slopify:latest</code>
+                  <button class="key" type="button" data-copy="docker run -d --name slopify --restart always -p 127.0.0.1:6969:6969 -v slopify-data:/data ghcr.io/gentbajko/slopify:latest">
+                    <span data-copy-label>Copy</span>
+                    <span class="visually-hidden"> the direct Docker command</span>
+                  </button>
+                </div>
+                <p class="step-line">
+                  Both use <code>http://127.0.0.1:6969</code>, keep data in <code>slopify-data</code>,
+                  and restart the container when Docker starts. Keep the localhost binding: Slopify has no login.
+                  See the <a href="https://github.com/GentBajko/slopify#docker">Docker guide</a> for sign-in and updates.
+                </p>
+              </div>
             </li>
             <li class="rundown-row">
               <span class="lamp" data-lamp="done" aria-hidden="true"></span>
