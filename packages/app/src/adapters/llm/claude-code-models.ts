@@ -31,6 +31,7 @@ const responseSchema = z.object({
         .array(
           z.object({
             value: modelId,
+            resolvedModel: modelId.optional(),
             displayName: modelName,
             supportedEffortLevels: z.array(z.string()).max(10).optional(),
           }),
@@ -82,15 +83,27 @@ function choices(event: unknown, requestId: string): readonly ModelInfo[] {
   if (!parsed.success || parsed.data.response.request_id !== requestId) throw unavailable();
   const models = new Map<string, ModelInfo>();
   for (const row of parsed.data.response.response.models) {
-    if (models.has(row.value)) continue;
     const modes = row.supportedEffortLevels?.filter((value): value is ThinkingMode =>
       supportedEfforts.includes(value as ThinkingMode),
     );
-    models.set(row.value, {
-      id: row.value,
-      name: row.displayName,
-      ...(modes?.length ? { thinkingModes: modes } : {}),
-    });
+    const thinking = modes?.length ? { thinkingModes: modes } : {};
+    if (!models.has(row.value))
+      models.set(row.value, {
+        id: row.value,
+        name:
+          row.resolvedModel === undefined || row.resolvedModel === row.value
+            ? row.displayName
+            : `${row.displayName} → ${row.resolvedModel}`,
+        ...thinking,
+      });
+    // Claude advertises stable aliases and their current concrete targets.
+    // Offer both so the user can choose a moving alias or pin a version.
+    if (row.resolvedModel !== undefined && !models.has(row.resolvedModel))
+      models.set(row.resolvedModel, {
+        id: row.resolvedModel,
+        name: `${row.resolvedModel} (exact model)`,
+        ...thinking,
+      });
   }
   return [...models.values()];
 }

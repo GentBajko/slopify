@@ -29,6 +29,10 @@ export async function nodeGeminiModels(binary: string): Promise<readonly ModelIn
         // A candidate is an optional package layout, not the final discovery result.
       }
     }
+    // Recent Gemini CLI releases ship only bundled chunks. Follow the entry
+    // point's literal chunk imports and read their model constants as text.
+    const bundled = await bundledModels(entry);
+    if (bundled.length > 1) return bundled;
     throw new Error("No installed model metadata");
   } catch {
     throw new Error(
@@ -37,14 +41,37 @@ export async function nodeGeminiModels(binary: string): Promise<readonly ModelIn
   }
 }
 
+async function bundledModels(entry: string): Promise<readonly ModelInfo[]> {
+  const source = await readCatalogueFile(entry, 256 * 1024);
+  const imports = new Set<string>();
+  for (const match of source.matchAll(
+    /\b(?:from\s+|import\s*)["']\.\/(chunk-[A-Za-z0-9-]+\.js)["']/g,
+  )) {
+    if (match[1] !== undefined) imports.add(match[1]);
+  }
+  if (imports.size === 0 || imports.size > 32) return [];
+  for (const name of imports) {
+    try {
+      const source = await readCatalogueFile(join(dirname(entry), name), 24 * 1024 * 1024);
+      if (!source.includes("packages/core/dist/src/config/models.js")) continue;
+      const models = parseGeminiModels(source);
+      if (models.length > 1) return models;
+    } catch {
+      // Other chunks can be absent or too large; do not execute them.
+    }
+  }
+  return [];
+}
+
 function parseGeminiModels(source: string): readonly ModelInfo[] {
   const models = new Map<string, ModelInfo>();
   let pro = false;
   let flash = false;
   let flashLite = false;
-  // Read literal exported model constants only. Never import or execute an
+  // Read literal model constants only. Never import or execute an
   // installed package, parse comments as entries, or inspect login/settings.
-  const declarations = /^export (?:const|let) ([A-Z][A-Z0-9_]*)\s*=\s*(['"])([^'"\r\n]+)\2\s*;/gm;
+  const declarations =
+    /^(?:export\s+)?(?:const|let|var)\s+([A-Z][A-Z0-9_]*)\s*=\s*(['"])([^'"\r\n]+)\2\s*;/gm;
   const uncommented = source.replace(/\/\*[\s\S]*?\*\//g, "");
   for (const match of uncommented.matchAll(declarations)) {
     const name = match[1];

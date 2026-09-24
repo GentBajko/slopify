@@ -46,8 +46,18 @@ const success = `${JSON.stringify({
     subtype: "success",
     response: {
       models: [
-        { value: "sonnet", displayName: "Claude Sonnet", supportedEffortLevels: ["low", "high"] },
-        { value: "opus", displayName: "Claude Opus", supportedEffortLevels: ["max"] },
+        {
+          value: "sonnet",
+          resolvedModel: "claude-sonnet-5",
+          displayName: "Claude Sonnet",
+          supportedEffortLevels: ["low", "high"],
+        },
+        {
+          value: "opus[1m]",
+          resolvedModel: "claude-opus-5[1m]",
+          displayName: "Claude Opus",
+          supportedEffortLevels: ["max"],
+        },
       ],
     },
   },
@@ -57,11 +67,42 @@ describe("Claude Code model discovery", () => {
   it("uses only a no-prompt initialize request and returns model/effort metadata", async () => {
     const binary = await fakeClaude(success);
     expect(await nodeClaudeCodeModels(binary, 1000)).toEqual([
-      { id: "sonnet", name: "Claude Sonnet", thinkingModes: ["low", "high"] },
-      { id: "opus", name: "Claude Opus" },
+      { id: "sonnet", name: "Claude Sonnet → claude-sonnet-5", thinkingModes: ["low", "high"] },
+      {
+        id: "claude-sonnet-5",
+        name: "claude-sonnet-5 (exact model)",
+        thinkingModes: ["low", "high"],
+      },
+      { id: "opus[1m]", name: "Claude Opus → claude-opus-5[1m]" },
+      { id: "claude-opus-5[1m]", name: "claude-opus-5[1m] (exact model)" },
     ]);
     const privateCwd = await readFile(join(dirname(binary), "cwd.txt"), "utf8");
     expect(existsSync(privateCwd)).toBe(false);
+  });
+
+  it("keeps legacy aliases and deduplicates shared resolved model IDs", async () => {
+    const binary = await fakeClaude(
+      `${JSON.stringify({
+        type: "control_response",
+        response: {
+          request_id: "REQUEST_ID",
+          subtype: "success",
+          response: {
+            models: [
+              { value: "default", resolvedModel: "claude-opus-5", displayName: "Default" },
+              { value: "opus", resolvedModel: "claude-opus-5", displayName: "Opus" },
+              { value: "haiku", displayName: "Haiku" },
+            ],
+          },
+        },
+      })}\n`,
+    );
+    expect(await nodeClaudeCodeModels(binary, 1000)).toEqual([
+      { id: "default", name: "Default → claude-opus-5" },
+      { id: "claude-opus-5", name: "claude-opus-5 (exact model)" },
+      { id: "opus", name: "Opus → claude-opus-5" },
+      { id: "haiku", name: "Haiku" },
+    ]);
   });
 
   it("rejects a mismatched control response", async () => {

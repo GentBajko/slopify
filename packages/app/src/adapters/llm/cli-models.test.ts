@@ -103,6 +103,35 @@ export const DEFAULT_GEMINI_DUPLICATE_MODEL = 'gemini-2.5-pro';
 `;
 
 describe("Gemini installed model catalogue", () => {
+  it("reads model constants from the installed CLI's bundled chunks", async () => {
+    const root = await directory();
+    const bundle = join(root, "node_modules/@google/gemini-cli/bundle");
+    await mkdir(bundle, { recursive: true });
+    const entry = join(bundle, "gemini.js");
+    await writeFile(entry, 'import "./chunk-ABC123.js";\n');
+    await writeFile(
+      join(bundle, "chunk-ABC123.js"),
+      [
+        "// packages/core/dist/src/config/models.js",
+        'var PREVIEW_GEMINI_MODEL = "gemini-3-pro-preview";',
+        'var DEFAULT_GEMINI_MODEL = "gemini-2.5-pro";',
+        'var DEFAULT_GEMINI_FLASH_MODEL = "gemini-2.5-flash";',
+        'var DEFAULT_GEMINI_FLASH_LITE_MODEL = "gemini-2.5-flash-lite";',
+        'var DEFAULT_GEMINI_EMBEDDING_MODEL = "gemini-embedding-001";',
+        '/* var DEFAULT_GEMINI_FAKE_MODEL = "gemini-fake"; */',
+      ].join("\n"),
+    );
+    expect(await nodeGeminiModels(entry)).toEqual([
+      { id: "auto", name: "Gemini Auto (CLI default)" },
+      { id: "pro", name: "Gemini Pro (CLI alias)" },
+      { id: "flash", name: "Gemini Flash (CLI alias)" },
+      { id: "flash-lite", name: "Gemini Flash-Lite (CLI alias)" },
+      { id: "gemini-3-pro-preview", name: "gemini-3-pro-preview" },
+      { id: "gemini-2.5-pro", name: "gemini-2.5-pro" },
+      { id: "gemini-2.5-flash", name: "gemini-2.5-flash" },
+      { id: "gemini-2.5-flash-lite", name: "gemini-2.5-flash-lite" },
+    ]);
+  });
   it.each([false, true])(
     "reads literal model metadata in nested=%s package layout without execution",
     async (nested) => {
