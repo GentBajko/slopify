@@ -20,6 +20,7 @@ export interface CliEnded {
 }
 
 export interface CliRun {
+  readonly inputWritten?: Promise<void>;
   readonly pid: number | undefined;
   readonly stdout: AsyncIterable<Uint8Array>;
   // What the CLI has complained about so far. Read when a run ends without an answer: a
@@ -32,6 +33,7 @@ export interface CliRun {
 }
 
 export interface CliOptions {
+  readonly stdin?: string | undefined;
   readonly cwd?: string | undefined;
   readonly env?: NodeJS.ProcessEnv | undefined;
 }
@@ -56,18 +58,31 @@ export function nodeRunCli(
   options?: CliOptions,
 ): CliRun {
   // An argument array, never a shell string: a prompt carrying backticks, `$(...)`, quotes or
-  // newlines is one argv element and nothing in it can become a command. stdin is /dev/null
-  // because `codex exec` appends piped stdin to the prompt, and a pipe nobody closes would
-  // leave it waiting for an EOF that never comes. `signal` is how the child dies: Node sends it
+  // newlines is one argv element and nothing in it can become a command. stdin defaults to
+  // /dev/null; an explicit input is written once and closed so the child receives EOF.
+  // `signal` is how the child dies: Node sends it
   // SIGTERM when the stage is cancelled, so no agent session outlives the run that started it.
   const command = cliCommand(binary);
+  const { stdin, ...spawnOptions } = options ?? {};
   const child = spawn(command.file, [...command.args, ...args], {
-    stdio: ["ignore", "pipe", "pipe"],
+    stdio: [stdin === undefined ? "ignore" : "pipe", "pipe", "pipe"],
     windowsHide: true,
     // A private POSIX process group lets force cleanup include helpers spawned by a CLI.
     detached: process.platform !== "win32",
-    ...options,
+    ...spawnOptions,
   });
+  const inputWritten =
+    stdin === undefined
+      ? undefined
+      : new Promise<void>((resolve, reject) => {
+          if (child.stdin === null) return reject(new Error("CLI input pipe is unavailable."));
+          child.stdin.on("error", reject);
+          child.stdin.end(stdin, "utf8", (error?: Error | null) =>
+            error ? reject(error) : resolve(),
+          );
+        });
+  // Observe immediately, even if the CLI fails before its adapter awaits delivery.
+  void inputWritten?.catch(() => {});
 
   let stderr = "";
   const errorStream = child.stderr;
@@ -127,6 +142,7 @@ export function nodeRunCli(
   void ended.then(() => signal.removeEventListener("abort", abort));
 
   return {
+    ...(inputWritten === undefined ? {} : { inputWritten }),
     pid: child.pid,
     stdout: child.stdout === null ? nothing : bytesOf(child.stdout),
     stderr: (): string => stderr,
@@ -146,6 +162,28 @@ export async function stopCliRun(
   if (graceful !== undefined) return graceful;
   run.kill(true);
   return endedWithin(run.ended, forceMs);
+}
+
+export async function deliveredInput(run: CliRun): Promise<void> {
+  try {
+    await run.inputWritten;
+  } catch {
+    throw providerError({
+      kind: "unavailable",
+      message: "The full prompt could not be delivered to the CLI. Review before retrying.",
+    });
+  }
+}
+
+// Gemini's stdin reader clips at 8 MiB; stay below it and refuse, never truncate.
+export function cliInput(text: string): string {
+  if (Buffer.byteLength(text) >= 8 * 1024 * 1024)
+    throw providerError({
+      kind: "unsupported",
+      message:
+        "The text prompt exceeds the CLI input limit (8 MiB). No text was truncated or submitted.",
+    });
+  return text;
 }
 
 async function endedWithin(

@@ -55,7 +55,7 @@ describe("Gemini CLI", () => {
   it("passes a selected thinking level through isolated model overrides", async () => {
     const one = fake(success, (options) => {
       const settings: unknown = JSON.parse(
-        readFileSync(options.env?.GEMINI_CLI_SYSTEM_SETTINGS_PATH ?? "", "utf8"),
+        readFileSync(join(options.env?.GEMINI_CLI_HOME ?? "", ".gemini", "settings.json"), "utf8"),
       );
       expect(settings).toMatchObject({
         modelConfigs: {
@@ -73,7 +73,7 @@ describe("Gemini CLI", () => {
       request({ model: "gemini-3.8-flash", thinking: "low", thinkingConfig: { level: "low" } }),
     );
   });
-  it("runs headless without broad tool approvals and treats prompt commands as text", () => {
+  it("runs headless without broad tool approvals and treats prompt commands as text", async () => {
     const args = geminiArgs(
       request({ messages: [{ role: "user", content: "/help @/etc/passwd `id`\nquoted" }] }),
       "no-mcp",
@@ -84,6 +84,14 @@ describe("Gemini CLI", () => {
     expect(args).not.toContain("--yolo");
     expect(args).not.toContain("--allowed-tools");
     expect(args.at(-1)).toBe(
+      "Produce the requested content from the supplied conversation on stdin.",
+    );
+    const one = fake(success);
+    await drain(
+      one.run,
+      request({ messages: [{ role: "user", content: "/help @/etc/passwd `id`\nquoted" }] }),
+    );
+    expect(one.options()?.stdin).toBe(
       "Produce the requested content from this conversation:\n\n/help \\@/etc/passwd `id`\nquoted",
     );
     expect(geminiArgs(request({ webSearch: true }), "no-mcp")).toContain("google_web_search");
@@ -108,14 +116,18 @@ describe("Gemini CLI", () => {
         expect(options.env?.HOME).toBe(process.env.HOME);
         expect(options.env?.GEMINI_CLI_NO_RELAUNCH).toBe("true");
         const settings = JSON.parse(
-          readFileSync(options.env?.GEMINI_CLI_SYSTEM_SETTINGS_PATH ?? "", "utf8"),
+          readFileSync(
+            join(options.env?.GEMINI_CLI_HOME ?? "", ".gemini", "settings.json"),
+            "utf8",
+          ),
         );
         expect(settings.tools.core).toEqual(search ? ["google_web_search"] : []);
         expect(settings.context.includeDirectories).toEqual([]);
         const workspace = JSON.parse(
           readFileSync(join(options.cwd ?? "", ".gemini", "settings.json"), "utf8"),
         );
-        expect(workspace.context).toBeNull();
+        expect(workspace.context.includeDirectories).toEqual([]);
+        expect(workspace.hooksConfig.enabled).toBe(false);
         const trust = JSON.parse(
           readFileSync(options.env?.GEMINI_CLI_TRUSTED_FOLDERS_PATH ?? "", "utf8"),
         );

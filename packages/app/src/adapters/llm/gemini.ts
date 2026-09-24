@@ -2,14 +2,24 @@ import { z } from "zod";
 import { redact } from "../../kernel/log.js";
 import type { LlmCompletion, LlmEvent, LlmPort } from "../../kernel/ports/llm.js";
 import { type ModelInfo, providerError } from "../../kernel/ports/model.js";
+import { documentWorkspace } from "./document-workspace.js";
 import { nodeGeminiModels } from "./gemini-models.js";
 import { geminiWorkspace } from "./gemini-workspace.js";
 import type { CliEnded, RunCli } from "./run-cli.js";
-import { cliEvent, cliShaped, endedWithout, promptOf, stopCliRun } from "./run-cli.js";
+import {
+  cliEvent,
+  cliInput,
+  cliShaped,
+  deliveredInput,
+  endedWithout,
+  promptOf,
+  stopCliRun,
+} from "./run-cli.js";
 import { lines } from "./sse-lines.js";
 
 export const geminiBinary = "gemini";
 export interface GeminiDeps {
+  readonly env?: Readonly<NodeJS.ProcessEnv> | undefined;
   readonly run: RunCli;
   readonly binary?: string | undefined;
   readonly readModels?: (() => Promise<readonly ModelInfo[]>) | undefined;
@@ -31,9 +41,7 @@ export function geminiArgs(req: LlmCompletion, mcpAllowlist: string): string[] {
     ...(req.webSearch === true ? ["--allowed-tools", "google_web_search"] : []),
     ...(req.model === "" ? [] : ["--model", req.model]),
     "-p",
-    // The prefix prevents slash-command dispatch; escaping @ prevents Gemini's
-    // input preprocessor from reading files even when read tools are disabled.
-    `Produce the requested content from this conversation:\n\n${promptOf(req.messages).replaceAll("@", "\\@")}`,
+    "Produce the requested content from the supplied conversation on stdin.",
   ];
 }
 const messageSchema = z.object({
@@ -52,16 +60,18 @@ export function geminiLlm(deps: GeminiDeps): LlmPort {
   const binary = deps.binary ?? geminiBinary;
   async function* complete(req: LlmCompletion): AsyncGenerator<LlmEvent> {
     req.signal.throwIfAborted();
-    const workspace = geminiWorkspace(req.webSearch === true, req);
+    const documents = documentWorkspace(req.documents);
+    let workspace: ReturnType<typeof geminiWorkspace> | undefined;
     let run: ReturnType<RunCli> | undefined;
     let ended: CliEnded | undefined;
     try {
-      run = deps.run(
-        binary,
-        geminiArgs(req, workspace.mcpAllowlist),
-        req.signal,
-        workspace.options,
-      );
+      workspace = geminiWorkspace(req.webSearch === true, req, documents, deps.env ?? process.env);
+      run = deps.run(binary, geminiArgs(req, workspace.mcpAllowlist), req.signal, {
+        ...workspace.options,
+        stdin: cliInput(
+          `Produce the requested content from this conversation:\n\n${[documents?.instructions, promptOf(req.messages)].filter(Boolean).join("\n\n").replaceAll("@", "\\@")}`,
+        ),
+      });
       for await (const line of lines(authChecked(run.stdout), req.signal)) {
         if (line.trim() === "") continue;
         const event = cliEvent(binary, line);
@@ -77,6 +87,8 @@ export function geminiLlm(deps: GeminiDeps): LlmPort {
         } else if (event.type === "result") {
           const result = cliShaped(binary, resultSchema, event.value);
           if (result.status !== "success") throw failure(result.error?.message ?? result.status);
+          await deliveredInput(run);
+          documents?.verifyRead();
           yield {
             type: "done",
             usage:
@@ -95,8 +107,12 @@ export function geminiLlm(deps: GeminiDeps): LlmPort {
       req.signal.throwIfAborted();
       throw error;
     } finally {
-      if (run !== undefined) ended = await stopCliRun(run);
-      workspace.remove();
+      try {
+        if (run !== undefined) ended = await stopCliRun(run);
+      } finally {
+        documents?.remove();
+        workspace?.remove();
+      }
     }
     req.signal.throwIfAborted();
     if (run === undefined) throw failure(`the ${binary} CLI could not be started`);

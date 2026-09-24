@@ -50,6 +50,25 @@ function alive(pid: number | undefined): boolean {
 }
 
 describe("nodeRunCli", () => {
+  it("writes a large UTF-8 prompt through stdin and closes it without changing bytes", async () => {
+    const path = script("echo-stdin.mjs", "process.stdin.pipe(process.stdout);\n");
+    const input = "këtu 日本語 --not-a-flag\n".repeat(10000);
+    const run = nodeRunCli(process.execPath, [path], AbortSignal.any([]), { stdin: input });
+    const chunks: Uint8Array[] = [];
+    for await (const bytes of run.stdout) chunks.push(bytes);
+    await run.inputWritten;
+    expect(Buffer.concat(chunks).toString()).toBe(input);
+    expect((await run.ended).code).toBe(0);
+  });
+
+  it("reports a closed input pipe without crashing or hanging", async () => {
+    const path = script("close-stdin.mjs", "process.exit(0);\n");
+    const run = nodeRunCli(process.execPath, [path], AbortSignal.any([]), {
+      stdin: "x".repeat(2000000),
+    });
+    await expect(run.inputWritten).rejects.toThrow();
+    await run.ended;
+  });
   it("delivers every argument verbatim, with no shell between", async () => {
     const path = script(
       "argv.mjs",

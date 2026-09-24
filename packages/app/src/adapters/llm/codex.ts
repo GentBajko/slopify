@@ -8,8 +8,22 @@ import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import { cliLoginError } from "./cli-login-error.js";
 import { nodeCodexModels } from "./codex-models.js";
+import {
+  type DocumentWorkspace,
+  documentServerName,
+  documentTool,
+  documentWorkspace,
+} from "./document-workspace.js";
 import type { CliEnded, CliOptions, RunCli } from "./run-cli.js";
-import { cliEvent, cliShaped, endedWithout, promptOf, stopCliRun } from "./run-cli.js";
+import {
+  cliEvent,
+  cliInput,
+  cliShaped,
+  deliveredInput,
+  endedWithout,
+  promptOf,
+  stopCliRun,
+} from "./run-cli.js";
 import { lines } from "./sse-lines.js";
 
 // The local-agent adapter for the Codex CLI. Same shape as Claude Code's and a different
@@ -19,6 +33,7 @@ import { lines } from "./sse-lines.js";
 export const codexBinary = "codex";
 
 export interface CodexDeps {
+  readonly env?: Readonly<NodeJS.ProcessEnv> | undefined;
   readonly run: RunCli;
   readonly binary?: string | undefined;
   readonly readModels?: (() => Promise<readonly ModelInfo[]>) | undefined;
@@ -58,7 +73,11 @@ const disabledFeatures = [
 // plus a zero project-doc budget excludes AGENTS.md and project `.codex` context. Read-only is
 // defense in depth if a future release exposes a new filesystem tool. The TOML strings keep their
 // quotes because each `-c` value is parsed as TOML rather than as a shell expression.
-export function codexArgs(req: LlmCompletion, directory: string): string[] {
+export function codexArgs(
+  req: LlmCompletion,
+  directory: string,
+  documents?: DocumentWorkspace,
+): string[] {
   return [
     "exec",
     "--json",
@@ -93,16 +112,29 @@ export function codexArgs(req: LlmCompletion, directory: string): string[] {
     "-c",
     'shell_environment_policy.inherit="none"',
     "-c",
-    `instructions=${JSON.stringify(writingRole)}`,
+    `instructions=${JSON.stringify(writingRole + (documents ? " Use the explicitly supplied research MCP tool to read request documents; it is the only permitted local reference source." : ""))}`,
     "-c",
     `web_search="${req.webSearch === true ? "live" : "disabled"}"`,
     ...(req.thinkingConfig?.effort
       ? ["-c", `model_reasoning_effort="${req.thinkingConfig.effort}"`]
       : []),
     ...(req.model === "" ? [] : ["-m", req.model]),
-    // The prompt is one argv element after `--`, so a leading dash is text, not a flag.
+    ...(documents
+      ? [
+          "-c",
+          "tool_output_token_limit=32768",
+          ...Object.entries({
+            command: JSON.stringify(documents.command),
+            args: JSON.stringify(documents.args),
+            enabled_tools: JSON.stringify([documentTool]),
+            required: "true",
+            default_tools_approval_mode: '"auto"',
+          }).flatMap(([key, value]) => ["-c", `mcp_servers.${documentServerName}.${key}=${value}`]),
+        ]
+      : []),
+    // A literal '-' requests stdin; report bodies never become OS arguments.
     "--",
-    promptOf(req.messages),
+    "-",
   ];
 }
 
@@ -126,11 +158,18 @@ export function codexLlm(deps: CodexDeps): LlmPort {
 
   async function* complete(req: LlmCompletion): AsyncGenerator<LlmEvent> {
     req.signal.throwIfAborted();
-    const workspace = codexWorkspace();
+    const workspace = codexWorkspace(deps.env ?? process.env);
+    let documents: DocumentWorkspace | undefined;
     let run: ReturnType<RunCli> | undefined;
     let ended: CliEnded | undefined;
     try {
-      run = deps.run(binary, codexArgs(req, workspace.directory), req.signal, workspace.options);
+      documents = documentWorkspace(req.documents);
+      run = deps.run(binary, codexArgs(req, workspace.directory, documents), req.signal, {
+        ...workspace.options,
+        stdin: cliInput(
+          [documents?.instructions, promptOf(req.messages)].filter(Boolean).join("\n\n"),
+        ),
+      });
       for await (const line of lines(run.stdout, req.signal)) {
         if (line.trim() === "") {
           continue;
@@ -150,6 +189,8 @@ export function codexLlm(deps: CodexDeps): LlmPort {
           continue;
         }
         if (event.type === "turn.completed") {
+          await deliveredInput(run);
+          documents?.verifyRead();
           const { usage } = cliShaped(binary, turnCompleted, event.value);
           // ceiling: Codex reports no stop reason, so the continuation loop cannot tell a
           // finished answer from one cut at the output limit. A `--output-schema` run
@@ -184,6 +225,7 @@ export function codexLlm(deps: CodexDeps): LlmPort {
       try {
         if (run !== undefined) ended = await stopCliRun(run);
       } finally {
+        documents?.remove();
         workspace.remove();
       }
     }
@@ -212,7 +254,7 @@ export function codexLlm(deps: CodexDeps): LlmPort {
   };
 }
 
-function codexWorkspace(): {
+function codexWorkspace(sourceEnv: Readonly<NodeJS.ProcessEnv>): {
   readonly directory: string;
   readonly options: CliOptions;
   readonly remove: () => void;
@@ -220,7 +262,7 @@ function codexWorkspace(): {
   const directory = mkdtempSync(join(tmpdir(), "slopify-codex-"));
   // npm sets INIT_CWD to the directory from which the app was launched. Do not hand that path,
   // an old shell directory or Git's explicit worktree pointers to the content subprocess.
-  const env = { ...process.env };
+  const env = { ...sourceEnv };
   delete env.INIT_CWD;
   delete env.OLDPWD;
   delete env.GIT_DIR;

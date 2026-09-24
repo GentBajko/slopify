@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import type { LlmCompletion, LlmEvent, Message } from "../../kernel/ports/llm.js";
 import { isProviderError } from "../../kernel/ports/model.js";
 import { claudeCodeArgs, claudeCodeLlm } from "./claude-code.js";
-import type { CliEnded, CliRun } from "./run-cli.js";
+import type { CliEnded, CliRun, RunCli } from "./run-cli.js";
 import { nodeRunCli } from "./run-cli.js";
 
 // Fixture provenance: `fixtures/claude-code-*.jsonl` come from real `claude` 2.1.258 runs on
@@ -33,7 +33,7 @@ function replaying(
   text: string,
   ended: CliEnded = { code: 0, error: null },
   stderr = "",
-): { readonly run: (b: string, a: readonly string[], s: AbortSignal) => CliRun } & Recorded {
+): { readonly run: RunCli } & Recorded {
   const seen: { binary: string; args: readonly string[] }[] = [];
   let killed = 0;
   return {
@@ -97,7 +97,7 @@ describe("claudeCodeArgs", () => {
     const role = args[args.indexOf("--system-prompt") + 1];
     expect(role).toContain("writing and research");
     expect(role).toContain("Return only the requested content");
-    expect(args.at(-1)).toBe("Write a travel article about Albania.");
+    expect(args).not.toContain("Write a travel article about Albania.");
     // Bare mode would discard the subscription login this provider exists to use.
     expect(args).not.toContain("--bare");
   });
@@ -116,8 +116,6 @@ describe("claudeCodeArgs", () => {
       "",
       "--model",
       "haiku",
-      "--",
-      "What is SSE?",
     ]);
   });
 
@@ -134,15 +132,37 @@ describe("claudeCodeArgs", () => {
     expect(claudeCodeArgs(request({ model: "" }))).not.toContain("--model");
   });
 
-  it("puts the prompt after a separator, as one argument, whatever is in it", () => {
+  it("keeps large prompts out of argv and sends them intact through stdin", async () => {
     const prompt = '-not a flag `id` $(rm -rf /) "quoted"\nsecond line';
-    const args = claudeCodeArgs(request({ messages: [{ role: "user", content: prompt }] }));
-    expect(args.at(-2)).toBe("--");
-    expect(args.at(-1)).toBe(prompt);
+    const content = prompt.repeat(5000);
+    const fake = replaying(fixture("claude-code-success.jsonl"));
+    const port = claudeCodeLlm({
+      run: (binary, args, signal, options) => {
+        expect(args).not.toContain(content);
+        expect(options?.stdin).toBe(content);
+        return fake.run(binary, args, signal, options);
+      },
+    });
+    for await (const _ of port.complete(request({ messages: [{ role: "user", content }] }))) {
+    }
+    expect(fake.seen).toHaveLength(1);
   });
 });
 
 describe("claudeCodeLlm.complete", () => {
+  it("does not accept an answer when the full prompt could not be delivered", async () => {
+    const fake = replaying(fixture("claude-code-success.jsonl"));
+    const port = claudeCodeLlm({
+      run: (...args) => ({
+        ...fake.run(...args),
+        inputWritten: Promise.reject(new Error("EPIPE")),
+      }),
+    });
+    await expect(async () => {
+      for await (const _ of port.complete(request())) {
+      }
+    }).rejects.toMatchObject({ fault: { kind: "unavailable" } });
+  });
   it("replays a recorded run into the answer, its usage and its stop reason", async () => {
     const events = await drain(fixture("claude-code-success.jsonl"));
     expect(events).toEqual([

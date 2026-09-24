@@ -5,8 +5,13 @@ import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import { nodeClaudeCodeModels } from "./claude-code-models.js";
 import { cliLoginError } from "./cli-login-error.js";
+import {
+  type DocumentWorkspace,
+  documentToolName,
+  documentWorkspace,
+} from "./document-workspace.js";
 import type { CliEnded, RunCli } from "./run-cli.js";
-import { cliEvent, cliShaped, endedWithout, promptOf, stopCliRun } from "./run-cli.js";
+import { cliEvent, cliInput, cliShaped, endedWithout, promptOf, stopCliRun } from "./run-cli.js";
 import { lines } from "./sse-lines.js";
 
 // The local-agent adapter for Claude Code: spawned non-interactively, authenticated by the
@@ -17,6 +22,7 @@ import { lines } from "./sse-lines.js";
 export const claudeCodeBinary = "claude";
 
 export interface ClaudeCodeDeps {
+  readonly env?: Readonly<NodeJS.ProcessEnv> | undefined;
   readonly run: RunCli;
   readonly binary?: string | undefined;
   readonly readModels?: (() => Promise<readonly ModelInfo[]>) | undefined;
@@ -36,7 +42,7 @@ const writingRole =
 // never something a stage does quietly, and no stage should touch the disk. `--tools ""`
 // empties the built-in set and `--strict-mcp-config` drops the user's MCP servers; the init
 // event of a run with both reports `"tools":[]` and `"mcp_servers":[]`.
-export function claudeCodeArgs(req: LlmCompletion): string[] {
+export function claudeCodeArgs(req: LlmCompletion, documents?: DocumentWorkspace): string[] {
   return [
     "-p",
     "--output-format",
@@ -46,19 +52,44 @@ export function claudeCodeArgs(req: LlmCompletion): string[] {
     "--include-partial-messages",
     // `claude --help` 2.1.263: safe mode excludes CLAUDE.md, output styles, skills and
     // hooks while retaining login and managed policy. --bare would discard OAuth.
-    "--safe-mode",
+    ...(documents
+      ? [
+          "--restricted",
+          "--setting-sources",
+          "",
+          "--disable-slash-commands",
+          "--no-chrome",
+          "--no-session-persistence",
+          "--settings",
+          JSON.stringify({
+            disableAllHooks: true,
+            autoMemoryEnabled: false,
+            claudeMdExcludes: ["**"],
+            enabledPlugins: {},
+          }),
+        ]
+      : ["--safe-mode"]),
     "--system-prompt",
-    writingRole,
+    writingRole +
+      (documents
+        ? " Use the explicitly supplied research MCP tool to read request documents; it is the only permitted local reference source."
+        : ""),
     "--strict-mcp-config",
-    ...(req.webSearch === true
-      ? ["--tools", "WebSearch", "--allowedTools", "WebSearch"]
-      : ["--tools", ""]),
+    "--tools",
+    req.webSearch === true ? "WebSearch" : "",
+    ...(documents ? ["--mcp-config", documents.config, "--permission-mode", "dontAsk"] : []),
+    ...(req.webSearch === true || documents
+      ? [
+          "--allowedTools",
+          [req.webSearch === true ? "WebSearch" : "", documents ? documentToolName : ""]
+            .filter(Boolean)
+            .join(","),
+        ]
+      : []),
     ...(req.model === "" ? [] : ["--model", req.model]),
     ...(req.thinking !== undefined && req.thinking !== "off" ? ["--effort", req.thinking] : []),
-    // Everything after `--` is the prompt, so a prompt opening with a dash is text and not
-    // a flag. It is one argv element: no shell sees it and nothing in it is expanded.
-    "--",
-    promptOf(req.messages),
+    // The full prompt is piped as text, not argv: research synthesis can exceed
+    // the OS argument-size limit. No shell or local-file access is involved.
   ];
 }
 
@@ -87,9 +118,26 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
   const binary = deps.binary ?? claudeCodeBinary;
 
   async function* complete(req: LlmCompletion): AsyncGenerator<LlmEvent> {
-    const run = deps.run(binary, claudeCodeArgs(req), req.signal);
+    req.signal.throwIfAborted();
+    const documents = documentWorkspace(req.documents);
+    let run: ReturnType<RunCli> | undefined;
     let ended: CliEnded | undefined;
     try {
+      run = deps.run(binary, claudeCodeArgs(req, documents), req.signal, {
+        ...(documents
+          ? {
+              cwd: documents.directory,
+              env: {
+                ...(deps.env ?? process.env),
+                CLAUDE_CODE_SAFE_MODE: "0",
+                PWD: documents.directory,
+              },
+            }
+          : {}),
+        stdin: cliInput(
+          [documents?.instructions, promptOf(req.messages)].filter(Boolean).join("\n\n"),
+        ),
+      });
       for await (const line of lines(run.stdout, req.signal)) {
         if (line.trim() === "") {
           continue;
@@ -99,7 +147,7 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
         // messages remain the sole prose source so text is never appended twice.
         yield { type: "activity" };
         req.signal.throwIfAborted();
-        if (event.type === "assistant") {
+        if (event.type === "assistant" && !documents) {
           for (const block of cliShaped(binary, assistantEvent, event.value).message.content) {
             // A turn also carries `thinking` and `tool_use` blocks; only the prose is the
             // stage's output.
@@ -113,6 +161,15 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
           continue;
         }
         const result = cliShaped(binary, resultEvent, event.value);
+        try {
+          await run.inputWritten;
+        } catch {
+          throw providerError({
+            kind: "unavailable",
+            message:
+              "The full prompt could not be delivered to Claude Code. Review before retrying.",
+          });
+        }
         if (result.is_error === true || result.subtype !== "success") {
           const login = cliLoginError("claude-code", result.result ?? result.subtype);
           if (login) throw login;
@@ -121,6 +178,8 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
             message: redact(result.result ?? result.subtype),
           });
         }
+        documents?.verifyRead();
+        if (documents && result.result) yield { type: "delta", text: result.result };
         yield {
           type: "done",
           usage: usageOf(result.modelUsage),
@@ -136,13 +195,18 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
     } finally {
       // The consumer can also abandon the generator - a retry, a timeout - and an agent
       // session left running would keep spending the user's subscription.
-      ended = await stopCliRun(run);
+      try {
+        if (run) ended = await stopCliRun(run);
+      } finally {
+        documents?.remove();
+      }
     }
     // A cancelled run ends its stream the same way an exhausted one does: the child was
     // killed, so stdout simply stopped. An aborted call counts as nothing, so it must not
     // be reported as the provider failing.
     req.signal.throwIfAborted();
     // The stream ended with no result event at all.
+    if (!run) throw new Error("Claude Code could not be started.");
     const login = cliLoginError("claude-code", run.stderr());
     if (login) throw login;
     throw providerError({
