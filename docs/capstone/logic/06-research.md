@@ -1,4 +1,5 @@
 ---
+absorbed_from: features/2026-09-24-research-documents@2026-09-25
 scenario: research
 mockup_row: S4
 screens: [06-play, 08-project]
@@ -21,15 +22,16 @@ The research stage: agentic, web-grounded, one sub-agent per chapter, synthesize
 
 1. Planner call: send a built-in instruction composed by the app from the keyword values and the rendered article prompt; the response is the chapter list, derived from the prompt's section guide. When the prompt has no section structure, the planner proposes the chapters. No cap on the count.
 2. Sub-agent calls: one per chapter, all in parallel, each web-grounded, each returning that chapter's notes plus its sources. The web-grounding mechanism is `stack`'s.
-3. Synthesis call: an editorial pass over every sub-agent's output that selects and organizes the findings; it does not concatenate. Output: plain-text notes ending in a "Sources" list of URLs; no length cap.
-4. Store on the project: the final notes, every instruction sent (planner, each sub-agent, synthesis), and each sub-agent's output. The project page shows the notes; the sent instructions are viewable there, presentation per `uiux`.
+3. Synthesis call: an editorial pass receives every original report as a separate document with an ordered index. It selects and organizes findings; it does not replace the originals. Output: notes ending in a Sources list. Model context limits and validated request-size limits apply; input is never silently clipped.
+4. Store each new report as an immutable research-N.md revision asset plus the existing title/notes payload. Retain final notes and exact instructions, including supplied documents. Existing revision downloads serve report assets; legacy payload-only reports remain reusable without regeneration.
 5. Progress on the project page: "k of N chapters researched"; refines scenario 01's plain running for this stage.
-6. The article stage receives the notes in full (scenario 07).
+6. The article stage and its continuations receive all original reports plus editorial notes in full (scenario 07).
 
 ## Branches
 
 - Section guide present in the article prompt → chapters from it; absent → planner proposes.
-- Manual retry after failure → resume: completed sub-agents kept, failed and not-started ones run, then synthesis.
+- Reviewed rebuild after failure → reuse matching completed reports; admit affected calls only after cost review and Start. The new document handoff preserves planner/chapter fingerprints.
+- CLI providers materialize request-only private files and expose only a read-only MCP document tool. API providers receive separately labelled complete document messages. Host transport accepts contents, never arbitrary paths.
 
 ## Unhappy paths
 
@@ -40,6 +42,7 @@ The research stage: agentic, web-grounded, one sub-agent per chapter, synthesize
 - One sub-agent exhausts its retries → the whole stage fails; sub-agents still running finish or are abandoned per scenario 13 cancel rules; their completed outputs are kept for the resume.
 - Interrupted process → stage failed "interrupted" (scenario 01); resume applies on manual retry.
 - Cancel mid-stage → scenario 13.
+- Invalid or oversized documents, changed files, failed stdin delivery or incomplete page reads fail explicitly. Uncertain submitted work requires review before retry; a document reader does not expand a model's context window.
 
 ## State transitions
 

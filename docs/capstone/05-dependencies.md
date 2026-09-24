@@ -20,6 +20,8 @@ paths_covered:
 
 # Dependencies
 
+Research-document additions (1.5.0): @modelcontextprotocol/sdk 1.30.1 (MIT) supplies the standard stdio reader protocol; strip-json-comments 5.0.3 (MIT) parses Gemini's existing JSONC authentication-selection setting. Both are locked runtime dependencies. No custom MCP protocol or general file-access dependency was added. The remaining inventory retains its prior checkpoint.
+
 Manifest and lockfile snapshot: `f4c4f7b3295a` (2026-09-13).
 
 ## Runtime and frameworks

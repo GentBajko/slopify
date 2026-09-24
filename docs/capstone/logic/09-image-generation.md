@@ -1,6 +1,7 @@
 ---
 host_cli_verified_at_commit: 9bd6517
 absorbed_from:
+  - features/2026-09-24-research-documents@2026-09-25
   - features/2026-09-24-host-cli-bridge@2026-09-24
   - features/2026-09-09-pausable-optional-runs@2026-09-10
   - features/2026-09-10-editable-projects@2026-09-12
@@ -41,6 +42,7 @@ The images stage and prompt-driven thumbnail use revision-bound image recipes, s
 ## Branches
 
 - Codex CLI is an image provider without a stored API key. Docker sends a strict model/prompt/aspect request to the host helper. The existing Codex adapter owns a private workspace, safe exact-file validation and cleanup; only verified PNG/JPEG bytes up to 32 MiB return. No caller-chosen output path or host filesystem mount is accepted (`packages/app/src/host-cli/runtime.ts:72`, `packages/app/src/edge/http/host-cli.ts:248`).
+- Codex 0.155.1 saves native image artifacts under CODEX_HOME/generated_images/<thread ID>. Slopify captures the unique thread.started ID and collects exactly one fresh regular single-link PNG-named artifact after a successful exit. It validates directory/file identity, bounded bytes and image format; it no longer asks the model to copy a result into its cwd. Originals stay in Codex. Missing, ambiguous, stale or unsafe artifacts fail terminally with a review-before-retry warning (`packages/app/src/adapters/image/codex-output.ts`).
 - Container publication still writes immutable project-owned assets; completed images survive host-helper loss. Missing/expired CLI login is terminal missing_key, and helper/protocol/truncated-response failure is terminal unavailable without automatic replay. After a submitted connection is lost, the message warns that generation may already have happened and requires reviewed rebuilding (`packages/app/src/adapters/host-cli/index.ts:140`, `packages/app/src/kernel/runner/attempt.ts:28`).
 
 - Thumbnail source: Off → skipped; Generate with a thumbnail prompt → step 4; Generate via LLM → scenario 10; Provide → scenario 05.

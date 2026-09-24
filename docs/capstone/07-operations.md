@@ -1,4 +1,5 @@
 ---
+research_documents_verified_at_commit: 735cf5b
 host_cli_verified_at_commit: 9bd6517
 generated_at_commit: 4cfe3473f74d
 generated_date: '2026-09-13'
@@ -95,7 +96,8 @@ The inventory distinguishes application inputs from values deliberately set for 
 | WSL_DISTRO_NAME | Unset; presence indicates WSL on Linux | `packages/app/src/edge/open-browser.ts:16` | Source comment; `/proc/version` is the additional detection fallback |
 | WSL_INTEROP | Unset; presence indicates WSL on Linux | `packages/app/src/edge/open-browser.ts:16` | Source comment; shared browser/folder detection |
 | npm_config_update_notifier | Set to `false` for the installer child | `packages/app/src/updater/worker.ts:137` | Internal npm environment; npm is its consumer |
-| GEMINI_CLI_SYSTEM_SETTINGS_PATH | Child-only temporary `settings.json` | `packages/app/src/adapters/llm/gemini-workspace.ts:96` | Internal Gemini child configuration |
+| GEMINI_CLI_HOME | Child-only private home containing `.gemini/settings.json` | `packages/app/src/adapters/llm/gemini-workspace.ts` | Isolated Gemini user settings |
+| GOOGLE_APPLICATION_CREDENTIALS | Existing host OAuth file when selected auth is oauth-personal | `packages/app/src/adapters/llm/gemini-workspace.ts` | Supported credential fallback; no credentials mounted into Docker |
 | GEMINI_CLI_TRUSTED_FOLDERS_PATH | Child-only temporary `trusted-folders.json` | `packages/app/src/adapters/llm/gemini-workspace.ts:97` | Internal Gemini workspace trust |
 | NO_BROWSER | Set to `true` for Gemini children | `packages/app/src/adapters/llm/gemini-workspace.ts:98`; logged-out prompt detection in `packages/app/src/adapters/llm/gemini.ts:138` | Internal Gemini headless-login handling |
 | GEMINI_SYSTEM_MD | Child-only temporary `writing.md` | `packages/app/src/adapters/llm/gemini-workspace.ts:99` | Internal writing-role context |
@@ -157,7 +159,9 @@ Revision subtitle/export execution prepares immutable caption, font and media as
 
 Saved executable paths and 15-second readiness probes cover Claude Code, Codex and Gemini. The launcher resolves supported Windows Node shims and refuses unknown batch commands; process argv is passed without shell interpolation (`packages/app/src/slices/settings/cli-paths.ts:35`, `packages/app/src/slices/settings/cli-status.ts:22`, `packages/app/src/kernel/cli-command.ts:11`, `packages/app/src/adapters/llm/run-cli.ts:63`).
 
-Claude uses JSON streaming with partial-message activity, safe mode, a writing role and strict MCP configuration. Codex 0.149.1+ runs JSON execution in a private temporary directory with user rules, local tools and account connectors disabled. Gemini receives temporary workspace/system configuration and a restricted tool/MCP configuration. Cancel/shutdown gives each CLI one second for graceful exit and one second after force-killing its POSIX process group or Windows process tree (`packages/app/src/adapters/llm/claude-code.ts:43`, `packages/app/src/adapters/llm/codex.ts:33`, `packages/app/src/adapters/llm/gemini-workspace.ts:10`, `packages/app/src/adapters/llm/gemini.ts:23`).
+CLI text prompts travel through stdin, never large command-line arguments. Document calls use a private read-only MCP reader and require every report page to be requested. Claude keeps safe mode for plain calls; document calls use restricted mode, strict MCP configuration, disabled hooks/memory/plugins and an exact tool allowlist because safe mode blocks explicit MCP servers. Codex disables local tools and user/account connectors while admitting only the required reader. Gemini uses a private CLI home rather than non-root system-settings overrides; only authentication selection is carried from host settings. Cancel/shutdown stops the CLI process group/tree before deleting request files. See the scoped [research architecture](01-architecture-research.md).
+
+Codex image collection follows the native generated_images/<thread ID> output contract, verifies one fresh safe image and leaves the source untouched. Ambiguous collection requires review rather than automatic regeneration. This was verified against installed Codex 0.155.1; reader configuration was checked without model turns on Claude 2.1.281 and Gemini 0.61.0.
 
 API-key provider choices use validated YAML. CLI choices come from live installed-provider discovery rather than YAML. Codex image generation uses the registered `codex-image` family with built-in model `codex-imagegen`, sharing Codex's executable and login (`packages/app/src/catalog/runtime-models.ts`, `packages/app/src/catalog/registry.ts`, `packages/app/src/slices/settings/cli-paths.ts`).
 

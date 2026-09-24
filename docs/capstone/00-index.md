@@ -33,9 +33,12 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | Topic | File |
 |---|---|
 | architecture | [01-architecture.md](01-architecture.md) |
+| architecture | [01-architecture-research.md](01-architecture-research.md) — scoped research/provider handoff |
 | models | [02-models.md](02-models.md) |
+| models | [02-models-research.md](02-models-research.md) — scoped research payloads |
 | conventions | [03-conventions.md](03-conventions.md) |
 | data-flow | [04-data-flow.md](04-data-flow.md) |
+| data-flow | [04-data-flow-research.md](04-data-flow-research.md) — research, synthesis and writer handoff |
 | dependencies | [05-dependencies.md](05-dependencies.md) |
 | testing | [06-testing.md](06-testing.md) |
 | operations | [07-operations.md](07-operations.md) |

@@ -4,6 +4,7 @@ generated_at_commit: 4cfe3473f74d
 capstone_version: 5.2.0
 generated_date: '2026-09-13'
 absorbed_from:
+  - features/2026-09-24-research-documents@2026-09-25
   - features/2026-09-24-host-cli-bridge@2026-09-24
   - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-10-editable-projects@2026-09-12
@@ -32,8 +33,8 @@ Use a scenario when changing one of the listed workflows. Article is the only re
 | 03 Placeholder substitution | [03-placeholder-substitution.md](03-placeholder-substitution.md) |
 | 04 Run admission | [04-run-admission.md](04-run-admission.md) |
 | 05 Provided outputs | [05-provided-outputs.md](05-provided-outputs.md) |
-| 06 Research | [06-research.md](06-research.md) |
-| 07 Article writing | [07-article-writing.md](07-article-writing.md) |
+| 06 Research documents and editorial consolidation | [06-research.md](06-research.md) |
+| 07 Article writing from originals and editorial notes | [07-article-writing.md](07-article-writing.md) |
 | 08 Narration, optional cue preparation and clean/script downloads | [08-narration.md](08-narration.md) |
 | 09 Image generation | [09-image-generation.md](09-image-generation.md) |
 | 10 Thumbnail prompt by LLM | [10-thumbnail-prompt-by-llm.md](10-thumbnail-prompt-by-llm.md) |

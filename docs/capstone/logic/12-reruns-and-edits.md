@@ -1,5 +1,6 @@
 ---
 absorbed_from:
+- features/2026-09-24-research-documents@2026-09-25
 - features/2026-09-09-pausable-optional-runs@2026-09-10
 - features/2026-09-10-editable-projects@2026-09-12
 - features/2026-09-10-review-checkpoints@2026-09-13
@@ -58,6 +59,8 @@ Start checks the same base, preview identity and acknowledgements again. Changed
 Host-managed CLI paths are checked by the host helper, not compared with the container's local path settings. Native CLI paths still receive the final change check. Both rebuild and Play admission use `cliPathChanged` in `packages/app/src/slices/settings/cli-paths.ts` (1.4.1 regression correction).
 
 Completed requests and assets within the revision are reused. Retained asynchronous provider jobs can be retrieved without submitting again; their retrieval does not require admitting a replacement job under a changed model or key. An unknown prior submission is reported before an explicit retry because it may already have been billed.
+
+Research document delivery preserves existing planner/chapter fingerprints. Legacy report payloads remain reusable, while changed editorial/article requests need a fresh review. The preview displays full labelled document inputs and includes their content in input-cost counts. Upgrading does not automatically retry failed work or regenerate reports/images.
 
 A duplicate Start returns the same admission and work IDs. Transport failure preserves the client's exact request body and idempotency key. A response lost after acceptance cannot authorize a second chargeable start.
 

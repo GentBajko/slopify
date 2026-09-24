@@ -1,4 +1,5 @@
 ---
+absorbed_from: features/2026-09-24-research-documents@2026-09-25
 scenario: article-writing
 mockup_row: S5
 screens: [08-project]
@@ -9,7 +10,7 @@ capstone_version: 5.2.0
 
 # 07 Article writing
 
-The article stage: one streamed LLM call from the rendered prompt and the research notes, stored as markdown plus a plain-text narration source.
+The article stage writes from the rendered prompt and, when research was generated, every original report plus editorial notes. It stores Markdown and a separate plain-text narration source.
 
 ## Trigger & preconditions
 
@@ -19,16 +20,16 @@ The article stage: one streamed LLM call from the rendered prompt and the resear
 
 ## Steps
 
-1. Compose one user message: with research, a fixed "Research notes" header followed by the notes, then the rendered article prompt; without research, the rendered prompt alone. Provider default parameters; the app sets none.
+1. Compose the task and document index. Generated research supplies ordered original reports and editorial-notes separately; provided research keeps its existing plain-text message path. Without research, use the rendered prompt alone. Reviewed recipes pin the documents and selected model/thinking configuration.
 2. Stream the response into the project page as it arrives (scenario 01).
-3. Truncation: when the model stops at its output limit before the article ends, send a continuation call that appends the rest; at most 3 continuations; still unfinished after the third is a failed attempt.
+3. Truncation: when the provider reports an output-limit stop, send a continuation retaining the same documents and prior article; at most 3 continuations. Model context limits still apply.
 4. Store on the project: the markdown text exactly as the model produced it plus continuations, a plain-text copy with markdown syntax stripped as the narration source, and the exact messages sent. Sections the prompt requests ("Sources Consulted", "Pronunciation Glossary") stay in the text; scenario 08 decides what is narrated.
 5. Intro and outro text: for each picked entry in LLM mode, one call with the filled entry as instruction plus the title, keyword values, and the plain-text article; the response is stored as that segment's text. Text-mode entries are stored as rendered per scenario 03 with no call. A failed call fails the article stage under the same retry rules.
 6. Mark the stage `done`; audio, images, and thumbnail start (scenario 01 step 4).
 
 ## Branches
 
-- Research ran → notes included; research Off or skipped → prompt alone.
+- Generated research → originals and editorial notes included; provided research → supplied notes; research Off or skipped → prompt alone.
 - Output within the requested word range or not → accepted as written either way; the app does not count words.
 - Model finished naturally → no continuation; stopped at its limit → continuation loop of step 3.
 
@@ -40,6 +41,7 @@ The article stage: one streamed LLM call from the rendered prompt and the resear
 - Fourth truncation → failed attempt; retry regenerates the whole article.
 - Interrupted process → stage failed "interrupted" (scenario 01).
 - Cancel → scenario 13.
+- CLI document calls must request every page before final output is accepted. Missing reads or uncertain delivery require reviewed retry. Private request files are removed after the child stops; stored reports are untouched.
 
 ## State transitions
 

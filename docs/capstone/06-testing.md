@@ -1,4 +1,5 @@
 ---
+research_documents_verified_at_commit: 735cf5b
 host_cli_verified_at_commit: 9bd6517
 generated_at_commit: 4cfe3473f74d
 generated_date: '2026-09-13'
@@ -34,7 +35,7 @@ Host CLI verification (2026-09-24): colocated protocol/client/status/runtime/ser
 
 `packages/app/scripts/host-cli-smoke.mjs` packs the candidate, installs it with scripts disabled under a disposable prefix, runs fake CLIs under a test HOME and connects a disposable container using only its share mount. It checks another container UID, model/status reads, generated image API publication and actual volume bytes, then restarts the helper without recreating Docker. Socket acceptance separately covers cancellation/lost responses. CI runs this after build and the API-only container/FFmpeg/storage smoke; native package and Windows tests remain (`.github/workflows/ci.yml:45`).
 
-Final 1.4.0 candidate: 435 files, 3,357 passing tests and one skipped. Lint/typecheck/build, zero-vulnerability audit, native install smoke and both Docker smokes passed. Real Claude/Codex login status and all three model catalogues were checked read-only; Gemini auth remains unknown. Real paid text/image generation and persistent systemd installation were not tested. The broader historical inventory below is retained, not claimed current.
+Document/image candidate 1.5.0: 440 files, 3,395 passing tests and one skipped; lint, typecheck, build and zero-vulnerability audit passed. Reader tests cover full large Unicode reports, scope, invalid IDs, tampering, missing reads and cleanup. All three host adapters use fake CLI executables against the real SDK reader; OpenRouter tests inspect exact labelled contents. Real CLI metadata-only checks confirmed the isolated reader connects on Claude 2.1.281, Codex 0.155.1 and Gemini 0.61.0 without model turns. A database-copy rehearsal and scoped live recovery preserved 13 reports and six saved images without generation. Container/release verification is recorded separately in the release ledger; the historical inventory below is not claimed current.
 
 `npm test` runs `vitest run` from the workspace root. Root Vitest discovers `packages/*/vitest.config.ts`. There are four configured projects: `app` includes `src/**/*.test.ts` and `test/**/*.test.ts`; `web` includes `src/**/*.test.ts` and `src/**/*.test.tsx` under `happy-dom`; `collector` includes `src/**/*.test.ts`; `site` includes root-level `*.test.js`. Application/unit tests are colocated with production modules, while composed application tests live under `packages/app/test` and real HTTP/media journeys under its `e2e` subdirectory. `package.json:11` `vitest.config.ts:3` `packages/app/vitest.config.ts:3` `packages/web/vitest.config.ts:5` `packages/collector/vitest.config.ts:3` `packages/site/vitest.config.ts:3` `packages/app/test/revision-rebuild.test.ts:11` `packages/app/test/e2e/editable-projects.test.ts:39`
 

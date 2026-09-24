@@ -17,6 +17,8 @@ paths_covered:
 
 # Conventions
 
+Research-document scope, verified at 735cf5b (2026-09-25): optional typed documents cross existing ports and strict schemas; empty collections are omitted to preserve old recipe identities. CLI input uses a closed stdin pipe. A fixed SDK reader owns request-only files and exposes IDs, not paths. Provider errors fail closed on uncertain delivery; no general local tools are enabled. Other observations below retain their historical checkpoint.
+
 Observed source: `f4c4f7b3295a` (2026-09-13).
 
 ## Paradigm
