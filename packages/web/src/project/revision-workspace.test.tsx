@@ -1,6 +1,6 @@
 import { startRebuildSchema } from "@app/slices/rebuild/model.js";
 import { restoreRevisionSchema, saveRevisionSchema } from "@app/slices/revisions/schema.js";
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -253,60 +253,109 @@ it("recovers a history restore conflict without requiring an open editor", async
   expect(screen.queryByRole("textbox")).toBeNull();
 });
 
-it("keeps a pending rebuild review exclusive and retries Start with the same key", async () => {
-  const user = userEvent.setup();
-  const sent: string[] = [];
-  const preview = {
-    id: "pv1",
-    projectId: "p1",
-    baseRevisionId: "r1",
-    planFingerprint: "f1",
-    selection: { kind: "allAffected" },
-    changedInputs: [],
-    retained: [],
-    warnings: [],
-    work: [],
-    wholeRequestNotice: null,
-    providedReuseRequired: [],
-    costs: {
-      currency: "USD",
-      rows: [],
-      low: 0,
-      high: 0,
-      unknown: 0,
-      expectedWords: 0,
-      catalogueDate: null,
-      assumptions: [],
-    },
-  };
-  renderApp(
-    <RevisionWorkspace projectId="p1" currentRevisionId="r1" renderEditor={titleEditor} />,
-    testDeps({
-      "GET /api/projects/p1/revisions/r1": jsonAnswer({ view: revisionView() }),
-      "POST /api/projects/p1/revisions/prepare": jsonAnswer({
-        ok: true,
-        view: revisionView(),
-        created: false,
-      }),
-      "POST /api/projects/p1/rebuild/preview": jsonAnswer({ ok: true, value: preview }),
-      "POST /api/projects/p1/rebuild": async (request) => {
-        const body = startRebuildSchema.parse(await request.json());
-        sent.push(body.idempotencyKey);
-        if (sent.length === 1) throw new TypeError("Start response lost");
-        return jsonAnswer({
-          ok: true,
-          value: { revisionId: "r1", admissionId: "a1", workIds: [], replayed: true },
-        })(request);
+it.each(["transport", "readiness", "stale-preview", "conflict"] as const)(
+  "shows %s errors beside Start and retries with the same key",
+  async (failure) => {
+    const user = userEvent.setup();
+    const sent: string[] = [];
+    const preview = {
+      id: "pv1",
+      projectId: "p1",
+      baseRevisionId: "r1",
+      planFingerprint: "f1",
+      selection: { kind: "allAffected" },
+      changedInputs: [],
+      retained: [],
+      warnings: [],
+      work: [],
+      wholeRequestNotice: null,
+      providedReuseRequired: [],
+      costs: {
+        currency: "USD",
+        rows: [],
+        low: 0,
+        high: 0,
+        unknown: 1,
+        expectedWords: 0,
+        catalogueDate: null,
+        assumptions: [],
       },
-    }),
-  );
-  await user.click(screen.getByRole("button", { name: "Rebuild affected outputs" }));
-  await screen.findByRole("button", { name: "Start rebuild" });
-  expect(screen.getByRole("button", { name: "Edit project" }).hasAttribute("disabled")).toBe(true);
-  expect(sent).toEqual([]);
-  await user.click(screen.getByRole("button", { name: "Start rebuild" }));
-  await screen.findByText("Start response lost");
-  await user.click(screen.getByRole("button", { name: "Start rebuild" }));
-  await waitFor(() => expect(sent).toHaveLength(2));
-  expect(sent[0]).toBe(sent[1]);
-});
+    };
+    renderApp(
+      <RevisionWorkspace projectId="p1" currentRevisionId="r1" renderEditor={titleEditor} />,
+      testDeps({
+        "GET /api/projects/p1/revisions/r1": jsonAnswer({ view: revisionView() }),
+        "POST /api/projects/p1/revisions/prepare": jsonAnswer({
+          ok: true,
+          view: revisionView(),
+          created: false,
+        }),
+        "POST /api/projects/p1/rebuild/preview": jsonAnswer({ ok: true, value: preview }),
+        "POST /api/projects/p1/rebuild": async (request) => {
+          const body = startRebuildSchema.parse(await request.json());
+          sent.push(body.idempotencyKey);
+          if (sent.length === 1) {
+            if (failure === "transport") throw new TypeError("Start response lost");
+            if (failure !== "readiness")
+              return new Response(
+                JSON.stringify({
+                  title: "Conflict",
+                  status: 409,
+                  reason: failure,
+                  detail: "Review this project again.",
+                }),
+                { status: 409 },
+              );
+            return new Response(
+              JSON.stringify({
+                title: "Conflict",
+                status: 409,
+                reason: "readiness",
+                detail: "readiness",
+                fields: [
+                  { field: "llm.model", message: "Choose an available model before rebuilding." },
+                ],
+              }),
+              { status: 409 },
+            );
+          }
+          return jsonAnswer({
+            ok: true,
+            value: { revisionId: "r1", admissionId: "a1", workIds: [], replayed: true },
+          })(request);
+        },
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Rebuild affected outputs" }));
+    await screen.findByRole("button", { name: "Start rebuild" });
+    expect(screen.getByRole("button", { name: "Edit project" }).hasAttribute("disabled")).toBe(
+      true,
+    );
+    expect(sent).toEqual([]);
+    const acknowledgement = screen.getByRole("checkbox", { name: /cost estimates are unknown/ });
+    await user.click(acknowledgement);
+    await user.click(screen.getByRole("button", { name: "Start rebuild" }));
+    if (failure === "stale-preview" || failure === "conflict") {
+      const alert = await screen.findByRole("alert");
+      expect(alert.textContent).toContain("Review this project again.");
+      expect(screen.queryByRole("region", { name: "Review affected rebuild" })).toBeNull();
+      await waitFor(() => expect(document.activeElement).toBe(alert));
+      expect(
+        screen.getByRole("button", { name: "Rebuild affected outputs" }).hasAttribute("disabled"),
+      ).toBe(false);
+      return;
+    }
+    const review = screen.getByRole("region", { name: "Review affected rebuild" });
+    const alert = await within(review).findByRole("alert");
+    expect(alert.textContent).toContain(
+      failure === "transport"
+        ? "Start response lost"
+        : "Choose an available model before rebuilding.",
+    );
+    await waitFor(() => expect(document.activeElement).toBe(alert));
+    expect(acknowledgement instanceof HTMLInputElement && acknowledgement.checked).toBe(true);
+    await user.click(screen.getByRole("button", { name: "Start rebuild" }));
+    await waitFor(() => expect(sent).toHaveLength(2));
+    expect(sent[0]).toBe(sent[1]);
+  },
+);

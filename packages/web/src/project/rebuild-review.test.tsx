@@ -63,7 +63,9 @@ it("blocks unavailable work and locks consent while starting", () => {
     work: preview.work.map((work) => ({ ...work, disposition: "blocked" as const })),
   };
   render(<RebuildReview preview={blocked} pending onStart={() => {}} onCancel={() => {}} />);
-  expect(screen.getByRole("button", { name: "Start rebuild" }).hasAttribute("disabled")).toBe(true);
+  expect(screen.getByRole("button", { name: "Starting rebuild…" }).hasAttribute("disabled")).toBe(
+    true,
+  );
   for (const input of screen.getAllByRole("checkbox"))
     expect(input.hasAttribute("disabled")).toBe(true);
 });

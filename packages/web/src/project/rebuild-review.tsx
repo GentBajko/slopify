@@ -1,5 +1,5 @@
 import type { RebuildPreview } from "@app/slices/rebuild/model.js";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { outputSlotLabel } from "./output-label.js";
 export interface RebuildConsent {
@@ -9,11 +9,13 @@ export interface RebuildConsent {
 export function RebuildReview({
   preview,
   pending,
+  feedback,
   onStart,
   onCancel,
 }: {
   readonly preview: RebuildPreview;
   readonly pending: boolean;
+  readonly feedback?: ReactNode;
   readonly onStart: (consent: RebuildConsent) => void;
   readonly onCancel: () => void;
 }): import("react").ReactElement {
@@ -145,6 +147,7 @@ export function RebuildReview({
           I understand that {preview.costs.unknown} cost estimates are unknown.
         </label>
       )}
+      {feedback}
       <div className="flex flex-wrap gap-3">
         <Button
           variant="primary"
@@ -157,7 +160,7 @@ export function RebuildReview({
             })
           }
         >
-          Start rebuild
+          {pending ? "Starting rebuild…" : "Start rebuild"}
         </Button>
         <Button type="button" disabled={pending} onClick={onCancel}>
           Cancel rebuild

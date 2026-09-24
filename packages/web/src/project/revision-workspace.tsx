@@ -17,6 +17,7 @@ import {
   startProjectRebuild,
   viewOf,
 } from "./revision-api.js";
+import { RevisionFeedback } from "./revision-feedback.js";
 import { RevisionHistory } from "./revision-history.js";
 import { type RequestMemory, requestFor } from "./revision-requests.js";
 export interface EditorProps {
@@ -70,6 +71,7 @@ export function RevisionWorkspace({
     active.current = true;
     setPending(true);
     setError(undefined);
+    setRefusal(undefined);
     try {
       await action();
     } catch (failure) {
@@ -225,8 +227,7 @@ export function RevisionWorkspace({
           Rebuild affected outputs
         </Button>
       </div>
-      {error === undefined ? null : <p role="alert">{error}</p>}
-      {refusal === undefined ? null : <p role="alert">{refusal.message}</p>}
+      {preview === undefined ? <RevisionFeedback error={error} refusal={refusal} /> : null}
       {edit === undefined && refusal?.reason === "conflict" ? (
         <Button
           type="button"
@@ -310,6 +311,7 @@ export function RevisionWorkspace({
         <RebuildReview
           key={preview.id}
           preview={preview}
+          feedback={<RevisionFeedback error={error} refusal={refusal} />}
           pending={pending}
           onStart={(consent) => void perform(() => start(consent))}
           onCancel={() => {
