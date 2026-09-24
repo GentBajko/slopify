@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ImagePort } from "./image.js";
 import { type LlmPort, messageRoles, thinkingModes } from "./llm.js";
+import { llmDocumentsSchema } from "./llm-documents.js";
 import { providerErrorKinds } from "./model.js";
 
 export const hostLlmIds = ["claude-code", "codex", "gemini"] as const;
@@ -46,6 +47,7 @@ export const hostLlmSchema = z
   .object({
     model: short,
     messages: z.array(message).min(1).max(128),
+    documents: llmDocumentsSchema.optional(),
     thinking: z.enum(thinkingModes).optional(),
     webSearch: z.boolean().optional(),
   })

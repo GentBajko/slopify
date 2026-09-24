@@ -1,4 +1,6 @@
 import type { Message } from "../../kernel/ports/llm.js";
+import { documentIndex } from "../../kernel/ports/llm-documents.js";
+import { researchDocuments } from "./documents.js";
 import type { ResearchBrief } from "./planner.js";
 import { briefText } from "./planner.js";
 
@@ -24,9 +26,9 @@ export function synthesisMessages(
         "",
         briefText(brief),
         "",
-        "One researcher covered each chapter. Their findings follow.",
+        "One researcher covered each chapter. Their original reports are attached as separate documents.",
         "",
-        findings.map(block).join("\n\n"),
+        documentIndex(researchDocuments(findings)),
         "",
         "Write the research notes the article will be written from. Select what the",
         "article needs, organise it, and resolve what the researchers disagree on. Do not",
@@ -59,8 +61,4 @@ export function sourcedAnswer(who: string, text: string): string | undefined {
     return `${who} answered with nothing`;
   }
   return endsWithSources(text) ? undefined : `${who} answered with no Sources list`;
-}
-
-function block(finding: Finding): string {
-  return `--- ${finding.title} ---\n${finding.notes}`;
 }

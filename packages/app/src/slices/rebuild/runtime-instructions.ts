@@ -44,6 +44,8 @@ export function frozenInstructions(
     sections.push(
       `## ${label(row.work_key)}\n\n${input.messages.map((message) => `### ${message.role}\n\n${message.content}`).join("\n\n")}`,
     );
+    for (const document of input.documents ?? [])
+      sections.push(`### Document ${document.id}: ${document.title}\n\n${document.content}`);
   }
   return `${sections.join("\n\n")}\n`;
 }

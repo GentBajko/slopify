@@ -1,3 +1,4 @@
+import type { LlmDocument } from "./llm-documents.js";
 import type { ModelInfo } from "./model.js";
 
 export const messageRoles = ["system", "user", "assistant"] as const;
@@ -46,6 +47,7 @@ export interface ThinkingConfig {
   readonly effort?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | undefined;
 }
 export interface LlmCompletion {
+  readonly documents?: readonly LlmDocument[] | undefined;
   readonly thinking?: ThinkingMode | undefined;
   readonly thinkingConfig?: ThinkingConfig | null | undefined;
   readonly model: string;

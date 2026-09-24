@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Catalogue } from "../../catalog/schema.js";
 import type { StageKind } from "../../kernel/pipeline.js";
 import type { Message, ThinkingConfig, ThinkingMode } from "../../kernel/ports/llm.js";
+import type { LlmDocument } from "../../kernel/ports/llm-documents.js";
 import { type FingerprintValue, fingerprint } from "../../kernel/runner/work.js";
 import type { RunConfig } from "../admission/model.js";
 import { narrationRegenerationToken, narrationRequestFingerprint } from "../narration/plan.js";
@@ -60,6 +61,7 @@ export type RecipeInput =
       readonly thinking: ThinkingMode | null;
       readonly thinkingConfig: ThinkingConfig | null;
       readonly messages: readonly Message[];
+      readonly documents?: readonly LlmDocument[] | undefined;
       readonly webSearch: boolean;
       readonly preparation?: PreparationSource | undefined;
     }

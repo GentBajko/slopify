@@ -50,6 +50,7 @@ export async function executeProviderRecipe(
             ...(input.thinking === null ? {} : { thinking: input.thinking }),
             thinkingConfig: input.thinkingConfig,
             messages: input.messages,
+            documents: input.documents,
             webSearch: input.webSearch,
             previewLabel: piece.key,
             check: (value) =>
@@ -249,7 +250,13 @@ async function publishText(
         : [];
     const title: unknown = titles[Number(piece.key.split(":").at(-1)) - 1];
     if (typeof title !== "string") throw new Error("Research chapter has no pinned title.");
-    await publishResult(deps, context, piece, [], { title, notes: answer.text });
+    const asset = writeAsset(
+      deps,
+      context.work.projectId,
+      `research-${piece.key.split(":").at(-1)}.md`,
+      Buffer.from(answer.text),
+    );
+    await publishResult(deps, context, piece, [], { title, notes: answer.text }, asset);
     return;
   }
   await publishResult(

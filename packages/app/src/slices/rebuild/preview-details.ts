@@ -83,9 +83,12 @@ export function previewDetails(
         {
           key: row.key,
           label: `${category} request ${peers.findIndex((one) => one.key === row.key) + 1}`,
-          text: input.messages
-            .map((message) => `${message.role}:\n${message.content}`)
-            .join("\n\n"),
+          text: [
+            ...input.messages.map((message) => `${message.role}:\n${message.content}`),
+            ...(input.documents ?? []).map(
+              (document) => `Document ${document.id}: ${document.title}\n${document.content}`,
+            ),
+          ].join("\n\n"),
           settings: [input.provider, input.model, input.thinking]
             .filter((value) => value !== null)
             .join(" · "),

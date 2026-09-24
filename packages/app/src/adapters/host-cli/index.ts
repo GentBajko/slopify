@@ -107,6 +107,7 @@ export function createHostCliClient(options: {
         const parsed = hostLlmSchema.safeParse({
           model: req.model,
           messages: req.messages,
+          ...(req.documents === undefined ? {} : { documents: req.documents }),
           ...(req.thinking === undefined ? {} : { thinking: req.thinking }),
           ...(req.webSearch === undefined ? {} : { webSearch: req.webSearch }),
         });

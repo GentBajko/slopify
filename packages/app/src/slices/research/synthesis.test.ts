@@ -22,10 +22,10 @@ describe("synthesisMessages", () => {
     expect(messages).toHaveLength(1);
     expect(messages[0]?.role).toBe("user");
     expect(content.startsWith("You are the editor of the research behind an article.")).toBe(true);
-    expect(content).toContain("--- History ---");
-    expect(content).toContain("Twisted fibre is older than writing.");
-    expect(content).toContain("--- Materials ---");
-    expect(content).toContain("Manila, sisal, nylon.");
+    expect(content).toContain('"id":"research-1","title":"History"');
+    expect(content).not.toContain("Twisted fibre is older than writing.");
+    expect(content).toContain('"id":"research-2","title":"Materials"');
+    expect(content).not.toContain("Manila, sisal, nylon.");
     expect(content).toContain("Do not");
     expect(content).toContain("concatenate");
   });

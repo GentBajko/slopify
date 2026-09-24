@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import { fakeLlm } from "../src/adapters/fake/llm.js";
 import { narrationCatalogue } from "../src/slices/rebuild/runtime-narration.fake.js";
+import { findRevisionDownload } from "../src/slices/revisions/downloads.js";
 import { outputPath } from "../src/slices/storage/layout.js";
 import { composedFixture, current, save, start } from "./revision-rebuild.fake.js";
 
@@ -18,7 +19,10 @@ it.each([
     const calls: { readonly kind: string; readonly round: number; readonly text: string }[] = [];
     const llm = fakeLlm({
       reply: (req) => {
-        const text = req.messages.map((message) => message.content).join("\n");
+        const text = [
+          ...req.messages.map((message) => message.content),
+          ...(req.documents ?? []).map((d) => d.content),
+        ].join("\n");
         const kind = text.includes("You are planning the web research")
           ? "planner"
           : text.includes("You are researching one chapter")
@@ -69,6 +73,23 @@ it.each([
       await start(h.deps, h.projectId, ["research:notes"]);
       await h.runner.settled();
       const first = current(h.deps, h.projectId);
+      const reports = first.pieces.filter(
+        (row) => row.selected && row.key.startsWith("research:chapter:"),
+      );
+      expect(reports).toHaveLength(2);
+      for (const report of reports) {
+        expect(report.assetId).not.toBeNull();
+        const downloaded = findRevisionDownload(
+          h.deps,
+          h.projectId,
+          first.revision.id,
+          report.recordId,
+        );
+        if (!downloaded.ok) throw new Error("Report document is unavailable.");
+        expect(readFileSync(downloaded.download.path, "utf8")).toBe(
+          "Finding from round 1.\nSources\nhttps://example.test",
+        );
+      }
       const oldNotes = first.outputs.find(
         (row) => row.workKey === "research:notes" && row.selected && row.state === "ready",
       );

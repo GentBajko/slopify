@@ -1,9 +1,11 @@
 import { expect, it } from "vitest";
+import { documentIndex } from "../../kernel/ports/llm-documents.js";
 import type { StagePiece } from "../../kernel/runner/piece-repo.js";
 import { articleMessages, continuationMessages } from "../article/continuation.js";
 import { plainText } from "../article/plain.js";
 import { segmentMessages } from "../article/segments.js";
 import { splitEndMatter } from "../article/split.js";
+import { researchDocuments } from "../research/documents.js";
 import { plannerMessages, subAgentMessages } from "../research/planner.js";
 import { synthesisMessages } from "../research/synthesis.js";
 import { thumbnailMessages } from "../thumbnail/by-llm.js";
@@ -85,7 +87,13 @@ it("materializes research planner, chapter, synthesis and continuation messages 
   });
   expect(recipes.find((r) => r.key === "article:continuation")?.input).toMatchObject({
     messages: continuationMessages(
-      articleMessages({ articlePrompt: brief.articlePrompt, notes: resolved.researchNotes }),
+      articleMessages({
+        articlePrompt: brief.articlePrompt,
+        notes: documentIndex([
+          ...researchDocuments(resolved.research.findings),
+          { id: "editorial-notes", title: "Editorial notes", content: resolved.researchNotes },
+        ]),
+      }),
       "Raw text\n",
     ),
   });

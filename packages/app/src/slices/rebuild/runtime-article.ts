@@ -44,6 +44,7 @@ export async function executeArticleRequests(
           provider: input.provider,
           model: input.model,
           messages: input.messages,
+          documents: input.documents,
           thinkingConfig: input.thinkingConfig,
           ...(input.thinking === null ? {} : { thinking: input.thinking }),
           webSearch: input.webSearch,

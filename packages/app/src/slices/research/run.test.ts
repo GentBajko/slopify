@@ -122,6 +122,7 @@ function harness(over: Partial<typeof config> = {}): Harness {
 type Turn = "planner" | "chapter" | "synthesis";
 
 interface Made {
+  readonly documents: LlmCall["documents"];
   readonly turn: Turn;
   readonly pieceId: string | null;
   readonly webSearch: boolean;
@@ -146,7 +147,13 @@ function fake(script: Script): Fake {
     ): Promise<import("../../kernel/runner/work.js").AttemptResult<LlmAnswer>> => {
       const prompt = promptOf(call.messages);
       const turn = turnOf(prompt);
-      made.push({ turn, pieceId, webSearch: call.webSearch === true, prompt });
+      made.push({
+        turn,
+        pieceId,
+        webSearch: call.webSearch === true,
+        prompt,
+        documents: call.documents,
+      });
       order.push(`start ${turn}${pieceId === null ? "" : ` ${pieceId}`}`);
       // Two turns of the event loop, so a caller that awaited each chapter before
       // starting the next would interleave its starts and finishes.
@@ -227,7 +234,11 @@ describe("runResearch", () => {
       llm.made.filter((one) => one.turn === "chapter").map((one) => chapterOf(one.prompt)),
     ).toEqual(["History", "Materials", "Knots"]);
     // The editor is handed what the researchers found, not asked to search again.
-    const synthesis = llm.made.at(-1)?.prompt ?? "";
+    const synthesis =
+      llm.made
+        .at(-1)
+        ?.documents?.map((d) => d.content)
+        .join("\n") ?? "";
     expect(synthesis).toContain("Found about History.");
     expect(synthesis).toContain("Found about Knots.");
 
@@ -312,8 +323,8 @@ describe("runResearch", () => {
       llm.made.filter((one) => one.turn === "chapter").map((one) => chapterOf(one.prompt)),
     ).toEqual(["Four", "Five"]);
     // The three that were kept reach the editor without being asked for again.
-    expect(llm.made.at(-1)?.prompt).toContain("kept One");
-    expect(llm.made.at(-1)?.prompt).toContain("kept Three");
+    expect(llm.made.at(-1)?.documents?.map((d) => d.content)).toContain("kept One");
+    expect(llm.made.at(-1)?.documents?.map((d) => d.content)).toContain("kept Three");
     // The meter starts from what was already done, not from zero.
     expect(progress(h.events)).toEqual(["3 of 5", "4 of 5", "5 of 5"]);
     h.db.close();

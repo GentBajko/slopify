@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { redact } from "../../kernel/log.js";
 import type { LlmCompletion, LlmEvent, LlmPort, Usage } from "../../kernel/ports/llm.js";
+import { documentMessages } from "../../kernel/ports/llm-documents.js";
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import { retryAfter } from "../retry-after.js";
@@ -64,7 +65,7 @@ export function openRouterLlm(deps: OpenRouterDeps): LlmPort {
       headers: { ...headers(deps.key()), "Content-Type": "application/json" },
       body: JSON.stringify({
         model: req.model,
-        messages: req.messages.map((message) => ({
+        messages: [...documentMessages(req.documents), ...req.messages].map((message) => ({
           role: message.role,
           content: message.content,
         })),

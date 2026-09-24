@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { messageRoles, thinkingModes } from "../../kernel/ports/llm.js";
+import { llmDocumentsSchema } from "../../kernel/ports/llm-documents.js";
 import type { FingerprintValue } from "../../kernel/runner/work.js";
 import { deferredOperations, localOperations, type RecipeInput } from "./recipe-model.js";
 
@@ -31,6 +32,7 @@ export const recipeInputSchema: z.ZodType<RecipeInput> = z.discriminatedUnion("k
         .strict()
         .nullable(),
       messages: z.array(z.object({ role: z.enum(messageRoles), content: z.string() }).strict()),
+      documents: llmDocumentsSchema.optional(),
       webSearch: z.boolean(),
       preparation: z
         .object({

@@ -283,7 +283,9 @@ export function priceRecipe(
       stage: work.key,
       provider: input.provider,
       model: input.model,
-      inputCharacters: input.messages.reduce((sum, message) => sum + message.content.length, 0),
+      inputCharacters:
+        input.messages.reduce((sum, message) => sum + message.content.length, 0) +
+        (input.documents ?? []).reduce((sum, document) => sum + document.content.length, 0),
       outputCharacters: work.key === "article:body" ? 9000 : 2400,
       detail:
         "Actual saved request input; output length is estimated. Retries and tools are excluded.",

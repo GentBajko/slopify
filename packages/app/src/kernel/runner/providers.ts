@@ -4,6 +4,7 @@ import type { Log } from "../log.js";
 import type { Format } from "../pipeline.js";
 import type { GeneratedImage } from "../ports/image.js";
 import type { LlmEvent, Message, ThinkingConfig, Usage } from "../ports/llm.js";
+import type { LlmDocument } from "../ports/llm-documents.js";
 import type { Registry } from "../ports/registry.js";
 import type { AttemptContext } from "./attempt.js";
 import { attempt } from "./attempt.js";
@@ -23,6 +24,7 @@ export interface LlmAnswer {
 }
 
 export interface LlmCall {
+  readonly documents?: readonly LlmDocument[] | undefined;
   readonly thinkingConfig?: ThinkingConfig | null | undefined;
   readonly thinking?: import("../ports/llm.js").ThinkingMode | undefined;
   readonly provider: string;
@@ -137,6 +139,7 @@ export function stageProviders(
               ...(call.thinkingConfig === undefined ? {} : { thinkingConfig: call.thinkingConfig }),
               ...(call.thinking === undefined ? {} : { thinking: call.thinking }),
               messages: call.messages,
+              ...(call.documents === undefined ? {} : { documents: call.documents }),
               ...(call.webSearch === undefined ? {} : { webSearch: call.webSearch }),
               signal,
             })) {

@@ -17,6 +17,7 @@ import { projectById, setStageProgress } from "../admission/repo.js";
 import { storeText } from "../storage/staging.js";
 import type { RecordEvent } from "../telemetry/model.js";
 import { noTokens, plusUsage } from "../telemetry/model.js";
+import { researchDocuments } from "./documents.js";
 import type { ResearchBrief } from "./planner.js";
 import { chaptersFrom, plannerMessages, subAgentMessages } from "./planner.js";
 import type { Finding } from "./synthesis.js";
@@ -109,6 +110,7 @@ async function research(
     model: choice.model,
     ...(choice.thinking === undefined ? {} : { thinking: choice.thinking }),
     messages: synthesisMessages(brief, findings),
+    documents: researchDocuments(findings),
     previewLabel: "Writing research notes",
     check: (given: LlmAnswer): string | undefined => sourcedAnswer("the synthesis", given.text),
   });

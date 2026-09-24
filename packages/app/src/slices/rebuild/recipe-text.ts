@@ -1,11 +1,13 @@
 import { z } from "zod";
 import type { Message } from "../../kernel/ports/llm.js";
+import { documentIndex, type LlmDocument } from "../../kernel/ports/llm-documents.js";
 import { type FingerprintValue, fingerprint } from "../../kernel/runner/work.js";
 import { render } from "../admission/substitute.js";
 import { articleMessages, continuationMessages } from "../article/continuation.js";
 import { plainText } from "../article/plain.js";
 import { segmentMessages } from "../article/segments.js";
 import { splitEndMatter } from "../article/split.js";
+import { researchDocuments } from "../research/documents.js";
 import { plannerMessages, subAgentMessages } from "../research/planner.js";
 import { synthesisMessages } from "../research/synthesis.js";
 import { thumbnailMessages } from "../thumbnail/by-llm.js";
@@ -27,6 +29,7 @@ export function llmInput(
   context: RecipeContext,
   messages: readonly Message[],
   webSearch = false,
+  documents?: readonly LlmDocument[],
 ): RecipeInput & { readonly kind: "llm" } {
   const choice = context.config.llm;
   const model = context.catalogue?.llm.find(
@@ -45,6 +48,7 @@ export function llmInput(
     thinkingConfig:
       choice?.thinking === undefined ? null : (model?.llm.thinking?.[choice.thinking] ?? null),
     messages,
+    ...(documents?.length ? { documents } : {}),
     webSearch,
   };
 }
@@ -110,7 +114,12 @@ export function textRecipes(context: RecipeContext): TextRecipes {
             context,
             "research:notes",
             "research",
-            llmInput(context, synthesisMessages(brief, findings)),
+            llmInput(
+              context,
+              synthesisMessages(brief, findings),
+              false,
+              researchDocuments(findings),
+            ),
             chapters.map((row) => row.key),
           )
         : recipe(
@@ -145,9 +154,16 @@ export function textRecipes(context: RecipeContext): TextRecipes {
       : config.sources.research === "provide"
         ? (config.provided.research ?? null)
         : resolved.researchNotes;
+  const documents: LlmDocument[] =
+    config.sources.research === "generate" && notes !== null
+      ? [
+          ...researchDocuments(resolved.research?.findings ?? []),
+          { id: "editorial-notes", title: "Editorial notes", content: notes },
+        ]
+      : [];
   const messages = articleMessages({
     articlePrompt: brief.articlePrompt,
-    ...(notes === null ? {} : { notes }),
+    ...(documents.length ? { notes: documentIndex(documents) } : notes === null ? {} : { notes }),
   });
   const article =
     config.sources.article === "provide" || content.articleEdited === true
@@ -168,7 +184,7 @@ export function textRecipes(context: RecipeContext): TextRecipes {
                 operation: "article",
                 template: [llmInputFingerprint(context, messages), research?.fingerprint ?? null],
               }
-            : llmInput(context, messages),
+            : llmInput(context, messages, false, documents),
           research === undefined ? [] : [research.key],
         );
   recipes.push(article);
@@ -182,7 +198,12 @@ export function textRecipes(context: RecipeContext): TextRecipes {
         context,
         "article:continuation",
         "article",
-        llmInput(context, continuationMessages(messages, resolved.articleContinuation)),
+        llmInput(
+          context,
+          continuationMessages(messages, resolved.articleContinuation),
+          false,
+          documents,
+        ),
         [article.key],
       ),
     );

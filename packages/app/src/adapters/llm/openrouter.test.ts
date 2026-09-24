@@ -78,6 +78,34 @@ async function drain(port: ReturnType<typeof openRouterLlm>): Promise<LlmEvent[]
 }
 
 describe("openRouterLlm.complete", () => {
+  it("delivers the full text of each reference document as a separate API message", async () => {
+    const seen: Seen[] = [];
+    const port = openRouterLlm({
+      fetch: streaming(fixture("openrouter-stream.txt"), seen),
+      key: () => key,
+    });
+    const documents = [
+      {
+        id: "research-1",
+        title: "Original",
+        content: `${"é".repeat(150000)}\nSources\nhttps://example.test`,
+      },
+      { id: "editorial-notes", title: "Editorial", content: "Exact notes." },
+    ];
+    for await (const _ of port.complete({
+      model: "test",
+      messages,
+      documents,
+      signal: new AbortController().signal,
+    })) {
+      /* drain */
+    }
+    const body = JSON.parse(String(seen[0]?.init?.body));
+    expect(body.messages).toHaveLength(3);
+    expect(body.messages[0].content.endsWith(documents[0]?.content)).toBe(true);
+    expect(body.messages[1].content.endsWith(documents[1]?.content)).toBe(true);
+    expect(body.messages[2]).toEqual(messages[0]);
+  });
   it("replays the recorded stream into deltas, usage and the finish reason", async () => {
     const port = openRouterLlm({
       fetch: streaming(fixture("openrouter-stream.txt")),
