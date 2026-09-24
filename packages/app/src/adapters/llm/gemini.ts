@@ -2,14 +2,13 @@ import { z } from "zod";
 import { redact } from "../../kernel/log.js";
 import type { LlmCompletion, LlmEvent, LlmPort } from "../../kernel/ports/llm.js";
 import { type ModelInfo, providerError } from "../../kernel/ports/model.js";
-import { geminiModels } from "./gemini-models.js";
+import { nodeGeminiModels } from "./gemini-models.js";
 import { geminiWorkspace } from "./gemini-workspace.js";
 import type { CliEnded, RunCli } from "./run-cli.js";
 import { cliEvent, cliShaped, endedWithout, promptOf, stopCliRun } from "./run-cli.js";
 import { lines } from "./sse-lines.js";
 
 export const geminiBinary = "gemini";
-export { geminiModels } from "./gemini-models.js";
 export interface GeminiDeps {
   readonly run: RunCli;
   readonly binary?: string | undefined;
@@ -111,7 +110,7 @@ export function geminiLlm(deps: GeminiDeps): LlmPort {
   return {
     id: "gemini",
     capabilities: { streams: true, reportsUsage: true, webSearch: true },
-    models: deps.readModels ?? (() => Promise.resolve(geminiModels)),
+    models: deps.readModels ?? (() => nodeGeminiModels(binary)),
     complete,
   };
 }

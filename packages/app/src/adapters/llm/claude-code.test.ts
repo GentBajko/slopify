@@ -5,7 +5,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { describe, expect, it } from "vitest";
 import type { LlmCompletion, LlmEvent, Message } from "../../kernel/ports/llm.js";
 import { isProviderError } from "../../kernel/ports/model.js";
-import { claudeCodeArgs, claudeCodeLlm, claudeCodeModels } from "./claude-code.js";
+import { claudeCodeArgs, claudeCodeLlm } from "./claude-code.js";
 import type { CliEnded, CliRun } from "./run-cli.js";
 import { nodeRunCli } from "./run-cli.js";
 
@@ -322,11 +322,11 @@ setInterval(() => {}, 1000);\n`,
 });
 
 describe("claudeCodeLlm surface", () => {
-  it("declares what the CLI can do and the aliases it takes", async () => {
-    const port = claudeCodeLlm({ run: replaying("").run });
+  it("declares what the CLI can do and uses discovered choices", async () => {
+    const models = [{ id: "installed", name: "Installed", thinkingModes: ["low"] as const }];
+    const port = claudeCodeLlm({ run: replaying("").run, readModels: async () => models });
     expect(port.id).toBe("claude-code");
     expect(port.capabilities).toEqual({ streams: true, reportsUsage: true, webSearch: true });
-    expect(await port.models()).toBe(claudeCodeModels);
-    expect(claudeCodeModels.map((model) => model.id)).toEqual(["fable", "opus", "sonnet", "haiku"]);
+    expect(await port.models()).toBe(models);
   });
 });

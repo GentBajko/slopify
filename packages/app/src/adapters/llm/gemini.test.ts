@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { LlmCompletion, LlmEvent } from "../../kernel/ports/llm.js";
-import { geminiArgs, geminiLlm, geminiModels } from "./gemini.js";
+import { geminiArgs, geminiLlm } from "./gemini.js";
 import type { CliOptions, RunCli } from "./run-cli.js";
 
 const request = (over: Partial<LlmCompletion> = {}): LlmCompletion => ({
@@ -159,7 +159,8 @@ describe("Gemini CLI", () => {
       drain(one.run, request({ signal: AbortSignal.abort(new Error("paused")) })),
     ).rejects.toThrow("paused");
     expect(one.options()).toBeUndefined();
-    expect(await geminiLlm({ run: one.run }).models()).toBe(geminiModels);
+    const models = [{ id: "installed", name: "Installed" }];
+    expect(await geminiLlm({ run: one.run, readModels: async () => models }).models()).toBe(models);
   });
 });
 

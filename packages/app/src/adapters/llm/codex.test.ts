@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { LlmCompletion, LlmEvent, Message } from "../../kernel/ports/llm.js";
 import { isProviderError } from "../../kernel/ports/model.js";
-import { codexArgs, codexLlm, codexModels } from "./codex.js";
+import { codexArgs, codexLlm } from "./codex.js";
 import type { CliEnded, CliOptions, CliRun, RunCli } from "./run-cli.js";
 
 // Fixture provenance: `fixtures/codex-auth-failure.jsonl` is verbatim stdout from a real
@@ -362,10 +362,11 @@ describe("codexLlm.complete", () => {
 
 describe("codexLlm surface", () => {
   it("declares what the CLI can do and the models it offers", async () => {
-    const port = codexLlm({ run: replaying("").run });
+    const models = [{ id: "installed", name: "Installed" }];
+    const port = codexLlm({ run: replaying("").run, readModels: async () => models });
     expect(port.id).toBe("codex");
     expect(port.capabilities).toEqual({ streams: true, reportsUsage: true, webSearch: true });
-    expect(await port.models()).toBe(codexModels);
+    expect(await port.models()).toBe(models);
   });
 });
 

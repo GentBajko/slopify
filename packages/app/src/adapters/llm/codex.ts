@@ -6,6 +6,7 @@ import { redact } from "../../kernel/log.js";
 import type { LlmCompletion, LlmEvent, LlmPort, Usage } from "../../kernel/ports/llm.js";
 import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { nodeCodexModels } from "./codex-models.js";
 import type { CliEnded, CliOptions, RunCli } from "./run-cli.js";
 import { cliEvent, cliShaped, endedWithout, promptOf, stopCliRun } from "./run-cli.js";
 import { lines } from "./sse-lines.js";
@@ -15,10 +16,6 @@ import { lines } from "./sse-lines.js";
 // events. No key here either - the CLI's own login authenticates it.
 
 export const codexBinary = "codex";
-
-// Codex publishes its account-specific picker in models_cache.json. With no
-// cache, offer custom entry rather than pretending a pinned model is current.
-export const codexModels: readonly ModelInfo[] = [];
 
 export interface CodexDeps {
   readonly run: RunCli;
@@ -200,7 +197,7 @@ export function codexLlm(deps: CodexDeps): LlmPort {
     id: "codex",
     // Prose arrives as whole messages; other JSONL events carry activity separately.
     capabilities: { streams: true, reportsUsage: true, webSearch: true },
-    models: deps.readModels ?? (() => Promise.resolve(codexModels)),
+    models: deps.readModels ?? (() => nodeCodexModels()),
     complete,
   };
 }

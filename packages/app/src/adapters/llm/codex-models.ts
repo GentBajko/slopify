@@ -23,6 +23,10 @@ const model = z.object({
   display_name: safeText.optional(),
   visibility: z.literal("list"),
   priority: z.number().finite().optional(),
+  supported_reasoning_levels: z
+    .array(z.object({ effort: z.string() }))
+    .max(20)
+    .optional(),
 });
 
 export async function nodeCodexModels(
@@ -41,7 +45,16 @@ export async function nodeCodexModels(
     const unique = new Map<string, ModelInfo>();
     for (const item of models) {
       if (!unique.has(item.slug)) {
-        unique.set(item.slug, { id: item.slug, name: item.display_name ?? item.slug });
+        const thinkingModes = item.supported_reasoning_levels
+          ?.map((level) => level.effort)
+          .filter((level): level is NonNullable<ModelInfo["thinkingModes"]>[number] =>
+            ["off", "low", "medium", "high", "xhigh"].includes(level),
+          );
+        unique.set(item.slug, {
+          id: item.slug,
+          name: item.display_name ?? item.slug,
+          ...(thinkingModes?.length ? { thinkingModes } : {}),
+        });
       }
     }
     if (unique.size === 0) throw new Error("No visible models");

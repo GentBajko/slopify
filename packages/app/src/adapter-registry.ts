@@ -4,6 +4,7 @@ import { googleImage } from "./adapters/image/google.js";
 import { openAiImage } from "./adapters/image/openai.js";
 import { replicateImage } from "./adapters/image/replicate.js";
 import { claudeCodeLlm } from "./adapters/llm/claude-code.js";
+import { nodeClaudeCodeModels } from "./adapters/llm/claude-code-models.js";
 import { codexLlm } from "./adapters/llm/codex.js";
 import { nodeCodexModels } from "./adapters/llm/codex-models.js";
 import { geminiLlm } from "./adapters/llm/gemini.js";
@@ -60,7 +61,13 @@ export function buildRegistry(deps: RegistryDeps): Registry {
   const llms = new Map<string, LlmPort>([
     ["openrouter", openRouterLlm({ fetch: deps.fetch, key: keyOf("openrouter") })],
     // Each CLI authenticates with its own login.
-    ["claude-code", claudeCodeLlm({ run: cliFor("claude-code") })],
+    [
+      "claude-code",
+      claudeCodeLlm({
+        run: cliFor("claude-code"),
+        readModels: () => nodeClaudeCodeModels(cliBinary(deps.db, "claude-code")),
+      }),
+    ],
     ["codex", codexLlm({ run: cliFor("codex"), readModels: () => nodeCodexModels() })],
     [
       "gemini",

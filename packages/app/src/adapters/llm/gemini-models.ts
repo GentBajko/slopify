@@ -5,15 +5,6 @@ import { cliCommand } from "../../kernel/cli-command.js";
 import type { ModelInfo } from "../../kernel/ports/model.js";
 import { readCatalogueFile } from "./catalogue-files.js";
 
-// Official CLI aliases follow the installed CLI's model routing and account.
-// https://geminicli.com/docs/cli/model/
-export const geminiModels: readonly ModelInfo[] = [
-  { id: "auto", name: "Gemini Auto (CLI default)" },
-  { id: "pro", name: "Gemini Pro (CLI alias)" },
-  { id: "flash", name: "Gemini Flash (CLI alias)" },
-  { id: "flash-lite", name: "Gemini Flash-Lite (CLI alias)" },
-];
-
 export async function nodeGeminiModels(binary: string): Promise<readonly ModelInfo[]> {
   try {
     const command = cliCommand(binary);
@@ -33,7 +24,7 @@ export async function nodeGeminiModels(binary: string): Promise<readonly ModelIn
     for (const candidate of candidates) {
       try {
         const models = parseGeminiModels(await readCatalogueFile(candidate, 256 * 1024));
-        if (models.length > geminiModels.length) return models;
+        if (models.length > 1) return models;
       } catch {
         // A candidate is an optional package layout, not the final discovery result.
       }
@@ -47,7 +38,10 @@ export async function nodeGeminiModels(binary: string): Promise<readonly ModelIn
 }
 
 function parseGeminiModels(source: string): readonly ModelInfo[] {
-  const models = new Map(geminiModels.map((model) => [model.id, model]));
+  const models = new Map<string, ModelInfo>();
+  let pro = false;
+  let flash = false;
+  let flashLite = false;
   // Read literal exported model constants only. Never import or execute an
   // installed package, parse comments as entries, or inspect login/settings.
   const declarations = /^export (?:const|let) ([A-Z][A-Z0-9_]*)\s*=\s*(['"])([^'"\r\n]+)\2\s*;/gm;
@@ -65,8 +59,18 @@ function parseGeminiModels(source: string): readonly ModelInfo[] {
       continue;
     if (!/^(?:(?:PREVIEW|DEFAULT|SECONDARY)_GEMINI_|GEMMA_)/.test(name)) continue;
     models.set(id, { id, name: id });
+    if (name.includes("FLASH_LITE") || id.includes("flash-lite")) flashLite = true;
+    else if (name.includes("FLASH") || id.includes("flash")) flash = true;
+    else if (name.includes("PRO") || id.includes("-pro")) pro = true;
   }
-  return [...models.values()];
+  if (models.size === 0) return [];
+  return [
+    { id: "auto", name: "Gemini Auto (CLI default)" },
+    ...(pro ? [{ id: "pro", name: "Gemini Pro (CLI alias)" }] : []),
+    ...(flash ? [{ id: "flash", name: "Gemini Flash (CLI alias)" }] : []),
+    ...(flashLite ? [{ id: "flash-lite", name: "Gemini Flash-Lite (CLI alias)" }] : []),
+    ...models.values(),
+  ];
 }
 
 async function executablePath(binary: string): Promise<string> {

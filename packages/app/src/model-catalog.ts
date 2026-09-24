@@ -2,9 +2,6 @@ import { falModels } from "./adapters/image/fal.js";
 import { googleImageModels } from "./adapters/image/google.js";
 import { openAiImageModels } from "./adapters/image/openai.js";
 import { replicateModels } from "./adapters/image/replicate.js";
-import { claudeCodeModels } from "./adapters/llm/claude-code.js";
-import { codexModels } from "./adapters/llm/codex.js";
-import { geminiModels } from "./adapters/llm/gemini.js";
 import { cartesiaModels } from "./adapters/tts/cartesia.js";
 import { elevenLabsModels } from "./adapters/tts/elevenlabs.js";
 import { inworldModels } from "./adapters/tts/inworld.js";
@@ -18,9 +15,6 @@ export function modelSources(registry: Registry): {
   readonly fallbackModelsFor: (provider: string) => readonly ModelInfo[];
 } {
   const fallbacks: Readonly<Record<string, readonly ModelInfo[]>> = {
-    "claude-code": claudeCodeModels,
-    codex: codexModels,
-    gemini: geminiModels,
     elevenlabs: elevenLabsModels,
     "openai-tts": openAiTtsModels,
     cartesia: cartesiaModels,

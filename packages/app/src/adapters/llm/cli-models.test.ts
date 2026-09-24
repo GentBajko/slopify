@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { nodeCodexModels } from "./codex-models.js";
-import { geminiModels, nodeGeminiModels } from "./gemini-models.js";
+import { nodeGeminiModels } from "./gemini-models.js";
 
 const directories: string[] = [];
 afterEach(async () => {
@@ -30,6 +30,7 @@ describe("Codex installed model catalogue", () => {
         display_name: "Future model",
         visibility: "list",
         priority: 5,
+        supported_reasoning_levels: [{ effort: "low" }, { effort: "high" }, { effort: "max" }],
         model_messages: "never returned",
       },
       { slug: "internal-review", visibility: "hide", priority: 0 },
@@ -42,7 +43,7 @@ describe("Codex installed model catalogue", () => {
     await writeFile(join(home, "config.toml"), "not parsed");
     expect(await nodeCodexModels({ CODEX_HOME: home })).toEqual([
       { id: "cli-only", name: "cli-only" },
-      { id: "future-model", name: "Future model" },
+      { id: "future-model", name: "Future model", thinkingModes: ["low", "high"] },
     ]);
   });
   it("reads updated metadata on the next refresh without a process restart", async () => {
@@ -108,7 +109,9 @@ describe("Gemini installed model catalogue", () => {
       const install = await geminiInstall(await directory(), nested);
       await writeFile(install.metadata, installedModels);
       expect(await nodeGeminiModels(install.entry)).toEqual([
-        ...geminiModels,
+        { id: "auto", name: "Gemini Auto (CLI default)" },
+        { id: "pro", name: "Gemini Pro (CLI alias)" },
+        { id: "flash", name: "Gemini Flash (CLI alias)" },
         { id: "gemini-2.5-pro", name: "gemini-2.5-pro" },
         { id: "gemini-3.1-flash-preview", name: "gemini-3.1-flash-preview" },
       ]);
@@ -130,7 +133,7 @@ describe("Gemini installed model catalogue", () => {
       ).toBe(true);
       await writeFile(install.metadata, "export const DEFAULT_GEMINI_MODEL = 'gemini-new';");
       expect(await nodeGeminiModels("gemini")).toEqual([
-        ...geminiModels,
+        { id: "auto", name: "Gemini Auto (CLI default)" },
         { id: "gemini-new", name: "gemini-new" },
       ]);
     },

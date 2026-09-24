@@ -3,6 +3,7 @@ import { redact } from "../../kernel/log.js";
 import type { LlmCompletion, LlmEvent, LlmPort, Usage } from "../../kernel/ports/llm.js";
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { nodeClaudeCodeModels } from "./claude-code-models.js";
 import type { CliEnded, RunCli } from "./run-cli.js";
 import { cliEvent, cliShaped, endedWithout, promptOf, stopCliRun } from "./run-cli.js";
 import { lines } from "./sse-lines.js";
@@ -14,19 +15,10 @@ import { lines } from "./sse-lines.js";
 
 export const claudeCodeBinary = "claude";
 
-// Official stable family aliases resolve to the latest model available to the
-// installed CLI/account. Full model IDs remain available through custom entry.
-// https://code.claude.com/docs/en/model-config
-export const claudeCodeModels: readonly ModelInfo[] = [
-  { id: "fable", name: "Claude Fable (latest)" },
-  { id: "opus", name: "Claude Opus (latest)" },
-  { id: "sonnet", name: "Claude Sonnet (latest)" },
-  { id: "haiku", name: "Claude Haiku (latest)" },
-];
-
 export interface ClaudeCodeDeps {
   readonly run: RunCli;
   readonly binary?: string | undefined;
+  readonly readModels?: (() => Promise<readonly ModelInfo[]>) | undefined;
 }
 
 const writingRole =
@@ -61,6 +53,7 @@ export function claudeCodeArgs(req: LlmCompletion): string[] {
       ? ["--tools", "WebSearch", "--allowedTools", "WebSearch"]
       : ["--tools", ""]),
     ...(req.model === "" ? [] : ["--model", req.model]),
+    ...(req.thinking !== undefined && req.thinking !== "off" ? ["--effort", req.thinking] : []),
     // Everything after `--` is the prompt, so a prompt opening with a dash is text and not
     // a flag. It is one argv element: no shell sees it and nothing in it is expanded.
     "--",
@@ -160,7 +153,7 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
     id: "claude-code",
     // Partial messages keep the deadline alive; complete assistant turns supply prose.
     capabilities: { streams: true, reportsUsage: true, webSearch: true },
-    models: (): Promise<readonly ModelInfo[]> => Promise.resolve(claudeCodeModels),
+    models: deps.readModels ?? (() => nodeClaudeCodeModels(binary)),
     complete,
   };
 }
