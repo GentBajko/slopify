@@ -99,6 +99,35 @@ it("discards an active dirty draft at the confirmed version without saving disca
   expect(session?.document.form.title).toBe("");
   expect(calls).toEqual(["delete"]);
 });
+
+it("removes a successfully discarded draft from the open list immediately", async () => {
+  const id = "00000000-0000-4000-8000-000000000001";
+  renderApp(
+    <PlayDraftProvider>
+      <DraftList />
+    </PlayDraftProvider>,
+    testDeps(
+      playRoutes({
+        "GET /api/drafts": jsonAnswer({
+          drafts: [
+            {
+              id,
+              title: "To discard",
+              version: 1,
+              updatedAt: "2026-09-13T10:00:00.000Z",
+              readable: true,
+            },
+          ],
+        }),
+      }),
+    ),
+  );
+  fireEvent.click(await screen.findByText("Drafts"));
+  fireEvent.click(await screen.findByRole("button", { name: "Discard To discard" }));
+  fireEvent.click(screen.getByRole("button", { name: "Confirm discard" }));
+  await waitFor(() => expect(screen.queryByText("To discard")).toBeNull());
+});
+
 it("clears a corrupt remembered identity after explicit list discard", async () => {
   const id = "00000000-0000-4000-8000-000000000001";
   const map = new Map([["slopify.play-draft", id]]);

@@ -124,9 +124,14 @@ export function TemplatesRoute({
   }
   async function remove(): Promise<void> {
     if (!deleting) return;
+    const deletedId = deleting.id;
     const reply = await deleteProjectTemplate(api, deleting);
     if (!reply.ok) throw new Error(reply.message);
     setDeleting(null);
+    await client.cancelQueries({ queryKey: templatesKey });
+    client.setQueryData<readonly TemplateSummary[]>(templatesKey, (current) =>
+      current?.filter((template) => template.id !== deletedId),
+    );
     setNotice("Template deleted.");
     await client.invalidateQueries({ queryKey: templatesKey });
   }
