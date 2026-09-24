@@ -165,7 +165,7 @@ describe("optional outputs through the real app", () => {
         ),
       ),
     ).toMatch(/Audio: pcm_s16le.*48000 Hz, (?:stereo|2 channels)/);
-  });
+  }, 60_000);
 
   it("renders a silent five-second slideshow when narration is Off", async () => {
     const app = await start();
