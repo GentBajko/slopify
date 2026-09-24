@@ -2,11 +2,12 @@ import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { nodeClaudeCodeModels } from "./claude-code-models.js";
 
 const directories: string[] = [];
 afterEach(async () => {
+  vi.unstubAllEnvs();
   await Promise.all(
     directories.splice(0).map((path) => rm(path, { recursive: true, force: true })),
   );
@@ -28,6 +29,7 @@ async function fakeClaude(reply: string, linger = false, ignoreTerm = false): Pr
       '  const request = JSON.parse(input.split("\\n")[0]);',
       '  if (request.type !== "control_request" || request.request.subtype !== "initialize") process.exit(9);',
       '  writeFileSync(new URL("./cwd.txt", import.meta.url), process.cwd());',
+      '  writeFileSync(new URL("./env.json", import.meta.url), JSON.stringify({config:process.env.CLAUDE_CONFIG_DIR ?? null,unrelated:process.env.SLOPIFY_PRIVATE_TEST ?? null}));',
       "  process.stdout.write(" +
         JSON.stringify(reply) +
         '.replaceAll("REQUEST_ID", request.request_id));',
@@ -64,6 +66,17 @@ const success = `${JSON.stringify({
 })}\n`;
 
 describe("Claude Code model discovery", () => {
+  it("keeps the host configuration directory without forwarding unrelated environment", async () => {
+    const binary = await fakeClaude(success);
+    const directory = join(dirname(binary), "custom-config");
+    vi.stubEnv("CLAUDE_CONFIG_DIR", directory);
+    vi.stubEnv("SLOPIFY_PRIVATE_TEST", "test-only-not-forwarded");
+    await nodeClaudeCodeModels(binary, 1000);
+    expect(JSON.parse(await readFile(join(dirname(binary), "env.json"), "utf8"))).toEqual({
+      config: directory,
+      unrelated: null,
+    });
+  });
   it("uses only a no-prompt initialize request and returns model/effort metadata", async () => {
     const binary = await fakeClaude(success);
     expect(await nodeClaudeCodeModels(binary, 1000)).toEqual([

@@ -244,14 +244,14 @@ describe("codexLlm.complete", () => {
     });
   });
 
-  it("fails on the recorded auth failure, quoting the CLI", async () => {
+  it("treats the recorded expired login as terminal, with sign-in guidance", async () => {
     const error: unknown = await drain(fixture("codex-auth-failure.jsonl"), {
       code: 1,
       error: null,
     }).catch((thrown: unknown) => thrown);
-    expect(isProviderError(error) && error.fault.kind).toBe("other");
+    expect(isProviderError(error) && error.fault.kind).toBe("missing_key");
     // The `error` event carries its text in `message`, not in `error.message`.
-    expect(String(error)).toContain("your refresh token was already used");
+    expect(String(error)).toContain("codex login");
   });
 
   it("treats the opening error item as the warning it is, not a failed turn", async () => {

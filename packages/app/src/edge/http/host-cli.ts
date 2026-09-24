@@ -78,7 +78,10 @@ export interface HostRouteOptions {
   readonly ports: HostCliPorts;
   readonly gate: HostGate;
 }
-type HostEnv = { Bindings: HttpBindings; Variables: { job: HostJob } };
+type HostEnv = {
+  Bindings: HttpBindings;
+  Variables: { job: HostJob & { readonly holdStream: () => void } };
+};
 const unavailable =
   "Host CLI operation did not finish reliably; its result may be uncertain. Review the affected rebuild before retrying.";
 function fault(error: unknown, token: string): z.infer<typeof hostFaultSchema> {
@@ -128,21 +131,41 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
         },
         503,
       );
-    c.set("job", job);
     const outgoing = c.env?.outgoing;
+    let responseEnded = !outgoing;
+    let handlerEnded = false;
+    let streaming = false;
+    const releaseIfFinished = () => {
+      if (responseEnded && handlerEnded && !streaming) job.release();
+    };
+    c.set("job", {
+      ...job,
+      holdStream: () => {
+        streaming = true;
+      },
+      release: () => {
+        streaming = false;
+        releaseIfFinished();
+      },
+    });
+    const finish = () => {
+      responseEnded = true;
+      releaseIfFinished();
+    };
     const close = () => {
       if (!outgoing?.writableFinished) job.abort();
-      job.release();
+      finish();
     };
     outgoing?.once("close", close);
-    outgoing?.once("finish", job.release);
+    outgoing?.once("finish", finish);
     const abort = () => job.abort();
     c.req.raw.signal.addEventListener("abort", abort, { once: true });
     try {
       await next();
     } finally {
       c.req.raw.signal.removeEventListener("abort", abort);
-      if (kind === "metadata" || !outgoing) job.release();
+      handlerEnded = true;
+      releaseIfFinished();
     }
   });
   app.use(
@@ -178,6 +201,7 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
     const body = hostLlmSchema.safeParse(await json(c.req.raw));
     if (!body.success) return invalid(c);
     const job = c.get("job");
+    job.holdStream();
     const controller = new AbortController();
     const signal = AbortSignal.any([job.signal, controller.signal]);
     let timer = setTimeout(() => controller.abort(), 120_000);

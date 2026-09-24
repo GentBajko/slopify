@@ -80,12 +80,12 @@ describe("claudeCodeArgs", () => {
   it("recognizes a sign-in refusal without an HTTP status", async () => {
     await expect(
       drain(
-        JSON.stringify({
+        `${JSON.stringify({
           type: "result",
           subtype: "success",
           is_error: true,
           result: "Not logged in · Please run /login",
-        }) + "\n",
+        })}\n`,
       ),
     ).rejects.toMatchObject({ fault: { kind: "missing_key" } });
   });

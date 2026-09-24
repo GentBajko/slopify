@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ "$(uname -s)" != Linux ]]; then
-  echo "Host CLI bridging requires Linux executables. Use the API providers on this host." >&2
+  echo "This Docker launcher requires Linux. Use plain Docker with API providers on this host." >&2
   exit 1
 fi
 

@@ -27,7 +27,12 @@ try {
     (process.getuid && stat.uid !== process.getuid())
   )
     throw new Error("Unsafe host environment file.");
-  const environment = hostEnvironmentSchema.parse(JSON.parse(await file.readFile("utf8")));
+  const buffer = Buffer.alloc(64 * 1024 + 1);
+  const { bytesRead } = await file.read(buffer, 0, buffer.length, 0);
+  if (bytesRead > 64 * 1024) throw new Error("Host environment file is too large.");
+  const environment = hostEnvironmentSchema.parse(
+    JSON.parse(buffer.subarray(0, bytesRead).toString("utf8")),
+  );
   Object.assign(process.env, environment);
 } finally {
   await file.close();

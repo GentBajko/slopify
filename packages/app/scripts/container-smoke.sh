@@ -17,7 +17,8 @@ trap cleanup EXIT
 docker volume create "$smoke_volume" >/dev/null
 
 start_container() {
-  SLOPIFY_DOCKER_IMAGE=slopify:smoke \
+  SLOPIFY_HOST_CLI_DIR="" \
+    SLOPIFY_DOCKER_IMAGE=slopify:smoke \
     SLOPIFY_DOCKER_NAME="$smoke_container" \
     SLOPIFY_DOCKER_VOLUME="$smoke_volume" \
     SLOPIFY_DOCKER_HOST_PORT="${1:-0}" \
@@ -59,19 +60,12 @@ start_container
 test "$(docker inspect --format '{{.Id}}' "$smoke_container")" = "$original_id"
 test "$(docker inspect --format '{{.HostConfig.RestartPolicy.Name}}' "$smoke_container")" = "always"
 curl --fail --silent "http://$(docker port "$smoke_container" 6969/tcp)/api/health" >/dev/null
-for cli in codex claude gemini; do
-  if command -v "$cli" >/dev/null 2>&1; then
-    provider=$cli
-    if [[ "$cli" == claude ]]; then provider=claude-code; fi
-    docker exec "$smoke_container" "$cli" --version >/dev/null
-    docker exec "$smoke_container" node -e \
-      "fetch('http://127.0.0.1:6969/api/providers').then(r => r.json()).then(body => { if (!body.providers.some(p => p.id === '$provider' && p.readiness.installed)) process.exit(1) }).catch(() => process.exit(1))"
-    if [[ "$cli" == gemini || "$cli" == codex || "$cli" == claude ]]; then
-      docker exec "$smoke_container" node -e \
-        "fetch('http://127.0.0.1:6969/api/providers/$provider/models').then(r => r.json()).then(body => { if (!Array.isArray(body.models) || body.models.length < 2 || body.warning) process.exit(1) }).catch(() => process.exit(1))"
-    fi
-  fi
-done
+docker exec "$smoke_container" node -e '
+  fetch("http://127.0.0.1:6969/api/providers").then(r => r.json()).then(body => {
+    const cli = body.providers.filter(p => ["codex", "claude-code", "gemini", "codex-image"].includes(p.id));
+    if (cli.length !== 4 || cli.some(p => p.readiness.installed || p.readiness.issueKind !== "bridge")) process.exit(1);
+  }).catch(() => process.exit(1));
+'
 docker exec "$smoke_container" sh -c 'test "$HOME" = /data/home && test -w "$HOME"'
 docker exec "$smoke_container" node -e \
   "require('node:fs').writeFileSync('/data/.container-smoke', 'persisted')"

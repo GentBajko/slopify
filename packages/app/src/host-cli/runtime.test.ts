@@ -28,13 +28,11 @@ it("runs Claude on the host in a disposable private directory", async () => {
     resolve: async () => "/host/claude",
     login: async () => "signed-in",
   });
-  for await (const _ of ports
-    .llm("claude-code")
-    .complete({
-      model: "sonnet",
-      messages: [{ role: "user", content: "hello" }],
-      signal: AbortSignal.timeout(1000),
-    })) {
+  for await (const _ of ports.llm("claude-code").complete({
+    model: "sonnet",
+    messages: [{ role: "user", content: "hello" }],
+    signal: AbortSignal.timeout(1000),
+  })) {
   }
   expect(seen[0]?.binary).toBe("/host/claude");
   expect(seen[0]?.options?.env?.HOME).toBe("/host/home");

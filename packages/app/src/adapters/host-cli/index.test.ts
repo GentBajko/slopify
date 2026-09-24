@@ -60,7 +60,7 @@ it.skipIf(process.platform === "win32")(
       { type: "delta", text: "héllo 🌕" },
       { type: "done", usage: { inputTokens: 1, outputTokens: 2 }, finishReason: null },
     ];
-    const { client } = await endpoint(events.map((e) => JSON.stringify(e)).join("\n") + "\n");
+    const { client } = await endpoint(`${events.map((e) => JSON.stringify(e)).join("\n")}\n`);
     expect(await drain(client)).toEqual(events);
     const image = Buffer.from([0xff, 0xd8, 0xff, 0xd9]);
     const picture = await endpoint(image, "image/jpeg");
@@ -90,6 +90,17 @@ it.skipIf(process.platform === "win32")(
   async () => {
     const h = await endpoint("", "application/x-ndjson", 2);
     await expect(drain(h.client)).rejects.toMatchObject({ fault: { kind: "unavailable" } });
+    expect(h.posts()).toBe(0);
+  },
+);
+it.skipIf(process.platform === "win32")(
+  "preserves host model groups and reasoning options",
+  async () => {
+    const models = [
+      { id: "test", name: "Test", group: "Installed", thinkingModes: ["low", "high"] },
+    ];
+    const h = await endpoint(JSON.stringify({ models }), "application/json");
+    expect(await h.client.llm("codex").models()).toEqual(models);
     expect(h.posts()).toBe(0);
   },
 );

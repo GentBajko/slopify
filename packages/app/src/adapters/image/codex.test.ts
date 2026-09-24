@@ -18,7 +18,7 @@ it.each(["turn.failed", "error"])(
       "Image tool unavailable for this account",
     ]) {
       const event = type === "error" ? { type, message } : { type, error: { message } };
-      const fake = fakeRun(() => {}, JSON.stringify(event) + "\n");
+      const fake = fakeRun(() => {}, `${JSON.stringify(event)}\n`);
       const result = codexImage({ run: fake.run }).generate(request());
       if (message.startsWith("Not"))
         await expect(result).rejects.toMatchObject({ fault: { kind: "missing_key" } });

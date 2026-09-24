@@ -1,4 +1,4 @@
-import { lstat, mkdtemp, rm } from "node:fs/promises";
+import { lstat, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -6,6 +6,7 @@ import { afterEach, expect, it } from "vitest";
 import type { HostCliPorts } from "../kernel/ports/host-cli.js";
 import { prepareHostPaths } from "./paths.js";
 import { startHostServer } from "./server.js";
+import { helperHealth } from "./service.js";
 
 const cleanups: (() => Promise<void>)[] = [];
 it.skipIf(process.platform === "win32")(
@@ -16,6 +17,10 @@ it.skipIf(process.platform === "win32")(
     const paths = await prepareHostPaths(root);
     let startedResolve = () => {};
     let stoppedResolve = () => {};
+    let finishCleanup = () => {};
+    const cleanupDone = new Promise<void>((resolve) => {
+      finishCleanup = resolve;
+    });
     const started = {
       promise: new Promise<void>((resolve) => {
         startedResolve = resolve;
@@ -47,6 +52,7 @@ it.skipIf(process.platform === "win32")(
             throw new Error("unexpected");
           } finally {
             stopped.resolve();
+            await cleanupDone;
           }
         },
       },
@@ -58,6 +64,8 @@ it.skipIf(process.platform === "win32")(
       ports,
     });
     cleanups.push(server.stop);
+    cleanups.push(async () => finishCleanup());
+    await writeFile(paths.tokenFile, "a".repeat(64), { mode: 0o644 });
     const call = request({
       socketPath: paths.socket,
       path: "/v1/image",
@@ -69,6 +77,11 @@ it.skipIf(process.platform === "win32")(
     await started.promise;
     call.destroy();
     await stopped.promise;
+    expect((await helperHealth(root, AbortSignal.timeout(1000)))?.active).toBe(1);
+    finishCleanup();
+    await expect
+      .poll(async () => (await helperHealth(root, AbortSignal.timeout(1000)))?.active)
+      .toBe(0);
   },
 );
 afterEach(async () => {

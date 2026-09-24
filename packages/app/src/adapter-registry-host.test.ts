@@ -50,23 +50,19 @@ it("uses host ports for every CLI and never probes or spawns a container CLI", a
   try {
     for (const id of hostLlmIds) {
       expect(await registry.llm(id).models()).toEqual([{ id: "host", name: "Host" }]);
-      for await (const _ of registry
-        .llm(id)
-        .complete({
-          model: "host",
-          messages: [{ role: "user", content: "test" }],
-          signal: AbortSignal.timeout(1000),
-        })) {
+      for await (const _ of registry.llm(id).complete({
+        model: "host",
+        messages: [{ role: "user", content: "test" }],
+        signal: AbortSignal.timeout(1000),
+      })) {
       }
     }
-    await registry
-      .image("codex-image")
-      .generate({
-        model: "codex-imagegen",
-        prompt: "test",
-        aspect: "16:9",
-        signal: AbortSignal.timeout(1000),
-      });
+    await registry.image("codex-image").generate({
+      model: "codex-imagegen",
+      prompt: "test",
+      aspect: "16:9",
+      signal: AbortSignal.timeout(1000),
+    });
     const list = await registry.list();
     expect(list.find((p) => p.id === "codex")?.readiness).toMatchObject({ installed: true });
     expect(registry.llm("openrouter").id).toBe("openrouter");

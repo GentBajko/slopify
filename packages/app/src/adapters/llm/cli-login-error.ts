@@ -3,7 +3,7 @@ import { type ProviderError, providerError } from "../../kernel/ports/model.js";
 export function cliLoginError(provider: string, text: string): ProviderError | undefined {
   if (/invalid api key/i.test(text)) return undefined;
   if (
-    !/not logged in|please (?:run|use)\s+\/login|run\s+codex\s+login|authentication required/i.test(
+    !/not logged in|please (?:run|use)\s+\/login|run\s+codex\s+login|authentication required|(?:access|refresh) token.*(?:expired|could not be refreshed|already used)/i.test(
       text,
     )
   )

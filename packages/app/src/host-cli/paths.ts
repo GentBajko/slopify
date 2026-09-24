@@ -39,7 +39,9 @@ export async function readBridgeToken(path: string): Promise<string> {
     const entry = await file.stat();
     if (!entry.isFile() || entry.size !== 64 || (entry.mode & 0o022) !== 0)
       throw new Error("Invalid host helper token file.");
-    const value = await file.readFile("utf8");
+    const buffer = Buffer.alloc(65);
+    const { bytesRead } = await file.read(buffer, 0, buffer.length, 0);
+    const value = buffer.subarray(0, bytesRead).toString("utf8");
     if (!/^[a-f0-9]{64}$/.test(value)) throw new Error("Invalid host helper token file.");
     return value;
   } finally {
