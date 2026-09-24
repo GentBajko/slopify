@@ -98,6 +98,37 @@ function generated(
     },
   };
 }
+it.each(["claude-code", "codex", "gemini", "codex-image"] as const)(
+  "accepts host-managed %s when starting a draft",
+  async (provider) => {
+    const h = startFixture();
+    try {
+      const image = provider === "codex-image";
+      const run = generated(h, image ? "image" : "llm");
+      const model = image ? "codex-imagegen" : "text";
+      const result = await checkDraftReadiness(
+        {
+          ...h.deps,
+          providers: async () => [
+            {
+              id: provider,
+              family: image ? "image" : "llm",
+              displayName: provider,
+              readiness: { kind: "cli", installed: true },
+              cliPath: { configured: null, command: `/host/bin/${provider}`, managedOnHost: true },
+            },
+          ],
+          modelsFor: async () => [{ id: model, name: "Test" }],
+        },
+        [{ ...run, draft: { ...run.draft, [image ? "images" : "llm"]: { provider, model } } }],
+      );
+      expect(result.fields).toEqual([]);
+      expect(h.ticks).toEqual([]);
+    } finally {
+      h.close();
+    }
+  },
+);
 it.each(["provider", "family", "model", "key", "voice", "cli"] as const)(
   "reports %s readiness loss with linked form fields",
   async (failure) => {

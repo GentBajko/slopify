@@ -47,6 +47,14 @@ export function cliBinary(db: DatabaseSync, id: ProviderId): string {
   return cliPathStatus(db, id).command;
 }
 
+export function cliPathChanged(db: DatabaseSync, provider: ProviderStatus | undefined): boolean {
+  return (
+    provider?.cliPath !== undefined &&
+    !provider.cliPath.managedOnHost &&
+    cliPathStatus(db, provider.id).command !== provider.cliPath.command
+  );
+}
+
 export async function saveCliPath(
   deps: CliPathDeps,
   id: ProviderId,

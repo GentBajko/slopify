@@ -3,7 +3,7 @@ import type { Catalogue } from "../../catalog/schema.js";
 import { readinessIsUsable } from "../../kernel/ports/model.js";
 import type { FieldError } from "../admission/rules.js";
 import type { RevisionView } from "../revisions/model.js";
-import { cliPathStatus } from "../settings/cli-paths.js";
+import { cliPathChanged } from "../settings/cli-paths.js";
 import type { ProviderStatus } from "../settings/model.js";
 import { isLocalCliProvider } from "../settings/model.js";
 import { hasKey, listVoices } from "../settings/repo.js";
@@ -104,10 +104,7 @@ export function localReadiness(
     const provider = providers.find(
       (row) => row.id === choice.provider && row.family === choice.family,
     );
-    if (
-      provider?.cliPath !== undefined &&
-      cliPathStatus(deps.db, provider.id).command !== provider.cliPath.command
-    )
+    if (cliPathChanged(deps.db, provider))
       fields.push({
         field: `${choice.family}.cliPath`,
         message: "The configured CLI command changed. Check readiness again before rebuilding.",

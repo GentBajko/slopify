@@ -2,7 +2,7 @@ import { checkRuntimeModel } from "../../catalog/runtime-models.js";
 import { modelFields } from "../../catalog/validate.js";
 import { readinessIsUsable } from "../../kernel/ports/model.js";
 import { type FieldError, usesNarrationPreparation } from "../admission/rules.js";
-import { cliPathStatus } from "../settings/cli-paths.js";
+import { cliPathChanged } from "../settings/cli-paths.js";
 import type { ProviderStatus } from "../settings/model.js";
 import { hasKey, listVoices } from "../settings/repo.js";
 import type { DraftStartDeps, ResolvedPlayRun } from "./model.js";
@@ -94,10 +94,7 @@ export function localDraftReadiness(
   const fields: FieldError[] = runs.flatMap((run) => modelFields(run.draft, deps.catalogue));
   for (const c of choices(runs)) {
     const provider = providers.find((p) => p.id === c.provider && p.family === c.family);
-    if (
-      provider?.cliPath !== undefined &&
-      cliPathStatus(deps.db, provider.id).command !== provider.cliPath.command
-    )
+    if (cliPathChanged(deps.db, provider))
       fields.push({
         field: `${c.field}.cliPath`,
         message: "The configured CLI command changed. Check readiness again.",
