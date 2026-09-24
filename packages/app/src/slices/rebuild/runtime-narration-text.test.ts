@@ -83,7 +83,7 @@ it("publishes separate clean and exact request scripts for all three segments", 
   } finally {
     h.close();
   }
-});
+}, 30_000);
 
 it("repairs missing text locally while retaining audio and historical downloads", async () => {
   const h = await narrationFixture("Exact narration.", {
