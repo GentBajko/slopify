@@ -35,21 +35,37 @@ or the global command when you want `slopify` available on your `PATH`.
 
 ## Docker
 
-On Linux, start Slopify in Docker with automatic detection of your installed
-Codex, Claude Code, and Gemini CLIs:
+On Linux with Docker, Node 26+ and systemd, run:
 
 ```sh
 npx @gentbajko/slopify@latest --docker
 ```
 
-With Slopify installed globally, use `slopify --docker`. The launcher finds the
-CLIs, mounts their installations read-only, and opens port 6969 on localhost.
-It runs in the background, restarts with Docker, and keeps your data in the
-`slopify-data` volume. Use `--port 7070` to change the port. Run the same command
-after a CLI update; it refreshes changed mounts and retains the previous container
-stopped for recovery. Running it again with the same configuration reuses the container.
+The launcher detects Codex, Claude Code and Gemini on your host. It asks once
+before installing a private helper that runs those CLIs under your user account.
+That permission includes automatic startup and user lingering, which keeps your
+user services running after logout and starts them at boot. CLI logins stay on
+the host; you don't sign in again inside Docker.
 
-For API-key providers without host CLI bridging, you can run the image directly:
+Slopify runs in the background at `http://127.0.0.1:6969`, restarts with Docker,
+and keeps prompts, settings and projects in the `slopify-data` volume. Use
+`--port 7070` to change the port. A global install can use `slopify --docker`.
+Native installs need no helper.
+
+The helper uses a private authenticated socket, not a public port or remote shell.
+Docker receives model metadata and generated text/image bytes. It doesn't mount
+your CLI executables, home directory or login files. Settings shows host commands
+read-only. Rerun the launcher after changing CLI installations or search paths.
+CLI authentication that depends on secret environment variables must be configured
+in the host service; the launcher does not copy those variables into Docker.
+
+For API-only Docker, add `--host-cli=off`. Non-interactive helper setup requires
+`--accept-host-cli`, which grants the same host-access and startup permission.
+If no CLIs are installed, the launcher starts API-only; install them on the host
+and rerun it when needed. Managed helper setup is not available on Windows/macOS.
+
+Plain `docker run` is API-only unless connected to an already configured helper.
+It does not install host services:
 
 ```sh
 docker run -d --name slopify --restart always \
@@ -58,45 +74,31 @@ docker run -d --name slopify --restart always \
   ghcr.io/gentbajko/slopify:latest
 ```
 
-Open `http://127.0.0.1:6969`. Keep the `127.0.0.1` binding: Slopify has no
-login, and anyone who can reach its port can control it. FFmpeg is already installed
-in the image; starting the container does not need a separate download or install command.
-The container does not run npm updates from the UI. Pull a new image, remove the
-old container, and run the command again with the same volume to update it.
+Keep the localhost binding: anyone who reaches Slopify's port can control the app
+and its providers. FFmpeg is already installed in the image.
 
-The image does **not** bundle Codex, Claude Code, or Gemini CLI. Plain `docker run`
-cannot see host installations. The `--docker` launcher includes the bridge; from
-a source checkout, the same launcher is also available as:
+To update a launcher-managed installation:
 
 ```sh
-bash packages/app/scripts/docker-run.sh
+docker pull ghcr.io/gentbajko/slopify:latest
+npx @gentbajko/slopify@latest --docker
 ```
 
-It resolves the host Codex and Gemini npm packages and the native Claude binary,
-mounts those installations and Codex's model catalogue read-only, and gives the container its own
-persistent CLI home in `slopify-data`. Install the CLIs on the host first, then
-recreate the container after installing or upgrading one; the mounts refer to
-the resolved installation paths. macOS or Windows executables cannot run inside
-this Linux image. API-key providers work without the helper.
+The launcher keeps the existing data volume, retains the previous container
+stopped for recovery, and refuses to replace a helper while it is generating.
+It never restarts failed projects automatically. For a direct Docker installation,
+recreate the container after pulling, using the same named volume.
 
-The host's CLI login files are **not** mounted. Sign in to Codex and Claude
-once inside the container; those credentials stay in the named volume across
-restarts:
+Check or disable only the dedicated host helper:
 
 ```sh
-docker exec -it slopify codex login --device-auth
-docker exec -it slopify claude auth login
+systemctl --user status slopify-cli-bridge.service
+systemctl --user disable --now slopify-cli-bridge.service
 ```
 
-Follow each CLI's prompts. Codex device-code login must be enabled for your
-ChatGPT account or workspace. For Gemini CLI in a headless container, set
-`GEMINI_API_KEY` in your host shell before running the helper; the helper
-passes it to Docker without placing the key on the command line. Docker
-retains it in the container configuration, so supply it again when recreating
-the container. Only run the login command for CLIs you mounted.
-Treat `slopify-data` as sensitive: it contains your provider keys and CLI
-credentials. To update a CLI, update it on the host, then recreate the container
-with the helper; Slopify will keep its data and login state in the same volume.
+Disabling it leaves Docker, API providers, data and host logins intact. It does
+not disable user lingering, which may support other services. Helper files live
+under `$XDG_DATA_HOME/slopify/host-cli` or `~/.local/share/slopify/host-cli`.
 
 ## How to use it
 

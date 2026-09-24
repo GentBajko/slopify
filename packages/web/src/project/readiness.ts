@@ -1,8 +1,8 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
-import { readinessIsUsable } from "@app/kernel/ports/model.js";
 import type { RunConfig } from "@app/slices/admission/model.js";
 import { usesNarrationPreparation } from "@app/slices/admission/rules.js";
 import type { ProviderStatus } from "@app/slices/settings/model.js";
+import { providerUnavailableLabel } from "@/lib/provider-status";
 
 // A stage whose provider has no key or usable agent CLI cannot be retried or re-run. The control
 // distinguishes a missing executable from one that needs an upgrade and links to Settings.
@@ -49,10 +49,6 @@ export function unreadyFor(
     // its key, so nothing is: the server answers for the retry.
     return undefined;
   }
-  if (status.readiness.kind === "keyed") {
-    return status.readiness.hasKey ? undefined : { label: "Key missing", provider: id };
-  }
-  return readinessIsUsable(status.readiness)
-    ? undefined
-    : { label: status.readiness.issue ? "CLI update required" : "CLI missing", provider: id };
+  const label = providerUnavailableLabel(status.readiness);
+  return label === undefined ? undefined : { label, provider: id };
 }

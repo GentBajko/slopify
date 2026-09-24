@@ -272,9 +272,9 @@ describe("the providers a run may use", () => {
     await section("Outputs");
     const cartesia = screen.getByRole("option", { name: /Cartesia/ });
 
-    expect(unkeyed.textContent).toBe("OpenRouter · Key missing");
-    expect(absent.textContent).toBe("Codex CLI · CLI missing");
-    expect(cartesia.textContent).toBe("Cartesia · Key missing");
+    expect(unkeyed.textContent).toBe("OpenRouter · Key Missing");
+    expect(absent.textContent).toBe("Codex CLI · CLI Missing");
+    expect(cartesia.textContent).toBe("Cartesia · Key Missing");
     expect(screen.getByRole("option", { name: "ElevenLabs" }).textContent).toBe("ElevenLabs");
   });
 

@@ -34,6 +34,7 @@ const providers: readonly ProviderStatus[] = [
       installed: true,
       version: "0.148.0",
       issue: "Gemini CLI update required.",
+      issueKind: "version",
     },
   },
   { id: "fal", family: "image", displayName: "fal.ai", readiness: { kind: "keyed", hasKey: true } },
@@ -88,7 +89,7 @@ describe("the provider picker", () => {
     expect(screen.queryByRole("option", { name: /fal\.ai/ })).toBeNull();
   });
 
-  it("greys a keyed provider with no key and says Key missing", () => {
+  it("greys a keyed provider with no key and says Key Missing", () => {
     render(
       <ProviderPicker
         label="LLM"
@@ -101,11 +102,11 @@ describe("the provider picker", () => {
     );
 
     const unkeyed = option(/OpenRouter/);
-    expect(unkeyed.textContent).toBe("OpenRouter · Key missing");
+    expect(unkeyed.textContent).toBe("OpenRouter · Key Missing");
     expect(unkeyed.disabled).toBe(true);
   });
 
-  it("greys a CLI provider that is not installed and says CLI missing", () => {
+  it("greys a CLI provider that is not installed and says CLI Missing", () => {
     render(
       <ProviderPicker
         label="LLM"
@@ -118,7 +119,7 @@ describe("the provider picker", () => {
     );
 
     const absent = option(/Codex CLI/);
-    expect(absent.textContent).toBe("Codex CLI · CLI missing");
+    expect(absent.textContent).toBe("Codex CLI · CLI Missing");
     expect(absent.disabled).toBe(true);
   });
 
@@ -135,7 +136,7 @@ describe("the provider picker", () => {
     );
 
     const outdated = option(/Gemini CLI/);
-    expect(outdated.textContent).toBe("Gemini CLI · CLI update required");
+    expect(outdated.textContent).toBe("Gemini CLI · CLI Update Required");
     expect(outdated.disabled).toBe(true);
   });
 

@@ -157,7 +157,7 @@ describe("a failed stage", () => {
       }),
     );
 
-    const control = await screen.findByRole("button", { name: "Key missing" });
+    const control = await screen.findByRole("button", { name: "Key Missing" });
     expect(control.hasAttribute("disabled")).toBe(true);
     expect(screen.getByRole("link", { name: "Open Settings" })).not.toBeNull();
   });

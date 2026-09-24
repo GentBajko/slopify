@@ -29,6 +29,7 @@ export function CliProviderRow({
   const [draft, setDraft] = useState<string | undefined>(undefined);
   const [saved, setSaved] = useState(false);
   const configured = provider.cliPath?.configured ?? null;
+  const onHost = provider.cliPath?.managedOnHost === true;
   const defaultCommand =
     provider.id === "claude-code"
       ? "claude"
@@ -80,53 +81,60 @@ export function CliProviderRow({
         <p className="mt-1 break-all text-label text-ink3">
           Command: <code>{command}</code>
         </p>
-        <form
-          className="mt-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!save.isPending) save.mutate(value);
-          }}
-        >
-          <Label htmlFor={fieldId} id={labelId} className="mb-[5px]">
-            Executable path
-          </Label>
-          <div className="flex items-center gap-2">
-            <Input
-              id={fieldId}
-              autoComplete="off"
-              spellCheck={false}
-              maxLength={4096}
-              aria-labelledby={`${nameId} ${labelId}`}
-              aria-invalid={save.error !== null}
-              aria-describedby={`${helpId}${save.error ? ` ${errorId}` : ""}`}
-              placeholder={defaultCommand}
-              value={value}
-              disabled={save.isPending}
-              onChange={(event) => {
-                setDraft(event.target.value);
-                setSaved(false);
-                save.reset();
-              }}
-            />
-            <Button
-              type="submit"
-              aria-label={`Save ${provider.displayName} path`}
-              disabled={save.isPending}
-            >
-              {save.isPending ? "Checking…" : "Save path"}
-            </Button>
-            {saved ? <SavedTick /> : null}
-          </div>
-          <p id={helpId} className="mt-1 text-label text-ink3">
-            Leave blank to find <code>{defaultCommand}</code> on PATH. Use an absolute path without
-            quotes or arguments.
+        {onHost ? (
+          <p className="mt-2 text-label text-ink3">
+            Runs on your host using its existing CLI login. Rerun the Docker launcher after changing
+            CLI installations.
           </p>
-          {save.error ? (
-            <p id={errorId} role="alert" className="mt-1 text-label text-red">
-              {save.error.message}
+        ) : (
+          <form
+            className="mt-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!save.isPending) save.mutate(value);
+            }}
+          >
+            <Label htmlFor={fieldId} id={labelId} className="mb-[5px]">
+              Executable path
+            </Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id={fieldId}
+                autoComplete="off"
+                spellCheck={false}
+                maxLength={4096}
+                aria-labelledby={`${nameId} ${labelId}`}
+                aria-invalid={save.error !== null}
+                aria-describedby={`${helpId}${save.error ? ` ${errorId}` : ""}`}
+                placeholder={defaultCommand}
+                value={value}
+                disabled={save.isPending}
+                onChange={(event) => {
+                  setDraft(event.target.value);
+                  setSaved(false);
+                  save.reset();
+                }}
+              />
+              <Button
+                type="submit"
+                aria-label={`Save ${provider.displayName} path`}
+                disabled={save.isPending}
+              >
+                {save.isPending ? "Checking…" : "Save path"}
+              </Button>
+              {saved ? <SavedTick /> : null}
+            </div>
+            <p id={helpId} className="mt-1 text-label text-ink3">
+              Leave blank to find <code>{defaultCommand}</code> on PATH. Use an absolute path
+              without quotes or arguments.
             </p>
-          ) : null}
-        </form>
+            {save.error ? (
+              <p id={errorId} role="alert" className="mt-1 text-label text-red">
+                {save.error.message}
+              </p>
+            ) : null}
+          </form>
+        )}
         <p className="mt-2 text-label text-ink3">
           Sign in through {provider.displayName} itself before generating; Slopify uses that login.
           {provider.id === "codex-image"
@@ -142,9 +150,9 @@ function statusOf(
   readiness: { readonly installed: boolean; readonly version?: string; readonly issue?: string },
   configured: string | null,
 ): string {
+  if (readiness.issue !== undefined) return readiness.issue;
   if (!readiness.installed) {
     return configured === null ? "Not found on PATH" : "Not found at saved path";
   }
-  if (readiness.issue !== undefined) return readiness.issue;
   return readiness.version === undefined ? "Installed" : `Installed, version ${readiness.version}`;
 }

@@ -1,4 +1,3 @@
-import { readinessIsUsable } from "@app/kernel/ports/model.js";
 import type { ProviderFamily, ProviderStatus } from "@app/slices/settings/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
@@ -9,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Picker } from "@/components/ui/picker";
 import { customModelFallback, listProviderModels, modelsKey, modelsQuery } from "@/lib/models";
+import { providerUnavailableLabel } from "@/lib/provider-status";
 import { cn } from "@/lib/utils";
 
 // The pickers Play draws over and over: a labelled control with its refusal underneath.
@@ -136,12 +136,7 @@ export function providerOptions(
 }
 
 function refusalOf(provider: ProviderStatus): string | undefined {
-  const { readiness } = provider;
-  if (readiness.kind === "cli") {
-    if (readiness.issue !== undefined) return "CLI update required";
-    return readinessIsUsable(readiness) ? undefined : "CLI missing";
-  }
-  return readiness.hasKey ? undefined : "Key missing";
+  return providerUnavailableLabel(provider.readiness);
 }
 
 export function ProviderPicker({

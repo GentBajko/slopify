@@ -22,7 +22,11 @@ const cli = (id: string, installed: boolean, issue?: string): ProviderStatus =>
     id,
     family: "llm",
     displayName: id,
-    readiness: { kind: "cli", installed, ...(issue === undefined ? {} : { issue }) },
+    readiness: {
+      kind: "cli",
+      installed,
+      ...(issue === undefined ? {} : { issue, issueKind: "version" }),
+    },
   }) as unknown as ProviderStatus;
 
 describe("which provider a stage's retry would go to", () => {
@@ -48,7 +52,7 @@ describe("a stage whose provider is not ready", () => {
     } as RunConfig;
     expect(
       unreadyFor("audio", prepared, [keyed("elevenlabs", true), cli("claude-code", false)])?.label,
-    ).toBe("CLI missing");
+    ).toBe("CLI Missing");
     expect(
       unreadyFor("audio", { ...prepared, narrationPrompt: "" }, [
         keyed("elevenlabs", true),
@@ -57,14 +61,14 @@ describe("a stage whose provider is not ready", () => {
     ).toBeUndefined();
   });
   it("says which of the two is missing", () => {
-    expect(unreadyFor("images", config, [keyed("fal", false)])?.label).toBe("Key missing");
-    expect(unreadyFor("article", config, [cli("claude-code", false)])?.label).toBe("CLI missing");
+    expect(unreadyFor("images", config, [keyed("fal", false)])?.label).toBe("Key Missing");
+    expect(unreadyFor("article", config, [cli("claude-code", false)])?.label).toBe("CLI Missing");
   });
 
   it("requires an update when an installed CLI has a compatibility issue", () => {
     expect(
       unreadyFor("article", config, [cli("claude-code", true, "Update this CLI.")])?.label,
-    ).toBe("CLI update required");
+    ).toBe("CLI Update Required");
   });
 
   it("says nothing when the key is stored or the binary answers", () => {

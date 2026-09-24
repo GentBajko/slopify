@@ -18,6 +18,40 @@ function codex(configured: string | null, installed: boolean): ProviderStatus {
 }
 
 describe("CLI executable settings", () => {
+  it.each(["ready", "login", "bridge", "version"] as const)(
+    "shows a read-only host command for %s",
+    async (kind) => {
+      const readiness =
+        kind === "ready"
+          ? { kind: "cli" as const, installed: true }
+          : {
+              kind: "cli" as const,
+              installed: kind !== "bridge",
+              issueKind: kind,
+              issue: `Host ${kind} guidance`,
+            };
+      renderApp(
+        <ProviderKeys />,
+        testDeps({
+          "GET /api/providers": jsonAnswer({
+            providers: [
+              {
+                ...codex(null, true),
+                readiness,
+                cliPath: { configured: null, command: "/host/bin/codex", managedOnHost: true },
+              },
+            ],
+          }),
+        }),
+      );
+      expect(await screen.findByText(/Runs on your host/)).not.toBeNull();
+      expect(screen.getByText("/host/bin/codex")).not.toBeNull();
+      expect(screen.queryByRole("textbox")).toBeNull();
+      expect(screen.queryByRole("button", { name: /Save.*path/ })).toBeNull();
+      if (kind !== "ready") expect(screen.getByText(`Host ${kind} guidance`)).not.toBeNull();
+      expect(screen.queryByText("Not found on PATH")).toBeNull();
+    },
+  );
   it.each([
     ["codex", "Codex CLI", "codex"],
     ["claude-code", "Claude Code CLI", "claude"],

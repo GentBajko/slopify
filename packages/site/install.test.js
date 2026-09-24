@@ -9,5 +9,9 @@ it("offers a copyable Docker launcher and a localhost-only direct command", () =
     'data-copy="docker run -d --name slopify --restart always -p 127.0.0.1:6969:6969 -v slopify-data:/data ghcr.io/gentbajko/slopify:latest"',
   );
   expect(page).toContain("Linux");
-  expect(page).toContain("Sign in to the CLIs inside the container");
+  expect(page).toContain("systemd");
+  expect(page).toContain("asks once");
+  expect(page).toContain("logins stay on the host");
+  expect(page).toContain("API-only");
+  expect(page).not.toContain("Sign in to the CLIs inside the container");
 });

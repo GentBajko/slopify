@@ -30,13 +30,19 @@ slopify
 
 Both commands launch the same local app.
 
-For Docker on Linux, use `slopify --docker` or
+For Docker on Linux with systemd, use `slopify --docker` or
 `npx @gentbajko/slopify@latest --docker`. The launcher detects installed Codex,
-Claude Code, and Gemini CLIs and mounts them read-only. It runs in the background,
-restarts with Docker, and keeps your data in `slopify-data`. Run it again after
-upgrading a CLI to refresh its mounts. Add `--port 7070` to change the default port.
-CLI credentials stay separate; sign in once inside the container. See the
-[Docker setup guide](https://github.com/GentBajko/slopify#docker) for login commands.
+Claude Code and Gemini CLIs. It asks once before installing a private host helper
+and enabling automatic startup, including user lingering. The CLIs run on your
+host with their existing logins; credentials never move into Docker.
+
+Slopify runs in the background, restarts with Docker and keeps your data in
+`slopify-data`. Add `--port 7070` to change the default port. Rerun the launcher
+after changing host CLI installations or search paths. Native installs need no helper.
+Plain `docker run` is API-only without a configured helper. Use `--host-cli=off`
+for API-only launcher setup, or `--accept-host-cli` to approve non-interactive setup.
+See the [Docker setup guide](https://github.com/GentBajko/slopify#docker) for
+updates and the dedicated helper's status/disable commands.
 
 ## How to use it
 
