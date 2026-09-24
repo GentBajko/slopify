@@ -29,7 +29,12 @@ export function CliProviderRow({
   const [draft, setDraft] = useState<string | undefined>(undefined);
   const [saved, setSaved] = useState(false);
   const configured = provider.cliPath?.configured ?? null;
-  const defaultCommand = provider.id === "claude-code" ? "claude" : provider.id;
+  const defaultCommand =
+    provider.id === "claude-code"
+      ? "claude"
+      : provider.id === "codex-image"
+        ? "codex"
+        : provider.id;
   const command = provider.cliPath?.command ?? defaultCommand;
   const value = draft ?? configured ?? "";
   const usable = readinessIsUsable(readiness);
@@ -124,6 +129,9 @@ export function CliProviderRow({
         </form>
         <p className="mt-2 text-label text-ink3">
           Sign in through {provider.displayName} itself before generating; Slopify uses that login.
+          {provider.id === "codex-image"
+            ? " Executable path and login are shared with Codex text generation."
+            : null}
         </p>
       </div>
     </div>

@@ -16,6 +16,10 @@ const pathSchema = z
 const storedPathSchema = z.string().max(cliPathMaxLength).nullable();
 const saves = new WeakMap<DatabaseSync, Map<ProviderId, Promise<void>>>();
 
+function installationId(id: ProviderId): ProviderId {
+  return id === "codex-image" ? "codex" : id;
+}
+
 export interface CliPathStatus {
   readonly configured: string | null;
   readonly command: string;
@@ -31,7 +35,7 @@ export type SaveCliPathResult =
 export function cliPathStatus(db: DatabaseSync, id: ProviderId): CliPathStatus {
   const provider = providerById(id);
   if (provider.auth !== "cli") throw new Error(`${id} is not a CLI provider`);
-  const stored = readSetting(db, `cli.path.${id}`);
+  const stored = readSetting(db, `cli.path.${installationId(id)}`);
   const configured = stored === undefined ? null : storedPathSchema.parse(JSON.parse(stored));
   return { configured, command: configured ?? provider.binary };
 }
@@ -52,17 +56,18 @@ export async function saveCliPath(
     queue = new Map();
     saves.set(deps.db, queue);
   }
-  const previous = queue.get(id) ?? Promise.resolve();
+  const sharedId = installationId(id);
+  const previous = queue.get(sharedId) ?? Promise.resolve();
   const next = previous.then(() => save(deps, id, raw));
   const settled = next.then(
     () => {},
     () => {},
   );
-  queue.set(id, settled);
+  queue.set(sharedId, settled);
   try {
     return await next;
   } finally {
-    if (queue.get(id) === settled) queue.delete(id);
+    if (queue.get(sharedId) === settled) queue.delete(sharedId);
   }
 }
 
@@ -112,7 +117,7 @@ async function save(deps: CliPathDeps, id: ProviderId, raw: string): Promise<Sav
         probed.error ??
         `${provider.displayName} did not answer --version successfully within ${cliProbeTimeoutMs / 1000} seconds. Choose its executable file without arguments.`,
     };
-  writeSetting(deps.db, `cli.path.${id}`, JSON.stringify(configured));
+  writeSetting(deps.db, `cli.path.${installationId(id)}`, JSON.stringify(configured));
   return {
     ok: true,
     status: {

@@ -95,6 +95,21 @@ describe("providerStatuses", () => {
     expect(statusOf(statuses, "claude-code").readiness).toEqual({ kind: "cli", installed: false });
   });
 
+  it("shares Codex readiness and the saved executable across text and images", async () => {
+    const deps = harness(async () => ({ ran: true, stdout: "codex-cli 0.148.0" }));
+    await saveCliPath(deps, "codex", process.execPath);
+    const statuses = await providerStatuses(deps);
+    const text = statuses.find((row) => row.id === "codex");
+    const image = statuses.find((row) => row.id === "codex-image");
+    expect(image).toMatchObject({
+      family: "image",
+      cliPath: text?.cliPath,
+      readiness: text?.readiness,
+    });
+    expect(image?.readiness).toMatchObject({ issue: expect.stringContaining("0.149.1") });
+    deps.db.close();
+  });
+
   it("probes each CLI provider's own binary and nothing else", async () => {
     const probed: string[] = [];
     const probe: CliProbe = (binary) => {

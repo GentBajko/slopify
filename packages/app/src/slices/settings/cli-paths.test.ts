@@ -69,6 +69,18 @@ describe("CLI executable paths", () => {
     expect(cliBinary(deps.db, "codex")).toBe("codex");
   });
 
+  it("uses one saved installation when changing either Codex provider", async () => {
+    const deps = harness();
+    await saveCliPath(deps, "codex", process.execPath);
+    expect(cliBinary(deps.db, "codex-image")).toBe(process.execPath);
+    const path = executable("codex-custom");
+    await saveCliPath(deps, "codex-image", path);
+    expect(cliBinary(deps.db, "codex")).toBe(path);
+    await saveCliPath(deps, "codex-image", "");
+    expect(cliBinary(deps.db, "codex")).toBe("codex");
+    expect(cliBinary(deps.db, "codex-image")).toBe("codex");
+  });
+
   it("stores a valid Codex path while returning actionable incompatible-version status", async () => {
     const deps = harness(async () => ({ ran: true, stdout: "codex-cli 0.148.0" }));
     const path = executable("old-codex");

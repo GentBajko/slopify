@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { codexImage } from "./adapters/image/codex.js";
 import { falImage } from "./adapters/image/fal.js";
 import { googleImage } from "./adapters/image/google.js";
 import { openAiImage } from "./adapters/image/openai.js";
@@ -92,7 +93,7 @@ export function buildRegistry(deps: RegistryDeps): Registry {
     ["cartesia", cartesiaTts({ fetch: deps.fetch, key: keyOf("cartesia") })],
     ["inworld", inworldTts({ fetch: deps.fetch, key: keyOf("inworld"), clock: deps.clock })],
   ]);
-  // Four image providers behind one port, each handed the reader for its own key row.
+  // Keyed image providers receive only their own key; Codex uses the shared CLI login.
   // Replicate also takes the clock: `Prefer: wait` gives up after 60 s and the prediction has
   // to be polled, and the wait is spent on the app's clock so a test never sits through one.
   const images = new Map<string, ImagePort>([
@@ -103,6 +104,7 @@ export function buildRegistry(deps: RegistryDeps): Registry {
     ],
     ["openai-image", openAiImage({ fetch: deps.fetch, key: keyOf("openai-image") })],
     ["google-image", googleImage({ fetch: deps.fetch, key: keyOf("google-image") })],
+    ["codex-image", codexImage({ run: cliFor("codex") })],
   ]);
 
   return {

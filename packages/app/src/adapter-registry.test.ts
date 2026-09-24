@@ -145,6 +145,8 @@ describe("buildRegistry", () => {
     expect(built.image("fal").id).toBe("fal");
     expect(built.image("replicate").id).toBe("replicate");
     expect(built.image("openai-image").id).toBe("openai-image");
+    expect(built.image("google-image").id).toBe("google-image");
+    expect(built.image("codex-image").id).toBe("codex-image");
     db.close();
   });
 
@@ -253,6 +255,12 @@ describe("buildRegistry", () => {
     expect(listed.find((one) => one.id === "codex")?.readiness).toEqual({
       kind: "cli",
       installed: false,
+    });
+    expect(listed.find((one) => one.id === "codex-image")).toEqual({
+      family: "image",
+      id: "codex-image",
+      name: "Codex CLI",
+      readiness: { kind: "cli", installed: false },
     });
     db.close();
   });

@@ -22,6 +22,7 @@ export const providerIds = [
   "replicate",
   "openai-image",
   "google-image",
+  "codex-image",
 ] as const;
 export type ProviderId = (typeof providerIds)[number];
 
@@ -83,6 +84,14 @@ export const providers: readonly Provider[] = [
   { id: "replicate", family: "image", displayName: "Replicate", auth: "key" },
   { id: "openai-image", family: "image", displayName: "OpenAI", auth: "key" },
   { id: "google-image", family: "image", displayName: "Google", auth: "key" },
+  {
+    id: "codex-image",
+    family: "image",
+    displayName: "Codex CLI",
+    auth: "cli",
+    binary: "codex",
+    versionArgs: ["--version"],
+  },
 ];
 
 export function providerById(id: ProviderId): Provider {

@@ -22,6 +22,7 @@ describe("CLI executable settings", () => {
     ["codex", "Codex CLI", "codex"],
     ["claude-code", "Claude Code CLI", "claude"],
     ["gemini", "Gemini CLI", "gemini"],
+    ["codex-image", "Codex CLI", "codex"],
   ] as const)(
     "offers an accessible path field for %s without an API key",
     async (id, name, command) => {
@@ -32,7 +33,7 @@ describe("CLI executable settings", () => {
             providers: [
               {
                 id,
-                family: "llm",
+                family: id === "codex-image" ? "image" : "llm",
                 displayName: name,
                 readiness: { kind: "cli", installed: false },
                 cliPath: { configured: null, command },

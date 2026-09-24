@@ -37,6 +37,12 @@ const providers: readonly ProviderStatus[] = [
     },
   },
   { id: "fal", family: "image", displayName: "fal.ai", readiness: { kind: "keyed", hasKey: true } },
+  {
+    id: "codex-image",
+    family: "image",
+    displayName: "Codex CLI",
+    readiness: { kind: "cli", installed: true },
+  },
 ];
 
 function option(name: RegExp | string): HTMLOptionElement {
@@ -48,6 +54,22 @@ function option(name: RegExp | string): HTMLOptionElement {
 }
 
 describe("the provider picker", () => {
+  it("offers installed Codex in Images without requiring an API key", async () => {
+    const onPick = vi.fn();
+    render(
+      <ProviderPicker
+        label="Image Provider"
+        family="image"
+        providers={providers}
+        value=""
+        problem={undefined}
+        onPick={onPick}
+      />,
+    );
+    expect(option("Codex CLI").disabled).toBe(false);
+    await userEvent.selectOptions(screen.getByLabelText("Image Provider"), "codex-image");
+    expect(onPick).toHaveBeenCalledWith("codex-image");
+  });
   it("lists every provider of the family, usable or not", () => {
     render(
       <ProviderPicker

@@ -66,7 +66,7 @@ export function readinessFromProbe(result: CliProbeResult, provider: CliProvider
     return { kind: "cli", installed: false };
   }
   const version = versionFrom(result.stdout);
-  if (provider.id !== "codex")
+  if (provider.id !== "codex" && provider.id !== "codex-image")
     return version === undefined
       ? { kind: "cli", installed: true }
       : { kind: "cli", installed: true, version };
