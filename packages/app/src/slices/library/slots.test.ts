@@ -44,6 +44,28 @@ function draft(over: Partial<RunDraft> = {}): RunDraft {
 }
 
 describe("pickTemplates", () => {
+  it("freezes narration slots separately and ignores the selection when Audio is off", () => {
+    const deps = library();
+    createPrompt(deps, {
+      kind: "narration",
+      name: "Delivery",
+      body: "Use {{Delivery Style}} delivery.",
+    });
+    const selected = draft({ narrationPrompt: "Delivery" });
+    const picked = pickTemplates(deps.db, selected);
+    expect(picked.requiredSlots).toEqual(["Delivery Style"]);
+    expect(renderPicked(picked, { "Delivery Style": "calm" })).toEqual({
+      narration: "Use calm delivery.",
+    });
+    expect(
+      pickTemplates(deps.db, { ...selected, sources: { ...selected.sources, audio: "off" } })
+        .bodies,
+    ).toEqual([]);
+    expect(
+      pickTemplates(deps.db, { ...selected, narrationPrompt: "Deleted" }).missing[0]?.field,
+    ).toBe("narrationPrompt");
+    deps.db.close();
+  });
   it.each(["off", "provide"] as const)(
     "ignores unused entries with Audio %s and prompts on disabled stages",
     (audio) => {

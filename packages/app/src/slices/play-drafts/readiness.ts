@@ -1,7 +1,7 @@
 import { checkRuntimeModel } from "../../catalog/runtime-models.js";
 import { modelFields } from "../../catalog/validate.js";
 import { readinessIsUsable } from "../../kernel/ports/model.js";
-import type { FieldError } from "../admission/rules.js";
+import { type FieldError, usesNarrationPreparation } from "../admission/rules.js";
 import { cliPathStatus } from "../settings/cli-paths.js";
 import type { ProviderStatus } from "../settings/model.js";
 import { hasKey, listVoices } from "../settings/repo.js";
@@ -21,7 +21,8 @@ export function choices(runs: readonly ResolvedPlayRun[]) {
               d.sources.article === "generate" ||
               d.sources.thumbnail === "prompt_by_llm" ||
               d.intro?.mode === "llm" ||
-              d.outro?.mode === "llm",
+              d.outro?.mode === "llm" ||
+              usesNarrationPreparation(d),
           },
           {
             field: "audio",

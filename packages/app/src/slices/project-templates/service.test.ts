@@ -12,6 +12,39 @@ import {
   updateTemplate,
 } from "./service.js";
 
+it("keeps narration selection and its frozen prompt across template restart", () => {
+  const h = draftFixture();
+  try {
+    const prompt = createPrompt(h.deps, {
+      kind: "narration",
+      name: "Delivery",
+      body: "Use {{Delivery Style}}.",
+    });
+    if (!prompt.ok) throw new Error("Prompt fixture failed");
+    const id = randomUUID();
+    const document = {
+      ...h.document,
+      form: {
+        ...h.document.form,
+        narrationPrompt: "Delivery",
+        values: { "Delivery Style": "calm" },
+      },
+    };
+    expect(createTemplate(h.deps, { id, name: "Narrated", document }).ok).toBe(true);
+    h.deps.db.prepare("DELETE FROM prompts WHERE id=?").run(prompt.value.id);
+    h.reopen();
+    const result = instantiateTemplate(h.deps, { templateId: id, id: randomUUID(), version: 1 });
+    if (!result.ok) throw new Error("Template did not instantiate");
+    expect(result.value.draft.document.form.narrationPrompt).toBe("Delivery");
+    expect(result.value.draft.document.librarySnapshot?.prompts).toEqual([
+      expect.objectContaining({ kind: "narration", body: "Use {{Delivery Style}}." }),
+    ]);
+    expect(h.deps.db.prepare("SELECT count(*) AS n FROM projects").get()?.n).toBe(0);
+  } finally {
+    h.close();
+  }
+});
+
 it("reviews frozen prompt bodies after library deletion and renders new keywords once", async () => {
   const h = reviewFixture();
   try {

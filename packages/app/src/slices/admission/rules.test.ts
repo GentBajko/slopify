@@ -4,7 +4,7 @@ import { stageKinds } from "../../kernel/pipeline.js";
 import type { StagedFile } from "../storage/model.js";
 import type { RunDraft, StageSource } from "./model.js";
 import { stageSources } from "./model.js";
-import { admit, allowedSources } from "./rules.js";
+import { admit, allowedSources, usesNarrationPreparation } from "./rules.js";
 
 function staged(
   id: string,
@@ -44,6 +44,29 @@ function provided(over: Partial<RunDraft> = {}): RunDraft {
 }
 
 const files = [staged("a1", "audio"), staged("i1", "images"), staged("i2", "images")];
+
+describe("narration preparation admission", () => {
+  const draft = (): RunDraft =>
+    provided({
+      sources: sources({ audio: "generate", images: "off", video: "off" }),
+      narrationPrompt: "Documentary",
+      llm: { provider: "codex", model: "model" },
+      audio: { provider: "inworld", model: "inworld-tts-2", voice: "voice" },
+    });
+  it("requires the shared LLM even with a provided article", () => {
+    expect(fields({ ...draft(), llm: undefined })).toContain("llm");
+    expect(fields(draft())).toEqual([]);
+  });
+  it("refuses unsupported models only when preparation is active", () => {
+    const flash = {
+      ...draft(),
+      audio: { provider: "inworld", model: "inworld-tts-2-flash", voice: "v" },
+    };
+    expect(fields(flash)).toContain("narrationPrompt");
+    expect(fields({ ...flash, narrationPrompt: "" })).toEqual([]);
+    expect(usesNarrationPreparation({ ...flash, sources: sources({ audio: "off" }) })).toBe(false);
+  });
+});
 
 function fields(draft: RunDraft, over: Partial<Parameters<typeof admit>[0]> = {}): string[] {
   const result = admit({ draft, staged: files, requiredSlots: [], ...over });

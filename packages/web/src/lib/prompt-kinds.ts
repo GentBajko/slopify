@@ -1,8 +1,6 @@
 import type { PromptKind } from "@app/slices/library/model.js";
 import { promptKinds } from "@app/slices/library/model.js";
 
-// The three kinds the segmented switch offers on 04 and 05, in the order the reference
-// sheet draws them, which is the order `slices/library/model.ts` declares them in.
 export const kindOptions: readonly { readonly value: PromptKind; readonly label: string }[] =
   promptKinds.map((value) => ({ value, label: kindLabel(value) }));
 
@@ -14,6 +12,8 @@ export function kindLabel(kind: PromptKind): string {
       return "Image";
     case "thumbnail":
       return "Thumbnail";
+    case "narration":
+      return "Narration Preparation";
   }
 }
 

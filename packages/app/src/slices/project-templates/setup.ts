@@ -11,6 +11,7 @@ export function templateSetup(
   const entries: LibrarySnapshot["entries"][number][] = [];
   const choices = [
     { kind: "article" as const, name: input.form.articlePrompt },
+    { kind: "narration" as const, name: input.form.narrationPrompt ?? "" },
     ...input.form.imagePrompts.map((row) => ({ kind: "image" as const, name: row.name })),
     { kind: "thumbnail" as const, name: input.form.thumbnailPrompt },
   ];

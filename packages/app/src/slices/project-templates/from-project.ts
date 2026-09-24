@@ -3,6 +3,7 @@ import { transact } from "../../kernel/db/tx.js";
 import { projectById } from "../admission/repo.js";
 import { detectSlots } from "../admission/substitute.js";
 import { listCheckpoints } from "../checkpoints/repo.js";
+import type { PromptKind } from "../library/model.js";
 import type { LibrarySnapshot } from "../library/snapshot.js";
 import type { PlayDraftDocument } from "../play-drafts/model.js";
 import { requestHash } from "../play-drafts/repo.js";
@@ -68,12 +69,7 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
   const config = revision.config;
   const prompts: LibrarySnapshot["prompts"][number][] = [];
   const entries: LibrarySnapshot["entries"][number][] = [];
-  const addPrompt = (
-    kind: "article" | "image" | "thumbnail",
-    name: string | undefined,
-    key: string,
-    literal?: string,
-  ) => {
+  const addPrompt = (kind: PromptKind, name: string | undefined, key: string, literal?: string) => {
     if (!name) return;
     const body = literal ?? revision.content.promptTemplates[key] ?? config.rendered[key];
     if (body === null || body === undefined) return;
@@ -87,6 +83,7 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
     });
   };
   addPrompt("article", config.articlePrompt, "article");
+  addPrompt("narration", config.narrationPrompt, "narration");
   const definitions = revision.content.imageOrder.flatMap((key) => {
     const definition = revision.content.imageDefinitions[key];
     return definition === undefined ? [] : [definition];
@@ -153,6 +150,7 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
       audio: config.audio ?? { provider: "", model: "", voice: "" },
       images: config.images ?? { provider: "", model: "" },
       articlePrompt: config.articlePrompt ?? "",
+      ...(config.narrationPrompt === undefined ? {} : { narrationPrompt: config.narrationPrompt }),
       imagePrompts,
       thumbnailPrompt: config.thumbnailPrompt ?? "",
       intro: config.intro?.name ?? "",

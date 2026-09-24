@@ -69,7 +69,8 @@ export function admit(input: AdmissionInput): AdmissionResult {
     sources.article === "generate" ||
     sources.thumbnail === "prompt_by_llm" ||
     draft.intro?.mode === "llm" ||
-    draft.outro?.mode === "llm";
+    draft.outro?.mode === "llm" ||
+    usesNarrationPreparation(draft);
   if (needsLlm && !chosen(draft.llm)) {
     fields.push({ field: "llm", message: "Pick an LLM provider and model." });
   }
@@ -79,6 +80,7 @@ export function admit(input: AdmissionInput): AdmissionResult {
   }
 
   const voiced = draft.audio;
+  fields.push(...narrationPreparationFields(draft));
   if (sources.audio === "generate") {
     if (voiced === undefined || !chosen(voiced)) {
       fields.push({ field: "audio", message: "Pick a narration provider and model." });
@@ -277,6 +279,25 @@ function checkValues(
 
 function blank(value: string | undefined): boolean {
   return value === undefined || value.trim() === "";
+}
+
+export function usesNarrationPreparation(
+  draft: Pick<RunDraft, "sources" | "narrationPrompt">,
+): boolean {
+  return draft.sources.audio === "generate" && !blank(draft.narrationPrompt);
+}
+
+export function narrationPreparationFields(draft: RunDraft): readonly FieldError[] {
+  return usesNarrationPreparation(draft) &&
+    (draft.audio?.provider !== "inworld" || draft.audio.model !== "inworld-tts-2")
+    ? [
+        {
+          field: "narrationPrompt",
+          message:
+            "Narration Preparation requires Inworld TTS-2. Choose that model or turn preparation Off.",
+        },
+      ]
+    : [];
 }
 
 function chosen(choice: ProviderChoice | undefined): boolean {

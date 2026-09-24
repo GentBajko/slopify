@@ -37,6 +37,7 @@ export const runDraftSchema = z.object({
   audio: providerChoice.extend({ voice: z.string() }).optional(),
   images: providerChoice.optional(),
   articlePrompt: z.string().optional(),
+  narrationPrompt: z.string().optional(),
   imagePrompts: z.array(z.object({ name: z.string(), number: z.number() })),
   thumbnailPrompt: z.string().optional(),
   intro: entryChoice.optional(),

@@ -1,4 +1,4 @@
-// The two template libraries: prompts of three kinds, and the intro/outro entries. One rule
+// The two template libraries: prompts and intro/outro entries. One rule
 // set covers both, which is why the drafts, the lint and the save path below are shared
 // rather than mirrored.
 
@@ -9,8 +9,7 @@ import type { EntryMode } from "../admission/model.js";
 export type { EntryMode } from "../admission/model.js";
 export { entryModes } from "../admission/model.js";
 
-// The CHECK constraint on `prompts.kind` holds the same three.
-export const promptKinds = ["article", "image", "thumbnail"] as const;
+export const promptKinds = ["article", "image", "thumbnail", "narration"] as const;
 export type PromptKind = (typeof promptKinds)[number];
 
 export const entryCategories = ["intro", "outro"] as const;

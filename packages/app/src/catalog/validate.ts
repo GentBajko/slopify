@@ -1,5 +1,5 @@
 import type { RunDraft } from "../slices/admission/model.js";
-import type { FieldError } from "../slices/admission/rules.js";
+import { type FieldError, usesNarrationPreparation } from "../slices/admission/rules.js";
 import { isLocalCliProvider } from "../slices/settings/model.js";
 import type { CatalogueStore } from "./store.js";
 export function modelFields(draft: RunDraft, catalogue?: CatalogueStore): FieldError[] {
@@ -10,7 +10,8 @@ export function modelFields(draft: RunDraft, catalogue?: CatalogueStore): FieldE
     draft.sources.article === "generate" ||
     draft.sources.thumbnail === "prompt_by_llm" ||
     draft.intro?.mode === "llm" ||
-    draft.outro?.mode === "llm";
+    draft.outro?.mode === "llm" ||
+    usesNarrationPreparation(draft);
   const checks = [
     { field: "llm", family: "llm", choice: draft.llm, needed: needLlm },
     {

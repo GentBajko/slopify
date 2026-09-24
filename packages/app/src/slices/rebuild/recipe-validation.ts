@@ -1,5 +1,9 @@
 import type { RunConfig } from "../admission/model.js";
-import type { FieldError } from "../admission/rules.js";
+import {
+  type FieldError,
+  narrationPreparationFields,
+  usesNarrationPreparation,
+} from "../admission/rules.js";
 import { detectSlots, render } from "../admission/substitute.js";
 import type { RevisionContent } from "../revisions/model.js";
 
@@ -7,11 +11,12 @@ export function validateRecipeInputs(
   config: RunConfig,
   content: RevisionContent,
 ): readonly FieldError[] {
-  const fields: FieldError[] = [];
+  const fields: FieldError[] = [...narrationPreparationFields(config)];
   const llm =
     (config.sources.research === "generate" && config.sources.article !== "provide") ||
     (config.sources.article === "generate" && !content.articleEdited) ||
     config.sources.thumbnail === "prompt_by_llm" ||
+    usesNarrationPreparation(config) ||
     (config.sources.audio === "generate" &&
       (config.intro?.mode === "llm" || config.outro?.mode === "llm"));
   if (llm && (!config.llm?.provider.trim() || !config.llm.model.trim()))
@@ -47,6 +52,12 @@ export function validateRecipeInputs(
       message: "Use a whole number from 1 to 1,000,000.",
     });
   const prompts: { field: string; raw: string | null; literal: string | undefined }[] = [];
+  if (usesNarrationPreparation(config))
+    prompts.push({
+      field: "rendered.narration",
+      raw: content.promptTemplates.narration ?? null,
+      literal: config.rendered.narration,
+    });
   if (
     (config.sources.article === "generate" && !content.articleEdited) ||
     (config.sources.research === "generate" && config.sources.article !== "provide")

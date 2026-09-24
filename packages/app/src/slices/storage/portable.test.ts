@@ -12,6 +12,7 @@ import { unzipSync, Zip, ZipDeflate, zipSync } from "fflate";
 import { expect, it } from "vitest";
 import { resolveFont } from "../fonts/catalog.js";
 import { listEntries, listPrompts } from "../library/repo.js";
+import { createPrompt } from "../library/save.js";
 import { draftFixture } from "../play-drafts/draft.fake.js";
 import { templateById } from "../project-templates/repo.js";
 import { createTemplate } from "../project-templates/service.js";
@@ -43,6 +44,30 @@ function manifest(overrides: Record<string, unknown> = {}): Record<string, unkno
     ...overrides,
   };
 }
+
+it("round-trips narration prompt wording and human-readable slots", () => {
+  const source = draftFixture();
+  const target = draftFixture();
+  try {
+    const prompt = {
+      kind: "narration" as const,
+      name: "Delivery",
+      body: "Use {{Delivery Style}} delivery.",
+    };
+    expect(createPrompt(source.deps, prompt).ok).toBe(true);
+    const archive = exportPortable({
+      ...source.deps,
+      now: () => source.deps.clock.now().toISOString(),
+    });
+    importPortable({ ...target.deps, now: () => target.deps.clock.now().toISOString() }, archive);
+    expect(listPrompts(target.deps.db)).toEqual([
+      expect.objectContaining({ ...prompt, slots: ["Delivery Style"] }),
+    ]);
+  } finally {
+    source.close();
+    target.close();
+  }
+});
 
 function manifestArchive(overrides: Record<string, unknown> = {}): Uint8Array {
   return zipSync({

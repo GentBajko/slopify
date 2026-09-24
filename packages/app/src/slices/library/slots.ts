@@ -5,7 +5,7 @@
 
 import type { DatabaseSync } from "node:sqlite";
 import type { EntryChoice, RunDraft } from "../admission/model.js";
-import { type FieldError, normaliseDraft } from "../admission/rules.js";
+import { type FieldError, normaliseDraft, usesNarrationPreparation } from "../admission/rules.js";
 import { collectFields, render } from "../admission/substitute.js";
 import type { Entry, EntryCategory, PromptKind } from "./model.js";
 import { type LibrarySnapshot, snapshotEntry, snapshotPrompt } from "./snapshot.js";
@@ -48,6 +48,17 @@ export function pickTemplates(
   }
 
   const intro = pickEntry(db, "intro", draft.intro, missing, snapshot);
+  if (usesNarrationPreparation(draft))
+    body(
+      db,
+      "narration",
+      draft.narrationPrompt,
+      "narrationPrompt",
+      missing,
+      text,
+      "narration",
+      snapshot,
+    );
   const outro = pickEntry(db, "outro", draft.outro, missing, snapshot);
   push(text, "intro", intro);
   push(text, "outro", outro);

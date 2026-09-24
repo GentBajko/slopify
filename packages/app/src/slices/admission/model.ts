@@ -61,6 +61,7 @@ export interface RunDraft {
   readonly audio?: VoiceChoice | undefined;
   readonly images?: ProviderChoice | undefined;
   readonly articlePrompt?: string | undefined;
+  readonly narrationPrompt?: string | undefined;
   readonly imagePrompts: readonly ImagePromptChoice[];
   readonly thumbnailPrompt?: string | undefined;
   readonly intro?: EntryChoice | undefined;

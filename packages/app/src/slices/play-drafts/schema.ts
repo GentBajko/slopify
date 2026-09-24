@@ -35,6 +35,7 @@ export const playDraftFormSchema = z
     audio: provider.extend({ voice: text }).readonly(),
     images: provider.readonly(),
     articlePrompt: text,
+    narrationPrompt: text.optional(),
     imagePrompts: z.array(z.object({ name: text, number: text }).strict().readonly()).readonly(),
     thumbnailPrompt: text,
     intro: text,

@@ -2,7 +2,7 @@ export type TutorialEvent =
   | {
       readonly type: "prompt-saved";
       readonly id: string;
-      readonly kind: "article" | "image" | "thumbnail";
+      readonly kind: "article" | "image" | "thumbnail" | "narration";
     }
   | { readonly type: "project-created"; readonly id: string };
 

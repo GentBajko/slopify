@@ -81,6 +81,9 @@ export function toAdmissionDraft(input: {
     audio: sources.audio === "generate" ? form.audio : undefined,
     images: form.images,
     articlePrompt: sources.article === "generate" ? form.articlePrompt : undefined,
+    ...(sources.audio === "generate" && form.narrationPrompt?.trim()
+      ? { narrationPrompt: form.narrationPrompt }
+      : {}),
     imagePrompts:
       sources.images === "generate"
         ? form.imagePrompts.map((prompt, index) => ({

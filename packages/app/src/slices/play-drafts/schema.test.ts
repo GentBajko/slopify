@@ -9,6 +9,13 @@ it("rejects unknown fields and unsupported versions without coercing draft numbe
       false,
     );
     expect(playDraftDocumentSchema.safeParse({ ...h.document, secret: "no" }).success).toBe(false);
+    expect(playDraftDocumentSchema.parse(h.document).form.narrationPrompt).toBeUndefined();
+    expect(
+      playDraftDocumentSchema.parse({
+        ...h.document,
+        form: { ...h.document.form, narrationPrompt: "Documentary" },
+      }).form.narrationPrompt,
+    ).toBe("Documentary");
     expect(
       playDraftDocumentSchema.parse({ ...h.document, expectedWords: " invalid " }).expectedWords,
     ).toBe(" invalid ");
