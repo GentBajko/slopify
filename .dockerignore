@@ -1,0 +1,14 @@
+.git
+.github
+.codex
+.agents
+node_modules
+**/node_modules
+**/dist
+docs
+.slopify*
+*.log
+*.tgz
+.env
+.env.*
+coverage

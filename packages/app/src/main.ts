@@ -271,13 +271,18 @@ export async function boot(config: Config): Promise<Boot> {
       currentVersion: version,
       previousUpdateFailed: process.env.SLOPIFY_UPDATE_FAILED === "1",
       now: () => Date.now(),
-      latest: () => publishedVersion(globalThis.fetch),
+      latest: () =>
+        process.env.SLOPIFY_DISABLE_UPDATES === "1"
+          ? Promise.resolve(version)
+          : publishedVersion(globalThis.fetch),
       unsupported: () =>
-        !existsSync(oldEntry) || !existsSync(workerEntry)
-          ? "Run Slopify from its installed package to use in-app updates."
-          : npm === undefined
-            ? "npm is unavailable. Install Node.js with npm to use in-app updates."
-            : undefined,
+        process.env.SLOPIFY_DISABLE_UPDATES === "1"
+          ? "This container is updated by pulling a new image and recreating it."
+          : !existsSync(oldEntry) || !existsSync(workerEntry)
+            ? "Run Slopify from its installed package to use in-app updates."
+            : npm === undefined
+              ? "npm is unavailable. Install Node.js with npm to use in-app updates."
+              : undefined,
       busy: () =>
         updateDb.prepare("SELECT 1 FROM stages WHERE state = 'running' LIMIT 1").get() !==
           undefined ||

@@ -223,6 +223,16 @@ describe("boot", () => {
     await expect(fetch(`${url}/api/health`)).rejects.toThrow();
   });
 
+  it("refuses in-app package updates in a container", async () => {
+    vi.stubEnv("SLOPIFY_DISABLE_UPDATES", "1");
+    const { url, stop } = await boot(config(dataDir()));
+    running.push(stop);
+
+    const response = await fetch(`${url}/api/update`, { method: "POST" });
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("pulling a new image");
+  });
+
   it("releases the lock when the port is already taken", async () => {
     const dir = dataDir();
     const taken = await boot(config(dataDir()));
