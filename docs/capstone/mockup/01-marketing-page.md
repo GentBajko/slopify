@@ -1,7 +1,7 @@
 ---
 absorbed_from:
   - features/2026-09-24-narration-preparation@2026-09-24
-absorbed_from: features/2026-09-10-subtitles-fonts@2026-09-10
+  - features/2026-09-10-subtitles-fonts@2026-09-10
 screen: marketing page (slopify.stream)
 journeys: [J1-discover-and-install]
 assumed:

@@ -1,0 +1,209 @@
+## 2026-09-24 - implement: narration preparation
+key: implement/2026-09-24-narration-preparation@Q3
+
+- What: optional source-preserving Inworld TTS-2 delivery preparation for documentary narration; original article prompts and saved content remain intact.
+- Approach: the selected text LLM returns validated sentence-bound cues; deterministic rendering produces bounded exact TTS requests and separate clean transcripts inside the existing revision-owned Audio stage.
+- Rejected: freely rewriting tagged prose cannot guarantee unchanged spoken content.
+- Rejected: independently generated article, narration and TTS content can diverge.
+- Rejected: fixed non-LLM tags do not respond to the narration's content.
+- Rejected: automatic activation adds unrequested cost and latency to existing setups.
+- Out of scope: rewriting or shortening saved documentary/article prompts.
+- Out of scope: translation, pronunciation substitution, SSML, voice cloning and provider-authentication changes.
+- Out of scope: steering formats other than Inworld TTS-2; Flash and other providers retain the plain path when preparation is Off.
+- Out of scope: paid live LLM/TTS/image verification.
+- Out of scope: replacing the running Docker container or changing its projects/data.
+- Out of scope: unrelated earlier Codex planning fragments, retained untracked.
+- User-added scope: include the existing Codex image adapter, register its image provider and share the Codex executable configuration; the original exclusion of that adapter was superseded by the explicit missing-provider request.
+- User-added scope: marketing-page Docker commands and deployment, plus FFmpeg included in Docker and automatic native-install recovery verification.
+- Task 1: strict source-bound cue validation and invalid-answer tests; commit b3f0fa0.
+- Task 2: bounded physical rendering, persistent instructions, reset and one-shot behavior without text changes; commit ce9acf8.
+- Task 3: optional selection, fourth prompt kind, preserving migration and saved-data compatibility; commit f6d47b3.
+- Task 4: revision-owned preparation, wrapper retries, admitted dependencies and compatible reuse; commit 39bf754.
+- Task 5: exact clean narration, separate TTS scripts and caption-safe scoped publications; commit f4cfefd.
+- Task 6: optional Audio control, explicit starter, shared LLM correction, estimates and download/history UI; commit 747a463.
+- Task 7: fresh/upgraded composed acceptance, saved workflows, restart/control tests, browser checks and scoped reference absorption; commit af7df90 and reference changes in 8b7354b.
+- Task 8: corrected 1.3.1 publication and artifact verification; see `2026-09-24-release-1.3.1-verification.md`.
+- Additions: Codex image registration 5b28ea4; Docker marketing 834668f; bundled FFmpeg and installation smoke c4b45a9.
+- Release correction: 1.3.0 verification timed out before publication; 4a5b810 changes only native test budgets and 7e8d1a9 prepares 1.3.1. The 1.3.0 tag remains unchanged.
+- Review loop: three full-diff rounds, including two consecutive dry rounds; four confirmed findings fixed and two suspected findings refuted.
+- Review loop: two FFmpeg add-on passes ended dry; offline test tmpfs ownership corrected before successful repetition.
+- Review loop: one hosted-test timeout finding fixed, followed by two dry passes; total five confirmed findings fixed, two refuted, no unresolved Important/Critical findings.
+- Reference wrap: preserved broad historical stamps because only affected sections were re-audited; corrected duplicate marketing absorption metadata and validated all 22 changed YAML frontmatters.
+- Verification: 418 test files, 3250 passed and 1 skipped; lint, typecheck, build and audit pass; clean 1.3.1 archive native install and offline Docker startup/render pass.
+- Verification: desktop and 390px browser acceptance, keyboard focus, starter, correction states and Codex image selection; fake-provider/component tests cover downloads, saved workflows and retry boundaries.
+- Local history: retained the completed ignored feature folder under the existing `delete_feature_folders: false` policy.
+- Refreshed/absorbed `docs/capstone/01-architecture.md`: revision-owned Audio preparation, source/script separation and shared Codex image registration.
+- Refreshed/absorbed `docs/capstone/02-models.md`: fourth prompt kind, optional fields, cue schema, clean request text, preparation work and download roles.
+- Refreshed/absorbed `docs/capstone/04-data-flow.md`: validated preparation dependency, materialization, publication, compatible reuse and caption flow.
+- Refreshed/absorbed `docs/capstone/06-testing.md`: cue, splitting, migration, runtime, restart, browser and installation verification.
+- Refreshed/absorbed `docs/capstone/07-operations.md`: optional narration setup, built-in FFmpeg installation/recovery and release commands.
+- Refreshed/absorbed `docs/capstone/logic/08-narration.md`: source-preserving optional cues, persistent direction, caps and retries.
+- Refreshed/absorbed `docs/capstone/logic/15-prompt-management.md`: fourth prompt kind, explicit starter and frozen project/template copies.
+- Refreshed/absorbed `docs/capstone/logic/17-subtitles.md`: persisted clean transcript selection without stripping source bracket spans.
+- Refreshed/absorbed `docs/capstone/mockup/01-marketing-page.md`: Docker launcher/direct commands; retained both existing and new absorption provenance.
+- Refreshed/absorbed `docs/capstone/mockup/04-prompts.md`: Narration Preparation library kind.
+- Refreshed/absorbed `docs/capstone/mockup/05-prompt-editor.md`: explicit documentary starter and human-readable slots.
+- Refreshed/absorbed `docs/capstone/mockup/06-play.md`: Off-by-default Audio selector, supported-model and shared-LLM correction.
+- Refreshed/absorbed `docs/capstone/mockup/08-project.md`: preparation editing and separate segment-scoped current/history downloads.
+- Refreshed/absorbed `docs/capstone/uiux/03-experience.md`: optional preparation and clean/script output journey.
+- Refreshed/absorbed `docs/capstone/uiux/screens/02-play.md`: optional Audio field, readiness and cost-review states.
+- Refreshed/absorbed `docs/capstone/uiux/screens/03-project.md`: revision preparation field and current/history text links.
+- Refreshed/absorbed `docs/capstone/uiux/screens/04-prompts.md`: fourth prompt-kind treatment.
+- Refreshed/absorbed `docs/capstone/uiux/screens/05-prompt-editor.md`: documentary starter replacement confirmation.
+- Refreshed/absorbed `docs/capstone/uiux/screens/10-marketing.md`: Docker install/copy treatment at desktop and narrow widths.
+- Refreshed/absorbed `docs/capstone/00-index.md`: updated existing companion/topic descriptions.
+- Refreshed/absorbed `docs/capstone/logic/README.md`: narration, prompt and subtitle scenario descriptions.
+- Refreshed/absorbed `docs/capstone/mockup/README.md`: changed screen descriptions.
+- Refreshed/absorbed `docs/capstone/uiux/README.md`: changed experience/screen descriptions.
+- Diff: `.github/workflows/ci.yml`.
+- Diff: `Dockerfile`.
+- Diff: `README.md`.
+- Diff: `docs/capstone/00-index.md`.
+- Diff: `docs/capstone/01-architecture.md`.
+- Diff: `docs/capstone/02-models.md`.
+- Diff: `docs/capstone/04-data-flow.md`.
+- Diff: `docs/capstone/06-testing.md`.
+- Diff: `docs/capstone/07-operations.md`.
+- Diff: `docs/capstone/changelog.d/2026-09-24-groom-narration-preparation.md`.
+- Diff: `docs/capstone/changelog.d/2026-09-24-map-narration-preparation-baseline.md`.
+- Diff: `docs/capstone/changelog.d/2026-09-24-map-narration-preparation.md`.
+- Diff: `docs/capstone/changelog.d/2026-09-24-plan-narration-preparation.md`.
+- Diff: `docs/capstone/changelog.d/2026-09-24-release-1.3.0-verification.md`.
+- Diff: `docs/capstone/logic/08-narration.md`.
+- Diff: `docs/capstone/logic/15-prompt-management.md`.
+- Diff: `docs/capstone/logic/17-subtitles.md`.
+- Diff: `docs/capstone/logic/README.md`.
+- Diff: `docs/capstone/mockup/01-marketing-page.md`.
+- Diff: `docs/capstone/mockup/04-prompts.md`.
+- Diff: `docs/capstone/mockup/05-prompt-editor.md`.
+- Diff: `docs/capstone/mockup/06-play.md`.
+- Diff: `docs/capstone/mockup/08-project.md`.
+- Diff: `docs/capstone/mockup/README.md`.
+- Diff: `docs/capstone/uiux/03-experience.md`.
+- Diff: `docs/capstone/uiux/README.md`.
+- Diff: `docs/capstone/uiux/screens/02-play.md`.
+- Diff: `docs/capstone/uiux/screens/03-project.md`.
+- Diff: `docs/capstone/uiux/screens/04-prompts.md`.
+- Diff: `docs/capstone/uiux/screens/05-prompt-editor.md`.
+- Diff: `docs/capstone/uiux/screens/10-marketing.md`.
+- Diff: `package-lock.json`.
+- Diff: `packages/app/README.md`.
+- Diff: `packages/app/package.json`.
+- Diff: `packages/app/scripts/container-smoke.sh`.
+- Diff: `packages/app/scripts/install-smoke.mjs`.
+- Diff: `packages/app/src/adapter-registry.test.ts`.
+- Diff: `packages/app/src/adapter-registry.ts`.
+- Diff: `packages/app/src/adapters/image/codex.test.ts`.
+- Diff: `packages/app/src/adapters/image/codex.ts`.
+- Diff: `packages/app/src/catalog/validate.ts`.
+- Diff: `packages/app/src/edge/http/diagnostics.test.ts`.
+- Diff: `packages/app/src/kernel/db/migrate.test.ts`.
+- Diff: `packages/app/src/kernel/db/migrations/0011-narration-prompts.sql`.
+- Diff: `packages/app/src/main.test.ts`.
+- Diff: `packages/app/src/slices/admission/model.ts`.
+- Diff: `packages/app/src/slices/admission/rules.test.ts`.
+- Diff: `packages/app/src/slices/admission/rules.ts`.
+- Diff: `packages/app/src/slices/admission/schema.ts`.
+- Diff: `packages/app/src/slices/estimate/index.test.ts`.
+- Diff: `packages/app/src/slices/estimate/index.ts`.
+- Diff: `packages/app/src/slices/estimate/requests.ts`.
+- Diff: `packages/app/src/slices/library/model.ts`.
+- Diff: `packages/app/src/slices/library/slots.test.ts`.
+- Diff: `packages/app/src/slices/library/slots.ts`.
+- Diff: `packages/app/src/slices/narration/preparation.test.ts`.
+- Diff: `packages/app/src/slices/narration/preparation.ts`.
+- Diff: `packages/app/src/slices/narration/steering.test.ts`.
+- Diff: `packages/app/src/slices/narration/steering.ts`.
+- Diff: `packages/app/src/slices/play-drafts/convert.ts`.
+- Diff: `packages/app/src/slices/play-drafts/readiness.ts`.
+- Diff: `packages/app/src/slices/play-drafts/schema.test.ts`.
+- Diff: `packages/app/src/slices/play-drafts/schema.ts`.
+- Diff: `packages/app/src/slices/project-templates/from-project.ts`.
+- Diff: `packages/app/src/slices/project-templates/service.test.ts`.
+- Diff: `packages/app/src/slices/project-templates/setup.ts`.
+- Diff: `packages/app/src/slices/rebuild/admission-repo.ts`.
+- Diff: `packages/app/src/slices/rebuild/preview-details.test.ts`.
+- Diff: `packages/app/src/slices/rebuild/preview-details.ts`.
+- Diff: `packages/app/src/slices/rebuild/preview-plan.ts`.
+- Diff: `packages/app/src/slices/rebuild/recipe-audio-parts.ts`.
+- Diff: `packages/app/src/slices/rebuild/recipe-audio.ts`.
+- Diff: `packages/app/src/slices/rebuild/recipe-input-schema.ts`.
+- Diff: `packages/app/src/slices/rebuild/recipe-legacy.ts`.
+- Diff: `packages/app/src/slices/rebuild/recipe-model.ts`.
+- Diff: `packages/app/src/slices/rebuild/recipe-narration-text.ts`.
+- Diff: `packages/app/src/slices/rebuild/recipe-preparation.test.ts`.
+- Diff: `packages/app/src/slices/rebuild/recipe-preparation.ts`.
+- Diff: `packages/app/src/slices/rebuild/recipe-provider-choice.ts`.
+- Diff: `packages/app/src/slices/rebuild/recipe-validation.ts`.
+- Diff: `packages/app/src/slices/rebuild/recipe-work.ts`.
+- Diff: `packages/app/src/slices/rebuild/runtime-admission.ts`.
+- Diff: `packages/app/src/slices/rebuild/runtime-export-inputs.ts`.
+- Diff: `packages/app/src/slices/rebuild/runtime-local.ts`.
+- Diff: `packages/app/src/slices/rebuild/runtime-materialize.ts`.
+- Diff: `packages/app/src/slices/rebuild/runtime-narration-reuse.ts`.
+- Diff: `packages/app/src/slices/rebuild/runtime-narration-text.test.ts`.
+- Diff: `packages/app/src/slices/rebuild/runtime-narration-text.ts`.
+- Diff: `packages/app/src/slices/rebuild/runtime-narration.fake.ts`.
+- Diff: `packages/app/src/slices/rebuild/runtime-preparation.test.ts`.
+- Diff: `packages/app/src/slices/rebuild/runtime-provider.ts`.
+- Diff: `packages/app/src/slices/rebuild/runtime-publication.ts`.
+- Diff: `packages/app/src/slices/rebuild/runtime-store.ts`.
+- Diff: `packages/app/src/slices/rebuild/service.fake.ts`.
+- Diff: `packages/app/src/slices/revisions/mutation.fake.ts`.
+- Diff: `packages/app/src/slices/revisions/revision.fake.ts`.
+- Diff: `packages/app/src/slices/revisions/rules.ts`.
+- Diff: `packages/app/src/slices/settings/cli-paths.test.ts`.
+- Diff: `packages/app/src/slices/settings/cli-paths.ts`.
+- Diff: `packages/app/src/slices/settings/cli-status.ts`.
+- Diff: `packages/app/src/slices/settings/model.ts`.
+- Diff: `packages/app/src/slices/settings/readiness.test.ts`.
+- Diff: `packages/app/src/slices/settings/readiness.ts`.
+- Diff: `packages/app/src/slices/storage/asset-name.ts`.
+- Diff: `packages/app/src/slices/storage/layout.ts`.
+- Diff: `packages/app/src/slices/storage/model.ts`.
+- Diff: `packages/app/src/slices/storage/portable.test.ts`.
+- Diff: `packages/app/src/slices/storage/schema.ts`.
+- Diff: `packages/app/test/preparation-saved-workflows.test.ts`.
+- Diff: `packages/app/test/revision-preparation-control.test.ts`.
+- Diff: `packages/app/test/revision-preparation-restart.test.ts`.
+- Diff: `packages/app/test/revision-preparation-validation.test.ts`.
+- Diff: `packages/app/test/revision-preparation.fake.ts`.
+- Diff: `packages/app/test/revision-preparation.test.ts`.
+- Diff: `packages/app/test/revision-rebuild.fake.ts`.
+- Diff: `packages/site/install.test.js`.
+- Diff: `packages/site/public/index.html`.
+- Diff: `packages/site/public/styles.css`.
+- Diff: `packages/web/src/components/provider-cli.test.tsx`.
+- Diff: `packages/web/src/components/provider-cli.tsx`.
+- Diff: `packages/web/src/lib/narration-starter.ts`.
+- Diff: `packages/web/src/lib/prompt-kinds.ts`.
+- Diff: `packages/web/src/play/admission.test.ts`.
+- Diff: `packages/web/src/play/admission.ts`.
+- Diff: `packages/web/src/play/content-section.tsx`.
+- Diff: `packages/web/src/play/draft-state.test.ts`.
+- Diff: `packages/web/src/play/draft-state.ts`.
+- Diff: `packages/web/src/play/field-targets.ts`.
+- Diff: `packages/web/src/play/media-rails.tsx`.
+- Diff: `packages/web/src/play/narration-controls.test.tsx`.
+- Diff: `packages/web/src/play/narration-preparation.test.tsx`.
+- Diff: `packages/web/src/play/narration-preparation.tsx`.
+- Diff: `packages/web/src/play/outputs-section.tsx`.
+- Diff: `packages/web/src/play/pickers.test.tsx`.
+- Diff: `packages/web/src/play/review-summary.tsx`.
+- Diff: `packages/web/src/play/setup-summary.tsx`.
+- Diff: `packages/web/src/play/state.ts`.
+- Diff: `packages/web/src/project/body-audio.tsx`.
+- Diff: `packages/web/src/project/narration-downloads.test.tsx`.
+- Diff: `packages/web/src/project/narration-downloads.tsx`.
+- Diff: `packages/web/src/project/output-label.ts`.
+- Diff: `packages/web/src/project/readiness.test.ts`.
+- Diff: `packages/web/src/project/readiness.ts`.
+- Diff: `packages/web/src/project/revision-form.tsx`.
+- Diff: `packages/web/src/project/revision-narration.test.tsx`.
+- Diff: `packages/web/src/project/revision-narration.tsx`.
+- Diff: `packages/web/src/project/revision-prompts.tsx`.
+- Diff: `packages/web/src/project/revision-providers.tsx`.
+- Diff: `packages/web/src/routes/prompt-editor.test.tsx`.
+- Diff: `packages/web/src/routes/prompt-editor.tsx`.
+- Diff: `packages/web/src/routes/prompts.tsx`.
+- Diff: `packages/web/src/tutorial/model.ts`.
