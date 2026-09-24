@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 import type { AdmissionInput } from "@/play/admission";
 import { admission, keywordFields, keywordOrigins } from "@/play/admission";
 import type { PlayFormState, Upload } from "@/play/state";
-import { freshForm } from "@/play/state";
+import { freshForm, needsLlm } from "@/play/state";
+import { playFieldTarget } from "./field-targets";
 
 function prompt(kind: Prompt["kind"], name: string, body: string): Prompt {
   return { id: name, kind, name, body, slots: [], updatedAt: "2026-09-03T00:00:00.000Z" };
@@ -72,6 +73,38 @@ const generated: PlayFormState = {
   imagePrompts: [{ name: "Oils", number: 8 }],
   values: { topic: "rope", minWords: "3000", style: "oil on canvas" },
 };
+
+it("collects narration slots and requires the shared LLM only while preparation is active", () => {
+  const form: PlayFormState = {
+    ...generated,
+    narrationPrompt: "Delivery",
+    sources: { ...generated.sources, article: "provide", images: "off", video: "off" },
+    provided: { ...generated.provided, article: "Exact words." },
+    audio: { provider: "inworld", model: "inworld-tts-2", voice: "v" },
+    llm: { provider: "", model: "" },
+    values: {},
+  };
+  const input = {
+    form,
+    prompts: [...prompts, prompt("narration", "Delivery", "Use {{Delivery Style}}.")],
+    entries: [],
+    silenceGapSeconds: 0,
+  };
+  expect(needsLlm(form, [])).toBe(true);
+  expect(admission(input).blocker?.field).toBe("llm");
+  expect(keywordFields(input)).toEqual([{ name: "Delivery Style", group: "text" }]);
+  expect(keywordOrigins(input).get("Delivery Style")).toEqual(["Narration Preparation"]);
+  expect(admission({ ...input, form: { ...form, llm: generated.llm } }).blocker?.field).toBe(
+    "values.Delivery Style",
+  );
+  expect(admission({ ...input, prompts: [] }).result.ok).toBe(false);
+  expect(playFieldTarget("narrationPrompt", form, [])).toEqual({
+    section: "outputs",
+    field: "narrationPrompt",
+  });
+  for (const source of ["off", "provide"] as const)
+    expect(needsLlm({ ...form, sources: { ...form.sources, audio: source } }, [])).toBe(false);
+});
 
 describe("the hint names the first missing item", () => {
   it("asks for the article prompt on a fresh form, because it is the first rail", () => {

@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { narrationStarter } from "@/lib/narration-starter";
 import type { Answer } from "@/test-app";
 import { emptyAnswer, jsonAnswer, renderRouted, testDeps, testVersion } from "@/test-app";
 import { PromptEditorRoute } from "./prompt-editor.js";
@@ -21,6 +22,35 @@ afterEach(() => {
   cleanup();
   tutorial.event.mockClear();
   tutorial.progress.mockClear();
+});
+
+it("offers the narration starter without saving or silently replacing a draft", async () => {
+  const user = userEvent.setup();
+  const spy = saveSpy([]);
+  renderRouted(
+    <PromptEditorRoute promptId={undefined} kind="narration" from={undefined} onLeave={vi.fn()} />,
+    deps([], { "POST /api/prompts": spy.answer }),
+  );
+  await screen.findByLabelText("Name");
+  await user.click(screen.getByRole("button", { name: "Use Documentary Starter" }));
+  expect((screen.getByLabelText("Body") as HTMLTextAreaElement).value).toBe(narrationStarter);
+  expect(spy.sent).toEqual([]);
+  await fill(user, "Body", "My detailed delivery prompt.");
+  await user.click(screen.getByRole("button", { name: "Use Documentary Starter" }));
+  const dialog = await screen.findByRole("dialog");
+  expect((screen.getByLabelText("Body") as HTMLTextAreaElement).value).toBe(
+    "My detailed delivery prompt.",
+  );
+  await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  expect((screen.getByLabelText("Body") as HTMLTextAreaElement).value).toBe(
+    "My detailed delivery prompt.",
+  );
+  await user.click(screen.getByRole("button", { name: "Use Documentary Starter" }));
+  await user.click(
+    within(await screen.findByRole("dialog")).getByRole("button", { name: "Use starter" }),
+  );
+  expect((screen.getByLabelText("Body") as HTMLTextAreaElement).value).toBe(narrationStarter);
+  expect(spy.sent).toEqual([]);
 });
 
 const dossier: Prompt = {

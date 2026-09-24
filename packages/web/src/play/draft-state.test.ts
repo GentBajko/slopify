@@ -64,6 +64,7 @@ it("round trips incomplete forms and dormant values without coercion or trimming
     form: {
       ...freshForm,
       title: "  ",
+      narrationPrompt: "  Retained Delivery  ",
       values: { unused: "  remembered  " },
       imagePrompts: [{ name: "", number: "-" }],
       chunking: { mode: "words" as const, words: "", characters: "oops" },

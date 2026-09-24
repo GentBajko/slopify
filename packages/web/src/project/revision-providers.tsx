@@ -1,3 +1,4 @@
+import { usesNarrationPreparation } from "@app/slices/admission/rules.js";
 import type { RevisionEdit } from "@app/slices/revisions/model.js";
 import type { ProviderStatus, Voice } from "@/api";
 import { ChunkingControl } from "@/play/chunking";
@@ -20,6 +21,7 @@ export function RevisionProviders({
   const audio = config.audio ?? { provider: "", model: "", voice: "" };
   const images = config.images ?? { provider: "", model: "" };
   const textNeeded =
+    usesNarrationPreparation(config) ||
     config.sources.research === "generate" ||
     config.sources.article === "generate" ||
     config.sources.thumbnail === "prompt_by_llm" ||

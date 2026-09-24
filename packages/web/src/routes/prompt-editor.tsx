@@ -24,6 +24,7 @@ import {
   slotNames,
 } from "@/lib/draft-lint";
 import { usePromptDraft } from "@/lib/form-drafts";
+import { narrationStarter } from "@/lib/narration-starter";
 import { kindOptions } from "@/lib/prompt-kinds";
 import { promptsQuery } from "@/queries";
 import { useTutorialEvent, useTutorialProgress } from "@/tutorial/context";
@@ -61,6 +62,7 @@ export function PromptEditorRoute({
   const [savedDraft, setSavedDraft] = useState<PromptDraft | undefined>(undefined);
   const saved = savedDraft !== undefined;
   const [deleting, setDeleting] = useState(false);
+  const [replacingBody, setReplacingBody] = useState(false);
 
   const rows = prompts.data?.prompts;
   const wanted = promptId ?? from;
@@ -160,7 +162,7 @@ export function PromptEditorRoute({
         className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]"
       >
         <div className={`${sheet} flex min-w-0 flex-col gap-[14px]`}>
-          <div className="flex items-end gap-[14px]">
+          <div className="flex flex-wrap items-end gap-[14px]">
             <div data-tour="prompt-name" className="flex-1">
               <Label htmlFor={nameId} className="mb-[5px]">
                 Name
@@ -193,6 +195,18 @@ export function PromptEditorRoute({
           </div>
 
           <div data-tour="prompt-body">
+            {draft.kind === "narration" ? (
+              <Button
+                type="button"
+                className="mb-3"
+                onClick={() => {
+                  if (draft.body.trim() !== "") setReplacingBody(true);
+                  else edit({ ...draft, body: narrationStarter }, "body");
+                }}
+              >
+                Use Documentary Starter
+              </Button>
+            ) : null}
             <Label htmlFor={bodyId} className="mb-[5px]">
               Body
             </Label>
@@ -248,6 +262,18 @@ export function PromptEditorRoute({
         </div>
       </div>
 
+      <ConfirmDialog
+        open={replacingBody}
+        title="Replace this prompt body?"
+        consequence="The documentary starter replaces the text in this editor. Nothing is saved until you choose Save."
+        verb="Use starter"
+        pending={false}
+        onConfirm={() => {
+          edit({ ...draft, body: narrationStarter }, "body");
+          setReplacingBody(false);
+        }}
+        onCancel={() => setReplacingBody(false)}
+      />
       <ConfirmDialog
         open={deleting}
         title={`Delete "${draft.name}"?`}

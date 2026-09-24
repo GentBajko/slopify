@@ -24,6 +24,8 @@ const labels: Readonly<Record<Output["role"], string>> = {
   instructions: "Generation instructions",
 };
 export function outputLabel(output: Output): string {
+  if ((output.role === "narration_txt" || output.role === "tts_script") && output.meta.segment)
+    return `${output.meta.segment === "body" ? "Body" : output.meta.segment === "intro" ? "Intro" : "Outro"} ${labels[output.role]}`;
   return output.role === "image" && typeof output.meta.index === "number"
     ? `Image ${output.meta.index}`
     : labels[output.role];

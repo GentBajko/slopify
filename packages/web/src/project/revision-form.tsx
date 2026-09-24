@@ -13,6 +13,7 @@ import { entriesQuery, promptsQuery, providersQuery, voicesQuery } from "@/queri
 import { subtitlesFor } from "@/subtitles/config";
 import { SubtitleControls } from "@/subtitles/controls";
 import { changeSource, editOfForm } from "./revision-form-state.js";
+import { RevisionNarration } from "./revision-narration.js";
 import { RevisionPrompts } from "./revision-prompts.js";
 import { RevisionProviders } from "./revision-providers.js";
 import type { EditorProps } from "./revision-workspace.js";
@@ -261,6 +262,13 @@ export function RevisionForm(
           edit={edit}
           providers={providers.data?.providers ?? []}
           voices={voices.data?.voices ?? []}
+          onChange={onChange}
+        />
+        <RevisionNarration
+          edit={edit}
+          view={view}
+          prompts={prompts.data?.prompts ?? []}
+          error={problem("narrationPrompt")}
           onChange={onChange}
         />
       </section>

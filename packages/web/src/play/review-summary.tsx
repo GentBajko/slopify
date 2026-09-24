@@ -331,6 +331,13 @@ export function ReviewSummary({
                     : "Paragraph",
               )}
               {row("Intro", "intro", form.intro || "Off")}
+              {row(
+                "Narration Preparation",
+                "narrationPrompt",
+                form.narrationPrompt
+                  ? `${form.narrationPrompt} · One LLM call per narration chunk and entry`
+                  : "Off",
+              )}
               {row("Outro", "outro", form.outro || "Off")}
             </>
           ) : null}

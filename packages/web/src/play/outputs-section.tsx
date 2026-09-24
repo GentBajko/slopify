@@ -44,6 +44,15 @@ export function OutputsSection(
       />
       {form.sources.audio === "generate" ? (
         <div className="grid grid-cols-1 gap-4 border-b border-line py-4 min-[700px]:grid-cols-2">
+          {form.narrationPrompt ? (
+            <Button
+              variant="ghost"
+              className="col-span-full"
+              onClick={() => props.onKeyword("llm")}
+            >
+              Choose Text Generation in Content
+            </Button>
+          ) : null}
           {(["intro", "outro"] as const).map((kind) => (
             <OptionPicker
               key={kind}

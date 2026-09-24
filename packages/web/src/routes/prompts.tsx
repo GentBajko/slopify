@@ -56,11 +56,12 @@ export function PromptsRoute({
     <div className="mx-auto max-w-[1440px]">
       <h1 className="mb-4 text-title font-bold tracking-[-0.01em]">Prompts</h1>
 
-      <div className="mb-4 flex items-center gap-4">
+      <div className="mb-4 flex flex-wrap items-center gap-4">
         <ToggleGroup
           type="single"
           value={kind}
           aria-label="Prompt kind"
+          className="flex-wrap"
           onValueChange={(next) => {
             const picked = kindOptions.find((option) => option.value === next);
             if (picked !== undefined) {

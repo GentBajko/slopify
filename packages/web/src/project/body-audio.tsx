@@ -8,6 +8,7 @@ import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { ConfirmedButton } from "./controls.js";
 import { LiveAudio } from "./live-audio.js";
+import { NarrationDownloads } from "./narration-downloads.js";
 import { ActionRow, EngravedLabel, OutputDownload, StageBody } from "./parts.js";
 import { useOutputMedia } from "./revision-media.js";
 import { duration } from "./summary.js";
@@ -46,6 +47,7 @@ export function AudioBody({ stage, project, outputs, actions, busy }: BodyProps)
         ))
       )}
 
+      <NarrationDownloads outputs={mine} />
       <ActionRow>
         <ConfirmedButton
           action={{ kind: "rerun", stage: stage.kind }}

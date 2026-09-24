@@ -40,6 +40,22 @@ describe("which provider a stage's retry would go to", () => {
 });
 
 describe("a stage whose provider is not ready", () => {
+  it("checks the shared LLM for prepared audio even when the TTS provider is ready", () => {
+    const prepared = {
+      ...config,
+      narrationPrompt: "Delivery",
+      sources: { audio: "generate" as const },
+    } as RunConfig;
+    expect(
+      unreadyFor("audio", prepared, [keyed("elevenlabs", true), cli("claude-code", false)])?.label,
+    ).toBe("CLI missing");
+    expect(
+      unreadyFor("audio", { ...prepared, narrationPrompt: "" }, [
+        keyed("elevenlabs", true),
+        cli("claude-code", false),
+      ]),
+    ).toBeUndefined();
+  });
   it("says which of the two is missing", () => {
     expect(unreadyFor("images", config, [keyed("fal", false)])?.label).toBe("Key missing");
     expect(unreadyFor("article", config, [cli("claude-code", false)])?.label).toBe("CLI missing");

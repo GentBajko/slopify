@@ -18,6 +18,9 @@ export function SetupSummary({
       form.sources.article === "provide" ? "provided.article" : "articlePrompt",
     ],
     ["Audio", form.sources.audio, "sources.audio"],
+    ...(form.sources.audio === "generate" && form.narrationPrompt
+      ? [["Narration Preparation", form.narrationPrompt, "narrationPrompt"] as const]
+      : []),
     [
       "Images",
       form.sources.images === "generate"

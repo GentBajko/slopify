@@ -25,6 +25,7 @@ export const freshDraftDocument: PlayDraftDocument = playDraftDocumentSchema.par
     audio: { provider: "", model: "", voice: "" },
     images: { provider: "", model: "" },
     articlePrompt: "",
+    narrationPrompt: "",
     imagePrompts: [],
     thumbnailPrompt: "",
     intro: "",

@@ -1,4 +1,4 @@
-import { valueMax } from "@app/slices/admission/rules.js";
+import { usesNarrationPreparation, valueMax } from "@app/slices/admission/rules.js";
 import { detectSlots } from "@app/slices/admission/substitute.js";
 import type { RevisionEdit } from "@app/slices/revisions/model.js";
 import { useId } from "react";
@@ -24,6 +24,7 @@ export function RevisionPrompts({
       ...Object.keys(edit.config.rendered),
       ...Object.keys(edit.content.promptTemplates),
       ...(edit.config.sources.article === "generate" ? ["article"] : []),
+      ...(usesNarrationPreparation(edit.config) ? ["narration"] : []),
       ...(["from_prompt", "prompt_by_llm"].includes(edit.config.sources.thumbnail)
         ? ["thumbnailPrompt"]
         : []),
@@ -52,9 +53,11 @@ export function RevisionPrompts({
                   prompt.kind ===
                   (key === "article"
                     ? "article"
-                    : key === "thumbnailPrompt"
-                      ? "thumbnail"
-                      : "image"),
+                    : key === "narration"
+                      ? "narration"
+                      : key === "thumbnailPrompt"
+                        ? "thumbnail"
+                        : "image"),
               );
         return (
           <fieldset key={key} className="min-w-0 space-y-3 rounded-control border border-line p-3">
@@ -94,9 +97,11 @@ export function RevisionPrompts({
                         }
                       : key === "article"
                         ? { ...next.config, articlePrompt: picked.name }
-                        : key === "thumbnailPrompt"
-                          ? { ...next.config, thumbnailPrompt: picked.name }
-                          : next.config;
+                        : key === "narration"
+                          ? { ...next.config, narrationPrompt: picked.name }
+                          : key === "thumbnailPrompt"
+                            ? { ...next.config, thumbnailPrompt: picked.name }
+                            : next.config;
                   onChange({ ...next, config });
                 }}
               >
@@ -157,6 +162,7 @@ export function RevisionPrompts({
 
 function promptLabel(key: string): string {
   if (key === "article") return "Article";
+  if (key === "narration") return "Narration Preparation";
   if (key === "thumbnailPrompt") return "Thumbnail";
   if (key === "intro") return "Intro";
   if (key === "outro") return "Outro";

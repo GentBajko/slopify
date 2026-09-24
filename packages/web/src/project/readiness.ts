@@ -1,6 +1,7 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import { readinessIsUsable } from "@app/kernel/ports/model.js";
 import type { RunConfig } from "@app/slices/admission/model.js";
+import { usesNarrationPreparation } from "@app/slices/admission/rules.js";
 import type { ProviderStatus } from "@app/slices/settings/model.js";
 
 // A stage whose provider has no key or usable agent CLI cannot be retried or re-run. The control
@@ -34,6 +35,10 @@ export function unreadyFor(
   config: RunConfig,
   providers: readonly ProviderStatus[],
 ): Unready | undefined {
+  if (kind === "audio" && config.narrationPrompt && usesNarrationPreparation(config)) {
+    const preparation = unreadyFor("article", config, providers);
+    if (preparation !== undefined) return preparation;
+  }
   const id = providerFor(kind, config);
   if (id === undefined || id === "") {
     return undefined;

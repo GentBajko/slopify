@@ -9,7 +9,7 @@ import type {
   StageSource,
   VoiceChoice,
 } from "@app/slices/admission/model.js";
-import { allowedSources } from "@app/slices/admission/rules.js";
+import { allowedSources, usesNarrationPreparation } from "@app/slices/admission/rules.js";
 import type { Entry } from "@app/slices/library/model.js";
 import type { Chunking } from "@app/slices/narration/chunk.js";
 import type { StagedFile } from "@app/slices/storage/model.js";
@@ -45,6 +45,7 @@ export interface LegacyPlayFormState {
   readonly audio: VoiceChoice;
   readonly images: ProviderChoice;
   readonly articlePrompt: string;
+  readonly narrationPrompt?: string | undefined;
   // The ticked image prompts, in tick order, each with its Number.
   readonly imagePrompts: readonly ImagePromptChoice[];
   readonly thumbnailPrompt: string;
@@ -94,6 +95,7 @@ export function sourceOptions(
 // whether the row is drawn at all.
 export function needsLlm(form: PlayFormState, entries: readonly Entry[]): boolean {
   return (
+    usesNarrationPreparation(form) ||
     form.sources.article === "generate" ||
     form.sources.thumbnail === "prompt_by_llm" ||
     (form.sources.audio === "generate" &&
@@ -146,6 +148,7 @@ export function draftOf(input: DraftInput): RunDraft {
     audio: form.audio,
     images: form.images,
     articlePrompt: form.articlePrompt,
+    ...(form.narrationPrompt === undefined ? {} : { narrationPrompt: form.narrationPrompt }),
     imagePrompts: form.imagePrompts,
     thumbnailPrompt: form.thumbnailPrompt,
     ...pick(entryChoice(input, "intro"), (intro) => ({ intro })),

@@ -64,6 +64,7 @@ export function playFieldTarget(
       ? "style"
       : matches([
             "audio",
+            "narrationPrompt",
             "provided.audio",
             "intro",
             "outro",

@@ -114,8 +114,8 @@ export function ContentSection(
             <ThinkingPicker choice={form.llm} onChange={(llm) => update({ llm })} />
           </div>
           <p className="mt-3 text-small text-ink3">
-            Shared by generated article, research, thumbnail wording and generated entries when
-            enabled.
+            Shared by generated article, research, thumbnail wording, generated entries and
+            Narration Preparation when enabled.
           </p>
           <Button variant="ghost" onClick={() => onLibrary("/settings")}>
             Settings

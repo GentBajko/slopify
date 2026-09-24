@@ -5,10 +5,11 @@ import {
   imagesPerRunMax,
   numberPerPromptMax,
   titleMax,
+  usesNarrationPreparation,
 } from "@app/slices/admission/rules.js";
 import type { Field } from "@app/slices/admission/substitute.js";
 import { collectFields, detectSlots } from "@app/slices/admission/substitute.js";
-import type { Entry, Prompt } from "@app/slices/library/model.js";
+import type { Entry, Prompt, PromptKind } from "@app/slices/library/model.js";
 import type { DraftInput, PlayFormState, Upload } from "@/play/state";
 import { draftOf, stagedOf } from "@/play/state";
 import { validSubtitleStyle } from "@/subtitles/config";
@@ -47,6 +48,8 @@ export function keywordFields(input: AdmissionInput): readonly Field[] {
   const { form } = input;
   const text: string[] = [];
   const image: string[] = [];
+  if (usesNarrationPreparation(form))
+    push(text, bodyOf(input.prompts, "narration", form.narrationPrompt ?? ""));
 
   if (form.sources.article === "generate") {
     push(text, bodyOf(input.prompts, "article", form.articlePrompt));
@@ -108,6 +111,7 @@ const readingOrder: readonly string[] = [
   "provided.article",
   "audio",
   "provided.audio",
+  "narrationPrompt",
   "imagePrompts",
   "images",
   "provided.images",
@@ -219,11 +223,7 @@ function hintOf(form: PlayFormState, error: FieldError): string {
   }
 }
 
-function bodyOf(
-  prompts: readonly Prompt[],
-  kind: "article" | "image" | "thumbnail",
-  name: string,
-): string | undefined {
+function bodyOf(prompts: readonly Prompt[], kind: PromptKind, name: string): string | undefined {
   if (name === "") {
     return undefined;
   }
@@ -258,6 +258,8 @@ export function keywordOrigins(input: AdmissionInput): ReadonlyMap<string, reado
     }
   };
   const { form, prompts, entries } = input;
+  if (usesNarrationPreparation(form))
+    add(bodyOf(prompts, "narration", form.narrationPrompt ?? ""), "Narration Preparation");
   if (form.sources.article === "generate")
     add(bodyOf(prompts, "article", form.articlePrompt), "Article");
   if (form.sources.images === "generate")

@@ -5,6 +5,7 @@ import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
 import { FilePick } from "@/play/provided";
 import type { RailProps } from "@/play/rail-frame";
 import { railBeneath, railControls, SourceSwitch, StageRail } from "@/play/rail-frame";
+import { NarrationPreparation } from "./narration-preparation";
 
 // The two rails that carry a provider, and with it everything a provider decides: the
 // voice and the chunking of the narration, and the model and the ticked
@@ -13,6 +14,7 @@ import { railBeneath, railControls, SourceSwitch, StageRail } from "@/play/rail-
 
 export function AudioRail({
   form,
+  prompts,
   providers,
   voices,
   problem,
@@ -74,6 +76,13 @@ export function AudioRail({
                 }}
               />
             </details>
+            <NarrationPreparation
+              value={form.narrationPrompt ?? ""}
+              prompts={prompts}
+              supported={form.audio.provider === "inworld" && form.audio.model === "inworld-tts-2"}
+              error={problem("narrationPrompt")}
+              onChange={(narrationPrompt) => update({ narrationPrompt })}
+            />
           </>
         ) : null}
       </div>

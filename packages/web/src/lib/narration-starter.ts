@@ -1,0 +1,2 @@
+export const narrationStarter =
+  "Prepare restrained delivery cues for a documentary narrator. Let the facts carry the scene. Use a measured pace and make only occasional changes where the supplied wording clearly calls for emphasis, reflection or tension. Prefer no cue to an unnecessary cue. Avoid theatrical emotion, invented reactions and routine laughter or sighs. Never rewrite, summarize, translate or add spoken words. Return only the cue annotations required by the supplied format contract.";
