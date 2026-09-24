@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
 import type { StageContext } from "../../kernel/runner/index.js";
+import { usesNarrationPreparation } from "../admission/rules.js";
 import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
 import type { RevisionDeps, RevisionView } from "../revisions/model.js";
@@ -10,6 +11,7 @@ import { probeDurationMs } from "../video/ffmpeg.js";
 import { type AudioSegment, audioTimeline } from "../video/plan.js";
 import type { RevisionWorkPlan } from "./recipe-work.js";
 import type { ExportExecutionDeps } from "./runtime-export.js";
+import { joinedNarration, narrationTextParts } from "./runtime-narration-text.js";
 import { executionPlan, executionView, savedCatalogue } from "./runtime-plan.js";
 import type { WorkPiece } from "./work-records.js";
 
@@ -81,6 +83,8 @@ export function revisionTranscript(
   kind: "intro" | "body" | "outro",
 ): string {
   const { view, plan } = snapshot;
+  if (usesNarrationPreparation(view.revision.config))
+    return joinedNarration(narrationTextParts(view, plan, kind));
   const concat = plan.recipes.find(
     (one) => one.key === (kind === "body" ? "audio:body:concat" : `audio:${kind}`),
   );

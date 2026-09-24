@@ -36,6 +36,7 @@ export const localOperations = [
   "manual-article",
   "entry-text",
   "concat-narration",
+  "narration-files-v1",
 ] as const;
 export const deferredOperations = [
   "narration-preparation",

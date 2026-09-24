@@ -10,6 +10,11 @@ import type { Output } from "./model.js";
 // research and the article each store what they sent.
 export function assetOf(output: Output): string {
   const asset = output.role.replaceAll("_", "-");
+  if (
+    (output.role === "narration_txt" || output.role === "tts_script") &&
+    output.meta.segment !== undefined
+  )
+    return `${asset}-${output.meta.segment}`;
   if (output.role === "instructions") {
     return `${output.stageKind}-${asset}`;
   }

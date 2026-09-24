@@ -10,6 +10,7 @@ import type { PreparedAsset } from "../storage/assets.js";
 import { allocateAsset, discardPreparedAssets, sealAsset } from "../storage/assets.js";
 import { outputPath } from "../storage/layout.js";
 import type { OutputRole } from "../storage/model.js";
+import { publishNarrationText } from "./runtime-narration-text.js";
 import { executionPlan, executionView, savedCatalogue } from "./runtime-plan.js";
 import type { ProviderExecutionDeps } from "./runtime-provider.js";
 import {
@@ -72,6 +73,10 @@ export async function executeLocalRecipe(
     return "done";
   }
   if (input.kind !== "local") throw new Error("Expected an exact local recipe.");
+  if (input.operation === "narration-files-v1") {
+    await publishNarrationText(deps, context, piece);
+    return "done";
+  }
   if (input.operation === "concat-narration") {
     await concatenate(deps, context, piece);
     return "done";

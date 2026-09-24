@@ -4,6 +4,8 @@ const labels: Readonly<Record<Output["role"], string>> = {
   notes: "Research notes",
   article_md: "Article (Markdown)",
   article_txt: "Article text",
+  narration_txt: "Clean Narration",
+  tts_script: "TTS Script",
   sources: "Research sources",
   glossary: "Glossary",
   audio_body: "Narration",

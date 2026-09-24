@@ -42,6 +42,10 @@ export function outputFileName(
       return "article.md";
     case "article_txt":
       return "article.txt";
+    case "narration_txt":
+      return "narration.txt";
+    case "tts_script":
+      return "tts-script.txt";
     case "sources":
       return "sources.txt";
     case "glossary":

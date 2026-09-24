@@ -158,6 +158,7 @@ export function bindNarrationReuse(
         payload: JSON.stringify({
           ...(typeof payload === "object" && payload !== null ? payload : {}),
           text: input.text,
+          spokenText: input.spokenText,
           logicalKey: input.logicalKey,
           logicalText: input.logicalText,
           segment: input.segment,

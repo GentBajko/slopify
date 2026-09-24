@@ -2,6 +2,7 @@ import { z } from "zod";
 import { outputRoles, stagedFileStates, stageKinds } from "./model.js";
 
 export const metaSchema = z.object({
+  segment: z.enum(["body", "intro", "outro"]).optional(),
   subtitleOmissions: z
     .array(z.object({ start: z.number().finite().nonnegative(), text: z.string() }))
     .optional(),

@@ -34,6 +34,8 @@ export function baselineFingerprints(
   return fingerprints;
 }
 export function legacyOutputSlot(output: Output): string {
+  if (output.role === "narration_txt" || output.role === "tts_script")
+    return `narration:files:${output.meta.segment ?? "body"}:${output.role}`;
   return output.role === "image" ? `image:${output.id}` : `${output.stageKind}:${output.role}`;
 }
 export function legacyOutputWorkKey(output: Output, config?: Pick<RunConfig, "sources">): string {
@@ -49,6 +51,9 @@ export function legacyOutputWorkKey(output: Output, config?: Pick<RunConfig, "so
     case "sources":
     case "glossary":
       return "article:body";
+    case "narration_txt":
+    case "tts_script":
+      return `narration:files:${output.meta.segment ?? "body"}`;
     case "audio_body":
       return config?.sources.audio === "provide" ? "audio:provided" : "audio:body:concat";
     case "audio_intro":

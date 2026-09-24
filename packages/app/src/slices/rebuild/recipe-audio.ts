@@ -11,6 +11,7 @@ import {
   resourceIdentity,
   selectedReference,
 } from "./recipe-model.js";
+import { narrationFileRecipe } from "./recipe-narration-text.js";
 import { preparationFuture, preparationTemplate } from "./recipe-preparation.js";
 import type { TextRecipes } from "./recipe-text.js";
 
@@ -93,6 +94,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
         ),
       );
     recipes.push(...parts);
+    if (usesNarrationPreparation(config)) recipes.push(narrationFileRecipe(context, "body", parts));
     body = recipe(
       context,
       "audio:body:concat",
@@ -185,6 +187,8 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
       parts.map((part) => part.key),
     );
     recipes.push(audio);
+    if (usesNarrationPreparation(config))
+      recipes.push(narrationFileRecipe(context, category, parts));
     ordered.push({ value: audio, transcript: entry.text ?? entry.recipe.fingerprint });
   }
   const timeline: FingerprintValue = ordered.map(({ value, transcript }) => {

@@ -11,6 +11,8 @@ export const outputRoles = [
   "notes",
   "article_md",
   "article_txt",
+  "narration_txt",
+  "tts_script",
   "sources",
   "glossary",
   "audio_body",
@@ -34,6 +36,7 @@ export const stagedFileStates = ["copying", "staged"] as const;
 export type StagedFileState = (typeof stagedFileStates)[number];
 
 export interface OutputMeta {
+  readonly segment?: "body" | "intro" | "outro" | undefined;
   readonly subtitleOmissions?:
     | readonly { readonly start: number; readonly text: string }[]
     | undefined;
