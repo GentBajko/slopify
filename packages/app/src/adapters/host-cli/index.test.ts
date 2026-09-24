@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
+import { bridgeLimits } from "../../kernel/ports/host-cli.js";
 import type { LlmEvent } from "../../kernel/ports/llm.js";
 import { createHostCliClient } from "./index.js";
 
@@ -10,7 +11,12 @@ const cleanups: (() => Promise<void>)[] = [];
 afterEach(async () => {
   for (const fn of cleanups.splice(0).reverse()) await fn();
 });
-async function endpoint(body: string | Buffer, type = "application/x-ndjson", protocol = 1) {
+async function endpoint(
+  body: string | Buffer,
+  type = "application/x-ndjson",
+  protocol = 1,
+  chunkSize = 3,
+) {
   const directory = await mkdtemp(join(tmpdir(), "sb-"));
   cleanups.push(() => rm(directory, { recursive: true, force: true }));
   await writeFile(join(directory, "token"), "a".repeat(64), { mode: 0o644 });
@@ -24,7 +30,7 @@ async function endpoint(body: string | Buffer, type = "application/x-ndjson", pr
     if (req.method === "POST") posts++;
     res.setHeader("content-type", type);
     const bytes = Buffer.from(body);
-    for (let i = 0; i < bytes.length; i += 3) res.write(bytes.subarray(i, i + 3));
+    for (let i = 0; i < bytes.length; i += chunkSize) res.write(bytes.subarray(i, i + chunkSize));
     res.end();
   });
   await new Promise<void>((resolve) => server.listen(join(directory, "cli.sock"), resolve));
@@ -41,6 +47,21 @@ const req = () => ({
   model: "test",
   messages: [{ role: "user" as const, content: "hello" }],
   signal: AbortSignal.timeout(2000),
+});
+it.skipIf(process.platform === "win32")("counts the newline in the frame byte limit", async () => {
+  const prefix = JSON.stringify({ type: "delta", text: "" });
+  const frame = JSON.stringify({
+    type: "delta",
+    text: "x".repeat(bridgeLimits.frame - prefix.length),
+  });
+  const h = await endpoint(
+    `${frame}\n{"type":"done","usage":null,"finishReason":null}\n`,
+    "application/x-ndjson",
+    1,
+    65536,
+  );
+  await expect(drain(h.client)).rejects.toMatchObject({ fault: { kind: "unavailable" } });
+  expect(h.posts()).toBe(1);
 });
 async function drain(client: ReturnType<typeof createHostCliClient>) {
   const events: LlmEvent[] = [];

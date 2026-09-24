@@ -181,7 +181,7 @@ async function* readEvents(response: IncomingMessage): AsyncGenerator<LlmEvent> 
     while (newline !== -1) {
       const line = pending.slice(0, newline);
       pending = pending.slice(newline + 1);
-      if (Buffer.byteLength(line) > bridgeLimits.frame) throw hostUnavailable(true);
+      if (Buffer.byteLength(line) + 1 > bridgeLimits.frame) throw hostUnavailable(true);
       if (line.trim() !== "") {
         if (terminal) throw hostUnavailable(true);
         const event = hostFrameSchema.parse(JSON.parse(line));
@@ -192,7 +192,7 @@ async function* readEvents(response: IncomingMessage): AsyncGenerator<LlmEvent> 
       }
       newline = pending.indexOf("\n");
     }
-    if (Buffer.byteLength(pending) > bridgeLimits.frame) throw hostUnavailable(true);
+    if (Buffer.byteLength(pending) >= bridgeLimits.frame) throw hostUnavailable(true);
   }
   pending += decoder.decode();
   if (!response.complete || pending.trim() !== "" || !terminal) throw hostUnavailable(true);

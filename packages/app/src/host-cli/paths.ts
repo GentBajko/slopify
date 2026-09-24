@@ -17,18 +17,19 @@ export async function prepareHostPaths(root: string): Promise<HostPaths> {
   if (Buffer.byteLength(socket) > 100)
     throw new Error("Use a shorter XDG_DATA_HOME for the host helper socket (at most 100 bytes).");
   await mkdir(normalized, { recursive: true, mode: 0o700 });
-  await ownedDirectory(normalized);
+  await ownedDirectory(normalized, true);
   await chmod(normalized, 0o700);
   await mkdir(share, { recursive: true, mode: 0o755 });
   await ownedDirectory(share);
   await chmod(share, 0o755);
   return { root: normalized, share, socket, tokenFile: join(share, "token") };
 }
-async function ownedDirectory(path: string): Promise<void> {
+async function ownedDirectory(path: string, privateRoot = false): Promise<void> {
   const entry = await lstat(path);
   if (
     !entry.isDirectory() ||
     entry.isSymbolicLink() ||
+    (privateRoot && (entry.mode & 0o077) !== 0) ||
     (process.getuid && entry.uid !== process.getuid())
   )
     throw new Error("Unsafe host helper directory.");

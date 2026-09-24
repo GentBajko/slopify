@@ -133,8 +133,13 @@ export async function ensureHostService(options: HostServiceOptions): Promise<vo
   if (previous !== undefined && !previous.startsWith(`${marker}\n`))
     throw new Error("An existing host helper service is not owned by Slopify. It was not changed.");
   const unit = serviceUnit(options.node, options.entry, root);
-  const run = async (file: string, args: readonly string[], required = true) => {
-    const result = await runner.exec(file, args, signal);
+  const run = async (
+    file: string,
+    args: readonly string[],
+    required = true,
+    commandSignal = signal,
+  ) => {
+    const result = await runner.exec(file, args, commandSignal);
     if (required && result.code !== 0)
       throw new Error(
         `Host helper setup failed (${file}). The existing container was not changed.`,
@@ -190,27 +195,26 @@ export async function ensureHostService(options: HostServiceOptions): Promise<vo
     await waitHealth(options, true);
     paused = false;
   } catch (error) {
+    const rollbackSignal = AbortSignal.timeout(35_000);
+    const restore = (args: readonly string[]) => run("systemctl", args, true, rollbackSignal);
     try {
       if (replaced) {
-        await run("systemctl", ["--user", "stop", hostUnit]);
-        if (!wasEnabled) await run("systemctl", ["--user", "disable", hostUnit]);
+        await restore(["--user", "stop", hostUnit]);
+        if (!wasEnabled) await restore(["--user", "disable", hostUnit]);
         if (previous === undefined) await unlink(unitPath);
         else await privateWrite(unitPath, previous);
         if (previousConfig === undefined) await unlink(configPath);
         else await privateWrite(configPath, previousConfig);
-        await run("systemctl", ["--user", "daemon-reload"]);
+        await restore(["--user", "daemon-reload"]);
         if (active) {
-          await run("systemctl", ["--user", "start", hostUnit]);
-          await waitHealth({ ...options, version: current?.version ?? options.version }, true);
+          await restore(["--user", "start", hostUnit]);
+          await waitHealth(
+            { ...options, signal: rollbackSignal, version: current?.version ?? options.version },
+            true,
+          );
         }
       } else if (paused)
-        await run("systemctl", [
-          "--user",
-          "kill",
-          "--kill-whom=main",
-          "--signal=SIGUSR2",
-          hostUnit,
-        ]);
+        await restore(["--user", "kill", "--kill-whom=main", "--signal=SIGUSR2", hostUnit]);
     } catch {
       throw new Error(
         "Host helper setup failed and rollback needs attention. Check slopify-cli-bridge.service; the Docker container was not changed.",

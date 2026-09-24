@@ -34,6 +34,12 @@ it.skipIf(process.platform === "win32")("refuses symlinked roots, exports and to
   await expect(prepareHostPaths(directory)).rejects.toThrow("Unsafe");
   await expect(readBridgeToken(join(directory, "alias"))).rejects.toThrow();
 });
+it.skipIf(process.platform === "win32")("refuses a previously exposed private root", async () => {
+  const directory = await root();
+  await chmod(directory, 0o755);
+  await expect(prepareHostPaths(directory)).rejects.toThrow("Unsafe");
+  expect((await lstat(directory)).mode & 0o777).toBe(0o755);
+});
 it("rejects long socket paths before creating directories and malformed tokens", async () => {
   await expect(prepareHostPaths(`/tmp/${"x".repeat(101)}`)).rejects.toThrow("shorter");
   const paths = await prepareHostPaths(await root());

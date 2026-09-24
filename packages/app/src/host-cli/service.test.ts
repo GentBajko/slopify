@@ -204,9 +204,12 @@ afterEach(async () => {
   vi.restoreAllMocks();
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
-it.skipIf(process.platform === "win32").each([false, true])(
+it.skipIf(process.platform === "win32").each(["success", "timeout", "canceled"])(
   "drains an idle upgrade; restores the old service if new health times out (%s)",
-  async (fails) => {
+  async (mode) => {
+    const fails = mode !== "success";
+    const canceled = mode === "canceled";
+    const controller = new AbortController();
     const root = await mkdtemp(join(tmpdir(), "sb-"));
     roots.push(root);
     const paths = await prepareHostPaths(root);
@@ -236,7 +239,7 @@ it.skipIf(process.platform === "win32").each([false, true])(
     let server = await start("1.3.1");
     const calls: string[][] = [];
     let now = Date.now();
-    if (fails)
+    if (mode === "timeout")
       vi.spyOn(Date, "now").mockImplementation(() => {
         now += 10_001;
         return now;
@@ -249,14 +252,16 @@ it.skipIf(process.platform === "win32").each([false, true])(
         uid: process.getuid?.() ?? 0,
         version: "1.4.0",
         env: { HOME: root, PATH: "/new/bin" },
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(5000)]),
         runner: {
-          exec: async (file, args) => {
+          exec: async (file, args, signal) => {
+            signal.throwIfAborted();
             calls.push([file, ...args]);
             if (args.includes("--signal=SIGHUP")) server.pauseAdmissions();
             if (args.includes("restart")) {
               await server.stop();
               server = await start(fails ? "0.0.1" : "1.4.0");
+              if (canceled) controller.abort(new Error("Fixture setup canceled"));
             }
             if (args.includes("stop")) await server.stop();
             if (args.includes("start")) server = await start("1.3.1");
@@ -265,7 +270,7 @@ it.skipIf(process.platform === "win32").each([false, true])(
         },
       });
       if (fails) {
-        await expect(operation).rejects.toThrow("30 seconds");
+        await expect(operation).rejects.toThrow(canceled ? "Fixture setup canceled" : "30 seconds");
         expect(await readFile(unitPath, "utf8")).toBe(oldUnit);
         expect(await readFile(join(root, "host-environment.json"), "utf8")).toBe(oldConfig);
       } else await operation;
