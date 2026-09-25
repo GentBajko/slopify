@@ -1,4 +1,5 @@
 import { transact } from "../../kernel/db/tx.js";
+import { projectPaused } from "../admission/repo.js";
 import { withProjectControl } from "../control/lock.js";
 import type { RevisionView } from "../revisions/model.js";
 import { requestHash } from "../revisions/mutation-request.js";
@@ -31,17 +32,24 @@ import { previewById, storePreview } from "./repo.js";
 import { admitCheckedPreview, type RebuildDeps, wakeRebuild } from "./service.js";
 import { checkReadiness } from "./service-readiness.js";
 
+// Active: an invocation in flight, a provider job the head can still retrieve, or admitted
+// work that can still start. Work behind a pause or a failed/canceled sibling of its
+// admission never starts, and leftovers of superseded revisions never run; counting either
+// would refuse every later rerun of the section.
 function activeConflict(deps: RebuildDeps, projectId: string, keys: readonly string[]): boolean {
   const rows = deps.db
     .prepare(
-      "SELECT p.work_key,r.logical_key,w.state,w.dispatch_state FROM revision_work w " +
+      "SELECT p.work_key,r.logical_key FROM revision_work w " +
         "JOIN revision_work_pieces p ON p.work_id=w.id " +
         "LEFT JOIN revision_work_reservations r ON r.work_id=w.id AND r.piece_id=p.id " +
-        "WHERE w.project_id=? AND w.state!='done' AND " +
-        "(w.state='running' OR w.dispatch_state='draining' OR " +
-        "(w.state='pending' AND w.dispatch_state='allowed'))",
+        "WHERE w.project_id=? AND (w.state='running' OR " +
+        "(w.state='pending' AND p.state!='done' AND p.continuation IS NOT NULL AND " +
+        "r.revision_id=(SELECT revision_id FROM project_heads WHERE project_id=w.project_id)) OR " +
+        "(? AND w.state='pending' AND w.dispatch_state='allowed' AND NOT EXISTS(" +
+        "SELECT 1 FROM revision_work f WHERE f.admission_id=w.admission_id " +
+        "AND f.state IN ('failed','canceled'))))",
     )
-    .all(projectId);
+    .all(projectId, projectPaused(deps.db, projectId) ? 0 : 1);
   return rows.some((row) =>
     keys.some(
       (key) =>
