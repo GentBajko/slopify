@@ -7,6 +7,7 @@ import {
   paint,
   readAggregates,
   tallyFoot,
+  wireInstallTabs,
   wireShowcase,
 } from "./public/main.js";
 
@@ -229,5 +230,57 @@ describe("wireShowcase", () => {
   // The recording is not in the repository yet, and the page has to survive that.
   it("does nothing when the page carries no video", () => {
     expect(() => wireShowcase(rootWith(null, true))).not.toThrow();
+  });
+});
+
+// Stand-ins for the three tabs and panels: attributes, focus and listeners are all the
+// switcher touches.
+function tabStub(selected) {
+  const listeners = {};
+  const attributes = { "aria-selected": String(selected) };
+  return {
+    tabIndex: selected ? 0 : -1,
+    focused: false,
+    getAttribute: (name) => attributes[name],
+    setAttribute: (name, value) => {
+      attributes[name] = value;
+    },
+    addEventListener: (type, listener) => {
+      listeners[type] = listener;
+    },
+    focus() {
+      this.focused = true;
+    },
+    fire: (type, event = {}) => listeners[type]?.({ preventDefault() {}, ...event }),
+  };
+}
+
+function installRoot() {
+  const tabs = [tabStub(true), tabStub(false), tabStub(false)];
+  const panels = [{ hidden: false }, { hidden: false }, { hidden: false }];
+  return {
+    tabs,
+    panels,
+    querySelectorAll: (selector) => (selector === "[data-install-tab]" ? tabs : panels),
+  };
+}
+
+describe("wireInstallTabs", () => {
+  it("shows only the selected command once wired", () => {
+    const root = installRoot();
+    wireInstallTabs(root);
+    expect(root.panels.map((panel) => panel.hidden)).toEqual([false, true, true]);
+  });
+
+  it("switches on click and moves with the arrow keys, wrapping at the ends", () => {
+    const root = installRoot();
+    wireInstallTabs(root);
+    root.tabs[2].fire("click");
+    expect(root.panels.map((panel) => panel.hidden)).toEqual([true, true, false]);
+    expect(root.tabs[2].getAttribute("aria-selected")).toBe("true");
+    root.tabs[2].fire("keydown", { key: "ArrowRight" });
+    expect(root.panels.map((panel) => panel.hidden)).toEqual([false, true, true]);
+    expect(root.tabs[0].focused).toBe(true);
+    expect(root.tabs.map((tab) => tab.tabIndex)).toEqual([0, -1, -1]);
   });
 });

@@ -169,6 +169,51 @@ export function wireCopy(root, clipboard) {
   }
 }
 
+// NPX, Global and Docker share one command slot. The panels ship visible so the page works
+// without this script; wiring it hides all but the chosen one and makes the tab row behave
+// like tabs: click or arrow keys to switch, Home and End for the ends.
+export function wireInstallTabs(root) {
+  const tabs = [...root.querySelectorAll("[data-install-tab]")];
+  const panels = [...root.querySelectorAll("[data-install-panel]")];
+  if (tabs.length === 0 || tabs.length !== panels.length) {
+    return;
+  }
+  const select = (index, focus) => {
+    tabs.forEach((tab, at) => {
+      const chosen = at === index;
+      tab.setAttribute("aria-selected", String(chosen));
+      tab.tabIndex = chosen ? 0 : -1;
+      panels[at].hidden = !chosen;
+    });
+    if (focus) tabs[index].focus();
+  };
+  tabs.forEach((tab, index) => {
+    tab.addEventListener("click", () => select(index, false));
+    tab.addEventListener("keydown", (event) => {
+      const next =
+        event.key === "ArrowRight"
+          ? (index + 1) % tabs.length
+          : event.key === "ArrowLeft"
+            ? (index - 1 + tabs.length) % tabs.length
+            : event.key === "Home"
+              ? 0
+              : event.key === "End"
+                ? tabs.length - 1
+                : undefined;
+      if (next === undefined) return;
+      event.preventDefault();
+      select(next, true);
+    });
+  });
+  select(
+    Math.max(
+      0,
+      tabs.findIndex((tab) => tab.getAttribute("aria-selected") === "true"),
+    ),
+    false,
+  );
+}
+
 // The showcase video autoplays and loops, which is the one thing on this page that moves
 // without being asked. Reduced motion holds its poster frame and restores native controls
 // so the viewer chooses when to play. Otherwise the recording loops without controls.
@@ -187,6 +232,7 @@ export function wireShowcase(root) {
 if (typeof document !== "undefined") {
   poll(document, collectorUrl, globalThis.fetch.bind(globalThis));
   wireShowcase(document);
+  wireInstallTabs(document);
   wireCopy(
     document,
     globalThis.navigator?.clipboard ?? {

@@ -93,88 +93,118 @@
               machine, free.
             </p>
             <p class="hero-aside">Start contributing to the internet’s enshittification today!</p>
-            <div class="install-options">
-              <div>
-                <p class="install-label">Run with npx</p>
-            <div class="command">
-              <code>npx @gentbajko/slopify@latest</code>
-              <button class="key" type="button" data-copy="npx @gentbajko/slopify@latest">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  class="key-glyph key-glyph-copy"
-                  aria-hidden="true"
-                >
-                  <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
-                  <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
-                </svg>
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  class="key-glyph key-glyph-done"
-                  aria-hidden="true"
-                >
-                  <path d="M20 6 9 17l-5-5"></path>
-                </svg>
-                <span data-copy-label>Copy</span>
-                <span class="visually-hidden"> the install command</span>
-              </button>
-            </div>
+            <!-- Three ways in, one on screen at a time. Without JavaScript every panel stays
+                 visible and the tabs are just labels. -->
+            <div class="install-options" data-install>
+              <div class="install-tabs" role="tablist" aria-label="How to run Slopify">
+                <button type="button" role="tab" id="install-tab-npx" aria-controls="install-npx" aria-selected="true" data-install-tab>NPX</button>
+                <button type="button" role="tab" id="install-tab-global" aria-controls="install-global" aria-selected="false" tabindex="-1" data-install-tab>Global</button>
+                <button type="button" role="tab" id="install-tab-docker" aria-controls="install-docker" aria-selected="false" tabindex="-1" data-install-tab>Docker</button>
               </div>
-              <div>
-                <p class="install-label">Or install globally</p>
-            <div class="command">
-              <code>npm install -g @gentbajko/slopify</code>
-              <button class="key" type="button" data-copy="npm install -g @gentbajko/slopify">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  class="key-glyph key-glyph-copy"
-                  aria-hidden="true"
-                >
-                  <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
-                  <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
-                </svg>
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  class="key-glyph key-glyph-done"
-                  aria-hidden="true"
-                >
-                  <path d="M20 6 9 17l-5-5"></path>
-                </svg>
-                <span data-copy-label>Copy</span>
-                <span class="visually-hidden"> the install command</span>
-              </button>
-            </div>
+              <div class="install-panel" id="install-npx" role="tabpanel" aria-labelledby="install-tab-npx" data-install-panel>
+                <div class="command">
+                  <code>npx @gentbajko/slopify@latest</code>
+                  <button class="key" type="button" data-copy="npx @gentbajko/slopify@latest">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      class="key-glyph key-glyph-copy"
+                      aria-hidden="true"
+                    >
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+                    </svg>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      class="key-glyph key-glyph-done"
+                      aria-hidden="true"
+                    >
+                      <path d="M20 6 9 17l-5-5"></path>
+                    </svg>
+                    <span data-copy-label>Copy</span>
+                    <span class="visually-hidden"> the npx command</span>
+                  </button>
+                </div>
+                <p class="install-hint">Runs the latest version. Nothing to install first.</p>
+              </div>
+              <div class="install-panel" id="install-global" role="tabpanel" aria-labelledby="install-tab-global" data-install-panel>
+                <div class="command">
+                  <code>npm install -g @gentbajko/slopify</code>
+                  <button class="key" type="button" data-copy="npm install -g @gentbajko/slopify">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      class="key-glyph key-glyph-copy"
+                      aria-hidden="true"
+                    >
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+                    </svg>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      class="key-glyph key-glyph-done"
+                      aria-hidden="true"
+                    >
+                      <path d="M20 6 9 17l-5-5"></path>
+                    </svg>
+                    <span data-copy-label>Copy</span>
+                    <span class="visually-hidden"> the global install command</span>
+                  </button>
+                </div>
                 <p class="install-hint">Then type <code>slopify</code> to launch.</p>
               </div>
-              <div>
-                <p class="install-label">Run in Docker · Linux</p>
+              <div class="install-panel" id="install-docker" role="tabpanel" aria-labelledby="install-tab-docker" data-install-panel>
                 <div class="command">
                   <code>npx @gentbajko/slopify@latest --docker</code>
                   <button class="key" type="button" data-copy="npx @gentbajko/slopify@latest --docker">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      class="key-glyph key-glyph-copy"
+                      aria-hidden="true"
+                    >
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+                    </svg>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      class="key-glyph key-glyph-done"
+                      aria-hidden="true"
+                    >
+                      <path d="M20 6 9 17l-5-5"></path>
+                    </svg>
                     <span data-copy-label>Copy</span>
                     <span class="visually-hidden"> the Docker launcher command</span>
                   </button>
                 </div>
-                <p class="install-hint">Runs in the background, restarts with Docker and saves project files in ~/Slopify/Projects. <a href="#docker">Docker setup</a></p>
+                <p class="install-hint">Linux only. Runs in the background, restarts with Docker and saves project files in ~/Slopify/Projects. <a href="#docker">Docker setup</a></p>
               </div>
             </div>
             <span class="visually-hidden" role="status" data-copy-status></span>
