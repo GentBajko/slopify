@@ -133,7 +133,6 @@ function harness(states: Partial<Record<StageKind, StageState>> = {}): Harness {
 describe("retired project mutations", () => {
   it.each([
     ["PATCH", "/providers"],
-    ["POST", "/stages/article/rerun"],
     ["PUT", "/article"],
     ["DELETE", "/images/o-image-1"],
     ["POST", "/images/o-image-1/regenerate"],
@@ -184,8 +183,8 @@ describe("explicit rebuild is required", () => {
       const response = await h.app.request(`/api/projects/${projectId}${suffix}`, {
         method: "POST",
       });
-      expect(response.status).toBe(409);
-      expect(await response.json()).toMatchObject({ reason: "rebuild-required" });
+      expect(response.status).toBe(400);
+      expect(await response.json()).toHaveProperty("errors");
       expect(stagesOf(h.db, projectId)).toEqual(before);
       expect(h.ticked).toEqual([]);
     },
@@ -224,13 +223,10 @@ describe("cancel and pause", () => {
     expect(h.aborted).toEqual([projectId]);
     expect(h.ticked).toEqual([]);
   });
-  it.each(["pause", "resume", "cancel"])(
-    "answers 404 for %s of an unknown project",
-    async (action) => {
-      const h = harness();
-      expect(
-        (await h.app.request(`/api/projects/missing/${action}`, { method: "POST" })).status,
-      ).toBe(404);
-    },
-  );
+  it.each(["pause", "cancel"])("answers 404 for %s of an unknown project", async (action) => {
+    const h = harness();
+    expect(
+      (await h.app.request(`/api/projects/missing/${action}`, { method: "POST" })).status,
+    ).toBe(404);
+  });
 });

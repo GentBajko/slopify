@@ -53,7 +53,15 @@ export async function pauseRun(
 }
 
 export async function resumeRun(api: Api, projectId: string): Promise<ActionResult> {
-  return acted(await api.client.projects[":id"].resume.$post({ param: { id: projectId } }));
+  return acted(await legacyRecovery(api, projectId, "resume"));
+}
+
+// The recovery routes now require a revision control body, which these bodiless calls
+// omit, so the server refuses them until the browser sends a request identity.
+function legacyRecovery(api: Api, projectId: string, path: string): Promise<Response> {
+  return api.fetch(`${api.origin}/api/projects/${encodeURIComponent(projectId)}/${path}`, {
+    method: "POST",
+  });
 }
 
 export async function updateProviders(
@@ -89,11 +97,7 @@ export async function retryStage(
   projectId: string,
   kind: StageKind,
 ): Promise<ActionResult> {
-  return acted(
-    await api.client.projects[":id"].stages[":kind"].retry.$post({
-      param: { id: projectId, kind },
-    }),
-  );
+  return acted(await legacyRecovery(api, projectId, `stages/${kind}/retry`));
 }
 
 export async function rerunStage(
@@ -101,11 +105,7 @@ export async function rerunStage(
   projectId: string,
   kind: StageKind,
 ): Promise<ActionResult> {
-  return acted(
-    await api.client.projects[":id"].stages[":kind"].rerun.$post({
-      param: { id: projectId, kind },
-    }),
-  );
+  return acted(await legacyRecovery(api, projectId, `stages/${kind}/rerun`));
 }
 
 export async function saveArticle(

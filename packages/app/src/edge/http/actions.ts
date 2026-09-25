@@ -13,6 +13,8 @@ import {
   type RevisionControlInput,
   revisionControlSchema,
 } from "../../slices/control/revision-control-schema.js";
+import { recoverProject } from "../../slices/rebuild/recovery.js";
+import { type RecoveryRequest, recoveryResultSchema } from "../../slices/rebuild/recovery-model.js";
 import type { RerunDeps } from "../../slices/reruns/index.js";
 import { adoptBaseline } from "../../slices/revisions/adopt.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
@@ -122,6 +124,67 @@ export function actionRoutes(deps: AppDeps) {
     });
   };
 
+  const recovery = async (
+    c: Context,
+    id: string,
+    input: RevisionControlInput,
+    action: RecoveryRequest["action"],
+  ): Promise<Response> => {
+    if (deps.rebuild === undefined)
+      return problem(c, {
+        status: 503,
+        title: titleOf(503),
+        detail: "Recovery is unavailable. Try again after restart.",
+      });
+    const result = recoveryResultSchema.parse(
+      await recoverProject(deps.rebuild, id, { ...input, action }),
+    );
+    if (result.ok) return c.json(result, 202);
+    const status =
+      result.reason === "no-project" || result.reason === "no-revision"
+        ? 404
+        : result.reason === "invalid-selection" || result.reason === "invalid-edit"
+          ? 400
+          : 409;
+    const messages: Record<typeof result.reason, string> = {
+      "no-project": "This project no longer exists.",
+      "no-revision": "This revision no longer exists. Reload the project.",
+      conflict: "The saved project changed. Reload it and try Resume.",
+      "idempotency-conflict": "This request ID belongs to another action. Reload the project.",
+      "invalid-edit": "This section needs attention in Edit project before rerunning.",
+      "stale-preview": "The required work changed. Try Resume to check it again.",
+      "invalid-selection":
+        "This section has no generated work to rerun. Use Edit project to change its source.",
+      "review-required":
+        "Changed supplied content or manual captions need Edit project or optional Advanced rebuild review.",
+      "cost-ack-required": "Use optional Advanced rebuild review for this request.",
+      readiness: "Check the provider, model, voice or source files, then try Resume.",
+      running: "Wait for this section to finish, or Pause the project before rerunning it.",
+      "control-changed":
+        "A newer control action took precedence. Check the project before using Resume.",
+    };
+    const detail = [
+      messages[result.reason],
+      ...(result.fields ?? []).map((row) => row.message),
+      ...(result.intentRevisionId === undefined
+        ? []
+        : ["The rerun revision was saved. Use Resume to continue it; do not rerun again."]),
+    ].join(" ");
+    return problem(c, {
+      status,
+      title: titleOf(status),
+      detail,
+      extensions: {
+        reason: result.reason,
+        fields: result.fields ?? [],
+        currentRevisionId: currentRevisionId(deps.db, id) ?? null,
+        ...(result.intentRevisionId === undefined
+          ? {}
+          : { intentRevisionId: result.intentRevisionId }),
+      },
+    });
+  };
+
   const controlInput = async (
     c: Parameters<typeof problem>[0],
     id: string,
@@ -149,13 +212,12 @@ export function actionRoutes(deps: AppDeps) {
         ? input
         : controlled(c, id, await pauseProject(control, id, input));
     })
-    .post("/:id/resume", zValidator("param", idParam, onInvalid), (c) => {
-      const { id } = c.req.valid("param");
-      return controlled(c, id, {
-        ok: false,
-        reason: projectById(deps.db, id) === undefined ? "no-project" : "rebuild-required",
-      });
-    })
+    .post(
+      "/:id/resume",
+      zValidator("param", idParam, onInvalid),
+      zValidator("json", revisionControlSchema, onInvalid),
+      (c) => recovery(c, c.req.valid("param").id, c.req.valid("json"), { kind: "resume" }),
+    )
     .patch("/:id/providers", zValidator("param", idParam, onInvalid), revisionRequired)
     .post("/:id/cancel", zValidator("param", idParam, onInvalid), async (c) => {
       const { id } = c.req.valid("param");
@@ -165,14 +227,26 @@ export function actionRoutes(deps: AppDeps) {
       if (!result.ok) return controlled(c, id, result);
       return c.json({ ...view(id), canceled: result.canceled });
     })
-    .post("/:id/stages/:kind/retry", zValidator("param", stageParam, onInvalid), (c) => {
-      const { id } = c.req.valid("param");
-      return controlled(c, id, {
-        ok: false,
-        reason: projectById(deps.db, id) === undefined ? "no-project" : "rebuild-required",
-      });
-    })
-    .post("/:id/stages/:kind/rerun", zValidator("param", stageParam, onInvalid), revisionRequired)
+    .post(
+      "/:id/stages/:kind/retry",
+      zValidator("param", stageParam, onInvalid),
+      zValidator("json", revisionControlSchema, onInvalid),
+      (c) =>
+        recovery(c, c.req.valid("param").id, c.req.valid("json"), {
+          kind: "retry",
+          stage: c.req.valid("param").kind,
+        }),
+    )
+    .post(
+      "/:id/stages/:kind/rerun",
+      zValidator("param", stageParam, onInvalid),
+      zValidator("json", revisionControlSchema, onInvalid),
+      (c) =>
+        recovery(c, c.req.valid("param").id, c.req.valid("json"), {
+          kind: "rerun",
+          stage: c.req.valid("param").kind,
+        }),
+    )
     .put("/:id/article", zValidator("param", idParam, onInvalid), revisionRequired)
     .delete("/:id/images/:outputId", zValidator("param", imageParam, onInvalid), revisionRequired)
     .post(

@@ -60,9 +60,9 @@ it("requires current revision control bodies and replays completed controls with
     expect((await post("/pause", request)).status).toBe(200);
     expect(projectById(h.deps.db, h.projectId)?.paused).toBe(false);
     expect((await post("/cancel", request)).status).toBe(409);
-    expect((await app.request(`${endpoint}/resume`, { method: "POST" })).status).toBe(409);
+    expect((await app.request(`${endpoint}/resume`, { method: "POST" })).status).toBe(400);
     expect((await app.request(`${endpoint}/stages/audio/retry`, { method: "POST" })).status).toBe(
-      409,
+      400,
     );
     expect(abort).toHaveBeenCalledTimes(1);
     expect(tick).not.toHaveBeenCalled();

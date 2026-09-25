@@ -133,7 +133,6 @@ it("saves without dispatch, replays a receipt and refuses an obsolete base", asy
 
 it.each([
   ["PATCH", "/providers"],
-  ["POST", "/stages/article/rerun"],
   ["PUT", "/article"],
   ["DELETE", "/images/o1"],
   ["POST", "/images/o1/regenerate"],

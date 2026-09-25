@@ -5,6 +5,7 @@ import { expect, it } from "vitest";
 import { fakeTts } from "../src/adapters/fake/tts.js";
 import { openDb } from "../src/kernel/db/index.js";
 import { claimWork } from "../src/kernel/runner/work-authority.js";
+import { recoverProject } from "../src/slices/rebuild/recovery.js";
 import { recoverWork } from "../src/slices/rebuild/repo.js";
 import { executionStages } from "../src/slices/rebuild/runtime-store.js";
 import { previewRebuild, startRebuild } from "../src/slices/rebuild/service.js";
@@ -147,109 +148,122 @@ it("recovers a submitted unknown narration outcome held and warns before an expl
   }
 });
 
-it("retrieves a persisted narration job after reopening without another submission or model readiness", async () => {
-  const gate = deferred<void>();
-  const entered = deferred<void>();
-  const audio = fakeTts({ bytesFor: () => [tone()] });
-  let submissions = 0;
-  const retrievals: string[] = [];
-  const h = await composedFixture({
-    tts: () => ({
-      ...audio,
-      synthesize: async (request) => {
-        const token = request.continuation?.read();
-        if (token === undefined) {
-          submissions += 1;
-          request.continuation?.write("retained-job");
-          entered.resolve();
-          await gate.promise;
-        } else {
-          retrievals.push(token);
-        }
-        return audio.synthesize(request);
-      },
-    }),
-  });
-  let closed = false;
-  let reopened: ReturnType<typeof openDb> | undefined;
-  try {
-    const base = current(h.deps, h.projectId);
-    await save(h.deps, h.projectId, {
-      config: {
-        ...base.revision.config,
-        sources: { ...base.revision.config.sources, audio: "generate" },
-        audio: { provider: "openai-tts", model: "tts", voice: "first" },
-        provided: { article: "abcd" },
-      },
-      content: base.revision.content,
+it.each(["advanced", "direct"] as const)(
+  "retrieves a persisted narration job after reopening without another submission or model readiness (%s)",
+  async (mode) => {
+    const gate = deferred<void>();
+    const entered = deferred<void>();
+    const audio = fakeTts({ bytesFor: () => [tone()] });
+    let submissions = 0;
+    const retrievals: string[] = [];
+    const h = await composedFixture({
+      tts: () => ({
+        ...audio,
+        synthesize: async (request) => {
+          const token = request.continuation?.read();
+          if (token === undefined) {
+            submissions += 1;
+            request.continuation?.write("retained-job");
+            entered.resolve();
+            await gate.promise;
+          } else {
+            retrievals.push(token);
+          }
+          return audio.synthesize(request);
+        },
+      }),
     });
-    const preview = await previewRebuild(h.deps, {
-      projectId: h.projectId,
-      baseRevisionId: current(h.deps, h.projectId).revision.id,
-      request: { kind: "selected", workKeys: ["export:wav"] },
-    });
-    if (!preview.ok) throw new Error(JSON.stringify(preview));
-    const part = preview.value.work.find((row) => row.stage === "audio" && row.kind === "provider");
-    if (part === undefined) throw new Error("Missing narration request");
-    await start(h.deps, h.projectId, [part.key]);
-    await entered.promise;
-    expect(
-      h.deps.db
-        .prepare("SELECT continuation FROM revision_work_pieces WHERE continuation IS NOT NULL")
-        .get()?.continuation,
-    ).toBe("retained-job");
-    const snapshot = join(h.deps.paths.dataDir, "known-job.sqlite");
-    h.deps.db.prepare("VACUUM INTO ?").run(snapshot);
-    gate.resolve();
-    await h.runner.settled();
-    h.deps.db.close();
-    closed = true;
-    reopened = openDb(snapshot);
-    recoverWork(reopened);
-    const next = h.compose({ ...h.deps, db: reopened });
+    let closed = false;
+    let reopened: ReturnType<typeof openDb> | undefined;
     try {
-      const catalogue = next.deps.catalogue.read();
-      next.setCatalogue({
-        ...catalogue,
-        tts: catalogue.tts.map((model) => ({ ...model, enabled: false })),
+      const base = current(h.deps, h.projectId);
+      await save(h.deps, h.projectId, {
+        config: {
+          ...base.revision.config,
+          sources: { ...base.revision.config.sources, audio: "generate" },
+          audio: { provider: "openai-tts", model: "tts", voice: "first" },
+          provided: { article: "abcd" },
+        },
+        content: base.revision.content,
       });
-      next.runner.tick(h.projectId);
-      await next.runner.settled();
-      expect(retrievals).toEqual([]);
-      const resumed = await start(
-        {
+      const preview = await previewRebuild(h.deps, {
+        projectId: h.projectId,
+        baseRevisionId: current(h.deps, h.projectId).revision.id,
+        request: { kind: "selected", workKeys: ["export:wav"] },
+      });
+      if (!preview.ok) throw new Error(JSON.stringify(preview));
+      const part = preview.value.work.find(
+        (row) => row.stage === "audio" && row.kind === "provider",
+      );
+      if (part === undefined) throw new Error("Missing narration request");
+      await start(h.deps, h.projectId, [part.key]);
+      await entered.promise;
+      expect(
+        h.deps.db
+          .prepare("SELECT continuation FROM revision_work_pieces WHERE continuation IS NOT NULL")
+          .get()?.continuation,
+      ).toBe("retained-job");
+      const snapshot = join(h.deps.paths.dataDir, "known-job.sqlite");
+      h.deps.db.prepare("VACUUM INTO ?").run(snapshot);
+      gate.resolve();
+      await h.runner.settled();
+      h.deps.db.close();
+      closed = true;
+      reopened = openDb(snapshot);
+      recoverWork(reopened);
+      const next = h.compose({ ...h.deps, db: reopened });
+      try {
+        const catalogue = next.deps.catalogue.read();
+        next.setCatalogue({
+          ...catalogue,
+          tts: catalogue.tts.map((model) => ({ ...model, enabled: false })),
+        });
+        next.runner.tick(h.projectId);
+        await next.runner.settled();
+        expect(retrievals).toEqual([]);
+        const retrievalDeps = {
           ...next.deps,
           providers: async () => {
             throw new Error("Retrieval needs no readiness probe");
           },
-        },
-        h.projectId,
-        [part.key],
-      );
-      expect(resumed.preview.costs.unknown).toBe(0);
-      expect(resumed.preview.warnings).toEqual([]);
-      await next.runner.settled();
-      expect(submissions).toBe(1);
-      expect(retrievals).toEqual(["retained-job"]);
-      expect(
-        current(next.deps, h.projectId).pieces.find((row) => row.key === part.key && row.selected)
-          ?.available,
-      ).toBe(true);
-      expect(reopened.prepare("SELECT outcome FROM attempts ORDER BY rowid").all()).toEqual([
-        { outcome: "ok" },
-      ]);
+        };
+        if (mode === "advanced") {
+          const resumed = await start(retrievalDeps, h.projectId, [part.key]);
+          expect(resumed.preview.costs.unknown).toBe(0);
+          expect(resumed.preview.warnings).toEqual([]);
+        } else {
+          const input = {
+            baseRevisionId: current(next.deps, h.projectId).revision.id,
+            idempotencyKey: randomUUID(),
+            action: { kind: "retry" as const, stage: "audio" as const },
+          };
+          const resumed = await recoverProject(retrievalDeps, h.projectId, input);
+          expect(resumed.ok).toBe(true);
+          expect(await recoverProject(retrievalDeps, h.projectId, input)).toEqual(resumed);
+        }
+        await next.runner.settled();
+        expect(submissions).toBe(1);
+        expect(retrievals).toEqual(["retained-job"]);
+        expect(
+          current(next.deps, h.projectId).pieces.find((row) => row.key === part.key && row.selected)
+            ?.available,
+        ).toBe(true);
+        expect(reopened.prepare("SELECT outcome FROM attempts ORDER BY rowid").all()).toEqual([
+          { outcome: "ok" },
+        ]);
+      } finally {
+        await next.runner.settled();
+        next.audioPreviews.close();
+      }
     } finally {
-      await next.runner.settled();
-      next.audioPreviews.close();
+      gate.resolve();
+      h.audioPreviews.close();
+      reopened?.close();
+      if (closed) rmSync(h.deps.paths.dataDir, { recursive: true, force: true });
+      else {
+        await h.runner.settled();
+        h.close();
+      }
     }
-  } finally {
-    gate.resolve();
-    h.audioPreviews.close();
-    reopened?.close();
-    if (closed) rmSync(h.deps.paths.dataDir, { recursive: true, force: true });
-    else {
-      await h.runner.settled();
-      h.close();
-    }
-  }
-});
+  },
+);
