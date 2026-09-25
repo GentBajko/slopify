@@ -17,6 +17,9 @@ export function recipeProviderChoice(
   const input = recipe.input;
   if (input.kind === "llm" || input.kind === "tts" || input.kind === "image")
     return { ...input, family: input.kind };
+  // The YouTube description's request is built when it runs, from the project's LLM row.
+  if (input.kind === "local" && input.operation === "youtube-description-v1")
+    return config.llm === undefined ? undefined : { ...config.llm, family: "llm" };
   if (input.kind !== "deferred") return undefined;
   const family =
     input.operation === "narration-preparation"

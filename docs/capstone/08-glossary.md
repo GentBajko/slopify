@@ -18,6 +18,7 @@ paths_covered:
 |---|---|---|
 | Run, project | One Play submission represented by a project record and its stages and outputs. `packages/app/src/slices/admission/model.ts:54-68` | `slices/admission`, `projects` table |
 | Stage | A pipeline unit such as research, article, audio, images, thumbnail, video, or document with a lifecycle state. `packages/app/src/kernel/pipeline.ts:10-36` | `stages`, `kernel/runner` |
+| YouTube description | The Video stage's optional step: after subtitle timing, the text model writes a summary, a YouTube chapter list at the narration's real times, hashtags last, and a separate comma-separated tags list (`youtube_description`, `youtube_tags`). `packages/app/src/slices/youtube/answer.ts` | `slices/youtube`, `youtube:description` |
 | Document | The optional seventh stage: the article laid out locally as a styled PDF (`document_pdf`) in the DiceMaster or Plain theme, with the thumbnail as its cover. `packages/app/src/slices/document/render.ts` | `slices/document`, `document:pdf` |
 | Piece | A resumable sub-unit of work, such as an audio chunk or an individual image. `packages/app/src/kernel/runner/attempt.ts:31-38` `packages/app/src/slices/narration/plan.ts:1-12` | `stage_pieces` |
 | Attempt | One provider call under the retry and timeout policy; the policy allows at most four attempts. `packages/app/src/kernel/runner/attempt.ts:8-19` | `attempts`, `kernel/runner/attempt.ts` |

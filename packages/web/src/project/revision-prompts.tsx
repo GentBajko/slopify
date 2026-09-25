@@ -1,4 +1,8 @@
-import { usesNarrationPreparation, valueMax } from "@app/slices/admission/rules.js";
+import {
+  usesNarrationPreparation,
+  usesYoutubeDescription,
+  valueMax,
+} from "@app/slices/admission/rules.js";
 import { detectSlots } from "@app/slices/admission/substitute.js";
 import type { RevisionEdit } from "@app/slices/revisions/model.js";
 import { useId } from "react";
@@ -25,6 +29,9 @@ export function RevisionPrompts({
       ...Object.keys(edit.content.promptTemplates),
       ...(edit.config.sources.article === "generate" ? ["article"] : []),
       ...(usesNarrationPreparation(edit.config) ? ["narration"] : []),
+      ...(usesYoutubeDescription(edit.config) && edit.config.descriptionPrompt
+        ? ["description"]
+        : []),
       ...(["from_prompt", "prompt_by_llm"].includes(edit.config.sources.thumbnail)
         ? ["thumbnailPrompt"]
         : []),
@@ -55,9 +62,11 @@ export function RevisionPrompts({
                     ? "article"
                     : key === "narration"
                       ? "narration"
-                      : key === "thumbnailPrompt"
-                        ? "thumbnail"
-                        : "image"),
+                      : key === "description"
+                        ? "description"
+                        : key === "thumbnailPrompt"
+                          ? "thumbnail"
+                          : "image"),
               );
         return (
           <fieldset key={key} className="min-w-0 space-y-3 rounded-control border border-line p-3">
@@ -99,9 +108,11 @@ export function RevisionPrompts({
                         ? { ...next.config, articlePrompt: picked.name }
                         : key === "narration"
                           ? { ...next.config, narrationPrompt: picked.name }
-                          : key === "thumbnailPrompt"
-                            ? { ...next.config, thumbnailPrompt: picked.name }
-                            : next.config;
+                          : key === "description"
+                            ? { ...next.config, descriptionPrompt: picked.name }
+                            : key === "thumbnailPrompt"
+                              ? { ...next.config, thumbnailPrompt: picked.name }
+                              : next.config;
                   onChange({ ...next, config });
                 }}
               >
@@ -163,6 +174,7 @@ export function RevisionPrompts({
 function promptLabel(key: string): string {
   if (key === "article") return "Article";
   if (key === "narration") return "Narration Preparation";
+  if (key === "description") return "YouTube description";
   if (key === "thumbnailPrompt") return "Thumbnail";
   if (key === "intro") return "Intro";
   if (key === "outro") return "Outro";

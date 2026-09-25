@@ -30,6 +30,8 @@ export const outputRoles = [
   "subtitle_font",
   "instructions",
   "document_pdf",
+  "youtube_description",
+  "youtube_tags",
 ] as const;
 export type OutputRole = (typeof outputRoles)[number];
 

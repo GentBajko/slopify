@@ -154,6 +154,12 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
   add("Narration voice", before.audio?.voice, after.audio?.voice);
   add("Narration Preparation", before.narrationPrompt, after.narrationPrompt);
   add("Narration chunking", before.chunking, after.chunking);
+  add(
+    "YouTube description",
+    before.youtubeDescription === true ? "On" : "Off",
+    after.youtubeDescription === true ? "On" : "Off",
+  );
+  add("Description prompt", before.descriptionPrompt, after.descriptionPrompt);
   add("Silence gap (seconds)", before.silenceGapSeconds, after.silenceGapSeconds);
   add("Silence at start and end (seconds)", before.edgeSilenceSeconds, after.edgeSilenceSeconds);
   add("Seconds per image", before.imageSeconds, after.imageSeconds);

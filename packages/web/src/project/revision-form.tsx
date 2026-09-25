@@ -32,6 +32,7 @@ import { RevisionNarration } from "./revision-narration.js";
 import { RevisionPrompts } from "./revision-prompts.js";
 import { RevisionProviders } from "./revision-providers.js";
 import type { EditorProps, EditSection } from "./revision-workspace.js";
+import { RevisionYoutube } from "./revision-youtube.js";
 export function RevisionForm(
   props: EditorProps & { readonly renderContent?: (props: EditorProps) => ReactNode },
 ): import("react").ReactElement {
@@ -498,6 +499,13 @@ export function RevisionForm(
           />
         </section>
         <section aria-label="Prompts" hidden={current !== "prompts"} className={panel("prompts")}>
+          <RevisionYoutube
+            edit={edit}
+            view={view}
+            prompts={prompts.data?.prompts ?? []}
+            problem={problem}
+            onChange={onChange}
+          />
           <RevisionPrompts
             edit={edit}
             prompts={prompts.data?.prompts ?? []}

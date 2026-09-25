@@ -1,4 +1,5 @@
 import type { Prompt, PromptDraft } from "@app/slices/library/model.js";
+import { defaultDescriptionPrompt } from "@app/slices/youtube/model.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import userEvent from "@testing-library/user-event";
@@ -51,6 +52,25 @@ it("offers the narration starter without saving or silently replacing a draft", 
   );
   expect((screen.getByLabelText("Body") as HTMLTextAreaElement).value).toBe(narrationStarter);
   expect(spy.sent).toEqual([]);
+});
+
+it("starts a YouTube Description prompt from the built-in wording", async () => {
+  const user = userEvent.setup();
+  renderRouted(
+    <PromptEditorRoute
+      promptId={undefined}
+      kind="description"
+      from={undefined}
+      onLeave={vi.fn()}
+    />,
+    deps([]),
+  );
+  await screen.findByLabelText("Name");
+  expect(screen.queryByRole("button", { name: "Use Documentary Starter" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Use Built-in Starter" }));
+  expect((screen.getByLabelText("Body") as HTMLTextAreaElement).value).toBe(
+    defaultDescriptionPrompt,
+  );
 });
 
 const dossier: Prompt = {

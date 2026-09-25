@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { expect, it, vi } from "vitest";
 import type { CatalogueStore } from "../../catalog/store.js";
 import { stageKinds } from "../../kernel/pipeline.js";
+import { sourceOf } from "../../slices/admission/model.js";
 import { exportCatalogue } from "../../slices/rebuild/runtime-export.fake.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
 import { revisionFixture } from "../../slices/revisions/revision.fake.js";
@@ -9,7 +10,6 @@ import { getRevisionView } from "../../slices/revisions/view.js";
 import { outputPath } from "../../slices/storage/layout.js";
 import { createHub } from "../events/hub.js";
 import { createApp } from "./app.js";
-import { sourceOf } from "../../slices/admission/model.js";
 
 it("prepares retained legacy history without changing outputs or dispatching work", async () => {
   const h = revisionFixture();

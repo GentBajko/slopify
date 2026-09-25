@@ -4,8 +4,9 @@ import type { StageState } from "../../kernel/pipeline.js";
 import { stageKinds, stageStates } from "../../kernel/pipeline.js";
 import type { RunnerStage } from "../../kernel/runner/index.js";
 import type { WorkRef } from "../../kernel/runner/work.js";
-import type { RevisionDeps } from "../revisions/model.js";
 import { sourceOf } from "../admission/model.js";
+import { usesYoutubeDescription } from "../admission/rules.js";
+import type { RevisionDeps } from "../revisions/model.js";
 import { currentRevisionId } from "../revisions/repo.js";
 import { getRevisionView } from "../revisions/view.js";
 import { settleScheduleRunsForProject } from "../schedules/repo.js";
@@ -41,7 +42,12 @@ export function executionStages(deps: RevisionDeps, projectId: string): readonly
     .filter((row) =>
       workPieces(deps.db, String(row.id)).some((piece) => {
         if (!keys.has(piece.key)) return false;
-        if (piece.key === "subtitles:timing" && view?.revision.content.subtitleCues !== undefined)
+        // Hand-edited captions need no timing, unless the YouTube description reads it.
+        if (
+          piece.key === "subtitles:timing" &&
+          view?.revision.content.subtitleCues !== undefined &&
+          !usesYoutubeDescription(view.revision.config)
+        )
           return false;
         if (piece.input.kind === "deferred" && piece.key.endsWith(":future")) {
           const cacheKey = String(row.id);

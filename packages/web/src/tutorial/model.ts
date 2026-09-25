@@ -1,8 +1,10 @@
+import type { PromptKind } from "@app/slices/library/model.js";
+
 export type TutorialEvent =
   | {
       readonly type: "prompt-saved";
       readonly id: string;
-      readonly kind: "article" | "image" | "thumbnail" | "narration";
+      readonly kind: PromptKind;
     }
   | { readonly type: "project-created"; readonly id: string };
 

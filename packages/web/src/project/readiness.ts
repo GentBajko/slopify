@@ -1,6 +1,6 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import type { RunConfig } from "@app/slices/admission/model.js";
-import { usesNarrationPreparation } from "@app/slices/admission/rules.js";
+import { usesNarrationPreparation, usesYoutubeDescription } from "@app/slices/admission/rules.js";
 import type { ProviderStatus } from "@app/slices/settings/model.js";
 import { providerUnavailableLabel } from "@/lib/provider-status";
 
@@ -14,7 +14,7 @@ export interface Unready {
 }
 
 // Which provider a stage's work goes to. The video and document stages render locally, so
-// they have none.
+// they have none of their own.
 export function providerFor(kind: StageKind, config: RunConfig): string | undefined {
   switch (kind) {
     case "research":
@@ -39,6 +39,11 @@ export function unreadyFor(
   if (kind === "audio" && config.narrationPrompt && usesNarrationPreparation(config)) {
     const preparation = unreadyFor("article", config, providers);
     if (preparation !== undefined) return preparation;
+  }
+  // The render is local, but the YouTube description in the same stage asks the text model.
+  if (kind === "video" && usesYoutubeDescription(config)) {
+    const description = unreadyFor("article", config, providers);
+    if (description !== undefined) return description;
   }
   const id = providerFor(kind, config);
   if (id === undefined || id === "") {

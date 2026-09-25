@@ -152,3 +152,46 @@ it("switches the Document on, picks its theme and saves both into the draft", as
     });
   });
 });
+
+it("switches the YouTube description on, picks its prompt and saves both into the draft", async () => {
+  const { requests } = await mountPlay();
+  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+  const on = screen.getByRole<HTMLInputElement>("checkbox", { name: /YouTube description/ });
+  const prompt = screen.getByRole<HTMLSelectElement>("combobox", { name: "Description prompt" });
+  expect(on.checked).toBe(false);
+  expect(prompt.disabled).toBe(true);
+  expect(prompt.value).toBe("");
+  expect(prompt.selectedOptions[0]?.textContent).toBe("Built-in");
+  expect(
+    screen.getAllByRole("button", { name: /^YouTube description: Off/ }).length,
+  ).toBeGreaterThan(0);
+  await userEvent.click(on);
+  expect(prompt.disabled).toBe(false);
+  await userEvent.selectOptions(prompt, "Hooky");
+  expect(
+    screen.getAllByRole("button", { name: /^YouTube description: Ready/ }).length,
+  ).toBeGreaterThan(0);
+  await waitFor(async () => {
+    const saves = requests.filter(
+      (request) =>
+        ["PUT", "POST"].includes(request.method) &&
+        /\/api\/drafts(?:\/[a-f0-9-]+)?$/.test(request.url),
+    );
+    expect(await saves.at(-1)?.clone().json()).toMatchObject({
+      document: { form: { youtubeDescription: true, descriptionPrompt: "Hooky" } },
+    });
+  });
+});
+
+it("keeps the YouTube description switch in place but disabled without narration", async () => {
+  await mountPlay();
+  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+  await userEvent.click(
+    within(screen.getByRole("radiogroup", { name: "audio source" })).getByRole("radio", {
+      name: "Off",
+    }),
+  );
+  const on = screen.getByRole<HTMLInputElement>("checkbox", { name: /YouTube description/ });
+  expect(on.disabled).toBe(true);
+  expect(screen.getByText("Needs narration.")).not.toBeNull();
+});

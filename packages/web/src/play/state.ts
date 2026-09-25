@@ -16,6 +16,7 @@ import {
   defaultImageSeconds,
   defaultZoomPercent,
   usesNarrationPreparation,
+  usesYoutubeDescription,
 } from "@app/slices/admission/rules.js";
 import { type DocumentSettings, defaultDocumentTheme } from "@app/slices/document/model.js";
 import type { Entry } from "@app/slices/library/model.js";
@@ -54,6 +55,9 @@ export interface LegacyPlayFormState {
   readonly images: ProviderChoice;
   readonly articlePrompt: string;
   readonly narrationPrompt?: string | undefined;
+  // The Video stage's YouTube description step and its Description prompt ("" is built-in).
+  readonly youtubeDescription?: boolean | undefined;
+  readonly descriptionPrompt?: string | undefined;
   // The ticked image prompts, in tick order, each with its Number.
   readonly imagePrompts: readonly ImagePromptChoice[];
   readonly thumbnailPrompt: string;
@@ -116,6 +120,7 @@ export function sourceOptions(
 export function needsLlm(form: PlayFormState, entries: readonly Entry[]): boolean {
   return (
     usesNarrationPreparation(form) ||
+    usesYoutubeDescription(form) ||
     form.sources.article === "generate" ||
     form.sources.thumbnail === "prompt_by_llm" ||
     (form.sources.audio === "generate" &&
@@ -169,6 +174,14 @@ export function draftOf(input: DraftInput): RunDraft {
     images: form.images,
     articlePrompt: form.articlePrompt,
     ...(form.narrationPrompt === undefined ? {} : { narrationPrompt: form.narrationPrompt }),
+    // As `slices/play-drafts/convert.ts` sends it: timed from the narration, so nothing with
+    // narration Off.
+    ...(form.sources.audio !== "off" && form.youtubeDescription === true
+      ? {
+          youtubeDescription: true,
+          ...(form.descriptionPrompt?.trim() ? { descriptionPrompt: form.descriptionPrompt } : {}),
+        }
+      : {}),
     imagePrompts: form.imagePrompts,
     thumbnailPrompt: form.thumbnailPrompt,
     ...pick(entryChoice(input, "intro"), (intro) => ({ intro })),

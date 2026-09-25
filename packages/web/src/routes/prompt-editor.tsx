@@ -1,4 +1,5 @@
 import type { PromptDraft, PromptKind } from "@app/slices/library/model.js";
+import { defaultDescriptionPrompt } from "@app/slices/youtube/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useId, useState } from "react";
@@ -192,16 +193,18 @@ export function PromptEditorRoute({
                 body up or down. */}
             <div className="mb-[5px] flex min-h-8 items-end justify-between gap-3">
               <Label htmlFor={bodyId}>Body</Label>
-              {draft.kind === "narration" ? (
+              {starterOf(draft.kind) ? (
                 <Button
                   type="button"
                   variant="ghost"
                   onClick={() => {
+                    const starter = starterOf(draft.kind);
+                    if (starter === undefined) return;
                     if (draft.body.trim() !== "") setReplacingBody(true);
-                    else edit({ ...draft, body: narrationStarter }, "body");
+                    else edit({ ...draft, body: starter.body }, "body");
                   }}
                 >
-                  Use Documentary Starter
+                  {starterOf(draft.kind)?.label}
                 </Button>
               ) : null}
             </div>
@@ -263,11 +266,12 @@ export function PromptEditorRoute({
       <ConfirmDialog
         open={replacingBody}
         title="Replace this prompt body?"
-        consequence="The documentary starter replaces the text in this editor. Nothing is saved until you choose Save."
+        consequence="The starter replaces the text in this editor. Nothing is saved until you choose Save."
         verb="Use starter"
         pending={false}
         onConfirm={() => {
-          edit({ ...draft, body: narrationStarter }, "body");
+          const starter = starterOf(draft.kind);
+          if (starter !== undefined) edit({ ...draft, body: starter.body }, "body");
           setReplacingBody(false);
         }}
         onCancel={() => setReplacingBody(false)}
@@ -289,6 +293,17 @@ export function PromptEditorRoute({
       />
     </div>
   );
+}
+
+// The two kinds with a starting text: the documentary delivery cues, and the wording the
+// YouTube description uses when a project picks no prompt.
+function starterOf(
+  kind: PromptKind,
+): { readonly label: string; readonly body: string } | undefined {
+  if (kind === "narration") return { label: "Use Documentary Starter", body: narrationStarter };
+  if (kind === "description")
+    return { label: "Use Built-in Starter", body: defaultDescriptionPrompt };
+  return undefined;
 }
 
 function Notice({ kind, children }: { readonly kind: PromptKind; readonly children: string }) {

@@ -70,6 +70,22 @@ describe("pickTemplates", () => {
     ).toBe("narrationPrompt");
     deps.db.close();
   });
+  it("freezes the picked Description prompt only while the YouTube description is on", () => {
+    const deps = library();
+    createPrompt(deps, { kind: "description", name: "Hooky", body: "Hook {{Topic}} fans." });
+    const selected = draft({ youtubeDescription: true, descriptionPrompt: "Hooky" });
+    const picked = pickTemplates(deps.db, selected);
+    expect(picked.requiredSlots).toEqual(["Topic"]);
+    expect(renderPicked(picked, { Topic: "rope" })).toEqual({ description: "Hook rope fans." });
+    expect(pickTemplates(deps.db, { ...selected, youtubeDescription: false }).bodies).toEqual([]);
+    // None picked is the built-in prompt: nothing to freeze and nothing missing.
+    const builtIn = pickTemplates(deps.db, { ...selected, descriptionPrompt: undefined });
+    expect([builtIn.bodies, builtIn.missing]).toEqual([[], []]);
+    expect(
+      pickTemplates(deps.db, { ...selected, descriptionPrompt: "Deleted" }).missing[0]?.field,
+    ).toBe("descriptionPrompt");
+    deps.db.close();
+  });
   it.each(["off", "provide"] as const)(
     "ignores unused entries with Audio %s and prompts on disabled stages",
     (audio) => {

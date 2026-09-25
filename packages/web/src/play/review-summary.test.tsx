@@ -276,3 +276,26 @@ it.each([
   const label = within(outputs).getByText("Document");
   expect(label.nextElementSibling?.textContent).toBe(expected);
 });
+
+it.each([
+  ["a draft saved without the YouTube description", generated, "Off"],
+  [
+    "the built-in prompt",
+    { ...generated, form: { ...generated.form, youtubeDescription: true } },
+    "Built-in prompt · One LLM call after subtitle timing",
+  ],
+  [
+    "a picked prompt",
+    {
+      ...generated,
+      form: { ...generated.form, youtubeDescription: true, descriptionPrompt: "Hooky" },
+    },
+    "Hooky prompt · One LLM call after subtitle timing",
+  ],
+])("names the YouTube description for %s", async (_name, document, expected) => {
+  const harness = reviewHarness();
+  await harness.prepare(document);
+  const outputs = screen.getByRole("region", { name: "Outputs summary" });
+  const label = within(outputs).getByText("YouTube description");
+  expect(label.nextElementSibling?.textContent).toBe(expected);
+});

@@ -34,12 +34,12 @@ import { transact } from "./kernel/db/tx.js";
 import { causedBy } from "./kernel/errors.js";
 import type { Ids } from "./kernel/ids.js";
 import { ulidIds } from "./kernel/ids.js";
-import { stageKinds } from "./kernel/pipeline.js";
 import { acquireInstanceLock } from "./kernel/lock.js";
 import type { Log } from "./kernel/log.js";
 import { openLog } from "./kernel/log.js";
 import type { Paths } from "./kernel/paths.js";
 import { ensureDirs, layout, subtitleModelDir } from "./kernel/paths.js";
+import { stageKinds } from "./kernel/pipeline.js";
 import type { Registry } from "./kernel/ports/registry.js";
 import { sqliteAttempts } from "./kernel/runner/attempt-repo.js";
 import {

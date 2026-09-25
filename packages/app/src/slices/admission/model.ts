@@ -107,6 +107,11 @@ export interface RunDraft {
   readonly subtitles?: SubtitleConfig | undefined;
   // The PDF's look. Absent on configs saved before the Document stage.
   readonly document?: DocumentSettings | undefined;
+  // The Video stage's optional YouTube description step (`slices/youtube`). Absent reads as
+  // off, which is what every project saved before it was.
+  readonly youtubeDescription?: boolean | undefined;
+  // The Description prompt from the library; absent or blank uses the built-in one.
+  readonly descriptionPrompt?: string | undefined;
 }
 
 // The draft as accepted, coerced and trimmed. This is what the project's `config` column

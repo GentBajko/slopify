@@ -3,6 +3,8 @@ import {
   type FieldError,
   narrationPreparationFields,
   usesNarrationPreparation,
+  usesYoutubeDescription,
+  youtubeDescriptionFields,
 } from "../admission/rules.js";
 import { detectSlots, render } from "../admission/substitute.js";
 import type { RevisionContent } from "../revisions/model.js";
@@ -11,12 +13,16 @@ export function validateRecipeInputs(
   config: RunConfig,
   content: RevisionContent,
 ): readonly FieldError[] {
-  const fields: FieldError[] = [...narrationPreparationFields(config)];
+  const fields: FieldError[] = [
+    ...narrationPreparationFields(config),
+    ...youtubeDescriptionFields(config),
+  ];
   const llm =
     (config.sources.research === "generate" && config.sources.article !== "provide") ||
     (config.sources.article === "generate" && !content.articleEdited) ||
     config.sources.thumbnail === "prompt_by_llm" ||
     usesNarrationPreparation(config) ||
+    usesYoutubeDescription(config) ||
     (config.sources.audio === "generate" &&
       (config.intro?.mode === "llm" || config.outro?.mode === "llm"));
   if (llm && (!config.llm?.provider.trim() || !config.llm.model.trim()))
@@ -57,6 +63,17 @@ export function validateRecipeInputs(
       field: "rendered.narration",
       raw: content.promptTemplates.narration ?? null,
       literal: config.rendered.narration,
+    });
+  // Only a picked Description prompt is checked: none picked uses the built-in one.
+  if (
+    usesYoutubeDescription(config) &&
+    config.descriptionPrompt?.trim() &&
+    content.promptTemplates.description != null
+  )
+    prompts.push({
+      field: "rendered.description",
+      raw: content.promptTemplates.description,
+      literal: config.rendered.description,
     });
   if (
     (config.sources.article === "generate" && !content.articleEdited) ||

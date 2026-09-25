@@ -3,13 +3,13 @@ import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import { parseCatalogue } from "../../catalog/store.js";
 import { stageKinds } from "../../kernel/pipeline.js";
+import { sourceOf } from "../admission/model.js";
 import { ensureBaseline } from "../revisions/adopt.js";
 import { revisionFixture } from "../revisions/revision.fake.js";
 import { planPreview } from "./preview-plan.js";
 import { createRebuildDeps } from "./service.fake.js";
 import { previewRebuild, startRebuild } from "./service.js";
 import { localReadiness } from "./service-readiness.js";
-import { sourceOf } from "../admission/model.js";
 
 const catalogue = parseCatalogue(
   readFileSync(new URL("../../assets/models.yaml", import.meta.url), "utf8"),

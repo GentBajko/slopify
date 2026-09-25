@@ -336,3 +336,23 @@ it("carries the timing settings as numbers and ignores ones the run does not use
     h.close();
   }
 });
+it("carries the YouTube description switch and prompt only with narration on", () => {
+  const h = draftFixture();
+  try {
+    const on = { ...h.document.form, youtubeDescription: true, descriptionPrompt: "Hooky" };
+    const result = convert({ ...h.document, form: on });
+    expect(result).toMatchObject({
+      ok: true,
+      draft: { youtubeDescription: true, descriptionPrompt: "Hooky" },
+    });
+    const builtIn = convert({ ...h.document, form: { ...on, descriptionPrompt: " " } });
+    expect(builtIn.ok && builtIn.draft.descriptionPrompt).toBe(undefined);
+    const silent = convert({
+      ...h.document,
+      form: { ...on, sources: { ...on.sources, audio: "off" as const } },
+    });
+    expect(silent.ok && silent.draft.youtubeDescription).toBe(undefined);
+  } finally {
+    h.close();
+  }
+});

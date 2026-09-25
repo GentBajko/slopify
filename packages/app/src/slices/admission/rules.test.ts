@@ -4,7 +4,12 @@ import { stageKinds } from "../../kernel/pipeline.js";
 import type { StagedFile } from "../storage/model.js";
 import type { RunDraft, StageSource, StageSources } from "./model.js";
 import { stageSources } from "./model.js";
-import { admit, allowedSources, usesNarrationPreparation } from "./rules.js";
+import {
+  admit,
+  allowedSources,
+  usesNarrationPreparation,
+  usesYoutubeDescription,
+} from "./rules.js";
 
 function staged(
   id: string,
@@ -69,6 +74,26 @@ describe("narration preparation admission", () => {
     expect(fields(flash)).toContain("narrationPrompt");
     expect(fields({ ...flash, narrationPrompt: "" })).toEqual([]);
     expect(usesNarrationPreparation({ ...flash, sources: sources({ audio: "off" }) })).toBe(false);
+  });
+});
+
+describe("YouTube description admission", () => {
+  const draft = (): RunDraft =>
+    provided({
+      sources: sources({ audio: "provide", images: "off", video: "off" }),
+      llm: { provider: "codex", model: "model" },
+      youtubeDescription: true,
+    });
+  it("needs the shared LLM, with or without a picked prompt", () => {
+    expect(fields(draft())).toEqual([]);
+    expect(fields({ ...draft(), llm: undefined })).toContain("llm");
+    expect(fields({ ...draft(), youtubeDescription: false, llm: undefined })).toEqual([]);
+  });
+  it("needs narration to time the chapters from", () => {
+    const silent = { ...draft(), sources: sources({ audio: "off", images: "off", video: "off" }) };
+    expect(fields(silent)).toEqual(["youtubeDescription"]);
+    expect(usesYoutubeDescription(silent)).toBe(false);
+    expect(fields({ ...silent, youtubeDescription: undefined })).toEqual([]);
   });
 });
 

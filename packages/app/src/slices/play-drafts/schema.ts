@@ -41,7 +41,11 @@ export const playDraftFormSchema = z
       .strict()
       .readonly(),
     // Absent until the theme is first chosen: the default theme.
-    document: z.object({ theme: z.enum(documentThemes) }).strict().readonly().optional(),
+    document: z
+      .object({ theme: z.enum(documentThemes) })
+      .strict()
+      .readonly()
+      .optional(),
     llm: provider.readonly(),
     audio: provider
       .extend({ voice: text, usePronunciationGlossary: z.boolean().optional() })
@@ -49,6 +53,9 @@ export const playDraftFormSchema = z
     images: provider.readonly(),
     articlePrompt: text,
     narrationPrompt: text.optional(),
+    // Absent on drafts and templates saved before the YouTube description: off, built-in prompt.
+    youtubeDescription: z.boolean().optional(),
+    descriptionPrompt: text.optional(),
     imagePrompts: z.array(z.object({ name: text, number: text }).strict().readonly()).readonly(),
     thumbnailPrompt: text,
     intro: text,
@@ -209,9 +216,7 @@ export const playReviewSchema = z
             stage: checkpointStageSchema,
             fingerprint: text,
             workKeys: z.array(text).readonly(),
-            dependents: z
-              .array(z.enum(stageKinds))
-              .readonly(),
+            dependents: z.array(z.enum(stageKinds)).readonly(),
           })
           .strict()
           .readonly(),

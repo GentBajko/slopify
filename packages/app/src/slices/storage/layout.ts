@@ -70,6 +70,10 @@ export function outputFileName(
       return "video.mp4";
     case "document_pdf":
       return "document.pdf";
+    case "youtube_description":
+      return "description.txt";
+    case "youtube_tags":
+      return "tags.txt";
     case "audio_body":
       return `audio-body${extension}`;
     case "audio_export":

@@ -126,6 +126,7 @@ describe("migrate", () => {
       { version: 12, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 13, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 14, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 15, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -135,7 +136,7 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 14 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 15 });
   });
 
   it("refuses a database newer than the app knows", () => {
@@ -144,7 +145,7 @@ describe("migrate", () => {
     db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(42, clock.now().toISOString());
 
     expect(() => migrate(db, clock)).toThrow(
-      "database schema 42 is newer than this app knows (14)",
+      "database schema 42 is newer than this app knows (15)",
     );
   });
 
@@ -282,6 +283,54 @@ describe("migrate", () => {
       db.exec("DELETE FROM projects WHERE id='p1'");
       expect(db.prepare("SELECT count(*) AS n FROM attempts").get()).toEqual({ n: 0 });
       expect(db.prepare("SELECT count(*) AS n FROM revision_work").get()).toEqual({ n: 0 });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("keeps every saved prompt when adding the description kind to a version 14 library", () => {
+    const db = openDb(":memory:");
+    try {
+      const directory = new URL("./migrations/", import.meta.url);
+      for (const file of readdirSync(directory)
+        .filter((name) => name.endsWith(".sql") && Number(name.slice(0, 4)) <= 14)
+        .sort()) {
+        db.exec(readFileSync(new URL(file, directory), "utf8"));
+        db.prepare("INSERT INTO schema_migrations VALUES (?,?)").run(
+          Number(file.slice(0, 4)),
+          clock.now().toISOString(),
+        );
+      }
+      for (const kind of ["article", "image", "thumbnail", "narration"])
+        db.prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)").run(
+          kind,
+          kind,
+          "Saved",
+          "Body {{Topic}}.",
+          '["Topic"]',
+          "original-date",
+        );
+      expect(() =>
+        db
+          .prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)")
+          .run("d0", "description", "D", "B", "[]", "x"),
+      ).toThrow();
+      const before = db.prepare("SELECT * FROM prompts ORDER BY id").all();
+      migrate(db, clock);
+      expect(db.prepare("SELECT * FROM prompts ORDER BY id").all()).toEqual(before);
+      db.prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)").run(
+        "d1",
+        "description",
+        "Saved",
+        "Hook",
+        "[]",
+        "today",
+      );
+      expect(() =>
+        db
+          .prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)")
+          .run("d2", "description", "SAVED", "Other", "[]", "today"),
+      ).toThrow();
     } finally {
       db.close();
     }

@@ -1,11 +1,12 @@
 import { readinessIsUsable } from "@app/kernel/ports/model.js";
 import { sourceOf } from "@app/slices/admission/model.js";
-import { motionStyleLabels } from "@app/slices/admission/rules.js";
+import { motionStyleLabels, usesYoutubeDescription } from "@app/slices/admission/rules.js";
 import type { Field } from "@app/slices/admission/substitute.js";
 import { documentThemeLabels, documentThemeOf } from "@app/slices/document/model.js";
 import type { Entry } from "@app/slices/library/model.js";
 import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import type { ProviderFamily, ProviderStatus, Voice } from "@app/slices/settings/model.js";
+import { defaultDescriptionPromptName } from "@app/slices/youtube/model.js";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
 import { useApp } from "@/app-context";
@@ -55,6 +56,7 @@ function requiredProviders(
   const generatedText =
     form.sources.article === "generate" ||
     form.sources.thumbnail === "prompt_by_llm" ||
+    usesYoutubeDescription(form) ||
     (generatedAudio &&
       (["intro", "outro"] as const).some((kind) =>
         entries.some(
@@ -232,6 +234,7 @@ export function ReviewSummary({
   const generatedText =
     form.sources.article === "generate" ||
     form.sources.thumbnail === "prompt_by_llm" ||
+    usesYoutubeDescription(form) ||
     (generatedAudio &&
       (["intro", "outro"] as const).some((kind) =>
         entries?.entries.some(
@@ -411,6 +414,15 @@ export function ReviewSummary({
                 "Silence at start and end",
                 "edgeSilenceSeconds",
                 form.edgeSilenceSeconds ? `${form.edgeSilenceSeconds} s` : "(not entered)",
+              )
+            : null}
+          {form.sources.audio !== "off"
+            ? row(
+                "YouTube description",
+                "youtubeDescription",
+                form.youtubeDescription === true
+                  ? `${form.descriptionPrompt || defaultDescriptionPromptName} prompt · One LLM call after subtitle timing`
+                  : "Off",
               )
             : null}
           {row(

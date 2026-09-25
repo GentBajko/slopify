@@ -84,6 +84,7 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
   };
   addPrompt("article", config.articlePrompt, "article");
   addPrompt("narration", config.narrationPrompt, "narration");
+  addPrompt("description", config.descriptionPrompt, "description");
   const definitions = revision.content.imageOrder.flatMap((key) => {
     const definition = revision.content.imageDefinitions[key];
     return definition === undefined ? [] : [definition];
@@ -152,6 +153,10 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
       images: config.images ?? { provider: "", model: "" },
       articlePrompt: config.articlePrompt ?? "",
       ...(config.narrationPrompt === undefined ? {} : { narrationPrompt: config.narrationPrompt }),
+      ...(config.youtubeDescription === true ? { youtubeDescription: true } : {}),
+      ...(config.descriptionPrompt === undefined
+        ? {}
+        : { descriptionPrompt: config.descriptionPrompt }),
       imagePrompts,
       thumbnailPrompt: config.thumbnailPrompt ?? "",
       intro: config.intro?.name ?? "",

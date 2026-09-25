@@ -81,6 +81,8 @@ export function playFieldTarget(
             "motionStyle",
             "edgeSilenceSeconds",
             "document",
+            "youtubeDescription",
+            "descriptionPrompt",
           ])
         ? "outputs"
         : "review";

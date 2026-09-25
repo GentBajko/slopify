@@ -79,6 +79,8 @@ export const runDraftSchema = z.object({
   edgeSilenceSeconds: z.number().default(defaultEdgeSilenceSeconds),
   subtitles: subtitleConfigSchema.optional(),
   document: z.object({ theme: z.enum(documentThemes) }).optional(),
+  youtubeDescription: z.boolean().optional(),
+  descriptionPrompt: z.string().optional(),
 });
 
 export const runConfigSchema = runDraftSchema.extend({

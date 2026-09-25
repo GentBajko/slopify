@@ -6,6 +6,7 @@ import {
   numberPerPromptMax,
   titleMax,
   usesNarrationPreparation,
+  usesYoutubeDescription,
 } from "@app/slices/admission/rules.js";
 import type { Field } from "@app/slices/admission/substitute.js";
 import { collectFields, detectSlots } from "@app/slices/admission/substitute.js";
@@ -58,6 +59,8 @@ export function keywordFields(input: AdmissionInput): readonly Field[] {
     push(text, entryBody(input.entries, "intro", form.intro));
     push(text, entryBody(input.entries, "outro", form.outro));
   }
+  if (usesYoutubeDescription(form))
+    push(text, bodyOf(input.prompts, "description", form.descriptionPrompt ?? ""));
 
   if (form.sources.images === "generate") {
     for (const picked of form.imagePrompts) {
@@ -128,6 +131,8 @@ const readingOrder: readonly string[] = [
   "imageSeconds",
   "zoomPercent",
   "motionStyle",
+  "youtubeDescription",
+  "descriptionPrompt",
 ];
 
 export function firstBlocker(form: PlayFormState, result: AdmissionResult): Blocker | undefined {
@@ -208,6 +213,8 @@ function hintOf(form: PlayFormState, error: FieldError): string {
       return "Pick an image provider and model to play";
     case "thumbnailPrompt":
       return "Pick a thumbnail prompt to play";
+    case "youtubeDescription":
+      return "Turn narration on, or the YouTube description off, to play";
     case "provided.research":
       return "Paste the research notes to play";
     case "provided.article":
@@ -274,5 +281,7 @@ export function keywordOrigins(input: AdmissionInput): ReadonlyMap<string, reado
   if (form.sources.audio === "generate")
     for (const kind of ["intro", "outro"] as const)
       add(entryBody(entries, kind, form[kind]), kind === "intro" ? "Intro" : "Outro");
+  if (usesYoutubeDescription(form))
+    add(bodyOf(prompts, "description", form.descriptionPrompt ?? ""), "YouTube description");
   return origins;
 }

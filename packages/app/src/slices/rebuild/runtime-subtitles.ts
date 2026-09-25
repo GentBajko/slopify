@@ -28,7 +28,9 @@ import {
 import { preparedResult, preparedText, publishResult } from "./runtime-publication.js";
 import type { WorkPiece } from "./work-records.js";
 
-const wordsSchema = z.object({
+// The saved `subtitles.json`: every word at its time in the final video. The YouTube
+// description reads it too (`runtime-youtube.ts`).
+export const wordsSchema = z.object({
   key: z.string(),
   words: z.array(
     z.object({
@@ -77,7 +79,7 @@ async function timing(
   const audio = await revisionAudio(deps, context, snapshot.view);
   if (audio.length === 0)
     throw new Error(
-      "Captions need narration audio, but this project has none. Turn captions off in Edit project → Subtitles, or turn narration on, then Retry stage.",
+      "Captions and the YouTube description need narration audio, but this project has none. Turn captions and the YouTube description off in Edit project, or turn narration on, then Retry stage.",
     );
   const alignSubtitles = deps.alignSubtitles;
   if (alignSubtitles === undefined)

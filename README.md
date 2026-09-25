@@ -148,8 +148,8 @@ under `$XDG_DATA_HOME/slopify/host-cli` or `~/.local/share/slopify/host-cli`.
    `~/.slopify/slopify.db` and go to the provider you picked, nowhere else. Usage is the
    last Settings section.
 3. Library holds Prompts, Intros & Outros, Templates and Schedules. Prompts is where the
-   article, image and thumbnail prompts are written once, with `{{keywords}}` where the
-   subject goes.
+   article, image, thumbnail and YouTube description prompts are written once, with
+   `{{keywords}}` where the subject goes.
 4. Play keeps an autosaved setup across Content, Outputs and Style. Pick the prompts, fill
    in the keywords, choose a voice and format, then press Review and start: Review opens
    beside the form with the estimated cost, and nothing runs until you choose Start run.
@@ -173,7 +173,12 @@ under `$XDG_DATA_HOME/slopify/host-cli` or `~/.local/share/slopify/host-cli`.
     links and a Sources page, in the DiceMaster or Plain theme. It is made locally, costs
     nothing, and is marked for a rebuild when you edit the article. Download it, open its
     folder, or use Open PDF on the project page to read it in a browser tab.
-11. The update button in the top bar checks for new releases and installs an update when you
+11. Switch on YouTube description on Play's Export rail (or in Edit project → Prompts) to get
+    a ready-to-paste description and tags with the video: a short summary, chapters at the
+    narration's real times, hashtags at the end, and a tags list within YouTube's limits. It
+    runs right after subtitle timing, beside the render, with the project's text model; copy
+    both from the Video stage or download `description.txt` and `tags.txt`.
+12. The update button in the top bar checks for new releases and installs an update when you
     choose it. Active projects must finish or be paused first.
 
 ## Inworld narration

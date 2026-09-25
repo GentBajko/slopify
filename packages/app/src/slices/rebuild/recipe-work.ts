@@ -256,6 +256,10 @@ function retainedFor(
       pieceIds: [],
     }));
 }
+// ceiling: the timed transcript of a 20-minute narration, about 3,000 words. The real one
+// is only built once the word timing lands.
+const youtubeTranscriptEstimate = 20000;
+
 export function priceRecipe(
   work: RebuildWork,
   value: ResolvedWorkRecipe | undefined,
@@ -300,6 +304,19 @@ export function priceRecipe(
     };
   if (input.kind === "image")
     return { kind: "image", stage: work.key, provider: input.provider, model: input.model };
+  if (input.kind === "local" && input.operation === "youtube-description-v1") {
+    const [, provider, model, , prompt] = Array.isArray(input.values) ? input.values : [];
+    return {
+      kind: "llm",
+      stage: work.key,
+      provider: typeof provider === "string" ? provider : "",
+      model: typeof model === "string" ? model : "",
+      inputCharacters: (typeof prompt === "string" ? prompt.length : 0) + youtubeTranscriptEstimate,
+      outputCharacters: 2400,
+      detail:
+        "The timed transcript is built when the step runs; its length is estimated. Retries are excluded.",
+    };
+  }
   return {
     kind: "tts-estimate",
     stage: work.key,

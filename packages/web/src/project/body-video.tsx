@@ -1,13 +1,15 @@
 import { cn } from "@/lib/utils";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
+import { YoutubeBlock } from "./body-youtube.js";
 import { ConfirmedButton } from "./controls.js";
 import { ActionRow, OutputDownload, StageBody } from "./parts.js";
 import { useOutputMedia } from "./revision-media.js";
 import { duration, percent, preparingSubtitles } from "./summary.js";
 
 // The final stage plays an MP4 or, when Video is Off, the combined narration WAV.
-// The previous file stays playable until ffmpeg successfully replaces it.
+// The previous file stays playable until ffmpeg successfully replaces it. The YouTube
+// description, when the project writes one, sits below the downloads.
 export function VideoBody({ stage, project, outputs, actions, busy, subtitleControls }: BodyProps) {
   const audioExport =
     project.config.sources.video === "off" && project.config.sources.audio !== "off";
@@ -128,6 +130,7 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
           {vtt ? <OutputDownload output={vtt} label="Download .vtt" /> : null}
         </ActionRow>
       ) : null}
+      <YoutubeBlock stage={stage} project={project} outputs={outputs} />
       {subtitleControls ? (
         <details className="mt-2 rounded-control border border-line px-4 py-3">
           <summary className="cursor-pointer text-small font-semibold">

@@ -59,6 +59,7 @@ Use a scenario when changing one of the listed workflows. Article is the only re
 | 24 Project templates | [24-project-templates.md](24-project-templates.md) |
 | 25 Scheduled jobs | [25-scheduled-jobs.md](25-scheduled-jobs.md) |
 | 26 Document (article as a styled PDF) | [26-document.md](26-document.md) |
+| 27 YouTube description (Video stage step) | [27-youtube-description.md](27-youtube-description.md) |
 
 ## Branches
 

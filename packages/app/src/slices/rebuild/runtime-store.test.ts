@@ -5,13 +5,13 @@ import type { Catalogue } from "../../catalog/schema.js";
 import { stageKinds } from "../../kernel/pipeline.js";
 import { createRunner } from "../../kernel/runner/index.js";
 import { claimWork, finishWork, maySubmit } from "../../kernel/runner/work-authority.js";
+import { sourceOf } from "../admission/model.js";
 import { adoptBaseline } from "../revisions/adopt.js";
 import { saveRevision } from "../revisions/mutations.js";
 import { revisionFixture } from "../revisions/revision.fake.js";
 import { admitPendingRevision } from "./legacy-admission.fake.js";
 import { admitInitialRevision } from "./runtime-admission.js";
 import { executionStages, executionStandings, recordWorkProgress } from "./runtime-store.js";
-import { sourceOf } from "../admission/model.js";
 
 const catalogue: Catalogue = {
   schemaVersion: 1,

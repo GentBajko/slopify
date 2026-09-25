@@ -23,6 +23,8 @@ const labels: Readonly<Record<Output["role"], string>> = {
   subtitle_font: "Subtitle font",
   instructions: "Generation instructions",
   document_pdf: "Document (PDF)",
+  youtube_description: "YouTube description",
+  youtube_tags: "YouTube tags",
 };
 export function outputLabel(output: Output): string {
   if ((output.role === "narration_txt" || output.role === "tts_script") && output.meta.segment)

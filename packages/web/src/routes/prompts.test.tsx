@@ -65,6 +65,24 @@ describe("the prompts list", () => {
     expect(screen.queryByText("Oil painting scenes")).toBeNull();
   });
 
+  it("offers YouTube Description as its own kind", async () => {
+    const user = userEvent.setup();
+    const hook: Prompt = {
+      id: "p4",
+      kind: "description",
+      name: "Hooky chapters",
+      body: "Hook {{topic}} fans.",
+      slots: ["topic"],
+      updatedAt: "2026-09-01T10:00:00.000Z",
+    };
+    renderRouted(<Screen />, deps([dossier, hook]));
+    expect(await screen.findByText("Documentary dossier")).not.toBeNull();
+    expect(screen.queryByText("Hooky chapters")).toBeNull();
+    await user.click(screen.getByRole("radio", { name: "YouTube Description" }));
+    expect(await screen.findByText("Hooky chapters")).not.toBeNull();
+    expect(screen.queryByText("Documentary dossier")).toBeNull();
+  });
+
   it("shows every detected slot of a row as a chip", async () => {
     renderRouted(<Screen />, deps([dossier]));
 

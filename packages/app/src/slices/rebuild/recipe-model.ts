@@ -39,6 +39,7 @@ export const localOperations = [
   "concat-narration",
   "narration-files-v1",
   "render-document",
+  "youtube-description-v1",
 ] as const;
 export const deferredOperations = [
   "narration-preparation",

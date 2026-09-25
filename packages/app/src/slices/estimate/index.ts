@@ -2,12 +2,13 @@ import { z } from "zod";
 import type { Catalogue } from "../../catalog/schema.js";
 import type { CatalogueStore } from "../../catalog/store.js";
 import { type RunDraft, sourceOf } from "../admission/model.js";
-import { usesNarrationPreparation } from "../admission/rules.js";
+import { usesNarrationPreparation, usesYoutubeDescription } from "../admission/rules.js";
 import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
 import { chunkNarration, defaultChunking } from "../narration/chunk.js";
 import { normalizeNarrationText } from "../narration/plan.js";
 import { preparationMessages } from "../narration/preparation.js";
+import { defaultDescriptionPrompt } from "../youtube/model.js";
 import { estimateRequests, groupEstimateRows, type PricedRequest } from "./requests.js";
 
 export { estimateRequests, type PricedRequest } from "./requests.js";
@@ -67,7 +68,7 @@ export function estimateRun(
   const generatedArticle = draft.sources.article === "generate";
   const articleChars = generatedArticle ? expectedWords * 6 : (draft.provided.article?.length ?? 0);
   const promptChars = Object.entries(rendered).reduce(
-    (sum, [key, value]) => sum + (key === "narration" ? 0 : value.length),
+    (sum, [key, value]) => sum + (key === "narration" || key === "description" ? 0 : value.length),
     0,
   );
   const local = (stage: string, detail: string): void => {
@@ -186,6 +187,19 @@ export function estimateRun(
   if (draft.sources.thumbnail === "prompt_by_llm")
     text("Thumbnail prompt", promptChars + articleChars, 1200);
   local("Export / subtitles", "Local processing; no API fee.");
+  // The timed transcript is the narration with a time before every passage of about 20 s,
+  // plus the fixed rules of the answer.
+  if (usesYoutubeDescription(draft))
+    text(
+      "YouTube description",
+      (rendered.description?.trim()
+        ? rendered.description.length
+        : defaultDescriptionPrompt.length) +
+        Math.round(articleChars * 1.05) +
+        1500,
+      2400,
+      "One LLM call on the timed transcript.",
+    );
   if (sourceOf(draft.sources, "document") === "generate")
     local("Document", "Laid out locally from the article; no API fee.");
   return {

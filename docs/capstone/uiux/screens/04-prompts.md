@@ -15,7 +15,7 @@ paths_covered:
 # Prompts
 
 ## Mode & job
-Operate surface, the Library's Prompts tab at `/prompts?kind=`, for browsing, creating, duplicating and deleting Article, Image, Thumbnail and Narration Preparation prompts (`packages/web/src/routes/prompts.tsx`, `packages/web/src/routes/library.tsx`).
+Operate surface, the Library's Prompts tab at `/prompts?kind=`, for browsing, creating, duplicating and deleting Article, Image, Thumbnail, Narration Preparation and YouTube Description prompts (`packages/web/src/routes/prompts.tsx`, `packages/web/src/routes/library.tsx`).
 
 ## Composition
 The Library page bar and tab links sit above the tab. Its LibraryToolbar holds the kind switch (a toggle group that wraps at narrow widths) at left and New prompt at right. Prompt rows follow; each row links to the editor from its name, and its overflow menu holds Edit, Duplicate and Delete (`packages/web/src/routes/prompts.tsx`).

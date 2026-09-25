@@ -5,7 +5,12 @@
 
 import type { DatabaseSync } from "node:sqlite";
 import type { EntryChoice, RunDraft } from "../admission/model.js";
-import { type FieldError, normaliseDraft, usesNarrationPreparation } from "../admission/rules.js";
+import {
+  type FieldError,
+  normaliseDraft,
+  usesNarrationPreparation,
+  usesYoutubeDescription,
+} from "../admission/rules.js";
 import { collectFields, render } from "../admission/substitute.js";
 import type { Entry, EntryCategory, PromptKind } from "./model.js";
 import { type LibrarySnapshot, snapshotEntry, snapshotPrompt } from "./snapshot.js";
@@ -62,6 +67,18 @@ export function pickTemplates(
   const outro = pickEntry(db, "outro", draft.outro, missing, snapshot);
   push(text, "intro", intro);
   push(text, "outro", outro);
+  // None picked is the built-in prompt, which asks for no keyword.
+  if (usesYoutubeDescription(draft))
+    body(
+      db,
+      "description",
+      draft.descriptionPrompt,
+      "descriptionPrompt",
+      missing,
+      text,
+      "description",
+      snapshot,
+    );
 
   if (sources.images === "generate") {
     for (const [index, picked] of draft.imagePrompts.entries()) {

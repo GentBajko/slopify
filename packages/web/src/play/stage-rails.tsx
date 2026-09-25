@@ -9,6 +9,7 @@ import { LabelledField, OptionPicker } from "@/play/pickers";
 import { FilePick, PasteArea } from "@/play/provided";
 import type { RailProps } from "@/play/rail-frame";
 import { promptNames, railBeneath, railControls, SourceSwitch, StageRail } from "@/play/rail-frame";
+import { YoutubeDescription } from "@/play/youtube-description";
 
 export function ResearchRail({ form, problem, update }: RailProps) {
   return (
@@ -150,6 +151,7 @@ export type RawTiming = Readonly<Record<TimingField, string>> & {
 
 export function VideoRail({
   form,
+  prompts,
   silenceGapSeconds,
   problem,
   update,
@@ -235,6 +237,16 @@ export function VideoRail({
           ) : null}
         </div>
       ) : null}
+      <div className={railBeneath}>
+        <YoutubeDescription
+          enabled={form.youtubeDescription === true}
+          prompt={form.descriptionPrompt ?? ""}
+          prompts={prompts}
+          narrated={form.sources.audio !== "off"}
+          problem={problem}
+          onChange={(next) => update(next)}
+        />
+      </div>
       {form.sources.images === "off" ? (
         <p className={`${railBeneath} text-small text-ink2`}>
           Video is Off because Images is Off. Generate or provide images to enable video.

@@ -110,7 +110,8 @@ export function admit(input: AdmissionInput): AdmissionResult {
     sources.thumbnail === "prompt_by_llm" ||
     draft.intro?.mode === "llm" ||
     draft.outro?.mode === "llm" ||
-    usesNarrationPreparation(draft);
+    usesNarrationPreparation(draft) ||
+    usesYoutubeDescription(draft);
   if (needsLlm && !chosen(draft.llm)) {
     fields.push({ field: "llm", message: "Choose a text (LLM) provider and model." });
   }
@@ -154,6 +155,7 @@ export function admit(input: AdmissionInput): AdmissionResult {
       message: "Subtitles need narration. Turn narration on, or turn subtitles off.",
     });
   }
+  fields.push(...youtubeDescriptionFields(draft));
   checkProvided(draft, input.staged, fields);
   checkValues(draft, input.requiredSlots, fields);
 
@@ -357,6 +359,28 @@ export function narrationPreparationFields(draft: RunDraft): readonly FieldError
           field: "narrationPrompt",
           message:
             "Narration preparation only works with the Inworld TTS-2 model. Choose that model under Narration, or turn preparation Off.",
+        },
+      ]
+    : [];
+}
+
+// The YouTube description is written from the narration's word timings, so it needs
+// narration; it runs whether the video renders or only the WAV is exported.
+export function usesYoutubeDescription(
+  draft: Pick<RunDraft, "sources" | "youtubeDescription">,
+): boolean {
+  return draft.youtubeDescription === true && draft.sources.audio !== "off";
+}
+
+export function youtubeDescriptionFields(
+  draft: Pick<RunDraft, "sources" | "youtubeDescription">,
+): readonly FieldError[] {
+  return draft.youtubeDescription === true && draft.sources.audio === "off"
+    ? [
+        {
+          field: "youtubeDescription",
+          message:
+            "The YouTube description is timed from the narration. Turn narration on, or turn the YouTube description off.",
         },
       ]
     : [];

@@ -412,3 +412,63 @@ it("adopts saved wording as a template only after an explicit click", async () =
     "Saved literal wording.",
   );
 });
+
+it("switches the YouTube description on in Prompts and freezes or drops its prompt", async () => {
+  const user = userEvent.setup();
+  const base = revisionView();
+  const view = {
+    ...base,
+    revision: {
+      ...base.revision,
+      config: {
+        ...base.revision.config,
+        sources: { ...base.revision.config.sources, audio: "provide" as const },
+      },
+    },
+  };
+  let latest = formOfRevision(view);
+  function Describe(): import("react").ReactElement {
+    const [edit, setEdit] = useState(formOfRevision(view));
+    latest = edit;
+    return (
+      <RevisionForm view={view} edit={edit} onChange={setEdit} onPending={() => {}} fields={[]} />
+    );
+  }
+  renderApp(
+    <Describe />,
+    testDeps({
+      "GET /api/providers": jsonAnswer({ providers: [] }),
+      "GET /api/settings/voices": jsonAnswer({ voices: [] }),
+      "GET /api/prompts": jsonAnswer({
+        prompts: [
+          {
+            id: "d1",
+            kind: "description",
+            name: "Hooky",
+            body: "Hook {{Topic}} fans.",
+            slots: ["Topic"],
+            updatedAt: "2026-09-03T00:00:00.000Z",
+          },
+        ],
+      }),
+      "GET /api/entries": jsonAnswer({ entries: [] }),
+    }),
+  );
+  await openEditSection("Prompts");
+  const on = screen.getByRole<HTMLInputElement>("checkbox", { name: /YouTube description/ });
+  const prompt = screen.getByRole<HTMLSelectElement>("combobox", { name: "Description prompt" });
+  expect(on.checked).toBe(false);
+  expect(prompt.disabled).toBe(true);
+  await user.click(on);
+  expect(latest.config.youtubeDescription).toBe(true);
+  await screen.findByRole("option", { name: "Hooky" });
+  await user.selectOptions(prompt, "Hooky");
+  expect(latest.config.descriptionPrompt).toBe("Hooky");
+  expect(latest.content.promptTemplates.description).toBe("Hook {{Topic}} fans.");
+  await user.selectOptions(prompt, "");
+  expect(latest.config.descriptionPrompt).toBeUndefined();
+  expect(latest.content.promptTemplates.description).toBeUndefined();
+  expect(latest.config.rendered.description).toBeUndefined();
+  await user.click(on);
+  expect(latest.config.youtubeDescription).toBe(false);
+});

@@ -54,6 +54,7 @@ const prompts: readonly Prompt[] = [
   prompt("image", "Oils", "An oil painting of {{topic}} in {{style}}."),
   prompt("image", "Maps", "A map of {{era}}."),
   prompt("thumbnail", "Title card", "A title card for {{topic}}."),
+  prompt("description", "Hooky", "Hook {{topic}} fans."),
 ];
 
 export const entries: readonly Entry[] = [

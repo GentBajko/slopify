@@ -2,12 +2,12 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { stageKinds } from "../../kernel/pipeline.js";
+import { sourceOf } from "../admission/model.js";
 import { executionPlan } from "../rebuild/runtime-plan.js";
 import { insertOutput } from "../storage/repo.js";
 import { ensureBaseline } from "./adopt.js";
 import { saveRevision } from "./mutations.js";
 import { revisionFixture } from "./revision.fake.js";
-import { sourceOf } from "../admission/model.js";
 
 const cleanups: (() => void)[] = [];
 afterEach(() => {
@@ -36,7 +36,13 @@ async function fixture(durationMs: number | null) {
   for (const kind of stageKinds)
     deps.db
       .prepare("INSERT INTO stages(id,project_id,kind,source,state) VALUES (?,?,?,?,?)")
-      .run(kind, h.projectId, kind, sourceOf(config.sources, kind), kind === "audio" ? "done" : "skipped");
+      .run(
+        kind,
+        h.projectId,
+        kind,
+        sourceOf(config.sources, kind),
+        kind === "audio" ? "done" : "skipped",
+      );
   const path = join(deps.paths.projects, h.projectId, "old.mp3");
   writeFileSync(path, "old voice audio");
   insertOutput(deps.db, {

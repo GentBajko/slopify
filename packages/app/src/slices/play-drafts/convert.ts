@@ -115,6 +115,13 @@ export function toAdmissionDraft(input: {
     ...(sources.audio === "generate" && form.narrationPrompt?.trim()
       ? { narrationPrompt: form.narrationPrompt }
       : {}),
+    // Timed from the narration, so a switch left on with narration Off asks for nothing.
+    ...(sources.audio !== "off" && form.youtubeDescription === true
+      ? {
+          youtubeDescription: true,
+          ...(form.descriptionPrompt?.trim() ? { descriptionPrompt: form.descriptionPrompt } : {}),
+        }
+      : {}),
     imagePrompts:
       sources.images === "generate"
         ? form.imagePrompts.map((prompt, index) => ({

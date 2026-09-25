@@ -62,6 +62,22 @@ describe("cost planning", () => {
       "future",
     );
   });
+  it("prices the YouTube description as one LLM call on the timed transcript", () => {
+    const selected = {
+      ...draft,
+      llm: { provider: "codex", model: "test" },
+      youtubeDescription: true,
+    };
+    const row = estimateRun(selected, {}, 1500, catalogue).rows.find(
+      (one) => one.stage === "YouTube description",
+    );
+    expect(row?.detail).toContain("One LLM call on the timed transcript.");
+    expect(
+      estimateRun({ ...selected, youtubeDescription: false }, {}, 1500, catalogue).rows.some(
+        (one) => one.stage === "YouTube description",
+      ),
+    ).toBe(false);
+  });
   it("prices a supplied article by characters and gives local/off stages zero API charges", () => {
     const estimate = estimateRun(draft, {}, 1500, catalogue);
     expect(estimate.low).toBe(0.25);

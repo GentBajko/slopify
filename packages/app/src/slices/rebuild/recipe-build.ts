@@ -4,6 +4,7 @@ import { exportRecipes } from "./recipe-exports.js";
 import type { RecipeContext, ResolvedWorkRecipe } from "./recipe-model.js";
 import { textRecipes } from "./recipe-text.js";
 import { thumbnailRecipes, visualAssets, visualRecipes } from "./recipe-visual.js";
+import { youtubeRecipes } from "./recipe-youtube.js";
 
 export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecipe[] {
   const text = textRecipes(context);
@@ -15,6 +16,7 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
     ...text.recipes,
     ...audio.recipes,
     ...exports,
+    ...youtubeRecipes(context, exports),
     ...thumbnail,
     ...documentRecipes(context, text, thumbnail),
     ...visualAssets(

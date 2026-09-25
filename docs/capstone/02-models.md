@@ -297,6 +297,8 @@ Source: `packages/app/src/slices/admission/model.ts:48`.
 | motionStyle | `MotionStyle` ("zoom" ∣ "pan" ∣ "mixed" ∣ "still") | yes (schema default "zoom") |
 | edgeSilenceSeconds | `number` | yes (schema default 2) |
 | subtitles | `SubtitleConfig \| undefined` | no |
+| youtubeDescription | `boolean \| undefined` | no (absent is Off) |
+| descriptionPrompt | `string \| undefined` | no (absent or blank is the built-in prompt) |
 
 Source: `packages/app/src/slices/admission/model.ts:55`.
 
@@ -325,6 +327,8 @@ Source: `packages/app/src/slices/admission/model.ts:55`.
 | motionStyle | `MotionStyle` ("zoom" ∣ "pan" ∣ "mixed" ∣ "still") | yes (schema default "zoom") |
 | edgeSilenceSeconds | `number` | yes (schema default 2) |
 | subtitles | `SubtitleConfig \| undefined` | no |
+| youtubeDescription | `boolean \| undefined` | no (absent is Off) |
+| descriptionPrompt | `string \| undefined` | no (absent or blank is the built-in prompt) |
 | rendered | `Readonly<Record<string, string>>` | yes |
 
 Source: `packages/app/src/slices/admission/model.ts:80`.
@@ -1562,7 +1566,7 @@ CatalogueModel is a union with one required llm, image or tts family object. Def
 
 - Format is `16:9` or `9:16`. StageKind is research, article, audio, images, thumbnail, video or document. StageState is pending, running, done, failed, canceled, provided or skipped; ProjectState adds paused and excludes provided/skipped (`packages/app/src/kernel/pipeline.ts:6`). StageSource is generate, provide, off, from_prompt or prompt_by_llm; admission applies stage-specific restrictions (Document is Generate or Off). `RunDraft.sources.document` is optional and absent reads as Off through `sourceOf`; `RunDraft.document` is an optional `{theme:"dicemaster"|"plain"}` (`packages/app/src/slices/document/model.ts`) (`packages/app/src/slices/admission/model.ts:11`, `packages/app/src/slices/admission/rules.ts:46`).
 - ProviderFamily is llm, tts or image. Provider IDs are openrouter, claude-code, codex, gemini, elevenlabs, openai-tts, cartesia, inworld, fal, replicate, openai-image and google-image (`packages/app/src/kernel/ports/model.ts:4`, `packages/app/src/slices/settings/model.ts:12`). ThinkingMode is off, low, medium, high or xhigh; model-specific availability comes from Catalogue (`packages/app/src/kernel/ports/llm.ts:41`, `packages/app/src/catalog/schema.ts:25`).
-- OutputRole accepts notes, article_md, article_txt, narration_txt, tts_script, sources, glossary, audio_body, audio_intro, audio_outro, audio_export, image, thumbnail, video, render_params, subtitles_srt, subtitles_vtt, subtitle_words, subtitle_ass, subtitle_font, instructions and document_pdf (`document.pdf`, stage `document`, work key `document:pdf`). StagedFileState is copying or staged; output paths are project-relative (`packages/app/src/slices/storage/model.ts:6`, `packages/app/src/slices/storage/model.ts:33`, `packages/app/src/slices/storage/model.ts:57`). PieceKind accepts chapter, chunk, segment, image, prompt_written and article_written; PieceState accepts pending, running, done and failed. The nullable payload remains a JSON string at the StagePiece boundary (`packages/app/src/kernel/runner/piece-repo.ts:9`, `packages/app/src/kernel/runner/piece-repo.ts:19`).
+- OutputRole accepts notes, article_md, article_txt, narration_txt, tts_script, sources, glossary, audio_body, audio_intro, audio_outro, audio_export, image, thumbnail, video, render_params, subtitles_srt, subtitles_vtt, subtitle_words, subtitle_ass, subtitle_font, instructions, document_pdf (`document.pdf`, stage `document`, work key `document:pdf`), and youtube_description and youtube_tags (`description.txt` and `tags.txt`, stage `video`, work key `youtube:description`). StagedFileState is copying or staged; output paths are project-relative (`packages/app/src/slices/storage/model.ts:6`, `packages/app/src/slices/storage/model.ts:33`, `packages/app/src/slices/storage/model.ts:57`). PieceKind accepts chapter, chunk, segment, image, prompt_written and article_written; PieceState accepts pending, running, done and failed. The nullable payload remains a JSON string at the StagePiece boundary (`packages/app/src/kernel/runner/piece-repo.ts:9`, `packages/app/src/kernel/runner/piece-repo.ts:19`).
 - Prompt.kind accepts article/image/thumbnail/narration; Entry.category accepts intro/outro and mode text/llm. Their detected slots are serialized arrays, not references to another table (`packages/app/src/slices/library/model.ts:4`, `packages/app/src/slices/library/model.ts:12`, `packages/app/src/slices/library/repo.ts:171`).
 - RevisionContent uses stable image keys and a separate imageOrder; generated definitions can retain raw-template identity in templateKey. Raw promptTemplates can be null when an old project has only rendered wording. Manual subtitle cues bind to an audioFingerprint. OutputState is ready/outdated/review (`packages/app/src/slices/revisions/model.ts:15`, `packages/app/src/slices/revisions/model.ts:26`).
 - Attempt.revisionId/workId/workPieceId are required nullable values on repository reads. The inherited work/operation fields are optional call-context inputs; they are not columns in attempts and `toAttempt` does not return them (`packages/app/src/kernel/runner/attempt-repo.ts:16`, `packages/app/src/kernel/runner/attempt-repo.ts:114`). AttemptOutcome adds ok and canceled to provider faults auth/missing_key/rate_limit/refusal/unsupported/timeout/other (`packages/app/src/kernel/runner/attempt-repo.ts:13`, `packages/app/src/kernel/ports/model.ts:21`).
@@ -1585,6 +1589,8 @@ Definition: `packages/app/src/slices/play-drafts/schema.ts:79`.
 | images | { provider: string; model: string; thinking?: ThinkingMode } | yes | thinking optional; accepted: off, low, medium, high, xhigh |
 | articlePrompt | string | yes | Saved prompt name, including empty/unavailable choice |
 | narrationPrompt | string ∣ undefined | no | Empty or absent is Off; hidden selections persist |
+| youtubeDescription | boolean ∣ undefined | no | Absent is Off; ignored with narration Off |
+| descriptionPrompt | string ∣ undefined | no | Description prompt name; empty or absent is the built-in prompt |
 | imagePrompts | { name: string; number: string }[] | yes | Order retained; number stays raw text |
 | thumbnailPrompt | string | yes | Saved prompt name |
 | intro | string | yes | Entry name; empty string represents Off |
@@ -2076,6 +2082,8 @@ The first table is `state.ts`’s alias of LegacyPlayFormState. `draft-state.ts`
 | images | { provider: string; model: string; thinking?: ThinkingMode } | yes | thinking optional; accepted: off, low, medium, high, xhigh |
 | articlePrompt | string | yes | Saved prompt name, including empty/unavailable choice |
 | narrationPrompt | string ∣ undefined | no | Empty or absent is Off; hidden selections persist |
+| youtubeDescription | boolean ∣ undefined | no | Absent is Off; ignored with narration Off |
+| descriptionPrompt | string ∣ undefined | no | Description prompt name; empty or absent is the built-in prompt |
 | imagePrompts | { name: string; number: string }[] | yes | Order retained; number stays raw text |
 | thumbnailPrompt | string | yes | Saved prompt name |
 | intro | string | yes | Entry name; empty string represents Off |
@@ -2452,12 +2460,12 @@ CREATE INDEX outputs_project ON outputs(project_id, stage_kind);
 
 ### prompts
 
-Migration 0011 copies all prior fields and recreates the table/index transactionally; the DDL below includes that fourth kind (`packages/app/src/kernel/db/migrations/0011-narration-prompts.sql:1`).
+Migration 0011 copies all prior fields and recreates the table/index transactionally to add a fourth kind, `narration` (`packages/app/src/kernel/db/migrations/0011-narration-prompts.sql:1`); migration 0015 does the same to add a fifth, `description`, for the YouTube description (`packages/app/src/kernel/db/migrations/0015-description-prompts.sql:1`). The DDL below includes both.
 
 Source: `packages/app/src/kernel/db/migrations/0001-init.sql:7`.
 
 ```sql
-CREATE TABLE prompts (id TEXT PRIMARY KEY, kind TEXT NOT NULL CHECK(kind IN ('article','image','thumbnail','narration')), name TEXT NOT NULL, body TEXT NOT NULL, slots TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE prompts (id TEXT PRIMARY KEY, kind TEXT NOT NULL CHECK(kind IN ('article','image','thumbnail','narration','description')), name TEXT NOT NULL, body TEXT NOT NULL, slots TEXT NOT NULL, updated_at TEXT NOT NULL);
 ```
 
 Source: `packages/app/src/kernel/db/migrations/0001-init.sql:8`.

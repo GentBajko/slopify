@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
 import { stageKinds } from "../../kernel/pipeline.js";
+import { sourceOf } from "../admission/model.js";
 import { catalogue, config, emptyView } from "../rebuild/recipe-fixture.js";
 import { admitInitialRevision } from "../rebuild/runtime-admission.js";
 import { executionPlan } from "../rebuild/runtime-plan.js";
@@ -10,7 +11,6 @@ import { checkpointClosure, checkpointFingerprint } from "./fingerprint.js";
 import { settleReleasedCheckpoints } from "./recovery.js";
 import { approveCheckpoint, listCheckpoints, saveCheckpointSet } from "./repo.js";
 import { checkpointDecision } from "./rules.js";
-import { sourceOf } from "../admission/model.js";
 
 it("applies a stage approval to every matching sibling invocation without widening revision scope", () => {
   const revision = emptyView(config).revision;

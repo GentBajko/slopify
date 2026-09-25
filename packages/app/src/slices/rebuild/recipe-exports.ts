@@ -1,3 +1,4 @@
+import { usesYoutubeDescription } from "../admission/rules.js";
 import { audioExportArgs } from "../video/audio-export-args.js";
 import type { AudioRecipes } from "./recipe-audio.js";
 import {
@@ -32,7 +33,10 @@ export function exportRecipes(
         audio.keys,
       ),
     );
-  if (config.subtitles === undefined || config.subtitles.mode === "off") return recipes;
+  const captions = config.subtitles !== undefined && config.subtitles.mode !== "off";
+  // The YouTube description's chapters use the same word timing, so it runs for them even
+  // with captions off; only the caption files below wait for captions.
+  if (!captions && !usesYoutubeDescription(config)) return recipes;
   const timing = recipe(
     context,
     "subtitles:timing",
@@ -45,13 +49,14 @@ export function exportRecipes(
       values: [
         audio.timeline,
         config.silenceGapSeconds,
-        config.subtitles.language,
+        config.subtitles?.language ?? "en",
         config.edgeSilenceSeconds,
       ],
     },
     audio.keys,
   );
   recipes.push(timing);
+  if (config.subtitles === undefined || config.subtitles.mode === "off") return recipes;
   const cues = content.subtitleCues;
   const cueRecipe =
     cues === undefined
