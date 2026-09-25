@@ -34,7 +34,9 @@ export const runDraftSchema = z.object({
     video: z.enum(stageSources),
   }),
   llm: providerChoice.optional(),
-  audio: providerChoice.extend({ voice: z.string() }).optional(),
+  audio: providerChoice
+    .extend({ voice: z.string(), usePronunciationGlossary: z.boolean().optional() })
+    .optional(),
   images: providerChoice.optional(),
   articlePrompt: z.string().optional(),
   narrationPrompt: z.string().optional(),

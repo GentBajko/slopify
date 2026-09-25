@@ -64,3 +64,56 @@ it("snapshots a pinned project setup without copying generated output or approva
     h.close();
   }
 });
+
+it.each([undefined, false, true])(
+  "retains saved project pronunciation preference %s in a template snapshot",
+  (preference) => {
+    const h = startFixture();
+    try {
+      const audio = {
+        provider: "cartesia",
+        model: "sonic-3.5",
+        voice: "v",
+        ...(preference === undefined ? {} : { usePronunciationGlossary: preference }),
+      };
+      const project = startRun(
+        h.deps,
+        {
+          title: "Saved pronunciation",
+          format: "16:9",
+          sources: {
+            research: "off",
+            article: "provide",
+            audio: "off",
+            images: "off",
+            thumbnail: "off",
+            video: "off",
+          },
+          audio,
+          imagePrompts: [],
+          values: {},
+          provided: { article: "Arda." },
+          silenceGapSeconds: 0,
+        },
+        {},
+      ).project;
+      const revisionId = currentRevisionId(h.deps.db, project.id);
+      if (revisionId === undefined) throw new Error("Missing fixture revision");
+      const result = createTemplateFromProject(h.deps, {
+        id: randomUUID(),
+        name: "Pronunciation snapshot",
+        projectId: project.id,
+        revisionId,
+      });
+      if (!result.ok) throw new Error(JSON.stringify(result));
+      expect(result.value.document.form.audio).toStrictEqual(audio);
+      expect(Object.hasOwn(result.value.document.form.audio, "usePronunciationGlossary")).toBe(
+        preference !== undefined,
+      );
+      expect(h.ticks).toEqual([]);
+      expect(h.deps.db.prepare("SELECT count(*) AS n FROM attempts").get()?.n).toBe(0);
+    } finally {
+      h.close();
+    }
+  },
+);

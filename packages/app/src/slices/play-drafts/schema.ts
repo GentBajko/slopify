@@ -32,7 +32,9 @@ export const playDraftFormSchema = z
       .strict()
       .readonly(),
     llm: provider.readonly(),
-    audio: provider.extend({ voice: text }).readonly(),
+    audio: provider
+      .extend({ voice: text, usePronunciationGlossary: z.boolean().optional() })
+      .readonly(),
     images: provider.readonly(),
     articlePrompt: text,
     narrationPrompt: text.optional(),

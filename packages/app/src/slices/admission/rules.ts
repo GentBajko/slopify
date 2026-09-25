@@ -303,3 +303,12 @@ export function narrationPreparationFields(draft: RunDraft): readonly FieldError
 function chosen(choice: ProviderChoice | undefined): boolean {
   return choice !== undefined && choice.provider.trim() !== "" && choice.model.trim() !== "";
 }
+
+export function usesPronunciationGlossary(draft: Pick<RunDraft, "sources" | "audio">): boolean {
+  return (
+    draft.sources.audio === "generate" &&
+    draft.audio?.usePronunciationGlossary === true &&
+    draft.audio.provider === "inworld" &&
+    (draft.audio.model === "inworld-tts-2" || draft.audio.model === "inworld-tts-2-flash")
+  );
+}

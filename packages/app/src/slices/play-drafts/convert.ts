@@ -78,7 +78,10 @@ export function toAdmissionDraft(input: {
     format: form.format,
     sources,
     llm: form.llm,
-    audio: sources.audio === "generate" ? form.audio : undefined,
+    audio:
+      sources.audio === "generate" || form.audio.usePronunciationGlossary !== undefined
+        ? form.audio
+        : undefined,
     images: form.images,
     articlePrompt: sources.article === "generate" ? form.articlePrompt : undefined,
     ...(sources.audio === "generate" && form.narrationPrompt?.trim()

@@ -22,6 +22,7 @@ export interface ProviderChoice {
 
 export interface VoiceChoice extends ProviderChoice {
   readonly voice: string;
+  readonly usePronunciationGlossary?: boolean | undefined;
 }
 
 export interface ImagePromptChoice {

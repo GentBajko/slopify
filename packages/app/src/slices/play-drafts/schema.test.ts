@@ -23,3 +23,51 @@ it("rejects unknown fields and unsupported versions without coercing draft numbe
     h.close();
   }
 });
+
+it.each([undefined, false, true])("preserves saved audio preference %s", (preference) => {
+  const h = draftFixture();
+  try {
+    const audio = {
+      provider: "inworld",
+      model: "inworld-tts-2-flash",
+      voice: "v",
+      ...(preference === undefined ? {} : { usePronunciationGlossary: preference }),
+    };
+    const document = { ...h.document, form: { ...h.document.form, audio } };
+    const parsed = playDraftDocumentSchema.parse(document);
+    expect(parsed).toStrictEqual(document);
+    expect(Object.hasOwn(parsed.form.audio, "usePronunciationGlossary")).toBe(
+      preference !== undefined,
+    );
+    expect(playDraftDocumentSchema.parse(JSON.parse(JSON.stringify(parsed)))).toStrictEqual(
+      document,
+    );
+  } finally {
+    h.close();
+  }
+});
+
+it("rejects malformed glossary preferences without loosening the strict audio shape", () => {
+  const h = draftFixture();
+  try {
+    for (const usePronunciationGlossary of [null, "true", "false", 0, 1, {}, []]) {
+      expect(
+        playDraftDocumentSchema.safeParse({
+          ...h.document,
+          form: {
+            ...h.document.form,
+            audio: { ...h.document.form.audio, usePronunciationGlossary },
+          },
+        }).success,
+      ).toBe(false);
+    }
+    expect(
+      playDraftDocumentSchema.safeParse({
+        ...h.document,
+        form: { ...h.document.form, audio: { ...h.document.form.audio, unexpected: true } },
+      }).success,
+    ).toBe(false);
+  } finally {
+    h.close();
+  }
+});

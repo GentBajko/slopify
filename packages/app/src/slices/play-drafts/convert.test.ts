@@ -229,3 +229,51 @@ it("retains active provider and research controls and downgrades captions for au
     h.close();
   }
 });
+
+it.each([undefined, false, true])(
+  "preserves explicit pronunciation preferences through every audio source: %s",
+  (preference) => {
+    const h = draftFixture();
+    try {
+      const audio = {
+        provider: "cartesia",
+        model: "sonic-3.5",
+        voice: "v",
+        ...(preference === undefined ? {} : { usePronunciationGlossary: preference }),
+      };
+      const attachment: DraftAttachment = {
+        id: randomUUID(),
+        kind: "audio",
+        name: "narration.wav",
+        state: "ready",
+        stagedFileId: "staged-audio",
+        bytes: 3,
+        error: null,
+      };
+      for (const source of ["generate", "off", "provide"] as const) {
+        const document: PlayDraftDocument = {
+          ...h.document,
+          form: {
+            ...h.document.form,
+            audio,
+            sources: { ...h.document.form.sources, audio: source },
+            provided: {
+              ...h.document.form.provided,
+              audio: { attachmentId: attachment.id, name: attachment.name },
+            },
+          },
+        };
+        const before = JSON.stringify(document);
+        const result = convert(document, [attachment]);
+        if (!result.ok) throw new Error(JSON.stringify(result.fields));
+        expect(result.draft.audio).toStrictEqual(
+          source === "generate" || preference !== undefined ? audio : undefined,
+        );
+        expect(result.draft.provided.audio).toBe(source === "provide" ? "staged-audio" : undefined);
+        expect(JSON.stringify(document)).toBe(before);
+      }
+    } finally {
+      h.close();
+    }
+  },
+);
