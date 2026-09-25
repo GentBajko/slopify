@@ -188,3 +188,58 @@ it("allows canceled Resume and paused Retry without approving a checkpoint or op
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(screen.getByText(/Resume recovers unfinished work/)).not.toBeNull();
 });
+
+it.each([
+  [{ kind: "resume" }, "Resuming…", ["Retry stage", "Retry stage"]],
+  [{ kind: "retry", stage: "images" }, "Resume", ["Retry stage", "Retrying…"]],
+] as const)(
+  "labels only the in-flight control while every control waits: %j",
+  async (performing, resume, retries) => {
+    const actions: ProjectActions = {
+      run: () => undefined,
+      pending: true,
+      performing,
+      refusal: undefined,
+      dismissRefusal: () => undefined,
+    };
+    const summary = body({ status: "failed", stages: [], outputs: [] }).project;
+    const project = { ...summary, format: "16:9" as const, config: generated().revision.config };
+    renderRouted(
+      <RevisionControlContext value={true}>
+        <ProjectHeader
+          project={project}
+          prompts={undefined}
+          actions={actions}
+          inFlight={false}
+          primaryOutput={undefined}
+        />
+        {(["audio", "images"] as const).map((kind) => (
+          <StageRow
+            key={kind}
+            stage={stage(kind, "failed")}
+            project={project}
+            outputs={[]}
+            providers={[]}
+            actions={actions}
+          >
+            {null}
+          </StageRow>
+        ))}
+      </RevisionControlContext>,
+      testDeps({}),
+    );
+    expect((await screen.findByRole("button", { name: resume })).hasAttribute("disabled")).toBe(
+      true,
+    );
+    const labels = within(
+      screen.getByRole("region", { name: /Audio workspace|Narration workspace/ }),
+    )
+      .getAllByRole("button")
+      .concat(
+        within(screen.getByRole("region", { name: /Images workspace/ })).getAllByRole("button"),
+      )
+      .filter((button) => /^Retry/.test(button.textContent ?? ""));
+    expect(labels.map((button) => button.textContent)).toEqual(retries);
+    expect(labels.every((button) => button.hasAttribute("disabled"))).toBe(true);
+  },
+);

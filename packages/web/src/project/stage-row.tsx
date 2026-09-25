@@ -117,7 +117,7 @@ export function StageRow({
               onClick={() => actions.run({ kind: "retry", stage: stage.kind })}
               className="rounded-control border border-red px-3 py-2 text-small text-ink hover:bg-panel2 disabled:opacity-50"
             >
-              {actions.pending
+              {actions.performing?.kind === "retry" && actions.performing.stage === stage.kind
                 ? "Retrying…"
                 : revisioned
                   ? "Retry stage"

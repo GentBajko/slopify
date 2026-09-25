@@ -52,6 +52,8 @@ export interface ProjectActions {
   // refused save leaves the user's typing where it is: an edit in progress stays put.
   readonly run: (action: Action, onDone?: () => void) => void;
   readonly pending: boolean;
+  // The action awaiting its answer, so only its own control says "Resuming…" or "Retrying…".
+  readonly performing?: Action | undefined;
   readonly refusal: Refusal | undefined;
   readonly dismissRefusal: () => void;
   readonly notice?: string | undefined;
@@ -89,12 +91,18 @@ export function useProjectActions(projectId: string): ProjectActions {
         controls.current.set(key, control);
       }
       // Keep the exact request after a transport/server fault, even if SSE advances the head.
+      // Once the server has answered, the identity is spent: a later press is a new request.
       const result = await perform(api, input.projectId, action, control);
-      if (result.ok) {
-        const fresh = await readProject(api, input.projectId);
-        queryClient.setQueryData(keys.project(input.projectId), fresh);
-      }
       controls.current.delete(key);
+      if (result.ok) {
+        // The action is already accepted; a failed refetch must not report it as failed.
+        // onSuccess still invalidates the projection, which retries the read.
+        await readProject(api, input.projectId).then(
+          (fresh) => queryClient.setQueryData(keys.project(input.projectId), fresh),
+          (error: unknown) =>
+            console.warn("Project refresh after an accepted action failed", error),
+        );
+      }
       return result;
     },
     onMutate: () => {
@@ -140,6 +148,7 @@ export function useProjectActions(projectId: string): ProjectActions {
       );
     },
     pending: mutation.isPending,
+    performing: mutation.isPending ? mutation.variables?.action : undefined,
     refusal,
     dismissRefusal: () => {
       setRefusal(undefined);

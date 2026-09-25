@@ -66,7 +66,7 @@ export function ProjectHeader({
             disabled={actions.pending || inFlight}
             onClick={() => actions.run({ kind: "resume" })}
           >
-            {actions.pending ? "Resuming…" : "Resume"}
+            {actions.performing?.kind === "resume" ? "Resuming…" : "Resume"}
           </Button>
         ) : null}
         {running ? (

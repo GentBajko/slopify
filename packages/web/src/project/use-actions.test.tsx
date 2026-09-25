@@ -224,3 +224,30 @@ for (const fault of ["transport", "server"] as const)
     expect(requests[2]?.baseRevisionId).toBe("r2");
     expect(requests[2]?.idempotencyKey).not.toBe(requests[0]?.idempotencyKey);
   });
+it("releases an answered pause identity even when the follow-up refresh fails", async () => {
+  const user = userEvent.setup();
+  const requests: RevisionControlInput[] = [];
+  const current = { ...body({ status: "running", stages: [], outputs: [] }), revisionId: "r1" };
+  renderApp(
+    <Probe advance={() => undefined} seen={[]} />,
+    testDeps({
+      "GET /api/projects/p1": (request) =>
+        requests.length === 0
+          ? jsonAnswer(current)(request)
+          : new Response("Server unavailable", { status: 500 }),
+      "POST /api/projects/p1/pause": async (request) => {
+        requests.push(revisionControlSchema.parse(await request.json()));
+        return jsonAnswer(current)(request);
+      },
+    }),
+  );
+  await screen.findByText("r1");
+  await user.click(screen.getByRole("button", { name: "Pause" }));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Pause" }).hasAttribute("disabled")).toBe(false),
+  );
+  expect(screen.queryByRole("alert")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Pause" }));
+  await waitFor(() => expect(requests).toHaveLength(2));
+  expect(requests[1]?.idempotencyKey).not.toBe(requests[0]?.idempotencyKey);
+});
