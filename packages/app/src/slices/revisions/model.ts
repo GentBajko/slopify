@@ -8,6 +8,7 @@ import type { StagePiece } from "../../kernel/runner/piece-repo.js";
 import type { Fingerprint, WorkKey } from "../../kernel/runner/work.js";
 import type { RunConfig } from "../admission/model.js";
 import type { FieldError } from "../admission/rules.js";
+import type { NarrationSource } from "../narration/pronunciation-chunks.js";
 import type { Output } from "../storage/model.js";
 
 export type { Fingerprint, WorkKey } from "../../kernel/runner/work.js";
@@ -40,6 +41,7 @@ export interface RevisionContent {
     >
   >;
   readonly narrationOverrides: Readonly<Record<string, NarrationOverride>>;
+  readonly narrationSources?: Readonly<Record<string, NarrationSource>> | undefined;
   readonly subtitleCues?:
     | {
         readonly audioFingerprint: string;

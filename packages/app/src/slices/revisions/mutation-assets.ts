@@ -132,7 +132,16 @@ export function validateAssetReferences(
             id,
             kind,
             JSON.stringify(kind === "audio" ? ["chunk", "segment"] : ["image"]),
-          ) === undefined)
+          ) === undefined) &&
+      !(
+        kind === "audio" &&
+        allowPiece &&
+        deps.db
+          .prepare(
+            "SELECT 1 FROM project_revisions r, json_each(r.content, '$.narrationOverrides') o WHERE r.project_id=? AND json_extract(o.value,'$.kind')='asset' AND json_extract(o.value,'$.assetId')=? LIMIT 1",
+          )
+          .get(projectId, id) !== undefined
+      )
     )
       fields.push({ field, message: "Choose an asset for this content stage." });
   }

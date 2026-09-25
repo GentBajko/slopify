@@ -32,7 +32,7 @@ import { checkMutation, insertReceipt, requestHash, requiredView } from "./mutat
 import { preserveDeferredIntent } from "./mutation-work.js";
 import { cloneManifest, ensureRevisionStages, projectSelected } from "./projection.js";
 import { insertAsset, insertRevision } from "./repo.js";
-import { validateNarrationIntent, validateTemplateIntent } from "./rules.js";
+import { bindNarrationSources, validateNarrationIntent, validateTemplateIntent } from "./rules.js";
 import { revisionEditSchema } from "./schema.js";
 
 export { bindUpload } from "./mutation-assets.js";
@@ -59,15 +59,17 @@ export async function saveRevision(
         message: row.message,
       })),
     };
-  const edit = parsed.data;
+  const { narrationSources: _submitted, ...content } = parsed.data.content;
+  const submitted = { ...parsed.data, content };
   const identity = {
     ...input,
     operation: "save" as const,
-    hash: requestHash("save", input.baseRevisionId, edit),
+    hash: requestHash("save", input.baseRevisionId, submitted),
   };
   const checked = checkMutation(deps, identity);
   if (checked !== undefined) return checked;
   const base = requiredView(deps, input.projectId, input.baseRevisionId);
+  const edit = bindNarrationSources(base, submitted);
   const fields = [
     ...validateUploads(deps, edit),
     ...validateTemplateIntent(base, edit),
@@ -94,10 +96,10 @@ export async function saveRevision(
       const tokens = { ...fresh.revision.content.regenerationTokens };
       for (const key of new Set((edit.regenerate ?? []).map(narrationRegenerationKey)))
         tokens[key] = deps.ids.next();
-      const finalEdit = {
+      const finalEdit = bindNarrationSources(fresh, {
         ...supplied,
         content: { ...supplied.content, regenerationTokens: tokens },
-      };
+      });
       const outputAssets = prepared.filter((row) => row.upload?.destination.kind !== "narration");
       const inspected = measuredOutputs(deps, fresh, durations);
       const preparedManifest = {

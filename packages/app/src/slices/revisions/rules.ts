@@ -1,8 +1,63 @@
 import { isDeepStrictEqual } from "node:util";
 import type { FieldError } from "../admission/rules.js";
+import { narrationRegenerationKey } from "../narration/plan.js";
+import { bodyNarrationGroups } from "../rebuild/recipe-audio.js";
 import { buildRecipes } from "../rebuild/recipe-build.js";
 import { normalizeArticleIntent, validateRevisionEdit } from "../rebuild/recipe-save.js";
+import { textRecipes } from "../rebuild/recipe-text.js";
 import type { ManualCue, RevisionEdit, RevisionView } from "./model.js";
+
+export function bindNarrationSources(base: RevisionView, edit: RevisionEdit): RevisionEdit {
+  const { narrationSources: _submitted, ...content } = normalizeArticleIntent(base, edit);
+  const keys = new Set([
+    ...Object.keys(content.narrationOverrides),
+    ...Object.keys(base.revision.content.regenerationTokens),
+    ...(edit.regenerate ?? []).map(narrationRegenerationKey),
+    ...(edit.uploads ?? []).flatMap((upload) =>
+      upload.destination.kind === "narration" ? [upload.destination.key] : [],
+    ),
+  ]);
+  if (keys.size === 0) return { ...edit, content };
+  const previous = {
+    config: base.revision.config,
+    content: base.revision.content,
+    manifest: base,
+    resolved: {
+      articleMarkdown: base.articleMarkdown,
+      researchNotes: base.revision.config.provided.research ?? null,
+    },
+  };
+  const sources = {
+    ...base.revision.content.narrationSources,
+    ...Object.fromEntries(
+      bodyNarrationGroups(previous, textRecipes(previous)).flatMap((group) =>
+        group.source === undefined ? [] : [[group.key, group.source]],
+      ),
+    ),
+  };
+  const proposed = {
+    ...previous,
+    config: edit.config,
+    content: {
+      ...content,
+      narrationSources: Object.fromEntries(
+        Object.entries(sources).filter(([key]) => keys.has(key)),
+      ),
+    },
+  };
+  const bindings = Object.fromEntries(
+    bodyNarrationGroups(proposed, textRecipes(proposed)).flatMap((group) =>
+      group.source !== undefined && keys.has(group.key) ? [[group.key, group.source]] : [],
+    ),
+  );
+  return {
+    ...edit,
+    content: {
+      ...content,
+      ...(Object.keys(bindings).length > 0 ? { narrationSources: bindings } : {}),
+    },
+  };
+}
 
 export function validateCues(cues: readonly ManualCue[], duration: number): readonly FieldError[] {
   const fields: FieldError[] = [];

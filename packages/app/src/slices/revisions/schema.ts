@@ -54,6 +54,25 @@ export const revisionContentSchema = z
         z.object({ kind: z.literal("text"), text: z.string().trim().min(1).max(500000) }).strict(),
       ]),
     ),
+    narrationSources: z
+      .record(
+        workKey,
+        z
+          .object({
+            text: z.string().min(1).max(500000),
+            start: z.number().int().nonnegative().max(500000),
+            bodyFingerprint: z.string().regex(/^[0-9a-f]{64}$/u),
+            chunkingFingerprint: z.string().regex(/^[0-9a-f]{64}$/u),
+          })
+          .strict(),
+      )
+      .refine(
+        (rows) =>
+          Object.keys(rows).length <= 10000 &&
+          Object.values(rows).reduce((length, row) => length + row.text.length, 0) <= 500000,
+        "Narration source bindings exceed the article limit.",
+      )
+      .optional(),
     subtitleCues: z
       .object({
         audioFingerprint: z.string().min(1),

@@ -22,6 +22,20 @@ export interface AudioRecipes {
   readonly timeline: FingerprintValue;
   readonly keys: readonly string[];
 }
+export function bodyNarrationGroups(
+  context: RecipeContext,
+  text: TextRecipes,
+): ReturnType<typeof pronunciationChunks> {
+  return text.articleText === null
+    ? []
+    : pronunciationChunks(
+        normalizeNarrationText(text.articleText),
+        context.config.chunking ?? defaultChunking,
+        usesPronunciationGlossary(context.config) && text.glossary?.ok ? text.glossary.entries : [],
+        new Set(Object.keys(context.content.narrationOverrides)),
+        context.content.narrationSources,
+      );
+}
 export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRecipes {
   const { config, content } = context;
   const recipes: ResolvedWorkRecipe[] = [];
@@ -48,15 +62,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
     );
     recipes.push(body);
   } else {
-    const groups =
-      text.articleText === null
-        ? []
-        : pronunciationChunks(
-            normalizeNarrationText(text.articleText),
-            config.chunking ?? defaultChunking,
-            pronounce && text.glossary?.ok ? text.glossary.entries : [],
-            new Set(Object.keys(content.narrationOverrides)),
-          );
+    const groups = bodyNarrationGroups(context, text);
     const parts: ResolvedWorkRecipe[] = [];
     const transcripts: { original: string; effective: string }[] = [];
     const futurePronunciation: FingerprintValue[] = [];

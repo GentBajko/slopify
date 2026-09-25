@@ -1,9 +1,13 @@
 import { expect, it } from "vitest";
 import { fingerprint } from "../../kernel/runner/work.js";
 import type { Chunking } from "../narration/chunk.js";
+import { bindNarrationSources } from "../revisions/rules.js";
+import { bodyNarrationGroups } from "./recipe-audio.js";
 import { buildRecipes } from "./recipe-build.js";
 import { catalogue, config, content, emptyView } from "./recipe-fixture.js";
 import type { RecipeContext, ResolvedWorkRecipe } from "./recipe-model.js";
+import { preparationTemplate } from "./recipe-preparation.js";
+import { textRecipes } from "./recipe-text.js";
 
 function context(source: string, glossary: string, chunking: Chunking): RecipeContext {
   const markdown = `${source}\n\n## Pronunciation Glossary\n${glossary}`;
@@ -164,4 +168,67 @@ it("bypasses logical glossary grouping for supplied whole audio", () => {
     kind: "provided",
     assetId: "whole-audio",
   });
+});
+
+it.each([false, undefined])(
+  "keeps ordinary override requests and transcripts identical with flag %s",
+  (flag) => {
+    const base = context("First.\n\nP!nk sings.\n\nLast.", "P!nk: /pɪŋk/", {
+      mode: "words",
+      words: 1,
+    });
+    const configured: RecipeContext = {
+      ...base,
+      config: {
+        ...base.config,
+        audio: {
+          provider: "inworld",
+          model: "inworld-tts-2",
+          voice: "voice",
+          ...(flag === undefined ? {} : { usePronunciationGlossary: flag }),
+        },
+      },
+    };
+    const key = bodyNarrationGroups(configured, textRecipes(configured))[0]?.key;
+    if (key === undefined) throw new Error("Missing narration group.");
+    const value = {
+      ...configured.content,
+      narrationOverrides: { [key]: { kind: "text" as const, text: "Replacement." } },
+    };
+    const before = { ...configured, content: value };
+    const edit = bindNarrationSources(emptyView(configured.config, value), {
+      config: configured.config,
+      content: value,
+    });
+    expect(edit.content.narrationSources).toBeUndefined();
+    expect(buildRecipes({ ...before, content: edit.content })).toEqual(buildRecipes(before));
+  },
+);
+
+it("keeps preparation identity independent of saved source bindings", () => {
+  const initial = context("Meet Dr. Doom today.", "Dr. Doom: /dɒktə duːm/", {
+    mode: "words",
+    words: 1,
+  });
+  const base = {
+    ...initial,
+    config: {
+      ...initial.config,
+      narrationPrompt: "Documentary",
+      rendered: { ...initial.config.rendered, narration: "Restrained delivery." },
+    },
+  };
+  const group = bodyNarrationGroups(base, textRecipes(base))[0];
+  if (group?.source === undefined) throw new Error("Missing merged source.");
+  const value = {
+    ...base.content,
+    narrationOverrides: { [group.key]: { kind: "text" as const, text: "Replacement." } },
+  };
+  const before = { ...base, content: value };
+  const after = {
+    ...before,
+    content: { ...value, narrationSources: { [group.key]: group.source } },
+  };
+  expect(preparationTemplate(after)).toEqual(preparationTemplate(before));
+  expect(buildRecipes(after)).toEqual(buildRecipes(before));
 });
