@@ -149,7 +149,8 @@ it("restores a held multi-invocation gate and keeps pause authoritative after ap
     await h.runner.settled();
     h.close();
   }
-});
+  // Two full boots of the app; a shared Windows runner needs more than the default.
+}, 30_000);
 
 it("invalidates changed gates while a submitted late result stays on its origin", async () => {
   const entered = deferred<void>();

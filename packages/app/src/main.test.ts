@@ -134,7 +134,9 @@ describe("schedule tick lifecycle", () => {
   });
 });
 
-describe("boot", () => {
+// Each case boots the whole app, and some boot it twice; on a shared Windows runner a single
+// boot can take several seconds.
+describe("boot", { timeout: 30_000 }, () => {
   const running: Array<() => Promise<void>> = [];
 
   afterEach(async () => {

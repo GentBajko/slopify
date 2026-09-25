@@ -12,6 +12,7 @@ import { outputPath } from "../src/slices/storage/layout.js";
 import { preparationFixture } from "./revision-preparation.fake.js";
 import { composedFixture, current, save, start, tone } from "./revision-rebuild.fake.js";
 
+// Each case drives full pipelines with real FFmpeg renders; a two-core CI runner needs minutes.
 it("reruns identical research chapters and uses fresh notes downstream without touching literal images", async () => {
   let round = 1;
   const requests: { kind: string; round: number; text: string }[] = [];
@@ -133,7 +134,7 @@ it("reruns identical research chapters and uses fresh notes downstream without t
     h.audioPreviews.close();
     h.close();
   }
-}, 90000);
+}, 300_000);
 
 it("reruns audio, reuses preparation and overrides, then reruns only the local export", async () => {
   const llm = fakeLlm({ deltas: ['{"cues":[]}'] });
@@ -201,7 +202,7 @@ it("reruns audio, reuses preparation and overrides, then reruns only the local e
     h.audioPreviews.close();
     h.close();
   }
-}, 90000);
+}, 300_000);
 
 it("reruns only generated images, then thumbnail, then local video, retaining supplied media and History", async () => {
   const images = fakeImage({
@@ -304,4 +305,4 @@ it("reruns only generated images, then thumbnail, then local video, retaining su
     h.audioPreviews.close();
     h.close();
   }
-}, 90000);
+}, 300_000);

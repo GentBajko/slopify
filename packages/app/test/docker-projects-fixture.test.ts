@@ -1,6 +1,6 @@
 import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join, resolve, sep } from "node:path";
 import { expect, it } from "vitest";
 import { retainedOutput, retainedPiece } from "../src/slices/revisions/downloads.fake.js";
 import { mutationFixture } from "../src/slices/revisions/mutation.fake.js";
@@ -11,7 +11,9 @@ it("seeds retained IDs, research, partial audio and failed/paused state without 
   const out = supplied
     ? resolve(supplied)
     : await mkdtemp(join(tmpdir(), "slopify-docker-projects-fixture-"));
-  if (!out.startsWith(join(tmpdir(), "slopify-docker-projects-")))
+  // The smoke's own disposable folder; the test runner may point TMPDIR elsewhere, so the
+  // check is on that folder's name rather than on the current temp root.
+  if (!out.split(sep).some((part) => part.startsWith("slopify-docker-projects-")))
     throw new Error("Fixture output must belong to the disposable Docker smoke.");
   const h = await mutationFixture();
   try {

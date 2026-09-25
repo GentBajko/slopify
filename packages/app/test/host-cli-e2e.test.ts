@@ -161,7 +161,10 @@ describe.skipIf(process.platform === "win32")("real host processes over the Unix
     await server.stop();
     expect((await Promise.all(results)).every((result) => result instanceof Error)).toBe(true);
     for (const call of await f.calls()) {
-      await expect.poll(() => alive(call.pid) || existsSync(call.cwd)).toBe(false);
+      // Beyond the runner's one-second SIGTERM grace, after which it sends SIGKILL.
+      await expect
+        .poll(() => alive(call.pid) || existsSync(call.cwd), { timeout: 5_000 })
+        .toBe(false);
     }
   });
   it("stops the host process when a stream consumer leaves early", async () => {
@@ -170,8 +173,9 @@ describe.skipIf(process.platform === "win32")("real host processes over the Unix
     for await (const _ of f.client.llm("codex").complete(request("HOLD_CANCEL"))) break;
     const call = (await f.calls())[0];
     if (!call) throw new Error("Missing fixture process");
-    await expect.poll(() => alive(call.pid)).toBe(false);
-    await expect.poll(() => existsSync(call.cwd)).toBe(false);
+    // Beyond the runner's one-second SIGTERM grace, after which it sends SIGKILL.
+    await expect.poll(() => alive(call.pid), { timeout: 5_000 }).toBe(false);
+    await expect.poll(() => existsSync(call.cwd), { timeout: 5_000 }).toBe(false);
   });
   it.each(["canceled", "unavailable"] as const)(
     "records %s once when a submitted host call is aborted",
