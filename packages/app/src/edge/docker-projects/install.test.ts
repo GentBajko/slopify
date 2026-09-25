@@ -483,3 +483,42 @@ it("does not restart a committed container beside a running retained writer", as
     await h.close();
   }
 });
+
+it("refuses an unrecorded replacement before committed activation or restart", async () => {
+  const h = await seeded();
+  try {
+    await installProjects(h.config, h.engine, () => h.engine);
+    const current = await h.engine.inspect(h.config.name);
+    if (!current) throw new Error("Missing committed fixture");
+    h.containers.delete(current.id);
+    h.containers.set("replacement", { ...current, id: "replacement", running: false });
+    h.calls.length = 0;
+    await expect(installProjects(h.config, h.engine, () => h.engine)).rejects.toThrow();
+    expect(h.containers.get("replacement")?.running).toBe(false);
+    for (const op of ["update", "start", "stop", "restore", "own"])
+      expect(h.calls).not.toContain(op);
+  } finally {
+    await h.close();
+  }
+});
+
+it.each(["stop", "digest"])(
+  "keeps verified publication authority through a second %s failure",
+  async (failure) => {
+    const h = await seeded();
+    try {
+      h.failures.add("health");
+      await expect(installProjects(h.config, h.engine, () => h.engine)).rejects.toThrow();
+      h.failures.clear();
+      h.failures.add(failure);
+      await expect(installProjects(h.config, h.engine, () => h.engine)).rejects.toThrow();
+      h.failures.clear();
+      const installed = await installProjects(h.config, h.engine, () => h.engine);
+      expect((await treeDigest(installed.projects)).hash).toBe(
+        (await treeDigest(join(h.volume, "projects"))).hash,
+      );
+    } finally {
+      await h.close();
+    }
+  },
+);

@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { readCommittedJournal } from "./committed.js";
 import type { Engine } from "./engine.js";
 import {
   type DockerConfig,
@@ -27,8 +28,7 @@ export async function recoverInstallation(
     const current = await e.inspect(c.name);
     await selectProjects({ ...c, projectsOverride: null }, receipt, current);
     await assertWritableTree(receipt.projects, c.uid);
-    if (current && (current.installation !== j.installation || current.signature !== j.signature))
-      throw new Error("Committed container identity differs from its receipt.");
+    j = await readCommittedJournal(c, receipt, current);
     await e.writers(c.volume, [receipt.projects], current ? [current.id] : []);
     await writeState(join(directory, "activation.json"), {
       version: 1,

@@ -3,6 +3,7 @@ import { lstat, mkdir, readdir, rename } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { readVersion } from "../../kernel/version.js";
 import { assertVolumeClaims } from "./claims.js";
+import { readCommittedJournal } from "./committed.js";
 import type { Engine } from "./engine.js";
 import { assertSourceIdentity, recoverInstallation } from "./recover.js";
 import {
@@ -118,26 +119,7 @@ export async function installProjects(
     (c.port === 0 || old.port === `127.0.0.1:${c.port}`) &&
     (old.mounts.find((m) => m.destination === "/opt/slopify-host")?.source ?? null) === c.bridge
   ) {
-    const j = await readState(
-      join(c.directory, receipt.transaction, "journal.json"),
-      journalSchema,
-      c.uid,
-    );
-    if (
-      !j ||
-      j.id !== receipt.transaction ||
-      j.name !== receipt.name ||
-      j.installation !== receipt.installation ||
-      j.daemon !== receipt.daemon ||
-      j.volume !== receipt.volume ||
-      j.volumeIdentity !== receipt.volumeIdentity ||
-      j.destination !== receipt.projects ||
-      j.signature !== receipt.signature ||
-      j.image !== receipt.image ||
-      j.user !== receipt.user ||
-      j.candidate !== old.id
-    )
-      throw new Error("Committed activation journal is missing.");
+    const j = await readCommittedJournal(c, receipt, old);
     if (!old.running) await e.command(["start", old.id]);
     await e.health(old.id, j.token, expectedVersion);
     return { url: `http://${old.port}`, projects, recovery: j.backup };
@@ -170,8 +152,8 @@ export async function installProjects(
     staging: join(dirname(projects), `.slopify-projects-${id}`),
     stagingIdentity: null,
     publishedIdentity: reuse?.publishedIdentity ?? null,
-    sourceDigest: null,
-    sourceAbsent: false,
+    sourceDigest: reuse?.sourceDigest ?? null,
+    sourceAbsent: reuse?.sourceAbsent ?? false,
     backup: `${c.volume}-recovery-${id}`,
     backupDigest: null,
     candidate: null,
@@ -201,7 +183,10 @@ export async function installProjects(
       throw new Error(
         `Stale migration baseline. Retain ${projects} and ${reuse.staging}; move the failed destination aside before retrying.`,
       );
-    await save({ sourceDigest: source, sourceAbsent: source === null });
+    await save({
+      sourceDigest: source ?? reuse?.sourceDigest ?? null,
+      sourceAbsent: source === null,
+    });
     const backupDigest = await e.snapshot(j);
     await save({ phase: "snapshot", backupDigest });
     if (projects !== bind && reuse === null) {
