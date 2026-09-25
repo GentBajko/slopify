@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { z } from "zod";
 import { subtitleModelDir } from "../../kernel/paths.js";
 import type { SubtitleOmission, TimedWord } from "../../kernel/ports/subtitles.js";
+import { SubtitleMismatch } from "../../kernel/ports/subtitles.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
 import { resolveFont } from "../fonts/index.js";
@@ -18,6 +19,11 @@ import {
   revisionAudio,
   revisionTranscript,
 } from "./runtime-export-inputs.js";
+import {
+  type NarrationChunk,
+  narrationChunks,
+  narrationTextParts,
+} from "./runtime-narration-text.js";
 import { preparedResult, preparedText, publishResult } from "./runtime-publication.js";
 import type { WorkPiece } from "./work-records.js";
 
@@ -67,7 +73,8 @@ async function timing(
 ): Promise<StageRunResult> {
   const audio = await revisionAudio(deps, context, snapshot.view);
   if (audio.length === 0) throw new Error("Subtitles need narration audio.");
-  if (deps.alignSubtitles === undefined)
+  const alignSubtitles = deps.alignSubtitles;
+  if (alignSubtitles === undefined)
     throw new Error("Local subtitle alignment is unavailable in this build.");
   if (!context.maySubmit(piece.id)) return "held";
   const words: TimedWord[] = [];
@@ -76,25 +83,28 @@ async function timing(
   const total = audio.reduce((sum, segment) => sum + segment.seconds, 0);
   for (const segment of audio) {
     context.signal.throwIfAborted();
-    if (segment.path !== null && segment.kind !== "gap") {
-      const aligned = await deps.alignSubtitles({
-        audioPath: segment.path,
-        text: revisionTranscript(deps, snapshot, segment.kind),
-        cacheDir: subtitleModelDir(deps.paths.dataDir),
-        ffmpeg: deps.ffmpeg,
-        signal: context.signal,
-        onOmission: (value) => omissions.push({ ...value, start: value.start + offset }),
-        onProgress: (current, maximum) =>
-          context.emit({
-            type: "stage.progress",
-            projectId: context.work.projectId,
-            stage: "video",
-            current: Math.round(
-              (100 * (offset + segment.seconds * (maximum > 0 ? current / maximum : 0))) / total,
-            ),
-            total: 100,
-          }),
-      });
+    const { path, kind } = segment;
+    if (path !== null && kind !== "gap") {
+      const aligned = await located(snapshot, kind, () =>
+        alignSubtitles({
+          audioPath: path,
+          text: revisionTranscript(deps, snapshot, kind),
+          cacheDir: subtitleModelDir(deps.paths.dataDir),
+          ffmpeg: deps.ffmpeg,
+          signal: context.signal,
+          onOmission: (value) => omissions.push({ ...value, start: value.start + offset }),
+          onProgress: (current, maximum) =>
+            context.emit({
+              type: "stage.progress",
+              projectId: context.work.projectId,
+              stage: "video",
+              current: Math.round(
+                (100 * (offset + segment.seconds * (maximum > 0 ? current / maximum : 0))) / total,
+              ),
+              total: 100,
+            }),
+        }),
+      );
       for (const word of aligned) {
         if (word.end > segment.seconds + 0.1)
           throw new Error("Subtitle timing exceeds the narration duration.");
@@ -280,4 +290,81 @@ async function files(
       prepared.map((one) => one.asset),
     );
   }
+}
+
+// A mismatch names the place to fix: the time in the narration, the chunk that holds it (as
+// the Narration editor numbers them) and what was expected against what was heard. The
+// usual cause is a TTS request that skipped or reworded a sentence.
+async function located<T>(
+  snapshot: ExportSnapshot,
+  segment: "intro" | "body" | "outro",
+  align: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await align();
+  } catch (error) {
+    if (!(error instanceof SubtitleMismatch)) throw error;
+    throw new Error(mismatchMessage(snapshot, segment, error), { cause: error });
+  }
+}
+
+export function mismatchMessage(
+  snapshot: Pick<ExportSnapshot, "view" | "plan">,
+  segment: "intro" | "body" | "outro",
+  mismatch: SubtitleMismatch,
+): string {
+  let chunks: readonly NarrationChunk[] = [];
+  try {
+    chunks = narrationChunks(narrationTextParts(snapshot.view, snapshot.plan, segment));
+  } catch {
+    // Without a readable plan the message still gives the time and the words.
+  }
+  return describeMismatch(chunks, segment, mismatch);
+}
+
+export function describeMismatch(
+  chunks: readonly NarrationChunk[],
+  segment: "intro" | "body" | "outro",
+  mismatch: Pick<SubtitleMismatch, "at" | "expected" | "heard">,
+): string {
+  const probe = comparable(mismatch.expected).split(" ").slice(0, 6).join(" ");
+  const at =
+    probe === ""
+      ? chunks.length - 1
+      : chunks.findIndex((chunk) => comparable(chunk.spokenText).includes(probe));
+  const chunk = at === -1 ? undefined : chunks[at];
+  const where =
+    chunk === undefined
+      ? `${clock(mismatch.at)} into the ${segment} narration`
+      : `${clock(mismatch.at)} into the ${segment} narration, in narration chunk ${String(at + 1)} of ${String(chunks.length)} (it starts "${opening(chunk.spokenText)}")`;
+  const expected = mismatch.expected === "" ? "the end of the text" : `"${mismatch.expected}…"`;
+  const heard = mismatch.heard === "" ? "no more speech" : `"${mismatch.heard.toLowerCase()}…"`;
+  const fix =
+    chunk === undefined
+      ? "Check that part of the narration, regenerate it in Edit project → Narration, then Resume."
+      : `In Edit project → Narration, regenerate narration chunk ${String(at + 1)}, then Resume.`;
+  return `Subtitles stopped matching the audio at ${where}. The text expected ${expected} but the audio has ${heard} The recording there probably skips or changes words. ${fix}`;
+}
+
+function comparable(text: string): string {
+  return text
+    .toUpperCase()
+    .replace(/&/g, " AND ")
+    .replace(/[^A-Z0-9' ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function opening(text: string): string {
+  return text.trim().split(/\s+/).slice(0, 6).join(" ");
+}
+
+function clock(seconds: number): string {
+  const whole = Math.floor(seconds);
+  const hours = Math.floor(whole / 3600);
+  const minutes = Math.floor((whole % 3600) / 60);
+  const rest = String(whole % 60).padStart(2, "0");
+  return hours > 0
+    ? `${String(hours)}:${String(minutes).padStart(2, "0")}:${rest}`
+    : `${String(minutes)}:${rest}`;
 }

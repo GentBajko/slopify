@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { SubtitleMismatch } from "../../kernel/ports/subtitles.js";
 import { runAlignmentWorker } from "./runner.js";
 
 const roots: string[] = [];
@@ -56,4 +57,23 @@ it("forwards validated omission notes without ending alignment", async () => {
   );
   expect(omissions).toEqual([{ start: 12, text: "Missing passage" }]);
   expect(words).toEqual([{ text: "Next", start: 13, end: 14 }]);
+});
+
+it("passes on where the audio stopped matching", async () => {
+  const worker = await script(
+    'process.on("message", () => process.send({type:"error",message:"no match",mismatch:{at:6022.7,expected:"Early reviews disagreed",heard:"WARGAMER\'S HEADLINE"}}));',
+  );
+  const failure = await runAlignmentWorker(
+    request,
+    new AbortController().signal,
+    undefined,
+    worker,
+  ).catch((error: unknown) => error);
+  expect(failure).toBeInstanceOf(SubtitleMismatch);
+  expect(failure).toMatchObject({
+    message: "no match",
+    at: 6022.7,
+    expected: "Early reviews disagreed",
+    heard: "WARGAMER'S HEADLINE",
+  });
 });

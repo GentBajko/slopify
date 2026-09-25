@@ -5,7 +5,7 @@ import { resolveFont } from "../fonts/index.js";
 import { saveRevision } from "../revisions/mutations.js";
 import { outputPath } from "../storage/layout.js";
 import { exportFixture } from "./runtime-export.fake.js";
-import { executeSubtitleRecipe } from "./runtime-subtitles.js";
+import { describeMismatch, executeSubtitleRecipe } from "./runtime-subtitles.js";
 
 vi.mock("../fonts/index.js", () => ({
   resolveFont: vi.fn(async (paths: { dataDir: string }) => {
@@ -173,3 +173,29 @@ it("reuses the saved font when changing caption size after the system font is un
     h.close();
   }
 }, 30_000);
+
+it("names the time, the chunk and the words when the audio stops matching", () => {
+  const chunks = [
+    { key: "audio:body:a-1", spokenText: "Richard Lee Byers wrote the novels. " },
+    {
+      key: "audio:body:b-1",
+      spokenText:
+        "Around its March 2023 release, Collider ran explainers. Early reviews disagreed with each other. Wargamer's headline was \"I tested D&D's new Deadfall adventure.\"",
+    },
+  ];
+  expect(
+    describeMismatch(chunks, "body", {
+      at: 6022.7,
+      expected: "Early reviews disagreed with each other. Wargamer's headline was",
+      heard: "WARGAMER'S HEADLINE WAS I TESTED D AND D'S",
+    }),
+  ).toBe(
+    'Subtitles stopped matching the audio at 1:40:22 into the body narration, in narration chunk 2 of 2 (it starts "Around its March 2023 release, Collider"). The text expected "Early reviews disagreed with each other. Wargamer\'s headline was…" but the audio has "wargamer\'s headline was i tested d and d\'s…" The recording there probably skips or changes words. In Edit project → Narration, regenerate narration chunk 2, then Resume.',
+  );
+});
+
+it("still gives the time when no chunk holds the expected words", () => {
+  expect(
+    describeMismatch([], "outro", { at: 75, expected: "", heard: "THANKS FOR LISTENING" }),
+  ).toContain("at 1:15 into the outro narration. The text expected the end of the text");
+});

@@ -1,5 +1,9 @@
 import { type ForkOptions, fork } from "node:child_process";
-import type { SubtitleOmission, TimedWord } from "../../kernel/ports/subtitles.js";
+import {
+  SubtitleMismatch,
+  type SubtitleOmission,
+  type TimedWord,
+} from "../../kernel/ports/subtitles.js";
 import { type WorkerInput, workerMessage } from "./protocol.js";
 
 export async function runAlignmentWorker(
@@ -66,7 +70,17 @@ export async function runAlignmentWorker(
         } catch (error) {
           finish(error instanceof Error ? error : new Error(String(error)));
         }
-      } else if (message.type === "error") finish(new Error(message.message));
+      } else if (message.type === "error")
+        finish(
+          message.mismatch === undefined
+            ? new Error(message.message)
+            : new SubtitleMismatch(
+                message.message,
+                message.mismatch.at,
+                message.mismatch.expected,
+                message.mismatch.heard,
+              ),
+        );
       else
         finish(
           undefined,

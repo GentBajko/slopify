@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { emptyAnswer, renderApp, testDeps } from "@/test-app";
-import { NarrationEditor, narrationGroups } from "./narration-editor.js";
+import { NarrationEditor, narrationGroups, orderedGroups } from "./narration-editor.js";
 import { deferred, narrationView, response, staged } from "./revision-editor-test-fixtures.js";
 import { revisionView } from "./revision-fixture.js";
 import { formOfRevision } from "./revision-form-state.js";
@@ -134,4 +134,36 @@ it("text edits supersede both a staged replacement and an upload still in flight
     text: "",
   });
   expect(changed).toHaveBeenCalledTimes(1);
+});
+
+it("lists only the current chunks, in spoken order, once the order is known", () => {
+  const chunk = (key: string) => ({ key, text: key, parts: 1 });
+  const listed = [chunk("audio:body:old"), chunk("audio:body:second"), chunk("audio:body:first")];
+  expect(
+    orderedGroups(listed, { body: ["audio:body:first", "audio:body:second"] }).map(
+      (group) => group.key,
+    ),
+  ).toEqual(["audio:body:first", "audio:body:second"]);
+  expect(orderedGroups(listed, null)).toBe(listed);
+  expect(orderedGroups(listed, undefined)).toBe(listed);
+});
+
+it("shows a chunk queued for regeneration and can take it back", async () => {
+  const user = userEvent.setup();
+  const view = narrationView();
+  function Harness() {
+    const [edit, setEdit] = useState<RevisionEdit>(formOfRevision(view));
+    return <NarrationEditor view={view} edit={edit} onChange={setEdit} onPending={() => {}} />;
+  }
+  renderApp(<Harness />, testDeps({}));
+  await user.click(
+    screen.getByRole("button", { name: "Regenerate narration chunk 1 after review" }),
+  );
+  expect(
+    screen.getByText("Narration chunk 1 will be regenerated when you save and Resume."),
+  ).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Keep narration chunk 1" }));
+  expect(
+    screen.getByRole("button", { name: "Regenerate narration chunk 1 after review" }),
+  ).toBeTruthy();
 });

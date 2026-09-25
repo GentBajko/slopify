@@ -1,8 +1,11 @@
 import type { RevisionEdit, RevisionView } from "@app/slices/revisions/model.js";
+import { useQuery } from "@tanstack/react-query";
 import { useId, useRef, useState } from "react";
 import { z } from "zod";
+import { useApp } from "@/app-context";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
+import { type NarrationChunkOrder, narrationChunkOrderOf } from "./revision-api.js";
 import { RevisionUpload } from "./revision-upload.js";
 
 const payload = z.object({
@@ -15,6 +18,18 @@ interface LogicalChunk {
   readonly key: string;
   readonly text: string;
   readonly parts: number;
+}
+// With the server's spoken order the list is the current chunks only, in that order, so
+// "narration chunk N" here is the chunk a subtitle error names. Without it (still loading, or
+// no admitted plan) the list keeps every selected chunk as stored.
+export function orderedGroups(
+  groups: readonly LogicalChunk[],
+  order: NarrationChunkOrder | undefined,
+): readonly LogicalChunk[] {
+  if (order === undefined || order === null) return groups;
+  const keys = [...(order.intro ?? []), ...(order.body ?? []), ...(order.outro ?? [])];
+  if (keys.length === 0) return groups;
+  return keys.flatMap((key) => groups.filter((group) => group.key === key));
 }
 export function narrationGroups(view: RevisionView): {
   readonly groups: readonly LogicalChunk[];
@@ -71,7 +86,18 @@ export function NarrationEditor({
   readonly onPending: (key: string, pending: boolean) => void;
 }): import("react").ReactElement {
   const editorId = useId();
-  const { groups, unmapped } = narrationGroups(view);
+  const { api } = useApp();
+  const order = useQuery({
+    queryKey: ["narration-chunks", view.revision.projectId, view.revision.id],
+    queryFn: async () => {
+      const reply = await narrationChunkOrderOf(api, view.revision.projectId, view.revision.id);
+      return reply.ok ? reply.value.chunks : null;
+    },
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  const listed = narrationGroups(view);
+  const groups = orderedGroups(listed.groups, order.data);
+  const unmapped = listed.unmapped;
   const latest = useRef(edit);
   latest.current = edit;
   const [uploadResets, setUploadResets] = useState<Readonly<Record<string, number>>>({});
@@ -154,30 +180,49 @@ export function NarrationEditor({
                 });
               }}
             />
-            <Button
-              type="button"
-              onClick={() => {
-                const current = getEdit?.() ?? latest.current;
-                const narrationOverrides = { ...current.content.narrationOverrides };
-                if (narrationOverrides[chunk.key]?.kind === "asset")
-                  delete narrationOverrides[chunk.key];
-                setUploadResets((resets) => ({
-                  ...resets,
-                  [chunk.key]: (resets[chunk.key] ?? 0) + 1,
-                }));
-                emit({
-                  ...current,
-                  content: { ...current.content, narrationOverrides },
-                  uploads: current.uploads?.filter(
-                    (one) =>
-                      one.destination.kind !== "narration" || one.destination.key !== chunk.key,
-                  ),
-                  regenerate: [...new Set([...(current.regenerate ?? []), chunk.key])],
-                });
-              }}
-            >
-              Regenerate narration chunk {index + 1} after review
-            </Button>
+            {edit.regenerate?.includes(chunk.key) ? (
+              <p className="flex flex-wrap items-center gap-2 text-small text-done">
+                Narration chunk {index + 1} will be regenerated when you save and Resume.
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    const current = getEdit?.() ?? latest.current;
+                    emit({
+                      ...current,
+                      regenerate: (current.regenerate ?? []).filter((one) => one !== chunk.key),
+                    });
+                  }}
+                >
+                  Keep narration chunk {index + 1}
+                </Button>
+              </p>
+            ) : (
+              <Button
+                type="button"
+                onClick={() => {
+                  const current = getEdit?.() ?? latest.current;
+                  const narrationOverrides = { ...current.content.narrationOverrides };
+                  if (narrationOverrides[chunk.key]?.kind === "asset")
+                    delete narrationOverrides[chunk.key];
+                  setUploadResets((resets) => ({
+                    ...resets,
+                    [chunk.key]: (resets[chunk.key] ?? 0) + 1,
+                  }));
+                  emit({
+                    ...current,
+                    content: { ...current.content, narrationOverrides },
+                    uploads: current.uploads?.filter(
+                      (one) =>
+                        one.destination.kind !== "narration" || one.destination.key !== chunk.key,
+                    ),
+                    regenerate: [...new Set([...(current.regenerate ?? []), chunk.key])],
+                  });
+                }}
+              >
+                Regenerate narration chunk {index + 1} after review
+              </Button>
+            )}
           </fieldset>
         );
       })}

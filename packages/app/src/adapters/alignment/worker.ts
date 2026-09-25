@@ -1,6 +1,6 @@
 import { open, readFile, stat } from "node:fs/promises";
 import * as ort from "onnxruntime-web/wasm";
-import type { TimedWord } from "../../kernel/ports/subtitles.js";
+import { SubtitleMismatch, type TimedWord } from "../../kernel/ports/subtitles.js";
 import { mismatch } from "./ctc.js";
 import { type WorkerInput, workerInput } from "./protocol.js";
 import { type SpeechWord, speechWords } from "./text.js";
@@ -19,7 +19,13 @@ process.once("message", (raw: unknown) => {
   run(input.data).then(
     (words) => send({ type: "done", words }),
     (error: unknown) =>
-      send({ type: "error", message: error instanceof Error ? error.message : String(error) }),
+      send({
+        type: "error",
+        message: error instanceof Error ? error.message : String(error),
+        ...(error instanceof SubtitleMismatch
+          ? { mismatch: { at: error.at, expected: error.expected, heard: error.heard } }
+          : {}),
+      }),
   );
 });
 
@@ -74,17 +80,30 @@ async function run(input: WorkerInput): Promise<readonly TimedWord[]> {
       const finalWindow = sampleAt + count >= totalSamples;
       const complete = finalWindow && cursor + candidate.length === source.length;
       const cutoff = finalWindow ? count / sampleRate : count / sampleRate - overlapSeconds;
-      const recovered = alignSpeechWindow(
-        logits.data,
-        frames,
-        candidate,
-        complete,
-        cutoff,
-        cursor === 0 ? 0 : omissionBudget - omitted,
-      );
+      const stuck = (): SubtitleMismatch =>
+        new SubtitleMismatch(
+          mismatch,
+          sampleAt / sampleRate,
+          snippet(candidate.map((word) => word.text)),
+          snippet(observed.split(/\s+/)),
+        );
+      let recovered: ReturnType<typeof alignSpeechWindow>;
+      try {
+        recovered = alignSpeechWindow(
+          logits.data,
+          frames,
+          candidate,
+          complete,
+          cutoff,
+          cursor === 0 ? 0 : omissionBudget - omitted,
+        );
+      } catch (error) {
+        if (error instanceof Error && error.message === mismatch) throw stuck();
+        throw error;
+      }
       const accepted = recovered.words;
       const last = accepted.at(-1);
-      if (last === undefined) throw new Error(mismatch);
+      if (last === undefined) throw stuck();
       if (recovered.skipped > 0) {
         omitted += recovered.skipped;
         send({
@@ -111,7 +130,13 @@ async function run(input: WorkerInput): Promise<readonly TimedWord[]> {
       sampleAt += Math.max(1, Math.floor(last.end * sampleRate));
       for (const tensor of Object.values(result)) tensor.dispose();
     }
-    if (cursor !== source.length || output.length === 0) throw new Error(mismatch);
+    if (cursor !== source.length || output.length === 0)
+      throw new SubtitleMismatch(
+        mismatch,
+        sampleAt / sampleRate,
+        snippet(source.slice(cursor).map((word) => word.text)),
+        "",
+      );
     // A substantial spoken tail absent from the transcript is a mismatch too.
     while (sampleAt + sampleRate < totalSamples) {
       const count = Math.min(windowSeconds * sampleRate, totalSamples - sampleAt);
@@ -128,7 +153,12 @@ async function run(input: WorkerInput): Promise<readonly TimedWord[]> {
           logits.data instanceof Float32Array &&
           greedy(logits.data, logits.dims[1] ?? 0).replace(/[^A-Z]/g, "").length > 8
         )
-          throw new Error(mismatch);
+          throw new SubtitleMismatch(
+            mismatch,
+            sampleAt / sampleRate,
+            "",
+            snippet(greedy(logits.data, logits.dims[1] ?? 0).split(/\s+/)),
+          );
         for (const tensor of Object.values(result)) tensor.dispose();
       }
       sampleAt += count;
@@ -157,6 +187,14 @@ function candidates(
     length += normalized.spoken.length + 1;
   }
   return selected;
+}
+
+// A dozen words: enough to find the place in the text, short enough for an error row.
+function snippet(words: readonly string[]): string {
+  return words
+    .filter((word) => word !== "")
+    .slice(0, 12)
+    .join(" ");
 }
 
 function normalize(audio: Float32Array): Float32Array | undefined {

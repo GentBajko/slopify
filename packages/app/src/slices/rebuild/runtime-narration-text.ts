@@ -108,3 +108,54 @@ export async function publishNarrationText(
   }));
   await publishResult(deps, context, piece, outputs, { segment });
 }
+
+export interface NarrationChunk {
+  readonly key: string;
+  readonly spokenText: string;
+}
+
+// The narration's chunks in the order they are spoken, each with its clean text. A chunk is
+// sent as one or more parts; the Narration editor numbers these chunks, so anything that
+// names "chunk N" to a person counts from this list.
+export function narrationChunks(parts: readonly NarrationTextPart[]): readonly NarrationChunk[] {
+  const chunks: NarrationChunk[] = [];
+  for (const part of parts) {
+    const last = chunks.at(-1);
+    if (last?.key === part.logicalKey)
+      chunks[chunks.length - 1] = {
+        key: last.key,
+        spokenText: `${last.spokenText}${part.spokenText}`,
+      };
+    else chunks.push({ key: part.logicalKey, spokenText: part.spokenText });
+  }
+  return chunks;
+}
+
+// The current chunk keys of each narration segment, in spoken order, for the Narration
+// editor. Undefined when the revision has no admitted work to read a plan from, or its
+// narration is not complete yet; the editor then keeps its own listing.
+export function narrationChunkOrder(
+  deps: RevisionDeps,
+  projectId: string,
+  revisionId: string,
+): Readonly<Partial<Record<NarrationSegment, readonly string[]>>> | undefined {
+  const row = deps.db
+    .prepare(
+      "SELECT recipe_context FROM revision_work WHERE project_id=? AND revision_id=? AND recipe_context IS NOT NULL LIMIT 1",
+    )
+    .get(projectId, revisionId);
+  const view = executionView(deps, projectId, revisionId);
+  if (row === undefined || view === undefined) return undefined;
+  const plan = executionPlan(deps, view, savedCatalogue(row.recipe_context));
+  const order: Partial<Record<NarrationSegment, readonly string[]>> = {};
+  for (const segment of ["intro", "body", "outro"] as const) {
+    try {
+      order[segment] = narrationChunks(narrationTextParts(view, plan, segment)).map(
+        (chunk) => chunk.key,
+      );
+    } catch {
+      // A segment that is off, or not narrated yet, has no chunks to order.
+    }
+  }
+  return order;
+}

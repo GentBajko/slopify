@@ -154,6 +154,32 @@ export function viewOf(
     z.object({ view: revisionViewSchema }),
   );
 }
+const chunkKeys = z.array(z.string()).readonly();
+export type NarrationChunkOrder =
+  | {
+      readonly [segment in "intro" | "body" | "outro"]?: readonly string[] | undefined;
+    }
+  | null;
+export function narrationChunkOrderOf(
+  api: Api,
+  projectId: string,
+  revisionId: string,
+): Promise<RevisionReply<{ readonly chunks: NarrationChunkOrder }>> {
+  return request(
+    api,
+    projectId,
+    `/revisions/${encodeURIComponent(revisionId)}/narration-chunks`,
+    z.object({
+      chunks: z
+        .object({
+          intro: chunkKeys.optional(),
+          body: chunkKeys.optional(),
+          outro: chunkKeys.optional(),
+        })
+        .nullable(),
+    }),
+  );
+}
 export function previewProjectRebuild(
   api: Api,
   projectId: string,

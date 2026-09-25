@@ -29,5 +29,15 @@ export const workerMessage = z.discriminatedUnion("type", [
     ),
   }),
   omissionSchema.extend({ type: z.literal("omission") }),
-  z.object({ type: z.literal("error"), message: z.string() }),
+  z.object({
+    type: z.literal("error"),
+    message: z.string(),
+    mismatch: z
+      .object({
+        at: z.number().finite().nonnegative(),
+        expected: z.string().max(2000),
+        heard: z.string().max(2000),
+      })
+      .optional(),
+  }),
 ]);

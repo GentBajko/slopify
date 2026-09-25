@@ -4,6 +4,7 @@ import { z } from "zod";
 import { projectExists } from "../../slices/admission/repo.js";
 import type { FieldError } from "../../slices/admission/rules.js";
 import { previewRebuildSchema, startRebuildSchema } from "../../slices/rebuild/model.js";
+import { narrationChunkOrder } from "../../slices/rebuild/runtime-narration-text.js";
 import { previewRebuild, startRebuild } from "../../slices/rebuild/service.js";
 import { ensureBaseline, restoreRevision, saveRevision } from "../../slices/revisions/index.js";
 import { currentRevisionId, listRevisionHistory } from "../../slices/revisions/repo.js";
@@ -63,69 +64,87 @@ function unavailable(c: Context): Response {
 }
 
 export function revisionRoutes(deps: AppDeps) {
-  return new Hono()
-    .post("/:id/revisions/prepare", zValidator("param", projectParam, onInvalid), async (c) => {
-      const projectId = c.req.valid("param").id;
-      const result = await ensureBaseline(deps, projectId);
-      return result.ok ? c.json(result) : refused(c, deps, projectId, result);
-    })
-    .get("/:id/revisions", zValidator("param", projectParam, onInvalid), (c) => {
-      const projectId = c.req.valid("param").id;
-      return projectExists(deps.db, projectId)
-        ? c.json({ revisions: listRevisionHistory(deps.db, projectId) })
-        : refused(c, deps, projectId, { reason: "no-project" });
-    })
-    .get("/:id/revisions/:revisionId", zValidator("param", revisionParam, onInvalid), (c) => {
-      const { id: projectId, revisionId } = c.req.valid("param");
-      const view = getRevisionView(deps, projectId, revisionId);
-      return view === undefined
-        ? refused(c, deps, projectId, { reason: "no-revision" })
-        : c.json({ view });
-    })
-    .post(
-      "/:id/revisions",
-      zValidator("param", projectParam, onInvalid),
-      zValidator("json", saveBody, onInvalid),
-      async (c) => {
+  return (
+    new Hono()
+      .post("/:id/revisions/prepare", zValidator("param", projectParam, onInvalid), async (c) => {
         const projectId = c.req.valid("param").id;
-        const result = await saveRevision(deps, { projectId, ...c.req.valid("json") });
-        if (!result.ok) return refused(c, deps, projectId, result);
-        deps.hub.emit(projectId, { type: "project.updated", projectId });
-        return c.json(result);
-      },
-    )
-    .post(
-      "/:id/revisions/restore",
-      zValidator("param", projectParam, onInvalid),
-      zValidator("json", restoreBody, onInvalid),
-      async (c) => {
-        const projectId = c.req.valid("param").id;
-        const result = await restoreRevision(deps, { projectId, ...c.req.valid("json") });
-        if (!result.ok) return refused(c, deps, projectId, result);
-        deps.hub.emit(projectId, { type: "project.updated", projectId });
-        return c.json(result);
-      },
-    )
-    .post(
-      "/:id/rebuild/preview",
-      zValidator("param", projectParam, onInvalid),
-      zValidator("json", previewRebuildSchema, onInvalid),
-      async (c) => {
-        if (deps.rebuild === undefined) return unavailable(c);
-        const projectId = c.req.valid("param").id;
-        const result = await previewRebuild(deps.rebuild, { projectId, ...c.req.valid("json") });
+        const result = await ensureBaseline(deps, projectId);
         return result.ok ? c.json(result) : refused(c, deps, projectId, result);
-      },
-    )
-    .post(
-      "/:id/rebuild",
-      zValidator("param", projectParam, onInvalid),
-      zValidator("json", startRebuildSchema, onInvalid),
-      async (c) => {
-        if (deps.rebuild === undefined) return unavailable(c);
+      })
+      .get("/:id/revisions", zValidator("param", projectParam, onInvalid), (c) => {
         const projectId = c.req.valid("param").id;
-        const result = await startRebuild(deps.rebuild, { projectId, ...c.req.valid("json") });
-        return result.ok ? c.json(result, 202) : refused(c, deps, projectId, result);
-      },
-    );
+        return projectExists(deps.db, projectId)
+          ? c.json({ revisions: listRevisionHistory(deps.db, projectId) })
+          : refused(c, deps, projectId, { reason: "no-project" });
+      })
+      .get("/:id/revisions/:revisionId", zValidator("param", revisionParam, onInvalid), (c) => {
+        const { id: projectId, revisionId } = c.req.valid("param");
+        const view = getRevisionView(deps, projectId, revisionId);
+        return view === undefined
+          ? refused(c, deps, projectId, { reason: "no-revision" })
+          : c.json({ view });
+      })
+      // Chunk keys in spoken order, so the Narration editor numbers chunks the way a subtitle
+      // error names them. Building the plan is the costly part, so it has its own request.
+      .get(
+        "/:id/revisions/:revisionId/narration-chunks",
+        zValidator("param", revisionParam, onInvalid),
+        (c) => {
+          const { id: projectId, revisionId } = c.req.valid("param");
+          let chunks: ReturnType<typeof narrationChunkOrder>;
+          try {
+            chunks = narrationChunkOrder(deps, projectId, revisionId);
+          } catch {
+            chunks = undefined;
+          }
+          return c.json({ chunks: chunks ?? null });
+        },
+      )
+      .post(
+        "/:id/revisions",
+        zValidator("param", projectParam, onInvalid),
+        zValidator("json", saveBody, onInvalid),
+        async (c) => {
+          const projectId = c.req.valid("param").id;
+          const result = await saveRevision(deps, { projectId, ...c.req.valid("json") });
+          if (!result.ok) return refused(c, deps, projectId, result);
+          deps.hub.emit(projectId, { type: "project.updated", projectId });
+          return c.json(result);
+        },
+      )
+      .post(
+        "/:id/revisions/restore",
+        zValidator("param", projectParam, onInvalid),
+        zValidator("json", restoreBody, onInvalid),
+        async (c) => {
+          const projectId = c.req.valid("param").id;
+          const result = await restoreRevision(deps, { projectId, ...c.req.valid("json") });
+          if (!result.ok) return refused(c, deps, projectId, result);
+          deps.hub.emit(projectId, { type: "project.updated", projectId });
+          return c.json(result);
+        },
+      )
+      .post(
+        "/:id/rebuild/preview",
+        zValidator("param", projectParam, onInvalid),
+        zValidator("json", previewRebuildSchema, onInvalid),
+        async (c) => {
+          if (deps.rebuild === undefined) return unavailable(c);
+          const projectId = c.req.valid("param").id;
+          const result = await previewRebuild(deps.rebuild, { projectId, ...c.req.valid("json") });
+          return result.ok ? c.json(result) : refused(c, deps, projectId, result);
+        },
+      )
+      .post(
+        "/:id/rebuild",
+        zValidator("param", projectParam, onInvalid),
+        zValidator("json", startRebuildSchema, onInvalid),
+        async (c) => {
+          if (deps.rebuild === undefined) return unavailable(c);
+          const projectId = c.req.valid("param").id;
+          const result = await startRebuild(deps.rebuild, { projectId, ...c.req.valid("json") });
+          return result.ok ? c.json(result, 202) : refused(c, deps, projectId, result);
+        },
+      )
+  );
 }
