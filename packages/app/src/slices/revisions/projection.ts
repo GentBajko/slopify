@@ -92,7 +92,15 @@ export function projectSelected(db: DatabaseSync, revision: ProjectRevision): vo
   db.prepare(
     "DELETE FROM stage_pieces WHERE stage_id IN (SELECT id FROM stages WHERE project_id=?)",
   ).run(revision.projectId);
-  for (const row of pieces) {
+  // `stage_pieces` holds one row per stage, kind and position. When a rewrite gives work new
+  // keys (narration whose text changed, say), the pieces under the old keys stay selected in
+  // the revision while new ones are published into the same positions. The records come oldest
+  // first, so the newest claimant of each position is the one projected; the others remain in
+  // the revision's history.
+  const newest = new Map<string, (typeof pieces)[number]>();
+  for (const row of pieces)
+    newest.set(`${row.piece.stageId}\0${row.piece.kind}\0${String(row.piece.idx)}`, row);
+  for (const row of newest.values()) {
     const stage = db
       .prepare("SELECT id FROM stages WHERE project_id=? AND kind=?")
       .get(revision.projectId, row.stageKind);
