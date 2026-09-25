@@ -37,6 +37,46 @@ function atoms(
   }
   return result;
 }
+function checkedSpans(source: string, pronunciation: readonly PronunciationSpan[]) {
+  const spans = new Map<number, PronunciationSpan>();
+  let end = 0;
+  for (const span of [...pronunciation].sort((a, b) => a.start - b.start)) {
+    if (
+      !Number.isInteger(span.start) ||
+      !Number.isInteger(span.end) ||
+      span.start < end ||
+      span.end <= span.start ||
+      span.end > source.length ||
+      !/^[^\s\uD800-\uDFFF]+$/u.test(source.slice(span.start, span.end))
+    )
+      throw new Error("Pronunciation spans must cover disjoint whole source characters in a word.");
+    spans.set(span.start, span);
+    end = span.end;
+  }
+  return spans;
+}
+function anchoredParts(source: string, cues: readonly Cue[], spans: readonly PronunciationSpan[]) {
+  const bySentence = new Map<number, Cue[]>();
+  for (const cue of cues) {
+    const group = bySentence.get(cue.sentence) ?? [];
+    group.push(cue);
+    bySentence.set(cue.sentence, group);
+  }
+  const anchors = new Map<number, Cue[]>();
+  let offset = 0;
+  for (const sentence of sourceSentences(source)) {
+    const start = spans.find((span) => span.start < offset && offset < span.end)?.start ?? offset;
+    const events = anchors.get(start) ?? [];
+    events.push(...(bySentence.get(sentence.sentence) ?? []));
+    anchors.set(start, events);
+    offset += sentence.text.length;
+  }
+  return [...anchors].map(([start, events], index, boundaries) => ({
+    start,
+    text: source.slice(start, boundaries[index + 1]?.[0] ?? source.length),
+    events,
+  }));
+}
 export function prepareRequests(
   source: string,
   cues: readonly Cue[],
@@ -49,18 +89,11 @@ export function prepareRequests(
       reason: "The narration character limit must be a whole number of at least 2.",
     };
   if (source.trim() === "") return { ok: true, requests: [] };
-  const spans = new Map(pronunciation.map((span) => [span.start, span]));
+  const spans = checkedSpans(source, pronunciation);
   const requests: PreparedRequest[] = [];
-  const bySentence = new Map<number, Cue[]>();
-  for (const cue of cues) {
-    const group = bySentence.get(cue.sentence) ?? [];
-    group.push(cue);
-    bySentence.set(cue.sentence, group);
-  }
   let active: string | null = null;
   let text = "";
   let spokenText = "";
-  let offset = 0;
   const flush = (): boolean => {
     if (spokenText.trim() === "") return false;
     requests.push({ text, spokenText });
@@ -68,13 +101,16 @@ export function prepareRequests(
     spokenText = "";
     return true;
   };
-  for (const sentence of sourceSentences(source)) {
-    const events = bySentence.get(sentence.sentence) ?? [];
-    const direction = events.find((cue) => cue.kind !== "sound");
+  for (const part of anchoredParts(source, cues, pronunciation)) {
+    const events = part.events;
+    const direction =
+      pronunciation.length === 0
+        ? events.find((cue) => cue.kind !== "sound")
+        : events.findLast((cue) => cue.kind !== "sound");
     const tags = events.map(cueTag).join(" ");
     const prefix = tags === "" ? "" : `${tags} `;
-    const words = Array.from(sentence.text.matchAll(/\S+\s*|\s+/gu)).map((match) =>
-      atoms(source, offset + match.index, offset + match.index + match[0].length, spans),
+    const words = Array.from(part.text.matchAll(/\S+\s*|\s+/gu)).map((match) =>
+      atoms(source, part.start + match.index, part.start + match.index + match[0].length, spans),
     );
     const first = words[0]?.[0]?.text ?? "";
     const firstWordLength = words[0]?.reduce((length, atom) => length + atom.text.length, 0) ?? 0;
@@ -90,9 +126,10 @@ export function prepareRequests(
     if (text.length + prefix.length + first.length > maxCharacters) return cannotFit;
     text += prefix;
     if (direction !== undefined) active = direction.kind === "instruction" ? direction.text : null;
-    for (const word of words) {
+    for (const [index, word] of words.entries()) {
       const length = word.reduce((sum, atom) => sum + atom.text.length, 0);
       if (
+        (index > 0 || prefix === "" || spans.size === 0) &&
         length + carryTag(active).length <= maxCharacters &&
         text.length + length > maxCharacters &&
         spokenText.trim() !== ""
@@ -110,7 +147,6 @@ export function prepareRequests(
         spokenText += atom.spokenText;
       }
     }
-    offset += sentence.text.length;
   }
   if (spokenText !== "" && !flush()) return cannotFit;
   return { ok: true, requests };

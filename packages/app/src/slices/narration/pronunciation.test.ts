@@ -70,4 +70,31 @@ describe("article pronunciation glossary", () => {
       "/eɪ/",
     ]);
   });
+  it.each(["'Lich'", "‘Lich’", '"Lich"', "“Lich”"])(
+    "matches the whole term inside %s without consuming quotes",
+    (quoted) => {
+      const parsed = parsePronunciationGlossary("Lich: /lɪtʃ/");
+      if (!parsed.ok) throw new Error(parsed.reason);
+      const source = `The ${quoted} returns.`;
+      expect(pronunciationSpans(source, parsed.entries)).toEqual([
+        { start: 5, end: 9, text: "/lɪtʃ/" },
+      ]);
+    },
+  );
+  it.each(["Lich's", "Lich’s", "Liches", "O'Lich", "O’Lich", "'Lich's'", "‘Lich’s’"])(
+    "does not infer a pronunciation for %s",
+    (source) => {
+      const parsed = parsePronunciationGlossary("Lich: /lɪtʃ/");
+      if (!parsed.ok) throw new Error(parsed.reason);
+      expect(pronunciationSpans(source, parsed.entries)).toEqual([]);
+    },
+  );
+  it.each(["O'Lich", "O’Lich"])("keeps an apostrophe inside the listed term %s", (term) => {
+    const parsed = parsePronunciationGlossary(`${term}: /oʊlɪtʃ/`);
+    if (!parsed.ok) throw new Error(parsed.reason);
+    const source = `The '${term}' returns.`;
+    expect(pronunciationSpans(source, parsed.entries)).toEqual([
+      { start: 5, end: 5 + term.length, text: "/oʊlɪtʃ/" },
+    ]);
+  });
 });

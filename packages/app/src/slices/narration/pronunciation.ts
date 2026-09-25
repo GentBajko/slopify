@@ -101,13 +101,13 @@ export function pronunciationSpans(
       .map((word) => word.replace(/[|\\{}()[\]^$+*?.]/gu, "\\$&"))
       .join("\\s+"),
   );
-  const boundary = "[\\p{L}\\p{M}\\p{N}_'’\\-]";
+  const boundary = "[\\p{L}\\p{M}\\p{N}_\\-]";
   const expression = new RegExp(
     "(?<!" +
       boundary +
-      ")(?:" +
+      "['’]?)(?:" +
       patterns.map((pattern) => `(${pattern})`).join("|") +
-      ")(?!" +
+      ")(?!['’]?" +
       boundary +
       ")",
     "giu",
