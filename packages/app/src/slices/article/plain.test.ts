@@ -77,4 +77,24 @@ describe("plainText", () => {
     expect(plainText("")).toBe("");
     expect(plainText("   \n\n")).toBe("");
   });
+
+  it.each([
+    ["D&D.", "D&D.\n"],
+    ["D\\&D.", "D&D.\n"],
+    ["\\*stars\\*, \\[brackets\\], a\\_b and \\#1.", "*stars*, [brackets], a_b and #1.\n"],
+    ["&amp; &#38; &#x26; &unknown;", "& & & &unknown;\n"],
+    [
+      "Literal `C:\\Temp\\file.txt` and `\\\\server\\share`.",
+      "Literal C:\\Temp\\file.txt and \\\\server\\share.\n",
+    ],
+    [
+      "# Title\n\nFirst **paragraph**.\n\n- Second\n- Third",
+      "Title\n\nFirst paragraph.\n\nSecond\n\nThird\n",
+    ],
+    ["One.  \nTwo.\nThree.", "One.\nTwo.\nThree.\n"],
+    ["<span></span>", ""],
+    ["[^1]\n\n[^1]: Removed.", ""],
+  ])("projects prose without serialization escapes: %s", (source, expected) => {
+    expect(plainText(source)).toBe(expected);
+  });
 });

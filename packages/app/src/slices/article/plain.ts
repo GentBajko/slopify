@@ -2,15 +2,19 @@ import { remark } from "remark";
 import remarkGfm from "remark-gfm";
 import stripMarkdown from "strip-markdown";
 
-// The article is stored twice, as the markdown the model wrote and as the plain text the
-// narration is read from, so no TTS voice ever says a hash or a bracket. remark parses and
-// strip-markdown drops the formatting; the GFM extension is what makes a table a table rather
-// than a paragraph full of pipes, and what takes a footnote marker out of the middle of a
-// sentence.
-
 export function plainText(markdown: string): string {
-  // Built per call: a shared processor would be a module-level singleton, and building
-  // one costs a few microseconds against a call that just parsed an article.
-  const stripped = remark().use(remarkGfm).use(stripMarkdown).processSync(markdown);
-  return String(stripped);
+  const processor = remark().use(remarkGfm).use(stripMarkdown);
+  const tree = processor.runSync(processor.parse(markdown));
+  const paragraphs = tree.children
+    .map((node) => {
+      if (node.type !== "paragraph") throw new Error("Expected stripped prose paragraphs.");
+      return node.children
+        .map((child) => {
+          if (child.type !== "text") throw new Error("Expected stripped prose text.");
+          return child.value;
+        })
+        .join("");
+    })
+    .filter((text) => text !== "");
+  return paragraphs.length === 0 ? "" : paragraphs.join("\n\n") + "\n";
 }
