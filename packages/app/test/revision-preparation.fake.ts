@@ -5,9 +5,15 @@ import { composedFixture, current, save } from "./revision-rebuild.fake.js";
 
 export async function preparationFixture(
   ports: Partial<Registry> = {},
-  article = "First sentence. Second sentence.",
-  upgradeFrom10 = false,
-) {
+  article: string = "First sentence. Second sentence.",
+  upgradeFrom10: boolean = false,
+  usePronunciationGlossary: boolean = false,
+): Promise<
+  Awaited<ReturnType<typeof composedFixture>> & {
+    readonly view: ReturnType<typeof current>;
+    readonly catalogue: typeof preparationCatalogue;
+  }
+> {
   const h = await composedFixture(ports, upgradeFrom10);
   const catalogue = {
     ...preparationCatalogue,
@@ -21,7 +27,12 @@ export async function preparationFixture(
       ...base.revision.config,
       narrationPrompt: "Delivery",
       llm: { provider: "openrouter", model: "llm" },
-      audio: { provider: "inworld", model: "inworld-tts-2", voice: "v" },
+      audio: {
+        provider: "inworld",
+        model: "inworld-tts-2",
+        voice: "v",
+        ...(usePronunciationGlossary ? { usePronunciationGlossary: true } : {}),
+      },
       sources: { ...base.revision.config.sources, images: "off", video: "off", audio: "generate" },
       chunking: { mode: "paragraph" },
       provided: { article },

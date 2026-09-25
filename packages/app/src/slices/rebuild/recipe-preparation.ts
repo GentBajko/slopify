@@ -5,6 +5,7 @@ import {
   preparationMessages,
   validatePreparation,
 } from "../narration/preparation.js";
+import type { pronunciationSpans } from "../narration/pronunciation.js";
 import { type PreparedRequest, prepareRequests } from "../narration/steering.js";
 import {
   type RecipeContext,
@@ -34,6 +35,7 @@ export function preparationFuture(
   context: RecipeContext,
   segment: NarrationSegment,
   dependency: ResolvedWorkRecipe,
+  additionalDependencies: readonly ResolvedWorkRecipe[] = [],
 ): ResolvedWorkRecipe {
   return recipe(
     context,
@@ -47,9 +49,10 @@ export function preparationFuture(
         dependency.fingerprint,
         preparationTemplate(context),
         JSON.parse(JSON.stringify(context.config.chunking ?? null)) as FingerprintValue,
+        ...additionalDependencies.map((row) => row.fingerprint),
       ],
     },
-    [dependency.key],
+    [...new Set([dependency.key, ...additionalDependencies.map((row) => row.key)])],
   );
 }
 
@@ -60,6 +63,7 @@ export function preparationForGroup(
   segment: NarrationSegment,
   dependsOn: readonly string[],
   maxCharacters: number,
+  spans: ReturnType<typeof pronunciationSpans> = [],
 ): PreparedGroup {
   const preparation = recipe(
     context,
@@ -114,12 +118,17 @@ export function preparationForGroup(
       ? Math.max(
           2,
           source.length +
+            spans.reduce(
+              (sum, span) => sum + Math.max(0, span.text.length - (span.end - span.start)),
+              0,
+            ) +
             validated.cues.reduce(
               (n, cue) => n + (cue.kind === "instruction" ? cue.text.length : 20) + 3,
               0,
             ),
         )
       : maxCharacters,
+    spans,
   );
   return prepared.ok
     ? { preparation, requests: prepared.requests, refusal: null }

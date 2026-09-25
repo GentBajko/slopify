@@ -1,9 +1,9 @@
 import { type FingerprintValue, fingerprint } from "../../kernel/runner/work.js";
-import { usesNarrationPreparation } from "../admission/rules.js";
+import { usesNarrationPreparation, usesPronunciationGlossary } from "../admission/rules.js";
 import { chunkNarration, defaultChunking } from "../narration/chunk.js";
 import { concatArgs } from "../narration/concat.js";
 import { normalizeNarrationText } from "../narration/plan.js";
-import { narrationParts, voiceValues } from "./recipe-audio-parts.js";
+import { narrationParts, pronunciationFutureValues, voiceValues } from "./recipe-audio-parts.js";
 import {
   type RecipeContext,
   type ResolvedWorkRecipe,
@@ -26,6 +26,9 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
   const recipes: ResolvedWorkRecipe[] = [];
   if (config.sources.audio === "off")
     return { recipes, mediaFingerprint: null, timeline: [], keys: [] };
+  const prepare = usesNarrationPreparation(config);
+  const pronounce = usesPronunciationGlossary(config);
+  const narrationFiles = prepare || pronounce;
   let body: ResolvedWorkRecipe;
   if (config.sources.audio === "provide") {
     body = recipe(
@@ -52,12 +55,16 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
           );
     const occurrences = new Map<string, number>();
     const parts: ResolvedWorkRecipe[] = [];
+    const futurePronunciation: FingerprintValue[] = [];
     let pending = text.articleText === null;
     for (const logicalText of groups) {
       const hash = fingerprint(logicalText).slice(0, 20);
       const occurrence = (occurrences.get(hash) ?? 0) + 1;
       occurrences.set(hash, occurrence);
       const logicalKey = `audio:body:${hash}-${occurrence}`;
+      futurePronunciation.push(
+        ...pronunciationFutureValues(context, text.glossary, text.article, logicalKey, logicalText),
+      );
       const group = narrationParts(
         context,
         logicalKey,
@@ -65,14 +72,24 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
         "body",
         [text.article.key],
         recipes,
+        text.glossary,
       );
       if (group.length === 0) pending = true;
       parts.push(...group);
     }
-    if (text.articleText === null && usesNarrationPreparation(config))
-      recipes.push(preparationFuture(context, "body", text.article));
-    // Physical ordinals are stable only after every logical group's cue plan is known.
-    if (pending && usesNarrationPreparation(config)) parts.length = 0;
+    if (text.articleText === null) {
+      futurePronunciation.push(
+        ...pronunciationFutureValues(
+          context,
+          text.glossary,
+          text.article,
+          "audio:body:future",
+          null,
+        ),
+      );
+      if (prepare) recipes.push(preparationFuture(context, "body", text.article));
+    }
+    if (pending && prepare) parts.length = 0;
     if (pending)
       parts.push(
         recipe(
@@ -87,14 +104,15 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
               text.article.fingerprint,
               voiceValues(context),
               chunkingValues(context),
-              ...(usesNarrationPreparation(config) ? [preparationTemplate(context)] : []),
+              ...(prepare ? [preparationTemplate(context)] : []),
+              ...futurePronunciation,
             ],
           },
           [text.article.key, ...preparationKeys(recipes, "body")],
         ),
       );
     recipes.push(...parts);
-    if (usesNarrationPreparation(config)) recipes.push(narrationFileRecipe(context, "body", parts));
+    if (narrationFiles) recipes.push(narrationFileRecipe(context, "body", parts));
     body = recipe(
       context,
       "audio:body:concat",
@@ -121,37 +139,33 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
     }
     const entry = text.entries[category];
     if (entry === undefined) continue;
-    if (entry.text === null && usesNarrationPreparation(config))
-      recipes.push(preparationFuture(context, category, entry.recipe));
+    const logicalKey = `audio:${category}`;
+    const supplied = content.narrationOverrides[logicalKey]?.kind === "asset";
+    const dependencies = [entry.recipe.key, ...(pronounce && !supplied ? [text.article.key] : [])];
+    const invalidGlossary =
+      !supplied && text.glossary !== null && !text.glossary.ok ? text.glossary.reason : undefined;
+    if (
+      prepare &&
+      !supplied &&
+      invalidGlossary === undefined &&
+      (entry.text === null || text.glossary === null)
+    )
+      recipes.push(
+        preparationFuture(context, category, entry.recipe, pronounce ? [text.article] : []),
+      );
     const parts =
       entry.text === null
-        ? [
-            recipe(
-              context,
-              `audio:${category}:future`,
-              "audio",
-              {
-                kind: "deferred",
-                version: 1,
-                operation: `${category}-narration`,
-                template: [
-                  entry.recipe.fingerprint,
-                  voiceValues(context),
-                  ...(usesNarrationPreparation(config) ? [preparationTemplate(context)] : []),
-                ],
-              },
-              [entry.recipe.key, ...preparationKeys(recipes, category)],
-            ),
-          ]
+        ? []
         : narrationParts(
             context,
-            `audio:${category}`,
+            logicalKey,
             entry.text,
             category,
-            [entry.recipe.key],
+            dependencies,
             recipes,
+            text.glossary,
           );
-    if (parts.length === 0 && usesNarrationPreparation(config))
+    if (parts.length === 0)
       parts.push(
         recipe(
           context,
@@ -164,10 +178,18 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
             template: [
               entry.recipe.fingerprint,
               voiceValues(context),
-              preparationTemplate(context),
+              ...(prepare ? [preparationTemplate(context)] : []),
+              ...pronunciationFutureValues(
+                context,
+                text.glossary,
+                text.article,
+                logicalKey,
+                entry.text,
+              ),
             ],
           },
-          [entry.recipe.key, ...preparationKeys(recipes, category)],
+          [...dependencies, ...preparationKeys(recipes, category)],
+          invalidGlossary === undefined ? {} : { unresolved: true, refusal: invalidGlossary },
         ),
       );
     recipes.push(...parts);
@@ -187,8 +209,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
       parts.map((part) => part.key),
     );
     recipes.push(audio);
-    if (usesNarrationPreparation(config))
-      recipes.push(narrationFileRecipe(context, category, parts));
+    if (narrationFiles) recipes.push(narrationFileRecipe(context, category, parts));
     ordered.push({ value: audio, transcript: entry.text ?? entry.recipe.fingerprint });
   }
   const timeline: FingerprintValue = ordered.map(({ value, transcript }) => {

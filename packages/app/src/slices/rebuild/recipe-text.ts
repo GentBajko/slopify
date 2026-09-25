@@ -2,11 +2,13 @@ import { z } from "zod";
 import type { Message } from "../../kernel/ports/llm.js";
 import { documentIndex, type LlmDocument } from "../../kernel/ports/llm-documents.js";
 import { type FingerprintValue, fingerprint } from "../../kernel/runner/work.js";
+import { usesPronunciationGlossary } from "../admission/rules.js";
 import { render } from "../admission/substitute.js";
 import { articleMessages, continuationMessages } from "../article/continuation.js";
 import { plainText } from "../article/plain.js";
 import { segmentMessages } from "../article/segments.js";
 import { splitEndMatter } from "../article/split.js";
+import { type GlossaryResult, parsePronunciationGlossary } from "../narration/pronunciation.js";
 import { researchDocuments } from "../research/documents.js";
 import { plannerMessages, subAgentMessages } from "../research/planner.js";
 import { synthesisMessages } from "../research/synthesis.js";
@@ -70,18 +72,13 @@ export function selectedText(
     .parse(JSON.parse(piece.piece.payload));
   return parsed[field]?.trim() ?? null;
 }
+type TextRecipe = { readonly recipe: ResolvedWorkRecipe; readonly text: string | null };
 export interface TextRecipes {
   readonly recipes: readonly ResolvedWorkRecipe[];
   readonly articleText: string | null;
+  readonly glossary: GlossaryResult | null;
   readonly article: ResolvedWorkRecipe;
-  readonly entries: Readonly<
-    Partial<
-      Record<
-        "intro" | "outro",
-        { readonly recipe: ResolvedWorkRecipe; readonly text: string | null }
-      >
-    >
-  >;
+  readonly entries: Readonly<Partial<Record<"intro" | "outro", TextRecipe>>>;
 }
 export function textRecipes(context: RecipeContext): TextRecipes {
   const { config, content, resolved } = context;
@@ -96,16 +93,15 @@ export function textRecipes(context: RecipeContext): TextRecipes {
       llmInput(context, plannerMessages(brief)),
     );
     recipes.push(planner);
-    const chapters =
-      resolved.research?.outline.map((title, index) =>
-        recipe(
-          context,
-          `research:chapter:${index + 1}`,
-          "research",
-          llmInput(context, subAgentMessages(brief, title, resolved.research?.outline ?? []), true),
-          [planner.key],
-        ),
-      ) ?? [];
+    const chapters = (resolved.research?.outline ?? []).map((title, index) =>
+      recipe(
+        context,
+        `research:chapter:${index + 1}`,
+        "research",
+        llmInput(context, subAgentMessages(brief, title, resolved.research?.outline ?? []), true),
+        [planner.key],
+      ),
+    );
     recipes.push(...chapters);
     const findings = resolved.research?.findings;
     research =
@@ -207,11 +203,14 @@ export function textRecipes(context: RecipeContext): TextRecipes {
         [article.key],
       ),
     );
-  const articleText =
-    articleMarkdown === null ? null : plainText(splitEndMatter(articleMarkdown).body);
-  const entries: Partial<
-    Record<"intro" | "outro", { recipe: ResolvedWorkRecipe; text: string | null }>
-  > = {};
+  const endMatter = articleMarkdown === null ? null : splitEndMatter(articleMarkdown);
+  const articleText = endMatter === null ? null : plainText(endMatter.body);
+  const glossary: GlossaryResult | null = !usesPronunciationGlossary(config)
+    ? { ok: true, entries: [] }
+    : endMatter === null
+      ? null
+      : parsePronunciationGlossary(endMatter.glossary);
+  const entries: Partial<Record<"intro" | "outro", TextRecipe>> = {};
   for (const category of ["intro", "outro"] as const) {
     const choice = config[category];
     if (choice === undefined || config.sources.audio !== "generate") continue;
@@ -270,7 +269,7 @@ export function textRecipes(context: RecipeContext): TextRecipes {
       ),
     );
   }
-  return { recipes, articleText, article, entries };
+  return { recipes, articleText, glossary, article, entries };
 }
 function llmInputFingerprint(context: RecipeContext, messages: readonly Message[]): string {
   return fingerprint(JSON.parse(JSON.stringify(llmInput(context, messages))) as FingerprintValue);
