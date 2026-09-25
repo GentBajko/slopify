@@ -14,6 +14,7 @@ export function pieceLabel(
   const { key } = piece;
   if (key === "thumbnail:image" || key.startsWith("thumbnail:")) return "Thumbnail";
   if (key === "article:body") return "Article";
+  if (key === "document:pdf") return "Document";
   if (key === "entry:intro:text") return "Intro text";
   if (key === "entry:outro:text") return "Outro text";
   if (key === "research:planner") return "Research plan";

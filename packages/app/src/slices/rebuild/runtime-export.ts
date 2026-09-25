@@ -7,6 +7,7 @@ import type { PreparedOutput } from "../revisions/publication-model.js";
 import { allocateAsset, discardPreparedAssets, sealAsset } from "../storage/assets.js";
 import { outputPath, projectDir } from "../storage/layout.js";
 import { audioExportArgs } from "../video/audio-export.js";
+import { withPaths } from "../video/edit-list.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import { planRender } from "../video/plan.js";
 import { renderSlideshow } from "../video/slideshow.js";
@@ -91,6 +92,7 @@ export async function executeExportRecipe(
           edgeSeconds: config.edgeSilenceSeconds,
           imageSeconds: config.imageSeconds,
           zoomPercent: config.zoomPercent,
+          motionStyle: config.motionStyle,
           body: segment("body"),
           intro: segment("intro"),
           outro: segment("outro"),
@@ -119,11 +121,7 @@ export async function executeExportRecipe(
         : {
             ...plan,
             output: pending.path,
-            audio: plan.audio.map((row) => ({
-              ...row,
-              path: row.path === null ? null : relativePath(row.path),
-            })),
-            images: plan.images.map((row) => ({ ...row, path: relativePath(row.path) })),
+            editList: withPaths(plan.editList, relativePath),
             subtitles: config.subtitles,
           };
     if (!context.maySubmit(piece.id)) return "held";
@@ -146,7 +144,8 @@ export async function executeExportRecipe(
     else
       await renderSlideshow({
         bin: deps.ffmpeg,
-        plan,
+        edit: plan.editList,
+        output: plan.output,
         burnSubtitles: burn,
         cwd: directory,
         scratch: projectDirectory,

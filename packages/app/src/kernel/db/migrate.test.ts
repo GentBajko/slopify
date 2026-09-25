@@ -125,6 +125,7 @@ describe("migrate", () => {
       { version: 11, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 12, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 13, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 14, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -134,7 +135,7 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 13 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 14 });
   });
 
   it("refuses a database newer than the app knows", () => {
@@ -143,7 +144,7 @@ describe("migrate", () => {
     db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(42, clock.now().toISOString());
 
     expect(() => migrate(db, clock)).toThrow(
-      "database schema 42 is newer than this app knows (13)",
+      "database schema 42 is newer than this app knows (14)",
     );
   });
 
@@ -205,6 +206,82 @@ describe("migrate", () => {
       ).toThrow();
       migrate(db, clock);
       expect(db.prepare("SELECT count(*) AS n FROM prompts").get()).toEqual({ n: 4 });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("adds a switched-off document stage to every project without losing a row", () => {
+    const db = openDb(":memory:");
+    try {
+      const directory = new URL("./migrations/", import.meta.url);
+      for (const file of readdirSync(directory)
+        .filter((name) => name.endsWith(".sql") && Number(name.slice(0, 4)) <= 13)
+        .sort()) {
+        db.exec(readFileSync(new URL(file, directory), "utf8"));
+        db.prepare("INSERT INTO schema_migrations VALUES (?,?)").run(
+          Number(file.slice(0, 4)),
+          clock.now().toISOString(),
+        );
+      }
+      db.exec("INSERT INTO projects VALUES ('p1','Saved','16:9','{}','old','old')");
+      db.exec("INSERT INTO projects VALUES ('p2','Other','9:16','{}','old','old')");
+      for (const kind of ["research", "article", "audio", "images", "thumbnail", "video"])
+        db.prepare(
+          "INSERT INTO stages (id,project_id,kind,source,state,attempt_count) VALUES (?,?,?,?,?,2)",
+        ).run(`s-${kind}`, "p1", kind, "generate", "done");
+      db.exec("INSERT INTO attempts (id,stage_id,n,started_at) VALUES ('a1','s-audio',1,'old')");
+      db.exec("INSERT INTO stage_pieces VALUES ('c1','s-audio','chunk',1,'done',NULL)");
+      db.exec("INSERT INTO project_revisions VALUES ('r1','p1',NULL,NULL,'{}','{}','{}','old')");
+      db.exec(
+        "INSERT INTO revision_work (id,project_id,revision_id,stage_id,kind,fingerprint,state,dispatch_state,created_at) VALUES ('w1','p1','r1','s-audio','audio','f','done','allowed','old')",
+      );
+      db.exec(
+        "INSERT INTO revision_pieces VALUES ('rp1','p1','r1','audio:body:1','audio',NULL,'f','{}',NULL,1,'old')",
+      );
+      const kept = ["stages", "attempts", "stage_pieces", "revision_work", "revision_pieces"];
+      const before = kept.map((table) => db.prepare(`SELECT * FROM ${table}`).all());
+
+      migrate(db, clock);
+
+      expect(
+        kept.map((table) =>
+          db
+            .prepare(`SELECT * FROM ${table}`)
+            .all()
+            .filter((row) => row.kind !== "document"),
+        ),
+      ).toEqual(before);
+      expect(
+        db
+          .prepare("SELECT project_id,source,state FROM stages WHERE kind='document' ORDER BY 1")
+          .all(),
+      ).toEqual([
+        { project_id: "p1", source: "off", state: "skipped" },
+        { project_id: "p2", source: "off", state: "skipped" },
+      ]);
+      expect(db.prepare("PRAGMA foreign_keys").get()).toEqual({ foreign_keys: 1 });
+      expect(db.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+      expect(names(db, "index")).toEqual(
+        expect.arrayContaining([
+          "stages_project_identity",
+          "revision_pieces_selected",
+          "revision_pieces_revision",
+          "revision_pieces_publication",
+        ]),
+      );
+      db.exec(
+        "INSERT INTO revision_pieces VALUES ('rp2','p1','r1','document:pdf','document',NULL,'f','{}',NULL,1,'old')",
+      );
+      expect(() =>
+        db.exec(
+          "INSERT INTO stages (id,project_id,kind,source,state) VALUES ('x','p2','poster','off','skipped')",
+        ),
+      ).toThrow();
+      // The rebuilt table still carries the cascade the old one had.
+      db.exec("DELETE FROM projects WHERE id='p1'");
+      expect(db.prepare("SELECT count(*) AS n FROM attempts").get()).toEqual({ n: 0 });
+      expect(db.prepare("SELECT count(*) AS n FROM revision_work").get()).toEqual({ n: 0 });
     } finally {
       db.close();
     }
@@ -281,9 +358,13 @@ describe("migrate", () => {
       db.prepare(`SELECT * FROM ${table}`).all(),
     );
     migrate(db, clock);
+    // Besides the switched-off document stage version 14 adds to every project.
     expect(
       ["projects", "stages", "stage_pieces", "outputs"].map((table) =>
-        db.prepare(`SELECT * FROM ${table}`).all(),
+        db
+          .prepare(`SELECT * FROM ${table}`)
+          .all()
+          .filter((row) => row.kind !== "document"),
       ),
     ).toEqual(before);
     for (const table of [

@@ -157,6 +157,7 @@ function pieceIndex(deps: RevisionDeps, context: StageContext, piece: WorkPiece)
     "subtitles:files",
     "export:wav",
     "export:video",
+    "document:pdf",
     "narration:files:body",
     "narration:files:intro",
     "narration:files:outro",

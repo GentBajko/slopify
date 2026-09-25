@@ -43,6 +43,7 @@ const contentTypes: Readonly<Record<string, string>> = {
   ".ogg": "audio/ogg",
   ".opus": "audio/opus",
   ".mp4": "video/mp4",
+  ".pdf": "application/pdf",
   ".srt": "application/x-subrip; charset=utf-8",
   ".vtt": "text/vtt; charset=utf-8",
 };

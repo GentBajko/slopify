@@ -1,4 +1,13 @@
-import type { Format } from "../admission/model.js";
+import type { Format, MotionStyle } from "../admission/model.js";
+import {
+  type AudioKind,
+  type AudioSegment,
+  type EditList,
+  editListVersion,
+  type Shot,
+  type SpokenKind,
+} from "./edit-list.js";
+import { motionFor } from "./motion.js";
 
 // 30 fps, 1920×1080 for 16:9 and 1080×1920 for 9:16.
 export const fps = 30;
@@ -7,8 +16,8 @@ const frames: Readonly<Record<Format, { width: number; height: number }>> = {
   "9:16": { width: 1080, height: 1920 },
 };
 
-// Each slot zooms linearly and centred between 100% and 100% + the project's zoom
-// percent, alternating in and out per slot. The ends are formatted into an ffmpeg
+// A zoom shot zooms linearly and centred between 100% and 100% + the project's zoom
+// percent; a pan holds 100% + its percent while it travels. The ends are formatted into an ffmpeg
 // expression, so they are built from whole thousandths as decimal text rather than by
 // float arithmetic: 1 + 0.225 is exact, but 1.225 - 1 is not 0.225 in binary floating
 // point, and a percent in half steps is always a whole number of thousandths.
@@ -27,7 +36,8 @@ export function zoomRange(percent: number): ZoomRange | undefined {
   return { from: zoomFrom, to: decimal(1000 + thousandths), by: decimal(thousandths) };
 }
 
-function decimal(thousandths: number): string {
+// Whole thousandths as decimal text, for anything that goes into an ffmpeg expression.
+export function decimal(thousandths: number): string {
   const fraction = String(thousandths % 1000)
     .padStart(3, "0")
     .replace(/0+$/, "");
@@ -35,38 +45,18 @@ function decimal(thousandths: number): string {
   return fraction === "" ? whole : `${whole}.${fraction}`;
 }
 
-export type SpokenKind = "intro" | "body" | "outro";
-// A gap sits between two spoken segments; an edge is the quiet lead-in before the first and
-// the tail after the last.
-export type AudioKind = SpokenKind | "gap" | "edge";
-export type Zoom = "in" | "out";
+export type { AudioKind, AudioSegment, SpokenKind } from "./edit-list.js";
 
-export interface AudioSegment {
-  readonly kind: AudioKind;
-  // Absolute path, or null for a silence gap the renderer synthesises.
-  readonly path: string | null;
-  readonly seconds: number;
-}
-
-export interface ImageSlot {
-  readonly path: string;
-  // 1-based place in the timeline, which is also what decides the zoom direction. The
-  // same image comes back in later slots once the images have all been shown.
-  readonly index: number;
-  readonly frames: number;
-  readonly zoom: Zoom;
-}
-
+// What the video stage decided: the project settings it planned from, the edit list the
+// renderer plays, and where the result goes. Everything about the picture and the sound
+// is in `editList`; the rest is recorded so render.json says why the list is what it is.
 export interface RenderPlan {
-  readonly width: number;
-  readonly height: number;
-  readonly fps: number;
   readonly gapSeconds: number;
   readonly edgeSeconds: number;
   readonly imageSeconds: number;
   readonly zoomPercent: number;
-  readonly audio: readonly AudioSegment[];
-  readonly images: readonly ImageSlot[];
+  readonly motionStyle: MotionStyle;
+  readonly editList: EditList;
   readonly totalFrames: number;
   readonly totalSeconds: number;
   readonly output: string;
@@ -83,6 +73,7 @@ export interface PlanInput {
   readonly edgeSeconds: number;
   readonly imageSeconds: number;
   readonly zoomPercent: number;
+  readonly motionStyle: MotionStyle;
   readonly intro?: AudioInput | undefined;
   readonly body?: AudioInput | undefined;
   readonly outro?: AudioInput | undefined;
@@ -107,15 +98,19 @@ export function planRender(input: PlanInput): RenderPlan {
       : audio.reduce((sum, segment) => sum + segment.seconds, 0);
   const totalFrames = Math.max(1, Math.round(totalSeconds * fps));
   return {
-    width: frame.width,
-    height: frame.height,
-    fps,
     gapSeconds: input.gapSeconds,
     edgeSeconds: input.edgeSeconds,
     imageSeconds: input.imageSeconds,
     zoomPercent: input.zoomPercent,
-    audio,
-    images: slots(input.images, Math.max(1, Math.round(input.imageSeconds * fps)), totalFrames),
+    motionStyle: input.motionStyle,
+    editList: {
+      version: editListVersion,
+      width: frame.width,
+      height: frame.height,
+      fps,
+      audio,
+      shots: shots(input, Math.max(1, Math.round(input.imageSeconds * fps)), totalFrames),
+    },
     totalFrames,
     totalSeconds,
     output: input.output,
@@ -164,16 +159,18 @@ export function audioTimeline(
 }
 
 // The images take turns in slideshow order, each for `each` frames, starting over after the
-// last until the timeline is full; the last slot is cut to what is left. A timeline shorter
-// than one slot is a single slot. Zoom alternates per slot, not per image, so an image
-// that comes round again may zoom the other way.
-function slots(paths: readonly string[], each: number, totalFrames: number): readonly ImageSlot[] {
+// last until the timeline is full; the last shot is cut to what is left. A timeline shorter
+// than one shot is a single shot. The motion goes by the shot's place, not the image
+// (`motion.ts`), so an image that comes round again may move another way.
+function shots(
+  input: Pick<PlanInput, "images" | "motionStyle" | "zoomPercent">,
+  each: number,
+  totalFrames: number,
+): readonly Shot[] {
   const count = Math.ceil(totalFrames / each);
   return Array.from({ length: count }, (_value, at) => ({
-    path: paths[at % paths.length] ?? "",
-    index: at + 1,
+    source: { kind: "image", path: input.images[at % input.images.length] ?? "" },
     frames: Math.min(each, totalFrames - each * at),
-    // Odd slots zoom in, even slots zoom out.
-    zoom: at % 2 === 0 ? "in" : "out",
+    motion: motionFor(input.motionStyle, at, input.zoomPercent),
   }));
 }

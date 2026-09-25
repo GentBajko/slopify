@@ -1,6 +1,7 @@
 import {
   defaultEdgeSilenceSeconds,
   defaultImageSeconds,
+  defaultMotionStyle,
   defaultZoomPercent,
   type FieldError,
 } from "@app/slices/admission/rules.js";
@@ -40,6 +41,7 @@ export const freshDraftDocument: PlayDraftDocument = playDraftDocumentSchema.par
     imageSeconds: String(defaultImageSeconds),
     edgeSilenceSeconds: String(defaultEdgeSilenceSeconds),
     zoomPercent: String(defaultZoomPercent),
+    motionStyle: defaultMotionStyle,
     values: {},
     provided: { research: "", article: "", audio: null, images: [], thumbnail: null },
   },

@@ -22,6 +22,7 @@ const labels: Readonly<Record<Output["role"], string>> = {
   subtitle_ass: "Styled subtitles",
   subtitle_font: "Subtitle font",
   instructions: "Generation instructions",
+  document_pdf: "Document (PDF)",
 };
 export function outputLabel(output: Output): string {
   if ((output.role === "narration_txt" || output.role === "tts_script") && output.meta.segment)
@@ -33,6 +34,7 @@ export function outputLabel(output: Output): string {
 
 export function outputSlotLabel(slot: string): string {
   if (slot.startsWith("image:")) return "Image";
+  if (slot === "document:pdf") return labels.document_pdf;
   const role = slot.split(":").at(-1);
   return Object.entries(labels).find(([key]) => key === role)?.[1] ?? "Saved output";
 }

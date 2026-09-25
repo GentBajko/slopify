@@ -67,7 +67,8 @@ function harness(options: Options = {}): Harness {
     "2026-09-03",
     "2026-09-03",
   );
-  for (const kind of stageKinds) {
+  // These projects predate the Document stage and have no row for it.
+  for (const kind of stageKinds.filter((one) => one !== "document")) {
     db.prepare(
       "INSERT INTO stages (id, project_id, kind, source, state, attempt_count, progress_current, progress_total, failure_reason) VALUES (?, ?, ?, 'generate', ?, 2, 1, 2, 'it broke')",
     ).run(`s-${kind}`, projectId, kind, options.states?.[kind] ?? "done");

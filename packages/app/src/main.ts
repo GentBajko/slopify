@@ -34,6 +34,7 @@ import { transact } from "./kernel/db/tx.js";
 import { causedBy } from "./kernel/errors.js";
 import type { Ids } from "./kernel/ids.js";
 import { ulidIds } from "./kernel/ids.js";
+import { stageKinds } from "./kernel/pipeline.js";
 import { acquireInstanceLock } from "./kernel/lock.js";
 import type { Log } from "./kernel/log.js";
 import { openLog } from "./kernel/log.js";
@@ -601,7 +602,7 @@ export function wireRunner({
       },
     },
     runs: Object.fromEntries(
-      ["research", "article", "audio", "images", "thumbnail", "video"].map((kind) => [
+      stageKinds.map((kind) => [
         kind,
         (context: import("./kernel/runner/index.js").StageContext) =>
           runRevisionInvocation(execution, context, stageProviders(providers, context)),

@@ -31,6 +31,7 @@ function generated(): RevisionView {
           images: "generate",
           thumbnail: "from_prompt",
           video: "generate",
+          document: "generate",
         },
       },
       content: {
@@ -42,7 +43,7 @@ function generated(): RevisionView {
     },
   };
 }
-it("offers all six generated sections but no provided/off conversion or edited-article overwrite", () => {
+it("offers every generated section but no provided/off conversion or edited-article overwrite", () => {
   const view = generated();
   for (const kind of stageKinds) expect(canRerunSection(view, kind)).toBe(true);
   const provided: RevisionView = {

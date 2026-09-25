@@ -1,3 +1,5 @@
+import { sourceOf } from "@app/slices/admission/model.js";
+import { documentThemeOf } from "@app/slices/document/model.js";
 import type { PromptDraft } from "@app/slices/library/model.js";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
@@ -84,6 +86,8 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
   };
   const legacy: PlayFormState = {
     ...form,
+    sources: { ...form.sources, document: sourceOf(form.sources, "document") },
+    document: { theme: documentThemeOf(form.document) },
     imagePrompts: form.imagePrompts.map((one) => ({ ...one, number: Number(one.number) })),
     chunking:
       form.chunking.mode === "words"
@@ -123,10 +127,19 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
       value === undefined ? "" : Object.is(value, Number(raw)) ? raw : String(value);
     const ref = (one: Upload | undefined) =>
       one ? { attachmentId: one.key, name: one.name } : null;
+    // A draft saved before the Document stage keeps both fields absent until one is changed.
+    const { document: documentSource, ...otherSources } = next.sources;
+    const { document: documentSettings, ...rest } = next;
+    const keepSource = before.form.sources.document !== undefined || documentSource !== "off";
+    const keepSettings =
+      before.form.document !== undefined ||
+      documentSettings.theme !== documentThemeOf(before.form.document);
     current.current.edit({
       ...before,
       form: {
-        ...next,
+        ...rest,
+        sources: keepSource ? next.sources : otherSources,
+        ...(keepSettings ? { document: documentSettings } : {}),
         imagePrompts: next.imagePrompts.map((one) => ({
           ...one,
           number: rawNumber(

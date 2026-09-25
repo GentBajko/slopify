@@ -78,12 +78,14 @@ it("reads a draft saved before the video timing controls with their defaults", (
       imageSeconds: _image,
       edgeSilenceSeconds: _edge,
       zoomPercent: _zoom,
+      motionStyle: _motion,
       ...form
     } = h.document.form;
     const parsed = playDraftDocumentSchema.parse({ ...h.document, form });
     expect(parsed.form.imageSeconds).toBe("15");
     expect(parsed.form.edgeSilenceSeconds).toBe("2");
     expect(parsed.form.zoomPercent).toBe("22.5");
+    expect(parsed.form.motionStyle).toBe("zoom");
   } finally {
     h.close();
   }

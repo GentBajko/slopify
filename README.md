@@ -13,7 +13,7 @@
 
 Slopify turns a prompt and a handful of keywords into a narrated slideshow video.
 It researches the topic, writes the article, narrates it, generates the imagery and
-cuts the result together with ffmpeg. Everything runs on your machine against your
+cuts the result together with ffmpeg. It can also lay the article out as a styled PDF. Everything runs on your machine against your
 own provider keys, behind a local web UI.
 
 ```sh
@@ -168,7 +168,12 @@ under `$XDG_DATA_HOME/slopify/host-cli` or `~/.local/share/slopify/host-cli`.
 9. Add review checkpoints in Review when you want to inspect Audio, Images or Video before it
    runs. Independent stages continue while the selected step and its dependents wait; approve
    them on the project's Checkpoints tab.
-10. The update button in the top bar checks for new releases and installs an update when you
+10. Switch on Document on Play (or in Edit project → Inputs) to get the article as a styled
+    PDF: a title page with the thumbnail as its cover, a clickable table of contents, drop caps,
+    links and a Sources page, in the DiceMaster or Plain theme. It is made locally, costs
+    nothing, and is marked for a rebuild when you edit the article. Download it, open its
+    folder, or use Open PDF on the project page to read it in a browser tab.
+11. The update button in the top bar checks for new releases and installs an update when you
     choose it. Active projects must finish or be paused first.
 
 ## Inworld narration
@@ -361,4 +366,5 @@ both configuration files is final.
 MIT. See [LICENSE](./LICENSE). The ffmpeg binary fetched at install time is a separate
 GPL-3.0-or-later program, as described above. The bundled Barlow and Barlow Condensed
 faces under `packages/site/public/assets/fonts/` are SIL Open Font License 1.1; the
-licence text ships with them as `OFL.txt`.
+licence text ships with them as `OFL.txt`. So is the Cinzel face the Document stage embeds in
+its PDFs, with its `OFL.txt` under `packages/app/src/assets/document/fonts/`.

@@ -27,9 +27,25 @@ export function migrate(db: DatabaseSync, clock: Clock): void {
     if (version === undefined || applied.has(version)) {
       continue;
     }
+    const sql = readFileSync(new URL(file, migrationsDir), "utf8");
+    // A migration that rebuilds a table other tables reference must run with enforcement
+    // off: dropping the old table would otherwise cascade into every row that points at it.
+    // SQLite ignores this pragma inside a transaction, so it is set around one, and every
+    // reference is checked before the rebuild commits.
+    const rebuild = sql.split("\n", 1)[0]?.trim() === foreignKeysOff;
+    const enforced = rebuild && foreignKeysOn(db);
+    if (enforced) db.exec("PRAGMA foreign_keys = OFF");
     db.exec("BEGIN");
     try {
-      db.exec(readFileSync(new URL(file, migrationsDir), "utf8"));
+      db.exec(sql);
+      if (rebuild) {
+        const broken = db.prepare("PRAGMA foreign_key_check").all();
+        if (broken.length > 0) {
+          throw new Error(
+            `Slopify couldn't upgrade its database: migration ${file} would leave ${broken.length} broken links between saved records, so it was undone and your data was not changed. Go back to the previous version of Slopify (npx @gentbajko/slopify@<previous version>) and report this on GitHub with the Download diagnostics file from Settings.`,
+          );
+        }
+      }
       db.prepare("INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)").run(
         version,
         clock.now().toISOString(),
@@ -38,8 +54,17 @@ export function migrate(db: DatabaseSync, clock: Clock): void {
     } catch (error) {
       db.exec("ROLLBACK");
       throw error;
+    } finally {
+      if (enforced) db.exec("PRAGMA foreign_keys = ON");
     }
   }
+}
+
+// The first line of such a migration, compared without its line ending.
+const foreignKeysOff = "-- foreign-keys: off";
+
+function foreignKeysOn(db: DatabaseSync): boolean {
+  return db.prepare("PRAGMA foreign_keys").get()?.foreign_keys === 1;
 }
 
 function versionOf(file: string): number {

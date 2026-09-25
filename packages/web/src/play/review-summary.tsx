@@ -1,5 +1,8 @@
 import { readinessIsUsable } from "@app/kernel/ports/model.js";
+import { sourceOf } from "@app/slices/admission/model.js";
+import { motionStyleLabels } from "@app/slices/admission/rules.js";
 import type { Field } from "@app/slices/admission/substitute.js";
+import { documentThemeLabels, documentThemeOf } from "@app/slices/document/model.js";
 import type { Entry } from "@app/slices/library/model.js";
 import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import type { ProviderFamily, ProviderStatus, Voice } from "@app/slices/settings/model.js";
@@ -400,6 +403,9 @@ export function ReviewSummary({
                 form.zoomPercent ? `${form.zoomPercent}%` : "(not entered)",
               )
             : null}
+          {form.sources.video === "generate"
+            ? row("Motion", "motionStyle", motionStyleLabels[form.motionStyle])
+            : null}
           {form.sources.audio !== "off"
             ? row(
                 "Silence at start and end",
@@ -407,6 +413,13 @@ export function ReviewSummary({
                 form.edgeSilenceSeconds ? `${form.edgeSilenceSeconds} s` : "(not entered)",
               )
             : null}
+          {row(
+            "Document",
+            "sources.document",
+            sourceOf(form.sources, "document") === "generate"
+              ? `PDF · ${documentThemeLabels[documentThemeOf(form.document)]} theme`
+              : sourceLabels.off,
+          )}
         </dl>
       </SummaryGroup>
       <SummaryGroup name="Checkpoints">

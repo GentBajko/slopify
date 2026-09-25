@@ -6,13 +6,14 @@ import logoMark from "@/assets/logo-mark.svg";
 import patreon from "@/assets/patreon.svg";
 import article from "@/assets/stage-article.svg";
 import audio from "@/assets/stage-audio.svg";
+import document from "@/assets/stage-document.svg";
 import images from "@/assets/stage-images.svg";
 import research from "@/assets/stage-research.svg";
 import thumbnail from "@/assets/stage-thumbnail.svg";
 import video from "@/assets/stage-video.svg";
 import { cn } from "@/lib/utils";
 
-// The mark and the six stage glyphs are used verbatim from `src/assets/`, worn as a mask
+// The mark and the stage glyphs are used verbatim from `src/assets/`, worn as a mask
 // rather than redrawn in JSX: the file stays the single copy and `bg-current` still lets
 // the artwork take its row's colour.
 const glyphs: Readonly<Record<StageKind, string>> = {
@@ -22,6 +23,7 @@ const glyphs: Readonly<Record<StageKind, string>> = {
   images,
   thumbnail,
   video,
+  document,
 };
 
 // The URL is quoted: Vite inlines these SVGs as data URLs carrying single quotes, and an

@@ -1,5 +1,6 @@
 import type { StageState } from "@app/kernel/pipeline.js";
 import type { FieldError } from "@app/slices/admission/rules.js";
+import { documentThemeLabels } from "@app/slices/document/model.js";
 import type { ReactElement } from "react";
 import { Lamp } from "@/components/lamp";
 import { cn } from "@/lib/utils";
@@ -100,7 +101,7 @@ export function readinessRows(form: PlayFormState, errors: readonly FieldError[]
     row(
       "Export",
       form.sources.video,
-      ["sources.video", "imageSeconds", "zoomPercent", "edgeSilenceSeconds"],
+      ["sources.video", "imageSeconds", "zoomPercent", "motionStyle", "edgeSilenceSeconds"],
       "sources.video",
       form.sources.video === "generate"
         ? form.sources.audio === "off"
@@ -109,6 +110,13 @@ export function readinessRows(form: PlayFormState, errors: readonly FieldError[]
         : form.sources.audio === "off"
           ? "Individual outputs"
           : "Combined WAV",
+    ),
+    row(
+      "Document",
+      form.sources.document,
+      ["sources.document", "document"],
+      "sources.document",
+      `PDF · ${documentThemeLabels[form.document.theme]} theme`,
     ),
     row("Style", undefined, ["format", "subtitles"], "format", form.format),
   ];

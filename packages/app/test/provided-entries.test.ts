@@ -76,6 +76,7 @@ it("narrates text and LLM entries around a provided article and includes both in
         silenceGapSeconds: 0.2,
         imageSeconds: 15,
         zoomPercent: 22.5,
+        motionStyle: "zoom",
         edgeSilenceSeconds: 0,
       },
       { intro: "Welcome to the channel.", outro: "Write a sign-off." },

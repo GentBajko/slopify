@@ -67,6 +67,7 @@ const config: RunConfig = {
   silenceGapSeconds: 3,
   imageSeconds: 15,
   zoomPercent: 22.5,
+  motionStyle: "zoom",
   edgeSilenceSeconds: 0,
   rendered: { article: "Write about rope." },
 };

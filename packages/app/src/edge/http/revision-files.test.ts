@@ -69,6 +69,27 @@ it("serves immutable old output and audio-part records after a newer Save", asyn
   }
 });
 
+it("opens a PDF in the browser on request and keeps every other file a download", async () => {
+  const h = await fixture();
+  try {
+    const pdf = retainedOutput(h.deps, h.base.revision, "document_pdf", "document.pdf", "%PDF-1.3");
+    const wav = retainedOutput(h.deps, h.base.revision, "audio_export", "audio.wav", "bytes");
+    const saved = (await h.app.request(h.file(pdf.recordId))).headers;
+    expect(saved.get("content-type")).toBe("application/pdf");
+    expect(saved.get("content-disposition")).toBe('attachment; filename="saved-document-pdf.pdf"');
+    const opened = await h.app.request(`${h.file(pdf.recordId)}?inline=1`);
+    expect(opened.headers.get("content-disposition")).toBe(
+      'inline; filename="saved-document-pdf.pdf"',
+    );
+    expect(opened.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(await opened.text()).toBe("%PDF-1.3");
+    const audio = await h.app.request(`${h.file(wav.recordId)}?inline=1`);
+    expect(audio.headers.get("content-disposition")).toMatch(/^attachment; /);
+  } finally {
+    h.close();
+  }
+});
+
 it("serves selected historical images as a zip and reports missing retained files", async () => {
   const h = await fixture();
   try {

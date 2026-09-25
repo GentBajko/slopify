@@ -41,6 +41,7 @@ function draft(over: Partial<RunDraft> = {}): RunDraft {
     silenceGapSeconds: 3,
     imageSeconds: 15,
     zoomPercent: 22.5,
+    motionStyle: "zoom",
     edgeSilenceSeconds: 0,
     ...over,
   };

@@ -55,9 +55,9 @@ function staleStages(input: CascadeInput): ReadonlySet<StageKind> {
       return withDependents([action.stage], input);
     case "article-edit": {
       // An article edit re-runs audio, LLM-mode intro/outro text, the LLM-written
-      // thumbnail and the video, leaving prompt-based images untouched. The video comes
-      // along as a dependent of the audio, so it is never named here.
-      const roots: StageKind[] = ["audio"];
+      // thumbnail, the document and the video, leaving prompt-based images untouched. The
+      // video comes along as a dependent of the audio, so it is never named here.
+      const roots: StageKind[] = ["audio", "document"];
       if (input.thumbnailSource === "prompt_by_llm") {
         roots.push("thumbnail");
       }
@@ -109,6 +109,8 @@ function withDependents(roots: readonly StageKind[], input: CascadeInput): Reado
   return found;
 }
 
+// A stage with no row is not part of the run (a project from before the Document stage
+// may lack one), so it is stepped over like a skipped one.
 function stateOf(stages: readonly StageStanding[], kind: StageKind): StageState {
-  return stages.find((stage) => stage.kind === kind)?.state ?? "pending";
+  return stages.find((stage) => stage.kind === kind)?.state ?? "skipped";
 }

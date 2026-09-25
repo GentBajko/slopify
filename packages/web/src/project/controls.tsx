@@ -1,4 +1,5 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
+import { sourceOf } from "@app/slices/admission/model.js";
 import type { RevisionView } from "@app/slices/revisions/model.js";
 import type { ReactNode } from "react";
 import { useContext, useState } from "react";
@@ -47,6 +48,8 @@ export function canRerunSection(view: RevisionView, stage: StageKind): boolean {
       );
     case "video":
       return config.sources.video !== "off" || config.sources.audio !== "off";
+    case "document":
+      return sourceOf(config.sources, "document") === "generate";
   }
 }
 

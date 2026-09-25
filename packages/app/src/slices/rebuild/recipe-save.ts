@@ -1,5 +1,5 @@
 import { stageKinds } from "../../kernel/pipeline.js";
-import type { RunConfig } from "../admission/model.js";
+import { type RunConfig, sourceOf } from "../admission/model.js";
 import {
   allowedSources,
   edgeSilenceSecondsProblem,
@@ -206,10 +206,10 @@ export function validateRevisionEdit(
 ): readonly FieldError[] {
   const fields: FieldError[] = [];
   for (const kind of stageKinds)
-    if (!allowedSources[kind].includes(config.sources[kind]))
+    if (!allowedSources[kind].includes(sourceOf(config.sources, kind)))
       fields.push({
         field: `sources.${kind}`,
-        message: `The ${kind} stage cannot be set to ${config.sources[kind]}.`,
+        message: `The ${kind} stage cannot be set to ${sourceOf(config.sources, kind)}.`,
       });
   if (
     config.sources.images === "provide" &&

@@ -13,8 +13,8 @@ export interface Unready {
   readonly provider: string;
 }
 
-// Which provider a stage's work goes to. The video stage renders locally with ffmpeg, so
-// it has none.
+// Which provider a stage's work goes to. The video and document stages render locally, so
+// they have none.
 export function providerFor(kind: StageKind, config: RunConfig): string | undefined {
   switch (kind) {
     case "research":
@@ -26,6 +26,7 @@ export function providerFor(kind: StageKind, config: RunConfig): string | undefi
     case "thumbnail":
       return config.images?.provider;
     case "video":
+    case "document":
       return undefined;
   }
 }

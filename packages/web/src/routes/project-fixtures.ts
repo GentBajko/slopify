@@ -84,6 +84,7 @@ export function body(options: {
         silenceGapSeconds: 0,
         imageSeconds: 15,
         zoomPercent: 22.5,
+        motionStyle: "zoom",
         edgeSilenceSeconds: 0,
       },
       createdAt: new Date().toISOString(),
@@ -108,6 +109,7 @@ export const finished = body({
     stage("images", "done"),
     stage("thumbnail", "done"),
     stage("video", "done"),
+    stage("document", "skipped"),
   ],
   outputs: [
     output("article_md", "article"),

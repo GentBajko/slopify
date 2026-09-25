@@ -89,6 +89,7 @@ function draft(over: Partial<RunDraft> = {}): RunDraft {
     silenceGapSeconds: 3,
     imageSeconds: 15,
     zoomPercent: 22.5,
+    motionStyle: "zoom",
     edgeSilenceSeconds: 0,
     ...over,
   };
@@ -128,7 +129,7 @@ describe("optional run outputs", () => {
     };
     expect(created.project.status).toBe("done");
     expect(created.project.config.intro).toBeUndefined();
-    expect(created.stages.filter((stage) => stage.state === "skipped")).toHaveLength(5);
+    expect(created.stages.filter((stage) => stage.state === "skipped")).toHaveLength(6);
     db.close();
   });
 
@@ -203,6 +204,7 @@ describe("POST /api/projects", () => {
       "images:provided",
       "thumbnail:skipped",
       "video:running",
+      "document:skipped",
     ]);
     expect(ticked).toEqual([created.project.id]);
   });
@@ -559,7 +561,7 @@ describe("GET /api/projects/:id", () => {
       outputs: Array<{ role: string; path: string }>;
     };
     expect(read.project.id).toBe(created.project.id);
-    expect(read.stages).toHaveLength(6);
+    expect(read.stages).toHaveLength(7);
     expect(read.outputs.map((output) => `${output.role}:${output.path}`)).toEqual([
       "article_txt:article.txt",
       "audio_body:audio-body.bin",

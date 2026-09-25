@@ -65,6 +65,7 @@ export function draftFixture(): {
       imageSeconds: "15",
       edgeSilenceSeconds: "2",
       zoomPercent: "22.5",
+      motionStyle: "zoom",
       values: {},
       provided: { research: "", article: "", audio: null, thumbnail: null, images: [] },
     },

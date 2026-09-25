@@ -1,4 +1,4 @@
-import type { StageKind } from "@app/kernel/pipeline.js";
+import { type StageKind, stageKinds } from "@app/kernel/pipeline.js";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
@@ -211,9 +211,9 @@ function SkeletonRundown() {
         <span className="ml-auto h-8 w-72 rounded-control bg-panel2" />
       </div>
       <div className="mb-2 min-h-8" />
-      <div className="mb-4 grid h-[78px] grid-cols-[112px_repeat(6,minmax(0,1fr))] overflow-hidden rounded-panel border border-line bg-panel">
+      <div className="mb-4 grid h-[78px] grid-cols-[112px_repeat(7,minmax(0,1fr))] overflow-hidden rounded-panel border border-line bg-panel">
         <span className="border-r border-line" />
-        {["research", "article", "audio", "images", "thumbnail", "video"].map((cell) => (
+        {stageKinds.map((cell) => (
           <span
             key={cell}
             className="flex items-start gap-2 border-r border-line p-3 last:border-r-0"

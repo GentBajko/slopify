@@ -9,6 +9,7 @@ import { getRevisionView } from "../../slices/revisions/view.js";
 import { outputPath } from "../../slices/storage/layout.js";
 import { createHub } from "../events/hub.js";
 import { createApp } from "./app.js";
+import { sourceOf } from "../../slices/admission/model.js";
 
 it("prepares retained legacy history without changing outputs or dispatching work", async () => {
   const h = revisionFixture();
@@ -20,7 +21,7 @@ it("prepares retained legacy history without changing outputs or dispatching wor
           kind,
           h.projectId,
           kind,
-          h.config.sources[kind],
+          sourceOf(h.config.sources, kind),
           kind === "article" ? "provided" : "skipped",
         );
     for (const [role, path] of [

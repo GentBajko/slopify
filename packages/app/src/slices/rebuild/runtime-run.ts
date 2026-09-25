@@ -2,6 +2,7 @@ import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageProviders } from "../../kernel/runner/providers.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
 import { type ExportExecutionDeps, executeExportRecipe } from "./runtime-export.js";
+import { executeDocumentRecipe } from "./runtime-document.js";
 import { executeLocalRecipe } from "./runtime-local.js";
 import { pieceLabel } from "./runtime-piece-label.js";
 import { executeProviderRecipe } from "./runtime-provider.js";
@@ -24,6 +25,8 @@ export async function runRevisionInvocation(
         ? await executeSubtitleRecipe(deps, context, piece)
         : piece.key.startsWith("export:")
           ? await executeExportRecipe(deps, context, piece)
+          : piece.key.startsWith("document:")
+            ? await executeDocumentRecipe(deps, context, piece)
           : piece.input.kind === "llm" || piece.input.kind === "tts" || piece.input.kind === "image"
             ? await executeProviderRecipe(deps, context, providers, piece)
             : await executeLocalRecipe(deps, context, piece);

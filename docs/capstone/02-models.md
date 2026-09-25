@@ -294,6 +294,7 @@ Source: `packages/app/src/slices/admission/model.ts:48`.
 | silenceGapSeconds | `number` | yes |
 | imageSeconds | `number` | yes (schema default 15) |
 | zoomPercent | `number` | yes (schema default 22.5) |
+| motionStyle | `MotionStyle` ("zoom" ∣ "pan" ∣ "mixed" ∣ "still") | yes (schema default "zoom") |
 | edgeSilenceSeconds | `number` | yes (schema default 2) |
 | subtitles | `SubtitleConfig \| undefined` | no |
 
@@ -321,11 +322,29 @@ Source: `packages/app/src/slices/admission/model.ts:55`.
 | silenceGapSeconds | `number` | yes |
 | imageSeconds | `number` | yes (schema default 15) |
 | zoomPercent | `number` | yes (schema default 22.5) |
+| motionStyle | `MotionStyle` ("zoom" ∣ "pan" ∣ "mixed" ∣ "still") | yes (schema default "zoom") |
 | edgeSilenceSeconds | `number` | yes (schema default 2) |
 | subtitles | `SubtitleConfig \| undefined` | no |
 | rendered | `Readonly<Record<string, string>>` | yes |
 
 Source: `packages/app/src/slices/admission/model.ts:80`.
+
+### EditList
+
+The video render's whole brief, recorded as `editList` in an MP4's `render.json` with project-relative paths. Version 1; a recorded list of another version, or with a field or kind this version does not know, is refused (`readEditList`).
+
+| Field | Type | Required |
+|---|---|---|
+| version | `1` | yes |
+| width | `number` | yes |
+| height | `number` | yes |
+| fps | `number` | yes |
+| audio | `readonly AudioSegment[]` (kind, path or null for silence, seconds) | yes |
+| shots | `readonly Shot[]`, at least one | yes |
+
+`Shot` is `{ source: { kind: "image", path }, frames, motion, transition?: undefined }`; `transition` is reserved. `Motion` is `{ kind: "zoom", direction: "in" ∣ "out", percent }`, `{ kind: "pan", from: Point, to: Point, percent }` or `{ kind: "still" }`; a `Point` is `{ x, y }`, each a 0–1 share of the room the crop leaves.
+
+Source: `packages/app/src/slices/video/edit-list.ts`.
 
 ### Project
 
@@ -1541,9 +1560,9 @@ Chunking.mode accepts whole/paragraph/words/characters. Whole is the default; wo
 
 CatalogueModel is a union with one required llm, image or tts family object. Defaulted enabled/deprecated/keywords/pricing fields are present after parse. The catalogue is capped at 300 LLM, 200 image and 100 TTS models, with provider maxConcurrent 1–5 (`packages/app/src/catalog/schema.ts:5`, `packages/app/src/catalog/schema.ts:70`).
 
-- Format is `16:9` or `9:16`. StageKind is research, article, audio, images, thumbnail or video. StageState is pending, running, done, failed, canceled, provided or skipped; ProjectState adds paused and excludes provided/skipped (`packages/app/src/kernel/pipeline.ts:6`). StageSource is generate, provide, off, from_prompt or prompt_by_llm; admission applies stage-specific restrictions (`packages/app/src/slices/admission/model.ts:11`, `packages/app/src/slices/admission/rules.ts:46`).
+- Format is `16:9` or `9:16`. StageKind is research, article, audio, images, thumbnail, video or document. StageState is pending, running, done, failed, canceled, provided or skipped; ProjectState adds paused and excludes provided/skipped (`packages/app/src/kernel/pipeline.ts:6`). StageSource is generate, provide, off, from_prompt or prompt_by_llm; admission applies stage-specific restrictions (Document is Generate or Off). `RunDraft.sources.document` is optional and absent reads as Off through `sourceOf`; `RunDraft.document` is an optional `{theme:"dicemaster"|"plain"}` (`packages/app/src/slices/document/model.ts`) (`packages/app/src/slices/admission/model.ts:11`, `packages/app/src/slices/admission/rules.ts:46`).
 - ProviderFamily is llm, tts or image. Provider IDs are openrouter, claude-code, codex, gemini, elevenlabs, openai-tts, cartesia, inworld, fal, replicate, openai-image and google-image (`packages/app/src/kernel/ports/model.ts:4`, `packages/app/src/slices/settings/model.ts:12`). ThinkingMode is off, low, medium, high or xhigh; model-specific availability comes from Catalogue (`packages/app/src/kernel/ports/llm.ts:41`, `packages/app/src/catalog/schema.ts:25`).
-- OutputRole accepts notes, article_md, article_txt, narration_txt, tts_script, sources, glossary, audio_body, audio_intro, audio_outro, audio_export, image, thumbnail, video, render_params, subtitles_srt, subtitles_vtt, subtitle_words, subtitle_ass, subtitle_font and instructions. StagedFileState is copying or staged; output paths are project-relative (`packages/app/src/slices/storage/model.ts:6`, `packages/app/src/slices/storage/model.ts:33`, `packages/app/src/slices/storage/model.ts:57`). PieceKind accepts chapter, chunk, segment, image, prompt_written and article_written; PieceState accepts pending, running, done and failed. The nullable payload remains a JSON string at the StagePiece boundary (`packages/app/src/kernel/runner/piece-repo.ts:9`, `packages/app/src/kernel/runner/piece-repo.ts:19`).
+- OutputRole accepts notes, article_md, article_txt, narration_txt, tts_script, sources, glossary, audio_body, audio_intro, audio_outro, audio_export, image, thumbnail, video, render_params, subtitles_srt, subtitles_vtt, subtitle_words, subtitle_ass, subtitle_font, instructions and document_pdf (`document.pdf`, stage `document`, work key `document:pdf`). StagedFileState is copying or staged; output paths are project-relative (`packages/app/src/slices/storage/model.ts:6`, `packages/app/src/slices/storage/model.ts:33`, `packages/app/src/slices/storage/model.ts:57`). PieceKind accepts chapter, chunk, segment, image, prompt_written and article_written; PieceState accepts pending, running, done and failed. The nullable payload remains a JSON string at the StagePiece boundary (`packages/app/src/kernel/runner/piece-repo.ts:9`, `packages/app/src/kernel/runner/piece-repo.ts:19`).
 - Prompt.kind accepts article/image/thumbnail/narration; Entry.category accepts intro/outro and mode text/llm. Their detected slots are serialized arrays, not references to another table (`packages/app/src/slices/library/model.ts:4`, `packages/app/src/slices/library/model.ts:12`, `packages/app/src/slices/library/repo.ts:171`).
 - RevisionContent uses stable image keys and a separate imageOrder; generated definitions can retain raw-template identity in templateKey. Raw promptTemplates can be null when an old project has only rendered wording. Manual subtitle cues bind to an audioFingerprint. OutputState is ready/outdated/review (`packages/app/src/slices/revisions/model.ts:15`, `packages/app/src/slices/revisions/model.ts:26`).
 - Attempt.revisionId/workId/workPieceId are required nullable values on repository reads. The inherited work/operation fields are optional call-context inputs; they are not columns in attempts and `toAttempt` does not return them (`packages/app/src/kernel/runner/attempt-repo.ts:16`, `packages/app/src/kernel/runner/attempt-repo.ts:114`). AttemptOutcome adds ok and canceled to provider faults auth/missing_key/rate_limit/refusal/unsupported/timeout/other (`packages/app/src/kernel/runner/attempt-repo.ts:13`, `packages/app/src/kernel/ports/model.ts:21`).
@@ -1574,6 +1593,7 @@ Definition: `packages/app/src/slices/play-drafts/schema.ts:79`.
 | subtitles | { mode: "off" ∣ "files" ∣ "burn-in"; language: "en"; fontId: string; fontSize: string; position: "top" ∣ "upper-middle" ∣ "center" ∣ "lower-middle" ∣ "bottom" } | yes | mode accepted: off, files, burn-in; position accepted: top, upper-middle, center, lower-middle, bottom |
 | imageSeconds | string | yes | Raw text; schema default "15" for older drafts and templates |
 | zoomPercent | string | yes | Raw text; schema default "22.5" for older drafts and templates |
+| motionStyle | "zoom" ∣ "pan" ∣ "mixed" ∣ "still" | yes | A select, not raw text; schema default "zoom" for older drafts and templates |
 | edgeSilenceSeconds | string | yes | Raw text; schema default "2" for older drafts and templates |
 | values | Readonly<Record<string, string>> | yes | Includes inactive keyword values |
 | provided | { research: string; article: string; audio: { attachmentId: string; name: string } ∣ null; thumbnail: { attachmentId: string; name: string } ∣ null; images: { attachmentId: string; name: string }[] } | yes | File references carry UUID attachment identity and original name; no browser File bytes |
@@ -2003,6 +2023,7 @@ Definition: `packages/web/src/play/state.ts:43`.
 | subtitles | SubtitleConfig | yes | Numeric font size |
 | imageSeconds | number | yes | NaN while the typed text is not a number |
 | zoomPercent | number | yes | NaN while the typed text is not a number |
+| motionStyle | MotionStyle | yes | Picked from the Motion select |
 | edgeSilenceSeconds | number | yes | NaN while the typed text is not a number |
 | values | Readonly<Record<string, string>> | yes | All editor keywords |
 | provided | ProvidedState | yes | Compatibility uploads |
@@ -2365,10 +2386,10 @@ CREATE TABLE projects (id TEXT PRIMARY KEY, title TEXT NOT NULL CHECK(length(tit
 
 ### stages
 
-Source: `packages/app/src/kernel/db/migrations/0001-init.sql:2`.
+Source: `packages/app/src/kernel/db/migrations/0001-init.sql:2`, rebuilt by `0014-document-stage.sql` to add `document` (every existing project gains a `document` row, source `off`, state `skipped`).
 
 ```sql
-CREATE TABLE stages (id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE, kind TEXT NOT NULL CHECK(kind IN ('research','article','audio','images','thumbnail','video')), source TEXT NOT NULL, state TEXT NOT NULL CHECK(state IN ('pending','running','done','failed','canceled','provided','skipped')), failure_reason TEXT, attempt_count INTEGER NOT NULL DEFAULT 0, progress_current INTEGER, progress_total INTEGER, started_at TEXT, finished_at TEXT, UNIQUE(project_id, kind));
+CREATE TABLE stages (id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE, kind TEXT NOT NULL CHECK(kind IN ('research','article','audio','images','thumbnail','video','document')), source TEXT NOT NULL, state TEXT NOT NULL CHECK(state IN ('pending','running','done','failed','canceled','provided','skipped')), failure_reason TEXT, attempt_count INTEGER NOT NULL DEFAULT 0, progress_current INTEGER, progress_total INTEGER, started_at TEXT, finished_at TEXT, UNIQUE(project_id, kind));
 ```
 
 Source: `packages/app/src/kernel/db/migrations/0005-revision-work.sql:1`.
@@ -2676,7 +2697,7 @@ CREATE UNIQUE INDEX revision_outputs_publication ON revision_outputs(revision_id
 
 ### revision_pieces
 
-Source: `packages/app/src/kernel/db/migrations/0004-project-revisions.sql:55`.
+Source: `packages/app/src/kernel/db/migrations/0004-project-revisions.sql:55`, rebuilt by `0014-document-stage.sql` with `document` added to the stage-kind check.
 
 ```sql
 CREATE TABLE revision_pieces (
@@ -2685,7 +2706,7 @@ CREATE TABLE revision_pieces (
   revision_id TEXT NOT NULL,
   piece_key TEXT NOT NULL,
   stage_kind TEXT NOT NULL CHECK(stage_kind IN
-    ('research','article','audio','images','thumbnail','video')),
+    ('research','article','audio','images','thumbnail','video','document')),
   asset_id TEXT,
   fingerprint TEXT NOT NULL,
   descriptor TEXT NOT NULL CHECK(json_valid(descriptor)),

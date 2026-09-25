@@ -14,6 +14,7 @@ import { prepareSubtitles } from "../subtitles/prepare.js";
 import type { RecordEvent } from "../telemetry/model.js";
 import { exportAudioWav } from "./audio-export.js";
 import { audioInputs } from "./audio-inputs.js";
+import { withPaths } from "./edit-list.js";
 import type { RenderPlan } from "./plan.js";
 import { planRender } from "./plan.js";
 import { renderSlideshow } from "./slideshow.js";
@@ -64,11 +65,12 @@ export async function renderVideo(deps: VideoDeps, context: StageContext): Promi
     edgeSeconds: project.config.edgeSilenceSeconds,
     imageSeconds: project.config.imageSeconds,
     zoomPercent: project.config.zoomPercent,
+    motionStyle: project.config.motionStyle,
     ...narration,
     images: slideshow(outputs).map((output) => outputPath(deps.paths, projectId, output.path)),
     output: outputPath(deps.paths, projectId, "video.mp4"),
   });
-  const subtitles = await prepareSubtitles(deps, context, plan.audio, plan);
+  const subtitles = await prepareSubtitles(deps, context, plan.editList.audio, plan.editList);
   await writeExport(deps, context, {
     role: "video",
     filename: "video.mp4",
@@ -79,7 +81,8 @@ export async function renderVideo(deps: VideoDeps, context: StageContext): Promi
     render: (part, onProgress) =>
       renderSlideshow({
         bin: deps.ffmpeg,
-        plan: { ...plan, output: part },
+        edit: plan.editList,
+        output: part,
         burnSubtitles: subtitles?.burnIn ?? false,
         cwd: subtitles?.directory,
         scratch: dir,
@@ -96,11 +99,7 @@ export async function renderVideo(deps: VideoDeps, context: StageContext): Promi
 function recorded(plan: RenderPlan, dir: string): Record<string, unknown> {
   return {
     ...plan,
-    audio: plan.audio.map((segment) => ({
-      ...segment,
-      path: segment.path === null ? null : relative(dir, segment.path),
-    })),
-    images: plan.images.map((slot) => ({ ...slot, path: relative(dir, slot.path) })),
+    editList: withPaths(plan.editList, (path) => relative(dir, path)),
     output: relative(dir, plan.output),
   };
 }

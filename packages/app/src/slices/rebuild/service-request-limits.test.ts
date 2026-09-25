@@ -9,6 +9,7 @@ import { planPreview } from "./preview-plan.js";
 import { createRebuildDeps } from "./service.fake.js";
 import { previewRebuild, startRebuild } from "./service.js";
 import { localReadiness } from "./service-readiness.js";
+import { sourceOf } from "../admission/model.js";
 
 const catalogue = parseCatalogue(
   readFileSync(new URL("../../assets/models.yaml", import.meta.url), "utf8"),
@@ -30,7 +31,7 @@ it("admits an Inworld asynchronous narration request above the streaming limit",
     for (const kind of stageKinds)
       h.deps.db
         .prepare("INSERT INTO stages(id,project_id,kind,source,state) VALUES (?,?,?,?,'pending')")
-        .run(kind, h.projectId, kind, config.sources[kind]);
+        .run(kind, h.projectId, kind, sourceOf(config.sources, kind));
     h.deps.db
       .prepare("INSERT INTO voices(id,provider,name,voice_id) VALUES (?,?,?,?)")
       .run("saved-voice", "inworld", "Saved voice", "voice");

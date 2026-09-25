@@ -33,6 +33,7 @@ const config = {
   imageSeconds: 15,
   edgeSilenceSeconds: 2,
   zoomPercent: 22.5,
+  motionStyle: "zoom",
 };
 const content = {
   provided: {},
@@ -111,12 +112,23 @@ describe("revision boundaries", () => {
   });
 
   it("reads a revision saved before the video timing settings with the defaults", () => {
-    const { imageSeconds: _image, edgeSilenceSeconds: _edge, zoomPercent: _zoom, ...old } = config;
+    const {
+      imageSeconds: _image,
+      edgeSilenceSeconds: _edge,
+      zoomPercent: _zoom,
+      motionStyle: _motion,
+      ...old
+    } = config;
     const parsed = revisionViewSchema.parse({
       ...view,
       revision: { ...view.revision, config: old },
     }).revision.config;
-    expect(parsed).toMatchObject({ imageSeconds: 15, edgeSilenceSeconds: 2, zoomPercent: 22.5 });
+    expect(parsed).toMatchObject({
+      imageSeconds: 15,
+      edgeSilenceSeconds: 2,
+      zoomPercent: 22.5,
+      motionStyle: "zoom",
+    });
   });
 
   it("accepts each upload destination and rejects file paths as asset IDs", () => {

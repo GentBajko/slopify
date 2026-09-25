@@ -88,6 +88,7 @@ function harness(images: number, port: ImagePort): Harness {
     images: "pending",
     thumbnail: "skipped",
     video: "pending",
+    document: "skipped",
   };
   for (const kind of stageKinds) {
     db.prepare(

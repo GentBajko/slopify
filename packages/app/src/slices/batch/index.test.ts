@@ -51,6 +51,7 @@ const draft: RunDraft = {
   silenceGapSeconds: 0,
   imageSeconds: 15,
   zoomPercent: 22.5,
+  motionStyle: "zoom",
   edgeSilenceSeconds: 0,
 };
 const runs = ["Arda", "Gondor", "Rohan"].map((title) => ({

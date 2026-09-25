@@ -1,14 +1,16 @@
 import { z } from "zod";
-import { formats } from "../../kernel/pipeline.js";
+import { formats, stageKinds } from "../../kernel/pipeline.js";
 import { thinkingModes } from "../../kernel/ports/llm.js";
-import { stageSources } from "../admission/model.js";
+import { motionStyles, stageSources } from "../admission/model.js";
 import {
   defaultEdgeSilenceSeconds,
   defaultImageSeconds,
+  defaultMotionStyle,
   defaultZoomPercent,
 } from "../admission/rules.js";
 import { runDraftSchema } from "../admission/schema.js";
 import { checkpointRowSchema, checkpointStageSchema } from "../checkpoints/schema.js";
+import { documentThemes } from "../document/model.js";
 import { librarySnapshotSchema } from "../library/snapshot.js";
 import { chunkModes } from "../narration/chunk.js";
 import { subtitleModes, subtitlePositions } from "../subtitles/model.js";
@@ -33,9 +35,13 @@ export const playDraftFormSchema = z
         images: z.enum(stageSources),
         thumbnail: z.enum(stageSources),
         video: z.enum(stageSources),
+        // Absent on drafts and templates saved before the Document stage: Off.
+        document: z.enum(stageSources).optional(),
       })
       .strict()
       .readonly(),
+    // Absent until the theme is first chosen: the default theme.
+    document: z.object({ theme: z.enum(documentThemes) }).strict().readonly().optional(),
     llm: provider.readonly(),
     audio: provider
       .extend({ voice: text, usePronunciationGlossary: z.boolean().optional() })
@@ -66,6 +72,7 @@ export const playDraftFormSchema = z
     imageSeconds: text.default(String(defaultImageSeconds)),
     edgeSilenceSeconds: text.default(String(defaultEdgeSilenceSeconds)),
     zoomPercent: text.default(String(defaultZoomPercent)),
+    motionStyle: z.enum(motionStyles).default(defaultMotionStyle),
     values,
     provided: z
       .object({
@@ -203,7 +210,7 @@ export const playReviewSchema = z
             fingerprint: text,
             workKeys: z.array(text).readonly(),
             dependents: z
-              .array(z.enum(["research", "article", "audio", "images", "thumbnail", "video"]))
+              .array(z.enum(stageKinds))
               .readonly(),
           })
           .strict()

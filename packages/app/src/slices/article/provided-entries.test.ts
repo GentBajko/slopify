@@ -51,6 +51,7 @@ function harness(over: Partial<RunConfig> = {}) {
     silenceGapSeconds: 3,
     imageSeconds: 15,
     zoomPercent: 22.5,
+    motionStyle: "zoom",
     edgeSilenceSeconds: 0,
     intro: { name: "Welcome", mode: "text" },
     outro: { name: "Ending", mode: "text" },

@@ -147,6 +147,7 @@ function harness(): Harness {
     // give the render room for every image.
     imageSeconds: 1,
     zoomPercent: 22.5,
+    motionStyle: "zoom",
     edgeSilenceSeconds: 1.5,
   };
   const { project } = startRun({ ...deps, emit: (): void => {} }, draft, {
@@ -231,11 +232,11 @@ function imageOutputs(h: Harness): { id: string; path: string }[] {
 
 function renderedImages(h: Harness): string[] {
   const plan = JSON.parse(readFileSync(join(h.dir, "render.json"), "utf8")) as {
-    images: readonly { path: string }[];
+    editList: { shots: readonly { source: { path: string } }[] };
   };
-  // The images cycle through the slots, so this is each image once, in the order it
+  // The images cycle through the shots, so this is each image once, in the order it
   // first appears.
-  return [...new Set(plan.images.map((slot) => slot.path))];
+  return [...new Set(plan.editList.shots.map((shot) => shot.source.path))];
 }
 
 describe("an edit and a delete on a finished project", () => {

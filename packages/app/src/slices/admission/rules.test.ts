@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { StageKind } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
 import type { StagedFile } from "../storage/model.js";
-import type { RunDraft, StageSource } from "./model.js";
+import type { RunDraft, StageSource, StageSources } from "./model.js";
 import { stageSources } from "./model.js";
 import { admit, allowedSources, usesNarrationPreparation } from "./rules.js";
 
@@ -41,6 +41,7 @@ function provided(over: Partial<RunDraft> = {}): RunDraft {
     silenceGapSeconds: 3,
     imageSeconds: 15,
     zoomPercent: 22.5,
+    motionStyle: "zoom",
     edgeSilenceSeconds: 0,
     ...over,
   };
@@ -76,7 +77,7 @@ function fields(draft: RunDraft, over: Partial<Parameters<typeof admit>[0]> = {}
   return result.ok ? [] : result.fields.map((field) => field.field);
 }
 
-function sources(over: Partial<Record<StageKind, StageSource>>): Record<StageKind, StageSource> {
+function sources(over: Partial<Record<StageKind, StageSource>>): StageSources {
   return { ...provided().sources, ...over };
 }
 
@@ -149,6 +150,13 @@ describe("sources", () => {
       expect(result.draft.outro).toBeUndefined();
     }
     expect(fields(provided({ sources: sources({ article: "off" }) }))).toContain("sources.article");
+  });
+
+  it("makes the document locally, so Generate asks for no provider", () => {
+    const { llm: _llm, ...keyless } = provided();
+    expect(fields({ ...keyless, sources: sources({ document: "generate" }) })).toEqual([]);
+    // Saved before the Document stage existed: no source, read as Off.
+    expect(fields(keyless)).toEqual([]);
   });
 
   it("allows a silent video with images and no narration", () => {

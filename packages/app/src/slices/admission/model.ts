@@ -1,4 +1,5 @@
 import type { Format, ProjectState, StageKind, StageState } from "../../kernel/pipeline.js";
+import type { DocumentSettings } from "../document/model.js";
 import type { Chunking } from "../narration/chunk.js";
 import type { SubtitleConfig } from "../subtitles/model.js";
 
@@ -7,9 +8,25 @@ export type { Format } from "../../kernel/pipeline.js";
 export { formats } from "../../kernel/pipeline.js";
 
 // Generate, Provide or Off for most stages, plus the thumbnail's two Generate modes.
-// Article stays Generate or Provide; Video can be Generate or Off.
+// Article stays Generate or Provide; Video and Document can be Generate or Off.
 export const stageSources = ["generate", "provide", "off", "from_prompt", "prompt_by_llm"] as const;
 export type StageSource = (typeof stageSources)[number];
+
+// One source per stage. Document came after projects, drafts, templates, schedules and
+// backups had been saved without it, so its source may be absent and then reads as Off:
+// read any stage's source through `sourceOf`.
+export type StageSources = Readonly<Record<Exclude<StageKind, "document">, StageSource>> & {
+  readonly document?: StageSource | undefined;
+};
+
+export function sourceOf(sources: StageSources, kind: StageKind): StageSource {
+  return sources[kind] ?? "off";
+}
+
+// How each slideshow image moves while it is on screen: Zoom in and out, Pan across, a
+// Mix of both taking turns, or Still. `video/motion.ts` has the rules.
+export const motionStyles = ["zoom", "pan", "mixed", "still"] as const;
+export type MotionStyle = (typeof motionStyles)[number];
 
 export const entryModes = ["text", "llm"] as const;
 export type EntryMode = (typeof entryModes)[number];
@@ -57,7 +74,7 @@ export interface RunDraft {
   readonly checkpoints?: readonly import("../checkpoints/model.js").CheckpointStage[] | undefined;
   readonly title: string;
   readonly format: Format;
-  readonly sources: Readonly<Record<StageKind, StageSource>>;
+  readonly sources: StageSources;
   readonly llm?: ProviderChoice | undefined;
   readonly audio?: VoiceChoice | undefined;
   readonly images?: ProviderChoice | undefined;
@@ -81,10 +98,15 @@ export interface RunDraft {
   // How far each slot zooms, in percent of the frame: 22.5 is 100% → 122.5%, 0 keeps the
   // stills still. A config saved before this existed reads as 22.5.
   readonly zoomPercent: number;
+  // How each image moves. A config saved before this existed reads as "zoom", which is
+  // what every video did then.
+  readonly motionStyle: MotionStyle;
   // Silence before the first and after the last narration segment of both exports. A
   // config saved before this existed reads as 2.
   readonly edgeSilenceSeconds: number;
   readonly subtitles?: SubtitleConfig | undefined;
+  // The PDF's look. Absent on configs saved before the Document stage.
+  readonly document?: DocumentSettings | undefined;
 }
 
 // The draft as accepted, coerced and trimmed. This is what the project's `config` column

@@ -151,3 +151,35 @@ it.each([undefined, false, true])(
     window.localStorage?.clear();
   },
 );
+
+it("reads a draft saved before the Document stage as Off with the default theme, and saves it unchanged", async () => {
+  const id = "00000000-0000-4000-8000-000000000003";
+  const saved = draftView(id);
+  expect(saved.draft.document.form.sources.document).toBeUndefined();
+  let session: PlaySession | undefined;
+  let read: { readonly source: string; readonly theme: string } | undefined;
+  function Consumer() {
+    session = usePlaySession();
+    const [form, setForm] = usePlayDraft();
+    read = { source: form.sources.document, theme: form.document.theme };
+    return (
+      <input
+        aria-label="Title"
+        value={form.title}
+        onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
+      />
+    );
+  }
+  renderApp(
+    <PlayDraftProvider>
+      <Consumer />
+    </PlayDraftProvider>,
+    testDeps(playRoutes({ [`GET /api/drafts/${id}`]: jsonAnswer(saved) })),
+  );
+  await act(() => session?.open(id));
+  expect(read).toEqual({ source: "off", theme: "dicemaster" });
+  fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Different" } });
+  expect(session?.document.form.title).toBe("Different");
+  expect(session?.document.form.sources).not.toHaveProperty("document");
+  expect(session?.document.form).not.toHaveProperty("document");
+});

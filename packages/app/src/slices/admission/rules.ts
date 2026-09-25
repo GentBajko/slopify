@@ -1,7 +1,8 @@
 import type { StageKind } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
 import type { StagedFile } from "../storage/model.js";
-import type { ProviderChoice, RunDraft, StageSource } from "./model.js";
+import type { MotionStyle, ProviderChoice, RunDraft, StageSource } from "./model.js";
+import { sourceOf } from "./model.js";
 
 export interface FieldError {
   // Dotted path of the control on Play, so the form marks it in place.
@@ -38,6 +39,14 @@ export const defaultEdgeSilenceSeconds = 2;
 // ceiling: past 50% the crop loses more of the picture than it shows.
 export const zoomPercentMax = 50;
 export const defaultZoomPercent = 22.5;
+export const defaultMotionStyle: MotionStyle = "zoom";
+// The words Play, Edit project and the change preview use for each motion style.
+export const motionStyleLabels: Readonly<Record<MotionStyle, string>> = {
+  zoom: "Zoom in and out",
+  pan: "Pan across",
+  mixed: "Mix of both",
+  still: "Still",
+};
 
 // Shared by admission, Play's draft conversion and Edit project, so all three say the same
 // sentence about the same value.
@@ -71,6 +80,7 @@ export const allowedSources: Readonly<Record<StageKind, readonly StageSource[]>>
   images: ["off", "generate", "provide"],
   thumbnail: ["off", "from_prompt", "prompt_by_llm", "provide"],
   video: ["off", "generate"],
+  document: ["off", "generate"],
 };
 
 export function admit(input: AdmissionInput): AdmissionResult {
@@ -85,10 +95,10 @@ export function admit(input: AdmissionInput): AdmissionResult {
   }
 
   for (const kind of stageKinds) {
-    if (!allowedSources[kind].includes(sources[kind])) {
+    if (!allowedSources[kind].includes(sourceOf(sources, kind))) {
       fields.push({
         field: `sources.${kind}`,
-        message: `"${sources[kind]}" is not an option for ${kind}. Reload the page and choose again.`,
+        message: `"${sourceOf(sources, kind)}" is not an option for ${kind}. Reload the page and choose again.`,
       });
     }
   }

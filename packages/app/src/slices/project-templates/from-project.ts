@@ -143,6 +143,7 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
       title: config.title,
       format: config.format,
       sources: config.sources,
+      ...(config.document === undefined ? {} : { document: config.document }),
       checkpoints: listCheckpoints(deps.db, revision.projectId, revision.id).map(
         (gate) => gate.stage,
       ),
@@ -172,6 +173,7 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
       imageSeconds: String(config.imageSeconds),
       edgeSilenceSeconds: String(config.edgeSilenceSeconds),
       zoomPercent: String(config.zoomPercent),
+      motionStyle: config.motionStyle,
       values: config.values,
       provided,
     },

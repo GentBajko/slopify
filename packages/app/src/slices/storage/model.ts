@@ -29,6 +29,7 @@ export const outputRoles = [
   "subtitle_ass",
   "subtitle_font",
   "instructions",
+  "document_pdf",
 ] as const;
 export type OutputRole = (typeof outputRoles)[number];
 

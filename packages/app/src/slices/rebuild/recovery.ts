@@ -207,7 +207,7 @@ export async function recoverProject(
         });
       if (
         input.action.kind === "rerun" &&
-        input.action.stage === "video" &&
+        (input.action.stage === "video" || input.action.stage === "document") &&
         preview.value.preview.work.some(
           (row) => row.kind === "provider" && row.disposition !== "reuse",
         )
@@ -216,11 +216,17 @@ export async function recoverProject(
           ok: false,
           reason: "readiness",
           fields: [
-            {
-              field: "video",
-              message:
-                "Source media is incomplete. Use Resume to recover it before rerunning the export.",
-            },
+            input.action.stage === "video"
+              ? {
+                  field: "video",
+                  message:
+                    "Source media is incomplete. Use Resume to recover it before rerunning the export.",
+                }
+              : {
+                  field: "document",
+                  message:
+                    "The article or thumbnail the document is made from isn't finished. Use Resume to finish it, then Re-run section on Document.",
+                },
           ],
         });
       const conflict =

@@ -97,6 +97,7 @@ export function suppliedDocument(variants = false): PlayDraftDocument {
       chunking: { mode: "whole", words: " 0500 ", characters: "3e3" },
       imageSeconds: "15",
       zoomPercent: "22.5",
+      motionStyle: "zoom",
       edgeSilenceSeconds: "0",
       subtitles: {
         mode: "off",

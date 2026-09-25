@@ -315,10 +315,11 @@ it("carries the timing settings as numbers and ignores ones the run does not use
       imageSeconds: " 20 ",
       edgeSilenceSeconds: "1.5",
       zoomPercent: "0",
+      motionStyle: "pan" as const,
     };
     expect(convert({ ...h.document, form: typed })).toMatchObject({
       ok: true,
-      draft: { imageSeconds: 20, edgeSilenceSeconds: 1.5, zoomPercent: 0 },
+      draft: { imageSeconds: 20, edgeSilenceSeconds: 1.5, zoomPercent: 0, motionStyle: "pan" },
     });
     const unused = {
       ...h.document.form,

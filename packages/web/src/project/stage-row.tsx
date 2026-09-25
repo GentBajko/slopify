@@ -26,6 +26,7 @@ const titles = {
   images: "Image library",
   thumbnail: "Thumbnail preview",
   video: "Preview & export",
+  document: "Document",
 } as const;
 
 export function StageRow({
@@ -206,7 +207,8 @@ export function StageRow({
       {stage.state === "running" &&
       stage.kind !== "article" &&
       stage.kind !== "images" &&
-      stage.kind !== "video" ? (
+      stage.kind !== "video" &&
+      stage.kind !== "document" ? (
         <LiveWriting projectId={project.id} stage={stage.kind} />
       ) : null}
       {openBody ? (

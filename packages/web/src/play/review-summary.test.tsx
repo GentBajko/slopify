@@ -254,3 +254,25 @@ it("uses loaded names while preserving the existing review catalogue refresh", a
     expect.arrayContaining(["/api/providers/elevenlabs/models", "/api/providers/fal/models"]),
   );
 });
+
+it.each([
+  ["a draft saved without the Document stage", generated, "Off"],
+  [
+    "a generated Document",
+    {
+      ...generated,
+      form: {
+        ...generated.form,
+        sources: { ...generated.form.sources, document: "generate" as const },
+        document: { theme: "plain" as const },
+      },
+    },
+    "PDF · Plain theme",
+  ],
+])("names the Document for %s", async (_name, document, expected) => {
+  const harness = reviewHarness();
+  await harness.prepare(document);
+  const outputs = screen.getByRole("region", { name: "Outputs summary" });
+  const label = within(outputs).getByText("Document");
+  expect(label.nextElementSibling?.textContent).toBe(expected);
+});

@@ -1,7 +1,9 @@
 import type { ProjectState, StageKind, StageState } from "../pipeline.js";
 
 // Images use saved prompts and can run immediately. A thumbnail's source and an
-// audio-only export narrow these dependencies through dependenciesOf().
+// audio-only export narrow these dependencies through dependenciesOf(). The document is
+// laid out from the article alone, with the thumbnail as its cover when there is one, so it
+// runs beside narration and images rather than after them.
 export const deps = {
   research: [],
   article: ["research"],
@@ -9,6 +11,7 @@ export const deps = {
   images: [],
   thumbnail: ["article"],
   video: ["article", "audio", "images", "thumbnail"],
+  document: ["article", "thumbnail"],
 } as const satisfies Readonly<Record<StageKind, readonly StageKind[]>>;
 
 // `provided` and `skipped` release a dependency exactly as `done` does.
@@ -47,6 +50,7 @@ export function dependenciesOf(
 ): readonly StageKind[] {
   if (kind === "thumbnail" && sources.thumbnail === "from_prompt") return [];
   if (kind === "video" && sources.video === "off") return ["article", "audio"];
+  if (kind === "document" && sources.thumbnail === "off") return ["article"];
   return deps[kind];
 }
 

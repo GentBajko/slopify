@@ -2,6 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { stageKinds } from "../../kernel/pipeline.js";
 import { insertPiece } from "../../kernel/runner/piece-repo.js";
+import { sourceOf } from "../admission/model.js";
 import { recipeInputSchema } from "../rebuild/recipe-input-schema.js";
 import { insertOutput } from "../storage/repo.js";
 import type {
@@ -22,7 +23,7 @@ import {
 
 export function ensureRevisionStages(deps: RevisionDeps, revision: ProjectRevision): void {
   for (const kind of stageKinds) {
-    const source = revision.config.sources[kind];
+    const source = sourceOf(revision.config.sources, kind);
     deps.db
       .prepare(
         "INSERT INTO stages(id,project_id,kind,source,state) VALUES (?,?,?,?,?) ON CONFLICT(project_id,kind) DO UPDATE SET source=excluded.source",

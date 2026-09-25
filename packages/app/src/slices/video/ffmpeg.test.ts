@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Log, LogLevel } from "../../kernel/log.js";
+import type { EditList, Motion, Shot } from "./edit-list.js";
 import {
   clipArgs,
   concatList,
@@ -12,18 +13,19 @@ import {
 import type { PlanInput } from "./plan.js";
 import { planRender } from "./plan.js";
 
-function plan(over: Partial<PlanInput> = {}): ReturnType<typeof planRender> {
+function plan(over: Partial<PlanInput> = {}): EditList {
   return planRender({
     format: "16:9",
     gapSeconds: 3,
     edgeSeconds: 0,
     imageSeconds: 5,
     zoomPercent: 22.5,
+    motionStyle: "zoom",
     body: { path: "/p/audio-body.mp3", seconds: 10 },
     images: ["/p/images/001.png", "/p/images/002.png", "/p/images/003.png"],
     output: "/p/video.mp4",
     ...over,
-  });
+  }).editList;
 }
 
 describe("resolveFfmpeg", () => {
@@ -42,13 +44,18 @@ describe("resolveFfmpeg", () => {
 });
 
 describe("slideshowClips", () => {
-  it("encodes each still, zoom and length once and plays them in slot order", () => {
+  it("encodes each still, motion and length once and plays them in shot order", () => {
     // 10 s at 3 s a slot over two images: a in, b out, a in, b out (1 s).
     const { clips, order } = slideshowClips(
       plan({ imageSeconds: 3, images: ["/a.png", "/b.png"] }),
     );
     expect(
-      clips.map((clip) => [clip.name, clip.slot.path, clip.slot.zoom, clip.slot.frames]),
+      clips.map((clip) => [
+        clip.name,
+        clip.shot.source.path,
+        clip.shot.motion.kind === "zoom" ? clip.shot.motion.direction : "",
+        clip.shot.frames,
+      ]),
     ).toEqual([
       ["c1.mp4", "/a.png", "in", 90],
       ["c2.mp4", "/b.png", "out", 90],
@@ -65,10 +72,57 @@ describe("slideshowClips", () => {
     expect(clips).toHaveLength(6);
     expect(order).toHaveLength(12);
   });
+
+  it("dedupes by the whole motion, so a pan and a zoom of one still are two clips", () => {
+    // One image, 4 s at 1 s a shot, mixed: zoom in, pan left to right, zoom out, pan right
+    // to left. Four motions, four clips; again with eight shots, the same four come back
+    // except the pans, which go down and up the second time round.
+    const one = { images: ["/a.png"], imageSeconds: 1, motionStyle: "mixed" as const };
+    const four = slideshowClips(plan({ ...one, body: { path: "/b.mp3", seconds: 4 } }));
+    expect(four.clips).toHaveLength(4);
+    expect(four.order).toEqual(["c1.mp4", "c2.mp4", "c3.mp4", "c4.mp4"]);
+    const twelve = slideshowClips(plan({ ...one, body: { path: "/b.mp3", seconds: 12 } }));
+    expect(twelve.clips.map((clip) => clip.shot.motion.kind)).toEqual([
+      "zoom",
+      "pan",
+      "zoom",
+      "pan",
+      "pan",
+      "pan",
+    ]);
+    expect(twelve.order).toEqual([
+      "c1.mp4",
+      "c2.mp4",
+      "c3.mp4",
+      "c4.mp4",
+      "c1.mp4",
+      "c5.mp4",
+      "c3.mp4",
+      "c6.mp4",
+      "c1.mp4",
+      "c2.mp4",
+      "c3.mp4",
+      "c4.mp4",
+    ]);
+  });
+
+  it("encodes a still image once however often it comes round", () => {
+    const { clips, order } = slideshowClips(
+      plan({ images: ["/a.png"], imageSeconds: 2, motionStyle: "still" }),
+    );
+    expect(clips).toHaveLength(1);
+    expect(order).toEqual(["c1.mp4", "c1.mp4", "c1.mp4", "c1.mp4", "c1.mp4"]);
+  });
 });
 
 describe("clipArgs", () => {
-  const slot = { path: "/p/images/001.png", index: 1, frames: 150, zoom: "in" as const };
+  const zoomIn: Motion = { kind: "zoom", direction: "in", percent: 22.5 };
+  const slot: Shot = {
+    source: { kind: "image", path: "/p/images/001.png" },
+    frames: 150,
+    motion: zoomIn,
+  };
+  const moving = (motion: Motion, frames = 150): Shot => ({ ...slot, motion, frames });
 
   it("renders one still through the prescaled zoom into one silent clip", () => {
     const args = clipArgs(plan(), slot, "/w/c1.mp4");
@@ -97,7 +151,7 @@ describe("clipArgs", () => {
     );
     const zooms = clips.map((clip) =>
       /zoompan=z='([^']+)':d=(\d+):/
-        .exec(clipArgs(plan(), clip.slot, "/w/c.mp4").join(" "))
+        .exec(clipArgs(plan(), clip.shot, "/w/c.mp4").join(" "))
         ?.slice(1),
     );
     // 450 frames: the zoom reaches 1 + 0.225 on the last frame, on = 449.
@@ -109,9 +163,9 @@ describe("clipArgs", () => {
   });
 
   it("zooms the project's own range, and not at all at 0%", () => {
-    const zoom = (zoomPercent: number, zoom: "in" | "out") =>
+    const zoom = (percent: number, direction: "in" | "out") =>
       /zoompan=z='([^']+)'/.exec(
-        clipArgs(plan({ zoomPercent }), { ...slot, zoom }, "/w/c1.mp4").join(" "),
+        clipArgs(plan(), moving({ kind: "zoom", direction, percent }), "/w/c1.mp4").join(" "),
       )?.[1];
     expect(zoom(22.5, "in")).toBe("1+0.225*on/149");
     expect(zoom(22.5, "out")).toBe("1.225-0.225*on/149");
@@ -120,13 +174,15 @@ describe("clipArgs", () => {
     expect(zoom(0, "in")).toBe("1");
     expect(zoom(0, "out")).toBe("1");
     // Still cover-scaled and cropped, but to the frame itself: nothing to smooth.
-    expect(clipArgs(plan({ zoomPercent: 0 }), slot, "/w/c1.mp4").join(" ")).toContain(
-      "scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,",
-    );
+    for (const still of [moving({ kind: "still" }), moving({ ...zoomIn, percent: 0 })])
+      expect(clipArgs(plan(), still, "/w/c1.mp4").join(" ")).toContain(
+        "scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080," +
+          "zoompan=z='1':d=150:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':",
+      );
   });
 
-  it("zooms out on an even slot", () => {
-    const args = clipArgs(plan(), { ...slot, index: 2, zoom: "out" }, "/w/c2.mp4");
+  it("zooms out when the shot says so", () => {
+    const args = clipArgs(plan(), moving({ ...zoomIn, direction: "out" }), "/w/c2.mp4");
     expect(args.join(" ")).toContain("zoompan=z='1.225-0.225*on/149':d=150:");
   });
 
@@ -140,9 +196,89 @@ describe("clipArgs", () => {
     expect(clipArgs(plan(), { ...slot, frames: 1 }, "/w/c1.mp4").join(" ")).toContain(
       "zoompan=z='1':d=1:",
     );
-    expect(clipArgs(plan(), { ...slot, frames: 1, zoom: "out" }, "/w/c1.mp4").join(" ")).toContain(
-      "zoompan=z='1.225':d=1:",
-    );
+    expect(
+      clipArgs(plan(), moving({ ...zoomIn, direction: "out" }, 1), "/w/c1.mp4").join(" "),
+    ).toContain("zoompan=z='1.225':d=1:");
+  });
+
+  describe("a pan", () => {
+    const pan = (from: [number, number], to: [number, number], percent = 22.5): Motion => ({
+      kind: "pan",
+      from: { x: from[0], y: from[1] },
+      to: { x: to[0], y: to[1] },
+      percent,
+    });
+    const graph = (shot: Shot) => {
+      const matched = /zoompan=z='([^']+)':d=\d+:x='([^']+)':y='([^']+)'/.exec(
+        clipArgs(plan(), shot, "/w/c1.mp4").join(" "),
+      );
+      return matched?.slice(1);
+    };
+
+    it("holds a fixed zoom and moves the crop across the room it leaves", () => {
+      expect(graph(moving(pan([0, 0.5], [1, 0.5])))).toEqual([
+        "1.225",
+        "(iw-iw/zoom)*(0+1*on/149)",
+        "(ih-ih/zoom)*(0.5)",
+      ]);
+      expect(graph(moving(pan([1, 0.5], [0, 0.5])))).toEqual([
+        "1.225",
+        "(iw-iw/zoom)*(1-1*on/149)",
+        "(ih-ih/zoom)*(0.5)",
+      ]);
+      expect(graph(moving(pan([0.5, 0], [0.5, 1]), 450))).toEqual([
+        "1.225",
+        "(iw-iw/zoom)*(0.5)",
+        "(ih-ih/zoom)*(0+1*on/449)",
+      ]);
+      expect(graph(moving(pan([0.5, 1], [0.5, 0], 10)))).toEqual([
+        "1.1",
+        "(iw-iw/zoom)*(0.5)",
+        "(ih-ih/zoom)*(1-1*on/149)",
+      ]);
+    });
+
+    it("writes every share as exact decimal text, never float noise", () => {
+      // 0.3 - 0.1 is 0.19999999999999998 in binary floating point.
+      expect(graph(moving(pan([0.1, 0.7], [0.3, 0.2], 12.5)))).toEqual([
+        "1.125",
+        "(iw-iw/zoom)*(0.1+0.2*on/149)",
+        "(ih-ih/zoom)*(0.7-0.5*on/149)",
+      ]);
+    });
+
+    it("stays inside the picture from the first frame to the last", () => {
+      // A share of the room, read at on = 0 and on = span: 0 is one edge, 1 the other.
+      const ends = (axis: string): number[] => {
+        // At on = span, `by*on/span` is `by` itself.
+        const [, start = "", sign = "+", by = "0"] =
+          /^\((?:iw-iw|ih-ih)\/zoom\)\*\(([\d.]+)(?:([+-])([\d.]+)\*on\/\d+)?\)$/.exec(axis) ?? [];
+        return [Number(start), Number(start) + (sign === "-" ? -1 : 1) * Number(by)];
+      };
+      const shots = plan({ motionStyle: "pan", body: { path: "/b.mp3", seconds: 40 } }).shots;
+      expect(shots).toHaveLength(8);
+      for (const shot of shots) {
+        const [, x = "", y = ""] = graph(shot) ?? [];
+        for (const end of [...ends(x), ...ends(y)]) {
+          expect(end).toBeGreaterThanOrEqual(0);
+          expect(end).toBeLessThanOrEqual(1);
+        }
+      }
+    });
+
+    it("holds where it starts on a one-frame shot", () => {
+      expect(graph(moving(pan([0, 0.5], [1, 0.5]), 1))).toEqual([
+        "1.225",
+        "(iw-iw/zoom)*(0)",
+        "(ih-ih/zoom)*(0.5)",
+      ]);
+    });
+
+    it("is prescaled like a zoom, for quarter-pixel steps", () => {
+      expect(clipArgs(plan(), moving(pan([0, 0.5], [1, 0.5])), "/w/c1.mp4").join(" ")).toContain(
+        "scale=7680:4320:force_original_aspect_ratio=increase,crop=7680:4320,",
+      );
+    });
   });
 
   it("keeps a clip that will be encoded again closer to the source", () => {
@@ -174,6 +310,7 @@ describe("joinArgs", () => {
         intro: { path: "/p/audio-intro.mp3", seconds: 2 },
         outro: { path: "/p/audio-outro.mp3", seconds: 4 },
       }),
+      "/p/video.mp4",
       "/w/slides.ffconcat",
     );
     expect(args.slice(args.indexOf("concat") - 1, args.indexOf("concat") + 3)).toEqual([
@@ -195,13 +332,14 @@ describe("joinArgs", () => {
   it("gives each silence its own length, the edges included", () => {
     const args = joinArgs(
       plan({ gapSeconds: 2.5, edgeSeconds: 2, intro: { path: "/p/i.mp3", seconds: 2 } }),
+      "/p/video.mp4",
       "/w/l",
     );
     expect(args.filter((_arg, at) => args[at - 1] === "-t")).toEqual(["2.000", "2.500", "2.000"]);
   });
 
   it("copies the clips and encodes only the audio when nothing is burned in", () => {
-    const args = joinArgs(plan(), "/w/l");
+    const args = joinArgs(plan(), "/p/video.mp4", "/w/l");
     expect(args[args.indexOf("-filter_complex") + 1]).toBe(
       "[1:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[a0];" +
         "[a0]concat=n=1:v=0:a=1[a]",
@@ -222,7 +360,7 @@ describe("joinArgs", () => {
   });
 
   it("burns captions in and encodes the video again when asked", () => {
-    const args = joinArgs(plan(), "/w/l", true);
+    const args = joinArgs(plan(), "/p/video.mp4", "/w/l", true);
     expect(args[args.indexOf("-filter_complex") + 1]).toMatch(
       /^\[0:v\]ass=filename=subtitles\.ass:fontsdir=fonts\[v\];/,
     );
@@ -231,20 +369,24 @@ describe("joinArgs", () => {
   });
 
   it("writes a silent video with no filtergraph and no audio stream", () => {
-    const args = joinArgs(plan({ body: undefined }), "/w/l");
+    const args = joinArgs(plan({ body: undefined }), "/p/video.mp4", "/w/l");
     expect(args).not.toContain("-filter_complex");
     expect(args).toContain("-an");
   });
 
   it("numbers the audio inputs after the clip list", () => {
-    const graph = joinArgs(plan({ outro: { path: "/p/o.mp3", seconds: 4 } }), "/w/l").join(" ");
+    const graph = joinArgs(
+      plan({ outro: { path: "/p/o.mp3", seconds: 4 } }),
+      "/p/video.mp4",
+      "/w/l",
+    ).join(" ");
     expect(graph).toContain("[1:a]aformat");
     expect(graph).toContain("[3:a]aformat");
     expect(graph).toContain("[a0][a1][a2]concat=n=3:v=0:a=1[a]");
   });
 
   it("never builds a shell string, so a filename with a space stays one argument", () => {
-    const args = joinArgs(plan({ output: "/p/my video; rm -rf ~.mp4" }), "/w/l");
+    const args = joinArgs(plan(), "/p/my video; rm -rf ~.mp4", "/w/l");
     expect(args.at(-1)).toBe("/p/my video; rm -rf ~.mp4");
   });
 });
@@ -267,8 +409,8 @@ describe("a long slideshow", () => {
     // Sixty images, an even count: each always zooms the same way, plus the cut last slot.
     expect(clips).toHaveLength(61);
     const lengths = [
-      ...clips.map((clip) => clipArgs(long, clip.slot, "C:\\w\\c61.mp4").join(" ").length),
-      joinArgs(long, "C:\\w\\slides.ffconcat", true).join(" ").length,
+      ...clips.map((clip) => clipArgs(long, clip.shot, "C:\\w\\c61.mp4").join(" ").length),
+      joinArgs(long, "C:\\w\\video.mp4", "C:\\w\\slides.ffconcat", true).join(" ").length,
     ];
     expect(Math.max(...lengths)).toBeLessThan(2000);
   });

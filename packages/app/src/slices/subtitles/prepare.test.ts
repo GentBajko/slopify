@@ -60,6 +60,7 @@ function fixture(): { deps: VideoDeps; context: StageContext; dir: string; texts
       silenceGapSeconds: 2,
       imageSeconds: 15,
       zoomPercent: 22.5,
+      motionStyle: "zoom",
       edgeSilenceSeconds: 0,
       subtitles: { ...defaultSubtitles, mode: "files" },
     },

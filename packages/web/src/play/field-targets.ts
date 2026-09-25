@@ -78,7 +78,9 @@ export function playFieldTarget(
             "sources",
             "imageSeconds",
             "zoomPercent",
+            "motionStyle",
             "edgeSilenceSeconds",
+            "document",
           ])
         ? "outputs"
         : "review";

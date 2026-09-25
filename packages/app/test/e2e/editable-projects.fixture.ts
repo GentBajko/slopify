@@ -7,7 +7,7 @@ import { expect } from "vitest";
 import { openDb } from "../../src/kernel/db/index.js";
 import { ensureDirs, layout } from "../../src/kernel/paths.js";
 import { stageKinds } from "../../src/kernel/pipeline.js";
-import type { RunConfig } from "../../src/slices/admission/model.js";
+import { type RunConfig, sourceOf } from "../../src/slices/admission/model.js";
 import { resolveFfmpeg } from "../../src/slices/video/ffmpeg.js";
 
 const ffmpeg = resolveFfmpeg(process.env, ffmpegStatic);
@@ -93,6 +93,7 @@ export function seedLegacy(): {
     silenceGapSeconds: 0,
     imageSeconds: 15,
     zoomPercent: 22.5,
+    motionStyle: "zoom",
     edgeSilenceSeconds: 0,
     rendered: {},
   };
@@ -115,12 +116,17 @@ export function seedLegacy(): {
     db.prepare(
       "INSERT INTO projects(id,title,format,config,created_at,updated_at) VALUES (?,?,?,?,?,?)",
     ).run(projectId, config.title, config.format, JSON.stringify(config), at, at);
-    for (const kind of stageKinds) {
+    // The seeded schema predates the Document stage; migrating adds its row.
+    for (const kind of stageKinds.filter((one) => one !== "document")) {
       const state =
-        kind === "video" ? "done" : config.sources[kind] === "provide" ? "provided" : "skipped";
+        kind === "video"
+          ? "done"
+          : sourceOf(config.sources, kind) === "provide"
+            ? "provided"
+            : "skipped";
       db.prepare(
         "INSERT INTO stages(id,project_id,kind,source,state,finished_at) VALUES (?,?,?,?,?,?)",
-      ).run(`legacy-${kind}`, projectId, kind, config.sources[kind], state, at);
+      ).run(`legacy-${kind}`, projectId, kind, sourceOf(config.sources, kind), state, at);
     }
     for (const [role, stage, path, duration] of [
       ["article_md", "article", "article.md", null],

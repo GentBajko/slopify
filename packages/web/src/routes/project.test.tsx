@@ -14,6 +14,7 @@ import { ProjectRoute } from "./project.js";
 import {
   body,
   deps,
+  finished,
   output,
   ready,
   recoveryAccepted,
@@ -33,7 +34,7 @@ describe("the project rundown", () => {
   it("shows a skeleton in the final shape while the project is coming", async () => {
     const { container } = renderRouted(<ProjectRoute projectId="p1" />, testDeps({}));
     await waitFor(() => {
-      expect(container.querySelectorAll(".rounded-full").length).toBe(6);
+      expect(container.querySelectorAll(".rounded-full").length).toBe(7);
     });
   });
 
@@ -51,6 +52,34 @@ describe("the project rundown", () => {
     const announced = screen.getAllByRole("status").map((live) => live.textContent);
     expect(announced).toContain("Video: done");
     expect(announced).toContain("Research: skipped");
+    expect(announced).toContain("Document: skipped");
+  });
+
+  it("shows the Document row switched off, and its PDF once rendered", async () => {
+    const off = renderRouted(<ProjectRoute projectId="p1" />, deps());
+    const skipped = await selectProjectStage("Document");
+    expect(within(skipped).getByText("Document was switched off for this run.")).not.toBeNull();
+    off.unmount();
+
+    const rendered = body({
+      status: "done",
+      stages: [
+        ...finished.stages.filter((one) => one.kind !== "document"),
+        stage("document", "done"),
+      ],
+      outputs: [...finished.outputs, output("document_pdf", "document")],
+    });
+    renderRouted(
+      <ProjectRoute projectId="p1" />,
+      deps({ "GET /api/projects/p1": jsonAnswer(rendered) }),
+    );
+    const navigation = await screen.findByRole("navigation", { name: "Project stages" });
+    expect(within(navigation).getByRole("button", { name: "Document, done" })).not.toBeNull();
+    expect(within(navigation).getByText("PDF · DiceMaster theme")).not.toBeNull();
+    const workspace = await selectProjectStage("Document");
+    expect(within(workspace).getByRole("link", { name: "Download PDF" }).getAttribute("href")).toBe(
+      `${testOrigin}/files/p1/document-pdf`,
+    );
   });
 
   it("carries a back link to the projects list", async () => {

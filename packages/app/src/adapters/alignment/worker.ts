@@ -1,10 +1,13 @@
 import { open, readFile, stat } from "node:fs/promises";
-import * as ort from "onnxruntime-web/wasm";
 import { SubtitleMismatch, type TimedWord } from "../../kernel/ports/subtitles.js";
 import { mismatch } from "./ctc.js";
 import { type WorkerInput, workerInput } from "./protocol.js";
 import { type SpeechWord, speechWords } from "./text.js";
+import { subtitleThreads } from "./threads.js";
 import { alignSpeechWindow, greedy } from "./window.js";
+
+type Runtime = typeof import("onnxruntime-node");
+type Session = Awaited<ReturnType<Runtime["InferenceSession"]["create"]>>;
 
 const sampleRate = 16000;
 const windowSeconds = 12;
@@ -34,9 +37,7 @@ function send(message: unknown): void {
 }
 
 async function run(input: WorkerInput): Promise<readonly TimedWord[]> {
-  ort.env.wasm.numThreads = 1;
-  const model = new Uint8Array(await readFile(input.modelPath));
-  const session = await ort.InferenceSession.create(model, { executionProviders: ["wasm"] });
+  const { ort, session } = await openSession(input.modelPath);
   const file = await open(input.pcmPath, "r");
   try {
     const totalSamples = (await stat(input.pcmPath)).size / 4;
@@ -168,6 +169,46 @@ async function run(input: WorkerInput): Promise<readonly TimedWord[]> {
     await file.close();
     await session.release();
   }
+}
+
+// One native CPU session per job, as benchmarked; threads.ts records the measured speeds. The
+// native runtime loads its binary on import, so a missing or foreign binary fails there; that
+// system (an Intel Mac has no 1.24 build) falls back to the single-threaded WebAssembly runtime,
+// about 7× slower but the same model, rather than losing captions.
+async function openSession(
+  modelPath: string,
+): Promise<{ readonly ort: Pick<Runtime, "Tensor">; readonly session: Session }> {
+  let native: Runtime;
+  try {
+    native = await import("onnxruntime-node");
+  } catch (nativeError) {
+    try {
+      const web = await import("onnxruntime-web/wasm");
+      web.env.wasm.numThreads = 1;
+      const session = await web.InferenceSession.create(new Uint8Array(await readFile(modelPath)), {
+        executionProviders: ["wasm"],
+      });
+      return {
+        ort: web as unknown as Pick<Runtime, "Tensor">,
+        session: session as unknown as Session,
+      };
+    } catch {
+      const system = `${process.platform} ${process.arch}`;
+      const reason =
+        nativeError instanceof Error
+          ? (nativeError.message.split("\n")[0] ?? "")
+          : String(nativeError);
+      throw new Error(
+        `Subtitle timing could not start: neither of its speech engines loaded on this computer (${system}): ${reason}. Reinstall Slopify so npm installs the engine for this system, then try again; if it keeps failing, turn subtitles off for this project.`,
+      );
+    }
+  }
+  const session = await native.InferenceSession.create(modelPath, {
+    executionProviders: ["cpu"],
+    intraOpNumThreads: subtitleThreads(),
+    interOpNumThreads: 1,
+  });
+  return { ort: native, session };
 }
 
 function candidates(

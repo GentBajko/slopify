@@ -1,0 +1,11 @@
+Cinzel-Regular.ttf, Cinzel-Medium.ttf, Cinzel-Bold.ttf, Cinzel-Black.ttf
+Cinzel 2.000 by Natanael Gama, from the embedded font data of the lore2script2 PDF generator
+(same owner). Copyright and licence are read from each file's own name table.
+Upstream: https://github.com/NDISCOVER/Cinzel
+
+OFL.txt
+SIL Open Font License 1.1, with the copyright line from the fonts' name table.
+7445469e9f302618200b15b1645d6aa3565b93a6634a0f9e5cd069c7fc2343fe  Cinzel-Black.ttf
+cbe8f6a665cc58d4540b6ce2a29e6f1b7e096fa6835aea1d2ffb40c088c5cdf6  Cinzel-Bold.ttf
+3d50001a451ba6cfd3ef07a2dfb0c564980a5229f70decdfa23f08f4a30e1bed  Cinzel-Medium.ttf
+540b628614b728fc87e50b883189a524dac4d8163ca4a0f8e49b499910762e86  Cinzel-Regular.ttf

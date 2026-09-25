@@ -90,6 +90,7 @@ it.each(["single", "batch"])(
         silenceGapSeconds: 3,
         imageSeconds: 15,
         zoomPercent: 22.5,
+        motionStyle: "zoom" as const,
         edgeSilenceSeconds: 0,
       };
       const storage = { ...h.deps, emit: () => undefined };

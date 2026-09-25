@@ -7,8 +7,11 @@ import { redoPlan } from "./cascade.js";
 
 // The cascade rule, decided with no database in reach.
 
+// A run from before the Document stage: every stage but the document, which has no row.
 function standing(overrides: Partial<Record<StageKind, StageState>> = {}): StageStanding[] {
-  return stageKinds.map((kind) => ({ kind, state: overrides[kind] ?? "done" }));
+  return stageKinds
+    .filter((kind) => kind !== "document" || overrides.document !== undefined)
+    .map((kind) => ({ kind, state: overrides[kind] ?? "done" }));
 }
 
 function plan(
@@ -19,6 +22,17 @@ function plan(
   const input: CascadeInput = { action, stages: standing(overrides), thumbnailSource };
   return redoPlan(input).map((redo) => `${redo.stage}:${redo.clears}`);
 }
+
+describe("a run with a document", () => {
+  it("redoes the document after an article edit, and never for an image change", () => {
+    expect(plan({ kind: "article-edit" }, { document: "done" })).toContain("document:all");
+    expect(plan({ kind: "image-regenerated" }, { document: "done" })).not.toContain("document:all");
+  });
+
+  it("steps over a document that was switched off", () => {
+    expect(plan({ kind: "article-edit" }, { document: "skipped" })).not.toContain("document:all");
+  });
+});
 
 describe("a re-run of one stage", () => {
   // Every re-run marks its dependents `pending` and runs them automatically.

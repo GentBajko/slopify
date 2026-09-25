@@ -1,10 +1,16 @@
 import { z } from "zod";
 import { thinkingModes } from "../../kernel/ports/llm.js";
 import { checkpointStageSchema } from "../checkpoints/schema.js";
+import { documentThemes } from "../document/model.js";
 import { chunkModes } from "../narration/chunk.js";
 import { subtitleConfigSchema } from "../subtitles/model.js";
-import { entryModes, formats, stageSources } from "./model.js";
-import { defaultEdgeSilenceSeconds, defaultImageSeconds, defaultZoomPercent } from "./rules.js";
+import { entryModes, formats, motionStyles, stageSources } from "./model.js";
+import {
+  defaultEdgeSilenceSeconds,
+  defaultImageSeconds,
+  defaultMotionStyle,
+  defaultZoomPercent,
+} from "./rules.js";
 
 const providerChoice = z.object({
   provider: z.string(),
@@ -24,8 +30,9 @@ export const runDraftSchema = z.object({
     .optional(),
   title: z.string(),
   format: z.enum(formats),
-  // Spelled out rather than built from stageKinds, so the inferred type carries the six
-  // keys and this schema stays assignable to the domain type without a cast.
+  // Spelled out rather than built from stageKinds, so the inferred type carries the
+  // keys and this schema stays assignable to the domain type without a cast. Document is
+  // optional: everything saved before it existed has no such key, and absent means Off.
   sources: z.object({
     research: z.enum(stageSources),
     article: z.enum(stageSources),
@@ -33,6 +40,7 @@ export const runDraftSchema = z.object({
     images: z.enum(stageSources),
     thumbnail: z.enum(stageSources),
     video: z.enum(stageSources),
+    document: z.enum(stageSources).optional(),
   }),
   llm: providerChoice.optional(),
   audio: providerChoice
@@ -67,8 +75,10 @@ export const runDraftSchema = z.object({
   // before these existed still parses. The range is `rules.ts`'s, not the schema's.
   imageSeconds: z.number().default(defaultImageSeconds),
   zoomPercent: z.number().default(defaultZoomPercent),
+  motionStyle: z.enum(motionStyles).default(defaultMotionStyle),
   edgeSilenceSeconds: z.number().default(defaultEdgeSilenceSeconds),
   subtitles: subtitleConfigSchema.optional(),
+  document: z.object({ theme: z.enum(documentThemes) }).optional(),
 });
 
 export const runConfigSchema = runDraftSchema.extend({

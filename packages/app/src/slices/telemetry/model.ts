@@ -8,7 +8,7 @@ export const telemetryEventTypes = ["install", "project.created", "stage.complet
 export type TelemetryEventType = (typeof telemetryEventTypes)[number];
 
 // Counting is finer than a stage: one event per research, article, intro/outro text, audio
-// segment (body, intro, outro), images, thumbnail and video. The three that are not whole
+// segment (body, intro, outro), images, thumbnail, video and document. The three that are not whole
 // stages are named by `segment` beside the stage that produced them - the article stage
 // writes the intro and outro texts, the audio stage narrates all three - so the event type
 // stays `stage.completed` and the pair (stage, segment) says which unit it is.

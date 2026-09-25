@@ -53,7 +53,7 @@ export function RundownStrip({
         aria-label="Project stages"
         className="relative min-w-0 overflow-x-auto [scrollbar-width:thin]"
       >
-        <div className="grid min-w-[640px] grid-cols-6">
+        <div className="grid min-w-[740px] grid-cols-7">
           {stages.map((stage) => {
             const active = stage.kind === selected;
             const name = stageName(stage.kind, project.config);

@@ -32,7 +32,8 @@ function store(initial: Partial<Record<StageKind, StageState>> = {}): Store {
     id: kind,
     projectId: "p1",
     kind,
-    state: initial[kind] ?? "pending",
+    // Most runs don't ask for a document; a test that does names it.
+    state: initial[kind] ?? (kind === "document" ? "skipped" : "pending"),
   }));
   const reasons = new Map<string, string | null>();
   const claims: string[] = [];
@@ -122,7 +123,9 @@ describe("tick", () => {
     runner.tick("p1");
     await runner.settled();
 
-    expect(stages.rows.every((row) => row.state === "done")).toBe(true);
+    expect(
+      stages.rows.every((row) => row.state === (row.kind === "document" ? "skipped" : "done")),
+    ).toBe(true);
     expect(
       states(events)
         .filter((event) => !event.startsWith("images:"))
@@ -152,6 +155,30 @@ describe("tick", () => {
     expect(peak).toBe(3);
   });
 
+  it("starts the document beside narration and images once the article is written", async () => {
+    let live = 0;
+    let peak = 0;
+    const concurrent: StageRun = async (): Promise<StageRunResult> => {
+      live += 1;
+      peak = Math.max(peak, live);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      live -= 1;
+      return "done";
+    };
+    const { runner, events, stages } = harness(
+      { article: ok, audio: concurrent, images: concurrent, document: concurrent, video: ok },
+      { research: "skipped", thumbnail: "skipped", document: "pending" },
+    );
+
+    runner.tick("p1");
+    await runner.settled();
+
+    expect(peak).toBe(3);
+    expect(stages.stateOf("document")).toBe("done");
+    const order = states(events);
+    expect(order.indexOf("document:running")).toBeGreaterThan(order.indexOf("article:done"));
+  });
+
   it("starts a stage once even when several ticks race its own completion", async () => {
     const started: StageKind[] = [];
     const counted: StageRun = async ({ stage }): Promise<StageRunResult> => {
@@ -179,9 +206,10 @@ describe("tick", () => {
     await runner.settled();
     clearInterval(storm);
 
-    // Six starts for six stages: the in-flight set turned every extra tick away.
-    expect(started.sort()).toEqual([...stageKinds].sort());
-    expect([...stages.claims].sort()).toEqual([...stageKinds].sort());
+    // One start per stage the run asked for: the in-flight set turned every extra tick away.
+    const asked = stageKinds.filter((kind) => kind !== "document").sort();
+    expect(started.sort()).toEqual(asked);
+    expect([...stages.claims].sort()).toEqual(asked);
   });
 
   it("starts a stage once even when the stage list it reads is stale", async () => {

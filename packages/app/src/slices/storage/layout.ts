@@ -68,6 +68,8 @@ export function outputFileName(
       return `instructions-${stageKind}.txt`;
     case "video":
       return "video.mp4";
+    case "document_pdf":
+      return "document.pdf";
     case "audio_body":
       return `audio-body${extension}`;
     case "audio_export":

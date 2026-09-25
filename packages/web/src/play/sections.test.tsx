@@ -125,3 +125,30 @@ it("edits a provided article from the summary and preserves focus through autosa
   await screen.findByText("Saved");
   expect(document.activeElement).toBe(screen.getByLabelText("Article text"));
 });
+
+it("switches the Document on, picks its theme and saves both into the draft", async () => {
+  const { requests } = await mountPlay();
+  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+  const theme = screen.getByRole<HTMLSelectElement>("combobox", { name: "Theme" });
+  expect(theme.value).toBe("dicemaster");
+  expect(theme.disabled).toBe(true);
+  expect(screen.getAllByRole("button", { name: /^Document: Off/ }).length).toBeGreaterThan(0);
+  await userEvent.click(
+    within(screen.getByRole("radiogroup", { name: "document source" })).getByRole("radio", {
+      name: "Generate",
+    }),
+  );
+  expect(theme.disabled).toBe(false);
+  await userEvent.selectOptions(theme, "plain");
+  expect(screen.getAllByRole("button", { name: /^Document: Ready/ }).length).toBeGreaterThan(0);
+  await waitFor(async () => {
+    const saves = requests.filter(
+      (request) =>
+        ["PUT", "POST"].includes(request.method) &&
+        /\/api\/drafts(?:\/[a-f0-9-]+)?$/.test(request.url),
+    );
+    expect(await saves.at(-1)?.clone().json()).toMatchObject({
+      document: { form: { sources: { document: "generate" }, document: { theme: "plain" } } },
+    });
+  });
+});

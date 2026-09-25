@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from "no
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { outputsOf } from "../storage/repo.js";
+import { readEditList } from "./edit-list.js";
 import { exportFixture, inspectMedia, wavParts } from "./export.fake.js";
 import { renderVideo } from "./run.js";
 
@@ -161,11 +162,21 @@ describe("optional media exports with real ffmpeg", () => {
     expect(report).toContain("Audio: aac");
     const params = JSON.parse(readFileSync(join(h.dir, "render.json"), "utf8"));
     expect(
-      params.images.map((slot: { path: string; frames: number }) => [slot.path, slot.frames]),
+      params.editList.shots.map((shot: { source: { path: string }; frames: number }) => [
+        shot.source.path,
+        shot.frames,
+      ]),
     ).toEqual([
       ["image.ppm", 30],
       ["image-2.ppm", 30],
       ["image.ppm", 15],
+    ]);
+    // The recorded list is the one rendered, project-relative, and reads back as a list.
+    expect(params.motionStyle).toBe("zoom");
+    expect(readEditList(params.editList).audio.map((segment) => segment.path)).toEqual([
+      null,
+      "audio_body.wav",
+      null,
     ]);
     expect(readdirSync(h.dir).filter((name) => name.startsWith("render-"))).toEqual([]);
   }, 30000);

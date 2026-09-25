@@ -158,6 +158,7 @@ function harness(): Harness {
     silenceGapSeconds: gapSeconds,
     imageSeconds: 15,
     zoomPercent: 22.5,
+    motionStyle: "zoom",
     edgeSilenceSeconds: 0,
   };
   const { project } = startRun({ ...deps, emit: (): void => {} }, draft, {
@@ -259,19 +260,19 @@ describe("a run with a picked intro and outro", () => {
 
     // Intro, gap, body, gap, outro, the gaps at the configured length.
     const plan = JSON.parse(readFileSync(join(dir, "render.json"), "utf8")) as {
-      audio: readonly PlannedSegment[];
+      editList: { audio: readonly PlannedSegment[] };
       gapSeconds: number;
       totalSeconds: number;
     };
     expect(plan.gapSeconds).toBe(gapSeconds);
-    expect(plan.audio.map((segment) => segment.kind)).toEqual([
+    expect(plan.editList.audio.map((segment) => segment.kind)).toEqual([
       "intro",
       "gap",
       "body",
       "gap",
       "outro",
     ]);
-    expect(plan.audio.map((segment) => segment.seconds)).toEqual([
+    expect(plan.editList.audio.map((segment) => segment.seconds)).toEqual([
       parts.get("audio_intro"),
       gapSeconds,
       parts.get("audio_body"),
@@ -282,7 +283,7 @@ describe("a run with a picked intro and outro", () => {
     // Video length = intro + gaps + body + outro, read off the mp4 rather than off the plan
     // that asked for it. The tolerance is a frame and a half: the video track is a whole number
     // of frames at 30 fps and AAC cannot end a file mid-block.
-    const sumSeconds = plan.audio.reduce((total, segment) => total + segment.seconds, 0);
+    const sumSeconds = plan.editList.audio.reduce((total, segment) => total + segment.seconds, 0);
     expect(plan.totalSeconds).toBe(sumSeconds);
     const rendered = await measure(join(dir, "video.mp4"));
     expect(Math.abs(rendered - sumSeconds * 1000)).toBeLessThan(120);

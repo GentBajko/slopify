@@ -10,6 +10,7 @@ import { checkpointClosure, checkpointFingerprint } from "./fingerprint.js";
 import { settleReleasedCheckpoints } from "./recovery.js";
 import { approveCheckpoint, listCheckpoints, saveCheckpointSet } from "./repo.js";
 import { checkpointDecision } from "./rules.js";
+import { sourceOf } from "../admission/model.js";
 
 it("applies a stage approval to every matching sibling invocation without widening revision scope", () => {
   const revision = emptyView(config).revision;
@@ -81,7 +82,7 @@ it("resolves and satisfies the exact current closure after its last invocation s
     for (const kind of stageKinds)
       h.deps.db
         .prepare("INSERT INTO stages(id,project_id,kind,source,state) VALUES (?,?,?,?, 'pending')")
-        .run(kind, h.projectId, kind, runtimeConfig.sources[kind]);
+        .run(kind, h.projectId, kind, sourceOf(runtimeConfig.sources, kind));
     const base = await ensureBaseline(h.deps, h.projectId);
     if (!base.ok) throw new Error("Missing baseline");
     admitInitialRevision(h.deps, base.view, runtimeCatalogue);

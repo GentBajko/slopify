@@ -11,6 +11,7 @@ import { revisionFixture } from "../revisions/revision.fake.js";
 import { admitPendingRevision } from "./legacy-admission.fake.js";
 import { admitInitialRevision } from "./runtime-admission.js";
 import { executionStages, executionStandings, recordWorkProgress } from "./runtime-store.js";
+import { sourceOf } from "../admission/model.js";
 
 const catalogue: Catalogue = {
   schemaVersion: 1,
@@ -31,7 +32,7 @@ it("keeps an adopted completed article satisfied after title Save and Resume", a
           kind,
           h.projectId,
           kind,
-          h.config.sources[kind],
+          sourceOf(h.config.sources, kind),
           kind === "article" ? "provided" : "skipped",
         );
     writeFileSync(

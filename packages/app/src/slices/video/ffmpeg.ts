@@ -1,8 +1,8 @@
 import { spawn } from "node:child_process";
 import { isAbsolute, resolve as resolvePath } from "node:path";
 import type { Log } from "../../kernel/log.js";
-import type { ImageSlot, RenderPlan } from "./plan.js";
-import { type ZoomRange, zoomRange } from "./plan.js";
+import type { EditList, Motion, Shot } from "./edit-list.js";
+import { decimal, zoomRange } from "./plan.js";
 
 // Hand-rolled per the standards: the filtergraph is the load-bearing part of this slice
 // and a wrapper would hide it. Every value goes into an argument array, never a shell
@@ -10,7 +10,9 @@ import { type ZoomRange, zoomRange } from "./plan.js";
 
 // zoompan works on a still that has been pre-scaled, because it steps the zoom in
 // sub-pixel increments and a source at output resolution visibly jitters where the zoom is
-// meant to be smooth and linear. Four times the frame is enough at 122.5%.
+// meant to be smooth and linear. A pan steps its crop window in whole source pixels, so
+// the same four times gives it quarter-pixel steps on screen. Four times the frame is
+// enough at 122.5%.
 const prescale = 4;
 const sampleRate = 44100;
 const channelLayout = "stereo";
@@ -40,33 +42,35 @@ export function resolveFfmpeg(
 }
 
 // The slideshow is rendered in two steps rather than one filtergraph. A graph with one
-// scale-and-zoompan chain per slot keeps each chain's frame buffers until the graph closes,
-// so its memory grows with the slot count: measured with ffmpeg 7, 200 slots peaked at
-// 16 GB and ran 6,000 threads, and a 3-hour video at 15 s per image has 720 slots. So each
-// distinct clip (one still, one zoom direction, one length) is encoded once, in its own
-// short ffmpeg run with a single input, and the concat demuxer then joins the clips in slot
+// scale-and-zoompan chain per shot keeps each chain's frame buffers until the graph closes,
+// so its memory grows with the shot count: measured with ffmpeg 7, 200 shots peaked at
+// 16 GB and ran 6,000 threads, and a 3-hour video at 15 s per image has 720 shots. So each
+// distinct clip (one still, one motion, one length) is encoded once, in its own short
+// ffmpeg run with a single input, and the concat demuxer then joins the clips in shot
 // order from a list file. Memory is one clip's worth whatever the length; the command
 // lines stay a few hundred characters (Windows allows 32,767) because the timeline lives
-// in the list, not the arguments; and a still that comes round again costs no second
-// zoompan. The clips are identical encodes, so without burned-in captions the join copies
-// them rather than encoding again.
+// in the list, not the arguments; and a still that comes round with the same motion costs
+// no second zoompan. The clips are identical encodes, so without burned-in captions the
+// join copies them rather than encoding again.
 export interface SlideshowClips {
   // One per distinct clip, named by its place in this list: `c1.mp4`, `c2.mp4`, ...
-  readonly clips: readonly { readonly name: string; readonly slot: ImageSlot }[];
-  // The clip each slot plays, in timeline order.
+  readonly clips: readonly { readonly name: string; readonly shot: Shot }[];
+  // The clip each shot plays, in timeline order.
   readonly order: readonly string[];
 }
 
-export function slideshowClips(plan: RenderPlan): SlideshowClips {
-  const clips: { name: string; slot: ImageSlot }[] = [];
+export function slideshowClips(edit: Pick<EditList, "shots">): SlideshowClips {
+  const clips: { name: string; shot: Shot }[] = [];
   const named = new Map<string, string>();
-  const order = plan.images.map((slot) => {
-    const key = JSON.stringify([slot.path, slot.zoom, slot.frames]);
+  const order = edit.shots.map((shot) => {
+    // The motion is plain data built in a fixed key order, so equal motions stringify
+    // alike.
+    const key = JSON.stringify([shot.source, shot.motion, shot.frames]);
     let name = named.get(key);
     if (name === undefined) {
       name = `c${clips.length + 1}.mp4`;
       named.set(key, name);
-      clips.push({ name, slot });
+      clips.push({ name, shot });
     }
     return name;
   });
@@ -79,27 +83,27 @@ export function slideshowClips(plan: RenderPlan): SlideshowClips {
 const intermediateCrf = "16";
 
 export function clipArgs(
-  plan: Pick<RenderPlan, "width" | "height" | "fps" | "zoomPercent">,
-  slot: ImageSlot,
+  frame: Pick<EditList, "width" | "height" | "fps">,
+  shot: Shot,
   output: string,
   intermediate = false,
 ): string[] {
-  const range = zoomRange(plan.zoomPercent);
-  // A still that does not zoom has no sub-pixel steps to smooth, so it is not prescaled.
-  const factor = range === undefined ? 1 : prescale;
-  const wide = plan.width * factor;
-  const tall = plan.height * factor;
+  const move = zoompan(shot.motion, shot.frames);
+  // A still that does not move has no sub-pixel steps to smooth, so it is not prescaled.
+  const factor = move === undefined ? 1 : prescale;
+  const wide = frame.width * factor;
+  const tall = frame.height * factor;
   return [
     ...progressArgs,
     "-i",
-    slot.path,
+    shot.source.path,
     "-filter_complex",
     `[0:v]trim=end_frame=1,setpts=PTS-STARTPTS,` +
       // Cover the frame and centre-crop, never letterbox.
       `scale=${wide}:${tall}:force_original_aspect_ratio=increase,crop=${wide}:${tall},` +
-      `zoompan=z='${zoomExpression(slot, range)}':d=${slot.frames}:` +
-      `x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':` +
-      `s=${plan.width}x${plan.height}:fps=${plan.fps},setsar=1[v]`,
+      `zoompan=z='${move?.z ?? "1"}':d=${shot.frames}:` +
+      `x='${move?.x ?? centredX}':y='${move?.y ?? centredY}':` +
+      `s=${frame.width}x${frame.height}:fps=${frame.fps},setsar=1[v]`,
     "-map",
     "[v]",
     ...videoCodec,
@@ -115,10 +119,15 @@ export function concatList(order: readonly string[]): string {
   return `ffconcat version 1.0\n${order.map((name) => `file ${name}`).join("\n")}\n`;
 }
 
-export function joinArgs(plan: RenderPlan, list: string, burnSubtitles = false): string[] {
+export function joinArgs(
+  edit: Pick<EditList, "audio">,
+  output: string,
+  list: string,
+  burnSubtitles = false,
+): string[] {
   const inputs: string[] = ["-f", "concat", "-i", list];
   const audioAt: number[] = [];
-  for (const segment of plan.audio) {
+  for (const segment of edit.audio) {
     audioAt.push(1 + audioAt.length);
     if (segment.path === null) {
       inputs.push(
@@ -154,12 +163,12 @@ export function joinArgs(plan: RenderPlan, list: string, burnSubtitles = false):
     ...(chains.length > 0 ? ["-filter_complex", chains.join(";")] : []),
     "-map",
     burnSubtitles ? "[v]" : "0:v",
-    ...(plan.audio.length > 0 ? ["-map", "[a]"] : []),
+    ...(edit.audio.length > 0 ? ["-map", "[a]"] : []),
     ...(burnSubtitles ? videoCodec : ["-c:v", "copy"]),
-    ...(plan.audio.length > 0 ? ["-c:a", "aac"] : ["-an"]),
+    ...(edit.audio.length > 0 ? ["-c:a", "aac"] : ["-an"]),
     "-movflags",
     "+faststart",
-    plan.output,
+    output,
   ];
 }
 
@@ -176,16 +185,51 @@ const progressArgs = [
 ] as const;
 const videoCodec = ["-c:v", "libx264", "-pix_fmt", "yuv420p"] as const;
 
-// Odd slots zoom from 100% up, even slots back down to 100%, linear over the slot. `on`
-// is zoompan's output frame counter, 0 to d-1, and a one-frame slot has no span to
-// divide by, so it holds the zoom it starts at. Without a range the zoom stays at 1.
-function zoomExpression(slot: ImageSlot, range: ZoomRange | undefined): string {
-  if (range === undefined) return "1";
-  const span = slot.frames - 1;
-  if (slot.zoom === "in") {
-    return span < 1 ? range.from : `${range.from}+${range.by}*on/${span}`;
+const centredX = "iw/2-(iw/zoom/2)";
+const centredY = "ih/2-(ih/zoom/2)";
+
+interface Zoompan {
+  readonly z: string;
+  readonly x: string;
+  readonly y: string;
+}
+
+// zoompan's expressions for a motion, or undefined for one that does not move. `on` is
+// zoompan's output frame counter, 0 to d-1, and a one-frame shot has no span to divide
+// by, so it holds where it starts. `zoom` in x and y is the current zoom, so iw-iw/zoom
+// is the room the crop window has to travel in.
+function zoompan(motion: Motion, frames: number): Zoompan | undefined {
+  if (motion.kind === "still") return undefined;
+  const range = zoomRange(motion.percent);
+  if (range === undefined) return undefined;
+  const span = frames - 1;
+  if (motion.kind === "zoom") {
+    // Zoom in rises from 100%, zoom out falls back to it, linear over the shot.
+    const z =
+      motion.direction === "in"
+        ? span < 1
+          ? range.from
+          : `${range.from}+${range.by}*on/${span}`
+        : span < 1
+          ? range.to
+          : `${range.to}-${range.by}*on/${span}`;
+    return { z, x: centredX, y: centredY };
   }
-  return span < 1 ? range.to : `${range.to}-${range.by}*on/${span}`;
+  return {
+    z: range.to,
+    x: `(iw-iw/zoom)*(${travel(motion.from.x, motion.to.x, span)})`,
+    y: `(ih-ih/zoom)*(${travel(motion.from.y, motion.to.y, span)})`,
+  };
+}
+
+// A share of the room from `from` to `to`, linear over the shot. Built in whole
+// thousandths as decimal text, like the zoom, so 1 - 0.5 reads 0.5 and never
+// 0.49999999999999994.
+function travel(from: number, to: number, span: number): string {
+  const start = Math.round(from * 1000);
+  const by = Math.round(to * 1000) - start;
+  if (span < 1 || by === 0) return decimal(start);
+  return `${decimal(start)}${by > 0 ? "+" : "-"}${decimal(Math.abs(by))}*on/${span}`;
 }
 
 function seconds(value: number): string {

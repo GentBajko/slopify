@@ -3,11 +3,16 @@ import type { StageKind, StageState } from "../pipeline.js";
 import { stageKinds } from "../pipeline.js";
 import { dependenciesOf, deps, derive, progressOf, satisfied } from "./graph.js";
 
+// A stage not named is waiting, except the document: most runs don't ask for one.
 function stages(states: Partial<Record<StageKind, StageState>>): Array<{
   kind: StageKind;
   state: StageState;
 }> {
-  return stageKinds.map((kind) => ({ kind, state: states[kind] ?? "pending" }));
+  return stageKinds.map((kind) => ({ kind, state: states[kind] ?? unnamed(kind) }));
+}
+
+function unnamed(kind: StageKind): StageState {
+  return kind === "document" ? "skipped" : "pending";
 }
 
 describe("deps", () => {
@@ -19,7 +24,14 @@ describe("deps", () => {
       images: [],
       thumbnail: ["article"],
       video: ["article", "audio", "images", "thumbnail"],
+      document: ["article", "thumbnail"],
     });
+  });
+
+  it("lays out the document from the article and cover alone, beside narration and images", () => {
+    expect(deps.document).not.toContain("audio");
+    expect(deps.document).not.toContain("images");
+    expect(deps.document).not.toContain("video");
   });
 
   it("names a dependency for every stage kind and nothing else", () => {
@@ -108,7 +120,7 @@ describe("progressOf", () => {
       const pair = over[kind];
       return {
         kind,
-        state: (pair === undefined ? "pending" : "running") as StageState,
+        state: pair === undefined ? unnamed(kind) : ("running" as StageState),
         progressCurrent: pair?.[0] ?? null,
         progressTotal: pair?.[1] ?? null,
       };
@@ -191,5 +203,9 @@ describe("source-aware dependencies", () => {
   });
   it("exports WAV as soon as article and audio finish even if optional images fail", () => {
     expect(dependenciesOf("video", { ...sources, video: "off" })).toEqual(["article", "audio"]);
+  });
+  it("waits for the thumbnail only when the document has one as its cover", () => {
+    expect(dependenciesOf("document", sources)).toEqual(["article", "thumbnail"]);
+    expect(dependenciesOf("document", { ...sources, thumbnail: "off" })).toEqual(["article"]);
   });
 });

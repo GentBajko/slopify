@@ -15,6 +15,7 @@ import { exportCatalogue } from "./runtime-export.fake.js";
 import { executionPlan } from "./runtime-plan.js";
 import { preparedResult, preparedText, publishResult } from "./runtime-publication.js";
 import { workPieces } from "./work-records.js";
+import { sourceOf } from "../admission/model.js";
 
 const cleanups: (() => void)[] = [];
 afterEach(() => {
@@ -48,7 +49,7 @@ async function fixture(durationMs: number | null, video: boolean, burnIn = false
   for (const kind of stageKinds)
     deps.db
       .prepare("INSERT INTO stages(id,project_id,kind,source,state) VALUES (?,?,?,?,?)")
-      .run(kind, h.projectId, kind, config.sources[kind], kind === "audio" ? "done" : "skipped");
+      .run(kind, h.projectId, kind, sourceOf(config.sources, kind), kind === "audio" ? "done" : "skipped");
   for (const [id, stageKind, role, path, bytes] of [
     ["body", "audio", "audio_body", "body.mp3", "original narration"],
     ["image-one", "images", "image", "one.png", "first image"],

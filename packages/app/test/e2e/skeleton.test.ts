@@ -160,6 +160,7 @@ function draft(audio: string, images: readonly string[]): RunDraft {
     silenceGapSeconds: 3,
     imageSeconds: 15,
     zoomPercent: 22.5,
+    motionStyle: "zoom",
     edgeSilenceSeconds: 0,
   };
 }
@@ -230,12 +231,12 @@ describe("a project whose every stage is provided renders an mp4", () => {
         "utf8",
       ),
     ) as {
-      audio: Array<{ kind: string; seconds: number }>;
+      editList: { audio: Array<{ kind: string; seconds: number }> };
       gapSeconds: number;
     };
     expect(plan.gapSeconds).toBe(3);
-    expect(plan.audio.map((segment) => segment.kind)).toEqual(["body"]);
-    const gaps = plan.audio
+    expect(plan.editList.audio.map((segment) => segment.kind)).toEqual(["body"]);
+    const gaps = plan.editList.audio
       .filter((segment) => segment.kind === "gap")
       .reduce((sum, segment) => sum + segment.seconds, 0);
     expect(durationSecondsOf(video)).toBeCloseTo(bodySeconds + gaps, 1);
@@ -253,6 +254,7 @@ describe("a project whose every stage is provided renders an mp4", () => {
       "images:provided",
       "thumbnail:skipped",
       "video:done",
+      "document:skipped",
     ]);
     expect(read.outputs.map((output) => output.role).sort()).toEqual(
       ["article_txt", "audio_body", "image", "image", "image", "render_params", "video"].sort(),

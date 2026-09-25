@@ -316,6 +316,9 @@ describe("the source switches", () => {
     expect(screen.getByRole("radiogroup", { name: "video source" }).textContent).toBe(
       "OffGenerate",
     );
+    expect(screen.getByRole("radiogroup", { name: "document source" }).textContent).toBe(
+      "OffGenerate",
+    );
   });
 
   it("swaps a stage's controls for its paste area, and hides research behind a provided article", async () => {

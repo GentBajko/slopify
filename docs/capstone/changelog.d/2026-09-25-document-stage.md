@@ -1,0 +1,10 @@
+# Document stage: the article as a styled PDF
+
+- New optional stage, Document, after the article: it lays the project's article out as a PDF with a title page, a clickable table of contents, drop caps after headings, clickable links, a Sources page and the theme's closing page. It is made on your machine with no provider, key or charge, and runs beside narration and images instead of after them. Switch it on per project on Play (Generate or Off) or in Edit project → Inputs; it is Off by default.
+- Two themes, DiceMaster (parchment page, Cinzel lettering, DiceMaster.io branding and closing page) and Plain (flat page, no branding). Every size, spacing, font, drop cap, page and header/footer value comes from one theme object, ready for a theme editor in the Library later.
+- The article's markdown is read as markdown: headings become the contents, bold, italic, lists, quotes and links keep their meaning, and the "Sources Consulted" section moves to the Sources page, followed by any other link the research notes cite. The pronunciation glossary stays out of the PDF.
+- When the project has a thumbnail (generated or uploaded), it becomes the cover on the title page. A thumbnail that isn't PNG, JPEG or WebP is left off rather than failing the document.
+- The project page has a Document row with its state; its output offers Download, Open folder and Open PDF, which opens it in a new browser tab.
+- Editing the article, the title or the theme marks the document as needing a rebuild; nothing else is affected. Resume, Retry stage and Re-run section work on it like any other stage.
+- Existing projects get a Document stage that is switched off, so nothing shows as waiting. The upgrade rebuilds two database tables to allow the new stage (schema version 14) and keeps every row.
+- The bundled Cinzel font ships with its SIL Open Font License beside it (`packages/app/src/assets/document/fonts/OFL.txt`). New dependency: jsPDF 3 (MIT), for writing PDF files, which Node and the existing dependencies cannot do.

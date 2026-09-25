@@ -112,8 +112,38 @@ it("offers seconds per image only for a video and the edge silence only with nar
   });
   expect(screen.queryByLabelText("Seconds per image")).toBeNull();
   expect(screen.queryByLabelText("Zoom (%)")).toBeNull();
+  expect(screen.queryByLabelText("Motion")).toBeNull();
   expect(screen.getByLabelText("Silence at start and end (seconds)")).toBeDefined();
   expect(
     screen.getByRole("button", { name: "About silence at start and end (seconds)" }),
   ).toBeDefined();
+});
+
+it("offers the motion beside the zoom and keeps the pick through save/reload", async () => {
+  const h = reviewHarness();
+  await h.prepare(freshDraftDocument);
+  const open = async () => {
+    await act(async () => {
+      await h.session().navigate("outputs");
+    });
+  };
+  await open();
+  const motion = screen.getByLabelText<HTMLSelectElement>("Motion");
+  expect(motion.value).toBe("zoom");
+  expect([...motion.options].map((option) => option.text)).toEqual([
+    "Zoom in and out",
+    "Pan across",
+    "Mix of both",
+    "Still",
+  ]);
+  expect(screen.getByRole("button", { name: "About motion" })).toBeDefined();
+  fireEvent.change(motion, { target: { value: "pan" } });
+  await waitFor(() => expect(h.session().document.form.motionStyle).toBe("pan"));
+  await act(async () => {
+    await h.session().flush();
+  });
+  await h.restart();
+  await waitFor(() => expect(h.session().document.form.motionStyle).toBe("pan"));
+  await open();
+  expect(screen.getByLabelText<HTMLSelectElement>("Motion").value).toBe("pan");
 });

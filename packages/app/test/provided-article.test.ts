@@ -120,6 +120,7 @@ function draft(image: string, article: string): RunDraft {
     silenceGapSeconds: 3,
     imageSeconds: 15,
     zoomPercent: 22.5,
+    motionStyle: "zoom",
     edgeSilenceSeconds: 0,
   };
 }

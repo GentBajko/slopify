@@ -76,10 +76,14 @@ export function visualRecipes(
             recipes.map((value) => value.fingerprint),
             audioFingerprint,
             config.subtitles?.mode === "burn-in" ? captionFingerprint : null,
-            // Only here: how long a still is held and how far it zooms change the render,
+            // Only here: how long a still is held and how it moves change the render,
             // never an image.
             config.imageSeconds,
             config.zoomPercent,
+            // Left out for "zoom", which is what every video did before the setting
+            // existed, so a project that keeps it keeps its render; the other styles
+            // each render differently.
+            ...(config.motionStyle === "zoom" ? [] : [config.motionStyle]),
             // v1 split the timeline evenly across the images; v2 cycles them.
             "slideshow-zoom-v2",
           ],

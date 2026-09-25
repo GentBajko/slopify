@@ -7,7 +7,14 @@ import { adoptBaseline } from "../revisions/adopt.js";
 import type { StorageDeps } from "../storage/staging.js";
 import { attachStagedFile, storeText } from "../storage/staging.js";
 import { releaseStagedFile } from "../storage/staging-refs.js";
-import type { Project, RunConfig, RunDraft, Stage, StageSource } from "./model.js";
+import {
+  type Project,
+  type RunConfig,
+  type RunDraft,
+  type Stage,
+  type StageSource,
+  sourceOf,
+} from "./model.js";
 import { insertProject, insertStage } from "./repo.js";
 
 export interface StartedRun {
@@ -48,11 +55,11 @@ export function startRun(
     id: deps.ids.next(),
     projectId: id,
     kind,
-    source: draft.sources[kind],
+    source: sourceOf(draft.sources, kind),
     state:
       kind === "video" && draft.sources.video === "off" && draft.sources.audio !== "off"
         ? "pending"
-        : initialState(draft.sources[kind]),
+        : initialState(sourceOf(draft.sources, kind)),
     failureReason: null,
     attemptCount: 0,
     progressCurrent: null,

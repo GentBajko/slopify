@@ -5,7 +5,7 @@ import { usePlaySession } from "./draft-context";
 import { AudioRail, ImagesRail } from "./media-rails";
 import { OptionPicker } from "./pickers";
 import type { RailProps } from "./rail-frame";
-import { ThumbnailRail, VideoRail } from "./stage-rails";
+import { DocumentRail, ThumbnailRail, VideoRail } from "./stage-rails";
 export function OutputsSection(
   props: RailProps & {
     readonly entries: readonly Entry[];
@@ -96,6 +96,7 @@ export function OutputsSection(
             session.edit({ ...document, form: { ...document.form, [field]: value } }),
         }}
       />
+      <DocumentRail {...props} />
       {props.missingKeyword ? (
         <p className="py-4 text-small text-ink2">
           A selected template needs keywords.{" "}

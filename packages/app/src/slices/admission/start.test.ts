@@ -65,6 +65,7 @@ function draft(over: Partial<RunDraft> = {}): RunDraft {
     silenceGapSeconds: 3,
     imageSeconds: 15,
     zoomPercent: 22.5,
+    motionStyle: "zoom",
     edgeSilenceSeconds: 0,
     ...over,
   };
@@ -116,7 +117,7 @@ describe("startRun", () => {
     storage.db.close();
   });
 
-  it("writes the project, its six stages, and the provided outputs together", async () => {
+  it("writes the project, its stages, and the provided outputs together", async () => {
     const storage = deps();
     const audio = await upload(storage, "audio", "narration bytes");
     const first = await upload(storage, "images", "one");
@@ -138,6 +139,8 @@ describe("startRun", () => {
         "images:provided",
         "thumbnail:skipped",
         "video:pending",
+        // A draft saved before the Document stage has no document source: Off.
+        "document:skipped",
       ],
     );
 
@@ -156,6 +159,32 @@ describe("startRun", () => {
     expect(readFileSync(join(dir, "article.txt"), "utf8")).toBe("The article.\n");
     expect(readFileSync(join(dir, "images", "002.bin"), "utf8")).toBe("two");
     expect(storage.db.prepare("SELECT count(*) AS n FROM staged_files").get()).toEqual({ n: 0 });
+  });
+
+  it("queues the document when the run asks for one, with its theme in the config", () => {
+    const storage = deps();
+
+    const { project } = startRun(
+      storage,
+      draft({
+        sources: {
+          ...draft().sources,
+          audio: "off",
+          images: "off",
+          video: "off",
+          document: "generate",
+        },
+        document: { theme: "plain" },
+      }),
+      {},
+    );
+
+    expect(
+      stagesOf(storage.db, project.id)
+        .filter((stage) => stage.kind === "document")
+        .map((stage) => `${stage.source}:${stage.state}`),
+    ).toEqual(["generate:pending"]);
+    expect(project.config.document).toEqual({ theme: "plain" });
   });
 
   it("keeps the slideshow order the user left the list in", async () => {

@@ -41,10 +41,14 @@ export function revisionFileRoutes(deps: AppDeps) {
         const result = findRevisionDownload(deps, projectId, revisionId, recordId);
         if (!result.ok) return unavailable(c, result.reason);
         const value = result.download;
+        // `?inline=1` lets the project page open a PDF in a browser tab instead of saving
+        // it. Only PDFs: anything else the browser might render stays a download.
+        const inline = c.req.query("inline") === "1" && value.contentType === "application/pdf";
         return c.body(Readable.toWeb(createReadStream(value.path)), 200, {
           "content-type": value.contentType,
           "content-length": String(value.bytes),
-          "content-disposition": `attachment; filename="${value.filename}"`,
+          "content-disposition": `${inline ? "inline" : "attachment"}; filename="${value.filename}"`,
+          "x-content-type-options": "nosniff",
         });
       },
     );

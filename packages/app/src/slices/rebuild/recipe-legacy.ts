@@ -64,6 +64,8 @@ export function legacyOutputWorkKey(output: Output, config?: Pick<RunConfig, "so
       return "export:wav";
     case "video":
       return "export:video";
+    case "document_pdf":
+      return "document:pdf";
     case "subtitles_srt":
     case "subtitles_vtt":
     case "subtitle_ass":

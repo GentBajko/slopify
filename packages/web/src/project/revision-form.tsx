@@ -1,12 +1,19 @@
 import { stageKinds } from "@app/kernel/pipeline.js";
+import { type MotionStyle, motionStyles, sourceOf } from "@app/slices/admission/model.js";
 import {
   edgeSilenceSecondsMax,
   imageSecondsMax,
   imageSecondsMin,
+  motionStyleLabels,
   silenceGapSecondsMax,
   titleMax,
   zoomPercentMax,
 } from "@app/slices/admission/rules.js";
+import {
+  documentThemeLabels,
+  documentThemeOf,
+  documentThemes,
+} from "@app/slices/document/model.js";
 import { defaultSubtitles } from "@app/slices/subtitles/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
@@ -155,7 +162,7 @@ export function RevisionForm(
               {kind} source
               <Picker
                 id={`${formId}-source-${kind}`}
-                value={config.sources[kind]}
+                value={sourceOf(config.sources, kind)}
                 onChange={(event) => {
                   const option = sourceOptions(kind).find(
                     (one) => one.value === event.target.value,
@@ -194,6 +201,28 @@ export function RevisionForm(
           {config.sources.images === "off" ? (
             <p>Images are Off. Video is also Off in these changes.</p>
           ) : null}
+          <label
+            htmlFor={`${formId}-document-theme`}
+            className="flex min-w-0 flex-col gap-1 text-small"
+          >
+            Document theme
+            <Picker
+              id={`${formId}-document-theme`}
+              disabled={sourceOf(config.sources, "document") === "off"}
+              value={documentThemeOf(config.document)}
+              onChange={(event) => {
+                const theme = documentThemes.find((one) => one === event.target.value);
+                if (theme === undefined) return;
+                onChange({ ...edit, config: { ...config, document: { theme } } });
+              }}
+            >
+              {documentThemes.map((theme) => (
+                <option key={theme} value={theme}>
+                  {documentThemeLabels[theme]}
+                </option>
+              ))}
+            </Picker>
+          </label>
           <label htmlFor={`${formId}-gap`} className="block space-y-1 text-small">
             Silence gap (seconds)
             <Input
@@ -299,6 +328,33 @@ export function RevisionForm(
               {problem("zoomPercent") ? (
                 <p className="text-label text-red">{problem("zoomPercent")}</p>
               ) : null}
+            </div>
+          )}
+          {config.sources.video === "off" ? null : (
+            <div className="space-y-1 text-small">
+              <label htmlFor={`${formId}-motion`} className="flex min-w-0 flex-col gap-1">
+                Motion
+                <Picker
+                  id={`${formId}-motion`}
+                  aria-describedby={`${formId}-motion-hint`}
+                  value={config.motionStyle}
+                  onChange={(event) =>
+                    onChange({
+                      ...edit,
+                      config: { ...config, motionStyle: event.target.value as MotionStyle },
+                    })
+                  }
+                >
+                  {motionStyles.map((style) => (
+                    <option key={style} value={style}>
+                      {motionStyleLabels[style]}
+                    </option>
+                  ))}
+                </Picker>
+              </label>
+              <p id={`${formId}-motion-hint`} className="text-label text-ink3">
+                How each image moves while it's on screen.
+              </p>
             </div>
           )}
           {(["intro", "outro"] as const).map((category) => (

@@ -22,6 +22,7 @@ export function revisionView(id = "r1", title = "Saved"): RevisionView {
         silenceGapSeconds: 0,
         imageSeconds: 15,
         zoomPercent: 22.5,
+        motionStyle: "zoom",
         edgeSilenceSeconds: 0,
         sources: {
           research: "off",

@@ -1,5 +1,9 @@
+import { type MotionStyle, motionStyles } from "@app/slices/admission/model.js";
+import { motionStyleLabels } from "@app/slices/admission/rules.js";
+import { documentThemeLabels, documentThemes } from "@app/slices/document/model.js";
 import { InfoTip } from "@/components/kit/info-tip";
 import { Input } from "@/components/ui/input";
+import { Picker } from "@/components/ui/picker";
 import { ImageProviderControls } from "@/play/media-rails";
 import { LabelledField, OptionPicker } from "@/play/pickers";
 import { FilePick, PasteArea } from "@/play/provided";
@@ -133,6 +137,9 @@ export function ThumbnailRail({
   );
 }
 
+// Edit project → Inputs says the same under its own Motion select.
+const motionHint = "How each image moves while it's on screen.";
+
 export type TimingField = "imageSeconds" | "zoomPercent" | "edgeSilenceSeconds";
 
 // Raw text for the timing fields, edited in the draft document itself so what was typed
@@ -191,6 +198,30 @@ export function VideoRail({
               problem={problem("zoomPercent")}
               {...timing("zoomPercent")}
             />
+          ) : null}
+          {form.sources.video === "generate" ? (
+            <LabelledField label="Motion" problem={undefined} inline>
+              {({ id }) => (
+                <>
+                  <Picker
+                    id={id}
+                    data-play-field="motionStyle"
+                    className="w-auto min-w-[120px]"
+                    value={form.motionStyle}
+                    onChange={(event) => update({ motionStyle: event.target.value as MotionStyle })}
+                  >
+                    {motionStyles.map((style) => (
+                      <option key={style} value={style}>
+                        {motionStyleLabels[style]}
+                      </option>
+                    ))}
+                  </Picker>
+                  <InfoTip label="motion">
+                    <p>{motionHint}</p>
+                  </InfoTip>
+                </>
+              )}
+            </LabelledField>
           ) : null}
           {form.sources.audio !== "off" ? (
             <NumberField
@@ -251,5 +282,38 @@ function NumberField({
         </>
       )}
     </LabelledField>
+  );
+}
+
+// The PDF is laid out locally from the article and title, so nothing here needs a provider.
+export function DocumentRail({ form, update }: RailProps) {
+  const off = form.sources.document === "off";
+  return (
+    <StageRail kind="document" name="Document" dim={off}>
+      <SourceSwitch kind="document" form={form} update={update} />
+      <div className={railControls}>
+        <LabelledField label="Theme" problem={undefined} inline>
+          {({ id }) => (
+            <Picker
+              id={id}
+              data-play-field="document.theme"
+              className="w-auto min-w-[120px]"
+              disabled={off}
+              value={form.document.theme}
+              onChange={(event) => {
+                const theme = documentThemes.find((one) => one === event.target.value);
+                if (theme !== undefined) update({ document: { theme } });
+              }}
+            >
+              {documentThemes.map((theme) => (
+                <option key={theme} value={theme}>
+                  {documentThemeLabels[theme]}
+                </option>
+              ))}
+            </Picker>
+          )}
+        </LabelledField>
+      </div>
+    </StageRail>
   );
 }

@@ -4,6 +4,7 @@ import type {
   EntryMode,
   Format,
   ImagePromptChoice,
+  MotionStyle,
   ProviderChoice,
   RunDraft,
   StageSource,
@@ -16,6 +17,7 @@ import {
   defaultZoomPercent,
   usesNarrationPreparation,
 } from "@app/slices/admission/rules.js";
+import { type DocumentSettings, defaultDocumentTheme } from "@app/slices/document/model.js";
 import type { Entry } from "@app/slices/library/model.js";
 import type { Chunking } from "@app/slices/narration/chunk.js";
 import type { StagedFile } from "@app/slices/storage/model.js";
@@ -64,6 +66,9 @@ export interface LegacyPlayFormState {
   readonly imageSeconds: number;
   readonly edgeSilenceSeconds: number;
   readonly zoomPercent: number;
+  readonly motionStyle: MotionStyle;
+  // Read with the saved draft's absent Document fields filled in: Off and the default theme.
+  readonly document: DocumentSettings;
   // Every value the user has typed, including one for a slot no prompt asks for any more:
   // unticking a prompt and ticking it again gives its field back with what was in it.
   readonly values: Readonly<Record<string, string>>;
@@ -78,6 +83,8 @@ export type PlayFormState = LegacyPlayFormState;
 // did not ask for.
 export const freshForm: PlayFormState = {
   ...freshDraftDocument.form,
+  sources: { ...freshDraftDocument.form.sources, document: "off" },
+  document: { theme: defaultDocumentTheme },
   imagePrompts: [],
   chunking: { mode: "whole" },
   subtitles: defaultSubtitles,
@@ -182,6 +189,8 @@ export function draftOf(input: DraftInput): RunDraft {
     imageSeconds: form.imageSeconds,
     edgeSilenceSeconds: form.edgeSilenceSeconds,
     zoomPercent: form.zoomPercent,
+    motionStyle: form.motionStyle,
+    ...(form.sources.document === "generate" ? { document: form.document } : {}),
   };
 }
 

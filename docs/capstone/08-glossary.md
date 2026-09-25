@@ -17,7 +17,8 @@ paths_covered:
 | Term | Meaning in Slopify | Implementation |
 |---|---|---|
 | Run, project | One Play submission represented by a project record and its stages and outputs. `packages/app/src/slices/admission/model.ts:54-68` | `slices/admission`, `projects` table |
-| Stage | A pipeline unit such as research, article, audio, images, thumbnail, or video with a lifecycle state. `packages/app/src/kernel/pipeline.ts:10-36` | `stages`, `kernel/runner` |
+| Stage | A pipeline unit such as research, article, audio, images, thumbnail, video, or document with a lifecycle state. `packages/app/src/kernel/pipeline.ts:10-36` | `stages`, `kernel/runner` |
+| Document | The optional seventh stage: the article laid out locally as a styled PDF (`document_pdf`) in the DiceMaster or Plain theme, with the thumbnail as its cover. `packages/app/src/slices/document/render.ts` | `slices/document`, `document:pdf` |
 | Piece | A resumable sub-unit of work, such as an audio chunk or an individual image. `packages/app/src/kernel/runner/attempt.ts:31-38` `packages/app/src/slices/narration/plan.ts:1-12` | `stage_pieces` |
 | Attempt | One provider call under the retry and timeout policy; the policy allows at most four attempts. `packages/app/src/kernel/runner/attempt.ts:8-19` | `attempts`, `kernel/runner/attempt.ts` |
 | Provider port, adapter | A family interface and concrete provider implementation for LLM, TTS, image, or subtitle alignment work. `packages/app/src/kernel/ports/llm.ts:1-80` `packages/app/src/adapter-registry.ts:51-89` | `kernel/ports`, `adapters` |

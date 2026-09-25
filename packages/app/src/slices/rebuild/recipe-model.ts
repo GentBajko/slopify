@@ -38,6 +38,7 @@ export const localOperations = [
   "entry-text",
   "concat-narration",
   "narration-files-v1",
+  "render-document",
 ] as const;
 export const deferredOperations = [
   "narration-preparation",

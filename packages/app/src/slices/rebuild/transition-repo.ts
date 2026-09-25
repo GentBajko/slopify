@@ -157,6 +157,7 @@ function stageForKey(key: string): StageKind {
   if (prefix === "image") return "images";
   if (prefix === "thumbnail") return "thumbnail";
   if (prefix === "export" || prefix === "subtitles" || prefix === "video") return "video";
+  if (prefix === "document") return "document";
   throw new Error(
     "Slopify hit an internal error (unknown kind of step). Try again; if it happens again, use Download diagnostics in Settings and report it.",
   );

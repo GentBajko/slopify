@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import type { RunConfig } from "../admission/model.js";
 import { config, content, emptyView, readyView } from "./recipe-fixture.js";
+import { visualRecipes } from "./recipe-visual.js";
 import { planRevision } from "./recipes.js";
 
 // The keys whose fingerprint an edit changes, which is what the rebuild re-runs.
@@ -36,6 +37,31 @@ it("re-renders only the video when the seconds per image change", () => {
 it("re-renders only the video when the zoom changes", () => {
   expect(changed(config, { ...config, zoomPercent: 0 })).toEqual(["export:video"]);
   expect(changed(captioned, { ...captioned, zoomPercent: 10 })).toEqual(["export:video"]);
+});
+
+it("re-renders only the video when the motion changes", () => {
+  for (const motionStyle of ["pan", "mixed", "still"] as const) {
+    expect(changed(config, { ...config, motionStyle })).toEqual(["export:video"]);
+    expect(changed(captioned, { ...captioned, motionStyle })).toEqual(["export:video"]);
+  }
+  expect(changed({ ...config, motionStyle: "pan" }, { ...config, motionStyle: "mixed" })).toEqual([
+    "export:video",
+  ]);
+});
+
+it("keeps the video of a project saved before the motion setting", () => {
+  // Such a project reads as "zoom", which renders what it always did. Its render values
+  // are the ones from before the setting, so its fingerprint and its video stay as they
+  // were; the other styles add their name.
+  const values = (motionStyle: RunConfig["motionStyle"]) => {
+    const video = visualRecipes({ ...config, motionStyle }, content, null, null).find(
+      (one) => one.key === "export:video",
+    );
+    const recorded = video?.input.kind === "local" ? video.input.values : undefined;
+    return Array.isArray(recorded) ? recorded.slice(-3) : undefined;
+  };
+  expect(values("zoom")).toEqual([15, 22.5, "slideshow-zoom-v2"]);
+  expect(values("pan")).toEqual([22.5, "pan", "slideshow-zoom-v2"]);
 });
 
 it("keeps the article and images when the seconds per image change on a ready project", () => {

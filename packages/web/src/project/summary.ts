@@ -1,5 +1,6 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import type { ProjectSummary, RunConfig, Stage } from "@app/slices/admission/model.js";
+import { documentThemeLabels, documentThemeOf } from "@app/slices/document/model.js";
 import type { Output } from "@app/slices/storage/model.js";
 
 // The one-line summary in the middle of a rundown row: "7 chapters researched · 41
@@ -14,6 +15,7 @@ export const stageNames: Readonly<Record<StageKind, string>> = {
   images: "Images",
   thumbnail: "Thumbnail",
   video: "Video",
+  document: "Document",
 };
 
 export function finalOutput(config: RunConfig): "video" | "audio" | "article" {
@@ -48,6 +50,7 @@ const running: Readonly<Record<StageKind, (current: number, total: number) => st
   images: (current, total) => `image ${String(current)} of ${String(total)}`,
   thumbnail: (current, total) => `${String(current)} of ${String(total)}`,
   video: (current, total) => `${String(percent(current, total))}% rendered`,
+  document: (current, total) => `${String(current)} of ${String(total)}`,
 };
 
 const segments: Readonly<Record<string, string>> = {
@@ -123,6 +126,8 @@ function done(kind: StageKind, mine: readonly Output[], project: ProjectSummary)
         duration(total(mine)),
         finalOutput(project.config) === "audio" ? "WAV · stereo · 48 kHz" : project.format,
       ]);
+    case "document":
+      return `PDF · ${documentThemeLabels[documentThemeOf(project.config.document)]} theme`;
   }
 }
 

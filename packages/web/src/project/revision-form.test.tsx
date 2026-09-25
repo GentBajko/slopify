@@ -47,6 +47,38 @@ it("keeps Article required and pairs Images Off with Video Off", async () => {
   ).toBe("30");
 });
 
+it("reads an absent Document source as Off and writes the source and theme", async () => {
+  const user = userEvent.setup();
+  const view = revisionView();
+  let latest = formOfRevision(view);
+  function Document(): import("react").ReactElement {
+    const [edit, setEdit] = useState(formOfRevision(view));
+    latest = edit;
+    return (
+      <RevisionForm view={view} edit={edit} onChange={setEdit} onPending={() => {}} fields={[]} />
+    );
+  }
+  renderApp(
+    <Document />,
+    testDeps({
+      "GET /api/providers": jsonAnswer({ providers: [] }),
+      "GET /api/settings/voices": jsonAnswer({ voices: [] }),
+      "GET /api/prompts": jsonAnswer({ prompts: [] }),
+      "GET /api/entries": jsonAnswer({ entries: [] }),
+    }),
+  );
+  const source = screen.getByRole<HTMLSelectElement>("combobox", { name: "document source" });
+  expect(source.value).toBe("off");
+  const theme = screen.getByRole<HTMLSelectElement>("combobox", { name: "Document theme" });
+  expect(theme.value).toBe("dicemaster");
+  expect(theme.disabled).toBe(true);
+  await user.selectOptions(source, "generate");
+  expect(theme.disabled).toBe(false);
+  await user.selectOptions(theme, "plain");
+  expect(latest.config.sources.document).toBe("generate");
+  expect(latest.config.document).toEqual({ theme: "plain" });
+});
+
 it("shows the video timing settings only where the export uses them", async () => {
   const user = userEvent.setup();
   const base = revisionView();
@@ -110,6 +142,19 @@ it("shows the video timing settings only where the export uses them", async () =
   await user.clear(zoom);
   await user.type(zoom, "0");
   expect(latest.config.zoomPercent).toBe(0);
+  const motion = screen.getByRole<HTMLSelectElement>("combobox", { name: "Motion" });
+  expect(motion.value).toBe("zoom");
+  expect(document.getElementById(motion.getAttribute("aria-describedby") ?? "")?.textContent).toBe(
+    "How each image moves while it's on screen.",
+  );
+  expect([...motion.options].map((option) => option.text)).toEqual([
+    "Zoom in and out",
+    "Pan across",
+    "Mix of both",
+    "Still",
+  ]);
+  await user.selectOptions(motion, "mixed");
+  expect(latest.config.motionStyle).toBe("mixed");
   const edge = screen.getByRole<HTMLInputElement>("spinbutton", {
     name: "Silence at start and end (seconds)",
   });
@@ -121,6 +166,7 @@ it("shows the video timing settings only where the export uses them", async () =
   await user.selectOptions(screen.getByRole("combobox", { name: "images source" }), "off");
   expect(screen.queryByRole("spinbutton", { name: "Seconds per image" })).toBeNull();
   expect(screen.queryByRole("spinbutton", { name: "Zoom (%)" })).toBeNull();
+  expect(screen.queryByRole("combobox", { name: "Motion" })).toBeNull();
   await user.selectOptions(screen.getByRole("combobox", { name: "audio source" }), "off");
   expect(
     screen.queryByRole("spinbutton", { name: "Silence at start and end (seconds)" }),

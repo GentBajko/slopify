@@ -11,6 +11,7 @@ import {
   zoomPercentProblem,
 } from "../admission/rules.js";
 import { runDraftSchema } from "../admission/schema.js";
+import { documentThemeOf } from "../document/model.js";
 import type { Entry } from "../library/model.js";
 import { defaultSubtitles } from "../subtitles/model.js";
 import type { DraftAttachment, PlayDraftDocument } from "./model.js";
@@ -101,6 +102,9 @@ export function toAdmissionDraft(input: {
     title: form.title,
     format: form.format,
     sources,
+    ...(sources.document === "generate"
+      ? { document: { theme: documentThemeOf(form.document) } }
+      : {}),
     llm: form.llm,
     audio:
       sources.audio === "generate" || form.audio.usePronunciationGlossary !== undefined
@@ -173,6 +177,9 @@ export function toAdmissionDraft(input: {
       defaultZoomPercent,
       zoomPercentProblem,
     ),
+    // A choice from a list, so there is nothing to refuse; a run without a video keeps it
+    // for when the video is turned back on.
+    motionStyle: form.motionStyle,
     edgeSilenceSeconds: measure(
       "edgeSilenceSeconds",
       sources.audio !== "off",

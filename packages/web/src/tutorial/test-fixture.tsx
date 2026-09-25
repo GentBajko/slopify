@@ -1,5 +1,5 @@
 import { stageKinds } from "@app/kernel/pipeline.js";
-import type { RunDraft } from "@app/slices/admission/model.js";
+import { type RunDraft, sourceOf } from "@app/slices/admission/model.js";
 import type { Prompt, PromptDraft } from "@app/slices/library/model.js";
 import type { ProviderStatus } from "@app/slices/settings/model.js";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
@@ -212,11 +212,11 @@ export async function mount(
           id: `stage-${kind}`,
           projectId: id,
           kind,
-          source: draft.sources[kind],
+          source: sourceOf(draft.sources, kind),
           state: options.completeProject
             ? kind === "video" && draft.sources.audio !== "off"
               ? "done"
-              : draft.sources[kind] === "off"
+              : sourceOf(draft.sources, kind) === "off"
                 ? "skipped"
                 : "done"
             : "pending",

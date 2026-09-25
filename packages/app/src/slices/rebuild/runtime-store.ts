@@ -5,6 +5,7 @@ import { stageKinds, stageStates } from "../../kernel/pipeline.js";
 import type { RunnerStage } from "../../kernel/runner/index.js";
 import type { WorkRef } from "../../kernel/runner/work.js";
 import type { RevisionDeps } from "../revisions/model.js";
+import { sourceOf } from "../admission/model.js";
 import { currentRevisionId } from "../revisions/repo.js";
 import { getRevisionView } from "../revisions/view.js";
 import { settleScheduleRunsForProject } from "../schedules/repo.js";
@@ -119,7 +120,7 @@ export function executionStandings(
   if (view === undefined) return [];
   const work = derived ?? executionStages(deps, projectId);
   return stageKinds.map((kind) => {
-    const source = view.revision.config.sources[kind];
+    const source = sourceOf(view.revision.config.sources, kind);
     const group = work
       .filter((entry) => entry.kind === kind)
       .map((entry) => {

@@ -1,4 +1,7 @@
 import { stageKinds } from "../../kernel/pipeline.js";
+import { sourceOf } from "../admission/model.js";
+import { motionStyleLabels } from "../admission/rules.js";
+import { documentThemeLabels, documentThemeOf } from "../document/model.js";
 import type { RevisionDeps, RevisionView } from "../revisions/model.js";
 import { getRevisionView } from "../revisions/view.js";
 import type { RebuildPreview } from "./model.js";
@@ -136,8 +139,8 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
   for (const kind of stageKinds)
     add(
       `${kind[0]?.toUpperCase()}${kind.slice(1)} source`,
-      before.sources[kind],
-      after.sources[kind],
+      sourceOf(before.sources, kind),
+      sourceOf(after.sources, kind),
     );
   for (const [name, a, b] of [
     ["Text", before.llm, after.llm],
@@ -155,9 +158,15 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
   add("Silence at start and end (seconds)", before.edgeSilenceSeconds, after.edgeSilenceSeconds);
   add("Seconds per image", before.imageSeconds, after.imageSeconds);
   add("Zoom (%)", before.zoomPercent, after.zoomPercent);
+  add("Motion", motionStyleLabels[before.motionStyle], motionStyleLabels[after.motionStyle]);
   add("Intro", before.intro, after.intro);
   add("Outro", before.outro, after.outro);
   add("Subtitle settings", before.subtitles, after.subtitles);
+  add(
+    "Document theme",
+    documentThemeLabels[documentThemeOf(before.document)],
+    documentThemeLabels[documentThemeOf(after.document)],
+  );
   add("Article text", parent.articleMarkdown, view.articleMarkdown);
   add("Provided research", before.provided.research, after.provided.research);
   for (const key of new Set([...Object.keys(before.values), ...Object.keys(after.values)]))

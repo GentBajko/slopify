@@ -30,6 +30,7 @@ export function sectionRoots(
             ["body-narration", "intro-narration", "outro-narration"].includes(row.input.operation))
         );
       if (stage === "article") return row.key === "article:body" && row.kind === "provider";
+      if (stage === "document") return row.key === "document:pdf";
       return row.kind === "provider";
     })
     .map((row) => row.key);

@@ -38,6 +38,8 @@ const rerunConsequence: Readonly<Record<StageKind, string>> = {
     "Regenerates the thumbnail without changing the main video; previous outputs stay in History.",
   video:
     "Rebuilds local exports from saved media without regenerating narration or images; previous outputs stay in History.",
+  document:
+    "Renders the PDF again from the saved article and title without regenerating anything else; previous outputs stay in History.",
 };
 
 export function confirmationFor(action: Destructive): Confirmation {

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Catalogue } from "../../catalog/schema.js";
 import type { CatalogueStore } from "../../catalog/store.js";
-import type { RunDraft } from "../admission/model.js";
+import { type RunDraft, sourceOf } from "../admission/model.js";
 import { usesNarrationPreparation } from "../admission/rules.js";
 import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
@@ -186,6 +186,8 @@ export function estimateRun(
   if (draft.sources.thumbnail === "prompt_by_llm")
     text("Thumbnail prompt", promptChars + articleChars, 1200);
   local("Export / subtitles", "Local processing; no API fee.");
+  if (sourceOf(draft.sources, "document") === "generate")
+    local("Document", "Laid out locally from the article; no API fee.");
   return {
     ...groupEstimateRows(estimateRequests(requests, data)),
     expectedWords,

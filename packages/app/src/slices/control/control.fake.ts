@@ -10,7 +10,7 @@ import { ensureDirs, layout, type Paths } from "../../kernel/paths.js";
 import { type StageKind, type StageState, stageKinds } from "../../kernel/pipeline.js";
 import { dependenciesOf } from "../../kernel/runner/graph.js";
 import { createRunner, type Runner, type StageRun } from "../../kernel/runner/index.js";
-import type { RunConfig } from "../admission/model.js";
+import { type RunConfig, sourceOf } from "../admission/model.js";
 import {
   claimStage,
   finishStage,
@@ -55,6 +55,7 @@ export const config: RunConfig = {
   silenceGapSeconds: 3,
   imageSeconds: 15,
   zoomPercent: 22.5,
+  motionStyle: "zoom",
   edgeSilenceSeconds: 0,
 };
 
@@ -79,7 +80,7 @@ export function harness(
       id: `s-${kind}`,
       projectId: "p1",
       kind,
-      source: config.sources[kind],
+      source: sourceOf(config.sources, kind),
       state: states[kind] ?? "skipped",
       attemptCount: 0,
       progressCurrent: null,

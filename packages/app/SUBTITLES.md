@@ -16,7 +16,7 @@ Fonts are copied into the completed project's caption assets, so an existing exp
 
 ## Local model and licenses
 
-Speech inference uses MIT-licensed `onnxruntime-web@1.24.3` in a separate WASM process. The runtime is installed with the package (about 138 MB on disk); model weights are downloaded lazily into `<data-dir>/models/english-subtitles/`.
+Speech inference uses MIT-licensed `onnxruntime-node@1.24.3` (native CPU) in a separate process, with `min(8, CPUs − 1)` threads; set `SLOPIFY_SUBTITLE_THREADS` to override. The npm package bundles CPU builds for Linux x64/arm64, Windows x64/arm64 and Apple silicon macOS (about 220 MB unpacked); Intel Macs have no build, so subtitle timing fails there with a message to turn subtitles off. Its postinstall script only fetches optional CUDA files on Linux x64 and is not needed (the Docker image installs with `--ignore-scripts`); model weights are downloaded lazily into `<data-dir>/models/english-subtitles/`.
 
 Model: [Xenova/wav2vec2-base-960h](https://huggingface.co/Xenova/wav2vec2-base-960h/tree/a19f851b3d42865797e410752b4c570c871e4825), an ONNX conversion of [facebook/wav2vec2-base-960h](https://huggingface.co/facebook/wav2vec2-base-960h), licensed Apache-2.0. Pinned revision: `a19f851b3d42865797e410752b4c570c871e4825`. The quantized model is 95,286,046 bytes, SHA256 `cd5040c147381580ed73258143dd8e0c28e800a09e74ee42ee2b3e8cb4d760a3`; every cached/downloaded model is verified before use.
 

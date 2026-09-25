@@ -44,6 +44,7 @@ function draft(over: Partial<RunDraft> = {}): RunDraft {
     silenceGapSeconds: 3,
     imageSeconds: 15,
     zoomPercent: 22.5,
+    motionStyle: "zoom",
     edgeSilenceSeconds: 0,
     ...over,
   };
@@ -130,7 +131,7 @@ describe("optional outputs through the real app", () => {
     const app = await start();
     const id = await create(app, draft());
     const view = await finished(app, id);
-    expect(view.stages.filter((stage) => stage.state === "skipped")).toHaveLength(5);
+    expect(view.stages.filter((stage) => stage.state === "skipped")).toHaveLength(6);
     expect(view.outputs.map((output) => output.role)).toEqual(["article_txt"]);
     const response = await fetch(`${app.url}/files/${id}/article-txt`);
     expect(response.status).toBe(200);

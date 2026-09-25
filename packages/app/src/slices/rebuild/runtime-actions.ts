@@ -89,5 +89,6 @@ function keyStage(key: string): StageKind {
   if (prefix === "audio") return "audio";
   if (prefix === "thumbnail") return "thumbnail";
   if (prefix === "research") return "research";
+  if (prefix === "document") return "document";
   return "video";
 }

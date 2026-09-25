@@ -6,7 +6,17 @@
 export const formats = ["16:9", "9:16"] as const;
 export type Format = (typeof formats)[number];
 
-export const stageKinds = ["research", "article", "audio", "images", "thumbnail", "video"] as const;
+// Document is last so every screen that walks this list in order shows the six older
+// stages where they always were.
+export const stageKinds = [
+  "research",
+  "article",
+  "audio",
+  "images",
+  "thumbnail",
+  "video",
+  "document",
+] as const;
 export type StageKind = (typeof stageKinds)[number];
 
 export const stageStates = [

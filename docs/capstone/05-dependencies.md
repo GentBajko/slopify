@@ -49,7 +49,7 @@ Manifest and lockfile snapshot: `f4c4f7b3295a` (2026-09-13).
 | ulid | 3.0.2 installed | MIT | entity IDs | stack |
 | @fastify/busboy | 3.2.2 installed | MIT | streaming `multipart/form-data` parser for staged uploads | ladder rung 4 |
 | yaml | 2.9.0 installed | ISC | bounded model-catalogue parsing before Zod validation | provider catalogue |
-| onnxruntime-web | 1.24.3 exact, installed | MIT | local English acoustic inference via WASM in an abortable Node child; no Python/compiler or paid subtitle API | subtitles 0.6; 2026-09-10 |
+| onnxruntime-node | 1.24.3 exact, installed | MIT | local English acoustic inference on the native CPU runtime in an abortable Node child; no Python/compiler or paid subtitle API | subtitles 0.6; native runtime 2026-09-25 (replaced onnxruntime-web) |
 | ffmpeg-static | 5.3.0 installed | GPL-3.0-or-later (binary shipped unlinked, notice in README) | bundled ffmpeg per platform; `SLOPIFY_FFMPEG` override. The package's release tag reads `b6.1.1`, but the linux-x64 asset it fetches reports `ffmpeg version 7.0.2-static` (johnvansickle build), measured - the "6.1.1" this row used to claim was never what shipped | architecture; stack note |
 
 ## No dependency, by the ladder
@@ -113,7 +113,7 @@ Deferred adapters: Google Cloud TTS, Azure TTS, Stability, Google Imagen; trigge
 
 ## Local subtitle assets and runtime
 
-The dependency ladder found no acoustic inference capability in Node, browser APIs or the existing dependencies. `onnxruntime-web@1.24.3` supplies WASM inference; the native runtime option was rejected because of its CUDA postinstall behavior and Intel Mac coverage gaps. The installed WASM runtime is about 138 MB on disk and requires no local compiler or Python (`packages/app/package.json`, `packages/app/SUBTITLES.md`, `packages/app/src/adapters/alignment/worker.ts`).
+The dependency ladder found no acoustic inference capability in Node, browser APIs or the existing dependencies. `onnxruntime-node@1.24.3` supplies native CPU inference. It replaced `onnxruntime-web` (WASM) on 2026-09-25: single-threaded WASM ran 4.8× realtime and multi-threaded WASM crashed, while one native session with 8 intra-op threads ran 37× on the benchmark clip. The package bundles CPU binaries for linux x64/arm64, win32 x64/arm64 and darwin arm64 (about 220 MB unpacked); its postinstall only downloads optional CUDA libraries on linux x64 (about 300 MB from nuget.org), which the CPU path never loads, so `--ignore-scripts` installs work. Intel Macs have no build; the worker says so and tells the user to turn subtitles off. It requires no local compiler or Python (`packages/app/package.json`, `packages/app/SUBTITLES.md`, `packages/app/src/adapters/alignment/worker.ts`).
 
 `adapters/alignment/cache.ts` pins the Apache-2.0 Xenova ONNX conversion of `facebook/wav2vec2-base-960h`: revision `a19f851b3d42865797e410752b4c570c871e4825`, quantized model 95,286,046 bytes, SHA256 `cd5040c147381580ed73258143dd8e0c28e800a09e74ee42ee2b3e8cb4d760a3`. First enabled use fetches the model from Hugging Face; every downloaded/cached copy is checked before use. Audio/text never leave the computer for alignment.
 

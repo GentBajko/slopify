@@ -281,11 +281,15 @@ describe("the ffmpeg render", () => {
     expect(durationSecondsOf(video)).toBeCloseTo(7, 1);
 
     const plan = JSON.parse(readFileSync(join(harness.dir, "render.json"), "utf8")) as {
-      audio: Array<{ kind: string; path: string | null; seconds: number }>;
-      images: Array<{ path: string; frames: number; zoom: string }>;
+      editList: {
+        version: number;
+        audio: Array<{ kind: string; path: string | null; seconds: number }>;
+        shots: Array<{ source: { path: string }; frames: number; motion: { direction?: string } }>;
+      };
       output: string;
     };
-    expect(plan.audio.map((segment) => `${segment.kind}:${segment.seconds}`)).toEqual([
+    expect(plan.editList.version).toBe(1);
+    expect(plan.editList.audio.map((segment) => `${segment.kind}:${segment.seconds}`)).toEqual([
       "edge:2",
       "intro:0.5",
       "gap:0.5",
@@ -294,8 +298,8 @@ describe("the ffmpeg render", () => {
       "outro:0.5",
       "edge:2",
     ]);
-    // Seven one-second slots: the three images take turns, zoom alternating per slot.
-    expect(plan.images.map((slot) => slot.zoom)).toEqual([
+    // Seven one-second shots: the three images take turns, zoom alternating per shot.
+    expect(plan.editList.shots.map((shot) => shot.motion.direction)).toEqual([
       "in",
       "out",
       "in",
@@ -304,7 +308,7 @@ describe("the ffmpeg render", () => {
       "out",
       "in",
     ]);
-    expect(plan.images.map((slot) => slot.path)).toEqual([
+    expect(plan.editList.shots.map((shot) => shot.source.path)).toEqual([
       "images/001.png",
       "images/002.png",
       "images/003.png",

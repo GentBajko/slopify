@@ -31,7 +31,7 @@ A project has immutable revisions, revision-scoped desired work and retained out
 
 ## Trigger & preconditions
 
-Reviewed Play or scheduled admission creates a project and baseline revision. Editing creates another revision, while a separate reviewed rebuild admits changed or missing work. Article is required; Research, Audio, Images, Thumbnail and Video can be generated, provided where supported, or disabled under admission rules (`packages/app/src/slices/admission/rules.ts:17`, `packages/app/src/slices/revisions/mutations.ts:47`).
+Reviewed Play or scheduled admission creates a project and baseline revision. Editing creates another revision, while a separate reviewed rebuild admits changed or missing work. Article is required; Research, Audio, Images, Thumbnail, Video and Document can be generated, provided where supported, or disabled under admission rules (`packages/app/src/slices/admission/rules.ts:17`, `packages/app/src/slices/revisions/mutations.ts:47`).
 
 ## Steps
 

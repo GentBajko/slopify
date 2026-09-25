@@ -19,6 +19,7 @@ const draft: RunDraft = {
   silenceGapSeconds: 0,
   imageSeconds: 15,
   zoomPercent: 22.5,
+  motionStyle: "zoom",
   edgeSilenceSeconds: 0,
 };
 
@@ -60,11 +61,18 @@ it("rejects non-boolean run preferences", () => {
 });
 
 it("reads a config saved before the video timing settings with the defaults", () => {
-  const { imageSeconds: _image, edgeSilenceSeconds: _edge, zoomPercent: _zoom, ...old } = draft;
+  const {
+    imageSeconds: _image,
+    edgeSilenceSeconds: _edge,
+    zoomPercent: _zoom,
+    motionStyle: _motion,
+    ...old
+  } = draft;
   for (const schema of [runDraftSchema, runConfigSchema]) {
     const parsed = schema.parse({ ...old, rendered: {} });
     expect(parsed.imageSeconds).toBe(15);
     expect(parsed.zoomPercent).toBe(22.5);
+    expect(parsed.motionStyle).toBe("zoom");
     expect(parsed.edgeSilenceSeconds).toBe(2);
   }
   expect(runConfigSchema.parse({ ...draft, imageSeconds: 40, rendered: {} }).imageSeconds).toBe(40);
