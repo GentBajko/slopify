@@ -55,12 +55,13 @@ export async function installationFixture(): Promise<{
     },
     version: async () => readVersion(),
     inspect: async (id) => find(id),
-    claims: async (volumeName, permitted) => {
+    claims: async (volumeName, permitted, spared = () => false) => {
       point("claims");
       if (
         [...containers.values()].some(
           (c) =>
             !permitted.includes(c.id) &&
+            !spared(c) &&
             c.mounts.some((m) => m.type === "volume" && m.name === volumeName),
         )
       )

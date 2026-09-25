@@ -17,7 +17,13 @@ export interface Engine {
   image(ref: string): Promise<string>;
   version(image: string): Promise<string>;
   inspect(name: string): Promise<Container | null>;
-  claims(volume: string, permitted: readonly string[]): Promise<void>;
+  // `spared` names containers that may keep the volume mounted: rollbacks this installation
+  // retained itself.
+  claims(
+    volume: string,
+    permitted: readonly string[],
+    spared?: (container: Container) => boolean,
+  ): Promise<void>;
   writers(volume: string, paths: readonly string[], permitted: readonly string[]): Promise<void>;
   probe(c: DockerConfig, image: string, user: string, destination: string): Promise<void>;
   ensureVolume(volume: string): Promise<void>;
@@ -146,13 +152,18 @@ export function dockerEngine(
       port: port ? `${port.HostIp}:${port.HostPort}` : null,
     });
   }
-  async function claims(volume: string, permitted: readonly string[]): Promise<void> {
+  async function claims(
+    volume: string,
+    permitted: readonly string[],
+    spared: (container: Container) => boolean = () => false,
+  ): Promise<void> {
     const ids = (await command(["container", "ls", "-a", "-q"])).split(/\s+/).filter(Boolean);
     for (const id of ids) {
       const c = await inspect(id);
       if (!c) throw new Error("Cannot verify volume claims; an inventoried container is missing.");
       if (
         !permitted.includes(c.id) &&
+        !spared(c) &&
         c.mounts.some((m) => m.type === "volume" && m.name === volume)
       )
         throw new Error(`Another container claims installation volume ${volume}: ${c.name}.`);

@@ -65,7 +65,7 @@ export async function assertVolumeClaims(
         [j.previous.name, `${c.name}-previous-${j.id}`].includes(prior.name) &&
         prior.image === j.previous.image &&
         prior.user === j.previous.user &&
-        JSON.stringify(prior.mounts) === JSON.stringify(j.previous.mounts)
+        sameMounts(prior.mounts, j.previous.mounts)
       )
         permitted.add(prior.id);
     }
@@ -80,5 +80,35 @@ export async function assertVolumeClaims(
         permitted.add(candidate.id);
     }
   }
-  await e.claims(c.volume, [...permitted]);
+  await e.claims(c.volume, [...permitted], (container) => legacyRollback(container, c.name));
+}
+
+// Docker reports a container's mounts in no fixed order, so the recorded shape is compared as
+// a set; comparing the JSON as listed refused this installation's own retained container on
+// some runs.
+function sameMounts(a: Container["mounts"], b: Container["mounts"]): boolean {
+  const shape = (mounts: Container["mounts"]) =>
+    JSON.stringify(
+      [...mounts].sort((x, y) =>
+        `${x.destination}\0${x.type}\0${x.name}\0${x.source}`.localeCompare(
+          `${y.destination}\0${y.type}\0${y.name}\0${y.source}`,
+        ),
+      ),
+    );
+  return shape(a) === shape(b);
+}
+
+// Launchers before project folders kept each replaced container stopped as a rollback, named
+// `<name>-previous-<YYYYmmddHHMMSS>` with the launcher's label and restart off. Such a container
+// never writes unless someone starts it by hand, which is equally true of the rollbacks this
+// launcher keeps itself, so it does not block an upgrade. Anything running, restartable,
+// unlabelled or otherwise named still does.
+function legacyRollback(container: Container, name: string): boolean {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return (
+    !container.running &&
+    container.restart.Name === "no" &&
+    container.signature !== null &&
+    new RegExp(`^${escaped}-previous-\\d{14}$`).test(container.name)
+  );
 }

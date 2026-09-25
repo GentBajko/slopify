@@ -185,3 +185,102 @@ it.each(["id", "name", "daemon", "volume", "volumeIdentity"] as const)(
     }
   },
 );
+
+// Rollback containers left by launchers before 1.6: stopped, restart off, launcher-labelled and
+// named `<name>-previous-<timestamp>`. Refusing them blocked every upgrade from those versions.
+function legacyRollback(name: string, volume: string, patch: Partial<Container> = {}): Container {
+  return {
+    id: randomUUID().replaceAll("-", ""),
+    name: `${name}-previous-20260925023316`,
+    image: "sha256:older-image",
+    user: "",
+    running: false,
+    restart: { Name: "no", MaximumRetryCount: 0 },
+    signature: "older-launcher-signature",
+    installation: null,
+    port: null,
+    mounts: [{ type: "volume", name: volume, source: "/volume", destination: "/data", rw: true }],
+    ...patch,
+  };
+}
+
+it("keeps a stopped launcher rollback from before project folders", async () => {
+  const h = await installationFixture();
+  try {
+    await mkdir(h.config.directory, { recursive: true, mode: 0o700 });
+    const old = legacyRollback(h.config.name, h.config.volume);
+    h.containers.set(old.id, old);
+    await expect(
+      assertVolumeClaims(
+        h.config,
+        h.engine,
+        "fixture-daemon",
+        await h.engine.volume(h.config.volume),
+        null,
+      ),
+    ).resolves.toBeUndefined();
+    expect(h.containers.get(old.id)).toBe(old);
+  } finally {
+    await h.close();
+  }
+});
+
+it.each([
+  ["running", { running: true }],
+  ["restartable", { restart: { Name: "always", MaximumRetryCount: 0 } }],
+  ["unlabelled", { signature: null }],
+  ["foreign name", { name: "someone-elses-previous-20260925023316" }],
+  ["hand-named", { name: "slopify-pre-cli-bridge-2026-09-24" }],
+] as const)("still refuses a %s container on the volume", async (_label, patch) => {
+  const h = await installationFixture();
+  try {
+    await mkdir(h.config.directory, { recursive: true, mode: 0o700 });
+    const other = legacyRollback(h.config.name, h.config.volume, patch);
+    h.containers.set(other.id, other);
+    await expect(
+      assertVolumeClaims(
+        h.config,
+        h.engine,
+        "fixture-daemon",
+        await h.engine.volume(h.config.volume),
+        null,
+      ),
+    ).rejects.toThrow("claimed by another container");
+  } finally {
+    await h.close();
+  }
+});
+
+// Docker lists a container's mounts in no fixed order; the retained previous container must be
+// recognised however they come back.
+it("recognises its own retained previous container whatever order Docker lists mounts in", async () => {
+  const h = await readerFixture();
+  try {
+    h.containers.delete(h.reader.id);
+    const data = {
+      type: "volume",
+      name: h.j.volume,
+      source: h.volume,
+      destination: "/data",
+      rw: true,
+    };
+    const share = {
+      type: "bind",
+      name: "",
+      source: "/host/share",
+      destination: "/opt/slopify-host",
+      rw: false,
+    };
+    const recorded: Container = {
+      ...legacyRollback(h.config.name, h.j.volume),
+      name: `${h.config.name}-previous-${h.j.id}`,
+      signature: null,
+      mounts: [data, share],
+    };
+    await writeState(join(h.directory, "journal.json"), { ...h.j, previous: recorded });
+    h.containers.set(recorded.id, { ...recorded, mounts: [share, data] });
+    await expect(h.check()).resolves.toBeUndefined();
+  } finally {
+    await h.close();
+  }
+});
