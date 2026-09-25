@@ -3,6 +3,7 @@ import type { Field } from "@app/slices/admission/substitute.js";
 import type { Entry } from "@app/slices/library/model.js";
 import type { ReactElement } from "react";
 import { useId } from "react";
+import { InfoTip } from "@/components/kit/info-tip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -86,8 +87,20 @@ export function ContentSection(
         onChange={(name, value) => update({ values: { ...form.values, [name]: value } })}
       />
       {needsLlm(form, entries) ? (
-        <section className="border-y border-line py-6">
-          <h3 className="mb-4 text-lg font-semibold">Text generation</h3>
+        <section className="border-y border-line py-4">
+          <div className="mb-3 flex items-center gap-1">
+            <h3 className="text-row font-semibold">Text generation</h3>
+            <InfoTip label="text generation">
+              <p>
+                Shared by generated article, research, thumbnail wording, generated entries and
+                Narration Preparation when enabled.
+              </p>
+            </InfoTip>
+            <span className="flex-1" />
+            <Button variant="ghost" onClick={() => onLibrary("/settings")}>
+              Settings
+            </Button>
+          </div>
           <div className="grid grid-cols-1 gap-4 min-[700px]:grid-cols-2">
             <ProviderPicker
               field="llm.provider"
@@ -113,13 +126,6 @@ export function ContentSection(
             />
             <ThinkingPicker choice={form.llm} onChange={(llm) => update({ llm })} />
           </div>
-          <p className="mt-3 text-small text-ink3">
-            Shared by generated article, research, thumbnail wording, generated entries and
-            Narration Preparation when enabled.
-          </p>
-          <Button variant="ghost" onClick={() => onLibrary("/settings")}>
-            Settings
-          </Button>
         </section>
       ) : null}
       {form.sources.article === "provide" ? (

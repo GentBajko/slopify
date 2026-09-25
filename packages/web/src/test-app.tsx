@@ -7,7 +7,8 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import type { RenderResult } from "@testing-library/react";
-import { render } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { createApi } from "./api.js";
 import type { AppDeps } from "./app-context.js";
@@ -89,6 +90,11 @@ function testRouter(ui: ReactNode) {
         path: "schedules",
         component: nowhere,
       }),
+      templates: createRoute({
+        getParentRoute: () => rootRoute,
+        path: "templates",
+        component: nowhere,
+      }),
       settings: createRoute({
         getParentRoute: () => rootRoute,
         path: "settings",
@@ -158,4 +164,23 @@ function mount(tree: ReactNode, deps: AppDeps): RenderResult & { readonly deps: 
     </QueryClientProvider>,
   );
   return { ...result, deps };
+}
+
+// Edit project shows one section at a time; a test reaches a field by opening its section
+// the way a person would, from the section list beside the form.
+export async function openEditSection(name: string): Promise<void> {
+  const nav = await screen.findByRole("navigation", { name: "Edit sections" });
+  await userEvent.click(within(nav).getByRole("button", { name: new RegExp(`^${name}`) }));
+}
+
+// The project page opens on its Output tab; a view that is not showing is one press away.
+export async function openProjectTab(name: "Output" | "Edit" | "History" | "Checkpoints") {
+  const tab = await screen.findByRole("tab", { name: new RegExp(`^${name}`) });
+  if (tab.getAttribute("aria-selected") !== "true") await userEvent.click(tab);
+}
+
+// Edit project lives on the Edit tab, beside Rebuild affected outputs.
+export async function openProjectEditor(): Promise<void> {
+  await openProjectTab("Edit");
+  await userEvent.click(await screen.findByRole("button", { name: "Edit project" }));
 }

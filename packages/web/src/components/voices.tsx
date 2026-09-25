@@ -62,7 +62,7 @@ export function Voices() {
       <table className="w-full table-fixed border-collapse text-small">
         <thead>
           <tr className="border-b border-line">
-            <th className={cn(cell, "engraved w-[26%] py-3 text-left text-ink3")}>Voices · Name</th>
+            <th className={cn(cell, "engraved w-[26%] py-3 text-left text-ink3")}>Name</th>
             <th className={cn(cell, "engraved w-[26%] py-3 text-left text-ink3")}>Provider</th>
             <th className={cn(cell, "engraved py-3 text-left text-ink3")}>Voice ID</th>
             <th className={cn(cell, "w-[104px] py-3")}>

@@ -71,6 +71,7 @@ it("lists templates and saves a named setup from an existing draft without start
     testDeps({ ...routes, "POST /api/project-templates": save }),
   );
   expect(await screen.findByRole("heading", { name: template.name })).not.toBeNull();
+  await user.click(screen.getByRole("button", { name: "Save a setup" }));
   await user.selectOptions(await screen.findByLabelText("Saved Play draft"), sourceId);
   await user.type(screen.getByLabelText("Template name"), "New template");
   await user.click(screen.getByRole("button", { name: "Save template" }));
@@ -196,7 +197,7 @@ it("does not install a template after the route unmounts during draft loading", 
     }),
   );
   await user.click(await screen.findByRole("button", { name: `Apply ${template.name}` }));
-  await screen.findByText("Templates");
+  await screen.findByRole("button", { name: "Refresh templates" });
   leave();
   await screen.findByText("Templates left");
   draftResponse.resolve(Response.json(draftView));
@@ -298,6 +299,6 @@ it("deletes the selected version and refreshes the list", async () => {
   await user.click(
     within(await screen.findByRole("dialog")).getByRole("button", { name: "Delete template" }),
   );
-  await screen.findByText("No templates yet. Save a Play draft above to reuse its setup.");
+  await screen.findByText("No templates yet. Use Save a setup to keep a Play draft for reuse.");
   expect(remove).toHaveBeenCalledOnce();
 });

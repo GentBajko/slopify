@@ -81,14 +81,16 @@ describe("the intros and outros list", () => {
     ).not.toBeNull();
   });
 
-  it("points New entry and Edit at the editor, carrying the tab that is on", async () => {
+  it("points New entry and the row itself at the editor, carrying the tab that is on", async () => {
     renderRouted(<Screen />, deps([coldOpen]));
 
     await screen.findByText("Cold open");
     expect(screen.getByRole("link", { name: "New entry" }).getAttribute("href")).toBe(
       "/entries/new?category=intro",
     );
-    expect(screen.getByRole("link", { name: "Edit" }).getAttribute("href")).toBe("/entries/e1");
+    expect(screen.getByRole("link", { name: "Cold open" }).getAttribute("href")).toBe(
+      "/entries/e1",
+    );
   });
 
   it("offers Duplicate as a copy opened for editing, and Delete behind a confirmation", async () => {

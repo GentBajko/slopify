@@ -1,9 +1,9 @@
 import type { RevisionEdit, RevisionView } from "@app/slices/revisions/model.js";
 import { saveRevisionSchema } from "@app/slices/revisions/schema.js";
-import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { emptyAnswer, jsonAnswer, renderApp, testDeps } from "@/test-app";
+import { emptyAnswer, jsonAnswer, openEditSection, renderApp, testDeps } from "@/test-app";
 import { RevisionContentEditors } from "./revision-content.js";
 import { deferred, narrationView, response, staged } from "./revision-editor-test-fixtures.js";
 import { RevisionForm } from "./revision-form.js";
@@ -82,6 +82,7 @@ it.each(["saved replacement", "staged replacement", "text override"] as const)(
     };
     const { saves } = mount(view, async () => response({ ...staged, stageKind: "audio" }));
     await user.click(screen.getByRole("button", { name: "Edit project" }));
+    await openEditSection("Narration");
     await screen.findByLabelText("Replace narration chunk 1");
     if (scenario !== "saved replacement") {
       fireEvent.change(screen.getByLabelText("Replace narration chunk 1"), {
@@ -113,10 +114,11 @@ it("discards an upload that settles after regeneration without undoing the saved
   const { view, key } = generatedNarration();
   const { saves, removed } = mount(view, () => copied.promise);
   await user.click(screen.getByRole("button", { name: "Edit project" }));
+  await openEditSection("Narration");
   fireEvent.change(await screen.findByLabelText("Replace narration chunk 1"), {
     target: { files: [new File(["audio"], "replacement.mp3", { type: "audio/mpeg" })] },
   });
-  await screen.findByRole("status");
+  await within(screen.getByRole("region", { name: "Narration" })).findByRole("status");
   await user.click(
     screen.getByRole("button", { name: "Regenerate narration chunk 1 after review" }),
   );

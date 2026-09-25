@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
+import { StatusSlot } from "@/components/kit/action-bar";
 import { SavedTick } from "@/components/saved-tick";
 import { Button } from "@/components/ui/button";
 
-// The bar under an editor's sheet: Delete at the left, then the reason Save is holding, the
-// Saved tick, Cancel and Save. Both editors draw it - prompts and intros/outros - so the
+// The bar under an editor's sheet, pinned to the bottom of the viewport: Delete at the left
+// (its place kept even before there is a row to delete), then one status slot for the error,
+// the Saved tick or the reason Save is holding, then Cancel and Save. Both editors draw it - prompts and intros/outros - so the
 // refusal affordance is written once and cannot drift between them.
 //
 // `cancel` is a node rather than a route, because the two editors return to two different
@@ -30,20 +32,25 @@ export function EditorActions({
 }) {
   const held = blocked !== undefined || pending || saved;
 
+  const failure = errors.join(" ");
   return (
-    <div className="flex flex-wrap items-center gap-[10px] border-t border-line pt-[14px]">
-      {onDelete === undefined ? null : (
-        <Button className="bg-transparent" onClick={onDelete}>
-          Delete
-        </Button>
-      )}
-      <span className="flex-1" />
-      {saved ? <SavedTick /> : null}
-      {blocked === undefined ? null : (
-        <span id={blockedId} className="text-small text-ink2">
-          {blocked}
-        </span>
-      )}
+    <div
+      data-slot="editor-actions"
+      className="sticky bottom-0 z-10 -mx-[18px] -mb-[18px] flex flex-wrap items-center gap-[10px] rounded-b-panel border-t border-line bg-panel px-[18px] py-3 shadow-[0_-6px_14px_-10px_var(--color-shadow)]"
+    >
+      <Button
+        className="bg-transparent"
+        onClick={onDelete}
+        disabled={onDelete === undefined}
+        aria-hidden={onDelete === undefined ? true : undefined}
+        tabIndex={onDelete === undefined ? -1 : undefined}
+        style={onDelete === undefined ? { visibility: "hidden" } : undefined}
+      >
+        Delete
+      </Button>
+      <StatusSlot tone={failure ? "error" : "info"} id={failure ? undefined : blockedId}>
+        {failure ? failure : saved ? <SavedTick /> : blocked}
+      </StatusSlot>
       {cancel}
       <Button
         variant="primary"
@@ -60,11 +67,6 @@ export function EditorActions({
       >
         Save
       </Button>
-      {errors.map((message) => (
-        <p key={message} className="basis-full text-label text-red">
-          {message}
-        </p>
-      ))}
     </div>
   );
 }

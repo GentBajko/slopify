@@ -2,7 +2,14 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { revisionView } from "@/project/revision-fixture";
-import { jsonAnswer, problemAnswer, renderRouted, testDeps, testOrigin } from "@/test-app";
+import {
+  jsonAnswer,
+  openProjectTab,
+  problemAnswer,
+  renderRouted,
+  testDeps,
+  testOrigin,
+} from "@/test-app";
 import { ProjectRoute } from "./project.js";
 import {
   body,
@@ -15,6 +22,12 @@ import {
 } from "./project-fixtures.js";
 
 afterEach(cleanup);
+
+// Cancel run sits in the page bar's "More" menu, behind its confirmation.
+async function pressCancelRun(): Promise<void> {
+  await userEvent.click(await screen.findByRole("button", { name: "More project actions" }));
+  await userEvent.click(await screen.findByRole("menuitem", { name: "Cancel run" }));
+}
 
 describe("the project rundown", () => {
   it("shows a skeleton in the final shape while the project is coming", async () => {
@@ -96,7 +109,9 @@ describe("the focused project workspace", () => {
     expect(
       screen.getByRole("progressbar", { name: "Overall progress" }).getAttribute("aria-valuenow"),
     ).toBe("25");
-    expect(screen.getByText("1 of 5 stages finished")).not.toBeNull();
+    expect(
+      screen.getByRole("progressbar", { name: "Overall progress" }).getAttribute("aria-valuetext"),
+    ).toContain("1 of 5 stages finished");
     await selectProjectStage("Article");
     expect(
       screen.getByRole("progressbar", { name: "Overall progress" }).getAttribute("aria-valuenow"),
@@ -128,7 +143,8 @@ describe("a failed stage", () => {
 
     const workspace = await screen.findByRole("region", { name: "Images workspace" });
     await userEvent.click(within(workspace).getByText("Error details"));
-    const line = within(workspace).getByText(verbatim);
+    // The details open in a popover over the page, so the sentence is read from the page.
+    const line = await screen.findByText(verbatim);
     // Verbatim: the whole sentence is one text node, neither truncated nor rewritten.
     expect(line.textContent).toBe(verbatim);
     expect(within(workspace).getByText("4 attempts")).not.toBeNull();
@@ -203,7 +219,7 @@ describe("cancelling a run", () => {
       }),
     );
 
-    await userEvent.click(await screen.findByRole("button", { name: "Cancel run" }));
+    await pressCancelRun();
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Cancel this run?")).not.toBeNull();
     expect(
@@ -225,13 +241,13 @@ describe("cancelling a run", () => {
       deps({ "GET /api/projects/p1": jsonAnswer(running) }),
     );
 
-    await userEvent.click(await screen.findByRole("button", { name: "Cancel run" }));
+    await pressCancelRun();
     await userEvent.click(
       within(await screen.findByRole("dialog")).getByRole("button", { name: "Keep running" }),
     );
     expect(screen.queryByRole("dialog")).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: "Cancel run" }));
+    await pressCancelRun();
     await screen.findByRole("dialog");
     await userEvent.keyboard("{Escape}");
     await waitFor(() => {
@@ -242,7 +258,10 @@ describe("cancelling a run", () => {
   it("offers no Cancel once the run is over", async () => {
     renderRouted(<ProjectRoute projectId="p1" />, deps());
     await screen.findByText("Research");
-    expect(screen.queryByRole("button", { name: "Cancel run" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "More project actions" }));
+    expect(
+      (await screen.findByRole("menuitem", { name: "Cancel run" })).getAttribute("aria-disabled"),
+    ).toBe("true");
   });
 
   it("keeps article output read-only and offers revision editing while a stage runs", async () => {
@@ -252,6 +271,7 @@ describe("cancelling a run", () => {
     );
     await selectProjectStage("Article");
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+    await openProjectTab("Edit");
     expect(screen.getByRole("button", { name: "Edit project" }).hasAttribute("disabled")).toBe(
       false,
     );

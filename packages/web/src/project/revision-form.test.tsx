@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { keys } from "@/queries";
-import { jsonAnswer, renderApp, testDeps } from "@/test-app";
+import { jsonAnswer, openEditSection, renderApp, testDeps } from "@/test-app";
 import { revisionView } from "./revision-fixture.js";
 import { RevisionForm } from "./revision-form.js";
 import { formOfRevision } from "./revision-form-state.js";
@@ -121,6 +121,7 @@ it("preserves saved unavailable choices, content references and frozen templates
   expect(latest.config.llm).toEqual(view.revision.config.llm);
   expect(latest.config.audio).toEqual(view.revision.config.audio);
   expect(latest.config.chunking).toEqual(view.revision.config.chunking);
+  await openEditSection("Prompts");
   await screen.findByRole("option", { name: "Fresh template" });
   await user.selectOptions(screen.getByLabelText("Use saved template for Article"), "replacement");
   expect(latest.config.rendered.article).toBe("Write new");
@@ -275,6 +276,7 @@ it("adopts saved wording as a template only after an explicit click", async () =
     }),
   );
   expect(latest.content.promptTemplates.article).toBeNull();
+  await openEditSection("Prompts");
   await user.click(
     screen.getByRole("button", { name: "Use saved wording as template for Article" }),
   );

@@ -29,7 +29,7 @@ it("keeps checkpoint Save, Review, Start and project approval as separate action
       values: { era: "Ancient" },
     },
   });
-  await act(() => h.session().navigate("outputs"));
+  await act(() => h.session().navigate("review"));
   for (const name of ["Before Audio", "Before Images", "Before Video / export"])
     await userEvent.click(screen.getByRole("checkbox", { name }));
   await act(() => h.session().flush());
@@ -38,9 +38,11 @@ it("keeps checkpoint Save, Review, Start and project approval as separate action
   expect(h.requests.filter((request) => request.url.endsWith("/start"))).toHaveLength(0);
   await act(() => h.restart());
   await waitFor(() => expect(h.session().status).toBe("saved"));
+  await act(() => h.session().navigate("review"));
+  await userEvent.click(screen.getByRole("checkbox", { name: "Before Images" }));
+  await userEvent.click(screen.getByRole("checkbox", { name: "Before Images" }));
+  // Changing a checkpoint invalidates the estimate; reopening Review asks again.
   await act(() => h.session().navigate("outputs"));
-  await userEvent.click(screen.getByRole("checkbox", { name: "Before Images" }));
-  await userEvent.click(screen.getByRole("checkbox", { name: "Before Images" }));
   await act(() => h.session().navigate("review"));
   await waitFor(() => expect(h.session().review.valid).toBe(true));
   expect(h.session().review.receipt?.runs[0]?.draft.checkpoints).toEqual([

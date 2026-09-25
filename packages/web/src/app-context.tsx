@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { createContext, useContext } from "react";
 import type { Api } from "./api.js";
+import { ToastProvider } from "./components/kit/toast.js";
 import type { OpenEvents } from "./events.js";
 import type { VersionWatch } from "./version.js";
 
@@ -21,7 +22,11 @@ export function AppProvider({
   readonly deps: AppDeps;
   readonly children: ReactNode;
 }) {
-  return <AppContext.Provider value={deps}>{children}</AppContext.Provider>;
+  return (
+    <AppContext.Provider value={deps}>
+      <ToastProvider>{children}</ToastProvider>
+    </AppContext.Provider>
+  );
 }
 
 export function useApp(): AppDeps {

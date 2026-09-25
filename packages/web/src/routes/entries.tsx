@@ -18,13 +18,14 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { categoryOptions, modeLabel } from "@/lib/entry-options";
 import { entriesQuery, keys } from "@/queries";
+import { LibraryToolbar } from "@/routes/library";
 
 // One row of the rundown, and the same shape for a skeleton. Mode sits in its own 70 px
 // column beside the name; the Slots column collapses under both below 768 px.
 const row =
-  "grid grid-cols-[minmax(0,1fr)_auto_auto_32px] items-center gap-x-[14px] gap-y-[6px] border-b border-line px-4 py-[14px] last:border-b-0 md:grid-cols-[260px_70px_minmax(0,1fr)_auto_32px]";
+  "grid grid-cols-[minmax(0,1fr)_auto_32px] items-center gap-x-[14px] gap-y-[6px] border-b border-line px-4 py-[10px] last:border-b-0 md:grid-cols-[260px_70px_minmax(0,1fr)_32px]";
 const slotsCell =
-  "col-span-4 col-start-1 row-start-2 flex flex-wrap gap-[6px] md:col-span-1 md:col-start-3 md:row-start-1";
+  "col-span-3 col-start-1 row-start-2 flex flex-wrap gap-[6px] md:col-span-1 md:col-start-3 md:row-start-1";
 
 // Every saved entry of one category, sorted by name by the list endpoint. The tab switch has to
 // rewrite the URL it is already on, so it is handed up to router.tsx rather than reaching for a
@@ -52,10 +53,17 @@ export function EntriesRoute({
   const listed = entries.data?.entries.filter((entry) => entry.category === category);
 
   return (
-    <div className="mx-auto max-w-[1440px]">
-      <h1 className="mb-4 text-title font-bold tracking-[-0.01em]">Intros &amp; Outros</h1>
-
-      <div className="mb-4 flex items-center gap-4">
+    <div>
+      <LibraryToolbar
+        action={
+          <Button asChild>
+            <Link to="/entries/new" search={{ category }}>
+              <PlusIcon aria-hidden="true" className="size-[14px]" />
+              New entry
+            </Link>
+          </Button>
+        }
+      >
         <ToggleGroup
           type="single"
           value={category}
@@ -73,14 +81,7 @@ export function EntriesRoute({
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
-        <span className="flex-1" />
-        <Button asChild>
-          <Link to="/entries/new" search={{ category }}>
-            <PlusIcon aria-hidden="true" className="size-[14px]" />
-            New entry
-          </Link>
-        </Button>
-      </div>
+      </LibraryToolbar>
 
       {entries.error === null ? null : (
         <RailGroup>
@@ -98,18 +99,19 @@ export function EntriesRoute({
         <RailGroup>
           {listed.map((entry) => (
             <div key={entry.id} className={row}>
-              <span className="col-start-1 row-start-1 font-semibold">{entry.name}</span>
+              <Link
+                to="/entries/$entryId"
+                params={{ entryId: entry.id }}
+                className="col-start-1 row-start-1 min-w-0 truncate font-semibold hover:underline"
+              >
+                {entry.name}
+              </Link>
               <ModeChip mode={entry.mode} />
               <span className={slotsCell}>
                 {entry.slots.map((slot) => (
                   <SlotChip key={slot} name={slot} />
                 ))}
               </span>
-              <Button className="col-start-3 row-start-1 md:col-start-4" asChild>
-                <Link to="/entries/$entryId" params={{ entryId: entry.id }}>
-                  Edit
-                </Link>
-              </Button>
               <RowOverflow
                 entry={entry}
                 onDelete={() => {
@@ -165,7 +167,7 @@ function EmptyCategory({ category }: { readonly category: EntryCategory }) {
   const where = category === "intro" ? "before" : "after";
   return (
     <RailGroup>
-      <p className="max-w-[75ch] px-4 py-7 text-ink2">
+      <p className="max-w-[75ch] px-4 py-6 text-ink2">
         {`No ${category}s yet. An ${category} is narrated ${where} the body in the run's voice.`}
       </p>
     </RailGroup>
@@ -185,12 +187,17 @@ function RowOverflow({
         <Button
           variant="ghost"
           aria-label={`More for ${entry.name}`}
-          className="col-start-4 row-start-1 size-8 p-0 md:col-start-5"
+          className="col-start-3 row-start-1 size-8 p-0 md:col-start-4"
         >
           <EllipsisIcon aria-hidden="true" className="size-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
+        <DropdownMenuItem asChild>
+          <Link to="/entries/$entryId" params={{ entryId: entry.id }}>
+            Edit
+          </Link>
+        </DropdownMenuItem>
         {/* The copy is named "<name> copy" and opened for editing, so a name that
             is already taken is renamed before it is ever saved. */}
         <DropdownMenuItem asChild>

@@ -1,4 +1,5 @@
 import { type ReactElement, useId } from "react";
+import { InfoTip } from "@/components/kit/info-tip";
 
 export function PronunciationGlossary({
   value,
@@ -27,15 +28,23 @@ export function PronunciationGlossary({
           onChange={(event) => onChange(event.currentTarget.checked)}
         />
         Use Pronunciation Glossary
+        <InfoTip label="the Pronunciation Glossary">
+          <p>
+            Uses IPA supplied in the article’s Pronunciation Glossary, for example{" "}
+            <code>Arda: /ˈɑɹdə/</code>. Works independently of Narration Preparation with no extra
+            LLM call. Supports generated Inworld TTS-2 and TTS-2 Flash audio. Readable text stays
+            unchanged; no glossary means ordinary narration.
+          </p>
+        </InfoTip>
       </label>
-      <p id={`${id}-help`} className="text-small text-ink3">
+      <p id={`${id}-help`} className="sr-only">
         Uses IPA supplied in the article’s Pronunciation Glossary, for example{" "}
         <code>Arda: /ˈɑɹdə/</code>. Works independently of Narration Preparation with no extra LLM
         call. Supports generated Inworld TTS-2 and TTS-2 Flash audio. Readable text stays unchanged;
         no glossary means ordinary narration.
       </p>
       {!supported ? (
-        <p id={`${id}-support`} className="text-small text-ink3">
+        <p id={`${id}-support`} className="text-label text-ink3">
           Unavailable for this provider or model. Your saved preference is retained.
         </p>
       ) : null}

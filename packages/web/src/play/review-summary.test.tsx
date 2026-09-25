@@ -246,9 +246,11 @@ it("uses loaded names while preserving the existing review catalogue refresh", a
   expect(
     within(screen.getByRole("region", { name: "Style summary" })).getByText("Default"),
   ).not.toBeNull();
-  expect(
-    harness.requests
-      .slice(requests)
-      .filter((request) => /\/providers\/[^/]+\/models/.test(new URL(request.url).pathname)),
-  ).toHaveLength(2);
+  const refreshed = harness.requests
+    .slice(requests)
+    .map((request) => new URL(request.url).pathname)
+    .filter((path) => /\/providers\/[^/]+\/models/.test(path));
+  expect(refreshed).toEqual(
+    expect.arrayContaining(["/api/providers/elevenlabs/models", "/api/providers/fal/models"]),
+  );
 });

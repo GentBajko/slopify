@@ -1,5 +1,5 @@
 import type { PlayReview } from "@app/slices/play-drafts/model.js";
-import { act, cleanup, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { deferred } from "./play-test-fixture";
@@ -143,11 +143,15 @@ it("shows costs and resolved text from one receipt without treating unknown char
   expect(screen.getByText("Unknown")).not.toBeNull();
   expect(screen.getByText(/Plus 1 stage charge/)).not.toBeNull();
   expect(screen.getByText(/Catalogue verified 2026-09-13/)).not.toBeNull();
-  expect(screen.getByText(/does not cap spending/)).not.toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "About the estimate" }));
+  expect(await screen.findByText(/does not cap spending/)).not.toBeNull();
   expect(screen.queryByText("Keep dormant")).toBeNull();
   await userEvent.click(screen.getByText("Read the supplied article and resolved prompts"));
   expect(screen.getByText("The exact reviewed prompt.")).not.toBeNull();
-  expect(screen.getByText("The supplied article.")).not.toBeNull();
+  // The editor behind the drawer holds the same text; read the drawer's copy.
+  expect(
+    within(screen.getByRole("dialog", { name: "Review" })).getByText("The supplied article."),
+  ).not.toBeNull();
   await userEvent.click(screen.getByText("Assumptions and stage details"));
   expect(screen.getByText("Actual usage may differ")).not.toBeNull();
 });

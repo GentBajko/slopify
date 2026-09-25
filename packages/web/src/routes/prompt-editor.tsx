@@ -1,7 +1,6 @@
 import type { PromptDraft, PromptKind } from "@app/slices/library/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ChevronLeftIcon } from "lucide-react";
 import { useId, useState } from "react";
 import type { FieldError } from "@/api";
 import { removePrompt, savePrompt } from "@/api";
@@ -10,6 +9,7 @@ import { ConfirmDialog } from "@/components/confirm";
 import { DetectedSlots } from "@/components/detected-slots";
 import { EditorActions } from "@/components/editor-actions";
 import { backLink, EditorNotice, EditorSkeleton, sheet } from "@/components/editor-states";
+import { PageBar } from "@/components/kit/page-bar";
 import { LabelledSwitch } from "@/components/labelled-switch";
 import { useLeaveWhenSaved } from "@/components/saved-tick";
 import { SlotBody } from "@/components/slot-body";
@@ -144,18 +144,11 @@ export function PromptEditorRoute({
   }
 
   return (
-    <div className="mx-auto max-w-[1440px]">
-      <Link
-        to="/prompts"
-        search={{ kind: draft.kind }}
-        className="mb-[10px] inline-flex items-center gap-1 text-small text-ink2 hover:text-ink"
-      >
-        <ChevronLeftIcon aria-hidden="true" className="size-[14px]" />
-        Prompts
-      </Link>
-      <h1 className="mb-4 text-title font-bold tracking-[-0.01em]">
-        {promptId === undefined ? "New prompt" : "Edit prompt"}
-      </h1>
+    <div>
+      <PageBar
+        back={{ to: "/prompts", label: "Prompts", search: { kind: draft.kind } }}
+        title={promptId === undefined ? "New prompt" : "Edit prompt"}
+      />
 
       <div
         data-tour="prompt-editor"
@@ -195,21 +188,23 @@ export function PromptEditorRoute({
           </div>
 
           <div data-tour="prompt-body">
-            {draft.kind === "narration" ? (
-              <Button
-                type="button"
-                className="mb-3"
-                onClick={() => {
-                  if (draft.body.trim() !== "") setReplacingBody(true);
-                  else edit({ ...draft, body: narrationStarter }, "body");
-                }}
-              >
-                Use Documentary Starter
-              </Button>
-            ) : null}
-            <Label htmlFor={bodyId} className="mb-[5px]">
-              Body
-            </Label>
+            {/* The starter sits on the label's own row, so switching Kind never moves the
+                body up or down. */}
+            <div className="mb-[5px] flex min-h-8 items-end justify-between gap-3">
+              <Label htmlFor={bodyId}>Body</Label>
+              {draft.kind === "narration" ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    if (draft.body.trim() !== "") setReplacingBody(true);
+                    else edit({ ...draft, body: narrationStarter }, "body");
+                  }}
+                >
+                  Use Documentary Starter
+                </Button>
+              ) : null}
+            </div>
             <SlotBody
               id={bodyId}
               value={draft.body}
@@ -257,7 +252,10 @@ export function PromptEditorRoute({
           </div>
         </div>
 
-        <div data-tour="prompt-slots" className={`${sheet} flex flex-col gap-3 lg:sticky lg:top-6`}>
+        <div
+          data-tour="prompt-slots"
+          className={`${sheet} flex flex-col gap-3 lg:sticky lg:top-16`}
+        >
           <DetectedSlots slots={slots} body={draft.body} lint={lint} lintId={lintId} />
         </div>
       </div>

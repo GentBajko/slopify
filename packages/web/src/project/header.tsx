@@ -1,12 +1,21 @@
 import type { ProjectSummary } from "@app/slices/admission/model.js";
 import type { Prompt } from "@app/slices/library/model.js";
 import type { Output } from "@app/slices/storage/model.js";
-import type { ReactNode } from "react";
+import { EllipsisIcon } from "lucide-react";
+import { type ReactNode, useState } from "react";
+import { ConfirmDialog } from "@/components/confirm";
+import { PageBar } from "@/components/kit/page-bar";
 import { Lamp } from "@/components/lamp";
 import { StateWord } from "@/components/state-word";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { startedAt } from "@/lib/utils";
-import { ConfirmedButton } from "./controls.js";
+import { confirmationFor } from "./confirmations.js";
 import { OutputDownload } from "./parts.js";
 import type { ProjectActions } from "./use-actions.js";
 
@@ -31,61 +40,87 @@ export function ProjectHeader({
   readonly children?: ReactNode;
 }) {
   const running = project.status === "running";
+  const [cancelling, setCancelling] = useState(false);
+  // One toggle, always mounted: it reads Pause while there is work to hold and Resume when
+  // there is work to continue, and is disabled when neither applies.
+  const canPause = running || (project.status === "pending" && !resumable);
+  const canResume =
+    resumable ||
+    project.status === "paused" ||
+    project.status === "failed" ||
+    project.status === "canceled";
+  const cancelCopy = confirmationFor({ kind: "cancel" });
   return (
-    <div className="flex flex-wrap items-start justify-between gap-5 py-2">
-      <div className="w-full min-w-0 sm:min-w-[220px] sm:flex-1">
-        <div className="mb-2 flex items-center gap-2">
-          <Lamp state={project.status} />
-          <StateWord state={project.status} announce="Project" />
-        </div>
-        <h1 className="break-words text-[28px] font-bold leading-tight">{project.title}</h1>
-        <p className="mt-2 text-small text-ink2">{subtitle(project, prompts)}</p>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        {children}
-        {primaryOutput ? (
-          <span className="rounded-control border border-accent bg-accent px-4 py-2 [&_a]:font-semibold [&_a]:text-accent-ink">
-            <OutputDownload
-              output={primaryOutput}
-              label={
-                primaryOutput.role === "video"
-                  ? "Download video"
-                  : primaryOutput.role === "audio_export"
-                    ? "Download audio"
-                    : "Download article"
-              }
-            />
-          </span>
-        ) : null}
-        {running || (project.status === "pending" && !resumable) ? (
-          <Button disabled={actions.pending} onClick={() => actions.run({ kind: "pause" })}>
-            Pause
-          </Button>
-        ) : null}
-        {resumable ||
-        project.status === "paused" ||
-        project.status === "failed" ||
-        project.status === "canceled" ? (
-          <Button
-            disabled={actions.pending || inFlight}
-            onClick={() => actions.run({ kind: "resume" })}
-          >
-            {actions.performing?.kind === "resume" ? "Resuming…" : "Resume"}
-          </Button>
-        ) : null}
-        {running ? (
-          <ConfirmedButton
-            action={{ kind: "cancel" }}
-            run={() => {
+    <PageBar
+      back={{ to: "/", label: "Projects" }}
+      lead={<Lamp state={project.status} />}
+      title={project.title}
+      status={<StateWord state={project.status} announce="Project" />}
+      meta={subtitle(project, prompts)}
+      actions={
+        <>
+          {children}
+          {canPause ? (
+            <Button disabled={actions.pending} onClick={() => actions.run({ kind: "pause" })}>
+              Pause
+            </Button>
+          ) : (
+            <Button
+              disabled={!canResume || actions.pending || inFlight}
+              onClick={() => actions.run({ kind: "resume" })}
+            >
+              {actions.performing?.kind === "resume" ? "Resuming…" : "Resume"}
+            </Button>
+          )}
+          {primaryOutput ? (
+            <span className="inline-flex h-8 items-center rounded-control border border-accent bg-accent px-3 [&_a]:font-semibold [&_a]:text-accent-ink [&_button]:text-accent-ink">
+              <OutputDownload
+                output={primaryOutput}
+                label={
+                  primaryOutput.role === "video"
+                    ? "Download video"
+                    : primaryOutput.role === "audio_export"
+                      ? "Download audio"
+                      : "Download article"
+                }
+              />
+            </span>
+          ) : (
+            <Button disabled title="Available once the final output has been made">
+              Download
+            </Button>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" aria-label="More project actions" className="size-8 p-0">
+                <EllipsisIcon aria-hidden="true" className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem
+                disabled={!running || actions.pending}
+                onSelect={() => setCancelling(true)}
+              >
+                Cancel run
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <ConfirmDialog
+            open={cancelling}
+            title={cancelCopy.title}
+            consequence={cancelCopy.consequence}
+            verb={cancelCopy.verb}
+            dismiss={cancelCopy.dismiss}
+            pending={actions.pending}
+            onConfirm={() => {
+              setCancelling(false);
               actions.run({ kind: "cancel" });
             }}
-            pending={actions.pending}
-          >
-            Cancel run
-          </ConfirmedButton>
-        ) : null}
-      </div>
-    </div>
+            onCancel={() => setCancelling(false)}
+          />
+        </>
+      }
+    />
   );
 }
 

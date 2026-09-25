@@ -7,6 +7,7 @@ import { removeProject } from "@/api";
 import { useApp } from "@/app-context";
 import { BatchQueue } from "@/components/batch-queue";
 import { ConfirmDialog } from "@/components/confirm";
+import { PageBar } from "@/components/kit/page-bar";
 import { Lamp } from "@/components/lamp";
 import { RailGroup, RailMeter } from "@/components/rail";
 import { StateWord } from "@/components/state-word";
@@ -48,13 +49,15 @@ export function ProjectsRoute() {
   });
 
   return (
-    <div className="mx-auto max-w-[1440px]">
-      <div className="mb-4 flex items-center">
-        <h1 className="text-title font-bold tracking-[-0.01em]">Projects</h1>
-        <Button variant="accent" className="ml-auto" asChild>
-          <Link to="/play">New run</Link>
-        </Button>
-      </div>
+    <div>
+      <PageBar
+        title="Projects"
+        actions={
+          <Button variant="accent" asChild>
+            <Link to="/play">New run</Link>
+          </Button>
+        }
+      />
 
       <BatchQueue />
       {projects.data?.projects.length === 0 ? <TutorialInvite /> : null}

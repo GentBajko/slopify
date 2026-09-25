@@ -257,21 +257,22 @@ export function StepContent({
       return (
         <>
           <p>
-            Overall progress stays above the workspace. Select a stage from <strong>Stages</strong>{" "}
-            to see its results or live writing. Press <strong>Pause</strong> to stop active requests
+            The rundown under the title shows overall progress and every stage. Select a stage to
+            see its results or live writing. Press <strong>Pause</strong> to stop active requests
             safely and keep finished work.
           </p>
           <p>
-            Open <strong>Edit project</strong> to change providers, models, voice, prompts or
-            optional steps.
-            <strong> Save changes</strong> keeps a new revision without starting generation. Then
-            use <strong>Rebuild affected outputs</strong> to review the required work and cost
-            before starting. Finished outputs remain available in <strong>History</strong>.
+            Open the <strong>Edit</strong> tab and press <strong>Edit project</strong> to change
+            providers, models, voice, prompts or optional steps.
+            <strong> Save changes</strong> keeps a new revision without starting generation.
+            <strong> Rebuild affected outputs</strong>, beside it, reviews the required work and
+            cost before starting. Finished outputs remain available in the <strong>History</strong>{" "}
+            tab.
           </p>
           <p>
             Select a failed stage and open <strong>Error details</strong> to read the provider’s
-            message. Review <strong>Rebuild affected outputs</strong> to retry the necessary work.
-            Unchanged outputs are reused.
+            message. <strong>Retry stage</strong> keeps completed outputs; its menu offers a full
+            re-run of that section.
           </p>
         </>
       );

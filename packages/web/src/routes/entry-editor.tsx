@@ -1,7 +1,6 @@
 import type { EntryCategory, EntryDraft } from "@app/slices/library/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ChevronLeftIcon } from "lucide-react";
 import { useId, useState } from "react";
 import type { FieldError } from "@/api";
 import { removeEntry, saveEntry } from "@/api";
@@ -10,6 +9,7 @@ import { ConfirmDialog } from "@/components/confirm";
 import { DetectedSlots } from "@/components/detected-slots";
 import { EditorActions } from "@/components/editor-actions";
 import { backLink, EditorNotice, EditorSkeleton, sheet } from "@/components/editor-states";
+import { PageBar } from "@/components/kit/page-bar";
 import { LabelledSwitch } from "@/components/labelled-switch";
 import { useLeaveWhenSaved } from "@/components/saved-tick";
 import { SlotBody } from "@/components/slot-body";
@@ -126,18 +126,11 @@ export function EntryEditorRoute({
   }
 
   return (
-    <div className="mx-auto max-w-[1440px]">
-      <Link
-        to="/entries"
-        search={{ category: draft.category }}
-        className="mb-[10px] inline-flex items-center gap-1 text-small text-ink2 hover:text-ink"
-      >
-        <ChevronLeftIcon aria-hidden="true" className="size-[14px]" />
-        Intros &amp; Outros
-      </Link>
-      <h1 className="mb-4 text-title font-bold tracking-[-0.01em]">
-        {entryId === undefined ? "New entry" : "Edit entry"}
-      </h1>
+    <div>
+      <PageBar
+        back={{ to: "/entries", label: "Intros & Outros", search: { category: draft.category } }}
+        title={entryId === undefined ? "New entry" : "Edit entry"}
+      />
 
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className={`${sheet} flex min-w-0 flex-col gap-[14px]`}>
@@ -231,7 +224,7 @@ export function EntryEditorRoute({
           />
         </div>
 
-        <div className={`${sheet} flex flex-col gap-3 lg:sticky lg:top-6`}>
+        <div className={`${sheet} flex flex-col gap-3 lg:sticky lg:top-16`}>
           <DetectedSlots
             slots={slots}
             body={draft.body}

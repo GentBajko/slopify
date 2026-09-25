@@ -8,7 +8,20 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it, vi } from "vitest";
 import { SchedulesRoute } from "@/routes/schedules";
-import { jsonAnswer, renderApp, renderRouted, testDeps } from "@/test-app";
+import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
+
+// Pause, Resume, Cancel and Delete live in each row's "More" menu.
+async function choose(user: ReturnType<typeof userEvent.setup>, action: string): Promise<void> {
+  const [more] = await screen.findAllByRole("button", { name: /^More for / });
+  if (!more) throw new Error("no schedule row menu");
+  await user.click(more);
+  await user.click(await screen.findByRole("menuitem", { name: action }));
+}
+
+// The form opens in a drawer from the toolbar.
+async function openNew(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  await user.click(await screen.findByRole("button", { name: "New schedule" }));
+}
 
 const templateId = "11111111-1111-4111-8111-111111111111";
 const scheduleId = "22222222-2222-4222-8222-222222222222";
@@ -38,7 +51,7 @@ it("shows schedules and sends a pause action with the current version", async ()
     return jsonAnswer({ ...summary, status: "paused", version: 2 })(request);
   });
   const user = userEvent.setup();
-  renderApp(
+  renderRouted(
     <SchedulesRoute />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [summary] }),
@@ -50,7 +63,7 @@ it("shows schedules and sends a pause action with the current version", async ()
   );
   await screen.findByText("Morning stories");
   expect(screen.getByText(/Daily at 09:00/)).toBeTruthy();
-  await user.click(screen.getByRole("button", { name: "Pause" }));
+  await choose(user, "Pause");
   await waitFor(() => expect(pause).toHaveBeenCalledOnce());
   if (pauseRequest === undefined) throw new Error("pause request was not captured");
   expect(pauseRequest.method).toBe("POST");
@@ -60,7 +73,7 @@ it("shows schedules and sends a pause action with the current version", async ()
 it("does not submit a second independently identified schedule while first is pending", async () => {
   const bodies: { id: string }[] = [];
   const user = userEvent.setup();
-  renderApp(
+  renderRouted(
     <SchedulesRoute />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [] }),
@@ -73,6 +86,7 @@ it("does not submit a second independently identified schedule while first is pe
       },
     }),
   );
+  await openNew(user);
   await user.type(screen.getByLabelText("Name"), "Duplicated");
   await screen.findByRole("option", { name: "Stories · v1" });
   await user.selectOptions(screen.getByLabelText("Template"), templateId);
@@ -81,7 +95,7 @@ it("does not submit a second independently identified schedule while first is pe
 });
 it("shows failed Pause transport errors", async () => {
   const user = userEvent.setup();
-  renderApp(
+  renderRouted(
     <SchedulesRoute />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [summary] }),
@@ -90,7 +104,7 @@ it("shows failed Pause transport errors", async () => {
         Response.json({ title: "Pause failed", detail: "Disk unavailable" }, { status: 500 }),
     }),
   );
-  await user.click(await screen.findByRole("button", { name: "Pause" }));
+  await choose(user, "Pause");
   expect(await screen.findByRole("alert")).toHaveProperty(
     "textContent",
     expect.stringContaining("Disk unavailable"),
@@ -100,7 +114,7 @@ it("shows failed Pause transport errors", async () => {
 it("refreshes schedule state when an action commits but its response is lost", async () => {
   let committed = false;
   const user = userEvent.setup();
-  renderApp(
+  renderRouted(
     <SchedulesRoute />,
     testDeps({
       "GET /api/schedules": (request) =>
@@ -114,18 +128,21 @@ it("refreshes schedule state when an action commits but its response is lost", a
       },
     }),
   );
-  await user.click(await screen.findByRole("button", { name: "Pause" }));
+  await choose(user, "Pause");
 
   expect(await screen.findByRole("alert")).toHaveProperty(
     "textContent",
     expect.stringContaining("Connection lost after save"),
   );
-  expect(await screen.findByRole("button", { name: "Resume" })).toBeTruthy();
+  await user.click(
+    (await screen.findAllByRole("button", { name: /^More for / }))[0] as HTMLElement,
+  );
+  expect(await screen.findByRole("menuitem", { name: "Resume" })).toBeTruthy();
 });
 it("resolves one-off Run at in the selected timezone", async () => {
   const bodies: { cadence: { at: string } }[] = [];
   const user = userEvent.setup();
-  renderApp(
+  renderRouted(
     <SchedulesRoute />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [] }),
@@ -138,14 +155,15 @@ it("resolves one-off Run at in the selected timezone", async () => {
       },
     }),
   );
+  await openNew(user);
   await user.type(screen.getByLabelText("Name"), "Time test");
   await screen.findByRole("option", { name: "Stories · v1" });
   await user.selectOptions(screen.getByLabelText("Template"), templateId);
   await user.selectOptions(screen.getByLabelText("Cadence"), "once");
   const { fireEvent } = await import("@testing-library/react");
   fireEvent.change(screen.getByLabelText("Run at"), { target: { value: "2027-01-15T12:00" } });
-  await user.clear(screen.getByLabelText(/Timezone/));
-  await user.type(screen.getByLabelText(/Timezone/), "America/New_York");
+  await user.clear(screen.getByLabelText("Timezone"));
+  await user.type(screen.getByLabelText("Timezone"), "America/New_York");
   await user.click(screen.getByRole("button", { name: "Save schedule" }));
   await waitFor(() => expect(bodies).toHaveLength(1));
   expect(bodies[0]?.cadence.at).toBe("2027-01-15T17:00:00.000Z");
@@ -154,7 +172,7 @@ it("resolves one-off Run at in the selected timezone", async () => {
 it("rejects an invalid recurring timezone before submission", async () => {
   const create = vi.fn(() => Response.json(summary));
   const user = userEvent.setup();
-  renderApp(
+  renderRouted(
     <SchedulesRoute />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [] }),
@@ -164,11 +182,12 @@ it("rejects an invalid recurring timezone before submission", async () => {
       "POST /api/schedules": create,
     }),
   );
+  await openNew(user);
   await user.type(screen.getByLabelText("Name"), "Bad timezone");
   await screen.findByRole("option", { name: "Stories · v1" });
   await user.selectOptions(screen.getByLabelText("Template"), templateId);
-  await user.clear(screen.getByLabelText(/Timezone/));
-  await user.type(screen.getByLabelText(/Timezone/), "Mars/Olympus");
+  await user.clear(screen.getByLabelText("Timezone"));
+  await user.type(screen.getByLabelText("Timezone"), "Mars/Olympus");
   await user.click(screen.getByRole("button", { name: "Save schedule" }));
 
   expect(await screen.findByRole("alert")).toHaveProperty(
@@ -194,7 +213,7 @@ it("edits the displayed version and retains values after conflict", async () => 
       { status: 409 },
     );
   });
-  renderApp(
+  renderRouted(
     <SchedulesRoute />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [summary] }),
@@ -220,7 +239,7 @@ it("preserves pinned template version and keyword text during a title edit", asy
     expect(await request.json()).toMatchObject({ templateVersion: 1, items });
     return Response.json({ ...summary, version: 2 });
   });
-  renderApp(
+  renderRouted(
     <SchedulesRoute />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [{ ...summary, items }] }),
@@ -242,7 +261,7 @@ it("requires confirmation before deletion and shows failures inside the dialog",
   const remove = vi.fn(() =>
     Response.json({ title: "Unavailable", detail: "Could not archive schedule" }, { status: 500 }),
   );
-  renderApp(
+  renderRouted(
     <SchedulesRoute />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [{ ...summary, status: "completed" }] }),
@@ -250,7 +269,7 @@ it("requires confirmation before deletion and shows failures inside the dialog",
       [`DELETE /api/schedules/${scheduleId}`]: remove,
     }),
   );
-  await user.click(await screen.findByRole("button", { name: "Delete" }));
+  await choose(user, "Delete");
   expect(remove).not.toHaveBeenCalled();
   await user.click(screen.getByRole("button", { name: "Delete schedule" }));
   await waitFor(() =>
@@ -260,7 +279,7 @@ it("requires confirmation before deletion and shows failures inside the dialog",
 it("requires confirmation before canceling a schedule", async () => {
   const user = userEvent.setup();
   const cancel = vi.fn(() => Response.json({ ...summary, status: "canceled", version: 2 }));
-  renderApp(
+  renderRouted(
     <SchedulesRoute />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [summary] }),
@@ -268,7 +287,7 @@ it("requires confirmation before canceling a schedule", async () => {
       [`POST /api/schedules/${scheduleId}/cancel`]: cancel,
     }),
   );
-  await user.click(await screen.findByRole("button", { name: "Cancel" }));
+  await choose(user, "Cancel");
   expect(cancel).not.toHaveBeenCalled();
   await user.click(screen.getByRole("button", { name: "Cancel schedule" }));
   await waitFor(() => expect(cancel).toHaveBeenCalledOnce());
@@ -276,7 +295,7 @@ it("requires confirmation before canceling a schedule", async () => {
 it("retries an uncertain create with the exact identity and input", async () => {
   const user = userEvent.setup();
   const bodies: unknown[] = [];
-  renderApp(
+  renderRouted(
     <SchedulesRoute />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [] }),
@@ -291,6 +310,7 @@ it("retries an uncertain create with the exact identity and input", async () => 
       },
     }),
   );
+  await openNew(user);
   await user.type(screen.getByLabelText("Name"), "Retried");
   await screen.findByRole("option", { name: "Stories · v1" });
   await user.selectOptions(screen.getByLabelText("Template"), templateId);
@@ -316,7 +336,7 @@ it("edits a variant without changing punctuation or multiline values in other va
     });
     return Response.json({ ...summary, version: 2 });
   });
-  renderApp(
+  renderRouted(
     <SchedulesRoute />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [{ ...summary, items }] }),
@@ -339,7 +359,7 @@ it("edits a variant without changing punctuation or multiline values in other va
 });
 
 it.each(["completed", "canceled"])("does not offer Edit for a %s schedule", async (status) => {
-  renderApp(
+  renderRouted(
     <SchedulesRoute />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [{ ...summary, status, nextRunAt: null }] }),
@@ -347,7 +367,7 @@ it.each(["completed", "canceled"])("does not offer Edit for a %s schedule", asyn
     }),
   );
   await screen.findByText("Morning stories");
-  expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Edit" }).hasAttribute("disabled")).toBe(true);
 });
 
 it("keeps deleted schedule history discoverable with project links and no live controls", async () => {
@@ -384,7 +404,7 @@ it("keeps deleted schedule history discoverable with project links and no live c
   );
 
   expect(await screen.findByText(/No active schedules/)).toBeTruthy();
-  await userEvent.setup().click(screen.getByText(/Deleted schedule history/));
+  await userEvent.setup().click(await screen.findByText(/^Deleted schedules ·/));
   expect(screen.getByText(/Deleted:/)).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
@@ -403,7 +423,7 @@ it("creates structured variants and refuses duplicate keyword names before submi
     });
     return Response.json(summary);
   });
-  renderApp(
+  renderRouted(
     <SchedulesRoute />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [] }),
@@ -413,6 +433,7 @@ it("creates structured variants and refuses duplicate keyword names before submi
       "POST /api/schedules": create,
     }),
   );
+  await openNew(user);
   await user.type(screen.getByLabelText("Name"), "Structured");
   await screen.findByRole("option", { name: "Stories · v1" });
   await user.selectOptions(screen.getByLabelText("Template"), templateId);
@@ -436,15 +457,19 @@ it("creates structured variants and refuses duplicate keyword names before submi
 
 it("explains that nonexistent one-off times are refused", async () => {
   const user = userEvent.setup();
-  renderApp(
+  renderRouted(
     <SchedulesRoute />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [] }),
-      "GET /api/project-templates": jsonAnswer({ templates: [] }),
+      "GET /api/project-templates": jsonAnswer({
+        templates: [{ id: templateId, name: "Stories", version: 1, updatedAt: summary.updatedAt }],
+      }),
     }),
   );
 
+  await openNew(user);
   await user.selectOptions(screen.getByLabelText("Cadence"), "once");
+  await user.click(screen.getByRole("button", { name: "About Timezone" }));
 
-  expect(screen.getByText(/nonexistent spring-forward times are refused/)).toBeTruthy();
+  expect(await screen.findByText(/nonexistent spring-forward times are refused/)).toBeTruthy();
 });

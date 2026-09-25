@@ -1,5 +1,7 @@
 import type { Format } from "@app/kernel/pipeline.js";
 import type { Output } from "@app/slices/storage/model.js";
+import { type ReactNode, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { BodyProps } from "./body.js";
 import { outputsOf } from "./body.js";
@@ -43,22 +45,58 @@ export function ImagesBody({ stage, project, outputs, actions, busy }: BodyProps
       ) : null}
 
       {groups.map((group) => (
-        <section key={group.name} className="flex flex-col gap-[10px]">
-          <EngravedLabel>{`${group.name} × ${String(group.images.length)}`}</EngravedLabel>
-          <div className="grid grid-cols-3 gap-2 min-[900px]:grid-cols-6">
-            {group.images.map((image) => (
-              <ImageTile
-                key={image.id}
-                image={image}
-                format={project.format}
-                actions={actions}
-                busy={busy}
-              />
-            ))}
-          </div>
-        </section>
+        <ImageGroup key={group.name} name={group.name} count={group.images.length}>
+          {(limit) =>
+            group.images
+              .slice(0, limit)
+              .map((image) => (
+                <ImageTile
+                  key={image.id}
+                  image={image}
+                  format={project.format}
+                  actions={actions}
+                  busy={busy}
+                />
+              ))
+          }
+        </ImageGroup>
       ))}
     </StageBody>
+  );
+}
+
+// Two rows of six, then "Show all": a group of sixty images no longer turns the Output tab
+// into a page of several thousand pixels. The cap is the reader's to lift.
+export const imageGroupCap = 12;
+
+function ImageGroup({
+  name,
+  count,
+  children,
+}: {
+  readonly name: string;
+  readonly count: number;
+  readonly children: (limit: number) => ReactNode;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const capped = count > imageGroupCap && !expanded;
+  return (
+    <section className="flex flex-col gap-[10px]">
+      <EngravedLabel>{`${name} × ${String(count)}`}</EngravedLabel>
+      <div className="grid grid-cols-3 gap-2 min-[900px]:grid-cols-6">
+        {children(capped ? imageGroupCap : count)}
+      </div>
+      {count > imageGroupCap ? (
+        <Button
+          variant="ghost"
+          aria-expanded={expanded}
+          className="self-start"
+          onClick={() => setExpanded((open) => !open)}
+        >
+          {expanded ? "Show fewer" : `Show all ${String(count)} images`}
+        </Button>
+      ) : null}
+    </section>
   );
 }
 
@@ -80,6 +118,7 @@ function ImageTile({
     <figure className="group relative m-0 overflow-hidden rounded-control border border-line bg-panel2">
       <img
         src={media?.url}
+        loading="lazy"
         alt={image.meta.prompt ?? `Slideshow image${place}`}
         // The image fades in as it lands, which is the grid's whole motion budget.
         className={cn(

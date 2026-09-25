@@ -47,8 +47,12 @@ export function TutorialRunner({
     entered.current = session.step;
     // Navigate on entry only. In particular, a successful prompt save owns its
     // delayed return to the list; the tutorial must not pull that editor back open.
-    if (step.page === "settings" && location.pathname !== "/settings") {
-      void navigate({ to: "/settings" });
+    if (step.page === "settings") {
+      // Keys and voices are separate Settings sections; open the one this step points at.
+      const section = step.id === "voice" ? "voices" : "providers";
+      if (location.pathname !== "/settings" || !location.searchStr.includes(`section=${section}`)) {
+        void navigate({ to: "/settings", search: { section } });
+      }
     }
     if (step.page === "article" || step.page === "image") {
       const id = step.page === "article" ? session.articleId : session.imageId;

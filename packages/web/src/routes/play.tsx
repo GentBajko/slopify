@@ -3,6 +3,9 @@ import { useNavigate } from "@tanstack/react-router";
 import { type KeyboardEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { UploadKind } from "@/api";
 import { useApp } from "@/app-context";
+import { ActionBar, StatusSlot } from "@/components/kit/action-bar";
+import { Drawer } from "@/components/kit/drawer";
+import { PageBar } from "@/components/kit/page-bar";
 import { Button } from "@/components/ui/button";
 import { usePlayDraft } from "@/lib/form-drafts";
 import { admission } from "@/play/admission";
@@ -13,10 +16,10 @@ import { DraftList } from "@/play/draft-list";
 import { focusPlayField, playFieldTarget } from "@/play/field-targets";
 import { OutputPreview, useWidePlayLayout } from "@/play/output-preview";
 import { OutputsSection } from "@/play/outputs-section";
+import { ReadinessRail } from "@/play/readiness-rail";
 import { ReviewSection } from "@/play/review-section";
 import { SectionNavigation } from "@/play/section-navigation";
-import { playSections } from "@/play/sections";
-import { SetupSummary } from "@/play/setup-summary";
+import { type PlaySection, playSections } from "@/play/sections";
 import type { PlayFormState, Upload } from "@/play/state";
 import { StyleSection } from "@/play/style-section";
 import { templateLibrary } from "@/play/template-library";
@@ -61,6 +64,9 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   const [touched, setTouched] = useState<ReadonlySet<string>>(new Set());
   const root = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
+  // The editor under the Review drawer: the last tab the user was on.
+  const lastEditor = useRef<Exclude<PlaySection, "review">>("content");
+  if (session.section !== "review") lastEditor.current = session.section;
   const routerNavigate = useNavigate();
   const touchedDraft = useRef(session.activeId);
   useLayoutEffect(() => {
@@ -232,6 +238,12 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
       void session.attach(kind, [file], key);
     },
   };
+  const editorSection: Exclude<PlaySection, "review"> =
+    session.section === "review" ? lastEditor.current : session.section;
+  const next = playSections[playSections.findIndex((item) => item.id === editorSection) + 1];
+  // Nothing here can be picked from a list that failed to arrive, so that failure is said
+  // once, in the action bar's reserved line, beside a save failure's.
+  const saveProblem = session.error ? `Couldn't save. ${session.error}` : loadError;
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: form-wide keyboard shortcut opens Review without starting a run.
     <div
@@ -242,49 +254,41 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
         if (field) setTouched((current) => new Set([...current, field]));
       }}
       data-play-grid="true"
-      className="mx-auto max-w-[1320px] pb-[calc(4rem+env(safe-area-inset-bottom))] [&_input:not([type=checkbox])]:min-h-10 [&_select]:min-h-10 [&_button]:min-h-10 [&_summary]:min-h-10 max-[1099px]:[&_button]:min-h-11 max-[1099px]:[&_input:not([type=checkbox])]:min-h-11 max-[1099px]:[&_select]:min-h-11 max-[1099px]:[&_summary]:min-h-11"
+      className="min-w-0 max-[1099px]:[&_button]:min-h-11 max-[1099px]:[&_input:not([type=checkbox])]:min-h-11 max-[1099px]:[&_select]:min-h-11 max-[1099px]:[&_summary]:min-h-11"
     >
-      <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="mb-1 text-[36px] font-bold tracking-[-0.01em]">New run</h1>
-          <p className="text-body text-ink2">
-            Create the article, choose the outputs, then review.
-          </p>
-        </div>
-        <DraftList />
-      </header>
-      {loadError ? <p className="mb-4 text-body text-red">{loadError}</p> : null}
+      <PageBar
+        title="New run"
+        meta={form.title.trim() === "" ? "Untitled draft" : form.title}
+        actions={<DraftList />}
+      />
       <SectionNavigation
         section={session.section}
+        underneath={editorSection}
         onNavigate={(section) => {
           void session.navigate(section);
         }}
       />
-      <div className="grid min-w-0 grid-cols-1 items-start gap-7 min-[1100px]:grid-cols-[minmax(0,1fr)_360px]">
+      {!wide ? <ReadinessRail compact form={form} errors={errors} onReveal={revealField} /> : null}
+      <div className="grid min-w-0 grid-cols-1 items-start gap-8 min-[1100px]:grid-cols-[minmax(0,1fr)_300px]">
         <section
-          data-tour={session.section === "content" ? "play-options" : undefined}
+          data-tour={editorSection === "content" ? "play-options" : undefined}
           className="min-w-0"
         >
-          <h2 ref={heading} tabIndex={-1} className="text-xl font-semibold">
-            {session.section === "style"
+          <h2
+            ref={session.section === "review" ? undefined : heading}
+            tabIndex={-1}
+            className="text-row font-semibold"
+          >
+            {editorSection === "style"
               ? "Make it look like yours."
-              : playSections.find((item) => item.id === session.section)?.label}
+              : playSections.find((item) => item.id === editorSection)?.label}
           </h2>
-          {!wide ? (
-            session.section === "style" ? (
-              <div className="mt-5">
-                <OutputPreview />
-              </div>
-            ) : (
-              <details className="my-5 rounded-control border border-line p-3">
-                <summary className="min-h-11 cursor-pointer text-small font-semibold">
-                  Preview · {form.format}
-                </summary>
-                <OutputPreview />
-              </details>
-            )
+          {!wide && editorSection === "style" ? (
+            <div className="mt-5">
+              <OutputPreview />
+            </div>
           ) : null}
-          {session.section === "content" ? (
+          {editorSection === "content" ? (
             <ContentSection
               {...controls}
               fields={fields}
@@ -294,7 +298,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
               }}
             />
           ) : null}
-          {session.section === "outputs" ? (
+          {editorSection === "outputs" ? (
             <OutputsSection
               {...controls}
               entries={choices.entries}
@@ -305,39 +309,59 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
               }}
             />
           ) : null}
-          {session.section === "style" ? <StyleSection problem={problem} /> : null}
-          {session.section === "review" ? (
-            <ReviewSection
-              fields={fields}
-              errors={errors}
-              problem={problem}
-              onReveal={revealField}
-            />
-          ) : (
-            <div className="mt-8 flex justify-end border-t border-line py-6">
-              <Button
-                variant="play"
-                onClick={() => {
-                  const next =
-                    playSections[playSections.findIndex((item) => item.id === session.section) + 1];
-                  if (next) void session.navigate(next.id);
-                }}
-              >
-                Continue to{" "}
-                {
-                  playSections[playSections.findIndex((item) => item.id === session.section) + 1]
-                    ?.label
-                }{" "}
-                →
-              </Button>
-            </div>
-          )}
+          {editorSection === "style" ? <StyleSection problem={problem} /> : null}
         </section>
-        <div className="flex min-w-0 flex-col gap-6 min-[1100px]:sticky min-[1100px]:top-6">
-          {wide ? <OutputPreview /> : null}
-          <SetupSummary form={form} blocker={blocker} onReveal={revealField} />
-        </div>
+        {wide ? (
+          <div className="flex min-w-0 flex-col gap-6 min-[1100px]:sticky min-[1100px]:top-16">
+            {editorSection === "style" ? <OutputPreview /> : null}
+            <ReadinessRail form={form} errors={errors} onReveal={revealField} />
+          </div>
+        ) : null}
       </div>
+      <ActionBar
+        status={
+          <StatusSlot tone={saveProblem ? "error" : "info"}>
+            {saveProblem ??
+              (blocker ? (
+                <>
+                  <span className="min-w-0 truncate" title={blocker.hint}>
+                    {blocker.hint}
+                  </span>
+                  <Button variant="ghost" onClick={() => revealField(blocker.field)}>
+                    Fix setup
+                  </Button>
+                </>
+              ) : undefined)}
+          </StatusSlot>
+        }
+      >
+        {/* Kept in place on Style, where there is no next tab, so Review and start never
+            moves. */}
+        <Button
+          variant="ghost"
+          className={next && next.id !== "review" ? undefined : "invisible"}
+          aria-hidden={next && next.id !== "review" ? undefined : true}
+          tabIndex={next && next.id !== "review" ? undefined : -1}
+          onClick={() => {
+            if (next && next.id !== "review") void session.navigate(next.id);
+          }}
+        >
+          Continue to {next && next.id !== "review" ? next.label : "Review"} →
+        </Button>
+        <Button variant="primary" aria-expanded={session.section === "review"} onClick={submit}>
+          Review and start
+        </Button>
+      </ActionBar>
+      <Drawer
+        open={session.section === "review"}
+        title="Review"
+        headingRef={heading}
+        onClose={() => {
+          void session.navigate(lastEditor.current);
+        }}
+      >
+        <ReviewSection fields={fields} errors={errors} problem={problem} onReveal={revealField} />
+      </Drawer>
     </div>
   );
 }

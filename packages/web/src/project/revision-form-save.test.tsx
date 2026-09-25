@@ -4,7 +4,7 @@ import { defaultSubtitles } from "@app/slices/subtitles/model.js";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
-import { jsonAnswer, renderApp, testDeps } from "@/test-app";
+import { jsonAnswer, openEditSection, renderApp, testDeps } from "@/test-app";
 import { revisionView } from "./revision-fixture.js";
 import { RevisionForm } from "./revision-form.js";
 import { RevisionWorkspace } from "./revision-workspace.js";
@@ -65,6 +65,7 @@ it("opens regenerated article text, keeps title-only saves generated, and retain
   const user = userEvent.setup();
   const saves = mount(generatedArticle());
   await user.click(screen.getByRole("button", { name: "Edit project" }));
+  await openEditSection("Article");
   const article = await screen.findByRole<HTMLTextAreaElement>("textbox", { name: "Article text" });
   expect(article.value).toBe("Newly regenerated article.");
   await user.type(screen.getByLabelText("Project title"), " renamed");
@@ -87,6 +88,7 @@ it.each([false, true])(
     const user = userEvent.setup();
     const saves = mount(generatedArticle());
     await user.click(screen.getByRole("button", { name: "Edit project" }));
+    await openEditSection("Article");
     const article = await screen.findByRole<HTMLTextAreaElement>("textbox", {
       name: "Article text",
     });
@@ -138,6 +140,7 @@ it.each([
     });
     await user.click(screen.getByRole("button", { name: "Edit project" }));
     await user.selectOptions(await screen.findByLabelText(`${source} source`), "off");
+    await openEditSection("Subtitles");
     expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "Subtitles" }).value).toBe(
       after,
     );

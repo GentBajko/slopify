@@ -1,19 +1,23 @@
 import type { ScheduleSummary } from "@app/slices/schedules/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import {
-  CalendarClockIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  PauseIcon,
-  PlayIcon,
-  XIcon,
-} from "lucide-react";
+import { ChevronDownIcon, ChevronUpIcon, EllipsisIcon, PlusIcon } from "lucide-react";
 import { type ReactElement, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { ConfirmDialog } from "@/components/confirm";
+import { StatusSlot } from "@/components/kit/action-bar";
+import { Drawer } from "@/components/kit/drawer";
+import { InfoTip } from "@/components/kit/info-tip";
+import { useToast } from "@/components/kit/toast";
+import { Lamp } from "@/components/lamp";
 import { RailGroup } from "@/components/rail";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   deleteSchedule,
   readSchedule,
@@ -24,6 +28,7 @@ import {
 import { ScheduleForm } from "@/schedules/form";
 import { formatScheduleDate } from "@/schedules/time";
 import { templatesQuery } from "@/templates/api";
+import { LibraryToolbar } from "./library.js";
 
 export function SchedulesRoute(): ReactElement {
   const { api } = useApp();
@@ -31,8 +36,9 @@ export function SchedulesRoute(): ReactElement {
   const schedules = useQuery(schedulesQuery(api));
   const templates = useQuery(templatesQuery(api));
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const notify = useToast();
   const [editing, setEditing] = useState<ScheduleSummary | null>(null);
+  const [creating, setCreating] = useState(false);
   const [formBusy, setFormBusy] = useState(false);
   const active = useRef(false);
   const liveSchedules = schedules.data?.filter((schedule) => schedule.deletedAt === null) ?? [];
@@ -60,108 +66,107 @@ export function SchedulesRoute(): ReactElement {
   ) => {
     if (active.current) return;
     active.current = true;
-    setNotice(null);
     setError(null);
     mutation.mutate(job);
   };
 
+  const formOpen = creating || editing !== null;
+  const closeForm = () => {
+    setEditing(null);
+    setCreating(false);
+    setError(null);
+  };
+  const status = error
+    ? ({ tone: "error", text: error } as const)
+    : schedules.error
+      ? ({ tone: "error", text: schedules.error.message } as const)
+      : templates.error
+        ? ({ tone: "error", text: templates.error.message } as const)
+        : undefined;
   return (
-    <div className="mx-auto max-w-[1200px] space-y-6">
-      <div>
-        <h1 className="flex items-center gap-2 text-title font-bold tracking-[-0.01em]">
-          <CalendarClockIcon aria-hidden="true" className="size-6 text-lamp-run" />
-          Schedules
-        </h1>
-        <p className="mt-2 max-w-[70ch] text-body text-ink2">
-          Run a saved template on this machine at a predictable local time. Each schedule keeps a
-          durable history and creates fresh projects, so changing a template never rewrites an old
-          run.
+    <div>
+      <LibraryToolbar
+        action={
+          <Button
+            type="button"
+            onClick={() => {
+              setEditing(null);
+              setCreating(true);
+              setError(null);
+            }}
+            disabled={formOpen || templates.data?.length === 0}
+          >
+            <PlusIcon aria-hidden="true" className="size-[14px]" />
+            New schedule
+          </Button>
+        }
+      >
+        <p className="flex items-center gap-1 text-small text-ink2">
+          {templates.data?.length === 0 ? (
+            <>
+              Save a template in{" "}
+              <Link className="underline" to="/templates">
+                Templates
+              </Link>{" "}
+              before creating a schedule.
+            </>
+          ) : (
+            "Runs a saved template on this machine at a local time."
+          )}
+          <InfoTip label="Schedules">
+            <p>
+              Each schedule keeps a durable history and creates fresh projects, so changing a
+              template never rewrites an old run. Schedules use the selected template version and
+              never include uploaded media.
+            </p>
+          </InfoTip>
         </p>
-      </div>
-      <ScheduleForm
-        onBusy={setFormBusy}
-        key={editing?.id ?? "new"}
-        editing={editing}
-        onCancel={() => {
-          setEditing(null);
-          setError(null);
-        }}
-        templates={templates.data ?? []}
-        pending={mutation.isPending}
-        onCreated={() => {
-          setNotice(
-            editing
-              ? "Schedule updated."
-              : "Schedule saved. It will run automatically while Slopify is open.",
-          );
-          setEditing(null);
-          setError(null);
-          void queryClient.invalidateQueries({ queryKey: schedulesKey });
-        }}
-        onError={(message) => {
-          setError(message);
-          void queryClient.invalidateQueries({ queryKey: schedulesKey });
-        }}
-      />
-      {templates.data?.length === 0 ? (
-        <p className="text-small text-ink2">
-          Save a template in{" "}
-          <a className="underline" href="/templates">
-            Templates
-          </a>{" "}
-          before creating a schedule.
-        </p>
-      ) : null}
-      {templates.error ? <p role="alert">{templates.error.message}</p> : null}
-      {schedules.error ? (
-        <p role="alert" className="text-red">
-          {schedules.error.message}
-        </p>
-      ) : null}
-      {error ? (
-        <p role="alert" className="text-red">
-          {error}
-        </p>
-      ) : null}
-      {notice ? (
-        <p role="status" className="text-lamp-run">
-          {notice}
-        </p>
-      ) : null}
+      </LibraryToolbar>
+      <StatusSlot tone={formOpen ? "info" : (status?.tone ?? "info")} className="mb-2">
+        {formOpen ? undefined : status?.text}
+      </StatusSlot>
       {schedules.data && liveSchedules.length === 0 ? (
         <RailGroup>
           <p className="px-4 py-6 text-ink2">
             {deletedSchedules.length === 0
               ? "No schedules yet. Your first one can be a one-off run or a recurring series."
-              : "No active schedules. Create one above or review deleted history below."}
+              : "No active schedules. Create one or review deleted history below."}
           </p>
         </RailGroup>
       ) : null}
-      <section className="space-y-3" aria-label="Saved schedules">
-        {liveSchedules.map((schedule) => (
-          <ScheduleCard
-            key={schedule.id}
-            schedule={schedule}
-            pending={mutation.isPending || formBusy || editing !== null}
-            onAction={act}
-            error={error}
-            onEdit={() => {
-              setEditing(schedule);
-              setError(null);
-              window.scrollTo?.({ top: 0 });
-            }}
-          />
-        ))}
-      </section>
+      {liveSchedules.length > 0 ? (
+        <section
+          className="overflow-hidden rounded-panel border border-line bg-panel"
+          aria-label="Saved schedules"
+        >
+          {liveSchedules.map((schedule) => (
+            <ScheduleCard
+              key={schedule.id}
+              schedule={schedule}
+              pending={mutation.isPending || formBusy || formOpen}
+              onAction={act}
+              error={error}
+              onEdit={() => {
+                setCreating(false);
+                setEditing(schedule);
+                setError(null);
+              }}
+            />
+          ))}
+        </section>
+      ) : null}
       {deletedSchedules.length > 0 ? (
-        <details className="rounded-panel border border-line bg-panel p-4">
-          <summary className="cursor-pointer font-semibold">
-            Deleted schedule history · {deletedSchedules.length}
+        <details className="mt-4">
+          <summary className="cursor-pointer text-small font-semibold text-ink2">
+            Deleted schedules · {deletedSchedules.length}
           </summary>
           <p className="mt-2 text-small text-ink2">
             Deleted schedules cannot run again. Their occurrence history remains available here.
           </p>
-          <section className="mt-4 space-y-3" aria-label="Deleted schedules">
+          <section
+            className="mt-2 overflow-hidden rounded-panel border border-line bg-panel"
+            aria-label="Deleted schedules"
+          >
             {deletedSchedules.map((schedule) => (
               <ScheduleCard
                 key={schedule.id}
@@ -175,6 +180,37 @@ export function SchedulesRoute(): ReactElement {
           </section>
         </details>
       ) : null}
+      <Drawer
+        open={formOpen}
+        title={editing ? "Edit schedule" : "New schedule"}
+        onClose={() => {
+          if (!formBusy) closeForm();
+        }}
+      >
+        <ScheduleForm
+          onBusy={setFormBusy}
+          key={editing?.id ?? "new"}
+          editing={editing}
+          onCancel={closeForm}
+          templates={templates.data ?? []}
+          pending={mutation.isPending}
+          error={error}
+          onCreated={() => {
+            notify(
+              editing
+                ? "Schedule updated."
+                : "Schedule saved. It will run automatically while Slopify is open.",
+              "success",
+            );
+            closeForm();
+            void queryClient.invalidateQueries({ queryKey: schedulesKey });
+          }}
+          onError={(message) => {
+            setError(message);
+            void queryClient.invalidateQueries({ queryKey: schedulesKey });
+          }}
+        />
+      </Drawer>
     </div>
   );
 }
@@ -213,72 +249,44 @@ function ScheduleCard({
       : schedule.cadence.kind === "daily"
         ? `Daily at ${schedule.cadence.time}`
         : `Weekly at ${schedule.cadence.time}`;
+  const live = schedule.deletedAt === null;
+  const editable = live && (schedule.status === "active" || schedule.status === "paused");
+  const lamp =
+    !live || schedule.status === "canceled"
+      ? "canceled"
+      : schedule.status === "paused"
+        ? "paused"
+        : schedule.status === "completed"
+          ? "done"
+          : "running";
   return (
-    <article className="rounded-panel border border-line bg-panel p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
+    <article className="border-b border-line px-4 py-[10px] last:border-b-0">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <Lamp state={lamp} className="animate-none" />
+        <div className="min-w-0 flex-1">
           <h2 className="break-words font-semibold">{schedule.name}</h2>
           <p className="text-small text-ink2">
             {cadence} · {schedule.timezone} · {schedule.items.length} variant
-            {schedule.items.length === 1 ? "" : "s"}
-          </p>
-          <p className="mt-1 text-small text-ink3">
+            {schedule.items.length === 1 ? "" : "s"} ·{" "}
             {schedule.deletedAt !== null
               ? `Deleted: ${formatScheduleDate(schedule.deletedAt, schedule.timezone)}`
               : schedule.nextRunAt === null
                 ? "No future run"
-                : `Next: ${formatScheduleDate(schedule.nextRunAt, schedule.timezone)}`}{" "}
-            · <span className="capitalize">{schedule.status}</span>
+                : `Next: ${formatScheduleDate(schedule.nextRunAt, schedule.timezone)}`}
           </p>
-          <p className="text-small text-ink2">
+        </div>
+        <span className="engraved w-[76px] text-ink2 capitalize">{schedule.status}</span>
+        <InfoTip label={`${schedule.name} policy`}>
+          <p>
             Missed runs: {schedule.missedPolicy === "skip" ? "skip" : "run once on reopening"}.
             Overlap: skip. Spend ceiling:{" "}
             {schedule.spendLimitCents === null ? "not set" : `${schedule.spendLimitCents} cents`}.
           </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {schedule.deletedAt === null &&
-          (schedule.status === "active" || schedule.status === "paused") ? (
-            <Button type="button" disabled={pending} onClick={onEdit}>
+        </InfoTip>
+        <div className="flex items-center gap-1">
+          {live ? (
+            <Button type="button" disabled={pending || !editable} onClick={onEdit}>
               Edit
-            </Button>
-          ) : null}
-          {schedule.deletedAt === null && schedule.status === "active" ? (
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={pending}
-              onClick={() =>
-                onAction(() => scheduleAction(api, schedule.id, "pause", schedule.version))
-              }
-            >
-              <PauseIcon aria-hidden="true" className="size-4" />
-              Pause
-            </Button>
-          ) : null}
-          {schedule.deletedAt === null && schedule.status === "paused" ? (
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={pending}
-              onClick={() =>
-                onAction(() => scheduleAction(api, schedule.id, "resume", schedule.version))
-              }
-            >
-              <PlayIcon aria-hidden="true" className="size-4" />
-              Resume
-            </Button>
-          ) : null}
-          {schedule.deletedAt === null &&
-          (schedule.status === "active" || schedule.status === "paused") ? (
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={pending}
-              onClick={() => setConfirm("cancel")}
-            >
-              <XIcon aria-hidden="true" className="size-4" />
-              Cancel
             </Button>
           ) : null}
           <Button
@@ -294,16 +302,56 @@ function ScheduleCard({
             )}
             History
           </Button>
-          {schedule.deletedAt === null &&
-          (schedule.status === "canceled" || schedule.status === "completed") ? (
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={pending}
-              onClick={() => setConfirm("delete")}
-            >
-              Delete
-            </Button>
+          {live ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  aria-label={`More for ${schedule.name}`}
+                  className="size-8 p-0"
+                >
+                  <EllipsisIcon aria-hidden="true" className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {schedule.status === "paused" ? (
+                  <DropdownMenuItem
+                    disabled={pending || !live}
+                    onSelect={() =>
+                      onAction(() => scheduleAction(api, schedule.id, "resume", schedule.version))
+                    }
+                  >
+                    Resume
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    disabled={pending || !live || schedule.status !== "active"}
+                    onSelect={() =>
+                      onAction(() => scheduleAction(api, schedule.id, "pause", schedule.version))
+                    }
+                  >
+                    Pause
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  disabled={pending || !editable}
+                  onSelect={() => setConfirm("cancel")}
+                >
+                  Cancel
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={
+                    pending ||
+                    !live ||
+                    (schedule.status !== "canceled" && schedule.status !== "completed")
+                  }
+                  onSelect={() => setConfirm("delete")}
+                >
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : null}
         </div>
       </div>
@@ -336,7 +384,7 @@ function ScheduleCard({
         }}
       />
       {open ? (
-        <div className="mt-4 border-t border-line pt-3">
+        <div className="mt-3 border-t border-line pt-3 pl-6">
           {details.isPending ? (
             <p className="text-small text-ink3">Loading history…</p>
           ) : details.error ? (

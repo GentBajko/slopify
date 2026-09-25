@@ -120,7 +120,7 @@ it.each(["pending", "copying", "reattach", "ready"] as const)(
         ],
       }),
     });
-    await userEvent.click(screen.getByText("Drafts", { selector: "summary" }));
+    await userEvent.click(screen.getByRole("button", { name: "Drafts" }));
     await userEvent.click(await screen.findByRole("button", { name: "Image draft" }));
     await userEvent.click(screen.getByRole("button", { name: "Style" }));
     const frame = screen.getByRole("img", { name: "Subtitle style preview" });
@@ -129,10 +129,7 @@ it.each(["pending", "copying", "reattach", "ready"] as const)(
     );
     expect(screen.queryByLabelText("Caption sample")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
-    expect(
-      screen.getByText(/Preview · 16:9/, { selector: "summary" }).closest("details")?.open,
-    ).toBe(false);
-    await userEvent.click(screen.getByText(/Preview · 16:9/, { selector: "summary" }));
-    expect(screen.getAllByRole("img", { name: "Subtitle style preview" })).toHaveLength(1);
+    // The frame preview belongs to Style alone.
+    expect(screen.queryByRole("img", { name: "Subtitle style preview" })).toBeNull();
   },
 );

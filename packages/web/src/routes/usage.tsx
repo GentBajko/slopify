@@ -15,19 +15,13 @@ import { usageQuery } from "@/queries";
 // local, it is the user's own machine, and it is what makes the token totals checkable. The
 // per-model breakdown on the public counters is a different thing and was deferred on
 // 2026-09-03.
-export function UsageRoute() {
+// Rendered as the Usage section of Settings.
+export function UsageBoard() {
   const { api } = useApp();
   const usage = useQuery(usageQuery(api));
 
   return (
-    <div className="flex max-w-[1100px] flex-col gap-6">
-      <div>
-        <h1 className="mb-1 text-title font-bold tracking-[-0.01em]">Usage</h1>
-        <p className="text-body text-ink2">
-          This machine only. The same counters, anonymised, feed slopify.stream.
-        </p>
-      </div>
-
+    <div className="flex flex-col gap-6">
       {usage.error === null ? null : (
         <RailGroup>
           <p className="px-4 py-[14px] text-body text-red">{usage.error.message}</p>

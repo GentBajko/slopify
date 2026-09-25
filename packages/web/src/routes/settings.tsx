@@ -4,6 +4,9 @@ import { useEffect, useId, useState } from "react";
 import { readStorageUsage, saveAppSettings } from "@/api";
 import { useApp } from "@/app-context";
 import { CatalogueSettings } from "@/components/catalogue";
+import { PageBar } from "@/components/kit/page-bar";
+import { SectionHead } from "@/components/kit/section-head";
+import { useToast } from "@/components/kit/toast";
 import { ProviderKeys } from "@/components/provider-keys";
 import { Rail, RailGroup } from "@/components/rail";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
@@ -11,9 +14,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Voices } from "@/components/voices";
+import { cn } from "@/lib/utils";
 import { keys, settingsQuery } from "@/queries";
 import { fontsKey } from "@/subtitles/api";
 import { templatesKey } from "@/templates/api";
+import { UsageBoard } from "./usage";
 
 const storageQueryKey = ["storage-usage"] as const;
 export const portableMaxUploadBytes = 100 * 1024 * 1024;
@@ -57,29 +62,94 @@ export function gapProblem(value: string): string | undefined {
     : `The silence gap is a whole number of seconds between 0 and ${String(silenceGapSecondsMax)}.`;
 }
 
-// Keys, voices, and the two playback values, without ceremony.
-export function SettingsRoute() {
+export const settingsSections = [
+  { id: "providers", label: "Providers" },
+  { id: "voices", label: "Voices" },
+  { id: "models", label: "Models" },
+  { id: "playback", label: "Playback & appearance" },
+  { id: "storage", label: "Backup & storage" },
+  { id: "usage", label: "Usage" },
+] as const;
+
+export type SettingsSection = (typeof settingsSections)[number]["id"];
+
+export function settingsSectionOf(value: unknown): SettingsSection {
+  return settingsSections.find((section) => section.id === value)?.id ?? "providers";
+}
+
+// One section on screen at a time, picked from the list on the left. Each section is a dense
+// list; explanations sit behind the info buttons beside what they explain.
+export function SettingsRoute({
+  section = "providers",
+  onSection = () => {},
+}: {
+  readonly section?: SettingsSection;
+  readonly onSection?: (section: SettingsSection) => void;
+}) {
   const { api } = useApp();
+  const current = settingsSections.find((item) => item.id === section) ?? settingsSections[0];
   return (
-    <div className="flex max-w-[1100px] flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-title font-bold tracking-[-0.01em]">Settings</h1>
-          <p className="mt-1 text-small text-ink2">
-            Provider readiness is checked again before each run.
-          </p>
-        </div>
-        <Button asChild variant="ghost">
-          <a href={`${api.origin}/api/diagnostics`} download="slopify-diagnostics.json">
-            Download diagnostics
-          </a>
-        </Button>
+    <div>
+      <PageBar
+        title="Settings"
+        actions={
+          <Button asChild variant="ghost">
+            <a href={`${api.origin}/api/diagnostics`} download="slopify-diagnostics.json">
+              Download diagnostics
+            </a>
+          </Button>
+        }
+      />
+      <div className="grid min-w-0 gap-6 md:grid-cols-[200px_minmax(0,1fr)]">
+        <nav aria-label="Settings sections" className="min-w-0">
+          <ul className="flex gap-1 overflow-x-auto border-b border-line pb-2 [scrollbar-width:none] md:flex-col md:border-b-0 md:pb-0">
+            {settingsSections.map((item) => (
+              <li key={item.id} className="shrink-0">
+                <button
+                  type="button"
+                  aria-current={item.id === section ? "page" : undefined}
+                  onClick={() => onSection(item.id)}
+                  className={cn(
+                    "flex min-h-9 w-full items-center rounded-control px-3 text-left whitespace-nowrap",
+                    item.id === section
+                      ? "bg-panel2 font-semibold text-ink shadow-[inset_2px_0_0_var(--color-lamp-run)]"
+                      : "text-ink2 hover:bg-panel2 hover:text-ink",
+                  )}
+                >
+                  {item.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <section aria-label={current.label} className="min-w-0">
+          {section === "providers" ? (
+            <SectionHead
+              title="Providers"
+              info="Provider readiness is checked again before each run. Keys stay on this machine and go only to the provider they belong to."
+            />
+          ) : null}
+          {section === "providers" ? <ProviderKeys /> : null}
+          {section === "voices" ? (
+            <SectionHead
+              title="Voices"
+              info="A wrong voice ID is discovered when the audio stage uses it."
+            />
+          ) : null}
+          {section === "voices" ? <Voices /> : null}
+          {section === "models" ? <CatalogueSettings /> : null}
+          {section === "playback" ? <SectionHead title="Playback & appearance" /> : null}
+          {section === "playback" ? <Playback /> : null}
+          {section === "storage" ? <StorageTools /> : null}
+          {section === "usage" ? (
+            <SectionHead
+              title="Usage"
+              info="This machine only. The same counters, anonymised, feed slopify.stream."
+            />
+          ) : null}
+          {section === "usage" ? <UsageBoard /> : null}
+        </section>
       </div>
-      <ProviderKeys />
-      <Voices />
-      <CatalogueSettings />
-      <Playback />
-      <StorageTools />
     </div>
   );
 }
@@ -93,18 +163,16 @@ function StorageTools() {
     staleTime: 30_000,
   });
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
+  const notify = useToast();
   const [error, setError] = useState<string | null>(null);
 
   async function importBackup(file: File): Promise<void> {
     if (file.size === 0 || file.size > portableMaxUploadBytes) {
-      setNotice(null);
       setError("The backup must be between 1 byte and 100 MB.");
       return;
     }
     setBusy(true);
     setError(null);
-    setNotice(null);
     try {
       const response = await api.fetch(`${api.origin}/api/storage/import`, {
         method: "PUT",
@@ -119,8 +187,9 @@ function StorageTools() {
         stagedFiles?: number;
       };
       if (!response.ok) throw new Error(body.detail ?? "The backup could not be imported.");
-      setNotice(
+      notify(
         `Imported ${body.templates ?? 0} template(s), ${body.fonts ?? 0} uploaded font(s), and ${body.stagedFiles ?? 0} staged file(s).${body.fontFallbacks ? ` ${body.fontFallbacks} missing legacy font reference(s) now use the default font.` : ""}`,
+        "success",
       );
       await refreshPortableImportQueries(queryClient);
     } catch (caught) {
@@ -133,13 +202,13 @@ function StorageTools() {
   async function cleanup(): Promise<void> {
     setBusy(true);
     setError(null);
-    setNotice(null);
     try {
       const response = await api.fetch(`${api.origin}/api/storage/cleanup`, { method: "POST" });
       const body = (await response.json()) as { orphanFiles?: number; stagedFiles?: number };
       if (!response.ok) throw new Error("Storage cleanup could not finish.");
-      setNotice(
+      notify(
         `Removed ${body.orphanFiles ?? 0} orphan project file(s) and ${body.stagedFiles ?? 0} stale staged file(s).`,
+        "success",
       );
       await queryClient.invalidateQueries({ queryKey: storageQueryKey });
     } catch (caught) {
@@ -150,19 +219,11 @@ function StorageTools() {
   }
 
   return (
-    <section
-      aria-labelledby="storage-tools-heading"
-      className="rounded-panel border border-line bg-panel p-4"
-    >
-      <h2 id="storage-tools-heading" className="font-semibold">
-        Backup and storage
-      </h2>
-      <p className="mt-1 max-w-[70ch] text-small text-ink2">
-        Backups include templates, prompts, voices, settings and staged assets. Provider keys and
-        telemetry are never included. Existing projects and their retained revisions stay untouched
-        when a backup is imported.
-      </p>
-      <div className="mt-3 flex flex-wrap gap-2">
+    <div>
+      <SectionHead
+        title="Backup & storage"
+        info="Backups include templates, prompts, voices, settings and staged assets. Provider keys and telemetry are never included. Existing projects and their retained revisions stay untouched when a backup is imported."
+      >
         <Button asChild disabled={busy}>
           <a href={`${api.origin}/api/storage/export`} download="slopify-backup.zip">
             Export backup
@@ -185,38 +246,45 @@ function StorageTools() {
         <Button type="button" variant="ghost" disabled={busy} onClick={() => void cleanup()}>
           Clean orphan files
         </Button>
-      </div>
-      {usage.data ? (
-        <div className="mt-4 border-t border-line pt-3 text-small text-ink2">
-          <p>
-            {formatBytes(usage.data.data)} stored · {formatBytes(usage.data.projects)} project files
-            · {formatBytes(usage.data.staging)} staged files
-          </p>
-          {usage.data.byProject.length > 0 ? (
-            <ul className="mt-2 space-y-1" aria-label="Storage by project">
-              {usage.data.byProject.slice(0, 5).map((project) => (
-                <li key={project.id} className="flex justify-between gap-4">
-                  <span className="truncate">{project.title}</span>
-                  <span className="shrink-0 tabular-nums">{formatBytes(project.bytes)}</span>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-      ) : usage.error ? (
-        <p className="mt-3 text-small text-ink2">Storage usage is unavailable.</p>
-      ) : null}
-      {notice ? (
-        <p role="status" className="mt-2 text-small text-lamp-run">
-          {notice}
-        </p>
-      ) : null}
+      </SectionHead>
+      <RailGroup>
+        {usage.data ? (
+          <>
+            <Rail className="flex-wrap justify-between gap-y-1 text-small text-ink2">
+              <span className="font-semibold text-ink">{formatBytes(usage.data.data)} stored</span>
+              <span className="tabular-nums">
+                {formatBytes(usage.data.projects)} project files · {formatBytes(usage.data.staging)}{" "}
+                staged files
+              </span>
+            </Rail>
+            {usage.data.byProject.length > 0 ? (
+              <ul aria-label="Storage by project">
+                {usage.data.byProject.slice(0, 5).map((project) => (
+                  <li
+                    key={project.id}
+                    className="flex justify-between gap-4 border-b border-line px-4 py-2 text-small text-ink2 last:border-b-0"
+                  >
+                    <span className="truncate">{project.title}</span>
+                    <span className="shrink-0 tabular-nums">{formatBytes(project.bytes)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </>
+        ) : usage.error ? (
+          <Rail className="text-small text-ink2">Storage usage is unavailable.</Rail>
+        ) : (
+          <Rail>
+            <span className="h-4 w-48 rounded-control bg-panel2" />
+          </Rail>
+        )}
+      </RailGroup>
       {error ? (
         <p role="alert" className="mt-2 text-small text-red">
           {error}
         </p>
       ) : null}
-    </section>
+    </div>
   );
 }
 
@@ -289,7 +357,6 @@ function Playback() {
   if (settings.data === undefined) {
     return (
       <RailGroup>
-        <h2 className="engraved border-b border-line px-4 py-3 text-ink3">Playback</h2>
         <Rail>
           <span className="h-4 w-48 rounded-control bg-panel2" />
           <span className="h-8 w-[72px] rounded-control bg-panel2" />
@@ -304,9 +371,7 @@ function Playback() {
 
   return (
     <RailGroup>
-      <h2 className="engraved border-b border-line px-4 py-3 text-ink3">Playback</h2>
-
-      <div className="grid grid-cols-[240px_1fr] items-center gap-[14px] border-b border-line px-4 py-[14px]">
+      <div className="grid sm:grid-cols-[240px_1fr] items-center gap-[14px] border-b border-line px-4 py-[14px]">
         <label htmlFor={gapId} className="font-semibold">
           Silence between segments
         </label>
@@ -345,7 +410,7 @@ function Playback() {
           >
             Save
           </Button>
-          {saved ? <SavedTick /> : null}
+          <span className="inline-flex w-[52px]">{saved ? <SavedTick /> : null}</span>
           {problem === undefined ? null : (
             <p id={gapErrorId} className="basis-full text-label text-red">
               {problem}
@@ -357,7 +422,7 @@ function Playback() {
         </div>
       </div>
 
-      <div className="grid grid-cols-[240px_1fr] items-center gap-[14px] px-4 py-[14px]">
+      <div className="grid items-center gap-[14px] px-4 py-[14px] sm:grid-cols-[240px_1fr]">
         <span id={appearanceLabelId} className="font-semibold">
           Appearance
         </span>

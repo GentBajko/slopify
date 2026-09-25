@@ -15,7 +15,7 @@ export function TutorialLauncher() {
       title="Start interactive tutorial"
     >
       <CircleHelpIcon className="size-4" aria-hidden="true" />
-      <span className="sr-only min-[1280px]:not-sr-only">Tutorial</span>
+      <span className="sr-only">Tutorial</span>
     </button>
   );
 }

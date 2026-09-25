@@ -1,8 +1,10 @@
 import type { Usage } from "@app/slices/telemetry/usage.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { jsonAnswer, problemAnswer, renderApp, testDeps } from "@/test-app";
-import { UsageRoute } from "./usage.js";
+import { SettingsRoute } from "./settings.js";
+import { UsageBoard as UsageRoute } from "./usage.js";
 
 afterEach(cleanup);
 
@@ -53,10 +55,14 @@ function deps(usage: Usage) {
 
 describe("the usage screen", () => {
   it("says whose numbers these are", async () => {
-    renderApp(<UsageRoute />, deps(empty));
+    const user = userEvent.setup();
+    renderApp(<SettingsRoute section="usage" />, deps(empty));
     expect(await screen.findByRole("heading", { name: "Usage" })).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "About Usage" }));
     expect(
-      screen.getByText("This machine only. The same counters, anonymised, feed slopify.stream."),
+      await screen.findByText(
+        "This machine only. The same counters, anonymised, feed slopify.stream.",
+      ),
     ).not.toBeNull();
   });
 

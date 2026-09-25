@@ -119,7 +119,7 @@ it("edits a provided article from the summary and preserves focus through autosa
     }),
   );
   await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
-  await userEvent.click(screen.getByRole("button", { name: "Edit Article" }));
+  await userEvent.click(screen.getByRole("button", { name: /^Article:/ }));
   await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Article text")));
   await userEvent.type(screen.getByLabelText("Article text"), "A provided article.");
   await screen.findByText("Saved");

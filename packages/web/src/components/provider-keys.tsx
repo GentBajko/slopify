@@ -4,20 +4,23 @@ import { useEffect, useId, useState } from "react";
 import { removeProviderKey, saveProviderKey } from "@/api";
 import { useApp } from "@/app-context";
 import { ConfirmDialog } from "@/components/confirm";
-import { CliProviderRow } from "@/components/provider-cli";
+import { InfoTip } from "@/components/kit/info-tip";
+import { Lamp } from "@/components/lamp";
+import { CliProviderRow, providerRow } from "@/components/provider-cli";
 import { Rail, RailGroup } from "@/components/rail";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { keys, providersQuery } from "@/queries";
 
 // The three families, in the order Settings draws them.
 const familyOrder: readonly ProviderFamily[] = ["llm", "tts", "image"];
 const familyTitles: Readonly<Record<ProviderFamily, string>> = {
-  llm: "API keys · LLM",
-  tts: "API keys · Text to speech",
-  image: "API keys · Image generation",
+  llm: "Text",
+  tts: "Speech",
+  image: "Images",
 };
 
 // The same constant slices/settings/keys.ts answers a save with: a fixed mask carrying
@@ -25,9 +28,7 @@ const familyTitles: Readonly<Record<ProviderFamily, string>> = {
 // `GET /api/providers` reports only whether a key is stored, never the mask.
 const keyMask = "••••••••••••";
 
-const row =
-  "grid grid-cols-[140px_1fr_auto] items-end gap-[14px] border-t border-line px-4 py-[14px] first:border-t-0";
-const header = "engraved border-t border-line px-4 py-3 text-ink3 first:border-t-0";
+const header = "engraved px-1 pb-2 text-ink3";
 
 // Every supported provider, keyed or not, found or not, so the user can see that a
 // provider exists and why it is unavailable.
@@ -56,35 +57,37 @@ export function ProviderKeys() {
   );
 
   return (
-    <RailGroup>
+    <div className="flex flex-col gap-6">
+      {fresh ? (
+        <p className="text-small text-ink2">Paste a key to make its provider selectable on Play.</p>
+      ) : null}
       {familyOrder.map((family) => (
-        <section
-          key={family}
-          data-tour={`keys-${family}`}
-          className="border-t border-line first:border-t-0"
-        >
-          <h2 className={header}>{familyTitles[family]}</h2>
-          {listed
-            .filter((provider) => provider.family === family)
-            .map((provider) =>
-              provider.readiness.kind === "cli" ? (
-                <CliProviderRow
-                  key={provider.id}
-                  provider={provider}
-                  readiness={provider.readiness}
-                />
-              ) : (
-                <KeyRow key={provider.id} provider={provider} hasKey={provider.readiness.hasKey} />
-              ),
-            )}
-          {family === "llm" && fresh ? (
-            <p className="border-t border-line px-4 pt-[10px] pb-[14px] text-small text-ink2">
-              Paste a key to make its provider selectable on Play.
-            </p>
-          ) : null}
+        <section key={family} data-tour={`keys-${family}`} aria-labelledby={`keys-${family}-title`}>
+          <h2 id={`keys-${family}-title`} className={header}>
+            {familyTitles[family]}
+          </h2>
+          <RailGroup>
+            {listed
+              .filter((provider) => provider.family === family)
+              .map((provider) =>
+                provider.readiness.kind === "cli" ? (
+                  <CliProviderRow
+                    key={provider.id}
+                    provider={provider}
+                    readiness={provider.readiness}
+                  />
+                ) : (
+                  <KeyRow
+                    key={provider.id}
+                    provider={provider}
+                    hasKey={provider.readiness.hasKey}
+                  />
+                ),
+              )}
+          </RailGroup>
         </section>
       ))}
-    </RailGroup>
+    </div>
   );
 }
 
@@ -160,13 +163,26 @@ function KeyRow({
     .join(" ");
 
   return (
-    <div data-ready={hasKey} className={row}>
-      <span id={nameId} className="pb-[7px] font-semibold">
-        {provider.displayName}
+    <div data-ready={hasKey} className={providerRow}>
+      <span className="flex min-w-0 items-center gap-1">
+        <span id={nameId} className="font-semibold">
+          {provider.displayName}
+        </span>
+        {provider.id === "inworld" ? (
+          <InfoTip label="Inworld keys">
+            <p>Paste the Base64 credentials from Inworld Settings → API Keys.</p>
+          </InfoTip>
+        ) : null}
+      </span>
+      <span className="flex items-center gap-2">
+        <Lamp state={hasKey ? "done" : "pending"} />
+        <span className={cn("engraved", hasKey ? "text-done" : "text-ink3")}>
+          {hasKey ? "Key saved" : "No key"}
+        </span>
       </span>
 
-      <div>
-        <Label htmlFor={fieldId} id={labelId} className="mb-[5px]">
+      <div className="min-w-0">
+        <Label htmlFor={fieldId} id={labelId} className="sr-only">
           API key
         </Label>
         <Input
@@ -174,22 +190,17 @@ function KeyRow({
           type="password"
           autoComplete="off"
           spellCheck={false}
-          // The visible label is "API key" on every row, so the accessible name carries
-          // the provider's name with it.
+          // The label is visually hidden on every row, so the accessible name carries the
+          // provider's name with it.
           aria-labelledby={`${nameId} ${labelId}`}
           aria-invalid={failure !== undefined}
           aria-describedby={described === "" ? undefined : described}
-          placeholder={hasKey ? keyMask : undefined}
+          placeholder={hasKey ? keyMask : "Paste API key"}
           value={draft}
           onChange={(event) => {
             setDraft(event.target.value);
           }}
         />
-        {provider.id === "inworld" ? (
-          <p className="mt-1 text-label text-ink3">
-            Paste the Base64 credentials from Inworld Settings → API Keys.
-          </p>
-        ) : null}
         {hasKey ? (
           <span id={storedId} className="sr-only">
             A key is stored for this provider.
@@ -212,18 +223,17 @@ function KeyRow({
         >
           Save
         </Button>
-        {saved ? <SavedTick /> : null}
-        {hasKey ? (
-          <Button
-            className="bg-transparent"
-            aria-label={`Remove ${provider.displayName} key`}
-            onClick={() => {
-              setAsking(true);
-            }}
-          >
-            Remove
-          </Button>
-        ) : null}
+        <span className="inline-flex w-[52px]">{saved ? <SavedTick /> : null}</span>
+        <Button
+          variant="ghost"
+          aria-label={`Remove ${provider.displayName} key`}
+          disabled={!hasKey}
+          onClick={() => {
+            setAsking(true);
+          }}
+        >
+          Remove
+        </Button>
       </div>
 
       <ConfirmDialog
@@ -245,13 +255,26 @@ function KeyRow({
 
 function SkeletonKeys() {
   return (
-    <RailGroup>
-      {[0, 1, 2, 3].map((line) => (
-        <Rail key={line}>
-          <span className="h-4 w-28 rounded-control bg-panel2" />
-          <span className="h-8 flex-1 rounded-control bg-panel2" />
-        </Rail>
+    <div className="flex flex-col gap-6" role="status" aria-label="Loading providers">
+      {(
+        [
+          ["llm", 4],
+          ["tts", 5],
+          ["image", 5],
+        ] as const
+      ).map(([family, count]) => (
+        <div key={family}>
+          <span className="mb-2 block h-3 w-16 rounded-control bg-panel2" />
+          <RailGroup>
+            {Array.from({ length: count }, (_, line) => `${family}-${line}`).map((row) => (
+              <Rail key={row} className="py-[10px]">
+                <span className="h-4 w-28 rounded-control bg-panel2" />
+                <span className="h-8 flex-1 rounded-control bg-panel2" />
+              </Rail>
+            ))}
+          </RailGroup>
+        </div>
       ))}
-    </RailGroup>
+    </div>
   );
 }

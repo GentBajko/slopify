@@ -216,19 +216,12 @@ it("polls every fifteen minutes without installing", async () => {
   expect(install).not.toHaveBeenCalled();
 });
 
-it("lifts the control above the footer instead of covering it", async () => {
-  const footer = document.createElement("footer");
-  footer.id = "app-footer";
-  document.body.append(footer);
-  vi.spyOn(footer, "getBoundingClientRect").mockReturnValue({
-    top: window.innerHeight - 50,
-    bottom: window.innerHeight,
-  } as DOMRect);
+it("sits in the header flow instead of floating over page content", async () => {
   renderApp(
     <UpdateWidget reload={vi.fn()} />,
     testDeps({ "GET /api/update": jsonAnswer(available) }),
   );
   await ready();
-  expect(control().style.bottom).toBe("62px");
-  footer.remove();
+  expect(control().className).not.toMatch(/\bfixed\b/);
+  expect(control().style.bottom).toBe("");
 });

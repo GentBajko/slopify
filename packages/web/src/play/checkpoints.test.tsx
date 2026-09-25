@@ -19,7 +19,7 @@ const choices = ["Before Audio", "Before Images", "Before Video / export"] as co
 it("selects each checkpoint and preserves it through saves, unrelated edits and reload", async () => {
   const h = reviewHarness();
   await h.prepare(generated);
-  await act(() => h.session().navigate("outputs"));
+  await act(() => h.session().navigate("review"));
   for (const name of choices) await userEvent.click(screen.getByRole("checkbox", { name }));
   await act(() => h.session().navigate("content"));
   await userEvent.type(screen.getByLabelText("Project title"), " changed");
@@ -27,7 +27,7 @@ it("selects each checkpoint and preserves it through saves, unrelated edits and 
   expect(h.session().view?.draft.document.form.checkpoints).toEqual(["audio", "images", "video"]);
   await act(() => h.restart());
   await waitFor(() => expect(h.session().status).toBe("saved"));
-  await act(() => h.session().navigate("outputs"));
+  await act(() => h.session().navigate("review"));
   for (const name of choices)
     expect((screen.getByRole("checkbox", { name }) as HTMLInputElement).checked).toBe(true);
   expect(h.requests.some((r) => r.url.endsWith("/start") || r.url.endsWith("/approve"))).toBe(
@@ -38,7 +38,7 @@ it("selects each checkpoint and preserves it through saves, unrelated edits and 
 it("disables unavailable generated stages and keeps audio-only export selectable", async () => {
   const h = reviewHarness();
   await h.prepare(suppliedDocument);
-  await act(() => h.session().navigate("outputs"));
+  await act(() => h.session().navigate("review"));
   for (const name of choices)
     expect((screen.getByRole("checkbox", { name }) as HTMLInputElement).disabled).toBe(true);
   await act(async () => {
@@ -62,7 +62,7 @@ it("lets users remove a saved checkpoint after its stage is disabled", async () 
     ...suppliedDocument,
     form: { ...suppliedDocument.form, checkpoints: ["audio"] },
   });
-  await act(() => h.session().navigate("outputs"));
+  await act(() => h.session().navigate("review"));
   await userEvent.click(screen.getByRole("checkbox", { name: "Before Audio" }));
   expect(h.session().document.form.checkpoints).toEqual([]);
 });
@@ -92,7 +92,7 @@ it("shows reviewed dependency closure and pending approval, then invalidates cha
   );
   expect(within(summary).getByText(/Approval required on the project page/)).not.toBeNull();
   await userEvent.click(within(summary).getByRole("button", { name: "Edit checkpoints" }));
-  expect(h.session().section).toBe("outputs");
+  expect(h.session().section).toBe("review");
   await userEvent.click(screen.getByRole("checkbox", { name: "Before Images" }));
   expect(h.session().review.valid).toBe(false);
 });
@@ -120,7 +120,7 @@ it.each(["checkpoints.audio", "checkpoints.0"])(
     await waitFor(() =>
       expect(document.activeElement?.getAttribute("data-play-field")).toBe("checkpoints.audio"),
     );
-    expect(h.session().section).toBe("outputs");
+    expect(h.session().section).toBe("review");
     expect(document.activeElement?.getAttribute("aria-invalid")).toBe("true");
   },
 );

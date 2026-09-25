@@ -35,11 +35,7 @@ export function RebuildReview({
     preview.providedReuseRequired.every((key) => confirmed.includes(key)) &&
     (preview.costs.unknown === 0 || unknown);
   return (
-    <section
-      aria-label="Review affected rebuild"
-      className="space-y-3 rounded-panel border border-line p-4"
-    >
-      <h2>Review affected rebuild</h2>
+    <section aria-label="Review affected rebuild" className="space-y-3">
       {preview.review?.inputChanges.length ? (
         <details open>
           <summary>Changed inputs since the previous revision</summary>
@@ -148,7 +144,7 @@ export function RebuildReview({
         </label>
       )}
       {feedback}
-      <div className="flex flex-wrap gap-3">
+      <div className="sticky bottom-[-16px] -mx-4 flex flex-wrap gap-3 border-t border-line bg-panel px-4 py-3">
         <Button
           variant="primary"
           type="button"

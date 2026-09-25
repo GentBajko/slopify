@@ -2,6 +2,7 @@ import { type FolderReply, folderReplySchema } from "@app/edge/http/folder-locat
 import { FolderOpen } from "lucide-react";
 import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { errorOf, problemOf } from "@/http";
 
 import { openRevisionFolder } from "./revision-api.js";
@@ -52,38 +53,51 @@ function FolderAction({ projectId, asset, folder = null }: Props) {
       setPending(false);
     }
   }
+  const shown = path !== undefined || error !== undefined;
   return (
-    <>
-      <button
-        type="button"
-        disabled={pending}
-        onClick={() => void open()}
-        title="Locate the saved output folder on the machine running Slopify"
-        className="inline-flex items-center gap-[5px] rounded-control text-small text-ink2 hover:text-ink disabled:opacity-50"
-      >
-        <FolderOpen aria-hidden="true" className="size-[14px] shrink-0" />
-        {pending ? "Locating…" : path ? "Locate folder" : "Open folder"}
-      </button>
-      {path !== undefined && (
-        <div role="status" className="basis-full min-w-0 text-small text-ink2">
-          <p>
-            This folder is on the machine running Slopify. Copy the path into a file manager on that
-            machine.
+    <Popover
+      open={shown}
+      onOpenChange={(open) => {
+        if (!open) {
+          setPath(undefined);
+          setError(undefined);
+        }
+      }}
+    >
+      <PopoverAnchor asChild>
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => void open()}
+          title="Locate the saved output folder on the machine running Slopify"
+          className="inline-flex items-center gap-[5px] rounded-control text-small text-ink2 hover:text-ink disabled:opacity-50"
+        >
+          <FolderOpen aria-hidden="true" className="size-[14px] shrink-0" />
+          {pending ? "Locating…" : path ? "Locate folder" : "Open folder"}
+        </button>
+      </PopoverAnchor>
+      <PopoverContent className="space-y-2">
+        {path !== undefined ? (
+          <div role="status" className="min-w-0 space-y-2 text-small text-ink2">
+            <p>
+              This folder is on the machine running Slopify. Copy the path into a file manager on
+              that machine.
+            </p>
+            <input
+              aria-label="Saved folder path"
+              readOnly
+              value={path}
+              onFocus={(event) => event.currentTarget.select()}
+              className="w-full min-w-0 rounded-control border border-line2 bg-transparent p-2 font-mono text-small text-ink"
+            />
+          </div>
+        ) : null}
+        {error !== undefined ? (
+          <p role="alert" className="text-small text-red">
+            {error}
           </p>
-          <input
-            aria-label="Saved folder path"
-            readOnly
-            value={path}
-            onFocus={(event) => event.currentTarget.select()}
-            className="w-full min-w-0 rounded-control border border-border bg-transparent p-2 font-mono text-small text-ink"
-          />
-        </div>
-      )}
-      {error !== undefined && (
-        <span role="alert" className="basis-full text-small text-red">
-          {error}
-        </span>
-      )}
-    </>
+        ) : null}
+      </PopoverContent>
+    </Popover>
   );
 }

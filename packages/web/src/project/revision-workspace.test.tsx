@@ -242,7 +242,7 @@ it("recovers a history restore conflict without requiring an open editor", async
       "GET /api/projects/p1": jsonAnswer(currentBody(revisionView("r3", "Restored"))),
     }),
   );
-  await user.click(screen.getByRole("button", { name: "History" }));
+  await user.click(screen.getByRole("tab", { name: "History" }));
   await user.click(await screen.findByRole("button", { name: /Earlier ·/ }));
   await user.click(await screen.findByRole("button", { name: "Restore this revision" }));
   await screen.findByText("Project changed.");

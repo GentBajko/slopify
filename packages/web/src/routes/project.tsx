@@ -1,20 +1,20 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
-import { BatchQueue } from "@/components/batch-queue";
-import { Rail, RailGroup } from "@/components/rail";
+import { BatchQueueCount } from "@/components/batch-queue";
+import { StatusSlot } from "@/components/kit/action-bar";
+import { Button } from "@/components/ui/button";
 import { StageBodyFor } from "@/project/bodies";
+import { checkpointRevisionKey, checkpointStatus } from "@/project/checkpoint-api";
 import { CheckpointPanel } from "@/project/checkpoint-panel";
 import { ProjectHeader } from "@/project/header";
-import { ProjectNavigation, ProjectProgress } from "@/project/navigation";
-import { RefusalLine } from "@/project/parts";
+import { RundownStrip } from "@/project/navigation";
 import { RevisionControlContext } from "@/project/revision-action-context";
 import { RevisionContentEditors } from "@/project/revision-content";
 import { RevisionForm } from "@/project/revision-form";
 import { RevisionMedia } from "@/project/revision-media";
-import { RevisionWorkspace } from "@/project/revision-workspace";
+import { type ProjectTab, RevisionWorkspace } from "@/project/revision-workspace";
 import { SaveProjectTemplate } from "@/project/save-template";
 import { StageRow } from "@/project/stage-row";
 import { finalOutput } from "@/project/summary";
@@ -39,6 +39,7 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
   const [selection, setSelection] = useState<
     { readonly projectId: string; readonly stage: StageKind } | undefined
   >();
+  const [tab, setTab] = useState<ProjectTab>("output");
   const tutorialStep = useTutorialProjectStep(projectId);
   const appliedTutorial = useRef<string | undefined>(undefined);
   useEffect(() => {
@@ -48,6 +49,7 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
     }
     if (project.data === undefined || appliedTutorial.current === tutorialStep) return;
     appliedTutorial.current = tutorialStep;
+    setTab("output");
     if (tutorialStep === "download")
       setSelection({
         projectId,
@@ -56,6 +58,18 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
   }, [tutorialStep, projectId, project.data]);
 
   useLiveProject(projectId, project.data?.revisionId ?? null);
+  // The same query the Checkpoints tab reads, so a held gate is counted on the tab itself.
+  const revisionId = project.data?.revisionId ?? null;
+  const gates = useQuery({
+    queryKey: checkpointRevisionKey(projectId, revisionId ?? ""),
+    queryFn: () => checkpointStatus(api, projectId),
+    enabled: revisionId !== null,
+    retry: false,
+  });
+  const held =
+    gates.data?.ok === true
+      ? gates.data.value.checkpoints.filter((gate) => gate.state === "held").length
+      : 0;
 
   if (project.error !== null) {
     return <p className="text-body text-red">{project.error.message}</p>;
@@ -77,15 +91,14 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
   const busy =
     summary.status === "running" || summary.status === "paused" || inFlight || actions.pending;
 
+  // A refused stage action is said inside that stage's own block, where the press happened;
+  // only the project's own controls report here.
+  const refusal = actions.refusal?.stage === undefined ? actions.refusal : undefined;
+
   return (
     <RevisionMedia projectId={projectId} revisionId={project.data.revisionId}>
       <RevisionControlContext value={project.data.revisionId !== null}>
-        <div className="mx-auto max-w-[1440px] space-y-5">
-          {/* The back link sits above a detail page's title. */}
-          <Link to="/" className="mb-[10px] block text-small text-ink2 hover:text-ink">
-            &lt; Projects
-          </Link>
-
+        <div>
           <div data-tour="project-controls">
             <ProjectHeader
               project={summary}
@@ -101,97 +114,121 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
                 title={summary.title}
               />
             </ProjectHeader>
-            {actions.notice === undefined ? null : (
-              <p role="status" className="break-words text-small text-ink2">
-                {actions.notice}
-              </p>
-            )}
-            {actions.refusal === undefined || actions.refusal.stage !== undefined ? null : (
-              // A refused cancel belongs to the project, not to one stage; every other
-              // refusal is drawn under the row whose control was pressed.
-              <Rail className="py-[10px]">
-                <RefusalLine message={actions.refusal.message} onDismiss={actions.dismissRefusal} />
-              </Rail>
-            )}
-            <RevisionWorkspace
-              projectId={projectId}
-              currentRevisionId={project.data.revisionId}
-              renderEditor={(props) => (
-                <RevisionForm
-                  {...props}
-                  renderContent={(contentProps) => (
-                    <RevisionContentEditors key={contentProps.view.revision.id} {...contentProps} />
-                  )}
-                />
+            {/* One reserved line for what the last action said: a refusal from any stage,
+                or the server's guidance after an accepted one. It is always here, so a
+                message arriving never pushes the rundown down. */}
+            <div className="mb-2 flex min-h-8 items-center gap-2">
+              {refusal === undefined ? (
+                <StatusSlot tone="info">{actions.notice}</StatusSlot>
+              ) : (
+                <>
+                  <StatusSlot tone="error">{refusal.message}</StatusSlot>
+                  <Button variant="ghost" onClick={actions.dismissRefusal}>
+                    Dismiss
+                  </Button>
+                </>
               )}
-            />
-          </div>
-          <BatchQueue />
-          <ProjectProgress stages={stages} project={summary} />
-          <CheckpointPanel
-            projectId={projectId}
-            revisionId={project.data.revisionId}
-            paused={summary.status === "paused"}
-            stages={stages}
-          />
-          <div className="grid items-start gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
-            <ProjectNavigation
+            </div>
+            <RundownStrip
               stages={stages}
               project={summary}
               outputs={outputs}
               selected={selected}
-              onSelect={selectStage}
+              onSelect={(stage) => {
+                selectStage(stage);
+                setTab("output");
+              }}
             />
-            <div className="min-w-0">
-              {stages.map((stage) => (
-                <StageRow
-                  key={stage.id}
-                  active={stage.kind === selected}
-                  stage={stage}
-                  project={summary}
-                  outputs={outputs}
-                  providers={providers.data?.providers ?? []}
-                  actions={actions}
-                >
-                  <StageBodyFor
+          </div>
+          <RevisionWorkspace
+            projectId={projectId}
+            currentRevisionId={project.data.revisionId}
+            tab={tab}
+            onTab={setTab}
+            trailing={<BatchQueueCount />}
+            {...(held === 0 ? {} : { checkpointBadge: `· ${String(held)} held` })}
+            renderEditor={(props) => (
+              <RevisionForm
+                {...props}
+                renderContent={(contentProps) => (
+                  <RevisionContentEditors key={contentProps.view.revision.id} {...contentProps} />
+                )}
+              />
+            )}
+            output={
+              <div className="min-w-0">
+                {stages.map((stage) => (
+                  <StageRow
+                    key={stage.id}
+                    active={stage.kind === selected}
                     stage={stage}
                     project={summary}
                     outputs={outputs}
+                    providers={providers.data?.providers ?? []}
                     actions={actions}
-                    busy={
-                      project.data.revisionId === null
-                        ? busy
-                        : actions.pending || stage.state === "running"
-                    }
-                  />
-                </StageRow>
-              ))}
-            </div>
-          </div>
+                  >
+                    <StageBodyFor
+                      stage={stage}
+                      project={summary}
+                      outputs={outputs}
+                      actions={actions}
+                      busy={
+                        project.data.revisionId === null
+                          ? busy
+                          : actions.pending || stage.state === "running"
+                      }
+                    />
+                  </StageRow>
+                ))}
+              </div>
+            }
+            {...(project.data.revisionId === null
+              ? {}
+              : {
+                  checkpoints: (
+                    <CheckpointPanel
+                      projectId={projectId}
+                      revisionId={project.data.revisionId}
+                      paused={summary.status === "paused"}
+                      stages={stages}
+                    />
+                  ),
+                })}
+          />
         </div>
       </RevisionControlContext>
     </RevisionMedia>
   );
 }
 
-// The final layout's shape, not a spinner.
+// The final layout's shape, not a spinner: page bar, status line, rundown, tab row, sheet.
 function SkeletonRundown() {
   return (
-    <div className="mx-auto max-w-[1440px] space-y-5" role="status" aria-label="Loading project">
-      <div className="h-28 rounded-panel bg-panel" />
-      <div className="h-24 rounded-panel border border-line bg-panel" />
-      <div className="grid items-start gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
-        <RailGroup>
-          {[0, 1, 2, 3, 4, 5].map((row) => (
-            <Rail key={row}>
-              <span className="size-[10px] rounded-full bg-panel2" />
-              <span className="h-4 w-24 rounded-control bg-panel2" />
-              <span className="ml-auto h-3 w-16 rounded-control bg-panel2" />
-            </Rail>
-          ))}
-        </RailGroup>
-        <div className="h-[560px] rounded-panel border border-line bg-panel" />
+    <div role="status" aria-label="Loading project">
+      <div className="flex min-h-12 items-center gap-3 pb-3">
+        <span className="h-4 w-20 rounded-control bg-panel2" />
+        <span className="h-5 w-64 rounded-control bg-panel2" />
+        <span className="ml-auto h-8 w-72 rounded-control bg-panel2" />
       </div>
+      <div className="mb-2 min-h-8" />
+      <div className="mb-4 grid h-[78px] grid-cols-[112px_repeat(6,minmax(0,1fr))] overflow-hidden rounded-panel border border-line bg-panel">
+        <span className="border-r border-line" />
+        {["research", "article", "audio", "images", "thumbnail", "video"].map((cell) => (
+          <span
+            key={cell}
+            className="flex items-start gap-2 border-r border-line p-3 last:border-r-0"
+          >
+            <span className="size-[10px] shrink-0 rounded-full bg-panel2" />
+            <span className="h-3 w-16 rounded-control bg-panel2" />
+          </span>
+        ))}
+      </div>
+      <div className="mb-4 flex h-10 gap-3 border-b border-line">
+        {[0, 1, 2, 3].map((tab) => (
+          <span key={tab} className="my-3 h-4 w-16 rounded-control bg-panel2" />
+        ))}
+      </div>
+      <div className="h-[560px] rounded-panel border border-line bg-panel" />
     </div>
   );
 }

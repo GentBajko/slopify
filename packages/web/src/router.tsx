@@ -1,20 +1,26 @@
 import type { EntryCategory, PromptKind } from "@app/slices/library/model.js";
-import { createRootRoute, createRoute, createRouter, useNavigate } from "@tanstack/react-router";
+import {
+  createRootRoute,
+  createRoute,
+  createRouter,
+  redirect,
+  useNavigate,
+} from "@tanstack/react-router";
 import { Shell } from "@/components/shell";
 import { categoryOf } from "@/lib/entry-options";
 import { kindOf } from "@/lib/prompt-kinds";
 import { usePlaySession } from "@/play/draft-context";
 import { EntriesRoute } from "@/routes/entries";
 import { EntryEditorRoute } from "@/routes/entry-editor";
+import { LibraryLayout } from "@/routes/library";
 import { PlayRoute } from "@/routes/play";
 import { ProjectRoute } from "@/routes/project";
 import { ProjectsRoute } from "@/routes/projects";
 import { PromptEditorRoute } from "@/routes/prompt-editor";
 import { PromptsRoute } from "@/routes/prompts";
 import { SchedulesRoute } from "@/routes/schedules";
-import { SettingsRoute } from "@/routes/settings";
+import { SettingsRoute, type SettingsSection, settingsSectionOf } from "@/routes/settings";
 import { TemplatesRoute } from "@/routes/templates";
-import { UsageRoute } from "@/routes/usage";
 
 // A code-based route tree: a handful of screens need no file convention, and the
 // generated tree a plugin would write would be one more artefact to keep honest.
@@ -52,14 +58,30 @@ const playRoute = createRoute({
   component: PlayRoute,
 });
 
-const templatesRoute = createRoute({
+// Prompts, Intros & Outros, Templates and Schedules are one destination with four tabs. The
+// layout is pathless, so the four keep their own URLs and every existing link still lands.
+const libraryRoute = createRoute({
   getParentRoute: () => rootRoute,
+  id: "_library",
+  component: LibraryLayout,
+});
+
+const libraryIndexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "library",
+  beforeLoad: () => {
+    throw redirect({ to: "/prompts", search: { kind: "article" } });
+  },
+});
+
+const templatesRoute = createRoute({
+  getParentRoute: () => libraryRoute,
   path: "templates",
   component: TemplatesPage,
 });
 
 const schedulesRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => libraryRoute,
   path: "schedules",
   component: SchedulesRoute,
 });
@@ -91,7 +113,7 @@ const projectRoute = createRoute({
 });
 
 const promptsRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => libraryRoute,
   path: "prompts",
   validateSearch: (search: Record<string, unknown>): KindSearch => ({ kind: kindOf(search.kind) }),
   component: PromptsPage,
@@ -114,7 +136,7 @@ const promptRoute = createRoute({
 });
 
 const entriesRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => libraryRoute,
   path: "entries",
   validateSearch: (search: Record<string, unknown>): CategorySearch => ({
     category: categoryOf(search.category),
@@ -138,17 +160,39 @@ const entryRoute = createRoute({
   component: EntryPage,
 });
 
+interface SettingsSearch {
+  readonly section?: SettingsSection;
+}
+
 const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "settings",
-  component: SettingsRoute,
+  validateSearch: (search: Record<string, unknown>): SettingsSearch =>
+    search.section === undefined ? {} : { section: settingsSectionOf(search.section) },
+  component: SettingsPage,
 });
 
+// Usage is a Settings section now; the old address still works.
 const usageRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "usage",
-  component: UsageRoute,
+  beforeLoad: () => {
+    throw redirect({ to: "/settings", search: { section: "usage" } });
+  },
 });
+
+function SettingsPage() {
+  const { section } = settingsRoute.useSearch();
+  const navigate = useNavigate();
+  return (
+    <SettingsRoute
+      section={section ?? "providers"}
+      onSection={(next) => {
+        void navigate({ to: "/settings", search: { section: next }, replace: true });
+      }}
+    />
+  );
+}
 
 function ProjectPage() {
   const { projectId } = projectRoute.useParams();
@@ -250,13 +294,16 @@ function useLeaveEntries(): (category: EntryCategory) => void {
 const routeTree = rootRoute.addChildren({
   projectsRoute,
   playRoute,
-  templatesRoute,
-  schedulesRoute,
+  libraryRoute: libraryRoute.addChildren({
+    promptsRoute,
+    entriesRoute,
+    templatesRoute,
+    schedulesRoute,
+  }),
+  libraryIndexRoute,
   projectRoute,
-  promptsRoute,
   newPromptRoute,
   promptRoute,
-  entriesRoute,
   newEntryRoute,
   entryRoute,
   settingsRoute,

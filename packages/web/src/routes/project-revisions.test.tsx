@@ -3,7 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { revisionView } from "@/project/revision-fixture";
-import { jsonAnswer, renderRouted, testOrigin } from "@/test-app";
+import { jsonAnswer, openProjectEditor, renderRouted, testOrigin } from "@/test-app";
 import { ProjectRoute } from "./project.js";
 import { deps, finished, output, selectProjectStage } from "./project-fixtures.js";
 
@@ -63,7 +63,7 @@ it("mounts revision editing and immutable media instead of direct legacy mutatio
   await selectProjectStage("Article");
   await screen.findByText("Retained prose.");
   expect(screen.queryByRole("button", { name: "Re-run" })).toBeNull();
-  await user.click(screen.getByRole("button", { name: "Edit project" }));
+  await openProjectEditor();
   await screen.findByRole("textbox", { name: "Project title" });
   expect(prepare).toHaveBeenCalledOnce();
   expect(start).not.toHaveBeenCalled();

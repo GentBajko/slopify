@@ -197,10 +197,10 @@ describe("the tutorial in the real app", () => {
     expect(router.state.location.pathname).toBe("/projects/actual-created-project");
     expect(
       screen
-        .getByRole("button", { name: "Edit project" })
+        .getByRole("navigation", { name: "Project stages" })
         .closest('[data-tour="project-controls"]'),
     ).not.toBeNull();
-    expect(screen.getByRole("button", { name: "Rebuild affected outputs" })).not.toBeNull();
+    expect(screen.getByRole("tab", { name: "Edit" })).not.toBeNull();
     expect(screen.queryByRole("button", { name: /^Run settings/ })).toBeNull();
     expect(
       requests.filter((request) => /^POST \/api\/drafts\/[^/]+\/start$/.test(request)),

@@ -4,6 +4,14 @@ import { expect, it, vi } from "vitest";
 import { jsonAnswer, renderApp, testDeps } from "../test-app";
 import { SchedulesRoute } from "./schedules";
 
+// Pause, Resume, Cancel and Delete live in each row's "More" menu.
+async function choose(user: ReturnType<typeof userEvent.setup>, action: string): Promise<void> {
+  const [more] = await screen.findAllByRole("button", { name: /^More for / });
+  if (!more) throw new Error("no schedule row menu");
+  await user.click(more);
+  await user.click(await screen.findByRole("menuitem", { name: action }));
+}
+
 const templateId = "11111111-1111-4111-8111-111111111111";
 const scheduleId = "22222222-2222-4222-8222-222222222222";
 const summary = {
@@ -44,7 +52,7 @@ it("shows schedules and sends a pause action with the current version", async ()
   );
   await screen.findByText("Morning stories");
   expect(screen.getByText(/Daily at 09:00/)).toBeTruthy();
-  await user.click(screen.getByRole("button", { name: "Pause" }));
+  await choose(user, "Pause");
   await waitFor(() => expect(pause).toHaveBeenCalledOnce());
   if (pauseRequest === undefined) throw new Error("pause request was not captured");
   expect(pauseRequest.method).toBe("POST");

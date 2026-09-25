@@ -1,10 +1,13 @@
 import type { DraftSummary } from "@app/slices/play-drafts/model.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronDownIcon } from "lucide-react";
 import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
 import { ConfirmDialog } from "@/components/confirm";
+import { useToast } from "@/components/kit/toast";
 import { Button } from "@/components/ui/button";
-import { startedAt } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn, startedAt } from "@/lib/utils";
 import { listPlayDrafts } from "./draft-api";
 import { usePlaySession } from "./draft-context";
 
@@ -15,6 +18,7 @@ export function DraftList(): ReactElement {
   const [confirm, setConfirm] = useState<DraftSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const notify = useToast();
   const list = useQuery({
     queryKey: ["play-drafts"],
     queryFn: async () => {
@@ -36,66 +40,26 @@ export function DraftList(): ReactElement {
         current?.filter((draft) => draft.id !== discardedId),
       );
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Couldn't discard draft");
+      const message = error instanceof Error ? error.message : "Couldn't discard draft";
+      setError(message);
+      notify(message, "error");
     } finally {
       setBusy(false);
     }
   };
   return (
-    <section aria-label="Drafts" className="min-w-0 max-w-full text-small">
-      <div className="flex flex-wrap items-start gap-2">
-        <details className="max-w-full rounded-control border border-line bg-panel px-3">
-          <summary className="flex min-h-10 cursor-pointer items-center font-semibold">
-            Drafts
-          </summary>
-          {list.isPending ? <p role="status">Loading drafts…</p> : null}
-          {list.error ? (
-            <p role="alert">
-              {list.error.message}
-              <button type="button" onClick={() => void list.refetch()}>
-                Retry
-              </button>
-            </p>
-          ) : null}
-          {list.data?.length === 0 ? <p>No saved drafts</p> : null}
-          <ul className="max-h-72 max-w-[320px] overflow-y-auto pb-2">
-            {list.data?.map((draft) => (
-              <li
-                key={draft.id}
-                className="flex flex-wrap items-center gap-2 border-t border-line py-2"
-              >
-                <div className="min-w-0 flex-1">
-                  <button
-                    type="button"
-                    className="w-full break-words text-left"
-                    onClick={() => void session.open(draft.id)}
-                  >
-                    <span className="block">{draft.title || "Untitled draft"}</span>
-                  </button>
-                  <time dateTime={draft.updatedAt} className="block text-label text-ink3">
-                    Last edited {startedAt(draft.updatedAt)}
-                  </time>
-                </div>
-                {!draft.readable ? (
-                  <p>Unsupported or corrupt draft. Try opening it to recover, or discard it.</p>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setConfirm(draft);
-                    setError(null);
-                  }}
-                  aria-label={`Discard ${draft.title || "Untitled draft"}`}
-                >
-                  Discard
-                </button>
-              </li>
-            ))}
-          </ul>
-        </details>
-        <Button onClick={() => void session.newDraft()}>New draft</Button>
-      </div>
-      <p role="status" className="mt-2 text-small text-ink3">
+    <section aria-label="Drafts" className="flex min-w-0 flex-wrap items-center gap-2 text-small">
+      <p
+        role="status"
+        className={cn(
+          "engraved min-w-[112px] text-right",
+          session.status === "saved"
+            ? "text-done"
+            : session.status === "error" || session.status === "conflict"
+              ? "text-red"
+              : "text-ink3",
+        )}
+      >
         {
           {
             unsaved: "Unsaved",
@@ -106,6 +70,99 @@ export function DraftList(): ReactElement {
           }[session.status]
         }
       </p>
+      {session.status === "error" ? (
+        <Button
+          variant="ghost"
+          onClick={() => {
+            if (!session.view && session.activeId && session.edited === 0)
+              void session.open(session.activeId);
+            else void session.flush();
+          }}
+        >
+          Retry
+        </Button>
+      ) : null}
+      {session.status === "conflict" ? (
+        <>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              if (session.activeId) void session.open(session.activeId);
+            }}
+          >
+            Reload saved draft
+          </Button>
+          <Button variant="ghost" onClick={() => void session.saveAsNew()}>
+            Save as a new draft
+          </Button>
+        </>
+      ) : null}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="ghost">
+            Drafts
+            <ChevronDownIcon aria-hidden="true" className="size-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-[340px] p-0" aria-label="Saved drafts">
+          {list.isPending ? (
+            <p role="status" className="px-3 py-2">
+              Loading drafts…
+            </p>
+          ) : null}
+          {list.error ? (
+            <p role="alert" className="px-3 py-2 text-red">
+              {list.error.message}{" "}
+              <Button variant="ghost" onClick={() => void list.refetch()}>
+                Retry
+              </Button>
+            </p>
+          ) : null}
+          {list.data?.length === 0 ? <p className="px-3 py-2">No saved drafts</p> : null}
+          {error ? (
+            <p role="alert" className="px-3 py-2 text-red">
+              {error}
+            </p>
+          ) : null}
+          <ul className="max-h-72 overflow-y-auto">
+            {list.data?.map((draft) => (
+              <li
+                key={draft.id}
+                className="flex flex-wrap items-center gap-2 border-t border-line px-3 py-2 first:border-t-0"
+              >
+                <div className="min-w-0 flex-1">
+                  <button
+                    type="button"
+                    className="w-full break-words text-left text-ink hover:underline"
+                    onClick={() => void session.open(draft.id)}
+                  >
+                    <span className="block">{draft.title || "Untitled draft"}</span>
+                  </button>
+                  <time dateTime={draft.updatedAt} className="block text-label text-ink3">
+                    Last edited {startedAt(draft.updatedAt)}
+                  </time>
+                </div>
+                {!draft.readable ? (
+                  <p className="basis-full text-label text-amber">
+                    Unsupported or corrupt draft. Try opening it to recover, or discard it.
+                  </p>
+                ) : null}
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setConfirm(draft);
+                    setError(null);
+                  }}
+                  aria-label={`Discard ${draft.title || "Untitled draft"}`}
+                >
+                  Discard
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </PopoverContent>
+      </Popover>
+      <Button onClick={() => void session.newDraft()}>New draft</Button>
       <ConfirmDialog
         open={confirm !== null}
         title="Discard draft"
@@ -117,35 +174,6 @@ export function DraftList(): ReactElement {
           if (!busy) setConfirm(null);
         }}
       />
-      {error ? <p role="alert">{error}</p> : null}
-      {session.error ? <p role="alert">Couldn't save. {session.error}</p> : null}
-      {session.status === "error" ? (
-        <button
-          type="button"
-          onClick={() => {
-            if (!session.view && session.activeId && session.edited === 0)
-              void session.open(session.activeId);
-            else void session.flush();
-          }}
-        >
-          Retry
-        </button>
-      ) : null}
-      {session.status === "conflict" ? (
-        <>
-          <button
-            type="button"
-            onClick={() => {
-              if (session.activeId) void session.open(session.activeId);
-            }}
-          >
-            Reload saved draft
-          </button>
-          <button type="button" onClick={() => void session.saveAsNew()}>
-            Save as a new draft
-          </button>
-        </>
-      ) : null}
     </section>
   );
 }

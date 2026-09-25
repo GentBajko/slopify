@@ -10,7 +10,7 @@ import type { AppDeps } from "@/app-context";
 import type { EventSourceLike } from "@/events";
 import { revisionView } from "@/project/revision-fixture";
 import type { Answer } from "@/test-app";
-import { fakeFetch, jsonAnswer, renderRouted, testOrigin } from "@/test-app";
+import { fakeFetch, jsonAnswer, openProjectEditor, renderRouted, testOrigin } from "@/test-app";
 import { createVersionWatch, watchingFetch } from "@/version";
 import { ProjectRoute } from "./project.js";
 import { selectProjectStage } from "./project-fixtures.js";
@@ -168,7 +168,7 @@ describe("the page under a live run", () => {
   it("refetches current configuration on project.updated while retaining the open revision draft", async () => {
     const server: Server = { landed: 0, video: "pending", textModel: "model-before" };
     const { source, reads } = mount(server);
-    await userEvent.click(await screen.findByRole("button", { name: "Edit project" }));
+    await openProjectEditor();
     const model = await screen.findByLabelText("Text model");
     expect((model as HTMLInputElement).value).toBe("model-before");
     const before = reads();
@@ -177,7 +177,7 @@ describe("the page under a live run", () => {
     await waitFor(() => expect(reads()).toBe(before + 1));
     expect((screen.getByLabelText("Text model") as HTMLSelectElement).value).toBe("model-before");
     await userEvent.click(screen.getByRole("button", { name: "Discard changes" }));
-    await userEvent.click(screen.getByRole("button", { name: "Edit project" }));
+    await openProjectEditor();
     expect(((await screen.findByLabelText("Text model")) as HTMLSelectElement).value).toBe(
       "model-after",
     );

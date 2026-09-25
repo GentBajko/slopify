@@ -10,7 +10,7 @@ import { NarrationEditor } from "./narration-editor.js";
 import { revisionFileUrl } from "./revision-api.js";
 import { captionNarrationDuration } from "./revision-caption-duration.js";
 import { RevisionUpload } from "./revision-upload.js";
-import type { EditorProps } from "./revision-workspace.js";
+import type { EditorProps, EditSection } from "./revision-workspace.js";
 
 const timing = z.object({
   words: z
@@ -62,6 +62,7 @@ export function RevisionContentEditors({
   edit,
   onChange,
   onPending,
+  section,
 }: EditorProps): import("react").ReactElement {
   const { api } = useApp();
   const identity = narrationIdentity(edit);
@@ -169,99 +170,109 @@ export function RevisionContentEditors({
     }
   }
   const captions = edit.content.subtitleCues;
+  const shows = (part: EditSection) => section === undefined || section === part;
   return (
     <div className="space-y-5">
-      {(["audio", "thumbnail"] as const).map((stage) =>
-        edit.config.sources[stage] !== "provide" ? null : (
-          <RevisionUpload
-            key={stage}
-            label={`Replace provided ${stage}`}
-            kind={stage}
-            onPending={(active) => mark(`provided:${stage}`, active)}
-            onReady={(file) => {
-              const current = latest.current;
-              if (current.edit.config.sources[stage] !== "provide") return;
-              emit({
-                ...current.edit,
-                uploads: [
-                  ...(current.edit.uploads ?? []).filter(
-                    (one) => one.destination.kind !== "provided" || one.destination.stage !== stage,
-                  ),
-                  { stagedFileId: file.id, destination: { kind: "provided", stage } },
-                ],
-              });
-            }}
-          />
-        ),
-      )}
-      <ImageEditor
-        getEdit={() => latest.current.edit}
-        view={view}
-        edit={edit}
-        onChange={emit}
-        onPending={mark}
-      />
-      {edit.config.sources.audio === "generate" ? (
-        <NarrationEditor
+      <section aria-label="Images" hidden={!shows("images")} className="space-y-5">
+        {(["audio", "thumbnail"] as const).map((stage) =>
+          edit.config.sources[stage] !== "provide" ? null : (
+            <RevisionUpload
+              key={stage}
+              label={`Replace provided ${stage}`}
+              kind={stage}
+              onPending={(active) => mark(`provided:${stage}`, active)}
+              onReady={(file) => {
+                const current = latest.current;
+                if (current.edit.config.sources[stage] !== "provide") return;
+                emit({
+                  ...current.edit,
+                  uploads: [
+                    ...(current.edit.uploads ?? []).filter(
+                      (one) =>
+                        one.destination.kind !== "provided" || one.destination.stage !== stage,
+                    ),
+                    { stagedFileId: file.id, destination: { kind: "provided", stage } },
+                  ],
+                });
+              }}
+            />
+          ),
+        )}
+        <ImageEditor
           getEdit={() => latest.current.edit}
           view={view}
           edit={edit}
           onChange={emit}
           onPending={mark}
         />
-      ) : null}
+      </section>
+      <section aria-label="Narration" hidden={!shows("narration")} className="space-y-5">
+        {edit.config.sources.audio === "generate" ? (
+          <NarrationEditor
+            getEdit={() => latest.current.edit}
+            view={view}
+            edit={edit}
+            onChange={emit}
+            onPending={mark}
+          />
+        ) : null}
+      </section>
       {error === undefined ? null : (
         <p role="alert" className="text-red">
           {error}
         </p>
       )}
-      {!ready ? (
-        <p>
-          Build current narration timing before editing caption cues; its duration or timing is
-          unavailable or stale.
-        </p>
-      ) : null}
-      {captions === undefined ? (
-        <Button
-          type="button"
-          disabled={!ready || pending.has("captions:load")}
-          onClick={() => void loadCues()}
-        >
-          Edit existing caption cues
-        </Button>
-      ) : (
-        <>
-          {captions.audioFingerprint !== fingerprint ? (
-            <p>
-              These caption edits belong to an earlier narration. Review their text and timing
-              against the current narration, then apply your corrections and save the project.
-            </p>
-          ) : null}
-          {ready && duration !== undefined ? (
-            <CaptionEditor
-              key={`${view.revision.id}:${fingerprint}`}
-              cues={captions.cues}
-              duration={duration}
-              onPending={(active) => mark("captions:dirty", active)}
-              onChange={(cues) => {
-                const current = latest.current;
-                const saved = current.edit.content.subtitleCues;
-                if (saved !== undefined)
-                  emit({
-                    ...current.edit,
-                    content: { ...current.edit.content, subtitleCues: { ...saved, cues } },
-                  });
-              }}
-            />
-          ) : null}
+      <section aria-label="Captions" hidden={!shows("captions")} className="space-y-5">
+        {!ready ? (
+          <p>
+            Build current narration timing before editing caption cues; its duration or timing is
+            unavailable or stale.
+          </p>
+        ) : null}
+        {captions === undefined ? (
           <Button
             type="button"
-            onClick={() => emit({ ...edit, content: { ...edit.content, subtitleCues: undefined } })}
+            disabled={!ready || pending.has("captions:load")}
+            onClick={() => void loadCues()}
           >
-            Discard caption edits
+            Edit existing caption cues
           </Button>
-        </>
-      )}
+        ) : (
+          <>
+            {captions.audioFingerprint !== fingerprint ? (
+              <p>
+                These caption edits belong to an earlier narration. Review their text and timing
+                against the current narration, then apply your corrections and save the project.
+              </p>
+            ) : null}
+            {ready && duration !== undefined ? (
+              <CaptionEditor
+                key={`${view.revision.id}:${fingerprint}`}
+                cues={captions.cues}
+                duration={duration}
+                onPending={(active) => mark("captions:dirty", active)}
+                onChange={(cues) => {
+                  const current = latest.current;
+                  const saved = current.edit.content.subtitleCues;
+                  if (saved !== undefined)
+                    emit({
+                      ...current.edit,
+                      content: { ...current.edit.content, subtitleCues: { ...saved, cues } },
+                    });
+                }}
+              />
+            ) : null}
+            <Button
+              type="button"
+              onClick={() =>
+                emit({ ...edit, content: { ...edit.content, subtitleCues: undefined } })
+              }
+            >
+              Discard caption edits
+            </Button>
+          </>
+        )}
+      </section>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { usesPronunciationGlossary } from "@app/slices/admission/rules.js";
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { ChunkingControl } from "@/play/chunking";
 import { ImagePrompts } from "@/play/image-prompts";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
@@ -25,8 +25,24 @@ export function AudioRail({
   onRemoveFile,
   onReattachFile,
   rawCounts,
-}: RailProps & { readonly rawCounts?: ComponentProps<typeof ChunkingControl>["rawCounts"] }) {
+  advanced,
+}: RailProps & {
+  readonly rawCounts?: ComponentProps<typeof ChunkingControl>["rawCounts"];
+  // Intro, outro and the links that go with them, drawn inside the Advanced disclosure.
+  readonly advanced?: ReactNode;
+}) {
   const mine = voices.filter((voice) => voice.provider === form.audio.provider);
+  // The disclosure's own line says what is not at its default, so a closed Advanced still
+  // tells the reader what it holds.
+  const advancedSummary = [
+    form.chunking.mode,
+    form.intro ? `intro ${form.intro}` : undefined,
+    form.outro ? `outro ${form.outro}` : undefined,
+    form.narrationPrompt ? "preparation on" : undefined,
+    form.audio.usePronunciationGlossary ? "glossary on" : undefined,
+  ]
+    .filter((part) => part !== undefined)
+    .join(" · ");
 
   return (
     <StageRail kind="audio" name="Audio" dim={form.sources.audio === "off"}>
@@ -66,35 +82,42 @@ export function AudioRail({
                 update({ audio: { ...form.audio, voice } });
               }}
             />
-            <details className="col-span-full">
-              <summary className="cursor-pointer py-2">
-                Audio Advanced · {form.chunking.mode}
+            <details className="col-span-full rounded-control border border-line px-3">
+              <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink2">
+                Audio Advanced · {advancedSummary}
               </summary>
-              <ChunkingControl
-                {...(rawCounts ? { rawCounts } : {})}
-                value={form.chunking}
-                onPick={(chunking) => {
-                  update({ chunking });
-                }}
-              />
+              <div className="grid grid-cols-1 gap-4 pt-2 pb-3 min-[700px]:grid-cols-2">
+                <div className="col-span-full">
+                  <ChunkingControl
+                    {...(rawCounts ? { rawCounts } : {})}
+                    value={form.chunking}
+                    onPick={(chunking) => {
+                      update({ chunking });
+                    }}
+                  />
+                </div>
+                {advanced}
+                <NarrationPreparation
+                  value={form.narrationPrompt ?? ""}
+                  prompts={prompts}
+                  supported={
+                    form.audio.provider === "inworld" && form.audio.model === "inworld-tts-2"
+                  }
+                  error={problem("narrationPrompt")}
+                  onChange={(narrationPrompt) => update({ narrationPrompt })}
+                />
+                <PronunciationGlossary
+                  value={form.audio.usePronunciationGlossary}
+                  supported={usesPronunciationGlossary({
+                    sources: form.sources,
+                    audio: { ...form.audio, usePronunciationGlossary: true },
+                  })}
+                  onChange={(usePronunciationGlossary) =>
+                    update({ audio: { ...form.audio, usePronunciationGlossary } })
+                  }
+                />
+              </div>
             </details>
-            <NarrationPreparation
-              value={form.narrationPrompt ?? ""}
-              prompts={prompts}
-              supported={form.audio.provider === "inworld" && form.audio.model === "inworld-tts-2"}
-              error={problem("narrationPrompt")}
-              onChange={(narrationPrompt) => update({ narrationPrompt })}
-            />
-            <PronunciationGlossary
-              value={form.audio.usePronunciationGlossary}
-              supported={usesPronunciationGlossary({
-                sources: form.sources,
-                audio: { ...form.audio, usePronunciationGlossary: true },
-              })}
-              onChange={(usePronunciationGlossary) =>
-                update({ audio: { ...form.audio, usePronunciationGlossary } })
-              }
-            />
           </>
         ) : null}
       </div>

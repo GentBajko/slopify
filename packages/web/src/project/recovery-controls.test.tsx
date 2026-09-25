@@ -187,7 +187,8 @@ it("allows canceled Resume and paused Retry without approving a checkpoint or op
     { kind: "retry", stage: "audio" },
   ]);
   expect(screen.queryByRole("dialog")).toBeNull();
-  expect(screen.getByText(/Resume recovers unfinished work/)).not.toBeNull();
+  await user.click(screen.getByRole("button", { name: /^About recovering/ }));
+  expect(await screen.findByText(/Resume recovers unfinished work/)).not.toBeNull();
 });
 
 it.each([

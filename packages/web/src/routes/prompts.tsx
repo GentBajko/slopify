@@ -19,12 +19,13 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { kindOptions } from "@/lib/prompt-kinds";
 import { cn } from "@/lib/utils";
 import { keys, promptsQuery } from "@/queries";
+import { LibraryToolbar } from "@/routes/library";
 
 // One row of the rundown, and the same shape for a skeleton. The Slots column collapses
 // under the name below 768 px.
 const row =
-  "grid grid-cols-[minmax(0,1fr)_auto_32px] items-center gap-x-[14px] gap-y-[6px] border-b border-line px-4 py-[14px] last:border-b-0 md:grid-cols-[260px_minmax(0,1fr)_auto_32px]";
-const slotsCell = "col-span-3 col-start-1 row-start-2 flex flex-wrap gap-[6px] md:col-span-1";
+  "grid grid-cols-[minmax(0,1fr)_32px] items-center gap-x-[14px] gap-y-[6px] border-b border-line px-4 py-[10px] last:border-b-0 md:grid-cols-[260px_minmax(0,1fr)_32px]";
+const slotsCell = "col-span-2 col-start-1 row-start-2 flex flex-wrap gap-[6px] md:col-span-1";
 const slotsWide = "md:col-start-2 md:row-start-1";
 
 // Every saved prompt of one kind, sorted by name by the list endpoint. Navigation that only
@@ -53,10 +54,8 @@ export function PromptsRoute({
   const listed = prompts.data?.prompts.filter((prompt) => prompt.kind === kind);
 
   return (
-    <div className="mx-auto max-w-[1440px]">
-      <h1 className="mb-4 text-title font-bold tracking-[-0.01em]">Prompts</h1>
-
-      <div className="mb-4 flex flex-wrap items-center gap-4">
+    <div>
+      <LibraryToolbar action={<NewPromptButton kind={kind} />}>
         <ToggleGroup
           type="single"
           value={kind}
@@ -75,9 +74,7 @@ export function PromptsRoute({
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
-        <span className="flex-1" />
-        <NewPromptButton kind={kind} />
-      </div>
+      </LibraryToolbar>
 
       {prompts.error === null ? null : (
         <RailGroup>
@@ -95,17 +92,18 @@ export function PromptsRoute({
         <RailGroup>
           {listed.map((prompt) => (
             <div key={prompt.id} className={row}>
-              <span className="col-start-1 row-start-1 font-semibold">{prompt.name}</span>
+              <Link
+                to="/prompts/$promptId"
+                params={{ promptId: prompt.id }}
+                className="col-start-1 row-start-1 min-w-0 truncate font-semibold hover:underline"
+              >
+                {prompt.name}
+              </Link>
               <span className={cn(slotsCell, slotsWide)}>
                 {prompt.slots.map((slot) => (
                   <SlotChip key={slot} name={slot} />
                 ))}
               </span>
-              <Button className="col-start-2 row-start-1 md:col-start-3" asChild>
-                <Link to="/prompts/$promptId" params={{ promptId: prompt.id }}>
-                  Edit
-                </Link>
-              </Button>
               <RowOverflow
                 prompt={prompt}
                 onDelete={() => {
@@ -153,16 +151,13 @@ function NewPromptButton({ kind }: { readonly kind: PromptKind }) {
   );
 }
 
-// An empty kind teaches what a prompt is and repeats the one action.
+// An empty kind teaches what a prompt is; the one action is already in the toolbar above.
 function EmptyKind({ kind }: { readonly kind: PromptKind }) {
   return (
     <RailGroup>
-      <div className="flex flex-wrap items-center gap-4 px-4 py-7 text-ink2">
-        <span className="max-w-[75ch]">
-          {`No ${kind} prompts yet. A prompt is text with {{keywords}}; each keyword becomes a field on Play.`}
-        </span>
-        <NewPromptButton kind={kind} />
-      </div>
+      <p className="max-w-[75ch] px-4 py-6 text-ink2">
+        {`No ${kind} prompts yet. A prompt is text with {{keywords}}; each keyword becomes a field on Play.`}
+      </p>
     </RailGroup>
   );
 }
@@ -180,12 +175,17 @@ function RowOverflow({
         <Button
           variant="ghost"
           aria-label={`More for ${prompt.name}`}
-          className="col-start-3 row-start-1 size-8 p-0 md:col-start-4"
+          className="col-start-2 row-start-1 size-8 p-0 md:col-start-3"
         >
           <EllipsisIcon aria-hidden="true" className="size-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
+        <DropdownMenuItem asChild>
+          <Link to="/prompts/$promptId" params={{ promptId: prompt.id }}>
+            Edit
+          </Link>
+        </DropdownMenuItem>
         {/* The copy is named "<name> copy" and opened for editing, so a name that
             is already taken is renamed before it is ever saved. */}
         <DropdownMenuItem asChild>
@@ -209,7 +209,6 @@ function SkeletonRows() {
             <span className="h-[18px] w-14 rounded-control bg-panel2" />
             <span className="h-[18px] w-[72px] rounded-control bg-panel2" />
           </span>
-          <span className="col-start-2 row-start-1 h-7 w-12 rounded-control bg-panel2 md:col-start-3" />
         </div>
       ))}
     </RailGroup>

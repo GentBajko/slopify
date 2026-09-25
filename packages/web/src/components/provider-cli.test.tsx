@@ -17,6 +17,12 @@ function codex(configured: string | null, installed: boolean): ProviderStatus {
   };
 }
 
+// The path form sits behind "Change path", so a row stays one line until it is asked for.
+async function openPath(name: string): Promise<HTMLElement> {
+  await userEvent.click(await screen.findByRole("button", { name: "Change path" }));
+  return screen.getByRole("textbox", { name: `${name} Executable path` });
+}
+
 describe("CLI executable settings", () => {
   it.each(["ready", "login", "bridge", "version"] as const)(
     "shows a read-only host command for %s",
@@ -44,8 +50,11 @@ describe("CLI executable settings", () => {
           }),
         }),
       );
+      expect(await screen.findByText("/host/bin/codex")).not.toBeNull();
+      expect(screen.getByText("Managed on host")).not.toBeNull();
+      expect(screen.queryByRole("button", { name: "Change path" })).toBeNull();
+      await userEvent.click(screen.getByRole("button", { name: "About Codex CLI sign-in" }));
       expect(await screen.findByText(/Runs on your host/)).not.toBeNull();
-      expect(screen.getByText("/host/bin/codex")).not.toBeNull();
       expect(screen.queryByRole("textbox")).toBeNull();
       expect(screen.queryByRole("button", { name: /Save.*path/ })).toBeNull();
       if (kind !== "ready") expect(screen.getByText(`Host ${kind} guidance`)).not.toBeNull();
@@ -76,12 +85,13 @@ describe("CLI executable settings", () => {
           }),
         }),
       );
-      const field = await screen.findByRole("textbox", { name: `${name} Executable path` });
+      const field = await openPath(name);
       expect((field as HTMLInputElement).value).toBe("");
       expect(field.getAttribute("placeholder")).toBe(command);
       expect(screen.getByRole("button", { name: `Save ${name} path` })).not.toBeNull();
       expect(screen.getByText(/Leave blank to find/).textContent).toContain("PATH");
-      expect(screen.getByText(/Sign in through/).textContent).toContain(name);
+      await userEvent.click(screen.getByRole("button", { name: `About ${name} sign-in` }));
+      expect((await screen.findByText(/Sign in through/)).textContent).toContain(name);
       expect(screen.queryByLabelText(`${name} API key`)).toBeNull();
     },
   );
@@ -111,7 +121,7 @@ describe("CLI executable settings", () => {
         },
       }),
     );
-    const field = await screen.findByRole("textbox", { name: "Codex CLI Executable path" });
+    const field = await openPath("Codex CLI");
     await user.type(field, path);
     await user.keyboard("{Enter}");
     await waitFor(() => expect(sent).toEqual({ path }));
@@ -142,7 +152,7 @@ describe("CLI executable settings", () => {
         },
       }),
     );
-    const field = await screen.findByRole("textbox", { name: "Codex CLI Executable path" });
+    const field = await openPath("Codex CLI");
     expect((field as HTMLInputElement).value).toBe("/opt/codex/bin/codex");
     await user.clear(field);
     await user.click(screen.getByRole("button", { name: "Save Codex CLI path" }));
@@ -176,7 +186,7 @@ describe("CLI executable settings", () => {
         ),
       }),
     );
-    const field = await screen.findByRole("textbox", { name: "Codex CLI Executable path" });
+    const field = await openPath("Codex CLI");
     await user.clear(field);
     await user.type(field, "/missing/codex");
     await user.click(screen.getByRole("button", { name: "Save Codex CLI path" }));

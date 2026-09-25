@@ -2,7 +2,13 @@ import { defaultSubtitles, type SubtitleConfig } from "@app/slices/subtitles/mod
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-import { jsonAnswer, renderRouted, testOrigin } from "@/test-app";
+import {
+  jsonAnswer,
+  openEditSection,
+  openProjectEditor,
+  renderRouted,
+  testOrigin,
+} from "@/test-app";
 import { ProjectRoute } from "./project";
 import { body, deps, output, stage } from "./project-fixtures";
 import { revisionRouteFixture } from "./project-revision.fake.js";
@@ -47,7 +53,8 @@ describe("existing project subtitles", () => {
     const user = userEvent.setup();
     const fixture = revisionRouteFixture(project());
     renderRouted(<ProjectRoute projectId="p1" />, deps({ ...fixture.routes, ...fontRoute }));
-    await user.click(await screen.findByRole("button", { name: "Edit project" }));
+    await openProjectEditor();
+    await openEditSection("Subtitles");
     await screen.findByLabelText("Subtitles", { selector: "select" });
     await user.selectOptions(subtitleMode(), "burn-in");
     await screen.findByRole("option", { name: "Custom font · uploaded" });
@@ -66,7 +73,8 @@ describe("existing project subtitles", () => {
       fontSize: 64,
       position: "upper-middle",
     });
-    await user.click(screen.getByRole("button", { name: "Edit project" }));
+    await openProjectEditor();
+    await openEditSection("Subtitles");
     expect(((await screen.findByLabelText("Subtitle font size")) as HTMLInputElement).value).toBe(
       "64",
     );
@@ -94,7 +102,8 @@ describe("existing project subtitles", () => {
       <ProjectRoute projectId="p1" />,
       deps({ ...fixture.routes, ...fontRoute, "POST /api/projects/p1/revisions": refusal }),
     );
-    await user.click(await screen.findByRole("button", { name: "Edit project" }));
+    await openProjectEditor();
+    await openEditSection("Subtitles");
     await screen.findByLabelText("Subtitles", { selector: "select" });
     await user.selectOptions(subtitleMode(), "files");
     await user.clear(screen.getByLabelText("Subtitle font size"));
@@ -111,7 +120,8 @@ describe("existing project subtitles", () => {
       project({ ...defaultSubtitles, mode: "files" }, "running"),
     );
     renderRouted(<ProjectRoute projectId="p1" />, deps({ ...fixture.routes, ...fontRoute }));
-    await user.click(await screen.findByRole("button", { name: "Edit project" }));
+    await openProjectEditor();
+    await openEditSection("Subtitles");
     await screen.findByLabelText("Subtitles", { selector: "select" });
     expect(subtitleMode().closest("fieldset")?.disabled).toBe(false);
     await user.selectOptions(subtitleMode(), "off");

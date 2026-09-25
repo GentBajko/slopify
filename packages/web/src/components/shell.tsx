@@ -1,14 +1,16 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Link, Outlet } from "@tanstack/react-router";
+import { Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { eventsUrl } from "@/api";
 import { useApp } from "@/app-context";
 import { Mark, SupportGlyph } from "@/components/glyph";
+import { Lamp } from "@/components/lamp";
 import { FirstRunNotice } from "@/components/notice";
 import { AppearanceSkin } from "@/components/theme";
 import { VersionPrompt } from "@/components/version-prompt";
 import { subscribeGlobal } from "@/events";
 import { FormDraftsProvider } from "@/lib/form-drafts";
+import { cn } from "@/lib/utils";
 import { PlayDraftProvider } from "@/play/draft-context";
 import { coalesce } from "@/project/live";
 import { keys } from "@/queries";
@@ -16,26 +18,26 @@ import { TutorialProvider } from "@/tutorial/context";
 import { TutorialLauncher } from "@/tutorial/launcher";
 import { UpdateWidget } from "@/updates/widget";
 
-// One top bar on every app screen, the active item underlined in the running-lamp colour, in
-// the order the reference sheet puts them. `exact: false` is a section that keeps an editor
-// beneath it: Prompts stays lit while 05 is open, and Intros & Outros while its own editor is.
+// One sticky bar on every app screen: four destinations, the running tally, the support links
+// and the help controls, in one row. `match` lists the paths a destination stays lit for:
+// Library holds the four reusable-material lists and their editors, Settings holds Usage.
 const sections = [
-  { to: "/", label: "Projects", exact: true },
-  { to: "/play", label: "Play", exact: true },
-  { to: "/templates", label: "Templates", exact: true },
-  { to: "/schedules", label: "Schedules", exact: true },
-  { to: "/prompts", label: "Prompts", exact: false },
-  { to: "/entries", label: "Intros & Outros", exact: false },
-  { to: "/settings", label: "Settings", exact: true },
-  { to: "/usage", label: "Usage", exact: true },
+  { to: "/", label: "Projects", match: ["/", "/projects"] },
+  { to: "/play", label: "Play", match: ["/play"] },
+  {
+    to: "/prompts",
+    label: "Library",
+    match: ["/library", "/prompts", "/entries", "/templates", "/schedules"],
+  },
+  { to: "/settings", label: "Settings", match: ["/settings", "/usage"] },
 ] as const;
 
-// The same three links the marketing page's masthead carries, in the same order, on every
-// screen of the app. They open in a tab of their own: the app is a local server and a run may
-// be in flight, so navigating the only tab away from it is never what the press meant.
-// The accent is the mark's own green, and it is what makes the two donation links read as
-// something to press rather than another item of chrome. GitHub is a source link, not a
-// donation, so its glyph stays the colour of the text beside it.
+function isActive(pathname: string, match: readonly string[]): boolean {
+  return match.some((path) =>
+    path === "/" ? pathname === "/" : pathname === path || pathname.startsWith(`${path}/`),
+  );
+}
+
 const support = [
   { href: "https://github.com/GentBajko/slopify", label: "GitHub", glyph: "github", tone: "" },
   {
@@ -68,6 +70,7 @@ function ShellContent() {
   const { api, openEvents } = useApp();
   const queryClient = useQueryClient();
   const [running, setRunning] = useState(0);
+  const pathname = useLocation({ select: (location) => location.pathname });
 
   useEffect(() => {
     const refreshProjects = coalesce(() => {
@@ -93,45 +96,50 @@ function ShellContent() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 border-b border-line bg-panel px-4 min-[1280px]:flex min-[1280px]:h-14 min-[1280px]:gap-7 min-[1280px]:px-7">
+      <header className="sticky top-0 z-40 flex h-12 min-w-0 items-center gap-4 border-b border-line bg-panel px-4 sm:gap-6 sm:px-6">
         <Link
           to="/"
-          className="flex h-14 shrink-0 items-center gap-[10px] text-wordmark font-extrabold tracking-[-0.02em] text-ink"
+          className="flex shrink-0 items-center gap-[10px] text-wordmark font-extrabold tracking-[-0.02em] text-ink"
         >
           {/* The mark sits 3 px below the text baseline so the goo reads as a
               descender. */}
           <Mark className="relative top-[3px] text-lamp-run" />
-          Slopify
+          <span className="max-[480px]:sr-only">Slopify</span>
         </Link>
-        {/* Only this row scrolls on narrow screens. Its links remain keyboard reachable,
-            and the logo, tutorial and support controls stay in the header above it. */}
         <nav
           aria-label="Main navigation"
-          className="col-span-2 row-start-2 flex min-w-0 items-center gap-6 overflow-x-auto [scrollbar-width:thin] min-[1280px]:flex-1 min-[1280px]:gap-7"
+          className="flex min-w-0 flex-1 items-stretch gap-5 self-stretch overflow-x-auto [scrollbar-width:none] sm:gap-6"
         >
-          {sections.map((section) => (
-            <Link
-              key={section.to}
-              to={section.to}
-              activeOptions={{ exact: section.exact }}
-              className="shrink-0 whitespace-nowrap border-b-2 border-transparent py-3 text-ink2 hover:text-ink focus-visible:outline-offset-[-3px] min-[1280px]:py-[18px]"
-              activeProps={{ className: "!border-lamp-run !text-ink" }}
-            >
-              {section.label}
-            </Link>
-          ))}
+          {sections.map((section) => {
+            const active = isActive(pathname, section.match);
+            return (
+              <Link
+                key={section.to}
+                to={section.to}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex shrink-0 items-center border-b-2 whitespace-nowrap focus-visible:outline-offset-[-3px]",
+                  active
+                    ? "border-lamp-run text-ink"
+                    : "border-transparent text-ink2 hover:text-ink",
+                )}
+              >
+                {section.label}
+              </Link>
+            );
+          })}
         </nav>
-        <div className="col-start-2 row-start-1 ml-auto flex items-center gap-1 sm:gap-4 min-[1280px]:gap-7 [&_button]:min-h-8 [&_button]:min-w-8">
-          <TutorialLauncher />
+        <div className="flex shrink-0 items-center gap-1 sm:gap-3 [&_button]:min-h-8 [&_button]:min-w-8">
           {running === 0 ? null : (
             <Link
               to="/"
               aria-label={`${String(running)} running`}
               title={`${String(running)} running`}
-              className="engraved flex min-h-8 items-center whitespace-nowrap text-ink3 hover:text-ink2"
+              className="engraved flex min-h-8 items-center gap-2 whitespace-nowrap text-run-text hover:text-ink"
             >
+              <Lamp state="running" />
               {String(running)}
-              <span className="sr-only sm:not-sr-only">&nbsp;running</span>
+              <span className="sr-only sm:not-sr-only">running</span>
             </Link>
           )}
           {support.map((link) => (
@@ -141,27 +149,28 @@ function ShellContent() {
               target="_blank"
               rel="noreferrer"
               title={link.label}
-              className="flex min-h-8 min-w-8 shrink-0 items-center justify-center gap-[6px] whitespace-nowrap text-ink2 hover:text-ink"
+              className="hidden min-h-8 min-w-8 shrink-0 items-center justify-center gap-[6px] whitespace-nowrap text-ink2 hover:text-ink sm:flex"
             >
               <SupportGlyph name={link.glyph} className={link.tone} />
               <span className="sr-only min-[1100px]:not-sr-only">{link.label}</span>
             </a>
           ))}
+          <UpdateWidget reload={() => window.location.reload()} />
+          <TutorialLauncher />
         </div>
       </header>
 
-      <main className="min-w-0 flex-1 px-4 py-6 pb-20 sm:px-7">
+      <main className="mx-auto w-full max-w-[1200px] min-w-0 flex-1 px-4 pt-5 pb-10 sm:px-6">
         <Outlet />
       </main>
 
       <footer
         id="app-footer"
-        className="flex items-center gap-[18px] border-t border-line px-4 py-[14px] text-label sm:px-7 text-ink3"
+        className="flex items-center gap-[18px] border-t border-line px-4 py-[14px] text-label text-ink3 sm:px-6"
       >
         <span>Free. Your keys, your machine.</span>
       </footer>
 
-      <UpdateWidget reload={() => window.location.reload()} />
       <AppearanceSkin />
       <FirstRunNotice />
       <VersionPrompt

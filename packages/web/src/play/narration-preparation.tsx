@@ -1,6 +1,7 @@
 import type { Prompt } from "@app/slices/library/model.js";
 import { Link } from "@tanstack/react-router";
 import { type ReactElement, useId } from "react";
+import { InfoTip } from "@/components/kit/info-tip";
 import { Picker } from "@/components/ui/picker";
 
 export function NarrationPreparation({
@@ -26,9 +27,17 @@ export function NarrationPreparation({
     (value !== "" && !supported ? "Choose Inworld TTS-2 or turn preparation Off." : undefined);
   return (
     <div className="col-span-full min-w-0 space-y-2">
-      <label htmlFor={id} className="block text-small font-semibold">
-        Narration Preparation
-      </label>
+      <span className="flex items-center gap-1">
+        <label htmlFor={id} className="text-small font-semibold">
+          Narration Preparation
+        </label>
+        <InfoTip label="Narration Preparation">
+          <p>
+            Optional. Uses the selected LLM once per narration chunk and entry. Supports Inworld
+            TTS-2; the article and clean narration stay unchanged.
+          </p>
+        </InfoTip>
+      </span>
       <Picker
         id={id}
         data-play-field="narrationPrompt"
@@ -47,7 +56,7 @@ export function NarrationPreparation({
           </option>
         ))}
       </Picker>
-      <p id={`${id}-help`} className="text-small text-ink3">
+      <p id={`${id}-help`} className="sr-only">
         Optional. Uses the selected LLM once per narration chunk and entry. Supports Inworld TTS-2;
         the article and clean narration stay unchanged.
       </p>

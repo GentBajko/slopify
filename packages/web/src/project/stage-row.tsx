@@ -2,13 +2,20 @@ import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
 import type { ProviderStatus } from "@app/slices/settings/model.js";
 import type { Output } from "@app/slices/storage/model.js";
 import { Link } from "@tanstack/react-router";
-import { type ReactNode, useContext } from "react";
+import { type ReactNode, useContext, useState } from "react";
+import { ConfirmDialog } from "@/components/confirm";
 import { StageGlyph } from "@/components/glyph";
+import { InfoTip } from "@/components/kit/info-tip";
+import { SplitButton } from "@/components/kit/split-button";
 import { StateWord } from "@/components/state-word";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { confirmationFor } from "./confirmations.js";
+import { canRerunSection } from "./controls.js";
 import { LiveWriting } from "./live-writing.js";
 import { RefusalLine } from "./parts.js";
 import { unreadyFor } from "./readiness.js";
 import { RevisionControlContext } from "./revision-action-context.js";
+import { useCurrentRevisionView } from "./revision-media.js";
 import { attempts, stageName, summaryOf } from "./summary.js";
 import type { ProjectActions } from "./use-actions.js";
 
@@ -42,7 +49,9 @@ export function StageRow({
   const name = stageName(stage.kind, project.config);
   const held = project.status === "paused" ? { ...actions, pending: true } : actions;
   const unready = unreadyFor(stage.kind, project.config, providers);
+  const view = useCurrentRevisionView();
   const refused = actions.refusal?.stage === stage.kind ? actions.refusal.message : undefined;
+  const [rerunning, setRerunning] = useState(false);
   const retryable = stage.state === "failed" || stage.state === "canceled";
   const hasOutput = outputs.some(
     (output) => output.stageKind === stage.kind && output.role !== "instructions",
@@ -60,6 +69,14 @@ export function StageRow({
           100,
           Math.max(0, Math.round(((stage.progressCurrent ?? 0) / stage.progressTotal) * 100)),
         );
+  const retryLabel =
+    actions.performing?.kind === "retry" && actions.performing.stage === stage.kind
+      ? "Retrying…"
+      : revisioned
+        ? "Retry stage"
+        : (unready?.label ?? "Retry stage");
+  const rerunnable = revisioned && view !== undefined && canRerunSection(view, stage.kind);
+  const rerunCopy = confirmationFor({ kind: "rerun", stage: stage.kind });
   return (
     <section
       data-tour={`project-${stage.kind}`}
@@ -67,7 +84,7 @@ export function StageRow({
       aria-label={`${name} workspace`}
       className={active ? "min-w-0 rounded-panel border border-line bg-panel" : "hidden"}
     >
-      <div className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-4">
+      <div className="relative flex min-h-14 flex-wrap items-center gap-3 border-b border-line px-5 py-3">
         <StageGlyph kind={stage.kind} className="text-ink2" />
         <div className="min-w-0 flex-1">
           <h2 className="text-row font-bold">
@@ -75,82 +92,110 @@ export function StageRow({
               ? "Listen & export"
               : titles[stage.kind]}
           </h2>
-          <p className="mt-1 text-small text-ink2">{summaryOf(stage, outputs, project)}</p>
+          <p className="text-small text-ink2">{summaryOf(stage, outputs, project)}</p>
         </div>
+        <span className="text-small text-run-text tabular-nums">
+          {stage.state === "running"
+            ? progress === undefined
+              ? "Waiting for provider progress"
+              : `${progress}%`
+            : null}
+        </span>
         <StateWord state={stage.state} />
-      </div>
-      {stage.state === "running" ? (
-        <div className="border-b border-line px-5 py-3">
-          <div className="mb-2 flex justify-between text-small text-run-text">
-            <span>{name} in progress</span>
-            {progress === undefined ? (
-              <span>Waiting for provider progress</span>
-            ) : (
-              <span className="tabular-nums">{progress}%</span>
-            )}
-          </div>
+        {/* The meter's track is always drawn, so a stage starting or stopping never moves the
+            body under it. */}
+        <div
+          {...(stage.state === "running"
+            ? {
+                role: "progressbar",
+                "aria-label": `${name} progress`,
+                "aria-valuemin": 0,
+                "aria-valuemax": 100,
+                "aria-valuenow": progress,
+              }
+            : { "aria-hidden": true })}
+          className="absolute inset-x-0 bottom-0 h-[2px] overflow-hidden"
+        >
           <div
-            role="progressbar"
-            aria-label={`${name} progress`}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={progress}
-            className="h-1.5 overflow-hidden rounded-control bg-panel2"
-          >
-            <div
-              className="h-full origin-left bg-accent"
-              style={{ transform: `scaleX(${(progress ?? 0) / 100})` }}
-            />
-          </div>
+            className="h-full origin-left bg-lamp-run transition-transform duration-200 motion-reduce:transition-none"
+            style={{
+              transform: `scaleX(${stage.state === "running" ? (progress ?? 0) / 100 : 0})`,
+            }}
+          />
         </div>
-      ) : null}
+      </div>
       {retryable ? (
-        <div className="m-5 rounded-control border border-red/30 bg-red-tint p-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="min-w-0 flex-1 text-small text-red">
-              {stage.state === "failed" ? `${name} needs attention.` : `${name} was canceled.`}
-            </p>
-            <span className="text-label text-ink2">{attempts(stage)}</span>
-            <button
-              type="button"
-              disabled={revisioned ? actions.pending : unready !== undefined || held.pending}
-              onClick={() => actions.run({ kind: "retry", stage: stage.kind })}
-              className="rounded-control border border-red px-3 py-2 text-small text-ink hover:bg-panel2 disabled:opacity-50"
-            >
-              {actions.performing?.kind === "retry" && actions.performing.stage === stage.kind
-                ? "Retrying…"
-                : revisioned
-                  ? "Retry stage"
-                  : (unready?.label ?? "Retry stage")}
-            </button>
-          </div>
-          <p className="mt-2 text-small text-ink2">
-            {revisioned
-              ? "Resume recovers unfinished work across the project; Retry stage keeps this section's completed outputs. Use Edit project for changed inputs or optional Advanced rebuild review for supplied-content conflicts."
-              : project.status === "paused"
-                ? "Resume the project to continue with its saved settings."
-                : "Retry keeps completed outputs. To change the provider or model, open Run settings."}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-red/30 bg-red-tint px-5 py-3">
+          <p className="min-w-0 text-small text-red">
+            {stage.state === "failed" ? `${name} needs attention.` : `${name} was canceled.`}
           </p>
+          <span className="text-label text-ink2">{attempts(stage)}</span>
           {stage.failureReason ? (
-            <details className="mt-3">
-              <summary className="cursor-pointer text-small text-red">Error details</summary>
-              <span className="mt-2 block max-h-48 overflow-auto whitespace-pre-wrap break-words text-label text-ink2">
+            <Popover>
+              <PopoverTrigger className="text-small text-red underline underline-offset-4">
+                Error details
+              </PopoverTrigger>
+              <PopoverContent className="max-h-48 w-[min(560px,calc(100vw-24px))] overflow-auto whitespace-pre-wrap break-words text-label">
                 {stage.failureReason}
-              </span>
-            </details>
+              </PopoverContent>
+            </Popover>
           ) : null}
           {unready ? (
-            <p className="mt-3 text-small text-ink2">
+            <p className="text-small text-ink2">
               {unready.label} for {unready.provider}.{" "}
-              <Link to="/settings" className="underline underline-offset-4">
+              <Link
+                to="/settings"
+                search={{ section: "providers" }}
+                className="underline underline-offset-4"
+              >
                 Open Settings
               </Link>
             </p>
           ) : null}
+          <span className="ml-auto flex items-center gap-1">
+            <InfoTip label={`recovering ${name}`}>
+              <p>
+                {revisioned
+                  ? "Resume recovers unfinished work across the project; Retry stage keeps this section's completed outputs. Use Edit project for changed inputs or optional Advanced rebuild review for supplied-content conflicts."
+                  : project.status === "paused"
+                    ? "Resume the project to continue with its saved settings."
+                    : "Retry keeps completed outputs. To change the provider or model, open Run settings."}
+              </p>
+            </InfoTip>
+            <SplitButton
+              variant="danger"
+              disabled={revisioned ? actions.pending : unready !== undefined || held.pending}
+              onClick={() => actions.run({ kind: "retry", stage: stage.kind })}
+              menuLabel={`More ways to recover ${name}`}
+              items={[
+                {
+                  label: "Re-run section",
+                  hint: "Replaces this section's outputs; earlier ones stay in History.",
+                  disabled: !rerunnable || actions.pending,
+                  onSelect: () => setRerunning(true),
+                },
+              ]}
+            >
+              {retryLabel}
+            </SplitButton>
+          </span>
+          <ConfirmDialog
+            open={rerunning}
+            title={rerunCopy.title}
+            consequence={rerunCopy.consequence}
+            verb={rerunCopy.verb}
+            dismiss={rerunCopy.dismiss}
+            pending={actions.pending}
+            onConfirm={() => {
+              setRerunning(false);
+              actions.run({ kind: "rerun", stage: stage.kind });
+            }}
+            onCancel={() => setRerunning(false)}
+          />
         </div>
       ) : null}
       {refused ? (
-        <div className="px-5 pt-4">
+        <div className="border-b border-line px-5 py-3">
           <RefusalLine message={refused} onDismiss={actions.dismissRefusal} />
         </div>
       ) : null}

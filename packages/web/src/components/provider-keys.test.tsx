@@ -51,7 +51,9 @@ describe("the API key rails", () => {
     );
     expect(await screen.findByText("Installed, version 2.1.258")).not.toBeNull();
     expect(screen.queryByLabelText(/Claude Code CLI API key/)).toBeNull();
-    expect(screen.getByText("Claude Code CLI").closest("div")?.dataset.ready).toBe("true");
+    expect(
+      screen.getByText("Claude Code CLI").closest<HTMLElement>("[data-ready]")?.dataset.ready,
+    ).toBe("true");
   });
 
   it("lists a CLI provider that ran but printed no version as installed", async () => {
@@ -84,7 +86,9 @@ describe("the API key rails", () => {
     );
 
     expect(await screen.findByText(issue)).not.toBeNull();
-    expect(screen.getByText("Codex CLI").closest("div")?.dataset.ready).toBe("false");
+    expect(screen.getByText("Codex CLI").closest<HTMLElement>("[data-ready]")?.dataset.ready).toBe(
+      "false",
+    );
   });
 
   it("greys a CLI that is not on PATH and says what to do about it", async () => {
@@ -97,11 +101,12 @@ describe("the API key rails", () => {
       }),
     );
     expect(await screen.findByText("Not found on PATH")).not.toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Change path" }));
     expect(screen.getByRole("button", { name: "Save Codex CLI path" })).not.toBeNull();
 
     const name = screen.getByText("Codex CLI");
     expect(name.className).toContain("text-ink3");
-    expect(name.closest("div")?.dataset.ready).toBe("false");
+    expect(name.closest<HTMLElement>("[data-ready]")?.dataset.ready).toBe("false");
   });
 
   it("teaches what a key is for while none is stored", async () => {
@@ -114,7 +119,9 @@ describe("the API key rails", () => {
     expect(
       await screen.findByText("Paste a key to make its provider selectable on Play."),
     ).not.toBeNull();
-    expect(screen.queryByRole("button", { name: /Remove OpenRouter key/ })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: /Remove OpenRouter key/ }).hasAttribute("disabled"),
+    ).toBe(true);
   });
 
   it("drops the teaching line once any provider is keyed", async () => {

@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useId, useRef, useState } from "react";
 import { useApp } from "@/app-context";
+import { useToast } from "@/components/kit/toast";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -24,7 +25,7 @@ export function SaveProjectTemplate({
   } | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const notify = useToast();
   const active = useRef(false);
   const identity = useRef<{ readonly key: string; readonly id: string } | null>(null);
   async function save(): Promise<void> {
@@ -47,7 +48,7 @@ export function SaveProjectTemplate({
       }
       identity.current = null;
       setEditing(null);
-      setSaved(true);
+      notify("Template saved.", "success");
       await client.invalidateQueries({ queryKey: templatesKey });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not save the template.");
@@ -64,12 +65,10 @@ export function SaveProjectTemplate({
           if (revisionId === null) return;
           setEditing({ revisionId, name: title });
           setError(null);
-          setSaved(false);
         }}
       >
         Save as template
       </Button>
-      {saved ? <p role="status">Template saved.</p> : null}
       <Dialog
         open={editing !== null}
         onOpenChange={(open) => {

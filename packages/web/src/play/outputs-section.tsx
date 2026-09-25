@@ -1,7 +1,6 @@
 import type { Entry } from "@app/slices/library/model.js";
 import type { ReactElement } from "react";
 import { Button } from "@/components/ui/button";
-import { CheckpointControls } from "./checkpoints";
 import { usePlaySession } from "./draft-context";
 import { AudioRail, ImagesRail } from "./media-rails";
 import { OptionPicker } from "./pickers";
@@ -41,37 +40,35 @@ export function OutputsSection(
               },
             }),
         }}
+        advanced={
+          <>
+            {(["intro", "outro"] as const).map((kind) => (
+              <OptionPicker
+                key={kind}
+                field={kind}
+                label={kind === "intro" ? "Intro" : "Outro"}
+                value={form[kind]}
+                placeholder="Off"
+                options={entries
+                  .filter((entry) => entry.category === kind)
+                  .map((entry) => ({ value: entry.name, label: entry.name }))}
+                problem={problem(kind)}
+                onPick={(value) => update({ [kind]: value })}
+              />
+            ))}
+            <div className="col-span-full flex flex-wrap gap-2">
+              {form.narrationPrompt ? (
+                <Button variant="ghost" onClick={() => props.onKeyword("llm")}>
+                  Choose Text Generation in Content
+                </Button>
+              ) : null}
+              <Button variant="ghost" onClick={props.onSettings}>
+                Settings
+              </Button>
+            </div>
+          </>
+        }
       />
-      {form.sources.audio === "generate" ? (
-        <div className="grid grid-cols-1 gap-4 border-b border-line py-4 min-[700px]:grid-cols-2">
-          {form.narrationPrompt ? (
-            <Button
-              variant="ghost"
-              className="col-span-full"
-              onClick={() => props.onKeyword("llm")}
-            >
-              Choose Text Generation in Content
-            </Button>
-          ) : null}
-          {(["intro", "outro"] as const).map((kind) => (
-            <OptionPicker
-              key={kind}
-              field={kind}
-              label={kind === "intro" ? "Intro" : "Outro"}
-              value={form[kind]}
-              placeholder="Off"
-              options={entries
-                .filter((entry) => entry.category === kind)
-                .map((entry) => ({ value: entry.name, label: entry.name }))}
-              problem={problem(kind)}
-              onPick={(value) => update({ [kind]: value })}
-            />
-          ))}
-          <Button variant="ghost" onClick={props.onSettings}>
-            Settings
-          </Button>
-        </div>
-      ) : null}
       <ImagesRail
         {...props}
         rawNumbers={{
@@ -90,7 +87,6 @@ export function OutputsSection(
       />
       <ThumbnailRail {...props} />
       <VideoRail {...props} />
-      <CheckpointControls problem={problem} />
       {props.missingKeyword ? (
         <p className="py-4 text-small text-ink2">
           A selected template needs keywords.{" "}

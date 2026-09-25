@@ -42,7 +42,9 @@ it("lists server drafts with no browser identity and offers recovery for unreada
   expect(remove).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "Confirm discard" }));
   await screen.findByText("Cannot discard");
-  expect(screen.getByText("Recovered")).toBeTruthy();
+  // The draft stays listed; the list reopens from the same Drafts control.
+  fireEvent.click(screen.getByText("Drafts"));
+  expect(await screen.findByText("Recovered")).toBeTruthy();
 });
 it("discards an active dirty draft at the confirmed version without saving discarded edits", async () => {
   const id = "00000000-0000-4000-8000-000000000001";
@@ -161,12 +163,14 @@ it("clears a corrupt remembered identity after explicit list discard", async () 
         }),
       ),
     );
-    await screen.findByRole("alert");
+    // The state word beside Drafts says the remembered draft could not be used; the full
+    // sentence is Play's action bar's to show.
+    await screen.findByText("Couldn't save");
     fireEvent.click(screen.getByText("Drafts"));
     fireEvent.click(screen.getByRole("button", { name: "Discard Broken" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm discard" }));
     await waitFor(() => expect(map.has("slopify.play-draft")).toBe(false));
-    expect(screen.queryByRole("alert")).toBeNull();
+    await waitFor(() => expect(screen.queryByText("Couldn't save")).toBeNull());
   } finally {
     cleanup();
     if (original) Object.defineProperty(window, "localStorage", original);

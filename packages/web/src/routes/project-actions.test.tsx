@@ -1,7 +1,13 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { jsonAnswer, problemAnswer, renderRouted } from "@/test-app";
+import {
+  jsonAnswer,
+  openProjectEditor,
+  openProjectTab,
+  problemAnswer,
+  renderRouted,
+} from "@/test-app";
 import { ProjectRoute } from "./project.js";
 import { deps, finished, recoveryAccepted, selectProjectStage } from "./project-fixtures.js";
 import { revisionRouteFixture } from "./project-revision.fake.js";
@@ -113,7 +119,7 @@ describe("editing the article", () => {
   it("saves the article in a revision without starting a rebuild", async () => {
     const fixture = revisionRouteFixture(finished);
     renderRouted(<ProjectRoute projectId="p1" />, fixture.app);
-    await userEvent.click(await screen.findByRole("button", { name: "Edit project" }));
+    await openProjectEditor();
     const editor = await screen.findByLabelText("Article text");
     await userEvent.clear(editor);
     await userEvent.type(editor, "Rewritten.");
@@ -132,7 +138,7 @@ describe("editing the article", () => {
         "POST /api/projects/p1/revisions": problemAnswer("An article cannot be saved empty.", 400),
       }),
     );
-    await userEvent.click(await screen.findByRole("button", { name: "Edit project" }));
+    await openProjectEditor();
     const editor = await screen.findByLabelText("Article text");
     await userEvent.clear(editor);
     await userEvent.type(editor, "Still mine.");
@@ -144,12 +150,15 @@ describe("editing the article", () => {
   it("keeps an unfinished article edit when switching output stages, until discarded", async () => {
     const fixture = revisionRouteFixture(finished);
     renderRouted(<ProjectRoute projectId="p1" />, fixture.app);
-    await userEvent.click(await screen.findByRole("button", { name: "Edit project" }));
+    await openProjectEditor();
     const editor = await screen.findByLabelText("Article text");
     await userEvent.clear(editor);
     await userEvent.type(editor, "My unfinished changes.");
     await selectProjectStage("Audio");
     await selectProjectStage("Article");
+    // The stage rundown opens the Output tab; the draft waits on the Edit tab.
+    expect(screen.getByRole("tab", { name: /^Edit/ }).textContent).toContain("unsaved");
+    await openProjectTab("Edit");
     expect((screen.getByLabelText("Article text") as HTMLTextAreaElement).value).toBe(
       "My unfinished changes.",
     );

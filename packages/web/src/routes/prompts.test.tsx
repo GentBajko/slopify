@@ -73,7 +73,7 @@ describe("the prompts list", () => {
     expect(screen.getByText("topic").getAttribute("data-slot-chip")).toBe("topic");
   });
 
-  it("teaches what a prompt is when the kind is empty, and repeats the one action", async () => {
+  it("teaches what a prompt is when the kind is empty, with the one action in the toolbar", async () => {
     renderRouted(<Screen start="image" />, deps([dossier]));
 
     expect(
@@ -81,17 +81,19 @@ describe("the prompts list", () => {
         "No image prompts yet. A prompt is text with {{keywords}}; each keyword becomes a field on Play.",
       ),
     ).not.toBeNull();
-    expect(screen.getAllByRole("link", { name: "New prompt" })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: "New prompt" })).toHaveLength(1);
   });
 
-  it("points New prompt and Edit at the editor, carrying the tab that is on", async () => {
+  it("points New prompt and the row itself at the editor, carrying the tab that is on", async () => {
     renderRouted(<Screen />, deps([dossier]));
 
     await screen.findByText("Documentary dossier");
     expect(screen.getByRole("link", { name: "New prompt" }).getAttribute("href")).toBe(
       "/prompts/new?kind=article",
     );
-    expect(screen.getByRole("link", { name: "Edit" }).getAttribute("href")).toBe("/prompts/p1");
+    expect(screen.getByRole("link", { name: "Documentary dossier" }).getAttribute("href")).toBe(
+      "/prompts/p1",
+    );
   });
 
   it("offers Duplicate as a copy opened for editing, and Delete behind a confirmation", async () => {

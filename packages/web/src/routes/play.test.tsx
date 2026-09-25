@@ -108,6 +108,12 @@ async function fillGeneratedRun(): Promise<void> {
   await userEvent.type(screen.getByLabelText("style"), "oil on canvas");
 }
 
+// Review opens over the editor, so a message can show both in the drawer's error list and
+// under the field behind it; these assertions read the drawer.
+function reviewDrawer(): HTMLElement {
+  return screen.getByRole("dialog", { name: "Review" });
+}
+
 describe("tutorial completion from the Play form", () => {
   it("tracks valid stage choices and keywords, and emits creation before leaving the form", async () => {
     const created = await mount();
@@ -165,7 +171,7 @@ describe("tutorial completion from the Play form", () => {
     await openCosts();
     await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
 
-    await screen.findByText("That article prompt was deleted.");
+    await within(reviewDrawer()).findByText("That article prompt was deleted.");
     expect(tutorial.progress.mock.lastCall?.[0]?.playArticleReady).toBe(false);
     expect(tutorial.event).not.toHaveBeenCalled();
   });
@@ -575,9 +581,11 @@ describe("a run the server refuses", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
 
     expect(
-      await screen.findByText("That article prompt no longer exists; pick another."),
+      await within(reviewDrawer()).findByText(
+        "That article prompt no longer exists; pick another.",
+      ),
     ).not.toBeNull();
-    expect(screen.getByText("This field is required.")).not.toBeNull();
+    expect(within(reviewDrawer()).getByText("This field is required.")).not.toBeNull();
     await section("Content");
     expect(screen.getByLabelText("Article prompt").getAttribute("aria-invalid")).toBe("true");
     expect(screen.getByLabelText("topic").getAttribute("aria-invalid")).toBe("true");
@@ -598,7 +606,7 @@ describe("a run the server refuses", () => {
     });
     await openCosts();
     await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
-    expect(await screen.findByText("This field is required.")).not.toBeNull();
+    expect(await within(reviewDrawer()).findByText("This field is required.")).not.toBeNull();
 
     await section("Content");
     await userEvent.type(screen.getByLabelText("topic"), "s");
@@ -735,7 +743,7 @@ describe("subtitles on Play", () => {
     await userEvent.selectOptions(mode(), "files");
     await openCosts();
     await userEvent.click(await screen.findByRole("button", { name: "Start run" }));
-    await screen.findByText("Choose an installed font.");
+    await within(reviewDrawer()).findByText("Choose an installed font.");
   });
 });
 
@@ -794,7 +802,9 @@ describe("explicit review error navigation", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Complete the second video's topic." }),
     );
-    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("topic")));
+    await waitFor(() =>
+      expect(document.activeElement).toBe(within(reviewDrawer()).getByLabelText("topic")),
+    );
     expect(screen.getByText(/Queue keyword variations/).closest("details")?.open).toBe(true);
   });
 });

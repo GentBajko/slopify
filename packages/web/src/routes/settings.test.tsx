@@ -1,6 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { AppearanceSkin } from "@/components/theme";
 import type { Answer } from "@/test-app";
@@ -11,6 +12,7 @@ import {
   portableMaxUploadBytes,
   refreshPortableImportQueries,
   SettingsRoute,
+  type SettingsSection,
 } from "./settings.js";
 
 afterEach(() => {
@@ -49,17 +51,51 @@ describe("the silence gap field", () => {
 });
 
 describe("the settings screen", () => {
-  it("carries the three groups the screen is made of", async () => {
-    renderApp(<SettingsRoute />, deps());
+  it("shows one section at a time, picked from the section list", async () => {
+    const user = userEvent.setup();
+    const picked: string[] = [];
+    function Harness() {
+      const [section, setSection] = useState<SettingsSection>("providers");
+      return (
+        <SettingsRoute
+          section={section}
+          onSection={(next) => {
+            picked.push(next);
+            setSection(next);
+          }}
+        />
+      );
+    }
+    renderApp(<Harness />, deps());
     expect(await screen.findByRole("heading", { name: "Settings" })).not.toBeNull();
-    expect(await screen.findByRole("heading", { name: "API keys · LLM" })).not.toBeNull();
-    expect(await screen.findByText("Voices · Name")).not.toBeNull();
-    expect(await screen.findByRole("heading", { name: "Playback" })).not.toBeNull();
+    expect(await screen.findByRole("heading", { name: "Text" })).not.toBeNull();
+    expect(screen.queryByLabelText("Silence between segments")).toBeNull();
+    const nav = screen.getByRole("navigation", { name: "Settings sections" });
+    expect(
+      within(nav)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual([
+      "Providers",
+      "Voices",
+      "Models",
+      "Playback & appearance",
+      "Backup & storage",
+      "Usage",
+    ]);
+    expect(
+      within(nav).getByRole("button", { name: "Providers" }).getAttribute("aria-current"),
+    ).toBe("page");
+    await user.click(within(nav).getByRole("button", { name: "Voices" }));
+    expect(picked).toEqual(["voices"]);
+    await user.click(within(nav).getByRole("button", { name: "Playback & appearance" }));
+    expect(await screen.findByLabelText("Silence between segments")).not.toBeNull();
+    expect(screen.queryByRole("heading", { name: "Text" })).toBeNull();
   });
 
   it("holds Save while the gap is not a number a run would take", async () => {
     const user = userEvent.setup();
-    renderApp(<SettingsRoute />, deps());
+    renderApp(<SettingsRoute section="playback" />, deps());
 
     const field = await screen.findByLabelText("Silence between segments");
     await user.clear(field);
@@ -74,7 +110,7 @@ describe("the settings screen", () => {
     const user = userEvent.setup();
     let sent: unknown;
     renderApp(
-      <SettingsRoute />,
+      <SettingsRoute section="playback" />,
       deps({
         "PUT /api/settings": async (request) => {
           sent = await request.json();
@@ -94,7 +130,7 @@ describe("the settings screen", () => {
 
   it("names the problem when the settings cannot be read", async () => {
     renderApp(
-      <SettingsRoute />,
+      <SettingsRoute section="playback" />,
       deps({ "GET /api/settings": problemAnswer("The database is locked.", 500) }),
     );
     expect(await screen.findByText("The database is locked.")).not.toBeNull();
@@ -102,7 +138,7 @@ describe("the settings screen", () => {
 
   it("shows disk usage while keeping backups and cleanup beside it", async () => {
     renderApp(
-      <SettingsRoute />,
+      <SettingsRoute section="storage" />,
       deps({
         "GET /api/storage": jsonAnswer({
           data: 1024 * 1024,
@@ -138,7 +174,7 @@ describe("the settings screen", () => {
     const user = userEvent.setup();
     let received = "";
     renderApp(
-      <SettingsRoute />,
+      <SettingsRoute section="storage" />,
       deps({
         "PUT /api/storage/import": async (request) => {
           received = await request.text();
@@ -158,7 +194,7 @@ describe("the settings screen", () => {
     const user = userEvent.setup();
     let requests = 0;
     renderApp(
-      <SettingsRoute />,
+      <SettingsRoute section="storage" />,
       deps({
         "PUT /api/storage/import": (request) => {
           requests += 1;
@@ -181,7 +217,7 @@ describe("the appearance switch", () => {
     renderApp(
       <>
         <AppearanceSkin />
-        <SettingsRoute />
+        <SettingsRoute section="playback" />
       </>,
       deps(),
     );
@@ -196,7 +232,7 @@ describe("the appearance switch", () => {
     renderApp(
       <>
         <AppearanceSkin />
-        <SettingsRoute />
+        <SettingsRoute section="playback" />
       </>,
       deps({ "PUT /api/settings": () => new Promise<Response>(() => {}) }),
     );
@@ -213,7 +249,7 @@ describe("the appearance switch", () => {
     renderApp(
       <>
         <AppearanceSkin />
-        <SettingsRoute />
+        <SettingsRoute section="playback" />
       </>,
       deps({
         "PUT /api/settings": async (request) => {
@@ -237,7 +273,7 @@ describe("the appearance switch", () => {
     renderApp(
       <>
         <AppearanceSkin />
-        <SettingsRoute />
+        <SettingsRoute section="playback" />
       </>,
       deps({ "PUT /api/settings": problemAnswer("The database is locked.", 500) }),
     );

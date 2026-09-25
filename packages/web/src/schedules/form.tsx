@@ -6,6 +6,7 @@ import type {
 } from "@app/slices/schedules/model.js";
 import { type FormEvent, type ReactElement, useRef, useState } from "react";
 import { useApp } from "@/app-context";
+import { InfoTip } from "@/components/kit/info-tip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createSchedule, updateSchedule } from "./api";
@@ -27,6 +28,7 @@ export function ScheduleForm({
   onError,
   editing,
   onCancel,
+  error,
   onBusy,
 }: {
   readonly templates: readonly {
@@ -39,6 +41,8 @@ export function ScheduleForm({
   readonly onError: (message: string) => void;
   readonly editing: ScheduleSummary | null;
   readonly onCancel: () => void;
+  // The last refusal, shown at the top of the form it belongs to.
+  readonly error?: string | null;
   readonly onBusy: (busy: boolean) => void;
 }): ReactElement {
   const { api } = useApp();
@@ -168,21 +172,14 @@ export function ScheduleForm({
   }
 
   return (
-    <section
-      aria-labelledby="new-schedule-heading"
-      className="rounded-panel border border-line bg-panel p-4 sm:p-5"
-    >
-      <h2 id="new-schedule-heading" className="font-semibold">
-        {editing ? "Edit schedule" : "New schedule"}
-      </h2>
-      <p className="mt-1 text-small text-ink2">
-        Schedules use the selected template version and never include uploaded media.
-      </p>
+    <section aria-label={editing ? "Edit schedule" : "New schedule"}>
+      {error ? (
+        <p role="alert" className="mb-3 text-small text-red">
+          {error}
+        </p>
+      ) : null}
       <form onSubmit={(event) => void submit(event)}>
-        <fieldset
-          disabled={saving || uncertain || pending}
-          className="mt-4 grid gap-4 md:grid-cols-2"
-        >
+        <fieldset disabled={saving || uncertain || pending} className="grid gap-4 sm:grid-cols-2">
           <label className="space-y-1" htmlFor="schedule-name">
             <span>Name</span>
             <Input
@@ -280,20 +277,24 @@ export function ScheduleForm({
           ) : (
             <div />
           )}
-          <label className="space-y-1" htmlFor="schedule-timezone">
-            <span>Timezone</span>
+          <div className="space-y-1">
+            <span className="flex items-center gap-1">
+              <label htmlFor="schedule-timezone">Timezone</label>
+              <InfoTip label="Timezone">
+                <p>
+                  {kind === "once"
+                    ? "IANA zone; the one-off instant is calculated here. Repeated clock times use the earlier occurrence; nonexistent spring-forward times are refused."
+                    : "IANA zone; next run is calculated here. Repeated clock times use the earlier occurrence; nonexistent spring-forward times move forward by the gap."}
+                </p>
+              </InfoTip>
+            </span>
             <Input
               id="schedule-timezone"
               value={timezone}
               onChange={(event) => setTimezone(event.target.value)}
               placeholder="Europe/Tirane"
             />
-            <small className="block text-ink3">
-              {kind === "once"
-                ? "IANA zone; the one-off instant is calculated here. Repeated clock times use the earlier occurrence; nonexistent spring-forward times are refused."
-                : "IANA zone; next run is calculated here. Repeated clock times use the earlier occurrence; nonexistent spring-forward times move forward by the gap."}
-            </small>
-          </label>
+          </div>
           <label className="space-y-1" htmlFor="schedule-missed">
             <span>Missed run</span>
             <select
@@ -320,9 +321,10 @@ export function ScheduleForm({
           </label>
           <VariantFields variants={variants} onChange={setVariants} />
         </fieldset>
-        <div className="mt-4 flex gap-2">
+        <div className="sticky bottom-[-16px] -mx-4 mt-4 flex gap-2 border-t border-line bg-panel px-4 py-3">
           <Button
             type="submit"
+            variant="primary"
             disabled={pending || saving || (options.length === 0 && !uncertain)}
           >
             {saving
@@ -333,11 +335,9 @@ export function ScheduleForm({
                   ? "Save changes"
                   : "Save schedule"}
           </Button>
-          {editing ? (
-            <Button type="button" disabled={saving || uncertain} onClick={onCancel}>
-              Cancel editing
-            </Button>
-          ) : null}
+          <Button type="button" disabled={saving || uncertain} onClick={onCancel}>
+            {editing ? "Cancel editing" : "Cancel"}
+          </Button>
         </div>
       </form>
     </section>
@@ -376,37 +376,50 @@ function VariantFields({
   const replace = (next: EditableVariant) =>
     onChange(variants.map((variant) => (variant.id === next.id ? next : variant)));
   const textClass =
-    "min-h-10 w-full rounded-control border border-line2 bg-panel2 px-[10px] py-2 text-small";
+    "min-h-8 w-full rounded-control border border-line2 bg-panel2 px-[10px] py-[5px] text-small";
   return (
-    <fieldset className="space-y-3 md:col-span-2">
-      <legend>Keyword variants (optional)</legend>
-      <p className="text-small text-ink3">
-        The base template run is always included. Add up to 49 variants.
-      </p>
+    <fieldset className="space-y-3 sm:col-span-2">
+      <legend className="flex items-center gap-1">
+        Keyword variants (optional)
+        <InfoTip label="Keyword variants">
+          <p>The base template run is always included. Add up to 49 variants.</p>
+        </InfoTip>
+      </legend>
       {variants.map((variant, index) => (
-        <fieldset key={variant.id} className="space-y-3 rounded-control border border-line p-3">
-          <legend>Variant {index + 1}</legend>
-          <label className="block space-y-1">
-            <span>Variant {index + 1} title</span>
-            <textarea
-              required
-              maxLength={200}
-              rows={1}
-              className={textClass}
-              value={variant.title}
-              onChange={(event) => replace({ ...variant, title: event.target.value })}
-            />
-          </label>
+        <fieldset key={variant.id} className="space-y-2 rounded-control border border-line p-3">
+          <legend className="engraved px-1 text-ink3">Variant {index + 1}</legend>
+          <div className="flex items-end gap-2">
+            <label className="block min-w-0 flex-1 space-y-1">
+              <span className="text-small text-ink2">Title</span>
+              <input
+                required
+                maxLength={200}
+                aria-label={`Variant ${index + 1} title`}
+                className={textClass}
+                value={variant.title}
+                onChange={(event) => replace({ ...variant, title: event.target.value })}
+              />
+            </label>
+            <Button
+              type="button"
+              variant="ghost"
+              aria-label={`Remove variant ${index + 1}`}
+              onClick={() => onChange(variants.filter((value) => value.id !== variant.id))}
+            >
+              Remove
+            </Button>
+          </div>
           {variant.values.map((keyword, keywordIndex) => (
-            <div key={keyword.id} className="grid gap-2 sm:grid-cols-2">
+            <div
+              key={keyword.id}
+              className="grid items-end gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto]"
+            >
               <label className="block space-y-1">
-                <span>
-                  Variant {index + 1} keyword {keywordIndex + 1} name
-                </span>
-                <textarea
+                <span className="text-small text-ink2">Keyword</span>
+                <input
                   required
                   maxLength={200}
-                  rows={1}
+                  aria-label={`Variant ${index + 1} keyword ${keywordIndex + 1} name`}
                   className={textClass}
                   value={keyword.name}
                   onChange={(event) =>
@@ -420,12 +433,11 @@ function VariantFields({
                 />
               </label>
               <label className="block space-y-1">
-                <span>
-                  Variant {index + 1} keyword {keywordIndex + 1} value
-                </span>
+                <span className="text-small text-ink2">Value</span>
                 <textarea
                   maxLength={10000}
-                  rows={2}
+                  rows={1}
+                  aria-label={`Variant ${index + 1} keyword ${keywordIndex + 1} value`}
                   className={textClass}
                   value={keyword.value}
                   onChange={(event) =>
@@ -440,7 +452,8 @@ function VariantFields({
               </label>
               <Button
                 type="button"
-                className="min-h-10"
+                variant="ghost"
+                aria-label={`Remove keyword ${keywordIndex + 1} from variant ${index + 1}`}
                 onClick={() =>
                   replace({
                     ...variant,
@@ -448,31 +461,23 @@ function VariantFields({
                   })
                 }
               >
-                Remove keyword {keywordIndex + 1} from variant {index + 1}
+                Remove
               </Button>
             </div>
           ))}
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              className="min-h-10"
-              onClick={() =>
-                replace({
-                  ...variant,
-                  values: [...variant.values, { id: crypto.randomUUID(), name: "", value: "" }],
-                })
-              }
-            >
-              Add keyword to variant {index + 1}
-            </Button>
-            <Button
-              type="button"
-              className="min-h-10"
-              onClick={() => onChange(variants.filter((value) => value.id !== variant.id))}
-            >
-              Remove variant {index + 1}
-            </Button>
-          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            aria-label={`Add keyword to variant ${index + 1}`}
+            onClick={() =>
+              replace({
+                ...variant,
+                values: [...variant.values, { id: crypto.randomUUID(), name: "", value: "" }],
+              })
+            }
+          >
+            Add keyword
+          </Button>
         </fieldset>
       ))}
       <Button

@@ -3,7 +3,14 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { revisionView } from "@/project/revision-fixture";
-import { jsonAnswer, renderRouted, testOrigin } from "@/test-app";
+import {
+  jsonAnswer,
+  openEditSection,
+  openProjectEditor,
+  openProjectTab,
+  renderRouted,
+  testOrigin,
+} from "@/test-app";
 import { ProjectRoute } from "./project";
 import { body, deps, output, ready, recoveryAccepted, stage } from "./project-fixtures";
 
@@ -119,6 +126,10 @@ describe("project pause and provider changes", () => {
         "POST /api/projects/p1/checkpoints/audio-gate/approve": approve,
       }),
     );
+    await waitFor(() =>
+      expect(screen.getByRole("tab", { name: /^Checkpoints/ }).textContent).toContain("1 held"),
+    );
+    await openProjectTab("Checkpoints");
     const approval = await screen.findByRole("button", { name: "Approve Audio checkpoint" });
     expect(approval.hasAttribute("disabled")).toBe(true);
     const button = await screen.findByRole("button", { name: "Resume" });
@@ -131,6 +142,7 @@ describe("project pause and provider changes", () => {
     await user.keyboard("{Enter}");
     await waitFor(() => expect(approval.hasAttribute("disabled")).toBe(false));
     expect(screen.getByRole("button", { name: "Pause" })).not.toBeNull();
+    await openProjectTab("Edit");
     expect(screen.getByRole("button", { name: "Edit project" })).not.toBeNull();
     expect(resume).toHaveBeenCalledTimes(2);
     expect(approve).not.toHaveBeenCalled();
@@ -150,7 +162,8 @@ describe("project pause and provider changes", () => {
         }),
       }),
     );
-    await user.click(await screen.findByRole("button", { name: "Edit project" }));
+    await openProjectEditor();
+    await openEditSection("Providers");
     await user.selectOptions(await screen.findByLabelText("Text provider"), "claude-code");
     await user.click(screen.getByRole("button", { name: "Enter Text model ID" }));
     await user.type(screen.getByRole("textbox", { name: "Text model" }), "sonnet");

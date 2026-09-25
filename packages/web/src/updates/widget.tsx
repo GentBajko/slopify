@@ -1,12 +1,10 @@
 import { RefreshCw } from "lucide-react";
 import type { ReactElement } from "react";
 import { cn } from "@/lib/utils";
-import { useFooterOffset } from "./footer-offset.js";
 import { useUpdate } from "./use-update.js";
 
 export function UpdateWidget({ reload }: { readonly reload: () => void }): ReactElement {
   const update = useUpdate(reload);
-  const bottom = useFooterOffset();
   const { info, updating, installing, reconnecting, checking, error } = update;
   const active = updating || installing;
   const blocked =
@@ -35,25 +33,24 @@ export function UpdateWidget({ reload }: { readonly reload: () => void }): React
         aria-label={label}
         title={label}
         disabled={active || checking}
-        style={{ bottom }}
         onClick={() => {
           if (info?.available && info.canUpdate && !blocked) update.install();
           else update.refresh();
         }}
         className={cn(
-          "fixed right-0 z-30 flex size-10 items-center justify-center rounded-full bg-transparent text-ink2 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:right-5",
+          "relative flex size-8 shrink-0 items-center justify-center rounded-control bg-transparent text-ink2 hover:bg-panel2 hover:text-ink",
           error && "text-amber",
         )}
       >
         <RefreshCw
           aria-hidden="true"
-          size={20}
+          size={16}
           className={cn((active || checking) && "animate-spin motion-reduce:animate-none")}
         />
         {info?.available && !active ? (
           <span
             aria-hidden="true"
-            className="absolute top-1 right-1 size-1.5 rounded-full bg-lamp-run"
+            className="absolute top-1 right-1 size-2 rounded-full bg-lamp-run"
           />
         ) : null}
       </button>

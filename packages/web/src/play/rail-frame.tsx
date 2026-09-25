@@ -50,10 +50,10 @@ export function StageRail({
   return (
     <section
       data-tour={`play-${kind}`}
-      className="grid grid-cols-[24px_1fr_auto] items-center gap-x-2 gap-y-5 border-b border-line py-6"
+      className="grid grid-cols-[24px_1fr_auto] items-center gap-x-2 gap-y-4 border-b border-line py-4 [&>div:empty]:hidden"
     >
       <StageGlyph kind={kind} className={dim ? "text-ink3" : "text-ink2"} />
-      <h3 className={cn("text-lg font-semibold", dim ? "text-ink3" : undefined)}>{name}</h3>
+      <h3 className={cn("text-row font-semibold", dim ? "text-ink3" : undefined)}>{name}</h3>
       {children}
     </section>
   );
