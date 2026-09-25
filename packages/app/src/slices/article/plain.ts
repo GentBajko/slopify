@@ -15,6 +15,6 @@ export function plainText(markdown: string): string {
         })
         .join("");
     })
-    .filter((text) => text !== "");
+    .filter((text) => text.trim() !== "");
   return paragraphs.length === 0 ? "" : paragraphs.join("\n\n") + "\n";
 }

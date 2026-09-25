@@ -94,6 +94,8 @@ describe("plainText", () => {
     ["One.  \nTwo.\nThree.", "One.\nTwo.\nThree.\n"],
     ["<span></span>", ""],
     ["[^1]\n\n[^1]: Removed.", ""],
+    ["[^1] [^2]\n\n[^1]: Removed.\n[^2]: Removed.", ""],
+    ["Before.\n\n[^1] [^2]\n\nAfter.\n\n[^1]: Removed.\n[^2]: Removed.", "Before.\n\nAfter.\n"],
   ])("projects prose without serialization escapes: %s", (source, expected) => {
     expect(plainText(source)).toBe(expected);
   });
