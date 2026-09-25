@@ -107,7 +107,10 @@ export const journalSchema = z
     publishedIdentity: identitySchema.nullable(),
     sourceDigest: digestSchema.nullable(),
     sourceAbsent: z.boolean().default(false),
-    backup: identifier,
+    backup: z
+      .string()
+      .max(174)
+      .regex(/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/),
     backupDigest: digestSchema.nullable(),
     candidate: z.string().nullable(),
     token: z.string().regex(/^[a-f0-9]{64}$/),

@@ -578,3 +578,20 @@ it("gives a working new-destination recovery path for a stale published copy", a
     await h.close();
   }
 });
+
+it.each([82, 83, 128])("supports a configured volume name of %s characters", async (length) => {
+  const h = await installationFixture();
+  try {
+    const volume = "v".repeat(length);
+    const installed = await installProjects({ ...h.config, volume }, h.engine, () => h.engine);
+    expect(installed.recovery).toMatch(new RegExp(`^${volume}-recovery-[a-f0-9-]{36}$`));
+    const journal = await readState(
+      join(h.config.directory, "journal.json"),
+      journalSchema,
+      h.config.uid,
+    );
+    expect(journal?.backup).toBe(installed.recovery);
+  } finally {
+    await h.close();
+  }
+});
