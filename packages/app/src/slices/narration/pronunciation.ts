@@ -89,10 +89,15 @@ export interface PronunciationSpan {
   readonly end: number;
   readonly text: string;
 }
-export function pronunciationSpans(
+export interface PronunciationMatch {
+  readonly start: number;
+  readonly end: number;
+  readonly entry: GlossaryEntry;
+}
+export function pronunciationMatches(
   source: string,
   entries: readonly GlossaryEntry[],
-): readonly PronunciationSpan[] {
+): readonly PronunciationMatch[] {
   if (entries.length === 0) return [];
   const ordered = [...entries].sort((a, b) => b.term.length - a.term.length);
   const patterns = ordered.map((entry) =>
@@ -112,14 +117,29 @@ export function pronunciationSpans(
       ")",
     "giu",
   );
-  const spans: PronunciationSpan[] = [];
+  const matches: PronunciationMatch[] = [];
   for (const match of source.matchAll(expression)) {
+    const end = match.index + match[0].length;
+    const before = source[match.index - 1];
+    const after = source[end];
+    if ((after === "'" && before !== "'") || (after === "’" && before !== "‘")) continue;
     const entry = ordered.find((_, index) => match[index + 1] !== undefined);
     if (entry === undefined) throw new Error("Matched glossary term has no mapping.");
-    for (const [index, word] of Array.from(match[0].matchAll(/\S+/gu)).entries()) {
-      const ipa = entry.ipa[index];
+    matches.push({ start: match.index, end, entry });
+  }
+  return matches;
+}
+export function pronunciationSpans(
+  source: string,
+  entries: readonly GlossaryEntry[],
+): readonly PronunciationSpan[] {
+  const spans: PronunciationSpan[] = [];
+  for (const match of pronunciationMatches(source, entries)) {
+    const words = source.slice(match.start, match.end).matchAll(/\S+/gu);
+    for (const [index, word] of Array.from(words).entries()) {
+      const ipa = match.entry.ipa[index];
       if (ipa === undefined) throw new Error("Validated glossary term has no IPA word.");
-      const start = match.index + word.index;
+      const start = match.start + word.index;
       spans.push({ start, end: start + word[0].length, text: `/${ipa}/` });
     }
   }

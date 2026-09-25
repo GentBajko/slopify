@@ -1,8 +1,9 @@
 import { type FingerprintValue, fingerprint } from "../../kernel/runner/work.js";
 import { usesNarrationPreparation, usesPronunciationGlossary } from "../admission/rules.js";
-import { chunkNarration, defaultChunking } from "../narration/chunk.js";
+import { defaultChunking } from "../narration/chunk.js";
 import { concatArgs } from "../narration/concat.js";
 import { normalizeNarrationText } from "../narration/plan.js";
+import { pronunciationChunks } from "../narration/pronunciation-chunks.js";
 import { narrationParts, pronunciationFutureValues, voiceValues } from "./recipe-audio-parts.js";
 import {
   type RecipeContext,
@@ -50,20 +51,17 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
     const groups =
       text.articleText === null
         ? []
-        : chunkNarration(
+        : pronunciationChunks(
             normalizeNarrationText(text.articleText),
             config.chunking ?? defaultChunking,
+            pronounce && text.glossary?.ok ? text.glossary.entries : [],
+            new Set(Object.keys(content.narrationOverrides)),
           );
-    const occurrences = new Map<string, number>();
     const parts: ResolvedWorkRecipe[] = [];
     const transcripts: { original: string; effective: string }[] = [];
     const futurePronunciation: FingerprintValue[] = [];
     let pending = text.articleText === null;
-    for (const logicalText of groups) {
-      const hash = fingerprint(logicalText).slice(0, 20);
-      const occurrence = (occurrences.get(hash) ?? 0) + 1;
-      occurrences.set(hash, occurrence);
-      const logicalKey = `audio:body:${hash}-${occurrence}`;
+    for (const { key: logicalKey, text: logicalText } of groups) {
       transcripts.push({
         original: logicalText,
         effective: effectiveText(context, logicalKey, logicalText),

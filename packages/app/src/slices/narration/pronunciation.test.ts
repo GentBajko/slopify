@@ -97,4 +97,19 @@ describe("article pronunciation glossary", () => {
       { start: 5, end: 5 + term.length, text: "/oʊlɪtʃ/" },
     ]);
   });
+  it.each(["James' book", "James’ book", "'James’ book", "‘James' book", "James's book"])(
+    "does not treat an unpaired possessive apostrophe as a closing quote: %s",
+    (source) => {
+      const parsed = parsePronunciationGlossary("James: /dʒeɪmz/");
+      if (!parsed.ok) throw new Error(parsed.reason);
+      expect(pronunciationSpans(source, parsed.entries)).toEqual([]);
+    },
+  );
+  it.each(["'James'", "‘James’"])("recognizes paired quotes around %s", (source) => {
+    const parsed = parsePronunciationGlossary("James: /dʒeɪmz/");
+    if (!parsed.ok) throw new Error(parsed.reason);
+    expect(pronunciationSpans(source, parsed.entries)).toEqual([
+      { start: 1, end: 6, text: "/dʒeɪmz/" },
+    ]);
+  });
 });
