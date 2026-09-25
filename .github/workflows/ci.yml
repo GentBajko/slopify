@@ -1,9 +1,10 @@
 name: CI
 
 on:
+  # Branches only: a release tag reuses the run its commit already passed on main.
   push:
+    branches: ['**']
   pull_request:
-  workflow_call:
 
 jobs:
   check:

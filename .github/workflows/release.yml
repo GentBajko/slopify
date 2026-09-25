@@ -19,9 +19,24 @@ jobs:
       - name: Verify tag matches package version
         run: node -e "const version=require('./packages/app/package.json').version; if (!/^\d+\.\d+\.\d+$/.test(version) || process.env.GITHUB_REF_NAME !== version) { throw new Error('Stable tag ' + process.env.GITHUB_REF_NAME + ' does not match package version ' + version); }"
 
+  # The tagged commit must already have passed CI on main; the release does not run the
+  # suite a second time. Push main, wait for CI, then tag that commit.
   verify:
     needs: metadata
-    uses: ./.github/workflows/ci.yml
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Require a passing CI run on main for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          passed=$(gh api "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=${{ github.sha }}&branch=main&status=success&per_page=1" --jq '.total_count')
+          if [ "$passed" -lt 1 ]; then
+            echo "::error::No successful CI run on main for ${{ github.sha }}. Push main, wait for CI to pass, then tag that commit."
+            exit 1
+          fi
 
   publish:
     needs: verify
