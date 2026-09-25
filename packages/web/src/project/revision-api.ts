@@ -1,3 +1,4 @@
+import { type FolderReply, folderReplySchema } from "@app/edge/http/folder-location-schema.js";
 import type {
   RebuildAdmission,
   RebuildPreview,
@@ -202,15 +203,14 @@ export async function openRevisionFolder(
   projectId: string,
   revisionId: string,
   recordId: string,
-): Promise<void> {
+): Promise<FolderReply> {
   const response = await api.fetch(
     `${api.origin}/api/projects/${encodeURIComponent(projectId)}/revisions/${encodeURIComponent(revisionId)}/${encodeURIComponent(recordId)}/open-folder`,
     { method: "POST" },
   );
-  if (!response.ok) {
-    const result = await responseOf(response, z.unknown());
-    if (!result.ok) throw new Error(result.message);
-  }
+  const result = await responseOf(response, folderReplySchema);
+  if (!result.ok) throw new Error(result.message);
+  return result.value;
 }
 export function revisionImagesUrl(api: Api, projectId: string, revisionId: string): string {
   return revisionFileUrl(api, projectId, revisionId, "images.zip");

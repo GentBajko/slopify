@@ -2,9 +2,49 @@ import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { jsonAnswer, problemAnswer, renderApp, testDeps } from "@/test-app";
+import { OpenFolder } from "./open-folder.js";
 import { DownloadLink } from "./parts.js";
 
 afterEach(cleanup);
+
+it("shows a selectable Docker path without claiming a desktop was opened", async () => {
+  renderApp(
+    <DownloadLink projectId="p1" asset="video" />,
+    testDeps({
+      "POST /api/projects/p1/open-folder": jsonAnswer({
+        opened: false,
+        location: "docker-host",
+        path: "/home/u/Slopify/Projects/p1",
+      }),
+    }),
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Open folder" }));
+  expect(
+    (await screen.findByRole("textbox", { name: "Saved folder path" })).getAttribute("value"),
+  ).toBe("/home/u/Slopify/Projects/p1");
+  expect(screen.getByText(/machine running Slopify/)).not.toBeNull();
+  expect(screen.getByRole("link", { name: "Download" })).not.toBeNull();
+  expect(screen.queryByText(/opened a window/i)).toBeNull();
+});
+
+it("uses the historical record endpoint for a retained folder", async () => {
+  const request = vi.fn(
+    jsonAnswer({
+      opened: false,
+      location: "docker-host",
+      path: "/home/u/Slopify/Projects/p1/history",
+    }),
+  );
+  renderApp(
+    <OpenFolder projectId="p1" asset="video" folder={{ revisionId: "old", recordId: "record" }} />,
+    testDeps({ "POST /api/projects/p1/revisions/old/record/open-folder": request }),
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Open folder" }));
+  expect(
+    (await screen.findByRole("textbox", { name: "Saved folder path" })).getAttribute("value"),
+  ).toContain("/history");
+  expect(request).toHaveBeenCalledTimes(1);
+});
 
 it("keeps downloads and opens the output folder only on demand", async () => {
   const open = vi.fn(jsonAnswer({ opened: true }));
