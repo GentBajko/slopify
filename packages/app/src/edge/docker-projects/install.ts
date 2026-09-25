@@ -58,6 +58,16 @@ export async function installProjects(
   if (previousJournal?.phase === "rolled-back") await assertSourceIdentity(previousJournal);
   receipt = await readState(receiptPath, receiptSchema, c.uid);
   const old = await e.inspect(c.name);
+  if (
+    !receipt &&
+    previousJournal?.sourceBind &&
+    (old?.id !== previousJournal.previous?.id ||
+      old?.mounts.find((m) => m.destination === "/data/projects")?.source !==
+        previousJournal.sourceBind)
+  )
+    throw new Error(
+      `Original bound container is missing or changed. Restore the recorded original container using ${previousJournal.sourceBind}; the hidden volume projects are not authoritative.`,
+    );
   for (const name of await readdir(c.root)) {
     if (name === c.name || name === "setup.lock") continue;
     const s = await lstat(join(c.root, name));
@@ -181,7 +191,7 @@ export async function installProjects(
     const source = await e.projects(image, c.volume, bind);
     if (reuse && (reuse.sourceAbsent ? source !== null : source?.hash !== reuse.sourceDigest?.hash))
       throw new Error(
-        `Stale migration baseline. Retain ${projects} and ${reuse.staging}; move the failed destination aside before retrying.`,
+        `Stale migration baseline. Retain ${projects} and ${reuse.staging}; select a new empty --projects-dir for a fresh verified copy.`,
       );
     await save({
       sourceDigest: source ?? reuse?.sourceDigest ?? null,

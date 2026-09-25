@@ -115,8 +115,9 @@ Budget temporary space for one volume clone plus one project copy.
 If setup is interrupted, rerun the same launcher. Keep the printed recovery
 volume and stopped containers until you have verified your outputs. A missing
 remembered folder, stale failed copy, conflicting container or changed daemon
-is an error; restore the original folder/daemon or move the specifically printed
-failed destination aside before retrying. Do not delete the receipt to bypass
+is an error; restore the original folder/daemon. For a stale failed copy, keep
+the printed recovery material and select a new empty `--projects-dir` for a
+fresh verified copy. Do not delete the receipt to bypass
 these checks, start a stopped recovery container while another writer uses its
 volume, or run a recursive permission fix on your data. Rootful userns-remap and
 remote daemons are unsupported; use a supported rootless daemon or native

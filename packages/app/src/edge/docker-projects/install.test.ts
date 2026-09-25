@@ -522,3 +522,59 @@ it.each(["stop", "digest"])(
     }
   },
 );
+
+it("refuses a missing original after failed unreceipted bind adoption", async () => {
+  const h = await seeded();
+  try {
+    const bind = join(h.root, "Current projects");
+    await mkdir(bind, { mode: 0o700 });
+    await writeFile(join(bind, "current.md"), "current bind bytes");
+    const old = h.containers.get("old");
+    if (!old) throw new Error("Missing fixture");
+    h.containers.set(old.id, {
+      ...old,
+      mounts: [
+        ...old.mounts,
+        { type: "bind", name: "", source: bind, destination: "/data/projects", rw: true },
+      ],
+    });
+    h.failures.add("health");
+    await expect(installProjects(h.config, h.engine, () => h.engine)).rejects.toThrow();
+    h.failures.clear();
+    h.containers.delete(old.id);
+    const before = await treeDigest(h.volume, true);
+    h.calls.length = 0;
+    await expect(installProjects(h.config, h.engine, () => h.engine)).rejects.toThrow(
+      "Original bound container is missing or changed",
+    );
+    for (const op of ["start", "stop", "copy", "snapshot", "own"])
+      expect(h.calls).not.toContain(op);
+    expect(await treeDigest(h.volume, true)).toEqual(before);
+    expect(await readFile(join(bind, "current.md"), "utf8")).toBe("current bind bytes");
+  } finally {
+    await h.close();
+  }
+});
+
+it("gives a working new-destination recovery path for a stale published copy", async () => {
+  const h = await seeded();
+  try {
+    h.failures.add("health");
+    await expect(installProjects(h.config, h.engine, () => h.engine)).rejects.toThrow();
+    h.failures.clear();
+    await writeFile(join(h.volume, "projects", "new.md"), "new source bytes");
+    await expect(installProjects(h.config, h.engine, () => h.engine)).rejects.toThrow(
+      "select a new empty --projects-dir",
+    );
+    const installed = await installProjects(
+      { ...h.config, projectsOverride: join(h.root, "Fresh destination") },
+      h.engine,
+      () => h.engine,
+    );
+    expect(await treeDigest(installed.projects)).toEqual(
+      await treeDigest(join(h.volume, "projects")),
+    );
+  } finally {
+    await h.close();
+  }
+});
