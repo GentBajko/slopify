@@ -55,3 +55,4 @@ jobs:
       - run: docker build -t slopify:smoke .
       - run: bash packages/app/scripts/container-smoke.sh
       - run: node packages/app/scripts/host-cli-smoke.mjs
+      - run: node packages/app/scripts/docker-projects-smoke.mjs

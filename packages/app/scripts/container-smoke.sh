@@ -5,12 +5,40 @@ smoke_container="slopify-container-smoke-$$"
 smoke_volume="slopify-container-smoke-$$"
 offline_container="${smoke_container}-offline"
 previous_id=""
+smoke_root=$(mktemp -d -t slopify-container-projects-XXXXXXXX)
+export XDG_DATA_HOME="$smoke_root/state"
+export SLOPIFY_DOCKER_PROJECTS_DIR="$smoke_root/Projects"
+succeeded=false
 
 cleanup() {
+  if [[ "$succeeded" != true ]]; then
+    printf 'Disposable recovery material retained: %s %s %s\n' "$smoke_root" "$smoke_container" "$smoke_volume" >&2
+    return
+  fi
   docker rm -f "$offline_container" >/dev/null 2>&1 || true
   docker rm -f "$smoke_container" >/dev/null 2>&1 || true
   if [[ -n "$previous_id" ]]; then docker rm -f "$previous_id" >/dev/null 2>&1 || true; fi
+  local target
+  while IFS= read -r target; do
+    if [[ -n "$target" ]]; then docker rm -f "$target" >/dev/null; fi
+  done < <(docker container ls -a --filter "name=^/${smoke_container}($|-)" --format '{{.ID}}')
   docker volume rm "$smoke_volume" >/dev/null 2>&1 || true
+  node --input-type=module - "$smoke_root" "$smoke_container" "$smoke_volume" <<'JS'
+import { execFileSync } from 'node:child_process';
+import { readFile, readdir, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+const [root,name,volume]=process.argv.slice(2);
+if (!root || !name || !volume || !name.startsWith('slopify-container-smoke-')) throw new Error('Invalid smoke cleanup identity');
+const directory=join(root,'state/slopify/docker',name);
+for (const entry of await readdir(directory).catch(()=>[])) {
+  if (!/^[a-f0-9-]{36}$/.test(entry)) continue;
+  const j=JSON.parse(await readFile(join(directory,entry,'journal.json'),'utf8'));
+  if (j.volume!==volume || j.backup!==`${volume}-recovery-${j.id}`) throw new Error('Foreign recovery volume');
+  const names=execFileSync('docker',['volume','ls','--format','{{.Name}}'],{encoding:'utf8'}).split(/\s+/);
+  if (names.includes(j.backup)) execFileSync('docker',['volume','rm',j.backup],{stdio:'pipe'});
+}
+await rm(root,{recursive:true,force:true});
+JS
 }
 trap cleanup EXIT
 
@@ -88,3 +116,4 @@ wait_for_health
 docker exec "$smoke_container" node -e \
   "if (require('node:fs').readFileSync('/data/.container-smoke', 'utf8') !== 'persisted') process.exit(1)"
 curl --fail --silent "http://$(docker port "$smoke_container" 6969/tcp)/api/health" >/dev/null
+succeeded=true

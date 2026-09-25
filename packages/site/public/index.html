@@ -172,7 +172,7 @@
                     <span class="visually-hidden"> the Docker launcher command</span>
                   </button>
                 </div>
-                <p class="install-hint">Runs in the background and restarts with Docker. <a href="#docker">Docker setup</a></p>
+                <p class="install-hint">Runs in the background, restarts with Docker and saves project files in ~/Slopify/Projects. <a href="#docker">Docker setup</a></p>
               </div>
             </div>
             <span class="visually-hidden" role="status" data-copy-status></span>
@@ -349,12 +349,21 @@
               <span class="engraved engraved-strong">Docker</span>
               <div>
                 <p class="step-line">
-                  On Linux with Docker, Node 26+ and systemd, run <code>npx @gentbajko/slopify@latest --docker</code>
+                  On Linux with Docker, Node 26+ and util-linux (flock), run <code>npx @gentbajko/slopify@latest --docker</code>
                   or <code>slopify --docker</code> after a global install. The launcher detects installed
                   Codex, Claude Code and Gemini CLIs. It asks once before setting up a private host helper
                   and automatic startup, including user lingering. The CLIs run on your machine;
-                  logins stay on the host. Native installs need no helper.
+                  logins stay on the host. The optional host helper requires systemd. Native installs need no helper.
                 </p>
+                <p>The managed launcher saves project files in <code>~/Slopify/Projects</code>;
+                  the database and credentials stay private in the named volume. Custom container
+                  names get their own folder. Use <code>--projects-dir</code> or
+                  <code>SLOPIFY_DOCKER_PROJECTS_DIR</code> to select a dedicated folder; updates
+                  remember it. Existing files are copied and verified before activation.</p>
+                <p>Folder actions show the path on the machine running Slopify. Downloads remain
+                  available, including with <code>--host-cli=off</code>; file access needs no helper.
+                  Plain Docker does not set up a host project folder. Use the managed launcher
+                  for automatic setup and recovery.</p>
                 <p class="step-line">
                   Plain Docker is API-only unless connected to an existing helper. It does not install host services.
                   Add <code>--host-cli=off</code> to the launcher, or run the image directly:
@@ -367,7 +376,7 @@
                   </button>
                 </div>
                 <p class="step-line">
-                  Both use <code>http://127.0.0.1:6969</code>, keep data in <code>slopify-data</code>,
+                  Both use <code>http://127.0.0.1:6969</code>, keep private data in <code>slopify-data</code>,
                   and restart the container when Docker starts. Keep the localhost binding: Slopify has no login.
                   See the <a href="https://github.com/GentBajko/slopify#docker">Docker guide</a> for helper permissions, updates and disable commands.
                 </p>

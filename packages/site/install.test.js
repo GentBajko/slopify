@@ -3,6 +3,15 @@ import { expect, it } from "vitest";
 
 const page = readFileSync(new URL("./public/index.html", import.meta.url), "utf8");
 
+it("explains automatic host project files, API-only access and safe recovery", () => {
+  expect(page).toContain("~/Slopify/Projects");
+  expect(page).toContain("--projects-dir");
+  expect(page).toContain("SLOPIFY_DOCKER_PROJECTS_DIR");
+  expect(page).toContain("database and credentials stay private");
+  expect(page).toContain("machine running Slopify");
+  expect(page).toContain("does not set up a host project folder");
+});
+
 it("offers a copyable Docker launcher and a localhost-only direct command", () => {
   expect(page).toContain('data-copy="npx @gentbajko/slopify@latest --docker"');
   expect(page).toContain(
