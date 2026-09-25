@@ -82,6 +82,7 @@ export async function revisionAudio(
           ? await input("audio_outro")
           : undefined,
       gapSeconds: config.silenceGapSeconds,
+      edgeSeconds: config.edgeSilenceSeconds,
     },
     config.sources.video === "off" ? 1 / 48000 : 1 / 30,
   );

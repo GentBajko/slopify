@@ -20,6 +20,8 @@ export const config: RunConfig = {
   values: {},
   provided: { article: "First paragraph.\n\nSecond paragraph." },
   silenceGapSeconds: 0,
+  imageSeconds: 15,
+  edgeSilenceSeconds: 0,
   rendered: { article: "Write an article." },
 };
 export const content: RevisionContent = {

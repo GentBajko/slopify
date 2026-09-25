@@ -49,6 +49,8 @@ const draft: RunDraft = {
   values: {},
   provided: {},
   silenceGapSeconds: 0,
+  imageSeconds: 15,
+  edgeSilenceSeconds: 0,
 };
 const runs = ["Arda", "Gondor", "Rohan"].map((title) => ({
   draft: { ...draft, title, values: { topic: title } },

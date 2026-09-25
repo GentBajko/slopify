@@ -53,6 +53,8 @@ export const config: RunConfig = {
   rendered: { article: "Write boats", "image:0": "Paint boats" },
   provided: { thumbnail: "consumed-upload" },
   silenceGapSeconds: 3,
+  imageSeconds: 15,
+  edgeSilenceSeconds: 0,
 };
 
 export function harness(

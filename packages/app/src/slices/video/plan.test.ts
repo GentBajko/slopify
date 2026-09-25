@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { PlanInput } from "./plan.js";
-import { planRender } from "./plan.js";
+import { audioTimeline, planRender } from "./plan.js";
 
 function input(over: Partial<PlanInput> = {}): PlanInput {
   return {
     format: "16:9",
     gapSeconds: 3,
+    edgeSeconds: 0,
+    imageSeconds: 15,
     body: { path: "/p/audio-body.mp3", seconds: 10 },
     images: ["/p/images/001.png", "/p/images/002.png", "/p/images/003.png"],
     output: "/p/video.mp4",
@@ -96,56 +98,125 @@ describe("the frame", () => {
   });
 });
 
+describe("the edge silence", () => {
+  it("opens and closes the timeline with it, around intro and outro alike", () => {
+    const plan = planRender(
+      input({
+        edgeSeconds: 2,
+        intro: { path: "/p/i.mp3", seconds: 2 },
+        outro: { path: "/p/o.mp3", seconds: 4 },
+      }),
+    );
+    expect(shape(plan)).toEqual([
+      "edge:2",
+      "intro:2",
+      "gap:3",
+      "body:10",
+      "gap:3",
+      "outro:4",
+      "edge:2",
+    ]);
+    expect(plan.totalSeconds).toBe(26);
+    expect(plan.audio[0]).toEqual({ kind: "edge", path: null, seconds: 2 });
+  });
+
+  it("adds nothing at zero", () => {
+    expect(shape(planRender(input({ edgeSeconds: 0 })))).toEqual(["body:10"]);
+  });
+
+  it("takes a WAV's one-sample minimum rather than the video's one frame", () => {
+    const body = { path: "/p/b.mp3", seconds: 1 };
+    expect(audioTimeline({ gapSeconds: 0, edgeSeconds: 0.01, body }).map((s) => s.kind)).toEqual([
+      "body",
+    ]);
+    expect(
+      audioTimeline({ gapSeconds: 0, edgeSeconds: 0.01, body }, 1 / 48000).map((s) => s.kind),
+    ).toEqual(["edge", "body", "edge"]);
+  });
+
+  it("leaves a silent video without any, since there is no audio to pad", () => {
+    expect(planRender(input({ edgeSeconds: 2, body: undefined })).audio).toEqual([]);
+  });
+});
+
 describe("the image slots", () => {
-  it("gives each silent image five seconds and omits the audio timeline", () => {
-    const plan = planRender(input({ body: undefined }));
+  const five = ["/1.png", "/2.png", "/3.png", "/4.png", "/5.png"];
+
+  it("shows each silent image once for its seconds and omits the audio timeline", () => {
+    const plan = planRender(input({ body: undefined, imageSeconds: 5 }));
     expect(plan.audio).toEqual([]);
     expect(plan.totalSeconds).toBe(15);
     expect(plan.images.map((slot) => slot.frames)).toEqual([150, 150, 150]);
   });
-  it("splits the timeline evenly and lets the last image absorb the rounding", () => {
-    // 10 s at 30 fps is 300 frames over three images: 100, 100, 100.
-    expect(planRender(input()).images.map((slot) => slot.frames)).toEqual([100, 100, 100]);
-    // 10.1 s rounds to 303 frames: 101, 101, 101.
-    expect(
-      planRender(input({ body: { path: "/p/a.mp3", seconds: 10.1 } })).images.map(
-        (slot) => slot.frames,
-      ),
-    ).toEqual([101, 101, 101]);
-    // 7 s is 210 frames over four images: 52, 52, 52 and 54 for the last.
-    expect(
-      planRender(
-        input({
-          body: { path: "/p/a.mp3", seconds: 7 },
-          images: ["/a.png", "/b.png", "/c.png", "/d.png"],
-        }),
-      ).images.map((slot) => slot.frames),
-    ).toEqual([52, 52, 52, 54]);
+
+  it("cycles the images in order until the narration ends", () => {
+    // 100 s at 15 s a slot: six full slots and a 10 s seventh.
+    const plan = planRender(input({ body: { path: "/b.mp3", seconds: 100 }, images: five }));
+    expect(plan.images.map((slot) => slot.path)).toEqual([
+      "/1.png",
+      "/2.png",
+      "/3.png",
+      "/4.png",
+      "/5.png",
+      "/1.png",
+      "/2.png",
+    ]);
+    expect(plan.images.map((slot) => slot.index)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(plan.images.map((slot) => slot.frames)).toEqual([450, 450, 450, 450, 450, 450, 300]);
+    expect(plan.images.reduce((sum, slot) => sum + slot.frames, 0)).toBe(plan.totalFrames);
   });
 
-  it("gives a single image the whole timeline", () => {
-    const plan = planRender(input({ images: ["/only.png"] }));
-    expect(plan.images).toEqual([{ path: "/only.png", index: 1, frames: 300, zoom: "in" }]);
+  it("cuts the last slot to what is left, never below one frame", () => {
+    const plan = planRender(
+      input({ body: { path: "/b.mp3", seconds: 30 + 1 / 30 }, images: five }),
+    );
+    expect(plan.images.map((slot) => slot.frames)).toEqual([450, 450, 1]);
   });
 
-  it("alternates the zoom, odd images in and even images out", () => {
-    expect(planRender(input()).images.map((slot) => slot.zoom)).toEqual(["in", "out", "in"]);
+  it("keeps a whole number of slots when the timeline divides evenly", () => {
+    const plan = planRender(input({ body: { path: "/b.mp3", seconds: 45 }, images: five }));
+    expect(plan.images.map((slot) => slot.frames)).toEqual([450, 450, 450]);
   });
 
-  it("keeps the slideshow order it was handed", () => {
-    expect(planRender(input()).images.map((slot) => slot.path)).toEqual([
-      "/p/images/001.png",
-      "/p/images/002.png",
-      "/p/images/003.png",
+  it("holds a 108-minute narration to its slots rather than 21 minutes an image", () => {
+    const plan = planRender(input({ body: { path: "/b.mp3", seconds: 108 * 60 }, images: five }));
+    expect(plan.images).toHaveLength(432);
+    expect(Math.max(...plan.images.map((slot) => slot.frames))).toBe(450);
+  });
+
+  it("gives a timeline shorter than one slot a single slot", () => {
+    const plan = planRender(input({ body: { path: "/b.mp3", seconds: 4 }, images: five }));
+    expect(plan.images).toEqual([{ path: "/1.png", index: 1, frames: 120, zoom: "in" }]);
+  });
+
+  it("alternates the zoom per slot, so a returning image may zoom the other way", () => {
+    const plan = planRender(
+      input({ body: { path: "/b.mp3", seconds: 60 }, images: ["/a.png", "/b.png", "/c.png"] }),
+    );
+    expect(plan.images.map((slot) => `${slot.path}:${slot.zoom}`)).toEqual([
+      "/a.png:in",
+      "/b.png:out",
+      "/c.png:in",
+      "/a.png:out",
     ]);
   });
 
-  it("gives every image a frame even when there are more images than frames", () => {
-    const many = Array.from({ length: 40 }, (_value, index) => `/i${index}.png`);
-    const plan = planRender(input({ body: { path: "/p/a.mp3", seconds: 1 }, images: many }));
+  it("uses the seconds it is given", () => {
+    const plan = planRender(input({ imageSeconds: 4 }));
+    // 10 s at 4 s a slot: 120, 120 and a 60-frame third.
+    expect(plan.images.map((slot) => slot.frames)).toEqual([120, 120, 60]);
+    expect(plan.imageSeconds).toBe(4);
+  });
 
-    expect(plan.images.every((slot) => slot.frames >= 1)).toBe(true);
-    expect(plan.images).toHaveLength(40);
+  it("gives a single image every slot", () => {
+    const plan = planRender(
+      input({ body: { path: "/b.mp3", seconds: 40 }, images: ["/only.png"] }),
+    );
+    expect(plan.images.map((slot) => [slot.path, slot.frames, slot.zoom])).toEqual([
+      ["/only.png", 450, "in"],
+      ["/only.png", 450, "out"],
+      ["/only.png", 300, "in"],
+    ]);
   });
 
   it("refuses to plan a render with no images", () => {

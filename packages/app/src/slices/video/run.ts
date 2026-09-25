@@ -14,9 +14,9 @@ import { prepareSubtitles } from "../subtitles/prepare.js";
 import type { RecordEvent } from "../telemetry/model.js";
 import { exportAudioWav } from "./audio-export.js";
 import { audioInputs } from "./audio-inputs.js";
-import { renderArgs } from "./ffmpeg.js";
 import type { RenderPlan } from "./plan.js";
 import { planRender } from "./plan.js";
+import { renderSlideshow } from "./slideshow.js";
 import { writeExport } from "./write-export.js";
 
 export interface VideoDeps {
@@ -44,7 +44,12 @@ export async function renderVideo(deps: VideoDeps, context: StageContext): Promi
       throw new Error(
         "There is nothing to export because both video and narration are turned off for this project. Turn one on in Edit project, then Retry stage.",
       );
-    await exportAudioWav(deps, context, project.config.silenceGapSeconds);
+    await exportAudioWav(
+      deps,
+      context,
+      project.config.silenceGapSeconds,
+      project.config.edgeSilenceSeconds,
+    );
     return;
   }
   const outputs = outputsOf(deps.db, projectId);
@@ -56,6 +61,8 @@ export async function renderVideo(deps: VideoDeps, context: StageContext): Promi
   const plan = planRender({
     format: project.format,
     gapSeconds: project.config.silenceGapSeconds,
+    edgeSeconds: project.config.edgeSilenceSeconds,
+    imageSeconds: project.config.imageSeconds,
     ...narration,
     images: slideshow(outputs).map((output) => outputPath(deps.paths, projectId, output.path)),
     output: outputPath(deps.paths, projectId, "video.mp4"),
@@ -68,7 +75,17 @@ export async function renderVideo(deps: VideoDeps, context: StageContext): Promi
     totalSeconds: plan.totalSeconds,
     record: { ...recorded(plan, dir), subtitles: project.config.subtitles ?? null },
     subtitles,
-    args: (part) => renderArgs({ ...plan, output: part }, subtitles?.burnIn),
+    render: (part, onProgress) =>
+      renderSlideshow({
+        bin: deps.ffmpeg,
+        plan: { ...plan, output: part },
+        burnSubtitles: subtitles?.burnIn ?? false,
+        cwd: subtitles?.directory,
+        scratch: dir,
+        signal: context.signal,
+        log: deps.log,
+        onProgress,
+      }),
   });
   deps.count("stage.completed", { stage: "video" });
 }
@@ -87,7 +104,7 @@ function recorded(plan: RenderPlan, dir: string): Record<string, unknown> {
   };
 }
 
-// Every slideshow image appears exactly once, in slideshow order.
+// Every slideshow image, once each, in slideshow order; the plan cycles through them.
 // The thumbnail is a different role, so it is never in this list.
 function slideshow(outputs: readonly Output[]): readonly Output[] {
   return outputs

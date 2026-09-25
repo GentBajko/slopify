@@ -75,6 +75,12 @@ export interface RunDraft {
   // existed keeps working.
   readonly chunking?: Chunking | undefined;
   readonly silenceGapSeconds: number;
+  // How long each slideshow image stays on screen before the next; the images cycle until
+  // the video ends. A config saved before this existed reads as 15 (`schema.ts`).
+  readonly imageSeconds: number;
+  // Silence before the first and after the last narration segment of both exports. A
+  // config saved before this existed reads as 2.
+  readonly edgeSilenceSeconds: number;
   readonly subtitles?: SubtitleConfig | undefined;
 }
 

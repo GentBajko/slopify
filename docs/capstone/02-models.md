@@ -292,6 +292,8 @@ Source: `packages/app/src/slices/admission/model.ts:48`.
 | provided | `ProvidedText & ProvidedFiles` | yes |
 | chunking | `Chunking \| undefined` | no |
 | silenceGapSeconds | `number` | yes |
+| imageSeconds | `number` | yes (schema default 15) |
+| edgeSilenceSeconds | `number` | yes (schema default 2) |
 | subtitles | `SubtitleConfig \| undefined` | no |
 
 Source: `packages/app/src/slices/admission/model.ts:55`.
@@ -316,6 +318,8 @@ Source: `packages/app/src/slices/admission/model.ts:55`.
 | provided | `ProvidedText & ProvidedFiles` | yes |
 | chunking | `Chunking \| undefined` | no |
 | silenceGapSeconds | `number` | yes |
+| imageSeconds | `number` | yes (schema default 15) |
+| edgeSilenceSeconds | `number` | yes (schema default 2) |
 | subtitles | `SubtitleConfig \| undefined` | no |
 | rendered | `Readonly<Record<string, string>>` | yes |
 
@@ -1463,7 +1467,7 @@ Source: `packages/app/src/slices/rebuild/recipe-provider-choice.ts:5`. Concrete 
 | timeline | `FingerprintValue` | yes |
 | keys | `readonly string[]` | yes |
 
-Source: `packages/app/src/slices/rebuild/recipe-audio.ts:18`. Media identity uses ordered audio resource identities and silence gaps; the subtitle timeline additionally contains transcript and observed duration. Observed duration is excluded from mediaFingerprint. Audio Off returns no media fingerprint (`packages/app/src/slices/rebuild/recipe-audio.ts:27`, `packages/app/src/slices/rebuild/recipe-audio.ts:139`, `packages/app/src/slices/rebuild/recipe-audio.ts:150`). Export recipes use mediaFingerprint for WAV and timeline for alignment (`packages/app/src/slices/rebuild/recipe-exports.ts:15`, `packages/app/src/slices/rebuild/recipe-exports.ts:44`).
+Source: `packages/app/src/slices/rebuild/recipe-audio.ts:18`. Media identity uses ordered audio resource identities, silence gaps and the edge silence; the subtitle timeline additionally contains transcript and observed duration. Observed duration is excluded from mediaFingerprint. Audio Off returns no media fingerprint (`packages/app/src/slices/rebuild/recipe-audio.ts:27`, `packages/app/src/slices/rebuild/recipe-audio.ts:139`, `packages/app/src/slices/rebuild/recipe-audio.ts:150`). Export recipes use mediaFingerprint for WAV and timeline for alignment (`packages/app/src/slices/rebuild/recipe-exports.ts:15`, `packages/app/src/slices/rebuild/recipe-exports.ts:44`).
 
 ### ExecutionSnapshot
 
@@ -1566,6 +1570,8 @@ Definition: `packages/app/src/slices/play-drafts/schema.ts:79`.
 | outro | string | yes | Entry name; empty string represents Off |
 | chunking | { mode: ChunkMode; words: string; characters: string } | yes | mode accepted: whole, paragraph, words, characters; both numeric strings retained |
 | subtitles | { mode: "off" ∣ "files" ∣ "burn-in"; language: "en"; fontId: string; fontSize: string; position: "top" ∣ "upper-middle" ∣ "center" ∣ "lower-middle" ∣ "bottom" } | yes | mode accepted: off, files, burn-in; position accepted: top, upper-middle, center, lower-middle, bottom |
+| imageSeconds | string | yes | Raw text; schema default "15" for older drafts and templates |
+| edgeSilenceSeconds | string | yes | Raw text; schema default "2" for older drafts and templates |
 | values | Readonly<Record<string, string>> | yes | Includes inactive keyword values |
 | provided | { research: string; article: string; audio: { attachmentId: string; name: string } ∣ null; thumbnail: { attachmentId: string; name: string } ∣ null; images: { attachmentId: string; name: string }[] } | yes | File references carry UUID attachment identity and original name; no browser File bytes |
 
@@ -1992,6 +1998,8 @@ Definition: `packages/web/src/play/state.ts:43`.
 | outro | string | yes | Name or empty |
 | chunking | Chunking | yes | Numeric chunk amounts |
 | subtitles | SubtitleConfig | yes | Numeric font size |
+| imageSeconds | number | yes | NaN while the typed text is not a number |
+| edgeSilenceSeconds | number | yes | NaN while the typed text is not a number |
 | values | Readonly<Record<string, string>> | yes | All editor keywords |
 | provided | ProvidedState | yes | Compatibility uploads |
 

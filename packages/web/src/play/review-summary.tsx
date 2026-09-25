@@ -390,6 +390,16 @@ export function ReviewSummary({
             ? row("Thumbnail file", "provided.thumbnail", form.provided.thumbnail?.name)
             : null}
           {row("Video", "sources.video", sourceLabels[form.sources.video])}
+          {form.sources.video === "generate"
+            ? row("Seconds per image", "imageSeconds", form.imageSeconds || "(not entered)")
+            : null}
+          {form.sources.audio !== "off"
+            ? row(
+                "Silence at start and end",
+                "edgeSilenceSeconds",
+                form.edgeSilenceSeconds ? `${form.edgeSilenceSeconds} s` : "(not entered)",
+              )
+            : null}
         </dl>
       </SummaryGroup>
       <SummaryGroup name="Checkpoints">

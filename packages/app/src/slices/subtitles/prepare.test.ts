@@ -58,6 +58,8 @@ function fixture(): { deps: VideoDeps; context: StageContext; dir: string; texts
       provided: {},
       rendered: {},
       silenceGapSeconds: 2,
+      imageSeconds: 15,
+      edgeSilenceSeconds: 0,
       subtitles: { ...defaultSubtitles, mode: "files" },
     },
   });
@@ -144,6 +146,29 @@ describe("subtitle preparation", () => {
     const text = readFileSync(join(one.dir, file?.path ?? "missing"), "utf8");
     expect(text).toContain("00:00:02,600 --> 00:00:02,900");
     expect(text).toContain("00:00:05,600 --> 00:00:05,900");
+  });
+  it("shifts every caption by the silence before the narration", async () => {
+    const one = fixture();
+    const prepared = await prepareSubtitles(
+      one.deps,
+      one.context,
+      [
+        { kind: "edge", path: null, seconds: 2 },
+        { kind: "intro", path: join(one.dir, "intro.mp3"), seconds: 0.5 },
+        { kind: "gap", path: null, seconds: 2 },
+        { kind: "body", path: join(one.dir, "body.mp3"), seconds: 1 },
+        { kind: "gap", path: null, seconds: 2 },
+        { kind: "outro", path: join(one.dir, "outro.mp3"), seconds: 0.5 },
+        { kind: "edge", path: null, seconds: 2 },
+      ],
+      { width: 1920, height: 1080 },
+    );
+    // The edges are silence: nothing is read aloud for them.
+    expect(one.texts).toEqual(["intro", "Exact spoken body.", "outro"]);
+    const file = prepared?.assets.find((asset) => asset.role === "subtitles_srt");
+    const text = readFileSync(join(one.dir, file?.path ?? "missing"), "utf8");
+    expect(text).toContain("00:00:04,600 --> 00:00:04,900");
+    expect(text).toContain("00:00:07,600 --> 00:00:07,900");
   });
   it("reuses timed words for styling, invalidates when audio bytes change", async () => {
     const one = fixture();

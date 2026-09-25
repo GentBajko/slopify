@@ -28,6 +28,27 @@ export const imagesPerRunMax = 60;
 // ceiling: the default gap is 3 s and nothing fixes an upper or lower bound, so the range
 // is this module's. A wider gap is a settings change, not a schema change.
 export const silenceGapSecondsMax = 30;
+// ceiling: the owner's numbers. A still held past ten minutes is a separate kind of video.
+export const imageSecondsMin = 1;
+export const imageSecondsMax = 600;
+export const defaultImageSeconds = 15;
+// ceiling: the same 30 s as the gap; half seconds are enough precision for a pause.
+export const edgeSilenceSecondsMax = 30;
+export const defaultEdgeSilenceSeconds = 2;
+
+// Shared by admission, Play's draft conversion and Edit project, so all three say the same
+// sentence about the same value.
+export function imageSecondsProblem(value: number): string | undefined {
+  return Number.isInteger(value) && value >= imageSecondsMin && value <= imageSecondsMax
+    ? undefined
+    : `Enter a whole number of seconds between ${imageSecondsMin} and ${imageSecondsMax}.`;
+}
+
+export function edgeSilenceSecondsProblem(value: number): string | undefined {
+  return Number.isInteger(value * 2) && value >= 0 && value <= edgeSilenceSecondsMax
+    ? undefined
+    : `Enter a number of seconds between 0 and ${edgeSilenceSecondsMax}, in steps of 0.5.`;
+}
 
 // The legal source for each stage. Exported because Play's
 // source switches offer exactly these and nothing else, so the segmented control and the
@@ -127,6 +148,13 @@ export function admit(input: AdmissionInput): AdmissionResult {
       message: `Enter a silence gap between 0 and ${silenceGapSecondsMax} seconds.`,
     });
   }
+  // Checked only where they are used: a hidden control cannot hold up a run.
+  const imageProblem =
+    sources.video === "generate" ? imageSecondsProblem(draft.imageSeconds) : undefined;
+  if (imageProblem !== undefined) fields.push({ field: "imageSeconds", message: imageProblem });
+  const edgeProblem =
+    sources.audio === "off" ? undefined : edgeSilenceSecondsProblem(draft.edgeSilenceSeconds);
+  if (edgeProblem !== undefined) fields.push({ field: "edgeSilenceSeconds", message: edgeProblem });
 
   return fields.length === 0 ? { ok: true, draft } : { ok: false, fields };
 }

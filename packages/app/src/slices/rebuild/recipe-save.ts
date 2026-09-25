@@ -2,7 +2,9 @@ import { stageKinds } from "../../kernel/pipeline.js";
 import type { RunConfig } from "../admission/model.js";
 import {
   allowedSources,
+  edgeSilenceSecondsProblem,
   type FieldError,
+  imageSecondsProblem,
   normaliseDraft,
   silenceGapSecondsMax,
 } from "../admission/rules.js";
@@ -243,6 +245,14 @@ export function validateRevisionEdit(
       field: "silenceGapSeconds",
       message: `Use a gap between 0 and ${silenceGapSecondsMax} seconds.`,
     });
+  const imageProblem =
+    config.sources.video === "off" ? undefined : imageSecondsProblem(config.imageSeconds);
+  if (imageProblem !== undefined) fields.push({ field: "imageSeconds", message: imageProblem });
+  const edgeProblem =
+    config.sources.audio === "off"
+      ? undefined
+      : edgeSilenceSecondsProblem(config.edgeSilenceSeconds);
+  if (edgeProblem !== undefined) fields.push({ field: "edgeSilenceSeconds", message: edgeProblem });
   if (
     config.sources.article === "generate" &&
     content.articleEdited === true &&

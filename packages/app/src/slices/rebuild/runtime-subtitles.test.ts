@@ -138,6 +138,45 @@ it("prepares automatic cues and sidecars from the completed timing asset", async
     h.close();
   }
 });
+it("times captions after the silence that opens the export", async () => {
+  const h = await exportFixture(false);
+  try {
+    const old = h.view();
+    const saved = await saveRevision(h.deps, {
+      projectId: h.projectId,
+      baseRevisionId: old.revision.id,
+      idempotencyKey: "edge",
+      edit: {
+        config: { ...old.revision.config, edgeSilenceSeconds: 2 },
+        content: old.revision.content,
+      },
+    });
+    if (!saved.ok) throw new Error(JSON.stringify(saved));
+    const alignSubtitles = vi.fn(async () => [
+      { text: "Saved", start: 0, end: 1 },
+      { text: "article.", start: 1, end: 2 },
+    ]);
+    const part = h.grant("subtitles:timing", saved.view.revision.id);
+    expect(
+      await executeSubtitleRecipe({ ...h.deps, alignSubtitles }, part.context, part.piece),
+    ).toBe("done");
+    const words = h
+      .view(saved.view.revision.id)
+      .outputs.find((row) => row.selected && row.output.role === "subtitle_words");
+    if (words === undefined) throw new Error("No timed words");
+    const timed = JSON.parse(
+      readFileSync(outputPath(h.deps.paths, h.projectId, words.output.path), "utf8"),
+    );
+    expect(
+      timed.words.map((word: { start: number; end: number }) => [word.start, word.end]),
+    ).toEqual([
+      [2, 3],
+      [3, 4],
+    ]);
+  } finally {
+    h.close();
+  }
+});
 it("reuses the saved font when changing caption size after the system font is unavailable", async () => {
   const h = await exportFixture();
   try {

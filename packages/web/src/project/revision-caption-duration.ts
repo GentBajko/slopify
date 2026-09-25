@@ -26,7 +26,9 @@ export function captionNarrationDuration(view: RevisionView): number | undefined
   if (durations.every(knownDuration))
     return (
       durations.reduce((sum, milliseconds) => sum + milliseconds, 0) / 1000 +
-      Math.max(0, segments.length - 1) * config.silenceGapSeconds
+      Math.max(0, segments.length - 1) * config.silenceGapSeconds +
+      // The quiet lead-in and tail around the narration (`slices/video/plan.ts`).
+      2 * config.edgeSilenceSeconds
     );
   // Older narration descriptors may predate duration inspection. Only a current
   // final export can supply that missing measurement, never incomplete narration.

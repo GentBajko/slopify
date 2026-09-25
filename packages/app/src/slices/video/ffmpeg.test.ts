@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Log, LogLevel } from "../../kernel/log.js";
-import { progressMsOf, renderArgs, resolveFfmpeg, runFfmpeg } from "./ffmpeg.js";
+import {
+  clipArgs,
+  concatList,
+  joinArgs,
+  progressMsOf,
+  resolveFfmpeg,
+  runFfmpeg,
+  slideshowClips,
+} from "./ffmpeg.js";
 import type { PlanInput } from "./plan.js";
 import { planRender } from "./plan.js";
 
@@ -8,16 +16,13 @@ function plan(over: Partial<PlanInput> = {}): ReturnType<typeof planRender> {
   return planRender({
     format: "16:9",
     gapSeconds: 3,
+    edgeSeconds: 0,
+    imageSeconds: 5,
     body: { path: "/p/audio-body.mp3", seconds: 10 },
     images: ["/p/images/001.png", "/p/images/002.png", "/p/images/003.png"],
     output: "/p/video.mp4",
     ...over,
   });
-}
-
-function graphOf(args: readonly string[]): string {
-  const at = args.indexOf("-filter_complex");
-  return args[at + 1] ?? "";
 }
 
 describe("resolveFfmpeg", () => {
@@ -35,19 +40,132 @@ describe("resolveFfmpeg", () => {
   });
 });
 
-describe("renderArgs", () => {
-  it("passes every image and every audio segment as its own input", () => {
-    const args = renderArgs(
+describe("slideshowClips", () => {
+  it("encodes each still, zoom and length once and plays them in slot order", () => {
+    // 10 s at 3 s a slot over two images: a in, b out, a in, b out (1 s).
+    const { clips, order } = slideshowClips(
+      plan({ imageSeconds: 3, images: ["/a.png", "/b.png"] }),
+    );
+    expect(
+      clips.map((clip) => [clip.name, clip.slot.path, clip.slot.zoom, clip.slot.frames]),
+    ).toEqual([
+      ["c1.mp4", "/a.png", "in", 90],
+      ["c2.mp4", "/b.png", "out", 90],
+      ["c3.mp4", "/b.png", "out", 30],
+    ]);
+    expect(order).toEqual(["c1.mp4", "c2.mp4", "c1.mp4", "c3.mp4"]);
+  });
+
+  it("gives an image both zooms when an odd count makes it come back the other way", () => {
+    const { clips, order } = slideshowClips(
+      plan({ body: { path: "/b.mp3", seconds: 36 }, imageSeconds: 3 }),
+    );
+    // Three images, twelve slots: each image in and out once, so six clips.
+    expect(clips).toHaveLength(6);
+    expect(order).toHaveLength(12);
+  });
+});
+
+describe("clipArgs", () => {
+  const slot = { path: "/p/images/001.png", index: 1, frames: 150, zoom: "in" as const };
+
+  it("renders one still through the prescaled zoom into one silent clip", () => {
+    const args = clipArgs(plan(), slot, "/w/c1.mp4");
+    expect(args.filter((_arg, at) => args[at - 1] === "-i")).toEqual(["/p/images/001.png"]);
+    expect(args[args.indexOf("-filter_complex") + 1]).toBe(
+      "[0:v]trim=end_frame=1,setpts=PTS-STARTPTS," +
+        "scale=7680:4320:force_original_aspect_ratio=increase,crop=7680:4320," +
+        "zoompan=z='1+0.225*on/149':d=150:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':" +
+        "s=1920x1080:fps=30,setsar=1[v]",
+    );
+    expect(args.slice(-8)).toEqual([
+      "-map",
+      "[v]",
+      "-c:v",
+      "libx264",
+      "-pix_fmt",
+      "yuv420p",
+      "-an",
+      "/w/c1.mp4",
+    ]);
+  });
+
+  it("zooms the full 100% to 122.5% over a 15-second slot, and a cut slot over its own length", () => {
+    const { clips } = slideshowClips(
+      plan({ body: { path: "/b.mp3", seconds: 40 }, imageSeconds: 15, images: ["/a.png"] }),
+    );
+    const zooms = clips.map((clip) =>
+      /zoompan=z='([^']+)':d=(\d+):/
+        .exec(clipArgs(plan(), clip.slot, "/w/c.mp4").join(" "))
+        ?.slice(1),
+    );
+    // 450 frames: the zoom reaches 1 + 0.225 on the last frame, on = 449.
+    expect(zooms).toEqual([
+      ["1+0.225*on/449", "450"],
+      ["1.225-0.225*on/449", "450"],
+      ["1+0.225*on/299", "300"],
+    ]);
+  });
+
+  it("zooms out on an even slot", () => {
+    const args = clipArgs(plan(), { ...slot, index: 2, zoom: "out" }, "/w/c2.mp4");
+    expect(args.join(" ")).toContain("zoompan=z='1.225-0.225*on/149':d=150:");
+  });
+
+  it("pre-scales to four times the frame in either orientation", () => {
+    const graph = clipArgs(plan({ format: "9:16" }), slot, "/w/c1.mp4").join(" ");
+    expect(graph).toContain("scale=4320:7680:force_original_aspect_ratio=increase,crop=4320:7680");
+    expect(graph).toContain("s=1080x1920");
+  });
+
+  it("holds the zoom still on a one-frame slot rather than dividing by zero", () => {
+    expect(clipArgs(plan(), { ...slot, frames: 1 }, "/w/c1.mp4").join(" ")).toContain(
+      "zoompan=z='1':d=1:",
+    );
+    expect(clipArgs(plan(), { ...slot, frames: 1, zoom: "out" }, "/w/c1.mp4").join(" ")).toContain(
+      "zoompan=z='1.225':d=1:",
+    );
+  });
+
+  it("keeps a clip that will be encoded again closer to the source", () => {
+    expect(clipArgs(plan(), slot, "/w/c1.mp4", true)).toEqual(
+      expect.arrayContaining(["-crf", "16"]),
+    );
+    expect(clipArgs(plan(), slot, "/w/c1.mp4")).not.toContain("-crf");
+  });
+
+  it("asks ffmpeg for machine-readable progress on stdout", () => {
+    expect(clipArgs(plan(), slot, "/w/c1.mp4")).toEqual(
+      expect.arrayContaining(["-progress", "pipe:1", "-nostats"]),
+    );
+  });
+});
+
+describe("concatList", () => {
+  it("lists every slot's clip in order in the concat demuxer's format", () => {
+    expect(concatList(["c1.mp4", "c2.mp4", "c1.mp4"])).toBe(
+      "ffconcat version 1.0\nfile c1.mp4\nfile c2.mp4\nfile c1.mp4\n",
+    );
+  });
+});
+
+describe("joinArgs", () => {
+  it("reads the clips from the list and every audio segment as its own input", () => {
+    const args = joinArgs(
       plan({
         intro: { path: "/p/audio-intro.mp3", seconds: 2 },
         outro: { path: "/p/audio-outro.mp3", seconds: 4 },
       }),
+      "/w/slides.ffconcat",
     );
-
+    expect(args.slice(args.indexOf("concat") - 1, args.indexOf("concat") + 3)).toEqual([
+      "-f",
+      "concat",
+      "-i",
+      "/w/slides.ffconcat",
+    ]);
     expect(args.filter((_arg, at) => args[at - 1] === "-i")).toEqual([
-      "/p/images/001.png",
-      "/p/images/002.png",
-      "/p/images/003.png",
+      "/w/slides.ffconcat",
       "/p/audio-intro.mp3",
       "anullsrc=r=44100:cl=stereo",
       "/p/audio-body.mp3",
@@ -56,29 +174,27 @@ describe("renderArgs", () => {
     ]);
   });
 
-  it("gives each silence gap its own length", () => {
-    const args = renderArgs(
-      plan({ gapSeconds: 2.5, intro: { path: "/p/audio-intro.mp3", seconds: 2 } }),
+  it("gives each silence its own length, the edges included", () => {
+    const args = joinArgs(
+      plan({ gapSeconds: 2.5, edgeSeconds: 2, intro: { path: "/p/i.mp3", seconds: 2 } }),
+      "/w/l",
     );
-    expect(args.slice(args.indexOf("lavfi"), args.indexOf("lavfi") + 4)).toEqual([
-      "lavfi",
-      "-t",
-      "2.500",
-      "-i",
-    ]);
+    expect(args.filter((_arg, at) => args[at - 1] === "-t")).toEqual(["2.000", "2.500", "2.000"]);
   });
 
-  it("writes an mp4 with the expected codecs and the faststart flag", () => {
-    const args = renderArgs(plan());
-    expect(args.slice(-13)).toEqual([
+  it("copies the clips and encodes only the audio when nothing is burned in", () => {
+    const args = joinArgs(plan(), "/w/l");
+    expect(args[args.indexOf("-filter_complex") + 1]).toBe(
+      "[1:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[a0];" +
+        "[a0]concat=n=1:v=0:a=1[a]",
+    );
+    expect(args.slice(-11)).toEqual([
       "-map",
-      "[v]",
+      "0:v",
       "-map",
       "[a]",
       "-c:v",
-      "libx264",
-      "-pix_fmt",
-      "yuv420p",
+      "copy",
       "-c:a",
       "aac",
       "-movflags",
@@ -87,57 +203,65 @@ describe("renderArgs", () => {
     ]);
   });
 
-  it("asks ffmpeg for machine-readable progress on stdout", () => {
-    expect(renderArgs(plan())).toEqual(expect.arrayContaining(["-progress", "pipe:1", "-nostats"]));
+  it("burns captions in and encodes the video again when asked", () => {
+    const args = joinArgs(plan(), "/w/l", true);
+    expect(args[args.indexOf("-filter_complex") + 1]).toMatch(
+      /^\[0:v\]ass=filename=subtitles\.ass:fontsdir=fonts\[v\];/,
+    );
+    expect(args).toEqual(expect.arrayContaining(["-map", "[v]", "-c:v", "libx264"]));
+    expect(args).not.toContain("copy");
+  });
+
+  it("writes a silent video with no filtergraph and no audio stream", () => {
+    const args = joinArgs(plan({ body: undefined }), "/w/l");
+    expect(args).not.toContain("-filter_complex");
+    expect(args).toContain("-an");
+  });
+
+  it("numbers the audio inputs after the clip list", () => {
+    const graph = joinArgs(plan({ outro: { path: "/p/o.mp3", seconds: 4 } }), "/w/l").join(" ");
+    expect(graph).toContain("[1:a]aformat");
+    expect(graph).toContain("[3:a]aformat");
+    expect(graph).toContain("[a0][a1][a2]concat=n=3:v=0:a=1[a]");
   });
 
   it("never builds a shell string, so a filename with a space stays one argument", () => {
-    const args = renderArgs(plan({ output: "/p/my video; rm -rf ~.mp4" }));
+    const args = joinArgs(plan({ output: "/p/my video; rm -rf ~.mp4" }), "/w/l");
     expect(args.at(-1)).toBe("/p/my video; rm -rf ~.mp4");
   });
+});
 
-  it("builds the whole filtergraph for the skeleton fixture", () => {
-    expect(graphOf(renderArgs(plan({ images: ["/p/images/001.png", "/p/images/002.png"] })))).toBe(
-      "[0:v]trim=end_frame=1,setpts=PTS-STARTPTS," +
-        "scale=7680:4320:force_original_aspect_ratio=increase,crop=7680:4320," +
-        "zoompan=z='1+0.225*on/149':d=150:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':" +
-        "s=1920x1080:fps=30,setsar=1[v0];" +
-        "[1:v]trim=end_frame=1,setpts=PTS-STARTPTS," +
-        "scale=7680:4320:force_original_aspect_ratio=increase,crop=7680:4320," +
-        "zoompan=z='1.225-0.225*on/149':d=150:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':" +
-        "s=1920x1080:fps=30,setsar=1[v1];" +
-        "[v0][v1]concat=n=2:v=1:a=0[v];" +
-        "[2:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[a0];" +
-        "[a0]concat=n=1:v=0:a=1[a]",
-    );
+describe("a long slideshow", () => {
+  // Three hours at 15 s a slot with sixty images: 720 slots, well past the length at
+  // which one argument per slot would have run into Windows' 32,767-character limit.
+  const long = plan({
+    body: { path: "C:\\Users\\someone\\AppData\\Slopify\\audio-body.mp3", seconds: 3 * 3600 + 7 },
+    imageSeconds: 15,
+    images: Array.from(
+      { length: 60 },
+      (_value, at) => `C:\\Users\\someone\\AppData\\Slopify\\projects\\p\\images\\${at}.png`,
+    ),
   });
 
-  it("pre-scales to four times the frame in either orientation", () => {
-    expect(graphOf(renderArgs(plan({ format: "9:16" })))).toContain(
-      "scale=4320:7680:force_original_aspect_ratio=increase,crop=4320:7680",
-    );
-    expect(graphOf(renderArgs(plan({ format: "9:16" })))).toContain("s=1080x1920");
+  it("keeps every command line short however many slots there are", () => {
+    const { clips, order } = slideshowClips(long);
+    expect(order.length).toBeGreaterThan(720);
+    // Sixty images, an even count: each always zooms the same way, plus the cut last slot.
+    expect(clips).toHaveLength(61);
+    const lengths = [
+      ...clips.map((clip) => clipArgs(long, clip.slot, "C:\\w\\c61.mp4").join(" ").length),
+      joinArgs(long, "C:\\w\\slides.ffconcat", true).join(" ").length,
+    ];
+    expect(Math.max(...lengths)).toBeLessThan(2000);
   });
 
-  it("holds the zoom still on a one-frame slot rather than dividing by zero", () => {
-    const graph = graphOf(
-      renderArgs(
-        plan({
-          body: { path: "/p/audio-body.mp3", seconds: 0.1 },
-          images: ["/a.png", "/b.png", "/c.png"],
-        }),
-      ),
-    );
-    expect(graph).toContain("zoompan=z='1':d=1:");
-    expect(graph).toContain("zoompan=z='1.225':d=1:");
-  });
-
-  it("numbers the audio inputs after the images", () => {
-    const graph = graphOf(renderArgs(plan({ outro: { path: "/p/o.mp3", seconds: 4 } })));
-    expect(graph).toContain("[3:a]aformat");
-    expect(graph).toContain("[4:a]aformat");
-    expect(graph).toContain("[5:a]aformat");
-    expect(graph).toContain("[a0][a1][a2]concat=n=3:v=0:a=1[a]");
+  it("puts the timeline in the list file, one line a slot", () => {
+    const { order } = slideshowClips(long);
+    expect(
+      concatList(order)
+        .split("\n")
+        .filter((line) => line.startsWith("file ")),
+    ).toHaveLength(order.length);
   });
 });
 

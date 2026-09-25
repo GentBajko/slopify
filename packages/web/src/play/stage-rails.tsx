@@ -1,5 +1,7 @@
+import { InfoTip } from "@/components/kit/info-tip";
+import { Input } from "@/components/ui/input";
 import { ImageProviderControls } from "@/play/media-rails";
-import { OptionPicker } from "@/play/pickers";
+import { LabelledField, OptionPicker } from "@/play/pickers";
 import { FilePick, PasteArea } from "@/play/provided";
 import type { RailProps } from "@/play/rail-frame";
 import { promptNames, railBeneath, railControls, SourceSwitch, StageRail } from "@/play/rail-frame";
@@ -131,15 +133,36 @@ export function ThumbnailRail({
   );
 }
 
-export function VideoRail({ form, silenceGapSeconds, update }: RailProps) {
+// Raw text for the two timing fields, edited in the draft document itself so what was typed
+// survives a reload; without it the fields write numbers through `update`.
+export interface RawSeconds {
+  readonly imageSeconds: string;
+  readonly edgeSilenceSeconds: string;
+  readonly onChange: (field: "imageSeconds" | "edgeSilenceSeconds", value: string) => void;
+}
+
+export function VideoRail({
+  form,
+  silenceGapSeconds,
+  problem,
+  update,
+  rawSeconds,
+}: RailProps & { readonly rawSeconds?: RawSeconds }) {
   const explanation =
     form.sources.video === "generate"
       ? form.sources.audio === "off"
-        ? "Silent video · 5 seconds per image"
+        ? "Silent video · each image shown once"
         : `Images and narration · ${String(silenceGapSeconds)} s segment gaps`
       : form.sources.audio !== "off"
         ? "Combined WAV export with narration and segment gaps"
         : "Download each enabled stage separately";
+  const seconds = (field: "imageSeconds" | "edgeSilenceSeconds") => ({
+    value: rawSeconds ? rawSeconds[field] : Number.isFinite(form[field]) ? String(form[field]) : "",
+    onChange: (value: string) => {
+      if (rawSeconds) rawSeconds.onChange(field, value);
+      else update({ [field]: value.trim() === "" ? Number.NaN : Number(value) });
+    },
+  });
 
   return (
     <StageRail kind="video" name="Export" dim={form.sources.video === "off"}>
@@ -147,11 +170,76 @@ export function VideoRail({ form, silenceGapSeconds, update }: RailProps) {
       <span className={railControls}>
         <span className="engraved text-ink3">{explanation}</span>
       </span>
+      {form.sources.video === "generate" || form.sources.audio !== "off" ? (
+        <div className={railControls}>
+          {form.sources.video === "generate" ? (
+            <SecondsField
+              field="imageSeconds"
+              label="Seconds per image"
+              help="Each image stays on screen this long, then the next one; after the last image they start again."
+              step={1}
+              problem={problem("imageSeconds")}
+              {...seconds("imageSeconds")}
+            />
+          ) : null}
+          {form.sources.audio !== "off" ? (
+            <SecondsField
+              field="edgeSilenceSeconds"
+              label="Silence at start and end (seconds)"
+              help="Quiet time before the narration starts and after it ends."
+              step={0.5}
+              problem={problem("edgeSilenceSeconds")}
+              {...seconds("edgeSilenceSeconds")}
+            />
+          ) : null}
+        </div>
+      ) : null}
       {form.sources.images === "off" ? (
         <p className={`${railBeneath} text-small text-ink2`}>
           Video is Off because Images is Off. Generate or provide images to enable video.
         </p>
       ) : null}
     </StageRail>
+  );
+}
+
+function SecondsField({
+  field,
+  label,
+  help,
+  step,
+  problem,
+  value,
+  onChange,
+}: {
+  readonly field: string;
+  readonly label: string;
+  readonly help: string;
+  readonly step: number;
+  readonly problem: string | undefined;
+  readonly value: string;
+  readonly onChange: (value: string) => void;
+}) {
+  return (
+    <LabelledField label={label} problem={problem} inline>
+      {({ id, describedBy }) => (
+        <>
+          <Input
+            id={id}
+            data-play-field={field}
+            type="text"
+            inputMode={step < 1 ? "decimal" : "numeric"}
+            className="w-[80px] tabular-nums"
+            aria-invalid={problem !== undefined}
+            aria-describedby={describedBy}
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+          />
+          <InfoTip label={label.toLowerCase()}>
+            <p>{help}</p>
+          </InfoTip>
+        </>
+      )}
+    </LabelledField>
   );
 }

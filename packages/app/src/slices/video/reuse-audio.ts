@@ -9,6 +9,8 @@ const planSchema = z.object({
   channels: z.number(),
   codec: z.string(),
   gapSeconds: z.number(),
+  // Absent from records written before the edge silence existed, which then never match.
+  edgeSeconds: z.number().optional(),
   totalSeconds: z.number(),
   audio: z.array(z.object({ kind: z.string(), path: z.string().nullable(), seconds: z.number() })),
   output: z.string(),

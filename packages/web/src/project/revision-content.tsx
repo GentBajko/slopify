@@ -38,6 +38,8 @@ function narrationIdentity(edit: RevisionEdit): string {
           row.destination.kind === "narration" ||
           (row.destination.kind === "provided" && row.destination.stage === "audio"),
       ) ?? [],
+    // Captions are timed against the whole timeline, lead-in included.
+    edge: config.edgeSilenceSeconds,
     ...(config.sources.audio !== "generate"
       ? {}
       : {

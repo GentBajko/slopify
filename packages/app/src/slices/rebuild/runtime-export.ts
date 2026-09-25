@@ -7,8 +7,9 @@ import type { PreparedOutput } from "../revisions/publication-model.js";
 import { allocateAsset, discardPreparedAssets, sealAsset } from "../storage/assets.js";
 import { outputPath, projectDir } from "../storage/layout.js";
 import { audioExportArgs } from "../video/audio-export.js";
-import { renderArgs, runFfmpeg } from "../video/ffmpeg.js";
+import { runFfmpeg } from "../video/ffmpeg.js";
 import { planRender } from "../video/plan.js";
+import { renderSlideshow } from "../video/slideshow.js";
 import {
   type ExportSnapshot,
   exportSnapshot,
@@ -87,6 +88,8 @@ export async function executeExportRecipe(
       : planRender({
           format: config.format,
           gapSeconds: config.silenceGapSeconds,
+          edgeSeconds: config.edgeSilenceSeconds,
+          imageSeconds: config.imageSeconds,
           body: segment("body"),
           intro: segment("intro"),
           outro: segment("outro"),
@@ -104,6 +107,7 @@ export async function executeExportRecipe(
             channels: 2,
             codec: "pcm_s16le",
             gapSeconds: config.silenceGapSeconds,
+            edgeSeconds: config.edgeSilenceSeconds,
             totalSeconds,
             audio: audio.map((row) => ({
               ...row,
@@ -122,22 +126,33 @@ export async function executeExportRecipe(
             subtitles: config.subtitles,
           };
     if (!context.maySubmit(piece.id)) return "held";
-    await runFfmpeg({
-      bin: deps.ffmpeg,
-      args:
-        plan === undefined ? audioExportArgs(audio, pending.absolutePath) : renderArgs(plan, burn),
-      cwd: directory,
-      signal: context.signal,
-      log: deps.log,
-      onProgress: (elapsedMs) =>
-        context.emit({
-          type: "stage.progress",
-          projectId: context.work.projectId,
-          stage: "video",
-          current: Math.min(100, Math.round(elapsedMs / (totalSeconds * 10))),
-          total: 100,
-        }),
-    });
+    const onProgress = (elapsedMs: number): void =>
+      context.emit({
+        type: "stage.progress",
+        projectId: context.work.projectId,
+        stage: "video",
+        current: Math.min(100, Math.round(elapsedMs / (totalSeconds * 10))),
+        total: 100,
+      });
+    if (plan === undefined)
+      await runFfmpeg({
+        bin: deps.ffmpeg,
+        args: audioExportArgs(audio, pending.absolutePath),
+        signal: context.signal,
+        log: deps.log,
+        onProgress,
+      });
+    else
+      await renderSlideshow({
+        bin: deps.ffmpeg,
+        plan,
+        burnSubtitles: burn,
+        cwd: directory,
+        scratch: projectDirectory,
+        signal: context.signal,
+        log: deps.log,
+        onProgress,
+      });
     context.signal.throwIfAborted();
     const asset = sealAsset(deps, pending);
     prepared.push(

@@ -65,6 +65,8 @@ const config: RunConfig = {
   values: { topic: "rope" },
   provided: {},
   silenceGapSeconds: 3,
+  imageSeconds: 15,
+  edgeSilenceSeconds: 0,
   rendered: { article: "Write about rope." },
 };
 

@@ -25,22 +25,23 @@ The final media stage produces an MP4 slideshow or a combined PCM WAV. Audio Off
 ## Trigger & preconditions
 
 - Trigger: explicit admission starts revision export work after its complete recipe dependencies are ready. MP4 depends on selected image/audio inputs and, for burn-in, caption files; thumbnail work is independent. WAV depends on selected narration. Running or incomplete dependency bundles do not authorize early export (`slices/rebuild/{recipe-build,recipe-visual,recipe-exports,runtime-store}.ts`).
-- Inputs on the project: body audio and its duration; intro and outro audio with durations when picked (scenario 08); the silence-gap setting, default 3 s (scenario 02); the current image set in slideshow order (scenarios 05, 09); format.
+- Inputs on the project: body audio and its duration; intro and outro audio with durations when picked (scenario 08); the silence-gap setting, default 3 s (scenario 02); the project's seconds per image (whole seconds 1–600, default 15) and silence at start and end (0–30 s in steps of 0.5, default 2); the current image set in slideshow order (scenarios 05, 09); format.
 - Actor: the user saves edits separately from explicit rebuild. Rebuild review identifies retained, replaced and local work; Save never begins rendering (`slices/revisions/mutations.ts`, `slices/rebuild/service.ts`).
 
 ## Steps
 
-1. When audio is enabled, build the current revision audio timeline: enabled intro audio, gap, body audio, gap, enabled outro audio; a gap is inserted only where the neighbouring segment exists; gaps are plain silence of the configured length. Historical removed entry audio remains downloadable but is excluded; supplied whole narration excludes generated intro/outro. Total length = sum of segments and gaps. Audio Off uses five seconds per image and omits the audio stream entirely.
-2. Slot computation: per-image slot = total length ÷ image count; the last image absorbs frame rounding at 30 fps. One image → it fills the whole length.
-3. Slideshow across the whole timeline, intro through outro, with the same images: hard cut between images; zoom alternates, odd images 100% → 122.5% zooming in, even images 122.5% → 100% zooming out, linear, centred. The 22.5% zoom travel is 1.5× the earlier 15% travel over the same image slot; it changes motion only, never narration or slideshow timing (`packages/app/src/slices/video/plan.ts`, `ffmpeg.ts`).
-4. Fit every image by scaling to cover the frame and centre-cropping; no letterboxing.
-5. Frame: 16:9 renders 1920×1080, 9:16 renders 1080×1920; 30 fps; mp4 container; codecs are `stack`'s. Progress reported as render percentage (scenario 01).
-6. Subtitle timing, cues and files are separate local recipes within the final stage (scenario 17). Manual cue edits bypass alignment; style changes reuse unchanged timing. Burn-in rendering waits for the complete caption/font bundle (`slices/rebuild/{runtime-subtitles,runtime-store}.ts`).
-7. Publish immutable MP4/WAV and render-parameter assets as one complete bundle, pinned to the admitted revision. Parameters record durations, gaps, image slots/order, zoom and frame. Current compatible owners receive the result; an incompatible later edit does not acquire older pixels or bytes (`slices/rebuild/{runtime-export,runtime-publication}.ts`, `slices/revisions/publish.ts`).
+1. When audio is enabled, build the current revision audio timeline: edge silence, enabled intro audio, gap, body audio, gap, enabled outro audio, edge silence; a gap is inserted only where the neighbouring segment exists; gaps and edges are plain silence of their configured lengths, and an edge of 0 adds nothing. Historical removed entry audio remains downloadable but is excluded; supplied whole narration excludes generated intro/outro. Total length = sum of segments, gaps and edges. Audio Off shows each image once for the seconds per image and omits the audio stream entirely.
+2. Slot computation: each slot lasts the seconds per image at 30 fps; the images take turns in slideshow order (1, 2, …, n, 1, 2, …) until the timeline is full, and the last slot is cut to what is left (at least one frame). A timeline shorter than one slot is a single slot.
+3. Slideshow across the whole timeline, lead-in through tail, with the same images: hard cut between slots; zoom alternates per slot, not per image, odd slots 100% → 122.5% zooming in, even slots 122.5% → 100% zooming out, linear, centred, over that slot's own length (a cut last slot zooms over its shorter length). With an odd image count an image that comes round again zooms the other way (`packages/app/src/slices/video/plan.ts`, `ffmpeg.ts`).
+4. Rendering: each distinct clip (one still, one zoom direction, one length) is encoded once in its own FFmpeg run from a still pre-scaled to four times the frame; the concat demuxer then joins the clips in slot order from a list file, copying them unless captions are burned in. One filtergraph with a chain per slot grew memory with the slot count (16 GB at 200 slots with FFmpeg 7) and a 3-hour video has over 700 slots, so the split keeps memory at one clip and every command line short enough for Windows. The clips' working directory beside the project's files is removed however the render ends (`packages/app/src/slices/video/slideshow.ts`).
+5. Fit every image by scaling to cover the frame and centre-cropping; no letterboxing.
+6. Frame: 16:9 renders 1920×1080, 9:16 renders 1080×1920; 30 fps; mp4 container; codecs are `stack`'s. Progress reported as render percentage (scenario 01).
+7. Subtitle timing, cues and files are separate local recipes within the final stage (scenario 17). Manual cue edits bypass alignment; style changes reuse unchanged timing. Burn-in rendering waits for the complete caption/font bundle (`slices/rebuild/{runtime-subtitles,runtime-store}.ts`).
+8. Publish immutable MP4/WAV and render-parameter assets as one complete bundle, pinned to the admitted revision. Parameters record durations, gaps, image slots/order, zoom and frame. Current compatible owners receive the result; an incompatible later edit does not acquire older pixels or bytes (`slices/rebuild/{runtime-export,runtime-publication}.ts`, `slices/revisions/publish.ts`).
 
 ## Branches
 
-- Video Off with Audio Generate/Provide → decode and combine intro, body and outro with the configured silence gaps into `audio.wav`, 48 kHz stereo signed 16-bit PCM. Record the plan in `render.json`; no images are needed and this does not increment the videos counter.
+- Video Off with Audio Generate/Provide → decode and combine intro, body and outro with the configured silence gaps and edge silence into `audio.wav`, 48 kHz stereo signed 16-bit PCM. Record the plan in `render.json`; no images are needed and this does not increment the videos counter.
 - Enabled subtitles with WAV → separate SRT/VTT files; burn-in is normalized to files (`slices/admission/rules.ts`, `slices/rebuild/{runtime-export,runtime-subtitles}.ts`).
 - Both Audio and Video Off → the final stage is skipped; the Article download remains available.
 - Intro Off → no intro segment and no leading gap; outro Off → no outro segment and no trailing gap.
@@ -60,8 +61,9 @@ The final media stage produces an MP4 slideshow or a combined PCM WAV. Audio Off
 
 ## Invariants
 
-- Narrated video length = intro + gaps + body + outro; silent video length = image count × 5 seconds.
-- Every slideshow image appears exactly once, in slideshow order (scenario 09).
+- Narrated video length = edge + intro + gaps + body + outro + edge; silent video length = image count × seconds per image.
+- Slideshow images cycle in slideshow order; every image appears at least once when the timeline has room for it (scenario 09).
+- Changing the seconds per image re-renders only the video; changing the edge silence re-exports the MP4/WAV and redoes caption timing, never narration or images (`slices/rebuild/{recipe-visual,recipe-audio,recipe-exports}.ts`).
 - The thumbnail is never in the video (scenario 09).
 - Rendering reads the admitted revision snapshot; later changed images, narration or burn-in captions require a separately authorized rebuild. Reorder-only image edits reuse image generation and change assembly.
 

@@ -41,7 +41,13 @@ export function exportRecipes(
       kind: "local",
       version: 1,
       operation: "wav2vec2-en-a19f851-v2-omissions",
-      values: [audio.timeline, config.silenceGapSeconds, config.subtitles.language],
+      // The lead-in moves every word, so the edge silence is part of the timing.
+      values: [
+        audio.timeline,
+        config.silenceGapSeconds,
+        config.subtitles.language,
+        config.edgeSilenceSeconds,
+      ],
     },
     audio.keys,
   );

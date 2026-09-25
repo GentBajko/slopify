@@ -4,7 +4,7 @@ import { piecesOf } from "../../kernel/runner/piece-repo.js";
 import { stagesOf } from "../admission/repo.js";
 import { outputPath } from "../storage/layout.js";
 import type { Output } from "../storage/model.js";
-import type { AudioKind } from "../video/plan.js";
+import type { SpokenKind } from "../video/plan.js";
 import type { VideoDeps } from "../video/run.js";
 
 const textPayload = z.object({ text: z.string(), category: z.string().optional() });
@@ -12,7 +12,7 @@ const textPayload = z.object({ text: z.string(), category: z.string().optional()
 export function spokenText(
   deps: VideoDeps,
   projectId: string,
-  kind: Exclude<AudioKind, "gap">,
+  kind: SpokenKind,
   outputs: readonly Output[],
 ): string {
   const stages = stagesOf(deps.db, projectId);

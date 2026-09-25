@@ -76,7 +76,10 @@ export function visualRecipes(
             recipes.map((value) => value.fingerprint),
             audioFingerprint,
             config.subtitles?.mode === "burn-in" ? captionFingerprint : null,
-            "slideshow-zoom-v1",
+            // Only here: how long a still is held changes the render, never an image.
+            config.imageSeconds,
+            // v1 split the timeline evenly across the images; v2 cycles them.
+            "slideshow-zoom-v2",
           ],
         },
         [

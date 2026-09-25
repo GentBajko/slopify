@@ -1,6 +1,13 @@
 import { z } from "zod";
 import type { EntryChoice, RunDraft } from "../admission/model.js";
-import { type FieldError, numberPerPromptMax } from "../admission/rules.js";
+import {
+  defaultEdgeSilenceSeconds,
+  defaultImageSeconds,
+  edgeSilenceSecondsProblem,
+  type FieldError,
+  imageSecondsProblem,
+  numberPerPromptMax,
+} from "../admission/rules.js";
 import { runDraftSchema } from "../admission/schema.js";
 import type { Entry } from "../library/model.js";
 import { defaultSubtitles } from "../subtitles/model.js";
@@ -31,6 +38,21 @@ export function toAdmissionDraft(input: {
     if (parsed.success) return parsed.data;
     fields.push({ field, message: `Enter a whole number between ${min} and ${max}.` });
     return min;
+  };
+  // A value the run uses is refused in the rule's words; one it ignores (the control is
+  // hidden) falls back to the default rather than holding up the run.
+  const seconds = (
+    field: "imageSeconds" | "edgeSilenceSeconds",
+    used: boolean,
+    fallback: number,
+    problem: (value: number) => string | undefined,
+  ): number => {
+    const raw = form[field].trim();
+    const value = raw === "" ? Number.NaN : Number(raw);
+    const refused = problem(value);
+    if (refused === undefined) return value;
+    if (used) fields.push({ field, message: refused });
+    return fallback;
   };
   const entry = (category: "intro" | "outro"): EntryChoice | undefined => {
     const name = form[category];
@@ -137,6 +159,18 @@ export function toAdmissionDraft(input: {
             fontSize: number(form.subtitles.fontSize, "subtitles.fontSize", 120, 16),
           },
     silenceGapSeconds: input.silenceGapSeconds,
+    imageSeconds: seconds(
+      "imageSeconds",
+      sources.video === "generate",
+      defaultImageSeconds,
+      imageSecondsProblem,
+    ),
+    edgeSilenceSeconds: seconds(
+      "edgeSilenceSeconds",
+      sources.audio !== "off",
+      defaultEdgeSilenceSeconds,
+      edgeSilenceSecondsProblem,
+    ),
   };
   const parsed = runDraftSchema.safeParse(draft);
   if (!parsed.success)

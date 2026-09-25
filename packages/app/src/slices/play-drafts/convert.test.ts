@@ -277,3 +277,50 @@ it.each([undefined, false, true])(
     }
   },
 );
+it.each([
+  [
+    "imageSeconds",
+    ["", "abc", "0", "1.5", "601"],
+    "Enter a whole number of seconds between 1 and 600.",
+  ],
+  [
+    "edgeSilenceSeconds",
+    ["", "-1", "0.25", "31"],
+    "Enter a number of seconds between 0 and 30, in steps of 0.5.",
+  ],
+] as const)("refuses a typed %s the run uses with the rule's sentence", (field, raws, message) => {
+  const h = draftFixture();
+  try {
+    for (const raw of raws) {
+      const result = convert({ ...h.document, form: { ...h.document.form, [field]: raw } });
+      expect(result).toMatchObject({
+        ok: false,
+        fields: expect.arrayContaining([{ field, message }]),
+      });
+    }
+  } finally {
+    h.close();
+  }
+});
+it("carries the timing settings as numbers and ignores ones the run does not use", () => {
+  const h = draftFixture();
+  try {
+    const typed = { ...h.document.form, imageSeconds: " 20 ", edgeSilenceSeconds: "1.5" };
+    expect(convert({ ...h.document, form: typed })).toMatchObject({
+      ok: true,
+      draft: { imageSeconds: 20, edgeSilenceSeconds: 1.5 },
+    });
+    const unused = {
+      ...h.document.form,
+      sources: { ...h.document.form.sources, audio: "off" as const, images: "off" as const },
+      imageSeconds: "",
+      edgeSilenceSeconds: "oops",
+    };
+    expect(convert({ ...h.document, form: unused })).toMatchObject({
+      ok: true,
+      draft: { imageSeconds: 15, edgeSilenceSeconds: 2 },
+    });
+  } finally {
+    h.close();
+  }
+});

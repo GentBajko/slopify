@@ -7,6 +7,7 @@ import { outputsOf } from "../storage/repo.js";
 import { prepareSubtitles } from "../subtitles/prepare.js";
 import { audioExportArgs } from "./audio-export-args.js";
 import { audioInputs } from "./audio-inputs.js";
+import { runFfmpeg } from "./ffmpeg.js";
 import { audioTimeline } from "./plan.js";
 import { reusableAudioExport } from "./reuse-audio.js";
 import type { VideoDeps } from "./run.js";
@@ -21,11 +22,12 @@ export async function exportAudioWav(
   deps: VideoDeps,
   context: StageContext,
   gapSeconds: number,
+  edgeSeconds: number,
 ): Promise<void> {
   const { projectId } = context.stage;
   const outputs = outputsOf(deps.db, projectId);
   const input = await audioInputs(deps, projectId, outputs, context.signal);
-  const audio = audioTimeline({ ...input, gapSeconds }, 1 / rate);
+  const audio = audioTimeline({ ...input, gapSeconds, edgeSeconds }, 1 / rate);
   const totalSeconds = audio.reduce((sum, segment) => sum + segment.seconds, 0);
   const dir = projectDir(deps.paths, projectId);
   const sources = outputs.filter((output) =>
@@ -36,6 +38,7 @@ export async function exportAudioWav(
     channels: 2,
     codec: "pcm_s16le",
     gapSeconds,
+    edgeSeconds,
     totalSeconds,
     audio: audio.map((segment) => ({
       ...segment,
@@ -63,6 +66,13 @@ export async function exportAudioWav(
     totalSeconds,
     record: plan,
     subtitles,
-    args: (part) => audioExportArgs(audio, part),
+    render: (part, onProgress) =>
+      runFfmpeg({
+        bin: deps.ffmpeg,
+        args: audioExportArgs(audio, part),
+        signal: context.signal,
+        log: deps.log,
+        onProgress,
+      }),
   });
 }

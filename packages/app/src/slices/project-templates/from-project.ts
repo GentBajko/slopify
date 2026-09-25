@@ -169,6 +169,8 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
           config.subtitles?.fontSize === undefined ? "48" : String(config.subtitles.fontSize),
         position: config.subtitles?.position ?? "bottom",
       },
+      imageSeconds: String(config.imageSeconds),
+      edgeSilenceSeconds: String(config.edgeSilenceSeconds),
       values: config.values,
       provided,
     },

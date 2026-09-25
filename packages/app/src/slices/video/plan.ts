@@ -7,14 +7,17 @@ const frames: Readonly<Record<Format, { width: number; height: number }>> = {
   "9:16": { width: 1080, height: 1920 },
 };
 
-// 100% → 122.5%, linear, centred, alternating per image. The three are written out
+// 100% → 122.5%, linear, centred, alternating per slot. The three are written out
 // rather than derived from one another, because they are formatted into an ffmpeg
 // expression and 1.225 - 1 is not 0.225 in binary floating point.
 export const zoomFrom = 1;
 export const zoomTo = 1.225;
 export const zoomBy = 0.225;
 
-export type AudioKind = "intro" | "body" | "outro" | "gap";
+export type SpokenKind = "intro" | "body" | "outro";
+// A gap sits between two spoken segments; an edge is the quiet lead-in before the first and
+// the tail after the last.
+export type AudioKind = SpokenKind | "gap" | "edge";
 export type Zoom = "in" | "out";
 
 export interface AudioSegment {
@@ -26,7 +29,8 @@ export interface AudioSegment {
 
 export interface ImageSlot {
   readonly path: string;
-  // 1-based place in the slideshow, which is also what decides the zoom direction.
+  // 1-based place in the timeline, which is also what decides the zoom direction. The
+  // same image comes back in later slots once the images have all been shown.
   readonly index: number;
   readonly frames: number;
   readonly zoom: Zoom;
@@ -37,6 +41,8 @@ export interface RenderPlan {
   readonly height: number;
   readonly fps: number;
   readonly gapSeconds: number;
+  readonly edgeSeconds: number;
+  readonly imageSeconds: number;
   readonly audio: readonly AudioSegment[];
   readonly images: readonly ImageSlot[];
   readonly totalFrames: number;
@@ -52,6 +58,8 @@ export interface AudioInput {
 export interface PlanInput {
   readonly format: Format;
   readonly gapSeconds: number;
+  readonly edgeSeconds: number;
+  readonly imageSeconds: number;
   readonly intro?: AudioInput | undefined;
   readonly body?: AudioInput | undefined;
   readonly outro?: AudioInput | undefined;
@@ -69,35 +77,49 @@ export function planRender(input: PlanInput): RenderPlan {
   }
   const frame = frames[input.format];
   const audio = input.body === undefined ? [] : audioTimeline({ ...input, body: input.body });
+  // A silent video shows every image once, which is the one length it has to go on.
   const totalSeconds =
     input.body === undefined
-      ? input.images.length * 5
+      ? input.images.length * input.imageSeconds
       : audio.reduce((sum, segment) => sum + segment.seconds, 0);
-  const totalFrames = Math.max(input.images.length, Math.round(totalSeconds * fps));
+  const totalFrames = Math.max(1, Math.round(totalSeconds * fps));
   return {
     width: frame.width,
     height: frame.height,
     fps,
     gapSeconds: input.gapSeconds,
+    edgeSeconds: input.edgeSeconds,
+    imageSeconds: input.imageSeconds,
     audio,
-    images: slots(input.images, totalFrames),
+    images: slots(input.images, Math.max(1, Math.round(input.imageSeconds * fps)), totalFrames),
     totalFrames,
     totalSeconds,
     output: input.output,
   };
 }
 
-// Intro, gap, body, gap, outro, with a gap only where the segment on
-// the other side of it exists.
+export function spoken(kind: AudioKind): kind is SpokenKind {
+  return kind !== "gap" && kind !== "edge";
+}
+
+// Edge, intro, gap, body, gap, outro, edge, with a gap only where the segment on the other
+// side of it exists. Captions walk these same segments, so the lead-in shifts every cue.
 export function audioTimeline(
-  input: Pick<PlanInput, "gapSeconds" | "intro" | "outro"> & { readonly body: AudioInput },
+  input: Pick<PlanInput, "gapSeconds" | "edgeSeconds" | "intro" | "outro"> & {
+    readonly body: AudioInput;
+  },
   minimumGap = 1 / fps,
 ): readonly AudioSegment[] {
   const segments: AudioSegment[] = [];
   const gap: AudioSegment = { kind: "gap", path: null, seconds: input.gapSeconds };
+  const edge: AudioSegment = { kind: "edge", path: null, seconds: input.edgeSeconds };
   // Video keeps its existing minimum of one frame. WAV passes one sample instead,
   // because its gap duration is independent of the slideshow's frame rate.
   const audible = input.gapSeconds >= minimumGap;
+  const edged = input.edgeSeconds >= minimumGap;
+  if (edged) {
+    segments.push(edge);
+  }
   if (input.intro !== undefined) {
     segments.push({ kind: "intro", path: input.intro.path, seconds: input.intro.seconds });
     if (audible) {
@@ -111,20 +133,23 @@ export function audioTimeline(
     }
     segments.push({ kind: "outro", path: input.outro.path, seconds: input.outro.seconds });
   }
+  if (edged) {
+    segments.push(edge);
+  }
   return segments;
 }
 
-// The slot is the total divided by the image count, and the last image absorbs the frame
-// rounding. One image fills the whole length. ceiling: every slot holds at least one frame, so
-// a run with more images than the timeline has frames renders slightly longer than its audio
-// rather than failing.
-function slots(paths: readonly string[], totalFrames: number): readonly ImageSlot[] {
-  const each = Math.max(1, Math.floor(totalFrames / paths.length));
-  return paths.map((path, at) => ({
-    path,
+// The images take turns in slideshow order, each for `each` frames, starting over after the
+// last until the timeline is full; the last slot is cut to what is left. A timeline shorter
+// than one slot is a single slot. Zoom alternates per slot, not per image, so an image
+// that comes round again may zoom the other way.
+function slots(paths: readonly string[], each: number, totalFrames: number): readonly ImageSlot[] {
+  const count = Math.ceil(totalFrames / each);
+  return Array.from({ length: count }, (_value, at) => ({
+    path: paths[at % paths.length] ?? "",
     index: at + 1,
-    frames: at === paths.length - 1 ? Math.max(1, totalFrames - each * at) : each,
-    // Odd images zoom in, even images zoom out.
+    frames: Math.min(each, totalFrames - each * at),
+    // Odd slots zoom in, even slots zoom out.
     zoom: at % 2 === 0 ? "in" : "out",
   }));
 }

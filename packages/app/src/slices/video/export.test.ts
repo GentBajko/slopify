@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { outputsOf } from "../storage/repo.js";
@@ -120,8 +120,8 @@ describe("optional media exports with real ffmpeg", () => {
     expect(existsSync(join(h.dir, "audio.part.wav"))).toBe(false);
   });
 
-  it("renders five seconds per image with no audio stream when Audio is Off", async () => {
-    const h = fixture("generate", "off");
+  it("shows each image once for its seconds with no audio stream when Audio is Off", async () => {
+    const h = fixture("generate", "off", 0.15, 0, 5);
     h.image();
     await renderVideo(h.deps, h.context());
     const report = inspectMedia(join(h.dir, "video.mp4"));
@@ -132,5 +132,41 @@ describe("optional media exports with real ffmpeg", () => {
       5000,
     );
     expect(h.counted.events()).toHaveLength(1);
+  }, 30000);
+
+  it("puts the edge silence before and after the narration in the WAV", async () => {
+    const h = fixture("off", "provide", 0.15, 0.5);
+    h.tone("audio_body", "wav", 0.3);
+    await renderVideo(h.deps, h.context());
+    const wav = wavParts(join(h.dir, "audio.wav"));
+    expect(wav.duration).toBeCloseTo(1.3, 2);
+    for (const at of [0.1, 0.4, 0.9, 1.2]) expect(wav.peakAt(at)).toBe(0);
+    expect(wav.peakAt(0.65)).toBeGreaterThan(1000);
+    const params = JSON.parse(readFileSync(join(h.dir, "render.json"), "utf8"));
+    expect(params.audio.map((segment: { kind: string }) => segment.kind)).toEqual([
+      "edge",
+      "body",
+      "edge",
+    ]);
+  });
+
+  it("cycles the images through a narrated video and leaves no working files", async () => {
+    const h = fixture("generate", "provide", 0.15, 0.5, 1);
+    h.tone("audio_body", "wav", 1.5);
+    h.image(1);
+    h.image(2);
+    await renderVideo(h.deps, h.context());
+    const report = inspectMedia(join(h.dir, "video.mp4"));
+    expect(report).toContain("Duration: 00:00:02.5");
+    expect(report).toContain("Audio: aac");
+    const params = JSON.parse(readFileSync(join(h.dir, "render.json"), "utf8"));
+    expect(
+      params.images.map((slot: { path: string; frames: number }) => [slot.path, slot.frames]),
+    ).toEqual([
+      ["image.ppm", 30],
+      ["image-2.ppm", 30],
+      ["image.ppm", 15],
+    ]);
+    expect(readdirSync(h.dir).filter((name) => name.startsWith("render-"))).toEqual([]);
   }, 30000);
 });

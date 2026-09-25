@@ -76,6 +76,8 @@ export function playFieldTarget(
             "provided.thumbnail",
             "provided",
             "sources",
+            "imageSeconds",
+            "edgeSilenceSeconds",
           ])
         ? "outputs"
         : "review";

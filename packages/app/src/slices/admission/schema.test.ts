@@ -17,6 +17,8 @@ const draft: RunDraft = {
   values: {},
   provided: { article: "Arda." },
   silenceGapSeconds: 0,
+  imageSeconds: 15,
+  edgeSilenceSeconds: 0,
 };
 
 it.each([undefined, false, true])("round trips run audio preference %s", (preference) => {
@@ -54,4 +56,14 @@ it("rejects non-boolean run preferences", () => {
     expect(runDraftSchema.safeParse(input).success).toBe(false);
     expect(runConfigSchema.safeParse(input).success).toBe(false);
   }
+});
+
+it("reads a config saved before the video timing settings with the defaults", () => {
+  const { imageSeconds: _image, edgeSilenceSeconds: _edge, ...old } = draft;
+  for (const schema of [runDraftSchema, runConfigSchema]) {
+    const parsed = schema.parse({ ...old, rendered: {} });
+    expect(parsed.imageSeconds).toBe(15);
+    expect(parsed.edgeSilenceSeconds).toBe(2);
+  }
+  expect(runConfigSchema.parse({ ...draft, imageSeconds: 40, rendered: {} }).imageSeconds).toBe(40);
 });

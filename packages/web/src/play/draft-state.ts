@@ -1,4 +1,8 @@
-import type { FieldError } from "@app/slices/admission/rules.js";
+import {
+  defaultEdgeSilenceSeconds,
+  defaultImageSeconds,
+  type FieldError,
+} from "@app/slices/admission/rules.js";
 import { toAdmissionDraft } from "@app/slices/play-drafts/convert.js";
 import {
   type PlayDraftDocument,
@@ -32,6 +36,8 @@ export const freshDraftDocument: PlayDraftDocument = playDraftDocumentSchema.par
     outro: "",
     chunking: { mode: "whole", words: "500", characters: "3000" },
     subtitles: { ...defaultSubtitles, fontSize: "48" },
+    imageSeconds: String(defaultImageSeconds),
+    edgeSilenceSeconds: String(defaultEdgeSilenceSeconds),
     values: {},
     provided: { research: "", article: "", audio: null, images: [], thumbnail: null },
   },

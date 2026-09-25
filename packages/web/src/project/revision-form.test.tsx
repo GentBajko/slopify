@@ -47,6 +47,77 @@ it("keeps Article required and pairs Images Off with Video Off", async () => {
   ).toBe("30");
 });
 
+it("shows the video timing settings only where the export uses them", async () => {
+  const user = userEvent.setup();
+  const base = revisionView();
+  const view = {
+    ...base,
+    revision: {
+      ...base.revision,
+      config: {
+        ...base.revision.config,
+        sources: {
+          ...base.revision.config.sources,
+          audio: "provide" as const,
+          images: "provide" as const,
+          video: "generate" as const,
+        },
+      },
+    },
+  };
+  let latest = formOfRevision(view);
+  function Timing(): import("react").ReactElement {
+    const [edit, setEdit] = useState(formOfRevision(view));
+    latest = edit;
+    return (
+      <RevisionForm
+        view={view}
+        edit={edit}
+        onChange={setEdit}
+        onPending={() => {}}
+        fields={[
+          {
+            field: "config.imageSeconds",
+            message: "Enter a whole number of seconds between 1 and 600.",
+          },
+        ]}
+      />
+    );
+  }
+  renderApp(
+    <Timing />,
+    testDeps({
+      "GET /api/providers": jsonAnswer({ providers: [] }),
+      "GET /api/settings/voices": jsonAnswer({ voices: [] }),
+      "GET /api/prompts": jsonAnswer({ prompts: [] }),
+      "GET /api/entries": jsonAnswer({ entries: [] }),
+    }),
+  );
+  const seconds = screen.getByRole<HTMLInputElement>("spinbutton", { name: "Seconds per image" });
+  expect(seconds.value).toBe("15");
+  expect(document.getElementById(seconds.getAttribute("aria-describedby") ?? "")?.textContent).toBe(
+    "Each image stays on screen this long, then the next one; after the last image they start again.",
+  );
+  expect(screen.getByText("Enter a whole number of seconds between 1 and 600.")).toBeDefined();
+  await user.clear(seconds);
+  await user.type(seconds, "20");
+  expect(latest.config.imageSeconds).toBe(20);
+  const edge = screen.getByRole<HTMLInputElement>("spinbutton", {
+    name: "Silence at start and end (seconds)",
+  });
+  expect(edge.getAttribute("step")).toBe("0.5");
+  await user.clear(edge);
+  await user.type(edge, "1.5");
+  expect(latest.config.edgeSilenceSeconds).toBe(1.5);
+
+  await user.selectOptions(screen.getByRole("combobox", { name: "images source" }), "off");
+  expect(screen.queryByRole("spinbutton", { name: "Seconds per image" })).toBeNull();
+  await user.selectOptions(screen.getByRole("combobox", { name: "audio source" }), "off");
+  expect(
+    screen.queryByRole("spinbutton", { name: "Silence at start and end (seconds)" }),
+  ).toBeNull();
+});
+
 it("preserves saved unavailable choices, content references and frozen templates through unrelated changes", async () => {
   const user = userEvent.setup();
   const base = revisionView();

@@ -19,7 +19,7 @@ import { resolveFont } from "../fonts/index.js";
 import { outputPath, projectDir } from "../storage/layout.js";
 import type { Output } from "../storage/model.js";
 import { outputsOf } from "../storage/repo.js";
-import type { AudioSegment } from "../video/plan.js";
+import { type AudioSegment, spoken } from "../video/plan.js";
 import type { VideoDeps } from "../video/run.js";
 import { captionCues, serializeAss, serializeSrt, serializeVtt } from "./captions.js";
 import { defaultSubtitles, type TimedWord } from "./model.js";
@@ -90,7 +90,7 @@ export async function prepareSubtitles(
   const outputs = outputsOf(deps.db, projectId);
   const segments = audio.map((segment) => ({
     ...segment,
-    text: segment.kind === "gap" ? "" : spokenText(deps, projectId, segment.kind, outputs),
+    text: spoken(segment.kind) ? spokenText(deps, projectId, segment.kind, outputs) : "",
   }));
   const key = await timingKey(segments, context.signal);
   const cache = readCache(deps, projectId, outputs);

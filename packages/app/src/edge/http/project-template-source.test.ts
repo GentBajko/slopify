@@ -28,6 +28,8 @@ it("snapshots a pinned project setup without copying generated output or approva
         values: { topic: "Arda" },
         provided: {},
         silenceGapSeconds: 0,
+        imageSeconds: 15,
+        edgeSilenceSeconds: 0,
       },
       { article: "Write about Arda" },
       false,
@@ -94,6 +96,8 @@ it.each([undefined, false, true])(
           values: {},
           provided: { article: "Arda." },
           silenceGapSeconds: 0,
+          imageSeconds: 15,
+          edgeSilenceSeconds: 0,
         },
         {},
       ).project;

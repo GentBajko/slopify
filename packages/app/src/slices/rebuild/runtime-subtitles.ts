@@ -11,6 +11,7 @@ import { validateCues } from "../revisions/rules.js";
 import { discardPreparedAssets, writeAsset } from "../storage/assets.js";
 import { outputPath } from "../storage/layout.js";
 import { captionCues, serializeAss, serializeSrt, serializeVtt } from "../subtitles/captions.js";
+import { spoken } from "../video/plan.js";
 import type { ExportExecutionDeps } from "./runtime-export.js";
 import {
   type ExportSnapshot,
@@ -91,7 +92,7 @@ async function timing(
   for (const segment of audio) {
     context.signal.throwIfAborted();
     const { path, kind } = segment;
-    if (path !== null && kind !== "gap") {
+    if (path !== null && spoken(kind)) {
       const aligned = await located(snapshot, kind, () =>
         alignSubtitles({
           audioPath: path,

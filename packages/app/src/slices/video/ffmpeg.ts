@@ -39,14 +39,84 @@ export function resolveFfmpeg(
   );
 }
 
-export function renderArgs(plan: RenderPlan, burnSubtitles = false): string[] {
-  const inputs: string[] = [];
-  for (const slot of plan.images) {
-    inputs.push("-i", slot.path);
-  }
+// The slideshow is rendered in two steps rather than one filtergraph. A graph with one
+// scale-and-zoompan chain per slot keeps each chain's frame buffers until the graph closes,
+// so its memory grows with the slot count: measured with ffmpeg 7, 200 slots peaked at
+// 16 GB and ran 6,000 threads, and a 3-hour video at 15 s per image has 720 slots. So each
+// distinct clip (one still, one zoom direction, one length) is encoded once, in its own
+// short ffmpeg run with a single input, and the concat demuxer then joins the clips in slot
+// order from a list file. Memory is one clip's worth whatever the length; the command
+// lines stay a few hundred characters (Windows allows 32,767) because the timeline lives
+// in the list, not the arguments; and a still that comes round again costs no second
+// zoompan. The clips are identical encodes, so without burned-in captions the join copies
+// them rather than encoding again.
+export interface SlideshowClips {
+  // One per distinct clip, named by its place in this list: `c1.mp4`, `c2.mp4`, ...
+  readonly clips: readonly { readonly name: string; readonly slot: ImageSlot }[];
+  // The clip each slot plays, in timeline order.
+  readonly order: readonly string[];
+}
+
+export function slideshowClips(plan: RenderPlan): SlideshowClips {
+  const clips: { name: string; slot: ImageSlot }[] = [];
+  const named = new Map<string, string>();
+  const order = plan.images.map((slot) => {
+    const key = JSON.stringify([slot.path, slot.zoom, slot.frames]);
+    let name = named.get(key);
+    if (name === undefined) {
+      name = `c${clips.length + 1}.mp4`;
+      named.set(key, name);
+      clips.push({ name, slot });
+    }
+    return name;
+  });
+  return { clips, order };
+}
+
+// Clips that are joined by copying get the final encode's settings. Clips that will be
+// decoded again under burned-in captions are kept closer to the source, so the second
+// encode is not a visible second generation.
+const intermediateCrf = "16";
+
+export function clipArgs(
+  plan: Pick<RenderPlan, "width" | "height" | "fps">,
+  slot: ImageSlot,
+  output: string,
+  intermediate = false,
+): string[] {
+  const wide = plan.width * prescale;
+  const tall = plan.height * prescale;
+  return [
+    ...progressArgs,
+    "-i",
+    slot.path,
+    "-filter_complex",
+    `[0:v]trim=end_frame=1,setpts=PTS-STARTPTS,` +
+      // Cover the frame and centre-crop, never letterbox.
+      `scale=${wide}:${tall}:force_original_aspect_ratio=increase,crop=${wide}:${tall},` +
+      `zoompan=z='${zoomExpression(slot)}':d=${slot.frames}:` +
+      `x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':` +
+      `s=${plan.width}x${plan.height}:fps=${plan.fps},setsar=1[v]`,
+    "-map",
+    "[v]",
+    ...videoCodec,
+    ...(intermediate ? ["-crf", intermediateCrf] : []),
+    "-an",
+    output,
+  ];
+}
+
+// The concat demuxer's own format. Names are resolved beside the list and are this
+// module's `cN.mp4`, so nothing in them needs quoting.
+export function concatList(order: readonly string[]): string {
+  return `ffconcat version 1.0\n${order.map((name) => `file ${name}`).join("\n")}\n`;
+}
+
+export function joinArgs(plan: RenderPlan, list: string, burnSubtitles = false): string[] {
+  const inputs: string[] = ["-f", "concat", "-i", list];
   const audioAt: number[] = [];
   for (const segment of plan.audio) {
-    audioAt.push(plan.images.length + audioAt.length);
+    audioAt.push(1 + audioAt.length);
     if (segment.path === null) {
       inputs.push(
         "-f",
@@ -60,55 +130,8 @@ export function renderArgs(plan: RenderPlan, burnSubtitles = false): string[] {
     }
     inputs.push("-i", segment.path);
   }
-
-  return [
-    "-hide_banner",
-    "-nostdin",
-    "-loglevel",
-    "error",
-    // Progress on stdout keeps stderr free to carry only what went wrong.
-    "-progress",
-    "pipe:1",
-    "-nostats",
-    "-y",
-    ...inputs,
-    "-filter_complex",
-    filterGraph(plan, audioAt, burnSubtitles),
-    "-map",
-    "[v]",
-    ...(plan.audio.length > 0 ? ["-map", "[a]"] : []),
-    "-c:v",
-    "libx264",
-    "-pix_fmt",
-    "yuv420p",
-    ...(plan.audio.length > 0 ? ["-c:a", "aac"] : ["-an"]),
-    "-movflags",
-    "+faststart",
-    plan.output,
-  ];
-}
-
-function filterGraph(plan: RenderPlan, audioAt: readonly number[], burnSubtitles: boolean): string {
   const chains: string[] = [];
-  const wide = plan.width * prescale;
-  const tall = plan.height * prescale;
-
-  plan.images.forEach((slot, at) => {
-    chains.push(
-      `[${at}:v]trim=end_frame=1,setpts=PTS-STARTPTS,` +
-        // Cover the frame and centre-crop, never letterbox.
-        `scale=${wide}:${tall}:force_original_aspect_ratio=increase,crop=${wide}:${tall},` +
-        `zoompan=z='${zoomExpression(slot)}':d=${slot.frames}:` +
-        `x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':` +
-        `s=${plan.width}x${plan.height}:fps=${plan.fps},setsar=1[v${at}]`,
-    );
-  });
-  chains.push(
-    `${plan.images.map((_slot, at) => `[v${at}]`).join("")}concat=n=${plan.images.length}:v=1:a=0${burnSubtitles ? "[uncaptioned]" : "[v]"}`,
-  );
-
-  if (burnSubtitles) chains.push("[uncaptioned]ass=filename=subtitles.ass:fontsdir=fonts[v]");
-
+  if (burnSubtitles) chains.push("[0:v]ass=filename=subtitles.ass:fontsdir=fonts[v]");
   audioAt.forEach((input, at) => {
     // The segments come from different files and the silence from lavfi, so they are
     // brought to one format before concat, which refuses to join mismatched streams.
@@ -122,10 +145,35 @@ function filterGraph(plan: RenderPlan, audioAt: readonly number[], burnSubtitles
     );
   }
 
-  return chains.join(";");
+  return [
+    ...progressArgs,
+    ...inputs,
+    ...(chains.length > 0 ? ["-filter_complex", chains.join(";")] : []),
+    "-map",
+    burnSubtitles ? "[v]" : "0:v",
+    ...(plan.audio.length > 0 ? ["-map", "[a]"] : []),
+    ...(burnSubtitles ? videoCodec : ["-c:v", "copy"]),
+    ...(plan.audio.length > 0 ? ["-c:a", "aac"] : ["-an"]),
+    "-movflags",
+    "+faststart",
+    plan.output,
+  ];
 }
 
-// Odd images 100% → 122.5%, even images 122.5% → 100%, linear over the slot. `on` is
+const progressArgs = [
+  "-hide_banner",
+  "-nostdin",
+  "-loglevel",
+  "error",
+  // Progress on stdout keeps stderr free to carry only what went wrong.
+  "-progress",
+  "pipe:1",
+  "-nostats",
+  "-y",
+] as const;
+const videoCodec = ["-c:v", "libx264", "-pix_fmt", "yuv420p"] as const;
+
+// Odd slots 100% → 122.5%, even slots 122.5% → 100%, linear over the slot. `on` is
 // zoompan's output frame counter, 0 to d-1, and a one-frame slot has no span to divide
 // by, so it holds the zoom it starts at.
 function zoomExpression(slot: ImageSlot): string {

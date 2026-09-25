@@ -38,6 +38,8 @@ function summary(
       values: {},
       provided: {},
       silenceGapSeconds: 3,
+      imageSeconds: 15,
+      edgeSilenceSeconds: 0,
       rendered: {},
     },
     createdAt: "2026-09-02T19:14:00.000Z",

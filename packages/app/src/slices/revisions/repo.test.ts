@@ -39,6 +39,8 @@ const revision: ProjectRevision = {
     provided: { article: "Narration" },
     rendered: {},
     silenceGapSeconds: 0,
+    imageSeconds: 15,
+    edgeSilenceSeconds: 0,
   },
   content: {
     articleEdited: false,

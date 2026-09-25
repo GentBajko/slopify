@@ -57,3 +57,61 @@ it.each([
     }
   },
 );
+
+it.each([
+  ["imageSeconds", "Seconds per image", ["", "0", "1.5", "601"]],
+  ["edgeSilenceSeconds", "Silence at start and end (seconds)", ["", "-1", "0.25", "31"]],
+] as const)(
+  "keeps a typed %s through save/reload and refuses it at Review",
+  async (field, label, values) => {
+    const h = reviewHarness();
+    await h.prepare(freshDraftDocument);
+    const open = async () => {
+      await act(async () => {
+        await h.session().navigate("outputs");
+      });
+    };
+    await open();
+    expect((screen.getByLabelText(label) as HTMLInputElement).value).toBe(
+      field === "imageSeconds" ? "15" : "2",
+    );
+    for (const value of values) {
+      fireEvent.change(screen.getByLabelText(label), { target: { value } });
+      expect(h.session().document.form[field]).toBe(value);
+      await act(async () => {
+        await h.session().flush();
+      });
+      await h.restart();
+      await waitFor(() => expect(h.session().document.form[field]).toBe(value));
+      await open();
+      expect((screen.getByLabelText(label) as HTMLInputElement).value).toBe(value);
+      const review = admissionOf({
+        document: h.session().document,
+        attachments: [],
+        entries: [],
+        silenceGapSeconds: 0,
+      });
+      expect(review.ok).toBe(false);
+      if (!review.ok) expect(review.fields.map((error) => error.field)).toContain(field);
+    }
+  },
+);
+
+it("offers seconds per image only for a video and the edge silence only with narration", async () => {
+  const h = reviewHarness();
+  await h.prepare({
+    ...freshDraftDocument,
+    form: {
+      ...freshDraftDocument.form,
+      sources: { ...freshDraftDocument.form.sources, images: "off", video: "off" },
+    },
+  });
+  await act(async () => {
+    await h.session().navigate("outputs");
+  });
+  expect(screen.queryByLabelText("Seconds per image")).toBeNull();
+  expect(screen.getByLabelText("Silence at start and end (seconds)")).toBeDefined();
+  expect(
+    screen.getByRole("button", { name: "About silence at start and end (seconds)" }),
+  ).toBeDefined();
+});

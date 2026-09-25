@@ -33,6 +33,8 @@ function harness() {
     rendered: {},
     provided: { article: "Article." },
     silenceGapSeconds: 0,
+    imageSeconds: 15,
+    edgeSilenceSeconds: 0,
     sources: {
       research: "off",
       article: "provide",

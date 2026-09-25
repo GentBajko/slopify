@@ -191,7 +191,8 @@ it("renders a silent slideshow in the selected shape without requiring narration
     const video = h
       .view(saved.view.revision.id)
       .outputs.find((row) => row.selected && row.output.role === "video");
-    expect(video?.output.durationMs).toBe(5000);
+    // One image, shown once for the default 15 seconds.
+    expect(video?.output.durationMs).toBe(15000);
   } finally {
     h.close();
   }

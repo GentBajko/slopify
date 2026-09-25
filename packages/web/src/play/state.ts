@@ -9,7 +9,12 @@ import type {
   StageSource,
   VoiceChoice,
 } from "@app/slices/admission/model.js";
-import { allowedSources, usesNarrationPreparation } from "@app/slices/admission/rules.js";
+import {
+  allowedSources,
+  defaultEdgeSilenceSeconds,
+  defaultImageSeconds,
+  usesNarrationPreparation,
+} from "@app/slices/admission/rules.js";
 import type { Entry } from "@app/slices/library/model.js";
 import type { Chunking } from "@app/slices/narration/chunk.js";
 import type { StagedFile } from "@app/slices/storage/model.js";
@@ -54,6 +59,9 @@ export interface LegacyPlayFormState {
   readonly outro: string;
   readonly chunking: Chunking;
   readonly subtitles: SubtitleConfig;
+  // NaN while the typed text is not a number, so the shared rule refuses it in place.
+  readonly imageSeconds: number;
+  readonly edgeSilenceSeconds: number;
   // Every value the user has typed, including one for a slot no prompt asks for any more:
   // unticking a prompt and ticking it again gives its field back with what was in it.
   readonly values: Readonly<Record<string, string>>;
@@ -71,6 +79,8 @@ export const freshForm: PlayFormState = {
   imagePrompts: [],
   chunking: { mode: "whole" },
   subtitles: defaultSubtitles,
+  imageSeconds: defaultImageSeconds,
+  edgeSilenceSeconds: defaultEdgeSilenceSeconds,
   values: {},
   provided: { research: "", article: "", audio: undefined, images: [], thumbnail: undefined },
 };
@@ -166,6 +176,8 @@ export function draftOf(input: DraftInput): RunDraft {
     chunking: form.chunking,
     subtitles: subtitlesFor(form.subtitles, form.sources),
     silenceGapSeconds: input.silenceGapSeconds,
+    imageSeconds: form.imageSeconds,
+    edgeSilenceSeconds: form.edgeSilenceSeconds,
   };
 }
 

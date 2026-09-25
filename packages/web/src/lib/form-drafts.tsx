@@ -46,6 +46,10 @@ export function usePromptDraft(
   return [context ? context.prompts.get(key) : local, update];
 }
 
+function typedNumber(raw: string): number {
+  return raw.trim() === "" ? Number.NaN : Number(raw);
+}
+
 export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction<PlayFormState>>] {
   const session = usePlaySession();
   const current = useRef(session);
@@ -96,6 +100,8 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
             }
           : { mode: form.chunking.mode },
     subtitles: { ...form.subtitles, fontSize: Number(form.subtitles.fontSize) },
+    imageSeconds: typedNumber(form.imageSeconds),
+    edgeSilenceSeconds: typedNumber(form.edgeSilenceSeconds),
     provided: {
       ...form.provided,
       audio: upload(form.provided.audio),
@@ -143,6 +149,16 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
           ...next.subtitles,
           fontSize: rawNumber(next.subtitles.fontSize, before.form.subtitles.fontSize),
         },
+        // What was typed stays, unless something else set a different number.
+        imageSeconds: Object.is(next.imageSeconds, typedNumber(before.form.imageSeconds))
+          ? before.form.imageSeconds
+          : String(next.imageSeconds),
+        edgeSilenceSeconds: Object.is(
+          next.edgeSilenceSeconds,
+          typedNumber(before.form.edgeSilenceSeconds),
+        )
+          ? before.form.edgeSilenceSeconds
+          : String(next.edgeSilenceSeconds),
         provided: {
           ...next.provided,
           audio: ref(next.provided.audio),

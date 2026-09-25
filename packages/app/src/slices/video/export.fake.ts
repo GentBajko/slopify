@@ -16,7 +16,13 @@ import { resolveFfmpeg } from "./ffmpeg.js";
 
 export const binary = resolveFfmpeg(process.env, ffmpegStatic);
 
-export function exportFixture(video: "generate" | "off", audio: "provide" | "off", gap = 0.15) {
+export function exportFixture(
+  video: "generate" | "off",
+  audio: "provide" | "off",
+  gap = 0.15,
+  edge = 0,
+  imageSeconds = 15,
+) {
   const paths = layout(mkdtempSync(join(tmpdir(), "slopify-export-")));
   ensureDirs(paths, { mode: 0o700 });
   const db = openDb(paths.db);
@@ -42,6 +48,8 @@ export function exportFixture(video: "generate" | "off", audio: "provide" | "off
       provided: {},
       rendered: {},
       silenceGapSeconds: gap,
+      edgeSilenceSeconds: edge,
+      imageSeconds,
     }),
   );
   db.prepare(
@@ -91,13 +99,13 @@ export function exportFixture(video: "generate" | "off", audio: "provide" | "off
     output(role, path);
     return join(dir, path);
   };
-  const image = () => {
-    const path = "image.ppm";
+  const image = (index = 1) => {
+    const path = index === 1 ? "image.ppm" : `image-${index}.ppm`;
     writeFileSync(
       join(dir, path),
-      Buffer.concat([Buffer.from("P6\n16 16\n255\n"), Buffer.alloc(16 * 16 * 3, 80)]),
+      Buffer.concat([Buffer.from("P6\n16 16\n255\n"), Buffer.alloc(16 * 16 * 3, 40 * index)]),
     );
-    output("image", path, 1);
+    output("image", path, index);
   };
   const context = (signal = new AbortController().signal): StageContext => ({
     stage: {

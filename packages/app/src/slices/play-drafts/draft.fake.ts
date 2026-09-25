@@ -62,6 +62,8 @@ export function draftFixture(): {
         fontSize: "48",
         position: "bottom",
       },
+      imageSeconds: "15",
+      edgeSilenceSeconds: "2",
       values: {},
       provided: { research: "", article: "", audio: null, thumbnail: null, images: [] },
     },

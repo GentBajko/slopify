@@ -1,5 +1,11 @@
 import { stageKinds } from "@app/kernel/pipeline.js";
-import { silenceGapSecondsMax, titleMax } from "@app/slices/admission/rules.js";
+import {
+  edgeSilenceSecondsMax,
+  imageSecondsMax,
+  imageSecondsMin,
+  silenceGapSecondsMax,
+  titleMax,
+} from "@app/slices/admission/rules.js";
 import { defaultSubtitles } from "@app/slices/subtitles/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
@@ -204,6 +210,67 @@ export function RevisionForm(
               }
             />
           </label>
+          {config.sources.audio === "off" ? null : (
+            <div className="space-y-1 text-small">
+              <label htmlFor={`${formId}-edge`} className="block space-y-1">
+                Silence at start and end (seconds)
+                <Input
+                  id={`${formId}-edge`}
+                  aria-describedby={`${formId}-edge-hint`}
+                  type="number"
+                  min={0}
+                  max={edgeSilenceSecondsMax}
+                  step={0.5}
+                  aria-invalid={problem("edgeSilenceSeconds") !== undefined}
+                  value={
+                    Number.isFinite(config.edgeSilenceSeconds) ? config.edgeSilenceSeconds : ""
+                  }
+                  onChange={(event) =>
+                    onChange({
+                      ...edit,
+                      config: { ...config, edgeSilenceSeconds: Number(event.target.value) },
+                    })
+                  }
+                />
+              </label>
+              <p id={`${formId}-edge-hint`} className="text-label text-ink3">
+                Quiet time before the narration starts and after it ends.
+              </p>
+              {problem("edgeSilenceSeconds") ? (
+                <p className="text-label text-red">{problem("edgeSilenceSeconds")}</p>
+              ) : null}
+            </div>
+          )}
+          {config.sources.video === "off" ? null : (
+            <div className="space-y-1 text-small">
+              <label htmlFor={`${formId}-image-seconds`} className="block space-y-1">
+                Seconds per image
+                <Input
+                  id={`${formId}-image-seconds`}
+                  aria-describedby={`${formId}-image-seconds-hint`}
+                  type="number"
+                  min={imageSecondsMin}
+                  max={imageSecondsMax}
+                  step={1}
+                  aria-invalid={problem("imageSeconds") !== undefined}
+                  value={Number.isFinite(config.imageSeconds) ? config.imageSeconds : ""}
+                  onChange={(event) =>
+                    onChange({
+                      ...edit,
+                      config: { ...config, imageSeconds: Number(event.target.value) },
+                    })
+                  }
+                />
+              </label>
+              <p id={`${formId}-image-seconds-hint`} className="text-label text-ink3">
+                Each image stays on screen this long, then the next one; after the last image they
+                start again.
+              </p>
+              {problem("imageSeconds") ? (
+                <p className="text-label text-red">{problem("imageSeconds")}</p>
+              ) : null}
+            </div>
+          )}
           {(["intro", "outro"] as const).map((category) => (
             <label
               htmlFor={`${formId}-entry-${category}`}

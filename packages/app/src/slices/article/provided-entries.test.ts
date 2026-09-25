@@ -49,6 +49,8 @@ function harness(over: Partial<RunConfig> = {}) {
     values: { topic: "rope" },
     provided: {},
     silenceGapSeconds: 3,
+    imageSeconds: 15,
+    edgeSilenceSeconds: 0,
     intro: { name: "Welcome", mode: "text" },
     outro: { name: "Ending", mode: "text" },
     rendered: { intro: "Welcome to rope.", outro: "Goodbye." },

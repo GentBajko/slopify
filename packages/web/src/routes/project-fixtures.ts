@@ -82,6 +82,8 @@ export function body(options: {
         rendered: {},
         provided: {},
         silenceGapSeconds: 0,
+        imageSeconds: 15,
+        edgeSilenceSeconds: 0,
       },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

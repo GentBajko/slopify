@@ -39,6 +39,8 @@ function draft(over: Partial<RunDraft> = {}): RunDraft {
     values: {},
     provided: {},
     silenceGapSeconds: 3,
+    imageSeconds: 15,
+    edgeSilenceSeconds: 0,
     ...over,
   };
 }

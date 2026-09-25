@@ -246,6 +246,9 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
       "audio-media-v1",
       ordered.map(({ value }) => resourceIdentity(context, value)),
       config.silenceGapSeconds,
+      // The exported timeline, not a narration piece: the silence only reaches the
+      // exports that read this fingerprint.
+      config.edgeSilenceSeconds,
     ]),
     timeline,
     keys: ordered.map(({ value }) => value.key),

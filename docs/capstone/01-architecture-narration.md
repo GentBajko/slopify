@@ -139,7 +139,7 @@ Request identity includes exact sent text, voice/model selection, segment and th
 
 Reused audio receives a new revision-local descriptor with current clean/request text and grouping metadata. Late publication finds selected revisions carrying that publication and rebinds matching exact recipes against each receiving revision’s plan. `packages/app/src/slices/rebuild/runtime-narration-reuse.ts:122`, `packages/app/src/slices/rebuild/runtime-narration-publication.ts:10`
 
-Caption identity includes audio resource identity, effective clean transcript and retained duration; timing also includes silence gap and language. Caption/export transcript selection uses clean narration whenever either pronunciation or preparation is active. `packages/app/src/slices/rebuild/recipe-audio.ts:233`, `packages/app/src/slices/rebuild/recipe-exports.ts:36`, `packages/app/src/slices/rebuild/runtime-export-inputs.ts:80`
+Caption identity includes audio resource identity, effective clean transcript and retained duration; timing also includes silence gap, edge silence and language. Caption/export transcript selection uses clean narration whenever either pronunciation or preparation is active. `packages/app/src/slices/rebuild/recipe-audio.ts:233`, `packages/app/src/slices/rebuild/recipe-exports.ts:36`, `packages/app/src/slices/rebuild/runtime-export-inputs.ts:80`
 
 ## Frontend
 

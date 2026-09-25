@@ -2,6 +2,7 @@ import { z } from "zod";
 import { formats } from "../../kernel/pipeline.js";
 import { thinkingModes } from "../../kernel/ports/llm.js";
 import { stageSources } from "../admission/model.js";
+import { defaultEdgeSilenceSeconds, defaultImageSeconds } from "../admission/rules.js";
 import { runDraftSchema } from "../admission/schema.js";
 import { checkpointRowSchema, checkpointStageSchema } from "../checkpoints/schema.js";
 import { librarySnapshotSchema } from "../library/snapshot.js";
@@ -56,6 +57,10 @@ export const playDraftFormSchema = z
       })
       .strict()
       .readonly(),
+    // Raw text, like every other number on Play, so what was typed survives a reload.
+    // Defaulted for drafts and templates saved before these controls existed.
+    imageSeconds: text.default(String(defaultImageSeconds)),
+    edgeSilenceSeconds: text.default(String(defaultEdgeSilenceSeconds)),
     values,
     provided: z
       .object({

@@ -20,6 +20,8 @@ export function revisionView(id = "r1", title = "Saved"): RevisionView {
         rendered: {},
         provided: { article: "Saved article." },
         silenceGapSeconds: 0,
+        imageSeconds: 15,
+        edgeSilenceSeconds: 0,
         sources: {
           research: "off",
           article: "provide",

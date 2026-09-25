@@ -24,6 +24,8 @@ const config: RunConfig = {
   values: {},
   provided: { article: "Saved article." },
   silenceGapSeconds: 0,
+  imageSeconds: 15,
+  edgeSilenceSeconds: 0,
   rendered: {},
 };
 export function revisionFixture(upgradeFrom10 = false): {

@@ -27,6 +27,8 @@ const draft: RunDraft = {
   values: {},
   provided: { article: "a".repeat(10000) },
   silenceGapSeconds: 0,
+  imageSeconds: 15,
+  edgeSilenceSeconds: 0,
 };
 describe("cost planning", () => {
   it("counts preparation groups using the shared LLM and preserves unknown CLI rates", () => {

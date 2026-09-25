@@ -88,6 +88,8 @@ it.each(["single", "batch"])(
         imagePrompts: [],
         values: {},
         silenceGapSeconds: 3,
+        imageSeconds: 15,
+        edgeSilenceSeconds: 0,
       };
       const storage = { ...h.deps, emit: () => undefined };
       if (mode === "single") startRun(storage, draft, {});

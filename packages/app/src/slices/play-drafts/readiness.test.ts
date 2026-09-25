@@ -95,6 +95,8 @@ function generated(
       values: {},
       provided: { article: "Text" },
       silenceGapSeconds: 0,
+      imageSeconds: 15,
+      edgeSilenceSeconds: 0,
     },
   };
 }

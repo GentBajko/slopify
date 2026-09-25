@@ -119,7 +119,9 @@ export function validateProposedCues(
   if (parts.some((one) => one === undefined)) return fail();
   const seconds =
     parts.reduce<number>((sum, one) => sum + (one ?? 0), 0) / 1000 +
-    Math.max(0, keys.length - 1) * plan.config.silenceGapSeconds;
+    Math.max(0, keys.length - 1) * plan.config.silenceGapSeconds +
+    // The lead-in and the tail are part of the timeline the cues are timed against.
+    2 * plan.config.edgeSilenceSeconds;
   return validateCues(cues.cues, seconds);
 }
 

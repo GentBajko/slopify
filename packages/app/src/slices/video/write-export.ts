@@ -15,7 +15,6 @@ import { outputPath } from "../storage/layout.js";
 import type { Output } from "../storage/model.js";
 import { deleteOutput, insertOutput, outputsOf } from "../storage/repo.js";
 import { type PreparedSubtitles, subtitleRoles } from "../subtitles/prepare.js";
-import { runFfmpeg } from "./ffmpeg.js";
 import type { VideoDeps } from "./run.js";
 
 const progressIntervalMs = 500;
@@ -32,7 +31,8 @@ interface ExportOutput {
   readonly partName: string;
   readonly totalSeconds: number;
   readonly record: unknown;
-  readonly args: (part: string) => readonly string[];
+  // Runs ffmpeg into the part file, reporting progress along the output's own timeline.
+  readonly render: (part: string, onProgress: (elapsedMs: number) => void) => Promise<void>;
 }
 
 // Both local exports retain the previous finished asset until ffmpeg succeeds and
@@ -52,31 +52,24 @@ export async function writeExport(
   let announced = 0;
   try {
     // No retry and no timeout. A render that fails is terminal.
-    await runFfmpeg({
-      bin: deps.ffmpeg,
-      args: output.args(part),
-      cwd: output.subtitles?.directory,
-      signal: context.signal,
-      log: deps.log,
-      onProgress: (elapsedMs: number): void => {
-        const at = deps.clock.now().getTime();
-        if (at - announced < progressIntervalMs) {
-          return;
-        }
-        announced = at;
-        const current =
-          output.subtitles === undefined
-            ? Math.min(elapsedMs, totalMs)
-            : Math.round((0.35 + 0.65 * Math.min(elapsedMs / totalMs, 1)) * totalMs);
-        setStageProgress(deps.db, context.stage.id, current, totalMs);
-        context.emit({
-          type: "stage.progress",
-          projectId,
-          stage: "video",
-          current,
-          total: totalMs,
-        });
-      },
+    await output.render(part, (elapsedMs: number): void => {
+      const at = deps.clock.now().getTime();
+      if (at - announced < progressIntervalMs) {
+        return;
+      }
+      announced = at;
+      const current =
+        output.subtitles === undefined
+          ? Math.min(elapsedMs, totalMs)
+          : Math.round((0.35 + 0.65 * Math.min(elapsedMs / totalMs, 1)) * totalMs);
+      setStageProgress(deps.db, context.stage.id, current, totalMs);
+      context.emit({
+        type: "stage.progress",
+        projectId,
+        stage: "video",
+        current,
+        total: totalMs,
+      });
     });
     // A cancel protects an output that was already stored, not one about to be. One
     // landing between ffmpeg exiting and the rows below discards the render rather than

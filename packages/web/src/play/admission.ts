@@ -124,6 +124,8 @@ const readingOrder: readonly string[] = [
   "llm",
   "values",
   "silenceGapSeconds",
+  "edgeSilenceSeconds",
+  "imageSeconds",
 ];
 
 export function firstBlocker(form: PlayFormState, result: AdmissionResult): Blocker | undefined {

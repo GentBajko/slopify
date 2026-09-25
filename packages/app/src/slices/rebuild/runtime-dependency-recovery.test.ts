@@ -165,7 +165,10 @@ it("waits for the entire caption bundle repair before running burned video once"
         .prepare("SELECT state,failure_reason FROM revision_work WHERE id=?")
         .get(video.work.workId),
     ).toMatchObject({ state: "done", failure_reason: null });
-    expect(runFfmpeg).toHaveBeenCalledTimes(1);
+    // One render: its clip, then the join that burns the captions in.
+    const renders = (): number =>
+      vi.mocked(runFfmpeg).mock.calls.filter(([run]) => run.args.includes("concat")).length;
+    expect(renders()).toBe(1);
     expect(
       h
         .view(revisionId)
@@ -175,7 +178,7 @@ it("waits for the entire caption bundle repair before running burned video once"
     ).toBe(true);
     runner.tick(h.projectId);
     await runner.settled();
-    expect(runFfmpeg).toHaveBeenCalledTimes(1);
+    expect(renders()).toBe(1);
     expect(unexpectedProvider).not.toHaveBeenCalled();
   } finally {
     release();

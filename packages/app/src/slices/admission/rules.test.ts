@@ -39,6 +39,8 @@ function provided(over: Partial<RunDraft> = {}): RunDraft {
     values: {},
     provided: { article: "The article.", audio: "a1", images: ["i1", "i2"] },
     silenceGapSeconds: 3,
+    imageSeconds: 15,
+    edgeSilenceSeconds: 0,
     ...over,
   };
 }
@@ -473,5 +475,67 @@ describe("the silence gap", () => {
     expect(fields(provided({ silenceGapSeconds: -1 }))).toEqual(["silenceGapSeconds"]);
     expect(fields(provided({ silenceGapSeconds: 31 }))).toEqual(["silenceGapSeconds"]);
     expect(fields(provided({ silenceGapSeconds: Number.NaN }))).toEqual(["silenceGapSeconds"]);
+  });
+});
+
+describe("the seconds per image", () => {
+  const message = (draft: RunDraft) => {
+    const result = admit({ draft, staged: files, requiredSlots: [] });
+    return result.ok ? [] : result.fields.filter((field) => field.field === "imageSeconds");
+  };
+
+  it("accepts whole seconds from 1 to 600", () => {
+    for (const imageSeconds of [1, 15, 600]) expect(fields(provided({ imageSeconds }))).toEqual([]);
+  });
+
+  it("refuses anything else with the range and what to enter", () => {
+    for (const imageSeconds of [0, 601, 1.5, -3, Number.NaN])
+      expect(message(provided({ imageSeconds }))).toEqual([
+        {
+          field: "imageSeconds",
+          message: "Enter a whole number of seconds between 1 and 600.",
+        },
+      ]);
+  });
+
+  it("does not hold up a run without a video", () => {
+    expect(
+      fields(provided({ imageSeconds: 0, sources: sources({ images: "off", video: "off" }) })),
+    ).toEqual([]);
+  });
+});
+
+describe("the silence at start and end", () => {
+  it("accepts 0 to 30 in half seconds", () => {
+    for (const edgeSilenceSeconds of [0, 0.5, 2, 29.5, 30])
+      expect(fields(provided({ edgeSilenceSeconds }))).toEqual([]);
+  });
+
+  it("refuses anything else with the range and the step", () => {
+    for (const edgeSilenceSeconds of [-0.5, 30.5, 1.25, Number.NaN]) {
+      const result = admit({
+        draft: provided({ edgeSilenceSeconds }),
+        staged: files,
+        requiredSlots: [],
+      });
+      expect(result.ok ? [] : result.fields).toEqual([
+        {
+          field: "edgeSilenceSeconds",
+          message: "Enter a number of seconds between 0 and 30, in steps of 0.5.",
+        },
+      ]);
+    }
+  });
+
+  it("does not hold up a run without narration", () => {
+    expect(
+      fields(
+        provided({
+          edgeSilenceSeconds: -1,
+          provided: { article: "The article.", images: ["i1", "i2"] },
+          sources: sources({ audio: "off" }),
+        }),
+      ),
+    ).toEqual([]);
   });
 });

@@ -30,6 +30,8 @@ const config = {
   provided: { article: "Narration" },
   rendered: {},
   silenceGapSeconds: 0,
+  imageSeconds: 15,
+  edgeSilenceSeconds: 2,
 };
 const content = {
   provided: {},
@@ -105,6 +107,15 @@ describe("revision boundaries", () => {
     expect(revisionContentSchema.parse(content).articleEdited).toBe(false);
     expect(runConfigSchema).toBe(legacyConfigSchema);
     expect(revisionEditSchema.parse({ config, content }).config).toEqual(config);
+  });
+
+  it("reads a revision saved before the video timing settings with the defaults", () => {
+    const { imageSeconds: _image, edgeSilenceSeconds: _edge, ...old } = config;
+    const parsed = revisionViewSchema.parse({
+      ...view,
+      revision: { ...view.revision, config: old },
+    }).revision.config;
+    expect(parsed).toMatchObject({ imageSeconds: 15, edgeSilenceSeconds: 2 });
   });
 
   it("accepts each upload destination and rejects file paths as asset IDs", () => {

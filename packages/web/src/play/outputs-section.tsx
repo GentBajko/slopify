@@ -86,7 +86,15 @@ export function OutputsSection(
         }}
       />
       <ThumbnailRail {...props} />
-      <VideoRail {...props} />
+      <VideoRail
+        {...props}
+        rawSeconds={{
+          imageSeconds: document.form.imageSeconds,
+          edgeSilenceSeconds: document.form.edgeSilenceSeconds,
+          onChange: (field, value) =>
+            session.edit({ ...document, form: { ...document.form, [field]: value } }),
+        }}
+      />
       {props.missingKeyword ? (
         <p className="py-4 text-small text-ink2">
           A selected template needs keywords.{" "}
