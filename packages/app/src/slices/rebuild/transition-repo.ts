@@ -144,7 +144,7 @@ function stageForKey(key: string): StageKind {
   const prefix = key.split(":")[0];
   if (prefix === "research") return "research";
   if (prefix === "article" || prefix === "entry") return "article";
-  if (prefix === "audio") return "audio";
+  if (prefix === "audio" || prefix === "narration") return "audio";
   if (prefix === "image") return "images";
   if (prefix === "thumbnail") return "thumbnail";
   if (prefix === "export" || prefix === "subtitles" || prefix === "video") return "video";

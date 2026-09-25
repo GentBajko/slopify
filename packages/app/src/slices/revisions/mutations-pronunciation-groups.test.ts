@@ -6,7 +6,7 @@ import { planRevision } from "../rebuild/recipe-save.js";
 import { insertStagedFile } from "../storage/repo.js";
 import type { RevisionDeps, RevisionEdit, RevisionView } from "./model.js";
 import { mutationFixture } from "./mutation.fake.js";
-import { saveRevision } from "./mutations.js";
+import { restoreRevision, saveRevision } from "./mutations.js";
 import { revisionViewSchema } from "./schema.js";
 import { getRevisionView } from "./view.js";
 
@@ -174,6 +174,47 @@ it("preserves a regeneration-only merged group through glossary removal", async 
     logicalKey: h.key,
   });
   expect(next.revision.content.regenerationTokens[h.key]).toBe(token);
+});
+
+it("restores a pronunciation revision and its source bindings without admitting narration", async () => {
+  const h = await fixture();
+  const original = await save(h.deps, h.base, "override", {
+    config: h.base.revision.config,
+    content: {
+      ...h.base.revision.content,
+      narrationOverrides: { [h.key]: { kind: "text", text: "Dr. Doom returns." } },
+    },
+  });
+  const changed = await save(h.deps, original, "disable-audio", {
+    config: {
+      ...original.revision.config,
+      sources: { ...original.revision.config.sources, audio: "off" },
+    },
+    content: original.revision.content,
+  });
+  const request = {
+    projectId: h.projectId,
+    baseRevisionId: changed.revision.id,
+    targetRevisionId: original.revision.id,
+    idempotencyKey: "restore-pronunciation",
+  };
+  const restored = await restoreRevision(h.deps, request);
+  if (!restored.ok) throw new Error(JSON.stringify(restored));
+  expect(restored.view.revision.content).toEqual(original.revision.content);
+  expect(recipes(restored.view).find((row) => row.key === `${h.key}:1`)?.input).toMatchObject({
+    kind: "tts",
+    text: "/dɒktə/ /duːm/ returns.",
+    logicalKey: h.key,
+  });
+  expect(
+    h.deps.db
+      .prepare(
+        "SELECT DISTINCT w.kind,w.dispatch_state FROM revision_work w JOIN revision_work_reservations r ON r.work_id=w.id WHERE r.revision_id=? AND r.work_key LIKE 'narration:%'",
+      )
+      .all(restored.view.revision.id),
+  ).toEqual([{ kind: "audio", dispatch_state: "held" }]);
+  expect(await restoreRevision(h.deps, request)).toMatchObject({ ok: true, duplicate: true });
+  expect(h.deps.db.prepare("SELECT count(*) AS n FROM attempts").get()).toEqual({ n: 0 });
 });
 
 it("retains repeated saved groups and ordinary overrides without attaching unnecessary metadata", async () => {

@@ -13,6 +13,29 @@ async function fixture() {
   cleanups.push(h.close);
   return h;
 }
+it.each(["narration:files:body", "narration:prepare:intro:future"])(
+  "restores %s as held Audio work when exact recipes are absent",
+  async (key) => {
+    const { deps, work, nextRevision } = await fixture();
+    deps.db.exec(
+      "INSERT INTO stages(id,project_id,kind,source,state) VALUES('audio','p1','audio','generate','pending')",
+    );
+    const fingerprints = { [key]: "restored" };
+    nextRevision("next", fingerprints);
+    transitionRevisionWork(deps, {
+      projectId: "p1",
+      baseRevisionId: work.revisionId,
+      revisionId: "next",
+      fingerprints,
+    });
+    expect(
+      deps.db
+        .prepare("SELECT kind,state,dispatch_state FROM revision_work WHERE revision_id='next'")
+        .all(),
+    ).toEqual([{ kind: "audio", state: "pending", dispatch_state: "held" }]);
+    expect(deps.db.prepare("SELECT count(*) AS n FROM attempts").get()).toEqual({ n: 0 });
+  },
+);
 it.each([false, true])(
   "carries exact unchanged reservations before/after head CAS (%s)",
   async (after) => {
