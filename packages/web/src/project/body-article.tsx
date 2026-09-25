@@ -55,7 +55,8 @@ export function ArticleBody({ stage, project, outputs, actions, busy }: BodyProp
       </div>
 
       <p className="text-small text-ink2">
-        Use Edit project to save changes, then review affected outputs before rebuilding.
+        Use Edit project to save changes, then Resume to recover affected work. Advanced rebuild
+        review is optional.
       </p>
       <ActionRow>
         <ConfirmedButton

@@ -28,12 +28,12 @@ describe("the dialog in front of a destructive action", () => {
     );
   });
 
-  it("names what a re-run of each stage replaces", () => {
+  it("names each re-run's dependency consequences and keeps History", () => {
     expect(confirmationFor({ kind: "rerun", stage: "images" }).consequence).toBe(
-      "Replaces every image in this run and re-renders video when enabled.",
+      "Regenerates generated images and affected video, keeping supplied images and narration; previous outputs stay in History.",
     );
     expect(confirmationFor({ kind: "rerun", stage: "video" }).consequence).toBe(
-      "Replaces the final audio or video export.",
+      "Rebuilds local exports from saved media without regenerating narration or images; previous outputs stay in History.",
     );
   });
 

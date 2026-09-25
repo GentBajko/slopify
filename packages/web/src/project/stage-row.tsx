@@ -111,20 +111,22 @@ export function StageRow({
               {stage.state === "failed" ? `${name} needs attention.` : `${name} was canceled.`}
             </p>
             <span className="text-label text-ink2">{attempts(stage)}</span>
-            {revisioned ? null : (
-              <button
-                type="button"
-                disabled={unready !== undefined || held.pending}
-                onClick={() => held.run({ kind: "retry", stage: stage.kind })}
-                className="rounded-control border border-red px-3 py-2 text-small text-ink hover:bg-panel2 disabled:opacity-50"
-              >
-                {unready?.label ?? "Retry stage"}
-              </button>
-            )}
+            <button
+              type="button"
+              disabled={revisioned ? actions.pending : unready !== undefined || held.pending}
+              onClick={() => actions.run({ kind: "retry", stage: stage.kind })}
+              className="rounded-control border border-red px-3 py-2 text-small text-ink hover:bg-panel2 disabled:opacity-50"
+            >
+              {actions.pending
+                ? "Retrying…"
+                : revisioned
+                  ? "Retry stage"
+                  : (unready?.label ?? "Retry stage")}
+            </button>
           </div>
           <p className="mt-2 text-small text-ink2">
             {revisioned
-              ? "Use Rebuild affected outputs to review the work and cost before retrying."
+              ? "Resume recovers unfinished work across the project; Retry stage keeps this section's completed outputs. Use Edit project for changed inputs or optional Advanced rebuild review for supplied-content conflicts."
               : project.status === "paused"
                 ? "Resume the project to continue with its saved settings."
                 : "Retry keeps completed outputs. To change the provider or model, open Run settings."}

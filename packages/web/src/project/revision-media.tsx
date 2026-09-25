@@ -51,6 +51,10 @@ export function RevisionMedia({
   );
 }
 
+export function useCurrentRevisionView(): RevisionView | undefined {
+  return useContext(MediaContext)?.view;
+}
+
 export function useOutputMedia(output: Output | undefined): RevisionMediaFile | undefined {
   const state = useContext(MediaContext);
   const { api } = useApp();

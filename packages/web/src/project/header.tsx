@@ -59,12 +59,14 @@ export function ProjectHeader({
             Pause
           </Button>
         ) : null}
-        {project.status === "paused" || project.status === "failed" ? (
+        {project.status === "paused" ||
+        project.status === "failed" ||
+        project.status === "canceled" ? (
           <Button
             disabled={actions.pending || inFlight}
             onClick={() => actions.run({ kind: "resume" })}
           >
-            Resume
+            {actions.pending ? "Resuming…" : "Resume"}
           </Button>
         ) : null}
         {running ? (

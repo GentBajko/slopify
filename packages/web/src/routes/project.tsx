@@ -157,7 +157,11 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
                     project={summary}
                     outputs={outputs}
                     actions={actions}
-                    busy={busy}
+                    busy={
+                      project.data.revisionId === null
+                        ? busy
+                        : actions.pending || stage.state === "running"
+                    }
                   />
                 </StageRow>
               ))}

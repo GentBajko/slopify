@@ -1,8 +1,8 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 
-// Every action on this page that destroys something the user cannot get back, with the
-// one sentence naming the consequence. The posture is fixed: stop and confirm, the action
-// verb and a dismissal, no secondary options.
+// Every action on this page that needs a deliberate second press, with the one sentence
+// naming its consequence. The posture is fixed: stop and confirm, the action verb and a
+// dismissal, no secondary options.
 //
 // Retry is not here on purpose: `slices/reruns` leaves a retried stage's pieces and outputs
 // where they are, so it destroys nothing and a dialog in front of the only recovery path
@@ -26,12 +26,18 @@ export interface Confirmation {
 }
 
 const rerunConsequence: Readonly<Record<StageKind, string>> = {
-  research: "Replaces the notes, then re-runs the enabled stages below.",
-  article: "Replaces the article, then re-runs the enabled stages below.",
-  audio: "Replaces the narration and refreshes the final audio or video export.",
-  images: "Replaces every image in this run and re-renders video when enabled.",
-  thumbnail: "Replaces the thumbnail.",
-  video: "Replaces the final audio or video export.",
+  research:
+    "Generates fresh research and affected article, narration, entries, thumbnail and exports; previous outputs stay in History.",
+  article:
+    "Generates a fresh article and affected narration, entries, thumbnail and exports; previous outputs stay in History.",
+  audio:
+    "Regenerates narration and affected exports, keeping compatible cue preparation; previous outputs stay in History.",
+  images:
+    "Regenerates generated images and affected video, keeping supplied images and narration; previous outputs stay in History.",
+  thumbnail:
+    "Regenerates the thumbnail without changing the main video; previous outputs stay in History.",
+  video:
+    "Rebuilds local exports from saved media without regenerating narration or images; previous outputs stay in History.",
 };
 
 export function confirmationFor(action: Destructive): Confirmation {

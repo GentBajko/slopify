@@ -96,7 +96,11 @@ describe("the destructive actions", () => {
     await screen.findByText("Video");
     await userEvent.click(screen.getByRole("button", { name: "Re-render" }));
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("Replaces the final audio or video export.")).not.toBeNull();
+    expect(
+      within(dialog).getByText(
+        "Rebuilds local exports from saved media without regenerating narration or images; previous outputs stay in History.",
+      ),
+    ).not.toBeNull();
     expect(rerun).not.toHaveBeenCalled();
     await userEvent.click(within(dialog).getByRole("button", { name: "Re-run" }));
     await waitFor(() => {

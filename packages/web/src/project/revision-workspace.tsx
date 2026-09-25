@@ -227,6 +227,10 @@ export function RevisionWorkspace({
           Rebuild affected outputs
         </Button>
       </div>
+      <p className="text-small text-ink2">
+        Resume uses the current saved revision. Rebuild affected outputs opens optional Advanced
+        rebuild review for selection, cost details and supplied-content confirmation.
+      </p>
       {preview === undefined ? <RevisionFeedback error={error} refusal={refusal} /> : null}
       {edit === undefined && refusal?.reason === "conflict" ? (
         <Button
