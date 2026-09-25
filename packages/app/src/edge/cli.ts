@@ -17,6 +17,7 @@ const { values } = parseArgs({
     port: { type: "string" },
     host: { type: "string" },
     "data-dir": { type: "string" },
+    "projects-dir": { type: "string" },
     "no-open": { type: "boolean" },
     docker: { type: "boolean" },
     "host-cli": { type: "string" },
@@ -25,6 +26,8 @@ const { values } = parseArgs({
 });
 
 try {
+  if (values["projects-dir"] !== undefined && !values.docker)
+    throw new Error("--projects-dir requires --docker; native installs use --data-dir.");
   if (
     (values["host-cli"] !== undefined || values["accept-host-cli"] !== undefined) &&
     !values.docker
@@ -35,9 +38,11 @@ try {
   if (values.docker) {
     if (values.host !== undefined || values["data-dir"] !== undefined)
       throw new Error(
-        "Docker stores data in the slopify-data volume and binds to localhost. Use --port to change its port.",
+        "Docker keeps private data in its named volume and binds to localhost. Use --projects-dir for project files and --port for the port.",
       );
-    const { prepareDockerHostCli } = await import("./docker.js");
+    const docker: typeof import("./docker.js") = await import("./docker.js");
+    docker.assertManagedDockerHost(process.platform, process.getuid?.(), process.getgid?.());
+    const { prepareDockerHostCli } = docker;
     const { nodeHostSetupRunner } = await import("../host-cli/install.js");
     const bridge = await prepareDockerHostCli({
       root: join(process.env.XDG_DATA_HOME ?? join(homedir(), ".local/share"), "slopify/host-cli"),
@@ -72,6 +77,9 @@ try {
           ...process.env,
           SLOPIFY_HOST_CLI_DIR: bridge.directory ?? "",
           ...(values.port === undefined ? {} : { SLOPIFY_DOCKER_HOST_PORT: values.port }),
+          ...(values["projects-dir"] === undefined
+            ? {}
+            : { SLOPIFY_DOCKER_PROJECTS_DIR: values["projects-dir"] }),
         },
       },
     );

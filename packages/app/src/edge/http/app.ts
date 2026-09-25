@@ -55,6 +55,8 @@ export interface AppDeps {
   readonly rebuild?: RebuildDeps;
   readonly measureAudio?: ((path: string, signal?: AbortSignal) => Promise<number>) | undefined;
   readonly openFolder?: (path: string) => Promise<void>;
+  readonly installationPending?: () => boolean;
+  readonly folderLocation?: { readonly container: boolean; readonly hostProjects: string | null };
   readonly catalogue?: CatalogueStore;
   readonly updater?: AppUpdater;
   readonly mutations?: Pick<MutationLifecycle, "begin">;
@@ -136,6 +138,12 @@ export function createApp(deps: AppDeps): Hono {
     })
     .use("/api/*", async (c, next) => {
       if (["GET", "HEAD", "OPTIONS"].includes(c.req.method)) return next();
+      if (deps.installationPending?.() && new URL(c.req.url).pathname !== "/api/update/activate")
+        return problem(c, {
+          status: 503,
+          title: titleOf(503),
+          detail: "Docker installation is being verified. Wait for the launcher to finish.",
+        });
       const releaseRequest = deps.mutations?.begin();
       if (deps.mutations !== undefined && releaseRequest === undefined)
         return problem(c, {

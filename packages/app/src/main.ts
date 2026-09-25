@@ -13,6 +13,10 @@ import { createHostCliClient } from "./adapters/host-cli/index.js";
 import { nodeRunCli } from "./adapters/llm/run-cli.js";
 import { curateRegistry } from "./catalog/registry.js";
 import { type CatalogueStore, createCatalogueStore } from "./catalog/store.js";
+import {
+  dockerActivationCommitted,
+  dockerFolderConfiguration,
+} from "./edge/docker-projects/activation.js";
 import { createHub } from "./edge/events/hub.js";
 import { currentProjectEvent } from "./edge/events/visibility.js";
 import { createApp } from "./edge/http/app.js";
@@ -157,6 +161,13 @@ export async function boot(config: Config): Promise<Boot> {
   const clock: Clock = systemClock;
   const ids = ulidIds;
   const paths = layout(config.dataDir);
+  const dockerState = process.env.SLOPIFY_DOCKER_INSTALL_STATE;
+  if (
+    dockerState !== undefined &&
+    (process.env.SLOPIFY_CONTAINER !== "1" ||
+      dockerState !== "/opt/slopify-install/activation.json")
+  )
+    throw new Error("Invalid managed Docker activation configuration.");
   const candidateToken = process.env.SLOPIFY_UPDATE_TOKEN ?? "";
   const pendingActivation =
     isUpdateToken(candidateToken) && process.env.SLOPIFY_UPDATE_PENDING === "1";
@@ -256,7 +267,10 @@ export async function boot(config: Config): Promise<Boot> {
             candidate: {
               token: candidateToken,
               pending: pendingActivation,
-              committed: () => updateCommitted(paths.dataDir, version, candidateToken),
+              committed: () =>
+                dockerState === undefined
+                  ? updateCommitted(paths.dataDir, version, candidateToken)
+                  : dockerActivationCommitted(dockerState, candidateToken),
               settle: () => {
                 try {
                   const settled = reconcileStorage(updateDb, paths);
@@ -373,6 +387,8 @@ export async function boot(config: Config): Promise<Boot> {
       schedules: scheduleDeps,
       ...(rebuild.measureAudio === undefined ? {} : { measureAudio: rebuild.measureAudio }),
       openFolder,
+      folderLocation: await dockerFolderConfiguration(process.env, paths.projects),
+      ...(dockerState === undefined ? {} : { installationPending: () => updater.locked() }),
       db,
       paths,
       hub,

@@ -8,6 +8,21 @@ import { ensureHostService, privateRead, privateWrite } from "../host-cli/servic
 import { resolveHostCommand } from "../host-cli/status.js";
 import { hostCliProtocol, hostLlmIds } from "../kernel/ports/host-cli.js";
 
+export function assertManagedDockerHost(
+  platform: string,
+  uid: number | undefined,
+  gid: number | undefined,
+): asserts uid is number {
+  if (platform !== "linux")
+    throw new Error(
+      "The managed Docker launcher requires Linux. Native Slopify and plain API-only Docker remain available on other hosts.",
+    );
+  if (uid === undefined || gid === undefined || uid === 0)
+    throw new Error(
+      "Run the managed Docker launcher as your logged-in user, not with sudo; grant that account access to Docker.",
+    );
+}
+
 export interface DockerHostOptions {
   readonly root: string;
   readonly version: string;
