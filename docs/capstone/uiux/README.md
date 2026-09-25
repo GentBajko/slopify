@@ -1,7 +1,9 @@
 ---
+docker_project_folder_verified_at_commit: a472d513f12c
 glossary_pronunciation_verified_at_commit: 6eeac3fd9043
 host_cli_verified_at_commit: 9bd6517
 absorbed_from:
+  - features/2026-09-25-docker-project-folder@2026-09-25
   - features/2026-09-25-glossary-pronunciation@2026-09-25
   - features/2026-09-24-host-cli-bridge@2026-09-24
   - features/2026-09-24-narration-preparation@2026-09-24
@@ -31,7 +33,7 @@ The SPA has eight top-level navigation destinations, three routed detail familie
 | [03-experience.md](03-experience.md) | all | 01, 02, 04, 12, 13, 17, 21-25 |
 | [screens/01-projects.md](screens/01-projects.md) | 07 Projects | 01, 13, 14 |
 | [screens/02-play.md](screens/02-play.md) | 06 Play, independent glossary preference | 04, 05, 08, 15, 17, 18, 22, 23 |
-| [screens/03-project.md](screens/03-project.md) | 08 Project, retained pronunciation and clean scripts | 01, 08, 09, 11, 12, 14, 17, 23 |
+| [screens/03-project.md](screens/03-project.md) | 08 Project, retained pronunciation, clean scripts and saved host paths | 01, 08, 09, 11, 12, 14, 17, 23 |
 | [screens/04-prompts.md](screens/04-prompts.md) | 04 Prompts | 15 |
 | [screens/05-prompt-editor.md](screens/05-prompt-editor.md) | 05 Prompt editor | 03, 15 |
 | [screens/06-entries.md](screens/06-entries.md) | Intros & Outros | 08, 15 |

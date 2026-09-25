@@ -1,10 +1,12 @@
 ---
+docker_project_folder_verified_at_commit: a472d513f12c
 glossary_pronunciation_verified_at_commit: 6eeac3fd9043
 host_cli_verified_at_commit: 9bd6517
 generated_at_commit: 4cfe3473f74d
 capstone_version: 5.2.0
 generated_date: '2026-09-13'
 absorbed_from:
+  - features/2026-09-25-docker-project-folder@2026-09-25
   - features/2026-09-25-glossary-pronunciation@2026-09-25
   - features/2026-09-25-video-recovery@2026-09-25
   - features/2026-09-24-research-documents@2026-09-25
@@ -44,13 +46,13 @@ Use a scenario when changing one of the listed workflows. Article is the only re
 | 11 Video assembly and bounded subtitle-model recovery | [11-video-assembly.md](11-video-assembly.md) |
 | 12 Project edits, retained pronunciation overrides and catalogue-consistent recovery | [12-reruns-and-edits.md](12-reruns-and-edits.md) |
 | 13 Pause, resume and cancel | [13-cancel.md](13-cancel.md) |
-| 14 Storage and downloads | [14-storage-and-downloads.md](14-storage-and-downloads.md) |
+| 14 Storage, downloads and Docker host folders | [14-storage-and-downloads.md](14-storage-and-downloads.md) |
 | 15 Prompt management | [15-prompt-management.md](15-prompt-management.md) |
 | 16 Telemetry | [16-telemetry.md](16-telemetry.md) |
 | 17 Subtitles and fonts | [17-subtitles.md](17-subtitles.md) |
 | 18 Cost review and batch queue | [18-cost-review-batch.md](18-cost-review-batch.md) |
 | 19 Model catalogue and thinking controls | [19-catalogue-thinking.md](19-catalogue-thinking.md) |
-| 20 Local boot, Docker host helper and recovery | [20-boot-cli-recovery.md](20-boot-cli-recovery.md) |
+| 20 Local boot, Docker transactions, host helper and recovery | [20-boot-cli-recovery.md](20-boot-cli-recovery.md) |
 | 21 In-app updater | [21-app-updater.md](21-app-updater.md) |
 | 22 Play drafts and uploads | [22-play-drafts.md](22-play-drafts.md) |
 | 23 Review checkpoints | [23-review-checkpoints.md](23-review-checkpoints.md) |

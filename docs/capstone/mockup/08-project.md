@@ -1,6 +1,8 @@
 ---
+docker_project_folder_verified_at_commit: a472d51
 glossary_pronunciation_verified_at_commit: 6eeac3fd9043
 absorbed_from:
+- features/2026-09-25-docker-project-folder@2026-09-25
 - features/2026-09-25-glossary-pronunciation@2026-09-25
 - features/2026-09-24-narration-preparation@2026-09-24
 - features/2026-09-09-pausable-optional-runs@2026-09-10
@@ -117,6 +119,10 @@ Rebuild affected outputs is available after local edits are saved or discarded. 
 Start rebuild is the only action here that admits work. Blocked work, missing required confirmations or unacknowledged unknown costs keep it disabled. Cancel rebuild closes the review without starting. A stale preview is refused and must be reviewed again. Retrying an uncertain Start preserves its request identity.
 
 ## History
+
+### Host folder location
+
+Scoped source `a472d51`, 2026-09-25. Open folder beside current or historical downloads retains native file-manager opening. In managed Docker, it instead reveals a readonly, selectable **Saved folder path** and explains that a remote browser must use the host machine to open it. The field selects its full value on focus. Downloads remain available, and the page never claims a desktop window opened inside Docker. Missing host configuration or unavailable output produces an inline error without starting work (`packages/web/src/project/open-folder.tsx:14`, `packages/app/src/edge/http/folder-location.ts:13`).
 
 History lists revision title, creation time and current marker. Selecting a revision exposes its retained outputs, earlier results, physical narration parts and retained text parts. Available files have Download and Open folder; image/thumbnail archives have Download all images. Media previews are bounded, and text uses wrapped retained content or a file download.
 

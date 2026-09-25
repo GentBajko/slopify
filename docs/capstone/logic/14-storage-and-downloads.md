@@ -1,5 +1,7 @@
 ---
+docker_project_folder_verified_at_commit: a472d51
 absorbed_from:
+- features/2026-09-25-docker-project-folder@2026-09-25
 - features/2026-09-09-pausable-optional-runs@2026-09-10
 - features/2026-09-10-subtitles-fonts@2026-09-10
 - features/2026-09-10-editable-projects@2026-09-12
@@ -39,7 +41,7 @@ App startup reconciles disk records. Save, provider settlement and local renderi
 2. Allocate a unique immutable project asset path, write/copy/probe its bytes, then register it with the revision manifest transaction. Keep original filenames and media metadata in descriptors. Revisions share registered assets instead of copying unchanged bytes (`slices/storage/assets.ts`, `prepare.ts`, `slices/revisions/mutations.ts`).
 3. A revision output record identifies a role/slot, originating work, asset and fingerprint. Current selection can change while previous records remain retained. Narration pieces also have immutable revision records; accepted partial article results are retained as unselected outdated history without satisfying a complete article (`slices/revisions/manifest-repo.ts`, `slices/rebuild/runtime-publication.ts`).
 4. Serve a specific retained record through `/files/:projectId/revisions/:revisionId/:recordId`. Resolve project, revision and record ownership before looking up bytes; build its download name from that revision's title and stored descriptor, so newer title edits do not rename old downloads. `/files/:projectId/revisions/:revisionId/images.zip` follows that revision's selected image order and includes its selected thumbnail (`slices/revisions/downloads.ts`, `edge/http/revision-files.ts`).
-5. Open folder uses the same retained-record ownership lookup and opens its containing directory on the machine hosting Slopify. It accepts an identified record, not an arbitrary filesystem path; cross-origin requests are refused (`edge/http/revision-files.ts`).
+5. Open folder uses the same retained-record ownership lookup. Native execution opens its containing directory; managed Docker returns the actual host directory, which the browser displays for selection/copying. It accepts an identified record, not an arbitrary filesystem path; cross-origin requests are refused (`edge/http/revision-files.ts`, `edge/http/folder-location.ts`).
 6. On startup retain all legacy output paths, registered project assets and completed legacy piece paths. Remove unregistered orphan files and unattached staging data. Registry retention includes historical revisions, not merely the latest selection (`slices/storage/reconcile.ts`).
 7. Delete removes the project folder first; only after successful removal delete the project row and cascade its revisions, manifests, assets, grants, previews and admissions. A file-manager/OS lock leaves the project listed with a recoverable deletion error (`slices/storage/delete-project.ts`, kernel migrations 0004/0005).
 8. Settings can export and import a portable archive of settings, prompts, entries, voices, current template heads and referenced staged files. Provider keys and telemetry are separate tables, existing projects are not imported, conflicting template IDs are left unchanged, and imported staged files receive fresh IDs (`packages/app/src/slices/storage/portable.ts:85`, `packages/app/src/slices/storage/portable.ts:135`).
@@ -52,7 +54,7 @@ App startup reconciles disk records. Save, provider settlement and local renderi
 - Disk/DB failure before publication: preserve the previous committed revision and its downloads; discard only newly allocated, unreferenced assets. Shared or committed assets are never cleanup candidates (`slices/storage/assets.ts`, `slices/revisions/mutation-prepare.ts`).
 - Replacement failure: old completed media remains selected/downloadable, marked outdated where inputs changed. Successful replacement selects new records while retaining old history.
 - Whole-project deletion is irreversible. Partial filesystem deletion may already remove some bytes before an OS error; the record remains so deletion can be retried. The operation does not promise filesystem rollback.
-- File-manager launch failure: return503 with desktop-session guidance; retained media stays untouched.
+- Native file-manager launch failure: return503 with desktop-session guidance. Docker without a verified host location returns503 with managed-launcher guidance; missing/symlinked output paths return404. Retained media stays untouched (`edge/http/folder-location.ts`).
 
 ## Unhappy paths
 
@@ -69,6 +71,16 @@ Staged files move into registered immutable project assets when an admission or 
 - No automatic project/history expiration or intermediate cleanup policy is introduced here.
 - Historical and currently selected references both protect assets during startup reconciliation.
 - Known active work prevents full-project deletion even if an old revision's visible stage state is no longer running.
+
+## Managed Docker project storage
+
+Scoped source `a472d51`, 2026-09-25. The managed Linux launcher binds only the dedicated host project directory at `/data/projects`; SQLite, credentials, logs, staging and models remain in the private named volume. The default is `~/Slopify/Projects`, or `~/Slopify/<container>/Projects` for a custom container. `--projects-dir`/`SLOPIFY_DOCKER_PROJECTS_DIR` overrides are persisted privately and reused when omitted. Native layout and stored relative asset paths do not change (`packages/app/src/edge/docker-projects/state.ts:133`, `packages/app/src/edge/docker-projects/install.ts:31`).
+
+Migration stops writers, snapshots the private volume, copies all project files and directories to fresh sibling staging, compares full path/size/SHA-256 manifests, and atomically publishes the verified directory. Original files, private recovery snapshots and stopped previous containers are retained. Receipt/journal identities govern retries; missing/replaced folders, foreign volume claims, unsafe paths/permissions and conflicting writers fail closed. A removed original from failed unreceipted bind adoption is refused rather than selecting stale hidden-volume projects. A stale failed copy requires a new empty destination, without deleting recovery records (`packages/app/src/edge/docker-projects/install.ts:31`, `packages/app/src/edge/docker-projects/recover.ts:20`, `packages/app/src/edge/docker-projects/claims.ts:6`).
+
+Rootful execution uses the invoking host UID/GID; supported rootless execution uses verified host mapping. An isolated write probe checks actual ownership before migration. Candidate boot defers normal reconciliation and work until receipt commit and activation; health is bounded and precommit failure restores private state before the original is restarted. Committed recovery validates the exact recorded candidate and mounts before activation. Installation never requests provider regeneration (`packages/app/src/edge/docker-projects/engine.ts:199`, `packages/app/src/edge/docker-projects/activation.ts:15`, `packages/app/src/edge/docker-projects/committed.ts:11`).
+
+This is Slopify-managed storage, not an input or synchronization folder: reconciliation can remove unregistered files. Current and historical downloads keep their owned record IDs; the host-location response does not expose arbitrary filesystem or shell access (`packages/app/src/edge/http/folder-location.ts:13`, `packages/app/src/slices/storage/reconcile.ts:14`).
 
 ## Font and model lifetime
 

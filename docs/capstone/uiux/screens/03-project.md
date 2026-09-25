@@ -1,4 +1,5 @@
 ---
+docker_project_folder_verified_at_commit: a472d51
 glossary_pronunciation_verified_at_commit: 6eeac3fd9043
 generated_at_commit: 7bdb84e3f57e
 generated_date: '2026-09-13'
@@ -11,6 +12,7 @@ paths_covered:
   - :(top)packages/web/src/router.tsx
   - :(top)packages/web/src/routes/settings.tsx
 absorbed_from:
+  - features/2026-09-25-docker-project-folder@2026-09-25
   - features/2026-09-25-glossary-pronunciation@2026-09-25
   - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-10-editable-projects@2026-09-12
@@ -56,7 +58,7 @@ Paused/canceled/recovered work resumes through current-revision dependency/cost 
 
 Subtitle preparation is separate from WAV encoding. Caption-file edits retain unchanged WAV/non-burned MP4 media; burn-in changes require a new visual render. Finished output and caption downloads remain available after failed replacement. Alignment recovery notes identify unmatched passages without claiming the audio changed. `project/body-video.tsx`.
 
-Download actions have adjacent Open folder actions for server-owned media, archives and subtitles. Pending folder opens disable that action; errors remain inline. Folder paths are resolved on the server, not supplied by the browser. `project/open-folder.tsx`, `project/revision-api.ts`.
+Download actions have adjacent Open folder actions for server-owned media, archives and subtitles. Pending folder requests disable that action; errors remain inline. Native success opens the file manager. Managed Docker success displays a labelled readonly host path in a status region, selects it on focus, and explains that the folder belongs to the machine running Slopify. No desktop-opening claim is made for Docker. Paths are resolved from owned current/retained output records on the server, not supplied by the browser. The same component serves History, and downloads remain independent (`packages/web/src/project/open-folder.tsx:14`, `packages/web/src/project/revision-api.ts`, `packages/app/src/edge/http/folder-location.ts:13`).
 
 ## Motion
 

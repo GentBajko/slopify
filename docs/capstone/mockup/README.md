@@ -1,10 +1,12 @@
 ---
+docker_project_folder_verified_at_commit: a472d513f12c
 glossary_pronunciation_verified_at_commit: 6eeac3fd9043
 host_cli_verified_at_commit: 9bd6517
 generated_date: '2026-09-13'
 generated_at_commit: 4cfe3473f74d
 capstone_version: 5.2.0
 absorbed_from:
+  - features/2026-09-25-docker-project-folder@2026-09-25
   - features/2026-09-25-glossary-pronunciation@2026-09-25
   - features/2026-09-24-host-cli-bridge@2026-09-24
   - features/2026-09-24-narration-preparation@2026-09-24
@@ -47,7 +49,7 @@ surfaces:
 | [05 Prompt editor](05-prompt-editor.md) | J2 | Prompt body, slots and explicit narration starter |
 | [06 Play](06-play.md) | J2, J3, J4, J7 | Durable draft, independent pronunciation and cue preparation, Review and Start |
 | [07 Projects](07-projects.md) | J3, J6 | Project list |
-| [08 Project](08-project.md) | J3, J4, J5, J6, J7 | Progress, pronunciation/editor settings, rebuild, checkpoints and history |
+| [08 Project](08-project.md) | J3, J4, J5, J6, J7 | Progress, pronunciation/editor settings, rebuild, checkpoints, history and saved host paths |
 | Templates (not separately drawn) | J7, J8 | `packages/web/src/routes/templates.tsx` |
 | [09 Schedules](09-schedules.md) | J8 | Local recurring template admission |
 | Entries (not separately drawn) | J2 | `packages/web/src/routes/entries.tsx` |
@@ -83,7 +85,7 @@ surfaces:
 | S11 | Pause, resume and cancel | 08 | [13](../logic/13-cancel.md) |
 | S12 | Telemetry | 01, 02, 08 | [16](../logic/16-telemetry.md) |
 | S13 | Provider credentials and voices | 03, 06 | [02](../logic/02-provider-credentials.md) |
-| S14 | Storage and downloads | 03, 07, 08 | [14](../logic/14-storage-and-downloads.md) |
+| S14 | Storage, downloads and Docker host folders | 03, 07, 08 | [14](../logic/14-storage-and-downloads.md) |
 | S15 | Prompt management | 04, 05, 08 | [15](../logic/15-prompt-management.md) |
 | S16 | Thumbnail prompt by LLM | 06, 08 | [10](../logic/10-thumbnail-prompt-by-llm.md) |
 | S17 | Subtitles and fonts | 06, 08 | [17](../logic/17-subtitles.md) |
