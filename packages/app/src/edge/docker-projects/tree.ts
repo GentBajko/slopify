@@ -148,6 +148,20 @@ export async function treeDigest(
   await walk(root, "");
   return { hash: hash.digest("hex"), files, bytes };
 }
+export async function assertWritableTree(root: string, uid: number): Promise<void> {
+  const s = await lstat(root);
+  if (
+    s.isSymbolicLink() ||
+    (!s.isDirectory() && !s.isFile()) ||
+    (s.isFile() && s.nlink !== 1) ||
+    s.uid !== uid ||
+    (s.mode & (s.isDirectory() ? 0o700 : 0o600)) !== (s.isDirectory() ? 0o700 : 0o600)
+  )
+    throw new Error(`Existing project permissions are incompatible with this host user: ${root}`);
+  if (s.isDirectory())
+    for (const name of await readdir(root)) await assertWritableTree(join(root, name), uid);
+}
+
 export async function privateTree(root: string, uid: number, gid: number): Promise<void> {
   async function visit(path: string): Promise<void> {
     const s = await lstat(path);

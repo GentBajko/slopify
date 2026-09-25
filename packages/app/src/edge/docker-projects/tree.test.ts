@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
-import { assertIdentity, identity, safePath, treeDigest } from "./tree.js";
+import { assertIdentity, assertWritableTree, identity, safePath, treeDigest } from "./tree.js";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -37,6 +37,20 @@ it("rejects symlinks in the tree and in destination ancestors", async () => {
   await symlink(h.projects, join(h.root, "alias"));
   await expect(safePath(join(h.root, "alias", "new"), h.home, h.state, true)).rejects.toThrow();
   expect(await readFile(join(h.root, "outside"), "utf8")).toBe("unchanged");
+});
+it("validates existing tree ownership and owner access without changing permissions", async () => {
+  const h = await fixture();
+  await mkdir(h.projects, { mode: 0o700 });
+  const file = join(h.projects, "saved.md");
+  await writeFile(file, "retained", { mode: 0o600 });
+  const uid = process.getuid?.() ?? 1000;
+  await assertWritableTree(h.projects, uid);
+  await expect(assertWritableTree(h.projects, uid + 1)).rejects.toThrow("permissions");
+  const { chmod, lstat } = await import("node:fs/promises");
+  await chmod(file, 0o400);
+  await expect(assertWritableTree(h.projects, uid)).rejects.toThrow("permissions");
+  expect((await lstat(file)).mode & 0o777).toBe(0o400);
+  expect(await readFile(file, "utf8")).toBe("retained");
 });
 it("rejects broad/private paths, detects a replaced directory and permits spaces", async () => {
   const h = await fixture();

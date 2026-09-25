@@ -2,6 +2,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { lstat, mkdir, readdir, rename } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { readVersion } from "../../kernel/version.js";
+import { assertVolumeClaims } from "./claims.js";
 import type { Engine } from "./engine.js";
 import { recoverInstallation } from "./recover.js";
 import {
@@ -17,6 +18,7 @@ import {
 } from "./state.js";
 import {
   assertIdentity,
+  assertWritableTree,
   identity,
   isMissing,
   privateTree,
@@ -49,6 +51,7 @@ export async function installProjects(
     (previousJournal && previousJournal.daemon !== context.daemon)
   )
     throw new Error("Docker daemon differs from saved installation; select the original daemon.");
+  await assertVolumeClaims(c, e, context.daemon, currentVolume, await e.inspect(c.name));
   if (previousJournal && previousJournal.phase !== "rolled-back")
     previousJournal = await recoverInstallation(c, previousJournal, receipt, recovery());
   receipt = await readState(receiptPath, receiptSchema, c.uid);
@@ -66,6 +69,7 @@ export async function installProjects(
   let reuse: Journal | null = null;
   if (
     previousJournal?.phase === "rolled-back" &&
+    previousJournal.sourceBind !== previousJournal.destination &&
     previousJournal.publishedIdentity &&
     previousJournal.sourceDigest &&
     (c.projectsOverride === null || c.projectsOverride === previousJournal.destination)
@@ -84,6 +88,7 @@ export async function installProjects(
     receipt?.projects ??
     old?.mounts.find((m) => m.destination === "/data/projects")?.source ??
     null;
+  if (bind !== null) await assertWritableTree(bind, c.uid);
   const image = await e.image(c.image);
   const expectedVersion = await e.version(image);
   if (expectedVersion !== readVersion())
@@ -112,10 +117,27 @@ export async function installProjects(
     (c.port === 0 || old.port === `127.0.0.1:${c.port}`) &&
     (old.mounts.find((m) => m.destination === "/opt/slopify-host")?.source ?? null) === c.bridge
   ) {
-    if (!old.running) await e.command(["start", old.id]);
-    const j = previousJournal;
-    if (!j || j.id !== receipt.transaction)
+    const j = await readState(
+      join(c.directory, receipt.transaction, "journal.json"),
+      journalSchema,
+      c.uid,
+    );
+    if (
+      !j ||
+      j.id !== receipt.transaction ||
+      j.name !== receipt.name ||
+      j.installation !== receipt.installation ||
+      j.daemon !== receipt.daemon ||
+      j.volume !== receipt.volume ||
+      j.volumeIdentity !== receipt.volumeIdentity ||
+      j.destination !== receipt.projects ||
+      j.signature !== receipt.signature ||
+      j.image !== receipt.image ||
+      j.user !== receipt.user ||
+      j.candidate !== old.id
+    )
       throw new Error("Committed activation journal is missing.");
+    if (!old.running) await e.command(["start", old.id]);
     await e.health(old.id, j.token, expectedVersion);
     return { url: `http://${old.port}`, projects, recovery: j.backup };
   }
@@ -147,6 +169,7 @@ export async function installProjects(
     stagingIdentity: null,
     publishedIdentity: reuse?.publishedIdentity ?? null,
     sourceDigest: null,
+    sourceAbsent: false,
     backup: `${c.volume}-recovery-${id}`,
     backupDigest: null,
     candidate: null,
@@ -171,11 +194,11 @@ export async function installProjects(
     await e.ensureVolume(c.volume);
     await save({ volumeIdentity: await e.volume(c.volume) });
     const source = await e.projects(image, c.volume, bind);
-    if (reuse && source?.hash !== reuse.sourceDigest?.hash)
+    if (reuse && (reuse.sourceAbsent ? source !== null : source?.hash !== reuse.sourceDigest?.hash))
       throw new Error(
         `Stale migration baseline. Retain ${projects} and ${reuse.staging}; move the failed destination aside before retrying.`,
       );
-    await save({ sourceDigest: source });
+    await save({ sourceDigest: source, sourceAbsent: source === null });
     const backupDigest = await e.snapshot(j);
     await save({ phase: "snapshot", backupDigest });
     if (projects !== bind && reuse === null) {

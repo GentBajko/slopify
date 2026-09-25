@@ -167,6 +167,7 @@ try {
     "-c",
     "chown -R 1000:1000 /data && chmod 700 /data && chmod 600 /data/slopify.db",
   ]);
+  await docker(["rm", seedContainer]);
   await docker([
     "run",
     "-d",

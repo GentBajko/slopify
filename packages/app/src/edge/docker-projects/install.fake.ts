@@ -55,6 +55,17 @@ export async function installationFixture(): Promise<{
     },
     version: async () => readVersion(),
     inspect: async (id) => find(id),
+    claims: async (volumeName, permitted) => {
+      point("claims");
+      if (
+        [...containers.values()].some(
+          (c) =>
+            !permitted.includes(c.id) &&
+            c.mounts.some((m) => m.type === "volume" && m.name === volumeName),
+        )
+      )
+        throw new Error("Named volume is claimed by another container.");
+    },
     writers: async (_v, _paths, allowed) => {
       point("writers");
       if ([...containers.values()].some((c) => c.running && !allowed.includes(c.id)))

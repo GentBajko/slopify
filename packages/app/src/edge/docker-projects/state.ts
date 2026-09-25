@@ -80,6 +80,7 @@ export const phases = [
   "starting",
   "healthy",
   "committed",
+  "restored",
   "rolled-back",
 ] as const;
 export const journalSchema = z
@@ -104,6 +105,7 @@ export const journalSchema = z
     stagingIdentity: identitySchema.nullable(),
     publishedIdentity: identitySchema.nullable(),
     sourceDigest: digestSchema.nullable(),
+    sourceAbsent: z.boolean().default(false),
     backup: identifier,
     backupDigest: digestSchema.nullable(),
     candidate: z.string().nullable(),
