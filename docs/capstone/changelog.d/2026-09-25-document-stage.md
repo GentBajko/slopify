@@ -7,4 +7,4 @@
 - The project page has a Document row with its state; its output offers Download, Open folder and Open PDF, which opens it in a new browser tab.
 - Editing the article, the title or the theme marks the document as needing a rebuild; nothing else is affected. Resume, Retry stage and Re-run section work on it like any other stage.
 - Existing projects get a Document stage that is switched off, so nothing shows as waiting. The upgrade rebuilds two database tables to allow the new stage (schema version 14) and keeps every row.
-- The bundled Cinzel font ships with its SIL Open Font License beside it (`packages/app/src/assets/document/fonts/OFL.txt`). New dependency: jsPDF 3 (MIT), for writing PDF files, which Node and the existing dependencies cannot do.
+- The bundled Cinzel font ships with its SIL Open Font License beside it (`packages/app/src/assets/document/fonts/OFL.txt`). New dependency: jsPDF 4.2.1 (MIT; 4.2.1 fixes the advisories against earlier versions), for writing PDF files, which Node and the existing dependencies cannot do.
