@@ -1,5 +1,6 @@
 ---
 absorbed_from:
+- features/2026-09-25-video-recovery@2026-09-25
 - features/2026-09-24-research-documents@2026-09-25
 - features/2026-09-09-pausable-optional-runs@2026-09-10
 - features/2026-09-10-editable-projects@2026-09-12
@@ -55,6 +56,8 @@ Save and Restore carry the current base revision and a UUID idempotency key. A s
 Rebuild affected outputs prepares a preview for the saved revision. The preview identifies changed inputs, affected work, reusable outputs, provided content requiring confirmation, and known/unknown charges. The execution snapshot binds recipes, inputs, request settings, catalogue data and whether selected work requires a new submission. Unknown charges are not displayed as free.
 
 Start checks the same base, preview identity and acknowledgements again. Changed inputs, expired readiness or a free in-flight join that has become a paid retry require a fresh review. Work that can now be joined without another charge can be reused. Provider readiness runs outside the database transaction, followed by a final atomic recheck before admission.
+
+Service and transactional rechecks use the same complete planning catalogue. New invocations retain the configured models' execution metadata even when selected local export work reuses upstream narration. This preserves the TTS character limit while rederiving dependencies; it does not broaden pricing/readiness beyond new selected submissions or weaken real stale-input checks. Previously saved contexts and completed outputs are not rewritten (`packages/app/src/slices/rebuild/service.ts:150`, `packages/app/src/slices/rebuild/admission-repo.ts:86`, `:143`).
 
 Host-managed CLI paths are checked by the host helper, not compared with the container's local path settings. Native CLI paths still receive the final change check. Both rebuild and Play admission use `cliPathChanged` in `packages/app/src/slices/settings/cli-paths.ts` (1.4.1 regression correction).
 

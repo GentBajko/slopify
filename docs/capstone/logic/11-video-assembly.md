@@ -1,5 +1,6 @@
 ---
 absorbed_from:
+- features/2026-09-25-video-recovery@2026-09-25
 - features/2026-09-09-pausable-optional-runs@2026-09-10
 - features/2026-09-10-subtitles-fonts@2026-09-10
 - features/2026-09-10-editable-projects@2026-09-12
@@ -47,7 +48,8 @@ The final media stage produces an MP4 slideshow or a combined PCM WAV. Audio Off
 
 ## Unhappy paths
 
-- Render fails → the renderer's error shown verbatim on the video stage; no automatic retry; no timeout; manual re-render per scenario 12.
+- FFmpeg render fails → the renderer's error shown verbatim on the video stage; no automatic encoding retry; no timeout; manual re-render per scenario 12.
+- Subtitle-model preparation happens before decoding/alignment and encoding. Its fetch/body interruptions and HTTP 408/429/5xx have at most three transfer attempts with abortable one- and two-second delays and a five-minute deadline per fetch. Exhaustion names the subtitle model and three attempts, not only `terminated`. Permanent HTTP, verification and disk errors stop without retry; cancellation stops transfer/backoff. Partial attempts stay private and only the pinned length/hash can publish to cache (`packages/app/src/adapters/alignment/cache.ts:34`, `:63`).
 - Caption alignment, font resolution, render or publication failure leaves retained completed revisions/media available. Unregistered prepared assets are discarded; atomic publication does not partially replace a completed media bundle (`slices/rebuild/{runtime-export,runtime-publication}.ts`, `slices/revisions/publish.ts`).
 - Interrupted work follows durable revision recovery and requires explicit rebuild where the outcome is uncertain (scenario 01).
 - Cancel → scenario 13.
@@ -74,7 +76,7 @@ The final media stage produces an MP4 slideshow or a combined PCM WAV. Audio Off
 - No remote render service.
 - D5 money: nothing charged.
 - The renderer introduces no extra duration cap; setup validation limits the image list to 60 entries (`packages/app/src/slices/revisions/schema.ts`).
-- D10 external failure: the render is local; its failure is handled above without retries.
+- D10 external failure: encoding is local and is not retried automatically. Downloading the free pinned subtitle model is a separate network prerequisite with the bounded recovery above; no requested subtitles are silently omitted.
 - D13 notification: no channel.
 
 ## Audio-only subtitle edits

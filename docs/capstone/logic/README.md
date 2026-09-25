@@ -4,6 +4,7 @@ generated_at_commit: 4cfe3473f74d
 capstone_version: 5.2.0
 generated_date: '2026-09-13'
 absorbed_from:
+  - features/2026-09-25-video-recovery@2026-09-25
   - features/2026-09-24-research-documents@2026-09-25
   - features/2026-09-24-host-cli-bridge@2026-09-24
   - features/2026-09-24-narration-preparation@2026-09-24
@@ -38,8 +39,8 @@ Use a scenario when changing one of the listed workflows. Article is the only re
 | 08 Narration, optional cue preparation and clean/script downloads | [08-narration.md](08-narration.md) |
 | 09 Image generation | [09-image-generation.md](09-image-generation.md) |
 | 10 Thumbnail prompt by LLM | [10-thumbnail-prompt-by-llm.md](10-thumbnail-prompt-by-llm.md) |
-| 11 Video assembly | [11-video-assembly.md](11-video-assembly.md) |
-| 12 Project edits and retained revisions | [12-reruns-and-edits.md](12-reruns-and-edits.md) |
+| 11 Video assembly and bounded subtitle-model recovery | [11-video-assembly.md](11-video-assembly.md) |
+| 12 Project edits, retained revisions and catalogue-consistent recovery | [12-reruns-and-edits.md](12-reruns-and-edits.md) |
 | 13 Pause, resume and cancel | [13-cancel.md](13-cancel.md) |
 | 14 Storage and downloads | [14-storage-and-downloads.md](14-storage-and-downloads.md) |
 | 15 Prompt management | [15-prompt-management.md](15-prompt-management.md) |

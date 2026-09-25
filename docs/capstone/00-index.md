@@ -34,6 +34,7 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 |---|---|
 | architecture | [01-architecture.md](01-architecture.md) |
 | architecture | [01-architecture-research.md](01-architecture-research.md) — scoped research/provider handoff |
+| architecture | [01-architecture-recovery.md](01-architecture-recovery.md) — scoped rebuild admission and subtitle-model caching |
 | models | [02-models.md](02-models.md) |
 | models | [02-models-research.md](02-models-research.md) — scoped research payloads |
 | conventions | [03-conventions.md](03-conventions.md) |

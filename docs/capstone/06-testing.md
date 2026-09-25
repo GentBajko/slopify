@@ -1,4 +1,5 @@
 ---
+video_recovery_verified_at_commit: 4a83abd9a070
 research_documents_verified_at_commit: 735cf5b
 host_cli_verified_at_commit: 9bd6517
 generated_at_commit: 4cfe3473f74d
@@ -16,6 +17,7 @@ paths_covered:
   - :(top).github/workflows/**
   - :(top)packages/site/*.test.js
 absorbed_from:
+  - features/2026-09-25-video-recovery@2026-09-25
   - features/2026-09-24-host-cli-bridge@2026-09-24
   - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-10-editable-projects@2026-09-12
@@ -145,6 +147,8 @@ The inventory is broadest by direct test-file count in rebuild (44), Play UI (32
 - No separately configured load, chaos, security, or browser accessibility audit project exists. This does not mean security/error/accessibility behaviors lack individual assertions; the configured projects are the four Vitest projects listed above. `vitest.config.ts:6` `packages/app/vitest.config.ts:4` `packages/web/vitest.config.ts:7` `packages/collector/vitest.config.ts:4` `packages/site/vitest.config.ts:4`
 
 ## Recorded verification
+
+- Video recovery at `4a83abd9a070` (2026-09-25): all **318 tests in 57 rebuild/alignment files** passed, plus workspace typecheck, scoped Biome and release build. New local-export regressions first reproduced stale-preview for plain/prepared narration, then proved persisted TTS metadata, runtime readiness/export snapshot, materialization, exact replay, retained asset IDs and no new provider readiness/calls. New download tests first failed, then covered transient fetch/body/503 recovery, three-attempt exhaustion, canceled backoff and permanent HTTP/checksum/size failure. Two independent review rounds found no actionable issues. These isolated fake-provider/network checks are not a production render, process-restart rehearsal, real model download or native Windows rerun (`packages/app/src/slices/rebuild/service-reuse.test.ts:69`, `packages/app/src/adapters/alignment/cache-retry.test.ts:25`).
 
 - Historical 0.8.1/open-folder checkpoint on 2026-09-10: 1,909 tests passed with one platform skip; lint, type checking and build passed. The preceding 0.8.1 entry records its audit and browser checks at 1440/390/320 pixels. These are dated release records, not a current-source audit/browser rerun. `docs/capstone/changelog.d/2026-09-10-release-081-open-folder.md:9` `docs/capstone/changelog.d/2026-09-10-release-081.md:7`
 - Linux at `29b88494eb404ea36f797929599db6a6e4ac8603`: the latest full unchanged-source rerun passed **2,586 tests**, with **one existing skip**, in **320 files**. The initial full run failed the legacy-plan WAV reuse case by trying to launch its deliberately invalid FFmpeg sentinel. An isolated native-enabled rerun passed all four file cases, then the full rerun passed. The initial failure's cause was not established; a sandbox-only attempt failed with FFmpeg permission errors and is not a product regression result. Execution logs: `/tmp/slopify-r7-full-tests.log:13`, `/tmp/slopify-r7-legacy-wav-native-recheck.log:5`, `/tmp/slopify-r7-full-tests-recheck.log:9`; relevant test: `packages/app/src/slices/video/subtitle-only.test.ts:1`.
