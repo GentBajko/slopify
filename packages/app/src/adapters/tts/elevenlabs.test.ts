@@ -158,7 +158,7 @@ describe("elevenLabsTts.synthesize", () => {
     // An absent key is terminal, so it carries the kind the wrapper does
     // not retry rather than the `auth` kind a rejected key carries.
     expect(isProviderError(error) && error.fault.kind).toBe("missing_key");
-    expect(String(error)).toContain("no ElevenLabs key is stored");
+    expect(String(error)).toContain("No ElevenLabs API key is saved");
     expect(called).toBe(0);
   });
 
@@ -197,7 +197,7 @@ describe("elevenLabsTts.synthesize", () => {
   it("names the voice a rejected voice id was asked for", async () => {
     const error = await failed(new Response(fixture("elevenlabs-400-voice.json"), { status: 400 }));
 
-    expect(String(error)).toContain(`for voice ${voiceId}`);
+    expect(String(error)).toContain(`for voice "${voiceId}"`);
     expect(String(error)).toContain("voice_not_found");
   });
 
@@ -220,7 +220,7 @@ describe("elevenLabsTts.synthesize", () => {
   it("fails when the response carries no audio at all", async () => {
     const error = await failed(new Response(null, { status: 200 }));
 
-    expect(String(error)).toContain("no audio");
+    expect(String(error)).toContain("without sending any audio");
   });
 });
 

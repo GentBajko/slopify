@@ -35,7 +35,7 @@ export const providerChangesSchema = z
       .optional(),
   })
   .strict()
-  .refine((value) => Object.keys(value).length > 0, "Pick at least one provider to update.");
+  .refine((value) => Object.keys(value).length > 0, "Change at least one provider before saving.");
 
 export interface ProviderChanges {
   readonly chunking?: Chunking | undefined;
@@ -64,7 +64,10 @@ export function validateLocalProviderChanges(
       (one) => one.id === picked.provider && one.family === families[key],
     );
     if (provider === undefined) {
-      fields.push({ field: key, message: "Choose a provider for this kind of generation." });
+      fields.push({
+        field: key,
+        message: "This provider cannot do this kind of work. Choose another provider.",
+      });
       continue;
     }
     const usable = readinessIsUsable(provider.readiness);
@@ -73,8 +76,9 @@ export function validateLocalProviderChanges(
         field: key,
         message:
           provider.readiness.kind === "cli"
-            ? (provider.readiness.issue ?? "Install and sign in to this CLI first.")
-            : "Save this provider's API key in Settings first.",
+            ? (provider.readiness.issue ??
+              "Install this command-line tool on your computer and sign in to it, then try again.")
+            : "Add this provider's API key in Settings → Providers first.",
       });
     }
   }
@@ -85,7 +89,11 @@ export function validateLocalProviderChanges(
         voice.provider === changes.audio?.provider && voice.voiceId === changes.audio.voice,
     )
   ) {
-    fields.push({ field: "audio.voice", message: "Choose a saved voice for this provider." });
+    fields.push({
+      field: "audio.voice",
+      message:
+        "Choose one of your saved voices for this provider. Add voices in Settings → Voices.",
+    });
   }
   return fields;
 }
@@ -109,9 +117,15 @@ export async function validateProviderChanges(
       picked.thinking,
     );
     if (result === "missing") {
-      fields.push({ field: `${key}.model`, message: "Choose a model supported by this provider." });
+      fields.push({
+        field: `${key}.model`,
+        message: "This provider does not offer that model. Choose another model.",
+      });
     } else if (result === "thinking") {
-      fields.push({ field: `${key}.thinking`, message: "Choose a supported thinking setting." });
+      fields.push({
+        field: `${key}.thinking`,
+        message: "This model does not support that thinking setting. Choose another.",
+      });
     }
   }
   return fields;

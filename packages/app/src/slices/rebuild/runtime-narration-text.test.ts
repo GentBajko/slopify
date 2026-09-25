@@ -162,7 +162,9 @@ it("refuses missing clean metadata instead of leaking delivery cues into caption
           : row,
       ),
     };
-    expect(() => narrationTextParts(incomplete, plan, "body")).toThrow(/exact clean transcript/);
+    expect(() => narrationTextParts(incomplete, plan, "body")).toThrow(
+      /no longer matches its prepared text/,
+    );
   } finally {
     h.close();
   }

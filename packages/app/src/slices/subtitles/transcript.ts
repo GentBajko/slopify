@@ -35,7 +35,7 @@ export function spokenText(
     }
   }
   throw new Error(
-    `The saved ${kind} narration text is missing. Subtitles need the text spoken in the audio.`,
+    `The saved text of the ${kind === "body" ? "article" : kind} is missing, and captions need the text spoken in the narration. Use Re-run section on Article, then Retry stage.`,
   );
 }
 function payload(raw: string | null): z.infer<typeof textPayload> {

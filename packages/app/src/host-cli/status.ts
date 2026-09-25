@@ -30,7 +30,9 @@ export async function resolveHostCommand(
         throw error;
     }
   }
-  throw Object.assign(new Error("The CLI was not found on the host PATH."), { code: "ENOENT" });
+  throw Object.assign(new Error(`${hostCommandName(id)} was not found on this machine's PATH.`), {
+    code: "ENOENT",
+  });
 }
 const authSchema = z.object({ loggedIn: z.boolean() });
 export function parseHostLogin(
@@ -90,8 +92,9 @@ export function createHostStatus(deps: HostStatusDeps): (id: HostCliId) => Promi
         installed: false,
         login: "unknown",
         issueKind: isCode(error, "ENOENT") ? "missing" : "bridge",
-        issue:
-          "The CLI could not be found on the host. Check its installation, then rerun the Docker launcher.",
+        issue: isCode(error, "ENOENT")
+          ? `${hostCommandName(id)} was not found on this machine. Install it and sign in there, then run the launcher again: npx @gentbajko/slopify --docker`
+          : `Slopify could not check for ${hostCommandName(id)} on this machine (${error instanceof Error ? error.message : String(error)}). Fix the problem, then run the launcher again: npx @gentbajko/slopify --docker`,
       };
     }
     const readiness = readinessFromProbe(
@@ -117,7 +120,7 @@ export function createHostStatus(deps: HostStatusDeps): (id: HostCliId) => Promi
         ...base,
         login: "unknown",
         issueKind: "missing",
-        issue: "The host CLI did not answer. Check its installation and rerun the Docker launcher.",
+        issue: `${command} is installed but did not answer "${hostCommandName(id)} --version". Reinstall or update it on this machine, then run the launcher again: npx @gentbajko/slopify --docker`,
       };
     if (readiness.issue)
       return { ...base, login: "unknown", issueKind: "version", issue: readiness.issue };

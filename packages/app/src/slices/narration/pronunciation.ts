@@ -137,7 +137,10 @@ export function pronunciationMatches(
     const after = source[end];
     if ((after === "'" && before !== "'") || (after === "’" && before !== "‘")) continue;
     const entry = ordered.find((_, index) => match[index + 1] !== undefined);
-    if (entry === undefined) throw new Error("Matched glossary term has no mapping.");
+    if (entry === undefined)
+      throw new Error(
+        "Slopify hit an internal error (a pronunciation glossary term has no pronunciation). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      );
     matches.push({ start: match.index, end, entry });
   }
   return matches;
@@ -151,7 +154,10 @@ export function pronunciationSpans(
     const words = source.slice(match.start, match.end).matchAll(/\S+/gu);
     for (const [index, word] of Array.from(words).entries()) {
       const ipa = match.entry.ipa[index];
-      if (ipa === undefined) throw new Error("Validated glossary term has no IPA word.");
+      if (ipa === undefined)
+        throw new Error(
+          "Slopify hit an internal error (a pronunciation glossary term is missing a word). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+        );
       const start = match.start + word.index;
       spans.push({ start, end: start + word[0].length, text: `/${ipa}/` });
     }

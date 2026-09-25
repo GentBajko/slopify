@@ -3,6 +3,14 @@ import type { Clock } from "../../kernel/clock.js";
 import { redact } from "../../kernel/log.js";
 import { providerError } from "../../kernel/ports/model.js";
 import type { TtsRequest } from "../../kernel/ports/tts.js";
+import {
+  httpFailure,
+  internalError,
+  noAudio,
+  providerSaid,
+  unreadable,
+  voiceFix,
+} from "../explain.js";
 import { retryAfter } from "../retry-after.js";
 
 interface AsyncDeps {
@@ -28,12 +36,15 @@ export async function* inworldAsync(
 ): AsyncGenerator<Uint8Array, void> {
   const saved = request.continuation?.read();
   if (saved !== undefined && !operationName.test(saved))
-    throw invalid("returned an invalid operation name");
+    throw providerError({
+      kind: "other",
+      message: internalError("the saved Inworld job reference is damaged"),
+    });
   if (saved === undefined && request.text.length > 100_000) {
     throw providerError({
       kind: "unsupported",
       message:
-        "Inworld async accepts up to 100,000 characters per request (10,000 for On-Demand accounts). Select paragraph chunking for longer articles.",
+        "This narration part is longer than the 100,000 characters Inworld takes at once (10,000 on On-Demand accounts). Set Chunking to Paragraph in the Providers section of Edit project, then use Retry stage.",
     });
   }
   const headers = { Authorization: `Basic ${key}`, "Content-Type": "application/json" };
@@ -62,10 +73,9 @@ export async function* inworldAsync(
   let expected = saved;
   for (;;) {
     request.signal.throwIfAborted();
-    await check(response, key);
+    await check(response, key, request.voiceId);
     const parsed = operationSchema.safeParse(await response.json().catch(() => null));
-    if (!parsed.success || (expected && parsed.data.name !== expected))
-      throw invalid("returned an invalid operation");
+    if (!parsed.success || (expected && parsed.data.name !== expected)) throw unreadableAnswer();
     const operation = parsed.data;
     expected = operation.name;
     request.continuation?.write(operation.name);
@@ -83,10 +93,10 @@ export async function* inworldAsync(
                 : code === 3 || code === 5 || code === 9
                   ? "unsupported"
                   : "other",
-          message: `Inworld async job failed: ${clean(message ?? "audio generation stopped", key)}`,
+          message: streamFailure(code, clean(message ?? "", key), request.voiceId),
         });
       }
-      if (!operation.response) throw invalid("finished without an audio download");
+      if (!operation.response) throw providerError({ kind: "other", message: noAudio("Inworld") });
       yield* download(deps.fetch, operation.response.audioUri, request.signal);
       return;
     }
@@ -106,8 +116,7 @@ async function* download(
   signal: AbortSignal,
 ): AsyncGenerator<Uint8Array, void> {
   const url = URL.parse(uri);
-  if (url?.protocol !== "https:" || url.username || url.password)
-    throw invalid("returned an invalid audio download URL");
+  if (url?.protocol !== "https:" || url.username || url.password) throw unreadableAnswer();
   // This is a signed storage URL, not an Inworld API endpoint. Never forward Basic auth.
   let response: Response;
   try {
@@ -115,11 +124,10 @@ async function* download(
   } catch {
     signal.throwIfAborted();
     // Signed query parameters must not become a persisted error or log entry.
-    throw invalid("audio download could not be reached; retrying the existing job");
+    throw downloadFailed("");
   }
-  if (!response.ok)
-    throw invalid(`audio download answered ${response.status}; retrying the existing job`);
-  if (!response.body) throw invalid("answered with no audio");
+  if (!response.ok) throw downloadFailed(` (error ${String(response.status)})`);
+  if (!response.body) throw providerError({ kind: "other", message: noAudio("Inworld") });
   const reader = response.body.getReader();
   let heard = false;
   try {
@@ -134,14 +142,14 @@ async function* download(
     }
   } catch {
     signal.throwIfAborted();
-    throw invalid("audio download stopped; retrying the existing job");
+    throw downloadFailed("");
   } finally {
     await reader.cancel().catch(() => {});
     reader.releaseLock();
   }
-  if (!heard) throw invalid("answered with no audio");
+  if (!heard) throw providerError({ kind: "other", message: noAudio("Inworld") });
 }
-async function check(response: Response, key: string): Promise<void> {
+async function check(response: Response, key: string, voiceId: string): Promise<void> {
   if (response.ok) return;
   const detail = clean(await response.text().catch(() => ""), key);
   const retryAfterMs = retryAfter(response.headers.get("retry-after"));
@@ -154,13 +162,43 @@ async function check(response: Response, key: string): Promise<void> {
           : response.status === 400 || response.status === 404
             ? "unsupported"
             : "other",
-    message: `Inworld async answered ${response.status}: ${detail || response.statusText}`,
+    message: httpFailure({
+      provider: "Inworld",
+      status: response.status,
+      detail: detail || response.statusText,
+      subject: `narration request for voice "${voiceId}"`,
+      fix: voiceFix(voiceId),
+    }),
     ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
   });
 }
 function clean(message: string, key: string): string {
   return redact(message.replaceAll(key, "[redacted]"));
 }
-function invalid(detail: string): Error {
-  return providerError({ kind: "other", message: `Inworld ${detail}.` });
+// Signed query parameters must not become a persisted error or log entry, so the link is
+// never quoted.
+function downloadFailed(status: string): Error {
+  return providerError({
+    kind: "other",
+    message: `Inworld made the narration, but Slopify could not download it${status}. Check your internet connection, then use Retry stage.`,
+  });
+}
+function unreadableAnswer(): Error {
+  return providerError({ kind: "other", message: unreadable("Inworld") });
+}
+
+// Inworld's streamed and async errors carry a gRPC code instead of an HTTP status.
+export function streamFailure(code: number | undefined, detail: string, voiceId: string): string {
+  const label = `code ${String(code)}`;
+  if (code === 16) return httpFailure({ provider: "Inworld", status: 401, detail, label });
+  if (code === 7) return httpFailure({ provider: "Inworld", status: 403, detail, label });
+  if (code === 8) return httpFailure({ provider: "Inworld", status: 429, detail, label });
+  if (code === 3 || code === 5 || code === 9)
+    return providerSaid("Inworld", "could not narrate this text", detail, voiceFix(voiceId));
+  return providerSaid(
+    "Inworld",
+    "stopped before the narration was finished",
+    detail,
+    "This is usually temporary: wait a few minutes, then use Retry stage.",
+  );
 }

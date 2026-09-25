@@ -177,7 +177,9 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     (process.env.SLOPIFY_CONTAINER !== "1" ||
       dockerState !== "/opt/slopify-install/activation.json")
   )
-    throw new Error("Invalid managed Docker activation configuration.");
+    throw new Error(
+      "This container was started with Slopify's Docker settings in the wrong place (SLOPIFY_DOCKER_INSTALL_STATE). Start it with the launcher instead: npx @gentbajko/slopify --docker",
+    );
   const candidateToken = process.env.SLOPIFY_UPDATE_TOKEN ?? "";
   const pendingActivation =
     isUpdateToken(candidateToken) && process.env.SLOPIFY_UPDATE_PENDING === "1";
@@ -311,7 +313,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
           : !existsSync(oldEntry) || !existsSync(workerEntry)
             ? "Run Slopify from its installed package to use in-app updates."
             : npm === undefined
-              ? "npm is unavailable. Install Node.js with npm to use in-app updates."
+              ? "npm was not found, so in-app updates are off. Install Node.js with npm (https://nodejs.org), or update from the terminal: npx @gentbajko/slopify@latest"
               : undefined,
       busy: () =>
         updateDb.prepare("SELECT 1 FROM stages WHERE state = 'running' LIMIT 1").get() !==

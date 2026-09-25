@@ -11,7 +11,8 @@ export function updateRoutes(deps: AppDeps) {
     busy: false,
     canUpdate: false,
     status: "idle",
-    blockedReason: "In-app updates are unavailable for this server.",
+    blockedReason:
+      "This copy of Slopify cannot update itself from the app. Update it the way you installed it, for example by running the launcher again.",
   };
   return new Hono()
     .get("/ready", (c) => {
@@ -42,7 +43,8 @@ export function updateRoutes(deps: AppDeps) {
         return problem(c, {
           status: 403,
           title: titleOf(403),
-          detail: "Start updates from the Slopify page on this server.",
+          detail:
+            "For your safety, updates can only be started from the Slopify page itself. Open Slopify and try again there.",
         });
       if (deps.updater === undefined)
         return problem(c, { status: 409, title: titleOf(409), detail: unavailable.blockedReason });
@@ -55,7 +57,7 @@ export function updateRoutes(deps: AppDeps) {
         detail:
           result.info.blockedReason ??
           result.info.error ??
-          "No newer published update is available.",
+          "You already have the latest version of Slopify.",
       });
     });
 }

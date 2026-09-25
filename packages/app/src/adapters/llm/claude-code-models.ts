@@ -47,7 +47,7 @@ const supportedEfforts: readonly ThinkingMode[] = ["low", "medium", "high", "xhi
 
 function unavailable(): Error {
   return new Error(
-    "Claude Code model discovery is unavailable. Refresh the list or enter an exact model ID.",
+    "Slopify could not get the model list from the Claude Code CLI. Check the CLI is installed and signed in (Settings → Providers), then refresh the list, or type an exact model ID.",
   );
 }
 

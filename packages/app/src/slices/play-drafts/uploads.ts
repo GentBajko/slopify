@@ -54,7 +54,7 @@ export async function uploadDraftAttachment(
       .prepare(
         "UPDATE play_draft_attachments SET status='reattach',error=? WHERE id=? AND draft_id=? AND staged_file_id IS NULL",
       )
-      .run("Upload failed. Reattach the file.", input.attachmentId, input.draftId);
+      .run("The upload failed. Attach the file again.", input.attachmentId, input.draftId);
     return refuse("invalid-edit");
   }
   const updated = deps.db

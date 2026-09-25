@@ -127,7 +127,7 @@ describe("Inworld narration", () => {
       const h = setup([]);
       await expect(
         h.speak({ continuation: { read: () => token, write: () => {} } }),
-      ).rejects.toThrow(/operation/);
+      ).rejects.toThrow(/job reference/);
       expect(h.fetch).not.toHaveBeenCalled();
     },
   );
@@ -178,7 +178,7 @@ describe("Inworld narration", () => {
 
   it("rejects malformed operations without following their path", async () => {
     const h = setup([Response.json({ name: "https://evil.invalid/steal", done: false })]);
-    await expect(h.speak({ text: "a".repeat(4001) })).rejects.toThrow("operation");
+    await expect(h.speak({ text: "a".repeat(4001) })).rejects.toThrow("could not read");
     expect(h.fetch).toHaveBeenCalledTimes(1);
   });
 

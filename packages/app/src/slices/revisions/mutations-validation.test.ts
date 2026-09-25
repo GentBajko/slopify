@@ -99,7 +99,10 @@ it("refuses a retained narration piece as whole provided audio before preparatio
     reason: "invalid-edit",
     currentRevisionId: h.base.revision.id,
     fields: [
-      { field: "content.provided.audio", message: "Choose an asset for this content stage." },
+      {
+        field: "content.provided.audio",
+        message: "This file cannot be used in this section. Choose a file of the right kind.",
+      },
     ],
   });
   expect(probes).toBe(0);

@@ -34,6 +34,25 @@ const statuses = {
   "cost-ack-required": 409,
   readiness: 409,
 } as const;
+const details: Readonly<Record<keyof typeof statuses, string>> = {
+  "no-project": "This project no longer exists. Go back to Projects to pick another.",
+  "no-revision":
+    "This saved version of the project no longer exists. Reload the page, then try again.",
+  conflict:
+    "This project changed while you were editing. Reload the page to see the latest, then make your change again.",
+  "idempotency-conflict":
+    "This change was already sent with different details. Reload the page, then try again.",
+  "invalid-edit": "Some of your changes are not valid. Fix the highlighted fields and save again.",
+  "stale-preview":
+    "What needs rebuilding changed since you opened this review. Cancel it and open Rebuild affected outputs again to see the latest.",
+  "invalid-selection":
+    "Some of the outputs you picked can no longer be rebuilt. Reload the page and choose again.",
+  "review-required":
+    'This rebuild touches content you supplied yourself. Tick "Keep the provided content" for each item in the review, then choose Start rebuild.',
+  "cost-ack-required":
+    "Some costs for this rebuild are unknown. Tick the box confirming you understand, then choose Start rebuild.",
+  readiness: "Slopify cannot run this rebuild yet. Fix the problems listed, then try again.",
+};
 function refused(
   c: Context,
   deps: AppDeps,
@@ -47,7 +66,7 @@ function refused(
   return problem(c, {
     status,
     title: titleOf(status),
-    detail: value.reason.replaceAll("-", " "),
+    detail: details[value.reason],
     extensions: {
       reason: value.reason,
       currentRevisionId: currentRevisionId(deps.db, projectId) ?? null,
@@ -59,7 +78,8 @@ function unavailable(c: Context): Response {
   return problem(c, {
     status: 503,
     title: titleOf(503),
-    detail: "Rebuild services are unavailable.",
+    detail:
+      "Rebuilding is not ready yet because Slopify is still starting. Wait a moment, reload the page and try again.",
   });
 }
 

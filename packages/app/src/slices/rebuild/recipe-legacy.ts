@@ -133,7 +133,9 @@ export function legacyImageOutput(
             row.meta.promptName === promptName)),
   );
   if (matches.length > 1)
-    throw new Error(`Legacy image piece ${piece.id} matches multiple outputs.`);
+    throw new Error(
+      `Slopify hit an internal error (an image from an older Slopify version, ${piece.id}, matches multiple outputs). Try again; if it happens again, use Download diagnostics in Settings and report it.`,
+    );
   return matches[0];
 }
 

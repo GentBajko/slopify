@@ -15,7 +15,10 @@ async function main(): Promise<void> {
   const uid = process.getuid?.();
   const gid = process.getgid?.();
   assertManagedDockerHost(process.platform, uid, gid);
-  if (gid === undefined) throw new Error("Missing host group.");
+  if (gid === undefined)
+    throw new Error(
+      "Could not read your user's group. Run the --docker launcher as your normal logged-in user.",
+    );
   const c = dockerConfig(process.env, homedir(), process.cwd(), uid, gid);
   await privateDirectory(c.root, uid);
   if (process.argv[2] !== "--locked") {
@@ -24,7 +27,9 @@ async function main(): Promise<void> {
     try {
       const s = await fd.stat();
       if (!s.isFile() || s.nlink !== 1 || s.uid !== uid || (s.mode & 0o077) !== 0)
-        throw new Error("Unsafe Docker setup lock.");
+        throw new Error(
+          `The launcher's lock file ${path} has the wrong owner or permissions. Delete it and run the launcher again.`,
+        );
       const child = spawn(
         "flock",
         [
@@ -41,17 +46,25 @@ async function main(): Promise<void> {
       );
       const code = await new Promise<number>((resolve, reject) => {
         child.once("error", () =>
-          reject(new Error("Install util-linux (flock) before using the managed Docker launcher.")),
+          reject(
+            new Error(
+              "The --docker launcher needs the flock command, which isn't installed. Install util-linux (for example sudo apt install util-linux, or sudo pacman -S util-linux) and try again.",
+            ),
+          ),
         );
         child.once("exit", (status, signal) =>
           signal
-            ? reject(new Error("Docker setup was interrupted; rerun to recover."))
+            ? reject(
+                new Error(
+                  "Docker setup was interrupted before it finished. Run the same command again; Slopify will finish or undo the half-done step.",
+                ),
+              )
             : resolve(status ?? 1),
         );
       });
       if (code === 73)
         throw new Error(
-          "Another managed Docker installation is changing storage. Wait for it to finish and rerun.",
+          "Another Slopify --docker launcher is already running and changing your installation. Wait for it to finish, then run the command again.",
         );
       process.exitCode = code;
       return;
@@ -60,7 +73,12 @@ async function main(): Promise<void> {
     }
   }
   const controller = new AbortController();
-  const abort = () => controller.abort(new Error("Docker setup interrupted."));
+  const abort = () =>
+    controller.abort(
+      new Error(
+        "Docker setup was stopped before it finished. Run the same command again; Slopify will finish or undo the half-done step.",
+      ),
+    );
   process.once("SIGINT", abort);
   process.once("SIGTERM", abort);
   try {

@@ -299,7 +299,7 @@ describe("codexLlm.complete", () => {
       (thrown: unknown) => thrown,
     );
     expect(isProviderError(error) && error.fault.kind).toBe("other");
-    expect(String(error)).toBe("Error: the codex CLI wrote a line this app could not read");
+    expect(String(error)).toContain("The Codex CLI sent output Slopify could not read");
   });
 
   it("shows what the CLI wrote to stderr when it exits without a turn", async () => {
@@ -315,7 +315,7 @@ describe("codexLlm.complete", () => {
       code: null,
       error: new Error("spawn codex ENOENT"),
     }).catch((thrown: unknown) => thrown);
-    expect(String(error)).toContain("could not be started (spawn codex ENOENT)");
+    expect(String(error)).toContain('could not be started ("spawn codex ENOENT")');
   });
 
   it("kills the child on the answer, on a failure and when walked away from", async () => {

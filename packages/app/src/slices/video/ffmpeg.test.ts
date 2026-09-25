@@ -225,7 +225,9 @@ describe("runFfmpeg", () => {
         log,
         onProgress: (): void => {},
       }),
-    ).rejects.toThrow("ffmpeg exited with code 3: Error opening input file bad.png.");
+    ).rejects.toThrow(
+      "The audio/video export failed (ffmpeg exited with code 3: Error opening input file bad.png.).",
+    );
   });
 
   it("says the binary could not be started rather than hanging", async () => {
@@ -239,7 +241,7 @@ describe("runFfmpeg", () => {
         log,
         onProgress: (): void => {},
       }),
-    ).rejects.toThrow(/could not be started/);
+    ).rejects.toThrow(/could not start ffmpeg/);
   });
 
   it("refuses before spawning anything when the signal has already fired", async () => {

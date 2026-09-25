@@ -3,6 +3,7 @@ import { redact } from "../../kernel/log.js";
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import type { TtsAudio, TtsPort, TtsRequest } from "../../kernel/ports/tts.js";
+import { httpFailure, missingKey, noAudio, refreshList, unreadable, voiceFix } from "../explain.js";
 import { retryAfter } from "../retry-after.js";
 
 // The HTTP gateway adapter for OpenAI's speech endpoint. `fetch` and nothing else; the response
@@ -48,12 +49,12 @@ export function openAiTts(deps: OpenAiTtsDeps): TtsPort {
         headers: { Authorization: `Bearer ${keyOf(deps)}` },
         signal: AbortSignal.timeout(10_000),
       });
-      if (!response.ok) throw await failure(response);
+      if (!response.ok) throw await failure(response, undefined, refreshList);
       const parsed = modelList.safeParse(safeJson(await response.text()));
       if (!parsed.success) {
         throw providerError({
           kind: "other",
-          message: "OpenAI's model list was not in the shape this app can read",
+          message: unreadable("OpenAI"),
         });
       }
       return parsed.data.data
@@ -82,7 +83,7 @@ export function openAiTts(deps: OpenAiTtsDeps): TtsPort {
         throw await failure(response, req.voiceId);
       }
       if (response.body === null) {
-        throw providerError({ kind: "other", message: "OpenAI answered with no audio" });
+        throw providerError({ kind: "other", message: noAudio("OpenAI") });
       }
       return { audio: response.body, container: "mp3" };
     },
@@ -97,7 +98,7 @@ function keyOf(deps: OpenAiTtsDeps): string {
   const key = deps.key();
   // An absent key is terminal, so it never becomes a request.
   if (key === undefined || key === "") {
-    throw providerError({ kind: "missing_key", message: "no OpenAI key is stored" });
+    throw providerError({ kind: "missing_key", message: missingKey("OpenAI") });
   }
   return key;
 }
@@ -114,7 +115,7 @@ function kindOf(status: number): ProviderErrorKind {
   return "other";
 }
 
-async function failure(response: Response, voiceId?: string): Promise<Error> {
+async function failure(response: Response, voiceId?: string, next?: string): Promise<Error> {
   const text = await response.text().catch(() => "");
   const parsed = errorBody.safeParse(safeJson(text));
   // Verbatim, through the same redactor the wrapper uses: OpenAI's own 401 quotes the
@@ -127,7 +128,18 @@ async function failure(response: Response, voiceId?: string): Promise<Error> {
     kind: kindOf(response.status),
     // The voice ID is named, so a rejected voice reads differently from
     // a rejected key.
-    message: `OpenAI answered ${response.status}${voiceId === undefined ? "" : ` for voice ${voiceId}`}: ${message}`,
+    message: httpFailure({
+      provider: "OpenAI",
+      status: response.status,
+      detail: message,
+      next,
+      ...(voiceId === undefined
+        ? {}
+        : {
+            subject: `narration request for voice "${voiceId}"`,
+            fix: voiceFix(voiceId),
+          }),
+    }),
     ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
   });
 }

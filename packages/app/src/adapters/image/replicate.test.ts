@@ -182,8 +182,8 @@ describe("replicateImage.generate", () => {
     const thrown = await failed(replaying([answering("replicate-401.json", 401)]));
 
     expect(kindOf(thrown)).toBe("auth");
-    expect(String(thrown)).toBe(
-      "Error: Replicate answered 401: You did not pass a valid authentication token",
+    expect(String(thrown)).toContain(
+      'Replicate did not accept the API key (error 401: "You did not pass a valid authentication token")',
     );
   });
 
@@ -203,8 +203,8 @@ describe("replicateImage.generate", () => {
     const thrown = await failed(replaying([answering("replicate-nsfw.json")], undefined, seen));
 
     expect(kindOf(thrown)).toBe("refusal");
-    expect(String(thrown)).toBe(
-      "Error: Replicate answered: NSFW content detected. Try running it again, or try a different prompt.",
+    expect(String(thrown)).toContain(
+      'Replicate refused to make this image under its content rules ("NSFW content detected. Try running it again, or try a different prompt.")',
     );
     // Nothing is downloaded, and the wrapper spends no further attempt on it.
     expect(seen).toHaveLength(1);
@@ -230,7 +230,7 @@ describe("replicateImage.generate", () => {
     );
 
     expect(kindOf(thrown)).toBe("other");
-    expect(String(thrown)).toContain("rather than a PNG or a JPEG");
+    expect(String(thrown)).toContain("not a PNG or JPEG image");
   });
 
   it("fails the attempt when the delivery link has expired", async () => {
@@ -242,7 +242,9 @@ describe("replicateImage.generate", () => {
     );
 
     expect(kindOf(thrown)).toBe("other");
-    expect(String(thrown)).toContain("Replicate answered 404 for the image it said it had made");
+    expect(String(thrown)).toContain(
+      "Replicate made the image, but Slopify could not download it (error 404)",
+    );
   });
 
   it("says so when a prediction is unfinished and names no address to read it from", async () => {
@@ -251,7 +253,7 @@ describe("replicateImage.generate", () => {
     const thrown = await failed(replaying([stuck]));
 
     expect(kindOf(thrown)).toBe("other");
-    expect(String(thrown)).toContain("named no address to read it from");
+    expect(String(thrown)).toContain("Replicate sent back an answer Slopify could not read");
   });
 
   it("says so when a succeeded prediction carries no output at all", async () => {
@@ -260,6 +262,6 @@ describe("replicateImage.generate", () => {
     const thrown = await failed(replaying([empty]));
 
     expect(kindOf(thrown)).toBe("other");
-    expect(String(thrown)).toContain("Replicate succeeded with no image");
+    expect(String(thrown)).toContain("Replicate finished without sending an image");
   });
 });

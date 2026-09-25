@@ -52,16 +52,16 @@ describe("configFrom", () => {
   });
 
   it.each(["abc", "", "80.5", "0", "-1", "65536"])("rejects the port %o", (port) => {
-    expect(() => configFrom({ port }, {})).toThrow(/invalid port/);
+    expect(() => configFrom({ port }, {})).toThrow(/Invalid port .*--port/);
   });
 
   it("names the source of a bad port from the environment", () => {
     expect(() => configFrom({}, { SLOPIFY_PORT: "nope" })).toThrow(
-      'invalid port "nope": expected an integer between 1 and 65535',
+      'Invalid port "nope" (from SLOPIFY_PORT): use a whole number between 1 and 65535',
     );
   });
 
   it("rejects a blank host", () => {
-    expect(() => configFrom({ host: "  " }, {})).toThrow(/host must not be empty/);
+    expect(() => configFrom({ host: "  " }, {})).toThrow(/host setting is empty \(from --host\)/);
   });
 });

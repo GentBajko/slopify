@@ -47,7 +47,8 @@ export interface NarrationDeps {
 
 // An empty narration source fails the stage immediately with no retries. Thrown from the
 // slice rather than from a provider call, so the attempt wrapper never sees it.
-export const nothingToNarrate = "nothing to narrate";
+export const nothingToNarrate =
+  "There is nothing to narrate because the article is empty. Add article text in Edit project → Article, then Retry stage.";
 
 // What a chunk piece carries between runs: the text that was sent, and the file it came
 // back as once the provider answered. That is the whole of the resume.
@@ -76,13 +77,17 @@ export async function runNarration(
   deps.audioPreviews?.clear(projectId);
   const project = projectById(deps.db, projectId);
   if (project === undefined) {
-    throw new Error(`project ${projectId} has no row`);
+    throw new Error(
+      "This project no longer exists; it may have been deleted while it was running.",
+    );
   }
   const choice = project.config.audio;
   if (choice === undefined) {
     // Admission refuses a run whose audio is Generate without a provider and a voice, so
     // reaching here is a bug in admission rather than something the user did.
-    throw new Error("the run has no TTS provider or voice");
+    throw new Error(
+      "No voice is set for the narration. Choose a voice in Edit project → Providers, then Retry stage.",
+    );
   }
   // Read once, before anything is written: the segment steps below ask it what a previous
   // run already stored, and the body step is the only thing that adds to it.
@@ -260,7 +265,9 @@ async function speakSegments(
     if (text === "") {
       // The same rule, applied to a segment: there is nothing to say, and silently
       // dropping an intro the user picked would lose it without telling anyone.
-      throw new Error(`the ${segment.category} segment has ${nothingToNarrate}`);
+      throw new Error(
+        `The ${segment.category} is empty, so there is nothing to narrate for it. Write the ${segment.category} or remove it in Edit project, then Retry stage.`,
+      );
     }
     const spoken = await providers.forPiece(piece.id).tts(
       {
@@ -305,7 +312,9 @@ function segmentPieces(deps: NarrationDeps, projectId: string): readonly StagePi
   if (article === undefined) {
     // Admission writes all six stage rows with the project, so a project without an article
     // stage is a bug rather than a run the user configured.
-    throw new Error(`project ${projectId} has no article stage`);
+    throw new Error(
+      "Slopify hit an internal error (the project has no article stage). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   }
   return piecesOf(deps.db, article.id, "segment");
 }
@@ -380,14 +389,18 @@ function store(
 
 function chunkOf(piece: StagePiece): z.infer<typeof chunkPayload> {
   if (piece.payload === null) {
-    throw new Error(`chunk ${piece.id} has no payload`);
+    throw new Error(
+      "Slopify hit an internal error (a saved narration chunk is empty). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   }
   return chunkPayload.parse(JSON.parse(piece.payload));
 }
 
 function segmentOf(piece: StagePiece): z.infer<typeof segmentPayload> {
   if (piece.payload === null) {
-    throw new Error(`segment ${piece.id} has no payload`);
+    throw new Error(
+      "Slopify hit an internal error (a saved intro or outro is empty). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   }
   return segmentPayload.parse(JSON.parse(piece.payload));
 }

@@ -41,7 +41,7 @@ export function stagingRoutes(deps: AppDeps) {
         return problem(c, {
           status: 400,
           title: titleOf(400),
-          detail: "The request carried no file part.",
+          detail: "No file arrived with the upload. Choose the file again and retry.",
         });
       }
       if (!result.ok) {
@@ -57,8 +57,8 @@ export function stagingRoutes(deps: AppDeps) {
           title: titleOf(result.reason === "in-use" ? 409 : 404),
           detail:
             result.reason === "in-use"
-              ? "This file is used by a saved draft."
-              : "No staged file has that id.",
+              ? "This file is still attached to a draft in Play. Remove it from the draft first."
+              : "This uploaded file no longer exists; it may have been removed already. Reload the page.",
         });
       }
       return c.body(null, 204);
@@ -67,6 +67,6 @@ export function stagingRoutes(deps: AppDeps) {
 
 function detailOf(reason: "unsafe-filename" | "empty-file"): string {
   return reason === "empty-file"
-    ? "The uploaded file is empty."
-    : "The file name may not be empty or contain a path separator.";
+    ? "This file is empty (0 bytes). Choose a file that has content."
+    : "This file's name is empty or contains a slash. Rename the file on your computer, then upload it again.";
 }

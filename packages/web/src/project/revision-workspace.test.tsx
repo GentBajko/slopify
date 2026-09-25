@@ -4,6 +4,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { afterEach, expect, it, vi } from "vitest";
+import { unreachable } from "@/http";
 import { jsonAnswer, renderApp, testDeps } from "@/test-app";
 import { revisionView } from "./revision-fixture.js";
 import type { EditorProps } from "./revision-workspace.js";
@@ -161,7 +162,7 @@ it("retries a transport failure with the original idempotency key", async () => 
   await user.clear(title);
   await user.type(title, "Changed");
   await user.click(screen.getByRole("button", { name: "Save changes" }));
-  await screen.findByText("Connection lost");
+  await screen.findByText(unreachable);
   await user.click(screen.getByRole("button", { name: "Save changes" }));
   await waitFor(() => expect(keys.length).toBe(2));
   expect(keys[0]).toBe(keys[1]);
@@ -348,9 +349,7 @@ it.each(["transport", "readiness", "stale-preview", "conflict"] as const)(
     const review = screen.getByRole("region", { name: "Review affected rebuild" });
     const alert = await within(review).findByRole("alert");
     expect(alert.textContent).toContain(
-      failure === "transport"
-        ? "Start response lost"
-        : "Choose an available model before rebuilding.",
+      failure === "transport" ? unreachable : "Choose an available model before rebuilding.",
     );
     await waitFor(() => expect(document.activeElement).toBe(alert));
     expect(acknowledgement instanceof HTMLInputElement && acknowledgement.checked).toBe(true);

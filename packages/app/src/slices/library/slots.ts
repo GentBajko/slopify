@@ -136,7 +136,7 @@ function body(
   }
   const prompt = snapshotPrompt(db, snapshot, kind, name);
   if (prompt === undefined) {
-    missing.push({ field, message: `That ${kind} prompt no longer exists; pick another.` });
+    missing.push({ field, message: `That ${kind} prompt was deleted. Choose another.` });
     return;
   }
   into.push({ key, body: prompt.body });
@@ -156,7 +156,7 @@ function pickEntry(
   if (entry === undefined) {
     missing.push({
       field: category,
-      message: `That ${category} entry no longer exists; pick another.`,
+      message: `That ${category} entry was deleted. Choose another.`,
     });
   }
   return entry;

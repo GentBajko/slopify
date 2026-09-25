@@ -131,7 +131,7 @@ describe("saveSettings", () => {
 
     expect(result).toEqual({
       ok: false,
-      fields: [{ field: "appearance", message: "Pick System, Light or Dark." }],
+      fields: [{ field: "appearance", message: "Choose System, Light or Dark." }],
     });
   });
 
@@ -159,7 +159,7 @@ describe("saveSettings", () => {
   });
 });
 
-const gapMessage = `The silence gap is a whole number of seconds between 0 and ${String(silenceGapSecondsMax)}.`;
+const gapMessage = `Enter a whole number of seconds between 0 and ${String(silenceGapSecondsMax)}.`;
 
 function storedWarning(key: string): string {
   return `setting ${key} is not a value this build understands; using the default`;

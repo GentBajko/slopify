@@ -111,7 +111,10 @@ it("skips a later occurrence until every project from the prior dispatch is term
         .all(scheduleId),
     ).toEqual([
       { status: "succeeded", error: null },
-      { status: "skipped", error: "Skipped because another occurrence is still running." },
+      {
+        status: "skipped",
+        error: "Skipped because the previous run of this schedule was still going.",
+      },
     ]);
 
     h.deps.db
@@ -272,7 +275,10 @@ it("reports a failed finalization and recovers its running occurrence on the nex
         status: "failed",
         error: "The previous schedule tick could not record this run's result.",
       },
-      { status: "skipped", error: "Skipped because another occurrence is still running." },
+      {
+        status: "skipped",
+        error: "Skipped because the previous run of this schedule was still going.",
+      },
     ]);
   } finally {
     h.close();

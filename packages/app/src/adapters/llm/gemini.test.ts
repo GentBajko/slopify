@@ -195,7 +195,7 @@ it("stops Gemini's non-newline OAuth prompt without exposing its URL or retrying
   });
   await expect(drain(run)).rejects.toMatchObject({
     fault: { kind: "missing_key" },
-    message: expect.stringContaining("Gemini CLI needs sign-in"),
+    message: expect.stringContaining("The Gemini CLI is not signed in"),
   });
   expect(killed).toBe(true);
 });
@@ -214,7 +214,7 @@ it("makes Gemini's license denial terminal with actionable guidance", async () =
   await expect(drain(one.run)).rejects.toMatchObject({
     fault: { kind: "unsupported" },
     message:
-      "Gemini CLI access was denied by Google's license check (#3501). Update Gemini CLI and sign in again. For a managed account, contact your administrator to request a license.",
+      "Google refused the Gemini CLI because the signed-in account has no licence for it (#3501). Update the Gemini CLI, run gemini in a terminal to sign in again, then use Retry stage; for a work or school account, ask your administrator for a Gemini licence.",
   });
   expect(one.killed()).toBe(1);
   expect(existsSync(one.options()?.cwd ?? "")).toBe(false);

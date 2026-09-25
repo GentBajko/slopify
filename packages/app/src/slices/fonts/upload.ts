@@ -43,7 +43,9 @@ export async function uploadFont(paths: Paths, input: FontUpload): Promise<FontU
   const root = join(paths.dataDir, "fonts");
   await mkdir(root, { recursive: true, mode: 0o700 });
   if (!(await lstat(root)).isDirectory())
-    throw new Error("The font storage directory is unavailable.");
+    throw new Error(
+      `Slopify can't save uploaded fonts because ${root} is not a folder. Move or rename that file, then upload the font again.`,
+    );
   const temporary = join(root, `.upload-${randomUUID()}`);
   try {
     await writeFile(temporary, input.content, { mode: 0o600, flag: "wx" });

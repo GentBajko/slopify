@@ -60,7 +60,8 @@ export function revisionFolderRoutes(deps: AppDeps) {
         return problem(c, {
           status: 403,
           title: titleOf(403),
-          detail: "Open folders from Slopify itself.",
+          detail:
+            "For your safety, folders can only be opened from the Slopify page itself. Open Slopify and try again there.",
         });
       const { id: projectId, revisionId, recordId } = c.req.valid("param");
       const result = findRevisionDownload(deps, projectId, revisionId, recordId);
@@ -76,8 +77,8 @@ function unavailable(c: Context, reason: string): Response {
     title: titleOf(404),
     detail:
       reason === "missing-file"
-        ? "This retained file is no longer on disk. Review the affected rebuild to recreate it."
-        : "The retained file is unavailable.",
+        ? "This file was deleted or moved from the project folder. In the Edit tab, use Rebuild affected outputs to make it again."
+        : "This file is no longer part of the project. Reload the page to see its current files.",
     extensions: { reason },
   });
 }

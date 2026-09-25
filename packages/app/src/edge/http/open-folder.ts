@@ -37,7 +37,8 @@ export function openFolderRoutes(deps: AppDeps) {
         return problem(c, {
           status: 403,
           title: titleOf(403),
-          detail: "Open folders from Slopify itself.",
+          detail:
+            "For your safety, folders can only be opened from the Slopify page itself. Open Slopify and try again there.",
         });
       }
       const { id } = c.req.valid("param");
@@ -57,7 +58,7 @@ export function openFolderRoutes(deps: AppDeps) {
           status: 404,
           title: titleOf(404),
           detail:
-            "No saved file was found for this output. Re-run the stage if the file was removed.",
+            "This output's file was deleted or moved. Use Re-run section on the project page to make it again.",
         });
       }
       return replyForFolder(c, deps, id, download.download.path);

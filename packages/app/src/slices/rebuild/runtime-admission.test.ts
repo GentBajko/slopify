@@ -73,7 +73,9 @@ describe("initial revision admission", () => {
         ),
       ).toBe(true);
       expect(JSON.parse(String(planner.recipe_context))).toEqual(catalogue);
-      expect(() => admitInitialRevision(h.deps, base.view, catalogue)).toThrow("explicit rebuild");
+      expect(() => admitInitialRevision(h.deps, base.view, catalogue)).toThrow(
+        "this project was started twice",
+      );
       expect(h.deps.db.prepare("SELECT COUNT(*) AS n FROM revision_work").get()?.n).toBe(
         works.length,
       );

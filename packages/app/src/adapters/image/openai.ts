@@ -3,6 +3,7 @@ import { redact } from "../../kernel/log.js";
 import type { GeneratedImage, ImagePort, ImageRequest } from "../../kernel/ports/image.js";
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { httpFailure, missingKey, noImage, refusedImage, unreadable } from "../explain.js";
 import { retryAfter } from "../retry-after.js";
 import { describeBytes, sniffImage } from "./bytes.js";
 import { discoverOpenAiImages } from "./models.js";
@@ -90,7 +91,7 @@ export function openAiImage(deps: OpenAiImageDeps): ImagePort {
       }
       const first = parse(await response.text()).data[0]?.b64_json;
       if (first === undefined || first === null || first === "") {
-        throw providerError({ kind: "other", message: "OpenAI answered with no image" });
+        throw providerError({ kind: "other", message: noImage("OpenAI") });
       }
       return decode(first);
     },
@@ -106,7 +107,7 @@ function decode(b64: string): GeneratedImage {
   if (mime === undefined) {
     throw providerError({
       kind: "other",
-      message: `OpenAI's image decoded to ${describeBytes(bytes)} rather than a PNG or a JPEG`,
+      message: `OpenAI sent back something that is not a PNG or JPEG image (${describeBytes(bytes)}). Use Retry stage; if it keeps happening, choose another image model in the Providers section of Edit project.`,
     });
   }
   return { bytes, mime };
@@ -116,7 +117,7 @@ function keyOf(deps: OpenAiImageDeps): string {
   // `missing_key`, not `auth`, because that rule makes it terminal.
   const key = deps.key();
   if (key === undefined || key === "") {
-    throw providerError({ kind: "missing_key", message: "no OpenAI image key is stored" });
+    throw providerError({ kind: "missing_key", message: missingKey("OpenAI") });
   }
   return key;
 }
@@ -146,9 +147,18 @@ async function failure(response: Response): Promise<Error> {
     parsed.success ? parsed.data.error.message : text.trim() || response.statusText,
   );
   const retryAfterMs = retryAfter(response.headers.get("retry-after"));
+  const kind = kindOf(response.status, parsed.success ? parsed.data.error.code : undefined);
   return providerError({
-    kind: kindOf(response.status, parsed.success ? parsed.data.error.code : undefined),
-    message: `OpenAI answered ${String(response.status)}: ${message}`,
+    kind,
+    message:
+      kind === "refusal"
+        ? refusedImage("OpenAI", message)
+        : httpFailure({
+            provider: "OpenAI",
+            status: response.status,
+            detail: message,
+            subject: "image request",
+          }),
     ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
   });
 }
@@ -158,7 +168,7 @@ function parse(text: string): z.infer<typeof generated> {
   if (!parsed.success) {
     throw providerError({
       kind: "other",
-      message: "OpenAI's answer was not in the shape this app can read",
+      message: unreadable("OpenAI"),
     });
   }
   return parsed.data;

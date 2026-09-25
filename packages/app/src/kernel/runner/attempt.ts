@@ -153,8 +153,8 @@ function classify(
       kind: "timeout",
       message:
         opts.streaming === true
-          ? `the provider sent nothing for ${seconds} s`
-          : `the provider did not answer within ${seconds} s`,
+          ? `The ${callee[opts.kind]} sent nothing for ${seconds} seconds, so Slopify stopped waiting. It may be overloaded: wait a few minutes, then use Retry stage.`
+          : `The ${callee[opts.kind]} did not answer within ${seconds} seconds. It may be overloaded: wait a few minutes, then use Retry stage, or choose another model in the Providers section of Edit project.`,
     });
   }
   if (isProviderError(error)) {
@@ -166,10 +166,36 @@ function classify(
       ...(error.fault.retryAfterMs === undefined ? {} : { retryAfterMs: error.fault.retryAfterMs }),
     });
   }
+  if (unreachable(error)) {
+    // `fetch` names only itself; the cause's code (ENOTFOUND, ECONNREFUSED) is the clue.
+    const code = causeCode(error);
+    return providerError({
+      kind: "other",
+      message: `Slopify could not reach the ${callee[opts.kind]} over the internet${code === undefined ? "" : ` (${code})`}. Check your internet connection, firewall or VPN, then use Retry stage.`,
+    });
+  }
   return providerError({
     kind: "other",
     message: redact(error instanceof Error ? error.message : String(error)),
   });
+}
+
+// What the user calls the other end of each kind of call.
+const callee: Readonly<Record<ProviderCallKind, string>> = {
+  llm: "AI model",
+  tts: "narration provider",
+  image: "image provider",
+};
+
+// Node's `fetch` rejects a request that never reached the server with this TypeError.
+function unreachable(error: unknown): error is TypeError {
+  return error instanceof TypeError && error.message === "fetch failed";
+}
+
+function causeCode(error: Error): string | undefined {
+  const cause: unknown = error.cause;
+  if (typeof cause !== "object" || cause === null || !("code" in cause)) return undefined;
+  return typeof cause.code === "string" && /^[A-Z_]+$/.test(cause.code) ? cause.code : undefined;
 }
 
 interface Deadline {

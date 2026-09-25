@@ -21,8 +21,8 @@ export function tutorialRoutes(deps: Pick<AppDeps, "db">) {
           title: titleOf(409),
           detail:
             result.reason === "unreadable"
-              ? "Saved tutorial progress cannot be read. Choose Restart tutorial to reset it."
-              : "Tutorial progress changed. Reload the saved progress before trying again.",
+              ? "Your saved tutorial progress could not be read. Choose Restart tutorial to start it again."
+              : "Your tutorial progress changed in another tab or window. Reload the page, then try again.",
           extensions: { reason: result.reason },
         });
       return c.json(result.value);

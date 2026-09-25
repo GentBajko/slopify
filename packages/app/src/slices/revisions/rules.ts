@@ -66,16 +66,25 @@ export function validateCues(cues: readonly ManualCue[], duration: number): read
   for (const [index, cue] of cues.entries()) {
     const field = `content.subtitleCues.cues.${index}`;
     if (seen.has(cue.id))
-      fields.push({ field: `${field}.id`, message: "Caption IDs must be unique." });
+      fields.push({
+        field: `${field}.id`,
+        message: "Two captions have the same ID. Reload the page and edit the captions again.",
+      });
     seen.add(cue.id);
     if (cue.text.trim() === "")
-      fields.push({ field: `${field}.text`, message: "Caption text is required." });
+      fields.push({
+        field: `${field}.text`,
+        message: "Enter the caption text, or delete this caption.",
+      });
     if (!Number.isFinite(cue.start) || cue.start < end)
-      fields.push({ field: `${field}.start`, message: "Start must follow the previous caption." });
+      fields.push({
+        field: `${field}.start`,
+        message: "This caption must start after the previous one ends.",
+      });
     if (!Number.isFinite(cue.end) || cue.end <= cue.start || cue.end > duration)
       fields.push({
         field: `${field}.end`,
-        message: "End must follow start and fit the narration.",
+        message: "This caption must end after it starts and before the narration ends.",
       });
     end = cue.end;
   }
@@ -97,7 +106,7 @@ export function validateTemplateIntent(
         fields.push({
           field: `content.promptTemplates.${key}`,
           message:
-            "Choose the raw template or explicitly keep the current prompt before changing keywords.",
+            "This prompt was edited by hand, so new keywords will not change it. Switch it back to its template, or choose to keep your edited prompt, first.",
         });
     }
     for (const [key, image] of Object.entries(base.revision.content.imageDefinitions)) {
@@ -112,7 +121,7 @@ export function validateTemplateIntent(
         fields.push({
           field: `content.imageDefinitions.${key}.templateKey`,
           message:
-            "Choose the raw template or explicitly keep the current image prompt before changing keywords.",
+            "This image prompt was edited by hand, so new keywords will not change it. Switch it back to its template, or choose to keep your edited prompt, first.",
         });
     }
   }
@@ -128,7 +137,7 @@ export function validateTemplateIntent(
     )
       fields.push({
         field: `content.imageDefinitions.${key}.templateKey`,
-        message: "The linked raw image template is missing.",
+        message: "The prompt template this image uses is missing. Choose another image prompt.",
       });
   return fields;
 }
@@ -168,13 +177,13 @@ export function validateNarrationIntent(
     if (!isDeepStrictEqual(value, base.revision.content.narrationOverrides[key]) && !keys.has(key))
       fields.push({
         field: `content.narrationOverrides.${key}`,
-        message: "Choose an active narration group or entry.",
+        message: "This narration part no longer exists. Reload the page and choose again.",
       });
   for (const [index, upload] of (edit.uploads ?? []).entries())
     if (upload.destination.kind === "narration" && !keys.has(upload.destination.key))
       fields.push({
         field: `uploads.${index}.destination.key`,
-        message: "Choose an active narration group or entry.",
+        message: "This narration part no longer exists. Reload the page and choose again.",
       });
   return fields;
 }

@@ -62,7 +62,7 @@ export async function checkDraftReadiness(
         message:
           provider?.readiness.kind === "cli" && provider.readiness.issue
             ? provider.readiness.issue
-            : "Configure this provider before starting.",
+            : "Set up this provider in Settings → Providers before starting.",
       });
       continue;
     }
@@ -76,12 +76,12 @@ export async function checkDraftReadiness(
     if (result === "missing")
       fields.push({
         field: `${c.field}.model`,
-        message: "Choose an available model before starting.",
+        message: "This model is no longer available. Choose another model.",
       });
     else if (result === "thinking")
       fields.push({
         field: `${c.field}.thinking`,
-        message: "Choose a supported thinking setting.",
+        message: "This model does not support that thinking setting. Choose another.",
       });
   }
   return { fields: [...fields, ...localDraftReadiness(deps, runs, providers)], providers };
@@ -97,10 +97,14 @@ export function localDraftReadiness(
     if (cliPathChanged(deps.db, provider))
       fields.push({
         field: `${c.field}.cliPath`,
-        message: "The configured CLI command changed. Check readiness again.",
+        message:
+          "This provider's command-line tool changed in Settings → Providers. Choose Review and start again.",
       });
     if (provider?.readiness.kind === "keyed" && !hasKey(deps.db, provider.id))
-      fields.push({ field: c.field, message: "Save the provider key before starting." });
+      fields.push({
+        field: c.field,
+        message: "Add this provider's API key in Settings → Providers before starting.",
+      });
   }
   for (const { draft } of runs)
     if (
@@ -110,6 +114,9 @@ export function localDraftReadiness(
         (v) => v.provider === draft.audio?.provider && v.voiceId === draft.audio.voice,
       )
     )
-      fields.push({ field: "audio.voice", message: "Choose a saved voice before starting." });
+      fields.push({
+        field: "audio.voice",
+        message: "Choose one of your saved voices. Add voices in Settings → Voices.",
+      });
   return fields;
 }

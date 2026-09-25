@@ -16,7 +16,10 @@ export function migrate(db: DatabaseSync, clock: Clock): void {
   const newest = Math.max(0, ...applied);
   const newestKnown = Math.max(0, ...known);
   if (newest > newestKnown) {
-    throw new Error(`database schema ${newest} is newer than this app knows (${newestKnown})`);
+    throw new Error(
+      `Your Slopify database was last used by a newer version of Slopify (database schema ${newest} is newer than this app knows (${newestKnown})). ` +
+        "Update Slopify and start it again: npx @gentbajko/slopify@latest (or pull the latest Docker image). Your data was not changed.",
+    );
   }
 
   for (const [index, file] of files.entries()) {

@@ -176,7 +176,10 @@ it("records a missed occurrence without dispatching when skip is selected", asyn
       h.deps.db
         .prepare("SELECT status,error FROM schedule_runs WHERE schedule_id=?")
         .get(created.value.id),
-    ).toEqual({ status: "skipped", error: "Skipped because the app missed this occurrence." });
+    ).toEqual({
+      status: "skipped",
+      error: "Skipped because Slopify was not running at the scheduled time.",
+    });
     expect(h.events).toEqual([]);
   } finally {
     h.close();

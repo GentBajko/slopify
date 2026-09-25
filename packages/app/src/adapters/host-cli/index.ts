@@ -23,6 +23,9 @@ import {
   readHostBytes,
 } from "./transport.js";
 
+const tooBigForHost =
+  "Slopify could not send this request to the host helper because it is larger than, or shaped differently from, what the helper accepts. Make the inputs shorter in Edit project, then use Retry stage; if it happens again, use Download diagnostics in Settings and report it.";
+
 export function createHostCliClient(options: {
   readonly directory: string | undefined;
 }): HostCliPorts {
@@ -112,7 +115,10 @@ export function createHostCliClient(options: {
           ...(req.webSearch === undefined ? {} : { webSearch: req.webSearch }),
         });
         if (!parsed.success)
-          throw providerError({ kind: "unsupported", message: "Invalid host LLM request." });
+          throw providerError({
+            kind: "unsupported",
+            message: tooBigForHost,
+          });
         await ready(req.signal);
         const response = await request({
           path: `/v1/llm/${id}`,
@@ -143,7 +149,10 @@ export function createHostCliClient(options: {
           aspect: req.aspect,
         });
         if (!parsed.success)
-          throw providerError({ kind: "unsupported", message: "Invalid host image request." });
+          throw providerError({
+            kind: "unsupported",
+            message: tooBigForHost,
+          });
         await ready(req.signal);
         const response = await request({
           path: "/v1/image",

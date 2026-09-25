@@ -97,7 +97,9 @@ function attachmentsOf(deps: DraftDeps, id: string): readonly DraftAttachment[] 
       state,
       stagedFileId: invalid ? null : row.staged_file_id,
       bytes: invalid ? 0 : (staged?.bytes ?? 0),
-      error: invalid ? "Upload is missing or incomplete. Reattach the file." : row.error,
+      error: invalid
+        ? "This file is missing or did not finish uploading. Attach it again."
+        : row.error,
     };
   });
 }

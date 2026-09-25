@@ -29,7 +29,7 @@ import type { Output, StagedFile } from "@app/slices/storage/model.js";
 import type { Usage } from "@app/slices/telemetry/usage.js";
 import { hc } from "hono/client";
 import type { Problem, SaveResult } from "./http.js";
-import { errorOf, failure, problemOf, read, saved } from "./http.js";
+import { errorOf, failure, problemOf, reachingFetch, read, saved } from "./http.js";
 
 export type {
   Appearance,
@@ -142,9 +142,10 @@ export interface Api {
 }
 
 export function createApi(origin: string, fetchImpl: typeof fetch): Api {
+  const reaching = reachingFetch(fetchImpl);
   return {
-    client: hc<AppType>(`${origin}/api`, { fetch: fetchImpl }),
-    fetch: fetchImpl,
+    client: hc<AppType>(`${origin}/api`, { fetch: reaching }),
+    fetch: reaching,
     origin,
   };
 }

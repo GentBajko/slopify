@@ -7,10 +7,16 @@ export function plainText(markdown: string): string {
   const tree = processor.runSync(processor.parse(markdown));
   const paragraphs = tree.children
     .map((node) => {
-      if (node.type !== "paragraph") throw new Error("Expected stripped prose paragraphs.");
+      if (node.type !== "paragraph")
+        throw new Error(
+          "Slopify hit an internal error (the article couldn't be turned into plain text). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+        );
       return node.children
         .map((child) => {
-          if (child.type !== "text") throw new Error("Expected stripped prose text.");
+          if (child.type !== "text")
+            throw new Error(
+              "Slopify hit an internal error (the article couldn't be turned into plain text). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+            );
           return child.value;
         })
         .join("");

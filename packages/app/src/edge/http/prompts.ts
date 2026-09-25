@@ -65,7 +65,7 @@ export function refused(c: Context, failure: SaveFailure, noun: "prompt" | "entr
       return problem(c, {
         status: 400,
         title: titleOf(400),
-        detail: `This ${noun} cannot be saved; the listed fields need attention.`,
+        detail: `This ${noun} cannot be saved yet. Fix the highlighted fields and try again.`,
         extensions: { fields: failure.fields },
       });
     // The name is refused against a row that exists, and the form marks the field.
@@ -73,16 +73,21 @@ export function refused(c: Context, failure: SaveFailure, noun: "prompt" | "entr
       return problem(c, {
         status: 409,
         title: titleOf(409),
-        detail: `Another ${noun} already has this name.`,
+        detail: `Another ${noun} already has this name. Choose a different name.`,
         extensions: {
-          fields: [{ field: "name", message: `Another ${noun} already has this name.` }],
+          fields: [
+            {
+              field: "name",
+              message: `Another ${noun} already has this name. Choose a different name.`,
+            },
+          ],
         },
       });
     case "not-found":
       return problem(c, {
         status: 404,
         title: titleOf(404),
-        detail: `No ${noun} has that id.`,
+        detail: `This ${noun} no longer exists; it may have been deleted. Go back to the Library to pick another.`,
       });
   }
 }

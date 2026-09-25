@@ -293,7 +293,7 @@ describe("buildRegistry", () => {
           messages: [{ role: "user", content: "hello" }],
         }),
       ),
-    ).rejects.toThrow("no OpenRouter key is stored");
+    ).rejects.toThrow("No OpenRouter API key is saved");
 
     expect(attempts.rows).toHaveLength(1);
     expect(attempts.rows[0]?.outcome).toBe("missing_key");
@@ -320,7 +320,9 @@ describe("buildRegistry", () => {
       "2026-09-02T10:00:00.000Z",
     );
 
-    await expect(drain(built.llm("openrouter"))).rejects.toThrow("OpenRouter answered 400");
+    await expect(drain(built.llm("openrouter"))).rejects.toThrow(
+      "OpenRouter rejected the request (error 400",
+    );
 
     expect(sent).toEqual(["Bearer later-key"]);
     db.close();

@@ -64,7 +64,7 @@ export async function failure(response: Response): Promise<Error> {
 // a response body may be read only once.
 export function errorOf(response: Response, problem: Problem | undefined): Error {
   if (problem === undefined) {
-    return new Error(`The app answered ${String(response.status)} with no problem document.`);
+    return new Error(unexplained(response.status));
   }
   const fields = problem.fields ?? [];
   const listed = fields.map((field) => `${field.field}: ${field.message}`).join("; ");
@@ -77,4 +77,55 @@ export async function problemOf(response: Response): Promise<Problem | undefined
     return undefined;
   }
   return (await response.json()) as Problem;
+}
+
+// Said when the browser could not reach the server at all: the app stopped, its container is
+// restarting, or an update is replacing it. The request never got an answer to explain.
+export const unreachable =
+  "Slopify isn't responding. If you're running it in Docker, check the container is running, then reload this page.";
+
+// A reply that is not the server's own problem document: a gateway in front of a stopped app,
+// or a fault that escaped before the server could write a sentence for it.
+function unexplained(status: number): string {
+  if (status === 502 || status === 503 || status === 504) {
+    return unreachable;
+  }
+  return `Slopify hit an unexpected error (${String(status)}). Reload the page and try again. If it keeps happening, open Settings and use Download diagnostics.`;
+}
+
+// `fetch` rejects with a bare TypeError ("Failed to fetch", "Load failed", "NetworkError ...")
+// when nothing answered. The error stays a TypeError so callers that tell a lost connection from
+// a refusal still can; only its sentence changes. Aborts are DOMExceptions and pass through.
+export function reachingFetch(inner: typeof fetch): typeof fetch {
+  return async (input, init) => {
+    try {
+      return await inner(input, init);
+    } catch (cause) {
+      if (cause instanceof TypeError) {
+        throw new TypeError(unreachable, { cause });
+      }
+      throw cause;
+    }
+  };
+}
+
+// Joins a message that may or may not end in a full stop to the sentence that follows it.
+export function sentence(message: string): string {
+  const trimmed = message.trim();
+  return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+}
+
+// Said when a reply arrived but is not shaped the way this page expects, which in practice
+// means the tab is older than the server that answered it (an update landed while it was open).
+export const unrecognised =
+  "Slopify answered in a way this page doesn't understand, usually because Slopify was updated while the page was open. Reload the page and try again.";
+
+// Parses a successful reply, turning a schema mismatch into the sentence above rather than a
+// dump of validation paths. The original error stays on `cause` for the console.
+export function understood<T>(schema: { parse: (raw: unknown) => T }, raw: unknown): T {
+  try {
+    return schema.parse(raw);
+  } catch (cause) {
+    throw new Error(unrecognised, { cause });
+  }
 }

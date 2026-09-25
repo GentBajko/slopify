@@ -68,11 +68,11 @@ export function createModelCatalog(deps: CatalogDeps): {
             allowsCustom: allowsCustomModel(provider),
             warning: local
               ? provider === "codex-image"
-                ? "Could not check the Codex image capability. Refresh after checking the CLI."
-                : "Could not discover models from this CLI. Enter an exact model ID manually or refresh."
+                ? "Slopify could not check whether Codex CLI can make images. Make sure Codex CLI is installed and signed in, then refresh the list."
+                : "Slopify could not get the model list from this command-line tool. Check it is installed and signed in, then refresh the list, or type an exact model ID manually."
               : saved === undefined
-                ? "Could not load the model list. Showing bundled choices; refresh to try again."
-                : "Could not refresh the model list. Showing the last loaded choices.",
+                ? "Slopify could not load this provider's model list, so it is showing its built-in choices. Check your internet connection and API key, then refresh the list."
+                : "Slopify could not update this provider's model list, so it is showing the last loaded list. Check your internet connection and API key, then refresh again.",
           };
           lifetime = retryMs;
         }

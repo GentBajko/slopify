@@ -6,6 +6,7 @@ import { redact } from "../../kernel/log.js";
 import type { LlmCompletion, LlmEvent, LlmPort, Usage } from "../../kernel/ports/llm.js";
 import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { cliCheck, cliReported } from "../explain.js";
 import { cliLoginError } from "./cli-login-error.js";
 import { nodeCodexModels } from "./codex-models.js";
 import {
@@ -23,6 +24,7 @@ import {
   endedWithout,
   promptOf,
   stopCliRun,
+  stuckCli,
 } from "./run-cli.js";
 import { lines } from "./sse-lines.js";
 
@@ -206,7 +208,11 @@ export function codexLlm(deps: CodexDeps): LlmPort {
           if (login) throw login;
           throw providerError({
             kind: "other",
-            message: redact(cliShaped(binary, turnFailed, event.value).error.message),
+            message: cliReported(
+              binary,
+              redact(cliShaped(binary, turnFailed, event.value).error.message),
+              cliCheck(binary),
+            ),
           });
         }
         if (event.type === "error") {
@@ -214,7 +220,11 @@ export function codexLlm(deps: CodexDeps): LlmPort {
           if (login) throw login;
           throw providerError({
             kind: "other",
-            message: redact(cliShaped(binary, errorEvent, event.value).message),
+            message: cliReported(
+              binary,
+              redact(cliShaped(binary, errorEvent, event.value).message),
+              cliCheck(binary),
+            ),
           });
         }
       }
@@ -238,10 +248,7 @@ export function codexLlm(deps: CodexDeps): LlmPort {
     if (login) throw login;
     throw providerError({
       kind: "other",
-      message:
-        ended === undefined
-          ? `the ${binary} CLI did not stop after forced termination`
-          : endedWithout(binary, ended, run.stderr()),
+      message: ended === undefined ? stuckCli(binary) : endedWithout(binary, ended, run.stderr()),
     });
   }
 

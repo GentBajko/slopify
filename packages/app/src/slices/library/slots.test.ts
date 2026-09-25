@@ -226,10 +226,10 @@ describe("pickTemplates", () => {
     );
 
     expect(picked.missing).toEqual([
-      { field: "articlePrompt", message: "That article prompt no longer exists; pick another." },
+      { field: "articlePrompt", message: "That article prompt was deleted. Choose another." },
       {
         field: "imagePrompts.0.name",
-        message: "That image prompt no longer exists; pick another.",
+        message: "That image prompt was deleted. Choose another.",
       },
     ]);
   });
@@ -239,7 +239,7 @@ describe("pickTemplates", () => {
 
     expect(
       pickTemplates(deps.db, draft({ outro: { name: "Gone", mode: "text" } })).missing,
-    ).toEqual([{ field: "outro", message: "That outro entry no longer exists; pick another." }]);
+    ).toEqual([{ field: "outro", message: "That outro entry was deleted. Choose another." }]);
   });
 
   // An unpicked prompt is admission's rule to state, so the field is marked once.

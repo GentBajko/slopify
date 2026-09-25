@@ -70,7 +70,10 @@ export function RevisionUpload({
         await waitForCopy(operation.signal);
         const current = (await listStaged(api)).files.find((one) => one.id === staged.id);
         operation.signal.throwIfAborted();
-        if (current === undefined) throw new Error("The upload failed before staging completed.");
+        if (current === undefined)
+          throw new Error(
+            "The upload stopped before the file finished copying. Choose the file again.",
+          );
         staged = current;
       }
       ready.current(staged);
@@ -84,11 +87,11 @@ export function RevisionUpload({
         try {
           await discardStaged(api, stagedId);
         } catch (cleanupFailure) {
-          message += ` Cleanup failed: ${cleanupFailure instanceof Error ? cleanupFailure.message : String(cleanupFailure)}`;
+          message += ` The partial upload couldn't be removed (${cleanupFailure instanceof Error ? cleanupFailure.message : String(cleanupFailure)}); use Clean orphan files in Settings → Backup & storage to clear it.`;
         }
       }
       if (mounted.current) setError(message);
-      else if (message.includes("Cleanup failed:")) console.error(message);
+      else if (message.includes("partial upload couldn't be removed")) console.error(message);
     } finally {
       if (controller.current === operation) {
         controller.current = undefined;

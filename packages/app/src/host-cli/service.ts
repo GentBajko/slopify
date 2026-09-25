@@ -50,10 +50,15 @@ export async function privateRead(path: string, uid: number): Promise<string | u
     try {
       const stat = await file.stat();
       if (!stat.isFile() || stat.uid !== uid || stat.size > 64 * 1024 || (stat.mode & 0o022) !== 0)
-        throw new Error("Unsafe host helper configuration.");
+        throw new Error(
+          `${path} must be a regular file owned by you that others can't write to. Fix it (chmod 600 ${path}) or delete it, then run the launcher again.`,
+        );
       const buffer = Buffer.alloc(64 * 1024 + 1);
       const { bytesRead } = await file.read(buffer, 0, buffer.length, 0);
-      if (bytesRead > 64 * 1024) throw new Error("Host configuration too large.");
+      if (bytesRead > 64 * 1024)
+        throw new Error(
+          `${path} is too large to be a Slopify file. Delete it and run the launcher again.`,
+        );
       return buffer.subarray(0, bytesRead).toString("utf8");
     } finally {
       await file.close();
@@ -119,19 +124,26 @@ async function waitHealth(
       return health;
     await delay(100, undefined, { signal: options.signal });
   }
-  throw new Error("Host helper did not become ready within 30 seconds.");
+  throw new Error(
+    `The Slopify host helper did not start within 30 seconds. See why with: systemctl --user status ${hostUnit}`,
+  );
 }
 export async function ensureHostService(options: HostServiceOptions): Promise<void> {
   const { root, env, runner, signal, uid } = options;
   const environment = JSON.stringify(hostEnvironment(env));
   const directory = join(env.XDG_CONFIG_HOME ?? join(env.HOME ?? "", ".config"), "systemd/user");
-  if (!isAbsolute(directory)) throw new Error("Host configuration directory must be absolute.");
+  if (!isAbsolute(directory))
+    throw new Error(
+      "Could not find your systemd user folder because HOME (or XDG_CONFIG_HOME) is not a full path. Set it and run the launcher again.",
+    );
   const unitPath = join(directory, hostUnit);
   const configPath = join(root, "host-environment.json");
   const previous = await privateRead(unitPath, uid);
   const previousConfig = await privateRead(configPath, uid);
   if (previous !== undefined && !previous.startsWith(`${marker}\n`))
-    throw new Error("An existing host helper service is not owned by Slopify. It was not changed.");
+    throw new Error(
+      `A service file ${unitPath} already exists and is not owned by Slopify, so it was left alone. Rename or remove it, or start with --host-cli=off to use API keys only.`,
+    );
   const unit = serviceUnit(options.node, options.entry, root);
   const run = async (
     file: string,
@@ -142,7 +154,7 @@ export async function ensureHostService(options: HostServiceOptions): Promise<vo
     const result = await runner.exec(file, args, commandSignal);
     if (required && result.code !== 0)
       throw new Error(
-        `Host helper setup failed (${file}). The existing container was not changed.`,
+        `Host helper setup failed at "${[file, ...args.slice(0, 2)].join(" ")}"${result.stderr?.trim() ? ` (${result.stderr.trim().split("\n").at(-1)?.slice(0, 300)})` : ""}. Check that systemd user services work (systemctl --user status), or start with --host-cli=off to use API keys only. Your existing container was not changed.`,
       );
     return result;
   };
@@ -150,7 +162,9 @@ export async function ensureHostService(options: HostServiceOptions): Promise<vo
     await run("systemctl", ["--user", "show", hostUnit, "--property=FragmentPath", "--value"])
   ).stdout.trim();
   if (fragment && fragment !== unitPath)
-    throw new Error("An existing host helper service is not owned by this Slopify installation.");
+    throw new Error(
+      `A ${hostUnit} service from somewhere else (${fragment}) is already installed and is not owned by this Slopify, so it was left alone. Remove it, or start with --host-cli=off to use API keys only.`,
+    );
   const active =
     (await run("systemctl", ["--user", "is-active", "--quiet", hostUnit], false)).code === 0;
   const wasEnabled =
@@ -158,7 +172,7 @@ export async function ensureHostService(options: HostServiceOptions): Promise<vo
   const current = await helperHealth(root, signal);
   if (active && (!previous || !current))
     throw new Error(
-      "The running host helper cannot be verified. Check its service before updating; no work was interrupted.",
+      `The Slopify host helper is running but not answering, so it was not replaced. Restart it (systemctl --user restart ${hostUnit}) and run the launcher again; no work was interrupted.`,
     );
   const linger = (
     await run("loginctl", ["show-user", String(uid), "-p", "Linger", "--value"])
@@ -180,12 +194,16 @@ export async function ensureHostService(options: HostServiceOptions): Promise<vo
       paused = true;
       await run("systemctl", ["--user", "kill", "--kill-whom=main", "--signal=SIGHUP", hostUnit]);
       if ((await waitHealth(options, false)).active !== 0)
-        throw new Error("The host helper is doing work. Wait for it to finish before updating.");
+        throw new Error(
+          "The host helper is doing work for Slopify right now. Wait for running projects to finish, then run the launcher again.",
+        );
     }
     await mkdir(directory, { recursive: true, mode: 0o700 });
     const directoryStat = await lstat(directory);
     if (!directoryStat.isDirectory() || directoryStat.isSymbolicLink() || directoryStat.uid !== uid)
-      throw new Error("Unsafe user service directory.");
+      throw new Error(
+        `${directory} is not a normal folder owned by your user, so Slopify can't add its service there. Fix its owner and run the launcher again.`,
+      );
     replaced = true;
     await privateWrite(configPath, environment);
     await privateWrite(unitPath, unit);
@@ -217,7 +235,7 @@ export async function ensureHostService(options: HostServiceOptions): Promise<vo
         await restore(["--user", "kill", "--kill-whom=main", "--signal=SIGUSR2", hostUnit]);
     } catch {
       throw new Error(
-        "Host helper setup failed and rollback needs attention. Check slopify-cli-bridge.service; the Docker container was not changed.",
+        `Host helper setup failed and Slopify could not fully undo it. Check the service with systemctl --user status ${hostUnit}; your Docker container was not changed.`,
       );
     }
     throw error;

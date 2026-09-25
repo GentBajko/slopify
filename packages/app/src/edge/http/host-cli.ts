@@ -83,7 +83,7 @@ type HostEnv = {
   Variables: { job: HostJob & { readonly holdStream: () => void } };
 };
 const unavailable =
-  "Host CLI operation did not finish reliably; its result may be uncertain. Review the affected rebuild before retrying.";
+  "The AI command-line tool on your computer stopped before it finished, so this result is uncertain. Check the section's outputs on the project page, then use Retry stage.";
 function fault(error: unknown, token: string): z.infer<typeof hostFaultSchema> {
   return {
     type: "error",
@@ -91,7 +91,7 @@ function fault(error: unknown, token: string): z.infer<typeof hostFaultSchema> {
     message: redact(
       isProviderError(error)
         ? error.message
-        : "Host helper operation failed. Check the host CLI and rerun the Docker launcher.",
+        : "The Slopify helper on your computer could not run the AI command-line tool. Check the tool is installed and signed in, then run the Slopify Docker launcher again.",
     )
       .replaceAll(token, "[redacted]")
       .slice(0, 4096),
@@ -105,7 +105,12 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
     const expected = Buffer.from(`Bearer ${token}`);
     if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected))
       return c.json(
-        { type: "error", kind: "unavailable", message: "Host helper authorization failed." },
+        {
+          type: "error",
+          kind: "unavailable",
+          message:
+            "The Slopify helper on your computer refused the connection. Run the Slopify Docker launcher again to reconnect it.",
+        },
         401,
       );
     c.header("Cache-Control", "no-store");
@@ -127,7 +132,8 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
         {
           type: "error",
           kind: "unavailable",
-          message: "The host helper is busy or restarting. Review the rebuild after it is ready.",
+          message:
+            "The Slopify helper on your computer is busy or restarting. Wait a moment, then use Retry stage.",
         },
         503,
       );
@@ -173,7 +179,15 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
     bodyLimit({
       maxSize: bridgeLimits.request,
       onError: (c) =>
-        c.json({ type: "error", kind: "unavailable", message: "Host request is too large." }, 413),
+        c.json(
+          {
+            type: "error",
+            kind: "unavailable",
+            message:
+              "Slopify hit an internal error (a request to the helper on your computer was too large). Try again; if it keeps happening, use Download diagnostics in Settings and report it.",
+          },
+          413,
+        ),
     }),
   );
   app.get("/v1/status/:provider", async (c) => {
@@ -182,7 +196,11 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
     const status = hostStatusSchema.parse(await ports.status(id.data));
     const text = JSON.stringify(status);
     if (Buffer.byteLength(text) > bridgeLimits.status)
-      throw providerError({ kind: "unavailable", message: "Host status exceeded its limit." });
+      throw providerError({
+        kind: "unavailable",
+        message:
+          "Slopify hit an internal error (the helper on your computer sent a status report that was too large). Try again; if it keeps happening, use Download diagnostics in Settings and report it.",
+      });
     return c.json(status);
   });
   app.get("/v1/models/:provider", async (c) => {
@@ -192,7 +210,11 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
       models: await (id.data === "codex-image" ? ports.image : ports.llm(id.data)).models(),
     });
     if (Buffer.byteLength(JSON.stringify(result)) > bridgeLimits.models)
-      throw providerError({ kind: "unavailable", message: "Host models exceeded their limit." });
+      throw providerError({
+        kind: "unavailable",
+        message:
+          "Slopify hit an internal error (the helper on your computer sent a model list that was too large). Try again; if it keeps happening, use Download diagnostics in Settings and report it.",
+      });
     return c.json(result);
   });
   app.post("/v1/llm/:provider", async (c) => {
@@ -220,11 +242,16 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
             clearTimeout(timer);
             timer = setTimeout(() => controller.abort(), 120_000);
             const parsed = hostFrameSchema.parse(event);
-            if (done || parsed.type === "error") throw new Error("Invalid provider stream.");
+            if (done || parsed.type === "error")
+              throw new Error(
+                "Slopify hit an internal error (the AI tool on your computer sent a reply Slopify could not read). Try again; if it keeps happening, use Download diagnostics in Settings and report it.",
+              );
             const frame = `${JSON.stringify(parsed)}\n`;
             total += Buffer.byteLength(frame);
             if (Buffer.byteLength(frame) > bridgeLimits.frame || total > bridgeLimits.stream)
-              throw new Error("Host stream exceeded its limit.");
+              throw new Error(
+                "Slopify hit an internal error (the AI tool on your computer sent a reply that was too large). Try again; if it keeps happening, use Download diagnostics in Settings and report it.",
+              );
             await output.write(frame);
             signal.throwIfAborted();
             done = parsed.type === "done";
@@ -259,7 +286,9 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
       const result = await ports.image.generate({ ...body.data, signal });
       if (signal.aborted) throw providerError({ kind: "unavailable", message: unavailable });
       if (result.bytes.byteLength > bridgeLimits.image || sniffImage(result.bytes) !== result.mime)
-        throw new Error("Invalid host image.");
+        throw new Error(
+          "Slopify hit an internal error (the image made on your computer was too large or not a valid image). Try again; if it keeps happening, use Download diagnostics in Settings and report it.",
+        );
       c.header("Content-Type", result.mime);
       c.header("Content-Length", String(result.bytes.byteLength));
       return c.body(new Uint8Array(result.bytes));
@@ -273,7 +302,12 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
   app.onError((error, c) => c.json(fault(error, token), 503));
   app.notFound((c) =>
     c.json(
-      { type: "error", kind: "unavailable", message: "Unknown host helper operation or protocol." },
+      {
+        type: "error",
+        kind: "unavailable",
+        message:
+          "The Slopify helper on your computer does not match this version of Slopify. Run the Slopify Docker launcher again to update it.",
+      },
       404,
     ),
   );
@@ -288,7 +322,12 @@ async function json(request: Request): Promise<unknown> {
 }
 function invalid(c: import("hono").Context<HostEnv>): Response {
   return c.json(
-    { type: "error", kind: "unavailable", message: "Invalid host provider request." },
+    {
+      type: "error",
+      kind: "unavailable",
+      message:
+        "Slopify hit an internal error (the helper on your computer received a request it could not read). Try again; if it keeps happening, use Download diagnostics in Settings and report it.",
+    },
     400,
   );
 }

@@ -63,7 +63,9 @@ export interface PlanInput {
 export function planRender(input: PlanInput): RenderPlan {
   if (input.images.length === 0) {
     // Admission permits Video only with an image source, so an empty set is a bug upstream.
-    throw new Error("a render needs at least one image");
+    throw new Error(
+      "The video needs at least one image, but there are none. Check the Images section in Edit project, then Retry stage.",
+    );
   }
   const frame = frames[input.format];
   const audio = input.body === undefined ? [] : audioTimeline({ ...input, body: input.body });

@@ -143,7 +143,7 @@ describe("writeArticle", () => {
     const llm = fake([{ text: "   " }]);
 
     await expect(writeArticle(llm.providers, choice, brief, () => {})).rejects.toThrow(
-      /answered with nothing/,
+      /returned an empty article/,
     );
   });
 
@@ -151,7 +151,7 @@ describe("writeArticle", () => {
     const llm = fake([{ text: "the start", finishReason: "length" }, { text: "" }]);
 
     await expect(writeArticle(llm.providers, choice, brief, () => {})).rejects.toThrow(
-      /answered with nothing/,
+      /returned an empty article/,
     );
   });
 });

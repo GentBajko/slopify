@@ -39,7 +39,10 @@ export async function executeLocalRecipe(
   if (!context.maySubmit(piece.id)) return "held";
   const input = piece.input;
   if (input.kind === "provided") {
-    if (input.assetId === null) throw new Error("The provided recipe has no retained asset.");
+    if (input.assetId === null)
+      throw new Error(
+        "A file you uploaded for this project is missing. Upload it again in Edit project, then Retry stage.",
+      );
     const row = z
       .object({ id: z.string(), project_id: z.string(), path: z.string(), created_at: z.string() })
       .parse(
@@ -72,7 +75,10 @@ export async function executeLocalRecipe(
     );
     return "done";
   }
-  if (input.kind !== "local") throw new Error("Expected an exact local recipe.");
+  if (input.kind !== "local")
+    throw new Error(
+      "Slopify hit an internal error (a local step was set up wrongly). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   if (input.operation === "narration-files-v1") {
     await publishNarrationText(deps, context, piece);
     return "done";
@@ -116,7 +122,9 @@ export async function executeLocalRecipe(
     });
     return "done";
   }
-  throw new Error(`No local executor for ${input.operation}.`);
+  throw new Error(
+    `Slopify hit an internal error (no handler for the step "${input.operation}"). Retry stage; if it happens again, use Download diagnostics in Settings and report it.`,
+  );
 }
 
 async function concatenate(
@@ -125,7 +133,10 @@ async function concatenate(
   piece: WorkPiece,
 ): Promise<void> {
   const view = executionView(deps, context.work.projectId, context.work.revisionId);
-  if (view === undefined) throw new Error("The pinned revision is missing.");
+  if (view === undefined)
+    throw new Error(
+      "Slopify hit an internal error (the project version being built is missing). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   const row = deps.db
     .prepare("SELECT recipe_context FROM revision_work WHERE id=?")
     .get(context.work.workId);
@@ -134,7 +145,9 @@ async function concatenate(
     (candidate) => candidate.key === piece.key && candidate.fingerprint === piece.fingerprint,
   );
   if (recipe === undefined)
-    throw new Error("The pinned concatenation no longer matches its inputs.");
+    throw new Error(
+      "Slopify hit an internal error (the narration chunks to join no longer match the project's saved inputs). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   const files = recipe.dependsOn.map((key) => {
     const input = view.pieces.find(
       (candidate) =>
@@ -145,7 +158,9 @@ async function concatenate(
         candidate.fingerprint === plan.recipes.find((value) => value.key === key)?.fingerprint,
     );
     if (input?.assetId === null || input === undefined)
-      throw new Error("A narration part has no retained audio.");
+      throw new Error(
+        "One narration chunk has no saved audio, so the narration can't be joined together. Regenerate the missing chunk in Edit project → Narration, then Retry stage.",
+      );
     const asset = deps.db
       .prepare("SELECT path FROM project_assets WHERE id=? AND project_id=?")
       .get(input.assetId, context.work.projectId);

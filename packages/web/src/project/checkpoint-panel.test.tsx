@@ -57,7 +57,7 @@ it("requires reconciliation when another tab changes the checkpoint set during l
   );
   const alert = await screen.findByRole("alert");
   expect(alert.textContent).toContain("Checkpoint choices changed elsewhere");
-  expect(alert.textContent).toContain("conflict");
+  expect(alert.textContent).toContain("Reload checkpoint choices");
   expect(document.activeElement).toBe(alert);
   const save = screen.getByRole("button", { name: "Save checkpoints" });
   expect(save.hasAttribute("disabled")).toBe(true);
@@ -363,7 +363,7 @@ it("keeps project pause authoritative and rejects another revision's status", as
   expect(screen.getByText(/Project is paused/)).not.toBeNull();
   mounted.unmount();
   renderApp(<CheckpointPanel projectId="p1" revisionId="r2" paused={false} stages={[]} />, deps);
-  expect(await screen.findByText(/Checkpoint status belongs to another revision/)).not.toBeNull();
+  expect(await screen.findByText(/edited after these checkpoints loaded/)).not.toBeNull();
   expect(screen.queryByRole("button", { name: "Approve Audio checkpoint" })).toBeNull();
 });
 

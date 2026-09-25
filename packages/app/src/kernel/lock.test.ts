@@ -34,7 +34,7 @@ describe("acquireInstanceLock", () => {
     acquireInstanceLock(path);
 
     expect(() => acquireInstanceLock(path)).toThrow(
-      /already running on this data directory \(pid \d+\)/,
+      /already running on this data directory \(process \d+\)/,
     );
   });
 

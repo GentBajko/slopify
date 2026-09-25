@@ -29,7 +29,11 @@ export function useTutorialSession(): {
     const deferred: SetStateAction<TutorialSession>[] = [];
     const queue: TutorialSession[] = [];
     const fail = (error: unknown) =>
-      setError(error instanceof Error ? error.message : "Tutorial progress could not be saved.");
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Your tutorial progress wasn't saved. You can keep going; it will try again on the next step.",
+      );
     const flush = async (): Promise<void> => {
       if (working || !restored || !readable) return;
       working = true;
@@ -39,7 +43,10 @@ export function useTutorialSession(): {
             const next = queue.shift();
             if (!next) break;
             const step = tutorialSteps[next.step];
-            if (!step) throw new Error("Unknown tutorial step. Restart tutorial to recover.");
+            if (!step)
+              throw new Error(
+                "This tutorial step isn't recognised. Choose Restart tutorial to start over.",
+              );
             const { step: _step, ...fields } = next;
             pending = {
               baseVersion: version,

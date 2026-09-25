@@ -139,9 +139,21 @@ function installPackage(plan: UpdatePlan, directory: string): Promise<void> {
         env: { ...process.env, npm_config_update_notifier: "false" },
       },
     );
-    child.once("error", () => reject(new Error("npm could not be started.")));
+    child.once("error", () =>
+      reject(
+        new Error(
+          `npm (${plan.npm.file}) could not be started. Check that Node.js and npm are installed.`,
+        ),
+      ),
+    );
     child.once("close", (code) =>
-      code === 0 ? resolve() : reject(new Error("npm could not install the update.")),
+      code === 0
+        ? resolve()
+        : reject(
+            new Error(
+              `npm could not install Slopify ${plan.version} (exit code ${code}). Check your internet connection (npm must reach registry.npmjs.org) and try again.`,
+            ),
+          ),
     );
   });
 }
@@ -153,7 +165,10 @@ async function waitForServer(
 ): Promise<void> {
   const until = Date.now() + 60_000;
   while (Date.now() < until) {
-    if (exited()) throw new Error("Slopify stopped during startup.");
+    if (exited())
+      throw new Error(
+        `Slopify ${version} stopped while starting up, so the previous version was kept.`,
+      );
     try {
       if (await candidateReady(serverOrigin(plan), version, plan.token, exited, globalThis.fetch))
         return;
@@ -162,7 +177,7 @@ async function waitForServer(
     }
     await delay(250);
   }
-  throw new Error("Slopify did not restart in time.");
+  throw new Error(`Slopify ${version} did not answer within 60 seconds of starting.`);
 }
 
 function serverOrigin(plan: Pick<UpdatePlan, "host" | "port">): string {

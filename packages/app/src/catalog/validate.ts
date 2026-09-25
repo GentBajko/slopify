@@ -33,16 +33,26 @@ export function modelFields(draft: RunDraft, catalogue?: CatalogueStore): FieldE
     if (!needed || !choice || isLocalCliProvider(choice.provider)) continue;
     const model = catalogue.models(choice.provider, family).find((m) => m.id === choice.model);
     if (!model)
-      fields.push({ field, message: "Choose an enabled model from the current catalogue." });
+      fields.push({
+        field,
+        message: "This model is no longer in Slopify's model list. Choose another model.",
+      });
     else if ("llm" in model && choice.thinking && !model.llm.thinking?.[choice.thinking])
-      fields.push({ field, message: "Choose a supported thinking setting for this model." });
+      fields.push({
+        field,
+        message: "This model does not support that thinking setting. Choose another.",
+      });
     else if ("llm" in model && draft.sources.research === "generate" && !model.llm.webSearch)
       fields.push({
         field,
-        message: "This model cannot perform web research. Choose another or turn Research off.",
+        message:
+          "This model cannot search the web for research. Choose another model or turn Research off.",
       });
     else if ("image" in model && !model.image.aspectRatios.includes(draft.format))
-      fields.push({ field, message: "This image model does not support the selected shape." });
+      fields.push({
+        field,
+        message: "This image model cannot make images in this video's shape. Choose another model.",
+      });
   }
   return fields;
 }

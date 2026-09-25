@@ -178,7 +178,9 @@ it("keeps draft topology recoverable after a truncated upload", async () => {
       body: '--test\r\nContent-Disposition: form-data; name="file"; filename="one.png"\r\n\r\nbytes\r\n--test\r\nContent-Disposition: form-data; name="field"\r\n\r\nunterminated',
     });
     expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ detail: expect.stringContaining("multipart") });
+    expect(await response.json()).toMatchObject({
+      detail: expect.stringContaining("did not arrive complete"),
+    });
     const view = draftViewSchema.parse(await (await app.request(`/api/drafts/${id}`)).json());
     expect(view.draft.document).toEqual(document);
     expect(view.attachments[0]).toMatchObject({ state: "reattach", stagedFileId: null });

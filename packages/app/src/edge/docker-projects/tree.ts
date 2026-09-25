@@ -34,7 +34,7 @@ export async function safePath(
 ): Promise<void> {
   if (!isAbsolute(path) || resolve(path) !== path || /[\p{Cc},]/u.test(path))
     throw new Error(
-      "Project directory must be a normal absolute path without commas/control characters.",
+      `The project folder ${JSON.stringify(path)} can't be used: give a full path without commas, for example --projects-dir ~/Slopify/Projects.`,
     );
   const forbidden = [
     "/",
@@ -56,7 +56,9 @@ export async function safePath(
       (p) => contains(p, path),
     )
   )
-    throw new Error("Unsafe broad or private project directory.");
+    throw new Error(
+      `${path} can't be the project folder because it is a system or shared folder (or holds Slopify's own settings). Choose a dedicated folder, for example --projects-dir ~/Slopify/Projects.`,
+    );
   const parts = path.split(sep).filter(Boolean);
   let current: string = sep;
   for (const [i, part] of parts.entries()) {
@@ -71,13 +73,17 @@ export async function safePath(
     }
     if (s === undefined) continue;
     if (!s.isDirectory() || s.isSymbolicLink())
-      throw new Error(`Unsafe path component: ${current}`);
+      throw new Error(
+        `${current} is a file or a link, not a folder, so it can't be part of the project folder path. Choose another folder with --projects-dir <folder>.`,
+      );
     if (i === parts.length - 1 && (s.uid !== process.getuid?.() || (s.mode & 0o022) !== 0))
       throw new Error(
-        "Project directory must belong to the installing user and must not be publicly writable.",
+        `The project folder ${path} must belong to you and must not be writable by other users. Fix it (chmod go-w ${path}) or choose another folder with --projects-dir <folder>.`,
       );
     if (i < parts.length - 1 && (s.mode & 0o022) !== 0 && (s.mode & 0o1000) === 0)
-      throw new Error(`Writable project ancestor: ${current}`);
+      throw new Error(
+        `Other users can write to ${current}, which contains the project folder. Choose a project folder inside your home folder with --projects-dir <folder>, or fix it with chmod go-w ${current}.`,
+      );
   }
 }
 export function isMissing(error: unknown): boolean {
@@ -157,7 +163,9 @@ export async function assertWritableTree(root: string, uid: number): Promise<voi
     s.uid !== uid ||
     (s.mode & (s.isDirectory() ? 0o700 : 0o600)) !== (s.isDirectory() ? 0o700 : 0o600)
   )
-    throw new Error(`Existing project permissions are incompatible with this host user: ${root}`);
+    throw new Error(
+      `${root} in your project files doesn't have permissions your user can fully use. Make it yours and writable (chown -R $USER ${root}; chmod -R u+rwX ${root}), then try again.`,
+    );
   if (s.isDirectory())
     for (const name of await readdir(root)) await assertWritableTree(join(root, name), uid);
 }

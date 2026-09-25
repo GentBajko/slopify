@@ -133,18 +133,23 @@ export function RevisionContentEditors({
       );
       if (!ready || duration === undefined || fingerprint === undefined || record === undefined)
         throw new Error(
-          "Build subtitle timing from the current narration before editing its cues.",
+          "Captions can't be edited until the current narration has finished and its subtitle timing is ready.",
         );
       const response = await api.fetch(
         revisionFileUrl(api, view.revision.projectId, view.revision.id, record.recordId),
         { signal: controller.signal },
       );
-      if (!response.ok) throw new Error("The retained timing file is unavailable.");
+      if (!response.ok)
+        throw new Error(
+          "The subtitle timing file couldn't be read. Reload the page and try again; if it still fails, use Re-run section on Audio.",
+        );
       const saved = timing.parse(await response.json());
       let previous = 0;
       for (const word of saved.words) {
         if (word.start < previous || word.end <= word.start || word.end > duration)
-          throw new Error("The subtitle word timing must be ordered and within narration.");
+          throw new Error(
+            "The saved subtitle timing doesn't match the current narration. Use Re-run section on Audio to rebuild it.",
+          );
         previous = word.end;
       }
       const cues = captionCues(saved.words).map((cue) => ({ ...cue, id: crypto.randomUUID() }));
@@ -225,8 +230,8 @@ export function RevisionContentEditors({
       <section aria-label="Captions" hidden={!shows("captions")} className="space-y-5">
         {!ready ? (
           <p>
-            Build current narration timing before editing caption cues; its duration or timing is
-            unavailable or stale.
+            Captions can be edited once the current narration has finished and its subtitle timing
+            is ready.
           </p>
         ) : null}
         {captions === undefined ? (

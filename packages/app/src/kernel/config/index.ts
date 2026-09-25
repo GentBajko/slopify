@@ -25,21 +25,26 @@ export function configFrom(flags: ConfigFlags, env: ConfigEnv): Config {
   const host = flags.host ?? env.SLOPIFY_HOST ?? defaultHost;
   const dataDir = flags["data-dir"] ?? env.SLOPIFY_DATA_DIR ?? join(homedir(), ".slopify");
   if (host.trim() === "") {
-    throw new Error("host must not be empty");
+    throw new Error(
+      `The host setting is empty (from ${flags.host !== undefined ? "--host" : "SLOPIFY_HOST"}). Leave it out to use 127.0.0.1, or give an address such as --host 127.0.0.1.`,
+    );
   }
   return {
-    port: port === undefined ? defaultPort : parsePort(port),
+    port:
+      port === undefined
+        ? defaultPort
+        : parsePort(port, flags.port !== undefined ? "--port" : "SLOPIFY_PORT"),
     host,
     dataDir: resolve(dataDir),
     open: flags["no-open"] === true ? false : !isTruthy(env.SLOPIFY_NO_OPEN),
   };
 }
 
-function parsePort(value: string): number {
+function parsePort(value: string, source: string): number {
   const port = Number(value.trim());
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
     throw new Error(
-      `invalid port ${JSON.stringify(value)}: expected an integer between 1 and 65535`,
+      `Invalid port ${JSON.stringify(value)} (from ${source}): use a whole number between 1 and 65535, for example --port 7070.`,
     );
   }
   return port;

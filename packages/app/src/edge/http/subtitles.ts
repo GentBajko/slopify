@@ -23,7 +23,8 @@ function revisionRequired(c: Context): Response {
   return problem(c, {
     status: 409,
     title: titleOf(409),
-    detail: "Open Edit project to save changes, then review the affected rebuild.",
+    detail:
+      "This change is now made from the Edit tab. Choose Edit project, save your change, then use Rebuild affected outputs.",
     extensions: { reason: "revision-required" },
   });
 }

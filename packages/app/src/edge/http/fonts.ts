@@ -31,14 +31,15 @@ export function fontsRoutes(deps: AppDeps) {
         return problem(c, {
           status: 415,
           title: titleOf(415),
-          detail: "Upload one .ttf or .otf file as multipart/form-data.",
+          detail:
+            "The font was not sent as a file. Reload the page and choose a .ttf or .otf file again.",
         });
       const body = c.req.raw.body;
       if (body === null)
         return problem(c, {
           status: 400,
           title: titleOf(400),
-          detail: "The request carried no font file.",
+          detail: "No font file arrived. Choose a .ttf or .otf file and try again.",
         });
       const part = await readUpload(contentType, body);
       if (!part.ok) {
@@ -47,8 +48,8 @@ export function fontsRoutes(deps: AppDeps) {
           status: tooLarge ? 413 : 400,
           title: tooLarge ? "Content Too Large" : titleOf(400),
           detail: tooLarge
-            ? "A font file must be no larger than 32 MiB."
-            : "Upload exactly one complete font file in the file part.",
+            ? "This font file is larger than 32 MB. Choose a smaller .ttf or .otf file."
+            : "The font upload did not arrive complete. Choose one .ttf or .otf file and try again.",
         });
       }
       const result = await uploadFont(deps.paths, part.upload);
@@ -59,7 +60,12 @@ export function fontsRoutes(deps: AppDeps) {
       "/:id/file",
       zValidator("param", idParam, (result, c) => {
         if (!result.success)
-          return problem(c, { status: 404, title: titleOf(404), detail: "No font has that id." });
+          return problem(c, {
+            status: 404,
+            title: titleOf(404),
+            detail:
+              "This font no longer exists; it may have been deleted. Reload the page to see your current fonts.",
+          });
         return undefined;
       }),
       async (c) => {
@@ -72,7 +78,12 @@ export function fontsRoutes(deps: AppDeps) {
           });
         } catch (error) {
           if (!isMissingFont(error)) throw error;
-          return problem(c, { status: 404, title: titleOf(404), detail: "No font has that id." });
+          return problem(c, {
+            status: 404,
+            title: titleOf(404),
+            detail:
+              "This font no longer exists; it may have been deleted. Reload the page to see your current fonts.",
+          });
         }
       },
     );
@@ -144,21 +155,28 @@ function failure(reason: Extract<FontUploadResult, { ok: false }>["reason"]): {
       return {
         status: 413,
         title: "Content Too Large",
-        detail: "A font file must be no larger than 32 MiB.",
+        detail: "This font file is larger than 32 MB. Choose a smaller .ttf or .otf file.",
       };
     case "unsupported-format":
-      return { status: 415, title: titleOf(415), detail: "Choose a .ttf or .otf font file." };
+      return {
+        status: 415,
+        title: titleOf(415),
+        detail:
+          "Slopify only accepts .ttf or .otf font files. Choose a file with one of those endings.",
+      };
     case "unsafe-filename":
       return {
         status: 400,
         title: titleOf(400),
-        detail: "The font filename cannot contain a path or control character.",
+        detail:
+          "The font's file name contains characters Slopify cannot use. Rename the file on your computer, then upload it again.",
       };
     case "invalid-font":
       return {
         status: 400,
         title: titleOf(400),
-        detail: "This file is not a supported, valid TrueType or OpenType font.",
+        detail:
+          "This file is not a valid TrueType (.ttf) or OpenType (.otf) font; it may be damaged. Download the font again or choose another.",
       };
   }
 }

@@ -31,7 +31,10 @@ export function diagnosticsRoutes(deps: AppDeps) {
         ...(provider.cliPath === undefined ? {} : { cliPath: provider.cliPath }),
       })),
       projects: { total: typeof projectCount?.count === "number" ? projectCount.count : 0 },
-      catalogue: deps.catalogue?.status() ?? { warning: "Catalogue unavailable." },
+      catalogue: deps.catalogue?.status() ?? {
+        warning:
+          "The model list (models.yaml) is not loaded yet. Wait a moment and reload the page; if it stays like this, restart Slopify.",
+      },
     });
   });
 }

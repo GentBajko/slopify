@@ -207,7 +207,11 @@ describe("the settings screen", () => {
 
     await user.upload(await screen.findByLabelText("Import backup"), file);
 
-    expect(await screen.findByText("The backup must be between 1 byte and 100 MB.")).not.toBeNull();
+    expect(
+      await screen.findByText(
+        "This file is empty or larger than 100 MB. Choose a .zip made with Export backup.",
+      ),
+    ).not.toBeNull();
     expect(requests).toBe(0);
   });
 });

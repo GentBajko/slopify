@@ -70,9 +70,16 @@ export async function discoverGoogleImages(deps: DiscoveryDeps): Promise<readonl
 function requireKey(deps: DiscoveryDeps): string {
   const key = deps.key();
   if (key === undefined || key === "")
-    throw providerError({ kind: "missing_key", message: "Save an API key to load models." });
+    throw providerError({
+      kind: "missing_key",
+      message: "Save this provider's API key in Settings → Providers to load its models.",
+    });
   return key;
 }
 function unavailable(): Error {
-  return providerError({ kind: "other", message: "The provider model list could not be loaded." });
+  return providerError({
+    kind: "other",
+    message:
+      "Slopify could not load this provider's model list. Check the API key in Settings → Providers and your internet connection, then refresh the list.",
+  });
 }

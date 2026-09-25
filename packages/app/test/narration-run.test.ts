@@ -424,7 +424,9 @@ describe("the audio stage through the attempt wrapper and the real ffmpeg", () =
       .prepare("UPDATE stage_pieces SET payload = ? WHERE id = 'seg-1'")
       .run(JSON.stringify({ category: "intro", name: "Standard intro", mode: "text", text: "  " }));
 
-    await expect(run(h, speaking())).rejects.toThrow(`the intro segment has ${nothingToNarrate}`);
+    await expect(run(h, speaking())).rejects.toThrow(
+      "The intro is empty, so there is nothing to narrate",
+    );
     h.db.close();
   }, 120_000);
 

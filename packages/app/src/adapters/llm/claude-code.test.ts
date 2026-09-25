@@ -237,7 +237,7 @@ describe("claudeCodeLlm.complete", () => {
       { code: 1, error: null },
       '[claude-code:unrecognized_model] {"model":"definitely-not-a-model"}',
     ).catch((thrown: unknown) => thrown);
-    expect(String(error)).toContain("the claude CLI exited 1 without answering");
+    expect(String(error)).toContain("The Claude Code CLI stopped without answering (exit code 1");
     expect(String(error)).toContain("unrecognized_model");
   });
 
@@ -246,7 +246,7 @@ describe("claudeCodeLlm.complete", () => {
       code: null,
       error: new Error("spawn claude ENOENT"),
     }).catch((thrown: unknown) => thrown);
-    expect(String(error)).toContain("could not be started (spawn claude ENOENT)");
+    expect(String(error)).toContain('could not be started ("spawn claude ENOENT")');
   });
 
   it("kills the child whether the run answered, failed or was walked away from", async () => {

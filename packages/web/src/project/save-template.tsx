@@ -51,7 +51,7 @@ export function SaveProjectTemplate({
       notify("Template saved.", "success");
       await client.invalidateQueries({ queryKey: templatesKey });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not save the template.");
+      setError(cause instanceof Error ? cause.message : "The template wasn't saved. Try again.");
     } finally {
       active.current = false;
       setPending(false);

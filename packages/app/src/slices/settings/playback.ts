@@ -43,11 +43,11 @@ export function saveSettings(deps: PlaybackDeps, settings: AppSettings): SaveSet
   if (!silenceGapValue.safeParse(settings.silenceGapSeconds).success) {
     fields.push({
       field: "silenceGapSeconds",
-      message: `The silence gap is a whole number of seconds between 0 and ${String(silenceGapSecondsMax)}.`,
+      message: `Enter a whole number of seconds between 0 and ${String(silenceGapSecondsMax)}.`,
     });
   }
   if (!appearanceValue.safeParse(settings.appearance).success) {
-    fields.push({ field: "appearance", message: "Pick System, Light or Dark." });
+    fields.push({ field: "appearance", message: "Choose System, Light or Dark." });
   }
   if (fields.length > 0) {
     return { ok: false, fields };

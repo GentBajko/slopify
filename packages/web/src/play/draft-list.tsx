@@ -40,7 +40,8 @@ export function DraftList(): ReactElement {
         current?.filter((draft) => draft.id !== discardedId),
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Couldn't discard draft";
+      const message =
+        error instanceof Error ? error.message : "The draft wasn't discarded. Try again.";
       setError(message);
       notify(message, "error");
     } finally {

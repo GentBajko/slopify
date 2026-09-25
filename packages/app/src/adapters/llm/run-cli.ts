@@ -5,6 +5,7 @@ import { cliCommand } from "../../kernel/cli-command.js";
 import { redact } from "../../kernel/log.js";
 import type { Message } from "../../kernel/ports/llm.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { cliName, commandOf, quoted } from "../explain.js";
 
 // The local-agent seam, shaped after `slices/settings/cli-status.ts`'s `CliProbe`: a type
 // the adapters take as a parameter and one implementation over `node:child_process`. It
@@ -170,7 +171,8 @@ export async function deliveredInput(run: CliRun): Promise<void> {
   } catch {
     throw providerError({
       kind: "unavailable",
-      message: "The full prompt could not be delivered to the CLI. Review before retrying.",
+      message:
+        "Slopify could not hand the whole prompt to the CLI, so it cannot tell what the CLI worked on (it may already have used your quota). Use Retry stage to run it again.",
     });
   }
 }
@@ -181,7 +183,7 @@ export function cliInput(text: string): string {
     throw providerError({
       kind: "unsupported",
       message:
-        "The text prompt exceeds the CLI input limit (8 MiB). No text was truncated or submitted.",
+        "This prompt is larger than the CLI accepts (8 MB), so nothing was sent. Make the inputs shorter in Edit project, or choose an API provider such as OpenRouter in its Providers section, then use Retry stage.",
     });
   return text;
 }
@@ -213,16 +215,18 @@ export function promptOf(messages: readonly Message[]): string {
 }
 
 // A bare non-zero exit tells the user nothing, so the stage shows whatever the CLI put on
-// stderr - the provider's error text, verbatim.
+// stderr - the provider's error text, verbatim - after a sentence saying what to do.
 export function endedWithout(binary: string, ended: CliEnded, stderr: string): string {
   const said = redact(stderr.trim());
-  const how =
-    ended.error === null
-      ? `exited ${ended.code === null ? "on a signal" : String(ended.code)}`
-      : `could not be started (${redact(ended.error.message)})`;
-  return said === ""
-    ? `the ${binary} CLI ${how} without answering`
-    : `the ${binary} CLI ${how} without answering: ${said}`;
+  if (ended.error !== null)
+    return `The ${cliName(binary)} could not be started${quoted("", redact(ended.error.message))}. Check it is installed and set up in Settings → Providers, then use Retry stage.`;
+  const how = ended.code === null ? "killed by the system" : `exit code ${String(ended.code)}`;
+  return `The ${cliName(binary)} stopped without answering${quoted(how, said)}. Run ${commandOf(binary)} in a terminal to check it works and is signed in, then use Retry stage.`;
+}
+
+// The run outlived both the polite and the forced stop.
+export function stuckCli(binary: string): string {
+  return `The ${cliName(binary)} stopped responding and could not be shut down. Close any leftover ${commandOf(binary)} processes or restart your computer, then use Retry stage.`;
 }
 
 // Unreachable while stdio names `pipe` for fd 1; it is here so the type carries no null
@@ -250,7 +254,7 @@ export function cliEvent(
     // know. The text is not echoed back: half a JSON object is noise to the user.
     throw providerError({
       kind: "other",
-      message: `the ${binary} CLI wrote a line this app could not read`,
+      message: `The ${cliName(binary)} sent output Slopify could not read. Update it to the latest version, then use Retry stage.`,
     });
   }
   return { type: parsed.data.type, value };
@@ -261,7 +265,7 @@ export function cliShaped<T>(binary: string, schema: z.ZodType<T>, value: unknow
   if (!parsed.success) {
     throw providerError({
       kind: "other",
-      message: `the ${binary} CLI wrote an event this app could not read`,
+      message: `The ${cliName(binary)} sent output Slopify could not read. Update it to the latest version, then use Retry stage.`,
     });
   }
   return parsed.data;

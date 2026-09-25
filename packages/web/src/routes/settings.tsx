@@ -168,7 +168,7 @@ function StorageTools() {
 
   async function importBackup(file: File): Promise<void> {
     if (file.size === 0 || file.size > portableMaxUploadBytes) {
-      setError("The backup must be between 1 byte and 100 MB.");
+      setError("This file is empty or larger than 100 MB. Choose a .zip made with Export backup.");
       return;
     }
     setBusy(true);
@@ -186,14 +186,22 @@ function StorageTools() {
         fontFallbacks?: number;
         stagedFiles?: number;
       };
-      if (!response.ok) throw new Error(body.detail ?? "The backup could not be imported.");
+      if (!response.ok)
+        throw new Error(
+          body.detail ??
+            "The backup wasn't imported. Check it is a .zip made with Export backup, then try again.",
+        );
       notify(
         `Imported ${body.templates ?? 0} template(s), ${body.fonts ?? 0} uploaded font(s), and ${body.stagedFiles ?? 0} staged file(s).${body.fontFallbacks ? ` ${body.fontFallbacks} missing legacy font reference(s) now use the default font.` : ""}`,
         "success",
       );
       await refreshPortableImportQueries(queryClient);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "The backup could not be imported.");
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "The backup wasn't imported. Check it is a .zip made with Export backup, then try again.",
+      );
     } finally {
       setBusy(false);
     }
@@ -205,14 +213,18 @@ function StorageTools() {
     try {
       const response = await api.fetch(`${api.origin}/api/storage/cleanup`, { method: "POST" });
       const body = (await response.json()) as { orphanFiles?: number; stagedFiles?: number };
-      if (!response.ok) throw new Error("Storage cleanup could not finish.");
+      if (!response.ok) throw new Error("Clean orphan files didn't finish. Try again in a moment.");
       notify(
         `Removed ${body.orphanFiles ?? 0} orphan project file(s) and ${body.stagedFiles ?? 0} stale staged file(s).`,
         "success",
       );
       await queryClient.invalidateQueries({ queryKey: storageQueryKey });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Storage cleanup could not finish.");
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Clean orphan files didn't finish. Try again in a moment.",
+      );
     } finally {
       setBusy(false);
     }

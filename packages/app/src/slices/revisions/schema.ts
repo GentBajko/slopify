@@ -21,7 +21,7 @@ const cue = z
   .strict()
   .refine((value) => value.end > value.start, {
     path: ["end"],
-    message: "End must be after start.",
+    message: "The end time must be after the start time.",
   });
 export const revisionContentSchema = z
   .object({

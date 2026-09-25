@@ -217,7 +217,7 @@ it("retains incomplete staging and never adopts unrelated populated destinations
     await writeFile(join(target, "note"), "keep");
     await expect(
       installProjects({ ...h.config, projectsOverride: target }, h.engine, () => h.engine),
-    ).rejects.toThrow("populated");
+    ).rejects.toThrow("already has files in it");
     expect(h.calls).not.toContain("stop");
     h.failures.add("copy");
     await expect(installProjects(h.config, h.engine, () => h.engine)).rejects.toThrow();

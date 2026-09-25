@@ -19,7 +19,10 @@ export function visualRecipes(
   const imageKeys = config.sources.images === "off" ? [] : content.imageOrder;
   for (const key of imageKeys) {
     const image = content.imageDefinitions[key];
-    if (image === undefined) throw new Error("Saved image definition is missing");
+    if (image === undefined)
+      throw new Error(
+        "Slopify hit an internal error (one of the project's images has no saved settings). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+      );
     const raw =
       image.templateKey === undefined || image.templateKey === null
         ? undefined

@@ -75,7 +75,8 @@ export function projectRoutes(deps: AppDeps) {
           return problem(c, {
             status: 409,
             title: titleOf(409),
-            detail: "Start checkpoint-enabled projects through Play Review.",
+            detail:
+              "This project has checkpoints turned on, so it must be started from Play with Review and start.",
           });
         const requestedSubtitles = c.req.valid("json").subtitles;
         if (requestedSubtitles !== undefined && requestedSubtitles.mode !== "off") {
@@ -85,12 +86,14 @@ export function projectRoutes(deps: AppDeps) {
             return problem(c, {
               status: 400,
               title: titleOf(400),
-              detail: "Choose an available subtitle font before starting.",
+              detail:
+                "The subtitle font you picked is no longer available. Choose another font before starting.",
               extensions: {
                 fields: [
                   {
                     field: "subtitles.fontId",
-                    message: "This font is no longer available; choose another or upload it again.",
+                    message:
+                      "This font is no longer available. Choose another or upload it again in Settings.",
                   },
                 ],
               },
@@ -110,7 +113,7 @@ export function projectRoutes(deps: AppDeps) {
           return problem(c, {
             status: 400,
             title: titleOf(400),
-            detail: "This run cannot start yet; the listed fields need attention.",
+            detail: "This video cannot start yet. Fix the highlighted fields, then try again.",
             extensions: {
               fields: [...picked.missing, ...modelErrors, ...(admitted.ok ? [] : admitted.fields)],
             },
@@ -157,7 +160,7 @@ export function projectRoutes(deps: AppDeps) {
           return problem(c, {
             status: 404,
             title: titleOf(404),
-            detail: "No project has that id.",
+            detail: "This project no longer exists. Go back to Projects to pick another.",
           });
         }
         if (deps.catalogue !== undefined) adoptBaseline(deps, project.id);
@@ -193,8 +196,10 @@ const deleteStatus: Readonly<Record<DeleteRefusal, 404 | 409 | 500>> = {
 };
 
 const deleteDetails: Readonly<Record<DeleteRefusal, string>> = {
-  "no-project": "No project has that id.",
+  "no-project": "This project no longer exists. Go back to Projects to pick another.",
   // The run has to be stopped before its files can go.
-  running: "This project is still running. Cancel the run first.",
-  files: "Some of this project's files could not be removed.",
+  running:
+    "This project is still running. Use Cancel run on the project page first, then delete it.",
+  files:
+    "Some of this project's files could not be removed. Close any program using files in the project folder, then try deleting again.",
 };

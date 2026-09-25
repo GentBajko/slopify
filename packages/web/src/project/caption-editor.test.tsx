@@ -24,13 +24,13 @@ it("keeps an invalid time visible without emitting a saved cue", async () => {
   expect(changed).not.toHaveBeenCalled();
   if (!(end instanceof HTMLInputElement)) throw new Error("Expected caption end input.");
   expect(end.value).toBe("3");
-  expect(screen.getByRole("alert").textContent).toContain("within narration");
+  expect(screen.getByRole("alert").textContent).toContain("end of the narration");
 });
 
 it.each([
   ["Start for caption 1", "", "start must"],
   ["Start for caption 1", "-1", "start must"],
-  ["End for caption 1", "banana", "within narration"],
+  ["End for caption 1", "banana", "end of the narration"],
   ["Start for caption 2", "0.5", "start must"],
   ["Text for caption 1", "", "enter caption text"],
 ])("retains invalid %s input %s without emitting cues", async (name, value, message) => {

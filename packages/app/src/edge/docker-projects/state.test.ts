@@ -74,6 +74,6 @@ it("accepts an existing owned bind and rejects nonempty unclaimed destinations",
     }),
   ).toBe(projects);
   await expect(selectProjects({ ...c, projectsOverride: projects }, null, null)).rejects.toThrow(
-    "populated",
+    "already has files in it",
   );
 });

@@ -214,7 +214,7 @@ describe("POST /api/projects", () => {
     expect(await response.json()).toMatchObject({
       status: 400,
       fields: [
-        { field: "title", message: "A title is required." },
+        { field: "title", message: "Enter a title for this video." },
         { field: "provided.audio", message: "Pick an audio file." },
         { field: "provided.images", message: "Pick at least one image." },
       ],
@@ -311,8 +311,8 @@ describe("POST /api/projects with library templates", () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({
       fields: [
-        { field: "values.tone", message: "This field is required." },
-        { field: "values.era", message: "This field is required." },
+        { field: "values.tone", message: "Fill in this field." },
+        { field: "values.era", message: "Fill in this field." },
       ],
     });
     expect(db.prepare("SELECT count(*) AS n FROM projects").get()).toEqual({ n: 0 });
@@ -333,7 +333,7 @@ describe("POST /api/projects with library templates", () => {
       fields: [
         {
           field: "imagePrompts.0.name",
-          message: "That image prompt no longer exists; pick another.",
+          message: "That image prompt was deleted. Choose another.",
         },
       ],
     });
@@ -371,7 +371,7 @@ describe("POST /api/projects with library templates", () => {
 
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({
-      fields: [{ field: "llm", message: "Pick an LLM provider and model." }],
+      fields: [{ field: "llm", message: "Choose a text (LLM) provider and model." }],
     });
   });
 
@@ -388,7 +388,7 @@ describe("POST /api/projects with library templates", () => {
 
     expect(unfilled.status).toBe(400);
     expect(await unfilled.json()).toMatchObject({
-      fields: [{ field: "values.constructor", message: "This field is required." }],
+      fields: [{ field: "values.constructor", message: "Fill in this field." }],
     });
 
     const filled = await post(app, await generating(app, { values: { constructor: "a rope" } }));

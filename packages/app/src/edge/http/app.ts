@@ -142,14 +142,16 @@ export function createApp(deps: AppDeps): Hono {
         return problem(c, {
           status: 503,
           title: titleOf(503),
-          detail: "Docker installation is being verified. Wait for the launcher to finish.",
+          detail:
+            "Slopify is still finishing its Docker setup. Wait for the launcher to finish, then try again.",
         });
       const releaseRequest = deps.mutations?.begin();
       if (deps.mutations !== undefined && releaseRequest === undefined)
         return problem(c, {
           status: 503,
           title: titleOf(503),
-          detail: "Slopify is shutting down. Wait for it to restart before making changes.",
+          detail:
+            "Slopify is shutting down, so changes cannot be saved right now. Start it again, reload the page and try again.",
         });
       const updateRoute = [
         "/api/update",
@@ -164,7 +166,7 @@ export function createApp(deps: AppDeps): Hono {
         return problem(c, {
           status: 409,
           title: titleOf(409),
-          detail: "Slopify is updating. Wait for it to restart before making changes.",
+          detail: "Slopify is updating. Wait for it to restart, reload the page and try again.",
         });
       }
       try {

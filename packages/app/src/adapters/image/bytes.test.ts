@@ -69,7 +69,9 @@ describe("downloadImage", () => {
     const thrown = await failed(new Response("<!doctype html>Not found", { status: 404 }));
 
     expect(isProviderError(thrown) && thrown.fault.kind).toBe("other");
-    expect(String(thrown)).toContain("fal answered 404 for the image it said it had made");
+    expect(String(thrown)).toContain(
+      "fal made the image, but Slopify could not download it (error 404)",
+    );
     // The signed link never reaches the message the stage shows.
     expect(String(thrown)).not.toContain("v3.fal.media");
   });
@@ -83,12 +85,12 @@ describe("downloadImage", () => {
     );
 
     expect(isProviderError(thrown) && thrown.fault.kind).toBe("other");
-    expect(String(thrown)).toContain("rather than a PNG or a JPEG");
+    expect(String(thrown)).toContain("not a PNG or JPEG image");
   });
 
   it("names WebP when that is what came back", async () => {
     const thrown = await failed(new Response(webpBytes, { status: 200 }));
 
-    expect(String(thrown)).toContain("a WebP image rather than a PNG or a JPEG");
+    expect(String(thrown)).toContain("not a PNG or JPEG image (a WebP image)");
   });
 });

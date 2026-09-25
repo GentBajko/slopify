@@ -32,8 +32,8 @@ export function RevisionFeedback({
         {error ??
           (refusal?.reason === "readiness"
             ? refusal.fields.length > 0
-              ? "Cannot start yet. Check the items below."
-              : "Provider readiness could not be checked. Check Settings and try again."
+              ? "This can't start yet. Fix the items below, then try again."
+              : "Slopify couldn't check your providers. Open Settings → Providers, make sure each one you use is set up, then try again."
             : refusal?.message)}
       </p>
       {refusal?.fields.length ? (

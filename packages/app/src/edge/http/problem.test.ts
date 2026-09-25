@@ -89,7 +89,8 @@ describe("problemFromError", () => {
       type: "about:blank",
       title: "Internal Server Error",
       status: 500,
-      detail: "The server failed to handle this request. Correlation id cid-1 is in the log.",
+      detail:
+        "Slopify hit an internal error while handling this request. Try again; if it keeps happening, use Download diagnostics in Settings and report it (reference cid-1).",
       instance: "/api/boom",
       correlationId: "cid-1",
     });

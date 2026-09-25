@@ -242,7 +242,7 @@ describe("the research stage through the attempt wrapper", () => {
       reply: script((req) => (chapterOf(req) === "Materials" ? [] : good)),
     });
 
-    await expect(h.clock.settle(run(h, llm))).rejects.toThrow("answered with nothing");
+    await expect(h.clock.settle(run(h, llm))).rejects.toThrow("returned an empty answer");
 
     const counts = attemptsPerPiece(h.db);
     const failing = Object.entries(counts).find(([, count]) => count === 4);
@@ -266,7 +266,7 @@ describe("the research stage through the attempt wrapper", () => {
       ),
     });
 
-    await expect(h.clock.settle(run(h, llm))).rejects.toThrow("answered with no Sources list");
+    await expect(h.clock.settle(run(h, llm))).rejects.toThrow("had no sources");
 
     expect(Object.values(attemptsPerPiece(h.db)).toSorted()).toEqual([1, 1, 4]);
     h.db.close();
@@ -286,7 +286,7 @@ describe("the research stage through the attempt wrapper", () => {
     });
 
     await expect(h.clock.settle(run(h, llm))).rejects.toThrow(
-      "the synthesis answered with no Sources list",
+      "answer for the research summary had no sources",
     );
 
     // One planner attempt, one chapter attempt, four synthesis attempts.

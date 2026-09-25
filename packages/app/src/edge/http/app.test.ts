@@ -178,7 +178,8 @@ describe("createApp", () => {
     const write = await app.request("/api/settings", { method: "PATCH" });
     expect(write.status).toBe(503);
     expect(await write.json()).toMatchObject({
-      detail: "Slopify is shutting down. Wait for it to restart before making changes.",
+      detail:
+        "Slopify is shutting down, so changes cannot be saved right now. Start it again, reload the page and try again.",
     });
     expect((await app.request("/api/health")).status).toBe(200);
   });

@@ -60,7 +60,7 @@ export function RevisionHistory({
     queryKey: keys.revision(projectId, selected ?? ""),
     enabled: selected !== undefined,
     queryFn: async () => {
-      if (selected === undefined) throw new Error("Choose a revision.");
+      if (selected === undefined) throw new Error("Choose a version from History first.");
       const result = await viewOf(api, projectId, selected);
       if (!result.ok) throw new Error(result.message);
       return result.value.view;

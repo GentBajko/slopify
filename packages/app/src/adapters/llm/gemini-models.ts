@@ -36,7 +36,7 @@ export async function nodeGeminiModels(binary: string): Promise<readonly ModelIn
     throw new Error("No installed model metadata");
   } catch {
     throw new Error(
-      "Gemini CLI model metadata is unavailable. Use a documented CLI alias or enter a custom model ID.",
+      "Slopify could not get the model list from the Gemini CLI. Check the CLI is installed (Settings → Providers), then refresh the list, or type a model name the Gemini CLI accepts.",
     );
   }
 }

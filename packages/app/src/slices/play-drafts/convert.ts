@@ -42,7 +42,7 @@ export function toAdmissionDraft(input: {
     if (saved) return { name: saved.name, mode: saved.mode };
     fields.push({
       field: category,
-      message: `That ${category} entry no longer exists; pick another.`,
+      message: `That ${category} entry was deleted. Choose another.`,
     });
     return undefined;
   };
@@ -60,8 +60,8 @@ export function toAdmissionDraft(input: {
       field,
       message:
         attachment?.state === "copying" || attachment?.state === "pending"
-          ? "This upload is still copying."
-          : "That upload is no longer available; pick the file again.",
+          ? "This file is still uploading. Wait for it to finish."
+          : "That upload is no longer available. Choose the file again.",
     });
     return undefined;
   };
@@ -143,7 +143,8 @@ export function toAdmissionDraft(input: {
     fields.push(
       ...parsed.error.issues.map((issue) => ({
         field: issue.path.join("."),
-        message: issue.message,
+        // The schema carries no sentences of its own; its defaults read like code.
+        message: "This setting is not valid. Reload the page and choose it again.",
       })),
     );
   return fields.length || !parsed.success

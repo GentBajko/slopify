@@ -45,14 +45,18 @@ export async function runArticle(
   const { projectId } = context.stage;
   const project = projectById(deps.db, projectId);
   if (project === undefined) {
-    throw new Error(`project ${projectId} has no row`);
+    throw new Error(
+      "This project no longer exists; it may have been deleted while it was running.",
+    );
   }
   const choice = project.config.llm;
   const articlePrompt = project.config.rendered.article;
   if (choice === undefined || articlePrompt === undefined) {
     // Admission refuses a run whose article is Generate without both, so
     // reaching here is a bug in admission rather than something the user did.
-    throw new Error("the run has no LLM provider or no rendered article prompt");
+    throw new Error(
+      "No AI model or article prompt is set for writing the article. Choose a model in Edit project → Providers and check Edit project → Prompts, then Retry stage.",
+    );
   }
   const notes = researchNotes(deps, projectId);
   const brief: ArticleBrief = { articlePrompt, ...(notes === undefined ? {} : { notes }) };

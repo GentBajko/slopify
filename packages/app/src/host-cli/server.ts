@@ -30,7 +30,10 @@ export async function startHostServer(options: {
     const existing = await lstat(socket);
     if (!existing.isSocket() || (process.getuid && existing.uid !== process.getuid()))
       throw new Error("Unsafe host helper socket.");
-    if (await listening(socket)) throw new Error("A host helper is already listening.");
+    if (await listening(socket))
+      throw new Error(
+        `A Slopify host helper is already listening on ${socket}. Stop it first (systemctl --user stop slopify-cli-bridge.service).`,
+      );
     await unlink(socket);
   } catch (error) {
     if (!hasCode(error, "ENOENT")) throw error;

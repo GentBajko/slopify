@@ -5,7 +5,7 @@ import { z } from "zod";
 import { type HostSetupRunner, installHostPackage } from "../host-cli/install.js";
 import { ensureBridgeToken, hasCode, prepareHostPaths } from "../host-cli/paths.js";
 import { ensureHostService, privateRead, privateWrite } from "../host-cli/service.js";
-import { resolveHostCommand } from "../host-cli/status.js";
+import { hostCommandName, resolveHostCommand } from "../host-cli/status.js";
 import { hostCliProtocol, hostLlmIds } from "../kernel/ports/host-cli.js";
 
 export function assertManagedDockerHost(
@@ -15,11 +15,11 @@ export function assertManagedDockerHost(
 ): asserts uid is number {
   if (platform !== "linux")
     throw new Error(
-      "The managed Docker launcher requires Linux. Native Slopify and plain API-only Docker remain available on other hosts.",
+      "The --docker launcher only works on Linux. On this system, run Slopify without Docker (npx @gentbajko/slopify), or start the Slopify Docker image yourself with docker run.",
     );
   if (uid === undefined || gid === undefined || uid === 0)
     throw new Error(
-      "Run the managed Docker launcher as your logged-in user, not with sudo; grant that account access to Docker.",
+      "Don't run the --docker launcher with sudo or as root. Run it as your normal user, and if Docker then says permission denied, give your user access: sudo usermod -aG docker $USER, then log out and back in.",
     );
 }
 
@@ -46,18 +46,20 @@ export async function prepareDockerHostCli(
       installed = true;
     } catch (error) {
       if (!hasCode(error, "ENOENT"))
-        throw new Error("Host CLI detection failed. No container was changed.");
+        throw new Error(
+          `Could not check whether ${hostCommandName(id)} is installed on this machine (${error instanceof Error ? error.message : String(error)}). Nothing was changed. Fix the problem, or start with --host-cli=off to use API keys only.`,
+        );
     }
   }
   if (!installed) return {};
   if (process.platform !== "linux")
     throw new Error(
-      "Managed host CLI setup requires Linux/systemd. Use --host-cli=off for API-only Docker.",
+      "Using this machine's AI CLIs from Docker needs Linux with systemd. Start with --host-cli=off to use API keys only.",
     );
   const uid = process.getuid?.();
   if (uid === undefined || uid === 0)
     throw new Error(
-      "Run the Docker launcher as your logged-in user, not root; or use --host-cli=off.",
+      "Don't run the --docker launcher with sudo or as root; run it as your normal user. Or start with --host-cli=off to use API keys only.",
     );
   const receiptPath = join(options.root, "consent.json");
   const existing = await privateRead(receiptPath, uid);
@@ -67,20 +69,22 @@ export async function prepareDockerHostCli(
     try {
       approved ||= receipt.safeParse(JSON.parse(existing)).success;
     } catch {
-      throw new Error("Invalid host helper consent receipt.");
+      throw new Error(
+        `The saved answer to the host CLI question (${receiptPath}) is damaged. Delete that file and run the launcher again to be asked again.`,
+      );
     }
   }
   if (!approved) {
     if (!options.interactive)
       throw new Error(
-        "Host CLI setup needs confirmation. Use --accept-host-cli to approve, or --host-cli=off for API-only Docker.",
+        "Slopify needs your OK to use the Claude Code, Codex or Gemini CLI installed on this machine, but can't ask because this isn't an interactive terminal. Rerun with --accept-host-cli to allow it, or with --host-cli=off to use API keys only.",
       );
     approved = await options.prompt(
       "Allow Slopify to run your host Claude Code, Codex and Gemini CLIs using their existing logins? This installs a private helper and enables automatic startup. User lingering keeps your user services running after logout and at boot. Credentials stay on the host. [y/N] ",
     );
     if (!approved)
       throw new Error(
-        "Host CLI setup declined. The container is unchanged. Use --host-cli=off for API-only Docker.",
+        "You declined, so Slopify did not set up your host AI CLIs and nothing was changed. Run the launcher again and answer y to allow it, or add --host-cli=off to start with API keys only.",
       );
   }
   const inspect = () =>
@@ -100,12 +104,12 @@ export async function prepareDockerHostCli(
     const pulled = await options.runner.exec("docker", ["pull", options.image], options.signal);
     if (pulled.code !== 0)
       throw new Error(
-        "Could not pull a compatible Docker image. No helper or container was changed.",
+        `Could not download the Slopify Docker image ${options.image}. Check your internet connection and that Docker is running (docker info), then try again. Nothing was changed.`,
       );
     image = await inspect();
     if (image.code !== 0 || image.stdout.trim() !== String(hostCliProtocol))
       throw new Error(
-        "This Docker image does not support the host helper. Update the image before retrying.",
+        `The Docker image ${options.image} is too old to use the AI CLIs on this machine. Use the latest image (unset SLOPIFY_DOCKER_IMAGE, or point it to a current release) and try again, or start with --host-cli=off.`,
       );
   }
   const supported = await options.runner.exec(
@@ -115,7 +119,7 @@ export async function prepareDockerHostCli(
   );
   if (supported.code !== 0)
     throw new Error(
-      "The systemd user service is unavailable. Use a normal Slopify install or --host-cli=off for API-only Docker.",
+      "Using this machine's AI CLIs from Docker needs systemd user services (systemctl --user), which aren't available here. Start with --host-cli=off to use API keys only, or run Slopify without Docker: npx @gentbajko/slopify.",
     );
   const paths = await prepareHostPaths(options.root);
   const lock = join(paths.root, "setup.lock");
@@ -128,7 +132,7 @@ export async function prepareDockerHostCli(
       if (!hasCode(error, "EEXIST")) throw error;
       if (Date.now() >= deadline)
         throw new Error(
-          "Another host helper setup holds setup.lock. Wait for it to finish; the container is unchanged.",
+          `Another Slopify launcher is setting up the host CLI helper right now. Wait for it to finish and try again. If no other launcher is running, delete the folder ${lock} and retry.`,
         );
       await delay(100, undefined, { signal: options.signal });
     }

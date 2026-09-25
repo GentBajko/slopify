@@ -29,13 +29,17 @@ export function exportSnapshot(
     .prepare("SELECT recipe_context FROM revision_work WHERE id=?")
     .get(context.work.workId);
   if (view === undefined || row === undefined)
-    throw new Error("The export revision no longer exists.");
+    throw new Error(
+      "Slopify hit an internal error (the project version being exported is missing). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   const plan = executionPlan(deps, view, savedCatalogue(row.recipe_context));
   const recipe = plan.recipes.find(
     (one) => one.key === piece.key && one.fingerprint === piece.fingerprint,
   );
   if (recipe === undefined || recipe.deferred || recipe.unresolved)
-    throw new Error("The export inputs do not match the admitted recipe.");
+    throw new Error(
+      "Slopify hit an internal error (the export no longer matches the project's saved inputs). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   return { view, plan };
 }
 export async function revisionAudio(
@@ -56,11 +60,16 @@ export async function revisionAudio(
       (await (deps.measureAudio?.(path, context.signal) ??
         probeDurationMs(deps.ffmpeg, path, context.signal, deps.log)));
     if (!Number.isFinite(duration) || duration <= 0)
-      throw new Error("The narration duration could not be measured.");
+      throw new Error(
+        "Slopify couldn't read the length of the narration audio, so the file may be damaged or empty. Regenerate the narration (or upload your audio file again in Edit project → Narration), then Retry stage.",
+      );
     return { path, seconds: duration / 1000 };
   };
   const body = await input("audio_body");
-  if (body === undefined) throw new Error("The revision has no complete narration.");
+  if (body === undefined)
+    throw new Error(
+      "The narration audio isn't finished yet. Let the Narration stage finish (Resume, or Retry stage on it), then retry this stage.",
+    );
   return audioTimeline(
     {
       body,
@@ -109,7 +118,9 @@ export function revisionTranscript(
         typeof recipe.input.semantic[0] === "string"
       )
         return recipe.input.semantic[0];
-      throw new Error("The saved narration transcript is incomplete.");
+      throw new Error(
+        "Some narration chunks aren't finished, so the full narration text isn't available. Let the Narration stage finish (Resume, or Retry stage on it), or regenerate the missing chunk in Edit project → Narration.",
+      );
     });
     if (texts.length > 0) return texts.join("\n");
   }
@@ -122,7 +133,9 @@ export function revisionTranscript(
       return readFileSync(outputPath(deps.paths, view.revision.projectId, row.output.path), "utf8");
     if (view.articleMarkdown !== null) return plainText(splitEndMatter(view.articleMarkdown).body);
   }
-  throw new Error(`The saved ${kind} narration transcript is missing.`);
+  throw new Error(
+    `The saved text of the ${kind === "body" ? "article" : kind} is missing, so it can't be matched to the narration. Use Re-run section on Article, then Retry stage.`,
+  );
 }
 export function retainedOutput(
   deps: RevisionDeps,

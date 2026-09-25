@@ -385,7 +385,7 @@ function projectIsActive(db: DatabaseSync, projectId: string): boolean {
 export function recoverRunningRuns(
   db: DatabaseSync,
   endedAt: string,
-  error = "The app stopped while this scheduled run was active.",
+  error = "Slopify was closed while this run was in progress. Check its video in Projects; the next run will go ahead as planned.",
 ): number {
   return transact(db, () => {
     const pending = db
@@ -470,6 +470,35 @@ function parseRun(row: unknown): ScheduleRun {
     estimate: value.estimate_json === null ? null : JSON.parse(value.estimate_json),
     startedAt: value.started_at,
     endedAt: value.ended_at,
-    error: value.error,
+    error: value.error === null ? null : runErrorText(value.error),
   });
+}
+
+// A failed dispatch records the refusal's reason code; the run history shows the sentence.
+// Mapped on read so runs recorded before these sentences existed read the same way.
+const internalRunError =
+  "Slopify hit an internal error while starting this run. The next run will try again; if it keeps happening, use Download diagnostics in Settings and report it.";
+const runErrors: Readonly<Record<string, string>> = {
+  "missing-template":
+    "The template this schedule uses was deleted or changed. Edit the schedule and choose a template again.",
+  "unsupported-media":
+    "This template uses audio, images or a thumbnail you supplied, which scheduled runs cannot use. Pick a template that generates these instead.",
+  "spend-limit":
+    "Not started: the estimated cost was above this schedule's spend limit, or some prices were unknown. Raise the spend limit or choose models with known prices.",
+  readiness:
+    "Not started: a provider was not ready, for example a missing API key, model or voice. Check Settings → Providers; the next run will try again.",
+  "not-found":
+    "The template's settings are no longer valid, for example a prompt or voice it uses was deleted. Fix the template in Library > Templates and save it.",
+  "invalid-draft":
+    "The template's settings are no longer valid, for example a prompt or voice it uses was deleted. Fix the template in Library > Templates and save it.",
+  "invalid-edit":
+    "The template's settings are no longer valid, for example a prompt or voice it uses was deleted. Fix the template in Library > Templates and save it.",
+  conflict: internalRunError,
+  "pending-start": internalRunError,
+  "already-started": internalRunError,
+  "stale-review": internalRunError,
+  "The scheduled run failed.": internalRunError,
+};
+function runErrorText(error: string): string {
+  return Object.hasOwn(runErrors, error) ? (runErrors[error] ?? error) : error;
 }

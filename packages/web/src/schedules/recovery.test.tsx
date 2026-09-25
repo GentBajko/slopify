@@ -193,7 +193,7 @@ it("rejects an invalid recurring timezone before submission", async () => {
 
   expect(await screen.findByRole("alert")).toHaveProperty(
     "textContent",
-    expect.stringContaining("valid IANA timezone"),
+    expect.stringContaining("Enter a timezone name"),
   );
   expect(create).not.toHaveBeenCalled();
 });

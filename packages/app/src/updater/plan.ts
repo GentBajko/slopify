@@ -184,7 +184,9 @@ export async function npmCommand(): Promise<CliCommand> {
       /* PATH can include directories without npm. */
     }
   }
-  throw new Error("npm is unavailable. Install Node.js with npm to use in-app updates.");
+  throw new Error(
+    "npm was not found, so in-app updates are off. Install Node.js with npm (https://nodejs.org), or update from the terminal: npx @gentbajko/slopify@latest",
+  );
 }
 
 export async function updateCommitted(

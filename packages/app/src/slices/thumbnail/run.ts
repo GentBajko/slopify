@@ -63,19 +63,25 @@ export async function runThumbnail(
   const { projectId } = context.stage;
   const project = projectById(deps.db, projectId);
   if (project === undefined) {
-    throw new Error(`project ${projectId} has no row`);
+    throw new Error(
+      "This project no longer exists; it may have been deleted while it was running.",
+    );
   }
   const source = project.config.sources.thumbnail;
   if (source !== "from_prompt" && source !== "prompt_by_llm") {
     // Off is `skipped` and Provide is `provided` at project creation,
     // so the runner never starts this stage for either.
-    throw new Error(`the thumbnail stage cannot run with its source set to ${source}`);
+    throw new Error(
+      `Slopify hit an internal error (the thumbnail stage cannot run with its source set to ${source}). Retry stage; if it happens again, use Download diagnostics in Settings and report it.`,
+    );
   }
   const choice = project.config.images;
   if (choice === undefined) {
     // Admission requires the image provider whenever the thumbnail is generated, so reaching
     // here is a bug in admission rather than the user's.
-    throw new Error("the run has no image provider or model");
+    throw new Error(
+      "No image model is set for the thumbnail. Choose one in Edit project → Providers, then Retry stage.",
+    );
   }
 
   const result =
@@ -109,7 +115,9 @@ export async function runThumbnail(
 function fromTemplate(project: Project): string {
   const rendered = project.config.rendered.thumbnailPrompt;
   if (rendered === undefined) {
-    throw new Error("the run has no rendered thumbnail prompt");
+    throw new Error(
+      "Slopify hit an internal error (the thumbnail prompt was never filled in). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   }
   return rendered;
 }
@@ -138,7 +146,9 @@ async function byLlm(
   }
   if (llm === undefined) {
     // Admission requires the LLM row when the thumbnail source is Prompt by LLM.
-    throw new Error("the run has no LLM provider or model");
+    throw new Error(
+      "No AI model is set for writing the thumbnail prompt. Choose one in Edit project → Providers, then Retry stage.",
+    );
   }
   const messages = thumbnailMessages(brief(deps, project));
   const answer = await providers.llm({
@@ -173,7 +183,9 @@ function named(choice: ProviderChoice): { provider: string; model: string } {
 function brief(deps: ThumbnailDeps, project: Project): ThumbnailBrief {
   const instruction = project.config.rendered.thumbnailPrompt;
   if (instruction === undefined) {
-    throw new Error("the run has no rendered thumbnail prompt");
+    throw new Error(
+      "Slopify hit an internal error (the thumbnail prompt was never filled in). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   }
   return {
     instruction,
@@ -190,7 +202,9 @@ function brief(deps: ThumbnailDeps, project: Project): ThumbnailBrief {
 function articleText(deps: ThumbnailDeps, projectId: string): string {
   const article = outputsOf(deps.db, projectId).find((output) => output.role === "article_txt");
   if (article === undefined) {
-    throw new Error("the project has no article for the thumbnail prompt to be written from");
+    throw new Error(
+      "The thumbnail prompt is written from the article, but the article isn't ready. Let the Article stage finish, then Retry stage.",
+    );
   }
   return readFileSync(outputPath(deps.paths, projectId, article.path), "utf8");
 }
@@ -291,7 +305,9 @@ function instructionsText(messages: readonly Message[]): string {
 
 function payloadOf(piece: StagePiece): z.infer<typeof writtenPayload> {
   if (piece.payload === null) {
-    throw new Error(`the written thumbnail prompt ${piece.id} has no payload`);
+    throw new Error(
+      "Slopify hit an internal error (the saved thumbnail prompt is empty). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   }
   return writtenPayload.parse(JSON.parse(piece.payload));
 }

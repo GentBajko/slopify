@@ -343,7 +343,7 @@ describe("attempt", () => {
 
       await expect(
         h.clock.settle(attempt(h.context, call, { kind: "llm", streaming: true })),
-      ).rejects.toThrow("sent nothing for 120 s");
+      ).rejects.toThrow("sent nothing for 120 seconds");
 
       // The first attempt started at 10:00:00 and died 120 s after its last chunk.
       expect(h.attempts.rows[0]?.endedAt).toBe("2026-09-02T10:02:01.000Z");
@@ -426,7 +426,7 @@ describe("attempt", () => {
       h.clock.settle(
         attempt(h.context, alwaysFails(new TypeError("fetch failed")), { kind: "llm" }),
       ),
-    ).rejects.toThrow("fetch failed");
+    ).rejects.toThrow("Slopify could not reach the AI model over the internet");
 
     expect(h.attempts.rows.map((row) => row.outcome)).toEqual(["other", "other", "other", "other"]);
     const thrown = await h.clock

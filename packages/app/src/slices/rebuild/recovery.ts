@@ -117,7 +117,10 @@ export async function recoverProject(
       if (record.edit !== null) {
         const prior = retainedPreviewPlan(deps, base, deps.catalogue.read());
         const action = input.action;
-        if (action.kind !== "rerun") throw new Error("Recovery edit has no rerun action");
+        if (action.kind !== "rerun")
+          throw new Error(
+            "Slopify hit an internal error (a recovery edit has nothing to re-run). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+          );
         const affected = dependentClosure(prior.recipes, sectionRoots(base, prior, action.stage));
         const savedIntent = deps.db
           .prepare(
@@ -225,7 +228,10 @@ export async function recoverProject(
       if (conflict !== undefined) return finish(conflictRefusal(conflict));
       storePreview(deps, preview.value.preview, preview.value.execution);
       const stored = previewById(deps.db, projectId, preview.value.preview.id);
-      if (stored === undefined) throw new Error("Stored recovery preview is missing.");
+      if (stored === undefined)
+        throw new Error(
+          "Slopify hit an internal error (the saved recovery preview is missing). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+        );
       return {
         plan: { preview: stored, execution: preview.value.execution },
         view,

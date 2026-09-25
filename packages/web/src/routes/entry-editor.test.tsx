@@ -184,17 +184,17 @@ describe("the entry editor's slots", () => {
     expect(marks[0]?.getAttribute("data-lint-mark")).toBe("15");
     expect(screen.getByText("1 slot error")).not.toBeNull();
     // Once in the slots panel, once beside the Save it is holding.
-    expect(screen.getAllByText("The `{{` at line 2, column 6 is never closed.")).toHaveLength(2);
+    expect(screen.getAllByText("The `{{` at line 2, column 6 is never closed. Add `}}` after the keyword name.")).toHaveLength(2);
     expect(screen.getByLabelText("Body").getAttribute("aria-invalid")).toBe("true");
 
     const save = screen.getByRole("button", { name: "Save" });
     expect(save.getAttribute("aria-disabled")).toBe("true");
     const reason = document.getElementById(save.getAttribute("aria-describedby") ?? "");
-    expect(reason?.textContent).toBe("The `{{` at line 2, column 6 is never closed.");
+    expect(reason?.textContent).toBe("The `{{` at line 2, column 6 is never closed. Add `}}` after the keyword name.");
 
     await user.click(screen.getByRole("radio", { name: "LLM" }));
     expect(screen.getByRole("button", { name: "Save" }).getAttribute("aria-disabled")).toBe("true");
-    expect(screen.getAllByText("The `{{` at line 2, column 6 is never closed.")).toHaveLength(2);
+    expect(screen.getAllByText("The `{{` at line 2, column 6 is never closed. Add `}}` after the keyword name.")).toHaveLength(2);
 
     await fill(user, "Body", "Line one.\nThen {{good}}");
     expect(screen.getByRole("button", { name: "Save" }).getAttribute("aria-disabled")).toBe(
@@ -207,10 +207,10 @@ describe("the entry editor's slots", () => {
     await newEditor();
 
     expect(screen.getByRole("button", { name: "Save" }).getAttribute("aria-disabled")).toBe("true");
-    expect(screen.getByText("A name is required.")).not.toBeNull();
+    expect(screen.getByText("Enter a name.")).not.toBeNull();
 
     await user.type(screen.getByLabelText("Name"), "Cold open");
-    expect(screen.getByText("A body is required.")).not.toBeNull();
+    expect(screen.getByText("Enter the text.")).not.toBeNull();
   });
 });
 
@@ -320,6 +320,6 @@ describe("an existing entry", () => {
       testDeps({ "GET /api/entries": () => new Response(null, { status: 500 }) }),
     );
 
-    expect(await screen.findByText(/answered 500/)).not.toBeNull();
+    expect(await screen.findByText(/unexpected error \(500\)/)).not.toBeNull();
   });
 });

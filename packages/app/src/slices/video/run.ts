@@ -35,10 +35,15 @@ export interface VideoDeps {
 export async function renderVideo(deps: VideoDeps, context: StageContext): Promise<void> {
   const { projectId } = context.stage;
   const project = projectById(deps.db, projectId);
-  if (!project) throw new Error(`project ${projectId} has no row`);
+  if (!project)
+    throw new Error(
+      "This project no longer exists; it may have been deleted while it was running.",
+    );
   if (project.config.sources.video === "off") {
     if (project.config.sources.audio === "off")
-      throw new Error("the project has no media export enabled");
+      throw new Error(
+        "There is nothing to export because both video and narration are turned off for this project. Turn one on in Edit project, then Retry stage.",
+      );
     await exportAudioWav(deps, context, project.config.silenceGapSeconds);
     return;
   }

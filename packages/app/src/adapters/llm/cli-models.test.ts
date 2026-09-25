@@ -67,7 +67,7 @@ describe("Codex installed model catalogue", () => {
       if (kind === "directory") await mkdir(path);
       await expect(
         nodeCodexModels({ CODEX_HOME: home }, join(home, "missing-codex")),
-      ).rejects.toThrow(/^Codex model metadata is unavailable\./);
+      ).rejects.toThrow(/^Slopify could not get the model list from the Codex CLI\./);
     },
   );
 });
@@ -228,7 +228,7 @@ describe("Gemini installed model catalogue", () => {
         await truncate(install.metadata, 256 * 1024 + 1);
       }
       await expect(nodeGeminiModels(install.entry)).rejects.toThrow(
-        /^Gemini CLI model metadata is unavailable\./,
+        /^Slopify could not get the model list from the Gemini CLI\./,
       );
     },
   );

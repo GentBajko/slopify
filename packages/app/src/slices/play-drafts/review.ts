@@ -36,7 +36,7 @@ export async function resolvePlayReview(
       return reviewRefusal(view, [
         {
           field: "subtitles.fontId",
-          message: "The selected font is no longer available. Choose another font.",
+          message: "This font was deleted. Choose another font.",
         },
       ]);
     }
@@ -55,12 +55,12 @@ export async function resolvePlayReview(
     if (result === "missing")
       fields.push({
         field: `${choice.field}.model`,
-        message: "Choose an available model before reviewing.",
+        message: "This model is no longer available. Choose another model.",
       });
     else if (result === "thinking")
       fields.push({
         field: `${choice.field}.thinking`,
-        message: "Choose a supported thinking setting.",
+        message: "This model does not support that thinking setting. Choose another.",
       });
   }
   if (fields.length) return reviewRefusal(view, fields);

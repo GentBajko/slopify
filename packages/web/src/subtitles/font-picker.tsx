@@ -132,7 +132,7 @@ function FontPickerFields({
       ) : null}
       {fonts.error ? (
         <p role="alert" className="text-small text-red">
-          Could not load fonts. {fonts.error.message}
+          The font list couldn't be loaded. {fonts.error.message}
         </p>
       ) : null}
     </div>

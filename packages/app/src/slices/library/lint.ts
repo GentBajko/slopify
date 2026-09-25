@@ -20,17 +20,23 @@ function lint(name: string, body: string): readonly FieldError[] {
   const fields: FieldError[] = [];
   const trimmed = name.trim();
   if (trimmed === "") {
-    fields.push({ field: "name", message: "A name is required." });
+    fields.push({ field: "name", message: "Enter a name." });
   } else if (trimmed.length > nameMax) {
-    fields.push({ field: "name", message: `A name is at most ${String(nameMax)} characters.` });
+    fields.push({
+      field: "name",
+      message: `Keep the name to ${String(nameMax)} characters or fewer.`,
+    });
   }
 
   if (body.trim() === "") {
-    fields.push({ field: "body", message: "A body is required." });
+    fields.push({ field: "body", message: "Enter the text." });
     return fields;
   }
   if (body.length > bodyMax) {
-    fields.push({ field: "body", message: `A body is at most ${String(bodyMax)} characters.` });
+    fields.push({
+      field: "body",
+      message: `The text is too long. Keep it to ${String(bodyMax)} characters or fewer.`,
+    });
     return fields;
   }
   for (const error of detectSlots(body).errors) {
@@ -45,11 +51,11 @@ function describe(error: SlotLintError, body: string): string {
   const where = positionOf(body, error.at);
   switch (error.kind) {
     case "unclosed":
-      return `The \`{{\` at ${where} is never closed.`;
+      return `The \`{{\` at ${where} is never closed. Add \`}}\` after the keyword name.`;
     case "empty":
-      return `The slot at ${where} has no name.`;
+      return `The keyword at ${where} has no name. Write a name between \`{{\` and \`}}\`.`;
     case "nested":
-      return `The slot at ${where} holds a brace; slots do not nest.`;
+      return `The keyword at ${where} contains a brace. Keywords cannot be placed inside other keywords.`;
   }
 }
 

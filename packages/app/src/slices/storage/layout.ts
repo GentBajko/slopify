@@ -20,7 +20,9 @@ function contained(root: string, path: string): string {
   const target = resolve(root, path);
   const inside = relative(root, target);
   if (inside === "" || inside.startsWith("..") || isAbsolute(inside)) {
-    throw new Error(`${path} resolves outside ${root}`);
+    throw new Error(
+      `Slopify hit an internal error (the saved file path ${path} resolves outside ${root}). Try again; if it happens again, use Download diagnostics in Settings and report it.`,
+    );
   }
   return target;
 }

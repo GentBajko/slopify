@@ -8,7 +8,7 @@ import { type RecoveryResult, recoveryResultSchema } from "@app/slices/rebuild/r
 import type { SubtitleConfig } from "@app/slices/subtitles/model.js";
 import type { Api, ProjectBody } from "@/api";
 import { fileUrl } from "@/api";
-import { errorOf, problemOf, readText } from "@/http";
+import { errorOf, problemOf, readText, unrecognised } from "@/http";
 
 // Control responses may be replayed receipts for an older revision. Callers refetch
 // the current project instead of publishing these projections into the current cache.
@@ -204,7 +204,7 @@ async function recoveryRun(
   );
   if (response.ok) {
     const result = recoveryResultSchema.parse(await response.json());
-    if (!result.ok) throw new Error("Invalid recovery success response");
+    if (!result.ok) throw new Error(unrecognised);
     return { ok: true, value: result.value, warnings: result.value.warnings };
   }
   const problem = await problemOf(response);

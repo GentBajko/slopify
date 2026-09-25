@@ -52,7 +52,7 @@ tts: []
     expect(store.models("inworld", "tts")[0]?.name).toBe("My account TTS-2");
     writeFileSync(store.status().path, "llm: [broken");
     expect(store.models("inworld", "tts")[0]?.name).toBe("My account TTS-2");
-    expect(store.status().warning).toMatch(/last valid/);
+    expect(store.status().warning).toMatch(/last working/);
   });
   it("validates a downloaded update before replacing local settings and backs up successful updates", async () => {
     const dataDir = mkdtempSync(join(tmpdir(), "slopify-models-"));

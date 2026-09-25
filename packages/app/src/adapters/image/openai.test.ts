@@ -157,7 +157,9 @@ describe("openAiImage.generate", () => {
     const thrown = await failed(replaying(answering("openai-image-401.json", 401)));
 
     expect(kindOf(thrown)).toBe("auth");
-    expect(String(thrown)).toContain("OpenAI answered 401: Incorrect API key provided");
+    expect(String(thrown)).toContain(
+      'OpenAI did not accept the API key (error 401: "Incorrect API key provided',
+    );
   });
 
   it("takes the wait from a 429's Retry-After instead of the fixed backoff", async () => {
@@ -176,8 +178,8 @@ describe("openAiImage.generate", () => {
     const thrown = await failed(replaying(answering("openai-image-moderation.json", 400)));
 
     expect(kindOf(thrown)).toBe("refusal");
-    expect(String(thrown)).toBe(
-      "Error: OpenAI answered 400: Your request was rejected as a result of our safety system. Your request may contain content that is not allowed by our safety system.",
+    expect(String(thrown)).toContain(
+      'OpenAI refused to make this image under its content rules ("Your request was rejected as a result of our safety system. Your request may contain content that is not allowed by our safety system.")',
     );
   });
 
@@ -199,7 +201,7 @@ describe("openAiImage.generate", () => {
     const thrown = await failed(replaying(answering("openai-image-truncated.json")));
 
     expect(kindOf(thrown)).toBe("other");
-    expect(String(thrown)).toContain("rather than a PNG or a JPEG");
+    expect(String(thrown)).toContain("not a PNG or JPEG image");
   });
 
   it("says so when the answer carries no image", async () => {
@@ -207,13 +209,13 @@ describe("openAiImage.generate", () => {
     const thrown = await failed(replaying(empty));
 
     expect(kindOf(thrown)).toBe("other");
-    expect(String(thrown)).toContain("OpenAI answered with no image");
+    expect(String(thrown)).toContain("OpenAI finished without sending an image");
   });
 
   it("says so when the answer is not the shape this app reads", async () => {
     const thrown = await failed(replaying(() => new Response("<html>502</html>", { status: 200 })));
 
     expect(kindOf(thrown)).toBe("other");
-    expect(String(thrown)).toContain("not in the shape this app can read");
+    expect(String(thrown)).toContain("OpenAI sent back an answer Slopify could not read");
   });
 });

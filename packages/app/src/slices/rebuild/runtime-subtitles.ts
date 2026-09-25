@@ -63,7 +63,9 @@ export async function executeSubtitleRecipe(
   if (piece.key === "subtitles:timing") return timing(deps, context, piece, snapshot);
   if (piece.key === "subtitles:cues") return cues(deps, context, piece, snapshot);
   if (piece.key === "subtitles:files") return files(deps, context, piece, snapshot);
-  throw new Error("Unknown subtitle recipe.");
+  throw new Error(
+    "Slopify hit an internal error (unknown kind of caption step). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+  );
 }
 async function timing(
   deps: ExportExecutionDeps,
@@ -72,10 +74,15 @@ async function timing(
   snapshot: ExportSnapshot,
 ): Promise<StageRunResult> {
   const audio = await revisionAudio(deps, context, snapshot.view);
-  if (audio.length === 0) throw new Error("Subtitles need narration audio.");
+  if (audio.length === 0)
+    throw new Error(
+      "Captions need narration audio, but this project has none. Turn captions off in Edit project → Subtitles, or turn narration on, then Retry stage.",
+    );
   const alignSubtitles = deps.alignSubtitles;
   if (alignSubtitles === undefined)
-    throw new Error("Local subtitle alignment is unavailable in this build.");
+    throw new Error(
+      "Slopify hit an internal error (the caption timing tool is missing from this build). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   if (!context.maySubmit(piece.id)) return "held";
   const words: TimedWord[] = [];
   const omissions: SubtitleOmission[] = [];
@@ -107,7 +114,9 @@ async function timing(
       );
       for (const word of aligned) {
         if (word.end > segment.seconds + 0.1)
-          throw new Error("Subtitle timing exceeds the narration duration.");
+          throw new Error(
+            "Caption timing came out longer than the narration audio. Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+          );
         words.push({
           ...word,
           start: word.start + offset,
@@ -119,7 +128,7 @@ async function timing(
   }
   if (captionCues(words).length === 0)
     throw new Error(
-      "No spoken words could be aligned. Check that the English article matches the audio.",
+      "None of the narration could be matched to the article text, so captions can't be timed. Captions only work for English narration; if you uploaded your own audio, make sure it reads the article text, then Retry stage.",
     );
   context.signal.throwIfAborted();
   const output = preparedText(
@@ -144,7 +153,9 @@ async function cues(
   let value: z.infer<typeof cuesSchema>;
   if (manual !== undefined) {
     if (plan.work.find((one) => one.key === piece.key)?.disposition === "review")
-      throw new Error("Review the saved captions against the current narration before rebuilding.");
+      throw new Error(
+        "Your edited captions were written for an older version of the narration. Review them in Edit project → Captions and save, then Retry stage.",
+      );
     const audio = await revisionAudio(deps, context, view);
     const errors = validateCues(
       manual.cues,
@@ -160,7 +171,10 @@ async function cues(
         one.state === "ready" &&
         one.workKey === "subtitles:timing",
     );
-    if (output === undefined) throw new Error("The revision has no aligned subtitle timing.");
+    if (output === undefined)
+      throw new Error(
+        "Caption timing is missing. Use Re-run section on Video, then Retry stage.",
+      );
     const timed = wordsSchema.parse(
       JSON.parse(
         readFileSync(outputPath(deps.paths, context.work.projectId, output.output.path), "utf8"),
@@ -187,13 +201,17 @@ async function files(
   const { view } = snapshot;
   const config = view.revision.config.subtitles;
   if (config === undefined || config.mode === "off")
-    throw new Error("The admitted revision has no subtitles.");
+    throw new Error(
+      "Slopify hit an internal error (captions are off for this version of the project). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   const row = view.pieces.find(
     (one) =>
       one.key === "subtitles:cues" && one.selected && one.available && one.piece.state === "done",
   );
   if (row?.piece.payload === null || row?.piece.payload === undefined)
-    throw new Error("The revision has no prepared captions.");
+    throw new Error(
+      "The captions haven't been prepared yet. Use Re-run section on Video, then Retry stage.",
+    );
   const value = cuesSchema.parse(JSON.parse(row.piece.payload));
   const previous = view.outputs.find(
     (one) => one.output.role === "subtitle_font" && one.selected && one.available,

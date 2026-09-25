@@ -37,7 +37,7 @@ it("leaves local CLI IDs to async validation while retaining API catalogue check
       ),
     ).toContainEqual({
       field: "llm",
-      message: "Choose an enabled model from the current catalogue.",
+      message: "This model is no longer in Slopify's model list. Choose another model.",
     });
   } finally {
     rmSync(dataDir, { recursive: true, force: true });

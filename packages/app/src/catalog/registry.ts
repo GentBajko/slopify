@@ -16,7 +16,7 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
     if (!model)
       throw providerError({
         kind: "unsupported",
-        message: `${provider}: this model is not enabled in the current catalogue. Choose a supported model in Run settings.`,
+        message: `The chosen ${provider} model is no longer in Slopify's model list. In the Edit tab, choose Edit project and change it under Providers, then use Resume.`,
       });
     return model;
   };
@@ -30,7 +30,11 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
           models: () => port.models(),
           complete: async function* (request): AsyncGenerator<LlmEvent> {
             if (request.model.trim() === "")
-              throw providerError({ kind: "unsupported", message: "Choose a model ID." });
+              throw providerError({
+                kind: "unsupported",
+                message:
+                  "No model is chosen for this step. In the Edit tab, choose Edit project and change it under Providers, then use Resume.",
+              });
             let models: Awaited<ReturnType<typeof port.models>> | undefined;
             try {
               models = await port.models();
@@ -42,7 +46,8 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
             if (models !== undefined && selected === undefined)
               throw providerError({
                 kind: "unsupported",
-                message: "This model is not available in the installed CLI.",
+                message:
+                  "The chosen model is not available in the AI command-line tool on your computer. Update the tool, or pick another model: in the Edit tab, choose Edit project and change it under Providers, then use Resume.",
               });
             if (
               request.thinking !== undefined &&
@@ -51,12 +56,14 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
             )
               throw providerError({
                 kind: "unsupported",
-                message: "This model does not support the selected thinking setting.",
+                message:
+                  "The chosen model does not support this thinking setting. In the Edit tab, choose Edit project and change it under Providers, then use Resume.",
               });
             if (request.webSearch && !port.capabilities.webSearch)
               throw providerError({
                 kind: "unsupported",
-                message: "This CLI does not support research web search.",
+                message:
+                  "This command-line tool cannot search the web for research. Choose another text provider or turn Research off in the Edit tab under Edit project, then use Resume.",
               });
             const thinkingConfig =
               id === "codex" && request.thinking !== undefined
@@ -89,7 +96,8 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
           if (request.webSearch && !model.llm.webSearch)
             throw providerError({
               kind: "unsupported",
-              message: "This model does not support research web search.",
+              message:
+                "The chosen model cannot search the web for research. Choose another model or turn Research off in the Edit tab under Edit project, then use Resume.",
             });
           const thinkingConfig =
             request.thinking === undefined ? undefined : model.llm.thinking?.[request.thinking];
@@ -97,7 +105,7 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
             throw providerError({
               kind: "unsupported",
               message:
-                "This model does not support the selected thinking setting. Choose an available setting.",
+                "The chosen model does not support this thinking setting. In the Edit tab, choose Edit project and change it under Providers, then use Resume.",
             });
           yield* port.complete({
             ...request,
@@ -116,7 +124,8 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
             if (!(await port.models()).some((model) => model.id === request.model))
               throw providerError({
                 kind: "unsupported",
-                message: "The Codex image capability is unavailable.",
+                message:
+                  "Image generation is not available in the Codex CLI on your computer. Update Codex CLI, or choose another image provider in the Edit tab under Edit project, then use Resume.",
               });
             return port.generate(request);
           },
@@ -130,7 +139,8 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
           if (!("image" in model) || !model.image.aspectRatios.includes(request.aspect))
             throw providerError({
               kind: "unsupported",
-              message: "This model does not support the selected video shape.",
+              message:
+                "The chosen image model cannot make images in this video's shape. In the Edit tab, choose Edit project and change it under Providers, then use Resume.",
             });
           return port.generate(request);
         },
@@ -149,7 +159,7 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
           if (request.text.length > model.tts.maxCharacters)
             throw providerError({
               kind: "unsupported",
-              message: `${id}: this physical narration request exceeds the current ${model.tts.maxCharacters}-character limit. Rebuild narration to split it using the new limit.`,
+              message: `A piece of narration is longer than this voice model's ${model.tts.maxCharacters}-character limit. Use Re-run section on Audio so Slopify splits it into shorter pieces.`,
             });
           return port.synthesize({ ...request, model: model.id });
         },

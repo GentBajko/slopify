@@ -210,7 +210,7 @@ describe("the article stage through the attempt wrapper", () => {
     const llm = fakeLlm({ deltas: ["on and on"], finishReason: "length" });
 
     await expect(h.clock.settle(run(h, llm))).rejects.toThrow(
-      "the article was still unfinished after 3 continuations",
+      "The article was still unfinished after 3 continuations",
     );
 
     // One article call, two continuations that were accepted, and four attempts at the

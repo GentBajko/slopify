@@ -82,7 +82,13 @@ describe("createPrompt", () => {
     expect(result).toEqual({
       ok: false,
       reason: "invalid",
-      fields: [{ field: "body", message: "The `{{` at line 1, column 13 is never closed." }],
+      fields: [
+        {
+          field: "body",
+          message:
+            "The `{{` at line 1, column 13 is never closed. Add `}}` after the keyword name.",
+        },
+      ],
     });
     expect(listPrompts(library.db)).toEqual([]);
   });
@@ -93,7 +99,7 @@ describe("createPrompt", () => {
     expect(createPrompt(library, { kind: "article", name: "Empty", body: "  " })).toEqual({
       ok: false,
       reason: "invalid",
-      fields: [{ field: "body", message: "A body is required." }],
+      fields: [{ field: "body", message: "Enter the text." }],
     });
     expect(listPrompts(library.db)).toEqual([]);
   });
@@ -309,7 +315,13 @@ describe("entries", () => {
     ).toEqual({
       ok: false,
       reason: "invalid",
-      fields: [{ field: "body", message: "The slot at line 1, column 1 has no name." }],
+      fields: [
+        {
+          field: "body",
+          message:
+            "The keyword at line 1, column 1 has no name. Write a name between `{{` and `}}`.",
+        },
+      ],
     });
   });
 

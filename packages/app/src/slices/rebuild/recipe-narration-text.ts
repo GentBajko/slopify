@@ -47,7 +47,9 @@ export function narrationFileRecipe(
             ];
           if (part.input.kind === "provided")
             return [resourceIdentity(context, part), part.input.semantic, null];
-          throw new Error("Narration files require exact audio parts.");
+          throw new Error(
+            "Slopify hit an internal error (a narration chunk has an unexpected source). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+          );
         }),
       },
     },

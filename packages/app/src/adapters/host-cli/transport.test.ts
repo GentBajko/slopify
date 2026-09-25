@@ -73,7 +73,7 @@ it.skipIf(process.platform === "win32")(
       }),
     ).rejects.toMatchObject({
       fault: { kind: "unavailable" },
-      message: expect.stringContaining("uncertain"),
+      message: expect.stringContaining("cannot tell whether it finished"),
     });
     expect(count).toBe(1);
   },
@@ -105,6 +105,6 @@ it.skipIf(process.platform === "win32")(
       kind: "metadata",
       signal: AbortSignal.timeout(2000),
     });
-    await expect(readHostBytes(response, 5)).rejects.toThrow("limit");
+    await expect(readHostBytes(response, 5)).rejects.toThrow("more data than Slopify accepts");
   },
 );

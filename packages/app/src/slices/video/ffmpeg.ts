@@ -33,8 +33,9 @@ export function resolveFfmpeg(
   // Never PATH: a Slopify that quietly rendered with whichever ffmpeg the machine
   // happens to carry would not be testing the binary it ships with.
   throw new Error(
-    "No ffmpeg binary is available. Slopify ships one through ffmpeg-static; if this " +
-      "platform has no build, point SLOPIFY_FFMPEG at an ffmpeg executable.",
+    "Slopify can't find ffmpeg, the tool it uses to make audio and video: its bundled copy is " +
+      "missing for this computer. Reinstall Slopify, or set the SLOPIFY_FFMPEG environment " +
+      "variable to the path of an ffmpeg program.",
   );
 }
 
@@ -232,7 +233,11 @@ export function runFfmpeg(run: RenderRun): Promise<void> {
 
     child.on("error", (error: Error) => {
       run.signal.removeEventListener("abort", stop);
-      reject(new Error(`ffmpeg could not be started: ${error.message}`));
+      reject(
+        new Error(
+          `Slopify could not start ffmpeg, the tool it uses to make audio and video (${error.message}). Reinstall Slopify, or if you set SLOPIFY_FFMPEG, check that it points to a working ffmpeg program.`,
+        ),
+      );
     });
     child.on("close", (code: number | null, signal: NodeJS.Signals | null) => {
       run.signal.removeEventListener("abort", stop);
@@ -304,7 +309,9 @@ function failure(
   errors: readonly string[],
 ): string {
   const ended = code === null ? `killed by ${signal ?? "a signal"}` : `exited with code ${code}`;
-  return errors.length === 0
-    ? `ffmpeg ${ended} and wrote nothing to its error stream`
-    : `ffmpeg ${ended}: ${errors.join(" / ")}`;
+  const said =
+    errors.length === 0
+      ? `ffmpeg ${ended} and wrote nothing to its error stream`
+      : `ffmpeg ${ended}: ${errors.join(" / ")}`;
+  return `The audio/video export failed (${said}). Retry stage; if it fails again, make sure your disk has free space (see Settings → Backup & storage), then use Download diagnostics in Settings and report it.`;
 }

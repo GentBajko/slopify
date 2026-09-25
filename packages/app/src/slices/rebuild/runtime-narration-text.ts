@@ -30,7 +30,10 @@ export function narrationTextParts(
   const concat = plan.recipes.find(
     (row) => row.key === (segment === "body" ? "audio:body:concat" : `audio:${segment}`),
   );
-  if (concat === undefined) throw new Error(`The saved ${segment} narration is missing.`);
+  if (concat === undefined)
+    throw new Error(
+      `Slopify hit an internal error (the ${segment} narration is missing from the project plan). Retry stage; if it happens again, use Download diagnostics in Settings and report it.`,
+    );
   return concat.dependsOn.map((key) => {
     const recipe = plan.recipes.find((row) => row.key === key);
     const selected = view.pieces.find(
@@ -42,7 +45,9 @@ export function narrationTextParts(
         row.fingerprint === recipe?.fingerprint,
     );
     if (selected === undefined || recipe === undefined)
-      throw new Error("The saved narration transcript is incomplete.");
+      throw new Error(
+        "Some narration chunks aren't finished, so the full narration text isn't available. Let the Narration stage finish (Resume, or Retry stage on it), or regenerate the missing chunk in Edit project → Narration.",
+      );
     const input = recipe.input;
     if (
       input.kind === "provided" &&
@@ -54,7 +59,10 @@ export function narrationTextParts(
         spokenText: input.semantic[0],
         requestText: null,
       };
-    if (input.kind !== "tts") throw new Error("The narration source has not resolved.");
+    if (input.kind !== "tts")
+      throw new Error(
+        "Slopify hit an internal error (a narration chunk's text was never worked out). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      );
     const payload = z
       .object({ text: z.string().optional(), spokenText: z.string().optional() })
       .parse(JSON.parse(selected.piece.payload ?? "{}"));
@@ -62,7 +70,9 @@ export function narrationTextParts(
       input.spokenText !== undefined &&
       (payload.spokenText !== input.spokenText || payload.text !== input.text)
     )
-      throw new Error("Prepared narration is missing its exact clean transcript.");
+      throw new Error(
+        "A narration chunk's audio no longer matches its prepared text. Regenerate that chunk in Edit project → Narration, then Retry stage.",
+      );
     return {
       logicalKey: input.logicalKey,
       spokenText:
@@ -77,7 +87,10 @@ export async function publishNarrationText(
   context: StageContext,
   piece: WorkPiece,
 ): Promise<void> {
-  if (piece.input.kind !== "local") throw new Error("Expected a narration-file recipe.");
+  if (piece.input.kind !== "local")
+    throw new Error(
+      "Slopify hit an internal error (the narration text file step was set up wrongly). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   const { segment } = z
     .object({ segment: z.enum(["body", "intro", "outro"]) })
     .parse(piece.input.values);
@@ -85,14 +98,19 @@ export async function publishNarrationText(
   const row = deps.db
     .prepare("SELECT recipe_context FROM revision_work WHERE id=?")
     .get(context.work.workId);
-  if (view === undefined) throw new Error("The pinned narration revision is missing.");
+  if (view === undefined)
+    throw new Error(
+      "Slopify hit an internal error (the project version being narrated is missing). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   const plan = executionPlan(deps, view, savedCatalogue(row?.recipe_context));
   if (
     !plan.recipes.some(
       (recipe) => recipe.key === piece.key && recipe.fingerprint === piece.fingerprint,
     )
   )
-    throw new Error("Narration text no longer matches the admitted inputs.");
+    throw new Error(
+      "Slopify hit an internal error (the narration text no longer matches the project's saved inputs). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   const parts = narrationTextParts(view, plan, segment);
   const outputs = preparedTexts(deps, context, piece, [
     ["narration_txt", `${segment}-narration.txt`, joinedNarration(parts)],

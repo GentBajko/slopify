@@ -109,7 +109,12 @@ describe("POST /api/prompts", () => {
     expect(response.headers.get("content-type")).toBe("application/problem+json");
     expect(await response.json()).toMatchObject({
       title: "Bad Request",
-      fields: [{ field: "body", message: "The `{{` at line 2, column 7 is never closed." }],
+      fields: [
+        {
+          field: "body",
+          message: "The `{{` at line 2, column 7 is never closed. Add `}}` after the keyword name.",
+        },
+      ],
     });
     expect(await (await send(app, "GET", "/api/prompts")).json()).toEqual({ prompts: [] });
   });
@@ -125,7 +130,7 @@ describe("POST /api/prompts", () => {
 
     expect(response.status).toBe(400);
     expect(((await response.json()) as ProblemBody).fields).toEqual([
-      { field: "name", message: "A name is required." },
+      { field: "name", message: "Enter a name." },
     ]);
   });
 
@@ -140,7 +145,7 @@ describe("POST /api/prompts", () => {
 
     expect(response.status).toBe(400);
     expect(((await response.json()) as ProblemBody).detail).toBe(
-      "The request does not match this endpoint's schema.",
+      "Slopify could not read this request, which usually means the page is out of date. Reload the page and try again.",
     );
   });
 
@@ -158,7 +163,12 @@ describe("POST /api/prompts", () => {
     expect(response.status).toBe(409);
     expect(await response.json()).toMatchObject({
       title: "Conflict",
-      fields: [{ field: "name", message: "Another prompt already has this name." }],
+      fields: [
+        {
+          field: "name",
+          message: "Another prompt already has this name. Choose a different name.",
+        },
+      ],
     });
   });
 
@@ -225,7 +235,9 @@ describe("PUT /api/prompts/:id", () => {
     });
 
     expect(response.status).toBe(404);
-    expect(((await response.json()) as ProblemBody).detail).toBe("No prompt has that id.");
+    expect(((await response.json()) as ProblemBody).detail).toBe(
+      "This prompt no longer exists; it may have been deleted. Go back to the Library to pick another.",
+    );
   });
 
   it("refuses an id shaped like anything but an id", async () => {

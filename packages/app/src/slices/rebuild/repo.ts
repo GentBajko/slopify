@@ -21,15 +21,22 @@ export function publicationTargets(
 ): readonly PublicationTarget[] {
   const { work, pieceId, publicationId } = publication;
   if (publicationId !== (pieceId ?? work.workId))
-    throw new Error("Publication identity does not match its durable work.");
+    throw new Error(
+      "Slopify hit an internal error (a finished result is filed under the wrong step). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   if (!workExists(db, work)) return [];
   if (pieceId !== null) {
     const piece = db
       .prepare("SELECT work_key,fingerprint FROM revision_work_pieces WHERE id=? AND work_id=?")
       .get(pieceId, work.workId);
-    if (piece === undefined) throw new Error("Publication piece does not belong to its work.");
+    if (piece === undefined)
+      throw new Error(
+        "Slopify hit an internal error (a finished result belongs to a different step). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      );
     if (piece.work_key !== workKey || piece.fingerprint !== workFingerprint)
-      throw new Error("Publication authority does not match its durable piece.");
+      throw new Error(
+        "Slopify hit an internal error (a finished result doesn't match its saved step). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      );
   }
   const currentId = currentRevisionId(db, work.projectId);
   const owns = (revisionId: string): boolean => {

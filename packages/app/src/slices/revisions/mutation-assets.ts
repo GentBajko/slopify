@@ -59,11 +59,14 @@ export function validateUploads(deps: RevisionDeps, edit: RevisionEdit): readonl
       fields.push({
         field,
         message:
-          "Enable the corresponding provided or generated content before importing this file.",
+          "This section is off or not set to use your own file. Change the section's setting first, then add the file.",
       });
     const destination = JSON.stringify(to);
     if (staged.has(upload.stagedFileId) || destinations.has(destination))
-      fields.push({ field, message: "Each upload and destination must be unique." });
+      fields.push({
+        field,
+        message: "The same file or place is used twice. Remove the duplicate.",
+      });
     staged.add(upload.stagedFileId);
     destinations.add(destination);
     const file = stagedFileById(deps.db, upload.stagedFileId);
@@ -74,11 +77,20 @@ export function validateUploads(deps: RevisionDeps, edit: RevisionEdit): readonl
       file.stageKind !== kind ||
       !statSync(stagingPath(deps.paths, file.path), { throwIfNoEntry: false })?.isFile()
     )
-      fields.push({ field, message: "Choose a completed upload for this stage." });
+      fields.push({
+        field,
+        message: "This upload is missing or has not finished. Upload the file again.",
+      });
     if (to.kind === "image" && edit.content.imageDefinitions[to.imageKey] === undefined)
-      fields.push({ field, message: "Choose an image in this revision." });
+      fields.push({
+        field,
+        message: "This image is no longer in the project. Reload the page and choose again.",
+      });
     if (to.kind === "narration" && !to.key.startsWith("audio:"))
-      fields.push({ field, message: "Choose a narration segment." });
+      fields.push({
+        field,
+        message: "Choose which part of the narration this audio file replaces.",
+      });
   }
   return fields;
 }
@@ -114,7 +126,10 @@ export function validateAssetReferences(
         .prepare("SELECT 1 FROM project_assets WHERE project_id=? AND id=?")
         .get(projectId, id) === undefined
     )
-      fields.push({ field, message: "Choose an asset belonging to this project." });
+      fields.push({
+        field,
+        message: "This file does not belong to this project. Reload the page and choose again.",
+      });
     if (
       !prepared.some((row) => row.id === id) &&
       deps.db
@@ -143,7 +158,10 @@ export function validateAssetReferences(
           .get(projectId, id) !== undefined
       )
     )
-      fields.push({ field, message: "Choose an asset for this content stage." });
+      fields.push({
+        field,
+        message: "This file cannot be used in this section. Choose a file of the right kind.",
+      });
   }
   return fields;
 }
@@ -224,6 +242,6 @@ export function validateReplacementAvailability(
       { throwIfNoEntry: false },
     )?.isFile()
       ? []
-      : [{ field: "content", message: "The replacement asset is missing. Upload it again." }],
+      : [{ field: "content", message: "The replacement file is missing. Upload it again." }],
   );
 }

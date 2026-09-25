@@ -62,7 +62,7 @@ it.each(["inworld-tts-2", "inworld-tts-2-flash"])(
         ),
       };
       expect(() => revisionTranscript(h.deps, { view: incomplete, plan }, "body")).toThrow(
-        /exact clean transcript/,
+        /no longer matches its prepared text/,
       );
     } finally {
       h.close();

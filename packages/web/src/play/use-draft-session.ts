@@ -51,7 +51,10 @@ export function useDraftSession(): PlaySession {
     const fail = (error: unknown) => {
       publish({
         status: "error",
-        error: error instanceof Error ? error.message : "Couldn't save draft",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Your latest changes weren't saved. Keep this page open and try again.",
       });
     };
     const accept = (

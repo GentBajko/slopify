@@ -148,7 +148,9 @@ export function dockerConfig(
     raw === null ? null : resolve(cwd, raw.startsWith("~/") ? join(home, raw.slice(2)) : raw);
   const portText = env.SLOPIFY_DOCKER_HOST_PORT || "6969";
   if (!/^\d{1,5}$/.test(portText) || Number(portText) > 65535)
-    throw new Error("Docker host port must be from 0 to 65535.");
+    throw new Error(
+      `Invalid port ${JSON.stringify(portText)}: use a whole number between 1 and 65535, for example --port 7070.`,
+    );
   return {
     home,
     uid,
@@ -184,11 +186,15 @@ export async function privateDirectory(path: string, uid: number): Promise<void>
       s.isSymbolicLink() ||
       ((s.mode & 0o022) !== 0 && (s.mode & 0o1000) === 0)
     )
-      throw new Error("Unsafe private state ancestor.");
+      throw new Error(
+        `${current} is not a normal folder, or other users can write to it, so Slopify won't keep its Docker settings under it. Fix its permissions (chmod go-w ${current}) or set XDG_DATA_HOME to another folder, then try again.`,
+      );
   }
   const s = await lstat(path);
   if (s.uid !== uid || (s.mode & 0o077) !== 0)
-    throw new Error("Installation state must be private and owned by the installing user.");
+    throw new Error(
+      `${path} must belong to you and be private. Fix it with chmod 700 ${path} (and chown it to your user if needed), then try again.`,
+    );
 }
 export async function readState<T>(
   path: string,
@@ -236,9 +242,12 @@ export async function selectProjects(
       throw new Error("Receipt selects a different installation or volume.");
     await safePath(receipt.projects, c.home, c.root, false);
     await assertIdentity(receipt.projects, receipt.directoryIdentity).catch((cause: unknown) => {
-      throw new Error(`Remembered project folder is missing or replaced: ${receipt.projects}`, {
-        cause,
-      });
+      throw new Error(
+        `Remembered project folder ${receipt.projects} is missing or was replaced. Put the original folder back where it was and run the launcher again.`,
+        {
+          cause,
+        },
+      );
     });
     if (old && (bind?.source !== receipt.projects || old.installation !== receipt.installation))
       throw new Error("Actual container mounts/installation disagree with its receipt.");
@@ -253,7 +262,9 @@ export async function selectProjects(
   await safePath(chosen, c.home, c.root, true);
   const source = receipt?.projects ?? bind?.source;
   if (source && source !== chosen && (contains(source, chosen) || contains(chosen, source)))
-    throw new Error("Source and destination project folders cannot contain each other.");
+    throw new Error(
+      `The new project folder ${chosen} and the current one ${source} are inside each other. Choose a separate folder with --projects-dir <folder>.`,
+    );
   if (chosen !== source) {
     const entries = await readdir(chosen).catch((error: unknown) => {
       if (isMissing(error)) return [];
@@ -261,7 +272,9 @@ export async function selectProjects(
     });
     if (entries.length > 0) {
       if (retry?.destination !== chosen || !retry.publishedIdentity || !retry.sourceDigest)
-        throw new Error(`Unrelated populated destination: ${chosen}`);
+        throw new Error(
+          `The project folder ${chosen} already has files in it that Slopify didn't put there. Choose an empty or new folder with --projects-dir <folder>, or move those files away, then try again.`,
+        );
       await assertIdentity(chosen, retry.publishedIdentity);
       if ((await treeDigest(chosen)).hash !== retry.sourceDigest.hash)
         throw new Error(`Published retry destination changed: ${chosen}`);

@@ -3,6 +3,7 @@ import { redact } from "../../kernel/log.js";
 import type { GeneratedImage, ImagePort, ImageRequest } from "../../kernel/ports/image.js";
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { httpFailure, missingKey, noImage, quoted, refusedImage, unreadable } from "../explain.js";
 import { retryAfter } from "../retry-after.js";
 import { describeBytes, sniffImage } from "./bytes.js";
 import { discoverGoogleImages } from "./models.js";
@@ -113,7 +114,7 @@ function imageOf(answer: z.infer<typeof interaction>): z.infer<typeof content> {
       }
     }
   }
-  throw providerError({ kind: "other", message: "Google answered with no image" });
+  throw providerError({ kind: "other", message: noImage("Google") });
 }
 
 // The bytes arrive with the call. They are still sniffed rather than trusted: what the port
@@ -126,7 +127,7 @@ function decode(part: z.infer<typeof content>): GeneratedImage {
     const claimed = part.mime_type ?? "nothing";
     throw providerError({
       kind: "other",
-      message: `Google called it ${claimed} but it decoded to ${describeBytes(bytes)} rather than a PNG or a JPEG`,
+      message: `Google sent back something that is not a PNG or JPEG image (labelled ${claimed}, but ${describeBytes(bytes)}). Use Retry stage; if it keeps happening, choose another image model in the Providers section of Edit project.`,
     });
   }
   return { bytes, mime };
@@ -136,7 +137,7 @@ function keyOf(deps: GoogleImageDeps): string {
   // `missing_key`, not `auth`, because that rule makes it terminal.
   const key = deps.key();
   if (key === undefined || key === "") {
-    throw providerError({ kind: "missing_key", message: "no Google key is stored" });
+    throw providerError({ kind: "missing_key", message: missingKey("Google") });
   }
   return key;
 }
@@ -189,13 +190,22 @@ async function failure(response: Response): Promise<Error> {
     : undefined;
   const retryAfterMs =
     retryAfter(response.headers.get("retry-after")) ?? googleRetryDelay(delay, message);
-  const guidance =
-    kind === "unsupported"
-      ? "Google reports zero image quota for this model. Check the API key's project, billing and model quota in Google AI Studio, or choose another image provider. Retrying will not help until quota is available. "
-      : "";
+  const detail = message || response.statusText;
   return providerError({
     kind,
-    message: `${guidance}Google answered ${String(response.status)}: ${message || response.statusText}`,
+    message:
+      kind === "unsupported"
+        ? `Google gives this API key no image quota for this model${quoted(`error ${String(response.status)}`, detail)}. Retrying will not help: turn on billing for the key's project in Google AI Studio, or choose another image provider in the Providers section of Edit project.`
+        : // PERMISSION_DENIED and FAILED_PRECONDITION also cover keys without access, billing
+          // and region limits, so they read as a content refusal only when Google says so.
+          kind === "refusal" && refusalWords.test(message)
+          ? refusedImage("Google", detail)
+          : httpFailure({
+              provider: "Google",
+              status: response.status,
+              detail,
+              subject: "image request",
+            }),
     ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
   });
 }
@@ -214,7 +224,7 @@ function parse(text: string): z.infer<typeof interaction> {
   if (!parsed.success) {
     throw providerError({
       kind: "other",
-      message: "Google's answer was not in the shape this app can read",
+      message: unreadable("Google"),
     });
   }
   return parsed.data;

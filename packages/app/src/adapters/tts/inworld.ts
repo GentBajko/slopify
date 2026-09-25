@@ -4,8 +4,9 @@ import { redact } from "../../kernel/log.js";
 import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import type { TtsPort, TtsRequest } from "../../kernel/ports/tts.js";
+import { httpFailure, missingKey, noAudio, unreadable, voiceFix } from "../explain.js";
 import { retryAfter } from "../retry-after.js";
-import { inworldAsync } from "./inworld-async.js";
+import { inworldAsync, streamFailure } from "./inworld-async.js";
 
 export const inworldModels: readonly ModelInfo[] = [
   { id: "inworld-tts-2", name: "Realtime TTS-2" },
@@ -31,8 +32,7 @@ export function inworldTts(deps: InworldDeps): TtsPort {
         .key()
         ?.trim()
         .replace(/^Basic\s+/i, "");
-      if (!key)
-        throw providerError({ kind: "missing_key", message: "No Inworld API key is stored." });
+      if (!key) throw providerError({ kind: "missing_key", message: missingKey("Inworld") });
       const cancel = new AbortController();
       const signal = AbortSignal.any([request.signal, cancel.signal]);
       const iterator = synthesizeRequest(deps, { ...request, signal }, key);
@@ -71,7 +71,11 @@ async function* synthesizeRequest(
     return;
   }
   if (request.text.trim().length === 0)
-    throw providerError({ kind: "unsupported", message: "Inworld needs text to narrate." });
+    throw providerError({
+      kind: "unsupported",
+      message:
+        "Inworld was sent an empty piece of narration. Check the article has text in the Article section of Edit project, then use Retry stage.",
+    });
   if ((request.model ?? "inworld-tts-2") === "inworld-tts-2" && request.text.length > 4000) {
     yield* inworldAsync(deps, request, key);
     return;
@@ -80,7 +84,7 @@ async function* synthesizeRequest(
     throw providerError({
       kind: "unsupported",
       message:
-        "Inworld streaming accepts up to 4,000 characters per physical request. Rebuild narration with a supported request limit.",
+        "This narration part is longer than the 4,000 characters Inworld's Flash model takes at once. In the Providers section of Edit project, set Chunking to Paragraph or a smaller character count, or switch to the Realtime TTS-2 model.",
     });
   request.signal.throwIfAborted();
   const response = await deps.fetch("https://api.inworld.ai/tts/v1/voice:stream", {
@@ -108,13 +112,19 @@ async function* synthesizeRequest(
               ? "unsupported"
               : "other",
       message: clean(
-        `Inworld answered ${response.status} for voice ${request.voiceId}: ${detail || response.statusText}`,
+        httpFailure({
+          provider: "Inworld",
+          status: response.status,
+          detail: detail || response.statusText,
+          subject: `narration request for voice "${request.voiceId}"`,
+          fix: voiceFix(request.voiceId),
+        }),
         key,
       ),
       ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
     });
   }
-  if (response.body === null) throw invalid("answered with no audio");
+  if (response.body === null) throw providerError({ kind: "other", message: noAudio("Inworld") });
   let heard = false;
   for await (const line of lines(response.body)) {
     request.signal.throwIfAborted();
@@ -122,11 +132,10 @@ async function* synthesizeRequest(
     try {
       raw = JSON.parse(line);
     } catch {
-      throw invalid("sent an unreadable audio chunk");
+      throw unreadableAudio();
     }
     const parsed = envelope.safeParse(raw);
-    if (!parsed.success || (!parsed.data.result && !parsed.data.error))
-      throw invalid("sent an unreadable audio chunk");
+    if (!parsed.success || (!parsed.data.result && !parsed.data.error)) throw unreadableAudio();
     if (parsed.data.error) {
       const { code, message } = parsed.data.error;
       throw providerError({
@@ -138,19 +147,19 @@ async function* synthesizeRequest(
               : code === 3 || code === 5
                 ? "unsupported"
                 : "other",
-        message: `Inworld stream failed: ${clean(message ?? "audio generation stopped", key)}`,
+        message: streamFailure(code, clean(message ?? "", key), request.voiceId),
       });
     }
     const encoded = parsed.data.result?.audioContent;
     if (!encoded) continue;
     if (!/^[A-Za-z0-9+/]*={0,2}$/.test(encoded) || encoded.length % 4 === 1)
-      throw invalid("sent invalid encoded audio");
+      throw unreadableAudio();
     const audio = Buffer.from(encoded, "base64");
     if (audio.length === 0) continue;
     heard = true;
     yield audio;
   }
-  if (!heard) throw invalid("answered with no audio");
+  if (!heard) throw providerError({ kind: "other", message: noAudio("Inworld") });
 }
 
 async function* lines(body: ReadableStream<Uint8Array>): AsyncGenerator<string, void> {
@@ -163,13 +172,13 @@ async function* lines(body: ReadableStream<Uint8Array>): AsyncGenerator<string, 
       pending += done ? decoder.decode() : decoder.decode(value, { stream: true });
       let end = pending.indexOf("\n");
       while (end !== -1) {
-        if (end > 8 * 1024 * 1024) throw invalid("sent an oversized audio chunk");
+        if (end > 8 * 1024 * 1024) throw unreadableAudio();
         const line = pending.slice(0, end).trim();
         pending = pending.slice(end + 1);
         if (line) yield line;
         end = pending.indexOf("\n");
       }
-      if (pending.length > 8 * 1024 * 1024) throw invalid("sent an oversized audio chunk");
+      if (pending.length > 8 * 1024 * 1024) throw unreadableAudio();
       if (done) break;
     }
     if (pending.trim()) yield pending.trim();
@@ -181,6 +190,6 @@ async function* lines(body: ReadableStream<Uint8Array>): AsyncGenerator<string, 
 function clean(message: string, key: string): string {
   return redact(message.replaceAll(key, "[redacted]"));
 }
-function invalid(detail: string): Error {
-  return providerError({ kind: "other", message: `Inworld ${detail}.` });
+function unreadableAudio(): Error {
+  return providerError({ kind: "other", message: unreadable("Inworld") });
 }

@@ -67,7 +67,7 @@ describe("image model discovery", () => {
         key: () => "placeholder",
         fetch: async () => new Response("private upstream response", { status: 401 }),
       });
-      await expect(port.models()).rejects.toThrow("model list could not be loaded");
+      await expect(port.models()).rejects.toThrow("could not load this provider's model list");
       await expect(
         make({
           key: () => undefined,
@@ -75,7 +75,7 @@ describe("image model discovery", () => {
             throw new Error("must not call");
           },
         }).models(),
-      ).rejects.toThrow("Save an API key");
+      ).rejects.toThrow("API key in Settings");
     }
   });
   it("rejects malformed responses and repeated page tokens", async () => {

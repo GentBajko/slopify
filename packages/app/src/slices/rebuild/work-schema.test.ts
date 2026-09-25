@@ -129,9 +129,9 @@ it("rejects a publication whose authority key or fingerprint differs from its du
   const { publicationTargets } = await import("./repo.js");
   const publication = { work, pieceId: "piece1", publicationId: "piece1" };
   expect(() => publicationTargets(deps.db, publication, "image:foreign", "old")).toThrow(
-    "authority",
+    "a finished result doesn't match its saved step",
   );
   expect(() => publicationTargets(deps.db, publication, "image:i1", "foreign")).toThrow(
-    "authority",
+    "a finished result doesn't match its saved step",
   );
 });

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { redact } from "../../kernel/log.js";
 import type { LlmCompletion, LlmEvent, LlmPort } from "../../kernel/ports/llm.js";
 import { type ModelInfo, providerError } from "../../kernel/ports/model.js";
+import { cliCheck, cliName, cliReported } from "../explain.js";
 import { documentWorkspace } from "./document-workspace.js";
 import { nodeGeminiModels } from "./gemini-models.js";
 import { geminiWorkspace } from "./gemini-workspace.js";
@@ -14,6 +15,7 @@ import {
   endedWithout,
   promptOf,
   stopCliRun,
+  stuckCli,
 } from "./run-cli.js";
 import { lines } from "./sse-lines.js";
 
@@ -83,10 +85,11 @@ export function geminiLlm(deps: GeminiDeps): LlmPort {
             yield { type: "delta", text: message.content };
         } else if (event.type === "error") {
           const error = cliShaped(binary, errorSchema, event.value);
-          if (error.severity !== "warning") throw failure(error.message);
+          if (error.severity !== "warning") throw failure(binary, error.message);
         } else if (event.type === "result") {
           const result = cliShaped(binary, resultSchema, event.value);
-          if (result.status !== "success") throw failure(result.error?.message ?? result.status);
+          if (result.status !== "success")
+            throw failure(binary, result.error?.message ?? result.status);
           await deliveredInput(run);
           documents?.verifyRead();
           yield {
@@ -115,12 +118,17 @@ export function geminiLlm(deps: GeminiDeps): LlmPort {
       }
     }
     req.signal.throwIfAborted();
-    if (run === undefined) throw failure(`the ${binary} CLI could not be started`);
+    if (run === undefined)
+      throw failure(
+        binary,
+        "",
+        `The ${cliName(binary)} could not be started. Check it is installed and set up in Settings → Providers, then use Retry stage.`,
+      );
     if (authRequired(run.stderr())) throw authFailure();
     throw failure(
-      ended === undefined
-        ? `the ${binary} CLI did not stop after forced termination`
-        : endedWithout(binary, ended, run.stderr()),
+      binary,
+      run.stderr(),
+      ended === undefined ? stuckCli(binary) : endedWithout(binary, ended, run.stderr()),
     );
   }
   return {
@@ -130,17 +138,22 @@ export function geminiLlm(deps: GeminiDeps): LlmPort {
     complete,
   };
 }
-function failure(message: string): Error {
+// `message` is what the CLI said, read for the two failures that need the user's hand;
+// `sentence` replaces the default wording when Slopify already knows what happened.
+function failure(binary: string, message: string, sentence?: string): Error {
   if (/(?:#?3501\b|do not have a valid licen[cs]e of this product)/i.test(message)) {
     return providerError({
       kind: "unsupported",
       message:
-        "Gemini CLI access was denied by Google's license check (#3501). Update Gemini CLI and sign in again. For a managed account, contact your administrator to request a license.",
+        "Google refused the Gemini CLI because the signed-in account has no licence for it (#3501). Update the Gemini CLI, run gemini in a terminal to sign in again, then use Retry stage; for a work or school account, ask your administrator for a Gemini licence.",
     });
   }
   return authRequired(message)
     ? authFailure()
-    : providerError({ kind: "other", message: redact(message) });
+    : providerError({
+        kind: "other",
+        message: sentence ?? cliReported(binary, redact(message), cliCheck(binary)),
+      });
 }
 function authRequired(message: string): boolean {
   return /Code Assist login required|authorize the application|authorization code|Please set an Auth method|re-authenticate|reauthenticate/i.test(
@@ -151,7 +164,7 @@ function authFailure(): Error {
   return providerError({
     kind: "missing_key",
     message:
-      "Gemini CLI needs sign-in. Run gemini in your terminal, complete login, then retry in Slopify.",
+      'The Gemini CLI is not signed in, or its sign-in has expired. Open a terminal on the computer running the CLI, run "gemini" and sign in, then use Retry stage.',
   });
 }
 async function* authChecked(source: AsyncIterable<Uint8Array>): AsyncGenerator<Uint8Array> {

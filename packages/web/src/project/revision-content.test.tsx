@@ -180,7 +180,7 @@ it("does not offer cues without current duration and the parent timing fingerpri
     (screen.getByRole("button", { name: "Edit existing caption cues" }) as HTMLButtonElement)
       .disabled,
   ).toBe(true);
-  expect(screen.getByText(/duration or timing is unavailable or stale/)).toBeTruthy();
+  expect(screen.getByText(/subtitle timing\s+is ready/)).toBeTruthy();
 });
 it("keeps independent upload and dirty-caption locks until both complete", async () => {
   const user = userEvent.setup();

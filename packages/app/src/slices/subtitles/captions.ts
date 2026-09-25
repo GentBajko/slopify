@@ -31,7 +31,9 @@ export function captionCues(words: readonly TimedWord[]): readonly CaptionCue[] 
       word.start < previousEnd - 0.001 ||
       word.end <= word.start
     ) {
-      throw new Error("The subtitle word timing is invalid; regenerate alignment.");
+      throw new Error(
+        "The saved caption timing is damaged. Use Re-run section on Video to time them again, then Retry stage.",
+      );
     }
     const first = pending[0];
     if (

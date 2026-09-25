@@ -42,7 +42,7 @@ export function settingsRoutes(deps: AppDeps) {
         return problem(c, {
           status: 400,
           title: titleOf(400),
-          detail: "These settings cannot be saved; the listed fields need attention.",
+          detail: "These settings cannot be saved yet. Fix the highlighted fields and try again.",
           extensions: { fields: result.fields },
         });
       }
@@ -58,12 +58,13 @@ export function settingsRoutes(deps: AppDeps) {
           ? problem(c, {
               status: 409,
               title: titleOf(409),
-              detail: "This voice ID is already listed for this provider.",
+              detail:
+                "This voice ID is already saved for this provider. Use the existing voice, or enter a different voice ID.",
             })
           : problem(c, {
               status: 400,
               title: titleOf(400),
-              detail: "This voice cannot be added; the listed fields need attention.",
+              detail: "This voice cannot be added yet. Fix the highlighted field and try again.",
               extensions: { fields: [fieldOf(result.reason)] },
             });
       }
@@ -74,7 +75,8 @@ export function settingsRoutes(deps: AppDeps) {
         return problem(c, {
           status: 404,
           title: titleOf(404),
-          detail: "No voice has that id.",
+          detail:
+            "This voice no longer exists; it may have been deleted already. Reload the page to see your voices.",
         });
       }
       return c.body(null, 204);
@@ -87,20 +89,26 @@ function fieldOf(reason: Exclude<AddVoiceReason, "duplicate-voice-id">): {
 } {
   switch (reason) {
     case "blank-name":
-      return { field: "name", message: "A voice name is required." };
+      return { field: "name", message: "Enter a name for this voice." };
     case "name-too-long":
       return {
         field: "name",
-        message: `A voice name is at most ${String(voiceNameMax)} characters.`,
+        message: `Keep the voice name to ${String(voiceNameMax)} characters or fewer.`,
       };
     case "blank-voice-id":
-      return { field: "voiceId", message: "A voice ID is required." };
+      return {
+        field: "voiceId",
+        message: "Enter the voice ID from your provider's voice library.",
+      };
     case "voice-id-too-long":
       return {
         field: "voiceId",
-        message: `A voice ID is at most ${String(voiceIdMax)} characters.`,
+        message: `A voice ID is at most ${String(voiceIdMax)} characters. Check you copied only the ID.`,
       };
     case "not-a-tts-provider":
-      return { field: "provider", message: "Pick a text-to-speech provider." };
+      return {
+        field: "provider",
+        message: "Choose a text-to-speech provider, such as Inworld or Cartesia.",
+      };
   }
 }

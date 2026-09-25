@@ -8,7 +8,7 @@ import {
 } from "@app/slices/checkpoints/schema.js";
 import { z } from "zod";
 import type { Api } from "@/api";
-import { errorOf } from "@/http";
+import { errorOf, understood } from "@/http";
 
 const statusSchema = z.object({
   revisionId: z.string(),
@@ -61,8 +61,13 @@ export const checkpointRevisionKey = (projectId: string, revisionId: string): re
 ];
 
 async function reply<T>(response: Response, schema: z.ZodType<T>): Promise<CheckpointReply<T>> {
-  const raw: unknown = await response.json();
-  if (response.ok) return { ok: true, value: schema.parse(raw) };
+  let raw: unknown;
+  try {
+    raw = await response.json();
+  } catch {
+    throw errorOf(response, undefined);
+  }
+  if (response.ok) return { ok: true, value: understood(schema, raw) };
   const problem = problemSchema.safeParse(raw);
   if (!problem.success) throw errorOf(response, undefined);
   if (![400, 404, 409].includes(response.status))

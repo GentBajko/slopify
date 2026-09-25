@@ -20,7 +20,7 @@ const maxOutputBytes = 32 * 1024 * 1024;
 function unavailable(detail: string): Error {
   return providerError({
     kind: "unavailable",
-    message: `Codex finished, but ${detail}. An image may already exist in Codex; review before retrying.`,
+    message: `The Codex CLI finished, but Slopify could not collect the image: ${detail}. Use Retry stage to make it again (this uses your Codex quota again).`,
   });
 }
 
@@ -30,7 +30,7 @@ export function codexGeneratedImage(
   startedAt: number,
 ): GeneratedImage {
   if (!z.uuid().safeParse(threadId).success || threadId === undefined)
-    throw unavailable("its image session could not be identified");
+    throw unavailable("the image job could not be identified");
   const root = join(
     resolve(env.CODEX_HOME || join(env.HOME || homedir(), ".codex")),
     "generated_images",
@@ -40,22 +40,21 @@ export function codexGeneratedImage(
     for (const path of [root, directory]) {
       const entry = lstatSync(path);
       if (!entry.isDirectory() || entry.isSymbolicLink())
-        throw unavailable("its image directory is unsafe");
+        throw unavailable("Codex's image folder is not a plain folder");
     }
     const canonical = realpathSync(directory);
     if (canonical !== join(realpathSync(root), threadId))
-      throw unavailable("its image directory changed");
+      throw unavailable("Codex's image folder moved while it was being read");
     // Codex 0.155.1 omits image items from exec JSONL. Its artifact contract is
     // generated_images/<thread.started ID>/<sanitized tool call ID>.png.
     const dir = opendirSync(directory);
     let name: string;
     try {
       const entry = dir.readSync();
-      if (entry === null) throw unavailable("no image was saved for this session");
-      if (dir.readSync() !== null)
-        throw unavailable("more than one output was saved for this session");
+      if (entry === null) throw unavailable("no image was saved");
+      if (dir.readSync() !== null) throw unavailable("more than one file was saved");
       if (!entry.isFile() || !/^[a-zA-Z0-9_-]+\.png$/.test(entry.name))
-        throw unavailable("its image output is unsafe");
+        throw unavailable("the saved file is not a plain image file");
       name = entry.name;
     } finally {
       dir.closeSync();
@@ -63,7 +62,7 @@ export function codexGeneratedImage(
     const path = join(directory, name);
     const before = lstatSync(path);
     if (!before.isFile() || before.isSymbolicLink() || realpathSync(path) !== join(canonical, name))
-      throw unavailable("its image output is unsafe");
+      throw unavailable("the saved file is not a plain image file");
     const fd = openSync(
       path,
       constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
@@ -79,7 +78,9 @@ export function codexGeneratedImage(
         stat.size > maxOutputBytes ||
         stat.mtimeMs < Math.floor(startedAt / 1000) * 1000
       )
-        throw unavailable("its image output is stale or unsafe");
+        throw unavailable(
+          "the saved file is empty, too large, older than this job, or not a plain file",
+        );
       const bytes = Buffer.alloc(stat.size + 1);
       let length = 0;
       while (length < bytes.length) {
@@ -95,16 +96,16 @@ export function codexGeneratedImage(
         after.ctimeMs !== stat.ctimeMs ||
         realpathSync(directory) !== canonical
       )
-        throw unavailable("its image changed while being collected");
+        throw unavailable("the file changed while it was being read");
       const image = bytes.subarray(0, length);
       const mime = sniffImage(image);
-      if (mime === undefined) throw unavailable("its output is not a PNG or JPEG image");
+      if (mime === undefined) throw unavailable("the saved file is not a PNG or JPEG image");
       return { bytes: image, mime };
     } finally {
       closeSync(fd);
     }
   } catch (error) {
     if (isProviderError(error)) throw error;
-    throw unavailable("its saved image could not be read");
+    throw unavailable("the saved file could not be read");
   }
 }

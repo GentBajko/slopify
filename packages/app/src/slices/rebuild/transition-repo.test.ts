@@ -241,6 +241,6 @@ it("refuses a stale base rather than revoking the current head work", async () =
       revisionId: "next",
       fingerprints: { "image:i1": "old" },
     }),
-  ).toThrow("current head");
+  ).toThrow("The project was changed while this was being saved");
   expect(maySubmit(deps.db, work, "piece1")).toBe(true);
 });

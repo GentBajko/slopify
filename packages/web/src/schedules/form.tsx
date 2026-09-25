@@ -136,7 +136,7 @@ export function ScheduleForm({
         if (!selectedTemplate) throw new Error("Choose a template before saving the schedule.");
         const selectedZone = timezone.trim();
         if (!validTimeZone(selectedZone))
-          throw new Error("Choose a valid IANA timezone, such as Europe/Tirane.");
+          throw new Error("Enter a timezone name like Europe/Tirane or America/New_York.");
         const cadence: Cadence =
           kind === "once"
             ? { kind, at: scheduleInstant(onceAt, selectedZone) }
@@ -145,7 +145,9 @@ export function ScheduleForm({
               : { kind, time };
         const limit = spendLimit.trim() === "" ? null : Number(spendLimit);
         if (limit !== null && (!Number.isInteger(limit) || limit < 0))
-          throw new Error("Spend limit must be a non-negative whole number of cents.");
+          throw new Error(
+            "Enter the spend limit as a whole number of cents, 0 or more (500 is $5.00), or leave it empty.",
+          );
         const input: ScheduleCreate = {
           id: editing?.id ?? crypto.randomUUID(),
           name: name.trim(),
@@ -184,7 +186,7 @@ export function ScheduleForm({
         setUncertain(false);
         onError(
           reply.reason === "conflict"
-            ? `${reply.message} Your inputs are kept. Cancel editing and reopen Edit to load the latest saved version.`
+            ? `${reply.message} Your inputs are kept here. To load the latest saved version, cancel editing and press Edit again.`
             : reply.message,
         );
         return;
@@ -196,7 +198,7 @@ export function ScheduleForm({
       onCreated();
     } catch (error) {
       setUncertain(attempt.current !== null);
-      onError(error instanceof Error ? error.message : "Could not save the schedule. Try again.");
+      onError(error instanceof Error ? error.message : "The schedule wasn't saved. Try again.");
     } finally {
       active.current = false;
       setSaving(false);

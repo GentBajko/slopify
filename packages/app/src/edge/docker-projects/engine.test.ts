@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { dockerEngine } from "./engine.js";
+import { dockerEngine, dockerFailure } from "./engine.js";
 
 it("labels a copy reader with its transaction at creation", async () => {
   const exec = vi.fn(async () => ({ code: 0, stdout: "reader-id" }));
@@ -321,4 +321,19 @@ it("propagates outer cancellation instead of retrying it", async () => {
     "outer cancellation",
   );
   expect(calls).toBe(1);
+});
+
+it.each([
+  [
+    "Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?",
+    "not running",
+  ],
+  [
+    "permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock",
+    "usermod -aG docker",
+  ],
+  ["Bind for 127.0.0.1:6969 failed: port is already allocated", "--port 7070"],
+  ["Error: something else", 'docker run" failed (exit code 125: Error: something else)'],
+])("explains a failed docker command from its error output: %s", (stderr, advice) => {
+  expect(dockerFailure(["run"], { code: 125, stderr })).toContain(advice);
 });

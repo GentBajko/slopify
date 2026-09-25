@@ -70,7 +70,8 @@ export function planningRoutes(deps: AppDeps) {
         return problem(c, {
           status: 400,
           title: titleOf(400),
-          detail: "Review the run setup.",
+          detail:
+            "Some settings need fixing before Slopify can estimate the cost. Fix the highlighted fields.",
           extensions: { fields },
         });
       return c.json({
@@ -85,7 +86,8 @@ export function planningRoutes(deps: AppDeps) {
         return problem(c, {
           status: 409,
           title: titleOf(409),
-          detail: "Queue checkpoint-enabled projects through Play Review.",
+          detail:
+            "Videos with checkpoints turned on cannot be queued. Start them one at a time from Play with Review and start.",
         });
       if (batchExists(deps.db, input.requestId))
         return c.json({ queue: queueEntries(deps.db, input.requestId) });
@@ -97,7 +99,8 @@ export function planningRoutes(deps: AppDeps) {
           return problem(c, {
             status: 400,
             title: titleOf(400),
-            detail: "Choose an available subtitle font before starting.",
+            detail:
+              "The subtitle font you picked is no longer available. Choose another font before starting.",
           });
         }
       }
@@ -107,7 +110,7 @@ export function planningRoutes(deps: AppDeps) {
         return problem(c, {
           status: 400,
           title: titleOf(400),
-          detail: "No videos were queued. Review the listed fields.",
+          detail: "No videos were queued. Fix the highlighted fields, then try again.",
           extensions: { fields },
         });
       const queue = enqueueBatch(

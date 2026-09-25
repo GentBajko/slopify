@@ -82,7 +82,7 @@ for (const catalogue of catalogues) {
           key: () => key,
           fetch: async () => Response.json(payload),
         });
-        await expect(port.models()).rejects.toThrow("model list");
+        await expect(port.models()).rejects.toThrow("could not read");
       },
     );
 
@@ -95,7 +95,7 @@ for (const catalogue of catalogues) {
           return Response.json(catalogue.payload);
         },
       });
-      await expect(port.models()).rejects.toThrow("key is stored");
+      await expect(port.models()).rejects.toThrow("API key is saved");
       expect(calls).toBe(0);
     });
 

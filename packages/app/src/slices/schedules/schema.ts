@@ -6,7 +6,10 @@ const keywordName = z
   .string()
   .min(1)
   .max(200)
-  .refine((value) => value === value.trim(), "Keyword names cannot start or end with spaces.");
+  .refine(
+    (value) => value === value.trim(),
+    "Remove the spaces at the start or end of the keyword name.",
+  );
 const values = z.record(keywordName, z.string().max(10000)).readonly();
 // A queued topic. Each run takes the first one and removes it once its project starts.
 // `values` is only filled on schedules saved before topics had one keyword.
@@ -27,7 +30,11 @@ export const scheduleCreateSchema = z
     templateId: id,
     templateVersion: z.number().int().positive(),
     cadence: cadenceSchema,
-    timezone: z.string().min(1).max(100).refine(validTimeZone, "Choose a valid IANA timezone."),
+    timezone: z
+      .string()
+      .min(1)
+      .max(100)
+      .refine(validTimeZone, "Choose a time zone from the list, such as Europe/London."),
     missedPolicy: policy.default("skip"),
     overlapPolicy: z.literal("skip").default("skip"),
     spendLimitCents: z.number().int().nonnegative().nullable().default(null),

@@ -277,7 +277,7 @@ it.each(["missing", "unknown"])(
     const changed = vi.fn();
     renderApp(<Harness view={view} changed={changed} />, testDeps({}));
     expect(screen.queryByRole("textbox", { name: "Text for caption 1" })).toBeNull();
-    expect(screen.getByText(/duration or timing is unavailable or stale/)).toBeTruthy();
+    expect(screen.getByText(/subtitle timing\s+is ready/)).toBeTruthy();
     expect(changed).not.toHaveBeenCalled();
   },
 );

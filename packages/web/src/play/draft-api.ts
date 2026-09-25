@@ -19,7 +19,7 @@ import {
 } from "@app/slices/play-drafts/schema.js";
 import { z } from "zod";
 import type { Api } from "@/api";
-import { errorOf } from "@/http";
+import { errorOf, understood } from "@/http";
 
 export interface DraftRefusal {
   readonly ok: false;
@@ -70,7 +70,7 @@ async function responseOf<T>(response: Response, schema: z.ZodType<T>): Promise<
   } catch {
     throw errorOf(response, undefined);
   }
-  if (response.ok) return { ok: true, value: schema.parse(raw) };
+  if (response.ok) return { ok: true, value: understood(schema, raw) };
   const parsed = problemSchema.safeParse(raw);
   if (!parsed.success) throw errorOf(response, undefined);
   const value = parsed.data;

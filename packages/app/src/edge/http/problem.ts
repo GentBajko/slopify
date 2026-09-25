@@ -58,7 +58,7 @@ export function problemFromError(c: Context, error: Error, deps: ProblemDeps): R
   return problem(c, {
     status: 500,
     title: titleOf(500),
-    detail: `The server failed to handle this request. Correlation id ${correlationId} is in the log.`,
+    detail: `Slopify hit an internal error while handling this request. Try again; if it keeps happening, use Download diagnostics in Settings and report it (reference ${correlationId}).`,
     extensions: { correlationId },
   });
 }
@@ -86,7 +86,8 @@ export function onInvalid(
   return problem(c, {
     status: 400,
     title: titleOf(400),
-    detail: "The request does not match this endpoint's schema.",
+    detail:
+      "Slopify could not read this request, which usually means the page is out of date. Reload the page and try again.",
     extensions: {
       errors: result.error.issues.map((issue) => ({
         path: issue.path.join("."),

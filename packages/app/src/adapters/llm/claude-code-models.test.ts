@@ -125,7 +125,7 @@ describe("Claude Code model discovery", () => {
   it("rejects a mismatched control response", async () => {
     const binary = await fakeClaude(success.replace("REQUEST_ID", "wrong-id"));
     await expect(nodeClaudeCodeModels(binary, 1000)).rejects.toThrow(
-      "Claude Code model discovery is unavailable",
+      "could not get the model list from the Claude Code CLI",
     );
   });
 
@@ -147,7 +147,7 @@ describe("Claude Code model discovery", () => {
   it("rejects malformed output without returning raw child text", async () => {
     const binary = await fakeClaude("not-json-with-a-private-path\n");
     await expect(nodeClaudeCodeModels(binary, 1000)).rejects.toThrow(
-      "Claude Code model discovery is unavailable",
+      "could not get the model list from the Claude Code CLI",
     );
   });
 
@@ -163,28 +163,28 @@ describe("Claude Code model discovery", () => {
       })}\n`,
     );
     await expect(nodeClaudeCodeModels(binary, 1000)).rejects.toThrow(
-      "Claude Code model discovery is unavailable",
+      "could not get the model list from the Claude Code CLI",
     );
   });
 
   it("bounds a child that never answers", async () => {
     const binary = await fakeClaude("", true);
     await expect(nodeClaudeCodeModels(binary, 50)).rejects.toThrow(
-      "Claude Code model discovery is unavailable",
+      "could not get the model list from the Claude Code CLI",
     );
   });
 
   it("force-stops a stalled child that ignores graceful termination", async () => {
     const binary = await fakeClaude("", true, true);
     await expect(nodeClaudeCodeModels(binary, 50)).rejects.toThrow(
-      "Claude Code model discovery is unavailable",
+      "could not get the model list from the Claude Code CLI",
     );
   });
 
   it("rejects an oversized control stream", async () => {
     const binary = await fakeClaude("x".repeat(1024 * 1024 + 1));
     await expect(nodeClaudeCodeModels(binary, 1000)).rejects.toThrow(
-      "Claude Code model discovery is unavailable",
+      "could not get the model list from the Claude Code CLI",
     );
   });
 });

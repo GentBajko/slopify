@@ -194,7 +194,9 @@ describe("falImage.generate", () => {
     const thrown = await failed(replaying(answering("fal-401.json", 401)));
 
     expect(kindOf(thrown)).toBe("auth");
-    expect(String(thrown)).toBe("Error: fal answered 401: Unauthorized");
+    expect(String(thrown)).toContain(
+      'fal.ai did not accept the API key (error 401: "Unauthorized")',
+    );
   });
 
   it("takes the wait from a 429's Retry-After instead of the fixed backoff", async () => {
@@ -219,7 +221,7 @@ describe("falImage.generate", () => {
     const thrown = await failed(replaying(answering("fal-nsfw.json"), undefined, seen));
 
     expect(kindOf(thrown)).toBe("refusal");
-    expect(String(thrown)).toContain("fal's safety checker rejected every image");
+    expect(String(thrown)).toContain("fal.ai's safety checker blocked the image");
     // The blank image fal made is never fetched, let alone stored.
     expect(seen).toHaveLength(1);
   });
@@ -237,7 +239,7 @@ describe("falImage.generate", () => {
     );
 
     expect(kindOf(thrown)).toBe("other");
-    expect(String(thrown)).toContain("rather than a PNG or a JPEG");
+    expect(String(thrown)).toContain("not a PNG or JPEG image");
   });
 
   it("fails the attempt when the delivery link has expired", async () => {
@@ -246,13 +248,15 @@ describe("falImage.generate", () => {
     );
 
     expect(kindOf(thrown)).toBe("other");
-    expect(String(thrown)).toContain("fal answered 404 for the image it said it had made");
+    expect(String(thrown)).toContain(
+      "fal.ai made the image, but Slopify could not download it (error 404)",
+    );
   });
 
   it("says so when the answer is not the shape this app reads", async () => {
     const thrown = await failed(replaying(() => new Response("<html>502</html>", { status: 200 })));
 
     expect(kindOf(thrown)).toBe("other");
-    expect(String(thrown)).toContain("not in the shape this app can read");
+    expect(String(thrown)).toContain("fal.ai sent back an answer Slopify could not read");
   });
 });

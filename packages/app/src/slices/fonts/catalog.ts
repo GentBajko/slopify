@@ -34,9 +34,12 @@ export async function resolveFont(paths: Paths, id: string): Promise<ResolvedFon
 }
 
 export function missingFont(): Error {
-  return new Error("The selected font is no longer available. Choose another font.", {
-    cause: "font-not-found",
-  });
+  return new Error(
+    "The chosen caption font is no longer available; it may have been uninstalled or deleted. Choose another font in Edit project → Subtitles, then try again.",
+    {
+      cause: "font-not-found",
+    },
+  );
 }
 export function isMissingFont(error: unknown): boolean {
   return error instanceof Error && error.cause === "font-not-found";

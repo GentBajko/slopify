@@ -33,10 +33,10 @@ describe("draftProblems", () => {
   it("lints an intro/outro entry by the same rules as a prompt", () => {
     expect(draftProblems(entry({}), [])).toEqual([]);
     expect(draftProblems(entry({ name: " " }), [])).toEqual([
-      { field: "name", message: "A name is required." },
+      { field: "name", message: "Enter a name." },
     ]);
     expect(draftProblems(entry({ body: "one\ntwo {{bad\n" }), [])).toEqual([
-      { field: "body", message: "The `{{` at line 2, column 5 is never closed." },
+      { field: "body", message: "The `{{` at line 2, column 5 is never closed. Add `}}` after the keyword name." },
     ]);
   });
 
@@ -44,7 +44,7 @@ describe("draftProblems", () => {
   // exactly as an LLM-mode one is.
   it("lints a text-mode body's slots, not only an LLM-mode one's", () => {
     expect(draftProblems(entry({ mode: "text", body: "Today on {{" }), [])).toEqual([
-      { field: "body", message: "The `{{` at line 1, column 10 is never closed." },
+      { field: "body", message: "The `{{` at line 1, column 10 is never closed. Add `}}` after the keyword name." },
     ]);
     expect(slotNames(entry({ mode: "text" }).body)).toEqual(["topic"]);
   });
@@ -52,16 +52,16 @@ describe("draftProblems", () => {
   it("carries the server's own sentence for an unclosed slot, with its line and column", () => {
     const problems = draftProblems(draft({ body: "one\ntwo {{bad\n" }), []);
     expect(problems).toEqual([
-      { field: "body", message: "The `{{` at line 2, column 5 is never closed." },
+      { field: "body", message: "The `{{` at line 2, column 5 is never closed. Add `}}` after the keyword name." },
     ]);
   });
 
   it("names an empty slot and a nested one", () => {
     expect(draftProblems(draft({ body: "{{}}" }), [])[0]?.message).toBe(
-      "The slot at line 1, column 1 has no name.",
+      "The keyword at line 1, column 1 has no name. Write a name between `{{` and `}}`.",
     );
     expect(draftProblems(draft({ body: "{{a{b}}" }), [])[0]?.message).toBe(
-      "The slot at line 1, column 1 holds a brace; slots do not nest.",
+      "The keyword at line 1, column 1 contains a brace. Keywords cannot be placed inside other keywords.",
     );
   });
 
@@ -78,17 +78,17 @@ describe("firstProblem", () => {
 
   it("names the missing name before the malformed body", () => {
     const problems = draftProblems(draft({ name: "  ", body: "{{bad" }), []);
-    expect(firstProblem(problems)).toBe("A name is required.");
+    expect(firstProblem(problems)).toBe("Enter a name.");
   });
 
   it("names the missing body once the name is there", () => {
-    expect(firstProblem(draftProblems(draft({ body: "   " }), []))).toBe("A body is required.");
+    expect(firstProblem(draftProblems(draft({ body: "   " }), []))).toBe("Enter the text.");
   });
 
   it("names the earliest slot error when a body holds two", () => {
     const problems = draftProblems(draft({ body: "{{a{b}} then {{unclosed" }), []);
     expect(firstProblem(problems)).toBe(
-      "The slot at line 1, column 1 holds a brace; slots do not nest.",
+      "The keyword at line 1, column 1 contains a brace. Keywords cannot be placed inside other keywords.",
     );
     expect(problems).toHaveLength(2);
   });
@@ -105,7 +105,7 @@ describe("problems by field", () => {
   it("splits the name's problems from the body's", () => {
     const problems = draftProblems(draft({ name: "", body: "{{bad" }), []);
     expect(nameProblems(problems).map((problem) => problem.message)).toEqual([
-      "A name is required.",
+      "Enter a name.",
     ]);
     expect(bodyProblems(problems)).toHaveLength(1);
   });

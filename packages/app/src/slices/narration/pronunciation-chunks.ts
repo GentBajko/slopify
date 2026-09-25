@@ -39,7 +39,10 @@ export function pronunciationChunks(
   let offset = 0;
   const chunks = chunkNarration(source, chunking).map((text) => {
     const start = source.indexOf(text, offset);
-    if (start < 0) throw new Error("Narration chunk is missing from its source.");
+    if (start < 0)
+      throw new Error(
+        "Slopify hit an internal error (a narration chunk isn't in the article text). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      );
     offset = start + text.length;
     return { key: nextKey(text), text, start, end: offset };
   });
@@ -101,7 +104,10 @@ export function pronunciationChunks(
       continue;
     }
     const chunk = chunks[index];
-    if (chunk === undefined) throw new Error("Narration chunk disappeared.");
+    if (chunk === undefined)
+      throw new Error(
+        "Slopify hit an internal error (a narration chunk went missing). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      );
     while ((matches[matchIndex]?.end ?? Infinity) <= chunk.end) matchIndex++;
     const match = matches[matchIndex];
     const next = chunks[index + 1];
@@ -113,7 +119,10 @@ export function pronunciationChunks(
     )
       continue;
     const first = chunks[from];
-    if (first === undefined) throw new Error("Narration group has no first chunk.");
+    if (first === undefined)
+      throw new Error(
+        "Slopify hit an internal error (a group of narration chunks is empty). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      );
     const text = source.slice(first.start, chunk.end);
     result.push(
       from === index

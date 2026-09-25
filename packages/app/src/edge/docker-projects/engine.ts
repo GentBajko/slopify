@@ -45,6 +45,28 @@ export interface Engine {
   health(id: string, token: string, expectedVersion: string): Promise<void>;
   command(args: readonly string[]): Promise<string>;
 }
+// Docker's exit code alone says nothing, so its last error line decides the advice: the daemon
+// being stopped and the socket being off-limits are by far the most common first-run failures.
+export function dockerFailure(
+  args: readonly string[],
+  result: { code: number; stderr?: string },
+): string {
+  const detail = (result.stderr ?? "").trim();
+  if (/permission denied[^\n]*docker\.sock|docker\.sock[^\n]*permission denied/i.test(detail))
+    return "Your user isn't allowed to use Docker. Give it access with sudo usermod -aG docker $USER, then log out and back in (or run newgrp docker) and try again.";
+  if (
+    /cannot connect to the docker daemon|is the docker daemon running|error during connect/i.test(
+      detail,
+    )
+  )
+    return "Docker is installed but not running. Start it (sudo systemctl start docker, or systemctl --user start docker for rootless Docker) and try again.";
+  if (/port is already allocated|address already in use/i.test(detail))
+    return "The port Slopify wants is already in use by another program. Stop that program, or start Slopify on another port: npx @gentbajko/slopify --docker --port 7070";
+  if (/no space left on device/i.test(detail))
+    return "The disk Docker uses is full. Free up space (for example docker system prune) and try again.";
+  const last = detail.split("\n").at(-1)?.trim().slice(0, 300);
+  return `Docker command "docker ${args[0] ?? ""}" failed (exit code ${result.code}${last ? `: ${last}` : ""}). Check that Docker works (docker info) and run the launcher again. Nothing was deleted, and any backup Slopify made is kept.`;
+}
 export function dockerEngine(
   runner: HostSetupRunner,
   signal: AbortSignal,
@@ -54,8 +76,7 @@ export function dockerEngine(
     runner.exec("docker", args, localSignal);
   async function command(args: readonly string[], localSignal = signal): Promise<string> {
     const r = await run(args, localSignal);
-    if (r.code !== 0)
-      throw new Error(`Docker ${args[0] ?? "command"} failed; recovery material is retained.`);
+    if (r.code !== 0) throw new Error(dockerFailure(args, r));
     return r.stdout.trim();
   }
   const mount = (type: string, source: string, target: string, readonly = false) => [
@@ -96,12 +117,12 @@ export function dockerEngine(
       "--format",
       "{{.ID}}",
     ]);
-    if (present.code !== 0) throw new Error("Docker container inventory failed.");
+    if (present.code !== 0) throw new Error(dockerFailure(["container", "ls"], present));
     if (!present.stdout.trim() && !/^[a-f0-9]{12,64}$/.test(name)) return null;
     const result = await run(["inspect", name]);
     if (result.code !== 0) {
       if (!present.stdout.trim()) return null;
-      throw new Error("Docker inspect failed.");
+      throw new Error(dockerFailure(["inspect", name], result));
     }
     const schema = z.array(
       z.object({
@@ -160,13 +181,18 @@ export function dockerEngine(
     const ids = (await command(["container", "ls", "-a", "-q"])).split(/\s+/).filter(Boolean);
     for (const id of ids) {
       const c = await inspect(id);
-      if (!c) throw new Error("Cannot verify volume claims; an inventoried container is missing.");
+      if (!c)
+        throw new Error(
+          "Cannot verify volume claims: a Docker container disappeared while Slopify was checking. Run the launcher again.",
+        );
       if (
         !permitted.includes(c.id) &&
         !spared(c) &&
         c.mounts.some((m) => m.type === "volume" && m.name === volume)
       )
-        throw new Error(`Another container claims installation volume ${volume}: ${c.name}.`);
+        throw new Error(
+          `The Docker volume ${volume} that holds Slopify's data is also used by the container ${c.name}. Remove that container if you no longer need it (docker rm ${c.name}), or give this Slopify its own volume with SLOPIFY_DOCKER_VOLUME=<name>, then try again.`,
+        );
     }
   }
   async function writers(
@@ -188,7 +214,7 @@ export function dockerEngine(
         )
       )
         throw new Error(
-          `Another running container writes installation storage: ${c.name}. Stop it before retrying.`,
+          `Another running container (${c.name}) is writing to Slopify's data or project folder. Stop it (docker stop ${c.name}) and try again.`,
         );
     }
   }
@@ -223,8 +249,14 @@ export function dockerEngine(
       }
       if (!endpoint?.startsWith("unix://"))
         throw new Error(
-          "Managed folders require a local Linux Docker unix socket; remote daemons are unsupported.",
+          `The --docker launcher only works with Docker running on this machine, not a remote Docker (${endpoint ?? "unknown endpoint"}). Switch to the local one (unset DOCKER_HOST, or docker context use default) and try again.`,
         );
+      const rawInfo: unknown = JSON.parse(await command(["info", "--format", "{{json .}}"]));
+      // Some Docker versions print the daemon's absence inside the JSON instead of failing.
+      const serverErrors = z.object({ ServerErrors: z.array(z.string()) }).safeParse(rawInfo)
+        .data?.ServerErrors;
+      if (serverErrors !== undefined && serverErrors.length > 0)
+        throw new Error(dockerFailure(["info"], { code: 1, stderr: serverErrors.join("\n") }));
       const info = z
         .object({
           ID: z.string(),
@@ -232,15 +264,15 @@ export function dockerEngine(
           OperatingSystem: z.string(),
           SecurityOptions: z.array(z.string()),
         })
-        .parse(JSON.parse(await command(["info", "--format", "{{json .}}"])));
+        .parse(rawInfo);
       if (/docker desktop/i.test(info.OperatingSystem))
         throw new Error(
-          "Docker Desktop is unsupported by managed project folders. Use a native Linux Docker daemon or native Slopify.",
+          "Docker Desktop isn't supported by the --docker launcher because it can't give your project folder the right owner. Use Docker Engine on Linux (docker context use default), or run Slopify without Docker: npx @gentbajko/slopify",
         );
       const rootless = info.SecurityOptions.includes("name=rootless");
       if (!rootless && info.SecurityOptions.some((s) => s.startsWith("name=userns")))
         throw new Error(
-          "Docker userns-remap is unsupported by managed project folders. Use a supported rootless daemon or native Slopify; do not disable isolation.",
+          "Your Docker uses userns-remap, which the --docker launcher doesn't support. Use rootless Docker or a standard Docker Engine setup, or run Slopify without Docker: npx @gentbajko/slopify. Don't turn off Docker's isolation to get around this.",
         );
       return { daemon: info.ID, user: rootless ? "0:0" : `${uid}:${gid}` };
     },
@@ -290,7 +322,7 @@ export function dockerEngine(
         .parse(JSON.parse(await command(["volume", "inspect", "--format", "{{json .}}", name])));
       if (v.Name !== name || (v.Options && Object.keys(v.Options).length > 0))
         throw new Error(
-          "Managed projects require an ordinary local named volume; remote/custom volume drivers are unsupported.",
+          `The Docker volume ${name} uses a custom driver or options, which Slopify doesn't support. Give Slopify a plain local volume with SLOPIFY_DOCKER_VOLUME=<new name> and try again.`,
         );
       return JSON.stringify([v.Name, v.CreatedAt, v.Driver]);
     },
@@ -308,7 +340,7 @@ export function dockerEngine(
           (await readFile(join(probe, "container"), "utf8")) !== "slopify ownership probe"
         )
           throw new Error(
-            "Docker cannot create private files as this host user; ownership mapping is unsupported.",
+            "Docker can't create files in your project folder as your user, so the files would end up with the wrong owner. Use a standard Docker Engine or rootless Docker setup, or run Slopify without Docker: npx @gentbajko/slopify",
           );
         await writeFile(join(probe, "container"), "host can write", { flag: "a" });
       } finally {
@@ -468,7 +500,9 @@ export function dockerEngine(
         }
         await delay(Math.min(250, Math.max(0, deadline - Date.now())), undefined, { signal });
       }
-      throw new Error("Replacement did not become healthy within 120 seconds.");
+      throw new Error(
+        `The new Slopify container did not start up within 2 minutes. See why with: docker logs ${id}`,
+      );
     },
   };
 }

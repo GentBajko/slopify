@@ -3,6 +3,7 @@ import { redact } from "../../kernel/log.js";
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import type { TtsAudio, TtsPort, TtsRequest } from "../../kernel/ports/tts.js";
+import { httpFailure, missingKey, noAudio, refreshList, unreadable, voiceFix } from "../explain.js";
 import { retryAfter } from "../retry-after.js";
 
 // The HTTP gateway adapter for ElevenLabs: the platform's own `fetch` and nothing else. The
@@ -60,12 +61,12 @@ export function elevenLabsTts(deps: ElevenLabsDeps): TtsPort {
         headers: { "xi-api-key": keyOf(deps) },
         signal: AbortSignal.timeout(10_000),
       });
-      if (!response.ok) throw await failure(response);
+      if (!response.ok) throw await failure(response, undefined, refreshList);
       const parsed = modelList.safeParse(safeJson(await response.text()));
       if (!parsed.success) {
         throw providerError({
           kind: "other",
-          message: "ElevenLabs' model list was not in the shape this app can read",
+          message: unreadable("ElevenLabs"),
         });
       }
       return parsed.data
@@ -89,7 +90,7 @@ export function elevenLabsTts(deps: ElevenLabsDeps): TtsPort {
         throw await failure(response, req.voiceId);
       }
       if (response.body === null) {
-        throw providerError({ kind: "other", message: "ElevenLabs answered with no audio" });
+        throw providerError({ kind: "other", message: noAudio("ElevenLabs") });
       }
       return { audio: response.body, container: "mp3" };
     },
@@ -100,7 +101,7 @@ function keyOf(deps: ElevenLabsDeps): string {
   const key = deps.key();
   // `missing_key`, not `auth`, because that rule makes it terminal.
   if (key === undefined || key === "") {
-    throw providerError({ kind: "missing_key", message: "no ElevenLabs key is stored" });
+    throw providerError({ kind: "missing_key", message: missingKey("ElevenLabs") });
   }
   return key;
 }
@@ -119,7 +120,7 @@ function kindOf(status: number): ProviderErrorKind {
   return "other";
 }
 
-async function failure(response: Response, voiceId?: string): Promise<Error> {
+async function failure(response: Response, voiceId?: string, next?: string): Promise<Error> {
   const text = await response.text().catch(() => "");
   // The provider's own words, through the redactor - an error body may quote the key back.
   const message = redact(detailOf(text) || response.statusText);
@@ -128,7 +129,18 @@ async function failure(response: Response, voiceId?: string): Promise<Error> {
     kind: kindOf(response.status),
     // A rejected voice ID has to be named, and it is the one part of the
     // request the user chose. It is not secret, unlike everything else on the wire.
-    message: `ElevenLabs answered ${response.status}${voiceId === undefined ? "" : ` for voice ${voiceId}`}: ${message}`,
+    message: httpFailure({
+      provider: "ElevenLabs",
+      status: response.status,
+      detail: message,
+      next,
+      ...(voiceId === undefined
+        ? {}
+        : {
+            subject: `narration request for voice "${voiceId}"`,
+            fix: voiceFix(voiceId),
+          }),
+    }),
     ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
   });
 }

@@ -225,7 +225,7 @@ describe("entries for a provided article", () => {
     });
     await expect(
       prepareProvidedArticleSegments(h.deps, h.context, fake(async () => " ").providers),
-    ).rejects.toThrow("intro answered with nothing");
+    ).rejects.toThrow("returned an empty intro");
     expect(h.segments()).toEqual([]);
   });
 
@@ -233,7 +233,7 @@ describe("entries for a provided article", () => {
     const h = harness({ intro: { name: "Hook", mode: "llm" } });
     await expect(
       prepareProvidedArticleSegments(h.deps, h.context, fake().providers),
-    ).rejects.toThrow(/LLM provider/);
+    ).rejects.toThrow(/No AI model is set for writing the intro/);
   });
 
   it.each(["off", "provide"] as const)(

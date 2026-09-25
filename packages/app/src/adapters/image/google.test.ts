@@ -137,14 +137,16 @@ describe("googleImage.generate", () => {
   });
 
   it("refuses an answer that carries prose and no picture", async () => {
-    await expect(generate(answering("google-no-image.json"))).rejects.toThrow(/no image/i);
+    await expect(generate(answering("google-no-image.json"))).rejects.toThrow(
+      /without sending an image/i,
+    );
   });
 
   // A truncated payload that decodes to something else must not reach the disk, whatever
   // the provider called it.
   it("refuses bytes that are not a PNG or a JPEG however they are labelled", async () => {
     await expect(generate(answering("google-truncated.json"))).rejects.toThrow(
-      /decoded to .* rather than a PNG or a JPEG/,
+      /not a PNG or JPEG image \(labelled .*, but /,
     );
   });
 });
@@ -231,6 +233,27 @@ describe("googleImage failures", () => {
     expect(isProviderError(error) && error.fault.kind).toBe("refusal");
   });
 
+  // PERMISSION_DENIED is final too, but it is usually the key's access, not the prompt.
+  it("words a permission denial as an access problem, not a content refusal", async () => {
+    const denied: GoogleImageDeps["fetch"] = () =>
+      Promise.resolve(
+        Response.json(
+          {
+            error: {
+              code: 403,
+              message: "The caller does not have permission",
+              status: "PERMISSION_DENIED",
+            },
+          },
+          { status: 403 },
+        ),
+      );
+    const error = await generate(denied).catch((e: unknown) => e);
+
+    expect(isProviderError(error) && error.fault.kind).toBe("refusal");
+    expect(error instanceof Error && error.message).toMatch(/^Google refused access/);
+  });
+
   // An absent key is terminal, so it never becomes a request.
   it("fails without calling when no key is stored", async () => {
     const seen: Seen[] = [];
@@ -246,6 +269,6 @@ describe("googleImage failures", () => {
     const shapeless: GoogleImageDeps["fetch"] = () =>
       Promise.resolve(new Response("<html>502</html>", { status: 200 }));
 
-    await expect(generate(shapeless)).rejects.toThrow(/not in the shape/);
+    await expect(generate(shapeless)).rejects.toThrow(/could not read/);
   });
 });

@@ -345,7 +345,7 @@ describe("runArticle", () => {
     const llm = fake((prompt) => (prompt.startsWith("Write a hook") ? "  " : article));
 
     await expect(runArticle(h.deps, h.context, llm.providers)).rejects.toThrow(
-      /intro answered with nothing/,
+      /returned an empty intro/,
     );
     h.db.close();
   });
@@ -408,7 +408,7 @@ describe("runArticle", () => {
     const h = harness({ rendered: {} });
 
     await expect(runArticle(h.deps, h.context, fake(writes(article)).providers)).rejects.toThrow(
-      /no LLM provider or no rendered article prompt/,
+      /No AI model or article prompt is set for writing the article/,
     );
     h.db.close();
   });

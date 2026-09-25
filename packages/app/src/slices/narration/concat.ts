@@ -72,7 +72,9 @@ export async function joinNarration(deps: JoinDeps, input: JoinInput): Promise<n
   const first = input.files[0];
   if (first === undefined) {
     // The stage refuses an empty narration before it gets here, so this is a bug.
-    throw new Error("there are no audio chunks to join");
+    throw new Error(
+      "Slopify hit an internal error (there is no narration audio to join). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   }
   mkdirSync(dirname(input.output), { recursive: true, mode: 0o700 });
 

@@ -64,7 +64,7 @@ export async function saveCliPath(
     return {
       ok: false,
       message:
-        "CLI paths are managed on the host. Rerun the Docker launcher after changing installations.",
+        "Slopify runs in Docker, so it finds these tools on your computer (the Docker host) by itself. If you installed or moved one, run the Slopify Docker launcher again.",
     };
   // A slow version probe must not overwrite a later Save or Reset from another tab.
   let queue = saves.get(deps.db);
@@ -96,13 +96,16 @@ async function save(deps: CliPathDeps, id: ProviderId, raw: string): Promise<Sav
     return {
       ok: false,
       message:
-        "Enter an absolute executable file path without quotes or arguments, or leave it blank to use PATH.",
+        "Enter the full path to the program file, without quotes or extra options, or leave it blank to let Slopify find it.",
     };
   const configured = parsed.data === "" ? null : parsed.data;
   if (configured !== null) {
     try {
       if (!(await stat(configured)).isFile())
-        return { ok: false, message: "Choose an executable file, not a directory." };
+        return {
+          ok: false,
+          message: "This path is a folder. Enter the path to the program file inside it.",
+        };
       await access(
         configured,
         process.platform === "win32" ||
@@ -118,7 +121,8 @@ async function save(deps: CliPathDeps, id: ProviderId, raw: string): Promise<Sav
       )
         return {
           ok: false,
-          message: "That executable file cannot be found or run. Check its path and permissions.",
+          message:
+            "Slopify cannot find or run a program at this path. Check the path is correct and the file is allowed to run.",
         };
       throw error;
     }

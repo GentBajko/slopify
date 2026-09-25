@@ -34,12 +34,13 @@ export function RevisionMedia({
     queryKey: keys.revision(projectId, revisionId ?? ""),
     enabled: revisionId !== null,
     queryFn: async () => {
-      if (revisionId === null) throw new Error("Choose a saved revision.");
+      if (revisionId === null)
+        throw new Error("This project has no saved version yet. Reload the page and try again.");
       const result = await viewOf(api, projectId, revisionId);
       if (!result.ok) throw new Error(result.message);
       const view = result.value.view;
       if (view.revision.id !== revisionId || view.revision.projectId !== projectId)
-        throw new Error("The file list belongs to another revision.");
+        throw new Error("The project changed while its files were loading. Reload the page.");
       return view;
     },
   });

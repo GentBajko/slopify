@@ -208,7 +208,7 @@ describe("the prompt editor's lint", () => {
     expect(marks[0]?.textContent).toBe("{{");
     expect(marks[0]?.getAttribute("data-lint-mark")).toBe("15");
     expect(screen.getByText("1 slot error")).not.toBeNull();
-    expect(screen.getByText("The `{{` at line 2, column 6 is never closed.")).not.toBeNull();
+    expect(screen.getByText("The `{{` at line 2, column 6 is never closed. Add `}}` after the keyword name.")).not.toBeNull();
     expect(screen.getByLabelText("Body").getAttribute("aria-invalid")).toBe("true");
   });
 
@@ -219,9 +219,9 @@ describe("the prompt editor's lint", () => {
     await fill(user, "Body", "{{}} and {{a{b}}");
     expect(container.querySelectorAll("[data-lint-mark]")).toHaveLength(2);
     expect(screen.getByText("2 slot errors")).not.toBeNull();
-    expect(screen.getByText("The slot at line 1, column 1 has no name.")).not.toBeNull();
+    expect(screen.getByText("The keyword at line 1, column 1 has no name. Write a name between `{{` and `}}`.")).not.toBeNull();
     expect(
-      screen.getByText("The slot at line 1, column 10 holds a brace; slots do not nest."),
+      screen.getByText("The keyword at line 1, column 10 contains a brace. Keywords cannot be placed inside other keywords."),
     ).not.toBeNull();
   });
 
@@ -242,11 +242,11 @@ describe("the prompt editor's Save", () => {
 
     const save = screen.getByRole("button", { name: "Save" });
     expect(save.getAttribute("aria-disabled")).toBe("true");
-    expect(screen.getByText("A name is required.")).not.toBeNull();
+    expect(screen.getByText("Enter a name.")).not.toBeNull();
 
     // A malformed body does not change which problem is first: the name still is.
     await fill(user, "Body", "About {{bad");
-    expect(screen.getByText("A name is required.")).not.toBeNull();
+    expect(screen.getByText("Enter a name.")).not.toBeNull();
   });
 
   it("names the missing body once the name is there", async () => {
@@ -254,7 +254,7 @@ describe("the prompt editor's Save", () => {
     await newEditor();
 
     await user.type(screen.getByLabelText("Name"), "Dossier");
-    expect(screen.getByText("A body is required.")).not.toBeNull();
+    expect(screen.getByText("Enter the text.")).not.toBeNull();
     expect(screen.getByRole("button", { name: "Save" }).getAttribute("aria-disabled")).toBe("true");
   });
 
@@ -268,7 +268,7 @@ describe("the prompt editor's Save", () => {
     const save = screen.getByRole("button", { name: "Save" });
     expect(save.getAttribute("aria-disabled")).toBe("true");
     const reason = document.getElementById(save.getAttribute("aria-describedby") ?? "");
-    expect(reason?.textContent).toBe("The `{{` at line 1, column 7 is never closed.");
+    expect(reason?.textContent).toBe("The `{{` at line 1, column 7 is never closed. Add `}}` after the keyword name.");
   });
 
   it("lets go once the body is fixed, and posts what was typed", async () => {

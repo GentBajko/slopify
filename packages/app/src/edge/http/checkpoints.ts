@@ -28,7 +28,12 @@ function refused(c: Context, reason: string): Response {
   return problem(c, {
     status,
     title: titleOf(status),
-    detail: "Reload the current checkpoint status before approving or changing this gate.",
+    detail:
+      reason === "not-found"
+        ? "This checkpoint no longer exists; the project may have moved on or changed. Reload the page to see where it is now."
+        : reason === "invalid-input"
+          ? "This checkpoint answer could not be read. Reload the page and try again."
+          : "This checkpoint changed since the page loaded, for example it was already approved. Reload the page to see its current state, then try again.",
     extensions: { reason },
   });
 }

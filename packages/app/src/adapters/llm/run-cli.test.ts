@@ -207,23 +207,25 @@ describe("promptOf", () => {
 describe("endedWithout", () => {
   it("says what the CLI put on stderr", () => {
     expect(endedWithout("codex", { code: 1, error: null }, " not signed in \n")).toBe(
-      "the codex CLI exited 1 without answering: not signed in",
+      'The Codex CLI stopped without answering (exit code 1: "not signed in"). Run codex in a terminal to check it works and is signed in, then use Retry stage.',
     );
   });
 
   it("says so plainly when stderr was empty", () => {
     expect(endedWithout("claude", { code: 2, error: null }, "")).toBe(
-      "the claude CLI exited 2 without answering",
+      "The Claude Code CLI stopped without answering (exit code 2). Run claude in a terminal to check it works and is signed in, then use Retry stage.",
     );
   });
 
   it("names a signal rather than a code", () => {
-    expect(endedWithout("claude", { code: null, error: null }, "")).toContain("on a signal");
+    expect(endedWithout("claude", { code: null, error: null }, "")).toContain(
+      "(killed by the system)",
+    );
   });
 
   it("names a binary that could not be started", () => {
     expect(endedWithout("codex", { code: null, error: new Error("spawn ENOENT") }, "")).toContain(
-      "could not be started (spawn ENOENT)",
+      'The Codex CLI could not be started ("spawn ENOENT")',
     );
   });
 
@@ -255,7 +257,9 @@ describe("cliEvent and cliShaped", () => {
       return undefined;
     })();
     expect(isProviderError(error) && error.fault.kind).toBe("other");
-    expect(String(error)).toBe("Error: the codex CLI wrote a line this app could not read");
+    expect(String(error)).toBe(
+      "Error: The Codex CLI sent output Slopify could not read. Update it to the latest version, then use Retry stage.",
+    );
   });
 
   it("fails a line that parses but carries no type", () => {
@@ -265,7 +269,7 @@ describe("cliEvent and cliShaped", () => {
   it("fails an event whose own shape is wrong", () => {
     const event = cliEvent("claude", '{"type":"result"}');
     expect(() => cliShaped("claude", z.object({ subtype: z.string() }), event.value)).toThrow(
-      "the claude CLI wrote an event this app could not read",
+      "The Claude Code CLI sent output Slopify could not read",
     );
   });
 });

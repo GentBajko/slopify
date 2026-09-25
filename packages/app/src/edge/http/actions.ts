@@ -103,16 +103,22 @@ export function actionRoutes(deps: AppDeps) {
       "rebuild-required": 409,
     } as const;
     const messages = {
-      "no-project": "No project has that id.",
-      running: "Pause the run and wait for its active calls to stop before changing providers.",
-      "not-editable": "Providers can be changed only while a project is paused or failed.",
-      "invalid-providers": "The provider choices need attention.",
-      "catalog-unavailable": "The provider model catalog could not be loaded. Try again.",
-      "revision-required":
-        "Reload the project before using this control. A current revision and request ID are required.",
-      conflict: "The project changed. Reload it before using this control.",
-      "idempotency-conflict": "This request ID has already been used for a different action.",
-      "rebuild-required": "Review the affected outputs and cost before rebuilding this revision.",
+      "no-project": "This project no longer exists. Go back to Projects to pick another.",
+      running:
+        "This project is still running. Pause it and wait for the current step to stop before changing providers.",
+      "not-editable":
+        "Providers can be changed only while the project is paused or has failed. Pause it first, then try again.",
+      "invalid-providers":
+        "Some provider choices are not valid. Fix the highlighted fields and try again.",
+      "catalog-unavailable":
+        "Slopify could not load the list of available models. Wait a moment and try again; if it keeps failing, check Settings → Models.",
+      "revision-required": "This page is out of date. Reload the page, then try again.",
+      conflict:
+        "This project changed since the page loaded. Reload the page to see the latest, then try again.",
+      "idempotency-conflict":
+        "This action was already sent with different details. Reload the page, then try again.",
+      "rebuild-required":
+        "This change needs some outputs to be made again. In the Edit tab, use Rebuild affected outputs to see what will be regenerated and what it costs.",
     };
     return problem(c, {
       status: codes[result.reason],
@@ -136,7 +142,8 @@ export function actionRoutes(deps: AppDeps) {
       return problem(c, {
         status: 503,
         title: titleOf(503),
-        detail: "Recovery is unavailable. Try again after restart.",
+        detail:
+          "Resume and retry are not ready yet because Slopify is still starting. Wait a moment, reload the page and try again.",
       });
     const result = recoveryResultSchema.parse(
       await recoverProject(deps.rebuild, id, { ...input, action }),
@@ -149,29 +156,40 @@ export function actionRoutes(deps: AppDeps) {
           ? 400
           : 409;
     const messages: Record<typeof result.reason, string> = {
-      "no-project": "This project no longer exists.",
-      "no-revision": "This revision no longer exists. Reload the project.",
-      conflict: "The saved project changed. Reload it and try Resume.",
-      "idempotency-conflict": "This request ID belongs to another action. Reload the project.",
-      "invalid-edit": "This section needs attention in Edit project before rerunning.",
-      "stale-preview": "The required work changed. Try Resume to check it again.",
+      "no-project": "This project no longer exists. Go back to Projects to pick another.",
+      "no-revision":
+        "The project's saved settings changed since the page loaded. Reload the page, then try again.",
+      conflict:
+        "This project changed since the page loaded. Reload the page to see the latest, then use Resume again.",
+      "idempotency-conflict":
+        "This action was already sent with different details. Reload the page, then try again.",
+      "invalid-edit":
+        "This section has settings that need fixing first. Open the Edit tab, choose Edit project and correct this section, then try again.",
+      "stale-preview":
+        "What needs to be made changed since the page loaded. Reload the page, then use Resume again.",
       "invalid-selection":
-        "This section has no generated work to rerun. Use Edit project to change its source.",
+        "This section has nothing generated to re-run because its content was supplied by you. To change it, open the Edit tab and choose Edit project.",
       "review-required":
-        "Changed supplied content or manual captions need Edit project or optional Advanced rebuild review.",
-      "cost-ack-required": "Use optional Advanced rebuild review for this request.",
-      readiness: "Check the provider, model, voice or source files, then try Resume.",
-      running: "Wait for this section to finish, or Pause the project before rerunning it.",
-      "accepted-job": "This section cannot be rerun yet.",
+        "Content you supplied or captions you edited by hand would be replaced. Change them in the Edit tab with Edit project, or use Rebuild affected outputs to confirm the replacement.",
+      "cost-ack-required":
+        "This re-run needs you to review its cost first. In the Edit tab, use Rebuild affected outputs.",
+      readiness:
+        "Slopify cannot run this yet. Check the provider, model, voice and any files you supplied, then use Resume.",
+      running:
+        "This section is still running. Wait for it to finish, or Pause the project, before re-running it.",
+      "accepted-job":
+        "This section has a finished provider job that Slopify has not collected yet.",
       "control-changed":
-        "A newer control action took precedence. Check the project before using Resume.",
+        "Another action on this project (such as Pause or Cancel) happened at the same time. Reload the page to see its current state, then try again.",
     };
     const detail = [
       messages[result.reason],
       ...(result.fields ?? []).map((row) => row.message),
       ...(result.intentRevisionId === undefined
         ? []
-        : ["The rerun revision was saved. Use Resume to continue it; do not rerun again."]),
+        : [
+            "Your re-run request was saved. Use Resume to continue it instead of re-running again.",
+          ]),
     ].join(" ");
     return problem(c, {
       status,
@@ -263,7 +281,8 @@ function revisionRequired(c: Context): Response {
   return problem(c, {
     status: 409,
     title: titleOf(409),
-    detail: "Open Edit project to save changes, then review the affected rebuild.",
+    detail:
+      "This change is now made from the Edit tab. Choose Edit project, save your change, then use Rebuild affected outputs.",
     extensions: { reason: "revision-required" },
   });
 }

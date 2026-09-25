@@ -34,7 +34,10 @@ export function allocateAsset(
   const path = `assets/${id}/${filename}`;
   const absolutePath = outputPath(deps.paths, projectId, path);
   const directory = outputPath(deps.paths, projectId, `assets/${id}`);
-  if (dirname(absolutePath) !== directory) throw new Error("Asset filenames must be basenames.");
+  if (dirname(absolutePath) !== directory)
+    throw new Error(
+      "Slopify hit an internal error (a file name to save is not a plain file name). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   mkdirSync(outputPath(deps.paths, projectId, "assets"), { recursive: true, mode: 0o700 });
   mkdirSync(directory, { mode: 0o700 });
   return { id, projectId, path, absolutePath };
@@ -44,7 +47,10 @@ export function sealAsset(deps: Pick<RevisionDeps, "clock">, pending: PendingAss
   const file = openSync(pending.absolutePath, "r+");
   try {
     const stats = fstatSync(file);
-    if (!stats.isFile()) throw new Error("An asset must be a regular file.");
+    if (!stats.isFile())
+      throw new Error(
+        "Slopify hit an internal error (a saved file is not a regular file). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+      );
     fchmodSync(file, 0o600);
     fsyncSync(file);
     return {
@@ -89,7 +95,9 @@ export function discardPreparedAssets(
       const filename = basename(asset.path);
       requireBasename(filename);
       if (asset.path !== `assets/${asset.id}/${filename}`) {
-        throw new Error("A prepared asset must belong to its allocated directory.");
+        throw new Error(
+          "Slopify hit an internal error (a prepared file is not in its allocated directory). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+        );
       }
       const directory = outputPath(deps.paths, asset.projectId, `assets/${asset.id}`);
       const registered = deps.db
@@ -97,7 +105,10 @@ export function discardPreparedAssets(
         .all(asset.projectId);
       const retained = registered.some((row) => {
         if (row.id === asset.id) return true;
-        if (typeof row.path !== "string") throw new Error("A registered asset must name a path.");
+        if (typeof row.path !== "string")
+          throw new Error(
+            "Slopify hit an internal error (a saved file has no path). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+          );
         const inside = relative(directory, outputPath(deps.paths, asset.projectId, row.path));
         return (
           inside === "" ||
@@ -124,7 +135,9 @@ function requireBasename(filename: string): void {
     /[. ]$/.test(filename) ||
     /^(?:con|prn|aux|nul|conin\$|conout\$|com[1-9¹²³]|lpt[1-9¹²³])(?:\.|$)/i.test(filename)
   )
-    throw new Error("Asset filenames must be portable basenames.");
+    throw new Error(
+      "Slopify hit an internal error (a file name to save is not allowed on every system). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+    );
 }
 
 function messageOf(error: unknown): string {

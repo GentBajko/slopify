@@ -86,7 +86,9 @@ export function useUpdate(reload: () => void): UpdateView {
     const timeout = window.setTimeout(() => {
       setAcceptedVersion(null);
       setRecoveryTimedOut(true);
-      setRecoveryError("The update did not finish. Restart Slopify and try again.");
+      setRecoveryError(
+        "The update did not finish. Restart Slopify (in Docker, restart the container), reload this page, and try again.",
+      );
     }, updateRecoveryTimeout);
     return () => window.clearTimeout(timeout);
   }, [recoveryActive, recoveryTimedOut]);

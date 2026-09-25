@@ -23,7 +23,7 @@ export async function replyForFolder(
         status: 503,
         title: titleOf(503),
         detail:
-          "This Docker installation has no verified host project folder. Downloads remain available. Rerun the managed Docker launcher to set up host files.",
+          "Slopify cannot show where this file is on your computer because its Docker project folder was not set up. You can still use the download buttons, or run the Slopify Docker launcher again to set up the folder.",
       });
     try {
       const r = relative(deps.paths.projects, file);
@@ -54,7 +54,8 @@ export async function replyForFolder(
       return problem(c, {
         status: 404,
         title: titleOf(404),
-        detail: "This saved output folder is no longer available.",
+        detail:
+          "This output's folder was deleted or moved. Use Re-run section on the project page to make the file again.",
       });
     }
   }
@@ -71,7 +72,7 @@ export async function replyForFolder(
       status: 503,
       title: titleOf(503),
       detail:
-        "Could not open the file manager on the machine running Slopify. Make sure a desktop session is available.",
+        "Slopify could not open a file manager window on the computer it runs on. Make sure you are signed in to that computer's desktop, or use the download buttons instead.",
     });
   }
 }

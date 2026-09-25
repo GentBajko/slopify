@@ -243,7 +243,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   const next = playSections[playSections.findIndex((item) => item.id === editorSection) + 1];
   // Nothing here can be picked from a list that failed to arrive, so that failure is said
   // once, in the action bar's reserved line, beside a save failure's.
-  const saveProblem = session.error ? `Couldn't save. ${session.error}` : loadError;
+  const saveProblem = session.error ? `Your draft wasn't saved. ${session.error}` : loadError;
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: form-wide keyboard shortcut opens Review without starting a run.
     <div

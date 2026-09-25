@@ -133,14 +133,18 @@ export function admitPreview(
         continue;
       }
       if (existing?.state === "running")
-        throw new Error("Selected work has a mismatched running reservation.");
+        throw new Error(
+          "Slopify hit an internal error (a step is already running for a different version of the project). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+        );
       deps.db
         .prepare("DELETE FROM revision_work_reservations WHERE revision_id=? AND work_key=?")
         .run(view.revision.id, recipe.key);
       const key = reservationKey(recipe, view);
       const fingerprint = snapshot.anchors[key];
       if (fingerprint === undefined)
-        throw new Error("Selected work has no reviewed desired anchor.");
+        throw new Error(
+          "Slopify hit an internal error (a step has no saved starting point). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+        );
       const work = insertInvocation(
         deps,
         view,

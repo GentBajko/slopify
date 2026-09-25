@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ComponentProps, type ReactElement, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/ui/button";
+import { sentence } from "@/http";
 import { keys } from "@/queries";
 import {
   type ApprovalIdentity,
@@ -62,7 +63,9 @@ function CurrentCheckpoints({
       <section aria-label="Review checkpoints">
         <p role="alert">
           {status.error?.message ??
-            (result?.ok === false ? result.message : "Checkpoint status unavailable.")}
+            (result?.ok === false
+              ? result.message
+              : "Checkpoints couldn't be loaded. Press Reload checkpoints.")}
         </p>
         <Button type="button" onClick={() => void reload()}>
           Reload checkpoints
@@ -74,7 +77,8 @@ function CurrentCheckpoints({
     return (
       <section aria-label="Review checkpoints">
         <p role="alert">
-          Checkpoint status belongs to another revision. Reload the project before approving.
+          The project was edited after these checkpoints loaded. Press Reload checkpoints before
+          approving.
         </p>
       </section>
     );
@@ -181,7 +185,7 @@ function Gate({
                   ? "Checkpoint already approved."
                   : "Checkpoint approved. Work will run when its dependencies are ready.",
               }
-            : { kind: "refused", message: `${result.message} (${result.reason})` },
+            : { kind: "refused", message: result.message },
         );
       void client.invalidateQueries({ queryKey: checkpointKey(gate.projectId) });
       void client.invalidateQueries({ queryKey: keys.project(gate.projectId) });
@@ -190,7 +194,7 @@ function Gate({
       if (mounted.current)
         setOutcome({
           kind: "transport",
-          message: `${error instanceof Error ? error.message : "Approval response unavailable."} Retry to check the same approval request.`,
+          message: `${sentence(error instanceof Error ? error.message : "Slopify didn't confirm the approval")} Press Retry approval to check whether it went through.`,
         });
     } finally {
       active.current = false;

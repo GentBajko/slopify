@@ -38,11 +38,17 @@ export async function writeSegment(
   const picked = config[category];
   if (picked === undefined) return { ok: true, value: undefined };
   const body = config.rendered[category];
-  if (body === undefined) throw new Error(`the run has no rendered ${category} text`);
+  if (body === undefined)
+    throw new Error(
+      `Slopify hit an internal error (the ${category} text was never filled in). Retry stage; if it happens again, use Download diagnostics in Settings and report it.`,
+    );
   const common = { category, name: picked.name, mode: picked.mode };
   if (picked.mode === "text")
     return { ok: true, value: { ...common, text: body, tokens: noTokens } };
-  if (choice === undefined) throw new Error(`the ${category} has no LLM provider or model`);
+  if (choice === undefined)
+    throw new Error(
+      `No AI model is set for writing the ${category}. Choose one in Edit project → Providers, then Retry stage.`,
+    );
   const messages = segmentMessages(body, config, article);
   sent.push({ label: category === "intro" ? "Intro" : "Outro", messages });
   const answer = await providers.llm({
@@ -51,7 +57,9 @@ export async function writeSegment(
     ...(choice.thinking === undefined ? {} : { thinking: choice.thinking }),
     messages,
     check: (given: LlmAnswer): string | undefined =>
-      given.text.trim() === "" ? `the ${category} answered with nothing` : undefined,
+      given.text.trim() === ""
+        ? `The AI model returned an empty ${category}. Retry stage; if it keeps happening, choose a different model in Edit project → Providers.`
+        : undefined,
   });
   if (!answer.ok) return answer;
   return {

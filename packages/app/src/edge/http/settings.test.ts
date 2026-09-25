@@ -162,7 +162,8 @@ describe("POST /api/settings/voices", () => {
 
     expect(response.status).toBe(409);
     expect(await response.json()).toMatchObject({
-      detail: "This voice ID is already listed for this provider.",
+      detail:
+        "This voice ID is already saved for this provider. Use the existing voice, or enter a different voice ID.",
     });
   });
 
@@ -194,7 +195,7 @@ describe("POST /api/settings/voices", () => {
 
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({
-      fields: [{ field: "name", message: "A voice name is required." }],
+      fields: [{ field: "name", message: "Enter a name for this voice." }],
     });
   });
 
@@ -220,7 +221,7 @@ describe("POST /api/settings/voices", () => {
     });
 
     expect(await response.json()).toMatchObject({
-      fields: [{ field: "name", message: "A voice name is at most 200 characters." }],
+      fields: [{ field: "name", message: "Keep the voice name to 200 characters or fewer." }],
     });
   });
 
@@ -234,7 +235,12 @@ describe("POST /api/settings/voices", () => {
     });
 
     expect(await response.json()).toMatchObject({
-      fields: [{ field: "voiceId", message: "A voice ID is at most 200 characters." }],
+      fields: [
+        {
+          field: "voiceId",
+          message: "A voice ID is at most 200 characters. Check you copied only the ID.",
+        },
+      ],
     });
   });
 
@@ -306,6 +312,9 @@ describe("DELETE /api/settings/voices/:id", () => {
     const response = await app.request("/api/settings/voices/id1", { method: "DELETE" });
 
     expect(response.status).toBe(404);
-    expect(await response.json()).toMatchObject({ detail: "No voice has that id." });
+    expect(await response.json()).toMatchObject({
+      detail:
+        "This voice no longer exists; it may have been deleted already. Reload the page to see your voices.",
+    });
   });
 });

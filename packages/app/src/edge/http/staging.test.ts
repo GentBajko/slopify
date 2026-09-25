@@ -220,7 +220,9 @@ it("cleans staged bytes when a later multipart part is truncated", async () => {
     body: '--test\r\nContent-Disposition: form-data; name="file"; filename="one.png"\r\nContent-Type: image/png\r\n\r\nbytes\r\n--test\r\nContent-Disposition: form-data; name="field"\r\n\r\nunterminated',
   });
   expect(response.status).toBe(400);
-  expect(await response.json()).toMatchObject({ detail: expect.stringContaining("multipart") });
+  expect(await response.json()).toMatchObject({
+    detail: expect.stringContaining("did not arrive complete"),
+  });
   expect(db.prepare("SELECT id FROM staged_files").all()).toEqual([]);
   expect(existsSync(join(paths.staging, "id1"))).toBe(false);
 });

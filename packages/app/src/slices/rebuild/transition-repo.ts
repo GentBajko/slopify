@@ -31,16 +31,20 @@ export function transitionRevisionWork(
   transact(db, () => {
     const current = currentRevisionId(db, input.projectId);
     if (current !== input.baseRevisionId && current !== input.revisionId)
-      throw new Error("Work transition requires the current head.");
+      throw new Error("The project was changed while this was being saved. Try again.");
     const base = revisionById(db, input.projectId, input.baseRevisionId);
     const next = revisionById(db, input.projectId, input.revisionId);
     if (base === undefined || next === undefined)
-      throw new Error("Work transition requires owned revisions.");
+      throw new Error(
+        "Slopify hit an internal error (a project version to switch between is missing). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+      );
     if (
       JSON.stringify(Object.entries(input.fingerprints).sort()) !==
       JSON.stringify(Object.entries(next.fingerprints).sort())
     )
-      throw new Error("Desired work differs from revision fingerprints.");
+      throw new Error(
+        "Slopify hit an internal error (the planned steps don't match the saved project version). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+      );
     const reserved = db
       .prepare(
         `SELECT r.* FROM revision_work_reservations r JOIN revision_work w ON w.id=r.work_id WHERE r.project_id=? AND r.revision_id=? AND w.state IN ('pending','running','done')`,
@@ -96,12 +100,17 @@ export function transitionRevisionWork(
       if (carried.has(key)) continue;
       const exact = input.recipes?.find((row) => row.key === key);
       if (exact !== undefined && exact.fingerprint !== fp)
-        throw new Error("Recipe differs from desired fingerprint.");
+        throw new Error(
+          "Slopify hit an internal error (a planned step doesn't match the saved project version). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+        );
       const kind = exact?.stage ?? stageForKey(key);
       const stage = db
         .prepare("SELECT id FROM stages WHERE project_id=? AND kind=?")
         .get(input.projectId, kind);
-      if (stage === undefined) throw new Error("Desired work has no project stage.");
+      if (stage === undefined)
+        throw new Error(
+          "Slopify hit an internal error (a planned step has no matching stage). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+        );
       const workId = deps.ids.next();
       const pieceId = deps.ids.next();
       db.prepare(
@@ -148,5 +157,7 @@ function stageForKey(key: string): StageKind {
   if (prefix === "image") return "images";
   if (prefix === "thumbnail") return "thumbnail";
   if (prefix === "export" || prefix === "subtitles" || prefix === "video") return "video";
-  throw new Error("Unknown revision work key.");
+  throw new Error(
+    "Slopify hit an internal error (unknown kind of step). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+  );
 }

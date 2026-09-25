@@ -70,10 +70,13 @@ function missing(
   reason: "unknown-project" | "unknown-asset" | "missing-file" | "no-images",
 ): Response {
   const details: Readonly<Record<typeof reason, string>> = {
-    "unknown-project": "No project has that id.",
-    "unknown-asset": "This project has no such file.",
-    "missing-file": "This file is recorded but is no longer on disk; re-run the stage.",
-    "no-images": "This project has no images or thumbnail yet.",
+    "unknown-project": "This project no longer exists. Go back to Projects to pick another.",
+    "unknown-asset":
+      "This project has no file by that name. Reload the page to see its current files.",
+    "missing-file":
+      "This file was deleted or moved from the project folder. Use Re-run section on the project page to make it again.",
+    "no-images":
+      "This project has no images or thumbnail yet. Wait for the Images step to finish, then try again.",
   };
   return problem(c, { status: 404, title: titleOf(404), detail: details[reason] });
 }

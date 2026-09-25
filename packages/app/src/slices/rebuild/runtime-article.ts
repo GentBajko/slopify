@@ -23,14 +23,18 @@ export async function executeArticleRequests(
   initial: WorkPiece,
 ): Promise<AttemptResult<LlmAnswer>> {
   if (initial.input.kind !== "llm")
-    throw new Error("Article generation needs a pinned LLM request.");
+    throw new Error(
+      "Slopify hit an internal error (the article step has no AI request). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   let piece = initial;
   let text = "";
   let inputTokens = 0;
   let outputTokens = 0;
   for (let part = 0; part <= continuationLimit; part += 1) {
     if (piece.input.kind !== "llm")
-      throw new Error("An article continuation must contain an exact LLM request.");
+      throw new Error(
+        "Slopify hit an internal error (an article continuation has no AI request). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      );
     const saved = deps.db
       .prepare("SELECT result_json FROM revision_work_pieces WHERE id=? AND work_id=?")
       .get(piece.id, context.work.workId);
@@ -51,9 +55,9 @@ export async function executeArticleRequests(
           previewLabel: part === 0 ? "Article" : `Continuation ${part}`,
           check: (value) =>
             value.text.trim() === ""
-              ? "The article answered with nothing."
+              ? "The AI model returned an empty article. Retry stage; if it keeps happening, choose a different model in Edit project → Providers."
               : part === continuationLimit && value.finishReason === "length"
-                ? `The article was still unfinished after ${continuationLimit} continuations.`
+                ? `The article was still unfinished after ${continuationLimit} continuations because the AI model kept stopping at its length limit. Ask for a shorter article in Edit project → Prompts, or choose a model with a larger output limit in Edit project → Providers, then Retry stage.`
                 : undefined,
         },
         (event) => {
@@ -87,7 +91,9 @@ export async function executeArticleRequests(
     if (next === undefined) return { ok: false, reason: "held" };
     piece = next;
   }
-  throw new Error("The article exceeded its continuation limit.");
+  throw new Error(
+    `The article was still unfinished after ${continuationLimit} continuations because the AI model kept stopping at its length limit. Ask for a shorter article in Edit project → Prompts, or choose a model with a larger output limit in Edit project → Providers, then Retry stage.`,
+  );
 }
 
 function continuationPiece(

@@ -141,8 +141,8 @@ it("shows staging failure and cleanup failure together without accepting a missi
   );
   choose();
   const error = await screen.findByRole("alert");
-  expect(error.textContent).toContain("failed before staging completed");
-  expect(error.textContent).toContain("Cleanup failed: Disk unavailable");
+  expect(error.textContent).toContain("stopped before the file finished copying");
+  expect(error.textContent).toContain("couldn't be removed (Disk unavailable)");
   expect(ready).not.toHaveBeenCalled();
 });
 it("allows a retry after a failed upload without fabricating a staged reference", async () => {

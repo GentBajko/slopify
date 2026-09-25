@@ -68,7 +68,7 @@ export function TemplatesRoute({
     try {
       await action();
     } catch (error) {
-      setError(error instanceof Error ? error.message : "The template action could not finish.");
+      setError(error instanceof Error ? error.message : "That didn't finish. Try again.");
     } finally {
       active.current = false;
       setPending(false);
@@ -97,7 +97,9 @@ export function TemplatesRoute({
   async function apply(template: TemplateSummary): Promise<void> {
     const startGeneration = getGeneration?.();
     if (blocked || (beforeApply && !(await beforeApply())))
-      throw new Error("Resolve the current Play draft before applying a template.");
+      throw new Error(
+        "Save or discard the draft open in Play first, then apply the template again.",
+      );
     if (
       !mounted.current ||
       (startGeneration !== undefined && startGeneration !== getGeneration?.())
@@ -127,7 +129,10 @@ export function TemplatesRoute({
       return;
     const opened = await onApplied(reply.value.draft.id, () => mounted.current);
     if (opened !== false) applications.current.delete(key);
-    else throw new Error("The new template draft could not be opened. Try again.");
+    else
+      throw new Error(
+        "The template's draft was created but didn't open. Press Apply to Play again to open it.",
+      );
   }
   async function remove(): Promise<void> {
     if (!deleting) return;
@@ -148,7 +153,7 @@ export function TemplatesRoute({
       : blocked
         ? ({
             tone: "warning",
-            text: "Resolve the pending Start in Play before applying a template.",
+            text: "A run is still starting in Play. Wait for it to finish (or press Check Start result there), then apply a template.",
           } as const)
         : templates.error
           ? ({ tone: "error", text: templates.error.message } as const)

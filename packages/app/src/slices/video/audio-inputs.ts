@@ -17,8 +17,14 @@ export async function audioInputs(
 }> {
   const dir = projectDir(deps.paths, projectId);
   const body = await audio(deps, outputs, "audio_body", dir, signal);
-  if (!body) throw new Error("the project has no narration audio to render against");
-  if (body.seconds <= 0) throw new Error("the narration audio decodes to no sound");
+  if (!body)
+    throw new Error(
+      "The video has no narration audio to play. Let the Narration stage finish, then Retry stage.",
+    );
+  if (body.seconds <= 0)
+    throw new Error(
+      "The narration audio contains no sound; the file may be damaged or empty. Regenerate the narration (or upload a different audio file in Edit project → Narration), then Retry stage.",
+    );
   const intro = await audio(deps, outputs, "audio_intro", dir, signal);
   const outro = await audio(deps, outputs, "audio_outro", dir, signal);
   return { body, intro, outro };

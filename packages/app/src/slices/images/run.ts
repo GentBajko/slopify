@@ -58,20 +58,26 @@ export async function runImages(
   const { projectId } = context.stage;
   const project = projectById(deps.db, projectId);
   if (project === undefined) {
-    throw new Error(`project ${projectId} has no row`);
+    throw new Error(
+      "This project no longer exists; it may have been deleted while it was running.",
+    );
   }
   const choice = project.config.images;
   if (choice === undefined) {
     // Admission refuses a run whose images are Generate without a provider and a model, so
     // reaching here is a bug in admission rather than the user's.
-    throw new Error("the run has no image provider or model");
+    throw new Error(
+      "No image model is set for this project. Choose one in Edit project → Providers, then Retry stage.",
+    );
   }
 
   const pieces = plan(deps, context, project.config);
   if (pieces.length === 0) {
     // Admission makes an image source mandatory and puts the Number at one or more, so an
     // empty plan is a bug upstream rather than a run with no pictures.
-    throw new Error("the run ticked no image prompt");
+    throw new Error(
+      "Slopify hit an internal error (no image prompt was selected). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   }
   // The run's own frame. The adapter turns it into whatever its provider spells the
   // closest supported size, and the render crops whatever is left over.
@@ -116,7 +122,9 @@ function plan(deps: ImagesDeps, context: StageContext, config: RunConfig): reado
     // it, so the run carries the substituted text under this key.
     const prompt = config.rendered[`imagePrompts.${String(at)}`];
     if (prompt === undefined) {
-      throw new Error(`the run has no rendered text for the image prompt ${picked.name}`);
+      throw new Error(
+        `Slopify hit an internal error (the image prompt ${picked.name} was never filled in). Retry stage; if it happens again, use Download diagnostics in Settings and report it.`,
+      );
     }
     for (let send = 1; send <= picked.number; send += 1) {
       planned.push({
@@ -296,7 +304,9 @@ function report(deps: ImagesDeps, context: StageContext, done: number, total: nu
 
 function payloadOf(piece: StagePiece): ImagePayload {
   if (piece.payload === null) {
-    throw new Error(`image ${piece.id} has no payload`);
+    throw new Error(
+      "Slopify hit an internal error (a saved image step is empty). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   }
   return imagePayload.parse(JSON.parse(piece.payload));
 }

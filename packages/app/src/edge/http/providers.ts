@@ -40,18 +40,29 @@ export function providerRoutes(deps: AppDeps) {
   return (
     new Hono()
       .get("/catalogue", (c) =>
-        c.json(deps.catalogue?.status() ?? { warning: "Catalogue unavailable." }),
+        c.json(
+          deps.catalogue?.status() ?? {
+            warning:
+              "The model list (models.yaml) is not loaded yet. Wait a moment and reload the page; if it stays like this, restart Slopify.",
+          },
+        ),
       )
       .post("/catalogue/refresh", async (c) => {
         if (!deps.catalogue)
-          return problem(c, { status: 503, title: titleOf(503), detail: "Catalogue unavailable." });
+          return problem(c, {
+            status: 503,
+            title: titleOf(503),
+            detail:
+              "The model list (models.yaml) is not loaded yet. Wait a moment and reload the page; if it stays like this, restart Slopify.",
+          });
         try {
           await deps.catalogue.refresh();
         } catch {
           return problem(c, {
             status: 502,
             title: titleOf(502),
-            detail: "Could not update the catalogue. The last valid version remains in use.",
+            detail:
+              "Slopify could not download the latest model list. Your current list is still in use; check your internet connection and try Refresh again.",
           });
         }
         return c.json(deps.catalogue.status());
@@ -140,20 +151,22 @@ function refusal(
     return problem(c, {
       status: 400,
       title: titleOf(400),
-      detail: `${name} signs in through its own CLI, so there is no key to store here.`,
+      detail: `${name} signs in through its own command-line tool, so it has no API key to save here. Sign in with that tool on your computer instead.`,
     });
   }
   if (reason === "absent") {
     return problem(c, {
       status: 404,
       title: titleOf(404),
-      detail: `No key is stored for ${name}.`,
+      detail: `There is no saved API key for ${name}, so there is nothing to remove.`,
     });
   }
   return problem(c, {
     status: 400,
     title: titleOf(400),
-    detail: "This key cannot be saved; the listed fields need attention.",
-    extensions: { fields: [{ field: "key", message: "An API key is required." }] },
+    detail: "This API key cannot be saved yet. Paste the key and try again.",
+    extensions: {
+      fields: [{ field: "key", message: "Paste the API key from your provider's account page." }],
+    },
   });
 }

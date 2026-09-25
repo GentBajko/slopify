@@ -153,7 +153,7 @@ describe("openAiTts.synthesize", () => {
 
     // An absent key is terminal, so it never becomes a request.
     expect(isProviderError(error) && error.fault.kind).toBe("missing_key");
-    expect(String(error)).toContain("no OpenAI key is stored");
+    expect(String(error)).toContain("No OpenAI API key is saved");
     expect(called).toBe(0);
   });
 
@@ -198,11 +198,15 @@ describe("openAiTts.synthesize", () => {
     expect(String(error)).toContain("maximum length 4096");
   });
 
-  // A rejected voice ID names the voice.
-  it("names the voice every failure was asked for", async () => {
-    const error = await failed(new Response(fixture("openai-401.json"), { status: 401 }));
+  // A rejected voice ID names the voice, so it reads differently from a rejected key.
+  it("names the voice a rejected request was asked for", async () => {
+    const error = await failed(
+      new Response(JSON.stringify({ error: { message: "Invalid voice." } }), { status: 400 }),
+    );
+    const key = await failed(new Response(fixture("openai-401.json"), { status: 401 }));
 
-    expect(String(error)).toContain(`for voice ${voiceId}`);
+    expect(String(error)).toContain(`for voice "${voiceId}"`);
+    expect(String(key)).toContain("did not accept the API key");
   });
 
   it("quotes a body that is not the documented envelope", async () => {
@@ -223,7 +227,7 @@ describe("openAiTts.synthesize", () => {
   it("fails when the response carries no audio at all", async () => {
     const error = await failed(new Response(null, { status: 200 }));
 
-    expect(String(error)).toContain("no audio");
+    expect(String(error)).toContain("without sending any audio");
   });
 });
 

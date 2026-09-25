@@ -127,7 +127,11 @@ export function StageRow({
       {retryable ? (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-red/30 bg-red-tint px-5 py-3">
           <p className="min-w-0 text-small text-red">
-            {stage.state === "failed" ? `${name} needs attention.` : `${name} was canceled.`}
+            {stage.state === "failed"
+              ? stage.failureReason
+                ? `${name} stopped with an error. Open Error details to see why.`
+                : `${name} stopped with an error.`
+              : `${name} was canceled.`}
           </p>
           <span className="text-label text-ink2">{attempts(stage)}</span>
           {stage.failureReason ? (
@@ -159,7 +163,7 @@ export function StageRow({
                   ? "Resume recovers unfinished work across the project; Retry stage keeps this section's completed outputs. Use Edit project for changed inputs or optional Advanced rebuild review for supplied-content conflicts."
                   : project.status === "paused"
                     ? "Resume the project to continue with its saved settings."
-                    : "Retry keeps completed outputs. To change the provider or model, open Run settings."}
+                    : "Retry keeps completed outputs. To change the provider or model, open the Edit tab and choose Edit project."}
               </p>
             </InfoTip>
             <SplitButton

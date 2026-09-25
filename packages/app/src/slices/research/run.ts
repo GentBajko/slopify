@@ -40,7 +40,8 @@ export interface ResearchDeps {
 
 // A model that cannot ground on the web fails the stage immediately, with no fallback to
 // what the model already knows.
-export const webResearchUnsupported = "web research unsupported by this model";
+export const webResearchUnsupported =
+  "The chosen AI model can't search the web, which research needs. Choose a model with web search in Edit project → Providers, or turn research off, then Retry stage.";
 
 // What a chapter piece carries between runs: its title, and its notes once a sub-agent
 // has answered. That is the whole of the resume.
@@ -54,14 +55,18 @@ export async function runResearch(
   const { projectId } = context.stage;
   const project = projectById(deps.db, projectId);
   if (project === undefined) {
-    throw new Error(`project ${projectId} has no row`);
+    throw new Error(
+      "This project no longer exists; it may have been deleted while it was running.",
+    );
   }
   const choice = project.config.llm;
   const articlePrompt = project.config.rendered.article;
   if (choice === undefined || articlePrompt === undefined) {
     // Admission refuses a run whose research is Generate without both, so
     // reaching here is a bug in admission rather than something the user did.
-    throw new Error("the run has no LLM provider or no rendered article prompt");
+    throw new Error(
+      "No AI model or article prompt is set for research. Choose a model in Edit project → Providers and check Edit project → Prompts, then Retry stage.",
+    );
   }
   const brief: ResearchBrief = { articlePrompt, values: project.config.values };
 
@@ -112,7 +117,8 @@ async function research(
     messages: synthesisMessages(brief, findings),
     documents: researchDocuments(findings),
     previewLabel: "Writing research notes",
-    check: (given: LlmAnswer): string | undefined => sourcedAnswer("the synthesis", given.text),
+    check: (given: LlmAnswer): string | undefined =>
+      sourcedAnswer("the research summary", given.text),
   });
   if (!answer.ok) return "held";
   add(answer.value.usage);
@@ -169,7 +175,9 @@ async function plan(
     previewLabel: "Planning research",
     // An empty answer, or one with no chapter in it, is a failed attempt.
     check: (given: LlmAnswer): string | undefined =>
-      chaptersFrom(given.text).length === 0 ? "the planner named no chapters" : undefined,
+      chaptersFrom(given.text).length === 0
+        ? "The AI model didn't return any research topics. Retry stage; if it keeps happening, choose a different model in Edit project → Providers."
+        : undefined,
   });
   if (!answer.ok) return answer;
   add(answer.value.usage);
@@ -226,7 +234,7 @@ async function researchChapters(
           // instead of answering from what it already knows.
           webSearch: true,
           check: (given: LlmAnswer): string | undefined =>
-            sourcedAnswer(`the researcher on "${kept.title}"`, given.text),
+            sourcedAnswer(`the research topic "${kept.title}"`, given.text),
         });
         if (!answer.ok) {
           setPiece(deps.db, piece.id, "pending", piece.payload);
@@ -294,7 +302,9 @@ function section(label: string, messages: readonly Message[]): string {
 
 function payloadOf(piece: StagePiece): z.infer<typeof chapterPayload> {
   if (piece.payload === null) {
-    throw new Error(`chapter ${piece.id} has no payload`);
+    throw new Error(
+      "Slopify hit an internal error (a saved research topic is empty). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   }
   return chapterPayload.parse(JSON.parse(piece.payload));
 }

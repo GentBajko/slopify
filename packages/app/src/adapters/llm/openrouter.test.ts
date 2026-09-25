@@ -207,7 +207,7 @@ describe("openRouterLlm.complete", () => {
     // An absent key is terminal, so it carries the kind the wrapper does
     // not retry rather than the `auth` kind a rejected key carries.
     expect(isProviderError(error) && error.fault.kind).toBe("missing_key");
-    expect(String(error)).toContain("no OpenRouter key is stored");
+    expect(String(error)).toContain("No OpenRouter API key is saved");
     expect(called).toBe(0);
   });
 
@@ -296,7 +296,7 @@ describe("openRouterLlm.complete", () => {
       ...replaying(new Response(null, { status: 200 })),
       key: () => key,
     });
-    await expect(drain(port)).rejects.toThrow("no body");
+    await expect(drain(port)).rejects.toThrow("dropped before the answer was complete");
   });
 });
 
@@ -328,7 +328,7 @@ describe("openRouterLlm.models", () => {
       ...replaying(new Response("", { status: 503 })),
       key: () => key,
     });
-    await expect(port.models()).rejects.toThrow("OpenRouter answered 503");
+    await expect(port.models()).rejects.toThrow("OpenRouter had a problem on its side (error 503");
   });
 
   it("fails when the list is not the shape this app reads", async () => {
@@ -336,7 +336,7 @@ describe("openRouterLlm.models", () => {
       ...replaying(new Response(JSON.stringify({ models: [] }), { status: 200 })),
       key: () => key,
     });
-    await expect(port.models()).rejects.toThrow("not in the shape");
+    await expect(port.models()).rejects.toThrow("could not read");
   });
 });
 

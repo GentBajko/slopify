@@ -22,7 +22,7 @@ export function documentWorkspace(input: readonly LlmDocument[] | undefined) {
     throw providerError({
       kind: "unsupported",
       message:
-        "Research documents are invalid or exceed the supported request size. No document was truncated.",
+        "The research notes are too large, or not in a form the AI model can be given, so nothing was sent. Make the inputs shorter in Edit project, then use Retry stage; if it keeps happening, use Download diagnostics in Settings and report it.",
     });
   const documents = parsed.data;
   const directory = mkdtempSync(join(tmpdir(), "slopify-documents-"));
@@ -93,7 +93,7 @@ function unread(): Error {
   return providerError({
     kind: "unavailable",
     message:
-      "The CLI did not read every research document in full. Review the work before retrying; the provider may have charged for this attempt.",
+      "The AI model did not read all of the research notes, so its answer was not used (the attempt may still have used your quota). Use Retry stage; if it keeps happening, choose another model in the Providers section of Edit project.",
   });
 }
 export type DocumentWorkspace = NonNullable<ReturnType<typeof documentWorkspace>>;

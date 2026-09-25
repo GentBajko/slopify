@@ -31,23 +31,29 @@ export function CaptionEditor({
     const seen = new Set<string>();
     let previous = 0;
     if (!Number.isFinite(duration) || duration <= 0) {
-      setError("The narration duration is unavailable.");
+      setError(
+        "The narration length isn't known yet, so captions can't be checked. Reload the page and try again.",
+      );
       return;
     }
     for (const [index, cue] of draft.entries()) {
       const start = cue.start.trim() === "" ? NaN : Number(cue.start);
       const end = cue.end.trim() === "" ? NaN : Number(cue.end);
       if (seen.has(cue.id)) {
-        setError(`Caption ${index + 1}: caption IDs must be unique.`);
+        setError(`Caption ${index + 1}: this caption is listed twice. Remove the copy.`);
         return;
       }
       seen.add(cue.id);
       if (!Number.isFinite(start) || start < 0 || start < previous) {
-        setError(`Caption ${index + 1}: start must follow the previous caption.`);
+        setError(
+          `Caption ${index + 1}: start must be a number of seconds, no earlier than the previous caption's end.`,
+        );
         return;
       }
       if (!Number.isFinite(end) || end <= start || end > duration) {
-        setError(`Caption ${index + 1}: end must be after start and within narration.`);
+        setError(
+          `Caption ${index + 1}: end must be after its start and no later than the end of the narration.`,
+        );
         return;
       }
       if (cue.text.trim() === "") {

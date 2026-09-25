@@ -29,7 +29,8 @@ export function storageRoutes(deps: AppDeps) {
         return problem(c, {
           status: 500,
           title: titleOf(500),
-          detail: "The backup could not be created.",
+          detail:
+            "Slopify could not create the backup. Check there is free disk space and try again; if it keeps failing, use Download diagnostics in Settings and report it.",
         });
       }
     })
@@ -39,14 +40,15 @@ export function storageRoutes(deps: AppDeps) {
         return problem(c, {
           status: 415,
           title: titleOf(415),
-          detail: "Upload a Slopify backup ZIP.",
+          detail: "Choose a Slopify backup file (.zip) made with Backup & storage in Settings.",
         });
       const upload = await readPortableUpload(c.req.raw);
       if (!upload.ok)
         return problem(c, {
           status: 413,
           title: titleOf(413),
-          detail: "The backup must be between 1 byte and 100 MB.",
+          detail:
+            "This backup file is empty or larger than 100 MB. Choose a Slopify backup file under 100 MB.",
         });
       try {
         const imported = importPortable(
@@ -63,7 +65,8 @@ export function storageRoutes(deps: AppDeps) {
         return problem(c, {
           status: 400,
           title: titleOf(400),
-          detail: "The backup is invalid or incomplete.",
+          detail:
+            "This file is not a complete Slopify backup; it may be damaged or a different kind of ZIP. Choose a backup made with Backup & storage in Settings.",
         });
       }
     })

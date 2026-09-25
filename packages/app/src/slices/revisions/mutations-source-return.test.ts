@@ -199,7 +199,7 @@ it.each(["audio", "thumbnail"] as const)(
       ok: false,
       reason: "invalid-edit",
       fields: [
-        expect.objectContaining({ message: "The replacement asset is missing. Upload it again." }),
+        expect.objectContaining({ message: "The replacement file is missing. Upload it again." }),
       ],
     });
     expect(h.inspections()).toBe(inspections);

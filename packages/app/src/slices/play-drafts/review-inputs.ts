@@ -66,7 +66,11 @@ export function resolveReviewInputs(
   if (!words.success)
     fields.push({ field: "expectedWords", message: "Enter a whole number between 1 and 100000." });
   if (document.variants.length > 49)
-    fields.push({ field: "variants", message: "Review at most 50 runs including the base run." });
+    fields.push({
+      field: "variants",
+      message:
+        "You can review at most 50 videos at once, counting the first one. Remove some variations.",
+    });
   const converted = toAdmissionDraft({
     document,
     attachments: fresh.value.attachments,
@@ -120,7 +124,7 @@ export function resolveReviewInputs(
           index > 0 && (issue.field === "title" || issue.field.startsWith("values."))
             ? `variants.${index - 1}.${issue.field}`
             : issue.field,
-        message: `${index > 0 ? `Run ${index + 1}: ` : ""}${issue.message}`,
+        message: `${index > 0 ? `Video ${index + 1}: ` : ""}${issue.message}`,
       })),
     );
     runs.push({
@@ -147,7 +151,7 @@ export function resolveReviewInputs(
     if (!stat?.isFile() || font.id !== converted.draft.subtitles?.fontId)
       fields.push({
         field: "subtitles.fontId",
-        message: "The selected font is no longer available. Choose another font.",
+        message: "This font was deleted. Choose another font.",
       });
     else fontHash = createHash("sha256").update(readFileSync(font.path)).digest("hex");
   }
@@ -162,7 +166,8 @@ export function resolveReviewInputs(
       )
         fields.push({
           field: `checkpoints.${stage}`,
-          message: "Choose a checkpoint only before an enabled generated stage or export.",
+          message:
+            "Checkpoints can only go before a step Slopify generates, or before export. Remove this checkpoint or turn that step on.",
         });
   if (fields.length) return reviewRefusal(view, fields);
   const checkpointSet = reviewCheckpointSet(runs, catalogue, attachmentIdentity, fontHash);

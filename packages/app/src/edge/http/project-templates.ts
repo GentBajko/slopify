@@ -37,10 +37,14 @@ function refused(c: Context, result: Extract<TemplateResult<never>, { ok: false 
     title: titleOf(status),
     detail:
       result.reason === "referenced-by-schedule"
-        ? "Cancel and delete the schedules using this template before deleting it. Their run history will be retained."
+        ? "Some schedules still use this template. In Library > Schedules, cancel and delete them first; their run history is kept."
         : result.reason === "missing-prompt"
-          ? "A selected prompt or entry is unavailable. Choose another before saving the template."
-          : "Reload the template and check its setup before trying again.",
+          ? "A prompt or intro/outro entry this template uses was deleted. Choose another in the template, then save again."
+          : result.reason === "not-found"
+            ? "This template no longer exists; it may have been deleted. Go to Library > Templates to see your templates."
+            : result.reason === "conflict"
+              ? "This template or its project changed while you were editing. Reload the page to see the latest, then make your change again."
+              : "Some template settings are not valid, for example an image you supplied yourself. Check the template's settings and try again.",
     extensions: { reason: result.reason },
   });
 }

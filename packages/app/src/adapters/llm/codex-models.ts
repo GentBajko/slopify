@@ -69,7 +69,7 @@ export async function nodeCodexModels(
     } catch {
       // Do not expose cache contents, home paths or raw JSON errors to the browser.
       throw new Error(
-        "Codex model metadata is unavailable. Check the CLI and refresh, or enter a custom model ID.",
+        "Slopify could not get the model list from the Codex CLI. Check the CLI is installed and signed in (Settings → Providers), then refresh the list, or type an exact model ID.",
       );
     }
   }

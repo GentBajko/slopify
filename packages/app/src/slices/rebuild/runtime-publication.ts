@@ -51,7 +51,10 @@ export function preparedText(
   text: string,
 ): PreparedOutput {
   const output = preparedTexts(deps, context, piece, [[role, filename, text]])[0];
-  if (output === undefined) throw new Error("The text output was not prepared.");
+  if (output === undefined)
+    throw new Error(
+      "Slopify hit an internal error (a text file could not be prepared). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   return output;
 }
 
@@ -206,9 +209,14 @@ export function retainPartialArticle(
       });
       if (authority === undefined) return;
       if (authority.key !== piece.key || authority.fingerprint !== piece.fingerprint)
-        throw new Error("Partial article differs from its durable piece authority.");
+        throw new Error(
+          "Slopify hit an internal error (a partly written article doesn't match its saved step). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+        );
       const revision = revisionById(deps.db, context.work.projectId, context.work.revisionId);
-      if (revision === undefined) throw new Error("Partial article origin disappeared.");
+      if (revision === undefined)
+        throw new Error(
+          "Slopify hit an internal error (the project version for a partly written article is missing). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+        );
       insertAsset(deps.db, result.asset);
       insertManifestOutput(
         deps.db,

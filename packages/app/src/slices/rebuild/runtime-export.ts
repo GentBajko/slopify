@@ -39,8 +39,14 @@ export async function executeExportRecipe(
   const { view } = snapshot;
   const audio = await revisionAudio(deps, context, view);
   const wav = piece.key === "export:wav";
-  if (!wav && piece.key !== "export:video") throw new Error("Unknown media export recipe.");
-  if (wav && audio.length === 0) throw new Error("Audio export needs complete narration.");
+  if (!wav && piece.key !== "export:video")
+    throw new Error(
+      "Slopify hit an internal error (unknown kind of export). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
+  if (wav && audio.length === 0)
+    throw new Error(
+      "The audio export has nothing to export because narration is turned off for this project. Turn narration on in Edit project, then Retry stage.",
+    );
   const filename = wav ? "audio.wav" : "video.mp4";
   const pending = allocateAsset(deps, context.work.projectId, filename);
   const prepared: PreparedOutput[] = [];
@@ -71,7 +77,9 @@ export async function executeExportRecipe(
           one.workKey === `image:${key}` && one.selected && one.available && one.state === "ready",
       );
       if (row === undefined)
-        throw new Error("The revision is missing an image selected for its slideshow.");
+        throw new Error(
+          "The video export can't find one of the slideshow images. Use Re-run section on Images (or regenerate that image in Edit project → Images), then Retry stage.",
+        );
       return outputPath(deps.paths, context.work.projectId, row.output.path);
     });
     const plan = wav
@@ -167,7 +175,9 @@ function captionDirectory(
   const ass = find("subtitle_ass");
   const font = find("subtitle_font");
   if (ass === undefined || font === undefined)
-    throw new Error("Burned subtitles need prepared captions and their saved font.");
+    throw new Error(
+      "Burned-in captions are missing their caption file or font. Use Re-run section on Video (or choose the caption font again in Edit project → Subtitles), then Retry stage.",
+    );
   const directory = mkdtempSync(join(projectDir(deps.paths, context.work.projectId), "render-"));
   try {
     mkdirSync(join(directory, "fonts"), { mode: 0o700 });

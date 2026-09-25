@@ -371,7 +371,7 @@ describe("runResearch", () => {
     await expect(runResearch(h.deps, h.context, llm.providers)).rejects.toThrow(
       webResearchUnsupported,
     );
-    expect(webResearchUnsupported).toBe("web research unsupported by this model");
+    expect(webResearchUnsupported).toMatch(/can't search the web/);
     h.db.close();
   });
 
@@ -385,7 +385,7 @@ describe("runResearch", () => {
         empty.context,
         fake((turn) => (turn === "planner" ? "One" : "")).providers,
       ),
-    ).rejects.toThrow("answered with nothing");
+    ).rejects.toThrow("returned an empty answer");
     empty.db.close();
 
     const bare = harness();
@@ -395,7 +395,7 @@ describe("runResearch", () => {
         bare.context,
         fake((turn) => (turn === "planner" ? "One" : "Notes with no list.")).providers,
       ),
-    ).rejects.toThrow("answered with no Sources list");
+    ).rejects.toThrow("had no sources");
     bare.db.close();
   });
 
@@ -403,7 +403,7 @@ describe("runResearch", () => {
     const h = harness();
 
     await expect(runResearch(h.deps, h.context, fake(() => "   ").providers)).rejects.toThrow(
-      "the planner named no chapters",
+      "didn't return any research topics",
     );
     h.db.close();
   });
@@ -412,7 +412,7 @@ describe("runResearch", () => {
     const h = harness({ rendered: {} });
 
     await expect(runResearch(h.deps, h.context, fake(threeChapters).providers)).rejects.toThrow(
-      "no LLM provider or no rendered article prompt",
+      "No AI model or article prompt is set for research",
     );
     h.db.close();
   });

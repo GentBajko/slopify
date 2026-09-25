@@ -56,6 +56,6 @@ function missing(c: Parameters<typeof problem>[0]): Response {
     status: 404,
     title: titleOf(404),
     detail:
-      "This live audio preview is no longer available. Finished narration is available in the audio outputs.",
+      "This live audio preview has ended. Play the finished narration from the project's audio outputs instead.",
   });
 }

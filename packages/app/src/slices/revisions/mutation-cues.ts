@@ -67,7 +67,8 @@ export function validateProposedCues(
   const fail = (): readonly FieldError[] => [
     {
       field: "content.subtitleCues",
-      message: "Save captions against the current, complete narration timeline.",
+      message:
+        "The narration changed or is not finished, so these captions no longer line up. Reload the page and edit the captions again once narration is complete.",
     },
   ];
   const candidates = [

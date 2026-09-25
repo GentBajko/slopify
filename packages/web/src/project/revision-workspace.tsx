@@ -85,7 +85,9 @@ export function RevisionWorkspace({
     enabled: currentRevisionId !== null,
     queryFn: async () => {
       if (currentRevisionId === null)
-        throw new Error("Prepare this legacy project before inspecting revision status.");
+        throw new Error(
+          "This project has no saved settings to show yet. Reload the page and try again.",
+        );
       const result = await viewOf(api, projectId, currentRevisionId);
       if (!result.ok) throw new Error(result.message);
       return result.value.view;

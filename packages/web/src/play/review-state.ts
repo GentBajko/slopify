@@ -7,6 +7,7 @@ import type {
 } from "@app/slices/play-drafts/model.js";
 import type { QueryClient } from "@tanstack/react-query";
 import type { Api } from "@/api";
+import { sentence } from "@/http";
 import { type DraftRefusal, readPlayDraft, reviewPlayDraft, startPlayDraft } from "./draft-api";
 import { refreshDraftChoices, rememberDraft } from "./draft-restore";
 import type { DraftSessionState } from "./draft-save";
@@ -183,7 +184,12 @@ export function createReviewOwner({
         publish({ receipt: reply.value, valid: true });
       } catch (error) {
         if (selected === reviewSequence)
-          publish({ error: error instanceof Error ? error.message : "Couldn't review this draft" });
+          publish({
+            error:
+              error instanceof Error
+                ? error.message
+                : "This setup couldn't be checked. Press Refresh review to try again.",
+          });
       } finally {
         if (selected === reviewSequence) publish({ pending: false });
       }
@@ -231,7 +237,7 @@ export function createReviewOwner({
         publish({
           uncertain: true,
           valid: false,
-          error: `${error instanceof Error ? error.message : "Start response was lost"}. The result is uncertain. Check the same Start receipt before trying a new run.`,
+          error: `${sentence(error instanceof Error ? error.message : "Slopify didn't confirm the start")} The run may already have started. Press Check Start result to find out before trying again.`,
         });
       } finally {
         publish({ starting: false });

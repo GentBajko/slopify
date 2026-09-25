@@ -45,13 +45,15 @@ export async function installProjects(
     (previousJournal?.volumeIdentity && previousJournal.volumeIdentity !== currentVolume)
   )
     throw new Error(
-      "Remembered data volume is missing or was replaced; restore the original volume before retrying.",
+      `Remembered data volume ${c.volume} is missing or was replaced since Slopify was installed. Restore the original volume (see docker volume ls) and run the launcher again. Nothing was changed.`,
     );
   if (
     (receipt && receipt.daemon !== context.daemon) ||
     (previousJournal && previousJournal.daemon !== context.daemon)
   )
-    throw new Error("Docker daemon differs from saved installation; select the original daemon.");
+    throw new Error(
+      "This is not the Docker that Slopify was installed with (a different Docker context or DOCKER_HOST is active). Switch back to the original one (docker context use <name>, or unset DOCKER_HOST) and try again.",
+    );
   await assertVolumeClaims(c, e, context.daemon, currentVolume, await e.inspect(c.name));
   if (previousJournal && previousJournal.phase !== "rolled-back")
     previousJournal = await recoverInstallation(c, previousJournal, receipt, recovery());
@@ -75,7 +77,7 @@ export async function installProjects(
     const other = await readState(join(c.root, name, "receipt.json"), receiptSchema, c.uid);
     if (other?.daemon === context.daemon && other.volume === c.volume)
       throw new Error(
-        `Named volume belongs to installation ${other.name}; select a separate volume.`,
+        `The Docker volume ${c.volume} already belongs to another Slopify installation (${other.name}). Give this one its own volume with SLOPIFY_DOCKER_VOLUME=<name> and try again.`,
       );
   }
   let reuse: Journal | null = null;
@@ -105,7 +107,7 @@ export async function installProjects(
   const expectedVersion = await e.version(image);
   if (expectedVersion !== readVersion())
     throw new Error(
-      "Docker image and installed launcher versions differ. Refresh the default release image or select the matching custom image before retrying; the existing container is unchanged.",
+      `The Docker image is Slopify ${expectedVersion} but this launcher is ${readVersion()}. Run the latest of both (npx @gentbajko/slopify@latest --docker), or if you set SLOPIFY_DOCKER_IMAGE, point it at version ${readVersion()}. Your existing container was not changed.`,
     );
   const signature = createHash("sha256")
     .update(JSON.stringify([image, c.volume, c.port, c.bridge, projects, context.user]))
@@ -265,25 +267,27 @@ export async function installProjects(
     await save({ phase: "committed" });
     const ready = await e.inspect(candidate);
     if (!ready?.port)
-      throw new Error("Committed container has no localhost port; rerun the launcher.");
+      throw new Error(
+        "Slopify started but Docker did not report which port it is on. Run the same command again to finish.",
+      );
     return { url: `http://${ready.port}`, projects, recovery: j.backup };
   } catch (cause) {
     const current = await readState(receiptPath, receiptSchema, c.uid);
     if (current?.transaction === j.id)
       throw new Error(
-        `Installation committed at ${projects}; rerun the launcher to finish activation. Recovery volume: ${j.backup}`,
+        `Slopify was installed (project files at ${projects}) but the last step did not finish. Run the same command again to complete it. Backup volume: ${j.backup}`,
         { cause },
       );
     try {
       await recoverInstallation(c, j, current, recovery());
     } catch (failure) {
       throw new Error(
-        `Recovery incomplete. Leave container/data stopped; recovery volume ${j.backup}, journal ${journalPath}, project folder ${projects}. ${failure instanceof Error ? failure.message : "Recovery operation failed."}`,
+        `Recovery incomplete: the install failed and Slopify could not fully undo it. Leave the Slopify container stopped and don't delete anything: backup volume ${j.backup}, progress file ${journalPath}, project folder ${projects}. Fix the problem below, then run the same command again. ${failure instanceof Error ? failure.message : "The undo step failed."}`,
         { cause },
       );
     }
     throw new Error(
-      `Previous installation restored${old?.running ? " and restarted" : " without starting it"}. Recovery: ${j.backup}; project copy: ${projects}. ${cause instanceof Error ? cause.message : "Installation failed."}`,
+      `Install failed. Previous installation restored${old?.running ? " and restarted" : " (not started)"}, so nothing was lost. Backup volume: ${j.backup}; project copy: ${projects}. Reason: ${cause instanceof Error ? cause.message : "Installation failed."}`,
       { cause },
     );
   }

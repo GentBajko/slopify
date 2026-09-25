@@ -26,7 +26,7 @@ export function createUpdater(deps: UpdateDeps): AppUpdater {
   let status: UpdateStatus = deps.candidate?.pending === true ? "restarting" : "idle";
   let activated = deps.candidate?.pending !== true;
   let installError: string | undefined = deps.previousUpdateFailed
-    ? "The update did not start. The previous version and database were restored. You can try again."
+    ? "The new version did not start, so Slopify put back the previous version and database. You can try again; the reason is in logs/updates.log inside your Slopify data folder."
     : undefined;
   let error: string | undefined = installError;
   let checking: Promise<void> | undefined;
@@ -72,7 +72,8 @@ export function createUpdater(deps: UpdateDeps): AppUpdater {
         error = installError;
       } catch {
         status = "error";
-        error = "Could not check for updates. Check your connection and try again.";
+        error =
+          "Could not check for updates: the npm registry (registry.npmjs.org) did not answer properly. Check your internet connection and try again.";
         deps.report(error);
       } finally {
         checkedAt = deps.now();
@@ -152,7 +153,7 @@ export function createUpdater(deps: UpdateDeps): AppUpdater {
         .catch(() => {
           status = "error";
           error =
-            "The update could not be completed. Your current installation is still available. Try again or restart Slopify.";
+            "The update could not be installed, so Slopify kept your current version. Check your internet connection and try again; the reason is in logs/updates.log inside your Slopify data folder.";
           installError = error;
           deps.report(error);
         });

@@ -92,8 +92,8 @@ function claim(
       endedAt: skip ? now.toISOString() : null,
       error: skip
         ? overlapping
-          ? "Skipped because another occurrence is still running."
-          : "Skipped because the app missed this occurrence."
+          ? "Skipped because the previous run of this schedule was still going."
+          : "Skipped because Slopify was not running at the scheduled time."
         : null,
     };
     if (!insertRun(deps.db, run)) return [];

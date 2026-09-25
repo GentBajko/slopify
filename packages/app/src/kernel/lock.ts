@@ -21,8 +21,9 @@ export function acquireInstanceLock(lockPath: string): InstanceLock {
     const holder = holderOf(lockPath);
     if (holder !== undefined && holds(holder, pid)) {
       throw new Error(
-        `another Slopify instance is already running on this data directory (pid ${holder.pid}). ` +
-          `Stop it, or delete ${lockPath} if it is stale.`,
+        `Slopify is already running on this data directory (process ${holder.pid}). ` +
+          "Use the copy that is already open, or stop it (Ctrl+C in its terminal) and start again. " +
+          `If no Slopify is running, delete ${lockPath} and try again.`,
       );
     }
     // The recorded process is gone, or the file says nothing usable. Reclaiming it here
@@ -30,7 +31,7 @@ export function acquireInstanceLock(lockPath: string): InstanceLock {
     discard(lockPath);
     if (!claim(lockPath, pid)) {
       throw new Error(
-        `could not take the instance lock at ${lockPath}: another process was faster`,
+        `Another Slopify started on this data directory at the same moment (lock file ${lockPath}). Close the extra copy and start Slopify again.`,
       );
     }
   }

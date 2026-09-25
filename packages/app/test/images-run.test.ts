@@ -393,9 +393,7 @@ describe("the images stage through the attempt wrapper", () => {
       .run();
     const image = fakeImage({ bytes: pngBytes });
 
-    await expect(run(h, image)).rejects.toThrow(
-      "the run has no rendered text for the image prompt Wide shot",
-    );
+    await expect(run(h, image)).rejects.toThrow("the image prompt Wide shot was never filled in");
     expect(image.calls()).toBe(0);
   });
 

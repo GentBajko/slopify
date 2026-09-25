@@ -341,7 +341,7 @@ describe("the thumbnail stage, with the prompt written by the LLM", () => {
     const h = harness("prompt_by_llm", { article: false });
 
     await expect(run(h, fakeLlm(), fakeImage({ bytes: pngBytes }))).rejects.toThrow(
-      "the project has no article",
+      "the article isn't ready",
     );
     expect(existsSync(join(h.dir, "thumbnail.png"))).toBe(false);
   });

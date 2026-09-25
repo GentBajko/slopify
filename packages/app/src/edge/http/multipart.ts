@@ -10,10 +10,12 @@ export async function readMultipart<T>(
   const contentType = request.headers.get("content-type");
   if (contentType === null || !contentType.startsWith("multipart/form-data"))
     throw new HTTPException(415, {
-      message: "An upload is sent as multipart/form-data with the file in one part.",
+      message: "The upload was not sent as a file. Reload the page and choose the file again.",
     });
   if (request.body === null)
-    throw new HTTPException(400, { message: "The request carried no body." });
+    throw new HTTPException(400, {
+      message: "The upload arrived empty. Choose the file again and retry.",
+    });
   let parser: InstanceType<typeof Busboy>;
   try {
     parser = new Busboy({
@@ -23,7 +25,7 @@ export async function readMultipart<T>(
     });
   } catch (error) {
     throw new HTTPException(400, {
-      message: "The multipart boundary is missing or invalid.",
+      message: "The upload did not arrive complete. Choose the file again and retry.",
       cause: error,
     });
   }
@@ -51,7 +53,7 @@ export async function readMultipart<T>(
   parser.on("error", (error: Error) =>
     fail(
       new HTTPException(400, {
-        message: "The multipart request is malformed or incomplete.",
+        message: "The upload did not arrive complete. Choose the file again and retry.",
         cause: error,
       }),
     ),
@@ -75,7 +77,10 @@ export async function readMultipart<T>(
       },
     );
   });
-  const abort = (): void => fail(new Error("Upload request was aborted."));
+  const abort = (): void =>
+    fail(
+      new Error("The upload was interrupted before it finished. Choose the file again and retry."),
+    );
   request.signal.addEventListener("abort", abort, { once: true });
   if (request.signal.aborted) abort();
   else source.pipe(parser);

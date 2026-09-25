@@ -277,7 +277,9 @@ function clearStage(deps: RerunDeps, stage: Stage, outputs: readonly Output[]): 
 // runs the returned cleanup only after commit. Finished narration is left intact.
 export function clearUnfinishedAudio(deps: RerunDeps, projectId: string): readonly (() => void)[] {
   if (currentRevisionId(deps.db, projectId) !== undefined)
-    throw new Error("Versioned narration must be edited through revisions.");
+    throw new Error(
+      "Slopify hit an internal error (narration was changed the old way on a project that uses versions). Try again; if it happens again, use Download diagnostics in Settings and report it.",
+    );
   const stage = stagesOf(deps.db, projectId).find((one) => one.kind === "audio");
   if (
     stage === undefined ||

@@ -4,6 +4,14 @@ import { redact } from "../../kernel/log.js";
 import type { GeneratedImage, ImagePort, ImageRequest } from "../../kernel/ports/image.js";
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import {
+  httpFailure,
+  missingKey,
+  noImage,
+  providerSaid,
+  refusedImage,
+  unreadable,
+} from "../explain.js";
 import { retryAfter } from "../retry-after.js";
 import { downloadImage } from "./bytes.js";
 
@@ -107,7 +115,7 @@ async function settle(
     if (next === undefined) {
       throw providerError({
         kind: "other",
-        message: `Replicate left the prediction ${current.status} and named no address to read it from`,
+        message: unreadable("Replicate"),
       });
     }
     await deps.clock.sleep(replicatePollMs, signal);
@@ -127,7 +135,7 @@ function outputOf(current: z.infer<typeof prediction>): string {
   const output = current.output;
   const url = typeof output === "string" ? output : output?.[0];
   if (url === undefined || url === "") {
-    throw providerError({ kind: "other", message: "Replicate succeeded with no image" });
+    throw providerError({ kind: "other", message: noImage("Replicate") });
   }
   return url;
 }
@@ -143,9 +151,17 @@ function declined(current: z.infer<typeof prediction>): Error {
   // ceiling: read off the sentence, because a failed prediction carries no machine-readable
   // reason. A phrase the list does not know costs the user three more images; the upgrade
   // is a structured field, when Replicate ships one.
+  const refusal = refusalWords.test(message);
   return providerError({
-    kind: refusalWords.test(message) ? "refusal" : "other",
-    message: `Replicate answered: ${message}`,
+    kind: refusal ? "refusal" : "other",
+    message: refusal
+      ? refusedImage("Replicate", message)
+      : providerSaid(
+          "Replicate",
+          "could not make the image",
+          message,
+          "Use Retry stage; if it keeps happening, reword the image prompt in the Images section of Edit project or choose another image model in its Providers section.",
+        ),
   });
 }
 
@@ -153,7 +169,7 @@ function auth(deps: ReplicateImageDeps): Record<string, string> {
   // `missing_key`, not `auth`, because that rule makes it terminal.
   const key = deps.key();
   if (key === undefined || key === "") {
-    throw providerError({ kind: "missing_key", message: "no Replicate key is stored" });
+    throw providerError({ kind: "missing_key", message: missingKey("Replicate") });
   }
   return { Authorization: `Bearer ${key}` };
 }
@@ -181,7 +197,12 @@ async function failure(response: Response): Promise<Error> {
   const retryAfterMs = retryAfter(response.headers.get("retry-after"));
   return providerError({
     kind: kindOf(response.status),
-    message: `Replicate answered ${String(response.status)}: ${message || response.statusText}`,
+    message: httpFailure({
+      provider: "Replicate",
+      status: response.status,
+      detail: message || response.statusText,
+      subject: "image request",
+    }),
     ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
   });
 }
@@ -191,7 +212,7 @@ function parse(text: string): z.infer<typeof prediction> {
   if (!parsed.success) {
     throw providerError({
       kind: "other",
-      message: "Replicate's answer was not in the shape this app can read",
+      message: unreadable("Replicate"),
     });
   }
   return parsed.data;

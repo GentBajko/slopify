@@ -54,7 +54,7 @@ export async function downloadImage(download: ImageDownload): Promise<GeneratedI
     // quoted back - a fal or Replicate delivery link carries its own signature.
     throw providerError({
       kind: "other",
-      message: `${download.provider} answered ${String(response.status)} for the image it said it had made`,
+      message: `${download.provider} made the image, but Slopify could not download it (error ${String(response.status)}). Check your internet connection, then use Retry stage.`,
     });
   }
   const bytes = new Uint8Array(await response.arrayBuffer());
@@ -62,7 +62,7 @@ export async function downloadImage(download: ImageDownload): Promise<GeneratedI
   if (mime === undefined) {
     throw providerError({
       kind: "other",
-      message: `${download.provider}'s image link answered with ${describeBytes(bytes)} rather than a PNG or a JPEG`,
+      message: `${download.provider} sent back something that is not a PNG or JPEG image (${describeBytes(bytes)}). Use Retry stage; if it keeps happening, choose another image model in the Providers section of Edit project.`,
     });
   }
   return { bytes, mime };

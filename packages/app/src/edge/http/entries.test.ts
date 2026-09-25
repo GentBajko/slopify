@@ -108,7 +108,13 @@ describe("POST /api/entries", () => {
 
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({
-      fields: [{ field: "body", message: "The slot at line 1, column 3 has no name." }],
+      fields: [
+        {
+          field: "body",
+          message:
+            "The keyword at line 1, column 3 has no name. Write a name between `{{` and `}}`.",
+        },
+      ],
     });
   });
 
@@ -130,7 +136,9 @@ describe("POST /api/entries", () => {
 
     expect(response.status).toBe(409);
     expect(await response.json()).toMatchObject({
-      fields: [{ field: "name", message: "Another entry already has this name." }],
+      fields: [
+        { field: "name", message: "Another entry already has this name. Choose a different name." },
+      ],
     });
   });
 

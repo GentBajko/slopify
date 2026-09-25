@@ -3,6 +3,7 @@ import { redact } from "../../kernel/log.js";
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import type { TtsAudio, TtsPort, TtsRequest } from "../../kernel/ports/tts.js";
+import { httpFailure, missingKey, noAudio, voiceFix } from "../explain.js";
 import { retryAfter } from "../retry-after.js";
 
 // The HTTP gateway adapter for Cartesia. `fetch` and
@@ -67,7 +68,7 @@ export function cartesiaTts(deps: CartesiaDeps): TtsPort {
         throw await failure(response, req.voiceId);
       }
       if (response.body === null) {
-        throw providerError({ kind: "other", message: "Cartesia answered with no audio" });
+        throw providerError({ kind: "other", message: noAudio("Cartesia") });
       }
       return { audio: response.body, container: "mp3" };
     },
@@ -78,7 +79,7 @@ function keyOf(deps: CartesiaDeps): string {
   const key = deps.key();
   // An absent key is terminal, so it never becomes a request.
   if (key === undefined || key === "") {
-    throw providerError({ kind: "missing_key", message: "no Cartesia key is stored" });
+    throw providerError({ kind: "missing_key", message: missingKey("Cartesia") });
   }
   return key;
 }
@@ -104,7 +105,13 @@ async function failure(response: Response, voiceId: string): Promise<Error> {
     kind: kindOf(response.status),
     // `voice_not_found` has to say which voice was asked for; Cartesia's
     // own message does not repeat the id.
-    message: `Cartesia answered ${response.status} for voice ${voiceId}: ${message}`,
+    message: httpFailure({
+      provider: "Cartesia",
+      status: response.status,
+      detail: message,
+      subject: `narration request for voice "${voiceId}"`,
+      fix: voiceFix(voiceId),
+    }),
     ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
   });
 }

@@ -40,7 +40,7 @@ export function draftFileRoutes(service: () => DraftStartDeps) {
           return problem(c, {
             status: 400,
             title: titleOf(400),
-            detail: "The request carried no file part.",
+            detail: "No file arrived with the upload. Choose the file again and retry.",
           });
         return result.ok
           ? c.json(draftAttachmentSchema.parse(result.value))
@@ -69,7 +69,8 @@ export function draftFileRoutes(service: () => DraftStartDeps) {
         return problem(c, {
           status: 404,
           title: titleOf(404),
-          detail: "This draft attachment has no preview bytes.",
+          detail:
+            "This attached file has not finished uploading, so it cannot be previewed yet. Wait a moment or attach it again.",
         });
       return c.body(Readable.toWeb(createReadStream(stagingPath(deps.paths, staged.path))), 200, {
         "content-type": contentType,

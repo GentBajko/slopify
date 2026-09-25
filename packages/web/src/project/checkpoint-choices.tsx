@@ -2,6 +2,7 @@ import type { Stage } from "@app/slices/admission/model.js";
 import { type ReactElement, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/ui/button";
+import { sentence } from "@/http";
 import {
   type CheckpointChange,
   type CheckpointGate,
@@ -57,7 +58,8 @@ export function CheckpointChoices({
   const notice: Outcome = concurrent
     ? {
         kind: "refused",
-        message: "Checkpoint choices changed elsewhere. Reload before saving. (conflict)",
+        message:
+          "Checkpoint choices changed elsewhere. Press Reload checkpoint choices before saving, then make your change again.",
       }
     : outcome;
   useEffect(() => {
@@ -79,12 +81,12 @@ export function CheckpointChoices({
         stages: selected,
       });
       if (!mounted.current) return;
-      if (!result.ok)
-        setOutcome({ kind: "refused", message: `${result.message} (${result.reason})` });
+      if (!result.ok) setOutcome({ kind: "refused", message: result.message });
       else if (result.value.revisionId !== revisionId)
         setOutcome({
           kind: "refused",
-          message: "The project revision changed. Reload checkpoint choices.",
+          message:
+            "The project was edited elsewhere. Press Reload checkpoint choices to see its current choices.",
         });
       else {
         saved(result.value);
@@ -95,7 +97,7 @@ export function CheckpointChoices({
       if (mounted.current)
         setOutcome({
           kind: "transport",
-          message: `${error instanceof Error ? error.message : "Checkpoint response unavailable."} Reload checkpoint choices before making another change.`,
+          message: `${sentence(error instanceof Error ? error.message : "Slopify didn't confirm the change")} It may or may not have saved. Press Reload checkpoint choices before changing anything else.`,
         });
     } finally {
       active.current = false;

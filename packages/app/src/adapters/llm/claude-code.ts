@@ -3,6 +3,7 @@ import { redact } from "../../kernel/log.js";
 import type { LlmCompletion, LlmEvent, LlmPort, Usage } from "../../kernel/ports/llm.js";
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { cliCheck, cliReported, commandOf } from "../explain.js";
 import { nodeClaudeCodeModels } from "./claude-code-models.js";
 import { cliLoginError } from "./cli-login-error.js";
 import {
@@ -11,7 +12,15 @@ import {
   documentWorkspace,
 } from "./document-workspace.js";
 import type { CliEnded, RunCli } from "./run-cli.js";
-import { cliEvent, cliInput, cliShaped, endedWithout, promptOf, stopCliRun } from "./run-cli.js";
+import {
+  cliEvent,
+  cliInput,
+  cliShaped,
+  endedWithout,
+  promptOf,
+  stopCliRun,
+  stuckCli,
+} from "./run-cli.js";
 import { lines } from "./sse-lines.js";
 
 // The local-agent adapter for Claude Code: spawned non-interactively, authenticated by the
@@ -167,7 +176,7 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
           throw providerError({
             kind: "unavailable",
             message:
-              "The full prompt could not be delivered to Claude Code. Review before retrying.",
+              "Slopify could not hand the whole prompt to the Claude Code CLI, so it cannot tell what the CLI worked on (it may already have used your quota). Use Retry stage to run it again.",
           });
         }
         if (result.is_error === true || result.subtype !== "success") {
@@ -175,7 +184,11 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
           if (login) throw login;
           throw providerError({
             kind: kindOf(result.api_error_status ?? null),
-            message: redact(result.result ?? result.subtype),
+            message: cliReported(
+              binary,
+              redact(result.result ?? result.subtype),
+              nextStep(binary, result.api_error_status ?? null),
+            ),
           });
         }
         documents?.verifyRead();
@@ -206,15 +219,15 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
     // be reported as the provider failing.
     req.signal.throwIfAborted();
     // The stream ended with no result event at all.
-    if (!run) throw new Error("Claude Code could not be started.");
+    if (!run)
+      throw new Error(
+        "The Claude Code CLI could not be started. Check it is installed and set up in Settings → Providers, then use Retry stage.",
+      );
     const login = cliLoginError("claude-code", run.stderr());
     if (login) throw login;
     throw providerError({
       kind: "other",
-      message:
-        ended === undefined
-          ? `the ${binary} CLI did not stop after forced termination`
-          : endedWithout(binary, ended, run.stderr()),
+      message: ended === undefined ? stuckCli(binary) : endedWithout(binary, ended, run.stderr()),
     });
   }
 
@@ -237,6 +250,17 @@ function kindOf(status: number | null): ProviderErrorKind {
     return "rate_limit";
   }
   return "other";
+}
+
+// What most often fixes the upstream status the CLI passed on.
+function nextStep(binary: string, status: number | null): string {
+  if (status === 401 || status === 403)
+    return `Run "${commandOf(binary)} auth login" in a terminal to sign in again, then use Retry stage.`;
+  if (status === 429)
+    return "Your Claude usage limit may be used up: wait until it resets, then use Retry stage.";
+  if (status === 404)
+    return "The chosen model may not exist or not be available to your account: choose another in the Providers section of Edit project, then use Retry stage.";
+  return cliCheck(binary);
 }
 
 // `modelUsage` is keyed by model id and a run may touch more than one - a fallback model,

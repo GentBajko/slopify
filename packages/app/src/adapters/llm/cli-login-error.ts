@@ -1,4 +1,5 @@
 import { type ProviderError, providerError } from "../../kernel/ports/model.js";
+import { cliName } from "../explain.js";
 
 export function cliLoginError(provider: string, text: string): ProviderError | undefined {
   if (/invalid api key/i.test(text)) return undefined;
@@ -16,6 +17,6 @@ export function cliLoginError(provider: string, text: string): ProviderError | u
         : "codex login";
   return providerError({
     kind: "missing_key",
-    message: `${provider}: sign in on the machine running the CLI with ${command}, then review the affected rebuild.`,
+    message: `The ${cliName(provider)} is not signed in, or its sign-in has expired. Open a terminal on the computer running the CLI, run "${command}" and sign in, then use Retry stage.`,
   });
 }

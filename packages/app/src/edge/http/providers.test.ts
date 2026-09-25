@@ -125,7 +125,7 @@ describe("PUT /api/providers/:id/key", () => {
 
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({
-      fields: [{ field: "key", message: "An API key is required." }],
+      fields: [{ field: "key", message: "Paste the API key from your provider's account page." }],
     });
   });
 
@@ -142,7 +142,8 @@ describe("PUT /api/providers/:id/key", () => {
 
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({
-      detail: "Claude Code CLI signs in through its own CLI, so there is no key to store here.",
+      detail:
+        "Claude Code CLI signs in through its own command-line tool, so it has no API key to save here. Sign in with that tool on your computer instead.",
     });
     expect(keyOf(db, "claude-code")).toBeUndefined();
   });
@@ -183,7 +184,9 @@ describe("DELETE /api/providers/:id/key", () => {
     const response = await app.request("/api/providers/fal/key", { method: "DELETE" });
 
     expect(response.status).toBe(404);
-    expect(await response.json()).toMatchObject({ detail: "No key is stored for fal.ai." });
+    expect(await response.json()).toMatchObject({
+      detail: "There is no saved API key for fal.ai, so there is nothing to remove.",
+    });
   });
 
   it("refuses for a CLI provider", async () => {

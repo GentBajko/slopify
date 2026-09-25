@@ -24,12 +24,18 @@ function atoms(
   for (let at = from; at < to; ) {
     const span = spans.get(at);
     if (span !== undefined) {
-      if (span.end > to || span.end <= at) throw new Error("Pronunciation span crosses a word.");
+      if (span.end > to || span.end <= at)
+        throw new Error(
+          "Slopify hit an internal error (a pronunciation fix spans more than one word). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+        );
       result.push({ text: span.text, spokenText: source.slice(at, span.end) });
       at = span.end;
     } else {
       const point = source.codePointAt(at);
-      if (point === undefined) throw new Error("Narration offset is outside the source.");
+      if (point === undefined)
+        throw new Error(
+          "Slopify hit an internal error (a narration position is outside the article text). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+        );
       const text = String.fromCodePoint(point);
       result.push({ text, spokenText: text });
       at += text.length;
@@ -49,7 +55,9 @@ function checkedSpans(source: string, pronunciation: readonly PronunciationSpan[
       span.end > source.length ||
       !/^[^\s\uD800-\uDFFF]+$/u.test(source.slice(span.start, span.end))
     )
-      throw new Error("Pronunciation spans must cover disjoint whole source characters in a word.");
+      throw new Error(
+        "Slopify hit an internal error (pronunciation fixes overlap or split a word). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      );
     spans.set(span.start, span);
     end = span.end;
   }

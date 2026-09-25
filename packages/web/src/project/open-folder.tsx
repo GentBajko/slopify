@@ -48,7 +48,9 @@ function FolderAction({ projectId, asset, folder = null }: Props) {
       }
       if (!result.opened) setPath(result.path);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not locate the folder.");
+      setError(
+        cause instanceof Error ? cause.message : "The folder couldn't be opened. Try again.",
+      );
     } finally {
       setPending(false);
     }

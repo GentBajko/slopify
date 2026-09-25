@@ -79,7 +79,7 @@ it.each(providers)(
         }
       };
       await expect(collect()).rejects.toThrow(
-        spawnFails ? /Failed to spawn/ : /did not read every/,
+        spawnFails ? /Failed to spawn/ : /did not read all of the research notes/,
       );
       expect(directory).not.toBe("");
       expect(existsSync(directory)).toBe(false);

@@ -3,6 +3,7 @@ import { redact } from "../../kernel/log.js";
 import type { GeneratedImage, ImagePort, ImageRequest } from "../../kernel/ports/image.js";
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import { httpFailure, missingKey, noImage, unreadable } from "../explain.js";
 import { retryAfter } from "../retry-after.js";
 import { downloadImage } from "./bytes.js";
 
@@ -108,12 +109,12 @@ export function falImage(deps: FalImageDeps): ImagePort {
       refused(answer, req.prompt);
       const first = answer.images[0];
       if (first === undefined) {
-        throw providerError({ kind: "other", message: "fal answered with no image" });
+        throw providerError({ kind: "other", message: noImage("fal.ai") });
       }
       // The download rides inside the attempt: a link that 404s is a failed attempt.
       return await downloadImage({
         fetch: deps.fetch,
-        provider: "fal",
+        provider: "fal.ai",
         url: first.url,
         signal: req.signal,
       });
@@ -125,7 +126,7 @@ function keyOf(deps: FalImageDeps): string {
   // `missing_key`, not `auth`, because that rule makes it terminal.
   const key = deps.key();
   if (key === undefined || key === "") {
-    throw providerError({ kind: "missing_key", message: "no fal key is stored" });
+    throw providerError({ kind: "missing_key", message: missingKey("fal.ai") });
   }
   return key;
 }
@@ -138,7 +139,7 @@ function refused(answer: z.infer<typeof generated>, prompt: string): void {
   if (flags.length > 0 && flags.every((flagged) => flagged)) {
     throw providerError({
       kind: "refusal",
-      message: `fal's safety checker rejected every image for this prompt: ${redact(prompt)}`,
+      message: `fal.ai's safety checker blocked the image for this prompt: "${redact(prompt)}". Reword the image prompt in the Images section of Edit project, or choose another image provider in its Providers section.`,
     });
   }
 }
@@ -164,7 +165,12 @@ async function failure(response: Response): Promise<Error> {
   const retryAfterMs = retryAfter(response.headers.get("retry-after"));
   return providerError({
     kind: kindOf(response.status),
-    message: `fal answered ${String(response.status)}: ${message}`,
+    message: httpFailure({
+      provider: "fal.ai",
+      status: response.status,
+      detail: message,
+      subject: "image request",
+    }),
     ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
   });
 }
@@ -186,7 +192,7 @@ function parse(text: string): z.infer<typeof generated> {
   if (!parsed.success) {
     throw providerError({
       kind: "other",
-      message: "fal's answer was not in the shape this app can read",
+      message: unreadable("fal.ai"),
     });
   }
   return parsed.data;

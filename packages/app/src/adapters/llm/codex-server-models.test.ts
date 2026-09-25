@@ -90,14 +90,14 @@ describe("Codex discovery without a local cache", () => {
   ])("sanitizes unavailable or malformed model replies", async ({ pages }) => {
     const f = await fixture(pages);
     await expect(nodeCodexModels(f.env, f.binary, 1000)).rejects.toThrow(
-      /^Codex model metadata is unavailable\./,
+      /^Slopify could not get the model list from the Codex CLI\./,
     );
   });
 
   it("bounds a CLI that does not answer", async () => {
     const f = await fixture([], true);
     await expect(nodeCodexModels(f.env, f.binary, 50)).rejects.toThrow(
-      /^Codex model metadata is unavailable\./,
+      /^Slopify could not get the model list from the Codex CLI\./,
     );
   });
 });

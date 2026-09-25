@@ -175,13 +175,18 @@ export async function executeProviderRecipe(
     });
     return "done";
   }
-  throw new Error("Expected an exact provider recipe.");
+  throw new Error(
+    "Slopify hit an internal error (this step has no provider request to run). Use Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+  );
 }
 
 function checkAnswer(piece: WorkPiece, answer: LlmAnswer): string | undefined {
-  if (answer.text.trim() === "") return "The provider answered with nothing.";
+  if (answer.text.trim() === "")
+    return "The AI model sent back an empty answer. Use Retry stage; if it keeps happening, choose another model in the Providers section of Edit project.";
   if (piece.key === "research:planner")
-    return chaptersFrom(answer.text).length === 0 ? "The planner named no chapters." : undefined;
+    return chaptersFrom(answer.text).length === 0
+      ? "The AI model's research plan listed no chapters, so research could not go on. Use Retry stage; if it keeps happening, choose another model in the Providers section of Edit project."
+      : undefined;
   if (piece.key === "research:notes" || piece.key.startsWith("research:chapter:"))
     return sourcedAnswer(piece.key, answer.text);
   return undefined;
@@ -249,7 +254,10 @@ async function publishText(
         ? outline.outline
         : [];
     const title: unknown = titles[Number(piece.key.split(":").at(-1)) - 1];
-    if (typeof title !== "string") throw new Error("Research chapter has no pinned title.");
+    if (typeof title !== "string")
+      throw new Error(
+        "Slopify hit an internal error (a research chapter has no title in the research plan). Use Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      );
     const asset = writeAsset(
       deps,
       context.work.projectId,

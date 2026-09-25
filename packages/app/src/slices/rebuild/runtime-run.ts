@@ -3,6 +3,7 @@ import type { StageProviders } from "../../kernel/runner/providers.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
 import { type ExportExecutionDeps, executeExportRecipe } from "./runtime-export.js";
 import { executeLocalRecipe } from "./runtime-local.js";
+import { pieceLabel } from "./runtime-piece-label.js";
 import { executeProviderRecipe } from "./runtime-provider.js";
 import { executeSubtitleRecipe } from "./runtime-subtitles.js";
 import { workPieces } from "./work-records.js";
@@ -33,7 +34,14 @@ export async function runRevisionInvocation(
           "UPDATE revision_work_pieces SET state=? WHERE id=? AND work_id=? AND state!='done'",
         )
         .run(context.signal.aborted ? "pending" : "failed", piece.id, context.work.workId);
-      throw error;
+      if (context.signal.aborted || !(error instanceof Error)) throw error;
+      let label: string | undefined;
+      try {
+        label = pieceLabel(deps, context, piece);
+      } catch {
+        // The error itself matters more than its label.
+      }
+      throw label === undefined ? error : new Error(`${label}: ${error.message}`, { cause: error });
     }
   }
   deps.db

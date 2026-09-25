@@ -113,7 +113,12 @@ it.each(["thumbnail", "images", "audio", "narration"] as const)(
         ok: false,
         reason: "invalid-edit",
         currentRevisionId: base.revision.id,
-        fields: [{ field, message: "Choose an asset for this content stage." }],
+        fields: [
+          {
+            field,
+            message: "This file cannot be used in this section. Choose a file of the right kind.",
+          },
+        ],
       });
       expect(probes).toBe(0);
       expect(listRevisionHistory(h.deps.db, h.projectId)).toHaveLength(1);
@@ -250,7 +255,7 @@ it.each([
                 stageKind === "audio"
                   ? "content.narrationOverrides.audio:body.assetId"
                   : "content.imageDefinitions.one.assetId",
-              message: "Choose an asset for this content stage.",
+              message: "This file cannot be used in this section. Choose a file of the right kind.",
             },
           ],
     );

@@ -274,7 +274,7 @@ it("keeps an unsaved or uncertain Play session authoritative before applying", a
   fireEvent.click(await screen.findByRole("button", { name: `Apply ${template.name}` }));
   expect(await screen.findByRole("alert")).toHaveProperty(
     "textContent",
-    expect.stringContaining("Resolve the current Play draft"),
+    expect.stringContaining("Save or discard the draft open in Play"),
   );
   expect(apply).not.toHaveBeenCalled();
 });

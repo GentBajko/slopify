@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { access, lstat, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { z } from "zod";
 import { isStableVersion, updatePackage } from "../updater/model.js";
 import { installArgs, npmCommand } from "../updater/plan.js";
@@ -11,7 +11,7 @@ export interface HostSetupRunner {
     file: string,
     args: readonly string[],
     signal: AbortSignal,
-  ) => Promise<{ code: number; stdout: string }>;
+  ) => Promise<{ code: number; stdout: string; stderr?: string }>;
 }
 export interface HostInstallOptions {
   readonly root: string;
@@ -27,18 +27,40 @@ export const nodeHostSetupRunner: HostSetupRunner = {
         file,
         [...args],
         { signal, timeout: 15 * 60_000, maxBuffer: 1024 * 1024, windowsHide: true },
-        (error, stdout) => {
+        (error, stdout, stderr) => {
           if (error && typeof error.code !== "number")
-            return reject(
-              new Error(
-                "Host setup command could not finish. Check Docker, Node and the systemd user service.",
-              ),
-            );
-          resolve({ code: typeof error?.code === "number" ? error.code : 0, stdout });
+            return reject(new Error(setupCommandFailure(file, args, error)));
+          resolve({ code: typeof error?.code === "number" ? error.code : 0, stdout, stderr });
         },
       );
     }),
 };
+// Says which program could not run and what to do about it; Node's own error only names the
+// errno, and the person running the launcher needs the fix.
+function setupCommandFailure(
+  file: string,
+  args: readonly string[],
+  error: Error & { code?: unknown; killed?: boolean },
+): string {
+  const name = basename(file);
+  const step = `"${[name, ...args.slice(0, 2)].join(" ")}"`;
+  if (error.code === "ENOENT") {
+    if (name === "docker")
+      return "Docker is not installed, or the docker command is not on your PATH. Install Docker Engine (https://docs.docker.com/engine/install/), check that docker info works, and run the launcher again.";
+    if (name === "systemctl" || name === "loginctl")
+      return `${name} was not found. Using this machine's AI CLIs from Docker needs systemd; start with --host-cli=off to use API keys only.`;
+    if (name === "npm" || name === "npm.cmd")
+      return "npm was not found. Install Node.js with npm (https://nodejs.org) and run the launcher again.";
+    return `${name} was not found on your PATH. Install it and run the launcher again.`;
+  }
+  if (error.code === "EACCES")
+    return `${file} could not be run (permission denied). Check that your user may run it, then try again.`;
+  if (error.code === "ABORT_ERR" || error.name === "AbortError")
+    return `${step} was stopped before it finished. Run the launcher again; Slopify will finish or undo the half-done step.`;
+  if (error.killed)
+    return `${step} took too long and was stopped. Check your internet connection and that Docker is running (docker info), then run the launcher again.`;
+  return `${step} could not finish (${error.message}). Check that Docker, Node.js and systemd user services work on this machine, then run the launcher again.`;
+}
 async function entryAt(directory: string, version: string): Promise<string> {
   const path = join(directory, "node_modules", "@gentbajko", "slopify");
   z.object({ name: z.literal(updatePackage), version: z.literal(version) }).parse(
@@ -58,7 +80,9 @@ export async function installHostPackage(options: HostInstallOptions): Promise<{
     return { entry: await entryAt(directory, version) };
   } catch (error) {
     if (!hasCode(error, "ENOENT"))
-      throw new Error("Existing host helper install is invalid. No service was changed.");
+      throw new Error(
+        `The installed host helper in ${directory} is damaged. Delete that folder and run the launcher again. Nothing else was changed.`,
+      );
   }
   await mkdir(versions, { recursive: true, mode: 0o700 });
   const staging = await mkdtemp(join(versions, `.install-${version}-`));
@@ -83,7 +107,7 @@ export async function installHostPackage(options: HostInstallOptions): Promise<{
     );
     if (result.code !== 0)
       throw new Error(
-        "npm could not install the host helper. The existing container was not changed.",
+        "npm could not install the Slopify host helper. Check your internet connection (npm must reach registry.npmjs.org) and run the launcher again. Your existing container was not changed.",
       );
     await entryAt(staging, version);
     await rename(staging, directory);

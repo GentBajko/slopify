@@ -4,6 +4,14 @@ import type { LlmCompletion, LlmEvent, LlmPort, Usage } from "../../kernel/ports
 import { documentMessages } from "../../kernel/ports/llm-documents.js";
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import {
+  droppedStream,
+  httpFailure,
+  missingKey,
+  providerSaid,
+  refreshList,
+  unreadable,
+} from "../explain.js";
 import { retryAfter } from "../retry-after.js";
 import { sseData } from "./sse-lines.js";
 
@@ -83,7 +91,7 @@ export function openRouterLlm(deps: OpenRouterDeps): LlmPort {
       throw await failure(response);
     }
     if (response.body === null) {
-      throw providerError({ kind: "other", message: "OpenRouter answered with no body" });
+      throw providerError({ kind: "other", message: droppedStream("OpenRouter") });
     }
 
     let usage: Usage | null = null;
@@ -103,7 +111,7 @@ export function openRouterLlm(deps: OpenRouterDeps): LlmPort {
         // frame; without this the stage would store half an article as a success.
         throw providerError({
           kind: kindOf(statusOf(chunk.error.code)),
-          message: redact(chunk.error.message),
+          message: streamFailure(statusOf(chunk.error.code), redact(chunk.error.message)),
         });
       }
       const choice = chunk.choices?.[0];
@@ -130,7 +138,7 @@ export function openRouterLlm(deps: OpenRouterDeps): LlmPort {
       // Saying so is what stops a truncated answer being stored as a whole one.
       throw providerError({
         kind: "other",
-        message: "OpenRouter's stream ended before the response was complete",
+        message: droppedStream("OpenRouter"),
       });
     }
     yield { type: "done", usage, finishReason };
@@ -145,13 +153,13 @@ export function openRouterLlm(deps: OpenRouterDeps): LlmPort {
         headers: headers(deps.key()),
       });
       if (!response.ok) {
-        throw await failure(response);
+        throw await failure(response, refreshList);
       }
       const parsed = modelList.safeParse(await response.json());
       if (!parsed.success) {
         throw providerError({
           kind: "other",
-          message: "OpenRouter's model list was not in the shape this app can read",
+          message: unreadable("OpenRouter"),
         });
       }
       // /models defaults to text output. Also reject an explicit non-text row
@@ -170,7 +178,7 @@ function headers(key: string | undefined): Record<string, string> {
   // rather than `auth` because the same rule makes it terminal: there is nothing to
   // retry until the user saves a key, and the wrapper is where that is decided.
   if (key === undefined || key === "") {
-    throw providerError({ kind: "missing_key", message: "no OpenRouter key is stored" });
+    throw providerError({ kind: "missing_key", message: missingKey("OpenRouter") });
   }
   return { Authorization: `Bearer ${key}`, ...appHeaders };
 }
@@ -189,7 +197,7 @@ function kindOf(status: number): ProviderErrorKind {
   return "other";
 }
 
-async function failure(response: Response): Promise<Error> {
+async function failure(response: Response, next?: string): Promise<Error> {
   const text = await response.text().catch(() => "");
   const parsed = errorBody.safeParse(safeJson(text));
   // The provider's own words, through the redactor - an error body may quote the key back.
@@ -199,9 +207,26 @@ async function failure(response: Response): Promise<Error> {
   const retryAfterMs = retryAfter(response.headers.get("retry-after"));
   return providerError({
     kind: kindOf(response.status),
-    message: `OpenRouter answered ${response.status}: ${message}`,
+    message: httpFailure({
+      provider: "OpenRouter",
+      status: response.status,
+      detail: message,
+      next,
+    }),
     ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
   });
+}
+
+// A mid-stream error carries an HTTP-like code; with none, the provider's words are all there is.
+function streamFailure(status: number, detail: string): string {
+  return status >= 400
+    ? httpFailure({ provider: "OpenRouter", status, detail })
+    : providerSaid(
+        "OpenRouter",
+        "stopped part-way through the answer",
+        detail,
+        "Use Retry stage; if it keeps happening, choose another model in the Providers section of Edit project.",
+      );
 }
 
 function statusOf(code: number | string | undefined): number {
@@ -216,7 +241,7 @@ function parseChunk(data: string): z.infer<typeof streamChunk> {
     // a half-written frame is noise, and the wrapper stores whatever is thrown.
     throw providerError({
       kind: "other",
-      message: "OpenRouter sent a stream frame this app could not read",
+      message: unreadable("OpenRouter"),
     });
   }
   return parsed.data;

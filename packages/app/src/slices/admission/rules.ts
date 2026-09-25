@@ -49,16 +49,16 @@ export function admit(input: AdmissionInput): AdmissionResult {
   const { sources } = draft;
 
   if (draft.title === "") {
-    fields.push({ field: "title", message: "A title is required." });
+    fields.push({ field: "title", message: "Enter a title for this video." });
   } else if (draft.title.length > titleMax) {
-    fields.push({ field: "title", message: `A title is at most ${titleMax} characters.` });
+    fields.push({ field: "title", message: `Keep the title to ${titleMax} characters or fewer.` });
   }
 
   for (const kind of stageKinds) {
     if (!allowedSources[kind].includes(sources[kind])) {
       fields.push({
         field: `sources.${kind}`,
-        message: `The ${kind} stage cannot be set to ${sources[kind]}.`,
+        message: `"${sources[kind]}" is not an option for ${kind}. Reload the page and choose again.`,
       });
     }
   }
@@ -72,7 +72,7 @@ export function admit(input: AdmissionInput): AdmissionResult {
     draft.outro?.mode === "llm" ||
     usesNarrationPreparation(draft);
   if (needsLlm && !chosen(draft.llm)) {
-    fields.push({ field: "llm", message: "Pick an LLM provider and model." });
+    fields.push({ field: "llm", message: "Choose a text (LLM) provider and model." });
   }
 
   if (sources.article === "generate" && blank(draft.articlePrompt)) {
@@ -83,9 +83,9 @@ export function admit(input: AdmissionInput): AdmissionResult {
   fields.push(...narrationPreparationFields(draft));
   if (sources.audio === "generate") {
     if (voiced === undefined || !chosen(voiced)) {
-      fields.push({ field: "audio", message: "Pick a narration provider and model." });
+      fields.push({ field: "audio", message: "Choose a narration provider and model." });
     } else if (voiced.voice.trim() === "") {
-      fields.push({ field: "audio.voice", message: "Pick a voice." });
+      fields.push({ field: "audio.voice", message: "Choose a voice for the narration." });
     }
   }
 
@@ -98,7 +98,7 @@ export function admit(input: AdmissionInput): AdmissionResult {
       sources.thumbnail === "prompt_by_llm") &&
     !chosen(draft.images)
   ) {
-    fields.push({ field: "images", message: "Pick an image provider and model." });
+    fields.push({ field: "images", message: "Choose an image provider and model." });
   }
 
   if (
@@ -109,7 +109,10 @@ export function admit(input: AdmissionInput): AdmissionResult {
   }
 
   if (sources.audio === "off" && draft.subtitles !== undefined && draft.subtitles.mode !== "off") {
-    fields.push({ field: "subtitles.mode", message: "Subtitles need narration audio." });
+    fields.push({
+      field: "subtitles.mode",
+      message: "Subtitles need narration. Turn narration on, or turn subtitles off.",
+    });
   }
   checkProvided(draft, input.staged, fields);
   checkValues(draft, input.requiredSlots, fields);
@@ -121,7 +124,7 @@ export function admit(input: AdmissionInput): AdmissionResult {
   ) {
     fields.push({
       field: "silenceGapSeconds",
-      message: `The silence gap is between 0 and ${silenceGapSecondsMax} seconds.`,
+      message: `Enter a silence gap between 0 and ${silenceGapSecondsMax} seconds.`,
     });
   }
 
@@ -163,7 +166,10 @@ export function normaliseDraft(draft: RunDraft): RunDraft {
 function checkImagePrompts(draft: RunDraft, fields: FieldError[]): void {
   if (draft.imagePrompts.length === 0) {
     // A run always has an image source.
-    fields.push({ field: "imagePrompts", message: "Tick at least one image prompt." });
+    fields.push({
+      field: "imagePrompts",
+      message: "Tick at least one image prompt, or turn images off.",
+    });
     return;
   }
   let total = 0;
@@ -179,14 +185,14 @@ function checkImagePrompts(draft: RunDraft, fields: FieldError[]): void {
     ) {
       fields.push({
         field: `imagePrompts.${index}.number`,
-        message: `Number is between 1 and ${numberPerPromptMax}.`,
+        message: `Enter a whole number between 1 and ${numberPerPromptMax}.`,
       });
     }
   }
   if (total > imagesPerRunMax) {
     fields.push({
       field: "imagePrompts",
-      message: `A run makes at most ${imagesPerRunMax} images; this one asks for ${total}.`,
+      message: `A video can have at most ${imagesPerRunMax} images; these prompts ask for ${total}. Lower the numbers.`,
     });
   }
 }
@@ -219,11 +225,14 @@ function checkProvided(draft: RunDraft, staged: readonly StagedFile[], fields: F
     } else if (ids.length > imagesPerRunMax) {
       fields.push({
         field: "provided.images",
-        message: `A run holds at most ${imagesPerRunMax} images.`,
+        message: `A video can have at most ${imagesPerRunMax} images. Remove some.`,
       });
     }
     if (new Set(ids).size !== ids.length) {
-      fields.push({ field: "provided.images", message: "The same image was picked twice." });
+      fields.push({
+        field: "provided.images",
+        message: "The same image is picked twice. Remove the duplicate.",
+      });
     }
     for (const [index, id] of ids.entries()) {
       checkFile(staged, id, "images", `provided.images.${index}`, "Pick an image.", fields);
@@ -246,11 +255,11 @@ function checkFile(
   }
   const file = staged.find((candidate) => candidate.id === id);
   if (file === undefined || file.stageKind !== kind) {
-    fields.push({ field, message: "That upload is no longer available; pick the file again." });
+    fields.push({ field, message: "That upload is no longer available. Choose the file again." });
     return;
   }
   if (file.state !== "staged") {
-    fields.push({ field, message: "This upload is still copying." });
+    fields.push({ field, message: "This file is still uploading. Wait for it to finish." });
   }
 }
 
@@ -262,17 +271,20 @@ function checkValues(
   for (const name of requiredSlots) {
     const value = Object.hasOwn(draft.values, name) ? draft.values[name] : undefined;
     if (value === undefined || value === "") {
-      fields.push({ field: `values.${name}`, message: "This field is required." });
+      fields.push({ field: `values.${name}`, message: "Fill in this field." });
       continue;
     }
     if (value.length > valueMax) {
       fields.push({
         field: `values.${name}`,
-        message: `A value is at most ${valueMax} characters.`,
+        message: `Keep this to ${valueMax} characters or fewer.`,
       });
     }
     if (/[\n\r]/.test(value)) {
-      fields.push({ field: `values.${name}`, message: "A value is a single line." });
+      fields.push({
+        field: `values.${name}`,
+        message: "Keep this to a single line, without line breaks.",
+      });
     }
   }
 }
@@ -294,7 +306,7 @@ export function narrationPreparationFields(draft: RunDraft): readonly FieldError
         {
           field: "narrationPrompt",
           message:
-            "Narration Preparation requires Inworld TTS-2. Choose that model or turn preparation Off.",
+            "Narration preparation only works with the Inworld TTS-2 model. Choose that model under Narration, or turn preparation Off.",
         },
       ]
     : [];

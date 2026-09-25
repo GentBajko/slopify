@@ -29,16 +29,22 @@ function refused(c: Context, result: Extract<ScheduleResult<never>, { ok: false 
       ? 409
       : 400;
   const detail: Record<string, string> = {
-    "invalid-input": "Check the schedule fields and try again.",
-    "not-found": "The schedule was not found.",
-    conflict: "The schedule changed elsewhere. Reload it before trying again.",
+    "invalid-input": "Some schedule settings are not valid. Check each field and save again.",
+    "not-found":
+      "This schedule no longer exists; it may have been deleted. Reload the page to see your schedules.",
+    conflict:
+      "This schedule changed while you were editing, possibly because a run just started. Reload the page to see the latest, then make your change again.",
     "cancel-required":
-      "Cancel this schedule before deleting it. Completed schedules can be deleted directly.",
-    "missing-template": "The selected template version is no longer available.",
-    "unsupported-media": "This template contains provided media and cannot run unattended.",
-    "not-due": "Choose a future one-off time.",
-    "spend-limit": "The estimate exceeds the schedule spend limit or contains unknown pricing.",
-    readiness: "Provider or local readiness checks refused this scheduled run.",
+      "This schedule is still active. Cancel it first, then delete it. Completed schedules can be deleted straight away.",
+    "missing-template":
+      "The template you picked was deleted or changed. Choose a template again, then save.",
+    "unsupported-media":
+      "This template uses audio, images or a thumbnail you supplied, so it cannot run on a schedule. Pick a template that generates these instead.",
+    "not-due": "This one-off time has already passed. Choose a time in the future.",
+    "spend-limit":
+      "The estimated cost is above this schedule's spend limit, or some prices are unknown. Raise the spend limit or choose models with known prices.",
+    readiness:
+      "A provider this template needs is not ready, for example a missing API key, model or voice. Check Settings → Providers, then try again.",
   };
   return problem(c, {
     status,

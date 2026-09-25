@@ -25,7 +25,9 @@ export async function prepareFfmpeg(deps: FfmpegSetup): Promise<string> {
     return override;
   }
   if (typeof deps.bundled !== "string" || deps.bundled === "") {
-    throw new Error(`No ffmpeg build is available for this platform. ${remedy}`);
+    throw new Error(
+      `Slopify has no built-in copy of ffmpeg (the tool it uses to make video) for this kind of computer. Install ffmpeg, then restart Slopify. ${remedy}`,
+    );
   }
   if (existsSync(deps.bundled)) {
     await verify(deps.bundled);
@@ -72,7 +74,8 @@ export async function prepareFfmpeg(deps: FfmpegSetup): Promise<string> {
   }
 }
 
-const remedy = "You can also set SLOPIFY_FFMPEG (or FFMPEG_BIN) to a working ffmpeg executable.";
+const remedy =
+  "You can also set the SLOPIFY_FFMPEG (or FFMPEG_BIN) environment variable to the full path of a working ffmpeg.";
 
 async function verify(bin: string): Promise<void> {
   try {
@@ -84,7 +87,9 @@ async function verify(bin: string): Promise<void> {
     if (!stdout.startsWith("ffmpeg version "))
       throw new Error("the executable did not identify itself as ffmpeg");
   } catch (error) {
-    throw new Error(`ffmpeg at ${bin} could not be started. ${remedy} ${detail(error)}`);
+    throw new Error(
+      `ffmpeg at ${bin} could not be started. Reinstall ffmpeg or check your antivirus has not quarantined it, then restart Slopify. ${remedy} ${detail(error)}`,
+    );
   }
 }
 
