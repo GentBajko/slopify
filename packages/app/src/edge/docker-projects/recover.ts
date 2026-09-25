@@ -42,6 +42,8 @@ export async function recoverInstallation(
     }
   }
   const possible = j.candidate ? await e.inspect(j.candidate) : occupant;
+  if (occupant && occupant.id !== j.previous?.id && occupant.id !== possible?.id)
+    throw new Error("Recovery name is occupied by an unrelated container.");
   if (possible && possible.id !== j.previous?.id) {
     const transaction = await e.command([
       "inspect",

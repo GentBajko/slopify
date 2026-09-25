@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { expect, it } from "vitest";
 import { installationFixture } from "./install.fake.js";
 import { installProjects } from "./install.js";
+import { recoverInstallation } from "./recover.js";
 import { journalSchema, readState, receiptSchema } from "./state.js";
 import { treeDigest } from "./tree.js";
 
@@ -91,6 +92,48 @@ it.each(["starting", "healthy", "verified"] as const)(
       expect((await treeDigest(result.projects)).hash).toBe(
         (await treeDigest(join(h.volume, "projects"))).hash,
       );
+    } finally {
+      await h.close();
+    }
+  },
+);
+it.each([false, true])(
+  "refuses an unrelated name occupant before recovery mutations (running=%s)",
+  async (running) => {
+    const h = await seeded();
+    try {
+      h.failures.add("health");
+      h.failures.add("restore");
+      await expect(installProjects(h.config, h.engine, () => h.engine)).rejects.toThrow(
+        "Recovery incomplete",
+      );
+      h.failures.clear();
+      const path = join(h.config.directory, "journal.json");
+      const j = await readState(path, journalSchema, h.config.uid);
+      if (!j?.candidate) throw new Error("Missing recorded candidate");
+      const candidate = h.containers.get(j.candidate);
+      if (!candidate) throw new Error("Missing candidate container");
+      h.containers.set(candidate.id, { ...candidate, name: "owned-elsewhere", running: true });
+      h.containers.set("foreign", {
+        ...candidate,
+        id: "foreign",
+        name: h.config.name,
+        running,
+        mounts: [],
+      });
+      await writeFile(join(h.volume, "database.fixture"), "private state before recovery");
+      const before = await treeDigest(h.volume, true);
+      const containers = [...h.containers.entries()];
+      const journal = await readFile(path, "utf8");
+      h.calls.length = 0;
+      await expect(recoverInstallation(h.config, j, null, h.engine)).rejects.toThrow(
+        "Recovery name is occupied by an unrelated container",
+      );
+      for (const operation of ["stop", "rename", "restore", "restart", "start", "update"])
+        expect(h.calls).not.toContain(operation);
+      expect([...h.containers.entries()]).toEqual(containers);
+      expect(await treeDigest(h.volume, true)).toEqual(before);
+      expect(await readFile(path, "utf8")).toBe(journal);
     } finally {
       await h.close();
     }
