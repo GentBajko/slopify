@@ -313,9 +313,18 @@ code {
   transform: translateY(3px);
 }
 
+/* The mark leads the headline on its line, about one and a half times the text's height,
+   rather than standing above it. */
 .mark-hero {
-  width: 96px;
-  height: 96px;
+  flex: none;
+  width: 48px;
+  height: 48px;
+}
+
+.hero-title {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--step) * 3);
 }
 
 .masthead-links {
@@ -882,6 +891,11 @@ h1 {
 
   h1 {
     font-size: 24px;
+  }
+
+  .mark-hero {
+    width: 36px;
+    height: 36px;
   }
 
   .masthead {
