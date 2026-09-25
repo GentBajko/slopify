@@ -99,6 +99,7 @@ export const journalSchema = z
     previous: containerSchema.nullable(),
     previousReceipt: receiptSchema.nullable(),
     sourceBind: absolute.nullable(),
+    sourceIdentity: identitySchema.nullable().default(null),
     destination: absolute,
     destinationBefore: identitySchema.nullable(),
     staging: absolute,

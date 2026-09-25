@@ -7,7 +7,13 @@ import {
   selectProjects,
   writeState,
 } from "./state.js";
-import { assertWritableTree, identity, isMissing, treeDigest } from "./tree.js";
+import { assertIdentity, assertWritableTree, identity, isMissing, treeDigest } from "./tree.js";
+
+export async function assertSourceIdentity(j: Journal): Promise<void> {
+  if (j.sourceBind === null) return;
+  if (!j.sourceIdentity) throw new Error("Original project bind identity is missing.");
+  await assertIdentity(j.sourceBind, j.sourceIdentity);
+}
 
 export async function recoverInstallation(
   c: DockerConfig,
@@ -23,6 +29,7 @@ export async function recoverInstallation(
     await assertWritableTree(receipt.projects, c.uid);
     if (current && (current.installation !== j.installation || current.signature !== j.signature))
       throw new Error("Committed container identity differs from its receipt.");
+    await e.writers(c.volume, [receipt.projects], current ? [current.id] : []);
     await writeState(join(directory, "activation.json"), {
       version: 1,
       token: j.token,
@@ -37,6 +44,7 @@ export async function recoverInstallation(
     return finished;
   }
   if (j.phase === "rolled-back") return j;
+  await assertSourceIdentity(j);
   const occupant = await e.inspect(c.name);
   if (j.phase === "verified" && j.stagingIdentity && j.sourceDigest) {
     const found = await identity(j.destination).catch((error: unknown) => {
@@ -67,6 +75,11 @@ export async function recoverInstallation(
       possible.signature !== j.signature
     )
       throw new Error("Recovery name is occupied by an unrelated container.");
+    if (j.candidate !== possible.id) {
+      j = { ...j, candidate: possible.id };
+      await writeState(join(c.directory, "journal.json"), j);
+      await writeState(join(directory, "journal.json"), j);
+    }
     await e.stop(possible);
     const failedName = `${c.name}-failed-${j.id}`;
     if (possible.name !== failedName) await e.command(["rename", possible.id, failedName]);

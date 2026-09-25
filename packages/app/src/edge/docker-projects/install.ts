@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { readVersion } from "../../kernel/version.js";
 import { assertVolumeClaims } from "./claims.js";
 import type { Engine } from "./engine.js";
-import { recoverInstallation } from "./recover.js";
+import { assertSourceIdentity, recoverInstallation } from "./recover.js";
 import {
   type DockerConfig,
   type Journal,
@@ -54,6 +54,7 @@ export async function installProjects(
   await assertVolumeClaims(c, e, context.daemon, currentVolume, await e.inspect(c.name));
   if (previousJournal && previousJournal.phase !== "rolled-back")
     previousJournal = await recoverInstallation(c, previousJournal, receipt, recovery());
+  if (previousJournal?.phase === "rolled-back") await assertSourceIdentity(previousJournal);
   receipt = await readState(receiptPath, receiptSchema, c.uid);
   const old = await e.inspect(c.name);
   for (const name of await readdir(c.root)) {
@@ -163,6 +164,7 @@ export async function installProjects(
     previous: old,
     previousReceipt: receipt,
     sourceBind: bind,
+    sourceIdentity: bind === null ? null : (receipt?.directoryIdentity ?? (await identity(bind))),
     destination: projects,
     destinationBefore,
     staging: join(dirname(projects), `.slopify-projects-${id}`),
@@ -190,6 +192,7 @@ export async function installProjects(
     await save({ phase: "stopping" });
     if (old) await e.stop(old);
     await e.writers(c.volume, [projects, ...(bind ? [bind] : [])], []);
+    await assertSourceIdentity(j);
     await save({ phase: "stopped" });
     await e.ensureVolume(c.volume);
     await save({ volumeIdentity: await e.volume(c.volume) });
@@ -232,6 +235,7 @@ export async function installProjects(
       await syncDirectory(dirname(projects));
     }
     await save({ phase: "published", publishedIdentity: await identity(projects) });
+    await assertSourceIdentity(j);
     await e.writers(c.volume, [projects, ...(bind ? [bind] : [])], []);
     await e.own(j);
     if (old) await e.command(["rename", old.id, `${c.name}-previous-${j.id}`]);

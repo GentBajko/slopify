@@ -402,3 +402,84 @@ it("finishes interrupted rollback without restoring private data after the origi
     await h.close();
   }
 });
+
+it("retains discovered candidate authority when creation finished before journal persistence", async () => {
+  const h = await seeded();
+  try {
+    const start = h.engine.start;
+    h.engine.start = async (...args) => {
+      await start(...args);
+      throw new Error("interrupted before candidate save");
+    };
+    await expect(installProjects(h.config, h.engine, () => h.engine)).rejects.toThrow(
+      "Previous installation restored",
+    );
+    h.engine.start = start;
+    const recovered = await readState(
+      join(h.config.directory, "journal.json"),
+      journalSchema,
+      h.config.uid,
+    );
+    expect(recovered?.candidate).toBe("candidate-1");
+    const installed = await installProjects(h.config, h.engine, () => h.engine);
+    expect(await readFile(join(installed.projects, "p", "research.md"), "utf8")).toBe("研究");
+  } finally {
+    await h.close();
+  }
+});
+
+it.each([false, true])(
+  "refuses replacement of an unreceipted source bind after incomplete rollback=%s",
+  async (incomplete) => {
+    const h = await seeded();
+    const bind = join(h.root, "Adopted projects");
+    try {
+      await mkdir(bind, { mode: 0o700 });
+      await writeFile(join(bind, "original.md"), "original");
+      const old = h.containers.get("old");
+      if (!old) throw new Error("Missing fixture");
+      h.containers.set(old.id, {
+        ...old,
+        mounts: [
+          ...old.mounts,
+          { type: "bind", name: "", source: bind, destination: "/data/projects", rw: true },
+        ],
+      });
+      h.failures.add("health");
+      if (incomplete) h.failures.add("restore");
+      await expect(installProjects(h.config, h.engine, () => h.engine)).rejects.toThrow();
+      h.failures.clear();
+      await rename(bind, `${bind}-original`);
+      await mkdir(bind, { mode: 0o700 });
+      await writeFile(join(bind, "unrelated.md"), "unrelated");
+      h.calls.length = 0;
+      await expect(installProjects(h.config, h.engine, () => h.engine)).rejects.toThrow("identity");
+      for (const op of ["stop", "start", "restart", "own", "restore", "snapshot"])
+        expect(h.calls).not.toContain(op);
+      expect(await readFile(join(bind, "unrelated.md"), "utf8")).toBe("unrelated");
+      expect(await readFile(join(`${bind}-original`, "original.md"), "utf8")).toBe("original");
+    } finally {
+      await h.close();
+    }
+  },
+);
+
+it("does not restart a committed container beside a running retained writer", async () => {
+  const h = await seeded();
+  try {
+    await installProjects(h.config, h.engine, () => h.engine);
+    const current = await h.engine.inspect(h.config.name);
+    const retained = h.containers.get("old");
+    if (!current || !retained) throw new Error("Missing fixture containers");
+    await h.engine.stop(current);
+    h.containers.set(retained.id, { ...retained, running: true });
+    h.calls.length = 0;
+    await expect(installProjects(h.config, h.engine, () => h.engine)).rejects.toThrow(
+      "Another running",
+    );
+    expect((await h.engine.inspect(current.id))?.running).toBe(false);
+    for (const op of ["update", "start", "stop", "restore"]) expect(h.calls).not.toContain(op);
+  } finally {
+    await h.close();
+  }
+});
