@@ -2,7 +2,7 @@
 absorbed_from:
   - features/2026-09-24-narration-preparation@2026-09-24
 generated_at_commit: 7bdb84e3f57e
-generated_date: '2026-09-13'
+generated_date: '2026-09-25'
 capstone_version: 5.2.0
 content_hash: 485e2f1187a0
 paths_covered:

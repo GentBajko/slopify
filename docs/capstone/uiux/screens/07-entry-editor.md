@@ -1,9 +1,10 @@
 ---
 generated_at_commit: 7bdb84e3f57e
-generated_date: '2026-09-13'
+generated_date: '2026-09-25'
 capstone_version: 5.2.0
 content_hash: d2a908ae5e6d
 paths_covered:
+  - :(top)packages/web/src/components/kit/page-bar.tsx
   - :(top)packages/web/src/routes/entry-editor.tsx
   - :(top)packages/web/src/components/editor-actions.tsx
   - :(top)packages/web/src/components/editor-states.tsx
@@ -15,19 +16,19 @@ paths_covered:
 # Entry editor
 
 ## Mode & job
-Operate surface for editing and deleting one intro/outro entry. Source: packages/web/src/routes/entry-editor.tsx:33-34,138-264.
+Operate surface for creating, duplicating, editing and deleting one intro/outro entry. Header navigation keeps Library lit (`packages/web/src/routes/entry-editor.tsx`, `packages/web/src/components/shell.tsx`).
 
 ## Composition
-The editor heading, back link, category/mode controls, name/body fields, slot notices, Save, and Delete actions form a single column. Source: packages/web/src/routes/entry-editor.tsx:138-264.
+A PageBar with the "< Intros & Outros" back link (returning to the entry's category) and the New entry or Edit entry title. The sheet holds Name with the Category and Mode switches (the mode hint under Mode), then Body with slot notices. The EditorActions bar is sticky at the viewport bottom: Delete at left (its place kept, hidden, before a row exists), one StatusSlot (the error, the Saved tick, or the reason Save is held), then Cancel and Save (`packages/web/src/routes/entry-editor.tsx`, `packages/web/src/components/editor-actions.tsx`).
 
 ## States
-Loading, validation/slot notices, save pending/error, and delete confirmation are represented. Source: packages/web/src/routes/entry-editor.tsx:138-264.
+Loading, validation/slot notices, save pending/error, held Save and delete confirmation are represented (`packages/web/src/routes/entry-editor.tsx`).
 
 ## Motion
-No route-specific motion found. Source: packages/web/src/routes/entry-editor.tsx:33-264.
+No route-specific motion found (`packages/web/src/routes/entry-editor.tsx`).
 
 ## Copy
-The heading is derived from entry state and delete confirmation names the draft. Source: packages/web/src/routes/entry-editor.tsx:138,247.
+The title is New entry or Edit entry and delete confirmation names the draft (`packages/web/src/routes/entry-editor.tsx`).
 
 ## Not in play
-Offline and permission-denied states are not rendered. Source: packages/web/src/routes/entry-editor.tsx:33-264.
+Offline and permission-denied states are not rendered (`packages/web/src/routes/entry-editor.tsx`).

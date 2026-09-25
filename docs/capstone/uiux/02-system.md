@@ -1,10 +1,11 @@
 ---
-generated_date: '2026-09-13'
+generated_date: '2026-09-25'
 capstone_version: 5.2.0
 generated_at_commit: 7bdb84e3f57e
 paths_covered:
   - :(top)packages/web/src/styles/index.css
   - :(top)packages/web/src/components/ui/**
+  - :(top)packages/web/src/components/kit/**
   - :(top)packages/web/src/components/rail.tsx
   - :(top)packages/web/src/components/lamp.tsx
   - :(top)packages/web/src/components/confirm.tsx
@@ -84,8 +85,10 @@ Theme switching: `prefers-color-scheme` by default, overridden by the Settings c
 ## Spacing and shape
 
 - 4 px base grid; rail padding 14 px 16 px; sheet padding 18 px; gap between rails 0 (they share borders), between sheet fields 14 px.
-- Radius lock: 4 px on controls and inputs, 6 px on rails, sheets, dialogs, and the Play key; nothing else. No pill shapes.
-- Rails are bordered rows sharing edges, not cards; elevation is used only by dialogs (shadow 0 8px 24px tinted toward the page hue, 24% alpha dark / 12% light).
+- Frame: a sticky 48 px header, a content column centred at max 1200 px with 16 px (24 px from 640 px) side gutters, and the footer. Page bars are at least 48 px tall; status slots reserve 32 px; action bars are at least 56 px.
+- Radius lock: 4 px on controls and inputs, 6 px on rails, sheets, dialogs, popovers, toasts and the Play key; nothing else. No pill shapes.
+- Rails are bordered rows sharing edges, not cards. Elevation, always tinted `--color-shadow` (24% alpha dark / 12% light): dialogs, popovers and toasts use 0 8px 24px; the drawer uses a left shadow (-12px 0 28px -12px) along its border; sticky action bars cast a short upward shadow (0 -6px 14px -10px) over the content they cover.
+- Sticky layers: header at the top (z 40), action bars at the viewport bottom (z 20, safe-area padded), the drawer fixed under the header on the right (z 30), toasts top-right under the header (z 60).
 - More space above a section header (24 px) than below it (10 px).
 
 ## Iconography
@@ -94,7 +97,7 @@ Lucide, 24 px grid, 2 px stroke, round caps and joins, one weight everywhere. Th
 
 ## Motion
 
-- Operate transitions 150-250 ms, ease-out, state-conveying only: switch marker slide, dialog fade and 4 px rise, row expand.
+- Operate transitions 150-250 ms, ease-out, state-conveying only: switch marker slide, dialog fade and 4 px rise, drawer and toast `tick-in` (150 ms), tab underline colour, row expand, 2 px stage meter and Run bar fill (200 ms transform).
 - The one authored moment: the running lamp's pulse, 1.2 s ease-in-out halo, and the Play key's 3 px press. Nothing else animates on its own.
 - Skeletons fade in after 1 s and match the final layout's shape.
 - `prefers-reduced-motion`: the pulse becomes a steady lamp, the press becomes an instant colour change, fades become cuts.
@@ -102,18 +105,32 @@ Lucide, 24 px grid, 2 px stroke, round caps and joins, one weight everywhere. Th
 
 ## Component library
 
-shadcn/ui restyled to the tokens above, never in default state, on Radix primitives: Dialog for every confirmation, Select for pickers, Toggle Group for segmented switches, Checkbox for prompt ticks, Tabs for kind tabs, Tooltip for truncated values. `stack` records the exact packages and versions. The control-room aesthetic has no official package; it is built with plain CSS on top of those primitives and labelled as such.
+shadcn/ui restyled to the tokens above, never in default state, on Radix primitives (`packages/web/src/components/ui/`): Dialog for every confirmation, Select for pickers, Toggle Group for segmented switches and kind filters, Dropdown Menu for row and page overflow menus, Popover (`packages/web/src/components/ui/popover.tsx`, `--panel`, radius 6, portalled) for help text, located folder paths, error details, the drafts list and the batch queue. `stack` records the exact packages and versions. The control-room aesthetic has no official package; it is built with plain CSS on top of those primitives and labelled as such.
+
+The layout kit (`packages/web/src/components/kit/`) is what every screen composes from:
+
+| Component | File | Contract |
+|---|---|---|
+| PageBar | `kit/page-bar.tsx` | One row per page: back link, lead (lamp), 18 px title, fixed-width (88 px) status slot, meta, actions. Every route uses it. |
+| StatusSlot | `kit/action-bar.tsx` | Always rendered, fixed 32 px line; `role="status"`, or `alert` when the tone is error; long text truncated with the full text in `title`. |
+| ActionBar | `kit/action-bar.tsx` | Sticky bar at the viewport bottom: a StatusSlot at left, the page's primary actions at right. |
+| Drawer | `kit/drawer.tsx` | Non-modal right panel (560 px wide, 440 px narrow, full width on phones) under the header; `role="dialog"`, `aria-modal="false"`; Escape closes unless a modal dialog is open; focus goes to the title unless the caller already focused inside, and returns to the opener; optional pinned footer. Non-modal so the tutorial spotlight keeps working. |
+| Tabs, TabLinks, TabPanel | `kit/tabs.tsx` | Tab row with a 2 px running-lamp underline, arrow-key movement, badges ("· unsaved", "· 2 held") and a trailing slot; TabLinks is the same bar for route tabs; panels stay mounted while hidden. |
+| InfoTip | `kit/info-tip.tsx` | Info glyph button ("About {label}") opening a popover on press, never on hover. |
+| Toast | `kit/toast.tsx` | `ToastProvider` in `packages/web/src/app-context.tsx`; top-right stack of at most three, 4 s, dismissible; `status`, or `alert` for errors. |
+| SplitButton | `kit/split-button.tsx` | Primary action plus a chevron menu of related actions; menu items disable rather than disappear. |
+| SectionHead | `kit/section-head.tsx` | Section title, optional InfoTip and right-aligned section actions on one row. |
 
 ## Implementation constraints
 
 The build-time checklist from capstone's design method, binding on `build`:
 
 - Every interactive component implements default, hover, focus, active, disabled, loading, error.
-- Skeletal loading matching layout shape; empty states teach; errors name the problem and the recovery, inline where the user acts.
+- Skeletal loading matching layout shape; empty states teach; errors name the problem and the recovery, inline where the user acts or in the reserved status slot beside the action.
 - Contrast verified 4.5:1 / 3:1 on both shipped themes, buttons and form fields included (no white-on-white CTAs, no grey-on-coloured secondary text).
 - One radius system, one icon family and stroke weight, one accent, as locked above.
 - Animation on transform/opacity only; no scroll listeners; reduced motion collapses every effect; motion isolated in leaf components with cleanup.
-- Overlays escape their containers (dialogs, selects, tooltips render in a portal).
+- Overlays escape their containers (dialogs, selects, menus and popovers render in a portal).
 - Real images only: the landing screenshot is a capture of the built Play screen; no div-fake screenshots, no hand-rolled icons, no emoji-as-icons.
 - Interface copy: zero em-dashes, controls name their action, no AI-tell labels, no placeholder-as-label on inputs, labels above inputs, error text below.
 - CTAs: one label per intent across the page; no wrapped button labels at desktop.

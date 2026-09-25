@@ -80,6 +80,17 @@ capstone_version: 5.2.0
 
 - No project-specific rule was set; `code-craft.md` governs this domain.
 
+## Web layout
+
+Set by the user on 2026-09-25 with the 2.0.0 console redesign. The kit lives in `packages/web/src/components/kit/`.
+
+- Nothing moves unless the user moved it: system-triggered messages go in a reserved `StatusSlot` or a toast, controls disable instead of mounting and unmounting by state, and skeletons match the loaded layout.
+- The primary action of an editing surface is always on screen, in a sticky `ActionBar` beside its status slot.
+- The frame stays fixed and small: one sticky header row with four destinations; page titles use `PageBar`.
+- Summary before detail: secondary surfaces are tabs or drawers; never insert a block above the primary one.
+- Help hides until asked: at most one short line under a control; anything longer goes behind `InfoTip`.
+- A new feature lands in an existing place (a tab, drawer, rail row, rundown cell or status slot) rather than adding a top-level block to a page column.
+
 ## Performance budgets
 
 - No project-specific budget was set; `code-craft.md` governs this domain.

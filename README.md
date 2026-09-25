@@ -140,26 +140,32 @@ under `$XDG_DATA_HOME/slopify/host-cli` or `~/.local/share/slopify/host-cli`.
 
 ## How to use it
 
-1. Run the command and open the tab it prints.
-2. Settings holds your provider API keys and your voices. They live in
-   `~/.slopify/slopify.db` and go to the provider you picked, nowhere else.
-3. Prompts is where the article, image and thumbnail prompts are written once, with
-   `{{keywords}}` where the subject goes.
-4. Play keeps an autosaved setup across Content, Outputs, Style and Review. Pick the
-   prompts, fill in the keywords, choose a voice and format, review the estimated cost,
-   then Start. Any optional stage you would rather do yourself can be skipped or supplied.
-5. The project workspace shows total progress and lets you inspect one stage at a time,
-   read writing as it arrives, and listen to streamed narration. Download the article,
+1. Run the command and open the tab it prints. The bar at the top has four places:
+   Projects, Play, Library and Settings.
+2. Settings holds your provider API keys and your voices, one section at a time. Keys live in
+   `~/.slopify/slopify.db` and go to the provider you picked, nowhere else. Usage is the
+   last Settings section.
+3. Library holds Prompts, Intros & Outros, Templates and Schedules. Prompts is where the
+   article, image and thumbnail prompts are written once, with `{{keywords}}` where the
+   subject goes.
+4. Play keeps an autosaved setup across Content, Outputs and Style. Pick the prompts, fill
+   in the keywords, choose a voice and format, then press Review and start: Review opens
+   beside the form with the estimated cost, and nothing runs until you choose Start run.
+   Any optional stage you would rather do yourself can be skipped or supplied.
+5. The project page shows the whole run in one row of stage lamps. Pick a stage to read
+   writing as it arrives, listen to streamed narration or see images. Download the article,
    audio, images or final export. Pause unfinished work to change providers.
 6. Subtitles can use a bundled, system or uploaded font. Preview size and one of five
    positions in the selected landscape or portrait frame before saving.
-7. Edit a completed or paused project without losing its history. Save creates a retained
-   revision; Slopify shows exactly which outputs are affected and rebuilds only when you ask.
+7. Edit a completed or paused project from its Edit tab without losing its history. Save
+   creates a retained revision; Slopify shows exactly which outputs are affected and rebuilds
+   only when you ask. Earlier revisions are on the History tab.
 8. Save a Play setup or project revision as a template. Apply it to make a fresh editable
    draft, or schedule one-off, daily or weekly runs with keyword variants and a spend ceiling.
-9. Add review checkpoints before Audio, Images or Video when you want to inspect upstream
-   work first. Independent stages continue while the selected step and its dependents wait.
-10. The floating update button checks for new releases and installs an update when you
+9. Add review checkpoints in Review when you want to inspect Audio, Images or Video before it
+   runs. Independent stages continue while the selected step and its dependents wait; approve
+   them on the project's Checkpoints tab.
+10. The update button in the top bar checks for new releases and installs an update when you
     choose it. Active projects must finish or be paused first.
 
 ## Inworld narration

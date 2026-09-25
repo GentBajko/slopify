@@ -1,5 +1,5 @@
 ---
-generated_date: '2026-09-13'
+generated_date: '2026-09-25'
 capstone_version: 5.2.0
 generated_at_commit: 7bdb84e3f57e
 paths_covered:
@@ -25,17 +25,14 @@ absorbed_from:
 |---|---|---|
 | 01 marketing page | Persuade; "How to use" section is Read | 7 / 5 / 4 |
 | 02 first-run notice | Operate | 4 / 3 / 6 |
-| 03 settings | Operate | 4 / 3 / 6 |
-| 04 prompts, 05 prompt editor | Operate | 4 / 3 / 6 |
+| 03 settings, with Usage as its last section | Operate | 4 / 3 / 6 |
 | 06 play (flagship) | Operate | 4 / 3 / 6 |
 | 07 projects | Operate | 4 / 3 / 6 |
 | 08 project page | Operate | 4 / 3 / 6 |
-| 09 intros and outros | Operate | 4 / 3 / 6 |
-| 10 usage | Operate | 4 / 3 / 6 |
-| Templates | Operate | 4 / 3 / 6 |
-| Schedules | Operate | 4 / 3 / 6 |
+| Library: 04 prompts, 09 intros and outros, templates, schedules | Operate | 4 / 3 / 6 |
+| 05 prompt editor, intro/outro editor | Operate | 4 / 3 / 6 |
 
-The app renders its control-room direction through shared matte surfaces, rail borders, Barlow faces, tally lamps and the green accent (`packages/web/src/styles/index.css:7-63`, `packages/web/src/components/shell.tsx:94-164`). The landing carries the same palette and faces in a wider persuasive composition (`packages/site/public/styles.css:57-105`, `packages/site/public/styles.css:340-413`). Play uses a separate 1100 px composition breakpoint (`packages/web/src/routes/play.tsx`).
+The app renders its control-room direction through shared matte surfaces, rail borders, Barlow faces, tally lamps and the green accent, inside one fixed 48 px header and a content column centred at 1200 px on every route (`packages/web/src/styles/index.css:7-63`, `packages/web/src/components/shell.tsx`). The landing carries the same palette and faces in a wider persuasive composition (`packages/site/public/styles.css:57-105`, `packages/site/public/styles.css:340-413`). Play uses a separate 1100 px composition breakpoint (`packages/web/src/routes/play.tsx`).
 
 ## Brand facts
 
@@ -64,11 +61,11 @@ The edit bay (matte console hardware); the control room (tally lamps and engrave
 
 **OWN-WORLD.** Off-black matte surfaces in dark, off-white paper-board surfaces in light; engraved-label typography (Barlow Condensed, uppercase, tracked) beside plain Barlow values; tally lamps as the status language (unlit pending, pulsing slime running, steady dim green done, red failed, amber canceled); horizontal rails and rundown sheets instead of cards; one saturated fill per screen, the Play key or the active lamp; the mark's slime green as the only accent. Recognizable with all content removed by the rail rhythm, the lamp dots, and the small tracked labels.
 
-**STORY.** Configure Content, Outputs and Style, inspect Review, then explicitly Start. Saved drafts let the operator return without reconstructing the setup. The project page carries the running stages and their lamps.
+**STORY.** Configure Content, Outputs and Style, open Review, then explicitly Start. Saved drafts let the operator return without reconstructing the setup. The project page carries the running stages and their lamps in one rundown strip.
 
-**FIRST VIEWPORT (06 play, 1440 px).** New run, save status and draft actions lead into four numbered section links. A flexible active editor sits beside a 360 px sticky preview and read-only setup summary, inside a 1320 px maximum width. Style shows the actual 16:9 or 9:16 frame, font, size and caption position. Below 1100 px the preview becomes an in-flow disclosure before the editor; the additional This run summary follows the section and its action. Continue and Review guide setup; only explicit Start or Queue admits work. See `screens/02-play.md` and `packages/web/src/routes/play.tsx`.
+**FIRST VIEWPORT (06 play, 1440 px).** The page bar reads New run with the draft title as meta and the drafts controls at its right. Under it the Run setup row holds three numbered editor tabs (Content, Outputs, Style) and a separate Review button. A flexible active editor sits beside a 300 px sticky readiness rail (Article, Narration, Images, Thumbnail, Export, Style, each a lamp and a state word), inside the shell's 1200 px column. Style alone adds the actual 16:9 or 9:16 frame preview above the rail. Below 1100 px the rail becomes a compact lamp row under the tabs and the Style preview sits above its controls. A sticky action bar keeps the blocker hint with Fix setup, Continue to the next tab and Review and start on screen; Review opens as a drawer and only its explicit Start run or Queue N videos admits work. See `screens/02-play.md` and `packages/web/src/routes/play.tsx`.
 
-**Signature interaction: going on air.** Review presents the resolved setup and costs. Explicit Start creates the project; the project page then exposes each stage's state and progress. Autosave, section navigation and preview never start work.
+**Signature interaction: going on air.** The Review drawer presents the resolved setup, checkpoints and costs. Explicit Start creates the project; the project page then exposes each stage's state and progress in its rundown strip. Autosave, section navigation, the readiness rail and preview never start work.
 
 **Honest risk.** Signage kitsch. The discipline: flat surfaces, no bevels, no fake screws; a lamp is a dot and a colour, a label is a type style; nothing else pretends to be hardware.
 
@@ -85,7 +82,7 @@ Use-scene sentence: "A solo operator at a desk in the evening, second monitor be
 - No gradient anywhere, no glass, no glow beyond the lamp halo, no sparkle icon, no "magic" copy.
 - No cards as page structure; rails, rundown sheets, and dividers group content.
 - No serif, no monospace costume; tabular figures carry timecodes and counts.
-- No decorative eyebrow labels or section numbers; Play uses numbered navigation to communicate its four setup sections. No hero-metric template on the landing: the tally board is a real live instrument, not decoration.
+- No decorative eyebrow labels or section numbers; Play numbers its three editor tabs to communicate setup order. No hero-metric template on the landing: the tally board is a real live instrument, not decoration.
 - The premium-consumer palette and the AI-purple palette are not used.
 
 ## Alternates and canon declined
