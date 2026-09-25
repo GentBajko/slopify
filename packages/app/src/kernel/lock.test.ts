@@ -23,7 +23,7 @@ describe("acquireInstanceLock", () => {
     const path = lockPath();
 
     const lock = acquireInstanceLock(path);
-    expect(readFileSync(path, "utf8").trim()).toBe(String(process.pid));
+    expect(readFileSync(path, "utf8").trim().split(" ")[0]).toBe(String(process.pid));
 
     lock.release();
     expect(() => readFileSync(path, "utf8")).toThrow();
@@ -44,8 +44,30 @@ describe("acquireInstanceLock", () => {
 
     const lock = acquireInstanceLock(path);
 
-    expect(readFileSync(path, "utf8").trim()).toBe(String(process.pid));
+    expect(readFileSync(path, "utf8").trim().split(" ")[0]).toBe(String(process.pid));
     lock.release();
+  });
+
+  // In a container the app is always pid 1, so after a hard shutdown the leftover lock names
+  // the new process itself. Its start time is what tells the two lives apart.
+  it("reclaims a lock left by an earlier process that had this same pid", () => {
+    const path = lockPath();
+    writeFileSync(path, `${process.pid} 1000\n`);
+
+    const lock = acquireInstanceLock(path);
+
+    expect(readFileSync(path, "utf8").trim().split(" ")[0]).toBe(String(process.pid));
+    lock.release();
+  });
+
+  it("reclaims a pid-only lock that names this process, written before start times", () => {
+    const path = lockPath();
+    writeFileSync(path, `${process.pid}\n`);
+
+    const lock = acquireInstanceLock(path);
+
+    lock.release();
+    expect(() => readFileSync(path, "utf8")).toThrow();
   });
 
   it("reclaims a lock file that holds no readable pid", () => {
@@ -54,7 +76,7 @@ describe("acquireInstanceLock", () => {
 
     const lock = acquireInstanceLock(path);
 
-    expect(readFileSync(path, "utf8").trim()).toBe(String(process.pid));
+    expect(readFileSync(path, "utf8").trim().split(" ")[0]).toBe(String(process.pid));
     lock.release();
   });
 
