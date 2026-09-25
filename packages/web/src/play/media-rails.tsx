@@ -1,3 +1,4 @@
+import { usesPronunciationGlossary } from "@app/slices/admission/rules.js";
 import type { ComponentProps } from "react";
 import { ChunkingControl } from "@/play/chunking";
 import { ImagePrompts } from "@/play/image-prompts";
@@ -6,6 +7,7 @@ import { FilePick } from "@/play/provided";
 import type { RailProps } from "@/play/rail-frame";
 import { railBeneath, railControls, SourceSwitch, StageRail } from "@/play/rail-frame";
 import { NarrationPreparation } from "./narration-preparation";
+import { PronunciationGlossary } from "./pronunciation-glossary";
 
 // The two rails that carry a provider, and with it everything a provider decides: the
 // voice and the chunking of the narration, and the model and the ticked
@@ -41,7 +43,7 @@ export function AudioRail({
               problem={problem("audio")}
               onPick={(provider) => {
                 update({
-                  audio: { provider, model: "", voice: "" },
+                  audio: { ...form.audio, provider, model: "", voice: "" },
                 });
               }}
             />
@@ -82,6 +84,16 @@ export function AudioRail({
               supported={form.audio.provider === "inworld" && form.audio.model === "inworld-tts-2"}
               error={problem("narrationPrompt")}
               onChange={(narrationPrompt) => update({ narrationPrompt })}
+            />
+            <PronunciationGlossary
+              value={form.audio.usePronunciationGlossary}
+              supported={usesPronunciationGlossary({
+                sources: form.sources,
+                audio: { ...form.audio, usePronunciationGlossary: true },
+              })}
+              onChange={(usePronunciationGlossary) =>
+                update({ audio: { ...form.audio, usePronunciationGlossary } })
+              }
             />
           </>
         ) : null}

@@ -21,6 +21,7 @@ it("matches the shared initial draft defaults", () => {
     fontUpload: null,
     form: {
       format: "16:9",
+      audio: { usePronunciationGlossary: true },
       chunking: { mode: "whole", words: "500", characters: "3000" },
       subtitles: { fontSize: "48", mode: "off", fontId: "default", position: "bottom" },
     },
@@ -133,3 +134,42 @@ it("uses shared admission numeric validation only at admission", () => {
     fields: expect.arrayContaining([{ field: "chunking.words", message: expect.any(String) }]),
   });
 });
+
+it.each([undefined, false, true])(
+  "round trips saved pronunciation preference %s without applying fresh defaults",
+  (preference) => {
+    const audio = {
+      provider: "cartesia",
+      model: "sonic-3.5",
+      voice: "v",
+      ...(preference === undefined ? {} : { usePronunciationGlossary: preference }),
+    };
+    const document = {
+      ...freshDraftDocument,
+      form: { ...freshDraftDocument.form, audio },
+    };
+    const parsed = parseDraftDocument(JSON.parse(serializeDraftDocument(document)));
+    expect(parsed).toStrictEqual({ ok: true, document });
+    if (!parsed.ok) throw new Error(JSON.stringify(parsed.fields));
+    expect(Object.hasOwn(parsed.document.form.audio, "usePronunciationGlossary")).toBe(
+      preference !== undefined,
+    );
+    const admitted = admissionOf({
+      document: parsed.document,
+      attachments: [],
+      entries: [],
+      silenceGapSeconds: 0,
+    });
+    if (!admitted.ok) throw new Error(JSON.stringify(admitted.fields));
+    expect(admitted.draft.audio).toStrictEqual(audio);
+    for (const source of ["off", "provide"] as const) {
+      const dormant = {
+        ...document,
+        form: { ...document.form, sources: { ...document.form.sources, audio: source } },
+      };
+      const restored = parseDraftDocument(JSON.parse(serializeDraftDocument(dormant)));
+      if (!restored.ok) throw new Error(JSON.stringify(restored.fields));
+      expect(restored.document.form.audio).toStrictEqual(audio);
+    }
+  },
+);

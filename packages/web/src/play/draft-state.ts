@@ -22,7 +22,7 @@ export const freshDraftDocument: PlayDraftDocument = playDraftDocumentSchema.par
       video: "generate",
     },
     llm: { provider: "", model: "" },
-    audio: { provider: "", model: "", voice: "" },
+    audio: { provider: "", model: "", voice: "", usePronunciationGlossary: true },
     images: { provider: "", model: "" },
     articlePrompt: "",
     narrationPrompt: "",

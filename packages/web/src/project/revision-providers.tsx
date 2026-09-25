@@ -1,8 +1,12 @@
-import { usesNarrationPreparation } from "@app/slices/admission/rules.js";
+import {
+  usesNarrationPreparation,
+  usesPronunciationGlossary,
+} from "@app/slices/admission/rules.js";
 import type { RevisionEdit } from "@app/slices/revisions/model.js";
 import type { ProviderStatus, Voice } from "@/api";
 import { ChunkingControl } from "@/play/chunking";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
+import { PronunciationGlossary } from "@/play/pronunciation-glossary";
 import { ThinkingPicker } from "@/play/thinking";
 
 export function RevisionProviders({
@@ -72,7 +76,7 @@ export function RevisionProviders({
             onPick={(provider) =>
               onChange({
                 ...edit,
-                config: { ...config, audio: { provider, model: "", voice: "" } },
+                config: { ...config, audio: { ...audio, provider, model: "", voice: "" } },
               })
             }
           />
@@ -102,6 +106,19 @@ export function RevisionProviders({
           <ChunkingControl
             value={config.chunking ?? { mode: "whole" }}
             onPick={(chunking) => onChange({ ...edit, config: { ...config, chunking } })}
+          />
+          <PronunciationGlossary
+            value={audio.usePronunciationGlossary}
+            supported={usesPronunciationGlossary({
+              sources: config.sources,
+              audio: { ...audio, usePronunciationGlossary: true },
+            })}
+            onChange={(usePronunciationGlossary) =>
+              onChange({
+                ...edit,
+                config: { ...config, audio: { ...audio, usePronunciationGlossary } },
+              })
+            }
           />
         </>
       ) : null}
