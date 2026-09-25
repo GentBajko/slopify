@@ -52,6 +52,16 @@ function refused(row: number, reason: string): GlossaryResult {
       ". Edit the glossary or turn off Use Pronunciation Glossary.",
   };
 }
+function termIdentity(term: string): string {
+  return Array.from(term, (character) => {
+    const lower = character.toLowerCase();
+    const folded = lower.toUpperCase().toLowerCase();
+    if (folded === character) return character;
+    // Full case conversion can expand letters; only /iu-equivalent forms may share a key.
+    const match = new RegExp(`^${character.replace(/[|\\{}()[\]^$+*?.]/gu, "\\$&")}$`, "iu");
+    return match.test(folded) ? folded : match.test(lower) ? lower : character;
+  }).join("");
+}
 export function parsePronunciationGlossary(markdown: string): GlossaryResult {
   const rows = rowsOf(remark().use(remarkGfm).parse(markdown));
   const entries = new Map<string, GlossaryEntry>();
@@ -78,7 +88,7 @@ export function parsePronunciationGlossary(markdown: string): GlossaryResult {
       return refused(index + 1, "use standard-English IPA, not ARPAbet or delivery tags");
     if (term.split(" ").length !== ipa.length)
       return refused(index + 1, "supply one IPA word for each written word");
-    const key = term.toLowerCase();
+    const key = termIdentity(term);
     const previous = entries.get(key);
     if (previous !== undefined && previous.ipa.join(" ") !== ipa.join(" "))
       return refused(index + 1, "conflicting pronunciations were supplied for the same term");
@@ -109,7 +119,7 @@ export function pronunciationMatches(
       .map((word) => word.replace(/[|\\{}()[\]^$+*?.]/gu, "\\$&"))
       .join("\\s+"),
   );
-  const boundary = "[\\p{L}\\p{M}\\p{N}_\\-]";
+  const boundary = "[\\p{L}\\p{M}\\p{N}_\\-\u00ad\u2010\u2011\ufe63\uff0d]";
   const expression = new RegExp(
     "(?<!" +
       boundary +

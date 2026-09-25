@@ -23,6 +23,30 @@ describe("article pronunciation glossary", () => {
     });
   });
   it.each([
+    ["Σ", "ς"],
+    ["S", "ſ"],
+    ["ẞ", "ß"],
+    ["K", "K"],
+  ])("uses Unicode matcher equivalence for duplicate terms %s and %s", (first, second) => {
+    for (const terms of [
+      [first, second],
+      [second, first],
+    ]) {
+      expect(parsePronunciationGlossary(`${terms[0]}: /s/\n${terms[1]}: /z/`).ok).toBe(false);
+      const parsed = parsePronunciationGlossary(`${terms[0]}: /s/\n${terms[1]}: /s/`);
+      expect(parsed.ok && parsed.entries).toEqual([{ term: terms[0], ipa: ["s"] }]);
+    }
+  });
+  it.each([
+    ["I", "ı"],
+    ["İ", "i\u0307"],
+    ["ß", "ss"],
+    ["ﬀ", "ff"],
+  ])("does not conflate different Unicode terms %s and %s", (first, second) => {
+    const parsed = parsePronunciationGlossary(`${first}: /s/\n${second}: /z/`);
+    expect(parsed.ok && parsed.entries).toHaveLength(2);
+  });
+  it.each([
     "Lich: LITCH",
     "Lich: /L IH CH/",
     "Lich: /lɪtʃ",
@@ -91,6 +115,19 @@ describe("article pronunciation glossary", () => {
     expect(pronunciationSpans("ordinary words", parsed.entries)).toEqual([]);
     expect(pronunciationSpans(source, [])).toEqual([]);
   });
+  it.each(["-", "\u00ad", "\u2010", "\u2011", "\ufe63", "\uff0d"])(
+    "does not substitute a partial compound joined by %s",
+    (hyphen) => {
+      const parsed = parsePronunciationGlossary("Lich: /lɪtʃ/");
+      if (!parsed.ok) throw new Error(parsed.reason);
+      expect(pronunciationSpans(`Lich${hyphen}king elder${hyphen}Lich`, parsed.entries)).toEqual(
+        [],
+      );
+      expect(pronunciationSpans("Lich—king", parsed.entries).map((span) => span.text)).toEqual([
+        "/lɪtʃ/",
+      ]);
+    },
+  );
   it("treats punctuation in a listed term as data, not a regular expression", () => {
     const parsed = parsePronunciationGlossary("A+B: /eɪ/");
     if (!parsed.ok) throw new Error(parsed.reason);

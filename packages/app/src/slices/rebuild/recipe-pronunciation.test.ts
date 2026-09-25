@@ -50,6 +50,27 @@ function part(recipes: readonly ResolvedWorkRecipe[]) {
 const article = (ipa = "dʒɑn", extra = "") =>
   `John reads.\n\nQuiet words.\n\n## Pronunciation Glossary\nJohn: /${ipa}/\n${extra}`;
 
+it.each([false, true])(
+  "refuses Unicode-equivalent conflicting terms before preparation=%s",
+  (prepare) => {
+    const recipes = buildRecipes(
+      context("Σ σ ς.\n\n## Pronunciation Glossary\nΣ: /s/\nς: /z/", prepare),
+    );
+    expect(recipes.some((row) => row.refusal?.includes("conflicting pronunciations"))).toBe(true);
+    expect(
+      recipes.some((row) => row.input.kind === "tts" || row.key.startsWith("narration:prepare:")),
+    ).toBe(false);
+  },
+);
+
+it("preserves joining hyphens instead of partially pronouncing compounds", () => {
+  const body = "Lich-king Lich‐king Lich‑king.";
+  const recipes = buildRecipes(
+    context(`${body}\n\n## Pronunciation Glossary\nLich: /lɪtʃ/`, false, 500),
+  );
+  expect(part(recipes).input.text).toBe(body);
+});
+
 it("extracts only glossary end matter and preserves the readable body", () => {
   const text = textRecipes(
     context(
