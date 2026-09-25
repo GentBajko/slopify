@@ -140,9 +140,20 @@ it("publishes description.txt and tags.txt in the Video stage", async () => {
       hashtags: ["#Saved"],
       tags: ["saved", "article"],
     });
+    const counted: unknown[][] = [];
     expect(
-      await executeYoutubeRecipe(h.deps, context, providersAnswering([answer], []), piece),
+      await executeYoutubeRecipe(
+        { ...h.deps, count: (...args: unknown[]) => void counted.push(args) },
+        context,
+        providersAnswering([answer], []),
+        piece,
+      ),
     ).toBe("done");
+    // One description counted, with no stage: stage "video" would read as a finished video.
+    expect(counted).toHaveLength(1);
+    expect(counted[0]?.[0]).toBe("stage.completed");
+    expect(counted[0]?.[1]).toMatchObject({ descriptions: 1, tokensIn: 0, tokensOut: 0 });
+    expect(counted[0]?.[1]).not.toHaveProperty("stage");
     const view = h.view(h.revision);
     const read = (role: string) => {
       const row = view.outputs.find((one) => one.selected && one.output.role === role);

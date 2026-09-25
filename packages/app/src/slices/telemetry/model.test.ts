@@ -15,6 +15,7 @@ const allowed = [
   "audioSeconds",
   "images",
   "thumbnails",
+  "descriptions",
 ];
 
 describe("the telemetry payload schema", () => {

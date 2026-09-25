@@ -24,6 +24,7 @@ const promisedPayload: Readonly<Record<string, string>> = {
   audioSeconds: "Audio seconds per segment",
   images: "Images made",
   thumbnails: "Thumbnails made",
+  descriptions: "YouTube descriptions written",
 };
 
 const promisedTypes: Readonly<Record<string, string>> = {

@@ -257,7 +257,8 @@ obligations for it, including offering that corresponding source.
 ## Telemetry
 
 Slopify sends anonymous counters to a collector: installs, projects created, stages
-completed, images and videos made, audio seconds, and provider token counts. Never
+completed, images, videos, PDF documents and YouTube descriptions made, audio seconds, and
+provider token counts. Never
 your keys, prompts, keywords, titles, article text, filenames, or anything about your
 machine beyond a random id created the first time you run it. The counters on
 [slopify.stream](https://slopify.stream) are the sum of those events. Deleting the

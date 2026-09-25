@@ -108,6 +108,13 @@ describe("POST /events", () => {
             payload: { appVersion: "1.2.3", stage: "audio", segment: "body", audioSeconds: 12.6 },
           }),
           event({ id: "e5", payload: { appVersion: "1.2.3", stage: "thumbnail" } }),
+          event({ id: "e6", payload: { appVersion: "2.1.0", stage: "document" } }),
+          // A YouTube description is written inside the Video stage but names no stage, so
+          // it adds a description and its tokens, never a video.
+          event({
+            id: "e7",
+            payload: { appVersion: "2.1.1", descriptions: 1, tokensIn: 100, tokensOut: 20 },
+          }),
         ],
       }),
       { DB: db },
@@ -119,8 +126,10 @@ describe("POST /events", () => {
       videos_made: 0,
       images_made: 4,
       thumbnails_made: 1,
+      documents_made: 1,
+      descriptions_made: 1,
       audio_seconds: 13,
-      tokens_used: 15,
+      tokens_used: 135,
     });
   });
 
@@ -269,6 +278,8 @@ describe("GET /aggregates", () => {
       videos_made: 0,
       images_made: 0,
       thumbnails_made: 0,
+      documents_made: 0,
+      descriptions_made: 0,
       audio_seconds: 0,
       tokens_used: 0,
     });

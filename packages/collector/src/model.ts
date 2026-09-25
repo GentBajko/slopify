@@ -16,7 +16,7 @@ export interface CollectorDb {
   readonly prepare: (query: string) => CollectorStatement;
 }
 
-// The totals the marketing page reads. Five of the seven counters are shown; the other two
+// The totals the marketing page reads. Seven of the nine counters are shown; the other two
 // are kept because the app counts them all the same.
 export const aggregateKeys = [
   "installs",
@@ -24,6 +24,8 @@ export const aggregateKeys = [
   "videos_made",
   "images_made",
   "thumbnails_made",
+  "documents_made",
+  "descriptions_made",
   "audio_seconds",
   "tokens_used",
 ] as const;
@@ -100,7 +102,13 @@ export function deltasFor(event: CollectorEvent): readonly (readonly [AggregateK
     if (stage === "thumbnail") {
       deltas.push(["thumbnails_made", 1]);
     }
+    // 2.1.0 added the document stage. A YouTube description names no stage, because it is
+    // made inside the Video stage and must not count as a video; it says so in its own key.
+    if (stage === "document") {
+      deltas.push(["documents_made", 1]);
+    }
     deltas.push(["images_made", count(event.payload.images)]);
+    deltas.push(["descriptions_made", count(event.payload.descriptions)]);
   }
   // Seconds are rounded per event; the page shows hours, so the drift is invisible and
   // the column stays an integer.
@@ -118,6 +126,8 @@ export function emptyAggregates(): Aggregates {
     videos_made: 0,
     images_made: 0,
     thumbnails_made: 0,
+    documents_made: 0,
+    descriptions_made: 0,
     audio_seconds: 0,
     tokens_used: 0,
   };

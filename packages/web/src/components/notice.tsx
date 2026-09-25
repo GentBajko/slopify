@@ -17,6 +17,8 @@ const tracked = [
   "Images made",
   "Thumbnails made",
   "Videos rendered",
+  "PDF documents made",
+  "YouTube descriptions written",
   "Projects created",
   "That this machine installed Slopify",
   "The time each of those happened",

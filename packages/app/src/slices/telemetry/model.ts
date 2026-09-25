@@ -55,6 +55,9 @@ export const payloadSchema = z.strictObject({
   audioSeconds: z.number().nonnegative().finite().optional(),
   images: z.number().int().nonnegative().optional(),
   thumbnails: z.number().int().nonnegative().optional(),
+  // A written YouTube description. Its event names no stage: it is made inside the Video
+  // stage, and a collector counting stage "video" as a finished video must not count it.
+  descriptions: z.number().int().nonnegative().optional(),
 });
 
 export interface TelemetryCounters {
@@ -67,6 +70,7 @@ export interface TelemetryCounters {
   readonly audioSeconds?: number | undefined;
   readonly images?: number | undefined;
   readonly thumbnails?: number | undefined;
+  readonly descriptions?: number | undefined;
 }
 
 // Every event carries the app version beside its counters.

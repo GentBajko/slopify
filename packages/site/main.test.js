@@ -17,6 +17,8 @@ const live = {
   videos_made: 12345,
   images_made: 98765,
   thumbnails_made: 300,
+  documents_made: 1234,
+  descriptions_made: 56,
   audio_seconds: 15_555_600,
   tokens_used: 1_200_000_000,
 };
@@ -37,16 +39,23 @@ describe("counterText", () => {
     expect(counterText({ tokens_used: 999 }, "tokens_used")).toBe("999");
     expect(counterText({ tokens_used: 0 }, "tokens_used")).toBe("0");
     expect(counterText(live, "audio_seconds")).toBe("4,321");
+    expect(counterText(live, "documents_made")).toBe("1,234");
+    expect(counterText(live, "descriptions_made")).toBe("56");
   });
 
   // Dashes, never a zero that reads as a real count.
-  it.each(["videos_made", "audio_seconds", "images_made", "tokens_used", "installs"])(
-    "shows a dash for %s when there are no aggregates",
-    (key) => {
-      expect(counterText(null, key)).toBe(dash);
-      expect(counterText(undefined, key)).toBe(dash);
-    },
-  );
+  it.each([
+    "videos_made",
+    "audio_seconds",
+    "images_made",
+    "documents_made",
+    "descriptions_made",
+    "tokens_used",
+    "installs",
+  ])("shows a dash for %s when there are no aggregates", (key) => {
+    expect(counterText(null, key)).toBe(dash);
+    expect(counterText(undefined, key)).toBe(dash);
+  });
 
   it("shows a real zero when the collector answers zero", () => {
     expect(counterText({ videos_made: 0 }, "videos_made")).toBe("0");

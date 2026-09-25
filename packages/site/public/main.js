@@ -32,6 +32,8 @@ const formats = {
   videos_made: (value) => grouped.format(Math.round(value)),
   audio_seconds: (value) => oneDecimal.format(value / 3600),
   images_made: (value) => grouped.format(Math.round(value)),
+  documents_made: (value) => grouped.format(Math.round(value)),
+  descriptions_made: (value) => grouped.format(Math.round(value)),
   tokens_used: compactNumber,
   installs: (value) => grouped.format(Math.round(value)),
 };
