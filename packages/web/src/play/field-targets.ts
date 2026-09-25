@@ -77,6 +77,7 @@ export function playFieldTarget(
             "provided",
             "sources",
             "imageSeconds",
+            "zoomPercent",
             "edgeSilenceSeconds",
           ])
         ? "outputs"

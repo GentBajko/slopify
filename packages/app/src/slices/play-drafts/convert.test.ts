@@ -284,6 +284,11 @@ it.each([
     "Enter a whole number of seconds between 1 and 600.",
   ],
   [
+    "zoomPercent",
+    ["", "-1", "10.25", "51"],
+    "Enter a zoom between 0 and 50 percent, in steps of 0.5.",
+  ],
+  [
     "edgeSilenceSeconds",
     ["", "-1", "0.25", "31"],
     "Enter a number of seconds between 0 and 30, in steps of 0.5.",
@@ -305,20 +310,26 @@ it.each([
 it("carries the timing settings as numbers and ignores ones the run does not use", () => {
   const h = draftFixture();
   try {
-    const typed = { ...h.document.form, imageSeconds: " 20 ", edgeSilenceSeconds: "1.5" };
+    const typed = {
+      ...h.document.form,
+      imageSeconds: " 20 ",
+      edgeSilenceSeconds: "1.5",
+      zoomPercent: "0",
+    };
     expect(convert({ ...h.document, form: typed })).toMatchObject({
       ok: true,
-      draft: { imageSeconds: 20, edgeSilenceSeconds: 1.5 },
+      draft: { imageSeconds: 20, edgeSilenceSeconds: 1.5, zoomPercent: 0 },
     });
     const unused = {
       ...h.document.form,
       sources: { ...h.document.form.sources, audio: "off" as const, images: "off" as const },
       imageSeconds: "",
       edgeSilenceSeconds: "oops",
+      zoomPercent: "",
     };
     expect(convert({ ...h.document, form: unused })).toMatchObject({
       ok: true,
-      draft: { imageSeconds: 15, edgeSilenceSeconds: 2 },
+      draft: { imageSeconds: 15, edgeSilenceSeconds: 2, zoomPercent: 22.5 },
     });
   } finally {
     h.close();

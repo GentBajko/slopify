@@ -154,6 +154,7 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
   add("Silence gap (seconds)", before.silenceGapSeconds, after.silenceGapSeconds);
   add("Silence at start and end (seconds)", before.edgeSilenceSeconds, after.edgeSilenceSeconds);
   add("Seconds per image", before.imageSeconds, after.imageSeconds);
+  add("Zoom (%)", before.zoomPercent, after.zoomPercent);
   add("Intro", before.intro, after.intro);
   add("Outro", before.outro, after.outro);
   add("Subtitle settings", before.subtitles, after.subtitles);

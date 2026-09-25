@@ -102,6 +102,7 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
     subtitles: { ...form.subtitles, fontSize: Number(form.subtitles.fontSize) },
     imageSeconds: typedNumber(form.imageSeconds),
     edgeSilenceSeconds: typedNumber(form.edgeSilenceSeconds),
+    zoomPercent: typedNumber(form.zoomPercent),
     provided: {
       ...form.provided,
       audio: upload(form.provided.audio),
@@ -159,6 +160,9 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
         )
           ? before.form.edgeSilenceSeconds
           : String(next.edgeSilenceSeconds),
+        zoomPercent: Object.is(next.zoomPercent, typedNumber(before.form.zoomPercent))
+          ? before.form.zoomPercent
+          : String(next.zoomPercent),
         provided: {
           ...next.provided,
           audio: ref(next.provided.audio),

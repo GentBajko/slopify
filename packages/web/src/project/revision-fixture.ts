@@ -21,6 +21,7 @@ export function revisionView(id = "r1", title = "Saved"): RevisionView {
         provided: { article: "Saved article." },
         silenceGapSeconds: 0,
         imageSeconds: 15,
+        zoomPercent: 22.5,
         edgeSilenceSeconds: 0,
         sources: {
           research: "off",

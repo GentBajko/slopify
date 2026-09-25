@@ -445,7 +445,7 @@ describe("optional stages", () => {
     await fillGeneratedRun();
     await section("Outputs");
     await userEvent.click(segment("audio", "Off"));
-    expect(screen.getByText("Silent video · 5 seconds per image")).not.toBeNull();
+    expect(screen.getByText("Silent video · each image shown once")).not.toBeNull();
     expect(screen.queryByLabelText("TTS")).toBeNull();
     expect(held()).toBe(false);
     await section("Outputs");

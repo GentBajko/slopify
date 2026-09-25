@@ -35,6 +35,9 @@ export const defaultImageSeconds = 15;
 // ceiling: the same 30 s as the gap; half seconds are enough precision for a pause.
 export const edgeSilenceSecondsMax = 30;
 export const defaultEdgeSilenceSeconds = 2;
+// ceiling: past 50% the crop loses more of the picture than it shows.
+export const zoomPercentMax = 50;
+export const defaultZoomPercent = 22.5;
 
 // Shared by admission, Play's draft conversion and Edit project, so all three say the same
 // sentence about the same value.
@@ -42,6 +45,12 @@ export function imageSecondsProblem(value: number): string | undefined {
   return Number.isInteger(value) && value >= imageSecondsMin && value <= imageSecondsMax
     ? undefined
     : `Enter a whole number of seconds between ${imageSecondsMin} and ${imageSecondsMax}.`;
+}
+
+export function zoomPercentProblem(value: number): string | undefined {
+  return Number.isInteger(value * 2) && value >= 0 && value <= zoomPercentMax
+    ? undefined
+    : `Enter a zoom between 0 and ${zoomPercentMax} percent, in steps of 0.5.`;
 }
 
 export function edgeSilenceSecondsProblem(value: number): string | undefined {
@@ -152,6 +161,9 @@ export function admit(input: AdmissionInput): AdmissionResult {
   const imageProblem =
     sources.video === "generate" ? imageSecondsProblem(draft.imageSeconds) : undefined;
   if (imageProblem !== undefined) fields.push({ field: "imageSeconds", message: imageProblem });
+  const zoomProblem =
+    sources.video === "generate" ? zoomPercentProblem(draft.zoomPercent) : undefined;
+  if (zoomProblem !== undefined) fields.push({ field: "zoomPercent", message: zoomProblem });
   const edgeProblem =
     sources.audio === "off" ? undefined : edgeSilenceSecondsProblem(draft.edgeSilenceSeconds);
   if (edgeProblem !== undefined) fields.push({ field: "edgeSilenceSeconds", message: edgeProblem });

@@ -88,6 +88,7 @@ function draft(over: Partial<RunDraft> = {}): RunDraft {
     provided: { article: "The article." },
     silenceGapSeconds: 3,
     imageSeconds: 15,
+    zoomPercent: 22.5,
     edgeSilenceSeconds: 0,
     ...over,
   };

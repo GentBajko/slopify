@@ -96,6 +96,7 @@ function generated(
       provided: { article: "Text" },
       silenceGapSeconds: 0,
       imageSeconds: 15,
+      zoomPercent: 22.5,
       edgeSilenceSeconds: 0,
     },
   };

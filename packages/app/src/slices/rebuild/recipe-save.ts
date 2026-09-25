@@ -7,6 +7,7 @@ import {
   imageSecondsProblem,
   normaliseDraft,
   silenceGapSecondsMax,
+  zoomPercentProblem,
 } from "../admission/rules.js";
 import { render } from "../admission/substitute.js";
 import type {
@@ -248,6 +249,9 @@ export function validateRevisionEdit(
   const imageProblem =
     config.sources.video === "off" ? undefined : imageSecondsProblem(config.imageSeconds);
   if (imageProblem !== undefined) fields.push({ field: "imageSeconds", message: imageProblem });
+  const zoomProblem =
+    config.sources.video === "off" ? undefined : zoomPercentProblem(config.zoomPercent);
+  if (zoomProblem !== undefined) fields.push({ field: "zoomPercent", message: zoomProblem });
   const edgeProblem =
     config.sources.audio === "off"
       ? undefined

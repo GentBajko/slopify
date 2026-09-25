@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { isAbsolute, resolve as resolvePath } from "node:path";
 import type { Log } from "../../kernel/log.js";
 import type { ImageSlot, RenderPlan } from "./plan.js";
-import { zoomBy, zoomFrom, zoomTo } from "./plan.js";
+import { type ZoomRange, zoomRange } from "./plan.js";
 
 // Hand-rolled per the standards: the filtergraph is the load-bearing part of this slice
 // and a wrapper would hide it. Every value goes into an argument array, never a shell
@@ -79,13 +79,16 @@ export function slideshowClips(plan: RenderPlan): SlideshowClips {
 const intermediateCrf = "16";
 
 export function clipArgs(
-  plan: Pick<RenderPlan, "width" | "height" | "fps">,
+  plan: Pick<RenderPlan, "width" | "height" | "fps" | "zoomPercent">,
   slot: ImageSlot,
   output: string,
   intermediate = false,
 ): string[] {
-  const wide = plan.width * prescale;
-  const tall = plan.height * prescale;
+  const range = zoomRange(plan.zoomPercent);
+  // A still that does not zoom has no sub-pixel steps to smooth, so it is not prescaled.
+  const factor = range === undefined ? 1 : prescale;
+  const wide = plan.width * factor;
+  const tall = plan.height * factor;
   return [
     ...progressArgs,
     "-i",
@@ -94,7 +97,7 @@ export function clipArgs(
     `[0:v]trim=end_frame=1,setpts=PTS-STARTPTS,` +
       // Cover the frame and centre-crop, never letterbox.
       `scale=${wide}:${tall}:force_original_aspect_ratio=increase,crop=${wide}:${tall},` +
-      `zoompan=z='${zoomExpression(slot)}':d=${slot.frames}:` +
+      `zoompan=z='${zoomExpression(slot, range)}':d=${slot.frames}:` +
       `x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':` +
       `s=${plan.width}x${plan.height}:fps=${plan.fps},setsar=1[v]`,
     "-map",
@@ -173,15 +176,16 @@ const progressArgs = [
 ] as const;
 const videoCodec = ["-c:v", "libx264", "-pix_fmt", "yuv420p"] as const;
 
-// Odd slots 100% → 122.5%, even slots 122.5% → 100%, linear over the slot. `on` is
-// zoompan's output frame counter, 0 to d-1, and a one-frame slot has no span to divide
-// by, so it holds the zoom it starts at.
-function zoomExpression(slot: ImageSlot): string {
+// Odd slots zoom from 100% up, even slots back down to 100%, linear over the slot. `on`
+// is zoompan's output frame counter, 0 to d-1, and a one-frame slot has no span to
+// divide by, so it holds the zoom it starts at. Without a range the zoom stays at 1.
+function zoomExpression(slot: ImageSlot, range: ZoomRange | undefined): string {
+  if (range === undefined) return "1";
   const span = slot.frames - 1;
   if (slot.zoom === "in") {
-    return span < 1 ? String(zoomFrom) : `${zoomFrom}+${zoomBy}*on/${span}`;
+    return span < 1 ? range.from : `${range.from}+${range.by}*on/${span}`;
   }
-  return span < 1 ? String(zoomTo) : `${zoomTo}-${zoomBy}*on/${span}`;
+  return span < 1 ? range.to : `${range.to}-${range.by}*on/${span}`;
 }
 
 function seconds(value: number): string {

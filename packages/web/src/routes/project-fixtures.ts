@@ -83,6 +83,7 @@ export function body(options: {
         provided: {},
         silenceGapSeconds: 0,
         imageSeconds: 15,
+        zoomPercent: 22.5,
         edgeSilenceSeconds: 0,
       },
       createdAt: new Date().toISOString(),

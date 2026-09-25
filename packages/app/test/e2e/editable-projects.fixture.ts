@@ -91,6 +91,9 @@ export function seedLegacy(): {
     values: {},
     provided: { article, audio: "consumed-legacy-upload" },
     silenceGapSeconds: 0,
+    imageSeconds: 15,
+    zoomPercent: 22.5,
+    edgeSilenceSeconds: 0,
     rendered: {},
   };
   const db = openDb(paths.db);

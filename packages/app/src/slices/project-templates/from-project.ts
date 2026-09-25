@@ -171,6 +171,7 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
       },
       imageSeconds: String(config.imageSeconds),
       edgeSilenceSeconds: String(config.edgeSilenceSeconds),
+      zoomPercent: String(config.zoomPercent),
       values: config.values,
       provided,
     },

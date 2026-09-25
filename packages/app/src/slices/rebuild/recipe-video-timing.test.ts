@@ -33,6 +33,11 @@ it("re-renders only the video when the seconds per image change", () => {
   expect(changed(captioned, { ...captioned, imageSeconds: 30 })).toEqual(["export:video"]);
 });
 
+it("re-renders only the video when the zoom changes", () => {
+  expect(changed(config, { ...config, zoomPercent: 0 })).toEqual(["export:video"]);
+  expect(changed(captioned, { ...captioned, zoomPercent: 10 })).toEqual(["export:video"]);
+});
+
 it("keeps the article and images when the seconds per image change on a ready project", () => {
   const result = planRevision(readyView(), { config: { ...config, imageSeconds: 30 }, content });
   if (!result.ok) throw new Error(JSON.stringify(result.fields));

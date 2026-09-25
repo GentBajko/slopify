@@ -133,21 +133,21 @@ export function ThumbnailRail({
   );
 }
 
-// Raw text for the two timing fields, edited in the draft document itself so what was typed
+export type TimingField = "imageSeconds" | "zoomPercent" | "edgeSilenceSeconds";
+
+// Raw text for the timing fields, edited in the draft document itself so what was typed
 // survives a reload; without it the fields write numbers through `update`.
-export interface RawSeconds {
-  readonly imageSeconds: string;
-  readonly edgeSilenceSeconds: string;
-  readonly onChange: (field: "imageSeconds" | "edgeSilenceSeconds", value: string) => void;
-}
+export type RawTiming = Readonly<Record<TimingField, string>> & {
+  readonly onChange: (field: TimingField, value: string) => void;
+};
 
 export function VideoRail({
   form,
   silenceGapSeconds,
   problem,
   update,
-  rawSeconds,
-}: RailProps & { readonly rawSeconds?: RawSeconds }) {
+  rawTiming,
+}: RailProps & { readonly rawTiming?: RawTiming }) {
   const explanation =
     form.sources.video === "generate"
       ? form.sources.audio === "off"
@@ -156,10 +156,10 @@ export function VideoRail({
       : form.sources.audio !== "off"
         ? "Combined WAV export with narration and segment gaps"
         : "Download each enabled stage separately";
-  const seconds = (field: "imageSeconds" | "edgeSilenceSeconds") => ({
-    value: rawSeconds ? rawSeconds[field] : Number.isFinite(form[field]) ? String(form[field]) : "",
+  const timing = (field: TimingField) => ({
+    value: rawTiming ? rawTiming[field] : Number.isFinite(form[field]) ? String(form[field]) : "",
     onChange: (value: string) => {
-      if (rawSeconds) rawSeconds.onChange(field, value);
+      if (rawTiming) rawTiming.onChange(field, value);
       else update({ [field]: value.trim() === "" ? Number.NaN : Number(value) });
     },
   });
@@ -173,23 +173,33 @@ export function VideoRail({
       {form.sources.video === "generate" || form.sources.audio !== "off" ? (
         <div className={railControls}>
           {form.sources.video === "generate" ? (
-            <SecondsField
+            <NumberField
               field="imageSeconds"
               label="Seconds per image"
               help="Each image stays on screen this long, then the next one; after the last image they start again."
               step={1}
               problem={problem("imageSeconds")}
-              {...seconds("imageSeconds")}
+              {...timing("imageSeconds")}
+            />
+          ) : null}
+          {form.sources.video === "generate" ? (
+            <NumberField
+              field="zoomPercent"
+              label="Zoom (%)"
+              help="How far each image zooms in or out over its time on screen. 0 keeps images still."
+              step={0.5}
+              problem={problem("zoomPercent")}
+              {...timing("zoomPercent")}
             />
           ) : null}
           {form.sources.audio !== "off" ? (
-            <SecondsField
+            <NumberField
               field="edgeSilenceSeconds"
               label="Silence at start and end (seconds)"
               help="Quiet time before the narration starts and after it ends."
               step={0.5}
               problem={problem("edgeSilenceSeconds")}
-              {...seconds("edgeSilenceSeconds")}
+              {...timing("edgeSilenceSeconds")}
             />
           ) : null}
         </div>
@@ -203,7 +213,7 @@ export function VideoRail({
   );
 }
 
-function SecondsField({
+function NumberField({
   field,
   label,
   help,

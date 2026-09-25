@@ -90,6 +90,7 @@ export async function executeExportRecipe(
           gapSeconds: config.silenceGapSeconds,
           edgeSeconds: config.edgeSilenceSeconds,
           imageSeconds: config.imageSeconds,
+          zoomPercent: config.zoomPercent,
           body: segment("body"),
           intro: segment("intro"),
           outro: segment("outro"),

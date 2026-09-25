@@ -7,12 +7,33 @@ const frames: Readonly<Record<Format, { width: number; height: number }>> = {
   "9:16": { width: 1080, height: 1920 },
 };
 
-// 100% → 122.5%, linear, centred, alternating per slot. The three are written out
-// rather than derived from one another, because they are formatted into an ffmpeg
-// expression and 1.225 - 1 is not 0.225 in binary floating point.
-export const zoomFrom = 1;
-export const zoomTo = 1.225;
-export const zoomBy = 0.225;
+// Each slot zooms linearly and centred between 100% and 100% + the project's zoom
+// percent, alternating in and out per slot. The ends are formatted into an ffmpeg
+// expression, so they are built from whole thousandths as decimal text rather than by
+// float arithmetic: 1 + 0.225 is exact, but 1.225 - 1 is not 0.225 in binary floating
+// point, and a percent in half steps is always a whole number of thousandths.
+export const zoomFrom = "1";
+
+export interface ZoomRange {
+  readonly from: string;
+  readonly to: string;
+  readonly by: string;
+}
+
+// undefined for 0%: the still does not move.
+export function zoomRange(percent: number): ZoomRange | undefined {
+  const thousandths = Math.round(percent * 10);
+  if (thousandths <= 0) return undefined;
+  return { from: zoomFrom, to: decimal(1000 + thousandths), by: decimal(thousandths) };
+}
+
+function decimal(thousandths: number): string {
+  const fraction = String(thousandths % 1000)
+    .padStart(3, "0")
+    .replace(/0+$/, "");
+  const whole = String(Math.floor(thousandths / 1000));
+  return fraction === "" ? whole : `${whole}.${fraction}`;
+}
 
 export type SpokenKind = "intro" | "body" | "outro";
 // A gap sits between two spoken segments; an edge is the quiet lead-in before the first and
@@ -43,6 +64,7 @@ export interface RenderPlan {
   readonly gapSeconds: number;
   readonly edgeSeconds: number;
   readonly imageSeconds: number;
+  readonly zoomPercent: number;
   readonly audio: readonly AudioSegment[];
   readonly images: readonly ImageSlot[];
   readonly totalFrames: number;
@@ -60,6 +82,7 @@ export interface PlanInput {
   readonly gapSeconds: number;
   readonly edgeSeconds: number;
   readonly imageSeconds: number;
+  readonly zoomPercent: number;
   readonly intro?: AudioInput | undefined;
   readonly body?: AudioInput | undefined;
   readonly outro?: AudioInput | undefined;
@@ -90,6 +113,7 @@ export function planRender(input: PlanInput): RenderPlan {
     gapSeconds: input.gapSeconds,
     edgeSeconds: input.edgeSeconds,
     imageSeconds: input.imageSeconds,
+    zoomPercent: input.zoomPercent,
     audio,
     images: slots(input.images, Math.max(1, Math.round(input.imageSeconds * fps)), totalFrames),
     totalFrames,

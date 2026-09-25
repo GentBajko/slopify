@@ -42,6 +42,9 @@ function draft(over: Partial<RunDraft> = {}): RunDraft {
     values: {},
     provided: { article: "The required article." },
     silenceGapSeconds: 3,
+    imageSeconds: 15,
+    zoomPercent: 22.5,
+    edgeSilenceSeconds: 0,
     ...over,
   };
 }
@@ -167,7 +170,7 @@ describe("optional outputs through the real app", () => {
     ).toMatch(/Audio: pcm_s16le.*48000 Hz, (?:stereo|2 channels)/);
   }, 60_000);
 
-  it("renders a silent five-second slideshow when narration is Off", async () => {
+  it("shows each image once for its seconds per image when narration is Off", async () => {
     const app = await start();
     const image = await upload(app, "images", fixture("images"));
     const id = await create(
@@ -175,6 +178,7 @@ describe("optional outputs through the real app", () => {
       draft({
         sources: { ...draft().sources, images: "provide", video: "generate" },
         provided: { article: "Article", images: [image] },
+        imageSeconds: 4,
       }),
     );
     const view = await finished(app, id);
@@ -187,7 +191,8 @@ describe("optional outputs through the real app", () => {
     );
     expect(report).toContain("Video:");
     expect(report).not.toContain("Audio:");
-    expect(report).toContain("Duration: 00:00:05.00");
+    // One image at 4 seconds.
+    expect(report).toContain("Duration: 00:00:04.00");
     expect((await fetch(`${app.url}/files/${id}/video`)).status).toBe(200);
   }, 30000);
 });

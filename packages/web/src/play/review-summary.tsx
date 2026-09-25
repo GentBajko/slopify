@@ -393,6 +393,13 @@ export function ReviewSummary({
           {form.sources.video === "generate"
             ? row("Seconds per image", "imageSeconds", form.imageSeconds || "(not entered)")
             : null}
+          {form.sources.video === "generate"
+            ? row(
+                "Zoom",
+                "zoomPercent",
+                form.zoomPercent ? `${form.zoomPercent}%` : "(not entered)",
+              )
+            : null}
           {form.sources.audio !== "off"
             ? row(
                 "Silence at start and end",

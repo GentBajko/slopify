@@ -40,6 +40,7 @@ const revision: ProjectRevision = {
     rendered: {},
     silenceGapSeconds: 0,
     imageSeconds: 15,
+    zoomPercent: 22.5,
     edgeSilenceSeconds: 0,
   },
   content: {

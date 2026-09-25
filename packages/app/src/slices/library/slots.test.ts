@@ -40,6 +40,7 @@ function draft(over: Partial<RunDraft> = {}): RunDraft {
     provided: {},
     silenceGapSeconds: 3,
     imageSeconds: 15,
+    zoomPercent: 22.5,
     edgeSilenceSeconds: 0,
     ...over,
   };

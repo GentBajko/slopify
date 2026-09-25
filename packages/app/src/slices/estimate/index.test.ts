@@ -28,6 +28,7 @@ const draft: RunDraft = {
   provided: { article: "a".repeat(10000) },
   silenceGapSeconds: 0,
   imageSeconds: 15,
+  zoomPercent: 22.5,
   edgeSilenceSeconds: 0,
 };
 describe("cost planning", () => {

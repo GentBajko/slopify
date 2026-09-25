@@ -34,6 +34,7 @@ function harness() {
     provided: { article: "Article." },
     silenceGapSeconds: 0,
     imageSeconds: 15,
+    zoomPercent: 22.5,
     edgeSilenceSeconds: 0,
     sources: {
       research: "off",

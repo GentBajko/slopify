@@ -2,7 +2,11 @@ import { z } from "zod";
 import { formats } from "../../kernel/pipeline.js";
 import { thinkingModes } from "../../kernel/ports/llm.js";
 import { stageSources } from "../admission/model.js";
-import { defaultEdgeSilenceSeconds, defaultImageSeconds } from "../admission/rules.js";
+import {
+  defaultEdgeSilenceSeconds,
+  defaultImageSeconds,
+  defaultZoomPercent,
+} from "../admission/rules.js";
 import { runDraftSchema } from "../admission/schema.js";
 import { checkpointRowSchema, checkpointStageSchema } from "../checkpoints/schema.js";
 import { librarySnapshotSchema } from "../library/snapshot.js";
@@ -61,6 +65,7 @@ export const playDraftFormSchema = z
     // Defaulted for drafts and templates saved before these controls existed.
     imageSeconds: text.default(String(defaultImageSeconds)),
     edgeSilenceSeconds: text.default(String(defaultEdgeSilenceSeconds)),
+    zoomPercent: text.default(String(defaultZoomPercent)),
     values,
     provided: z
       .object({

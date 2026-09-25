@@ -127,6 +127,9 @@ interface FixtureOptions {
   readonly gapSeconds?: number;
   readonly withEnds?: boolean;
   readonly brokenImage?: boolean;
+  readonly edgeSeconds?: number;
+  readonly imageSeconds?: number;
+  readonly bodySeconds?: number;
 }
 
 function fixture(options: FixtureOptions = {}): Fixture {
@@ -138,7 +141,13 @@ function fixture(options: FixtureOptions = {}): Fixture {
   const dir = join(paths.projects, projectId);
   mkdirSync(join(dir, "images"), { recursive: true });
 
-  const config = { silenceGapSeconds: options.gapSeconds ?? 0.5 };
+  // One-second slots over a three-second body give each image one slot, so every test
+  // below reaches all three; no edge silence unless a test asks for it.
+  const config = {
+    silenceGapSeconds: options.gapSeconds ?? 0.5,
+    edgeSilenceSeconds: options.edgeSeconds ?? 0,
+    imageSeconds: options.imageSeconds ?? 1,
+  };
   db.prepare("INSERT INTO projects VALUES (?, ?, ?, ?, ?, ?)").run(
     projectId,
     "Rope Tricks",
@@ -173,7 +182,7 @@ function fixture(options: FixtureOptions = {}): Fixture {
   marker(join(dir, "images", "002.png"), 640, 160, 360);
   // A square source, so the cover-and-crop is exercised too.
   marker(join(dir, "images", "003.png"), 360, 120, 360);
-  tone(join(dir, "audio-body.mp3"), 440, 1);
+  tone(join(dir, "audio-body.mp3"), 440, options.bodySeconds ?? 3);
   if (options.withEnds === true) {
     tone(join(dir, "audio-intro.mp3"), 300, 0.5);
     tone(join(dir, "audio-outro.mp3"), 600, 0.5);
@@ -261,33 +270,48 @@ function idsOf(db: DatabaseSync): unknown[] {
 
 describe("the ffmpeg render", () => {
   it("renders the slideshow over the audio, gaps included, and records the plan", async () => {
-    const harness = fixture({ withEnds: true, gapSeconds: 0.5 });
+    const harness = fixture({ withEnds: true, gapSeconds: 0.5, edgeSeconds: 2, bodySeconds: 1 });
     const events: unknown[] = [];
 
     await renderVideo(deps(harness), context(new AbortController().signal, events));
 
     const video = join(harness.dir, "video.mp4");
     expect(existsSync(video)).toBe(true);
-    // 0.5 intro + 0.5 gap + 1 body + 0.5 gap + 0.5 outro.
-    expect(durationSecondsOf(video)).toBeCloseTo(3, 1);
+    // 2 edge + 0.5 intro + 0.5 gap + 1 body + 0.5 gap + 0.5 outro + 2 edge.
+    expect(durationSecondsOf(video)).toBeCloseTo(7, 1);
 
     const plan = JSON.parse(readFileSync(join(harness.dir, "render.json"), "utf8")) as {
       audio: Array<{ kind: string; path: string | null; seconds: number }>;
       images: Array<{ path: string; frames: number; zoom: string }>;
       output: string;
     };
-    expect(plan.audio.map((segment) => segment.kind)).toEqual([
-      "intro",
-      "gap",
-      "body",
-      "gap",
-      "outro",
+    expect(plan.audio.map((segment) => `${segment.kind}:${segment.seconds}`)).toEqual([
+      "edge:2",
+      "intro:0.5",
+      "gap:0.5",
+      "body:1",
+      "gap:0.5",
+      "outro:0.5",
+      "edge:2",
     ]);
-    expect(plan.images.map((slot) => slot.zoom)).toEqual(["in", "out", "in"]);
+    // Seven one-second slots: the three images take turns, zoom alternating per slot.
+    expect(plan.images.map((slot) => slot.zoom)).toEqual([
+      "in",
+      "out",
+      "in",
+      "out",
+      "in",
+      "out",
+      "in",
+    ]);
     expect(plan.images.map((slot) => slot.path)).toEqual([
       "images/001.png",
       "images/002.png",
       "images/003.png",
+      "images/001.png",
+      "images/002.png",
+      "images/003.png",
+      "images/001.png",
     ]);
     expect(plan.output).toBe("video.mp4");
 
@@ -302,13 +326,13 @@ describe("the ffmpeg render", () => {
       type: "stage.progress",
       projectId: "p1",
       stage: "video",
-      current: 3000,
-      total: 3000,
+      current: 7000,
+      total: 7000,
     });
     // A page loaded after the render reads the row, not the events it missed, so the row
     // has to agree with the last one that went out.
     expect(harness.db.prepare("SELECT progress_current, progress_total FROM stages").get()).toEqual(
-      { progress_current: 3000, progress_total: 3000 },
+      { progress_current: 7000, progress_total: 7000 },
     );
     // Videos rendered (completed renders). One event, no provider: ffmpeg is the machine's own
     // binary, not a service with a model name.
@@ -322,12 +346,13 @@ describe("the ffmpeg render", () => {
     await renderVideo(deps(harness), context(new AbortController().signal, []));
     const video = join(harness.dir, "video.mp4");
 
-    // 1 s of audio is 30 frames over three images, so each image holds 10 frames:
-    // image 1 spans 0.000-0.300 s and image 2 spans 0.333-0.633 s.
+    // One-second slots of 30 frames: image 1 spans 0.000-0.967 s and image 2
+    // 1.000-1.967 s, and each zooms its full range within its own slot. The ends are
+    // read half a frame early, since a seek to 0.967 lands past frame 29 (0.9667 s).
     const firstStart = rectangleWidthAt(video, 0);
-    const firstEnd = rectangleWidthAt(video, 0.3);
-    const secondStart = rectangleWidthAt(video, 0.34);
-    const secondEnd = rectangleWidthAt(video, 0.63);
+    const firstEnd = rectangleWidthAt(video, 0.95);
+    const secondStart = rectangleWidthAt(video, 1.0);
+    const secondEnd = rectangleWidthAt(video, 1.95);
 
     // A 200 px rectangle on a 640 px source is 600 px in a 1920 px frame at zoom 1.
     expect(firstStart).toBe(600);
@@ -478,7 +503,8 @@ describe("the ffmpeg render", () => {
 
 describe("real subtitle export", () => {
   it("burns captions, reuses timing for WAV, and preserves exports on alignment failure", async () => {
-    const one = fixture();
+    // A 2 s lead-in, so the burned caption must land after it.
+    const one = fixture({ edgeSeconds: 2, bodySeconds: 1 });
     const project = projectById(one.db, "p1");
     if (project === undefined) throw new Error("fixture project missing");
     writeFileSync(join(one.dir, "article.txt"), "Hello world.");
@@ -511,28 +537,31 @@ describe("real subtitle export", () => {
     const outputs = outputsOf(one.db, "p1");
     expect(outputs.find((output) => output.role === "video")?.meta.subtitlesMode).toBe("burn-in");
     expect(outputs.filter((output) => output.role.startsWith("subtitle"))).toHaveLength(5);
-    const pixels = execFileSync(
-      ffmpeg,
-      [
-        "-v",
-        "error",
-        "-ss",
-        "0.5",
-        "-i",
-        join(one.dir, "video.mp4"),
-        "-vf",
-        "crop=1920:200:0:880",
-        "-frames:v",
-        "1",
-        "-f",
-        "rawvideo",
-        "-pix_fmt",
-        "gray",
-        "-",
-      ],
-      { maxBuffer: 1 << 22 },
-    );
-    expect(pixels.filter((value) => value > 180).length).toBeGreaterThan(100);
+    const brightAt = (at: string): number =>
+      execFileSync(
+        ffmpeg,
+        [
+          "-v",
+          "error",
+          "-ss",
+          at,
+          "-i",
+          join(one.dir, "video.mp4"),
+          "-vf",
+          "crop=1920:200:0:880",
+          "-frames:v",
+          "1",
+          "-f",
+          "rawvideo",
+          "-pix_fmt",
+          "gray",
+          "-",
+        ],
+        { maxBuffer: 1 << 22 },
+      ).filter((value) => value > 180).length;
+    // Words at 0.1-0.9 s of the narration are on screen at 2.1-2.9 s, after the lead-in.
+    expect(brightAt("2.5")).toBeGreaterThan(100);
+    expect(brightAt("0.5")).toBe(0);
     const prior = readFileSync(join(one.dir, "video.mp4"));
     const priorParams = readFileSync(join(one.dir, "render.json"));
     one.db.exec(

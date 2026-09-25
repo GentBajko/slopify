@@ -74,10 +74,16 @@ it("rejects malformed glossary preferences without loosening the strict audio sh
 it("reads a draft saved before the video timing controls with their defaults", () => {
   const h = draftFixture();
   try {
-    const { imageSeconds: _image, edgeSilenceSeconds: _edge, ...form } = h.document.form;
+    const {
+      imageSeconds: _image,
+      edgeSilenceSeconds: _edge,
+      zoomPercent: _zoom,
+      ...form
+    } = h.document.form;
     const parsed = playDraftDocumentSchema.parse({ ...h.document, form });
     expect(parsed.form.imageSeconds).toBe("15");
     expect(parsed.form.edgeSilenceSeconds).toBe("2");
+    expect(parsed.form.zoomPercent).toBe("22.5");
   } finally {
     h.close();
   }

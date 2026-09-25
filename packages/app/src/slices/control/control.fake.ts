@@ -54,6 +54,7 @@ export const config: RunConfig = {
   provided: { thumbnail: "consumed-upload" },
   silenceGapSeconds: 3,
   imageSeconds: 15,
+  zoomPercent: 22.5,
   edgeSilenceSeconds: 0,
 };
 

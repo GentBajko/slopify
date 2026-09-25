@@ -3,10 +3,12 @@ import type { EntryChoice, RunDraft } from "../admission/model.js";
 import {
   defaultEdgeSilenceSeconds,
   defaultImageSeconds,
+  defaultZoomPercent,
   edgeSilenceSecondsProblem,
   type FieldError,
   imageSecondsProblem,
   numberPerPromptMax,
+  zoomPercentProblem,
 } from "../admission/rules.js";
 import { runDraftSchema } from "../admission/schema.js";
 import type { Entry } from "../library/model.js";
@@ -41,8 +43,8 @@ export function toAdmissionDraft(input: {
   };
   // A value the run uses is refused in the rule's words; one it ignores (the control is
   // hidden) falls back to the default rather than holding up the run.
-  const seconds = (
-    field: "imageSeconds" | "edgeSilenceSeconds",
+  const measure = (
+    field: "imageSeconds" | "edgeSilenceSeconds" | "zoomPercent",
     used: boolean,
     fallback: number,
     problem: (value: number) => string | undefined,
@@ -159,13 +161,19 @@ export function toAdmissionDraft(input: {
             fontSize: number(form.subtitles.fontSize, "subtitles.fontSize", 120, 16),
           },
     silenceGapSeconds: input.silenceGapSeconds,
-    imageSeconds: seconds(
+    imageSeconds: measure(
       "imageSeconds",
       sources.video === "generate",
       defaultImageSeconds,
       imageSecondsProblem,
     ),
-    edgeSilenceSeconds: seconds(
+    zoomPercent: measure(
+      "zoomPercent",
+      sources.video === "generate",
+      defaultZoomPercent,
+      zoomPercentProblem,
+    ),
+    edgeSilenceSeconds: measure(
       "edgeSilenceSeconds",
       sources.audio !== "off",
       defaultEdgeSilenceSeconds,

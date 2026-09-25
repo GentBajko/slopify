@@ -138,6 +138,9 @@ function draft(audio: string, image: string): RunDraft {
       images: [image],
     },
     silenceGapSeconds: 0,
+    imageSeconds: 15,
+    zoomPercent: 22.5,
+    edgeSilenceSeconds: 0,
   };
 }
 

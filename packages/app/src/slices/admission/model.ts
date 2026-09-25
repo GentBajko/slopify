@@ -78,6 +78,9 @@ export interface RunDraft {
   // How long each slideshow image stays on screen before the next; the images cycle until
   // the video ends. A config saved before this existed reads as 15 (`schema.ts`).
   readonly imageSeconds: number;
+  // How far each slot zooms, in percent of the frame: 22.5 is 100% → 122.5%, 0 keeps the
+  // stills still. A config saved before this existed reads as 22.5.
+  readonly zoomPercent: number;
   // Silence before the first and after the last narration segment of both exports. A
   // config saved before this existed reads as 2.
   readonly edgeSilenceSeconds: number;

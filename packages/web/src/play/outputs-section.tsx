@@ -88,8 +88,9 @@ export function OutputsSection(
       <ThumbnailRail {...props} />
       <VideoRail
         {...props}
-        rawSeconds={{
+        rawTiming={{
           imageSeconds: document.form.imageSeconds,
+          zoomPercent: document.form.zoomPercent,
           edgeSilenceSeconds: document.form.edgeSilenceSeconds,
           onChange: (field, value) =>
             session.edit({ ...document, form: { ...document.form, [field]: value } }),

@@ -74,6 +74,9 @@ it("narrates text and LLM entries around a provided article and includes both in
         values: {},
         provided: { article: "Rope is twisted fibre." },
         silenceGapSeconds: 0.2,
+        imageSeconds: 15,
+        zoomPercent: 22.5,
+        edgeSilenceSeconds: 0,
       },
       { intro: "Welcome to the channel.", outro: "Write a sign-off." },
     );

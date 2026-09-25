@@ -156,6 +156,9 @@ function harness(): Harness {
     provided: {},
     chunking: { mode: "whole" },
     silenceGapSeconds: gapSeconds,
+    imageSeconds: 15,
+    zoomPercent: 22.5,
+    edgeSilenceSeconds: 0,
   };
   const { project } = startRun({ ...deps, emit: (): void => {} }, draft, {
     article: articlePrompt,

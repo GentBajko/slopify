@@ -29,6 +29,7 @@ it("leaves local CLI IDs to async validation while retaining API catalogue check
       provided: {},
       silenceGapSeconds: 0,
       imageSeconds: 15,
+      zoomPercent: 22.5,
       edgeSilenceSeconds: 0,
     };
     expect(modelFields(draft, catalogue)).toEqual([]);

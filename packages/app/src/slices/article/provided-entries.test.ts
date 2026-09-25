@@ -50,6 +50,7 @@ function harness(over: Partial<RunConfig> = {}) {
     provided: {},
     silenceGapSeconds: 3,
     imageSeconds: 15,
+    zoomPercent: 22.5,
     edgeSilenceSeconds: 0,
     intro: { name: "Welcome", mode: "text" },
     outro: { name: "Ending", mode: "text" },

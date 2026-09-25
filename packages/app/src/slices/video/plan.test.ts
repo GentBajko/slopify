@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PlanInput } from "./plan.js";
-import { audioTimeline, planRender } from "./plan.js";
+import { audioTimeline, planRender, zoomRange } from "./plan.js";
 
 function input(over: Partial<PlanInput> = {}): PlanInput {
   return {
@@ -8,6 +8,7 @@ function input(over: Partial<PlanInput> = {}): PlanInput {
     gapSeconds: 3,
     edgeSeconds: 0,
     imageSeconds: 15,
+    zoomPercent: 22.5,
     body: { path: "/p/audio-body.mp3", seconds: 10 },
     images: ["/p/images/001.png", "/p/images/002.png", "/p/images/003.png"],
     output: "/p/video.mp4",
@@ -221,5 +222,22 @@ describe("the image slots", () => {
 
   it("refuses to plan a render with no images", () => {
     expect(() => planRender(input({ images: [] }))).toThrow(/at least one image/);
+  });
+});
+
+describe("the zoom range", () => {
+  it("builds each end from whole thousandths, never float arithmetic", () => {
+    expect(zoomRange(22.5)).toEqual({ from: "1", to: "1.225", by: "0.225" });
+    expect(zoomRange(10)).toEqual({ from: "1", to: "1.1", by: "0.1" });
+    expect(zoomRange(0.5)).toEqual({ from: "1", to: "1.005", by: "0.005" });
+    expect(zoomRange(50)).toEqual({ from: "1", to: "1.5", by: "0.5" });
+  });
+
+  it("has none at 0%, so the stills stay still", () => {
+    expect(zoomRange(0)).toBeUndefined();
+  });
+
+  it("is recorded in the plan", () => {
+    expect(planRender(input({ zoomPercent: 10 })).zoomPercent).toBe(10);
   });
 });

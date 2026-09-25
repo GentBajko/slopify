@@ -4,7 +4,7 @@ import { checkpointStageSchema } from "../checkpoints/schema.js";
 import { chunkModes } from "../narration/chunk.js";
 import { subtitleConfigSchema } from "../subtitles/model.js";
 import { entryModes, formats, stageSources } from "./model.js";
-import { defaultEdgeSilenceSeconds, defaultImageSeconds } from "./rules.js";
+import { defaultEdgeSilenceSeconds, defaultImageSeconds, defaultZoomPercent } from "./rules.js";
 
 const providerChoice = z.object({
   provider: z.string(),
@@ -66,6 +66,7 @@ export const runDraftSchema = z.object({
   // Defaulted rather than required, so a config, revision, draft review or backup saved
   // before these existed still parses. The range is `rules.ts`'s, not the schema's.
   imageSeconds: z.number().default(defaultImageSeconds),
+  zoomPercent: z.number().default(defaultZoomPercent),
   edgeSilenceSeconds: z.number().default(defaultEdgeSilenceSeconds),
   subtitles: subtitleConfigSchema.optional(),
 });

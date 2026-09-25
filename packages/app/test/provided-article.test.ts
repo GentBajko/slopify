@@ -118,6 +118,9 @@ function draft(image: string, article: string): RunDraft {
     provided: { article, images: [image] },
     chunking: { mode: "whole" },
     silenceGapSeconds: 3,
+    imageSeconds: 15,
+    zoomPercent: 22.5,
+    edgeSilenceSeconds: 0,
   };
 }
 

@@ -5,6 +5,7 @@ import {
   imageSecondsMin,
   silenceGapSecondsMax,
   titleMax,
+  zoomPercentMax,
 } from "@app/slices/admission/rules.js";
 import { defaultSubtitles } from "@app/slices/subtitles/model.js";
 import { useQuery } from "@tanstack/react-query";
@@ -268,6 +269,35 @@ export function RevisionForm(
               </p>
               {problem("imageSeconds") ? (
                 <p className="text-label text-red">{problem("imageSeconds")}</p>
+              ) : null}
+            </div>
+          )}
+          {config.sources.video === "off" ? null : (
+            <div className="space-y-1 text-small">
+              <label htmlFor={`${formId}-zoom`} className="block space-y-1">
+                Zoom (%)
+                <Input
+                  id={`${formId}-zoom`}
+                  aria-describedby={`${formId}-zoom-hint`}
+                  type="number"
+                  min={0}
+                  max={zoomPercentMax}
+                  step={0.5}
+                  aria-invalid={problem("zoomPercent") !== undefined}
+                  value={Number.isFinite(config.zoomPercent) ? config.zoomPercent : ""}
+                  onChange={(event) =>
+                    onChange({
+                      ...edit,
+                      config: { ...config, zoomPercent: Number(event.target.value) },
+                    })
+                  }
+                />
+              </label>
+              <p id={`${formId}-zoom-hint`} className="text-label text-ink3">
+                How far each image zooms in or out over its time on screen. 0 keeps images still.
+              </p>
+              {problem("zoomPercent") ? (
+                <p className="text-label text-red">{problem("zoomPercent")}</p>
               ) : null}
             </div>
           )}

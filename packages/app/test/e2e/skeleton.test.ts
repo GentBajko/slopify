@@ -158,6 +158,9 @@ function draft(audio: string, images: readonly string[]): RunDraft {
     values: {},
     provided: { article: "Everything you never wanted to know about rope.", audio, images },
     silenceGapSeconds: 3,
+    imageSeconds: 15,
+    zoomPercent: 22.5,
+    edgeSilenceSeconds: 0,
   };
 }
 

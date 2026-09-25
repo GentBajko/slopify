@@ -143,6 +143,11 @@ function harness(): Harness {
     values: {},
     provided: {},
     silenceGapSeconds: 0,
+    // The narration is a 0.4 s tone: 1.5 s of silence either side and one-second slots
+    // give the render room for every image.
+    imageSeconds: 1,
+    zoomPercent: 22.5,
+    edgeSilenceSeconds: 1.5,
   };
   const { project } = startRun({ ...deps, emit: (): void => {} }, draft, {
     article: "write about rope",
@@ -228,7 +233,9 @@ function renderedImages(h: Harness): string[] {
   const plan = JSON.parse(readFileSync(join(h.dir, "render.json"), "utf8")) as {
     images: readonly { path: string }[];
   };
-  return plan.images.map((slot) => slot.path);
+  // The images cycle through the slots, so this is each image once, in the order it
+  // first appears.
+  return [...new Set(plan.images.map((slot) => slot.path))];
 }
 
 describe("an edit and a delete on a finished project", () => {

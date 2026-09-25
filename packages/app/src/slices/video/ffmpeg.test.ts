@@ -18,6 +18,7 @@ function plan(over: Partial<PlanInput> = {}): ReturnType<typeof planRender> {
     gapSeconds: 3,
     edgeSeconds: 0,
     imageSeconds: 5,
+    zoomPercent: 22.5,
     body: { path: "/p/audio-body.mp3", seconds: 10 },
     images: ["/p/images/001.png", "/p/images/002.png", "/p/images/003.png"],
     output: "/p/video.mp4",
@@ -105,6 +106,23 @@ describe("clipArgs", () => {
       ["1.225-0.225*on/449", "450"],
       ["1+0.225*on/299", "300"],
     ]);
+  });
+
+  it("zooms the project's own range, and not at all at 0%", () => {
+    const zoom = (zoomPercent: number, zoom: "in" | "out") =>
+      /zoompan=z='([^']+)'/.exec(
+        clipArgs(plan({ zoomPercent }), { ...slot, zoom }, "/w/c1.mp4").join(" "),
+      )?.[1];
+    expect(zoom(22.5, "in")).toBe("1+0.225*on/149");
+    expect(zoom(22.5, "out")).toBe("1.225-0.225*on/149");
+    expect(zoom(10, "in")).toBe("1+0.1*on/149");
+    expect(zoom(10, "out")).toBe("1.1-0.1*on/149");
+    expect(zoom(0, "in")).toBe("1");
+    expect(zoom(0, "out")).toBe("1");
+    // Still cover-scaled and cropped, but to the frame itself: nothing to smooth.
+    expect(clipArgs(plan({ zoomPercent: 0 }), slot, "/w/c1.mp4").join(" ")).toContain(
+      "scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,",
+    );
   });
 
   it("zooms out on an even slot", () => {

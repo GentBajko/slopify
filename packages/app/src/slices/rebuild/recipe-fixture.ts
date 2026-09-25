@@ -21,6 +21,7 @@ export const config: RunConfig = {
   provided: { article: "First paragraph.\n\nSecond paragraph." },
   silenceGapSeconds: 0,
   imageSeconds: 15,
+  zoomPercent: 22.5,
   edgeSilenceSeconds: 0,
   rendered: { article: "Write an article." },
 };

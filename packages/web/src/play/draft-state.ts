@@ -1,6 +1,7 @@
 import {
   defaultEdgeSilenceSeconds,
   defaultImageSeconds,
+  defaultZoomPercent,
   type FieldError,
 } from "@app/slices/admission/rules.js";
 import { toAdmissionDraft } from "@app/slices/play-drafts/convert.js";
@@ -38,6 +39,7 @@ export const freshDraftDocument: PlayDraftDocument = playDraftDocumentSchema.par
     subtitles: { ...defaultSubtitles, fontSize: "48" },
     imageSeconds: String(defaultImageSeconds),
     edgeSilenceSeconds: String(defaultEdgeSilenceSeconds),
+    zoomPercent: String(defaultZoomPercent),
     values: {},
     provided: { research: "", article: "", audio: null, images: [], thumbnail: null },
   },

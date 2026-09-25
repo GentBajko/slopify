@@ -63,6 +63,7 @@ export async function renderVideo(deps: VideoDeps, context: StageContext): Promi
     gapSeconds: project.config.silenceGapSeconds,
     edgeSeconds: project.config.edgeSilenceSeconds,
     imageSeconds: project.config.imageSeconds,
+    zoomPercent: project.config.zoomPercent,
     ...narration,
     images: slideshow(outputs).map((output) => outputPath(deps.paths, projectId, output.path)),
     output: outputPath(deps.paths, projectId, "video.mp4"),

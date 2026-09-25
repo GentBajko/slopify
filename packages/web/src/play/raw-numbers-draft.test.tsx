@@ -61,6 +61,7 @@ it.each([
 it.each([
   ["imageSeconds", "Seconds per image", ["", "0", "1.5", "601"]],
   ["edgeSilenceSeconds", "Silence at start and end (seconds)", ["", "-1", "0.25", "31"]],
+  ["zoomPercent", "Zoom (%)", ["", "-1", "10.25", "51"]],
 ] as const)(
   "keeps a typed %s through save/reload and refuses it at Review",
   async (field, label, values) => {
@@ -73,7 +74,7 @@ it.each([
     };
     await open();
     expect((screen.getByLabelText(label) as HTMLInputElement).value).toBe(
-      field === "imageSeconds" ? "15" : "2",
+      { imageSeconds: "15", edgeSilenceSeconds: "2", zoomPercent: "22.5" }[field],
     );
     for (const value of values) {
       fireEvent.change(screen.getByLabelText(label), { target: { value } });
@@ -110,6 +111,7 @@ it("offers seconds per image only for a video and the edge silence only with nar
     await h.session().navigate("outputs");
   });
   expect(screen.queryByLabelText("Seconds per image")).toBeNull();
+  expect(screen.queryByLabelText("Zoom (%)")).toBeNull();
   expect(screen.getByLabelText("Silence at start and end (seconds)")).toBeDefined();
   expect(
     screen.getByRole("button", { name: "About silence at start and end (seconds)" }),

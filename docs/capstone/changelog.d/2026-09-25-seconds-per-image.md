@@ -1,8 +1,9 @@
-# Seconds per image and silence at start and end
+# Seconds per image, zoom, and silence at start and end
 
 - Each image now stays on screen for a set time, 15 seconds by default, and the images take turns in order until the video ends, starting over after the last. Before, the narration was split evenly across the images, so five images under a 108-minute narration each stayed up for about 21 minutes. The zoom keeps its full 100% to 122.5% travel within each slot, alternating in and out per slot; the last slot is cut to fit. Set it per project as Seconds per image (whole seconds, 1 to 600) on Play → Outputs → Export or Edit project → Inputs.
+- How far each image zooms is now a per-project setting, Zoom (%), next to Seconds per image: 22.5 by default (100% to 122.5%, as before), 0 to 50 in half steps, and 0 keeps the images still.
 - The exported MP4 and WAV now start and end with 2 seconds of silence, so the narration no longer starts and stops abruptly. Set it per project as Silence at start and end (0 to 30 seconds, in half seconds); 0 turns it off. Captions move with the lead-in.
 - A silent video (narration Off) shows each image once for the seconds per image, instead of a fixed 5 seconds.
-- Projects, revisions, drafts, templates and backups saved before this read as 15 seconds per image and 2 seconds of silence. Their finished videos and WAV exports show as needing a rebuild, and captioned projects redo their caption timing (manual captions ask for review, as after a silence-gap change). Narration and images are kept.
-- Changing seconds per image re-renders only the video. Changing the silence re-exports the MP4 or WAV and redoes caption timing, never narration or images.
+- Projects, revisions, drafts, templates and backups saved before this read as 15 seconds per image, a 22.5% zoom and 2 seconds of silence. Their finished videos and WAV exports show as needing a rebuild, and captioned projects redo their caption timing (manual captions ask for review, as after a silence-gap change). Narration and images are kept.
+- Changing seconds per image or the zoom re-renders only the video. Changing the silence re-exports the MP4 or WAV and redoes caption timing, never narration or images.
 - Long videos render in bounded memory: each distinct image clip is encoded once and the clips are joined in order, instead of one FFmpeg filtergraph with a chain per image, which grew with the video's length.

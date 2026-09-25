@@ -40,6 +40,7 @@ function provided(over: Partial<RunDraft> = {}): RunDraft {
     provided: { article: "The article.", audio: "a1", images: ["i1", "i2"] },
     silenceGapSeconds: 3,
     imageSeconds: 15,
+    zoomPercent: 22.5,
     edgeSilenceSeconds: 0,
     ...over,
   };
@@ -536,6 +537,31 @@ describe("the silence at start and end", () => {
           sources: sources({ audio: "off" }),
         }),
       ),
+    ).toEqual([]);
+  });
+});
+
+describe("the zoom", () => {
+  it("accepts 0 to 50 percent in half steps", () => {
+    for (const zoomPercent of [0, 0.5, 22.5, 50])
+      expect(fields(provided({ zoomPercent }))).toEqual([]);
+  });
+
+  it("refuses anything else in plain words", () => {
+    for (const zoomPercent of [-0.5, 50.5, 10.25, Number.NaN]) {
+      const result = admit({ draft: provided({ zoomPercent }), staged: files, requiredSlots: [] });
+      expect(result.ok ? [] : result.fields).toEqual([
+        {
+          field: "zoomPercent",
+          message: "Enter a zoom between 0 and 50 percent, in steps of 0.5.",
+        },
+      ]);
+    }
+  });
+
+  it("does not hold up a run without a video", () => {
+    expect(
+      fields(provided({ zoomPercent: 99, sources: sources({ images: "off", video: "off" }) })),
     ).toEqual([]);
   });
 });

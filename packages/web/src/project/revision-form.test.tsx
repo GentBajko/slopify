@@ -102,6 +102,14 @@ it("shows the video timing settings only where the export uses them", async () =
   await user.clear(seconds);
   await user.type(seconds, "20");
   expect(latest.config.imageSeconds).toBe(20);
+  const zoom = screen.getByRole<HTMLInputElement>("spinbutton", { name: "Zoom (%)" });
+  expect(zoom.value).toBe("22.5");
+  expect(document.getElementById(zoom.getAttribute("aria-describedby") ?? "")?.textContent).toBe(
+    "How far each image zooms in or out over its time on screen. 0 keeps images still.",
+  );
+  await user.clear(zoom);
+  await user.type(zoom, "0");
+  expect(latest.config.zoomPercent).toBe(0);
   const edge = screen.getByRole<HTMLInputElement>("spinbutton", {
     name: "Silence at start and end (seconds)",
   });
@@ -112,6 +120,7 @@ it("shows the video timing settings only where the export uses them", async () =
 
   await user.selectOptions(screen.getByRole("combobox", { name: "images source" }), "off");
   expect(screen.queryByRole("spinbutton", { name: "Seconds per image" })).toBeNull();
+  expect(screen.queryByRole("spinbutton", { name: "Zoom (%)" })).toBeNull();
   await user.selectOptions(screen.getByRole("combobox", { name: "audio source" }), "off");
   expect(
     screen.queryByRole("spinbutton", { name: "Silence at start and end (seconds)" }),

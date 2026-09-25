@@ -13,6 +13,7 @@ import {
   allowedSources,
   defaultEdgeSilenceSeconds,
   defaultImageSeconds,
+  defaultZoomPercent,
   usesNarrationPreparation,
 } from "@app/slices/admission/rules.js";
 import type { Entry } from "@app/slices/library/model.js";
@@ -62,6 +63,7 @@ export interface LegacyPlayFormState {
   // NaN while the typed text is not a number, so the shared rule refuses it in place.
   readonly imageSeconds: number;
   readonly edgeSilenceSeconds: number;
+  readonly zoomPercent: number;
   // Every value the user has typed, including one for a slot no prompt asks for any more:
   // unticking a prompt and ticking it again gives its field back with what was in it.
   readonly values: Readonly<Record<string, string>>;
@@ -81,6 +83,7 @@ export const freshForm: PlayFormState = {
   subtitles: defaultSubtitles,
   imageSeconds: defaultImageSeconds,
   edgeSilenceSeconds: defaultEdgeSilenceSeconds,
+  zoomPercent: defaultZoomPercent,
   values: {},
   provided: { research: "", article: "", audio: undefined, images: [], thumbnail: undefined },
 };
@@ -178,6 +181,7 @@ export function draftOf(input: DraftInput): RunDraft {
     silenceGapSeconds: input.silenceGapSeconds,
     imageSeconds: form.imageSeconds,
     edgeSilenceSeconds: form.edgeSilenceSeconds,
+    zoomPercent: form.zoomPercent,
   };
 }
 
