@@ -191,7 +191,14 @@ it("refuses to rerun over an accepted provider job until Retry retrieves it", as
     next = h.compose({ ...h.deps, db: reopened });
     expect(await recover(next.deps, h.projectId, { kind: "rerun", stage: "audio" })).toMatchObject({
       ok: false,
-      reason: "running",
+      reason: "accepted-job",
+      fields: [
+        {
+          field: "stage",
+          message:
+            "An accepted provider job for this section is waiting to be collected. Use Retry stage or Resume, then rerun.",
+        },
+      ],
     });
     expect(await recover(next.deps, h.projectId, { kind: "retry", stage: "audio" })).toMatchObject({
       ok: true,

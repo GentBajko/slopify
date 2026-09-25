@@ -1,5 +1,4 @@
 import { transact } from "../../kernel/db/tx.js";
-import { projectPaused } from "../admission/repo.js";
 import { withProjectControl } from "../control/lock.js";
 import type { RevisionView } from "../revisions/model.js";
 import { requestHash } from "../revisions/mutation-request.js";
@@ -10,6 +9,7 @@ import type { RebuildSelection } from "./model.js";
 import { type PreviewPlan, planPreview } from "./preview-plan.js";
 import { retainedPreviewPlan } from "./preview-retained.js";
 import { recipeProviderChoice } from "./recipe-provider-choice.js";
+import { acceptedJobMessage, activeConflict, conflictRefusal } from "./recovery-conflict.js";
 import {
   type RecoveryRequest,
   type RecoveryResult,
@@ -32,33 +32,6 @@ import { previewById, storePreview } from "./repo.js";
 import { admitCheckedPreview, type RebuildDeps, wakeRebuild } from "./service.js";
 import { checkReadiness } from "./service-readiness.js";
 
-// Active: an invocation in flight, a provider job the head can still retrieve, or admitted
-// work that can still start. Work behind a pause or a failed/canceled sibling of its
-// admission never starts, and leftovers of superseded revisions never run; counting either
-// would refuse every later rerun of the section.
-function activeConflict(deps: RebuildDeps, projectId: string, keys: readonly string[]): boolean {
-  const rows = deps.db
-    .prepare(
-      "SELECT p.work_key,r.logical_key FROM revision_work w " +
-        "JOIN revision_work_pieces p ON p.work_id=w.id " +
-        "LEFT JOIN revision_work_reservations r ON r.work_id=w.id AND r.piece_id=p.id " +
-        "WHERE w.project_id=? AND (w.state='running' OR " +
-        "(w.state='pending' AND p.state!='done' AND p.continuation IS NOT NULL AND " +
-        "r.revision_id=(SELECT revision_id FROM project_heads WHERE project_id=w.project_id)) OR " +
-        "(? AND w.state='pending' AND w.dispatch_state='allowed' AND NOT EXISTS(" +
-        "SELECT 1 FROM revision_work f WHERE f.admission_id=w.admission_id " +
-        "AND f.state IN ('failed','canceled'))))",
-    )
-    .all(projectId, projectPaused(deps.db, projectId) ? 0 : 1);
-  return rows.some((row) =>
-    keys.some(
-      (key) =>
-        row.work_key === key ||
-        row.logical_key === key ||
-        (key.endsWith(":future") && String(row.work_key).startsWith(key.slice(0, -6))),
-    ),
-  );
-}
 function credentialsStamp(deps: RebuildDeps, plan: PreviewPlan, view: RevisionView): string {
   const providers = new Set(
     plan.execution.recipes.flatMap((recipe) => {
@@ -151,16 +124,19 @@ export async function recoverProject(
             "SELECT result_revision_id FROM revision_mutations WHERE project_id=? AND idempotency_key=?",
           )
           .get(projectId, recoveryKey(input, "save"));
-        if (savedIntent === undefined && activeConflict(deps, projectId, affected))
-          return finish({ ok: false, reason: "running" });
+        const conflict =
+          savedIntent === undefined ? activeConflict(deps, projectId, affected) : undefined;
+        if (conflict !== undefined) return finish(conflictRefusal(conflict));
         const saved = await saveRevision(deps, {
           projectId,
           baseRevisionId: input.baseRevisionId,
           idempotencyKey: recoveryKey(input, "save"),
           edit: record.edit,
-          beforeCommit: () =>
-            activeConflict(deps, projectId, affected)
-              ? {
+          beforeCommit: () => {
+            const late = activeConflict(deps, projectId, affected);
+            return late === undefined
+              ? undefined
+              : {
                   ok: false,
                   reason: "invalid-edit",
                   currentRevisionId: currentRevisionId(deps.db, projectId) ?? null,
@@ -168,11 +144,13 @@ export async function recoverProject(
                     {
                       field: "stage",
                       message:
-                        "Wait for this section to finish, or Pause the project before rerunning it.",
+                        late === "running"
+                          ? "Wait for this section to finish, or Pause the project before rerunning it."
+                          : acceptedJobMessage,
                     },
                   ],
-                }
-              : undefined,
+                };
+          },
         });
         if (!saved.ok) return finish(saved);
         view = saved.view;
@@ -242,8 +220,9 @@ export async function recoverProject(
             },
           ],
         });
-      if (rerunKeys.length > 0 && activeConflict(deps, projectId, rerunKeys))
-        return finish({ ok: false, reason: "running" });
+      const conflict =
+        rerunKeys.length > 0 ? activeConflict(deps, projectId, rerunKeys) : undefined;
+      if (conflict !== undefined) return finish(conflictRefusal(conflict));
       storePreview(deps, preview.value.preview, preview.value.execution);
       const stored = previewById(deps.db, projectId, preview.value.preview.id);
       if (stored === undefined) throw new Error("Stored recovery preview is missing.");
@@ -300,8 +279,11 @@ export async function recoverProject(
         });
       if (ready.fields.length > 0)
         return finish({ ok: false, reason: "readiness", fields: [...ready.fields] });
-      if (prepared.rerunKeys.length > 0 && activeConflict(deps, projectId, prepared.rerunKeys))
-        return finish({ ok: false, reason: "running" });
+      const conflict =
+        prepared.rerunKeys.length > 0
+          ? activeConflict(deps, projectId, prepared.rerunKeys)
+          : undefined;
+      if (conflict !== undefined) return finish(conflictRefusal(conflict));
       const admitted = admitCheckedPreview(
         deps,
         prepared.plan.preview,

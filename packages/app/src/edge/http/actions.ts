@@ -162,6 +162,7 @@ export function actionRoutes(deps: AppDeps) {
       "cost-ack-required": "Use optional Advanced rebuild review for this request.",
       readiness: "Check the provider, model, voice or source files, then try Resume.",
       running: "Wait for this section to finish, or Pause the project before rerunning it.",
+      "accepted-job": "This section cannot be rerun yet.",
       "control-changed":
         "A newer control action took precedence. Check the project before using Resume.",
     };

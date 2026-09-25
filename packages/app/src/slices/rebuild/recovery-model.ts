@@ -33,6 +33,7 @@ export const recoveryResultSchema = z.discriminatedUnion("ok", [
       "cost-ack-required",
       "readiness",
       "running",
+      "accepted-job",
       "control-changed",
     ]),
     fields: z
