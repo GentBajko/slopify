@@ -1,6 +1,129 @@
 import { expect, it } from "vitest";
 import { dockerEngine } from "./engine.js";
 
+function claimFixture(rw = false) {
+  const containers = [
+    { id: "a".repeat(64), name: "historical", running: false, volume: "selected", rw },
+    { id: "b".repeat(64), name: "current", running: true, volume: "selected", rw: true },
+    { id: "c".repeat(64), name: "unrelated", running: false, volume: "other", rw: true },
+  ];
+  const calls: string[][] = [];
+  const e = dockerEngine(
+    {
+      exec: async (file, args) => {
+        calls.push([file, ...args]);
+        if (args.join(" ") === "container ls -a -q")
+          return { code: 0, stdout: containers.map((c) => c.id.slice(0, 12)).join("\n") };
+        if (args.join(" ") === "container ls -q")
+          return {
+            code: 0,
+            stdout: containers
+              .filter((c) => c.running)
+              .map((c) => c.id.slice(0, 12))
+              .join("\n"),
+          };
+        if (args[0] === "container" && args[1] === "ls" && args[3] === "--filter")
+          return { code: 0, stdout: "" };
+        if (args[0] === "inspect") {
+          const c = containers.find((c) => c.id.slice(0, 12) === args[1]);
+          if (!c) throw new Error("Unknown fixture container");
+          return {
+            code: 0,
+            stdout: JSON.stringify([
+              {
+                Id: c.id,
+                Name: `/${c.name}`,
+                Image: "sha256:fixture",
+                Config: { User: "1001:1002", Labels: null },
+                State: { Running: c.running },
+                HostConfig: { RestartPolicy: { Name: "no", MaximumRetryCount: 0 } },
+                Mounts: [
+                  {
+                    Type: "volume",
+                    Name: c.volume,
+                    Source: `/var/lib/docker/volumes/${c.volume}/_data`,
+                    Destination: "/data",
+                    RW: c.rw,
+                  },
+                ],
+                NetworkSettings: { Ports: {} },
+              },
+            ]),
+          };
+        }
+        throw new Error("Unexpected claim fixture command");
+      },
+    },
+    AbortSignal.timeout(1000),
+    {},
+  );
+  return { e, calls };
+}
+
+it.each([true, false])(
+  "rejects a stopped foreign volume claimant with RW=%s using only reads",
+  async (rw) => {
+    const { e, calls } = claimFixture(rw);
+    await expect(e.claims("selected", ["b".repeat(64)])).rejects.toThrow("historical");
+    expect(calls).toEqual([
+      ["docker", "container", "ls", "-a", "-q"],
+      [
+        "docker",
+        "container",
+        "ls",
+        "-a",
+        "--filter",
+        `name=^/${"a".repeat(12)}$`,
+        "--format",
+        "{{.ID}}",
+      ],
+      ["docker", "inspect", "a".repeat(12)],
+    ]);
+  },
+);
+
+it("allows exact historical and current IDs while ignoring unrelated volumes", async () => {
+  const { e, calls } = claimFixture();
+  await expect(e.claims("selected", ["a".repeat(64), "b".repeat(64)])).resolves.toBeUndefined();
+  expect(calls.filter((c) => c[1] === "inspect")).toEqual(
+    ["a", "b", "c"].map((id) => ["docker", "inspect", id.repeat(12)]),
+  );
+});
+
+it.each(["historical", "a".repeat(12)])(
+  "refuses a claimant permitted only by name or short ID: %s",
+  async (id) => {
+    const { e } = claimFixture();
+    await expect(e.claims("selected", [id, "b".repeat(64)])).rejects.toThrow("historical");
+  },
+);
+
+it("rejects an unpermitted running claimant after a permitted historical one", async () => {
+  const { e } = claimFixture();
+  await expect(e.claims("selected", ["a".repeat(64)])).rejects.toThrow("current");
+});
+
+it("keeps writer inventory limited to running containers", async () => {
+  const { e, calls } = claimFixture();
+  await expect(e.writers("selected", [], ["b".repeat(64)])).resolves.toBeUndefined();
+  expect(calls[0]).toEqual(["docker", "container", "ls", "-q"]);
+  expect(calls.filter((c) => c[1] === "inspect")).toEqual([["docker", "inspect", "b".repeat(12)]]);
+});
+
+it("refuses to clear claims when an inventoried container cannot be inspected", async () => {
+  const e = dockerEngine(
+    {
+      exec: async (_file, args) => {
+        if (args.join(" ") === "container ls -a -q") return { code: 0, stdout: "a".repeat(12) };
+        return { code: args[0] === "inspect" ? 1 : 0, stdout: "" };
+      },
+    },
+    AbortSignal.timeout(1000),
+    {},
+  );
+  await expect(e.claims("selected", [])).rejects.toThrow("Cannot verify volume claims");
+});
+
 it.each([
   ["unix:///var/run/docker.sock", [], "1001:1002"],
   ["unix:///run/user/1001/docker.sock", ["name=rootless"], "0:0"],

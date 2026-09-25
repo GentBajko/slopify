@@ -17,6 +17,7 @@ export interface Engine {
   image(ref: string): Promise<string>;
   version(image: string): Promise<string>;
   inspect(name: string): Promise<Container | null>;
+  claims(volume: string, permitted: readonly string[]): Promise<void>;
   writers(volume: string, paths: readonly string[], permitted: readonly string[]): Promise<void>;
   probe(c: DockerConfig, image: string, user: string, destination: string): Promise<void>;
   ensureVolume(volume: string): Promise<void>;
@@ -145,6 +146,18 @@ export function dockerEngine(
       port: port ? `${port.HostIp}:${port.HostPort}` : null,
     });
   }
+  async function claims(volume: string, permitted: readonly string[]): Promise<void> {
+    const ids = (await command(["container", "ls", "-a", "-q"])).split(/\s+/).filter(Boolean);
+    for (const id of ids) {
+      const c = await inspect(id);
+      if (!c) throw new Error("Cannot verify volume claims; an inventoried container is missing.");
+      if (
+        !permitted.includes(c.id) &&
+        c.mounts.some((m) => m.type === "volume" && m.name === volume)
+      )
+        throw new Error(`Another container claims installation volume ${volume}: ${c.name}.`);
+    }
+  }
   async function writers(
     volume: string,
     paths: readonly string[],
@@ -181,6 +194,7 @@ export function dockerEngine(
   return {
     command,
     inspect,
+    claims,
     writers,
     context: async (uid, gid) => {
       let endpoint = env.DOCKER_HOST;
