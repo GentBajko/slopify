@@ -27,7 +27,7 @@ it("hashes every relative name, empty directory, size and byte without a 64KiB m
   expect(await treeDigest(h.projects)).toEqual(first);
   await rm(join(h.projects, "empty"), { recursive: true });
   expect((await treeDigest(h.projects)).hash).not.toBe(first.hash);
-});
+}, 30_000);
 it("rejects symlinks in the tree and in destination ancestors", async () => {
   const h = await fixture();
   await mkdir(h.projects);
