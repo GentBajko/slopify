@@ -4,9 +4,10 @@ import type { SubtitleConfig } from "@app/slices/subtitles/model.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import type { Api, ProjectBody } from "@/api";
+import { readProject } from "@/api";
 import { useApp } from "@/app-context";
 import { keys } from "@/queries";
-import type { ActionResult, ProviderChanges } from "./api.js";
+import type { ActionResult, ProviderChanges, RecoveryActionResult } from "./api.js";
 import {
   cancelRun,
   deleteImage,
@@ -53,6 +54,7 @@ export interface ProjectActions {
   readonly pending: boolean;
   readonly refusal: Refusal | undefined;
   readonly dismissRefusal: () => void;
+  readonly notice?: string | undefined;
 }
 
 interface MutationInput {
@@ -64,14 +66,17 @@ export function useProjectActions(projectId: string): ProjectActions {
   const { api } = useApp();
   const queryClient = useQueryClient();
   const [refusal, setRefusal] = useState<Refusal | undefined>(undefined);
+  const [notice, setNotice] = useState<string | undefined>();
 
   const controls = useRef(new Map<string, RevisionControlInput>());
   const active = useRef(false);
   const mutation = useMutation({
-    mutationFn: async (input: MutationInput): Promise<ActionResult> => {
-      const kind = input.action.kind;
-      if (kind !== "pause" && kind !== "cancel") return perform(api, input.projectId, input.action);
-      const key = `${input.projectId}:${kind}`;
+    mutationFn: async (input: MutationInput): Promise<ActionResult | RecoveryActionResult> => {
+      const action = input.action;
+      if (!["pause", "cancel", "resume", "retry", "rerun"].includes(action.kind))
+        return perform(api, input.projectId, action);
+      const stage = action.kind === "retry" || action.kind === "rerun" ? action.stage : "";
+      const key = `${input.projectId}:${action.kind}:${stage}`;
       let control = controls.current.get(key);
       if (!control) {
         let base = queryClient.getQueryData<ProjectBody>(keys.project(input.projectId))?.revisionId;
@@ -84,17 +89,27 @@ export function useProjectActions(projectId: string): ProjectActions {
         controls.current.set(key, control);
       }
       // Keep the exact request after a transport/server fault, even if SSE advances the head.
-      const result = await (kind === "pause" ? pauseRun : cancelRun)(api, input.projectId, control);
+      const result = await perform(api, input.projectId, action, control);
+      if (result.ok) {
+        const fresh = await readProject(api, input.projectId);
+        queryClient.setQueryData(keys.project(input.projectId), fresh);
+      }
       controls.current.delete(key);
       return result;
     },
     onMutate: () => {
       setRefusal(undefined);
+      setNotice(undefined);
     },
     onSuccess: async (result, input) => {
       if (!result.ok) {
         setRefusal({ message: result.message, stage: stageOf(input.action) });
       } else {
+        setNotice(
+          "warnings" in result && result.warnings.length > 0
+            ? result.warnings.join(" ")
+            : undefined,
+        );
         void queryClient.invalidateQueries({ queryKey: keys.projects });
       }
       await queryClient.invalidateQueries({ queryKey: keys.project(input.projectId) });
@@ -129,6 +144,7 @@ export function useProjectActions(projectId: string): ProjectActions {
     dismissRefusal: () => {
       setRefusal(undefined);
     },
+    notice,
   };
 }
 
@@ -156,19 +172,28 @@ function stageOf(action: Action): StageKind | undefined {
 function perform(
   api: Api,
   projectId: string,
-  action: Exclude<Action, { readonly kind: "pause" | "cancel" }>,
-): Promise<ActionResult> {
+  action: Action,
+  control?: RevisionControlInput,
+): Promise<ActionResult | RecoveryActionResult> {
+  const required = (): RevisionControlInput => {
+    if (!control) throw new Error("A saved revision and request identity are required.");
+    return control;
+  };
   switch (action.kind) {
+    case "pause":
+      return pauseRun(api, projectId, required());
+    case "cancel":
+      return cancelRun(api, projectId, required());
     case "resume":
-      return resumeRun(api, projectId);
+      return resumeRun(api, projectId, required());
+    case "retry":
+      return retryStage(api, projectId, action.stage, required());
+    case "rerun":
+      return rerunStage(api, projectId, action.stage, required());
     case "providers":
       return updateProviders(api, projectId, action.choices);
     case "subtitles":
       return updateSubtitles(api, projectId, action.subtitles);
-    case "retry":
-      return retryStage(api, projectId, action.stage);
-    case "rerun":
-      return rerunStage(api, projectId, action.stage);
     case "save-article":
       return saveArticle(api, projectId, action.markdown);
     case "delete-image":

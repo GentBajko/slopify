@@ -3,6 +3,7 @@ import type { Stage } from "@app/slices/admission/model.js";
 import type { Output } from "@app/slices/storage/model.js";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { revisionView } from "@/project/revision-fixture";
 import type { Answer } from "@/test-app";
 import { jsonAnswer, testDeps, testVersion } from "@/test-app";
 
@@ -136,6 +137,11 @@ export const ready = [
   { id: "fal", family: "image", displayName: "fal.ai", readiness: { kind: "keyed", hasKey: true } },
 ];
 
+export const recoveryAccepted = {
+  ok: true,
+  value: { revisionId: "r1", admissionId: "a1", workIds: [], replayed: false, warnings: [] },
+};
+
 export function deps(routes: Readonly<Record<string, Answer>> = {}) {
   return testDeps({
     "GET /api/projects/p1": jsonAnswer(finished),
@@ -148,6 +154,11 @@ export function deps(routes: Readonly<Record<string, Answer>> = {}) {
     }),
     "GET /files/p1/article-md": textAnswer("# The Archlich\n\nMost villains want something."),
     "GET /files/p1/notes": textAnswer("Chapter 1 of 7."),
+    "POST /api/projects/p1/revisions/prepare": jsonAnswer({
+      ok: true,
+      created: false,
+      view: revisionView(),
+    }),
     ...routes,
   });
 }

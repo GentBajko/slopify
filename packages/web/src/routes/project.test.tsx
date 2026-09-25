@@ -4,7 +4,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { revisionView } from "@/project/revision-fixture";
 import { jsonAnswer, problemAnswer, renderRouted, testDeps, testOrigin } from "@/test-app";
 import { ProjectRoute } from "./project.js";
-import { body, deps, output, ready, selectProjectStage, stage } from "./project-fixtures.js";
+import {
+  body,
+  deps,
+  output,
+  ready,
+  recoveryAccepted,
+  selectProjectStage,
+  stage,
+} from "./project-fixtures.js";
 
 afterEach(cleanup);
 
@@ -135,7 +143,7 @@ describe("a failed stage", () => {
         "GET /api/projects/p1": jsonAnswer(failed),
         "POST /api/projects/p1/stages/images/retry": (request) => {
           retried();
-          return jsonAnswer({ ...failed, redone: ["images"] })(request);
+          return jsonAnswer(recoveryAccepted)(request);
         },
       }),
     );

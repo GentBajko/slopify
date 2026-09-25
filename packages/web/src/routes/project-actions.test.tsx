@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { jsonAnswer, problemAnswer, renderRouted } from "@/test-app";
 import { ProjectRoute } from "./project.js";
-import { deps, finished, selectProjectStage } from "./project-fixtures.js";
+import { deps, finished, recoveryAccepted, selectProjectStage } from "./project-fixtures.js";
 import { revisionRouteFixture } from "./project-revision.fake.js";
 
 afterEach(cleanup);
@@ -88,7 +88,7 @@ describe("the destructive actions", () => {
       deps({
         "POST /api/projects/p1/stages/video/rerun": (request) => {
           rerun();
-          return jsonAnswer(finished)(request);
+          return jsonAnswer(recoveryAccepted)(request);
         },
       }),
     );

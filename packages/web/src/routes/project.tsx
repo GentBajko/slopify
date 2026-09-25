@@ -100,6 +100,11 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
                 title={summary.title}
               />
             </ProjectHeader>
+            {actions.notice === undefined ? null : (
+              <p role="status" className="break-words text-small text-ink2">
+                {actions.notice}
+              </p>
+            )}
             {actions.refusal === undefined || actions.refusal.stage !== undefined ? null : (
               // A refused cancel belongs to the project, not to one stage; every other
               // refusal is drawn under the row whose control was pressed.

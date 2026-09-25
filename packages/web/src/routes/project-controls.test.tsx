@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { revisionView } from "@/project/revision-fixture";
 import { jsonAnswer, renderRouted, testOrigin } from "@/test-app";
 import { ProjectRoute } from "./project";
-import { body, deps, output, ready, stage } from "./project-fixtures";
+import { body, deps, output, ready, recoveryAccepted, stage } from "./project-fixtures";
 
 afterEach(cleanup);
 
@@ -65,7 +65,7 @@ describe("project pause and provider changes", () => {
           { status: 409, headers: { "content-type": "application/problem+json" } },
         );
       resumed = true;
-      return Response.json({});
+      return Response.json(recoveryAccepted);
     });
     const approve = vi.fn(() => Response.json({}));
     renderRouted(

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createApi } from "@/api";
+import { recoveryAccepted } from "@/routes/project-fixtures";
 import { fakeFetch, jsonAnswer, problemAnswer, testOrigin } from "@/test-app";
 import {
   cancelRun,
@@ -30,13 +31,19 @@ describe("the project page's actions", () => {
     expect(result.ok ? result.value.project.id : "").toBe("p1");
   });
 
-  it("posts a retry and a re-run at the stage's own route", async () => {
-    const routes = {
-      "POST /api/projects/p1/stages/images/retry": jsonAnswer(view),
-      "POST /api/projects/p1/stages/audio/rerun": jsonAnswer(view),
+  it("posts exact recovery identity to the selected section", async () => {
+    const sent: unknown[] = [];
+    const reply = async (request: Request): Promise<Response> => {
+      sent.push(await request.json());
+      return jsonAnswer(recoveryAccepted)(request);
     };
-    expect((await retryStage(api(routes), "p1", "images")).ok).toBe(true);
-    expect((await rerunStage(api(routes), "p1", "audio")).ok).toBe(true);
+    const client = api({
+      "POST /api/projects/p1/stages/images/retry": reply,
+      "POST /api/projects/p1/stages/audio/rerun": reply,
+    });
+    expect((await retryStage(client, "p1", "images", control)).ok).toBe(true);
+    expect((await rerunStage(client, "p1", "audio", control)).ok).toBe(true);
+    expect(sent).toEqual([control, control]);
   });
 
   it("puts the edited article as markdown", async () => {
@@ -76,6 +83,7 @@ describe("the project page's actions", () => {
         api({ "POST /api/projects/p1/stages/audio/rerun": problemAnswer("no", status) }),
         "p1",
         "audio",
+        control,
       );
       expect(result).toEqual({ ok: false, message: "no" });
     }

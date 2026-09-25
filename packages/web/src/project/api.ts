@@ -4,6 +4,7 @@ import {
   type RevisionControlInput,
   revisionControlSchema,
 } from "@app/slices/control/revision-control-schema.js";
+import { type RecoveryResult, recoveryResultSchema } from "@app/slices/rebuild/recovery-model.js";
 import type { SubtitleConfig } from "@app/slices/subtitles/model.js";
 import type { Api, ProjectBody } from "@/api";
 import { fileUrl } from "@/api";
@@ -52,16 +53,38 @@ export async function pauseRun(
   return controlRun(api, projectId, "pause", input);
 }
 
-export async function resumeRun(api: Api, projectId: string): Promise<ActionResult> {
-  return acted(await legacyRecovery(api, projectId, "resume"));
+export type RecoveryActionResult =
+  | {
+      readonly ok: true;
+      readonly value: Extract<RecoveryResult, { ok: true }>["value"];
+      readonly warnings: readonly string[];
+    }
+  | { readonly ok: false; readonly message: string };
+
+export function resumeRun(
+  api: Api,
+  projectId: string,
+  input: RevisionControlInput,
+): Promise<RecoveryActionResult> {
+  return recoveryRun(api, projectId, "resume", input);
 }
 
-// The recovery routes now require a revision control body, which these bodiless calls
-// omit, so the server refuses them until the browser sends a request identity.
-function legacyRecovery(api: Api, projectId: string, path: string): Promise<Response> {
-  return api.fetch(`${api.origin}/api/projects/${encodeURIComponent(projectId)}/${path}`, {
-    method: "POST",
-  });
+export function retryStage(
+  api: Api,
+  projectId: string,
+  kind: StageKind,
+  input: RevisionControlInput,
+): Promise<RecoveryActionResult> {
+  return recoveryRun(api, projectId, `stages/${kind}/retry`, input);
+}
+
+export function rerunStage(
+  api: Api,
+  projectId: string,
+  kind: StageKind,
+  input: RevisionControlInput,
+): Promise<RecoveryActionResult> {
+  return recoveryRun(api, projectId, `stages/${kind}/rerun`, input);
 }
 
 export async function updateProviders(
@@ -90,22 +113,6 @@ export async function updateSubtitles(
       body: JSON.stringify(subtitles),
     }),
   );
-}
-
-export async function retryStage(
-  api: Api,
-  projectId: string,
-  kind: StageKind,
-): Promise<ActionResult> {
-  return acted(await legacyRecovery(api, projectId, `stages/${kind}/retry`));
-}
-
-export async function rerunStage(
-  api: Api,
-  projectId: string,
-  kind: StageKind,
-): Promise<ActionResult> {
-  return acted(await legacyRecovery(api, projectId, `stages/${kind}/rerun`));
 }
 
 export async function saveArticle(
@@ -179,4 +186,29 @@ async function controlRun(
       body: JSON.stringify(body),
     }),
   );
+}
+
+async function recoveryRun(
+  api: Api,
+  projectId: string,
+  path: string,
+  input: RevisionControlInput,
+): Promise<RecoveryActionResult> {
+  const response = await api.fetch(
+    `${api.origin}/api/projects/${encodeURIComponent(projectId)}/${path}`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(revisionControlSchema.parse(input)),
+    },
+  );
+  if (response.ok) {
+    const result = recoveryResultSchema.parse(await response.json());
+    if (!result.ok) throw new Error("Invalid recovery success response");
+    return { ok: true, value: result.value, warnings: result.value.warnings };
+  }
+  const problem = await problemOf(response);
+  if (problem !== undefined && refusals.has(response.status))
+    return { ok: false, message: errorOf(response, problem).message };
+  throw errorOf(response, problem);
 }
