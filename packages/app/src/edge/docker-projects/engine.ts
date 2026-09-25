@@ -46,8 +46,8 @@ export function dockerEngine(
 ): Engine {
   const run = (args: readonly string[], localSignal = signal) =>
     runner.exec("docker", args, localSignal);
-  async function command(args: readonly string[]): Promise<string> {
-    const r = await run(args);
+  async function command(args: readonly string[], localSignal = signal): Promise<string> {
+    const r = await run(args, localSignal);
     if (r.code !== 0)
       throw new Error(`Docker ${args[0] ?? "command"} failed; recovery material is retained.`);
     return r.stdout.trim();
@@ -319,6 +319,8 @@ export function dockerEngine(
         "create",
         "--name",
         name,
+        "--label",
+        `io.slopify.reader=${id}`,
         "--network",
         "none",
         "--read-only",
@@ -332,7 +334,7 @@ export function dockerEngine(
       try {
         await command(["cp", `${reader}:/source/projects/.`, destination]);
       } finally {
-        await command(["rm", reader]);
+        await command(["rm", reader], AbortSignal.timeout(10_000));
       }
     },
     snapshot: async (j) => {

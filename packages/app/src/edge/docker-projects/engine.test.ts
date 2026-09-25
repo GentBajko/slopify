@@ -1,5 +1,58 @@
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { dockerEngine } from "./engine.js";
+
+it("labels a copy reader with its transaction at creation", async () => {
+  const exec = vi.fn(async () => ({ code: 0, stdout: "reader-id" }));
+  const e = dockerEngine({ exec }, new AbortController().signal, {});
+  await e.copy("image-id", "selected", null, "/staging", "transaction-id");
+  expect(exec.mock.calls[0]).toEqual([
+    "docker",
+    expect.arrayContaining([
+      "create",
+      "--name",
+      "slopify-reader-transaction-id",
+      "--label",
+      "io.slopify.reader=transaction-id",
+    ]),
+    expect.any(AbortSignal),
+  ]);
+});
+
+it("cleans up a canceled copy with an independent ten-second signal", async () => {
+  const outer = new AbortController();
+  const timeout = vi.spyOn(AbortSignal, "timeout");
+  const signals: AbortSignal[] = [];
+  const calls: string[][] = [];
+  const e = dockerEngine(
+    {
+      exec: async (_file, args, signal) => {
+        calls.push([...args]);
+        if (args[0] === "create") return { code: 0, stdout: "reader-id" };
+        if (args[0] === "cp") {
+          outer.abort(new Error("copy canceled"));
+          signal.throwIfAborted();
+        }
+        signals.push(signal);
+        signal.throwIfAborted();
+        return { code: 0, stdout: "" };
+      },
+    },
+    outer.signal,
+    {},
+  );
+  try {
+    await expect(e.copy("image-id", "selected", null, "/staging", "id")).rejects.toThrow(
+      "copy canceled",
+    );
+    expect(calls.at(-1)).toEqual(["rm", "reader-id"]);
+    expect(signals).toHaveLength(1);
+    expect(signals[0]).not.toBe(outer.signal);
+    expect(signals[0]?.aborted).toBe(false);
+    expect(timeout).toHaveBeenCalledWith(10_000);
+  } finally {
+    timeout.mockRestore();
+  }
+});
 
 function claimFixture(rw = false) {
   const containers = [

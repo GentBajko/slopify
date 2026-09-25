@@ -27,6 +27,37 @@ export async function assertVolumeClaims(
       j.volumeIdentity !== volumeIdentity
     )
       continue;
+    const readerName = `slopify-reader-${j.id}`;
+    const reader = await e.inspect(readerName);
+    if (reader) {
+      const transaction = await e.command([
+        "inspect",
+        "--format",
+        '{{index .Config.Labels "io.slopify.reader"}}',
+        reader.id,
+      ]);
+      const source = reader.mounts.find((m) => m.destination === "/source");
+      const bind = reader.mounts.find((m) => m.destination === "/source/projects");
+      if (
+        reader.name !== readerName ||
+        transaction !== j.id ||
+        reader.image !== j.image ||
+        reader.running ||
+        source?.type !== "volume" ||
+        source.name !== j.volume ||
+        source.rw ||
+        (j.sourceBind !== null &&
+          (bind?.type !== "bind" || bind.source !== j.sourceBind || bind.rw)) ||
+        reader.mounts.some(
+          (m) =>
+            m !== source &&
+            !(j.sourceBind !== null && m === bind) &&
+            !(m.type === "tmpfs" && m.destination === "/data"),
+        )
+      )
+        throw new Error("Copy reader identity or mounts conflict; recovery material is retained.");
+      await e.command(["rm", reader.id]);
+    }
     if (j.previous) {
       const prior = await e.inspect(j.previous.id);
       if (
