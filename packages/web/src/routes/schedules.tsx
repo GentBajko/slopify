@@ -266,8 +266,11 @@ function ScheduleCard({
         <div className="min-w-0 flex-1">
           <h2 className="break-words font-semibold">{schedule.name}</h2>
           <p className="text-small text-ink2">
-            {cadence} · {schedule.timezone} · {schedule.items.length} variant
-            {schedule.items.length === 1 ? "" : "s"} ·{" "}
+            {cadence} · {schedule.timezone} ·{" "}
+            {schedule.items.length === 0
+              ? "Template as saved"
+              : `${String(schedule.items.length)} ${schedule.items.length === 1 ? "topic" : "topics"} left`}{" "}
+            ·{" "}
             {schedule.deletedAt !== null
               ? `Deleted: ${formatScheduleDate(schedule.deletedAt, schedule.timezone)}`
               : schedule.nextRunAt === null

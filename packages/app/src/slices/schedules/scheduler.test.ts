@@ -30,7 +30,10 @@ it("skips a later occurrence until every project from the prior dispatch is term
         missedPolicy: "skip",
         overlapPolicy: "skip",
         spendLimitCents: null,
-        items: [{ title: "Second project", values: {} }],
+        items: [
+          { title: "First topic", values: {} },
+          { title: "Second topic", values: {} },
+        ],
       }).ok,
     ).toBe(true);
     const runner = createScheduleRunner(deps);
@@ -40,11 +43,21 @@ it("skips a later occurrence until every project from the prior dispatch is term
       .prepare("SELECT project_ids_json FROM schedule_runs WHERE schedule_id=?")
       .get(scheduleId);
     const projectIds = JSON.parse(String(first?.project_ids_json)) as string[];
-    expect(projectIds).toHaveLength(2);
+    // One run starts one project, from the first topic, and takes that topic off the queue.
+    expect(projectIds).toHaveLength(1);
     expect(h.events).toEqual(projectIds);
-    const [finishedId, outstandingId] = projectIds;
-    if (finishedId === undefined || outstandingId === undefined)
-      throw new Error("Expected the scheduled batch to record both projects.");
+    expect(
+      JSON.parse(
+        String(
+          h.deps.db.prepare("SELECT items_json FROM schedules WHERE id=?").get(scheduleId)
+            ?.items_json,
+        ),
+      ),
+    ).toEqual([{ title: "Second topic", values: {} }]);
+    const [outstandingId] = projectIds;
+    if (outstandingId === undefined) throw new Error("Expected the scheduled run's project.");
+    // A project from some other occurrence that has already finished (no row: never active).
+    const finishedId = randomUUID();
 
     // Migration/boot recovery freezes terminal history before a user can edit it.
     h.deps.db
@@ -52,13 +65,7 @@ it("skips a later occurrence until every project from the prior dispatch is term
       .run(scheduleId);
     expect(settleTerminalScheduleRuns(h.deps.db, "2026-09-12T00:01:45.000Z")).toBe(1);
 
-    // The first project has finished, but its batch sibling is still queued.
-    h.deps.db
-      .prepare("UPDATE stages SET state='done',finished_at=? WHERE project_id=?")
-      .run("2026-09-12T00:02:00.000Z", finishedId);
-    h.deps.db
-      .prepare("UPDATE project_queue SET state='finished' WHERE project_id=?")
-      .run(finishedId);
+    // The run's project is still queued.
     h.deps.db
       .prepare(
         "UPDATE stages SET state='pending',finished_at=NULL WHERE project_id=? AND kind='article'",
@@ -156,12 +163,18 @@ it("skips a later occurrence until every project from the prior dispatch is term
     expect(activeRun(h.deps.db, scheduleId, "2026-09-13T00:07:00.000Z")).toBe(false);
 
     await runner.tick(new Date("2026-09-14T00:01:30.000Z"));
-    expect(h.events).toHaveLength(4);
+    expect(h.events).toHaveLength(2);
     expect(
       h.deps.db
         .prepare("SELECT status FROM schedule_runs WHERE schedule_id=? ORDER BY scheduled_for")
         .all(scheduleId),
     ).toEqual([{ status: "succeeded" }, { status: "skipped" }, { status: "succeeded" }]);
+    // The run that takes the last topic completes the schedule.
+    expect(
+      h.deps.db
+        .prepare("SELECT status,next_run_at,items_json FROM schedules WHERE id=?")
+        .get(scheduleId),
+    ).toEqual({ status: "completed", next_run_at: null, items_json: "[]" });
   } finally {
     h.close();
   }
@@ -356,6 +369,68 @@ it("recovers admitted project ids from the exact Start receipt after a crash bef
         .prepare("SELECT status FROM schedule_runs WHERE schedule_id=? ORDER BY scheduled_for")
         .all(scheduleId),
     ).toEqual([{ status: "failed" }, { status: "succeeded" }]);
+  } finally {
+    h.close();
+  }
+});
+
+it("fills the chosen keyword and the project title from the first topic", async () => {
+  const h = startFixture();
+  try {
+    const templateId = randomUUID();
+    const scheduleId = randomUUID();
+    const document = {
+      ...h.document,
+      form: {
+        ...h.document.form,
+        title: "D&D Lore To Sleep To: {{Topic}}",
+        values: { Topic: "Szass Tam", "Min. Word Count": "1", "Max. Word Count": "2" },
+      },
+    };
+    expect(createTemplate(h.deps, { id: templateId, name: "Lore", document }).ok).toBe(true);
+    const deps = {
+      ...h.deps,
+      template: (id: string, version: number) => templateById(h.deps.db, id, version),
+    };
+    expect(
+      createSchedule(deps, {
+        id: scheduleId,
+        name: "Nightly lore",
+        templateId,
+        templateVersion: 1,
+        cadence: { kind: "daily", time: "00:01" },
+        timezone: "UTC",
+        items: [
+          { title: "Owlbears", values: {} },
+          { title: "Mimics", values: {} },
+        ],
+        topicKeyword: "Topic",
+        values: { "Min. Word Count": "15000", "Max. Word Count": "18000" },
+      }).ok,
+    ).toBe(true);
+
+    await createScheduleRunner(deps).tick(new Date("2026-09-12T00:01:30.000Z"));
+
+    expect(h.events).toHaveLength(1);
+    expect(
+      h.deps.db.prepare("SELECT title FROM projects WHERE id=?").get(h.events[0] ?? ""),
+    ).toEqual({ title: "D&D Lore To Sleep To: Owlbears" });
+    const draft = h.deps.db
+      .prepare("SELECT document_json FROM play_drafts ORDER BY created_at DESC LIMIT 1")
+      .get();
+    expect(JSON.parse(String(draft?.document_json)).form.values).toEqual({
+      Topic: "Owlbears",
+      "Min. Word Count": "15000",
+      "Max. Word Count": "18000",
+    });
+    expect(
+      JSON.parse(
+        String(
+          h.deps.db.prepare("SELECT items_json FROM schedules WHERE id=?").get(scheduleId)
+            ?.items_json,
+        ),
+      ),
+    ).toEqual([{ title: "Mimics", values: {} }]);
   } finally {
     h.close();
   }

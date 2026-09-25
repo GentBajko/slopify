@@ -235,6 +235,8 @@ function summary(
     overlapPolicy: input.overlapPolicy,
     spendLimitCents: input.spendLimitCents,
     items: input.items,
+    topicKeyword: input.topicKeyword,
+    values: input.values,
     status,
     version,
     nextRunAt,

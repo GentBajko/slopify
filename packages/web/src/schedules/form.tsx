@@ -1,14 +1,18 @@
+import { render } from "@app/slices/admission/substitute.js";
 import { type Cadence, validTimeZone } from "@app/slices/schedules/calendar.js";
 import type {
   ScheduleCreate,
   ScheduleSummary,
   ScheduleUpdate,
 } from "@app/slices/schedules/model.js";
+import { queueMax } from "@app/slices/schedules/schema.js";
+import { useQuery } from "@tanstack/react-query";
 import { type FormEvent, type ReactElement, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { InfoTip } from "@/components/kit/info-tip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { readProjectTemplate } from "@/templates/api";
 import { createSchedule, updateSchedule } from "./api";
 import { localScheduleTime, scheduleInstant } from "./time";
 
@@ -65,17 +69,11 @@ export function ScheduleForm({
     editing?.missedPolicy ?? "skip",
   );
   const [spendLimit, setSpendLimit] = useState(editing?.spendLimitCents?.toString() ?? "");
-  const [variants, setVariants] = useState<readonly EditableVariant[]>(() =>
-    (editing?.items ?? []).map((item) => ({
-      id: crypto.randomUUID(),
-      title: item.title,
-      values: Object.entries(item.values).map(([name, value]) => ({
-        id: crypto.randomUUID(),
-        name,
-        value,
-      })),
-    })),
+  const [topics, setTopics] = useState(() =>
+    (editing?.items ?? []).map((item) => item.title).join("\n"),
   );
+  const [topicKeyword, setTopicKeyword] = useState<string | null>(editing?.topicKeyword ?? null);
+  const [fixed, setFixed] = useState<Readonly<Record<string, string>>>(editing?.values ?? {});
   const [saving, setSaving] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const active = useRef(false);
@@ -93,12 +91,37 @@ export function ScheduleForm({
             : template,
         );
   const selectedTemplate = options.find((template) => template.id === templateId);
+  const template = useQuery({
+    queryKey: ["project-template", templateId],
+    enabled: templateId !== "",
+    queryFn: async () => {
+      const reply = await readProjectTemplate(api, templateId);
+      if (!reply.ok) throw new Error(reply.message);
+      return reply.value;
+    },
+  });
+  const form = template.data?.document.form;
+  const keywords = form === undefined ? [] : Object.keys(form.values);
+  // Until the person picks one: the keyword the project title uses, else the first.
+  const chosenKeyword =
+    topicKeyword !== null && keywords.includes(topicKeyword)
+      ? topicKeyword
+      : (keywords.find((name) => form?.title.includes(`{{${name}}}`)) ?? keywords[0] ?? null);
+  const queue = topicLines(topics);
 
   async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     if (active.current || pending) return;
     if (!selectedTemplate && !attempt.current) {
       onError("Choose a template before saving the schedule.");
+      return;
+    }
+    if (queue.length > queueMax) {
+      onError(`Keep the list to ${String(queueMax)} topics or fewer.`);
+      return;
+    }
+    if (queue.some((line) => line.length > 200)) {
+      onError("Each topic can be at most 200 characters.");
       return;
     }
     if (kind === "weekly" && days.length === 0) {
@@ -134,7 +157,17 @@ export function ScheduleForm({
           missedPolicy,
           overlapPolicy: "skip",
           spendLimitCents: limit,
-          items: variantInputs(variants),
+          items: queue.map((title) => ({
+            title,
+            // A topic kept from an older schedule keeps the values it was saved with.
+            values: editing?.items.find((item) => item.title === title)?.values ?? {},
+          })),
+          topicKeyword: chosenKeyword,
+          values: Object.fromEntries(
+            keywords
+              .filter((name) => name !== chosenKeyword)
+              .map((name) => [name, fixed[name] ?? form?.values[name] ?? ""]),
+          ),
         };
         attempt.current = editing
           ? { ...input, baseVersion: editing.version, mutationId: crypto.randomUUID() }
@@ -159,7 +192,7 @@ export function ScheduleForm({
       attempt.current = null;
       setUncertain(false);
       setName("");
-      setVariants([]);
+      setTopics("");
       onCreated();
     } catch (error) {
       setUncertain(attempt.current !== null);
@@ -319,7 +352,20 @@ export function ScheduleForm({
               placeholder="1000"
             />
           </label>
-          <VariantFields variants={variants} onChange={setVariants} />
+          <TopicFields
+            topics={topics}
+            onTopics={setTopics}
+            queue={queue}
+            keywords={keywords}
+            keyword={chosenKeyword}
+            onKeyword={setTopicKeyword}
+            values={Object.fromEntries(
+              keywords.map((name) => [name, fixed[name] ?? form?.values[name] ?? ""]),
+            )}
+            onValue={(name, value) => setFixed((current) => ({ ...current, [name]: value }))}
+            title={form?.title}
+            loading={templateId !== "" && template.isPending}
+          />
         </fieldset>
         <div className="sticky bottom-[-16px] -mx-4 mt-4 flex gap-2 border-t border-line bg-panel px-4 py-3">
           <Button
@@ -344,150 +390,126 @@ export function ScheduleForm({
   );
 }
 
-interface EditableVariant {
-  readonly id: string;
-  readonly title: string;
-  readonly values: readonly {
-    readonly id: string;
-    readonly name: string;
-    readonly value: string;
-  }[];
+// One topic per line; blank lines and surrounding spaces do not count.
+function topicLines(text: string): readonly string[] {
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
 }
 
-function variantInputs(variants: readonly EditableVariant[]): ScheduleCreate["items"] {
-  return variants.map((variant) => {
-    const names = variant.values.map((value) => value.name.trim());
-    if (names.some((name) => !name) || new Set(names).size !== names.length)
-      throw new Error("Each variant needs non-empty, unique keyword names.");
-    return {
-      title: variant.title,
-      values: Object.fromEntries(variant.values.map(({ name, value }) => [name.trim(), value])),
-    };
-  });
-}
-
-function VariantFields({
-  variants,
-  onChange,
+function TopicFields({
+  topics,
+  onTopics,
+  queue,
+  keywords,
+  keyword,
+  onKeyword,
+  values,
+  onValue,
+  title,
+  loading,
 }: {
-  readonly variants: readonly EditableVariant[];
-  readonly onChange: (variants: readonly EditableVariant[]) => void;
+  readonly topics: string;
+  readonly onTopics: (text: string) => void;
+  readonly queue: readonly string[];
+  readonly keywords: readonly string[];
+  readonly keyword: string | null;
+  readonly onKeyword: (name: string) => void;
+  readonly values: Readonly<Record<string, string>>;
+  readonly onValue: (name: string, value: string) => void;
+  readonly title: string | undefined;
+  readonly loading: boolean;
 }): ReactElement {
-  const replace = (next: EditableVariant) =>
-    onChange(variants.map((variant) => (variant.id === next.id ? next : variant)));
-  const textClass =
+  const fieldClass =
     "min-h-8 w-full rounded-control border border-line2 bg-panel2 px-[10px] py-[5px] text-small";
+  const next = queue[0];
+  const preview =
+    title === undefined
+      ? undefined
+      : render(title, {
+          ...values,
+          ...(keyword !== null && next !== undefined ? { [keyword]: next } : {}),
+        });
+  const titleUsesTopic = keyword !== null && title?.includes(`{{${keyword}}}`) === true;
   return (
     <fieldset className="space-y-3 sm:col-span-2">
       <legend className="flex items-center gap-1">
-        Keyword variants (optional)
-        <InfoTip label="Keyword variants">
-          <p>The base template run is always included. Add up to 49 variants.</p>
+        Topics (optional)
+        <InfoTip label="Topics">
+          <p>
+            One topic per line. Each run starts one project with the first topic and removes it from
+            the list; the schedule completes when the list is empty. With no topics, every run uses
+            the template as saved.
+          </p>
         </InfoTip>
       </legend>
-      {variants.map((variant, index) => (
-        <fieldset key={variant.id} className="space-y-2 rounded-control border border-line p-3">
-          <legend className="engraved px-1 text-ink3">Variant {index + 1}</legend>
-          <div className="flex items-end gap-2">
-            <label className="block min-w-0 flex-1 space-y-1">
-              <span className="text-small text-ink2">Title</span>
-              <input
-                required
-                maxLength={200}
-                aria-label={`Variant ${index + 1} title`}
-                className={textClass}
-                value={variant.title}
-                onChange={(event) => replace({ ...variant, title: event.target.value })}
-              />
-            </label>
-            <Button
-              type="button"
-              variant="ghost"
-              aria-label={`Remove variant ${index + 1}`}
-              onClick={() => onChange(variants.filter((value) => value.id !== variant.id))}
+      <label className="block space-y-1" htmlFor="schedule-topics">
+        <span className="text-small text-ink2">
+          {queue.length === 0
+            ? "One per line"
+            : `${String(queue.length)} ${queue.length === 1 ? "topic" : "topics"} · next: ${next ?? ""}`}
+        </span>
+        <textarea
+          id="schedule-topics"
+          rows={6}
+          className={fieldClass}
+          value={topics}
+          onChange={(event) => onTopics(event.target.value)}
+          placeholder={"Owlbears\nGelatinous Cubes\nMimics"}
+        />
+      </label>
+      {loading ? (
+        <p className="text-small text-ink3">Reading the template's keywords…</p>
+      ) : keywords.length === 0 ? (
+        <p className="text-small text-ink3">
+          This template has no keywords such as {"{{Topic}}"}, so each topic becomes the project's
+          title.
+        </p>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block space-y-1" htmlFor="schedule-topic-keyword">
+            <span className="text-small text-ink2">Each topic fills</span>
+            <select
+              id="schedule-topic-keyword"
+              value={keyword ?? ""}
+              onChange={(event) => onKeyword(event.target.value)}
+              className="h-8 w-full rounded-control border border-line2 bg-panel2 px-2 text-small"
             >
-              Remove
-            </Button>
-          </div>
-          {variant.values.map((keyword, keywordIndex) => (
-            <div
-              key={keyword.id}
-              className="grid items-end gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto]"
-            >
-              <label className="block space-y-1">
-                <span className="text-small text-ink2">Keyword</span>
+              {keywords.map((name) => (
+                <option key={name} value={name}>
+                  {`{{${name}}}`}
+                </option>
+              ))}
+            </select>
+          </label>
+          {keywords
+            .filter((name) => name !== keyword)
+            .map((name) => (
+              <label key={name} className="block space-y-1">
+                <span className="text-small text-ink2">{name} (every run)</span>
                 <input
-                  required
-                  maxLength={200}
-                  aria-label={`Variant ${index + 1} keyword ${keywordIndex + 1} name`}
-                  className={textClass}
-                  value={keyword.name}
-                  onChange={(event) =>
-                    replace({
-                      ...variant,
-                      values: variant.values.map((value) =>
-                        value.id === keyword.id ? { ...value, name: event.target.value } : value,
-                      ),
-                    })
-                  }
-                />
-              </label>
-              <label className="block space-y-1">
-                <span className="text-small text-ink2">Value</span>
-                <textarea
                   maxLength={10000}
-                  rows={1}
-                  aria-label={`Variant ${index + 1} keyword ${keywordIndex + 1} value`}
-                  className={textClass}
-                  value={keyword.value}
-                  onChange={(event) =>
-                    replace({
-                      ...variant,
-                      values: variant.values.map((value) =>
-                        value.id === keyword.id ? { ...value, value: event.target.value } : value,
-                      ),
-                    })
-                  }
+                  aria-label={`${name} for every run`}
+                  className={fieldClass}
+                  value={values[name] ?? ""}
+                  onChange={(event) => onValue(name, event.target.value)}
                 />
               </label>
-              <Button
-                type="button"
-                variant="ghost"
-                aria-label={`Remove keyword ${keywordIndex + 1} from variant ${index + 1}`}
-                onClick={() =>
-                  replace({
-                    ...variant,
-                    values: variant.values.filter((value) => value.id !== keyword.id),
-                  })
-                }
-              >
-                Remove
-              </Button>
-            </div>
-          ))}
-          <Button
-            type="button"
-            variant="ghost"
-            aria-label={`Add keyword to variant ${index + 1}`}
-            onClick={() =>
-              replace({
-                ...variant,
-                values: [...variant.values, { id: crypto.randomUUID(), name: "", value: "" }],
-              })
-            }
-          >
-            Add keyword
-          </Button>
-        </fieldset>
-      ))}
-      <Button
-        type="button"
-        className="min-h-10"
-        disabled={variants.length >= 49}
-        onClick={() => onChange([...variants, { id: crypto.randomUUID(), title: "", values: [] }])}
-      >
-        Add variant
-      </Button>
+            ))}
+        </div>
+      )}
+      {preview !== undefined && next !== undefined ? (
+        <p className="text-small text-ink2">
+          Next project: <span className="font-semibold text-ink">{preview}</span>
+          {titleUsesTopic ? null : (
+            <span className="block text-ink3">
+              The template's project title does not use {`{{${keyword ?? "keyword"}}}`}, so every
+              project gets this title. Edit the template's title to include it.
+            </span>
+          )}
+        </p>
+      ) : null}
     </fieldset>
   );
 }

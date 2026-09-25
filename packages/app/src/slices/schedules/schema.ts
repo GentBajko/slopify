@@ -7,14 +7,19 @@ const keywordName = z
   .min(1)
   .max(200)
   .refine((value) => value === value.trim(), "Keyword names cannot start or end with spaces.");
+const values = z.record(keywordName, z.string().max(10000)).readonly();
+// A queued topic. Each run takes the first one and removes it once its project starts.
+// `values` is only filled on schedules saved before topics had one keyword.
 const item = z
   .object({
     title: z.string().trim().min(1).max(200),
-    values: z.record(keywordName, z.string().max(10000)).readonly(),
+    values,
   })
   .strict()
   .readonly();
 const policy = z.enum(["skip", "run-once"]);
+// Enough for a year of daily runs, pasted as one list.
+export const queueMax = 500;
 export const scheduleCreateSchema = z
   .object({
     id,
@@ -26,7 +31,11 @@ export const scheduleCreateSchema = z
     missedPolicy: policy.default("skip"),
     overlapPolicy: z.literal("skip").default("skip"),
     spendLimitCents: z.number().int().nonnegative().nullable().default(null),
-    items: z.array(item).max(49).default([]).readonly(),
+    items: z.array(item).max(queueMax).default([]).readonly(),
+    // The template keyword each queued topic fills, such as "Topic".
+    topicKeyword: keywordName.nullable().default(null),
+    // Keywords every run uses as they are, such as the word counts.
+    values: values.default({}),
   })
   .strict()
   .readonly();
@@ -55,6 +64,8 @@ export const scheduleSummarySchema = z
     overlapPolicy: z.literal("skip"),
     spendLimitCents: z.number().int().nonnegative().nullable(),
     items: z.array(item).readonly(),
+    topicKeyword: z.string().nullable().default(null),
+    values: values.default({}),
     status: z.enum(["active", "paused", "completed", "canceled"]),
     version: z.number().int().positive(),
     nextRunAt: z.string().datetime({ offset: true }).nullable(),

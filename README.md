@@ -161,7 +161,8 @@ under `$XDG_DATA_HOME/slopify/host-cli` or `~/.local/share/slopify/host-cli`.
    creates a retained revision; Slopify shows exactly which outputs are affected and rebuilds
    only when you ask. Earlier revisions are on the History tab.
 8. Save a Play setup or project revision as a template. Apply it to make a fresh editable
-   draft, or schedule one-off, daily or weekly runs with keyword variants and a spend ceiling.
+   draft, or schedule one-off, daily or weekly runs with a spend ceiling. Paste a list of topics,
+   one per line: each run fills one template keyword with the next topic and removes it.
 9. Add review checkpoints in Review when you want to inspect Audio, Images or Video before it
    runs. Independent stages continue while the selected step and its dependents wait; approve
    them on the project's Checkpoints tab.

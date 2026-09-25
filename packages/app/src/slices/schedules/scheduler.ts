@@ -1,4 +1,5 @@
 import { transact } from "../../kernel/db/tx.js";
+import { render } from "../admission/substitute.js";
 import { reviewDraft } from "../play-drafts/review.js";
 import { createDraft } from "../play-drafts/service.js";
 import { startPlayDraft } from "../play-drafts/start.js";
@@ -114,13 +115,11 @@ async function execute(deps: ScheduleDeps, claimed: ClaimedScheduleRun): Promise
       id: claimed.schedule.templateId,
       version: claimed.schedule.templateVersion,
     });
+    const topic = claimed.schedule.items[0];
     const fresh = {
       ...document,
-      variants: claimed.schedule.items.map((item) => ({
-        id: deps.uuid(),
-        title: item.title,
-        values: item.values,
-      })),
+      form: runForm(document.form, claimed.schedule, topic),
+      variants: [],
     };
     const draft = createDraft(deps, { id: deps.uuid(), document: fresh });
     if (!draft.ok) throw new ScheduleDispatchError("conflict");
@@ -150,7 +149,7 @@ async function execute(deps: ScheduleDeps, claimed: ClaimedScheduleRun): Promise
       requestId: started.value.requestId,
       projectIds: started.value.projectIds,
     };
-    recordRunDispatch(deps.db, run, deps.clock.now().toISOString());
+    recordRunDispatch(deps.db, run, deps.clock.now().toISOString(), topic);
     run = {
       ...run,
       status: "succeeded",
@@ -165,6 +164,28 @@ async function execute(deps: ScheduleDeps, claimed: ClaimedScheduleRun): Promise
     };
   }
   updateRun(deps.db, run);
+}
+
+// One project per run. The first queued topic fills the chosen keyword, the schedule's fixed
+// values fill the rest over the template's own, and the template's title is filled from the
+// same keywords, so "D&D Lore: {{Topic}}" names the project after the topic. A topic saved
+// before topics had a keyword brings its own title and values instead.
+function runForm<
+  F extends { readonly title: string; readonly values: Readonly<Record<string, string>> },
+>(form: F, schedule: ScheduleSummary, topic: ScheduleSummary["items"][number] | undefined): F {
+  const values = {
+    ...form.values,
+    ...schedule.values,
+    ...(topic?.values ?? {}),
+    ...(topic !== undefined && schedule.topicKeyword !== null
+      ? { [schedule.topicKeyword]: topic.title }
+      : {}),
+  };
+  const title =
+    topic !== undefined && schedule.topicKeyword === null
+      ? topic.title
+      : render(form.title, values);
+  return { ...form, title, values };
 }
 
 class ScheduleDispatchError extends Error {

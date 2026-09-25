@@ -7,6 +7,7 @@ import { scheduleUpdateSchema } from "@app/slices/schedules/schema.js";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it, vi } from "vitest";
+import { freshDraftDocument } from "@/play/draft-state";
 import { SchedulesRoute } from "@/routes/schedules";
 import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
 
@@ -321,18 +322,15 @@ it("retries an uncertain create with the exact identity and input", async () => 
   expect(bodies[1]).toEqual(bodies[0]);
 });
 
-it("edits a variant without changing punctuation or multiline values in other variants", async () => {
+it("keeps an older topic's saved values when the list is edited", async () => {
   const user = userEvent.setup();
   const items = [
-    { title: "A | B\nC", values: { "topic,name": "One, two\nthree | four" } },
+    { title: "A | B", values: { "topic,name": "One, two\nthree | four" } },
     { title: "Second", values: { topic: "Before" } },
   ];
   const update = vi.fn(async (request: Request) => {
     expect(await request.json()).toMatchObject({
-      items: [
-        items[0],
-        { title: "Changed", values: { topic: "After, with | punctuation\nand a newline" } },
-      ],
+      items: [items[0], { title: "Changed", values: {} }],
     });
     return Response.json({ ...summary, version: 2 });
   });
@@ -347,13 +345,9 @@ it("edits a variant without changing punctuation or multiline values in other va
     }),
   );
   await user.click(await screen.findByRole("button", { name: "Edit" }));
-  await user.clear(screen.getByLabelText("Variant 2 title"));
-  await user.type(screen.getByLabelText("Variant 2 title"), "Changed");
-  await user.clear(screen.getByLabelText("Variant 2 keyword 1 value"));
-  await user.type(
-    screen.getByLabelText("Variant 2 keyword 1 value"),
-    "After, with | punctuation\nand a newline",
-  );
+  const topics = screen.getByLabelText(/topics · next: A \| B/);
+  await user.clear(topics);
+  await user.type(topics, "A | B{Enter}Changed");
   await user.click(screen.getByRole("button", { name: "Save changes" }));
   await waitFor(() => expect(update).toHaveBeenCalledOnce());
 });
@@ -415,14 +409,27 @@ it("keeps deleted schedule history discoverable with project links and no live c
   );
 });
 
-it("creates structured variants and refuses duplicate keyword names before submission", async () => {
+it("queues pasted topics into the chosen keyword with fixed values for the rest", async () => {
   const user = userEvent.setup();
   const create = vi.fn(async (request: Request) => {
     expect(await request.json()).toMatchObject({
-      items: [{ title: "A | B", values: { topic: "One, two\nthree" } }],
+      items: [
+        { title: "Owlbears", values: {} },
+        { title: "Mimics", values: {} },
+      ],
+      topicKeyword: "Topic",
+      values: { "Min. Word Count": "15000", "Max. Word Count": "18000" },
     });
     return Response.json(summary);
   });
+  const document = {
+    ...freshDraftDocument,
+    form: {
+      ...freshDraftDocument.form,
+      title: "D&D Lore To Sleep To: {{Topic}}",
+      values: { Topic: "Szass Tam", "Min. Word Count": "1", "Max. Word Count": "18000" },
+    },
+  };
   renderRouted(
     <SchedulesRoute />,
     testDeps({
@@ -430,27 +437,29 @@ it("creates structured variants and refuses duplicate keyword names before submi
       "GET /api/project-templates": jsonAnswer({
         templates: [{ id: templateId, name: "Stories", version: 1, updatedAt: summary.updatedAt }],
       }),
+      [`GET /api/project-templates/${templateId}`]: jsonAnswer({
+        template: {
+          id: templateId,
+          name: "Stories",
+          version: 1,
+          updatedAt: summary.updatedAt,
+          document,
+        },
+      }),
       "POST /api/schedules": create,
     }),
   );
   await openNew(user);
-  await user.type(screen.getByLabelText("Name"), "Structured");
+  await user.type(screen.getByLabelText("Name"), "Nightly lore");
   await screen.findByRole("option", { name: "Stories · v1" });
   await user.selectOptions(screen.getByLabelText("Template"), templateId);
-  await user.click(screen.getByRole("button", { name: "Add variant" }));
-  await user.type(screen.getByLabelText("Variant 1 title"), "A | B");
-  await user.click(screen.getByRole("button", { name: "Add keyword to variant 1" }));
-  await user.type(screen.getByLabelText("Variant 1 keyword 1 name"), " topic ");
-  await user.type(screen.getByLabelText("Variant 1 keyword 1 value"), "One, two\nthree");
-  await user.click(screen.getByRole("button", { name: "Add keyword to variant 1" }));
-  await user.type(screen.getByLabelText("Variant 1 keyword 2 name"), "topic");
-  await user.click(screen.getByRole("button", { name: "Save schedule" }));
-  expect(await screen.findByRole("alert")).toHaveProperty(
-    "textContent",
-    expect.stringContaining("unique keyword names"),
-  );
-  expect(create).not.toHaveBeenCalled();
-  await user.click(screen.getByRole("button", { name: "Remove keyword 2 from variant 1" }));
+  await user.type(screen.getByLabelText("One per line"), "  Owlbears {Enter}{Enter}Mimics");
+  await screen.findByLabelText("Each topic fills");
+  expect(screen.getByLabelText<HTMLSelectElement>("Each topic fills").value).toBe("Topic");
+  const min = screen.getByLabelText("Min. Word Count for every run");
+  await user.clear(min);
+  await user.type(min, "15000");
+  expect(screen.getByText("D&D Lore To Sleep To: Owlbears")).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Save schedule" }));
   await waitFor(() => expect(create).toHaveBeenCalledOnce());
 });

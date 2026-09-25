@@ -94,7 +94,7 @@ Narration Preparation follows optional Audio disclosure: Off by default, a named
 - StatusSlots are `role="status"`, or `alert` for errors; toasts follow the same split.
 - `prefers-reduced-motion` honoured per `02-system.md`; the marketing recording pauses and restores native controls, while its default display loops without controls (`packages/site/public/main.js`, `index.html`).
 - Files-mode MP4 preview offers a native English caption track; burned output already contains captions and receives no duplicate track. SRT/VTT download links remain available for either mode (`packages/web/src/project/body-video.tsx`).
-- Every icon-only control has a label; every input has a visible label above it, or a short visible label with a full accessible name where rows repeat (schedule keyword variants).
+- Every icon-only control has a label; every input has a visible label above it, or a short visible label with a full accessible name where rows repeat (schedule fixed keyword values).
 - Interface copy: the product's own words, one register per page, zero em-dashes, controls name their action.
 
 ## Copy register

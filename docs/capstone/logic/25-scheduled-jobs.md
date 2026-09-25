@@ -29,15 +29,15 @@ A schedule stores a local recurrence over one immutable project-template revisio
 
 ## Trigger & preconditions
 
-Creation requires a valid name, existing template ID/version, once/daily/weekly cadence, IANA timezone, missed-run policy, fixed overlap policy, optional nonnegative cent ceiling and at most 49 keyword variants. The referenced template must resolve to a future next occurrence (`packages/app/src/slices/schedules/schema.ts:13`, `packages/app/src/slices/schedules/service.ts:38`).
+Creation requires a valid name, existing template ID/version, once/daily/weekly cadence, IANA timezone, missed-run policy, fixed overlap policy, optional nonnegative cent ceiling, and an optional queue of at most 500 topics with the template keyword they fill (`topicKeyword`) and fixed values for the other keywords (`values`). The referenced template must resolve to a future next occurrence (`packages/app/src/slices/schedules/schema.ts:13`, `packages/app/src/slices/schedules/service.ts:38`).
 
 ## Steps
 
 1. Create validates the immutable template revision, calculates the next local occurrence in its timezone and persists an idempotent active schedule. Saving does not run it (`packages/app/src/slices/schedules/service.ts:38`, `packages/app/src/slices/schedules/calendar.ts:35`).
 2. Boot recovers schedule-run rows left running, settles already-terminal admitted occurrences, ticks immediately and then every 15 seconds. A mutation lease and process-local guard prevent update/shutdown races and overlapping ticks (`packages/app/src/main.ts:263`, `packages/app/src/main.ts:303`, `packages/app/src/slices/schedules/scheduler.ts:25`).
 3. A due claim observes the missed-run grace, skip policy and active-run exclusion, inserts a unique occurrence record, then advances the next occurrence or completes a one-off schedule (`packages/app/src/slices/schedules/scheduler.ts:43`, `packages/app/src/slices/schedules/repo.ts:149`).
-4. The claimed occurrence instantiates a fresh template-derived draft, applies title/keyword variants, resolves Play review and rejects high estimates above the configured ceiling. Unknown pricing blocks when a ceiling is configured (`packages/app/src/slices/schedules/scheduler.ts:96`).
-5. Successful Start records the resulting project IDs and marks the schedule occurrence succeeded. This status records successful admission; project stages continue through the normal runner (`packages/app/src/slices/schedules/scheduler.ts:124`).
+4. The claimed occurrence instantiates a fresh template-derived draft for one project: the first queued topic fills `topicKeyword`, `values` fill the other keywords over the template's own, and the template's project title is rendered with the same keywords (so `D&D Lore: {{Topic}}` names the project after the topic). A topic saved before topics had a keyword instead becomes the title and brings its own values. It then resolves Play review and rejects high estimates above the configured ceiling. Unknown pricing blocks when a ceiling is configured (`packages/app/src/slices/schedules/scheduler.ts:96`).
+5. Successful Start records the resulting project ID, removes the topic it used from the queue (matched by value, in the same transaction) and marks the schedule occurrence succeeded; the run that empties the queue completes the schedule. A run that fails before Start keeps its topic. This status records successful admission; project stages continue through the normal runner (`packages/app/src/slices/schedules/scheduler.ts:124`).
 
 ## Branches
 
@@ -51,7 +51,7 @@ Stale base versions, reused mutation IDs with changed bodies, missing template v
 
 ## State transitions
 
-Schedules move active ↔ paused, active/paused → canceled, and a once schedule becomes completed after its occurrence is claimed. Occurrences move running → succeeded, failed or skipped and retain timestamps, project IDs and a stable reason (`packages/app/src/slices/schedules/service.ts:110`, `packages/app/src/slices/schedules/scheduler.ts:43`).
+Schedules move active ↔ paused, active/paused → canceled, and a once schedule becomes completed after its occurrence is claimed, and a schedule with a topic queue becomes completed when a run starts its last topic. Occurrences move running → succeeded, failed or skipped and retain timestamps, project IDs and a stable reason (`packages/app/src/slices/schedules/service.ts:110`, `packages/app/src/slices/schedules/scheduler.ts:43`).
 
 ## Invariants
 

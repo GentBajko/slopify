@@ -22,6 +22,8 @@ const rowSchema = z.object({
   overlap_policy: z.string(),
   spend_limit_cents: z.number().nullable(),
   items_json: z.string(),
+  topic_keyword: z.string().nullable(),
+  values_json: z.string(),
   status: z.string(),
   version: z.number(),
   next_run_at: z.string().nullable(),
@@ -34,7 +36,7 @@ export function scheduleById(db: DatabaseSync, id: string): ScheduleSummary | un
   const row = db
     .prepare(
       `SELECT id,name,template_id,template_version,cadence_json,timezone,missed_policy,
-       overlap_policy,spend_limit_cents,items_json,status,version,next_run_at,created_at,updated_at,
+       overlap_policy,spend_limit_cents,items_json,topic_keyword,values_json,status,version,next_run_at,created_at,updated_at,
        deleted_at
        FROM schedules WHERE id=?`,
     )
@@ -46,7 +48,7 @@ export function scheduleRows(db: DatabaseSync): readonly ScheduleSummary[] {
   return db
     .prepare(
       `SELECT id,name,template_id,template_version,cadence_json,timezone,missed_policy,
-       overlap_policy,spend_limit_cents,items_json,status,version,next_run_at,created_at,updated_at,
+       overlap_policy,spend_limit_cents,items_json,topic_keyword,values_json,status,version,next_run_at,created_at,updated_at,
        deleted_at
        FROM schedules ORDER BY created_at DESC,id`,
     )
@@ -58,7 +60,7 @@ export function dueSchedules(db: DatabaseSync, now: string): readonly ScheduleSu
   return db
     .prepare(
       `SELECT id,name,template_id,template_version,cadence_json,timezone,missed_policy,
-       overlap_policy,spend_limit_cents,items_json,status,version,next_run_at,created_at,updated_at,
+       overlap_policy,spend_limit_cents,items_json,topic_keyword,values_json,status,version,next_run_at,created_at,updated_at,
        deleted_at
        FROM schedules WHERE deleted_at IS NULL AND status='active' AND next_run_at IS NOT NULL
        AND next_run_at <= ?
@@ -76,9 +78,9 @@ export function insertSchedule(
   db.prepare(
     `INSERT INTO schedules
       (id,name,template_id,template_version,cadence_json,timezone,missed_policy,overlap_policy,
-       spend_limit_cents,items_json,status,version,creation_hash,next_run_at,created_at,updated_at,
-       deleted_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       spend_limit_cents,items_json,topic_keyword,values_json,status,version,creation_hash,
+       next_run_at,created_at,updated_at,deleted_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
   ).run(
     schedule.id,
     schedule.name,
@@ -90,6 +92,8 @@ export function insertSchedule(
     schedule.overlapPolicy,
     schedule.spendLimitCents,
     JSON.stringify(schedule.items),
+    schedule.topicKeyword,
+    JSON.stringify(schedule.values),
     schedule.status,
     schedule.version,
     creationHash,
@@ -110,7 +114,8 @@ export function updateScheduleRow(
   const changed = db
     .prepare(
       `UPDATE schedules SET name=?,template_id=?,template_version=?,cadence_json=?,timezone=?,
-       missed_policy=?,overlap_policy=?,spend_limit_cents=?,items_json=?,status=?,version=?,
+       missed_policy=?,overlap_policy=?,spend_limit_cents=?,items_json=?,topic_keyword=?,
+       values_json=?,status=?,version=?,
        next_run_at=?,updated_at=?,mutation_id=?,mutation_hash=?
        WHERE id=? AND version=? AND deleted_at IS NULL`,
     )
@@ -124,6 +129,8 @@ export function updateScheduleRow(
       schedule.overlapPolicy,
       schedule.spendLimitCents,
       JSON.stringify(schedule.items),
+      schedule.topicKeyword,
+      JSON.stringify(schedule.values),
       schedule.status,
       schedule.version,
       schedule.nextRunAt,
@@ -220,8 +227,18 @@ export function recordRunStartIdentity(db: DatabaseSync, run: ScheduleRun): void
     throw new Error("The scheduled run could not persist its Start identity.");
 }
 
-export function recordRunDispatch(db: DatabaseSync, run: ScheduleRun, recordedAt: string): void {
+// `used` is the queued topic the run started, removed in the same transaction that records
+// the run's projects. It is matched by value rather than position, so an edit saved while the
+// run was starting cannot make it remove a different topic. The run that empties the queue
+// completes the schedule.
+export function recordRunDispatch(
+  db: DatabaseSync,
+  run: ScheduleRun,
+  recordedAt: string,
+  used?: ScheduleSummary["items"][number],
+): void {
   transact(db, () => {
+    if (used !== undefined) consumeTopic(db, run.scheduleId, used, recordedAt);
     const changed = db
       .prepare(
         `UPDATE schedule_runs SET request_id=?,project_ids_json=?,estimate_json=?
@@ -237,6 +254,31 @@ export function recordRunDispatch(db: DatabaseSync, run: ScheduleRun, recordedAt
       throw new Error("The scheduled run could not record its admitted projects.");
     for (const projectId of run.projectIds) settleScheduleRunsForProject(db, projectId, recordedAt);
   });
+}
+
+function consumeTopic(
+  db: DatabaseSync,
+  scheduleId: string,
+  used: ScheduleSummary["items"][number],
+  updatedAt: string,
+): void {
+  const schedule = scheduleById(db, scheduleId);
+  if (schedule === undefined || schedule.deletedAt !== null) return;
+  const key = JSON.stringify(used);
+  const at = schedule.items.findIndex((item) => JSON.stringify(item) === key);
+  if (at === -1) return;
+  const items = schedule.items.filter((_item, index) => index !== at);
+  const done = items.length === 0 && (schedule.status === "active" || schedule.status === "paused");
+  db.prepare(
+    `UPDATE schedules SET items_json=?,status=?,next_run_at=?,version=version+1,updated_at=?
+     WHERE id=? AND deleted_at IS NULL`,
+  ).run(
+    JSON.stringify(items),
+    done ? "completed" : schedule.status,
+    done ? null : schedule.nextRunAt,
+    updatedAt,
+    scheduleId,
+  );
 }
 
 export function runsForSchedule(db: DatabaseSync, scheduleId: string): readonly ScheduleRun[] {
@@ -392,6 +434,8 @@ function parseSchedule(row: unknown): ScheduleSummary {
     overlapPolicy: value.overlap_policy,
     spendLimitCents: value.spend_limit_cents,
     items: JSON.parse(value.items_json),
+    topicKeyword: value.topic_keyword,
+    values: JSON.parse(value.values_json),
     status: value.status,
     version: value.version,
     nextRunAt: value.next_run_at,

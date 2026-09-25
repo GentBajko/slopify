@@ -140,9 +140,8 @@ it("claims a due one-off schedule once and records the started project", async (
       .prepare("SELECT status,request_id FROM schedule_runs WHERE schedule_id=?")
       .get(created.value.id);
     expect(run).toMatchObject({ status: "succeeded", request_id: expect.any(String) });
-    // One scheduled item creates the base run plus one variant. Batch dispatch
-    // records both projects before the queue begins pumping them.
-    expect(h.events).toHaveLength(2);
+    // One run starts one project, from the first queued topic.
+    expect(h.events).toHaveLength(1);
     await scheduler.tick(new Date("2026-09-12T00:03:00.000Z"));
     expect(
       h.deps.db
