@@ -16,7 +16,12 @@ import {
   type RebuildSelection,
   startRebuildSchema,
 } from "./model.js";
-import { executionSnapshotSchema, planPreview, reviewStillCovers } from "./preview-plan.js";
+import {
+  type ExecutionSnapshot,
+  executionSnapshotSchema,
+  planPreview,
+  reviewStillCovers,
+} from "./preview-plan.js";
 import { admissionReceipt, admitPreview, previewById, storePreview } from "./repo.js";
 import { checkReadiness, localReadiness } from "./service-readiness.js";
 
@@ -101,7 +106,7 @@ export async function startRebuild(
   const hash = requestHash("rebuild", input.baseRevisionId, parsed.data);
   const replay = admissionReceipt(deps.db, projectId, input.idempotencyKey, hash);
   if (replay !== undefined) {
-    if (replay.ok) wake(deps, projectId, replay.value);
+    if (replay.ok) wakeRebuild(deps, projectId, replay.value);
     return replay;
   }
   const preview = previewById(deps.db, projectId, input.previewId);
@@ -140,33 +145,73 @@ export async function startRebuild(
   return withProjectControl(deps.db, projectId, () => {
     const again = admissionReceipt(deps.db, projectId, input.idempotencyKey, hash);
     if (again !== undefined) {
-      if (again.ok) wake(deps, projectId, again.value);
+      if (again.ok) wakeRebuild(deps, projectId, again.value);
       return again;
     }
-    if (currentRevisionId(deps.db, projectId) !== input.baseRevisionId)
-      return { ok: false, reason: "conflict" };
-    const current = getRevisionView(deps, projectId, input.baseRevisionId);
-    if (current === undefined) return { ok: false, reason: "no-project" };
-    const catalogue = deps.catalogue.read();
-    const fresh = planPreview(deps, current, catalogue, preview.selection, preview.id);
-    if (!fresh.ok || !reviewStillCovers(preview, snapshot, fresh.value))
-      return { ok: false, reason: "stale-preview" };
-    const fields = localReadiness(deps, snapshot, current, ready.providers, catalogue);
-    if (fields.length > 0) return { ok: false, reason: "readiness", fields };
-    const admitted = admitPreview(deps, {
+    const admitted = admitCheckedPreview(
+      deps,
       preview,
-      planningCatalogue: catalogue,
-      idempotencyKey: input.idempotencyKey,
-      requestHash: hash,
-    });
+      snapshot,
+      ready.providers,
+      input.idempotencyKey,
+      hash,
+    );
     if (admitted.ok) {
       deps.emit(projectId, { type: "project.updated", projectId });
-      wake(deps, projectId, admitted.value);
+      wakeRebuild(deps, projectId, admitted.value);
     }
     return admitted;
   });
 }
-function wake(deps: RebuildDeps, projectId: string, admission: RebuildAdmission): void {
+export function admitCheckedPreview(
+  deps: RebuildDeps,
+  preview: RebuildPreview,
+  snapshot: ExecutionSnapshot,
+  providers: readonly ProviderStatus[],
+  idempotencyKey: string,
+  hash: string,
+): RebuildResult<RebuildAdmission> {
+  const replay = admissionReceipt(deps.db, preview.projectId, idempotencyKey, hash);
+  if (replay !== undefined) return replay;
+  if (currentRevisionId(deps.db, preview.projectId) !== preview.baseRevisionId)
+    return { ok: false, reason: "conflict" };
+  const current = getRevisionView(deps, preview.projectId, preview.baseRevisionId);
+  if (current === undefined) return { ok: false, reason: "no-project" };
+  const catalogue = deps.catalogue.read();
+  const fresh = planPreview(deps, current, catalogue, preview.selection, preview.id);
+  if (!fresh.ok || !reviewStillCovers(preview, snapshot, fresh.value))
+    return { ok: false, reason: "stale-preview" };
+  const fields = localReadiness(deps, snapshot, current, providers, catalogue);
+  if (fields.length > 0) return { ok: false, reason: "readiness", fields };
+  for (const recipe of snapshot.recipes) {
+    const running = deps.db
+      .prepare(
+        "SELECT r.fingerprint FROM revision_work_reservations r " +
+          "JOIN revision_work w ON w.id=r.work_id WHERE r.revision_id=? " +
+          "AND r.work_key=? AND w.state='running'",
+      )
+      .get(preview.baseRevisionId, recipe.key);
+    if (running !== undefined && running.fingerprint !== recipe.fingerprint)
+      return {
+        ok: false,
+        reason: "conflict",
+        fields: [
+          { field: recipe.key, message: "Wait for this work to finish, or Pause before retrying." },
+        ],
+      };
+  }
+  return admitPreview(deps, {
+    preview,
+    planningCatalogue: catalogue,
+    idempotencyKey,
+    requestHash: hash,
+  });
+}
+export function wakeRebuild(
+  deps: RebuildDeps,
+  projectId: string,
+  admission: RebuildAdmission,
+): void {
   const owned =
     deps.db
       .prepare(

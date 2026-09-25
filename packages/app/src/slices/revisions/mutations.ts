@@ -43,6 +43,7 @@ export interface SaveRevisionInput {
   readonly baseRevisionId: string;
   readonly idempotencyKey: string;
   readonly edit: RevisionEdit;
+  readonly beforeCommit?: (() => RevisionMutationResult | undefined) | undefined;
 }
 export async function saveRevision(
   deps: RevisionDeps,
@@ -92,6 +93,8 @@ export async function saveRevision(
     const result = transact(deps.db, (): RevisionMutationResult => {
       const checked = checkMutation(deps, identity);
       if (checked !== undefined) return checked;
+      const blocked = input.beforeCommit?.();
+      if (blocked !== undefined) return blocked;
       const fresh = requiredView(deps, input.projectId, input.baseRevisionId);
       const tokens = { ...fresh.revision.content.regenerationTokens };
       for (const key of new Set((edit.regenerate ?? []).map(narrationRegenerationKey)))

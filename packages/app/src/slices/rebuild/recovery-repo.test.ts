@@ -3,9 +3,13 @@ import { expect, it } from "vitest";
 import { z } from "zod";
 import { checkRevisionControl } from "../control/revision-control.js";
 import { checkMutation, requestHash } from "../revisions/mutation-request.js";
+import { saveRevision } from "../revisions/mutations.js";
 import { admissionReceipt } from "./admission-repo.js";
-import { readRecovery, rememberRecovery, reserveRecovery } from "./recovery-repo.js";
-import { serviceFixture } from "./service.fake.js";
+import { retainedPreviewPlan } from "./preview-retained.js";
+import { recoverProject } from "./recovery.js";
+import { readRecovery, recoveryKey, rememberRecovery, reserveRecovery } from "./recovery-repo.js";
+import { regenerationEdit } from "./recovery-selection.js";
+import { paidServiceFixture, serviceFixture } from "./service.fake.js";
 
 it.each([false, true])(
   "owns one UUID across every control namespace (upgrade=%s)",
@@ -60,3 +64,34 @@ it.each([false, true])(
     }
   },
 );
+
+it("reuses the original saved intent when a process stops before recording its revision id", async () => {
+  const h = await paidServiceFixture();
+  try {
+    const input = {
+      baseRevisionId: h.base.revision.id,
+      idempotencyKey: randomUUID(),
+      action: { kind: "rerun" as const, stage: "images" as const },
+    };
+    const edit = regenerationEdit(
+      h.base,
+      retainedPreviewPlan(h.deps, h.base, h.catalogue),
+      "images",
+    );
+    if (!edit) throw new Error("Missing edit");
+    reserveRecovery(h.deps, h.projectId, input, edit);
+    const saved = await saveRevision(h.deps, {
+      projectId: h.projectId,
+      baseRevisionId: input.baseRevisionId,
+      idempotencyKey: recoveryKey(input, "save"),
+      edit,
+    });
+    if (!saved.ok) throw new Error("Missing saved intent");
+    const count = h.deps.db.prepare("SELECT count(*) AS n FROM project_revisions").get()?.n;
+    const result = await recoverProject(h.deps, h.projectId, input);
+    expect(result).toMatchObject({ ok: true, value: { revisionId: saved.view.revision.id } });
+    expect(h.deps.db.prepare("SELECT count(*) AS n FROM project_revisions").get()?.n).toBe(count);
+  } finally {
+    h.close();
+  }
+});
