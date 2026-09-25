@@ -10,6 +10,7 @@ import { insertAsset, insertManifestOutput, revisionById } from "../revisions/re
 import type { PreparedAsset } from "../storage/assets.js";
 import { discardPreparedAssets, writeAsset } from "../storage/assets.js";
 import type { OutputMeta, OutputRole } from "../storage/model.js";
+import { rebindPublishedNarration } from "./runtime-narration-publication.js";
 import { executionPlan, executionView, savedCatalogue } from "./runtime-plan.js";
 import type { WorkPiece } from "./work-records.js";
 
@@ -100,15 +101,19 @@ export async function publishResult(
         }),
       },
     };
-    const result = await commitRevisionOutputs(
-      deps,
-      { work: context.work, pieceId: piece.id, publicationId: piece.id },
-      outputs,
-      [record],
-    );
-    deps.db
-      .prepare("UPDATE revision_work_pieces SET state='done' WHERE id=? AND work_id=?")
-      .run(piece.id, context.work.workId);
+    const result = transact(deps.db, () => {
+      const committed = commitRevisionOutputs(
+        deps,
+        { work: context.work, pieceId: piece.id, publicationId: piece.id },
+        outputs,
+        [record],
+      );
+      rebindPublishedNarration(deps, context.work, piece);
+      deps.db
+        .prepare("UPDATE revision_work_pieces SET state='done' WHERE id=? AND work_id=?")
+        .run(piece.id, context.work.workId);
+      return committed;
+    });
     if (result.currentAttached)
       context.emit({ type: "project.updated", projectId: context.work.projectId });
   } finally {
