@@ -13,7 +13,12 @@ it.each([
         if (args[0] === "info")
           return {
             code: 0,
-            stdout: JSON.stringify({ ID: "daemon", OSType: "linux", SecurityOptions: security }),
+            stdout: JSON.stringify({
+              ID: "daemon",
+              OSType: "linux",
+              OperatingSystem: "Ubuntu 24.04",
+              SecurityOptions: security,
+            }),
           };
         throw new Error("Unexpected fake command");
       },
@@ -36,7 +41,12 @@ it.each([
         calls.push([...args]);
         return {
           code: 0,
-          stdout: JSON.stringify({ ID: "d", OSType: "linux", SecurityOptions: security }),
+          stdout: JSON.stringify({
+            ID: "d",
+            OSType: "linux",
+            OperatingSystem: "Ubuntu 24.04",
+            SecurityOptions: security,
+          }),
         };
       },
     },
@@ -45,6 +55,29 @@ it.each([
   );
   await expect(e.context(1001, 1002)).rejects.toThrow();
   expect(calls.some((c) => ["run", "stop", "create", "update"].includes(c[0] ?? ""))).toBe(false);
+});
+it("refuses Docker Desktop's Linux VM before any storage mutation", async () => {
+  const calls: string[][] = [];
+  const e = dockerEngine(
+    {
+      exec: async (_file, args) => {
+        calls.push([...args]);
+        return {
+          code: 0,
+          stdout: JSON.stringify({
+            ID: "desktop",
+            OSType: "linux",
+            OperatingSystem: "Docker Desktop",
+            SecurityOptions: [],
+          }),
+        };
+      },
+    },
+    AbortSignal.timeout(1000),
+    { DOCKER_HOST: "unix:///home/user/.docker/desktop/docker.sock" },
+  );
+  await expect(e.context(1001, 1002)).rejects.toThrow("Docker Desktop");
+  expect(calls).toEqual([["info", "--format", "{{json .}}"]]);
 });
 it("refreshes a cached old default latest image, but reuses a cached local override", async () => {
   const calls: string[][] = [];

@@ -204,9 +204,14 @@ export function dockerEngine(
         .object({
           ID: z.string(),
           OSType: z.literal("linux"),
+          OperatingSystem: z.string(),
           SecurityOptions: z.array(z.string()),
         })
         .parse(JSON.parse(await command(["info", "--format", "{{json .}}"])));
+      if (/docker desktop/i.test(info.OperatingSystem))
+        throw new Error(
+          "Docker Desktop is unsupported by managed project folders. Use a native Linux Docker daemon or native Slopify.",
+        );
       const rootless = info.SecurityOptions.includes("name=rootless");
       if (!rootless && info.SecurityOptions.some((s) => s.startsWith("name=userns")))
         throw new Error(
