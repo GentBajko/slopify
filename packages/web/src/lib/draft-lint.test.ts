@@ -36,7 +36,10 @@ describe("draftProblems", () => {
       { field: "name", message: "Enter a name." },
     ]);
     expect(draftProblems(entry({ body: "one\ntwo {{bad\n" }), [])).toEqual([
-      { field: "body", message: "The `{{` at line 2, column 5 is never closed. Add `}}` after the keyword name." },
+      {
+        field: "body",
+        message: "The `{{` at line 2, column 5 is never closed. Add `}}` after the keyword name.",
+      },
     ]);
   });
 
@@ -44,7 +47,10 @@ describe("draftProblems", () => {
   // exactly as an LLM-mode one is.
   it("lints a text-mode body's slots, not only an LLM-mode one's", () => {
     expect(draftProblems(entry({ mode: "text", body: "Today on {{" }), [])).toEqual([
-      { field: "body", message: "The `{{` at line 1, column 10 is never closed. Add `}}` after the keyword name." },
+      {
+        field: "body",
+        message: "The `{{` at line 1, column 10 is never closed. Add `}}` after the keyword name.",
+      },
     ]);
     expect(slotNames(entry({ mode: "text" }).body)).toEqual(["topic"]);
   });
@@ -52,7 +58,10 @@ describe("draftProblems", () => {
   it("carries the server's own sentence for an unclosed slot, with its line and column", () => {
     const problems = draftProblems(draft({ body: "one\ntwo {{bad\n" }), []);
     expect(problems).toEqual([
-      { field: "body", message: "The `{{` at line 2, column 5 is never closed. Add `}}` after the keyword name." },
+      {
+        field: "body",
+        message: "The `{{` at line 2, column 5 is never closed. Add `}}` after the keyword name.",
+      },
     ]);
   });
 
@@ -104,9 +113,7 @@ describe("firstProblem", () => {
 describe("problems by field", () => {
   it("splits the name's problems from the body's", () => {
     const problems = draftProblems(draft({ name: "", body: "{{bad" }), []);
-    expect(nameProblems(problems).map((problem) => problem.message)).toEqual([
-      "Enter a name.",
-    ]);
+    expect(nameProblems(problems).map((problem) => problem.message)).toEqual(["Enter a name."]);
     expect(bodyProblems(problems)).toHaveLength(1);
   });
 });

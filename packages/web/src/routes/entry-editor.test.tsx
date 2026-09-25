@@ -184,17 +184,27 @@ describe("the entry editor's slots", () => {
     expect(marks[0]?.getAttribute("data-lint-mark")).toBe("15");
     expect(screen.getByText("1 slot error")).not.toBeNull();
     // Once in the slots panel, once beside the Save it is holding.
-    expect(screen.getAllByText("The `{{` at line 2, column 6 is never closed. Add `}}` after the keyword name.")).toHaveLength(2);
+    expect(
+      screen.getAllByText(
+        "The `{{` at line 2, column 6 is never closed. Add `}}` after the keyword name.",
+      ),
+    ).toHaveLength(2);
     expect(screen.getByLabelText("Body").getAttribute("aria-invalid")).toBe("true");
 
     const save = screen.getByRole("button", { name: "Save" });
     expect(save.getAttribute("aria-disabled")).toBe("true");
     const reason = document.getElementById(save.getAttribute("aria-describedby") ?? "");
-    expect(reason?.textContent).toBe("The `{{` at line 2, column 6 is never closed. Add `}}` after the keyword name.");
+    expect(reason?.textContent).toBe(
+      "The `{{` at line 2, column 6 is never closed. Add `}}` after the keyword name.",
+    );
 
     await user.click(screen.getByRole("radio", { name: "LLM" }));
     expect(screen.getByRole("button", { name: "Save" }).getAttribute("aria-disabled")).toBe("true");
-    expect(screen.getAllByText("The `{{` at line 2, column 6 is never closed. Add `}}` after the keyword name.")).toHaveLength(2);
+    expect(
+      screen.getAllByText(
+        "The `{{` at line 2, column 6 is never closed. Add `}}` after the keyword name.",
+      ),
+    ).toHaveLength(2);
 
     await fill(user, "Body", "Line one.\nThen {{good}}");
     expect(screen.getByRole("button", { name: "Save" }).getAttribute("aria-disabled")).toBe(

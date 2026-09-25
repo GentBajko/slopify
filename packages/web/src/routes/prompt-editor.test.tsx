@@ -208,7 +208,11 @@ describe("the prompt editor's lint", () => {
     expect(marks[0]?.textContent).toBe("{{");
     expect(marks[0]?.getAttribute("data-lint-mark")).toBe("15");
     expect(screen.getByText("1 slot error")).not.toBeNull();
-    expect(screen.getByText("The `{{` at line 2, column 6 is never closed. Add `}}` after the keyword name.")).not.toBeNull();
+    expect(
+      screen.getByText(
+        "The `{{` at line 2, column 6 is never closed. Add `}}` after the keyword name.",
+      ),
+    ).not.toBeNull();
     expect(screen.getByLabelText("Body").getAttribute("aria-invalid")).toBe("true");
   });
 
@@ -219,9 +223,15 @@ describe("the prompt editor's lint", () => {
     await fill(user, "Body", "{{}} and {{a{b}}");
     expect(container.querySelectorAll("[data-lint-mark]")).toHaveLength(2);
     expect(screen.getByText("2 slot errors")).not.toBeNull();
-    expect(screen.getByText("The keyword at line 1, column 1 has no name. Write a name between `{{` and `}}`.")).not.toBeNull();
     expect(
-      screen.getByText("The keyword at line 1, column 10 contains a brace. Keywords cannot be placed inside other keywords."),
+      screen.getByText(
+        "The keyword at line 1, column 1 has no name. Write a name between `{{` and `}}`.",
+      ),
+    ).not.toBeNull();
+    expect(
+      screen.getByText(
+        "The keyword at line 1, column 10 contains a brace. Keywords cannot be placed inside other keywords.",
+      ),
     ).not.toBeNull();
   });
 
@@ -268,7 +278,9 @@ describe("the prompt editor's Save", () => {
     const save = screen.getByRole("button", { name: "Save" });
     expect(save.getAttribute("aria-disabled")).toBe("true");
     const reason = document.getElementById(save.getAttribute("aria-describedby") ?? "");
-    expect(reason?.textContent).toBe("The `{{` at line 1, column 7 is never closed. Add `}}` after the keyword name.");
+    expect(reason?.textContent).toBe(
+      "The `{{` at line 1, column 7 is never closed. Add `}}` after the keyword name.",
+    );
   });
 
   it("lets go once the body is fixed, and posts what was typed", async () => {

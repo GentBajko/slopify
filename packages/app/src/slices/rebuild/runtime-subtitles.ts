@@ -172,9 +172,7 @@ async function cues(
         one.workKey === "subtitles:timing",
     );
     if (output === undefined)
-      throw new Error(
-        "Caption timing is missing. Use Re-run section on Video, then Retry stage.",
-      );
+      throw new Error("Caption timing is missing. Use Re-run section on Video, then Retry stage.");
     const timed = wordsSchema.parse(
       JSON.parse(
         readFileSync(outputPath(deps.paths, context.work.projectId, output.output.path), "utf8"),
