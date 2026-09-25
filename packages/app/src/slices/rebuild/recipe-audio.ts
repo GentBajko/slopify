@@ -30,6 +30,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
   const pronounce = usesPronunciationGlossary(config);
   const narrationFiles = prepare || pronounce;
   let body: ResolvedWorkRecipe;
+  let bodyTranscript: FingerprintValue = text.articleText ?? text.article.fingerprint;
   if (config.sources.audio === "provide") {
     body = recipe(
       context,
@@ -55,6 +56,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
           );
     const occurrences = new Map<string, number>();
     const parts: ResolvedWorkRecipe[] = [];
+    const transcripts: { original: string; effective: string }[] = [];
     const futurePronunciation: FingerprintValue[] = [];
     let pending = text.articleText === null;
     for (const logicalText of groups) {
@@ -62,6 +64,10 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
       const occurrence = (occurrences.get(hash) ?? 0) + 1;
       occurrences.set(hash, occurrence);
       const logicalKey = `audio:body:${hash}-${occurrence}`;
+      transcripts.push({
+        original: logicalText,
+        effective: effectiveText(context, logicalKey, logicalText),
+      });
       futurePronunciation.push(
         ...pronunciationFutureValues(context, text.glossary, text.article, logicalKey, logicalText),
       );
@@ -77,6 +83,8 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
       if (group.length === 0) pending = true;
       parts.push(...group);
     }
+    if (transcripts.some((row) => row.effective !== row.original))
+      bodyTranscript = ["narration-transcript-v1", transcripts.map((row) => row.effective)];
     if (text.articleText === null) {
       futurePronunciation.push(
         ...pronunciationFutureValues(
@@ -134,7 +142,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
   const ordered: { value: ResolvedWorkRecipe; transcript: FingerprintValue }[] = [];
   for (const category of ["intro", "body", "outro"] as const) {
     if (category === "body") {
-      ordered.push({ value: body, transcript: text.articleText ?? text.article.fingerprint });
+      ordered.push({ value: body, transcript: bodyTranscript });
       continue;
     }
     const entry = text.entries[category];
@@ -210,7 +218,13 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
     );
     recipes.push(audio);
     if (narrationFiles) recipes.push(narrationFileRecipe(context, category, parts));
-    ordered.push({ value: audio, transcript: entry.text ?? entry.recipe.fingerprint });
+    ordered.push({
+      value: audio,
+      transcript:
+        entry.text === null
+          ? entry.recipe.fingerprint
+          : effectiveText(context, logicalKey, entry.text),
+    });
   }
   const timeline: FingerprintValue = ordered.map(({ value, transcript }) => {
     const retained = context.manifest.outputs.find(
@@ -233,6 +247,11 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
     keys: ordered.map(({ value }) => value.key),
   };
 }
+function effectiveText(context: RecipeContext, key: string, original: string): string {
+  const override = context.content.narrationOverrides[key];
+  return override?.kind === "text" ? normalizeNarrationText(override.text) : original;
+}
+
 function chunkingValues(context: RecipeContext): FingerprintValue {
   const chunking = context.config.chunking ?? defaultChunking;
   return [

@@ -120,6 +120,7 @@ export function bindNarrationReuse(
     return;
   }
   if (recipe.input.kind !== "tts") return;
+  const input = recipe.input;
   if (
     view.pieces.some(
       (one) =>
@@ -128,7 +129,8 @@ export function bindNarrationReuse(
         one.key === recipe.key &&
         one.fingerprint === recipe.fingerprint &&
         one.piece.state === "done" &&
-        one.piece.idx === ordinal,
+        one.piece.idx === ordinal &&
+        narrationMetadataMatches(one.piece.payload, input),
     )
   )
     return;
@@ -140,7 +142,6 @@ export function bindNarrationReuse(
   );
   const old = matchingNarrationPiece(recipe, history, available);
   if (old === undefined) return;
-  const input = recipe.input;
   const recordId = deps.ids.next();
   const payload: unknown = JSON.parse(old.piece.payload ?? "{}");
   insertManifestPiece(
@@ -172,6 +173,29 @@ export function bindNarrationReuse(
     recordId,
   );
   selectPieceRecord(deps.db, view.revision.id, recipe.key, recordId);
+}
+
+function narrationMetadataMatches(
+  payload: string | null,
+  input: Extract<ResolvedWorkRecipe["input"], { kind: "tts" }>,
+): boolean {
+  const parsed = z
+    .object({
+      text: z.string().optional(),
+      spokenText: z.string().optional(),
+      logicalKey: z.string().optional(),
+      logicalText: z.string().optional(),
+      segment: z.string().optional(),
+    })
+    .safeParse(JSON.parse(payload ?? "{}"));
+  return (
+    parsed.success &&
+    parsed.data.text === input.text &&
+    parsed.data.spokenText === input.spokenText &&
+    parsed.data.logicalKey === input.logicalKey &&
+    parsed.data.logicalText === input.logicalText &&
+    parsed.data.segment === input.segment
+  );
 }
 
 export function narrationOrdinal(recipes: readonly ResolvedWorkRecipe[], key: string): number {
