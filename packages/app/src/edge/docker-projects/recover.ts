@@ -1,0 +1,77 @@
+import { join } from "node:path";
+import type { Engine } from "./engine.js";
+import { type DockerConfig, type Journal, type Receipt, writeState } from "./state.js";
+import { identity, isMissing, treeDigest } from "./tree.js";
+
+export async function recoverInstallation(
+  c: DockerConfig,
+  j: Journal,
+  receipt: Receipt | null,
+  e: Engine,
+): Promise<Journal> {
+  const directory = join(c.directory, j.id);
+  if (j.name !== c.name || j.volume !== c.volume) throw new Error("Journal installation conflict.");
+  if (receipt?.transaction === j.id) {
+    await writeState(join(directory, "activation.json"), {
+      version: 1,
+      token: j.token,
+      committed: true,
+    });
+    const current = await e.inspect(c.name);
+    if (current && current.installation === j.installation && current.signature === j.signature) {
+      await e.command(["update", "--restart=always", current.id]);
+      if (!current.running) await e.command(["start", current.id]);
+    }
+    const finished = { ...j, phase: "committed" as const };
+    await writeState(join(c.directory, "journal.json"), finished);
+    return finished;
+  }
+  if (j.phase === "rolled-back") return j;
+  const occupant = await e.inspect(c.name);
+  if (j.phase === "verified" && j.stagingIdentity && j.sourceDigest) {
+    const found = await identity(j.destination).catch((error: unknown) => {
+      if (isMissing(error)) return null;
+      throw error;
+    });
+    if (
+      found?.dev === j.stagingIdentity.dev &&
+      found.ino === j.stagingIdentity.ino &&
+      (await treeDigest(j.destination)).hash === j.sourceDigest.hash
+    ) {
+      j = { ...j, publishedIdentity: found };
+    }
+  }
+  const possible = j.candidate ? await e.inspect(j.candidate) : occupant;
+  if (possible && possible.id !== j.previous?.id) {
+    const transaction = await e.command([
+      "inspect",
+      "--format",
+      '{{index .Config.Labels "io.slopify.transaction"}}',
+      possible.id,
+    ]);
+    if (
+      transaction !== j.id ||
+      possible.installation !== j.installation ||
+      possible.signature !== j.signature
+    )
+      throw new Error("Recovery name is occupied by an unrelated container.");
+    await e.stop(possible);
+    const failedName = `${c.name}-failed-${j.id}`;
+    if (possible.name !== failedName) await e.command(["rename", possible.id, failedName]);
+  }
+  if (j.backupDigest) {
+    await e.writers(c.volume, [j.destination, ...(j.sourceBind ? [j.sourceBind] : [])], []);
+    await e.restore(j);
+  }
+  if (j.previous) {
+    const old = await e.inspect(j.previous.id);
+    if (!old || old.mounts.find((m) => m.destination === "/data")?.name !== c.volume)
+      throw new Error("Original container/storage is missing; automatic rollback is unsafe.");
+    await e.writers(c.volume, [j.destination, ...(j.sourceBind ? [j.sourceBind] : [])], [old.id]);
+    await e.restart(j.previous);
+  }
+  const rolledBack = { ...j, phase: "rolled-back" as const };
+  await writeState(join(c.directory, "journal.json"), rolledBack);
+  await writeState(join(directory, "journal.json"), rolledBack);
+  return rolledBack;
+}
