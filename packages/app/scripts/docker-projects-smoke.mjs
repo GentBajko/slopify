@@ -194,7 +194,33 @@ try {
   assert.equal(restored.Config.User, original.Config.User);
   assert.deepEqual(restored.HostConfig.RestartPolicy, original.HostConfig.RestartPolicy);
   await ready(name);
+  const interrupted = JSON.parse(await readFile(join(installRoot, "journal.json"), "utf8"));
+  assert.equal(interrupted.volume, volume);
+  assert.equal(interrupted.name, name);
+  assert.match(interrupted.id, /^[a-f0-9-]{36}$/);
+  const reader = `slopify-reader-${interrupted.id}`;
+  await docker([
+    "create",
+    "--name",
+    reader,
+    "--label",
+    `io.slopify.reader=${interrupted.id}`,
+    "--network",
+    "none",
+    "--read-only",
+    "--tmpfs",
+    "/data",
+    "--mount",
+    `type=volume,source=${volume},target=/source,readonly,volume-nocopy`,
+    "--entrypoint",
+    "true",
+    interrupted.image,
+  ]);
   await launch();
+  assert.equal(
+    await docker(["container", "ls", "-a", "--filter", `name=^/${reader}$`, "--format", "{{.ID}}"]),
+    "",
+  );
   assert.deepEqual(await treeDigest(projects), before);
   const assets = await verify(expected);
   const installed = await inspect(name);
