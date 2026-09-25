@@ -179,6 +179,7 @@ describe("boot", () => {
       { version: 9 },
       { version: 10 },
       { version: 11 },
+      { version: 12 },
     ]);
     db.close();
   });

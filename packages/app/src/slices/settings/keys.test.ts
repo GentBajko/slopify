@@ -103,3 +103,27 @@ describe("keyForAttempt", () => {
     expect(keyForAttempt(deps(), "claude-code")).toEqual({ ok: false, reason: "cli-provider" });
   });
 });
+
+it("changes credential generation on same-clock saves and delete/reinsert only for that provider", () => {
+  const keys = deps();
+  const generation = (provider: string): unknown =>
+    keys.db
+      .prepare("SELECT credential_generation FROM provider_keys WHERE provider=?")
+      .get(provider)?.credential_generation;
+  try {
+    saveProviderKey(keys, "fal", standIn);
+    saveProviderKey(keys, "openrouter", standIn);
+    const first = generation("fal");
+    const unrelated = generation("openrouter");
+    saveProviderKey(keys, "fal", standIn);
+    const second = generation("fal");
+    expect(typeof first).toBe("string");
+    expect(second).not.toBe(first);
+    removeProviderKey(keys, "fal");
+    saveProviderKey(keys, "fal", standIn);
+    expect(generation("fal")).not.toBe(second);
+    expect(generation("openrouter")).toBe(unrelated);
+  } finally {
+    keys.db.close();
+  }
+});

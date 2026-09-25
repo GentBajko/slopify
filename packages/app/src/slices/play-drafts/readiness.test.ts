@@ -159,7 +159,9 @@ it.each(["provider", "family", "model", "key", "voice", "cli"] as const)(
       };
       if (failure !== "cli")
         h.deps.db
-          .prepare("INSERT INTO provider_keys VALUES (?,hex(randomblob(32)),?)")
+          .prepare(
+            "INSERT INTO provider_keys(provider,key,updated_at) VALUES (?,hex(randomblob(32)),?)",
+          )
           .run(choice.provider, "now");
       insertVoice(h.deps.db, {
         id: "v",
@@ -233,7 +235,9 @@ it.each(["font", "template"] as const)(
         .prepare("INSERT INTO entries VALUES ('e','intro','text','Opening','Hello','[]','now')")
         .run();
       h.deps.db
-        .prepare("INSERT INTO provider_keys VALUES (?,hex(randomblob(32)),?)")
+        .prepare(
+          "INSERT INTO provider_keys(provider,key,updated_at) VALUES (?,hex(randomblob(32)),?)",
+        )
         .run(tts.provider, "now");
       insertVoice(h.deps.db, {
         id: "voice",
@@ -296,7 +300,9 @@ it("starts generated narration with the reviewed font and available saved voice"
     if (!tts) throw new Error("Missing model");
     const provider = z.enum(providerIds).parse(tts.provider);
     h.deps.db
-      .prepare("INSERT INTO provider_keys VALUES (?,hex(randomblob(32)),?)")
+      .prepare(
+        "INSERT INTO provider_keys(provider,key,updated_at) VALUES (?,hex(randomblob(32)),?)",
+      )
       .run(provider, "now");
     insertVoice(h.deps.db, { id: "v", provider, name: "Voice", voiceId: "voice" });
     const id = randomUUID();

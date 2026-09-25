@@ -65,9 +65,16 @@ export function checkRevisionControl<T>(
     if (
       db
         .prepare(
-          "SELECT 1 FROM revision_mutations WHERE project_id=? AND idempotency_key=? UNION ALL SELECT 1 FROM rebuild_admissions WHERE project_id=? AND idempotency_key=?",
+          "SELECT 1 FROM revision_mutations WHERE project_id=? AND idempotency_key=? UNION ALL SELECT 1 FROM rebuild_admissions WHERE project_id=? AND idempotency_key=? UNION ALL SELECT 1 FROM project_recovery_requests WHERE project_id=? AND idempotency_key=?",
         )
-        .get(projectId, identity.idempotencyKey, projectId, identity.idempotencyKey) !== undefined
+        .get(
+          projectId,
+          identity.idempotencyKey,
+          projectId,
+          identity.idempotencyKey,
+          projectId,
+          identity.idempotencyKey,
+        ) !== undefined
     )
       return { ok: false, reason: "idempotency-conflict" };
     if (head !== identity.baseRevisionId) return { ok: false, reason: "conflict" };

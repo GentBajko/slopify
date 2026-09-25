@@ -43,9 +43,10 @@ export function admissionReceipt(
   if (
     db
       .prepare(
-        "SELECT 1 FROM revision_mutations WHERE project_id=? AND idempotency_key=? UNION ALL SELECT 1 FROM project_control_receipts WHERE project_id=? AND idempotency_key=?",
+        "SELECT 1 FROM revision_mutations WHERE project_id=? AND idempotency_key=? UNION ALL SELECT 1 FROM project_control_receipts WHERE project_id=? AND idempotency_key=? UNION ALL SELECT 1 FROM project_recovery_requests WHERE project_id=? AND idempotency_key=?",
       )
-      .get(projectId, idempotencyKey, projectId, idempotencyKey) !== undefined
+      .get(projectId, idempotencyKey, projectId, idempotencyKey, projectId, idempotencyKey) !==
+    undefined
   )
     return { ok: false, reason: "conflict" };
   return undefined;

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import type { ProviderId, Voice } from "./model.js";
@@ -22,9 +23,10 @@ export function upsertKey(
   updatedAt: string,
 ): void {
   db.prepare(
-    "INSERT INTO provider_keys (provider, key, updated_at) VALUES (?, ?, ?)" +
-      " ON CONFLICT(provider) DO UPDATE SET key = excluded.key, updated_at = excluded.updated_at",
-  ).run(provider, key, updatedAt);
+    "INSERT INTO provider_keys (provider,key,updated_at,credential_generation) VALUES (?,?,?,?)" +
+      " ON CONFLICT(provider) DO UPDATE SET key=excluded.key,updated_at=excluded.updated_at," +
+      "credential_generation=excluded.credential_generation",
+  ).run(provider, key, updatedAt, randomUUID());
 }
 
 export function deleteKey(db: DatabaseSync, provider: ProviderId): boolean {
