@@ -39,7 +39,11 @@ export function executionPlan(
 ): RevisionWorkPlan {
   const textOutput = (role: "article_md" | "notes"): string | null => {
     const row = view.outputs.find(
-      (output) => output.selected && output.available && output.output.role === role,
+      (output) =>
+        output.selected &&
+        output.available &&
+        output.state === "ready" &&
+        output.output.role === role,
     );
     return row === undefined
       ? null
@@ -49,7 +53,11 @@ export function executionPlan(
     (piece) => piece.selected && piece.piece.state === "done" && piece.piece.payload !== null,
   );
   const resolved = {
-    articleMarkdown: view.articleMarkdown ?? textOutput("article_md"),
+    articleMarkdown:
+      view.revision.content.articleEdited === true ||
+      view.revision.config.sources.article === "provide"
+        ? view.articleMarkdown
+        : textOutput("article_md"),
     researchNotes: textOutput("notes"),
   };
   const research = matchingResearch(

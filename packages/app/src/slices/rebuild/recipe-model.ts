@@ -146,15 +146,19 @@ export function recipe(
             ),
           ) as FingerprintValue,
         );
-  const workFingerprint = fingerprint([
-    requestFingerprint,
+  const token =
     input.kind === "tts"
       ? narrationRegenerationToken(
           context.content.regenerationTokens,
           input.logicalKey,
           input.segment,
         )
-      : (context.content.regenerationTokens[options.tokenKey ?? key] ?? null),
+      : (context.content.regenerationTokens[options.tokenKey ?? key] ?? null);
+  const researchToken =
+    stage === "research" ? context.content.regenerationTokens["research:all"] : undefined;
+  const workFingerprint = fingerprint([
+    requestFingerprint,
+    researchToken === undefined ? token : fingerprint([researchToken, token]),
   ]);
   return {
     key,
