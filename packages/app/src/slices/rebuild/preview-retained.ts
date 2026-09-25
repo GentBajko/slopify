@@ -35,6 +35,23 @@ export function retainedPreviewPlan(
     }
     const recipe = original.recipes.find((one) => one.key === piece.key);
     if (recipe === undefined) continue;
+    // Pre-1.5 requests embedded research in messages. Review a fresh document-based
+    // request instead of re-admitting an input the current scheduler cannot match.
+    // Running calls, accepted jobs and cached answers must retain their exact input.
+    if (
+      (piece.key === "research:notes" || piece.key === "article:body") &&
+      piece.input.kind === "llm" &&
+      (piece.input.documents?.length ?? 0) === 0 &&
+      recipe.input.kind === "llm" &&
+      (recipe.input.documents?.length ?? 0) > 0 &&
+      row.state !== "running" &&
+      !deps.db
+        .prepare(
+          "SELECT 1 FROM revision_work_pieces WHERE work_id=? AND (state IN ('running','done') OR continuation IS NOT NULL OR result_json IS NOT NULL) LIMIT 1",
+        )
+        .get(piece.workId)
+    )
+      continue;
     replacements.set(piece.key, {
       ...recipe,
       input: piece.input,
@@ -137,17 +154,12 @@ function cachedArticleComplete(deps: RevisionDeps, revisionId: string, workId: s
   return false;
 }
 
-export function hasSubmittedRequest(
-  deps: RevisionDeps,
-  revisionId: string,
-  key: string,
-  fingerprint: string,
-): boolean {
+export function hasSubmittedRequest(deps: RevisionDeps, revisionId: string, key: string): boolean {
   return (
     deps.db
       .prepare(
-        `SELECT 1 FROM revision_work_reservations r JOIN revision_work_pieces p ON p.id=r.piece_id WHERE r.revision_id=? AND r.work_key=? AND r.fingerprint=? AND p.submitted_at IS NOT NULL AND p.continuation IS NULL AND p.state!='done'`,
+        `SELECT 1 FROM revision_work_reservations r JOIN revision_work_pieces p ON p.id=r.piece_id WHERE r.revision_id=? AND r.work_key=? AND p.submitted_at IS NOT NULL AND p.continuation IS NULL AND p.state!='done'`,
       )
-      .get(revisionId, key, fingerprint) !== undefined
+      .get(revisionId, key) !== undefined
   );
 }

@@ -155,7 +155,7 @@ export function planPreview(
       return {
         key: row.key,
         submit,
-        uncertain: submit && hasSubmittedRequest(deps, view.revision.id, row.key, row.fingerprint),
+        uncertain: submit && hasSubmittedRequest(deps, view.revision.id, row.key),
       };
     });
   const execution: ExecutionSnapshot = {
