@@ -399,7 +399,10 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       schedules: scheduleDeps,
       ...(rebuild.measureAudio === undefined ? {} : { measureAudio: rebuild.measureAudio }),
       openFolder,
-      folderLocation: await dockerFolderConfiguration(process.env, paths.projects),
+      folderLocation: {
+        ...(await dockerFolderConfiguration(process.env, paths.projects)),
+        ...(hostCli === undefined ? {} : { openOnHost: hostCli.openFolder }),
+      },
       ...(dockerState === undefined ? {} : { installationPending: () => updater.locked() }),
       db,
       paths,

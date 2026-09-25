@@ -130,6 +130,10 @@ export interface DockerConfig {
   readonly projectsOverride: string | null;
   readonly bridge: string | null;
 }
+/** Where the Docker launcher keeps one folder (and receipt) per installation. */
+export function dockerRoot(env: Readonly<NodeJS.ProcessEnv>, home: string): string {
+  return join(absolute.parse(env.XDG_DATA_HOME || join(home, ".local/share")), "slopify/docker");
+}
 export function dockerConfig(
   env: Readonly<NodeJS.ProcessEnv>,
   home: string,
@@ -139,10 +143,7 @@ export function dockerConfig(
 ): DockerConfig {
   const name = identifier.parse(env.SLOPIFY_DOCKER_NAME || "slopify");
   const volume = identifier.parse(env.SLOPIFY_DOCKER_VOLUME || "slopify-data");
-  const root = join(
-    absolute.parse(env.XDG_DATA_HOME || join(home, ".local/share")),
-    "slopify/docker",
-  );
+  const root = dockerRoot(env, home);
   const raw = env.SLOPIFY_DOCKER_PROJECTS_DIR || null;
   const projectsOverride =
     raw === null ? null : resolve(cwd, raw.startsWith("~/") ? join(home, raw.slice(2)) : raw);

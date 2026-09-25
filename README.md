@@ -64,10 +64,12 @@ reconciliation owns it. Moving to another folder performs a verified copy;
 existing unrelated contents are never merged or overwritten.
 
 Existing installations are stopped, copied and verified before the new folder
-is activated. Current and historical output actions show the real host folder
-on the machine running Slopify; downloads remain available. This also works with
-`--host-cli=off`, without installing a host helper. Docker does not open a desktop
-window on your browser's machine.
+is activated. Open folder on current and historical outputs opens the real host
+folder in your file manager through the host helper when it is installed;
+otherwise (for example with `--host-cli=off`, or a helper from an older launcher)
+it shows that folder's path on the machine running Slopify. Downloads remain
+available either way. The helper only opens folders inside the project folder the
+launcher set up, and needs `xdg-open` (xdg-utils) on the host.
 
 The helper uses a private authenticated socket, not a public port or remote shell.
 Docker receives model metadata and generated text/image bytes. It doesn't mount

@@ -3,14 +3,16 @@ import type { z } from "zod";
 import { redact } from "../../kernel/log.js";
 import {
   bridgeLimits,
+  type HostCliClient,
   type HostCliId,
-  type HostCliPorts,
   hostFaultSchema,
   hostFrameSchema,
   hostHealthSchema,
   hostImageSchema,
   hostLlmSchema,
   hostModelsSchema,
+  hostOpenedSchema,
+  hostOpenFolderSchema,
   hostStatusSchema,
 } from "../../kernel/ports/host-cli.js";
 import type { LlmDone, LlmEvent } from "../../kernel/ports/llm.js";
@@ -28,7 +30,7 @@ const tooBigForHost =
 
 export function createHostCliClient(options: {
   readonly directory: string | undefined;
-}): HostCliPorts {
+}): HostCliClient {
   async function request(input: Omit<HostRequestOptions, "directory">): Promise<IncomingMessage> {
     if (!options.directory) throw hostUnavailable();
     const response = await hostRequest({ ...input, directory: options.directory });
@@ -78,6 +80,30 @@ export function createHostCliClient(options: {
       ...(model.thinkingModes === undefined ? {} : { thinkingModes: model.thinkingModes }),
     }));
   return {
+    openFolder: async (path, signal) => {
+      const parsed = hostOpenFolderSchema.safeParse({ path });
+      if (!parsed.success || !options.directory) return false;
+      // An older helper answers 404 and a refused folder 403; either way the caller shows the path.
+      try {
+        const response = await hostRequest({
+          directory: options.directory,
+          path: "/v1/open-folder",
+          method: "POST",
+          kind: "metadata",
+          body: Buffer.from(JSON.stringify(parsed.data)),
+          signal,
+        });
+        if (response.statusCode !== 200) {
+          response.destroy();
+          return false;
+        }
+        return hostOpenedSchema.safeParse(
+          JSON.parse((await readHostBytes(response, bridgeLimits.status)).toString("utf8")),
+        ).success;
+      } catch {
+        return false;
+      }
+    },
     status: async (id) => {
       try {
         const status = await metadata(`/v1/status/${id}`, hostStatusSchema);

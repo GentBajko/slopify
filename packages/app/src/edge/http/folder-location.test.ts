@@ -138,3 +138,61 @@ it("reports an unavailable native opener without exposing filesystem details", a
     detail: "The file manager could not be opened for a saved file.",
   });
 });
+
+it.skipIf(process.platform !== "linux")(
+  "asks the host helper to open the verified Docker folder and falls back to the path",
+  async () => {
+    const root = await mkdtemp(join(tmpdir(), "slopify-folder-"));
+    try {
+      const projects = join(root, "projects");
+      await mkdir(join(projects, "p"), { recursive: true });
+      const file = join(projects, "p", "old.wav");
+      await writeFile(file, "saved");
+      const write = vi.fn();
+      const request = (openOnHost: (path: string, signal: AbortSignal) => Promise<boolean>) =>
+        new Hono()
+          .post("/", (c) =>
+            replyForFolder(
+              c,
+              {
+                paths: { projects },
+                folderLocation: {
+                  container: true,
+                  hostProjects: "/home/user/Slopify/Projects",
+                  openOnHost,
+                },
+                log: { write },
+              },
+              "p",
+              file,
+            ),
+          )
+          .request("/", { method: "POST" });
+      const opened = vi.fn(async () => true);
+      const response = await request(opened);
+      expect(await response.json()).toEqual({
+        opened: true,
+        location: "docker-host",
+        path: "/home/user/Slopify/Projects/p",
+      });
+      expect(opened).toHaveBeenCalledWith("/home/user/Slopify/Projects/p", expect.any(AbortSignal));
+      expect(write).not.toHaveBeenCalled();
+      for (const openOnHost of [async () => false, () => Promise.reject(new Error("gone"))]) {
+        const fallback = await request(openOnHost);
+        expect(fallback.status).toBe(200);
+        expect(await fallback.json()).toEqual({
+          opened: false,
+          location: "docker-host",
+          path: "/home/user/Slopify/Projects/p",
+        });
+      }
+      expect(write).toHaveBeenCalledWith("warn", "project.open-folder", expect.anything());
+      await rm(file);
+      const missing = vi.fn(async () => true);
+      expect((await request(missing)).status).toBe(404);
+      expect(missing).not.toHaveBeenCalled();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  },
+);

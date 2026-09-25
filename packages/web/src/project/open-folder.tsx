@@ -82,8 +82,9 @@ function FolderAction({ projectId, asset, folder = null }: Props) {
         {path !== undefined ? (
           <div role="status" className="min-w-0 space-y-2 text-small text-ink2">
             <p>
-              This folder is on the machine running Slopify. Copy the path into a file manager on
-              that machine.
+              Slopify runs in Docker, which can't open windows on your desktop. Copy this path into
+              your file manager. To have Open folder open it directly, run the Docker launcher again
+              (npx @gentbajko/slopify@latest --docker) so it sets up the host helper.
             </p>
             <input
               aria-label="Saved folder path"

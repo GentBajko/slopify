@@ -22,9 +22,25 @@ it("shows a selectable Docker path without claiming a desktop was opened", async
   expect(
     (await screen.findByRole("textbox", { name: "Saved folder path" })).getAttribute("value"),
   ).toBe("/home/u/Slopify/Projects/p1");
-  expect(screen.getByText(/machine running Slopify/)).not.toBeNull();
+  expect(screen.getByText(/Slopify runs in Docker, which can't open windows/)).not.toBeNull();
+  expect(screen.getByText(/npx @gentbajko\/slopify@latest --docker/)).not.toBeNull();
   expect(screen.getByRole("link", { name: "Download" })).not.toBeNull();
   expect(screen.queryByText(/opened a window/i)).toBeNull();
+});
+
+it("shows no path when the host helper opened the Docker folder", async () => {
+  const open = vi.fn(
+    jsonAnswer({ opened: true, location: "docker-host", path: "/home/u/Slopify/Projects/p1" }),
+  );
+  renderApp(
+    <DownloadLink projectId="p1" asset="video" />,
+    testDeps({ "POST /api/projects/p1/open-folder": open }),
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Open folder" }));
+  expect(open).toHaveBeenCalledTimes(1);
+  expect(await screen.findByRole("button", { name: "Open folder" })).not.toBeNull();
+  expect(screen.queryByRole("textbox", { name: "Saved folder path" })).toBeNull();
+  expect(screen.queryByRole("status")).toBeNull();
 });
 
 it("uses the historical record endpoint for a retained folder", async () => {

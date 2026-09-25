@@ -1,15 +1,18 @@
 import { constants } from "node:fs";
 import { open } from "node:fs/promises";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { nodeRunCli } from "../adapters/llm/run-cli.js";
 import { hostEnvironmentSchema } from "../host-cli/environment.js";
+import { launchXdgOpen } from "../host-cli/open-folder.js";
 import { ensureBridgeToken, prepareHostPaths } from "../host-cli/paths.js";
 import { createHostRuntime } from "../host-cli/runtime.js";
 import { startHostServer } from "../host-cli/server.js";
 import { resolveHostCommand } from "../host-cli/status.js";
 import { readVersion } from "../kernel/version.js";
 import { nodeCliProbe } from "../slices/settings/cli-status.js";
+import { dockerRoot } from "./docker-projects/state.js";
 
 const { values } = parseArgs({ options: { "state-dir": { type: "string" } }, strict: true });
 if (!values["state-dir"]) throw new Error("A host helper state directory is required.");
@@ -37,6 +40,13 @@ try {
 } finally {
   await file.close();
 }
+// Without a usable data folder there are no launcher receipts, so Open folder stays unsupported.
+let folderRoot: string | undefined;
+try {
+  folderRoot = dockerRoot(process.env, process.env.HOME || homedir());
+} catch {
+  folderRoot = undefined;
+}
 const server = await startHostServer({
   directory: paths.share,
   token: await ensureBridgeToken(paths.tokenFile),
@@ -47,6 +57,9 @@ const server = await startHostServer({
     env: process.env,
     now: Date.now,
     resolve: (id) => resolveHostCommand(id, process.env),
+    ...(process.getuid === undefined || folderRoot === undefined
+      ? {}
+      : { folders: { root: folderRoot, uid: process.getuid(), launch: launchXdgOpen } }),
   }),
 });
 process.on("SIGHUP", server.pauseAdmissions);

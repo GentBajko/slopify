@@ -9,13 +9,18 @@ import { nodeCodexModels } from "../adapters/llm/codex-models.js";
 import { geminiLlm } from "../adapters/llm/gemini.js";
 import { nodeGeminiModels } from "../adapters/llm/gemini-models.js";
 import type { RunCli } from "../adapters/llm/run-cli.js";
-import type { HostCliId, HostCliPorts, HostLlmId } from "../kernel/ports/host-cli.js";
+import type { HostCliId, HostCliRuntime, HostLlmId } from "../kernel/ports/host-cli.js";
 import { providerError } from "../kernel/ports/model.js";
+import { createHostFolderOpener, type HostFolderDeps } from "./open-folder.js";
 import { createHostStatus, type HostStatusDeps } from "./status.js";
 
 export function createHostRuntime(
-  deps: HostStatusDeps & { readonly run: RunCli; readonly env: Readonly<NodeJS.ProcessEnv> },
-): HostCliPorts {
+  deps: HostStatusDeps & {
+    readonly run: RunCli;
+    readonly env: Readonly<NodeJS.ProcessEnv>;
+    readonly folders?: HostFolderDeps;
+  },
+): HostCliRuntime {
   const status = createHostStatus(deps);
   async function command(id: HostCliId): Promise<string> {
     const ready = await status(id);
@@ -37,6 +42,7 @@ export function createHostRuntime(
   };
   return {
     status,
+    ...(deps.folders === undefined ? {} : { openFolder: createHostFolderOpener(deps.folders) }),
     llm: (id) => ({
       id,
       capabilities: { streams: true, reportsUsage: true, webSearch: true },

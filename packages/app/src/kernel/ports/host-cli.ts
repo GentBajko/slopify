@@ -1,3 +1,4 @@
+import { isAbsolute } from "node:path";
 import { z } from "zod";
 import type { ImagePort } from "./image.js";
 import { type LlmPort, messageRoles, thinkingModes } from "./llm.js";
@@ -35,6 +36,16 @@ export interface HostCliPorts {
   readonly llm: (id: HostLlmId) => LlmPort;
   readonly image: ImagePort;
 }
+/** The helper's own ports: it can also open a verified project folder on the user's desktop. */
+export interface HostCliRuntime extends HostCliPorts {
+  readonly openFolder?: (path: string) => Promise<void>;
+}
+/** A folder the helper refuses to open on purpose; the route answers it with a 403. */
+export class HostFolderRefused extends Error {}
+/** The container's view: opening a folder answers false when the helper can't (or is too old to). */
+export interface HostCliClient extends HostCliPorts {
+  readonly openFolder: (path: string, signal: AbortSignal) => Promise<boolean>;
+}
 const short = z
   .string()
   .min(1)
@@ -59,6 +70,16 @@ export const hostImageSchema = z
     aspect: z.enum(["16:9", "9:16"]),
   })
   .strict();
+export const hostOpenFolderSchema = z
+  .object({
+    path: z
+      .string()
+      .min(1)
+      .max(4096)
+      .refine((v) => isAbsolute(v) && !/[\p{Cc}]/u.test(v)),
+  })
+  .strict();
+export const hostOpenedSchema = z.object({ opened: z.literal(true) }).strict();
 export type HostLlmBody = z.infer<typeof hostLlmSchema>;
 export type HostImageBody = z.infer<typeof hostImageSchema>;
 export const hostStatusSchema = z

@@ -16,6 +16,7 @@ async function endpoint(
   type = "application/x-ndjson",
   protocol = 1,
   chunkSize = 3,
+  status = 200,
 ) {
   const directory = await mkdtemp(join(tmpdir(), "sb-"));
   cleanups.push(() => rm(directory, { recursive: true, force: true }));
@@ -28,6 +29,7 @@ async function endpoint(
       return;
     }
     if (req.method === "POST") posts++;
+    res.statusCode = status;
     res.setHeader("content-type", type);
     const bytes = Buffer.from(body);
     for (let i = 0; i < bytes.length; i += chunkSize) res.write(bytes.subarray(i, i + chunkSize));
@@ -141,5 +143,29 @@ it.skipIf(process.platform === "win32")(
         signal: AbortSignal.timeout(2000),
       }),
     ).rejects.toMatchObject({ fault: { kind: "unavailable" } });
+  },
+);
+it.skipIf(process.platform === "win32")(
+  "opens a host folder only when the helper confirms, and treats an older helper as unsupported",
+  async () => {
+    const signal = () => AbortSignal.timeout(2000);
+    const opened = await endpoint('{"opened":true}', "application/json");
+    expect(await opened.client.openFolder("/home/u/Slopify/Projects/p1", signal())).toBe(true);
+    expect(opened.posts()).toBe(1);
+    const old = await endpoint(
+      JSON.stringify({ type: "error", kind: "unavailable", message: "Update the helper." }),
+      "application/json",
+      1,
+      3,
+      404,
+    );
+    expect(await old.client.openFolder("/home/u/Slopify/Projects/p1", signal())).toBe(false);
+    const refused = await endpoint("{}", "application/json", 1, 3, 403);
+    expect(await refused.client.openFolder("/etc", signal())).toBe(false);
+    expect(await old.client.openFolder("relative/path", signal())).toBe(false);
+    expect(old.posts()).toBe(1);
+    expect(
+      await createHostCliClient({ directory: undefined }).openFolder("/home/u", signal()),
+    ).toBe(false);
   },
 );

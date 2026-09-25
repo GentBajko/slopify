@@ -1,8 +1,12 @@
 import { expect, it, vi } from "vitest";
-import type { HostCliPorts } from "../../kernel/ports/host-cli.js";
+import {
+  type HostCliPorts,
+  type HostCliRuntime,
+  HostFolderRefused,
+} from "../../kernel/ports/host-cli.js";
 import { hostCliRoutes, hostGate } from "./host-cli.js";
 
-function harness(override: Partial<HostCliPorts> = {}) {
+function harness(override: Partial<HostCliRuntime> = {}) {
   let calls = 0;
   const ports: HostCliPorts = {
     status: async (id) => ({ id, command: "/host/cli", installed: true, login: "unknown" }),
@@ -233,3 +237,46 @@ it.each(["llm", "image"] as const)(
     }
   },
 );
+it("opens a folder only for an authenticated, well-formed request", async () => {
+  const opened: string[] = [];
+  const h = harness({
+    openFolder: async (path) => {
+      opened.push(path);
+      if (path === "/etc") throw new HostFolderRefused("The helper did not open /etc.");
+      if (path === "/broken") throw new Error("xdg-open isn't installed on this machine.");
+    },
+  });
+  const post = (body: string, headers: Record<string, string> = h.headers) =>
+    h.app.request("/v1/open-folder", { method: "POST", headers, body });
+  expect((await post('{"path":"/home/u/p"}', { authorization: "Bearer wrong" })).status).toBe(401);
+  for (const body of [
+    "invalid",
+    "{}",
+    '{"path":"relative/p"}',
+    '{"path":"/home/u/p","extra":1}',
+    JSON.stringify({ path: "/home/u/p\nx" }),
+    JSON.stringify({ path: `/${"a".repeat(4096)}` }),
+  ])
+    expect((await post(body)).status).toBe(400);
+  expect(opened).toEqual([]);
+  const ok = await post('{"path":"/home/u/p"}');
+  expect(ok.status).toBe(200);
+  expect(await ok.json()).toEqual({ opened: true });
+  const refused = await post('{"path":"/etc"}');
+  expect(refused.status).toBe(403);
+  expect(await refused.json()).toMatchObject({ message: "The helper did not open /etc." });
+  const broken = await post('{"path":"/broken"}');
+  expect(broken.status).toBe(503);
+  expect(await broken.json()).toMatchObject({ message: expect.stringContaining("xdg-open") });
+  expect(opened).toEqual(["/home/u/p", "/etc", "/broken"]);
+  expect(h.gate.active).toBe(0);
+});
+it("answers 404 for open-folder when the helper can't open folders", async () => {
+  const h = harness();
+  const response = await h.app.request("/v1/open-folder", {
+    method: "POST",
+    headers: h.headers,
+    body: '{"path":"/home/u/p"}',
+  });
+  expect(response.status).toBe(404);
+});

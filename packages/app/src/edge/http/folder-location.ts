@@ -39,13 +39,18 @@ export async function replyForFolder(
         if (s.isSymbolicLink() || (i === parts.length - 1 ? !s.isFile() : !s.isDirectory()))
           throw new Error("Unavailable output");
       }
-      return c.json(
-        folderReplySchema.parse({
-          opened: false,
-          location: "docker-host",
-          path: join(host, dirname(r)),
-        }),
-      );
+      const hostPath = join(host, dirname(r));
+      const opened =
+        (await deps.folderLocation
+          .openOnHost?.(hostPath, AbortSignal.timeout(10_000))
+          .catch(() => false)) === true;
+      if (!opened && deps.folderLocation.openOnHost)
+        deps.log.write("warn", "project.open-folder", {
+          projectId,
+          detail:
+            "The host helper did not open the folder (not installed, too old, or it refused), so the host path was shown instead.",
+        });
+      return c.json(folderReplySchema.parse({ opened, location: "docker-host", path: hostPath }));
     } catch {
       deps.log.write("warn", "project.locate-folder", {
         projectId,

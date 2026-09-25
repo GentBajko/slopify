@@ -4,14 +4,14 @@ import { connect } from "node:net";
 import { join } from "node:path";
 import { createAdaptorServer } from "@hono/node-server";
 import { hostCliRoutes, hostGate } from "../edge/http/host-cli.js";
-import type { HostCliPorts } from "../kernel/ports/host-cli.js";
+import type { HostCliRuntime } from "../kernel/ports/host-cli.js";
 import { hasCode } from "./paths.js";
 
 export async function startHostServer(options: {
   readonly directory: string;
   readonly token: string;
   readonly version: string;
-  readonly ports: HostCliPorts;
+  readonly ports: HostCliRuntime;
 }): Promise<{
   stop: () => Promise<void>;
   pauseAdmissions: () => void;

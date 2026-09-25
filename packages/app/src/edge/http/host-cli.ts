@@ -8,7 +8,8 @@ import { sniffImage } from "../../adapters/image/bytes.js";
 import { redact } from "../../kernel/log.js";
 import {
   bridgeLimits,
-  type HostCliPorts,
+  type HostCliRuntime,
+  HostFolderRefused,
   hostCliIds,
   hostCliProtocol,
   type hostFaultSchema,
@@ -17,6 +18,7 @@ import {
   hostLlmIds,
   hostLlmSchema,
   hostModelsSchema,
+  hostOpenFolderSchema,
   hostStatusSchema,
 } from "../../kernel/ports/host-cli.js";
 import { isProviderError, providerError } from "../../kernel/ports/model.js";
@@ -75,7 +77,7 @@ export function hostGate(): HostGate {
 export interface HostRouteOptions {
   readonly token: string;
   readonly version: string;
-  readonly ports: HostCliPorts;
+  readonly ports: HostCliRuntime;
   readonly gate: HostGate;
 }
 type HostEnv = {
@@ -125,7 +127,9 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
     }),
   );
   app.use("/v1/*", async (c, next) => {
-    const kind = c.req.method === "POST" ? "generation" : "metadata";
+    // Opening a folder is quick and must not look like running work to the launcher's upgrade check.
+    const kind =
+      c.req.method === "POST" && c.req.path !== "/v1/open-folder" ? "generation" : "metadata";
     const job = gate.acquire(kind);
     if (!job)
       return c.json(
@@ -298,6 +302,31 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
       clearTimeout(timer);
       controller.abort();
     }
+  });
+  app.post("/v1/open-folder", async (c) => {
+    const open = ports.openFolder;
+    if (!open) return c.notFound();
+    const body = hostOpenFolderSchema.safeParse(await json(c.req.raw));
+    if (!body.success) return invalid(c);
+    try {
+      await open(body.data.path);
+    } catch (error) {
+      const refused = error instanceof HostFolderRefused;
+      return c.json(
+        {
+          type: "error",
+          kind: "unavailable",
+          message: (error instanceof Error
+            ? error.message
+            : "The Slopify host helper could not open the folder. Copy the path into your file manager instead."
+          )
+            .replaceAll(token, "[redacted]")
+            .slice(0, 4096),
+        },
+        refused ? 403 : 503,
+      );
+    }
+    return c.json({ opened: true });
   });
   app.onError((error, c) => c.json(fault(error, token), 503));
   app.notFound((c) =>

@@ -56,7 +56,12 @@ export interface AppDeps {
   readonly measureAudio?: ((path: string, signal?: AbortSignal) => Promise<number>) | undefined;
   readonly openFolder?: (path: string) => Promise<void>;
   readonly installationPending?: () => boolean;
-  readonly folderLocation?: { readonly container: boolean; readonly hostProjects: string | null };
+  readonly folderLocation?: {
+    readonly container: boolean;
+    readonly hostProjects: string | null;
+    /** Asks the host helper to open a host folder; false means show the path instead. */
+    readonly openOnHost?: (path: string, signal: AbortSignal) => Promise<boolean>;
+  };
   readonly catalogue?: CatalogueStore;
   readonly updater?: AppUpdater;
   readonly mutations?: Pick<MutationLifecycle, "begin">;
