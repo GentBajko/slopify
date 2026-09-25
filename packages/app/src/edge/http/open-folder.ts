@@ -1,10 +1,10 @@
-import { dirname } from "node:path";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
 import { assetOf, findDownload } from "../../slices/storage/downloads.js";
 import { outputsOf } from "../../slices/storage/repo.js";
 import type { AppDeps } from "./app.js";
+import { replyForFolder } from "./folder-location.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
 
 export function openFolderRoutes(deps: AppDeps) {
@@ -60,18 +60,7 @@ export function openFolderRoutes(deps: AppDeps) {
             "No saved file was found for this output. Re-run the stage if the file was removed.",
         });
       }
-      try {
-        if (deps.openFolder === undefined) throw new Error("No folder opener configured");
-        await deps.openFolder(dirname(download.download.path));
-        return c.json({ opened: true });
-      } catch {
-        return problem(c, {
-          status: 503,
-          title: titleOf(503),
-          detail:
-            "Could not open the file manager on the machine running Slopify. Make sure a desktop session is available.",
-        });
-      }
+      return replyForFolder(c, deps, id, download.download.path);
     },
   );
 }

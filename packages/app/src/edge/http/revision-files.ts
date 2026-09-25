@@ -1,11 +1,11 @@
 import { createReadStream } from "node:fs";
-import { dirname } from "node:path";
 import { Readable } from "node:stream";
 import { zValidator } from "@hono/zod-validator";
 import { type Context, Hono } from "hono";
 import { z } from "zod";
 import { findRevisionDownload, revisionImagesZip } from "../../slices/revisions/downloads.js";
 import type { AppDeps } from "./app.js";
+import { replyForFolder } from "./folder-location.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
 
 const id = z
@@ -65,22 +65,7 @@ export function revisionFolderRoutes(deps: AppDeps) {
       const { id: projectId, revisionId, recordId } = c.req.valid("param");
       const result = findRevisionDownload(deps, projectId, revisionId, recordId);
       if (!result.ok) return unavailable(c, result.reason);
-      try {
-        if (deps.openFolder === undefined) throw new Error("No folder opener configured");
-        await deps.openFolder(dirname(result.download.path));
-        return c.json({ opened: true });
-      } catch {
-        deps.log.write("warn", "project.open-folder", {
-          projectId,
-          detail: "The file manager could not be opened for a retained file.",
-        });
-        return problem(c, {
-          status: 503,
-          title: titleOf(503),
-          detail:
-            "Could not open the file manager on the machine running Slopify. Make sure a desktop session is available.",
-        });
-      }
+      return replyForFolder(c, deps, projectId, result.download.path);
     },
   );
 }

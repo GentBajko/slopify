@@ -8,13 +8,14 @@ import { saveRevision } from "../../slices/revisions/mutations.js";
 import { insertRevision } from "../../slices/revisions/repo.js";
 import { outputPath } from "../../slices/storage/layout.js";
 import { createHub } from "../events/hub.js";
-import { createApp } from "./app.js";
+import { type AppDeps, createApp } from "./app.js";
 
-async function fixture() {
+async function fixture(folderLocation?: AppDeps["folderLocation"]) {
   const h = await mutationFixture();
   const openFolder = vi.fn(async (_path: string): Promise<void> => undefined);
   const app = createApp({
     ...h.deps,
+    ...(folderLocation === undefined ? {} : { folderLocation }),
     hub: createHub(h.deps),
     version: "test",
     webDist: "/unused",
@@ -148,3 +149,44 @@ it("reports an unavailable desktop without exposing filesystem details", async (
     h.close();
   }
 });
+
+it.skipIf(process.platform !== "linux")(
+  "locates retained output and partial narration records with unchanged byte downloads",
+  async () => {
+    const h = await fixture({ container: true, hostProjects: "/home/u/Slopify/Projects" });
+    try {
+      const output = retainedOutput(
+        h.deps,
+        h.base.revision,
+        "audio_export",
+        "old.wav",
+        "old bytes",
+      );
+      const piece = retainedPiece(h.deps, h.base.revision, "partial bytes");
+      for (const [record, bytes] of [
+        [output.recordId, "old bytes"],
+        [piece.recordId, "partial bytes"],
+      ] as const) {
+        const response = await h.app.request(h.folder(record), { method: "POST" });
+        expect(await response.json()).toMatchObject({
+          opened: false,
+          location: "docker-host",
+          path: expect.stringContaining(`/Slopify/Projects/${h.projectId}/`),
+        });
+        expect(await (await h.app.request(h.file(record))).text()).toBe(bytes);
+      }
+      expect(h.openFolder).not.toHaveBeenCalled();
+      expect(
+        (
+          await h.app.request(h.folder(output.recordId), {
+            method: "POST",
+            headers: { origin: "https://foreign.example" },
+          })
+        ).status,
+      ).toBe(403);
+      expect((await h.app.request(h.folder("unknown"), { method: "POST" })).status).toBe(404);
+    } finally {
+      h.close();
+    }
+  },
+);

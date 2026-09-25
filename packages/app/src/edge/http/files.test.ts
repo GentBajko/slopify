@@ -13,7 +13,7 @@ import { ensureDirs, layout } from "../../kernel/paths.js";
 import type { Output } from "../../slices/storage/model.js";
 import { insertOutput } from "../../slices/storage/repo.js";
 import { createHub } from "../events/hub.js";
-import { createApp } from "./app.js";
+import { type AppDeps, createApp } from "./app.js";
 
 const clock = fixedClock("2026-09-02T10:00:00.000Z");
 const log: Log = { write: (): void => {} };
@@ -28,7 +28,11 @@ interface Harness {
   readonly paths: Paths;
 }
 
-function harness(openFolder?: (path: string) => Promise<void>): Harness {
+function harness(
+  openFolder?: (path: string) => Promise<void>,
+  folderLocation?: AppDeps["folderLocation"],
+  installationPending?: () => boolean,
+): Harness {
   const paths = layout(mkdtempSync(join(tmpdir(), "slopify-files-")));
   ensureDirs(paths, { mode: 0o700 });
   const db = openDb(paths.db);
@@ -36,6 +40,8 @@ function harness(openFolder?: (path: string) => Promise<void>): Harness {
   db.exec("INSERT INTO projects VALUES ('p1','Rope','16:9','{}','2026-09-01','2026-09-01')");
   const app = createApp({
     ...(openFolder === undefined ? {} : { openFolder }),
+    ...(folderLocation === undefined ? {} : { folderLocation }),
+    ...(installationPending === undefined ? {} : { installationPending }),
     db,
     paths,
     hub: createHub({ ids, log }),
@@ -149,6 +155,41 @@ describe("GET /files/:projectId/images.zip", () => {
 });
 
 describe("opening output folders", () => {
+  it.skipIf(process.platform !== "linux")(
+    "locates current and virtual archive files in API-only Docker, keeping downloads",
+    async () => {
+      const h = harness(undefined, { container: true, hostProjects: "/home/u/Slopify/Projects" });
+      h.place({ id: "image", role: "image", path: "images/001.png", meta: { index: 1 } }, "image");
+      for (const asset of ["image-1", "images.zip"]) {
+        const result = await h.app.request("/api/projects/p1/open-folder", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ asset }),
+        });
+        expect(await result.json()).toEqual({
+          opened: false,
+          location: "docker-host",
+          path: "/home/u/Slopify/Projects/p1/images",
+        });
+      }
+      expect(await (await h.app.request("/files/p1/image-1")).text()).toBe("image");
+    },
+  );
+
+  it("holds mutations during provisional Docker setup while health remains available", async () => {
+    const h = harness(undefined, undefined, () => true);
+    expect((await h.app.request("/api/health")).status).toBe(200);
+    expect(
+      (
+        await h.app.request("/api/projects/p1/open-folder", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ asset: "video" }),
+        })
+      ).status,
+    ).toBe(503);
+  });
+
   it("opens only a recorded output's directory and the image collection directory", async () => {
     const opened: string[] = [];
     const { app, place, paths } = harness(async (path) => {
