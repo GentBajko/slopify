@@ -34,3 +34,9 @@ export function ensureDirs(paths: Paths, options: EnsureDirsOptions): void {
     chmodSync(dir, options.mode);
   }
 }
+
+// The subtitle-timing model's cache. The app readies it at start and every captioned render
+// reads it, so both name it through here.
+export function subtitleModelDir(dataDir: string): string {
+  return join(dataDir, "models", "english-subtitles");
+}

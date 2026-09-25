@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { z } from "zod";
+import { subtitleModelDir } from "../../kernel/paths.js";
 import type { SubtitleOmission } from "../../kernel/ports/subtitles.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import { projectById, setStageProgress } from "../admission/repo.js";
@@ -177,7 +178,7 @@ async function alignSegments(
         audioPath: segment.path,
         onOmission: (omission) => omissions.push({ ...omission, start: omission.start + offset }),
         text: segment.text,
-        cacheDir: join(deps.paths.dataDir, "models", "english-subtitles"),
+        cacheDir: subtitleModelDir(deps.paths.dataDir),
         ffmpeg: deps.ffmpeg,
         signal: context.signal,
         onProgress: (current, maximum) => {

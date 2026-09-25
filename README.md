@@ -198,6 +198,7 @@ variable, the variable beats the default.
 | `--projects-dir` (Docker only) | `SLOPIFY_DOCKER_PROJECTS_DIR` | remembered path; otherwise `~/Slopify/Projects` (custom names: `~/Slopify/<container>/Projects`) | Dedicated host project folder. |
 | `--no-open` | `SLOPIFY_NO_OPEN` | the browser opens | Keeps the browser shut. As a variable, any value other than empty, `0` or `false` counts as set. |
 | no flag | `SLOPIFY_FFMPEG` | the bundled binary | Path to an ffmpeg to render with. |
+| no flag | `SLOPIFY_NO_MODEL_PREFETCH` | the model downloads at start | Skips fetching the 95 MB subtitle-timing model when the app starts; the first captioned render fetches it instead. Docker images ship the model and copy it locally. Set as for `SLOPIFY_NO_OPEN`. |
 
 There is no login. Binding to anything but `127.0.0.1` prints a warning at startup
 and means it: whoever reaches that port controls the app and the keys in it.

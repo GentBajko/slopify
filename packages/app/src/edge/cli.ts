@@ -93,7 +93,12 @@ try {
     process.argv.slice(2),
   );
   if (forwarded !== undefined) process.exit(forwarded);
-  const { paths, url, stop } = await boot(config);
+  const { paths, url, stop } = await boot(config, {
+    prefetchSubtitleModel: ["", "0", "false"].includes(
+      (process.env.SLOPIFY_NO_MODEL_PREFETCH ?? "").trim().toLowerCase(),
+    ),
+    subtitleModelSeed: process.env.SLOPIFY_SUBTITLE_MODEL_SEED?.trim() || undefined,
+  });
   console.log(`Slopify is running at ${url}`);
   console.log(`Slopify data directory: ${paths.dataDir}`);
   console.log(`Database: ${paths.db}`);

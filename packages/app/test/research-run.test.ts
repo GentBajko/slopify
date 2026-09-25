@@ -355,9 +355,10 @@ describe("the research stage through the attempt wrapper", () => {
       state: "done",
       failure_reason: null,
     });
+    // The runner passes the first report of each half second and the last one at the end.
     expect(
       events.filter((event) => event.type === "stage.progress").map((event) => event.current),
-    ).toEqual([0, 1, 2]);
+    ).toEqual([0, 2]);
     h.db.close();
   });
 });

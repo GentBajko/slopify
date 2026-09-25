@@ -87,6 +87,7 @@ async function smoke(command, label, prefix = [], extraEnv = {}) {
         SLOPIFY_FFMPEG: "",
         FFMPEG_BIN: "",
         SLOPIFY_SKIP_MANAGED_UPDATE: "1",
+        SLOPIFY_NO_MODEL_PREFETCH: "1",
         ...extraEnv,
       },
       stdio: "ignore",

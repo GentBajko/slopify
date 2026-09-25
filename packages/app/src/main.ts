@@ -8,6 +8,7 @@ import ffmpegStatic from "ffmpeg-static";
 import type { Hono } from "hono";
 import { buildRegistry } from "./adapter-registry.js";
 import { alignSubtitles } from "./adapters/alignment/index.js";
+import { prefetchModel } from "./adapters/alignment/prefetch.js";
 import { prepareFfmpeg } from "./adapters/ffmpeg.js";
 import { createHostCliClient } from "./adapters/host-cli/index.js";
 import { nodeRunCli } from "./adapters/llm/run-cli.js";
@@ -30,13 +31,14 @@ import type { Config } from "./kernel/config/index.js";
 import { openDb } from "./kernel/db/index.js";
 import { migrate } from "./kernel/db/migrate.js";
 import { transact } from "./kernel/db/tx.js";
+import { causedBy } from "./kernel/errors.js";
 import type { Ids } from "./kernel/ids.js";
 import { ulidIds } from "./kernel/ids.js";
 import { acquireInstanceLock } from "./kernel/lock.js";
 import type { Log } from "./kernel/log.js";
 import { openLog } from "./kernel/log.js";
 import type { Paths } from "./kernel/paths.js";
-import { ensureDirs, layout } from "./kernel/paths.js";
+import { ensureDirs, layout, subtitleModelDir } from "./kernel/paths.js";
 import type { Registry } from "./kernel/ports/registry.js";
 import { sqliteAttempts } from "./kernel/runner/attempt-repo.js";
 import {
@@ -107,6 +109,14 @@ export interface Boot {
   readonly stop: () => Promise<void>;
 }
 
+export interface BootOptions {
+  // Ready the subtitle model in the background as soon as the app is up. The CLI turns it
+  // on; tests boot without it so they never reach the network.
+  readonly prefetchSubtitleModel?: boolean;
+  // A verified model shipped with the install, copied instead of downloaded.
+  readonly subtitleModelSeed?: string | undefined;
+}
+
 export interface ScheduleTickLifecycle {
   readonly tick: () => Promise<void>;
   readonly stop: () => Promise<void>;
@@ -157,7 +167,7 @@ export function createScheduleTickLifecycle(deps: {
   };
 }
 
-export async function boot(config: Config): Promise<Boot> {
+export async function boot(config: Config, options: BootOptions = {}): Promise<Boot> {
   const clock: Clock = systemClock;
   const ids = ulidIds;
   const paths = layout(config.dataDir);
@@ -427,6 +437,21 @@ export async function boot(config: Config): Promise<Boot> {
     // Whatever last run left queued goes out at start. Nothing waits for
     // it, and an unreachable collector costs one refused socket.
     flusher.soon();
+    const modelPrefetch = new AbortController();
+    const prefetching = options.prefetchSubtitleModel
+      ? prefetchModel({
+          cacheDir: subtitleModelDir(paths.dataDir),
+          seed: options.subtitleModelSeed,
+          signal: modelPrefetch.signal,
+        }).then(
+          () => log.write("info", "subtitle-model.ready"),
+          (error: unknown) => {
+            // Not fatal: the first captioned render tries again and says why on its row.
+            if (!modelPrefetch.signal.aborted)
+              log.write("warn", "subtitle-model.prefetch", { detail: causedBy(error) });
+          },
+        )
+      : Promise.resolve();
     const open = db;
     let stopping: Promise<void> | undefined;
     let stopActivation = (): void => {};
@@ -439,6 +464,7 @@ export async function boot(config: Config): Promise<Boot> {
         const serverClose = beginServerClose(server);
         stopActivation();
         audioPreviews.close();
+        modelPrefetch.abort();
         try {
           // Admission closes before the listener. Requests already admitted keep the
           // database until their response settles; anything racing shutdown receives 503.
@@ -459,6 +485,7 @@ export async function boot(config: Config): Promise<Boot> {
             // closes and fail to mark its batch delivered, which costs one re-send that
             // the collector deduplicates by event id.
             flusher.stop();
+            await prefetching;
             log.write("info", "shutdown");
             open.close();
             lock.release();

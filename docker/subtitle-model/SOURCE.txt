@@ -1,0 +1,12 @@
+The subtitle-timing model baked into the Docker image, so captions never wait on a download.
+Shipped byte-for-byte as published; Slopify makes no changes to it.
+
+wav2vec2-base-960h-cd5040c1.onnx
+Source: https://huggingface.co/Xenova/wav2vec2-base-960h/resolve/a19f851b3d42865797e410752b4c570c871e4825/onnx/model_quantized.onnx
+SHA-256: cd5040c147381580ed73258143dd8e0c28e800a09e74ee42ee2b3e8cb4d760a3
+A quantized ONNX conversion of https://huggingface.co/facebook/wav2vec2-base-960h,
+Copyright Facebook, Inc. and its affiliates, licensed under the Apache License, Version 2.0.
+
+LICENSE-2.0.txt
+Source: https://www.apache.org/licenses/LICENSE-2.0.txt
+SHA-256: cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30

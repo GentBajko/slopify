@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { z } from "zod";
+import { subtitleModelDir } from "../../kernel/paths.js";
 import type { SubtitleOmission, TimedWord } from "../../kernel/ports/subtitles.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
@@ -80,7 +80,7 @@ async function timing(
       const aligned = await deps.alignSubtitles({
         audioPath: segment.path,
         text: revisionTranscript(deps, snapshot, segment.kind),
-        cacheDir: join(deps.paths.dataDir, "models", "english-subtitles"),
+        cacheDir: subtitleModelDir(deps.paths.dataDir),
         ffmpeg: deps.ffmpeg,
         signal: context.signal,
         onOmission: (value) => omissions.push({ ...value, start: value.start + offset }),

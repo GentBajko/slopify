@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
-import { mkdir, mkdtemp, rename, rm, stat } from "node:fs/promises";
+import { chmod, copyFile, mkdir, mkdtemp, rename, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
@@ -15,10 +15,13 @@ interface ModelFile {
 }
 interface ModelInput {
   readonly cacheDir: string;
+  // A verified copy shipped with the install (the Docker image carries one). Used instead of
+  // the network when the cache is empty; checked against the same size and hash first.
+  readonly seed?: string | undefined;
   readonly signal: AbortSignal;
   readonly onProgress?: ((current: number, total: number) => void) | undefined;
 }
-interface ModelDeps {
+export interface ModelDeps {
   readonly model: ModelFile;
   readonly fetch: typeof fetch;
   readonly wait?: (milliseconds: number, signal: AbortSignal) => Promise<void>;
@@ -39,6 +42,8 @@ export async function prepareModel(
   await mkdir(input.cacheDir, { recursive: true, mode: 0o700 });
   const target = join(input.cacheDir, deps.model.filename);
   if (await verified(target, deps.model, input.signal)) return target;
+  if (input.seed !== undefined && (await verified(input.seed, deps.model, input.signal)))
+    return seedModel(input, input.seed, target);
   let lastFailure: unknown;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
@@ -134,6 +139,20 @@ async function downloadModel(input: ModelInput, deps: ModelDeps, target: string)
       await rm(target, { force: true });
       await rename(part, target);
     }
+    return target;
+  } finally {
+    await rm(staging, { recursive: true, force: true });
+  }
+}
+
+async function seedModel(input: ModelInput, seed: string, target: string): Promise<string> {
+  const staging = await mkdtemp(join(input.cacheDir, ".alignment-seed-"));
+  try {
+    const part = join(staging, "model.part");
+    await copyFile(seed, part);
+    await chmod(part, 0o600);
+    input.signal.throwIfAborted();
+    await rename(part, target);
     return target;
   } finally {
     await rm(staging, { recursive: true, force: true });

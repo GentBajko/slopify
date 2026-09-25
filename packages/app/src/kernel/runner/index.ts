@@ -1,8 +1,10 @@
+import { causedBy } from "../errors.js";
 import type { EmitProject, ProjectEvent } from "../events.js";
 import type { Log } from "../log.js";
 import type { ProjectState, StageKind, StageState } from "../pipeline.js";
 import type { CheckpointAuthority } from "./checkpoint-authority.js";
 import { derive, deps as graph, satisfied } from "./graph.js";
+import { type ProgressGate, progressGate } from "./progress.js";
 import type { StageRunResult, WorkRef } from "./work.js";
 
 export interface RunnerStage {
@@ -131,6 +133,12 @@ export function createRunner(deps: RunnerDeps): Runner {
   };
 
   async function execute(stage: RunnerStage, controller: AbortController): Promise<void> {
+    const tag = (event: ProjectEvent): ProjectEvent => ({
+      ...event,
+      revisionId: stage.work.revisionId,
+      workId: stage.work.workId,
+    });
+    const progress: ProgressGate = progressGate((event) => deps.emit(stage.projectId, tag(event)));
     try {
       const run = deps.runs[stage.kind];
       if (run === undefined) {
@@ -148,15 +156,15 @@ export function createRunner(deps: RunnerDeps): Runner {
           deps.stages.maySubmit(stage.work, pieceId),
         signal: controller.signal,
         emit: (event: ProjectEvent): void => {
-          deps.emit(stage.projectId, {
-            ...event,
-            revisionId: stage.work.revisionId,
-            workId: stage.work.workId,
-          });
+          if (event.type === "stage.progress") progress.offer(event);
+          else deps.emit(stage.projectId, tag(event));
         },
       });
+      progress.flush();
+      progress.close();
       conclude(stage, result === "held" ? "pending" : "done", null);
     } catch (error) {
+      progress.close();
       if (controller.signal.aborted) {
         // A late rejection from the aborted call is how a stage learns it was canceled, so
         // it is not logged as a fault.
@@ -167,7 +175,7 @@ export function createRunner(deps: RunnerDeps): Runner {
       deps.log.write("error", "stage.failed", {
         projectId: stage.projectId,
         stage: stage.kind,
-        detail: reasonOf(error),
+        detail: causedBy(error),
       });
       conclude(stage, "failed", reasonOf(error));
     }

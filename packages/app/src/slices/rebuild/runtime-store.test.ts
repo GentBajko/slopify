@@ -131,6 +131,21 @@ it("persists fractional current progress without letting retired work paint its 
         .prepare("SELECT progress_current,progress_total FROM stages WHERE id='article'")
         .get(),
     ).toMatchObject({ progress_current: 0.75, progress_total: 1 });
+    recordWorkProgress(h.deps, {
+      type: "stage.progress",
+      projectId: h.projectId,
+      revisionId: work.revisionId,
+      workId: work.workId,
+      stage: "article",
+      current: 1,
+      total: 4,
+    });
+    // Later reports adjust the counted row by their difference instead of re-deriving it.
+    expect(
+      h.deps.db
+        .prepare("SELECT progress_current,progress_total FROM stages WHERE id='article'")
+        .get(),
+    ).toMatchObject({ progress_current: 0.25, progress_total: 1 });
     const saved = await saveRevision(h.deps, {
       projectId: h.projectId,
       baseRevisionId: base.view.revision.id,

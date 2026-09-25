@@ -41,6 +41,40 @@ describe("alignment model cache", () => {
     );
     expect(calls).toBe(1);
   });
+  it("copies a verified shipped model instead of downloading it", async () => {
+    const dir = await cache();
+    const seed = join(await cache(), model.filename);
+    await writeFile(seed, bytes);
+    const file = await prepareModel(
+      { cacheDir: dir, seed, signal: new AbortController().signal },
+      {
+        model,
+        fetch: async () => {
+          throw new Error("no network");
+        },
+      },
+    );
+    expect(file).toBe(join(dir, model.filename));
+    expect(await readFile(file)).toEqual(Buffer.from(bytes));
+  });
+  it("downloads when the shipped model fails verification", async () => {
+    const dir = await cache();
+    const seed = join(await cache(), model.filename);
+    await writeFile(seed, "tampered");
+    let calls = 0;
+    const file = await prepareModel(
+      { cacheDir: dir, seed, signal: new AbortController().signal },
+      {
+        model,
+        fetch: async () => {
+          calls += 1;
+          return new Response(bytes);
+        },
+      },
+    );
+    expect(calls).toBe(1);
+    expect(await readFile(file)).toEqual(Buffer.from(bytes));
+  });
   it("replaces a corrupt cached model only with verified bytes", async () => {
     const dir = await cache();
     await writeFile(join(dir, model.filename), "corrupt");

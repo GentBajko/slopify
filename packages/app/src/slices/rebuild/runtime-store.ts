@@ -112,11 +112,12 @@ export function invocationReady(deps: RevisionDeps, work: WorkRef): boolean {
 export function executionStandings(
   deps: RevisionDeps,
   projectId: string,
+  derived?: readonly RunnerStage[],
 ): readonly Pick<RunnerStage, "kind" | "state">[] {
   const revisionId = currentRevisionId(deps.db, projectId);
   const view = revisionId === undefined ? undefined : getRevisionView(deps, projectId, revisionId);
   if (view === undefined) return [];
-  const work = executionStages(deps, projectId);
+  const work = derived ?? executionStages(deps, projectId);
   return stageKinds.map((kind) => {
     const source = view.revision.config.sources[kind];
     const group = work
@@ -162,21 +163,17 @@ export function executionStandings(
 }
 
 export function projectStandings(deps: RevisionDeps, projectId: string): void {
-  const standings = executionStandings(deps, projectId);
+  // One derivation serves every stage: each builds the whole execution plan.
+  const work = executionStages(deps, projectId);
+  const standings = executionStandings(deps, projectId, work);
   for (const stage of standings) {
-    const invocations = executionStages(deps, projectId).filter((work) => work.kind === stage.kind);
-    const current = invocations.reduce((total, work) => {
-      if (work.state === "done") return total + 1;
+    const invocations = work.filter((entry) => entry.kind === stage.kind);
+    const current = invocations.reduce((total, entry) => {
+      if (entry.state === "done") return total + 1;
       const progress = deps.db
         .prepare("SELECT progress_current,progress_total FROM revision_work WHERE id=?")
-        .get(work.work.workId);
-      if (
-        typeof progress?.progress_current !== "number" ||
-        typeof progress.progress_total !== "number" ||
-        progress.progress_total <= 0
-      )
-        return total;
-      return total + Math.max(0, Math.min(1, progress.progress_current / progress.progress_total));
+        .get(entry.work.workId);
+      return total + fraction(progress?.progress_current, progress?.progress_total);
     }, 0);
     const failed = invocations.find((work) => work.state === "failed");
     const failure =
@@ -203,6 +200,11 @@ export function projectStandings(deps: RevisionDeps, projectId: string): void {
   settleScheduleRunsForProject(deps.db, projectId, deps.clock.now().toISOString());
 }
 
+// Progress moves one number and nothing else. The stage row already counts this invocation's
+// last fraction, from the claim or the previous event, so it takes the difference instead
+// of re-deriving the project: that derivation rebuilds every stage's plan and ran to seconds
+// on a long article, which froze the process once per downloaded chunk. State changes still
+// go through projectStandings.
 export function recordWorkProgress(deps: RevisionDeps, event: StageProgressEvent): void {
   if (
     event.workId === undefined ||
@@ -212,17 +214,38 @@ export function recordWorkProgress(deps: RevisionDeps, event: StageProgressEvent
     event.total <= 0
   )
     return;
-  deps.db
+  const before = deps.db
     .prepare(
-      "UPDATE revision_work SET progress_current=?,progress_total=? WHERE id=? AND revision_id=? AND project_id=? AND kind=? AND state='running'",
+      "SELECT progress_current,progress_total FROM revision_work WHERE id=? AND revision_id=? AND project_id=? AND kind=? AND state='running'",
     )
-    .run(
-      Math.max(0, Math.min(event.current, event.total)),
-      event.total,
-      event.workId,
-      event.revisionId,
-      event.projectId,
-      event.stage,
-    );
-  projectStandings(deps, event.projectId);
+    .get(event.workId, event.revisionId, event.projectId, event.stage);
+  if (before === undefined) return;
+  const current = Math.max(0, Math.min(event.current, event.total));
+  deps.db
+    .prepare("UPDATE revision_work SET progress_current=?,progress_total=? WHERE id=?")
+    .run(current, event.total, event.workId);
+  // Work an edit retired keeps running until it notices, but the stage row belongs to the
+  // current revision's work and must not move with it.
+  const head = currentRevisionId(deps.db, event.projectId);
+  if (
+    head === undefined ||
+    deps.db
+      .prepare("SELECT 1 FROM revision_work_reservations WHERE work_id=? AND revision_id=? LIMIT 1")
+      .get(event.workId, head) === undefined
+  )
+    return;
+  const delta = current / event.total - fraction(before.progress_current, before.progress_total);
+  if (delta === 0) return;
+  const moved = deps.db
+    .prepare(
+      "UPDATE stages SET progress_current=MIN(progress_total,MAX(0,progress_current+?)) WHERE project_id=? AND kind=? AND progress_current IS NOT NULL AND progress_total IS NOT NULL",
+    )
+    .run(delta, event.projectId, event.stage);
+  // A row no derivation has counted yet has nothing to adjust: derive it once.
+  if (moved.changes === 0) projectStandings(deps, event.projectId);
+}
+
+function fraction(current: unknown, total: unknown): number {
+  if (typeof current !== "number" || typeof total !== "number" || total <= 0) return 0;
+  return Math.max(0, Math.min(1, current / total));
 }
