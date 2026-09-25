@@ -155,6 +155,7 @@ export async function startRebuild(
     if (fields.length > 0) return { ok: false, reason: "readiness", fields };
     const admitted = admitPreview(deps, {
       preview,
+      planningCatalogue: catalogue,
       idempotencyKey: input.idempotencyKey,
       requestHash: hash,
     });

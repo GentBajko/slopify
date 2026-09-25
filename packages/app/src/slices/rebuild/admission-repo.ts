@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import type { Catalogue } from "../../catalog/schema.js";
 import { transact } from "../../kernel/db/tx.js";
 import { setProjectPaused } from "../admission/repo.js";
 import type { RevisionDeps } from "../revisions/model.js";
@@ -15,6 +16,7 @@ import { executionSnapshotSchema, planPreview, reviewStillCovers } from "./previ
 import { previewById } from "./repo.js";
 import { insertInvocation, reservationKey } from "./runtime-admission.js";
 import { bindNarrationReuse } from "./runtime-narration-reuse.js";
+import { executionCatalogue } from "./runtime-plan.js";
 import { projectStandings } from "./runtime-store.js";
 
 export function admissionReceipt(
@@ -52,6 +54,7 @@ export function admitPreview(
   deps: RevisionDeps,
   input: {
     readonly preview: RebuildPreview;
+    readonly planningCatalogue: Catalogue;
     readonly idempotencyKey: string;
     readonly requestHash: string;
   },
@@ -80,9 +83,10 @@ export function admitPreview(
     const snapshot = executionSnapshotSchema.parse(JSON.parse(row.execution_json));
     const view = getRevisionView(deps, preview.projectId, preview.baseRevisionId);
     if (view === undefined) return { ok: false, reason: "no-project" };
-    const fresh = planPreview(deps, view, snapshot.catalogue, preview.selection, preview.id);
+    const fresh = planPreview(deps, view, input.planningCatalogue, preview.selection, preview.id);
     if (!fresh.ok || !reviewStillCovers(preview, snapshot, fresh.value))
       return { ok: false, reason: "stale-preview" };
+    const catalogue = executionCatalogue(input.planningCatalogue, view.revision.config);
     const admissionId = deps.ids.next();
     const workIds: string[] = [];
     for (const recipe of snapshot.recipes) {
@@ -140,7 +144,7 @@ export function admitPreview(
         deps,
         view,
         recipe,
-        snapshot.catalogue,
+        catalogue,
         { key, fingerprint },
         false,
         view.revision.id,
