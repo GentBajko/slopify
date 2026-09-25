@@ -32,6 +32,16 @@ describe("article pronunciation glossary", () => {
     "Lich: /./",
     "Lich: /ˈ/",
     "Lich: /ː/",
+    "Lich: /ʘ/",
+    "Lich: /ʄ/",
+    "Lich: /ɢ/",
+    "Lich: /ɲ/",
+    "Lich: /ɮ/",
+    "Lich: /ø/",
+    "Lich: /œ/",
+    "Lich: /y/",
+    "Lich: /q/",
+    "Lich: /c/",
     "Lich: /̃/",
     "Lich: /ˈˈlɪtʃ/",
     "Lich: /.lɪtʃ/",
@@ -47,6 +57,24 @@ describe("article pronunciation glossary", () => {
     expect(parsed.reason).toContain("Pronunciation Glossary entry");
     expect(parsed.reason).toContain("turn off Use Pronunciation Glossary");
     expect(parsed.reason).not.toContain(markdown);
+  });
+  it.each([
+    "kriːt",
+    "joʊˈsɛmɪti",
+    "ŋwɪən",
+    "ɑːsɑːˈiː",
+    "ɡoʊ",
+    "bɜːd",
+    "ɝθ",
+    "dɒg",
+    "lɪt͡ʃ",
+    "kʰæt",
+    "bʌtn̩",
+  ])("accepts English IPA notation %s", (ipa) => {
+    expect(parsePronunciationGlossary(`Term: /${ipa}/`)).toEqual({
+      ok: true,
+      entries: [{ term: "Term", ipa: [ipa] }],
+    });
   });
   it("matches longest whole terms and keeps exact source offsets and spelling", () => {
     const parsed = parsePronunciationGlossary("Tam: /tæm/\nSzass Tam: /sæz tæm/\nLich: /lɪtʃ/");

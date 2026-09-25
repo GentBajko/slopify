@@ -14,7 +14,10 @@ interface MarkdownNode {
   readonly value?: string;
   readonly children?: readonly MarkdownNode[];
 }
-const ipaAtom = "[ˈˌ]?[a-zæðøŋœθ\\u0250-\\u02af][\\u0300-\\u036fʰʲʷ]*[ːˑ]?[\\u0300-\\u036fʰʲʷ]*";
+// Inworld requires English IPA, not every symbol in Unicode's IPA Extensions block.
+// https://docs.inworld.ai/tts/capabilities/custom-pronunciation
+const ipaAtom =
+  "[ˈˌ]?[abdefghijklmnoprstuvwxzæðŋθɑɒɔəɚɛɜɝɡɪɹʃʊʌʒʔɫɾ][\\u0303\\u031a\\u0325\\u0329\\u032a\\u032c\\u032f\\u035c\\u0361ʰʲʷ]*[ːˑ]?";
 const ipaSymbols = new RegExp(`^(?:${ipaAtom})+(?:\\.(?:${ipaAtom})+)*$`, "u");
 
 function textOf(node: MarkdownNode): string {
