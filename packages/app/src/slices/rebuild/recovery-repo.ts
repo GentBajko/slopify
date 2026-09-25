@@ -1,3 +1,4 @@
+import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import type { RevisionDeps, RevisionEdit } from "../revisions/model.js";
 import { requestHash } from "../revisions/mutation-request.js";
@@ -108,4 +109,28 @@ export function rememberRecovery(
     )
     .run(JSON.stringify(response), projectId, input.idempotencyKey);
   return response;
+}
+// The head has unfinished stages but nothing that will move them on its own: no call in
+// flight and no admitted, dispatchable work. A saved rerun or edit is admitted by no one
+// until Resume, and work held by a pause, a restart or a failed sibling of its admission
+// never starts, yet none of these shows as paused or failed. A queued batch item waits for
+// its turn instead.
+export function resumable(db: DatabaseSync, projectId: string): boolean {
+  return (
+    db
+      .prepare(
+        "SELECT 1 FROM project_heads h WHERE h.project_id=? " +
+          "AND EXISTS(SELECT 1 FROM stages s WHERE s.project_id=h.project_id " +
+          "AND s.state NOT IN ('done','provided','skipped')) " +
+          "AND NOT EXISTS(SELECT 1 FROM stages s WHERE s.project_id=h.project_id AND s.state='running') " +
+          "AND NOT EXISTS(SELECT 1 FROM project_queue q WHERE q.project_id=h.project_id AND q.state='queued') " +
+          "AND NOT EXISTS(SELECT 1 FROM revision_work w WHERE w.project_id=h.project_id AND w.state='running') " +
+          "AND NOT EXISTS(SELECT 1 FROM revision_work w " +
+          "JOIN revision_work_reservations r ON r.work_id=w.id AND r.revision_id=h.revision_id " +
+          "WHERE w.state='pending' AND w.dispatch_state='allowed' AND NOT EXISTS(" +
+          "SELECT 1 FROM revision_work f WHERE f.admission_id=w.admission_id " +
+          "AND f.state IN ('failed','canceled')))",
+      )
+      .get(projectId) !== undefined
+  );
 }

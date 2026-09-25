@@ -23,6 +23,7 @@ function stage(over: Partial<Stage>): Stage {
 function body(stages: readonly Stage[]): ProjectBody {
   return {
     revisionId: null,
+    resumable: false,
     project: {
       id: "p1",
       title: "Rope Tricks",

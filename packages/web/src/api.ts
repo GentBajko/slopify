@@ -76,6 +76,9 @@ export interface ProjectListBody {
 }
 export interface ProjectBody {
   readonly revisionId: string | null;
+  // Unfinished work on the saved revision that nothing has admitted or will dispatch
+  // (`slices/rebuild/recovery-repo.ts`): Resume is the way on even while status says pending.
+  readonly resumable: boolean;
   readonly project: ProjectSummary;
   readonly stages: readonly Stage[];
   readonly outputs: readonly Output[];

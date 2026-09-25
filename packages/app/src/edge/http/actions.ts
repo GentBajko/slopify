@@ -15,6 +15,7 @@ import {
 } from "../../slices/control/revision-control-schema.js";
 import { recoverProject } from "../../slices/rebuild/recovery.js";
 import { type RecoveryRequest, recoveryResultSchema } from "../../slices/rebuild/recovery-model.js";
+import { resumable } from "../../slices/rebuild/recovery-repo.js";
 import type { RerunDeps } from "../../slices/reruns/index.js";
 import { adoptBaseline } from "../../slices/revisions/adopt.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
@@ -75,6 +76,7 @@ export function actionRoutes(deps: AppDeps) {
     const stages = stagesOf(deps.db, projectId);
     return {
       revisionId: currentRevisionId(deps.db, projectId) ?? null,
+      resumable: resumable(deps.db, projectId),
       project: {
         ...projectById(deps.db, projectId),
         status: derive(stages, projectPaused(deps.db, projectId)),

@@ -15,6 +15,7 @@ export function ProjectHeader({
   prompts,
   actions,
   inFlight,
+  resumable,
   primaryOutput,
   children,
 }: {
@@ -24,6 +25,8 @@ export function ProjectHeader({
   readonly prompts: readonly Prompt[] | undefined;
   readonly actions: ProjectActions;
   readonly inFlight: boolean;
+  // A pending revision can hold work nothing will start; only Resume admits it.
+  readonly resumable: boolean;
   readonly primaryOutput: Output | undefined;
   readonly children?: ReactNode;
 }) {
@@ -54,12 +57,13 @@ export function ProjectHeader({
             />
           </span>
         ) : null}
-        {running || project.status === "pending" ? (
+        {running || (project.status === "pending" && !resumable) ? (
           <Button disabled={actions.pending} onClick={() => actions.run({ kind: "pause" })}>
             Pause
           </Button>
         ) : null}
-        {project.status === "paused" ||
+        {resumable ||
+        project.status === "paused" ||
         project.status === "failed" ||
         project.status === "canceled" ? (
           <Button

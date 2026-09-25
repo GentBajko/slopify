@@ -54,6 +54,24 @@ describe("project pause and provider changes", () => {
     );
   });
 
+  it("offers Resume for a pending revision whose unfinished work nothing admitted", async () => {
+    const user = userEvent.setup();
+    const current = paused();
+    const fixture = revisionRouteFixture({
+      ...current,
+      resumable: true,
+      project: { ...current.project, status: "pending" },
+    });
+    const resume = vi.fn(() => Response.json(recoveryAccepted));
+    renderRouted(
+      <ProjectRoute projectId="p1" />,
+      deps({ ...fixture.routes, "POST /api/projects/p1/resume": resume }),
+    );
+    await user.click(await screen.findByRole("button", { name: "Resume" }));
+    await waitFor(() => expect(resume).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole("button", { name: "Pause" })).toBeNull();
+  });
+
   it("resumes a revisioned checkpoint project by keyboard only after the server accepts", async () => {
     const user = userEvent.setup();
     const fixture = revisionRouteFixture(paused());

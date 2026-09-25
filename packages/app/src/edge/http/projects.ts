@@ -16,6 +16,7 @@ import { startRun } from "../../slices/admission/start.js";
 import { withProjectControl } from "../../slices/control/lock.js";
 import { resolveFont } from "../../slices/fonts/index.js";
 import { pickTemplates, renderPicked } from "../../slices/library/slots.js";
+import { resumable } from "../../slices/rebuild/recovery-repo.js";
 import { adoptBaseline } from "../../slices/revisions/adopt.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
 import type { DeleteDeps, DeleteRefusal } from "../../slices/storage/delete-project.js";
@@ -162,6 +163,7 @@ export function projectRoutes(deps: AppDeps) {
         if (deps.catalogue !== undefined) adoptBaseline(deps, project.id);
         return c.json({
           revisionId: currentRevisionId(deps.db, project.id) ?? null,
+          resumable: resumable(deps.db, project.id),
           project: summarise(project),
           stages: stagesOf(deps.db, project.id),
           outputs: outputsOf(deps.db, project.id),

@@ -160,6 +160,7 @@ it("allows canceled Resume and paused Retry without approving a checkpoint or op
         prompts={undefined}
         actions={actions}
         inFlight={false}
+        resumable={false}
         primaryOutput={undefined}
       />
       <StageRow
@@ -211,6 +212,7 @@ it.each([
           prompts={undefined}
           actions={actions}
           inFlight={false}
+          resumable={false}
           primaryOutput={undefined}
         />
         {(["audio", "images"] as const).map((kind) => (

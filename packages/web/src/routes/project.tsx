@@ -92,6 +92,7 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
               prompts={prompts.data?.prompts}
               actions={actions}
               inFlight={inFlight}
+              resumable={project.data.resumable}
               primaryOutput={primaryOutput}
             >
               <SaveProjectTemplate

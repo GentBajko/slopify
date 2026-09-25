@@ -198,6 +198,7 @@ export async function mount(
       const id = "actual-created-project";
       created = {
         revisionId: null,
+        resumable: false,
         project: {
           id,
           title: draft.title,

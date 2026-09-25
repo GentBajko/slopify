@@ -43,8 +43,13 @@ it("validates routes, owns one action UUID, and returns exact receipts", async (
       ...h.catalogue,
       image: h.catalogue.image.map((model) => ({ ...model, pricing: {} })),
     });
+    const resumable = async () =>
+      ((await (await app.request(`/api/projects/${h.projectId}`)).json()) as { resumable: unknown })
+        .resumable;
+    expect(await resumable()).toBe(true);
     const accepted = await post("/resume", input);
     expect(accepted.status).toBe(202);
+    expect(await resumable()).toBe(false);
     const receipt = recoveryResultSchema.parse(await accepted.json());
     expect(receipt.ok).toBe(true);
     if (receipt.ok) expect(receipt.value.warnings.join(" ")).toMatch(/prices are unknown/);
