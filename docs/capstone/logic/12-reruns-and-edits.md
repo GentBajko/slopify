@@ -1,5 +1,7 @@
 ---
+glossary_pronunciation_verified_at_commit: 6eeac3fd9043
 absorbed_from:
+- features/2026-09-25-glossary-pronunciation@2026-09-25
 - features/2026-09-25-video-recovery@2026-09-25
 - features/2026-09-24-research-documents@2026-09-25
 - features/2026-09-09-pausable-optional-runs@2026-09-10
@@ -31,6 +33,14 @@ content_hash: 889127dea7b9
 ---
 
 # 12 Project edits and retained revisions
+
+## Pronunciation edits and retained audio
+
+Scoped verification: `6eeac3f`, 2026-09-25. Existing missing/off pronunciation settings stay unchanged until explicitly enabled. A used glossary mapping changes exact affected TTS request identity and its dependent outputs; unused mappings do not force compatible requests to repeat. Narration Preparation remains reusable when its source and preparation settings match. Provided whole/chunk audio remains supplied, while text overrides participate in pronunciation (`packages/app/src/slices/rebuild/recipe-audio-parts.ts:187`, `packages/app/src/slices/rebuild/recipe-text.ts:208`).
+
+Overrides targeting merged logical groups retain server-derived source text, offset, body fingerprint and chunking fingerprint. Save strips submitted bindings and derives authority from the base revision; source changes invalidate obsolete bindings instead of retargeting overrides. Removing a mapping or turning pronunciation off does not silently drop an unchanged targeted group. Restore classifies narration script/preparation work as Audio and holds it without admitting new work (`packages/app/src/slices/revisions/mutations.ts:62`, `packages/app/src/slices/revisions/rules.ts:10`, `packages/app/src/slices/rebuild/transition-repo.ts:143`).
+
+Clean transcript descriptors are rebound for the receiving revision when exact IPA-equivalent requests reuse existing or late-completing audio. Historical descriptors and bytes remain immutable; caption identity follows effective clean overridden spelling. Save/Restore never dispatch synthesis (`packages/app/src/slices/rebuild/runtime-narration-reuse.ts`, `packages/app/src/slices/rebuild/narration-reuse.ts`).
 
 An existing project can change its setup, text, media and captions while retaining completed outputs. Saving creates a revision. Rebuilding requires a separate dependency and cost review followed by explicit Start.
 

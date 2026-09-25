@@ -36,9 +36,11 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | architecture | [01-architecture-research.md](01-architecture-research.md) — scoped research/provider handoff |
 | architecture | [01-architecture-recovery.md](01-architecture-recovery.md) — scoped rebuild admission and subtitle-model caching |
 | architecture | [01-architecture-narration.md](01-architecture-narration.md) — scoped narration text and pronunciation boundaries |
+| architecture | [01-architecture-docker.md](01-architecture-docker.md) — scoped Docker storage and folder access |
 | models | [02-models.md](02-models.md) |
 | models | [02-models-research.md](02-models-research.md) — scoped research payloads |
 | models | [02-models-narration.md](02-models-narration.md) — scoped spoken text, request text and glossary models |
+| models | [02-models-docker.md](02-models-docker.md) — scoped Docker installation and filesystem state |
 | conventions | [03-conventions.md](03-conventions.md) |
 | data-flow | [04-data-flow.md](04-data-flow.md) |
 | data-flow | [04-data-flow-research.md](04-data-flow-research.md) — research, synthesis and writer handoff |
@@ -85,9 +87,9 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | [mockup/03-settings.md](mockup/03-settings.md) | Screen: API keys, native executable paths, read-only host CLIs, voices, playback |
 | [mockup/04-prompts.md](mockup/04-prompts.md) | Screen: four prompt kinds including Narration Preparation |
 | [mockup/05-prompt-editor.md](mockup/05-prompt-editor.md) | Screen: prompt editor with `{{keyword}}` slots and explicit narration starter |
-| [mockup/06-play.md](mockup/06-play.md) | Screen: durable drafts, optional narration preparation, templates, Review and explicit Start |
+| [mockup/06-play.md](mockup/06-play.md) | Screen: durable drafts, independent glossary pronunciation and cue preparation, templates, Review and explicit Start |
 | [mockup/07-projects.md](mockup/07-projects.md) | Screen: projects list |
-| [mockup/08-project.md](mockup/08-project.md) | Screen: retained revisions, frozen narration preparation, separate transcript/script downloads, History and rebuild |
+| [mockup/08-project.md](mockup/08-project.md) | Screen: retained revisions, opt-in glossary pronunciation, frozen cue preparation, clean/script downloads, History and rebuild |
 | [mockup/09-schedules.md](mockup/09-schedules.md) | Screen: local scheduled template runs, policies, variants and history |
 | [uiux/README.md](uiux/README.md) | UI/UX design index: direction, system, experience, assumed items |
 | [uiux/01-direction.md](uiux/01-direction.md) | Design read, mode map, the control-room direction contract |
@@ -96,8 +98,8 @@ Slopify: a self-hosted, single-user content pipeline (research → article → n
 | [standards.md](standards.md) | Binding code standards the user set; outranks generic best practice |
 | [changelog.md](changelog.md) | Append-only ledger of every stage run and its decisions |
 | [uiux/screens/01-projects.md](uiux/screens/01-projects.md) | Observed implemented surface |
-| [uiux/screens/02-play.md](uiux/screens/02-play.md) | Observed implemented surface |
-| [uiux/screens/03-project.md](uiux/screens/03-project.md) | Current revision workspace, granular editors, retained media and review |
+| [uiux/screens/02-play.md](uiux/screens/02-play.md) | Observed Play controls, including the independent glossary preference |
+| [uiux/screens/03-project.md](uiux/screens/03-project.md) | Current revision workspace, pronunciation and granular editors, retained media and review |
 | [uiux/screens/04-prompts.md](uiux/screens/04-prompts.md) | Observed implemented surface |
 | [uiux/screens/05-prompt-editor.md](uiux/screens/05-prompt-editor.md) | Observed implemented surface |
 | [uiux/screens/06-entries.md](uiux/screens/06-entries.md) | Observed implemented surface |

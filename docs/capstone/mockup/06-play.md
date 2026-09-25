@@ -1,5 +1,7 @@
 ---
+glossary_pronunciation_verified_at_commit: 6eeac3fd9043
 absorbed_from:
+  - features/2026-09-25-glossary-pronunciation@2026-09-25
   - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-09-pausable-optional-runs@2026-09-10
   - features/2026-09-10-subtitles-fonts@2026-09-10
@@ -24,6 +26,10 @@ content_hash: fb14e2c26cf1
 ---
 
 # 06 Play
+
+## Pronunciation preference
+
+Scoped verification: `6eeac3f`, 2026-09-25. Generated Audio exposes **Use Pronunciation Glossary**, a labelled checkbox with the example `Arda: /ˈɑɹdə/`. It explains that supplied IPA is applied without rewriting ordinary narration or making an extra LLM call. Fresh drafts enable it; restored drafts/templates with an absent value remain off. It is independent of Narration Preparation, active for Inworld TTS-2 and Flash, and retained but inactive for other providers or Audio Off/Provide. Provider switches, autosave/reload and template application preserve the choice (`packages/web/src/play/pronunciation-glossary.tsx:3`, `packages/web/src/play/media-rails.tsx:88`, `packages/web/src/play/draft-state.ts:25`).
 
 Configure an editable local draft, review the resolved setup/costs, then explicitly start one run or queue keyword variants. Play creates new projects; editing a project's retained revisions remains on the project page.
 

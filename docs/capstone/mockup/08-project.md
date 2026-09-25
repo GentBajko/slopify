@@ -1,5 +1,7 @@
 ---
+glossary_pronunciation_verified_at_commit: 6eeac3fd9043
 absorbed_from:
+- features/2026-09-25-glossary-pronunciation@2026-09-25
 - features/2026-09-24-narration-preparation@2026-09-24
 - features/2026-09-09-pausable-optional-runs@2026-09-10
 - features/2026-09-10-subtitles-fonts@2026-09-10
@@ -26,6 +28,10 @@ content_hash: a37e02ecfc8e
 ---
 
 # 08 Project page
+
+## Pronunciation setting and files
+
+Scoped verification: `6eeac3f`, 2026-09-25. The generated Audio editor includes **Use Pronunciation Glossary**, independent of cue preparation and supported by Inworld TTS-2/Flash. Existing missing settings display off; Save records a preference without synthesis or prompt-library edits. Supplied audio is not transformed. Current and historical narration text retains readable spelling; TTS scripts expose exact supplied IPA substitutions. Glossary validation errors require correction before new preparation/TTS (`packages/web/src/project/revision-providers.tsx:110`, `packages/web/src/play/pronunciation-glossary.tsx:3`, `packages/app/src/slices/rebuild/recipe-audio-parts.ts:187`).
 
 One project workspace contains current outputs, a unified edit form, explicit rebuild review and retained revision history. Editing saves first; rebuilding starts only after a separate review and Start action.
 

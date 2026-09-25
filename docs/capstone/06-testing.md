@@ -1,4 +1,5 @@
 ---
+glossary_pronunciation_verified_at_commit: 6eeac3fd9043
 video_recovery_verified_at_commit: 4a83abd9a070
 research_documents_verified_at_commit: 735cf5b
 host_cli_verified_at_commit: 9bd6517
@@ -17,6 +18,7 @@ paths_covered:
   - :(top).github/workflows/**
   - :(top)packages/site/*.test.js
 absorbed_from:
+  - features/2026-09-25-glossary-pronunciation@2026-09-25
   - features/2026-09-25-video-recovery@2026-09-25
   - features/2026-09-24-host-cli-bridge@2026-09-24
   - features/2026-09-24-narration-preparation@2026-09-24
@@ -128,6 +130,18 @@ The bundle-completeness matrix and saved-font subtitle recovery case use a 30-se
 
 ## Coverage shape
 
+### Glossary pronunciation verification
+
+Scoped source `6eeac3f`, 2026-09-25; the historical broad inventory and stamps are not advanced. Existing app/web Vitest inclusion covers all these colocated and composed tests (`packages/app/vitest.config.ts:6`, `packages/web/vitest.config.ts:10`).
+
+- Parsing/matching: lists, tables, English IPA, malformed/conflicting aliases, Unicode identities, longest whole terms, exact offsets, quotes, possessives and joining hyphens (`packages/app/src/slices/narration/pronunciation.test.ts:5`).
+- Logical and physical planning: complete-term boundary merging, repeated occurrences, saved-group retention, exact UTF-16 request limits, intact IPA/code points, persistent cues, no repeated sounds and oversized-token refusal (`packages/app/src/slices/narration/pronunciation-chunks.test.ts:27`, `packages/app/src/slices/narration/steering-pronunciation.test.ts:17`).
+- Save/Restore: text/upload overrides survive removed/disabled/invalid glossary data; source/chunking changes invalidate obsolete bindings; forged client metadata is ignored; Restore leaves work held with zero attempts and exact duplicate replay (`packages/app/src/slices/revisions/mutations-pronunciation-groups.test.ts:158`, `packages/app/src/slices/revisions/mutations-narration-source-trust.test.ts:53`).
+- Runtime: off/missing identity, used/unused mapping invalidation, provided-audio bypass, cue reuse, unchanged historical bytes, clean transcripts and exact scripts, caption spelling, pause/cancel and compatible/incompatible late results (`packages/app/src/slices/rebuild/runtime-pronunciation-reuse.test.ts:19`, `packages/app/src/slices/rebuild/runtime-pronunciation-metadata.test.ts:70`, `packages/app/test/revision-pronunciation-authority.test.ts:11`).
+- UI/persistence: labelled keyboard control, new-on/old-missing-off defaults, independent preparation, dormant provider/source choices, draft save/reopen, template/portable/schedule round-trips and six revision-qualified text links (`packages/web/src/play/pronunciation-glossary.test.tsx:135`, `packages/web/src/play/draft-compat.test.tsx:121`, `packages/app/test/preparation-saved-workflows.test.ts:17`, `packages/web/src/project/narration-downloads.test.tsx:47`).
+
+Fixtures use temporary SQLite/files, scripted ports, locally generated WAV data, deferred responses and inert browser fetch/event doubles. They do not establish audible live-provider pronunciation or real-browser layout (`packages/app/src/slices/rebuild/runtime-narration.fake.ts:51`, `packages/web/src/test-app.tsx:48`).
+
 Narration tests added 2026-09-24 cover strict cues, exact-source UTF-16 splitting, Off identities, invalidation/reuse, late edits, pause/cancel, durable database reopen, uncertain submissions, partial TTS failure and pending-file cleanup. Composed acceptance covers fresh/0010-upgraded databases, generated entries and six downloads (`packages/app/src/slices/narration/{preparation,steering}.test.ts`, `packages/app/src/slices/rebuild/runtime-{preparation,narration-text}.test.ts`, `packages/app/test/revision-preparation*.test.ts`). Frozen prompts survive portable/template/schedule paths (`packages/app/test/preparation-saved-workflows.test.ts:1`). Mounted components verify slots, refusal, preserved choices and historical URLs; isolated desktop/390px browser checks verify controls and Codex images without paid generation.
 
 Windows CI includes the pure and composed narration suites. Fake CLI tests validate Codex private-output safety; site tests cover both Docker copy commands (`.github/workflows/ci.yml:42`, `packages/app/src/adapters/image/codex.test.ts:1`, `packages/site/install.test.js:1`). This feature-scoped update leaves the historical inventory checkpoint unchanged.
@@ -147,6 +161,8 @@ The inventory is broadest by direct test-file count in rebuild (44), Play UI (32
 - No separately configured load, chaos, security, or browser accessibility audit project exists. This does not mean security/error/accessibility behaviors lack individual assertions; the configured projects are the four Vitest projects listed above. `vitest.config.ts:6` `packages/app/vitest.config.ts:4` `packages/web/vitest.config.ts:7` `packages/collector/vitest.config.ts:4` `packages/site/vitest.config.ts:4`
 
 ## Recorded verification
+
+- Glossary pronunciation at `6eeac3f` (2026-09-25): full suite **3,636 passed, one existing skip, 456 files**, 36.69 seconds. Six review rounds repaired twelve confirmed issues; two final independent full-diff rounds were dry. Final source app typecheck, scoped Biome and diff check passed; preceding full workspace typecheck/lint/build passed. Isolated fake providers/sockets only; no production generation, real pronunciation audition or Docker update.
 
 - Video recovery at `4a83abd9a070` (2026-09-25): all **318 tests in 57 rebuild/alignment files** passed, plus workspace typecheck, scoped Biome and release build. New local-export regressions first reproduced stale-preview for plain/prepared narration, then proved persisted TTS metadata, runtime readiness/export snapshot, materialization, exact replay, retained asset IDs and no new provider readiness/calls. New download tests first failed, then covered transient fetch/body/503 recovery, three-attempt exhaustion, canceled backoff and permanent HTTP/checksum/size failure. Two independent review rounds found no actionable issues. These isolated fake-provider/network checks are not a production render, process-restart rehearsal, real model download or native Windows rerun (`packages/app/src/slices/rebuild/service-reuse.test.ts:69`, `packages/app/src/adapters/alignment/cache-retry.test.ts:25`).
 

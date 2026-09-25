@@ -1,9 +1,11 @@
 ---
+glossary_pronunciation_verified_at_commit: 6eeac3fd9043
 host_cli_verified_at_commit: 9bd6517
 generated_date: '2026-09-13'
 generated_at_commit: 4cfe3473f74d
 capstone_version: 5.2.0
 absorbed_from:
+  - features/2026-09-25-glossary-pronunciation@2026-09-25
   - features/2026-09-24-host-cli-bridge@2026-09-24
   - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-10-editable-projects@2026-09-12
@@ -43,9 +45,9 @@ surfaces:
 | [03 Settings](03-settings.md) | J2, J6 | Keys, native CLI paths, read-only host CLIs, voices, catalogue, storage and diagnostics |
 | [04 Prompts](04-prompts.md) | J2 | Four prompt kinds, including Narration Preparation |
 | [05 Prompt editor](05-prompt-editor.md) | J2 | Prompt body, slots and explicit narration starter |
-| [06 Play](06-play.md) | J2, J3, J4, J7 | Durable draft, optional narration preparation, Review and Start |
+| [06 Play](06-play.md) | J2, J3, J4, J7 | Durable draft, independent pronunciation and cue preparation, Review and Start |
 | [07 Projects](07-projects.md) | J3, J6 | Project list |
-| [08 Project](08-project.md) | J3, J4, J5, J6, J7 | Progress, editors, rebuild, checkpoints and history |
+| [08 Project](08-project.md) | J3, J4, J5, J6, J7 | Progress, pronunciation/editor settings, rebuild, checkpoints and history |
 | Templates (not separately drawn) | J7, J8 | `packages/web/src/routes/templates.tsx` |
 | [09 Schedules](09-schedules.md) | J8 | Local recurring template admission |
 | Entries (not separately drawn) | J2 | `packages/web/src/routes/entries.tsx` |

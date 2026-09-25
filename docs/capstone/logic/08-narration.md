@@ -1,5 +1,7 @@
 ---
+glossary_pronunciation_verified_at_commit: 6eeac3fd9043
 absorbed_from:
+- features/2026-09-25-glossary-pronunciation@2026-09-25
 - features/2026-09-24-narration-preparation@2026-09-24
 - features/2026-09-09-pausable-optional-runs@2026-09-10
 - features/2026-09-10-editable-projects@2026-09-12
@@ -27,6 +29,16 @@ content_hash: 15c07d068892
 ---
 
 # 08 Narration
+
+## Supplied glossary pronunciation
+
+Scoped verification: `6eeac3f`, 2026-09-25. **Use Pronunciation Glossary** is independent of Narration Preparation and applies only to generated Inworld TTS-2/TTS-2 Flash audio. Fresh Play drafts enable it; absent/false in saved work remains off. Unsupported providers retain the preference without applying it. Drafts, templates, schedules and portable transfer preserve the optional boolean; no configuration backfill or additional LLM request occurs (`packages/app/src/slices/admission/rules.ts:307`, `packages/web/src/play/draft-state.ts:25`).
+
+The parser reads only the article's Pronunciation Glossary, accepting list/plain `Term: /ipa/` entries and term/IPA tables. Matching is whole-term, longest-first and Unicode case-insensitive, with flexible inter-word whitespace but no invented plural, possessive or compound forms. Identical mappings deduplicate; conflicting aliases, malformed English IPA or unequal term/IPA word counts refuse before new preparation/TTS. Each corresponding word becomes its own slash pair. Missing glossary/no match keeps ordinary narration; Off ignores malformed glossary data (`packages/app/src/slices/narration/pronunciation.ts`, `packages/app/src/slices/rebuild/recipe-text.ts:208`).
+
+Body, enabled literal/generated entries and text overrides participate. Supplied whole or chunk audio bypasses pronunciation. Entry text can generate before the glossary resolves, but its TTS waits for that glossary. Logical boundaries crossing a complete listed term are merged before physical planning; IPA atoms and Unicode code points cannot be split. Exact sent UTF-16 length includes delivery cues; an indivisible request that cannot fit is refused (`packages/app/src/slices/rebuild/recipe-audio.ts:45`, `packages/app/src/slices/narration/pronunciation-chunks.ts:21`, `packages/app/src/slices/narration/steering.ts`).
+
+Clean source spelling stays in readable downloads and subtitle alignment; only the exact TTS script contains supplied IPA. Compatible existing audio bytes can be reused while the receiving revision binds its own clean transcript metadata. Original History stays unchanged. Saved merged-group overrides retain server-derived source bindings even if pronunciation is disabled or its mapping is removed; these bindings do not enter cue-preparation identity (`packages/app/src/slices/revisions/rules.ts:10`, `packages/app/src/slices/rebuild/runtime-export-inputs.ts:88`). Save and installation grant no generation authority.
 
 Generated narration is planned as logical chunks and exact physical provider requests. Revisions share matching completed requests; changed text or request settings require an explicitly reviewed rebuild. Whole supplied audio follows the provided-content rules in scenario05.
 

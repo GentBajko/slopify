@@ -1,4 +1,5 @@
 ---
+glossary_pronunciation_verified_at_commit: 6eeac3fd9043
 generated_at_commit: 7bdb84e3f57e
 generated_date: '2026-09-13'
 capstone_version: 5.2.0
@@ -10,6 +11,7 @@ paths_covered:
   - :(top)packages/web/src/router.tsx
   - :(top)packages/web/src/routes/settings.tsx
 absorbed_from:
+  - features/2026-09-25-glossary-pronunciation@2026-09-25
   - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-10-editable-projects@2026-09-12
   - features/2026-09-10-review-checkpoints@2026-09-13
@@ -17,6 +19,10 @@ absorbed_from:
 ---
 
 # Project workspace
+
+## Glossary pronunciation editing
+
+Scoped verification: `6eeac3f`, 2026-09-25. Generated Audio's provider editor reuses the labelled **Use Pronunciation Glossary** control; existing missing values remain off and provider switches preserve the dormant preference. Save alone never synthesizes. The control explains supported Inworld models, the supplied IPA format and independence from cue preparation. Current/History downloads keep clean narration text separate from exact TTS scripts; articles and subtitle spelling are unchanged (`packages/web/src/project/revision-providers.tsx:110`, `packages/web/src/play/pronunciation-glossary.tsx:3`, `packages/web/src/project/narration-downloads.tsx`).
 
 The progress area includes a Review checkpoints panel. It exposes held dependents, revision-bound approval, pending gate add/remove controls and explicit reload when another tab changes the gate set. Approval releases only the selected closure and never starts a rebuild.
 

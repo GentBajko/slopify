@@ -1,4 +1,5 @@
 ---
+glossary_pronunciation_verified_at_commit: 6eeac3fd9043
 generated_at_commit: 7bdb84e3f57e
 generated_date: '2026-09-13'
 capstone_version: 5.2.0
@@ -9,12 +10,17 @@ paths_covered:
   - :(top)packages/web/src/subtitles/**
   - :(top)packages/web/src/router.tsx
 absorbed_from:
+  - features/2026-09-25-glossary-pronunciation@2026-09-25
   - features/2026-09-24-narration-preparation@2026-09-24
   - features/2026-09-10-play-redesign-drafts@2026-09-13
   - features/2026-09-10-review-checkpoints@2026-09-13
 ---
 
 # Play
+
+## Glossary pronunciation control
+
+Scoped verification: `6eeac3f`, 2026-09-25. Generated Audio includes a native labelled **Use Pronunciation Glossary** checkbox and explanatory example. Fresh Play initializes it true; absent saved values display off. The value persists across provider/source switches, but only generated Inworld TTS-2/Flash applies it. The copy distinguishes it from optional LLM cue preparation and keeps unsupported choices dormant. It introduces no new design token, auto-generation or glossary editor (`packages/web/src/play/pronunciation-glossary.tsx:3`, `packages/web/src/play/media-rails.tsx:88`, `packages/web/src/play/draft-state.ts:25`).
 
 The Outputs section includes keyboard-accessible checkpoint choices for Audio, Images and Video/export. The Review section summarizes the selected dependency closures; approval happens later on the project page.
 
