@@ -322,7 +322,13 @@ it("adds the other projects' pronunciations when sharing, with the project's own
     ...base,
     config: {
       ...base.config,
-      audio: { ...base.config.audio, voice: "voice", shareGlossary: true },
+      audio: {
+        provider: "inworld",
+        model: "inworld-tts-2",
+        voice: "voice",
+        usePronunciationGlossary: true,
+        shareGlossary: true,
+      },
       sharedGlossary: [
         { term: "john", ipa: ["ʒɑn"] },
         { term: "Szass Tam", ipa: ["sæs", "tæm"] },
@@ -339,7 +345,16 @@ it("adds the other projects' pronunciations when sharing, with the project's own
   // Off, or a project saved before sharing existed, ignores a copied list.
   const off = {
     ...shared,
-    config: { ...shared.config, audio: { ...shared.config.audio, shareGlossary: false } },
+    config: {
+      ...shared.config,
+      audio: {
+        provider: "inworld",
+        model: "inworld-tts-2",
+        voice: "voice",
+        usePronunciationGlossary: true,
+        shareGlossary: false,
+      },
+    },
   };
   expect(textRecipes(off).glossary).toEqual({
     ok: true,
