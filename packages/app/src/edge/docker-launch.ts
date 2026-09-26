@@ -92,6 +92,8 @@ async function main(): Promise<void> {
       console.log(
         `Recovery volume retained: ${result.recovery}. Previous containers remain stopped.`,
       );
+    for (const name of result.pruned.removed) console.log(`Removed older recovery volume: ${name}`);
+    for (const problem of result.pruned.problems) console.warn(problem);
   } finally {
     process.off("SIGINT", abort);
     process.off("SIGTERM", abort);

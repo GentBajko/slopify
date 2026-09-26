@@ -337,3 +337,85 @@ it.each([
 ])("explains a failed docker command from its error output: %s", (stderr, advice) => {
   expect(dockerFailure(["run"], { code: 125, stderr })).toContain(advice);
 });
+
+it("lists only this data volume's recovery volumes, with their labels, and never forces removal", async () => {
+  const id = "0f8fad5b-d9cb-469f-a165-70867728950e";
+  const calls: string[][] = [];
+  const e = dockerEngine(
+    {
+      exec: async (_file, args) => {
+        calls.push([...args]);
+        if (args[0] === "volume" && args[1] === "ls")
+          return {
+            code: 0,
+            stdout: [
+              `data-recovery-${id}`,
+              "data",
+              `data-recovery-${id}-extra`,
+              "data-recovery-not-a-uuid",
+              `other-recovery-${id}`,
+            ].join("\n"),
+          };
+        if (args[0] === "volume" && args[1] === "inspect")
+          return {
+            code: 0,
+            stdout: JSON.stringify({ "io.slopify.transaction": id, "io.slopify.container": "c" }),
+          };
+        return { code: 0, stdout: "" };
+      },
+    },
+    new AbortController().signal,
+    {},
+  );
+  expect(await e.recoveryVolumes("data")).toEqual([
+    { name: `data-recovery-${id}`, transaction: id, installation: null, container: "c" },
+  ]);
+  expect(calls[0]).toEqual([
+    "volume",
+    "ls",
+    "--filter",
+    "label=io.slopify.transaction",
+    "--format",
+    "{{.Name}}",
+  ]);
+  expect(calls).toHaveLength(2);
+  await e.removeVolume(`data-recovery-${id}`);
+  expect(calls.at(-1)).toEqual(["volume", "rm", `data-recovery-${id}`]);
+});
+
+it("labels a recovery volume with its update, installation and container at creation", async () => {
+  const calls: string[][] = [];
+  const e = dockerEngine(
+    {
+      exec: async (_file, args) => {
+        calls.push([...args]);
+        if (args[0] === "run")
+          return { code: 0, stdout: JSON.stringify({ hash: "a".repeat(64), files: 0, bytes: 0 }) };
+        return { code: 0, stdout: "" };
+      },
+    },
+    new AbortController().signal,
+    {},
+  );
+  const id = "0f8fad5b-d9cb-469f-a165-70867728950e";
+  const installation = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
+  await e.snapshot({
+    id,
+    installation,
+    name: "slopify",
+    volume: "data",
+    image: "image-id",
+    backup: `data-recovery-${id}`,
+  } as Parameters<typeof e.snapshot>[0]);
+  expect(calls[1]).toEqual([
+    "volume",
+    "create",
+    "--label",
+    `io.slopify.transaction=${id}`,
+    "--label",
+    `io.slopify.installation=${installation}`,
+    "--label",
+    "io.slopify.container=slopify",
+    `data-recovery-${id}`,
+  ]);
+});

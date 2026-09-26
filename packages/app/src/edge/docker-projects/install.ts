@@ -5,6 +5,7 @@ import { readVersion } from "../../kernel/version.js";
 import { assertVolumeClaims } from "./claims.js";
 import { readCommittedJournal } from "./committed.js";
 import type { Engine } from "./engine.js";
+import { type PruneResult, pruneRecoveryVolumes } from "./prune.js";
 import { assertSourceIdentity, recoverInstallation } from "./recover.js";
 import {
   type DockerConfig,
@@ -32,7 +33,12 @@ export async function installProjects(
   c: DockerConfig,
   e: Engine,
   recovery: () => Engine,
-): Promise<{ url: string; projects: string; recovery: string | null }> {
+): Promise<{
+  url: string;
+  projects: string;
+  recovery: string | null;
+  pruned: PruneResult;
+}> {
   await privateDirectory(c.directory, c.uid);
   const receiptPath = join(c.directory, "receipt.json");
   const journalPath = join(c.directory, "journal.json");
@@ -134,7 +140,12 @@ export async function installProjects(
     const j = await readCommittedJournal(c, receipt, old);
     if (!old.running) await e.command(["start", old.id]);
     await e.health(old.id, j.token, expectedVersion);
-    return { url: `http://${old.port}`, projects, recovery: j.backup };
+    return {
+      url: `http://${old.port}`,
+      projects,
+      recovery: j.backup,
+      pruned: { removed: [], problems: [] },
+    };
   }
   const id = randomUUID();
   const directory = join(c.directory, id);
@@ -270,7 +281,9 @@ export async function installProjects(
       throw new Error(
         "Slopify started but Docker did not report which port it is on. Run the same command again to finish.",
       );
-    return { url: `http://${ready.port}`, projects, recovery: j.backup };
+    // Only now, with the new container committed and healthy, are older snapshots redundant.
+    const pruned = await pruneRecoveryVolumes(c, e, j);
+    return { url: `http://${ready.port}`, projects, recovery: j.backup, pruned };
   } catch (cause) {
     const current = await readState(receiptPath, receiptSchema, c.uid);
     if (current?.transaction === j.id)

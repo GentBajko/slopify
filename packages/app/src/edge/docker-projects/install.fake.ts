@@ -2,7 +2,7 @@ import { cp, mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readVersion } from "../../kernel/version.js";
-import type { Engine } from "./engine.js";
+import { type Engine, recoveryId, recoveryLabels } from "./engine.js";
 import { type Container, dockerConfig, type Journal } from "./state.js";
 import { isMissing, treeDigest } from "./tree.js";
 
@@ -13,6 +13,8 @@ export async function installationFixture(): Promise<{
   engine: Engine;
   calls: string[];
   containers: Map<string, Container>;
+  // Docker volumes other than the data volume, by name, with their labels.
+  volumes: Map<string, Readonly<Record<string, string>>>;
   failures: Set<string>;
   close: () => Promise<void>;
 }> {
@@ -29,6 +31,7 @@ export async function installationFixture(): Promise<{
   const calls: string[] = [];
   const failures = new Set<string>();
   const containers = new Map<string, Container>();
+  const volumes = new Map<string, Readonly<Record<string, string>>>();
   let serial = 0;
   function point(name: string) {
     calls.push(name);
@@ -99,7 +102,26 @@ export async function installationFixture(): Promise<{
       point("snapshot");
       const backup = join(root, j.backup);
       await cp(volume, backup, { recursive: true });
+      volumes.set(j.backup, recoveryLabels(j));
       return treeDigest(backup, true, true);
+    },
+    recoveryVolumes: async (name) => {
+      point("recoveryVolumes");
+      return [...volumes]
+        .filter(
+          ([one, labels]) => recoveryId(name, one) !== null && "io.slopify.transaction" in labels,
+        )
+        .map(([one, labels]) => ({
+          name: one,
+          transaction: labels["io.slopify.transaction"] ?? null,
+          installation: labels["io.slopify.installation"] ?? null,
+          container: labels["io.slopify.container"] ?? null,
+        }));
+    },
+    removeVolume: async (name) => {
+      point(`removeVolume ${name}`);
+      if (!volumes.delete(name)) throw new Error(`No such volume ${name}`);
+      await rm(join(root, name), { recursive: true, force: true });
     },
     restore: async (j) => {
       point("restore");
@@ -190,6 +212,7 @@ export async function installationFixture(): Promise<{
     engine,
     calls,
     containers,
+    volumes,
     failures,
     close: () => rm(root, { recursive: true, force: true }),
   };

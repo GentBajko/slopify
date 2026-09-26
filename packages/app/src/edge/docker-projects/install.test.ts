@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { chmod, mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, it } from "vitest";
@@ -591,6 +592,90 @@ it.each([82, 83, 128])("supports a configured volume name of %s characters", asy
       h.config.uid,
     );
     expect(journal?.backup).toBe(installed.recovery);
+  } finally {
+    await h.close();
+  }
+});
+
+it("keeps only the newest recovery volume and never one it can't prove is its own", async () => {
+  const h = await seeded();
+  try {
+    const first = await installProjects(h.config, h.engine, () => h.engine);
+    if (first.recovery === null) throw new Error("No first recovery volume");
+    expect(first.pruned).toEqual({ removed: [], problems: [] });
+    const firstId = first.recovery.slice(`${h.config.volume}-recovery-`.length);
+    // Made by an earlier launcher: only the transaction label, proven by its update's record.
+    h.volumes.set(first.recovery, { "io.slopify.transaction": firstId });
+    const stranger = randomUUID();
+    const kept = {
+      // The right shape and label, but no record of an update of this container.
+      [`${h.config.volume}-recovery-${stranger}`]: { "io.slopify.transaction": stranger },
+      // Its label names a different update than its name does.
+      [`${h.config.volume}-recovery-${randomUUID()}`]: { "io.slopify.transaction": firstId },
+      // Another data volume's recovery volume.
+      [`other-data-recovery-${firstId}`]: { "io.slopify.transaction": firstId },
+    };
+    for (const [name, labels] of Object.entries(kept)) h.volumes.set(name, labels);
+
+    // A new port is a new container, so this is a whole update with its own snapshot.
+    const second = await installProjects({ ...h.config, port: 7070 }, h.engine, () => h.engine);
+    expect(second.recovery).not.toBe(first.recovery);
+    expect(second.pruned).toEqual({ removed: [first.recovery], problems: [] });
+    expect([...h.volumes.keys()].sort()).toEqual([second.recovery, ...Object.keys(kept)].sort());
+    // The new one carries the labels that name its installation and container.
+    const journal = await readState(
+      join(h.config.directory, "journal.json"),
+      journalSchema,
+      h.config.uid,
+    );
+    expect(h.volumes.get(second.recovery ?? "")).toEqual({
+      "io.slopify.transaction": journal?.id,
+      "io.slopify.installation": journal?.installation,
+      "io.slopify.container": h.config.name,
+    });
+  } finally {
+    await h.close();
+  }
+});
+
+it.each([
+  ["another installation", { "io.slopify.installation": "00000000-0000-4000-8000-000000000000" }],
+  ["another container", { "io.slopify.container": "someone-else" }],
+])("keeps a recovery volume whose labels name %s", async (_case, labels) => {
+  const h = await seeded();
+  try {
+    const first = await installProjects(h.config, h.engine, () => h.engine);
+    if (first.recovery === null) throw new Error("No first recovery volume");
+    h.volumes.set(first.recovery, { ...h.volumes.get(first.recovery), ...labels });
+    const second = await installProjects({ ...h.config, port: 7070 }, h.engine, () => h.engine);
+    expect(second.pruned).toEqual({ removed: [], problems: [] });
+    expect([...h.volumes.keys()].sort()).toEqual([first.recovery, second.recovery].sort());
+  } finally {
+    await h.close();
+  }
+});
+
+it("removes a rolled-back update's volume, and reports one Docker won't remove", async () => {
+  const h = await seeded();
+  try {
+    h.failures.add("health");
+    await expect(installProjects(h.config, h.engine, () => h.engine)).rejects.toThrow();
+    h.failures.clear();
+    const [failed] = [...h.volumes.keys()];
+    if (failed === undefined) throw new Error("No recovery volume from the failed update");
+    h.failures.add(`removeVolume ${failed}`);
+    const fresh = { ...h.config, projectsOverride: join(h.root, "Fresh destination") };
+    const installed = await installProjects(fresh, h.engine, () => h.engine);
+    expect(installed.pruned.removed).toEqual([]);
+    expect(installed.pruned.problems).toEqual([
+      expect.stringContaining(
+        `Couldn't remove the older recovery volume ${failed}, so it is kept. Once nothing uses it, remove it with docker volume rm ${failed}.`,
+      ),
+    ]);
+    h.failures.clear();
+    const again = await installProjects({ ...fresh, port: 7070 }, h.engine, () => h.engine);
+    expect(again.pruned.removed.toSorted()).toEqual([failed, installed.recovery].sort());
+    expect([...h.volumes.keys()]).toEqual([again.recovery]);
   } finally {
     await h.close();
   }

@@ -37,6 +37,9 @@ export interface Engine {
     id: string,
   ): Promise<void>;
   snapshot(j: Journal): Promise<Digest>;
+  // The recovery volumes named `<volume>-recovery-<uuid>`, with the labels they were made with.
+  recoveryVolumes(volume: string): Promise<readonly RecoveryVolume[]>;
+  removeVolume(name: string): Promise<void>;
   restore(j: Journal): Promise<void>;
   own(j: Journal): Promise<void>;
   stop(c: Container): Promise<void>;
@@ -45,6 +48,33 @@ export interface Engine {
   health(id: string, token: string, expectedVersion: string): Promise<void>;
   command(args: readonly string[]): Promise<string>;
 }
+export interface RecoveryVolume {
+  readonly name: string;
+  readonly transaction: string | null;
+  readonly installation: string | null;
+  readonly container: string | null;
+}
+
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+// A recovery volume says which update, installation and container made it. Earlier launchers
+// set only the transaction label; `prune.ts` asks those for the update's own record instead.
+export function recoveryLabels(j: Journal): Readonly<Record<string, string>> {
+  return {
+    "io.slopify.transaction": j.id,
+    "io.slopify.installation": j.installation,
+    "io.slopify.container": j.name,
+  };
+}
+
+// The id a recovery volume of `volume` carries in its name, or null for any other volume.
+export function recoveryId(volume: string, name: string): string | null {
+  const prefix = `${volume}-recovery-`;
+  if (!name.startsWith(prefix)) return null;
+  const id = name.slice(prefix.length);
+  return uuid.test(id) ? id : null;
+}
+
 // Docker's exit code alone says nothing, so its last error line decides the advice: the daemon
 // being stopped and the socket being off-limits are by far the most common first-run failures.
 export function dockerFailure(
@@ -384,7 +414,15 @@ export function dockerEngine(
       const all = (await command(["volume", "ls", "--format", "{{.Name}}"])).split(/\s+/);
       if (all.includes(j.backup))
         throw new Error("Recovery volume already exists; reconcile the journal before retrying.");
-      await command(["volume", "create", "--label", `io.slopify.transaction=${j.id}`, j.backup]);
+      await command([
+        "volume",
+        "create",
+        ...Object.entries(recoveryLabels(j)).flatMap(([key, value]) => [
+          "--label",
+          `${key}=${value}`,
+        ]),
+        j.backup,
+      ]);
       return digestSchema.parse(
         await helper(
           j.image,
@@ -392,6 +430,40 @@ export function dockerEngine(
           "snapshot",
         ),
       );
+    },
+    recoveryVolumes: async (volume) => {
+      const names = (
+        await command([
+          "volume",
+          "ls",
+          "--filter",
+          "label=io.slopify.transaction",
+          "--format",
+          "{{.Name}}",
+        ])
+      )
+        .split(/\s+/)
+        .filter((name) => recoveryId(volume, name) !== null);
+      const found: RecoveryVolume[] = [];
+      for (const name of names) {
+        const labels = z
+          .record(z.string(), z.string())
+          .nullable()
+          .parse(
+            JSON.parse(await command(["volume", "inspect", "--format", "{{json .Labels}}", name])),
+          );
+        found.push({
+          name,
+          transaction: labels?.["io.slopify.transaction"] ?? null,
+          installation: labels?.["io.slopify.installation"] ?? null,
+          container: labels?.["io.slopify.container"] ?? null,
+        });
+      }
+      return found;
+    },
+    // Never forced: Docker refuses a volume a container still mounts, and that refusal stands.
+    removeVolume: async (name) => {
+      await command(["volume", "rm", name]);
     },
     restore: async (j) => {
       if (!j.backupDigest)
