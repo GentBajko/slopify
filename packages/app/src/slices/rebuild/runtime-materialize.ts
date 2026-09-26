@@ -3,6 +3,7 @@ import { transact } from "../../kernel/db/tx.js";
 import type { RevisionDeps } from "../revisions/model.js";
 import { currentRevisionId } from "../revisions/repo.js";
 import { getRevisionView } from "../revisions/view.js";
+import { recipeInputSchema } from "./recipe-input-schema.js";
 import type { ResolvedWorkRecipe } from "./recipe-model.js";
 import { insertInvocation } from "./runtime-admission.js";
 import { bindNarrationReuse, narrationOrdinal } from "./runtime-narration-reuse.js";
@@ -65,6 +66,16 @@ export function materializeAdmittedWork(deps: RevisionDeps, projectId: string): 
         )
           continue;
         if (plan.work.find((row) => row.key === recipe.key)?.disposition === "review") continue;
+        // A step waiting on its inputs changes fingerprint each time one lands: every
+        // narration chunk moves the joined audio, the timing, the export and the YouTube
+        // description after it. The waiting row is the same request with newer inputs, so it
+        // takes them in place; minting a row per landing left one never-run row per chunk.
+        if (
+          own !== undefined &&
+          plan.work.find((row) => row.key === recipe.key)?.disposition !== "reuse" &&
+          refreshWaiting(deps, head, own, recipe)
+        )
+          continue;
         if (own !== undefined) {
           deps.db
             .prepare("UPDATE revision_work SET state='done' WHERE id=? AND state='pending'")
@@ -108,6 +119,52 @@ export function materializeAdmittedWork(deps: RevisionDeps, projectId: string): 
   });
 }
 
+// Only a row nothing has touched: still pending, one unsent piece, no attempt. Anything
+// further along keeps the old path, which retires it and admits a fresh row.
+function refreshWaiting(
+  deps: RevisionDeps,
+  head: string,
+  own: Reservation,
+  recipe: ResolvedWorkRecipe,
+): boolean {
+  const pieces = workPieces(deps.db, own.work_id);
+  const piece = pieces[0];
+  if (
+    pieces.length !== 1 ||
+    piece === undefined ||
+    piece.key !== recipe.key ||
+    piece.state !== "pending" ||
+    piece.submittedAt !== null ||
+    piece.continuation !== null
+  )
+    return false;
+  const waiting = deps.db
+    .prepare(
+      "SELECT 1 FROM revision_work w WHERE w.id=? AND w.state='pending' AND NOT EXISTS(SELECT 1 FROM attempts a WHERE a.work_id=w.id)",
+    )
+    .get(own.work_id);
+  if (waiting === undefined) return false;
+  deps.db
+    .prepare("UPDATE revision_work SET fingerprint=? WHERE id=?")
+    .run(recipe.fingerprint, own.work_id);
+  deps.db
+    .prepare(
+      "UPDATE revision_work_pieces SET fingerprint=?,request_fingerprint=?,logical_fingerprint=?,input_json=? WHERE id=?",
+    )
+    .run(
+      recipe.fingerprint,
+      recipe.requestFingerprint,
+      recipe.logicalFingerprint,
+      JSON.stringify(recipeInputSchema.parse(recipe.input)),
+      piece.id,
+    );
+  deps.db
+    .prepare(
+      "UPDATE revision_work_reservations SET fingerprint=? WHERE revision_id=? AND work_id=? AND work_key=?",
+    )
+    .run(recipe.fingerprint, head, own.work_id, recipe.key);
+  return true;
+}
 function desiredAnchor(
   deps: RevisionDeps,
   projectId: string,

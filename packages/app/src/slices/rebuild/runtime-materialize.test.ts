@@ -117,19 +117,27 @@ async function fixture() {
 }
 
 describe("deferred admitted work", () => {
-  it("removes a held Audio gate after materialization retires unsubmitted placeholders", async () => {
+  it("removes a held Audio gate after materialization refreshes unsubmitted placeholders", async () => {
     const h = await fixture();
     try {
       const input = { projectId: h.projectId, revisionId: h.base.revision.id };
       expect(changeCheckpoints(h.deps, { ...input, stages: ["audio"] }).ok).toBe(true);
+      const before = h.deps.db
+        .prepare("SELECT count(*) AS n FROM revision_work WHERE kind='audio'")
+        .get()?.n;
       materializeAdmittedWork(h.deps, h.projectId);
+      // The finished article changes what the waiting Audio steps read. They take the new
+      // inputs in place: none is retired as "done" without having run.
       expect(
         h.deps.db
           .prepare(`SELECT count(*) AS n FROM revision_work w WHERE kind='audio' AND state='done'
         AND NOT EXISTS(SELECT 1 FROM revision_work_reservations r WHERE r.work_id=w.id)
         AND NOT EXISTS(SELECT 1 FROM revision_work_pieces p WHERE p.work_id=w.id AND p.submitted_at IS NOT NULL)`)
           .get()?.n,
-      ).toBeGreaterThan(0);
+      ).toBe(0);
+      expect(
+        h.deps.db.prepare("SELECT count(*) AS n FROM revision_work WHERE kind='audio'").get()?.n,
+      ).toBeGreaterThan(Number(before));
       expect(changeCheckpoints(h.deps, { ...input, stages: [] })).toEqual({
         ok: true,
         value: { changed: true, released: true },
