@@ -70,7 +70,9 @@ try {
   ]);
   await smoke(npm, "skipped-scripts", [skippedCli], { FFMPEG_BINARIES_URL: "http://127.0.0.1:1" });
 } finally {
-  await rm(root, { recursive: true, force: true });
+  // Windows releases a killed process's file handles a moment after taskkill returns, so
+  // the database can still be locked here; rm retries EBUSY for this long.
+  await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 500 });
 }
 
 async function smoke(command, label, prefix = [], extraEnv = {}) {
