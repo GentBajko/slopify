@@ -143,6 +143,9 @@ const readingOrder: readonly string[] = [
   "shorts.maxSeconds",
   "shorts.prompt",
   "shorts.imagePrompt",
+  "shorts.speed",
+  "shorts.musicVolume",
+  "shorts.fullVideoLink",
 ];
 
 export function firstBlocker(form: PlayFormState, result: AdmissionResult): Blocker | undefined {
@@ -232,6 +235,12 @@ function hintOf(form: PlayFormState, error: FieldError): string {
     case "shorts.minSeconds":
     case "shorts.maxSeconds":
       return "Set the shorts' length to play";
+    case "shorts.speed":
+      return "Choose the shorts' speed to play";
+    case "shorts.musicVolume":
+      return "Set the shorts' music volume to play";
+    case "shorts.fullVideoLink":
+      return "Fix the full video link to play";
     case "provided.research":
       return "Paste the research notes to play";
     case "provided.article":

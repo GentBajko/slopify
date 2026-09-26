@@ -82,6 +82,19 @@ export const revisionContentSchema = z
       .optional(),
     regenerationTokens: tokens,
     promptTemplates: z.record(z.string().min(1), z.string().max(500000).nullable()),
+    shortsMusic: id.optional(),
+    shortsRanges: z
+      .record(
+        z.string().regex(/^[1-9]\d?$/u),
+        z
+          .object({
+            first: z.number().int().positive(),
+            last: z.number().int().positive(),
+            pick: z.string().min(1).max(128),
+          })
+          .strict(),
+      )
+      .optional(),
   })
   .strict();
 export const revisionEditSchema = z
@@ -100,6 +113,7 @@ export const revisionEditSchema = z
                 .strict(),
               z.object({ kind: z.literal("image"), imageKey: id }).strict(),
               z.object({ kind: z.literal("narration"), key: workKey }).strict(),
+              z.object({ kind: z.literal("shortsMusic") }).strict(),
             ]),
           })
           .strict(),

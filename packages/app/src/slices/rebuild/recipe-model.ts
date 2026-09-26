@@ -112,6 +112,11 @@ export type RecipeInput =
     };
 export interface ResolvedWorkRecipe extends WorkRecipe {
   readonly refusal?: string | undefined;
+  // Images this step's answer will ask for, which planning cannot list yet: a short's image
+  // prompts lead to one image each. The estimate prices them with the step.
+  readonly unfoldsImages?:
+    | { readonly count: number; readonly provider: string; readonly model: string }
+    | undefined;
   readonly input: RecipeInput;
   readonly logicalFingerprint: string;
   readonly deferred: boolean;
@@ -133,6 +138,8 @@ export function recipe(
   options: {
     readonly unresolved?: boolean;
     readonly tokenKey?: string;
+    // The regeneration token itself, when it is not simply the one under a key.
+    readonly token?: string | null;
     readonly logicalFingerprint?: string;
     readonly kind?: WorkRecipe["kind"];
     readonly refusal?: string | undefined;
@@ -158,7 +165,9 @@ export function recipe(
           input.logicalKey,
           input.segment,
         )
-      : (context.content.regenerationTokens[options.tokenKey ?? key] ?? null);
+      : options.token !== undefined
+        ? options.token
+        : (context.content.regenerationTokens[options.tokenKey ?? key] ?? null);
   const researchToken =
     stage === "research" ? context.content.regenerationTokens["research:all"] : undefined;
   const workFingerprint = fingerprint([

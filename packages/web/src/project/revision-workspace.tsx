@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { keys } from "@/queries";
 import { outputLabel } from "./output-label.js";
 import { type RebuildConsent, RebuildReview } from "./rebuild-review.js";
+import { type EditRequest, EditRequestContext } from "./revision-action-context.js";
 import {
   prepareRevision,
   previewProjectRebuild,
@@ -29,6 +30,7 @@ export type EditSection =
   | "article"
   | "providers"
   | "prompts"
+  | "shorts"
   | "subtitles"
   | "images"
   | "narration"
@@ -43,7 +45,10 @@ export interface EditorProps {
   // The one edit section on screen. The others stay mounted, hidden, so an upload or an
   // unapplied caption edit survives a switch. Undefined shows everything.
   readonly section?: EditSection | undefined;
+  // The section a change asked for from the project page opens; a new object each time.
+  readonly focus?: { readonly section: EditSection } | undefined;
 }
+
 export type ProjectTab = "output" | "edit" | "history" | "checkpoints";
 
 // The project page's secondary surfaces are tabs under the rundown, never blocks inserted
@@ -96,6 +101,7 @@ export function RevisionWorkspace({
   const [view, setView] = useState<RevisionView | undefined>();
   const [edit, setEdit] = useState<RevisionEdit | undefined>();
   const [preview, setPreview] = useState<RebuildPreview | undefined>();
+  const [focus, setFocus] = useState<{ readonly section: EditSection } | undefined>();
   const [pending, setPending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -138,6 +144,23 @@ export function RevisionWorkspace({
         content: structuredClone(result.value.view.revision.content),
       });
     return result.value.view;
+  }
+  function requestEdit(request: EditRequest): void {
+    void perform(async () => {
+      let base = view;
+      let draft = edit;
+      if (base === undefined || draft === undefined) {
+        base = await prepare(false);
+        if (base === undefined) return;
+        draft = {
+          config: structuredClone(base.revision.config),
+          content: structuredClone(base.revision.content),
+        };
+      }
+      setEdit(request.change(draft, base));
+      setFocus({ section: request.section });
+      selectTab("edit");
+    });
   }
   async function accepted(next: RevisionView): Promise<void> {
     const latest = await readProject(api, projectId);
@@ -272,7 +295,9 @@ export function RevisionWorkspace({
       />
       {output === undefined ? null : (
         <TabPanel idPrefix="project" id="output" active={tab === "output"}>
-          {output}
+          <EditRequestContext value={pending || preview !== undefined ? undefined : requestEdit}>
+            {output}
+          </EditRequestContext>
         </TabPanel>
       )}
       <TabPanel idPrefix="project" id="edit" active={tab === "edit"}>
@@ -350,6 +375,7 @@ export function RevisionWorkspace({
                 fields: refusal?.fields ?? [],
                 onChange: setEdit,
                 onPending: setUploading,
+                ...(focus === undefined ? {} : { focus }),
               })}
             </fieldset>
             {preview === undefined ? <RevisionFeedback error={error} refusal={refusal} /> : null}

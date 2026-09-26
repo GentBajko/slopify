@@ -6,7 +6,11 @@ import { afterEach, expect, it, vi } from "vitest";
 import { body, output, stage } from "@/routes/project-fixtures";
 import { jsonAnswer, renderApp, testDeps, testOrigin } from "@/test-app";
 import { ShortsBlock } from "./body-shorts.js";
-import { RevisionControlContext } from "./revision-action-context.js";
+import {
+  type EditRequest,
+  EditRequestContext,
+  RevisionControlContext,
+} from "./revision-action-context.js";
 import { revisionView } from "./revision-fixture.js";
 import { RevisionMedia } from "./revision-media.js";
 
@@ -52,12 +56,26 @@ const images = [1, 2, 3].map((index) =>
   output("short_image", "video", { id: `o-short-2-${String(index)}`, meta: { short: 2, index } }),
 );
 
-function mount(outputs: readonly Output[], state: StageState = "done", failureReason?: string) {
+function mount(
+  outputs: readonly Output[],
+  state: StageState = "done",
+  failureReason?: string,
+  options: {
+    readonly fullVideoLink?: string;
+    readonly requestEdit?: (request: EditRequest) => void;
+  } = {},
+) {
   const video = stage("video", state, { failureReason: failureReason ?? null });
   const config = {
     ...revisionView().revision.config,
     imageSeconds: 15,
-    shorts: { enabled: true, count: 2, minSeconds: 30, maxSeconds: 90 },
+    shorts: {
+      enabled: true,
+      count: 2,
+      minSeconds: 30,
+      maxSeconds: 90,
+      ...(options.fullVideoLink === undefined ? {} : { fullVideoLink: options.fullVideoLink }),
+    },
   };
   const project = {
     ...body({ status: "done", stages: [video], outputs }).project,
@@ -82,7 +100,9 @@ function mount(outputs: readonly Output[], state: StageState = "done", failureRe
   renderApp(
     <RevisionMedia projectId="p1" revisionId="r1">
       <RevisionControlContext value>
-        <ShortsBlock stage={video} project={project} outputs={outputs} />
+        <EditRequestContext value={options.requestEdit}>
+          <ShortsBlock stage={video} project={project} outputs={outputs} />
+        </EditRequestContext>
       </RevisionControlContext>
     </RevisionMedia>,
     testDeps({
@@ -124,7 +144,7 @@ it("shows each short as a small vertical player with its title, length, Copy and
     }),
   );
   expect(writeText).toHaveBeenLastCalledWith(
-    "The knot sailors trust\n\nOne knot, every boat.\n\n#Sailing #Bowline #Knots",
+    "The knot sailors trust\n\nOne knot, every boat.\nWatch the full video: [PASTE THE FULL VIDEO LINK HERE]\n\n#Sailing #Bowline #Knots",
   );
   await waitFor(() => expect(screen.getByRole("status").textContent).toBe("Copied short 2."));
 });
@@ -160,4 +180,60 @@ it("does not show a video made before the current pick under the new clip", asyn
 it("says the clips come after the subtitle timing before they are picked", () => {
   mount([], "running");
   expect(screen.getByText("The clips are picked after the subtitle timing.")).not.toBeNull();
+});
+
+it("ends the copied description with the project's link to the full video", async () => {
+  const writeText = vi.fn(async () => undefined);
+  vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+  mount([pick, first], "done", undefined, { fullVideoLink: "https://youtu.be/rope" });
+  const cards = await screen.findAllByRole("listitem");
+  expect(
+    within(cards[0] as HTMLElement).getByText("Watch the full video: https://youtu.be/rope"),
+  ).not.toBeNull();
+  await userEvent.click(
+    screen.getByRole("button", { name: "Copy short 1's title, description and hashtags" }),
+  );
+  expect(writeText).toHaveBeenLastCalledWith(
+    "Why rope holds\n\nFriction does the work.\nWatch the full video: https://youtu.be/rope\n\n#Rope #Knots #Friction",
+  );
+});
+
+it("keeps showing a short made before the pick when the pick chose the same sentences", async () => {
+  mount([
+    { ...pick, createdAt: "2026-09-04T00:00:00.000Z" },
+    { ...first, createdAt: "2026-09-03T00:00:00.000Z", meta: { short: 1, sentences: [1, 4] } },
+  ]);
+  const cards = await screen.findAllByRole("listitem");
+  expect(await within(cards[0] as HTMLElement).findByLabelText("Short 1")).not.toBeNull();
+});
+
+it("opens Edit project to make one short again, or to pick different moments", async () => {
+  const requests: EditRequest[] = [];
+  mount([pick, first], "done", undefined, { requestEdit: (request) => requests.push(request) });
+  const cards = await screen.findAllByRole("listitem");
+  await userEvent.click(
+    within(cards[1] as HTMLElement).getByRole("button", { name: "Make short 2 again" }),
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Pick different moments" }));
+  const view = revisionView();
+  const edit = {
+    config: view.revision.config,
+    content: {
+      ...view.revision.content,
+      shortsRanges: { "1": { first: 2, last: 4, pick: "fingerprint" } },
+    },
+  };
+  expect(requests.map((request) => request.section)).toEqual(["shorts", "shorts"]);
+  expect(requests[0]?.change(edit, view).regenerate).toEqual(["shorts:2"]);
+  // The moments picked again drop the ranges set on the old ones.
+  const again = requests[1]?.change(edit, view);
+  expect(again?.regenerate).toEqual(["shorts:pick"]);
+  expect(again?.content.shortsRanges).toBeUndefined();
+});
+
+it("offers no remake outside a project that has versions", async () => {
+  mount([pick, first]);
+  await screen.findAllByRole("listitem");
+  expect(screen.queryByRole("button", { name: "Pick different moments" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /again/ })).toBeNull();
 });

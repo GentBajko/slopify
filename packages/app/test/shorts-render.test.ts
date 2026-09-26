@@ -6,7 +6,7 @@ import ffmpegStatic from "ffmpeg-static";
 import { afterAll, expect, it } from "vitest";
 import type { Log } from "../src/kernel/log.js";
 import { layout } from "../src/kernel/paths.js";
-import { resolveFont } from "../src/slices/fonts/index.js";
+import { resolveBoldFont, resolveFont } from "../src/slices/fonts/index.js";
 import { renderShort } from "../src/slices/shorts/render.js";
 import { probeDurationMs, resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
 
@@ -131,4 +131,126 @@ it("cuts the clip's sound off the timeline and burns big captions over vertical 
   };
   expect(bright(band(1.0))).toBeGreaterThan(500);
   expect(bright(band(0.2))).toBe(0);
+});
+
+// The average level of one band of a file's sound between two times, in dB: the narration's
+// tone and the music's sit an octave and more apart, so each is measured on its own.
+function band(path: string, from: number, to: number, frequency: number): number {
+  const said = spawnSync(
+    ffmpeg,
+    [
+      "-hide_banner",
+      "-i",
+      path,
+      "-af",
+      `atrim=${String(from)}:${String(to)},bandpass=f=${String(frequency)}:width_type=q:w=8,volumedetect`,
+      "-f",
+      "null",
+      "-",
+    ],
+    { encoding: "utf8" },
+  ).stderr;
+  const matched = /mean_volume: (-?[\d.]+|-inf) dB/.exec(said);
+  return matched?.[1] === undefined || matched[1] === "-inf" ? -Infinity : Number(matched[1]);
+}
+
+// Bright pixels (white, or the gold of the word being spoken) in a horizontal band of the
+// frame at a time.
+function brightIn(path: string, at: number, top: number, height: number): number {
+  const pixels = execFileSync(
+    ffmpeg,
+    [
+      "-v",
+      "error",
+      "-ss",
+      String(at),
+      "-i",
+      path,
+      "-frames:v",
+      "1",
+      "-vf",
+      `crop=1080:${String(height)}:0:${String(top)}`,
+      "-f",
+      "rawvideo",
+      "-pix_fmt",
+      "rgb24",
+      "-",
+    ],
+    { maxBuffer: 64 * 1024 * 1024 },
+  );
+  let count = 0;
+  for (let index = 0; index + 2 < pixels.length; index += 3)
+    if ((pixels[index] ?? 0) > 200 && (pixels[index + 1] ?? 0) > 150) count += 1;
+  return count;
+}
+
+it("plays faster, keeps the title on top, and ducks looped music under the narration", {
+  timeout: 90_000,
+}, async () => {
+  // Narration: a 440 Hz tone from 3 s to 7 s of a 12 s timeline. Music: 1.5 s of 1000 Hz,
+  // looped to the short's length.
+  const voice = join(scratch, "voice.wav");
+  ff(["-f", "lavfi", "-i", "sine=frequency=440:duration=4:sample_rate=44100", "-ac", "2", voice]);
+  const music = join(scratch, "music.wav");
+  ff([
+    "-f",
+    "lavfi",
+    "-i",
+    "sine=frequency=1000:duration=1.5:sample_rate=44100",
+    "-ac",
+    "2",
+    music,
+  ]);
+  const still = join(scratch, "black.png");
+  ff(["-f", "lavfi", "-i", "color=c=black:s=270x480", "-frames:v", "1", still]);
+  const output = join(scratch, "fast.mp4");
+  await renderShort({
+    bin: ffmpeg,
+    timeline: [
+      { kind: "edge", path: null, seconds: 3 },
+      { kind: "body", path: voice, seconds: 4 },
+      { kind: "edge", path: null, seconds: 5 },
+    ],
+    start: 0,
+    end: 12,
+    images: [still, still],
+    imageSeconds: 6,
+    motionStyle: "still",
+    zoomPercent: 0,
+    // The clip's own timeline; drawn at 1.25× these come 0.8 as early.
+    words: [{ text: "TONE", start: 3.2, end: 6.8 }],
+    font: await resolveBoldFont(layout(scratch), "default"),
+    title: "Harbors at night",
+    speed: 1.25,
+    music: { path: music, volume: 50 },
+    output,
+    scratch,
+    signal: new AbortController().signal,
+    log: silent,
+    onProgress: () => undefined,
+  });
+
+  // 12 s of timeline at 1.25× is 9.6 s, and the tone now runs 2.4 s to 5.6 s.
+  const durationMs = await probeDurationMs(ffmpeg, output, new AbortController().signal, silent);
+  expect(durationMs).toBeGreaterThan(9500);
+  expect(durationMs).toBeLessThan(9750);
+  expect(band(output, 2.8, 5.2, 440)).toBeGreaterThan(band(output, 6.2, 7.2, 440) + 20);
+  // The music plays through the silence, looped, and dips while the narration speaks.
+  const before = band(output, 1.2, 2.2, 1000);
+  const under = band(output, 3.2, 5.0, 1000);
+  const after = band(output, 6.2, 7.2, 1000);
+  expect(before).toBeGreaterThan(-40);
+  expect(after).toBeGreaterThan(-40);
+  expect(under).toBeLessThan(before - 6);
+  expect(under).toBeLessThan(after - 6);
+  // Faded out by the end.
+  expect(band(output, 9.3, 9.55, 1000)).toBeLessThan(after - 10);
+
+  // The title is on screen from the first frame, above the captions' band, which is still
+  // empty then; the caption comes at 2.56 s, 0.8 of its 3.2 s.
+  expect(brightIn(output, 0.1, 180, 260)).toBeGreaterThan(500);
+  expect(brightIn(output, 9.4, 180, 260)).toBeGreaterThan(500);
+  expect(brightIn(output, 0.1, 1070, 240)).toBe(0);
+  expect(brightIn(output, 2.3, 1070, 240)).toBe(0);
+  expect(brightIn(output, 3.0, 1070, 240)).toBeGreaterThan(500);
 });

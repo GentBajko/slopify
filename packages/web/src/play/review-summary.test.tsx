@@ -324,6 +324,23 @@ it.each([
     },
     "3 shorts of 60-120 s · Hooks prompt · Maps image style · Vertical images and renders after subtitle timing",
   ],
+  [
+    "the more options",
+    {
+      ...generated,
+      form: {
+        ...generated.form,
+        shorts: {
+          ...shorts,
+          titleOnScreen: true,
+          speed: "1.10",
+          musicVolume: "20",
+          fullVideoLink: "https://youtu.be/x",
+        },
+      },
+    },
+    "3 shorts of 60-120 s · Built-in prompt · Built-in image style · Title on screen · 1.10× speed · Music at 20% once added in Edit project · Links https://youtu.be/x · Vertical images and renders after subtitle timing",
+  ],
 ])("names the Shorts for %s", async (_name, document, expected) => {
   const harness = reviewHarness();
   await harness.prepare(document);

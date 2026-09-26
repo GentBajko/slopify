@@ -88,6 +88,7 @@ export async function publishResult(
   outputs: readonly PreparedOutput[],
   payload: Readonly<Record<string, unknown>>,
   asset: PreparedAsset | null = null,
+  retired?: (key: string) => boolean,
 ): Promise<void> {
   try {
     const record: PreparedPiece = {
@@ -114,6 +115,7 @@ export async function publishResult(
         { work: context.work, pieceId: piece.id, publicationId: piece.id },
         outputs,
         [record],
+        retired,
       );
       rebindPublishedNarration(deps, context.work, piece);
       deps.db

@@ -50,13 +50,22 @@ export interface RevisionContent {
     | undefined;
   readonly regenerationTokens: Readonly<Record<WorkKey, string>>;
   readonly promptTemplates: Readonly<Record<string, string | null>>;
+  // The Shorts step's background music: the project asset uploaded in Edit project →
+  // Shorts. Absent is none.
+  readonly shortsMusic?: string | undefined;
+  // Ranges of sentences set by hand for some shorts, by short number, in place of the
+  // model's pick (`slices/shorts/clips.ts`).
+  readonly shortsRanges?:
+    | Readonly<Record<string, import("../shorts/clips.js").ShortRange>>
+    | undefined;
 }
 export interface RevisionUpload {
   readonly stagedFileId: string;
   readonly destination:
     | { readonly kind: "provided"; readonly stage: "audio" | "thumbnail" }
     | { readonly kind: "image"; readonly imageKey: string }
-    | { readonly kind: "narration"; readonly key: string };
+    | { readonly kind: "narration"; readonly key: string }
+    | { readonly kind: "shortsMusic" };
 }
 export interface RevisionEdit {
   readonly config: RunConfig;

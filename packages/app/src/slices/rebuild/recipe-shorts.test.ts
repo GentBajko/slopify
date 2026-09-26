@@ -4,7 +4,7 @@ import type { ManifestPiece, RevisionContent } from "../revisions/model.js";
 import type { ShortPick } from "../shorts/pick.js";
 import { buildRecipes } from "./recipe-build.js";
 import { config, content, emptyView, readyView, workFor } from "./recipe-fixture.js";
-import type { ResolvedWorkRecipe } from "./recipe-model.js";
+import { type ResolvedWorkRecipe, recipe, resourceIdentity } from "./recipe-model.js";
 import { recipeProviderChoice } from "./recipe-provider-choice.js";
 import { priceRecipes } from "./recipe-work.js";
 import { planRevision } from "./recipes.js";
@@ -307,5 +307,254 @@ describe("Shorts recipes", () => {
     );
     expect(refused({ ...shorts, images: undefined })).toContain("images");
     expect(refused({ ...shorts, llm: undefined })).toContain("llm");
+  });
+});
+
+describe("Shorts recipes, clip by clip", () => {
+  // The recipes once a pick saved `payload` and each clip's prompts answered.
+  function planned(
+    c: RunConfig,
+    value: RevisionContent,
+    payload: (pickFingerprint: string) => unknown,
+  ): readonly ResolvedWorkRecipe[] {
+    const pick = key(recipesFor(c, [], value), "shorts:pick");
+    const picked = [piece("shorts:pick", pick.fingerprint, payload(pick.fingerprint))];
+    const second = recipesFor(c, picked, value);
+    const written = second
+      .filter((row) => row.key.endsWith(":prompts"))
+      .map((row) => {
+        if (row.input.kind !== "llm") throw new Error("Expected an LLM request");
+        const count = Number(
+          /Exactly (\d+) prompt/.exec(row.input.messages[0]?.content ?? "")?.[1],
+        );
+        return piece(row.key, row.fingerprint, {
+          prompts: Array.from(
+            { length: count },
+            (_value, at) => `${row.key} image ${String(at + 1)}`,
+          ),
+        });
+      });
+    return recipesFor(c, [...picked, ...written], value);
+  }
+  const fingerprints = (recipes: readonly ResolvedWorkRecipe[], prefix: string) =>
+    Object.fromEntries(
+      recipes.filter((row) => row.key.startsWith(prefix)).map((row) => [row.key, row.fingerprint]),
+    );
+  const sentences = Array.from({ length: 12 }, (_value, at) => ({
+    start: at * 10,
+    end: at * 10 + 9.5,
+    text: `Sentence ${String(at + 1)}.`,
+  }));
+  const seeded = (number: number, first: number, last: number, seed: string | null) => ({
+    ...clip(number, (first - 1) * 10 - 0.25, (last - 1) * 10 + 9.75),
+    first,
+    last,
+    seed,
+  });
+
+  it("plans a short saved before these settings exactly as it did", () => {
+    const recipes = unfolded().third;
+    const timing = key(recipes, "subtitles:timing");
+    const context = {
+      config: shorts,
+      content,
+      manifest: { outputs: [], pieces: [] },
+      resolved: { articleMarkdown: null, researchNotes: null },
+    };
+    const stills = [key(recipes, "shorts:1:image:1"), key(recipes, "shorts:1:image:2")];
+    // The render's request as it was written before the title, speed and music: no fourth
+    // group of values, and the pick's own regeneration token.
+    const before = recipe(
+      context,
+      "shorts:1:render",
+      "video",
+      {
+        kind: "local",
+        version: 1,
+        operation: "short-render-v1",
+        values: [
+          resourceIdentity(context, timing),
+          1,
+          10,
+          45,
+          stills.map((still) => resourceIdentity(context, still)),
+          shorts.imageSeconds,
+          shorts.zoomPercent,
+          shorts.motionStyle,
+          "default",
+        ],
+      },
+      ["shorts:pick", ...stills.map((still) => still.key)],
+      { tokenKey: "shorts:pick" },
+    );
+    expect(key(recipes, "shorts:1:render").fingerprint).toBe(before.fingerprint);
+    const prompts = key(recipes, "shorts:1:prompts");
+    expect(
+      recipe(context, prompts.key, prompts.stage, prompts.input, prompts.dependsOn, {
+        tokenKey: "shorts:pick",
+      }).fingerprint,
+    ).toBe(prompts.fingerprint);
+  });
+
+  it("renders again, and only renders, for the title, the speed and the music", () => {
+    const base = unfolded().third;
+    for (const next of [
+      { ...shorts, shorts: { ...shorts.shorts, titleOnScreen: true } } as RunConfig,
+      { ...shorts, shorts: { ...shorts.shorts, speed: 1.1 } } as RunConfig,
+    ]) {
+      const after = unfolded(next).third;
+      expect(key(after, "shorts:1:render").fingerprint).not.toBe(
+        key(base, "shorts:1:render").fingerprint,
+      );
+      expect(fingerprints(after, "shorts:1:image")).toEqual(fingerprints(base, "shorts:1:image"));
+      expect(key(after, "shorts:pick").fingerprint).toBe(key(base, "shorts:pick").fingerprint);
+    }
+    // The title off, speed 1 and no music are the settings absent.
+    expect(
+      key(
+        unfolded({
+          ...shorts,
+          shorts: { ...shorts.shorts, titleOnScreen: false, speed: 1, musicVolume: 40 },
+        } as RunConfig).third,
+        "shorts:1:render",
+      ).fingerprint,
+    ).toBe(key(base, "shorts:1:render").fingerprint);
+    const music = unfolded(shorts, { ...content, shortsMusic: "music1" }).third;
+    expect(key(music, "shorts:2:render").fingerprint).not.toBe(
+      key(base, "shorts:2:render").fingerprint,
+    );
+    expect(key(music, "shorts:2:prompts").fingerprint).toBe(
+      key(base, "shorts:2:prompts").fingerprint,
+    );
+  });
+
+  it("makes one short again, and only that short", () => {
+    const payload = () => ({
+      shorts: [seeded(1, 2, 5, null), seeded(2, 7, 10, null)],
+      durationSeconds: 120,
+      sentences,
+    });
+    const base = planned(shorts, content, payload);
+    const again = planned(
+      shorts,
+      { ...content, regenerationTokens: { "shorts:2": "again" } },
+      payload,
+    );
+    expect(key(again, "shorts:pick").fingerprint).toBe(key(base, "shorts:pick").fingerprint);
+    expect(fingerprints(again, "shorts:1:")).toEqual(fingerprints(base, "shorts:1:"));
+    for (const name of ["shorts:2:prompts", "shorts:2:image:1", "shorts:2:render"])
+      expect(key(again, name).fingerprint).not.toBe(key(base, name).fingerprint);
+  });
+
+  it("keeps a clip's work when the moments are picked again and its sentences are the same", () => {
+    const base = planned(shorts, content, () => ({
+      shorts: [seeded(1, 2, 5, null), seeded(2, 7, 10, null)],
+      durationSeconds: 120,
+      sentences,
+    }));
+    // The pick made again kept short 2 (same sentences, its old token) and made a new short 1.
+    const repicked = planned(
+      shorts,
+      { ...content, regenerationTokens: { "shorts:pick": "again" } },
+      () => ({
+        shorts: [seeded(1, 3, 5, "again"), seeded(2, 7, 10, null)],
+        durationSeconds: 120,
+        sentences,
+      }),
+    );
+    expect(key(repicked, "shorts:pick").fingerprint).not.toBe(key(base, "shorts:pick").fingerprint);
+    expect(fingerprints(repicked, "shorts:2:")).toEqual(fingerprints(base, "shorts:2:"));
+    expect(key(repicked, "shorts:1:prompts").fingerprint).not.toBe(
+      key(base, "shorts:1:prompts").fingerprint,
+    );
+    // Even a new clip on the old sentences is new work when it carries the new token.
+    const fresh = planned(
+      shorts,
+      { ...content, regenerationTokens: { "shorts:pick": "again" } },
+      () => ({
+        shorts: [seeded(1, 2, 5, "again"), seeded(2, 7, 10, null)],
+        durationSeconds: 120,
+        sentences,
+      }),
+    );
+    expect(key(fresh, "shorts:1:render").fingerprint).not.toBe(
+      key(base, "shorts:1:render").fingerprint,
+    );
+  });
+
+  it("uses a range set by hand in place of the model's clip, and redoes only that clip", () => {
+    const payload = () => ({
+      shorts: [seeded(1, 2, 5, null), seeded(2, 7, 10, null)],
+      durationSeconds: 120,
+      sentences,
+    });
+    const base = planned(shorts, content, payload);
+    const pick = key(base, "shorts:pick").fingerprint;
+    const moved = planned(
+      shorts,
+      { ...content, shortsRanges: { "2": { first: 8, last: 11, pick } } },
+      payload,
+    );
+    expect(fingerprints(moved, "shorts:1:")).toEqual(fingerprints(base, "shorts:1:"));
+    const prompts = key(moved, "shorts:2:prompts");
+    if (prompts.input.kind !== "llm") throw new Error("Expected an LLM request");
+    expect(prompts.input.messages[1]?.content).toContain(
+      "Sentence 8. Sentence 9. Sentence 10. Sentence 11.",
+    );
+    expect(key(moved, "shorts:2:render").input).toMatchObject({
+      values: expect.arrayContaining([2, 69.75, 109.75]),
+    });
+    // Saving it is refused in plain words when it breaks the length rules.
+    const view = {
+      ...emptyView(shorts),
+      pieces: [
+        {
+          ...piece("shorts:pick", pick, payload()),
+          recordId: "pick-record",
+          publicationId: null,
+          selected: true,
+          available: true,
+        },
+      ],
+    };
+    const refused = planRevision(view, {
+      config: shorts,
+      content: { ...content, shortsRanges: { "2": { first: 8, last: 8, pick } } },
+    });
+    expect(refused).toEqual({
+      ok: false,
+      fields: [
+        {
+          field: "content.shortsRanges.2",
+          message:
+            "Short 2 would last 10 seconds, shorter than the 30-second minimum. Start it earlier or end it later.",
+        },
+      ],
+    });
+    // One left from an earlier pick no longer applies and is not checked.
+    expect(
+      planRevision(view, {
+        config: shorts,
+        content: { ...content, shortsRanges: { "2": { first: 8, last: 8, pick: "older" } } },
+      }).ok,
+    ).toBe(true);
+  });
+
+  it("prices a short's images with its prompts, once the clips are picked", () => {
+    const { second } = unfolded();
+    const prompts = key(second, "shorts:2:prompts");
+    const generate = {
+      disposition: "generate" as const,
+      inflight: false,
+      pieceIds: [],
+      reason: "Inputs changed or a required output is missing.",
+    };
+    // 40 s of clip at 20 s per image: the call and two images.
+    const priced = priceRecipes({ ...prompts, ...generate }, prompts);
+    expect(priced.map((row) => row.kind)).toEqual(["llm", "image", "image"]);
+    expect(priced[1]).toMatchObject({ provider: "fal", model: "image-model" });
+    expect(priceRecipes({ ...prompts, ...generate, disposition: "reuse" }, prompts)).toEqual([
+      expect.objectContaining({ kind: "local" }),
+    ]);
   });
 });

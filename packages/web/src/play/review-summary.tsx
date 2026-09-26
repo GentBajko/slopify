@@ -6,7 +6,11 @@ import { documentThemeLabel } from "@app/slices/document/model.js";
 import type { Entry } from "@app/slices/library/model.js";
 import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import type { ProviderFamily, ProviderStatus, Voice } from "@app/slices/settings/model.js";
-import { defaultShortsPromptName } from "@app/slices/shorts/model.js";
+import {
+  defaultMusicVolume,
+  defaultShortsPromptName,
+  shortsExtrasOf,
+} from "@app/slices/shorts/model.js";
 import { defaultDescriptionPromptName } from "@app/slices/youtube/model.js";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
@@ -17,7 +21,7 @@ import { entriesQuery, providersQuery, voicesQuery } from "@/queries";
 import { type FontSummary, fontsKey } from "@/subtitles/api";
 import { usePlaySession } from "./draft-context";
 import { CheckpointReview } from "./run-review";
-import { shortsOn, sourceLabels } from "./state";
+import { type ShortsForm, shortsOn, sourceLabels } from "./state";
 
 interface RequiredProvider {
   readonly field: string;
@@ -433,7 +437,13 @@ export function ReviewSummary({
                 "Shorts",
                 "shorts.enabled",
                 shortsOn(form) && form.shorts !== undefined
-                  ? `${form.shorts.count} shorts of ${form.shorts.minSeconds}-${form.shorts.maxSeconds} s · ${form.shorts.prompt || defaultShortsPromptName} prompt · ${form.shorts.imagePrompt || defaultShortsPromptName} image style · Vertical images and renders after subtitle timing`
+                  ? [
+                      `${form.shorts.count} shorts of ${form.shorts.minSeconds}-${form.shorts.maxSeconds} s`,
+                      `${form.shorts.prompt || defaultShortsPromptName} prompt`,
+                      `${form.shorts.imagePrompt || defaultShortsPromptName} image style`,
+                      ...shortsExtrasSummary(form.shorts),
+                      "Vertical images and renders after subtitle timing",
+                    ].join(" · ")
                   : "Off",
               )
             : null}
@@ -491,4 +501,19 @@ export function ReviewSummary({
       </SummaryGroup>
     </>
   );
+}
+
+// The later Shorts settings the review names, each only when it differs from the default.
+function shortsExtrasSummary(shorts: ShortsForm): readonly string[] {
+  const settings = shortsExtrasOf(shorts);
+  const speed = settings.speed;
+  const volume = settings.musicVolume;
+  return [
+    ...(settings.titleOnScreen === true ? ["Title on screen"] : []),
+    ...(speed !== undefined && speed !== 1 ? [`${speed.toFixed(2)}× speed`] : []),
+    ...(volume !== undefined && volume !== defaultMusicVolume
+      ? [`Music at ${String(volume)}% once added in Edit project`]
+      : []),
+    ...(settings.fullVideoLink === undefined ? [] : [`Links ${settings.fullVideoLink}`]),
+  ];
 }

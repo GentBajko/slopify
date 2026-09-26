@@ -1,13 +1,19 @@
 import type { Prompt, PromptKind } from "@app/slices/library/model.js";
 import {
+  defaultMusicVolume,
   defaultShorts,
   defaultShortsPromptName,
+  fullVideoLinkMax,
+  fullVideoPlaceholder,
   shortsCountMax,
   shortsCountMin,
   shortsSecondsMax,
   shortsSecondsMin,
+  shortsSpeedMax,
+  shortsSpeedMin,
+  shortsSpeedStep,
 } from "@app/slices/shorts/model.js";
-import { type ReactElement, useId } from "react";
+import { type ReactElement, type ReactNode, useId, useState } from "react";
 import { InfoTip } from "@/components/kit/info-tip";
 import { Input } from "@/components/ui/input";
 import { Picker } from "@/components/ui/picker";
@@ -16,7 +22,8 @@ import type { ShortsForm } from "@/play/state";
 const help =
   "After subtitle timing, the text model picks the best self-contained moments of the narration. Each becomes a vertical 1080×1920 clip with new images, big word-by-word captions, and its own title, description and hashtags. It runs beside the render; the images are charged like any other.";
 
-// The Shorts settings as a form edits them: the draft's own shape, numbers as typed.
+// The Shorts settings as a form edits them: the draft's own shape, numbers as typed. A new
+// form starts with the title on screen.
 export const freshShorts: ShortsForm = {
   enabled: false,
   count: String(defaultShorts.count),
@@ -24,22 +31,35 @@ export const freshShorts: ShortsForm = {
   maxSeconds: String(defaultShorts.maxSeconds),
   prompt: "",
   imagePrompt: "",
+  titleOnScreen: true,
 };
+
+// 1.00, 1.05 … 1.25: the speeds a short may play at.
+const speeds = Array.from(
+  { length: Math.round((shortsSpeedMax - shortsSpeedMin) / shortsSpeedStep) + 1 },
+  (_value, at) => (shortsSpeedMin + at * shortsSpeedStep).toFixed(2),
+);
+
+const moreFields = ["titleOnScreen", "speed", "musicVolume", "fullVideoLink"] as const;
 
 // The Video stage's Shorts step, on Play and in Edit project, beside the YouTube description.
 // Every control stays mounted: without narration the switch is disabled rather than removed,
-// and so is the rest while the switch is off.
+// and so is the rest while the switch is off. The title, speed, music and link sit in a
+// "More shorts options" disclosure whose summary names what differs from the defaults, so the
+// row stays one line; `music` is Edit project's music file, which belongs to a project.
 export function Shorts({
   value,
   prompts,
   narrated,
   problem,
+  music,
   onChange,
 }: {
   readonly value: ShortsForm;
   readonly prompts: readonly Prompt[];
   readonly narrated: boolean;
   readonly problem?: ((field: string) => string | undefined) | undefined;
+  readonly music?: ReactNode;
   readonly onChange: (next: ShortsForm) => void;
 }): ReactElement {
   const id = useId();
@@ -47,6 +67,10 @@ export function Shorts({
   const issue = (["enabled", "count", "minSeconds", "maxSeconds", "prompt", "imagePrompt"] as const)
     .map((field) => problem?.(`shorts.${field}`))
     .find((message) => message !== undefined);
+  const moreIssue = moreFields
+    .map((field) => problem?.(`shorts.${field}`))
+    .find((message) => message !== undefined);
+  const [open, setOpen] = useState(false);
   const number = (
     field: "count" | "minSeconds" | "maxSeconds",
     label: string,
@@ -68,6 +92,18 @@ export function Shorts({
       onChange={(event) => onChange({ ...value, [field]: event.target.value })}
     />
   );
+  const speed = value.speed?.trim() ? value.speed : speeds[0];
+  const volume = value.musicVolume ?? "";
+  const summary = [
+    value.titleOnScreen === true ? "Title on screen" : "No title on screen",
+    speed === speeds[0] ? undefined : `${speed ?? ""}×`,
+    volume.trim() === "" || volume === String(defaultMusicVolume)
+      ? undefined
+      : `Music at ${volume}%`,
+    value.fullVideoLink?.trim() ? "Full video linked" : undefined,
+  ]
+    .filter((part) => part !== undefined)
+    .join(" · ");
   return (
     <div className="col-span-full flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
       <label
@@ -130,6 +166,104 @@ export function Shorts({
       ) : !narrated ? (
         <p className="basis-full text-label text-ink3">Needs narration.</p>
       ) : null}
+      <details
+        className="basis-full rounded-control border border-line px-3"
+        open={open || moreIssue !== undefined}
+        onToggle={(event) => setOpen(event.currentTarget.open)}
+      >
+        <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink2">
+          More shorts options · {summary}
+        </summary>
+        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-3 pt-2 pb-3">
+          <label htmlFor={`${id}-title`} className="flex min-h-9 items-center gap-2 text-small">
+            <input
+              id={`${id}-title`}
+              type="checkbox"
+              data-play-field="shorts.titleOnScreen"
+              checked={value.titleOnScreen === true}
+              disabled={!on}
+              className="size-4 accent-accent"
+              onChange={(event) =>
+                onChange({ ...value, titleOnScreen: event.currentTarget.checked })
+              }
+            />
+            Title on screen
+            <InfoTip label="Title on screen">
+              <p>
+                The short's title stays at the top for the whole clip, large and bold in the caption
+                font, below where the apps draw their own buttons.
+              </p>
+            </InfoTip>
+          </label>
+          <label htmlFor={`${id}-speed`} className="flex items-center gap-2 text-small">
+            Speed
+            <Picker
+              id={`${id}-speed`}
+              data-play-field="shorts.speed"
+              className="w-auto min-w-[88px]"
+              value={speeds.includes(speed ?? "") ? speed : ""}
+              aria-invalid={problem?.("shorts.speed") !== undefined}
+              disabled={!on}
+              onChange={(event) => onChange({ ...value, speed: event.target.value })}
+            >
+              {speeds.includes(speed ?? "") ? null : <option value="">Choose a speed</option>}
+              {speeds.map((one) => (
+                <option key={one} value={one}>
+                  {one === speeds[0] ? "1.00× (normal)" : `${one}×`}
+                </option>
+              ))}
+            </Picker>
+          </label>
+          <label htmlFor={`${id}-volume`} className="flex items-center gap-2 text-small">
+            Music volume
+            <Input
+              id={`${id}-volume`}
+              data-play-field="shorts.musicVolume"
+              type="text"
+              inputMode="numeric"
+              title="0-100"
+              placeholder={String(defaultMusicVolume)}
+              aria-invalid={problem?.("shorts.musicVolume") !== undefined}
+              className="w-[64px] tabular-nums"
+              disabled={!on}
+              value={volume}
+              onChange={(event) => onChange({ ...value, musicVolume: event.target.value })}
+            />
+            <span className="text-ink3">%</span>
+          </label>
+          <label htmlFor={`${id}-link`} className="flex min-w-0 grow items-center gap-2 text-small">
+            Full video link
+            <Input
+              id={`${id}-link`}
+              data-play-field="shorts.fullVideoLink"
+              type="url"
+              inputMode="url"
+              maxLength={fullVideoLinkMax}
+              placeholder="https://youtu.be/…"
+              aria-invalid={problem?.("shorts.fullVideoLink") !== undefined}
+              className="min-w-[200px] flex-1"
+              disabled={!on}
+              value={value.fullVideoLink ?? ""}
+              onChange={(event) => onChange({ ...value, fullVideoLink: event.target.value })}
+            />
+          </label>
+          <p className="basis-full text-label text-ink3">
+            Each short's description ends with a line to the full video; without a link it says{" "}
+            {fullVideoPlaceholder} for you to fill in.
+          </p>
+          {music ?? (
+            <p className="basis-full text-label text-ink3">
+              Background music is added per project, in Edit project → Shorts, once the run has
+              started. It plays at this volume under the narration and dips while it speaks.
+            </p>
+          )}
+          {moreIssue ? (
+            <p role="alert" className="basis-full text-small text-red">
+              {moreIssue}
+            </p>
+          ) : null}
+        </div>
+      </details>
     </div>
   );
 }

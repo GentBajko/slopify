@@ -22,7 +22,7 @@ import { type DocumentSettings, defaultDocumentTheme } from "@app/slices/documen
 import type { Entry } from "@app/slices/library/model.js";
 import type { Chunking } from "@app/slices/narration/chunk.js";
 import type { PlayDraftForm } from "@app/slices/play-drafts/schema.js";
-import type { ShortsSettings } from "@app/slices/shorts/model.js";
+import { type ShortsSettings, shortsExtrasOf } from "@app/slices/shorts/model.js";
 import type { StagedFile } from "@app/slices/storage/model.js";
 import { defaultSubtitles, type SubtitleConfig } from "@app/slices/subtitles/model.js";
 import { subtitlesFor } from "@/subtitles/config";
@@ -105,6 +105,7 @@ export function shortsSettingsOf(form: ShortsForm): ShortsSettings {
     maxSeconds: typed(form.maxSeconds),
     ...(form.prompt.trim() ? { prompt: form.prompt } : {}),
     ...(form.imagePrompt.trim() ? { imagePrompt: form.imagePrompt } : {}),
+    ...shortsExtrasOf(form),
   };
 }
 

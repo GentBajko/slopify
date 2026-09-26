@@ -268,3 +268,55 @@ it("refuses a Shorts length whose shortest is longer than its longest, in plain 
   ).not.toBeNull();
   expect(screen.getAllByRole("button", { name: /^Shorts: Needs setup/ }).length).toBeGreaterThan(0);
 });
+
+it("keeps the title, speed, music volume and link in More shorts options and saves them into the draft", async () => {
+  const { requests } = await mountPlay();
+  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+  await userEvent.click(screen.getByRole("checkbox", { name: /Shorts/ }));
+  // Closed until asked for; a new form starts with the title on screen.
+  const more = screen.getByText(/More shorts options/);
+  expect(more.textContent).toBe("More shorts options · Title on screen");
+  expect(more.closest("details")?.open).toBe(false);
+  await userEvent.click(more);
+  expect(screen.getByRole<HTMLInputElement>("checkbox", { name: /Title on screen/ }).checked).toBe(
+    true,
+  );
+  await userEvent.selectOptions(screen.getByRole("combobox", { name: "Speed" }), "1.10");
+  await userEvent.type(screen.getByRole("textbox", { name: /Music volume/ }), "25");
+  await userEvent.type(screen.getByRole("textbox", { name: "Full video link" }), "youtu.be/x");
+  await userEvent.tab();
+  // Refused in the shared rule's words, and the disclosure stays open to show it.
+  expect(
+    await screen.findByText(
+      "The full video link must be a whole web address starting with https:// or http://, like https://youtu.be/abc123. Paste it again, or leave the box empty.",
+    ),
+  ).not.toBeNull();
+  const link = screen.getByRole<HTMLInputElement>("textbox", { name: "Full video link" });
+  await userEvent.clear(link);
+  await userEvent.type(link, "https://youtu.be/x");
+  expect(more.textContent).toBe(
+    "More shorts options · Title on screen · 1.10× · Music at 25% · Full video linked",
+  );
+  // The music file itself is a project's, added in Edit project.
+  expect(screen.getByText(/Background music is added per project/)).not.toBeNull();
+  await waitFor(async () => {
+    const saves = requests.filter(
+      (request) =>
+        ["PUT", "POST"].includes(request.method) &&
+        /\/api\/drafts(?:\/[a-f0-9-]+)?$/.test(request.url),
+    );
+    expect(await saves.at(-1)?.clone().json()).toMatchObject({
+      document: {
+        form: {
+          shorts: {
+            enabled: true,
+            titleOnScreen: true,
+            speed: "1.10",
+            musicVolume: "25",
+            fullVideoLink: "https://youtu.be/x",
+          },
+        },
+      },
+    });
+  });
+});

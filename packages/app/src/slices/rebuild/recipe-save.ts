@@ -17,6 +17,7 @@ import type {
   RevisionManifest,
   RevisionView,
 } from "../revisions/model.js";
+import { effectiveClips, pickedShortsOf, rangeProblem } from "../shorts/clips.js";
 import { buildRecipes } from "./recipe-build.js";
 import { type RecipeContext, type ResolvedWorkRecipe, selectedReference } from "./recipe-model.js";
 import { validateRecipeInputs } from "./recipe-validation.js";
@@ -32,6 +33,31 @@ export type RevisionPlanResult =
       readonly recipes: readonly ResolvedWorkRecipe[];
     }
   | { readonly ok: false; readonly fields: readonly FieldError[] };
+// A range set by hand for a short is checked against the pick it was set on, while that is
+// still the project's pick; one left from an earlier pick no longer applies and is ignored.
+function shortRangeFields(
+  base: RevisionView,
+  config: RunConfig,
+  content: RevisionContent,
+): readonly FieldError[] {
+  const ranges = content.shortsRanges;
+  const shorts = config.shorts;
+  if (ranges === undefined || shorts?.enabled !== true) return [];
+  const row = base.pieces.find(
+    (one) => one.key === "shorts:pick" && one.selected && one.piece.state === "done",
+  );
+  const picked = pickedShortsOf(row?.piece.payload);
+  if (row === undefined || picked === undefined) return [];
+  const current = Object.fromEntries(
+    Object.entries(ranges).filter(([, range]) => range.pick === row.fingerprint),
+  );
+  const clips = effectiveClips(picked, current, row.fingerprint, shorts);
+  return Object.entries(current).flatMap(([number, range]) => {
+    const message = rangeProblem(picked, Number(number), range.first, range.last, shorts, clips);
+    return message === undefined ? [] : [{ field: `content.shortsRanges.${number}`, message }];
+  });
+}
+
 export function normalizeArticleIntent(base: RevisionView, edit: RevisionEdit): RevisionContent {
   const restart =
     edit.regenerate?.includes("article:body") === true ||
@@ -61,6 +87,7 @@ export function planRevision(
     ...validateRevisionEdit(edit.config, content),
     ...validateCues(content),
     ...validateRecipeInputs(edit.config, content),
+    ...shortRangeFields(base, edit.config, content),
   ];
   if (fields.length > 0) return { ok: false, fields };
   const normalized = normaliseDraft(edit.config);

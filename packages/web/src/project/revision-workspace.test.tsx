@@ -2,10 +2,11 @@ import { startRebuildSchema } from "@app/slices/rebuild/model.js";
 import { restoreRevisionSchema, saveRevisionSchema } from "@app/slices/revisions/schema.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactElement } from "react";
+import { type ReactElement, use } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { unreachable } from "@/http";
 import { jsonAnswer, renderApp, testDeps } from "@/test-app";
+import { EditRequestContext } from "./revision-action-context.js";
 import { revisionView } from "./revision-fixture.js";
 import type { EditorProps } from "./revision-workspace.js";
 import { RevisionWorkspace } from "./revision-workspace.js";
@@ -358,3 +359,58 @@ it.each(["transport", "readiness", "stale-preview", "conflict"] as const)(
     expect(sent[0]).toBe(sent[1]);
   },
 );
+
+it("opens Edit project with a change the Output tab asks for, in the section it names", async () => {
+  const user = userEvent.setup();
+  const baseline = revisionView();
+  const save = vi.fn(jsonAnswer({ ok: true, view: baseline, duplicate: false }));
+  function Remake(): ReactElement {
+    const request = use(EditRequestContext);
+    return (
+      <button
+        type="button"
+        disabled={request === undefined}
+        onClick={() =>
+          request?.({
+            section: "shorts",
+            change: (edit) => ({ ...edit, regenerate: ["shorts:2"] }),
+          })
+        }
+      >
+        Make short 2 again
+      </button>
+    );
+  }
+  renderApp(
+    <RevisionWorkspace
+      projectId="p1"
+      currentRevisionId="r1"
+      output={<Remake />}
+      renderEditor={({ edit, focus }) => (
+        <p>
+          {focus?.section ?? "no section"}: {(edit.regenerate ?? []).join(",")}
+        </p>
+      )}
+    />,
+    testDeps({
+      "GET /api/projects/p1/revisions/r1": jsonAnswer({ view: baseline }),
+      "POST /api/projects/p1/revisions/prepare": jsonAnswer({
+        ok: true,
+        view: baseline,
+        created: false,
+      }),
+      "POST /api/projects/p1/revisions": save,
+    }),
+  );
+  await user.click(await screen.findByRole("button", { name: "Make short 2 again" }));
+  // Nothing is saved until the user presses Save changes on the Edit tab.
+  expect(await screen.findByText("shorts: shorts:2")).not.toBeNull();
+  expect(screen.getByRole("tab", { name: /^Edit/ }).getAttribute("aria-selected")).toBe("true");
+  expect(save).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Save changes" }));
+  await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+  const request = save.mock.calls[0]?.[0] as Request | undefined;
+  if (request === undefined) throw new Error("Expected the save request");
+  const body = saveRevisionSchema.parse(await request.json());
+  expect(body.edit.regenerate).toEqual(["shorts:2"]);
+});

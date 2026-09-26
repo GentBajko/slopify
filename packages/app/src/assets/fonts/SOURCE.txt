@@ -2,6 +2,12 @@ Barlow-Regular.ttf
 Source: https://raw.githubusercontent.com/google/fonts/6cdf01867df0813c2390f90dff7dc66c87f14cf7/ofl/barlow/Barlow-Regular.ttf
 SHA-256: 95aa02c7c43096e0dd44d787ba6216864a67157e402adab59b35572e0c1577ea
 
+Barlow-Bold.ttf
+Source: https://raw.githubusercontent.com/google/fonts/6cdf01867df0813c2390f90dff7dc66c87f14cf7/ofl/barlow/Barlow-Bold.ttf
+SHA-256: 84e6a4d61e7c3e21f3c50ea6a4f7e5303a3467864c038be6ea3759bab8d547f9
+Git blob: 2f20cbe667ca5cd871410dc50dc4b1a30c1d6267 (matches the google/fonts tree at that commit)
+Licence: SIL Open Font License 1.1, OFL.txt below (the same licence and authors as Barlow-Regular)
+
 OFL.txt
 Source: https://raw.githubusercontent.com/google/fonts/6cdf01867df0813c2390f90dff7dc66c87f14cf7/ofl/barlow/OFL.txt
 SHA-256: 186d750eb496a4c17a76385f82be6aea2ac1cf2de074a811d63786cf374ea73f

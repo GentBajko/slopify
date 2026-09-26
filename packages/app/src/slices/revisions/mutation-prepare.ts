@@ -43,24 +43,26 @@ export async function prepareEditAssets(
         index: to.kind === "image" ? content.imageOrder.indexOf(to.imageKey) + 1 : 1,
       });
       if (!result.ok) throw new Error("A validated upload became unavailable.");
+      // The shorts' music is an asset the revision names, like a narration replacement,
+      // never an output of its own.
       const workKey =
         to.kind === "image"
           ? `image:${to.imageKey}`
           : to.kind === "narration"
             ? to.key
-            : to.stage === "audio"
-              ? "audio:provided"
-              : "thumbnail:image";
+            : to.kind === "shortsMusic"
+              ? "shorts:music"
+              : to.stage === "audio"
+                ? "audio:provided"
+                : "thumbnail:image";
       const item: PreparedEditAsset = {
         ...result,
         upload,
         workKey,
         slot:
-          to.kind === "image"
+          to.kind === "image" || to.kind === "narration" || to.kind === "shortsMusic"
             ? workKey
-            : to.kind === "narration"
-              ? workKey
-              : `${result.output.stageKind}:${role}`,
+            : `${result.output.stageKind}:${role}`,
       };
       allocated.push(result.asset);
       const durationMs =

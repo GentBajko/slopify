@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { TranscriptSentence } from "../youtube/transcript.js";
-import { checkPicks, noPicksMessage, pickMessages, pickRetryMessages } from "./pick.js";
+import {
+  checkPicks,
+  keepNumbers,
+  noPicksMessage,
+  pickMessages,
+  pickRetryMessages,
+  type ShortPick,
+} from "./pick.js";
 
 // Ten sentences of 9.5 s each, half a second apart: sentence n runs (n-1)*10 to (n-1)*10+9.5.
 const sentences: readonly TranscriptSentence[] = Array.from({ length: 10 }, (_value, at) => ({
@@ -138,10 +145,71 @@ describe("the pick's messages", () => {
 
   it("says what to change when nothing usable came back", () => {
     expect(noPicksMessage(["Clip 1 is too short."], limits)).toBe(
-      "The AI model didn't pick any clip Slopify could use as a short, twice (Clip 1 is too short.). Retry stage; if it keeps happening, widen the length range in Edit project → Prompts → Shorts, or choose another model in Edit project → Providers.",
+      "The AI model didn't pick any clip Slopify could use as a short, twice (Clip 1 is too short.). Retry stage; if it keeps happening, widen the length range in Edit project → Shorts, or choose another model in Edit project → Providers.",
     );
     expect(noPicksMessage([], { ...limits, durationSeconds: 12 })).toBe(
-      "The narration is 12 seconds long, shorter than the 20-second minimum for a short, so there is nothing to cut. Lower the shortest length in Edit project → Prompts → Shorts, then Retry stage.",
+      "The narration is 12 seconds long, shorter than the 20-second minimum for a short, so there is nothing to cut. Lower the shortest length in Edit project → Shorts, then Retry stage.",
     );
+  });
+});
+
+describe("keepNumbers", () => {
+  const picked = (
+    number: number,
+    first: number,
+    last: number,
+    seed?: string | null,
+  ): ShortPick => ({
+    number,
+    first,
+    last,
+    start: first * 10,
+    end: last * 10 + 9,
+    title: `Sentences ${String(first)}-${String(last)}`,
+    description: "One line.",
+    hashtags: ["#One"],
+    why: "",
+    text: "What is said.",
+    ...(seed === undefined ? {} : { seed }),
+  });
+
+  it("gives a fresh pick numbers in playing order, each clip carrying the pick's token", () => {
+    expect(
+      keepNumbers([picked(1, 1, 2), picked(2, 5, 6)], [], "token-a").map((one) => [
+        one.number,
+        one.seed,
+      ]),
+    ).toEqual([
+      [1, "token-a"],
+      [2, "token-a"],
+    ]);
+  });
+
+  it("keeps the number, words and token of a clip picked again with the same sentences", () => {
+    const before = [picked(1, 1, 2, null), picked(2, 5, 6, null), picked(3, 8, 9, null)];
+    // Sentences 5-6 come back, now first in playing order; 1-2 and 8-9 are gone.
+    const again = keepNumbers(
+      [
+        { ...picked(1, 3, 4), title: "New" },
+        { ...picked(2, 5, 6), title: "Renamed" },
+      ],
+      before,
+      "token-b",
+    );
+    expect(again.map((one) => [one.number, one.first, one.title, one.seed])).toEqual([
+      [1, 3, "New", "token-b"],
+      [2, 5, "Sentences 5-6", null],
+    ]);
+  });
+
+  it("renumbers a kept clip whose number is past the new count, and ignores older picks", () => {
+    const before = [picked(1, 1, 2, null), picked(2, 5, 6, null), picked(3, 8, 9, null)];
+    expect(
+      keepNumbers([picked(1, 8, 9)], before, "token-c").map((one) => [one.number, one.seed]),
+    ).toEqual([[1, "token-c"]]);
+    // A pick saved before clips kept a token has nothing to keep.
+    expect(
+      keepNumbers([picked(1, 5, 6)], [picked(2, 5, 6)], "token-d").map((one) => one.seed),
+    ).toEqual(["token-d"]);
   });
 });

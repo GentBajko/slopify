@@ -1,4 +1,10 @@
-export { fontIdPattern, isMissingFont, listFonts, resolveFont } from "./catalog.js";
+export {
+  fontIdPattern,
+  isMissingFont,
+  listFonts,
+  resolveBoldFont,
+  resolveFont,
+} from "./catalog.js";
 export type { FontSummary, ResolvedFont } from "./model.js";
 export { fontMaxBytes } from "./model.js";
 export { previewFont } from "./preview.js";

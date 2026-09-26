@@ -271,6 +271,23 @@ export function priceRecipes(
   value: ResolvedWorkRecipe | undefined,
 ): readonly PricedRequest[] {
   const input = value?.input;
+  const unfolds = value?.unfoldsImages;
+  // A short's image prompts once the clips are picked: the call, and the images it leads to,
+  // as many as the clip's length asks for.
+  if (work.disposition === "generate" && unfolds !== undefined)
+    return [
+      priceRecipe(work, value),
+      ...Array.from(
+        { length: unfolds.count },
+        (): PricedRequest => ({
+          kind: "image",
+          stage: work.key,
+          provider: unfolds.provider,
+          model: unfolds.model,
+          detail: `${String(unfolds.count)} vertical ${unfolds.count === 1 ? "image" : "images"} for this short, one per stretch of the seconds each image is held.`,
+        }),
+      ),
+    ];
   if (
     work.disposition !== "generate" ||
     input?.kind !== "deferred" ||

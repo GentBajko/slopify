@@ -56,6 +56,9 @@ export interface OutputMeta {
   readonly index?: number | undefined;
   // Which short (1-based) a short's image or video belongs to.
   readonly short?: number | undefined;
+  // The first and last sentence of the narration that short was cut from, so a clip picked
+  // again with the same sentences still finds its video.
+  readonly sentences?: readonly [number, number] | undefined;
   readonly provider?: string | undefined;
   readonly model?: string | undefined;
   readonly voice?: string | undefined;
