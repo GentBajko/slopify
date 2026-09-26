@@ -114,3 +114,63 @@ it("streams a bounded portable backup through to the importer", async () => {
     h.close();
   }
 });
+
+it("refuses to export while a project is being made, before any download starts", async () => {
+  const h = startFixture();
+  try {
+    h.deps.db
+      .prepare(
+        "INSERT INTO projects(id,title,format,config,created_at,updated_at) VALUES ('p1','Rope knots','16:9','{}','t','t')",
+      )
+      .run();
+    h.deps.db
+      .prepare(
+        "INSERT INTO stages(id,project_id,kind,source,state) VALUES ('s1','p1','audio','generate','running')",
+      )
+      .run();
+    const app = new Hono().route(
+      "/api/storage",
+      storageRoutes({
+        ...h.deps,
+        version: "test",
+        runner: {},
+        log: { write: () => undefined },
+      } as unknown as AppDeps),
+    );
+
+    const summary = await app.request("/api/storage/export/summary");
+    expect(await summary.json()).toEqual({
+      ready: false,
+      detail: expect.stringContaining('"Rope knots"'),
+      busy: [{ id: "p1", title: "Rope knots" }],
+    });
+    const download = await app.request("/api/storage/export");
+    expect(download.status).toBe(409);
+    expect(((await download.json()) as { detail: string }).detail).toContain(
+      "Wait for them to finish, or pause them on their project page",
+    );
+  } finally {
+    h.close();
+  }
+});
+
+it("answers a refused full backup with the reason and how to fix it", async () => {
+  const h = startFixture();
+  try {
+    const app = new Hono().route(
+      "/api/storage",
+      storageRoutes({ ...h.deps, version: "test", runner: {} } as unknown as AppDeps),
+    );
+    const response = await app.request("/api/storage/import", {
+      method: "PUT",
+      headers: { "content-type": "application/x-tar" },
+      body: new Uint8Array(1024),
+    });
+    expect(response.status).toBe(400);
+    expect(((await response.json()) as { detail: string }).detail).toBe(
+      "This backup can't be imported: the file ends before the backup does; it was probably cut short while downloading. Choose a .tar file made with Export everything in Settings → Backup & storage, or export it again.",
+    );
+  } finally {
+    h.close();
+  }
+});

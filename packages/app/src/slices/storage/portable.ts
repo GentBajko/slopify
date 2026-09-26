@@ -426,6 +426,23 @@ function portableSettings(settings: Readonly<Record<string, string>>): Record<st
   return portable;
 }
 
+// The settings a full backup carries: the same known keys as above, each checked alone, so
+// one this build does not know (or a damaged value) is left behind instead of refusing
+// the whole export.
+export function exportableSettings(
+  settings: Readonly<Record<string, string>>,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(settings)) {
+    try {
+      Object.assign(out, portableSettings({ [key]: value }));
+    } catch {
+      // Not portable: skipped.
+    }
+  }
+  return out;
+}
+
 function storedJson(value: string): unknown {
   try {
     return JSON.parse(value);
@@ -434,7 +451,19 @@ function storedJson(value: string): unknown {
   }
 }
 
-function validateLibraryRows(manifest: z.infer<typeof manifestSchema>): void {
+// The same checks a v1 import makes on library rows, for rows a full backup carries.
+export function checkLibraryRows(input: {
+  readonly prompts: unknown;
+  readonly entries: unknown;
+  readonly voices: unknown;
+}): void {
+  const parsed = manifestSchema.pick({ prompts: true, entries: true, voices: true }).parse(input);
+  validateLibraryRows({ ...parsed, templates: [] });
+}
+
+function validateLibraryRows(
+  manifest: Pick<z.infer<typeof manifestSchema>, "prompts" | "entries" | "voices" | "templates">,
+): void {
   const promptIds = new Set<string>();
   const promptNames = new Set<string>();
   for (const row of manifest.prompts) {
@@ -866,6 +895,15 @@ function exportUploadedFonts(
   });
 }
 
+export function installedUploadedFontFiles(
+  paths: Paths,
+): readonly { readonly name: string; readonly bytes: number }[] {
+  return installedUploadedFonts(paths).map((font) => ({
+    name: `${font.id}${font.extension}`,
+    bytes: font.content.byteLength,
+  }));
+}
+
 function installedUploadedFonts(paths: Paths): PortableFont[] {
   const root = join(paths.dataDir, "fonts");
   let names: readonly string[];
@@ -917,7 +955,11 @@ function fontArchivePath(id: string, extension: ".ttf" | ".otf"): string {
   return `fonts/${id}${extension}`;
 }
 
-function validFontContent(id: string, extension: ".ttf" | ".otf", content: Uint8Array): boolean {
+export function validFontContent(
+  id: string,
+  extension: ".ttf" | ".otf",
+  content: Uint8Array,
+): boolean {
   if (content.byteLength < 12 || content.byteLength > fontMaxBytes) return false;
   if (`uploaded-${createHash("sha256").update(content).digest("hex")}` !== id) return false;
   const metadata = readFontMetadata(content);

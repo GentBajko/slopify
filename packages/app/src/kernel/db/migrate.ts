@@ -7,7 +7,13 @@ import type { Clock } from "../clock.js";
 // filled by packages/app/scripts/copy-migrations.mjs).
 const migrationsDir = new URL("./migrations/", import.meta.url);
 
-export function migrate(db: DatabaseSync, clock: Clock): void {
+export interface MigrateOptions {
+  // Stop after this version. A backup made by an older Slopify is loaded into a scratch
+  // database at its own schema and then carried forward by the same files an upgrade runs.
+  readonly through?: number;
+}
+
+export function migrate(db: DatabaseSync, clock: Clock, options: MigrateOptions = {}): void {
   const files = readdirSync(migrationsDir)
     .filter((file) => file.endsWith(".sql"))
     .sort();
@@ -26,6 +32,9 @@ export function migrate(db: DatabaseSync, clock: Clock): void {
     const version = known[index];
     if (version === undefined || applied.has(version)) {
       continue;
+    }
+    if (options.through !== undefined && version > options.through) {
+      break;
     }
     const sql = readFileSync(new URL(file, migrationsDir), "utf8");
     // A migration that rebuilds a table other tables reference must run with enforcement
@@ -58,6 +67,16 @@ export function migrate(db: DatabaseSync, clock: Clock): void {
       if (enforced) db.exec("PRAGMA foreign_keys = ON");
     }
   }
+}
+
+// The newest schema this build knows, which a backup records as the schema its rows fit.
+export function newestMigration(): number {
+  return Math.max(
+    0,
+    ...readdirSync(migrationsDir)
+      .filter((file) => file.endsWith(".sql"))
+      .map(versionOf),
+  );
 }
 
 // The first line of such a migration, compared without its line ending.
