@@ -110,7 +110,7 @@ export function deltasFor(event: CollectorEvent): readonly (readonly [AggregateK
     }
     deltas.push(["images_made", count(event.payload.images)]);
     deltas.push(["descriptions_made", count(event.payload.descriptions)]);
-    // 2.2 added shorts, cut from the narration inside the Video stage; like a description
+    // A short is cut from the narration inside the Video stage; like a description
     // the event names no stage.
     deltas.push(["shorts_made", count(event.payload.shorts)]);
   }
