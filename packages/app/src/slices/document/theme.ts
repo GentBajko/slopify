@@ -1,8 +1,10 @@
+import { legacyDiceMasterTheme } from "./legacy-dicemaster.js";
 import {
   type DocumentSettings,
   type DocumentThemeName,
   defaultDocumentTheme,
   documentThemeOf,
+  legacyDocumentTheme,
 } from "./model.js";
 
 // Everything about a generated PDF that isn't the article itself: page, fonts, sizes,
@@ -12,8 +14,7 @@ import {
 // "#rrggbb" or "#rgb". Any `url` set to null drops that link and any brand text set to null
 // hides it.
 //
-// Ported from the lore2script2 PDF generator: DEFAULT (dicemaster) reproduces its stock
-// DiceMaster.io look value for value, and `plain` is its plain.json.
+// Ported from the lore2script2 PDF generator; `plain` is its plain.json with neutral metadata.
 
 export interface RGB {
   readonly r: number;
@@ -194,10 +195,12 @@ const cinzel = (style: FontStyle, letterSpacing: number): FontFace => ({
   letterSpacing,
 });
 
-const dicemaster: DocumentTheme = {
+// The one built-in: an unbranded flat page. Its layout is the one Slopify has always drawn,
+// written out in full rather than as changes to another theme.
+const plain: DocumentTheme = {
   page: { format: "a4", margin: 22, contentTop: 32 },
-  background: { image: "parchment", color: "#f5ebd7" },
-  colors: { heading: "#8c1e14", text: "#000000", muted: "#50463c", faint: "#786e5f" },
+  background: { image: null, color: "#fdfaf3" },
+  colors: { heading: "#1f3a5f", text: "#1a1a1a", muted: "#555555", faint: "#888888" },
   fonts: {
     body: cinzel("normal", 0.01),
     strong: cinzel("bold", 0.02),
@@ -209,8 +212,6 @@ const dicemaster: DocumentTheme = {
     dropCap: cinzel("black", 0),
     footer: { family: "times", style: "normal", letterSpacing: 0 },
   },
-  // lore2script2 scaled its Cinzel sizes and line heights (by 1.1, 1.05 and 1.2) and
-  // rounded; these are the results.
   sizes: {
     brand: 31,
     title: 22,
@@ -255,18 +256,8 @@ const dicemaster: DocumentTheme = {
   },
   header: { enabled: true, top: 15, maxTitleCharacters: 35 },
   footer: { enabled: true, bottom: 10, reserve: 15, text: "Page {page}" },
-  brand: {
-    name: "DiceMaster.io",
-    url: "https://dicemaster.io/",
-    tagline: "Let us Handle the Crunch, You Focus on the Story",
-    linkLabel: "Visit DiceMaster.io",
-  },
-  metadata: {
-    author: "Created with DiceMaster.io",
-    subject: "{title} - Powered by DiceMaster.io",
-    keywords: "D&D, DnD, Dungeons and Dragons, lore, script, tabletop, RPG, TTRPG, DiceMaster.io",
-    creator: "DiceMaster.io - The AI-Powered Virtual Tabletop",
-  },
+  brand: { name: null, url: null, tagline: null, linkLabel: null },
+  metadata: { author: "", subject: "{title}", keywords: "", creator: "" },
   sources: {
     enabled: true,
     title: "Sources Consulted",
@@ -276,26 +267,14 @@ const dicemaster: DocumentTheme = {
     gap: 2,
   },
   endPage: {
-    enabled: true,
-    title: "About DiceMaster.io",
+    enabled: false,
+    title: "About",
     titleOffset: 20,
     bodyOffset: 40,
-    lines: [
-      "About DiceMaster.io:",
-      "• Character Engine - Form-driven creation with automatic leveling",
-      "• Automated Rules Engine - D&D mechanics and spells run automatically",
-      "• AI-Generated NPCs - Instant personalities with full stat blocks",
-      "• Granular Inventory Tracking - Live gear & condition management",
-      "• Real-Time Rule Guidance - Context-aware clarifications",
-      "• Dynamic Storytelling AI - On-the-fly narration & dialogue",
-      "• True-Physics Dice - RNG-driven rolls with animated suspense",
-      "• Cinematic Combat Module - Positional tracking & narrative summaries",
-      "• Voice Commands - Seamless STT/TTS multimodal interaction",
-      "• AI Dungeon Master Layer - Rules adjudication & encounter balancing",
-    ],
+    lines: [],
     showDocumentDetails: true,
-    link: { text: "Visit DiceMaster.io", url: "https://dicemaster.io/" },
-    closing: "Experience the future of tabletop RPGs!",
+    link: null,
+    closing: null,
   },
 };
 
@@ -305,16 +284,10 @@ export type DocumentThemeOverrides = {
   readonly [K in keyof DocumentTheme]?: Partial<DocumentTheme[K]>;
 };
 
-const plain: DocumentThemeOverrides = {
-  background: { image: null, color: "#fdfaf3" },
-  colors: { heading: "#1f3a5f", text: "#1a1a1a", muted: "#555555", faint: "#888888" },
-  brand: { name: null, url: null, tagline: null, linkLabel: null },
-  metadata: { author: "", subject: "{title}", keywords: "D&D, lore", creator: "" },
-  endPage: { enabled: false },
-};
-
+// A built-in by name. "dicemaster" is still read, from projects saved while it was built in,
+// and gives exactly the values it gave then.
 export function builtInTheme(name: DocumentThemeName): DocumentTheme {
-  return name === "plain" ? resolveTheme(plain) : resolveTheme();
+  return resolveTheme({}, name === legacyDocumentTheme ? legacyDiceMasterTheme : plain);
 }
 
 // The theme a project's document is drawn with: its copy of a Library theme, or a built-in.
@@ -332,7 +305,7 @@ export function defaultTheme(): DocumentTheme {
 // Unknown sections and keys throw, so a typo in a saved theme can't pass silently.
 export function resolveTheme(
   overrides: DocumentThemeOverrides = {},
-  base: DocumentTheme = dicemaster,
+  base: DocumentTheme = plain,
 ): DocumentTheme {
   const theme = structuredClone(base) as unknown as Record<string, Record<string, unknown>>;
   for (const [section, values] of Object.entries(overrides)) {

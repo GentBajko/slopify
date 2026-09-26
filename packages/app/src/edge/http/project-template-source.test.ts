@@ -125,3 +125,60 @@ it.each([undefined, false, true])(
     }
   },
 );
+
+it.each([
+  [undefined, { theme: "dicemaster" }],
+  [{ theme: "plain" as const }, { theme: "plain" }],
+])("names the document theme a project was drawn with (%j) in its template", (saved, named) => {
+  const h = startFixture();
+  try {
+    const project = startRun(
+      h.deps,
+      {
+        title: "Saved project",
+        format: "16:9",
+        sources: {
+          research: "off",
+          article: "generate",
+          audio: "off",
+          images: "off",
+          thumbnail: "off",
+          video: "off",
+          document: "generate",
+        },
+        ...(saved === undefined ? {} : { document: saved }),
+        articlePrompt: "Story",
+        imagePrompts: [],
+        values: {},
+        provided: {},
+        silenceGapSeconds: 0,
+        imageSeconds: 15,
+        zoomPercent: 22.5,
+        motionStyle: "zoom",
+        edgeSilenceSeconds: 0,
+      },
+      { article: "Write" },
+      false,
+      { article: "Write" },
+    ).project;
+    const revisionId = currentRevisionId(h.deps.db, project.id);
+    if (!revisionId) throw new Error("Missing fixture revision");
+    // A project saved before theme settings existed has none, and was drawn with DiceMaster;
+    // a new one always names its theme, so the old shape is written in by hand.
+    if (saved === undefined)
+      h.deps.db
+        .prepare(
+          "UPDATE project_revisions SET config = json_remove(config, '$.document') WHERE id = ?",
+        )
+        .run(revisionId);
+    const template = createTemplateFromProject(h.deps, {
+      id: randomUUID(),
+      name: "Series",
+      projectId: project.id,
+      revisionId,
+    });
+    expect(template.ok && template.value.document.form.document).toEqual(named);
+  } finally {
+    h.close();
+  }
+});

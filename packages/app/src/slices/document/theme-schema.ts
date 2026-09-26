@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { documentThemeNameMax, documentThemes } from "./model.js";
+import { documentThemeNameMax, documentThemeNames } from "./model.js";
 import { type DocumentTheme, fontFamilies, fontStyles } from "./theme.js";
 
 // Every value of a document theme with the range the renderer draws sensibly within, so a
@@ -172,7 +172,8 @@ export const customDocumentThemeSchema = z
   })
   .strict();
 
-// A project's, a draft's and a template's document settings.
+// A project's, a draft's and a template's document settings. The retired "dicemaster" still
+// parses, so a project or draft saved with it keeps opening.
 export const documentSettingsSchema = z
-  .object({ theme: z.enum(documentThemes), custom: customDocumentThemeSchema.optional() })
+  .object({ theme: z.enum(documentThemeNames), custom: customDocumentThemeSchema.optional() })
   .strict();

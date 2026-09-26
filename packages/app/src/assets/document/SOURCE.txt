@@ -1,5 +1,5 @@
 background.jpg
-The parchment page texture of the DiceMaster document theme, from the lore2script2 PDF
+The parchment page texture any document theme can use as its background, from the lore2script2 PDF
 generator (same owner).
 SHA-256: 18f9701b476f299e942cbb99c05ba3267d8341df2b6136e3aebbafad83b03b31
 

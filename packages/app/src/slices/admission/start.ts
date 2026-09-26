@@ -2,6 +2,7 @@ import { transact } from "../../kernel/db/tx.js";
 import type { StageKind, StageState } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
 import { storeArticleText } from "../article/store.js";
+import { defaultDocumentTheme } from "../document/model.js";
 import { collectSharedGlossary } from "../narration/shared-glossary.js";
 import { admitInitialRevision } from "../rebuild/runtime-admission.js";
 import { adoptBaseline } from "../revisions/adopt.js";
@@ -50,6 +51,11 @@ export function startRun(
       : [];
   const config: RunConfig = {
     ...draft,
+    // A new project always names its document theme: a config without one reads as the
+    // DiceMaster of older projects (see documentThemeOf), which no new project should get.
+    ...(sourceOf(draft.sources, "document") === "generate" && draft.document === undefined
+      ? { document: { theme: defaultDocumentTheme } }
+      : {}),
     rendered,
     ...(shared.length === 0 ? {} : { sharedGlossary: shared }),
   };

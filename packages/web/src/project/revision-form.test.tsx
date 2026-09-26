@@ -70,13 +70,22 @@ it("reads an absent Document source as Off and writes the source and theme", asy
   const source = screen.getByRole<HTMLSelectElement>("combobox", { name: "document source" });
   expect(source.value).toBe("off");
   const theme = screen.getByRole<HTMLSelectElement>("combobox", { name: "Document theme" });
+  // A project saved with no theme was drawn with DiceMaster, and still is; the retired built-in
+  // is shown as this project's look, not offered as a choice.
   expect(theme.value).toBe("builtin:dicemaster");
+  const builtIns = () =>
+    Array.from(
+      theme.querySelectorAll("optgroup[label='Built in'] option"),
+      (one) => one.textContent,
+    );
+  expect(builtIns()).toEqual(["Plain", "DiceMaster (retired, this project's look)"]);
   expect(theme.disabled).toBe(true);
   await user.selectOptions(source, "generate");
   expect(theme.disabled).toBe(false);
   await user.selectOptions(theme, "Plain");
   expect(latest.config.sources.document).toBe("generate");
   expect(latest.config.document).toEqual({ theme: "plain" });
+  expect(builtIns()).toEqual(["Plain"]);
 });
 
 it("shows the video timing settings only where the export uses them", async () => {

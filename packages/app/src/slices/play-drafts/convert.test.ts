@@ -360,3 +360,20 @@ it("carries the YouTube description switch and prompt only with narration on", (
     h.close();
   }
 });
+
+it("saves the document theme outright, Plain for a draft that names none", () => {
+  const h = draftFixture();
+  try {
+    const on = {
+      ...h.document.form,
+      sources: { ...h.document.form.sources, document: "generate" as const },
+    };
+    const unnamed = convert({ ...h.document, form: on });
+    expect(unnamed.ok && unnamed.draft.document).toEqual({ theme: "plain" });
+    // A draft made from a project that still uses the retired DiceMaster keeps it.
+    const kept = convert({ ...h.document, form: { ...on, document: { theme: "dicemaster" } } });
+    expect(kept.ok && kept.draft.document).toEqual({ theme: "dicemaster" });
+  } finally {
+    h.close();
+  }
+});

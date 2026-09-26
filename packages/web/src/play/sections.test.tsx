@@ -130,7 +130,14 @@ it("switches the Document on, picks its theme and saves both into the draft", as
   const { requests } = await mountPlay();
   await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
   const theme = screen.getByRole<HTMLSelectElement>("combobox", { name: "Theme" });
-  expect(theme.value).toBe("builtin:dicemaster");
+  // Plain is the one built-in; DiceMaster is no longer offered.
+  expect(theme.value).toBe("builtin:plain");
+  expect(
+    Array.from(
+      theme.querySelectorAll("optgroup[label='Built in'] option"),
+      (one) => one.textContent,
+    ),
+  ).toEqual(["Plain"]);
   expect(theme.disabled).toBe(true);
   expect(screen.getAllByRole("button", { name: /^Document: Off/ }).length).toBeGreaterThan(0);
   await userEvent.click(
@@ -139,7 +146,6 @@ it("switches the Document on, picks its theme and saves both into the draft", as
     }),
   );
   expect(theme.disabled).toBe(false);
-  await userEvent.selectOptions(theme, "Plain");
   expect(screen.getAllByRole("button", { name: /^Document: Ready/ }).length).toBeGreaterThan(0);
   await waitFor(async () => {
     const saves = requests.filter(
@@ -147,9 +153,10 @@ it("switches the Document on, picks its theme and saves both into the draft", as
         ["PUT", "POST"].includes(request.method) &&
         /\/api\/drafts(?:\/[a-f0-9-]+)?$/.test(request.url),
     );
-    expect(await saves.at(-1)?.clone().json()).toMatchObject({
-      document: { form: { sources: { document: "generate" }, document: { theme: "plain" } } },
-    });
+    const saved = await saves.at(-1)?.clone().json();
+    expect(saved).toMatchObject({ document: { form: { sources: { document: "generate" } } } });
+    // The default needs no saving: a draft without a theme reads, and is made, as Plain.
+    expect(saved.document.form.document?.theme ?? "plain").toBe("plain");
   });
 });
 

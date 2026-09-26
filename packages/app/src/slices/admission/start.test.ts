@@ -82,6 +82,25 @@ describe("initialState", () => {
 });
 
 describe("startRun", () => {
+  it("names Plain on a new project's document when the draft names no theme", () => {
+    const storage = deps();
+    const sources = {
+      ...draft().sources,
+      audio: "off" as const,
+      images: "off" as const,
+      video: "off" as const,
+      document: "generate" as const,
+    };
+    expect(startRun(storage, draft({ sources }), {}).project.config.document).toEqual({
+      theme: "plain",
+    });
+    const chosen = draft({ sources, document: { theme: "dicemaster" } });
+    expect(startRun(storage, chosen, {}).project.config.document).toEqual({ theme: "dicemaster" });
+    const off = draft({ sources: { ...sources, document: "off" } });
+    expect(startRun(storage, off, {}).project.config.document).toBeUndefined();
+    storage.db.close();
+  });
+
   it("queues a WAV export when Video is Off and Audio is supplied", async () => {
     const storage = deps();
     const audio = await upload(storage, "audio", "supplied audio");

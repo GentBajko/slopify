@@ -3,6 +3,7 @@ import {
   documentThemeLabels,
   documentThemeOf,
   documentThemes,
+  legacyDocumentTheme,
 } from "@app/slices/document/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { useApp } from "@/app-context";
@@ -13,7 +14,8 @@ import { documentThemesQuery } from "@/queries";
 // Picking a Library theme copies its values into the project, as a prompt's text is copied,
 // so editing the theme later leaves this project alone until it is picked again. A project
 // whose copy no longer matches the Library (or whose theme was deleted) keeps an option for
-// the copy it has.
+// the copy it has. Likewise a project saved with the retired DiceMaster built-in keeps an option
+// for it while it is the current choice; it is never offered otherwise.
 export function DocumentThemePicker({
   id,
   value,
@@ -40,6 +42,7 @@ export function DocumentThemePicker({
     (library === undefined ||
       library.name !== custom.name ||
       JSON.stringify(library.values) !== JSON.stringify(custom.values));
+  const legacy = custom === undefined && documentThemeOf(value) === legacyDocumentTheme;
   const selected =
     custom === undefined
       ? `builtin:${documentThemeOf(value)}`
@@ -76,6 +79,11 @@ export function DocumentThemePicker({
             {documentThemeLabels[theme]}
           </option>
         ))}
+        {legacy ? (
+          <option value={`builtin:${legacyDocumentTheme}`}>
+            {`${documentThemeLabels[legacyDocumentTheme]} (retired, this project's look)`}
+          </option>
+        ) : null}
       </optgroup>
       {saved.length === 0 && !kept ? null : (
         <optgroup label="Your themes">

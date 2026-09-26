@@ -77,6 +77,20 @@ describe("document recipe", () => {
     ]);
   });
 
+  // DiceMaster left the built-ins in 2.3.0. A project saved with it, or with the stage on and
+  // no theme (which meant DiceMaster then), must keep the fingerprint its PDF was made under,
+  // or every such PDF would turn outdated. The hash is the one 2.2.0 computed for both.
+  it("keeps the 2.2.0 fingerprint for a DiceMaster project and for one with no theme", () => {
+    const made = "e120d584e397a1afd902702397701f00f174543c79dfcdda0760672410a55221";
+    const pdf = (c: RunConfig) => recipesFor(c).find((row) => row.key === "document:pdf");
+    const { document: _theme, ...absent } = withDocument;
+    expect(pdf(withDocument)?.logicalFingerprint).toBe(made);
+    expect(pdf(absent)?.logicalFingerprint).toBe(made);
+    expect(pdf({ ...withDocument, document: { theme: "plain" } })?.logicalFingerprint).not.toBe(
+      made,
+    );
+  });
+
   it("goes stale alone when the title changes", () => {
     expect(changed(withDocument, { ...withDocument, title: "Renamed" })).toEqual(["document:pdf"]);
   });

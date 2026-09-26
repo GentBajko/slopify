@@ -1,5 +1,5 @@
 import { sourceOf } from "@app/slices/admission/model.js";
-import { documentThemeOf } from "@app/slices/document/model.js";
+import { draftDocumentThemeOf } from "@app/slices/document/model.js";
 import type { PromptDraft } from "@app/slices/library/model.js";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
@@ -88,7 +88,7 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
     ...form,
     sources: { ...form.sources, document: sourceOf(form.sources, "document") },
     document: {
-      theme: documentThemeOf(form.document),
+      theme: draftDocumentThemeOf(form.document),
       ...(form.document?.custom === undefined ? {} : { custom: form.document.custom }),
     },
     imagePrompts: form.imagePrompts.map((one) => ({ ...one, number: Number(one.number) })),
@@ -136,7 +136,7 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
     const keepSource = before.form.sources.document !== undefined || documentSource !== "off";
     const keepSettings =
       before.form.document !== undefined ||
-      documentSettings.theme !== documentThemeOf(before.form.document) ||
+      documentSettings.theme !== draftDocumentThemeOf(before.form.document) ||
       documentSettings.custom !== undefined;
     current.current.edit({
       ...before,

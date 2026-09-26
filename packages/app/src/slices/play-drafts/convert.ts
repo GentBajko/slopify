@@ -11,7 +11,7 @@ import {
   zoomPercentProblem,
 } from "../admission/rules.js";
 import { runDraftSchema } from "../admission/schema.js";
-import { documentThemeOf } from "../document/model.js";
+import { draftDocumentThemeOf } from "../document/model.js";
 import type { Entry } from "../library/model.js";
 import { defaultSubtitles } from "../subtitles/model.js";
 import type { DraftAttachment, PlayDraftDocument } from "./model.js";
@@ -105,7 +105,7 @@ export function toAdmissionDraft(input: {
     ...(sources.document === "generate"
       ? {
           document: {
-            theme: documentThemeOf(form.document),
+            theme: draftDocumentThemeOf(form.document),
             ...(form.document?.custom === undefined ? {} : { custom: form.document.custom }),
           },
         }

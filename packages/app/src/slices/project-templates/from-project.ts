@@ -1,8 +1,10 @@
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
+import { sourceOf } from "../admission/model.js";
 import { projectById } from "../admission/repo.js";
 import { detectSlots } from "../admission/substitute.js";
 import { listCheckpoints } from "../checkpoints/repo.js";
+import { documentThemeOf } from "../document/model.js";
 import type { PromptKind } from "../library/model.js";
 import type { LibrarySnapshot } from "../library/snapshot.js";
 import type { PlayDraftDocument } from "../play-drafts/model.js";
@@ -144,7 +146,13 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
       title: config.title,
       format: config.format,
       sources: config.sources,
-      ...(config.document === undefined ? {} : { document: config.document }),
+      // A project from before theme settings was drawn with DiceMaster; the template says so
+      // outright, as a draft without a theme would now mean Plain.
+      ...(config.document === undefined
+        ? sourceOf(config.sources, "document") === "generate"
+          ? { document: { theme: documentThemeOf(undefined) } }
+          : {}
+        : { document: config.document }),
       checkpoints: listCheckpoints(deps.db, revision.projectId, revision.id).map(
         (gate) => gate.stage,
       ),

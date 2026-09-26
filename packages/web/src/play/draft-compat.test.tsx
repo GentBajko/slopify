@@ -177,7 +177,7 @@ it("reads a draft saved before the Document stage as Off with the default theme,
     testDeps(playRoutes({ [`GET /api/drafts/${id}`]: jsonAnswer(saved) })),
   );
   await act(() => session?.open(id));
-  expect(read).toEqual({ source: "off", theme: "dicemaster" });
+  expect(read).toEqual({ source: "off", theme: "plain" });
   fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Different" } });
   expect(session?.document.form.title).toBe("Different");
   expect(session?.document.form.sources).not.toHaveProperty("document");
