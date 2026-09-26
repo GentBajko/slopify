@@ -54,7 +54,7 @@ function mount(
   );
 }
 
-it("shows the description and tags read-only, copies each and offers both files", async () => {
+it("shows the description and tags read-only, each with Copy beside its heading", async () => {
   const writeText = vi.fn(async () => undefined);
   vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
   mount();
@@ -73,15 +73,6 @@ it("shows the description and tags read-only, copies each and offers both files"
   await userEvent.click(screen.getByRole("button", { name: "Copy tags" }));
   expect(writeText).toHaveBeenLastCalledWith("rope, knots, sailing knots");
   await waitFor(() => expect(screen.getByRole("status").textContent).toBe("Copied the tags."));
-
-  await waitFor(() =>
-    expect(
-      screen.getByRole("link", { name: "Download description.txt" }).getAttribute("href"),
-    ).toBe(`${testOrigin}/files/p1/revisions/r1/youtube_description`),
-  );
-  expect(screen.getByRole("link", { name: "Download tags.txt" }).getAttribute("href")).toBe(
-    `${testOrigin}/files/p1/revisions/r1/youtube_tags`,
-  );
 });
 
 it("says in the status line when the clipboard refuses", async () => {
@@ -116,5 +107,4 @@ it("keeps the block in place with Copy disabled until the step has written", () 
   expect(
     (screen.getByRole("button", { name: "Copy description" }) as HTMLButtonElement).disabled,
   ).toBe(true);
-  expect(screen.queryByRole("link", { name: "Download description.txt" })).toBeNull();
 });

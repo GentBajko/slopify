@@ -1,13 +1,20 @@
 import { assetOf } from "@app/slices/storage/asset-name.js";
 import type { Output } from "@app/slices/storage/model.js";
 import { useQuery } from "@tanstack/react-query";
-import { DownloadIcon } from "lucide-react";
+import { ChevronDownIcon, DownloadIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import type { Components } from "react-markdown";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useApp } from "@/app-context";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { readText } from "@/http";
 import { cn } from "@/lib/utils";
 import { keys } from "@/queries";
@@ -223,6 +230,58 @@ export function OutputDownload({
       <OpenFolder projectId={output.projectId} asset={assetOf(output)} folder={media.folder} />
     </span>
   );
+}
+
+// A stage's files behind one Download button, so a section with five files shows one
+// control rather than a row of links each with its own Open folder beside it.
+export function DownloadMenu({
+  files,
+  label = "Download",
+}: {
+  readonly files: readonly { readonly output: Output | undefined; readonly label: string }[];
+  readonly label?: string;
+}) {
+  const present = files.filter(
+    (file): file is { readonly output: Output; readonly label: string } =>
+      file.output !== undefined,
+  );
+  if (present.length === 0) return null;
+  return (
+    // Not modal: an open menu leaves the rest of the page readable and clickable.
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <Button type="button">
+          <DownloadIcon aria-hidden="true" className="size-[14px] shrink-0" />
+          {label}
+          <ChevronDownIcon aria-hidden="true" className="size-[14px] shrink-0 text-ink2" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent>
+        {present.map((file) => (
+          <DownloadItem key={file.output.id} output={file.output} label={file.label} />
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function DownloadItem({ output, label }: { readonly output: Output; readonly label: string }) {
+  const media = useOutputMedia(output);
+  if (media === undefined) return null;
+  return (
+    <DropdownMenuItem asChild>
+      <a href={media.url} download>
+        {label}
+      </a>
+    </DropdownMenuItem>
+  );
+}
+
+// The folder a stage's files are saved in, without a download beside it.
+export function OutputFolder({ output }: { readonly output: Output | undefined }) {
+  const media = useOutputMedia(output);
+  if (output === undefined || media === undefined) return null;
+  return <OpenFolder projectId={output.projectId} asset={assetOf(output)} folder={media.folder} />;
 }
 
 // One of the project's own files, read as text. Loading and failure are said here so the

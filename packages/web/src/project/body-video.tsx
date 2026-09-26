@@ -3,7 +3,7 @@ import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { YoutubeBlock } from "./body-youtube.js";
 import { ConfirmedButton } from "./controls.js";
-import { ActionRow, OutputDownload, StageBody } from "./parts.js";
+import { DownloadMenu, OutputFolder, StageBody } from "./parts.js";
 import { useOutputMedia } from "./revision-media.js";
 import { duration, percent, preparingSubtitles } from "./summary.js";
 
@@ -17,6 +17,8 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
   const subtitleOutputs = outputsOf(outputs, stage);
   const srt = roleOf(subtitleOutputs, "subtitles_srt");
   const vtt = roleOf(subtitleOutputs, "subtitles_vtt");
+  const description = roleOf(subtitleOutputs, "youtube_description");
+  const tags = roleOf(subtitleOutputs, "youtube_tags");
   const media = useOutputMedia(video);
   const captions = useOutputMedia(vtt);
   const playedSubtitles = video?.meta.subtitlesMode ?? project.config.subtitles?.mode;
@@ -80,10 +82,7 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
         </video>
       )}
 
-      <ActionRow>
-        {video === undefined ? null : (
-          <OutputDownload output={video} label={audioExport ? "Download .wav" : "Download .mp4"} />
-        )}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-small">
         {stage.state === "pending" || stage.state === "skipped" ? null : (
           <ConfirmedButton
             action={{ kind: "rerun", stage: stage.kind }}
@@ -96,7 +95,7 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
             {audioExport ? "Re-export" : "Re-render"}
           </ConfirmedButton>
         )}
-        <span className="text-small text-ink2">
+        <span className="text-ink2">
           {[
             duration(video?.durationMs ?? undefined),
             audioExport ? "WAV · stereo · 48 kHz" : project.format,
@@ -104,7 +103,19 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
             .filter((part) => part !== undefined)
             .join(" · ")}
         </span>
-      </ActionRow>
+        <span className="flex-1" />
+        {/* Every file the stage made behind one button, and one folder for them all. */}
+        <DownloadMenu
+          files={[
+            { output: video, label: audioExport ? "Audio (.wav)" : "Video (.mp4)" },
+            { output: srt, label: "Subtitles (.srt)" },
+            { output: vtt, label: "Subtitles (.vtt)" },
+            { output: description, label: "YouTube description (.txt)" },
+            { output: tags, label: "YouTube tags (.txt)" },
+          ]}
+        />
+        <OutputFolder output={video} />
+      </div>
       {video?.meta.subtitleOmissions?.length ? (
         <details className="border-t border-line pt-3 text-small">
           <summary className="cursor-pointer font-semibold">
@@ -123,12 +134,6 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
             ))}
           </ul>
         </details>
-      ) : null}
-      {srt || vtt ? (
-        <ActionRow>
-          {srt ? <OutputDownload output={srt} label="Download .srt" /> : null}
-          {vtt ? <OutputDownload output={vtt} label="Download .vtt" /> : null}
-        </ActionRow>
       ) : null}
       <YoutubeBlock stage={stage} project={project} outputs={outputs} />
       {subtitleControls ? (

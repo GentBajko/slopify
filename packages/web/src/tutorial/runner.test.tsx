@@ -1,7 +1,7 @@
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { jsonAnswer, testVersion } from "@/test-app";
+import { downloadItem, jsonAnswer, testVersion } from "@/test-app";
 import { at, fill, guide, mount, next, nextHeld, skipTo, start } from "./test-fixture";
 
 beforeEach(() => {
@@ -283,8 +283,8 @@ describe("the tutorial in the real app", () => {
       });
       expect(workspace.hasAttribute("hidden")).toBe(false);
       if (final === "audio") {
-        expect(guide().getByText("Download .wav")).not.toBeNull();
-        expect(screen.getByRole("link", { name: "Download .wav" }).getAttribute("href")).toContain(
+        expect(guide().getByText("Audio (.wav)")).not.toBeNull();
+        expect((await downloadItem("Audio (.wav)")).getAttribute("href")).toContain(
           "/files/actual-created-project/audio-export",
         );
         expect(screen.getByLabelText("Combined narration")).not.toBeNull();

@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  downloadItem,
   jsonAnswer,
   openEditSection,
   openProjectEditor,
@@ -145,10 +146,10 @@ describe("subtitle downloads and playback", () => {
       `${testOrigin}/files/p1/subtitles-vtt`,
     );
     expect(video.querySelector("track")?.getAttribute("srclang")).toBe("en");
-    expect(screen.getByRole("link", { name: "Download .srt" }).getAttribute("href")).toBe(
+    expect((await downloadItem("Subtitles (.srt)")).getAttribute("href")).toBe(
       `${testOrigin}/files/p1/subtitles-srt`,
     );
-    expect(screen.getByRole("link", { name: "Download .vtt" }).getAttribute("href")).toBe(
+    expect((await downloadItem("Subtitles (.vtt)")).getAttribute("href")).toBe(
       `${testOrigin}/files/p1/subtitles-vtt`,
     );
   });
@@ -172,7 +173,7 @@ describe("subtitle downloads and playback", () => {
         }),
       );
       expect((await screen.findByLabelText("Generated video")).querySelector("track")).toBeNull();
-      expect(screen.getByRole("link", { name: "Download .srt" })).not.toBeNull();
+      expect(await downloadItem("Subtitles (.srt)")).not.toBeNull();
     },
   );
 
@@ -217,7 +218,7 @@ describe("subtitle downloads and playback", () => {
       }),
     );
     await screen.findByLabelText("Combined narration");
-    expect(screen.getByRole("link", { name: "Download .srt" })).not.toBeNull();
+    expect(await downloadItem("Subtitles (.srt)")).not.toBeNull();
     expect(screen.queryByLabelText("Subtitles", { selector: "select" })).toBeNull();
     expect(screen.queryByLabelText("Generated video")).toBeNull();
   });
@@ -246,5 +247,5 @@ it("shows persisted missing narration notes alongside downloadable subtitles", a
   await screen.findByText(/Subtitles recovered after missing narration/);
   expect(screen.getByText(/The missing transcript passage\./)).not.toBeNull();
   expect(screen.getByText("00:02:41")).not.toBeNull();
-  expect(screen.getByRole("link", { name: "Download .srt" })).not.toBeNull();
+  expect(await downloadItem("Subtitles (.srt)")).not.toBeNull();
 });

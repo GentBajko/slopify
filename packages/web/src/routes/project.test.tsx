@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { revisionView } from "@/project/revision-fixture";
 import {
+  downloadItem,
   jsonAnswer,
   openProjectTab,
   problemAnswer,
@@ -114,7 +115,7 @@ describe("the focused project workspace", () => {
     );
     const workspace = await screen.findByRole("region", { name: "Video workspace" });
     expect(within(workspace).getByLabelText("Generated video")).not.toBeNull();
-    expect(within(workspace).getByRole("link", { name: "Download .mp4" })).not.toBeNull();
+    expect(await downloadItem("Video (.mp4)")).not.toBeNull();
     expect(screen.getByRole("link", { name: "Download video" })).not.toBeNull();
     expect(screen.getByRole("button", { name: "Video, done" }).getAttribute("aria-current")).toBe(
       "step",
@@ -363,7 +364,7 @@ describe("the stage bodies", () => {
     expect(container.querySelector("video")?.getAttribute("src")).toBe(
       `${testOrigin}/files/p1/video`,
     );
-    const download = screen.getByRole("link", { name: "Download .mp4" });
+    const download = await downloadItem("Video (.mp4)");
     expect(download.getAttribute("href")).toBe(`${testOrigin}/files/p1/video`);
     expect(download.hasAttribute("download")).toBe(true);
   });

@@ -184,3 +184,11 @@ export async function openProjectEditor(): Promise<void> {
   await openProjectTab("Edit");
   await userEvent.click(await screen.findByRole("button", { name: "Edit project" }));
 }
+
+// One file from a stage's Download menu (project/parts.tsx), opening the menu when it is shut.
+export async function downloadItem(name: string): Promise<HTMLElement> {
+  const open = screen.queryByRole("menuitem", { name });
+  if (open !== null) return open;
+  await userEvent.click(await screen.findByRole("button", { name: "Download" }));
+  return await screen.findByRole("menuitem", { name });
+}

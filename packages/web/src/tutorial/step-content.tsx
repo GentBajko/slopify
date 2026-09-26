@@ -282,8 +282,8 @@ export function StepContent({
           <p>
             {output === "audio" ? (
               <>
-                When Audio export finishes, press <strong>Download .wav</strong> for the combined
-                narration.
+                When Audio export finishes, press <strong>Download</strong>, then{" "}
+                <strong>Audio (.wav)</strong> for the combined narration.
               </>
             ) : output === "article" ? (
               <>
@@ -292,7 +292,8 @@ export function StepContent({
               </>
             ) : (
               <>
-                When Video finishes, press <strong>Download .mp4</strong>.
+                When Video finishes, press <strong>Download</strong>, then{" "}
+                <strong>Video (.mp4)</strong>.
               </>
             )}{" "}
             The completed project stays in <strong>Projects</strong> so you can return to it.

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { revisionView } from "@/project/revision-fixture";
 import {
+  downloadItem,
   jsonAnswer,
   openEditSection,
   openProjectEditor,
@@ -327,11 +328,11 @@ describe("audio-only final export", () => {
         }),
       }),
     );
-    const download = await screen.findByRole("link", { name: "Download .wav" });
+    const download = await downloadItem("Audio (.wav)");
     expect(download.getAttribute("href")).toBe(`${testOrigin}/files/p1/audio-export`);
     expect(screen.getByText("Audio export")).not.toBeNull();
     expect(screen.getByLabelText("Combined narration").tagName).toBe("AUDIO");
-    expect(screen.queryByRole("link", { name: "Download .mp4" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Video (.mp4)" })).toBeNull();
     expect(screen.getByRole("button", { name: "Re-export" })).not.toBeNull();
   });
 });
