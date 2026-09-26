@@ -84,7 +84,7 @@ export function modelFields(draft: RunDraft, catalogue?: CatalogueStore): FieldE
       fields.push({
         field: "videoEdit.animateModel",
         message:
-          "This image provider can't animate images. Choose fal.ai or Replicate under Images in Providers, or turn Animate images off.",
+          "This image provider can't animate images. Choose fal.ai or Replicate as the image provider (on Play's Images rail, or in Edit project → Providers), or turn Animate images off.",
       });
     else if (model.trim() !== "" && !offered.some((one) => one.id === model))
       fields.push({

@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { isAbsolute, resolve as resolvePath } from "node:path";
 import type { Log } from "../../kernel/log.js";
 import type { EditList, Motion, Shot, TransitionStyle } from "./edit-list.js";
-import { lookChain, lookEncoding, placed } from "./look.js";
+import { gradeFilter, lookChain, lookEncoding, placed } from "./look.js";
 import { decimal, zoomRange } from "./plan.js";
 import { type Segment, segments, transitionHalves } from "./transitions.js";
 
@@ -167,7 +167,7 @@ export function segmentArgs(
         "Slopify hit an internal error (the video's edit list lost a shot). Use Re-run section on Video; if it happens again, use Download diagnostics in Settings and report it.",
       );
     const at = inputs.filter((one) => one === "-i").length;
-    const built = pictureChain(edit, shot, from, segment.count, at, label);
+    const built = pictureChain(edit, shot, from, segment.count, at, label, gradeFilter(edit.look));
     inputs.push(...built.inputs);
     chains.push(built.chain);
   };
@@ -223,6 +223,7 @@ function pictureChain(
   count: number,
   input: number,
   label: string,
+  grade: string | undefined,
 ): { readonly inputs: readonly string[]; readonly chain: string } {
   const source = shot.source;
   if (source.kind === "video") {
@@ -237,6 +238,7 @@ function pictureChain(
         `fps=${String(fps)},` +
         `scale=${String(width)}:${String(height)}:force_original_aspect_ratio=increase,` +
         `crop=${String(width)}:${String(height)},setsar=1,` +
+        (grade === undefined ? "" : `${grade},`) +
         (pad > 0 ? `tpad=start=${String(pad)}:start_mode=clone,` : "") +
         `trim=start_frame=${String(first)}:end_frame=${String(first + count)},` +
         // Padding and trimming drop the declared rate, which a transition needs to match.
@@ -255,6 +257,8 @@ function pictureChain(
     inputs: ["-i", source.path],
     chain:
       `[${String(input)}:v]trim=end_frame=1,setpts=PTS-STARTPTS,` +
+      // The grade is applied here, to the one still frame, rather than to every frame after.
+      (grade === undefined ? "" : `${grade},`) +
       // Cover the frame and centre-crop, never letterbox.
       `scale=${wide}:${tall}:force_original_aspect_ratio=increase,crop=${wide}:${tall},` +
       `zoompan=z='${move?.z ?? "1"}':d=${count}:` +

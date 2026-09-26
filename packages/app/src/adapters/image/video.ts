@@ -34,7 +34,7 @@ export async function downloadVideo(download: VideoDownload): Promise<GeneratedV
   if (!sniffVideo(bytes))
     throw providerError({
       kind: "other",
-      message: `${download.provider} sent back something that is not an MP4 video clip (${describeBytes(bytes)}). Use Retry stage; if it keeps happening, choose another image-to-video model in Edit project → Video.`,
+      message: `${download.provider} sent back something that is not an MP4 video clip (${describeBytes(bytes)}). Use Retry stage; if it keeps happening, choose another image-to-video model under Animate images in Edit project → Inputs → Look.`,
     });
   return { bytes, mime: "video/mp4" };
 }

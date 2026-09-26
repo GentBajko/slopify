@@ -65,6 +65,32 @@ function made(name: string, args: readonly string[]): Uint8Array {
   return new Uint8Array(readFileSync(path));
 }
 
+// The clip model sits in the image list under fal.ai, marked as video, priced per clip, and
+// the narration is one request for the whole article, so it is the one WAV.
+function withClipModel(h: Awaited<ReturnType<typeof composedFixture>>): void {
+  const saved = h.deps.catalogue.read();
+  h.setCatalogue({
+    ...saved,
+    tts: saved.tts.map((row) =>
+      row.tts === undefined ? row : { ...row, tts: { ...row.tts, maxCharacters: 1000 } },
+    ),
+    image: [
+      ...saved.image,
+      {
+        provider: "fal",
+        id: "clip-model",
+        name: "Clip model",
+        enabled: true,
+        deprecated: false,
+        source: "https://example.test",
+        keywords: ["video"],
+        pricing: { perImage: 0.35 },
+        image: { aspectRatios: ["16:9", "9:16"] },
+      },
+    ],
+  });
+}
+
 it("cuts on sentences, crossfades, draws chapter cards and animates every other image", {
   timeout: 180_000,
 }, async () => {
@@ -89,29 +115,7 @@ it("cuts on sentences, crossfades, draws chapter cards and animates every other 
     image: () => images,
     tts: () => fakeTts({ bytesFor: () => [narration()] }),
   });
-  // The clip model sits in the image list under fal.ai, marked as video, priced per clip.
-  const saved = h.deps.catalogue.read();
-  h.setCatalogue({
-    ...saved,
-    // One narration request for the whole article, so the narration is the one WAV.
-    tts: saved.tts.map((row) =>
-      row.tts === undefined ? row : { ...row, tts: { ...row.tts, maxCharacters: 1000 } },
-    ),
-    image: [
-      ...saved.image,
-      {
-        provider: "fal",
-        id: "clip-model",
-        name: "Clip model",
-        enabled: true,
-        deprecated: false,
-        source: "https://example.test",
-        keywords: ["video"],
-        pricing: { perImage: 0.35 },
-        image: { aspectRatios: ["16:9", "9:16"] },
-      },
-    ],
-  });
+  withClipModel(h);
   const base = current(h.deps, h.projectId);
   await save(h.deps, h.projectId, {
     config: {
@@ -188,14 +192,6 @@ it("cuts on sentences, crossfades, draws chapter cards and animates every other 
 
   // The video runs exactly as long as its sound: 1 + 24 + 1 s at 30 fps.
   const file = outputPath(h.deps.paths, h.projectId, video?.output.path ?? "");
-  if (process.env.DUMP_EDIT === "1") {
-    const { cpSync, writeFileSync } = await import("node:fs");
-    const dir =
-      "/tmp/claude-1000/-home-gent-code-slopify/ef323775-456d-417a-bdeb-afbec9e77b5a/scratchpad/e2e";
-    const root = file.slice(0, file.indexOf("/p1/") + 4);
-    cpSync(root, dir, { recursive: true });
-    writeFileSync(`${dir}/where.txt`, root);
-  }
   const decoded = spawnSync(
     ffmpeg,
     ["-hide_banner", "-i", file, "-map", "0:v", "-f", "null", "-"],
@@ -220,9 +216,9 @@ it("cuts on sentences, crossfades, draws chapter cards and animates every other 
     readonly frames: number;
     readonly transition?: { readonly kind: string; readonly frames: number };
   }[];
-  // Every cut but one lands in a sentence pause: words run 1 + n seconds, so a pause is at
-  // .95 past a whole second; the other is the chapter "Later Years" (word 11, at 12 s),
-  // moved onto the pause before it.
+  // Every cut lands in a sentence pause: words run 1 + n seconds, so a pause is at .95 past
+  // a whole second, give or take the half frame a cut is rounded by. The chapter "Later
+  // Years" (its first word at 13 s) is moved onto the pause before it.
   let at = 0;
   const cuts: number[] = [];
   for (const shot of shots.slice(0, -1)) {
@@ -249,4 +245,84 @@ it("cuts on sentences, crossfades, draws chapter cards and animates every other 
   ]);
   expect(record.videoEdit.cuts).toBe("narration");
   expect(record.warnings).toHaveLength(1);
+});
+
+it("animates the images the chapters open on, once the word timing has found the chapters", {
+  timeout: 180_000,
+}, async () => {
+  const still = made("still-2.png", [
+    "-f",
+    "lavfi",
+    "-i",
+    "color=c=teal:s=480x270",
+    "-frames:v",
+    "1",
+  ]);
+  const clip = made("clip-2.mp4", [
+    ...["-f", "lavfi", "-i", "testsrc2=s=480x270:r=30", "-t", "5", "-pix_fmt", "yuv420p"],
+  ]);
+  const images = fakeImage({ bytes: still, video: clip });
+  const h = await composedFixture({
+    image: () => images,
+    tts: () => fakeTts({ bytesFor: () => [narration()] }),
+  });
+  withClipModel(h);
+  const base = current(h.deps, h.projectId);
+  await save(h.deps, h.projectId, {
+    config: {
+      ...base.revision.config,
+      sources: {
+        ...base.revision.config.sources,
+        audio: "generate",
+        images: "generate",
+        video: "generate",
+      },
+      audio: { provider: "openai-tts", model: "tts", voice: "first" },
+      chunking: { mode: "whole" },
+      provided: { article },
+      edgeSilenceSeconds: 1,
+      // One shot up to the second chapter, so it opens on the second image.
+      imageSeconds: 13,
+      motionStyle: "still",
+      videoEdit: {
+        ...legacyVideoEdit,
+        cuts: "narration",
+        animate: "chapters",
+        animateModel: "clip-model",
+      },
+    },
+    content: {
+      ...base.revision.content,
+      articleMarkdown: article,
+      imageOrder: ["one", "two", "three"],
+      imageDefinitions: {
+        one: { source: "generate", prompt: "One", assetId: null },
+        two: { source: "generate", prompt: "Two", assetId: null },
+        three: { source: "generate", prompt: "Three", assetId: null },
+      },
+    },
+  });
+  // Before the timing, one deferred request stands in for the clips.
+  const keys = Object.keys(current(h.deps, h.projectId).revision.fingerprints);
+  expect(keys).toContain("animate:future");
+  expect(keys.filter((key) => /^animate:(one|two|three)$/.test(key))).toEqual([]);
+
+  await start(h.deps, h.projectId, keys);
+  await h.runner.settled();
+  const stage = h.deps.db
+    .prepare("SELECT state,failure_reason FROM stages WHERE project_id=? AND kind='video'")
+    .get(h.projectId);
+  expect(stage).toEqual({ state: "done", failure_reason: null });
+  const ready = current(h.deps, h.projectId).outputs.filter(
+    (row) => row.selected && row.state === "ready",
+  );
+  // The video opens on the first image and "Later Years" on the second.
+  expect(
+    ready
+      .filter((row) => row.output.role === "animated_image")
+      .map((row) => row.workKey)
+      .sort(),
+  ).toEqual(["animate:one", "animate:two"]);
+  expect(images.animated()).toHaveLength(2);
+  expect(ready.find((row) => row.output.role === "video")?.output.meta.warnings).toBeUndefined();
 });

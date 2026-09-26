@@ -281,7 +281,7 @@ export function stageProviders(
         return Promise.reject(
           providerError({
             kind: "unsupported",
-            message: `${call.provider} can't turn images into video clips. Choose fal.ai or Replicate as the image provider in Edit project → Providers, or turn Animate images off in Edit project → Video.`,
+            message: `${call.provider} can't turn images into video clips. Choose fal.ai or Replicate as the image provider in Edit project → Providers, or turn Animate images off in Edit project → Inputs → Look.`,
           }),
         );
       return schedule(call.provider, () =>

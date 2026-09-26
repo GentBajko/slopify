@@ -6,8 +6,10 @@ import type { Atmosphere, ColorGrade, LookLevel } from "./edit-settings.js";
 // is ffmpeg's own filters with fixed numbers: no footage, no LUT files, and the same project
 // renders the same frames every time.
 //
-// Order matters: the grade first, so the overlay and the vignette sit on graded colour; the
-// atmosphere next; then the vignette darkens both; the chapter card is drawn on top of that
+// The colour grade is applied to each source before its picture is built (`gradeFilter`):
+// once on a still, before zoompan turns it into frames, rather than on every frame. So the
+// overlay and the vignette sit on graded colour. Order matters for the rest: the atmosphere
+// first; then the vignette darkens both; the chapter card is drawn on top of that
 // so its text stays clean; the grain last, over everything, as film grain is.
 
 // ceiling: the owner's eye on test renders. Subtle darkens the corners a little, strong
@@ -40,6 +42,12 @@ const grades: Readonly<Record<Exclude<ColorGrade, "none">, string>> = {
   sepia:
     "colorchannelmixer=rr=0.393:rg=0.769:rb=0.189:gr=0.349:gg=0.686:gb=0.168:br=0.272:bg=0.534:bb=0.131",
 };
+
+// The grade as a filter for a picture's source, or undefined for none: a still is graded once,
+// a clip frame by frame.
+export function gradeFilter(look: Look | undefined): string | undefined {
+  return look === undefined || look.grade === "none" ? undefined : grades[look.grade];
+}
 
 export function hasLook(look: Look | undefined): boolean {
   return (
@@ -98,16 +106,13 @@ export function lookChain(
     steps.push(`${at}${filters.join(",")}${label}`);
     at = label;
   };
-  if (look !== undefined && look.grade !== "none") simple([grades[look.grade]]);
   if (look !== undefined && look.atmosphere !== "none") {
     const texture = next();
-    const base = next();
     const blended = next();
     steps.push(`${atmosphereSource(edit, look.atmosphere, start)}${texture}`);
-    steps.push(`${at}format=gbrp${base}`);
-    steps.push(
-      `${base}${texture}blend=all_mode=screen:all_opacity=${atmosphereOpacity[look.atmosphere]}:shortest=1,format=yuv420p${blended}`,
-    );
+    // Laid over the picture by its alpha, in the picture's own YUV: converting every frame
+    // to RGB for a screen blend doubled a clip's render time.
+    steps.push(`${at}${texture}overlay=shortest=1:format=yuv420${blended}`);
     at = blended;
   }
   const after: string[] = [];
@@ -127,7 +132,7 @@ export function lookChain(
 const atmosphereOpacity: Readonly<Record<Exclude<Atmosphere, "none">, string>> = {
   embers: "1",
   dust: "0.6",
-  fog: "0.6",
+  fog: "1",
 };
 
 // A still texture made once per clip, then moved: embers rise and drift left, dust wanders,
@@ -160,8 +165,16 @@ function atmosphereSource(
   // The green plane carries the texture; the mixer tints it into all three.
   const tint = (r: number, g: number, b: number): string =>
     `colorchannelmixer=rr=0:rg=${String(r)}:rb=0:gr=0:gg=${String(g)}:gb=0:br=0:bg=${String(b)}:bb=0`;
+  // The texture as light over a transparent frame, made once before it loops: each pixel keeps
+  // its hue at full brightness, and how bright it was (times the atmosphere's strength)
+  // becomes how opaque it is, which is a screen blend's look for a dark background.
+  const peak = "max(r(X,Y),max(g(X,Y),b(X,Y)))";
+  const lit = (plane: string): string => `if(gt(${peak},0),255*${plane}(X,Y)/${peak},0)`;
+  const light =
+    `format=gbrap,geq=r='${lit("r")}':g='${lit("g")}':b='${lit("b")}':` +
+    `a='${peak}*${atmosphereOpacity[atmosphere]}',format=yuva420p`;
   const moving = (h: number, v: number): string =>
-    `loop=loop=-1:size=1,setpts=N/(${String(fps)}*TB),` +
+    `${light},loop=loop=-1:size=1,setpts=N/(${String(fps)}*TB),` +
     `scroll=h=${String(h)}:v=${String(v)}:hpos=${position(h, start)}:vpos=${position(v, start)}`;
   if (atmosphere === "embers")
     // Small sparks and a few large soft glows, orange, rising.
