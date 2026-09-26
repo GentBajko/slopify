@@ -153,4 +153,12 @@ describe("YouTube description recipe", () => {
       ),
     ).toMatchObject({ kind: "llm", provider: "text", model: "text-model", outputCharacters: 2400 });
   });
+  it("writes only the description again when asked to regenerate it", () => {
+    expect(
+      changed(described, described, {
+        ...content,
+        regenerationTokens: { "youtube:description": "again" },
+      }),
+    ).toEqual(["youtube:description"]);
+  });
 });

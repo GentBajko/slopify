@@ -86,6 +86,12 @@ export function RevisionPrompts({
                 </Button>
               </div>
             ) : null}
+            <LibraryChanged
+              label={label}
+              raw={raw}
+              library={libraryPrompt(edit, key, options)}
+              onUse={(body) => onChange(setPrompt(edit, key, body))}
+            />
             <label
               htmlFor={`${formId}-library-${key}`}
               className="flex min-w-0 flex-col gap-1 text-small"
@@ -168,6 +174,65 @@ export function RevisionPrompts({
         </label>
       ))}
     </section>
+  );
+}
+
+// The Library prompt this snapshot was copied from, found by the name the project saved.
+function libraryPrompt(
+  edit: RevisionEdit,
+  key: string,
+  options: readonly (Prompt | Entry)[],
+): Prompt | undefined {
+  const { config } = edit;
+  const image = /^imagePrompts\.(\d+)$/.exec(key);
+  const name =
+    key === "article"
+      ? config.articlePrompt
+      : key === "narration"
+        ? config.narrationPrompt
+        : key === "description"
+          ? config.descriptionPrompt
+          : key === "thumbnailPrompt"
+            ? config.thumbnailPrompt
+            : image?.[1] !== undefined
+              ? config.imagePrompts[Number(image[1])]?.name
+              : undefined;
+  if (name === undefined || name === "") return undefined;
+  return options.find(
+    (option): option is Prompt => !("category" in option) && option.name === name,
+  );
+}
+
+// A project keeps the prompt text it was given. When the Library prompt of the same name has
+// been edited since, say so here, so a newer wording is one press away instead of a mystery.
+function LibraryChanged({
+  label,
+  raw,
+  library,
+  onUse,
+}: {
+  readonly label: string;
+  readonly raw: string | null;
+  readonly library: Prompt | undefined;
+  readonly onUse: (body: string) => void;
+}) {
+  if (library === undefined || raw === null || library.body === raw) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-control border border-line bg-panel2 px-3 py-2 text-small">
+      <span className="min-w-0 flex-1">
+        The Library's &ldquo;{library.name}&rdquo; has changed since this project copied it. The
+        project still uses its own copy below.
+      </span>
+      <Button
+        type="button"
+        aria-label={`Use the Library version for ${label}`}
+        onClick={() => {
+          onUse(library.body);
+        }}
+      >
+        Use the Library version
+      </Button>
+    </div>
   );
 }
 
