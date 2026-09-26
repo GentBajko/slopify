@@ -44,7 +44,11 @@ export const playDraftFormSchema = z
     document: documentSettingsSchema.readonly().optional(),
     llm: provider.readonly(),
     audio: provider
-      .extend({ voice: text, usePronunciationGlossary: z.boolean().optional() })
+      .extend({
+        voice: text,
+        usePronunciationGlossary: z.boolean().optional(),
+        shareGlossary: z.boolean().optional(),
+      })
       .readonly(),
     images: provider.readonly(),
     articlePrompt: text,

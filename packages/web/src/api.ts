@@ -4,6 +4,7 @@ import type {
   ProjectListing,
   ProjectSummary,
   RunDraft,
+  SharedPronunciation,
   Stage,
 } from "@app/slices/admission/model.js";
 import type { FieldError } from "@app/slices/admission/rules.js";
@@ -416,6 +417,14 @@ export async function previewDocumentTheme(
     throw await failure(response);
   }
   return await response.blob();
+}
+
+// The other projects' pronunciations, merged, for Edit project to copy into this one.
+export async function readSharedPronunciations(
+  api: Api,
+  except: string,
+): Promise<{ readonly entries: readonly SharedPronunciation[]; readonly projects: number }> {
+  return read(await api.client.pronunciations.shared.$get({ query: { except } }));
 }
 
 export async function removeEntry(api: Api, id: string): Promise<void> {

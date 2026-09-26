@@ -267,7 +267,11 @@ it.each([undefined, false, true])(
         const result = convert(document, [attachment]);
         if (!result.ok) throw new Error(JSON.stringify(result.fields));
         expect(result.draft.audio).toStrictEqual(
-          source === "generate" || preference !== undefined ? audio : undefined,
+          source === "generate" || preference !== undefined
+            ? preference === true
+              ? { ...audio, shareGlossary: true }
+              : audio
+            : undefined,
         );
         expect(result.draft.provided.audio).toBe(source === "provide" ? "staged-audio" : undefined);
         expect(JSON.stringify(document)).toBe(before);

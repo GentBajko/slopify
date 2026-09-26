@@ -105,7 +105,10 @@ it.each([undefined, false, true])(
         await reviewDraft(target.deps, { id: draft.value.draft.id, baseVersion: 1 }),
       );
       expect(review.runs[0]?.draft.sources.article).toBe("provide");
-      expect(review.runs[0]?.draft.audio).toStrictEqual(audio);
+      // With the glossary on, the run shares pronunciations unless the draft turned it off.
+      expect(review.runs[0]?.draft.audio).toStrictEqual(
+        preference === true ? { ...audio, shareGlossary: true } : audio,
+      );
       expect(review.runs[0]?.rendered.narration).toBe("Use calm delivery.");
       expect(review.runs[0]?.templates.narration).toBe("Use {{Delivery Style}} delivery.");
       const input = { draftId: draft.value.draft.id, baseVersion: 1, reviewId: review.id };
@@ -156,7 +159,9 @@ it.each([undefined, false, true])(
         narrationPrompt: "Delivery",
         rendered: { narration: "Use calm delivery." },
       });
-      expect(scheduled.audio).toStrictEqual(audio);
+      expect(scheduled.audio).toStrictEqual(
+        preference === true ? { ...audio, shareGlossary: true } : audio,
+      );
       expect(Object.hasOwn(scheduled.audio ?? {}, "usePronunciationGlossary")).toBe(
         preference !== undefined,
       );

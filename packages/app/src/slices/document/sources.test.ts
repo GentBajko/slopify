@@ -91,7 +91,10 @@ describe("documentText", () => {
 it("reads one source per line when the model left no blank lines between them", () => {
   const article = `# T\n\nBody.\n\n## Sources Consulted\n\nWikipedia, "Lich" — https://en.wikipedia.org/wiki/Lich\nTSR, *Monster Manual* (1977)\n- [Dragon #26](https://example.com/26)\n  continued on the next line\n`;
   expect(documentText(article, null).sources).toEqual([
-    { text: 'Wikipedia, "Lich" — https://en.wikipedia.org/wiki/Lich', href: "https://en.wikipedia.org/wiki/Lich" },
+    {
+      text: 'Wikipedia, "Lich" — https://en.wikipedia.org/wiki/Lich',
+      href: "https://en.wikipedia.org/wiki/Lich",
+    },
     { text: "TSR, Monster Manual (1977)", href: null },
     { text: "Dragon #26 continued on the next line", href: "https://example.com/26" },
   ]);

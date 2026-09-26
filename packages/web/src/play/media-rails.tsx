@@ -115,6 +115,11 @@ export function AudioRail({
                   onChange={(usePronunciationGlossary) =>
                     update({ audio: { ...form.audio, usePronunciationGlossary } })
                   }
+                  shared={{
+                    value: form.audio.shareGlossary ?? true,
+                    onChange: (shareGlossary) =>
+                      update({ audio: { ...form.audio, shareGlossary } }),
+                  }}
                 />
               </div>
             </details>

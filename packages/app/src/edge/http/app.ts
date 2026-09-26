@@ -34,6 +34,7 @@ import { problem, problemFromError, titleOf } from "./problem.js";
 import { projectTemplateRoutes } from "./project-templates.js";
 import { projectRoutes } from "./projects.js";
 import { promptRoutes } from "./prompts.js";
+import { pronunciationRoutes } from "./pronunciations.js";
 import { providerRoutes } from "./providers.js";
 import { revisionFileRoutes, revisionFolderRoutes } from "./revision-files.js";
 import { revisionRoutes } from "./revisions.js";
@@ -126,6 +127,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/prompts", promptRoutes(deps))
       .route("/entries", entryRoutes(deps))
       .route("/document-themes", documentThemeRoutes(deps))
+      .route("/pronunciations", pronunciationRoutes(deps))
       .route("/telemetry", telemetryRoutes(deps))
       .route("/usage", usageRoutes(deps))
       .route("/settings", settingsRoutes(deps))

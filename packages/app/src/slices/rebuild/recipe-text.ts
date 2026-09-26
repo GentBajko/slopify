@@ -9,6 +9,7 @@ import { plainText } from "../article/plain.js";
 import { segmentMessages } from "../article/segments.js";
 import { splitEndMatter } from "../article/split.js";
 import { type GlossaryResult, parsePronunciationGlossary } from "../narration/pronunciation.js";
+import { withSharedGlossary } from "../narration/shared-glossary.js";
 import { researchDocuments } from "../research/documents.js";
 import { plannerMessages, subAgentMessages } from "../research/planner.js";
 import { synthesisMessages } from "../research/synthesis.js";
@@ -209,7 +210,7 @@ export function textRecipes(context: RecipeContext): TextRecipes {
     ? { ok: true, entries: [] }
     : endMatter === null
       ? null
-      : parsePronunciationGlossary(endMatter.glossary);
+      : withShared(parsePronunciationGlossary(endMatter.glossary), config);
   const entries: Partial<Record<"intro" | "outro", TextRecipe>> = {};
   for (const category of ["intro", "outro"] as const) {
     const choice = config[category];
@@ -299,4 +300,11 @@ export function matchingText(
   )
     return null;
   return selectedText(context, value.key, field);
+}
+
+// The project's own glossary, then the other projects' pronunciations it copied, when it
+// shares them. An own glossary that doesn't parse still refuses, as before.
+function withShared(own: GlossaryResult, config: RecipeContext["config"]): GlossaryResult {
+  if (!own.ok || config.audio?.shareGlossary !== true) return own;
+  return { ok: true, entries: withSharedGlossary(own.entries, config.sharedGlossary) };
 }

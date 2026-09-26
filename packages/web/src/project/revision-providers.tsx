@@ -3,18 +3,89 @@ import {
   usesPronunciationGlossary,
 } from "@app/slices/admission/rules.js";
 import type { RevisionEdit } from "@app/slices/revisions/model.js";
-import type { ProviderStatus, Voice } from "@/api";
+import { useState } from "react";
+import { type ProviderStatus, readSharedPronunciations, type Voice } from "@/api";
+import { useApp } from "@/app-context";
+import { Button } from "@/components/ui/button";
 import { ChunkingControl } from "@/play/chunking";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
 import { PronunciationGlossary } from "@/play/pronunciation-glossary";
 import { ThinkingPicker } from "@/play/thinking";
 
+// "Also use pronunciations from my other projects" in Edit project: turning it on copies the
+// other projects' glossaries into this one, and the button copies them again, so a project
+// only picks up newer pronunciations when asked (and rebuilds the narration they change).
+function useSharedGlossary(
+  projectId: string,
+  edit: RevisionEdit,
+  onChange: (edit: RevisionEdit) => void,
+) {
+  const { api } = useApp();
+  const [state, setState] = useState<{ busy: boolean; error?: string; projects?: number }>({
+    busy: false,
+  });
+  const { config } = edit;
+  const audio = config.audio;
+  const copy = async (): Promise<void> => {
+    if (audio === undefined) return;
+    setState({ busy: true });
+    try {
+      const shared = await readSharedPronunciations(api, projectId);
+      const { sharedGlossary: _old, ...rest } = config;
+      onChange({
+        ...edit,
+        config: {
+          ...rest,
+          audio: { ...audio, shareGlossary: true },
+          ...(shared.entries.length === 0 ? {} : { sharedGlossary: shared.entries }),
+        },
+      });
+      setState({ busy: false, projects: shared.projects });
+    } catch (error) {
+      setState({ busy: false, error: error instanceof Error ? error.message : String(error) });
+    }
+  };
+  const off = (): void => {
+    if (audio === undefined) return;
+    const { sharedGlossary: _old, ...rest } = config;
+    onChange({ ...edit, config: { ...rest, audio: { ...audio, shareGlossary: false } } });
+  };
+  const count = config.sharedGlossary?.length ?? 0;
+  const note =
+    audio?.shareGlossary === true ? (
+      <p className="flex flex-wrap items-center gap-2 text-label text-ink2">
+        {state.error !== undefined
+          ? `Couldn't read your other projects' pronunciations: ${state.error}`
+          : count === 0
+            ? "No pronunciations from other projects are copied yet."
+            : `${String(count)} ${count === 1 ? "term" : "terms"} copied from ${
+                state.projects === undefined
+                  ? "your other projects"
+                  : `${String(state.projects)} other ${state.projects === 1 ? "project" : "projects"}`
+              }.`}
+        <Button type="button" variant="ghost" disabled={state.busy} onClick={() => void copy()}>
+          {state.busy ? "Copying…" : "Update from other projects"}
+        </Button>
+      </p>
+    ) : undefined;
+  return {
+    value: audio?.shareGlossary === true,
+    onChange: (on: boolean) => {
+      if (on) void copy();
+      else off();
+    },
+    note,
+  };
+}
+
 export function RevisionProviders({
+  projectId,
   edit,
   providers,
   voices,
   onChange,
 }: {
+  readonly projectId: string;
   readonly edit: RevisionEdit;
   readonly providers: readonly ProviderStatus[];
   readonly voices: readonly Voice[];
@@ -23,6 +94,7 @@ export function RevisionProviders({
   const { config } = edit;
   const llm = config.llm ?? { provider: "", model: "" };
   const audio = config.audio ?? { provider: "", model: "", voice: "" };
+  const shared = useSharedGlossary(projectId, edit, onChange);
   const images = config.images ?? { provider: "", model: "" };
   const textNeeded =
     usesNarrationPreparation(config) ||
@@ -108,6 +180,7 @@ export function RevisionProviders({
             onPick={(chunking) => onChange({ ...edit, config: { ...config, chunking } })}
           />
           <PronunciationGlossary
+            shared={shared}
             value={audio.usePronunciationGlossary}
             supported={usesPronunciationGlossary({
               sources: config.sources,

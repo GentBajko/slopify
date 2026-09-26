@@ -315,3 +315,34 @@ it("reports a blocked physical request when one IPA atom exceeds the catalog lim
     plan.work.some((row) => row.key.startsWith("audio:body:") && row.disposition === "blocked"),
   ).toBe(true);
 });
+
+it("adds the other projects' pronunciations when sharing, with the project's own first", () => {
+  const base = context("John and Szass Tam read.\n\n## Pronunciation Glossary\nJohn: /dʒɑn/");
+  const shared = {
+    ...base,
+    config: {
+      ...base.config,
+      audio: { ...base.config.audio, voice: "voice", shareGlossary: true },
+      sharedGlossary: [
+        { term: "john", ipa: ["ʒɑn"] },
+        { term: "Szass Tam", ipa: ["sæs", "tæm"] },
+      ],
+    },
+  };
+  expect(textRecipes(shared).glossary).toEqual({
+    ok: true,
+    entries: [
+      { term: "John", ipa: ["dʒɑn"] },
+      { term: "Szass Tam", ipa: ["sæs", "tæm"] },
+    ],
+  });
+  // Off, or a project saved before sharing existed, ignores a copied list.
+  const off = {
+    ...shared,
+    config: { ...shared.config, audio: { ...shared.config.audio, shareGlossary: false } },
+  };
+  expect(textRecipes(off).glossary).toEqual({
+    ok: true,
+    entries: [{ term: "John", ipa: ["dʒɑn"] }],
+  });
+});

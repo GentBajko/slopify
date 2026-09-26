@@ -113,7 +113,11 @@ export function toAdmissionDraft(input: {
     llm: form.llm,
     audio:
       sources.audio === "generate" || form.audio.usePronunciationGlossary !== undefined
-        ? form.audio
+        ? // With the glossary on, sharing it is on unless the draft turned it off, as Play
+          // shows it for a draft saved before the switch existed.
+          form.audio.usePronunciationGlossary === true && form.audio.shareGlossary === undefined
+          ? { ...form.audio, shareGlossary: true }
+          : form.audio
         : undefined,
     images: form.images,
     articlePrompt: sources.article === "generate" ? form.articlePrompt : undefined,

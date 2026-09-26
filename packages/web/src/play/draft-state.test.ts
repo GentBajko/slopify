@@ -161,7 +161,10 @@ it.each([undefined, false, true])(
       silenceGapSeconds: 0,
     });
     if (!admitted.ok) throw new Error(JSON.stringify(admitted.fields));
-    expect(admitted.draft.audio).toStrictEqual(audio);
+    // With the glossary on, a draft saved before the sharing switch shares, as Play shows it.
+    expect(admitted.draft.audio).toStrictEqual(
+      preference === true ? { ...audio, shareGlossary: true } : audio,
+    );
     for (const source of ["off", "provide"] as const) {
       const dormant = {
         ...document,

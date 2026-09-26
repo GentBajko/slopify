@@ -2,6 +2,7 @@ import { transact } from "../../kernel/db/tx.js";
 import type { StageKind, StageState } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
 import { storeArticleText } from "../article/store.js";
+import { collectSharedGlossary } from "../narration/shared-glossary.js";
 import { admitInitialRevision } from "../rebuild/runtime-admission.js";
 import { adoptBaseline } from "../revisions/adopt.js";
 import type { StorageDeps } from "../storage/staging.js";
@@ -16,6 +17,7 @@ import {
   sourceOf,
 } from "./model.js";
 import { insertProject, insertStage } from "./repo.js";
+import { usesPronunciationGlossary } from "./rules.js";
 
 export interface StartedRun {
   readonly project: Project;
@@ -42,7 +44,15 @@ export function startRun(
 ): StartedRun {
   const id = deps.ids.next();
   const at = deps.clock.now().toISOString();
-  const config: RunConfig = { ...draft, rendered };
+  const shared =
+    usesPronunciationGlossary(draft) && draft.audio?.shareGlossary === true
+      ? collectSharedGlossary(deps).entries
+      : [];
+  const config: RunConfig = {
+    ...draft,
+    rendered,
+    ...(shared.length === 0 ? {} : { sharedGlossary: shared }),
+  };
   const project: Project = {
     id,
     title: draft.title,

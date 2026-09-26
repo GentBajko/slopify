@@ -44,7 +44,21 @@ export const runDraftSchema = z.object({
   }),
   llm: providerChoice.optional(),
   audio: providerChoice
-    .extend({ voice: z.string(), usePronunciationGlossary: z.boolean().optional() })
+    .extend({
+      voice: z.string(),
+      usePronunciationGlossary: z.boolean().optional(),
+      shareGlossary: z.boolean().optional(),
+    })
+    .optional(),
+  sharedGlossary: z
+    .array(
+      z.object({
+        term: z.string().min(1).max(200),
+        ipa: z.array(z.string().min(1).max(200)).min(1).max(20).readonly(),
+      }),
+    )
+    .max(20000)
+    .readonly()
     .optional(),
   images: providerChoice.optional(),
   articlePrompt: z.string().optional(),

@@ -473,6 +473,7 @@ export function RevisionForm(
           className={panel("providers")}
         >
           <RevisionProviders
+            projectId={view.revision.projectId}
             edit={edit}
             providers={providers.data?.providers ?? []}
             voices={voices.data?.voices ?? []}

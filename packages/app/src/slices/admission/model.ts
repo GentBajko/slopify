@@ -40,6 +40,15 @@ export interface ProviderChoice {
 export interface VoiceChoice extends ProviderChoice {
   readonly voice: string;
   readonly usePronunciationGlossary?: boolean | undefined;
+  // Also use the pronunciations of the user's other projects. Absent reads as off, so a
+  // project saved before this existed narrates exactly as it did.
+  readonly shareGlossary?: boolean | undefined;
+}
+
+// One shared pronunciation, copied into a project from another project's glossary.
+export interface SharedPronunciation {
+  readonly term: string;
+  readonly ipa: readonly string[];
 }
 
 export interface ImagePromptChoice {
@@ -71,6 +80,9 @@ export interface ProvidedFiles {
 
 // What Play posts. Everything a run is configured with, before any rule has looked at it.
 export interface RunDraft {
+  // The other projects' pronunciations as copied when this one started or was last refreshed
+  // in Edit project; used only while `audio.shareGlossary` is on.
+  readonly sharedGlossary?: readonly SharedPronunciation[] | undefined;
   readonly checkpoints?: readonly import("../checkpoints/model.js").CheckpointStage[] | undefined;
   readonly title: string;
   readonly format: Format;

@@ -116,7 +116,13 @@ function ProjectSubject({
   });
   return (
     <>
-      <RevisionProviders edit={edit} providers={providers} voices={[]} onChange={setEdit} />
+      <RevisionProviders
+        projectId="p1"
+        edit={edit}
+        providers={providers}
+        voices={[]}
+        onChange={setEdit}
+      />
       <output aria-label="Saved audio">{JSON.stringify(edit.config.audio)}</output>
     </>
   );
