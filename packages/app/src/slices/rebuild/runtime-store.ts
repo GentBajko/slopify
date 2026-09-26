@@ -174,7 +174,8 @@ export function projectStandings(deps: RevisionDeps, projectId: string): void {
   const work = executionStages(deps, projectId);
   const standings = executionStandings(deps, projectId, work);
   for (const stage of standings) {
-    const invocations = work.filter((entry) => entry.kind === stage.kind);
+    const all = work.filter((entry) => entry.kind === stage.kind);
+    const invocations = metered(deps, all);
     const current = invocations.reduce((total, entry) => {
       if (entry.state === "done") return total + 1;
       const progress = deps.db
@@ -182,7 +183,7 @@ export function projectStandings(deps: RevisionDeps, projectId: string): void {
         .get(entry.work.workId);
       return total + fraction(progress?.progress_current, progress?.progress_total);
     }, 0);
-    const failed = invocations.find((work) => work.state === "failed");
+    const failed = all.find((work) => work.state === "failed");
     const failure =
       failed === undefined
         ? null
@@ -228,6 +229,7 @@ export function recordWorkProgress(deps: RevisionDeps, event: StageProgressEvent
     .get(event.workId, event.revisionId, event.projectId, event.stage);
   if (before === undefined) return;
   const current = Math.max(0, Math.min(event.current, event.total));
+  const counted = !(event.stage === "audio" && !spoken(deps, event.workId));
   deps.db
     .prepare("UPDATE revision_work SET progress_current=?,progress_total=? WHERE id=?")
     .run(current, event.total, event.workId);
@@ -235,6 +237,7 @@ export function recordWorkProgress(deps: RevisionDeps, event: StageProgressEvent
   // current revision's work and must not move with it.
   const head = currentRevisionId(deps.db, event.projectId);
   if (
+    !counted ||
     head === undefined ||
     deps.db
       .prepare("SELECT 1 FROM revision_work_reservations WHERE work_id=? AND revision_id=? LIMIT 1")
@@ -250,6 +253,21 @@ export function recordWorkProgress(deps: RevisionDeps, event: StageProgressEvent
     .run(delta, event.projectId, event.stage);
   // A row no derivation has counted yet has nothing to adjust: derive it once.
   if (moved.changes === 0) projectStandings(deps, event.projectId);
+}
+
+// The Audio meter reads "chunk K of N", so it counts the spoken pieces only: preparing a
+// chunk's text, joining the pieces and saving the files are steps of their own that would
+// otherwise pad N past the chunks the Narration editor lists.
+function metered(deps: RevisionDeps, invocations: readonly RunnerStage[]): readonly RunnerStage[] {
+  if (invocations[0]?.kind !== "audio") return invocations;
+  const pieces = invocations.filter((entry) => spoken(deps, entry.work.workId));
+  return pieces.length === 0 ? invocations : pieces;
+}
+
+const spokenKey = /^audio:(?:intro|body|outro)(?::(?!concat$|future$).+)?$/;
+
+function spoken(deps: RevisionDeps, workId: string): boolean {
+  return workPieces(deps.db, workId).some((piece) => spokenKey.test(piece.key));
 }
 
 function fraction(current: unknown, total: unknown): number {

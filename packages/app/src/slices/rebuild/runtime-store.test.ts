@@ -11,7 +11,13 @@ import { saveRevision } from "../revisions/mutations.js";
 import { revisionFixture } from "../revisions/revision.fake.js";
 import { admitPendingRevision } from "./legacy-admission.fake.js";
 import { admitInitialRevision } from "./runtime-admission.js";
-import { executionStages, executionStandings, recordWorkProgress } from "./runtime-store.js";
+import {
+  executionStages,
+  executionStandings,
+  projectStandings,
+  recordWorkProgress,
+} from "./runtime-store.js";
+import { workPieces } from "./work-records.js";
 
 const catalogue: Catalogue = {
   schemaVersion: 1,
@@ -223,6 +229,41 @@ it("holds a stopped invocation instead of reclaiming it on the runner's completi
         .prepare("SELECT state,dispatch_state FROM revision_work WHERE kind='article'")
         .get(),
     ).toMatchObject({ state: "pending", dispatch_state: "held" });
+  } finally {
+    h.close();
+  }
+});
+
+it("counts only spoken narration pieces on the Audio meter", () => {
+  const h = revisionFixture();
+  try {
+    const config = {
+      ...h.config,
+      sources: { ...h.config.sources, audio: "generate" as const },
+      audio: { provider: "openai-tts", model: "test", voice: "voice" },
+    };
+    h.deps.db
+      .prepare("UPDATE projects SET config=? WHERE id=?")
+      .run(JSON.stringify(config), h.projectId);
+    for (const kind of stageKinds)
+      h.deps.db
+        .prepare("INSERT INTO stages(id,project_id,kind,source,state) VALUES (?,?,?,?,?)")
+        .run(kind, h.projectId, kind, sourceOf(config.sources, kind), "pending");
+    const base = adoptBaseline(h.deps, h.projectId);
+    if (!base.ok) throw new Error("Missing baseline");
+    admitInitialRevision(h.deps, base.view, catalogue);
+    const keys = executionStages(h.deps, h.projectId)
+      .filter((row) => row.kind === "audio")
+      .flatMap((row) => workPieces(h.deps.db, row.work.workId).map((piece) => piece.key));
+    // The join is a step of its own, not a chunk: "chunk 1 of 1", not "of 2".
+    expect(keys).toContain("audio:body:concat");
+    expect(keys).toHaveLength(2);
+    projectStandings(h.deps, h.projectId);
+    expect(
+      h.deps.db
+        .prepare("SELECT progress_current,progress_total FROM stages WHERE id='audio'")
+        .get(),
+    ).toMatchObject({ progress_current: 0, progress_total: 1 });
   } finally {
     h.close();
   }
