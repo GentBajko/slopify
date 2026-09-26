@@ -1,3 +1,4 @@
+import { sourceEntries } from "../article/source-lines.js";
 import { splitEndMatter } from "../article/split.js";
 import { type Block, markdownBlocks, markdownLinks, runsText } from "./blocks.js";
 
@@ -30,18 +31,14 @@ export function documentText(articleMarkdown: string, researchNotes: string | nu
 }
 
 function sourceItems(section: string): readonly SourceItem[] {
-  if (section.trim() === "") return [];
-  // The section's own heading, whether a `#` line or a bold paragraph, is its first block.
-  return markdownBlocks(section)
-    .slice(1)
-    .flatMap((block): readonly SourceItem[] => {
-      if (block.kind !== "item" && block.kind !== "paragraph" && block.kind !== "quote") return [];
-      const text = runsText(block.runs).trim();
-      if (text === "") return [];
-      const href =
-        block.runs.find((run) => run.href !== null)?.href ??
-        /https?:\/\/[^\s)>\]]+/.exec(text)?.[0] ??
-        null;
-      return [{ text, href }];
-    });
+  return sourceEntries(section).flatMap((entry): readonly SourceItem[] => {
+    const runs = markdownBlocks(entry).flatMap((block) => ("runs" in block ? block.runs : []));
+    const text = runsText(runs).trim();
+    if (text === "") return [];
+    const href =
+      runs.find((run) => run.href !== null)?.href ??
+      /https?:\/\/[^\s)>\]]+/.exec(text)?.[0] ??
+      null;
+    return [{ text, href }];
+  });
 }
