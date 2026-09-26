@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
-import { currentShorts, ShortsBlock } from "./body-shorts.js";
+import { currentShorts, ShortsBlock, useShortClips } from "./body-shorts.js";
 import { YoutubeBlock } from "./body-youtube.js";
 import { ConfirmedButton } from "./controls.js";
 import { DownloadMenu, OutputFolder, StageBody } from "./parts.js";
@@ -20,7 +20,8 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
   const vtt = roleOf(subtitleOutputs, "subtitles_vtt");
   const description = roleOf(subtitleOutputs, "youtube_description");
   const tags = roleOf(subtitleOutputs, "youtube_tags");
-  const shorts = currentShorts(subtitleOutputs, "short_video").toSorted(
+  const clips = useShortClips(subtitleOutputs);
+  const shorts = currentShorts(subtitleOutputs, "short_video", clips).toSorted(
     (left, right) => (left.meta.short ?? 0) - (right.meta.short ?? 0),
   );
   const media = useOutputMedia(video);

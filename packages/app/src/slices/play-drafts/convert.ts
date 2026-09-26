@@ -13,7 +13,12 @@ import {
 import { runDraftSchema } from "../admission/schema.js";
 import { draftDocumentThemeOf } from "../document/model.js";
 import type { Entry } from "../library/model.js";
-import { defaultShorts, type ShortsSettings, shortsSettingsProblems } from "../shorts/model.js";
+import {
+  defaultShorts,
+  type ShortsSettings,
+  shortsExtrasOf,
+  shortsSettingsProblems,
+} from "../shorts/model.js";
 import { defaultSubtitles } from "../subtitles/model.js";
 import type { DraftAttachment, PlayDraftDocument } from "./model.js";
 
@@ -109,11 +114,16 @@ export function toAdmissionDraft(input: {
       maxSeconds: whole(raw.maxSeconds),
       ...(raw.prompt.trim() ? { prompt: raw.prompt } : {}),
       ...(raw.imagePrompt.trim() ? { imagePrompt: raw.imagePrompt } : {}),
+      ...shortsExtrasOf(raw),
     };
     for (const problem of shortsSettingsProblems(settings))
       fields.push({ field: `shorts.${problem.field}`, message: problem.message });
+    const { musicVolume, speed, ...rest } = settings;
     return {
-      ...settings,
+      ...rest,
+      // A number already refused above is left out rather than saved as NaN.
+      ...(musicVolume !== undefined && Number.isFinite(musicVolume) ? { musicVolume } : {}),
+      ...(speed !== undefined && Number.isFinite(speed) ? { speed } : {}),
       count: Number.isFinite(settings.count) ? settings.count : defaultShorts.count,
       minSeconds: Number.isFinite(settings.minSeconds)
         ? settings.minSeconds

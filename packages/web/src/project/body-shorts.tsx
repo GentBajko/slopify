@@ -1,14 +1,16 @@
-import { shortImageCount } from "@app/slices/shorts/model.js";
+import { fullVideoLine, shortImageCount, shortUploadText } from "@app/slices/shorts/model.js";
 import type { Output } from "@app/slices/storage/model.js";
 import { CopyIcon, DownloadIcon } from "lucide-react";
-import { useId, useState } from "react";
+import { use, useId, useState } from "react";
 import { z } from "zod";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button } from "@/components/ui/button";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { useOutputText } from "./parts.js";
+import { EditRequestContext, RevisionControlContext } from "./revision-action-context.js";
 import { useOutputMedia } from "./revision-media.js";
+import { pickAgain, remakeShort } from "./revision-shorts.js";
 import { duration } from "./summary.js";
 
 // What `shorts.json` holds for each picked clip.
@@ -16,6 +18,8 @@ const listSchema = z.object({
   shorts: z.array(
     z.object({
       number: z.number(),
+      first: z.number().optional(),
+      last: z.number().optional(),
       start: z.number(),
       end: z.number(),
       title: z.string(),
@@ -29,19 +33,23 @@ type Clip = z.infer<typeof listSchema>["shorts"][number];
 // The Video stage's Shorts part, below the YouTube one and set off the same way: a rule and a
 // heading, no box of its own. The clips sit in a grid of small vertical players, three across
 // on a wide screen, each with its title, length, a Copy for what goes with the upload, and its
-// download. While the stage runs, a clip not rendered yet says how far it got.
+// download. While the stage runs, a clip not rendered yet says how far it got. "Make this
+// short again" and "Pick different moments" open Edit project → Shorts with the change made,
+// to review and save like any other edit.
 export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "actions" | "busy">) {
   const id = useId();
   const own = outputsOf(outputs, stage);
   const list = roleOf(own, "shorts");
-  const listText = useOutputText(list).data;
+  const clips = useShortClips(own);
   const [status, setStatus] = useState<{ text: string; tone: StatusTone } | undefined>();
-  const videos = currentShorts(own, "short_video");
+  const videos = currentShorts(own, "short_video", clips);
   const settings = project.config.shorts;
+  const revisions = use(RevisionControlContext);
+  const requestEdit = use(EditRequestContext);
   if (settings?.enabled !== true && list === undefined && videos.length === 0) return null;
-  const clips = clipsOf(listText);
+  const editable = revisions && requestEdit !== undefined && settings?.enabled === true;
   const copy = (clip: Clip) => {
-    const text = [clip.title, "", clip.description, "", clip.hashtags.join(" ")].join("\n");
+    const text = shortUploadText(clip, settings?.fullVideoLink);
     const failed = {
       text: `Couldn't copy short ${String(clip.number)}. Select its text and copy it.`,
       tone: "error" as const,
@@ -60,9 +68,20 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
       aria-labelledby={`${id}-title`}
       className="flex min-w-0 flex-col gap-3 border-t border-line pt-4"
     >
-      <h3 id={`${id}-title`} className="engraved text-ink3">
-        Shorts
-      </h3>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 id={`${id}-title`} className="engraved text-ink3">
+          Shorts
+        </h3>
+        {editable && clips.length > 0 ? (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => requestEdit({ section: "shorts", change: pickAgain })}
+          >
+            Pick different moments
+          </Button>
+        ) : null}
+      </div>
       {clips.length === 0 ? (
         <p className="text-small text-ink2">
           {stage.state === "running"
@@ -75,16 +94,25 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
             <ShortCard
               key={clip.number}
               clip={clip}
-              video={videos.find((output) => output.meta.short === clip.number)}
+              video={videos.find((output) => ofClip(output, clip))}
               images={
-                currentShorts(own, "short_image").filter(
-                  (output) => output.meta.short === clip.number,
-                ).length
+                currentShorts(own, "short_image", clips).filter((output) => ofClip(output, clip))
+                  .length
               }
+              link={fullVideoLine(settings?.fullVideoLink)}
               wanted={shortImageCount(clip.end - clip.start, project.config.imageSeconds)}
               state={stage.state}
               failed={failedHere(stage.failureReason, clip.number)}
               onCopy={() => copy(clip)}
+              {...(editable
+                ? {
+                    onRemake: () =>
+                      requestEdit({
+                        section: "shorts",
+                        change: (edit) => remakeShort(edit, clip.number),
+                      }),
+                  }
+                : {})}
             />
           ))}
         </ul>
@@ -101,7 +129,9 @@ function ShortCard({
   wanted,
   state,
   failed,
+  link,
   onCopy,
+  onRemake,
 }: {
   readonly clip: Clip;
   readonly video: Output | undefined;
@@ -109,7 +139,9 @@ function ShortCard({
   readonly wanted: number;
   readonly state: BodyProps["stage"]["state"];
   readonly failed: boolean;
+  readonly link: string;
   readonly onCopy: () => void;
+  readonly onRemake?: (() => void) | undefined;
 }) {
   const id = useId();
   const media = useOutputMedia(video);
@@ -157,6 +189,7 @@ function ShortCard({
         {duration(video?.durationMs ?? Math.round((clip.end - clip.start) * 1000))}
       </p>
       <p className="break-words text-small text-ink2">{clip.description}</p>
+      <p className="break-words text-label text-ink3">{link}</p>
       <p className="break-words text-small text-ink2">{clip.hashtags.join(" ")}</p>
       {/* The folder is the stage's one Open folder; each short only downloads here. */}
       {video !== undefined && media !== undefined ? (
@@ -169,21 +202,53 @@ function ShortCard({
           Download
         </a>
       ) : null}
+      {onRemake === undefined ? null : (
+        <Button
+          type="button"
+          variant="ghost"
+          className="self-start"
+          aria-label={`Make short ${String(clip.number)} again`}
+          onClick={onRemake}
+        >
+          Make this short again
+        </Button>
+      )}
     </li>
   );
 }
 
-// A short's video or images made before the current pick belong to clips picked earlier: a
-// pick made again may choose fewer or other clips, and until each is rendered again the old
-// file would sit under the new clip's title. Everything a pick leads to is made after it.
+// A short's video or images belong to the current pick when they were made after it, or
+// when they were cut from the same sentences as its clip: a pick made again keeps the work of
+// a clip it chose again. Anything else is a clip picked earlier, whose file would otherwise
+// sit under the new clip's title until it is rendered again.
 export function currentShorts(
   outputs: readonly Output[],
   role: "short_video" | "short_image",
+  clips: readonly Clip[],
 ): readonly Output[] {
   const pick = outputs.find((output) => output.role === "shorts");
   return outputs.filter(
-    (output) => output.role === role && (pick === undefined || output.createdAt >= pick.createdAt),
+    (output) =>
+      output.role === role &&
+      (pick === undefined ||
+        output.createdAt >= pick.createdAt ||
+        clips.some(
+          (clip) =>
+            ofClip(output, clip) &&
+            output.meta.sentences?.[0] === clip.first &&
+            output.meta.sentences?.[1] === clip.last,
+        )),
   );
+}
+
+function ofClip(output: Output, clip: Clip): boolean {
+  return output.meta.short === clip.number;
+}
+
+// The clips the stage's `shorts.json` lists, read once and shared by the Shorts part and the
+// stage's Download menu.
+export function useShortClips(outputs: readonly Output[]): readonly Clip[] {
+  return clipsOf(useOutputText(roleOf(outputs, "shorts")).data);
 }
 
 function clipsOf(text: string | undefined): readonly Clip[] {

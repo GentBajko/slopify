@@ -66,6 +66,12 @@ export const playDraftFormSchema = z
         maxSeconds: text,
         prompt: text,
         imagePrompt: text,
+        // Absent on drafts saved before these: the title off, no link, the music at its
+        // default level, normal speed. The two numbers are raw text too.
+        titleOnScreen: z.boolean().optional(),
+        fullVideoLink: text.optional(),
+        musicVolume: text.optional(),
+        speed: text.optional(),
       })
       .strict()
       .readonly()

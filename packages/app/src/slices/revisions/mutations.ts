@@ -103,7 +103,11 @@ export async function saveRevision(
         ...supplied,
         content: { ...supplied.content, regenerationTokens: tokens },
       });
-      const outputAssets = prepared.filter((row) => row.upload?.destination.kind !== "narration");
+      const outputAssets = prepared.filter(
+        (row) =>
+          row.upload?.destination.kind !== "narration" &&
+          row.upload?.destination.kind !== "shortsMusic",
+      );
       const inspected = measuredOutputs(deps, fresh, durations);
       const preparedManifest = {
         outputs: [

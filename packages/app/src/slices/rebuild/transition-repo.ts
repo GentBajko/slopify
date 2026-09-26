@@ -57,6 +57,15 @@ export function transitionRevisionWork(
       const logicalKey = input.logicalKeys?.[row.work_key] ?? row.logical_key ?? row.work_key;
       const before = baseFingerprints[logicalKey];
       const after = input.fingerprints[logicalKey];
+      // Work unfolded under another step (a short's prompts, images and render under the
+      // pick) is planned under its own key too once it is known. It carries over only while
+      // that key still wants the same work; when it changed (a short made again), the new
+      // step is reserved afresh below. A short's step the new plan doesn't list yet waits on
+      // an answer that changed, so it is unfolded again once that answer lands.
+      const own = logicalKey === row.work_key ? undefined : input.fingerprints[row.work_key];
+      if (own !== undefined && own !== row.fingerprint) continue;
+      if (own === undefined && logicalKey !== row.work_key && row.work_key.startsWith("shorts:"))
+        continue;
       if (
         before !== undefined &&
         before === after &&
@@ -76,6 +85,7 @@ export function transitionRevisionWork(
           after,
         );
         carried.add(logicalKey);
+        if (own !== undefined) carried.add(row.work_key);
       }
     }
     const live = db.prepare("SELECT id FROM revision_work WHERE project_id=?").all(input.projectId);

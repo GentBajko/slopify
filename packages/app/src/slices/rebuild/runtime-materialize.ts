@@ -183,7 +183,11 @@ function futureKey(recipe: ResolvedWorkRecipe): string {
   if (recipe.input.kind === "tts") return `audio:${recipe.input.segment}:future`;
   if (recipe.key.startsWith("research:chapter:")) return "research:planner";
   if (recipe.key === "article:continuation") return "article:body";
-  // Every step of the shorts unfolds from the pick's answer, and is admitted with it.
+  // A short's images and render unfold from its image prompts, admitted with them: under the
+  // pick on a first run, or on their own when one short is made again and the pick is kept.
+  // The prompts unfold from the pick's answer.
+  const clip = /^(shorts:\d+):(?:image:\d+|render)$/.exec(recipe.key);
+  if (clip?.[1] !== undefined) return `${clip[1]}:prompts`;
   if (recipe.key.startsWith("shorts:")) return "shorts:pick";
   return recipe.key;
 }

@@ -12,6 +12,9 @@ import { readFontMetadata } from "./sfnt.js";
 export const fontIdPattern = /^(?:default|(?:system|uploaded)-[a-f0-9]{64})$/;
 const uploadName = /^(uploaded-[a-f0-9]{64})\.(ttf|otf)$/;
 const bundled = fileURLToPath(new URL("../../assets/fonts/Barlow-Regular.ttf", import.meta.url));
+// Barlow's own Bold face, for text drawn bold in the bundled font (the shorts' captions);
+// not listed as a font of its own.
+const bundledBold = fileURLToPath(new URL("../../assets/fonts/Barlow-Bold.ttf", import.meta.url));
 
 export async function listFonts(paths: Paths): Promise<readonly FontSummary[]> {
   const [defaultFont, uploaded, system] = await Promise.all([
@@ -31,6 +34,26 @@ export async function resolveFont(paths: Paths, id: string): Promise<ResolvedFon
   const font = fonts.find((font) => font.id === id);
   if (font === undefined) throw missingFont();
   return font;
+}
+
+// The font to draw bold text in: for the bundled Barlow its real Bold face, so the letters
+// are drawn as designed; any other font is the font itself, which libass emboldens.
+export async function resolveBoldFont(paths: Paths, id: string): Promise<ResolvedFont> {
+  if (id !== "default") return resolveFont(paths, id);
+  const bytes = await readFontFile(bundledBold);
+  const face = bytes === undefined ? undefined : readFontMetadata(bytes)?.[0];
+  if (face === undefined)
+    throw new Error("Slopify's bundled Barlow Bold font is missing or invalid. Reinstall Slopify.");
+  return {
+    id: "default",
+    name: face.name,
+    family: face.family,
+    source: "bundled",
+    path: bundledBold,
+    extension: ".ttf",
+    assName: face.assName,
+    faceIndex: 0,
+  };
 }
 
 export function missingFont(): Error {

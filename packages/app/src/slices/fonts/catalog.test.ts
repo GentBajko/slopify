@@ -1,9 +1,10 @@
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { layout } from "../../kernel/paths.js";
-import { listFonts, resolveFont } from "./catalog.js";
+import { listFonts, resolveBoldFont, resolveFont } from "./catalog.js";
 import { scanFontDirectories, systemFontDirectories } from "./discovery.js";
 import { uploadFont } from "./upload.js";
 
@@ -39,6 +40,34 @@ describe("font catalog", () => {
       family: "Barlow",
       source: "bundled",
     });
+  });
+
+  // Listing scans the installed fonts too, like the test above.
+  it("draws bold text in the bundled Barlow's own Bold face, and any other font as itself", {
+    timeout: 30_000,
+  }, async () => {
+    const paths = await fresh();
+    const bold = await resolveBoldFont(paths, "default");
+    expect(bold).toMatchObject({
+      id: "default",
+      source: "bundled",
+      family: "Barlow",
+      assName: "Barlow Bold",
+      extension: ".ttf",
+    });
+    // The file recorded in assets/fonts/SOURCE.txt, byte for byte.
+    expect(
+      createHash("sha256")
+        .update(await readFile(bold.path))
+        .digest("hex"),
+    ).toBe("84e6a4d61e7c3e21f3c50ea6a4f7e5303a3467864c038be6ea3759bab8d547f9");
+    // Not a font of its own in the list.
+    expect((await listFonts(paths)).filter((font) => font.source === "bundled")).toHaveLength(1);
+    const upload = await uploadFont(paths, { filename: "Mine.ttf", content: await regular() });
+    if (!upload.ok) throw new Error("Expected the upload");
+    expect(await resolveBoldFont(paths, upload.font.id)).toEqual(
+      await resolveFont(paths, upload.font.id),
+    );
   });
 
   it("stores validated uploads under a content hash and resolves the same bytes", async () => {

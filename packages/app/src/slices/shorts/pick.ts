@@ -21,7 +21,8 @@ export interface PickBrief {
 }
 
 export interface ShortPick {
-  // 1-based, in the order the clips play in the video.
+  // 1-based. A fresh pick numbers its clips in the order they play; a pick made again keeps
+  // the number of every clip it picks again (`keepNumbers`), so that clip's work is reused.
   readonly number: number;
   // The sentence numbers the clip runs from and to, inclusive.
   readonly first: number;
@@ -35,6 +36,11 @@ export interface ShortPick {
   readonly why: string;
   // What is said in the clip, which the image prompts are written from.
   readonly text: string;
+  // The pick's regeneration token when this clip was first picked (null: none yet). The
+  // clip's prompts, images and render carry it instead of the pick's current token, so a
+  // pick made again that lands on the same sentences reuses them. Absent on picks saved
+  // before it existed, which carry the current token as they always did.
+  readonly seed?: string | null | undefined;
 }
 
 export const shortPickSchema = z.object({
@@ -48,7 +54,69 @@ export const shortPickSchema = z.object({
   hashtags: z.array(z.string()),
   why: z.string(),
   text: z.string(),
+  seed: z.string().nullable().optional(),
 });
+
+// A clip keeps the number, title, description, hashtags and seed it had when a pick made
+// again chooses exactly the same sentences, as long as that number is still in range; the
+// other clips take the free numbers in the order they play. Everything after the pick is
+// keyed by number, so an unchanged clip plans the same work under the same keys.
+export function keepNumbers(
+  picks: readonly ShortPick[],
+  previous: readonly ShortPick[],
+  seed: string | null,
+): readonly ShortPick[] {
+  const taken = new Set<number>();
+  const kept = new Map<ShortPick, ShortPick>();
+  for (const pick of picks) {
+    const before = previous.find(
+      (one) =>
+        one.first === pick.first &&
+        one.last === pick.last &&
+        one.seed !== undefined &&
+        one.number <= picks.length &&
+        !taken.has(one.number),
+    );
+    if (before === undefined) continue;
+    taken.add(before.number);
+    kept.set(pick, { ...before, start: pick.start, end: pick.end, text: pick.text });
+  }
+  const free = Array.from({ length: picks.length }, (_value, at) => at + 1).filter(
+    (number) => !taken.has(number),
+  );
+  return picks
+    .map((pick) => kept.get(pick) ?? { ...pick, number: free.shift() ?? pick.number, seed })
+    .toSorted((left, right) => left.number - right.number);
+}
+
+// ceiling: a clip opens a quarter second before its first word and closes 0.4 s after its
+// last, so the first consonant and the last breath are kept; never past halfway to the
+// neighbouring sentence, so a clip holds nothing of the words around it.
+const leadSeconds = 0.25;
+const tailSeconds = 0.4;
+
+// Where a clip of sentences `first` to `last` (1-based, inclusive) starts and ends.
+export function clipBounds(
+  sentences: readonly { readonly start: number; readonly end: number }[],
+  first: number,
+  last: number,
+  durationSeconds: number,
+): { readonly start: number; readonly end: number } | undefined {
+  const opening = sentences[first - 1];
+  const closing = sentences[last - 1];
+  if (opening === undefined || closing === undefined || first > last) return undefined;
+  const before = sentences[first - 2]?.end ?? 0;
+  const after = sentences[last]?.start ?? durationSeconds;
+  const start = Math.max(
+    0,
+    opening.start - Math.max(0, Math.min(leadSeconds, (opening.start - before) / 2)),
+  );
+  const end = Math.min(
+    durationSeconds,
+    closing.end + Math.max(0, Math.min(tailSeconds, (after - closing.end) / 2)),
+  );
+  return { start: round(start), end: round(end) };
+}
 
 export function pickMessages(brief: PickBrief): readonly Message[] {
   const plural = brief.count === 1 ? "short" : "shorts";
@@ -138,11 +206,6 @@ export interface PickLimits {
   readonly durationSeconds: number;
 }
 
-// ceiling: a clip opens a quarter second before its first word and closes 0.4 s after its
-// last, so the first consonant and the last breath are kept; never past halfway to the
-// neighbouring sentence, so a clip holds nothing of the words around it.
-const leadSeconds = 0.25;
-const tailSeconds = 0.4;
 // Timing noise: the length rules are checked to the hundredth of a second.
 const tolerance = 0.01;
 
@@ -180,19 +243,9 @@ export function checkPicks(
       );
       continue;
     }
-    const opening = sentences[first - 1];
-    const closing = sentences[last - 1];
-    if (opening === undefined || closing === undefined) continue;
-    const before = sentences[first - 2]?.end ?? 0;
-    const after = sentences[last]?.start ?? limits.durationSeconds;
-    const start = Math.max(
-      0,
-      opening.start - Math.max(0, Math.min(leadSeconds, (opening.start - before) / 2)),
-    );
-    const end = Math.min(
-      limits.durationSeconds,
-      closing.end + Math.max(0, Math.min(tailSeconds, (after - closing.end) / 2)),
-    );
+    const bounds = clipBounds(sentences, first, last, limits.durationSeconds);
+    if (bounds === undefined) continue;
+    const { start, end } = bounds;
     const seconds = end - start;
     if (seconds < limits.minSeconds - tolerance || seconds > limits.maxSeconds + tolerance) {
       problems.push(
@@ -265,8 +318,8 @@ export function checkPicks(
 export function noPicksMessage(problems: readonly string[], limits: PickLimits): string {
   const shortVideo = limits.durationSeconds < limits.minSeconds;
   if (shortVideo)
-    return `The narration is ${String(Math.round(limits.durationSeconds))} seconds long, shorter than the ${String(limits.minSeconds)}-second minimum for a short, so there is nothing to cut. Lower the shortest length in Edit project → Prompts → Shorts, then Retry stage.`;
-  return `The AI model didn't pick any clip Slopify could use as a short, twice (${problems[0] ?? "no clips were listed"}). Retry stage; if it keeps happening, widen the length range in Edit project → Prompts → Shorts, or choose another model in Edit project → Providers.`;
+    return `The narration is ${String(Math.round(limits.durationSeconds))} seconds long, shorter than the ${String(limits.minSeconds)}-second minimum for a short, so there is nothing to cut. Lower the shortest length in Edit project → Shorts, then Retry stage.`;
+  return `The AI model didn't pick any clip Slopify could use as a short, twice (${problems[0] ?? "no clips were listed"}). Retry stage; if it keeps happening, widen the length range in Edit project → Shorts, or choose another model in Edit project → Providers.`;
 }
 
 function round(seconds: number): number {

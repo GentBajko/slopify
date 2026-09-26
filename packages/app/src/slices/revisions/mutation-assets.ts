@@ -34,6 +34,7 @@ export function bindUpload(
       ...content,
       narrationOverrides: { ...content.narrationOverrides, [to.key]: { kind: "asset", assetId } },
     };
+  if (to.kind === "shortsMusic") return { ...content, shortsMusic: assetId };
   const image = content.imageDefinitions[to.imageKey];
   if (image === undefined) throw new Error("Validated image destination disappeared.");
   return {
@@ -60,6 +61,12 @@ export function validateUploads(deps: RevisionDeps, edit: RevisionEdit): readonl
         field,
         message:
           "This section is off or not set to use your own file. Change the section's setting first, then add the file.",
+      });
+    if (to.kind === "shortsMusic" && edit.config.shorts?.enabled !== true)
+      fields.push({
+        field,
+        message:
+          "Background music is only used by the shorts. Turn Shorts on in Edit project → Shorts, then add the music.",
       });
     const destination = JSON.stringify(to);
     if (staged.has(upload.stagedFileId) || destinations.has(destination))
@@ -163,6 +170,22 @@ export function validateAssetReferences(
         message: "This file cannot be used in this section. Choose a file of the right kind.",
       });
   }
+  // The shorts' music is uploaded with this edit, or was this project's music before.
+  const music = content.shortsMusic;
+  if (
+    music !== undefined &&
+    !prepared.some((row) => row.id === music && row.projectId === projectId) &&
+    deps.db
+      .prepare(
+        "SELECT 1 FROM project_revisions WHERE project_id=? AND json_extract(content,'$.shortsMusic')=? LIMIT 1",
+      )
+      .get(projectId, music) === undefined
+  )
+    fields.push({
+      field: "content.shortsMusic",
+      message:
+        "This music file does not belong to this project. Reload the page and choose the music again.",
+    });
   return fields;
 }
 export async function measureAudio(

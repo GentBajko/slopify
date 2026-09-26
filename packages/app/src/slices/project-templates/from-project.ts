@@ -11,6 +11,7 @@ import type { PlayDraftDocument } from "../play-drafts/model.js";
 import { requestHash } from "../play-drafts/repo.js";
 import type { ProjectRevision } from "../revisions/model.js";
 import { currentRevisionId, revisionById } from "../revisions/repo.js";
+import { shortsExtrasForm } from "../shorts/model.js";
 import type { ProjectTemplate, TemplateDeps, TemplateResult } from "./model.js";
 import { createTemplate, readTemplate } from "./service.js";
 
@@ -182,6 +183,7 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
               maxSeconds: String(config.shorts.maxSeconds),
               prompt: config.shorts.prompt ?? "",
               imagePrompt: config.shorts.imagePrompt ?? "",
+              ...shortsExtrasForm(config.shorts),
             },
           }),
       imagePrompts,

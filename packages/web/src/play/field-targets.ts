@@ -5,6 +5,9 @@ export function focusPlayField(root: HTMLElement, field: string): boolean {
     (element) => element.dataset.playField === field,
   );
   if (!target || target.hasAttribute("disabled")) return false;
+  // A field inside a closed disclosure (More shorts options) is shown before it is focused.
+  const disclosure = target.closest("details");
+  if (disclosure !== null && !disclosure.open) disclosure.open = true;
   target.focus();
   target.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "instant" });
   return document.activeElement === target;

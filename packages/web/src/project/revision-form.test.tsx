@@ -1,10 +1,12 @@
+import type { RevisionView } from "@app/slices/revisions/model.js";
 import { useQueryClient } from "@tanstack/react-query";
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { keys } from "@/queries";
 import { jsonAnswer, openEditSection, renderApp, testDeps } from "@/test-app";
+import { response, staged } from "./revision-editor-test-fixtures.js";
 import { revisionView } from "./revision-fixture.js";
 import { RevisionForm } from "./revision-form.js";
 import { formOfRevision } from "./revision-form-state.js";
@@ -482,49 +484,72 @@ it("switches the YouTube description on in Prompts and freezes or drops its prom
   expect(latest.config.youtubeDescription).toBe(false);
 });
 
-it("switches Shorts on in Prompts, sets its numbers and prompts, and asks to make them again", async () => {
-  const user = userEvent.setup();
+// A project whose shorts were picked: two clips over ten sentences of ten seconds each.
+function shortsView() {
   const base = revisionView();
-  const view = {
+  const sentences = Array.from({ length: 10 }, (_value, at) => ({
+    start: at * 10,
+    end: at * 10 + 9.5,
+    text: `Sentence ${String(at + 1)}.`,
+  }));
+  const clip = (number: number, first: number, last: number) => ({
+    number,
+    first,
+    last,
+    start: (first - 1) * 10 - 0.25,
+    end: (last - 1) * 10 + 9.75,
+    title: `Short ${String(number)} title`,
+    description: "One line.",
+    hashtags: ["#One"],
+    why: "",
+    text: "Said.",
+    seed: null,
+  });
+  return {
     ...base,
     revision: {
       ...base.revision,
       config: {
         ...base.revision.config,
         sources: { ...base.revision.config.sources, audio: "provide" as const },
-        shorts: { enabled: true, count: 3, minSeconds: 60, maxSeconds: 120 },
+        shorts: { enabled: true, count: 2, minSeconds: 20, maxSeconds: 40 },
       },
     },
-    outputs: [
+    pieces: [
       {
-        recordId: "shorts",
+        recordId: "pick",
         publicationId: null,
         selected: true,
         available: true,
-        slot: "video:shorts",
-        workKey: "shorts:pick",
-        assetId: "shorts",
-        fingerprint: "pick",
-        state: "ready" as const,
-        output: {
-          id: "shorts",
-          projectId: "p1",
-          stageKind: "video" as const,
-          role: "shorts" as const,
-          path: "shorts.json",
-          originalFilename: null,
-          bytes: 10,
-          durationMs: null,
-          meta: {},
-          createdAt: "2026-09-03T00:00:00.000Z",
+        key: "shorts:pick",
+        stageKind: "video" as const,
+        assetId: null,
+        fingerprint: "pick-fingerprint",
+        piece: {
+          id: "pick",
+          stageId: "s-video",
+          kind: "article_written" as const,
+          idx: 10000,
+          state: "done" as const,
+          payload: JSON.stringify({
+            shorts: [clip(1, 2, 4), clip(2, 7, 9)],
+            durationSeconds: 100,
+            sentences,
+          }),
         },
       },
     ],
   };
-  let latest = formOfRevision(view);
+}
+
+function mountShorts(
+  view: RevisionView,
+  extra: Readonly<Record<string, (request: Request) => Promise<Response> | Response>> = {},
+) {
+  const state = { latest: formOfRevision(view) };
   function Cut(): import("react").ReactElement {
     const [edit, setEdit] = useState(formOfRevision(view));
-    latest = edit;
+    state.latest = edit;
     return (
       <RevisionForm view={view} edit={edit} onChange={setEdit} onPending={() => {}} fields={[]} />
     );
@@ -547,25 +572,125 @@ it("switches Shorts on in Prompts, sets its numbers and prompts, and asks to mak
         ],
       }),
       "GET /api/entries": jsonAnswer({ entries: [] }),
+      ...extra,
     }),
   );
-  await openEditSection("Prompts");
+  return state;
+}
+
+it("sets the Shorts in their own section: numbers, prompts and the more options", async () => {
+  const user = userEvent.setup();
+  const state = mountShorts(shortsView());
+  await openEditSection("Shorts");
   const count = screen.getByRole<HTMLInputElement>("textbox", { name: "How many shorts" });
-  expect(count.value).toBe("3");
+  expect(count.value).toBe("2");
   await user.clear(count);
   await user.type(count, "5");
-  expect(latest.config.shorts?.count).toBe(5);
+  expect(state.latest.config.shorts?.count).toBe(5);
   await screen.findByRole("option", { name: "Hooks" });
   await user.selectOptions(
     screen.getByRole<HTMLSelectElement>("combobox", { name: "Shorts prompt" }),
     "Hooks",
   );
-  expect(latest.config.shorts?.prompt).toBe("Hooks");
-  expect(latest.content.promptTemplates.shorts).toBe("Pick the boldest claims.");
-  await user.click(screen.getByRole("button", { name: "Make the shorts again after review" }));
-  expect(latest.regenerate).toEqual(["shorts:pick"]);
-  await user.click(screen.getByRole("button", { name: "Keep the current shorts" }));
-  expect(latest.regenerate).toEqual([]);
-  await user.click(screen.getByRole("checkbox", { name: /Shorts/ }));
-  expect(latest.config.shorts).toMatchObject({ enabled: false, count: 5, prompt: "Hooks" });
+  expect(state.latest.config.shorts?.prompt).toBe("Hooks");
+  expect(state.latest.content.promptTemplates.shorts).toBe("Pick the boldest claims.");
+  // A project saved before the title, speed, music and link reads as all of them unset.
+  const more = screen.getByText(/More shorts options/);
+  expect(more.textContent).toBe("More shorts options · No title on screen");
+  await user.click(more);
+  await user.click(screen.getByRole("checkbox", { name: /Title on screen/ }));
+  await user.selectOptions(screen.getByRole("combobox", { name: "Speed" }), "1.15");
+  await user.type(screen.getByRole("textbox", { name: /Music volume/ }), "30");
+  await user.type(
+    screen.getByRole("textbox", { name: "Full video link" }),
+    "https://youtu.be/full",
+  );
+  expect(state.latest.config.shorts).toMatchObject({
+    count: 5,
+    titleOnScreen: true,
+    speed: 1.15,
+    musicVolume: 30,
+    fullVideoLink: "https://youtu.be/full",
+  });
+  expect(more.textContent).toBe(
+    "More shorts options · Title on screen · 1.15× · Music at 30% · Full video linked",
+  );
+  await user.click(screen.getByRole("checkbox", { name: /^Shorts/ }));
+  expect(state.latest.config.shorts).toMatchObject({ enabled: false, count: 5, prompt: "Hooks" });
+});
+
+it("moves a picked clip by a sentence, or to a range of one's own, and says when it can't", async () => {
+  const user = userEvent.setup();
+  const state = mountShorts(shortsView());
+  await openEditSection("Shorts");
+  const first = screen.getByRole("listitem", { name: "Short 1 · Short 1 title" });
+  expect(within(first).getByText("Starts: “Sentence 2.”")).not.toBeNull();
+  expect(within(first).getByText("Ends: “Sentence 4.”")).not.toBeNull();
+  await user.click(within(first).getByRole("button", { name: "Later end of short 1" }));
+  expect(state.latest.content.shortsRanges).toEqual({
+    "1": { first: 2, last: 5, pick: "pick-fingerprint" },
+  });
+  expect(within(first).getByText("Ends: “Sentence 5.”")).not.toBeNull();
+  // Four sentences are 40 s, the longest allowed; one more is too long, and it says so.
+  await user.click(within(first).getByRole("button", { name: "Later end of short 1" }));
+  expect(within(first).getByRole("alert").textContent).toBe(
+    "Short 1 would last 50 seconds, longer than the 40-second maximum. Start it later or end it earlier.",
+  );
+  await user.click(within(first).getByRole("button", { name: "Use my own range" }));
+  await user.selectOptions(within(first).getByRole("combobox", { name: "Start sentence" }), "3");
+  await user.selectOptions(within(first).getByRole("combobox", { name: "End sentence" }), "5");
+  expect(state.latest.content.shortsRanges).toEqual({
+    "1": { first: 3, last: 5, pick: "pick-fingerprint" },
+  });
+  expect(within(first).queryByRole("alert")).toBeNull();
+  // Back to the model's own clip, and no range is kept.
+  await user.click(within(first).getByRole("button", { name: "Back to the AI's choice" }));
+  expect(state.latest.content.shortsRanges).toBeUndefined();
+});
+
+it("makes one short again, or picks different moments, through the edit's regenerate list", async () => {
+  const user = userEvent.setup();
+  const view = shortsView();
+  const state = mountShorts({
+    ...view,
+    revision: {
+      ...view.revision,
+      content: {
+        ...view.revision.content,
+        shortsRanges: { "2": { first: 6, last: 9, pick: "pick-fingerprint" } },
+      },
+    },
+  });
+  await openEditSection("Shorts");
+  const second = screen.getByRole("listitem", { name: "Short 2 · Short 2 title" });
+  await user.click(within(second).getByRole("button", { name: "Make this short again" }));
+  expect(state.latest.regenerate).toEqual(["shorts:2"]);
+  await user.click(within(second).getByRole("button", { name: "Keep this short" }));
+  expect(state.latest.regenerate).toEqual([]);
+  await user.click(screen.getByRole("button", { name: "Pick different moments" }));
+  expect(state.latest.regenerate).toEqual(["shorts:pick"]);
+  // Ranges set on these clips would not apply to the new ones.
+  expect(state.latest.content.shortsRanges).toBeUndefined();
+  await user.click(screen.getByRole("button", { name: "Keep the current moments" }));
+  expect(state.latest.regenerate).toEqual([]);
+});
+
+it("uploads background music for the shorts and removes it again", async () => {
+  const state = mountShorts(shortsView(), {
+    "POST /api/staging/audio": async () => response({ ...staged, stageKind: "audio" }),
+  });
+  await openEditSection("Shorts");
+  await userEvent.click(screen.getByText(/More shorts options/));
+  fireEvent.change(screen.getByLabelText(/Background music \(optional\)/), {
+    target: { files: [new File(["music"], "loop.mp3", { type: "audio/mpeg" })] },
+  });
+  await waitFor(() =>
+    expect(state.latest.uploads).toEqual([
+      { stagedFileId: "upload1", destination: { kind: "shortsMusic" } },
+    ]),
+  );
+  expect(screen.getByLabelText("Replace the background music")).not.toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "Remove the music" }));
+  expect(state.latest.uploads).toEqual([]);
+  expect(state.latest.content.shortsMusic).toBeUndefined();
 });

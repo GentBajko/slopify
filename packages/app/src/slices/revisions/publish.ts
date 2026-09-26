@@ -17,6 +17,7 @@ import {
   insertManifestOutput,
   insertManifestPiece,
   outputsForRevision,
+  piecesForRevision,
   revisionById,
   selectOutputRecord,
   selectPieceRecord,
@@ -29,6 +30,10 @@ export function commitRevisionOutputs(
   publication: PublicationRef,
   outputs: readonly PreparedOutput[],
   pieces: readonly PreparedPiece[],
+  // Output slots and piece keys this result makes obsolete, deselected in every revision
+  // it lands in: the shorts past a pick's new count, a short's images past its new number.
+  // Their files stay in history and leave the project's current outputs.
+  retired?: (key: string) => boolean,
 ): PublicationResult {
   const assets = [
     ...outputs.map((row) => row.asset),
@@ -105,6 +110,24 @@ export function commitRevisionOutputs(
               .prepare("UPDATE revision_outputs SET selected=0 WHERE revision_id=? AND slot=?")
               .run(revision.id, slot);
           }
+        if (selected && retired !== undefined) {
+          for (const slot of new Set(before.filter((row) => row.selected).map((row) => row.slot)))
+            if (retired(slot))
+              deps.db
+                .prepare("UPDATE revision_outputs SET selected=0 WHERE revision_id=? AND slot=?")
+                .run(revision.id, slot);
+          for (const key of new Set(
+            piecesForRevision(deps.db, revision.projectId, revision.id)
+              .filter((row) => row.selected)
+              .map((row) => row.key),
+          ))
+            if (retired(key))
+              deps.db
+                .prepare(
+                  "UPDATE revision_pieces SET selected=0 WHERE revision_id=? AND piece_key=?",
+                )
+                .run(revision.id, key);
+        }
         for (const output of outputs) {
           const row: ManifestOutput = {
             slot: output.slot,

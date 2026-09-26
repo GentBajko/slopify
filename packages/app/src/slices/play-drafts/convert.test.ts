@@ -417,3 +417,60 @@ it("carries the Shorts settings only with narration on, refusing bad numbers in 
     h.close();
   }
 });
+
+it("carries the title, link, music volume and speed of the shorts, or leaves them out", () => {
+  const h = draftFixture();
+  try {
+    const shorts = {
+      enabled: true,
+      count: "2",
+      minSeconds: "45",
+      maxSeconds: "90",
+      prompt: "",
+      imagePrompt: "",
+    };
+    const form = (extra: object) => ({ ...h.document.form, shorts: { ...shorts, ...extra } });
+    const converted = convert({
+      ...h.document,
+      form: form({
+        titleOnScreen: true,
+        fullVideoLink: " https://youtu.be/abc ",
+        musicVolume: "20",
+        speed: "1.10",
+      }),
+    });
+    expect(converted.ok && converted.draft.shorts).toEqual({
+      enabled: true,
+      count: 2,
+      minSeconds: 45,
+      maxSeconds: 90,
+      titleOnScreen: true,
+      fullVideoLink: "https://youtu.be/abc",
+      musicVolume: 20,
+      speed: 1.1,
+    });
+    // A draft saved before these settings, or with them blank, is what it always was.
+    const before = convert({ ...h.document, form: form({ fullVideoLink: "", speed: "" }) });
+    expect(before.ok && before.draft.shorts).toEqual({
+      enabled: true,
+      count: 2,
+      minSeconds: 45,
+      maxSeconds: 90,
+    });
+    expect(
+      convert({
+        ...h.document,
+        form: form({ speed: "fast", musicVolume: "120", fullVideoLink: "my video" }),
+      }),
+    ).toMatchObject({
+      ok: false,
+      fields: [
+        { field: "shorts.speed" },
+        { field: "shorts.musicVolume" },
+        { field: "shorts.fullVideoLink" },
+      ],
+    });
+  } finally {
+    h.close();
+  }
+});

@@ -35,10 +35,14 @@ export function RevisionForm(
 ): import("react").ReactElement {
   const { view, edit, onChange, onPending, fields } = props;
   const formId = useId();
-  const [section, setSection] = useState<EditSection>("inputs");
-  const [pending, setPending] = useState({ font: false, content: false });
+  const [section, setSection] = useState<EditSection>(props.focus?.section ?? "inputs");
+  // A change asked for from the project page opens the section it belongs to.
   useEffect(() => {
-    onPending(pending.font || pending.content);
+    if (props.focus !== undefined) setSection(props.focus.section);
+  }, [props.focus]);
+  const [pending, setPending] = useState({ font: false, content: false, music: false });
+  useEffect(() => {
+    onPending(pending.font || pending.content || pending.music);
   }, [onPending, pending]);
   const markFont = useCallback((active: boolean): void => {
     setPending((current) => (current.font === active ? current : { ...current, font: active }));
@@ -47,6 +51,9 @@ export function RevisionForm(
     setPending((current) =>
       current.content === active ? current : { ...current, content: active },
     );
+  }, []);
+  const markMusic = useCallback((active: boolean): void => {
+    setPending((current) => (current.music === active ? current : { ...current, music: active }));
   }, []);
   const { api } = useApp();
   const providers = useQuery(providersQuery(api));
@@ -70,6 +77,15 @@ export function RevisionForm(
     { id: "article", label: "Article", ...(edit.content.articleEdited ? { badge: "edited" } : {}) },
     { id: "providers", label: "Providers" },
     { id: "prompts", label: "Prompts" },
+    ...(config.sources.audio !== "off" || config.shorts?.enabled === true
+      ? [
+          {
+            id: "shorts" as const,
+            label: "Shorts",
+            ...(config.shorts?.enabled ? { badge: "on" } : {}),
+          },
+        ]
+      : []),
     { id: "subtitles", label: "Subtitles" },
     { id: "images", label: "Images", badge: String(edit.content.imageOrder.length) },
     ...(config.sources.audio === "generate"
@@ -496,18 +512,21 @@ export function RevisionForm(
             problem={problem}
             onChange={onChange}
           />
+          <RevisionPrompts
+            edit={edit}
+            prompts={prompts.data?.prompts ?? []}
+            entries={entries.data?.entries ?? []}
+            onChange={onChange}
+          />
+        </section>
+        <section aria-label="Shorts" hidden={current !== "shorts"} className={panel("shorts")}>
           <RevisionShorts
             edit={edit}
             view={view}
             prompts={prompts.data?.prompts ?? []}
             problem={problem}
             onChange={onChange}
-          />
-          <RevisionPrompts
-            edit={edit}
-            prompts={prompts.data?.prompts ?? []}
-            entries={entries.data?.entries ?? []}
-            onChange={onChange}
+            onPending={markMusic}
           />
         </section>
         <section

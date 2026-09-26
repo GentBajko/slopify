@@ -104,6 +104,10 @@ export const runDraftSchema = z.object({
       maxSeconds: z.number(),
       prompt: z.string().optional(),
       imagePrompt: z.string().optional(),
+      titleOnScreen: z.boolean().optional(),
+      fullVideoLink: z.string().optional(),
+      musicVolume: z.number().optional(),
+      speed: z.number().optional(),
     })
     .optional(),
 });

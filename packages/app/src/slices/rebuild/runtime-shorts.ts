@@ -5,27 +5,34 @@ import type { StageContext } from "../../kernel/runner/index.js";
 import type { LlmCall, StageProviders } from "../../kernel/runner/providers.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
 import { usesShorts } from "../admission/rules.js";
-import { resolveFont } from "../fonts/index.js";
+import { resolveBoldFont } from "../fonts/index.js";
 import type { RevisionView } from "../revisions/model.js";
 import type { PreparedOutput } from "../revisions/publication-model.js";
 import { clipWords } from "../shorts/captions.js";
-import { defaultShortsPrompt, shortImageCount } from "../shorts/model.js";
+import { effectiveClips, pickedShortsOf } from "../shorts/clips.js";
+import {
+  defaultShortsPrompt,
+  musicVolumeOf,
+  shortImageCount,
+  shortsSpeedOf,
+} from "../shorts/model.js";
 import {
   checkPicks,
+  keepNumbers,
   noPicksMessage,
   type PickBrief,
   type PickLimits,
   pickMessages,
   pickRetryMessages,
   type ShortPick,
-  shortPickSchema,
 } from "../shorts/pick.js";
 import { checkImagePrompts } from "../shorts/prompts.js";
-import { renderShort } from "../shorts/render.js";
+import { renderShort, type ShortMusic } from "../shorts/render.js";
 import { allocateAsset, discardPreparedAssets, sealAsset, writeAsset } from "../storage/assets.js";
 import { outputPath, projectDir } from "../storage/layout.js";
 import { probeDurationMs } from "../video/ffmpeg.js";
 import { sentencesText, transcriptSentences } from "../youtube/transcript.js";
+import { shortsPickKey } from "./recipe-shorts.js";
 import type { ExportExecutionDeps } from "./runtime-export.js";
 import { type ExportSnapshot, exportSnapshot, revisionAudio } from "./runtime-export-inputs.js";
 import { savedCatalogue } from "./runtime-plan.js";
@@ -59,7 +66,7 @@ export async function executeShortsRecipe(
   const clip = savedClips(snapshot).find((one) => one.number === number);
   if (clip === undefined)
     throw new Error(
-      "The clip this short was cut from is no longer among the picked shorts. Use Make the shorts again in Edit project → Prompts → Shorts, then Retry stage.",
+      "The clip this short was cut from is no longer among the picked shorts. Use Pick different moments in Edit project → Shorts, then Retry stage.",
     );
   if (matched[2] === "prompts") return prompts(deps, context, providers, piece, snapshot, clip);
   if (matched[2] === "render") return render(deps, context, piece, snapshot, clip);
@@ -129,7 +136,16 @@ async function pick(
     if (again.ok && again.picks.length >= checked.picks.length) checked = again;
   }
   if (checked.picks.length === 0) throw new Error(noPicksMessage(checked.problems, limits));
-  const picks = checked.picks;
+  // A clip picked again with the same sentences keeps its number and seed, so its prompts,
+  // images and render are reused; the new ones carry this pick's token.
+  const previous = pickedShortsOf(
+    view.pieces.find((row) => row.key === shortsPickKey && row.selected)?.piece.payload,
+  );
+  const picks = keepNumbers(
+    checked.picks,
+    previous?.shorts ?? [],
+    view.revision.content.regenerationTokens[shortsPickKey] ?? null,
+  );
   await publishResult(
     deps,
     context,
@@ -140,14 +156,22 @@ async function pick(
         "shorts.json",
         JSON.stringify(
           {
-            shorts: picks.map(({ text: _text, ...clip }) => clip),
+            shorts: picks.map(({ text: _text, seed: _seed, ...clip }) => clip),
           },
           null,
           2,
         ),
       ],
     ]),
-    { shorts: picks, durationSeconds },
+    {
+      shorts: picks,
+      durationSeconds,
+      // The numbered transcript's times, which a range set by hand is measured against.
+      sentences: sentences.map(({ start, end, text }) => ({ start, end, text })),
+    },
+    null,
+    // The shorts past the new count, from a pick that made more.
+    (key) => Number(/^shorts:(\d+):/.exec(key)?.[1] ?? 0) > picks.length,
   );
   return "done";
 }
@@ -179,7 +203,17 @@ async function prompts(
   if (!answer.ok) return "held";
   const checked = checkImagePrompts(answer.value.text, count);
   if (!checked.ok) throw new Error(checked.reason);
-  await publishResult(deps, context, piece, [], { prompts: checked.prompts });
+  const images = new RegExp(`^shorts:${String(clip.number)}:image:(\\d+)$`);
+  await publishResult(
+    deps,
+    context,
+    piece,
+    [],
+    { prompts: checked.prompts },
+    null,
+    // The images past this count, from a longer clip made before.
+    (key) => Number(images.exec(key)?.[1] ?? 0) > count,
+  );
   return "done";
 }
 
@@ -208,6 +242,7 @@ async function image(
   );
   const output = preparedResult(deps, context, piece, "short_image", asset, null, {
     short: clip.number,
+    sentences: [clip.first, clip.last],
     index,
     prompt: input.prompt,
     provider: input.provider,
@@ -237,17 +272,21 @@ async function render(
       );
       if (row === undefined)
         throw new Error(
-          `Short ${String(clip.number)} is missing one of its images. Retry stage to make it again; if it keeps happening, use Make the shorts again in Edit project → Prompts → Shorts.`,
+          `Short ${String(clip.number)} is missing one of its images. Retry stage to make it again; if it keeps happening, use Make this short again in Edit project → Shorts.`,
         );
       return outputPath(deps.paths, context.work.projectId, row.output.path);
     });
   const words = clipWords(timingWords(deps, context, view), clip.start, clip.end);
   const timeline = await revisionAudio(deps, context, view);
-  const font = await resolveFont(deps.paths, config.subtitles?.fontId ?? "default");
+  // The bundled Barlow is drawn in its own Bold face; any other font is emboldened.
+  const font = await resolveBoldFont(deps.paths, config.subtitles?.fontId ?? "default");
+  const shorts = config.shorts;
+  const speed = shorts === undefined ? 1 : shortsSpeedOf(shorts);
+  const music = await backgroundMusic(deps, context, view);
   if (!context.maySubmit(piece.id)) return "held";
   const pending = allocateAsset(deps, context.work.projectId, "short.mp4");
   const prepared: PreparedOutput[] = [];
-  const seconds = clip.end - clip.start;
+  const seconds = (clip.end - clip.start) / speed;
   try {
     await renderShort({
       bin: deps.ffmpeg,
@@ -260,6 +299,9 @@ async function render(
       zoomPercent: config.zoomPercent,
       words,
       font,
+      ...(shorts?.titleOnScreen === true ? { title: clip.title } : {}),
+      speed,
+      music,
       output: pending.absolutePath,
       scratch: projectDir(deps.paths, context.work.projectId),
       signal: context.signal,
@@ -284,6 +326,7 @@ async function render(
     prepared.push(
       preparedResult(deps, context, piece, "short_video", asset, durationMs, {
         short: clip.number,
+        sentences: [clip.first, clip.last],
       }),
     );
     await publishResult(
@@ -303,22 +346,61 @@ async function render(
   }
 }
 
-// The clips the pick saved for this plan: the selected pick whose fingerprint is the one the
-// plan asks for.
+// The clips the pick saved for this plan, with any range set by hand in place: the
+// selected pick whose fingerprint is the one the plan asks for.
 function savedClips(snapshot: ExportSnapshot): readonly ShortPick[] {
-  const recipe = snapshot.plan.recipes.find((one) => one.key === "shorts:pick");
+  const recipe = snapshot.plan.recipes.find((one) => one.key === shortsPickKey);
   const row = snapshot.view.pieces.find(
     (one) =>
-      one.key === "shorts:pick" &&
+      one.key === shortsPickKey &&
       one.selected &&
       one.piece.state === "done" &&
       one.fingerprint === recipe?.fingerprint,
   );
-  if (row?.piece.payload === undefined || row.piece.payload === null) return [];
-  const parsed = z
-    .object({ shorts: z.array(shortPickSchema) })
-    .safeParse(JSON.parse(row.piece.payload));
-  return parsed.success ? parsed.data.shorts : [];
+  const picked = pickedShortsOf(row?.piece.payload);
+  const shorts = snapshot.view.revision.config.shorts;
+  if (picked === undefined || recipe === undefined || shorts === undefined) return [];
+  return effectiveClips(
+    picked,
+    snapshot.view.revision.content.shortsRanges,
+    recipe.fingerprint,
+    shorts,
+  );
+}
+
+// The project's background music for the shorts, checked readable before the render so a
+// bad file is named as the music rather than as a failed render.
+async function backgroundMusic(
+  deps: ExportExecutionDeps,
+  context: StageContext,
+  view: RevisionView,
+): Promise<ShortMusic | undefined> {
+  const assetId = view.revision.content.shortsMusic;
+  const shorts = view.revision.config.shorts;
+  if (assetId === undefined || shorts === undefined) return undefined;
+  const fix =
+    "Choose another file under Background music in Edit project → Shorts, or remove the music, then Retry stage.";
+  const row = z
+    .object({ path: z.string() })
+    .safeParse(
+      deps.db
+        .prepare("SELECT path FROM project_assets WHERE project_id=? AND id=?")
+        .get(context.work.projectId, assetId),
+    );
+  if (!row.success)
+    throw new Error(`The shorts' background music file is no longer in the project. ${fix}`);
+  const path = outputPath(deps.paths, context.work.projectId, row.data.path);
+  let durationMs: number;
+  try {
+    durationMs = await probeDurationMs(deps.ffmpeg, path, context.signal, deps.log);
+  } catch (error) {
+    context.signal.throwIfAborted();
+    throw new Error(
+      `The shorts' background music couldn't be read as audio (${error instanceof Error ? error.message : String(error)}). ${fix}`,
+    );
+  }
+  if (durationMs <= 0) throw new Error(`The shorts' background music file holds no sound. ${fix}`);
+  return { path, volume: musicVolumeOf(shorts) };
 }
 
 function timingWords(

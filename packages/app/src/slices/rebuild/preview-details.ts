@@ -4,6 +4,7 @@ import { motionStyleLabels } from "../admission/rules.js";
 import { documentThemeLabel } from "../document/model.js";
 import type { RevisionDeps, RevisionView } from "../revisions/model.js";
 import { getRevisionView } from "../revisions/view.js";
+import { musicVolumeOf, shortsSpeedOf } from "../shorts/model.js";
 import type { RebuildPreview } from "./model.js";
 import type { ResolvedWorkRecipe } from "./recipe-model.js";
 
@@ -81,7 +82,9 @@ export function previewDetails(
                 ? "Article"
                 : row.stage === "research"
                   ? "Research"
-                  : "Thumbnail prompt";
+                  : row.key.startsWith("shorts:")
+                    ? "Short image prompts"
+                    : "Thumbnail prompt";
       return [
         {
           key: row.key,
@@ -177,6 +180,32 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
   );
   add("Shorts prompt", before.shorts?.prompt, after.shorts?.prompt);
   add("Shorts image prompt", before.shorts?.imagePrompt, after.shorts?.imagePrompt);
+  add(
+    "Title on the shorts",
+    before.shorts === undefined ? undefined : before.shorts.titleOnScreen === true ? "On" : "Off",
+    after.shorts === undefined ? undefined : after.shorts.titleOnScreen === true ? "On" : "Off",
+  );
+  add(
+    "Shorts speed",
+    before.shorts === undefined ? undefined : `${shortsSpeedOf(before.shorts).toFixed(2)}×`,
+    after.shorts === undefined ? undefined : `${shortsSpeedOf(after.shorts).toFixed(2)}×`,
+  );
+  add(
+    "Shorts music",
+    old.shortsMusic === undefined ? "None" : "Uploaded file",
+    next.shortsMusic === undefined
+      ? "None"
+      : next.shortsMusic === old.shortsMusic
+        ? "Uploaded file"
+        : "New uploaded file",
+  );
+  add(
+    "Shorts music volume (%)",
+    before.shorts === undefined ? undefined : musicVolumeOf(before.shorts),
+    after.shorts === undefined ? undefined : musicVolumeOf(after.shorts),
+  );
+  add("Full video link", before.shorts?.fullVideoLink, after.shorts?.fullVideoLink);
+  add("Short ranges set by hand", old.shortsRanges, next.shortsRanges);
   add("Silence gap (seconds)", before.silenceGapSeconds, after.silenceGapSeconds);
   add("Silence at start and end (seconds)", before.edgeSilenceSeconds, after.edgeSilenceSeconds);
   add("Seconds per image", before.imageSeconds, after.imageSeconds);
