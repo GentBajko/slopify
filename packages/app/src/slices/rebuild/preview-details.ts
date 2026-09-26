@@ -1,7 +1,7 @@
 import { stageKinds } from "../../kernel/pipeline.js";
 import { sourceOf } from "../admission/model.js";
 import { motionStyleLabels } from "../admission/rules.js";
-import { documentThemeLabels, documentThemeOf } from "../document/model.js";
+import { documentThemeLabel } from "../document/model.js";
 import type { RevisionDeps, RevisionView } from "../revisions/model.js";
 import { getRevisionView } from "../revisions/view.js";
 import type { RebuildPreview } from "./model.js";
@@ -168,10 +168,17 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
   add("Intro", before.intro, after.intro);
   add("Outro", before.outro, after.outro);
   add("Subtitle settings", before.subtitles, after.subtitles);
+  const themeBefore = documentThemeLabel(before.document);
+  const themeAfter = documentThemeLabel(after.document);
+  // A Library theme saved again under the same name still changes the document.
   add(
     "Document theme",
-    documentThemeLabels[documentThemeOf(before.document)],
-    documentThemeLabels[documentThemeOf(after.document)],
+    themeBefore,
+    themeBefore === themeAfter &&
+      JSON.stringify(before.document?.custom?.values) !==
+        JSON.stringify(after.document?.custom?.values)
+      ? `${themeAfter} (updated settings)`
+      : themeAfter,
   );
   add("Article text", parent.articleMarkdown, view.articleMarkdown);
   add("Provided research", before.provided.research, after.provided.research);

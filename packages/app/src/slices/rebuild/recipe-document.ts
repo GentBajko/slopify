@@ -1,7 +1,6 @@
 import type { FingerprintValue } from "../../kernel/runner/work.js";
 import { sourceOf } from "../admission/model.js";
-import { documentThemeOf } from "../document/model.js";
-import { builtInTheme } from "../document/theme.js";
+import { resolvedDocumentTheme } from "../document/theme.js";
 import {
   type RecipeContext,
   type ResolvedWorkRecipe,
@@ -26,7 +25,7 @@ export function documentRecipes(
   if (sourceOf(config.sources, "document") !== "generate") return [];
   const notes = text.recipes.find((value) => value.key === "research:notes");
   const cover = thumbnail.find((value) => value.key === "thumbnail:image");
-  const theme = builtInTheme(documentThemeOf(config.document));
+  const theme = resolvedDocumentTheme(config.document);
   return [
     recipe(
       context,

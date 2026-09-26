@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { thinkingModes } from "../../kernel/ports/llm.js";
 import { checkpointStageSchema } from "../checkpoints/schema.js";
-import { documentThemes } from "../document/model.js";
+import { documentSettingsSchema } from "../document/theme-schema.js";
 import { chunkModes } from "../narration/chunk.js";
 import { subtitleConfigSchema } from "../subtitles/model.js";
 import { entryModes, formats, motionStyles, stageSources } from "./model.js";
@@ -78,7 +78,7 @@ export const runDraftSchema = z.object({
   motionStyle: z.enum(motionStyles).default(defaultMotionStyle),
   edgeSilenceSeconds: z.number().default(defaultEdgeSilenceSeconds),
   subtitles: subtitleConfigSchema.optional(),
-  document: z.object({ theme: z.enum(documentThemes) }).optional(),
+  document: documentSettingsSchema.optional(),
   youtubeDescription: z.boolean().optional(),
   descriptionPrompt: z.string().optional(),
 });

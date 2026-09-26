@@ -10,6 +10,7 @@ export const libraryTabs = [
   { to: "/prompts", label: "Prompts" },
   { to: "/entries", label: "Intros & Outros" },
   { to: "/templates", label: "Templates" },
+  { to: "/document-themes", label: "Documents" },
   { to: "/schedules", label: "Schedules" },
 ] as const;
 

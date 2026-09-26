@@ -22,6 +22,7 @@ import { actionRoutes } from "./actions.js";
 import { audioPreviewRoutes } from "./audio-preview.js";
 import { checkpointRoutes } from "./checkpoints.js";
 import { diagnosticsRoutes } from "./diagnostics.js";
+import { documentThemeRoutes } from "./document-themes.js";
 import { draftRoutes } from "./drafts.js";
 import { entryRoutes } from "./entries.js";
 import { fileRoutes } from "./files.js";
@@ -124,6 +125,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/fonts", fontsRoutes(deps))
       .route("/prompts", promptRoutes(deps))
       .route("/entries", entryRoutes(deps))
+      .route("/document-themes", documentThemeRoutes(deps))
       .route("/telemetry", telemetryRoutes(deps))
       .route("/usage", usageRoutes(deps))
       .route("/settings", settingsRoutes(deps))

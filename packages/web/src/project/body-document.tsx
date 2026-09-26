@@ -1,4 +1,4 @@
-import { documentThemeLabels, documentThemeOf } from "@app/slices/document/model.js";
+import { documentThemeLabel } from "@app/slices/document/model.js";
 import { ExternalLink } from "lucide-react";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
@@ -10,7 +10,7 @@ import { useOutputMedia } from "./revision-media.js";
 export function DocumentBody({ stage, project, outputs, actions, busy }: BodyProps) {
   const pdf = roleOf(outputsOf(outputs, stage), "document_pdf");
   const media = useOutputMedia(pdf);
-  const theme = documentThemeLabels[documentThemeOf(project.config.document)];
+  const theme = documentThemeLabel(project.config.document);
 
   return (
     <StageBody>

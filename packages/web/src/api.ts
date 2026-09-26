@@ -7,6 +7,8 @@ import type {
   Stage,
 } from "@app/slices/admission/model.js";
 import type { FieldError } from "@app/slices/admission/rules.js";
+import type { DocumentThemeName, SavedDocumentTheme } from "@app/slices/document/model.js";
+import type { DocumentTheme } from "@app/slices/document/theme.js";
 import type {
   Entry,
   EntryCategory,
@@ -121,6 +123,16 @@ export interface PromptListBody {
 // needs the body it is copying (`edge/http/entries.ts`).
 export interface EntryListBody {
   readonly entries: readonly Entry[];
+}
+// Library → Documents: the built-ins with their values (Duplicate starts from them) and
+// every saved theme (`edge/http/document-themes.ts`).
+export interface DocumentThemeListBody {
+  readonly builtIns: readonly {
+    readonly name: DocumentThemeName;
+    readonly label: string;
+    readonly values: DocumentTheme;
+  }[];
+  readonly themes: readonly SavedDocumentTheme[];
 }
 // What a save answers with: that a key is stored and the mask, never the value
 // (slices/settings/keys.ts).
@@ -364,6 +376,46 @@ export async function saveEntry(
       ? await api.client.entries.$post({ json })
       : await api.client.entries[":id"].$put({ param: { id }, json }),
   );
+}
+
+export async function listDocumentThemes(api: Api): Promise<DocumentThemeListBody> {
+  return read<DocumentThemeListBody>(await api.client["document-themes"].$get());
+}
+
+export async function saveDocumentTheme(
+  api: Api,
+  draft: { readonly name: string; readonly values: DocumentTheme },
+  id: string | undefined,
+): Promise<SaveResult<SavedDocumentTheme>> {
+  const json = { name: draft.name, values: draft.values };
+  return saved<SavedDocumentTheme>(
+    id === undefined
+      ? await api.client["document-themes"].$post({ json })
+      : await api.client["document-themes"][":id"].$put({ param: { id }, json }),
+  );
+}
+
+export async function removeDocumentTheme(api: Api, id: string): Promise<void> {
+  const response = await api.client["document-themes"][":id"].$delete({ param: { id } });
+  if (!response.ok) {
+    throw await failure(response);
+  }
+}
+
+// The sample article laid out with unsaved values, as a PDF for the editor's preview.
+export async function previewDocumentTheme(
+  api: Api,
+  values: DocumentTheme,
+  signal: AbortSignal,
+): Promise<Blob> {
+  const response = await api.client["document-themes"].preview.$post(
+    { json: { values: values as never } },
+    { init: { signal } },
+  );
+  if (!response.ok) {
+    throw await failure(response);
+  }
+  return await response.blob();
 }
 
 export async function removeEntry(api: Api, id: string): Promise<void> {

@@ -1,6 +1,6 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import type { ProjectSummary, RunConfig, Stage } from "@app/slices/admission/model.js";
-import { documentThemeLabels, documentThemeOf } from "@app/slices/document/model.js";
+import { documentThemeLabel } from "@app/slices/document/model.js";
 import type { Output } from "@app/slices/storage/model.js";
 
 // The one-line summary in the middle of a rundown row: "7 chapters researched · 41
@@ -127,7 +127,7 @@ function done(kind: StageKind, mine: readonly Output[], project: ProjectSummary)
         finalOutput(project.config) === "audio" ? "WAV · stereo · 48 kHz" : project.format,
       ]);
     case "document":
-      return `PDF · ${documentThemeLabels[documentThemeOf(project.config.document)]} theme`;
+      return `PDF · ${documentThemeLabel(project.config.document)} theme`;
   }
 }
 

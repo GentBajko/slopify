@@ -5,3 +5,7 @@ SHA-256: 18f9701b476f299e942cbb99c05ba3267d8341df2b6136e3aebbafad83b03b31
 
 fonts/
 Cinzel, SIL Open Font License 1.1: see fonts/SOURCE.txt and fonts/OFL.txt.
+
+sample-cover.jpg
+A plain gradient made with ImageMagick for the Library theme preview, standing in for a project's
+thumbnail. No third-party content.

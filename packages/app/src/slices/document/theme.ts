@@ -1,4 +1,9 @@
-import { type DocumentThemeName, defaultDocumentTheme } from "./model.js";
+import {
+  type DocumentSettings,
+  type DocumentThemeName,
+  defaultDocumentTheme,
+  documentThemeOf,
+} from "./model.js";
 
 // Everything about a generated PDF that isn't the article itself: page, fonts, sizes,
 // spacing, drop caps, the title, contents, sources and closing pages, and the running
@@ -310,6 +315,14 @@ const plain: DocumentThemeOverrides = {
 
 export function builtInTheme(name: DocumentThemeName): DocumentTheme {
   return name === "plain" ? resolveTheme(plain) : resolveTheme();
+}
+
+// The theme a project's document is drawn with: its copy of a Library theme, or a built-in.
+export function resolvedDocumentTheme(settings: DocumentSettings | undefined): DocumentTheme {
+  const custom = settings?.custom;
+  return custom === undefined
+    ? builtInTheme(documentThemeOf(settings))
+    : resolveTheme(custom.values as DocumentThemeOverrides);
 }
 
 export function defaultTheme(): DocumentTheme {

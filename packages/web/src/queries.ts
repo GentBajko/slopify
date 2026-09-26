@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import type { Api } from "./api.js";
 import {
+  listDocumentThemes,
   listEntries,
   listProjects,
   listPrompts,
@@ -39,6 +40,7 @@ export const keys = {
   voices: ["voices"] as const,
   prompts: ["prompts"] as const,
   entries: ["entries"] as const,
+  documentThemes: ["document-themes"] as const,
   settings: ["settings"] as const,
 };
 
@@ -76,6 +78,10 @@ export function promptsQuery(api: Api) {
 
 export function entriesQuery(api: Api) {
   return queryOptions({ queryKey: keys.entries, queryFn: () => listEntries(api) });
+}
+
+export function documentThemesQuery(api: Api) {
+  return queryOptions({ queryKey: keys.documentThemes, queryFn: () => listDocumentThemes(api) });
 }
 
 export function settingsQuery(api: Api) {

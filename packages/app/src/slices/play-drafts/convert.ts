@@ -103,7 +103,12 @@ export function toAdmissionDraft(input: {
     format: form.format,
     sources,
     ...(sources.document === "generate"
-      ? { document: { theme: documentThemeOf(form.document) } }
+      ? {
+          document: {
+            theme: documentThemeOf(form.document),
+            ...(form.document?.custom === undefined ? {} : { custom: form.document.custom }),
+          },
+        }
       : {}),
     llm: form.llm,
     audio:

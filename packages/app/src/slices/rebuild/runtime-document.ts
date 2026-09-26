@@ -2,9 +2,8 @@ import { readFileSync } from "node:fs";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
 import { readDocumentAssets } from "../document/fonts.js";
-import { documentThemeOf } from "../document/model.js";
 import { renderDocument } from "../document/render.js";
-import { builtInTheme } from "../document/theme.js";
+import { resolvedDocumentTheme } from "../document/theme.js";
 import type { RevisionView } from "../revisions/model.js";
 import { writeAsset } from "../storage/assets.js";
 import { outputPath } from "../storage/layout.js";
@@ -64,7 +63,7 @@ export async function executeDocumentRecipe(
     articleMarkdown: article,
     researchNotes: config.sources.research === "off" ? null : text("notes", "research:notes"),
     cover,
-    theme: builtInTheme(documentThemeOf(config.document)),
+    theme: resolvedDocumentTheme(config.document),
     writtenOn: deps.clock.now(),
     assets: readDocumentAssets(),
   });

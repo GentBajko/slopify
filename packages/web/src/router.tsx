@@ -10,6 +10,8 @@ import { Shell } from "@/components/shell";
 import { categoryOf } from "@/lib/entry-options";
 import { kindOf } from "@/lib/prompt-kinds";
 import { usePlaySession } from "@/play/draft-context";
+import { DocumentThemeEditorRoute } from "@/routes/document-theme-editor";
+import { DocumentThemesRoute } from "@/routes/document-themes";
 import { EntriesRoute } from "@/routes/entries";
 import { EntryEditorRoute } from "@/routes/entry-editor";
 import { LibraryLayout } from "@/routes/library";
@@ -160,6 +162,31 @@ const entryRoute = createRoute({
   component: EntryPage,
 });
 
+const documentThemesRoute = createRoute({
+  getParentRoute: () => libraryRoute,
+  path: "document-themes",
+  component: DocumentThemesRoute,
+});
+
+interface NewDocumentThemeSearch {
+  // A built-in's name or a saved theme's id.
+  readonly from?: string;
+}
+
+const newDocumentThemeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "document-themes/new",
+  validateSearch: (search: Record<string, unknown>): NewDocumentThemeSearch =>
+    typeof search.from === "string" ? { from: search.from } : {},
+  component: NewDocumentThemePage,
+});
+
+const documentThemeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "document-themes/$themeId",
+  component: DocumentThemePage,
+});
+
 interface SettingsSearch {
   readonly section?: SettingsSection;
 }
@@ -284,6 +311,25 @@ function EntryPage() {
   );
 }
 
+function NewDocumentThemePage() {
+  const { from } = newDocumentThemeRoute.useSearch();
+  const leave = useLeaveDocumentThemes();
+  return <DocumentThemeEditorRoute themeId={undefined} from={from} onLeave={leave} />;
+}
+
+function DocumentThemePage() {
+  const { themeId } = documentThemeRoute.useParams();
+  const leave = useLeaveDocumentThemes();
+  return <DocumentThemeEditorRoute themeId={themeId} from={undefined} onLeave={leave} />;
+}
+
+function useLeaveDocumentThemes(): () => void {
+  const navigate = useNavigate();
+  return () => {
+    void navigate({ to: "/document-themes" });
+  };
+}
+
 function useLeaveEntries(): (category: EntryCategory) => void {
   const navigate = useNavigate();
   return (category) => {
@@ -298,6 +344,7 @@ const routeTree = rootRoute.addChildren({
     promptsRoute,
     entriesRoute,
     templatesRoute,
+    documentThemesRoute,
     schedulesRoute,
   }),
   libraryIndexRoute,
@@ -306,6 +353,8 @@ const routeTree = rootRoute.addChildren({
   promptRoute,
   newEntryRoute,
   entryRoute,
+  newDocumentThemeRoute,
+  documentThemeRoute,
   settingsRoute,
   usageRoute,
 });

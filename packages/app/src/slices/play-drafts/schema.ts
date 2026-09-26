@@ -10,7 +10,7 @@ import {
 } from "../admission/rules.js";
 import { runDraftSchema } from "../admission/schema.js";
 import { checkpointRowSchema, checkpointStageSchema } from "../checkpoints/schema.js";
-import { documentThemes } from "../document/model.js";
+import { documentSettingsSchema } from "../document/theme-schema.js";
 import { librarySnapshotSchema } from "../library/snapshot.js";
 import { chunkModes } from "../narration/chunk.js";
 import { subtitleModes, subtitlePositions } from "../subtitles/model.js";
@@ -41,11 +41,7 @@ export const playDraftFormSchema = z
       .strict()
       .readonly(),
     // Absent until the theme is first chosen: the default theme.
-    document: z
-      .object({ theme: z.enum(documentThemes) })
-      .strict()
-      .readonly()
-      .optional(),
+    document: documentSettingsSchema.readonly().optional(),
     llm: provider.readonly(),
     audio: provider
       .extend({ voice: text, usePronunciationGlossary: z.boolean().optional() })

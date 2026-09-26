@@ -130,7 +130,7 @@ it("switches the Document on, picks its theme and saves both into the draft", as
   const { requests } = await mountPlay();
   await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
   const theme = screen.getByRole<HTMLSelectElement>("combobox", { name: "Theme" });
-  expect(theme.value).toBe("dicemaster");
+  expect(theme.value).toBe("builtin:dicemaster");
   expect(theme.disabled).toBe(true);
   expect(screen.getAllByRole("button", { name: /^Document: Off/ }).length).toBeGreaterThan(0);
   await userEvent.click(
@@ -139,7 +139,7 @@ it("switches the Document on, picks its theme and saves both into the draft", as
     }),
   );
   expect(theme.disabled).toBe(false);
-  await userEvent.selectOptions(theme, "plain");
+  await userEvent.selectOptions(theme, "Plain");
   expect(screen.getAllByRole("button", { name: /^Document: Ready/ }).length).toBeGreaterThan(0);
   await waitFor(async () => {
     const saves = requests.filter(

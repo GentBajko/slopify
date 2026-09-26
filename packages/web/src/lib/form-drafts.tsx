@@ -87,7 +87,10 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
   const legacy: PlayFormState = {
     ...form,
     sources: { ...form.sources, document: sourceOf(form.sources, "document") },
-    document: { theme: documentThemeOf(form.document) },
+    document: {
+      theme: documentThemeOf(form.document),
+      ...(form.document?.custom === undefined ? {} : { custom: form.document.custom }),
+    },
     imagePrompts: form.imagePrompts.map((one) => ({ ...one, number: Number(one.number) })),
     chunking:
       form.chunking.mode === "words"
@@ -133,7 +136,8 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
     const keepSource = before.form.sources.document !== undefined || documentSource !== "off";
     const keepSettings =
       before.form.document !== undefined ||
-      documentSettings.theme !== documentThemeOf(before.form.document);
+      documentSettings.theme !== documentThemeOf(before.form.document) ||
+      documentSettings.custom !== undefined;
     current.current.edit({
       ...before,
       form: {

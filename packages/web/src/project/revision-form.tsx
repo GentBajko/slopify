@@ -9,15 +9,11 @@ import {
   titleMax,
   zoomPercentMax,
 } from "@app/slices/admission/rules.js";
-import {
-  documentThemeLabels,
-  documentThemeOf,
-  documentThemes,
-} from "@app/slices/document/model.js";
 import { defaultSubtitles } from "@app/slices/subtitles/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
 import { useApp } from "@/app-context";
+import { DocumentThemePicker } from "@/components/document-theme-picker";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Picker } from "@/components/ui/picker";
@@ -207,22 +203,14 @@ export function RevisionForm(
             className="flex min-w-0 flex-col gap-1 text-small"
           >
             Document theme
-            <Picker
+            <DocumentThemePicker
               id={`${formId}-document-theme`}
               disabled={sourceOf(config.sources, "document") === "off"}
-              value={documentThemeOf(config.document)}
-              onChange={(event) => {
-                const theme = documentThemes.find((one) => one === event.target.value);
-                if (theme === undefined) return;
-                onChange({ ...edit, config: { ...config, document: { theme } } });
+              value={config.document}
+              onChange={(document) => {
+                onChange({ ...edit, config: { ...config, document } });
               }}
-            >
-              {documentThemes.map((theme) => (
-                <option key={theme} value={theme}>
-                  {documentThemeLabels[theme]}
-                </option>
-              ))}
-            </Picker>
+            />
           </label>
           <label htmlFor={`${formId}-gap`} className="block space-y-1 text-small">
             Silence gap (seconds)

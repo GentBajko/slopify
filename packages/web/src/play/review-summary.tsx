@@ -2,7 +2,7 @@ import { readinessIsUsable } from "@app/kernel/ports/model.js";
 import { sourceOf } from "@app/slices/admission/model.js";
 import { motionStyleLabels, usesYoutubeDescription } from "@app/slices/admission/rules.js";
 import type { Field } from "@app/slices/admission/substitute.js";
-import { documentThemeLabels, documentThemeOf } from "@app/slices/document/model.js";
+import { documentThemeLabel } from "@app/slices/document/model.js";
 import type { Entry } from "@app/slices/library/model.js";
 import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import type { ProviderFamily, ProviderStatus, Voice } from "@app/slices/settings/model.js";
@@ -429,7 +429,7 @@ export function ReviewSummary({
             "Document",
             "sources.document",
             sourceOf(form.sources, "document") === "generate"
-              ? `PDF · ${documentThemeLabels[documentThemeOf(form.document)]} theme`
+              ? `PDF · ${documentThemeLabel(form.document)} theme`
               : sourceLabels.off,
           )}
         </dl>

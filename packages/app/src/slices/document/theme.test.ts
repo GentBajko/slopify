@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { builtInTheme, defaultTheme, parseHexColor, resolveTheme } from "./theme.js";
+import {
+  builtInTheme,
+  defaultTheme,
+  parseHexColor,
+  resolvedDocumentTheme,
+  resolveTheme,
+} from "./theme.js";
 
 describe("parseHexColor", () => {
   it("parses six-digit and shorthand hex, with or without #", () => {
@@ -54,4 +60,12 @@ describe("builtInTheme", () => {
     expect(plain.endPage.enabled).toBe(false);
     expect(plain.sizes).toEqual(builtInTheme("dicemaster").sizes);
   });
+});
+
+it("draws a project's own copy of a Library theme", () => {
+  const values = { ...builtInTheme("plain"), page: { ...builtInTheme("plain").page, margin: 30 } };
+  expect(resolvedDocumentTheme({ theme: "dicemaster" }).page.margin).toBe(22);
+  expect(
+    resolvedDocumentTheme({ theme: "dicemaster", custom: { id: "t1", name: "Mine", values } }),
+  ).toEqual(values);
 });

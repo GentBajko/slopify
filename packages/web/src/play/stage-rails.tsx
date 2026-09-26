@@ -1,6 +1,7 @@
 import { type MotionStyle, motionStyles } from "@app/slices/admission/model.js";
 import { motionStyleLabels } from "@app/slices/admission/rules.js";
-import { documentThemeLabels, documentThemes } from "@app/slices/document/model.js";
+import { Link } from "@tanstack/react-router";
+import { DocumentThemePicker } from "@/components/document-theme-picker";
 import { InfoTip } from "@/components/kit/info-tip";
 import { Input } from "@/components/ui/input";
 import { Picker } from "@/components/ui/picker";
@@ -306,23 +307,21 @@ export function DocumentRail({ form, update }: RailProps) {
       <div className={railControls}>
         <LabelledField label="Theme" problem={undefined} inline>
           {({ id }) => (
-            <Picker
-              id={id}
-              data-play-field="document.theme"
-              className="w-auto min-w-[120px]"
-              disabled={off}
-              value={form.document.theme}
-              onChange={(event) => {
-                const theme = documentThemes.find((one) => one === event.target.value);
-                if (theme !== undefined) update({ document: { theme } });
-              }}
-            >
-              {documentThemes.map((theme) => (
-                <option key={theme} value={theme}>
-                  {documentThemeLabels[theme]}
-                </option>
-              ))}
-            </Picker>
+            <span className="flex flex-wrap items-center gap-3">
+              <DocumentThemePicker
+                id={id}
+                field="document.theme"
+                className="w-auto min-w-[120px]"
+                disabled={off}
+                value={form.document}
+                onChange={(document) => {
+                  update({ document });
+                }}
+              />
+              <Link to="/document-themes" className="text-small text-run-text underline">
+                Edit themes
+              </Link>
+            </span>
           )}
         </LabelledField>
       </div>
