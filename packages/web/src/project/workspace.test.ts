@@ -13,6 +13,31 @@ describe("overall project progress", () => {
       ]),
     ).toEqual({ completed: 1, total: 3, percent: 50 });
   });
+  it("counts the page's sections, with research and the thumbnail inside theirs", () => {
+    expect(
+      overallProgress([
+        stage("research", "done"),
+        stage("article", "done"),
+        stage("audio", "done"),
+        stage("images", "done"),
+        stage("thumbnail", "running", { progressCurrent: 0, progressTotal: 1 }),
+        stage("video", "done"),
+        stage("document", "pending"),
+      ]),
+      // Images waits on its thumbnail, so three of five sections: half of Images is done.
+    ).toEqual({ completed: 3, total: 5, percent: 70 });
+    expect(
+      overallProgress([
+        stage("research", "skipped"),
+        stage("article", "done"),
+        stage("audio", "done"),
+        stage("images", "skipped"),
+        stage("thumbnail", "done"),
+        stage("video", "done"),
+        stage("document", "skipped"),
+      ]),
+    ).toEqual({ completed: 4, total: 4, percent: 100 });
+  });
   it("does not invent progress for a provider with no measurable total", () => {
     expect(
       overallProgress([stage("article", "running", { progressCurrent: null, progressTotal: null })])

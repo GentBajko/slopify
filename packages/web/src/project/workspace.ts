@@ -1,24 +1,40 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import type { Stage } from "@app/slices/admission/model.js";
+import { sectionsOf } from "./sections";
 
 const finished = (stage: Stage): boolean => stage.state === "done" || stage.state === "provided";
 
+// Counted in the page's five sections, not the run's seven stages, so "3 of 5" names cells
+// the reader can see: research is part of Article and the thumbnail part of Images. A
+// section is finished when every stage in it is, and a switched-off one is left out.
 export function overallProgress(stages: readonly Stage[]): {
   readonly completed: number;
   readonly total: number;
   readonly percent: number;
 } {
-  const included = stages.filter((stage) => stage.state !== "skipped");
+  const included = sectionsOf(stages)
+    .map((section) =>
+      [section.stage, section.companion].filter(
+        (stage): stage is Stage => stage !== undefined && stage.state !== "skipped",
+      ),
+    )
+    .filter((members) => members.length > 0);
   const total = included.length;
-  const completed = included.filter(finished).length;
-  const work = included.reduce((sum, stage) => {
-    if (finished(stage)) return sum + 1;
-    if (stage.progressTotal === null || stage.progressTotal <= 0) return sum;
-    return sum + Math.min(0.99, Math.max(0, (stage.progressCurrent ?? 0) / stage.progressTotal));
-  }, 0);
+  const completed = included.filter((members) => members.every(finished)).length;
+  const work = included.reduce(
+    (sum, members) =>
+      sum + members.reduce((part, stage) => part + stageWork(stage), 0) / members.length,
+    0,
+  );
   const percent =
     total === 0 ? 0 : Math.min(completed === total ? 100 : 99, Math.round((work / total) * 100));
   return { completed, total, percent };
+}
+
+function stageWork(stage: Stage): number {
+  if (finished(stage)) return 1;
+  if (stage.progressTotal === null || stage.progressTotal <= 0) return 0;
+  return Math.min(0.99, Math.max(0, (stage.progressCurrent ?? 0) / stage.progressTotal));
 }
 
 export function suggestedStage(stages: readonly Stage[]): StageKind {

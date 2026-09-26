@@ -143,6 +143,7 @@ describe("the focused project workspace", () => {
               stage("images", "pending"),
               stage("thumbnail", "pending"),
               stage("video", "pending"),
+              stage("document", "pending"),
             ],
             outputs: [output("article_md", "article")],
           }),
