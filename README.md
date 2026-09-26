@@ -114,6 +114,8 @@ text, files or anything about your machine beyond a random id.
 
 ## Licence
 
-MIT, see [LICENSE](./LICENSE). The bundled ffmpeg is a separate GPL program
+MIT, see [LICENSE](./LICENSE). The licence covers the code, not the Slopify name or logo:
+a fork must use a name of its own and not present itself as Slopify. The bundled ffmpeg is a separate GPL program
 ([details](docs/ffmpeg.md)); the Barlow and Cinzel fonts are SIL Open Font License 1.1.
-Supporters are listed in [SUPPORTERS.md](SUPPORTERS.md).
+Supporters are listed in [SUPPORTERS.md](SUPPORTERS.md). To report a security problem, see
+[SECURITY.md](SECURITY.md).
