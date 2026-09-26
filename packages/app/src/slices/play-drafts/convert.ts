@@ -225,6 +225,8 @@ export function toAdmissionDraft(input: {
     // A choice from a list, so there is nothing to refuse; a run without a video keeps it
     // for when the video is turned back on.
     motionStyle: form.motionStyle,
+    // Kept the same way; admission checks it only while the video renders.
+    ...(form.videoEdit === undefined ? {} : { videoEdit: form.videoEdit }),
     edgeSilenceSeconds: measure(
       "edgeSilenceSeconds",
       sources.audio !== "off",

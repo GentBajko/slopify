@@ -6,6 +6,8 @@ import {
   usesYoutubeDescription,
 } from "../slices/admission/rules.js";
 import { isLocalCliProvider } from "../slices/settings/model.js";
+import { usesAnimation } from "../slices/video/edit-settings.js";
+import { videoModelsOf } from "./schema.js";
 import type { CatalogueStore } from "./store.js";
 export function modelFields(draft: RunDraft, catalogue?: CatalogueStore): FieldError[] {
   if (!catalogue) return [];
@@ -72,6 +74,23 @@ export function modelFields(draft: RunDraft, catalogue?: CatalogueStore): FieldE
         field,
         message:
           "This image model cannot make the vertical (9:16) images Shorts need. Choose another image model, or turn Shorts off.",
+      });
+  }
+  // Animate images runs on the image provider's image-to-video models.
+  if (usesAnimation(draft) && draft.images !== undefined) {
+    const model = draft.videoEdit?.animateModel ?? "";
+    const offered = videoModelsOf(catalogue.read(), draft.images.provider);
+    if (offered.length === 0)
+      fields.push({
+        field: "videoEdit.animateModel",
+        message:
+          "This image provider can't animate images. Choose fal.ai or Replicate under Images in Providers, or turn Animate images off.",
+      });
+    else if (model.trim() !== "" && !offered.some((one) => one.id === model))
+      fields.push({
+        field: "videoEdit.animateModel",
+        message:
+          "This image-to-video model is no longer in Slopify's model list. Choose another under Animate images.",
       });
   }
   return fields;

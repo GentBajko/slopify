@@ -96,6 +96,23 @@ export const catalogueSchema = z
       }
   });
 export type Catalogue = z.infer<typeof catalogueSchema>;
+
+// Image-to-video models live in the image list, under the image providers that run them,
+// marked by the `video` keyword; their perImage is the price of one clip. A catalogue that
+// older Slopify versions read keeps its shape, and the image pickers leave these out.
+export function isVideoModel(model: Pick<CatalogueModel, "keywords">): boolean {
+  return model.keywords.includes("video");
+}
+
+// The image-to-video models a provider offers, as Animate images lists them.
+export function videoModelsOf(
+  catalogue: Catalogue,
+  provider: string,
+): readonly Catalogue["image"][number][] {
+  return catalogue.image.filter(
+    (m) => m.provider === provider && m.enabled && !m.deprecated && isVideoModel(m),
+  );
+}
 export type CatalogueModel =
   | Catalogue["llm"][number]
   | Catalogue["image"][number]

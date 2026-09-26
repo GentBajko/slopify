@@ -75,6 +75,9 @@ export function legacyOutputWorkKey(output: Output, config?: Pick<RunConfig, "so
       return `shorts:${String(output.meta.short ?? 1)}:image:${String(output.meta.index ?? 1)}`;
     case "short_video":
       return `shorts:${String(output.meta.short ?? 1)}:render`;
+    // Only ever made by a revision, never by the legacy stages.
+    case "animated_image":
+      return `animate:${String(output.meta.index ?? 1)}`;
     case "subtitles_srt":
     case "subtitles_vtt":
     case "subtitle_ass":

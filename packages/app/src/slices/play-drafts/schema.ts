@@ -8,7 +8,7 @@ import {
   defaultMotionStyle,
   defaultZoomPercent,
 } from "../admission/rules.js";
-import { runDraftSchema } from "../admission/schema.js";
+import { runDraftSchema, videoEditSchema } from "../admission/schema.js";
 import { checkpointRowSchema, checkpointStageSchema } from "../checkpoints/schema.js";
 import { documentSettingsSchema } from "../document/theme-schema.js";
 import { librarySnapshotSchema } from "../library/snapshot.js";
@@ -94,6 +94,9 @@ export const playDraftFormSchema = z
     edgeSilenceSeconds: text.default(String(defaultEdgeSilenceSeconds)),
     zoomPercent: text.default(String(defaultZoomPercent)),
     motionStyle: z.enum(motionStyles).default(defaultMotionStyle),
+    // Absent on drafts and templates saved before the edit settings: today's slideshow. Every
+    // field is a pick from a list, so it is kept as the settings themselves.
+    videoEdit: videoEditSchema.strict().readonly().optional(),
     values,
     provided: z
       .object({

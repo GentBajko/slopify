@@ -56,6 +56,7 @@ export const deferredOperations = [
   "outro-narration",
   "resolve-revision-recipe",
   "shorts",
+  "animate",
 ] as const;
 export type RecipeInput =
   | {
@@ -91,6 +92,10 @@ export type RecipeInput =
       readonly model: string;
       readonly prompt: string;
       readonly aspect: RunConfig["format"];
+      // Present when the request animates a still rather than drawing one: an image-to-video
+      // model on the same provider, fed the image `image` (its recipe's fingerprint) for a
+      // clip of `seconds`. Priced, retried and keyed like an image.
+      readonly animate?: { readonly image: string; readonly seconds: number } | undefined;
     }
   | {
       readonly kind: "provided";

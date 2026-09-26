@@ -17,6 +17,7 @@ export function pieceLabel(
   if (key === "document:pdf") return "Document";
   if (key === "youtube:description") return "YouTube description";
   if (key === "shorts:pick" || key === "shorts:future") return "Shorts";
+  if (key === "animate:future") return "Animated images";
   const short = /^shorts:(\d+):(prompts|image:(\d+)|render)$/.exec(key);
   if (short !== null)
     return short[2] === "prompts"
@@ -34,6 +35,10 @@ export function pieceLabel(
   if (key.startsWith("image:")) {
     const at = view()?.revision.content.imageOrder.indexOf(key.slice("image:".length)) ?? -1;
     return at === -1 ? "An image" : `Image ${String(at + 1)}`;
+  }
+  if (key.startsWith("animate:")) {
+    const at = view()?.revision.content.imageOrder.indexOf(key.slice("animate:".length)) ?? -1;
+    return at === -1 ? "An animated image" : `Animated image ${String(at + 1)}`;
   }
   const narration =
     /^(?:narration:prepare:(?:intro|body|outro):)?audio:(intro|body|outro)(?::(.+))?$/.exec(key);

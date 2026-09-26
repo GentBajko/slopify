@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { StageKind } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
 import type { StagedFile } from "../storage/model.js";
+import { defaultVideoEdit, type VideoEditSettings } from "../video/edit-settings.js";
 import type { RunDraft, StageSource, StageSources } from "./model.js";
 import { stageSources } from "./model.js";
 import {
@@ -131,6 +132,43 @@ describe("Shorts admission", () => {
     ).toEqual(["shorts.minSeconds", "shorts.maxSeconds"]);
     // With the video off, nothing else checks how long each image is held.
     expect(fields({ ...draft(), imageSeconds: 0 })).toEqual(["imageSeconds"]);
+  });
+});
+
+describe("video edit admission", () => {
+  const edit = (over: Partial<VideoEditSettings>): VideoEditSettings => ({
+    ...defaultVideoEdit,
+    ...over,
+  });
+  it("takes a new project's settings as they come", () => {
+    expect(fields(provided({ videoEdit: defaultVideoEdit }))).toEqual([]);
+  });
+
+  it("needs an image provider to animate images", () => {
+    const animated = provided({
+      videoEdit: edit({ animate: "every", animateEvery: 3, animateModel: "kling" }),
+    });
+    expect(fields(animated)).toEqual(["images"]);
+    expect(fields({ ...animated, images: { provider: "fal", model: "flux" } })).toEqual([]);
+  });
+
+  it("refuses what the controls cannot offer, and only while the video renders", () => {
+    const wrong = provided({
+      videoEdit: edit({ transition: "wipe", transitionSeconds: 5, animate: "chapters" }),
+      images: { provider: "fal", model: "flux" },
+    });
+    expect(fields(wrong)).toEqual(["videoEdit.transitionSeconds", "videoEdit.animateModel"]);
+    expect(fields({ ...wrong, sources: sources({ images: "off", video: "off" }) })).toEqual([]);
+  });
+
+  it("asks for narration before chapter cards and chapter openers", () => {
+    const silent = provided({
+      sources: sources({ audio: "off" }),
+      provided: { article: "The article.", images: ["i1", "i2"] },
+      videoEdit: edit({ chapterCards: true, animate: "chapters", animateModel: "kling" }),
+      images: { provider: "fal", model: "flux" },
+    });
+    expect(fields(silent)).toEqual(["videoEdit.chapterCards", "videoEdit.animate"]);
   });
 });
 

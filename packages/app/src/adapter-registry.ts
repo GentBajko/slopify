@@ -99,7 +99,7 @@ export function buildRegistry(deps: RegistryDeps): Registry {
   // Replicate also takes the clock: `Prefer: wait` gives up after 60 s and the prediction has
   // to be polled, and the wait is spent on the app's clock so a test never sits through one.
   const images = new Map<string, ImagePort>([
-    ["fal", falImage({ fetch: deps.fetch, key: keyOf("fal") })],
+    ["fal", falImage({ fetch: deps.fetch, key: keyOf("fal"), clock: deps.clock })],
     [
       "replicate",
       replicateImage({ fetch: deps.fetch, key: keyOf("replicate"), clock: deps.clock }),

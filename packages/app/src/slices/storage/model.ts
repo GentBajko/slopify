@@ -36,6 +36,8 @@ export const outputRoles = [
   "shorts",
   "short_image",
   "short_video",
+  // An image of the slideshow brought to life by an image-to-video model (Animate images).
+  "animated_image",
 ] as const;
 export type OutputRole = (typeof outputRoles)[number];
 
@@ -56,6 +58,9 @@ export interface OutputMeta {
   readonly index?: number | undefined;
   // Which short (1-based) a short's image or video belongs to.
   readonly short?: number | undefined;
+  // What the video could not do as asked, in plain sentences for the project page: an image
+  // shown still because it could not be animated.
+  readonly warnings?: readonly string[] | undefined;
   readonly provider?: string | undefined;
   readonly model?: string | undefined;
   readonly voice?: string | undefined;

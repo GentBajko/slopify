@@ -1,6 +1,7 @@
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageProviders } from "../../kernel/runner/providers.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
+import { executeAnimateRecipe } from "./runtime-animate.js";
 import { executeDocumentRecipe } from "./runtime-document.js";
 import { type ExportExecutionDeps, executeExportRecipe } from "./runtime-export.js";
 import { executeLocalRecipe } from "./runtime-local.js";
@@ -33,11 +34,13 @@ export async function runRevisionInvocation(
               ? await executeYoutubeRecipe(deps, context, providers, piece)
               : piece.key.startsWith("shorts:")
                 ? await executeShortsRecipe(deps, context, providers, piece)
-                : piece.input.kind === "llm" ||
-                    piece.input.kind === "tts" ||
-                    piece.input.kind === "image"
-                  ? await executeProviderRecipe(deps, context, providers, piece)
-                  : await executeLocalRecipe(deps, context, piece);
+                : piece.key.startsWith("animate:")
+                  ? await executeAnimateRecipe(deps, context, providers, piece)
+                  : piece.input.kind === "llm" ||
+                      piece.input.kind === "tts" ||
+                      piece.input.kind === "image"
+                    ? await executeProviderRecipe(deps, context, providers, piece)
+                    : await executeLocalRecipe(deps, context, piece);
       if (outcome === "held") return outcome;
     } catch (error) {
       deps.db

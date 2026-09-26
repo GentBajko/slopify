@@ -11,6 +11,7 @@ import { withPaths } from "../video/edit-list.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import { planRender } from "../video/plan.js";
 import { renderSlideshow } from "../video/slideshow.js";
+import { exportEdit } from "./runtime-export-edit.js";
 import {
   type ExportSnapshot,
   exportSnapshot,
@@ -84,6 +85,7 @@ export async function executeExportRecipe(
         );
       return outputPath(deps.paths, context.work.projectId, row.output.path);
     });
+    const edited = wav ? undefined : await exportEdit(deps, context, view, images);
     const plan = wav
       ? undefined
       : planRender({
@@ -98,6 +100,7 @@ export async function executeExportRecipe(
           outro: segment("outro"),
           images,
           output: pending.absolutePath,
+          edit: edited?.edit,
         });
     const totalSeconds = plan?.totalSeconds ?? audio.reduce((sum, row) => sum + row.seconds, 0);
     const projectDirectory = projectDir(deps.paths, context.work.projectId);
@@ -123,6 +126,10 @@ export async function executeExportRecipe(
             output: pending.path,
             editList: withPaths(plan.editList, relativePath),
             subtitles: config.subtitles,
+            ...(edited?.settings === undefined ? {} : { videoEdit: edited.settings }),
+            ...(edited === undefined || edited.warnings.length === 0
+              ? {}
+              : { warnings: edited.warnings }),
           };
     if (!context.maySubmit(piece.id)) return "held";
     const onProgress = (elapsedMs: number): void =>
@@ -163,7 +170,12 @@ export async function executeExportRecipe(
         wav ? "audio_export" : "video",
         asset,
         Math.round(totalSeconds * 1000),
-        { subtitlesMode: mode },
+        {
+          subtitlesMode: mode,
+          ...(edited === undefined || edited.warnings.length === 0
+            ? {}
+            : { warnings: edited.warnings }),
+        },
       ),
     );
     prepared.push(

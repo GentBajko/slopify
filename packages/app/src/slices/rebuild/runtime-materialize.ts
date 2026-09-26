@@ -128,5 +128,7 @@ function futureKey(recipe: ResolvedWorkRecipe): string {
   if (recipe.key === "article:continuation") return "article:body";
   // Every step of the shorts unfolds from the pick's answer, and is admitted with it.
   if (recipe.key.startsWith("shorts:")) return "shorts:pick";
+  // The chapter openers' clips unfold from the deferred request that stood in for them.
+  if (recipe.key.startsWith("animate:")) return "animate:future";
   return recipe.key;
 }

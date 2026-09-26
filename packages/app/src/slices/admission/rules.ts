@@ -2,6 +2,7 @@ import type { StageKind } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
 import { shortsSettingsProblems } from "../shorts/model.js";
 import type { StagedFile } from "../storage/model.js";
+import { usesAnimation, videoEditProblems } from "../video/edit-settings.js";
 import type { MotionStyle, ProviderChoice, RunDraft, StageSource } from "./model.js";
 import { sourceOf } from "./model.js";
 
@@ -139,7 +140,8 @@ export function admit(input: AdmissionInput): AdmissionResult {
     (sources.images === "generate" ||
       sources.thumbnail === "from_prompt" ||
       sources.thumbnail === "prompt_by_llm" ||
-      usesShorts(draft)) &&
+      usesShorts(draft) ||
+      usesAnimation(draft)) &&
     !chosen(draft.images)
   ) {
     fields.push({ field: "images", message: "Choose an image provider and model." });
@@ -160,6 +162,7 @@ export function admit(input: AdmissionInput): AdmissionResult {
   }
   fields.push(...youtubeDescriptionFields(draft));
   fields.push(...shortsFields(draft));
+  fields.push(...videoEditFields(draft));
   checkProvided(draft, input.staged, fields);
   checkValues(draft, input.requiredSlots, fields);
 
@@ -418,6 +421,17 @@ export function shortsFields(
     draft.sources.video === "generate" ? undefined : imageSecondsProblem(draft.imageSeconds);
   if (imageProblem !== undefined) fields.push({ field: "imageSeconds", message: imageProblem });
   return fields;
+}
+
+// The Video stage's edit settings, checked only while the video renders: a hidden setting
+// cannot hold up a run.
+export function videoEditFields(
+  draft: Pick<RunDraft, "sources" | "videoEdit">,
+): readonly FieldError[] {
+  return videoEditProblems(draft).map((problem) => ({
+    field: `videoEdit.${problem.field}`,
+    message: problem.message,
+  }));
 }
 
 function chosen(choice: ProviderChoice | undefined): boolean {

@@ -1,16 +1,31 @@
 import { z } from "zod";
+import type { Clock } from "../../kernel/clock.js";
 import { redact } from "../../kernel/log.js";
-import type { GeneratedImage, ImagePort, ImageRequest } from "../../kernel/ports/image.js";
+import type {
+  AnimateRequest,
+  GeneratedImage,
+  GeneratedVideo,
+  ImagePort,
+  ImageRequest,
+} from "../../kernel/ports/image.js";
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
-import { httpFailure, missingKey, noImage, unreadable } from "../explain.js";
+import {
+  httpFailure,
+  internalError,
+  missingKey,
+  noImage,
+  providerSaid,
+  unreadable,
+} from "../explain.js";
 import { retryAfter } from "../retry-after.js";
 import { downloadImage } from "./bytes.js";
+import { dataUri, downloadVideo } from "./video.js";
 
 // The HTTP gateway adapter for fal.ai: `fetch` and the downloader beside this file, no SDK.
-// `@fal-ai/client` would buy queue polling this endpoint does not need, so the platform's
-// own `fetch` covers the whole call. The synchronous host runs the model on the open
-// connection, which is what the wrapper's 300 s measures.
+// `@fal-ai/client` would buy queue polling, which only the video clips need and which is three
+// plain requests, so the platform's own `fetch` covers every call. Images use the synchronous
+// host, which runs the model on the open connection the wrapper's 300 s measures.
 
 export const falBase = "https://fal.run";
 
@@ -64,7 +79,33 @@ export interface FalImageDeps {
   readonly fetch: typeof globalThis.fetch;
   // Called per request, never held: an attempt finishes on the key it started with.
   readonly key: () => string | undefined;
+  // The wait between polls of a queued video clip, spent on the app's clock so a test drives
+  // a slow clip without waiting for one.
+  readonly clock?: Clock | undefined;
 }
+
+// Image-to-video runs on fal's queue, not the synchronous host: a clip takes one to five
+// minutes, and fal documents the queue as the way to call anything that slow. A request is
+// submitted, its status polled until it completes, and its answer fetched from the links the
+// submission gave.
+export const falQueueBase = "https://queue.fal.run";
+export const falPollMs = 5000;
+
+// The image-to-video models this adapter knows the inputs of. Each takes `prompt`,
+// `image_url` and a `duration` string; the rest is per model. A model not listed gets only
+// those three.
+const videoInputs: Readonly<Record<string, (aspect: ImageRequest["aspect"]) => object>> = {
+  "fal-ai/kling-video/v2.5-turbo/pro/image-to-video": () => ({}),
+  "fal-ai/wan-25-preview/image-to-video": () => ({ resolution: "720p" }),
+  "fal-ai/bytedance/seedance/v1/pro/fast/image-to-video": (aspect) => ({
+    resolution: "720p",
+    aspect_ratio: aspect,
+  }),
+};
+
+const queued = z.object({ status_url: z.string(), response_url: z.string() });
+const queueStatus = z.object({ status: z.string(), error: z.string().nullish() });
+const video = z.object({ video: z.object({ url: z.string() }) });
 
 // A wire payload is narrowed, never cast: everything unlisted is dropped at the seam.
 const generated = z.object({
@@ -119,7 +160,58 @@ export function falImage(deps: FalImageDeps): ImagePort {
         signal: req.signal,
       });
     },
+    animate: async (req: AnimateRequest): Promise<GeneratedVideo> => {
+      const clock = deps.clock;
+      if (clock === undefined)
+        throw providerError({ kind: "other", message: internalError("fal.ai has no clock") });
+      const headers = { Authorization: `Key ${keyOf(deps)}`, "Content-Type": "application/json" };
+      const submitted = await deps.fetch(`${falQueueBase}/${req.model}`, {
+        method: "POST",
+        signal: req.signal,
+        headers,
+        body: JSON.stringify({
+          prompt: req.prompt,
+          image_url: dataUri(req.image),
+          duration: String(Math.round(req.seconds)),
+          ...(Object.hasOwn(videoInputs, req.model) ? videoInputs[req.model]?.(req.aspect) : {}),
+        }),
+      });
+      if (!submitted.ok) throw await failure(submitted, "video clip request");
+      const links = read(queued, await submitted.text());
+      for (;;) {
+        const status = await deps.fetch(links.status_url, { signal: req.signal, headers });
+        if (!status.ok) throw await failure(status, "video clip request");
+        const current = read(queueStatus, await status.text());
+        if (current.error)
+          throw providerError({
+            kind: "other",
+            message: providerSaid(
+              "fal.ai",
+              "could not make the video clip",
+              redact(current.error),
+              "Use Retry stage; if it keeps happening, choose another image-to-video model in Edit project → Video.",
+            ),
+          });
+        if (current.status === "COMPLETED") break;
+        await clock.sleep(falPollMs, req.signal);
+      }
+      const answer = await deps.fetch(links.response_url, { signal: req.signal, headers });
+      if (!answer.ok) throw await failure(answer, "video clip request");
+      const made = read(video, await answer.text());
+      return await downloadVideo({
+        fetch: deps.fetch,
+        provider: "fal.ai",
+        url: made.video.url,
+        signal: req.signal,
+      });
+    },
   };
+}
+
+function read<T>(schema: z.ZodType<T>, text: string): T {
+  const parsed = schema.safeParse(safeJson(text));
+  if (!parsed.success) throw providerError({ kind: "other", message: unreadable("fal.ai") });
+  return parsed.data;
 }
 
 function keyOf(deps: FalImageDeps): string {
@@ -158,7 +250,7 @@ function kindOf(status: number): ProviderErrorKind {
   return "other";
 }
 
-async function failure(response: Response): Promise<Error> {
+async function failure(response: Response, subject = "image request"): Promise<Error> {
   const text = await response.text().catch(() => "");
   // The provider's own words, through the redactor - an error body may quote the key back.
   const message = redact(detailOf(text) || response.statusText);
@@ -169,7 +261,7 @@ async function failure(response: Response): Promise<Error> {
       provider: "fal.ai",
       status: response.status,
       detail: message,
-      subject: "image request",
+      subject,
     }),
     ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
   });

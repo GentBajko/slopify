@@ -127,6 +127,10 @@ export interface RunDraft {
   // The Video stage's optional Shorts step (`slices/shorts`). Absent reads as off, which is
   // what every project saved before it was.
   readonly shorts?: import("../shorts/model.js").ShortsSettings | undefined;
+  // How the video is cut, joined and finished: cuts, transitions, the Look and animated images
+  // (`video/edit-settings.ts`). Absent reads as today's slideshow, which is what every project
+  // saved before it rendered.
+  readonly videoEdit?: import("../video/edit-settings.js").VideoEditSettings | undefined;
 }
 
 // The draft as accepted, coerced and trimmed. This is what the project's `config` column

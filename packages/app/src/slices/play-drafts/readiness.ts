@@ -10,6 +10,7 @@ import {
 import { cliPathChanged } from "../settings/cli-paths.js";
 import type { ProviderStatus } from "../settings/model.js";
 import { hasKey, listVoices } from "../settings/repo.js";
+import { usesAnimation } from "../video/edit-settings.js";
 import type { DraftStartDeps, ResolvedPlayRun } from "./model.js";
 
 export function choices(runs: readonly ResolvedPlayRun[]) {
@@ -44,7 +45,8 @@ export function choices(runs: readonly ResolvedPlayRun[]) {
             needed:
               d.sources.images === "generate" ||
               ["from_prompt", "prompt_by_llm"].includes(d.sources.thumbnail) ||
-              usesShorts(d),
+              usesShorts(d) ||
+              usesAnimation(d),
           },
         ] as const,
     )

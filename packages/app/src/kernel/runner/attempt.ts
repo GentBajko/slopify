@@ -14,11 +14,13 @@ import type { AttemptResult, WorkRef } from "./work.js";
 export const attemptLimit = 4;
 export const backoffMs: readonly number[] = [2000, 8000, 30_000];
 
-// Each attempt times out at 120 s, image calls at 300 s.
+// Each attempt times out at 120 s, image calls at 300 s, and an image animated into a clip at
+// 900 s: image-to-video models queue and take one to five minutes when they run.
 export const timeoutMs: Readonly<Record<ProviderCallKind, number>> = {
   llm: 120_000,
   tts: 120_000,
   image: 300_000,
+  video: 900_000,
 };
 
 // A refusal and an unsupported capability are the provider's final answer; retrying only
@@ -32,7 +34,7 @@ const terminalKinds: readonly ProviderErrorKind[] = [
   "unavailable",
 ];
 
-export type ProviderCallKind = "llm" | "tts" | "image";
+export type ProviderCallKind = "llm" | "tts" | "image" | "video";
 
 export interface AttemptContext {
   readonly work: WorkRef;
@@ -185,6 +187,7 @@ const callee: Readonly<Record<ProviderCallKind, string>> = {
   llm: "AI model",
   tts: "narration provider",
   image: "image provider",
+  video: "image-to-video model",
 };
 
 // Node's `fetch` rejects a request that never reached the server with this TypeError.
