@@ -22,6 +22,7 @@ import { createHub } from "./edge/events/hub.js";
 import { currentProjectEvent } from "./edge/events/visibility.js";
 import { createApp } from "./edge/http/app.js";
 import { createMutationLifecycle, drainMutationsWithDeadline } from "./edge/http/mutations.js";
+import { limitRequestTimes } from "./edge/http/timeouts.js";
 import { openFolder } from "./edge/open-folder.js";
 import type { AudioPreviewStore } from "./kernel/audio-preview.js";
 import { createAudioPreviewStore } from "./kernel/audio-preview.js";
@@ -633,6 +634,8 @@ function listen(app: Hono, config: Config, log: Log): Promise<ServerType> {
       });
       resolve(server);
     });
+    // Before the first connection: a backup import may outlast Node's 5-minute request limit.
+    limitRequestTimes(server);
     server.once("error", reject);
   });
 }
