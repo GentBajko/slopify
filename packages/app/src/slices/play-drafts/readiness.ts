@@ -4,6 +4,7 @@ import { readinessIsUsable } from "../../kernel/ports/model.js";
 import {
   type FieldError,
   usesNarrationPreparation,
+  usesShorts,
   usesYoutubeDescription,
 } from "../admission/rules.js";
 import { cliPathChanged } from "../settings/cli-paths.js";
@@ -27,7 +28,8 @@ export function choices(runs: readonly ResolvedPlayRun[]) {
               d.intro?.mode === "llm" ||
               d.outro?.mode === "llm" ||
               usesNarrationPreparation(d) ||
-              usesYoutubeDescription(d),
+              usesYoutubeDescription(d) ||
+              usesShorts(d),
           },
           {
             field: "audio",
@@ -41,7 +43,8 @@ export function choices(runs: readonly ResolvedPlayRun[]) {
             choice: d.images,
             needed:
               d.sources.images === "generate" ||
-              ["from_prompt", "prompt_by_llm"].includes(d.sources.thumbnail),
+              ["from_prompt", "prompt_by_llm"].includes(d.sources.thumbnail) ||
+              usesShorts(d),
           },
         ] as const,
     )

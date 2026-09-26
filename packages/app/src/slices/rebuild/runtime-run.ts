@@ -6,6 +6,7 @@ import { type ExportExecutionDeps, executeExportRecipe } from "./runtime-export.
 import { executeLocalRecipe } from "./runtime-local.js";
 import { pieceLabel } from "./runtime-piece-label.js";
 import { executeProviderRecipe } from "./runtime-provider.js";
+import { executeShortsRecipe } from "./runtime-shorts.js";
 import { executeSubtitleRecipe } from "./runtime-subtitles.js";
 import { executeYoutubeRecipe } from "./runtime-youtube.js";
 import { workPieces } from "./work-records.js";
@@ -30,11 +31,13 @@ export async function runRevisionInvocation(
             ? await executeDocumentRecipe(deps, context, piece)
             : piece.key.startsWith("youtube:")
               ? await executeYoutubeRecipe(deps, context, providers, piece)
-              : piece.input.kind === "llm" ||
-                  piece.input.kind === "tts" ||
-                  piece.input.kind === "image"
-                ? await executeProviderRecipe(deps, context, providers, piece)
-                : await executeLocalRecipe(deps, context, piece);
+              : piece.key.startsWith("shorts:")
+                ? await executeShortsRecipe(deps, context, providers, piece)
+                : piece.input.kind === "llm" ||
+                    piece.input.kind === "tts" ||
+                    piece.input.kind === "image"
+                  ? await executeProviderRecipe(deps, context, providers, piece)
+                  : await executeLocalRecipe(deps, context, piece);
       if (outcome === "held") return outcome;
     } catch (error) {
       deps.db

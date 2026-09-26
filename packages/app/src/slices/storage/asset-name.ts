@@ -15,6 +15,11 @@ export function assetOf(output: Output): string {
     output.meta.segment !== undefined
   )
     return `${asset}-${output.meta.segment}`;
+  // A project holds one video per short and several images per short.
+  if (output.role === "short_video" && output.meta.short !== undefined)
+    return `${asset}-${String(output.meta.short)}`;
+  if (output.role === "short_image" && output.meta.short !== undefined)
+    return `${asset}-${String(output.meta.short)}-${String(output.meta.index ?? 1)}`;
   if (output.role === "instructions") {
     return `${output.stageKind}-${asset}`;
   }

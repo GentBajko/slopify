@@ -1,5 +1,10 @@
 import { expect, it } from "vitest";
-import { transcriptPassages, transcriptText } from "./transcript.js";
+import {
+  sentencesText,
+  transcriptPassages,
+  transcriptSentences,
+  transcriptText,
+} from "./transcript.js";
 
 const words = (
   start: number,
@@ -62,4 +67,33 @@ it("writes H:MM:SS for passages past the first hour", () => {
 
 it("has nothing to say for no words", () => {
   expect(transcriptPassages([])).toEqual([]);
+});
+
+it("numbers the sentences with their span and the words they hold, for the shorts", () => {
+  const sentences = transcriptSentences([
+    ...words(2, ["Harbors", "matter.", "Boats", "need", "them."]),
+    // A pause of 1.5 s closes one even without a full stop.
+    ...words(6, ["No", "stop"]),
+    ...words(9, ["Then", "more."]),
+  ]);
+  expect(sentences.map((one) => [one.number, one.text, one.firstWord, one.lastWord])).toEqual([
+    [1, "Harbors matter.", 0, 1],
+    [2, "Boats need them.", 2, 4],
+    [3, "No stop", 5, 6],
+    [4, "Then more.", 7, 8],
+  ]);
+  expect(sentences[1]).toMatchObject({ start: 3, end: 4.4 });
+  expect(sentencesText(sentences.slice(0, 1))).toBe("[1] (0:02-0:02) Harbors matter.");
+});
+
+it("closes a sentence with no full stop after 30 seconds", () => {
+  const sentences = transcriptSentences(
+    words(
+      0,
+      Array.from({ length: 100 }, () => "word"),
+    ),
+  );
+  expect(sentences.length).toBeGreaterThan(1);
+  expect(sentences.every((one) => one.end - one.start <= 30)).toBe(true);
+  expect(transcriptSentences([])).toEqual([]);
 });

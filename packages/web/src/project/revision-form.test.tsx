@@ -481,3 +481,91 @@ it("switches the YouTube description on in Prompts and freezes or drops its prom
   await user.click(on);
   expect(latest.config.youtubeDescription).toBe(false);
 });
+
+it("switches Shorts on in Prompts, sets its numbers and prompts, and asks to make them again", async () => {
+  const user = userEvent.setup();
+  const base = revisionView();
+  const view = {
+    ...base,
+    revision: {
+      ...base.revision,
+      config: {
+        ...base.revision.config,
+        sources: { ...base.revision.config.sources, audio: "provide" as const },
+        shorts: { enabled: true, count: 3, minSeconds: 60, maxSeconds: 120 },
+      },
+    },
+    outputs: [
+      {
+        recordId: "shorts",
+        publicationId: null,
+        selected: true,
+        available: true,
+        slot: "video:shorts",
+        workKey: "shorts:pick",
+        assetId: "shorts",
+        fingerprint: "pick",
+        state: "ready" as const,
+        output: {
+          id: "shorts",
+          projectId: "p1",
+          stageKind: "video" as const,
+          role: "shorts" as const,
+          path: "shorts.json",
+          originalFilename: null,
+          bytes: 10,
+          durationMs: null,
+          meta: {},
+          createdAt: "2026-09-03T00:00:00.000Z",
+        },
+      },
+    ],
+  };
+  let latest = formOfRevision(view);
+  function Cut(): import("react").ReactElement {
+    const [edit, setEdit] = useState(formOfRevision(view));
+    latest = edit;
+    return (
+      <RevisionForm view={view} edit={edit} onChange={setEdit} onPending={() => {}} fields={[]} />
+    );
+  }
+  renderApp(
+    <Cut />,
+    testDeps({
+      "GET /api/providers": jsonAnswer({ providers: [] }),
+      "GET /api/settings/voices": jsonAnswer({ voices: [] }),
+      "GET /api/prompts": jsonAnswer({
+        prompts: [
+          {
+            id: "s1",
+            kind: "shorts",
+            name: "Hooks",
+            body: "Pick the boldest claims.",
+            slots: [],
+            updatedAt: "2026-09-03T00:00:00.000Z",
+          },
+        ],
+      }),
+      "GET /api/entries": jsonAnswer({ entries: [] }),
+    }),
+  );
+  await openEditSection("Prompts");
+  const count = screen.getByRole<HTMLInputElement>("textbox", { name: "How many shorts" });
+  expect(count.value).toBe("3");
+  await user.clear(count);
+  await user.type(count, "5");
+  expect(latest.config.shorts?.count).toBe(5);
+  await screen.findByRole("option", { name: "Hooks" });
+  await user.selectOptions(
+    screen.getByRole<HTMLSelectElement>("combobox", { name: "Shorts prompt" }),
+    "Hooks",
+  );
+  expect(latest.config.shorts?.prompt).toBe("Hooks");
+  expect(latest.content.promptTemplates.shorts).toBe("Pick the boldest claims.");
+  await user.click(screen.getByRole("button", { name: "Make the shorts again after review" }));
+  expect(latest.regenerate).toEqual(["shorts:pick"]);
+  await user.click(screen.getByRole("button", { name: "Keep the current shorts" }));
+  expect(latest.regenerate).toEqual([]);
+  await user.click(screen.getByRole("checkbox", { name: /Shorts/ }));
+  expect(latest.config.shorts).toMatchObject({ enabled: false, count: 5, prompt: "Hooks" });
+});

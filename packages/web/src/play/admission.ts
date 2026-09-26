@@ -12,7 +12,7 @@ import type { Field } from "@app/slices/admission/substitute.js";
 import { collectFields, detectSlots } from "@app/slices/admission/substitute.js";
 import type { Entry, Prompt, PromptKind } from "@app/slices/library/model.js";
 import type { DraftInput, PlayFormState, Upload } from "@/play/state";
-import { draftOf, stagedOf } from "@/play/state";
+import { draftOf, shortsOn, stagedOf } from "@/play/state";
 import { validSubtitleStyle } from "@/subtitles/config";
 
 // Live admission. `admit` is the server's own function, imported through `@app/*`: the
@@ -61,6 +61,10 @@ export function keywordFields(input: AdmissionInput): readonly Field[] {
   }
   if (usesYoutubeDescription(form))
     push(text, bodyOf(input.prompts, "description", form.descriptionPrompt ?? ""));
+  if (shortsOn(form)) {
+    push(text, bodyOf(input.prompts, "shorts", form.shorts?.prompt ?? ""));
+    push(image, bodyOf(input.prompts, "image", form.shorts?.imagePrompt ?? ""));
+  }
 
   if (form.sources.images === "generate") {
     for (const picked of form.imagePrompts) {
@@ -133,6 +137,12 @@ const readingOrder: readonly string[] = [
   "motionStyle",
   "youtubeDescription",
   "descriptionPrompt",
+  "shorts.enabled",
+  "shorts.count",
+  "shorts.minSeconds",
+  "shorts.maxSeconds",
+  "shorts.prompt",
+  "shorts.imagePrompt",
 ];
 
 export function firstBlocker(form: PlayFormState, result: AdmissionResult): Blocker | undefined {
@@ -215,6 +225,13 @@ function hintOf(form: PlayFormState, error: FieldError): string {
       return "Pick a thumbnail prompt to play";
     case "youtubeDescription":
       return "Turn narration on, or the YouTube description off, to play";
+    case "shorts.enabled":
+      return "Turn narration on, or Shorts off, to play";
+    case "shorts.count":
+      return "Set how many shorts to make to play";
+    case "shorts.minSeconds":
+    case "shorts.maxSeconds":
+      return "Set the shorts' length to play";
     case "provided.research":
       return "Paste the research notes to play";
     case "provided.article":
@@ -283,5 +300,9 @@ export function keywordOrigins(input: AdmissionInput): ReadonlyMap<string, reado
       add(entryBody(entries, kind, form[kind]), kind === "intro" ? "Intro" : "Outro");
   if (usesYoutubeDescription(form))
     add(bodyOf(prompts, "description", form.descriptionPrompt ?? ""), "YouTube description");
+  if (shortsOn(form)) {
+    add(bodyOf(prompts, "shorts", form.shorts?.prompt ?? ""), "Shorts");
+    add(bodyOf(prompts, "image", form.shorts?.imagePrompt ?? ""), "Shorts images");
+  }
   return origins;
 }

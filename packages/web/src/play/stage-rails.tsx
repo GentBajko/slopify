@@ -10,6 +10,7 @@ import { LabelledField, OptionPicker } from "@/play/pickers";
 import { FilePick, PasteArea } from "@/play/provided";
 import type { RailProps } from "@/play/rail-frame";
 import { promptNames, railBeneath, railControls, SourceSwitch, StageRail } from "@/play/rail-frame";
+import { freshShorts, Shorts } from "@/play/shorts";
 import { YoutubeDescription } from "@/play/youtube-description";
 
 export function ResearchRail({ form, problem, update }: RailProps) {
@@ -246,6 +247,15 @@ export function VideoRail({
           narrated={form.sources.audio !== "off"}
           problem={problem}
           onChange={(next) => update(next)}
+        />
+      </div>
+      <div className={railBeneath}>
+        <Shorts
+          value={form.shorts ?? freshShorts}
+          prompts={prompts}
+          narrated={form.sources.audio !== "off"}
+          problem={problem}
+          onChange={(shorts) => update({ shorts })}
         />
       </div>
       {form.sources.images === "off" ? (

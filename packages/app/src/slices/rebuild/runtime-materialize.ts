@@ -126,5 +126,7 @@ function futureKey(recipe: ResolvedWorkRecipe): string {
   if (recipe.input.kind === "tts") return `audio:${recipe.input.segment}:future`;
   if (recipe.key.startsWith("research:chapter:")) return "research:planner";
   if (recipe.key === "article:continuation") return "article:body";
+  // Every step of the shorts unfolds from the pick's answer, and is admitted with it.
+  if (recipe.key.startsWith("shorts:")) return "shorts:pick";
   return recipe.key;
 }

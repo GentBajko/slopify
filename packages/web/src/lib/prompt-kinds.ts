@@ -16,6 +16,8 @@ export function kindLabel(kind: PromptKind): string {
       return "Narration Preparation";
     case "description":
       return "YouTube Description";
+    case "shorts":
+      return "Shorts";
   }
 }
 

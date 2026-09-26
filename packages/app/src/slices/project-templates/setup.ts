@@ -15,6 +15,8 @@ export function templateSetup(
     { kind: "description" as const, name: input.form.descriptionPrompt ?? "" },
     ...input.form.imagePrompts.map((row) => ({ kind: "image" as const, name: row.name })),
     { kind: "thumbnail" as const, name: input.form.thumbnailPrompt },
+    { kind: "shorts" as const, name: input.form.shorts?.prompt ?? "" },
+    { kind: "image" as const, name: input.form.shorts?.imagePrompt ?? "" },
   ];
   for (const choice of choices) {
     if (choice.name === "") continue;

@@ -3,6 +3,7 @@ import type { Catalogue } from "../../catalog/schema.js";
 import type { CostEstimate, PricedRequest } from "../estimate/index.js";
 import { estimateRequests } from "../estimate/index.js";
 import type { ManifestPiece, ProjectRevision, RevisionManifest } from "../revisions/model.js";
+import { defaultShortsPrompt, shortsImageUpperBound } from "../shorts/model.js";
 import { planDependencies, type RetainedWork, type WorkRecipe } from "./dependencies.js";
 import type { RebuildPreview, RebuildWork } from "./model.js";
 import { matchingNarrationPiece } from "./narration-reuse.js";
@@ -110,12 +111,11 @@ export function planRevisionWork(
         null,
       after: row.fingerprint,
     }));
-  const priced = work.map(
-    (row): PricedRequest =>
-      priceRecipe(
-        row,
-        recipes.find((one) => one.key === row.key),
-      ),
+  const priced = work.flatMap((row) =>
+    priceRecipes(
+      row,
+      recipes.find((one) => one.key === row.key),
+    ),
   );
   return {
     recipes,
@@ -259,6 +259,58 @@ function retainedFor(
 // ceiling: the timed transcript of a 20-minute narration, about 3,000 words. The real one
 // is only built once the word timing lands.
 const youtubeTranscriptEstimate = 20000;
+// The numbered transcript the shorts are picked from is the same text with a number and a
+// span before every sentence rather than a time before every passage.
+const shortsTranscriptEstimate = 24000;
+
+// What a step is charged as. Most steps are one request; what stands in for the shorts
+// until they are picked is every clip's image prompts and, at the longest length allowed,
+// every image, which is the most the step can cost.
+export function priceRecipes(
+  work: RebuildWork,
+  value: ResolvedWorkRecipe | undefined,
+): readonly PricedRequest[] {
+  const input = value?.input;
+  if (
+    work.disposition !== "generate" ||
+    input?.kind !== "deferred" ||
+    input.operation !== "shorts" ||
+    !Array.isArray(input.template)
+  )
+    return [priceRecipe(work, value)];
+  const [, style, provider, model, imageSeconds, count, maxSeconds, llmProvider, llmModel] =
+    input.template;
+  const clips = typeof count === "number" ? count : 0;
+  const images =
+    typeof imageSeconds === "number" && typeof maxSeconds === "number"
+      ? shortsImageUpperBound({ count: clips, maxSeconds }, imageSeconds)
+      : 0;
+  const detail = `Up to ${String(images)} vertical images: ${String(clips)} shorts at the longest length allowed. The clips are picked when the step runs, so shorter ones use fewer.`;
+  return [
+    ...Array.from(
+      { length: clips },
+      (): PricedRequest => ({
+        kind: "llm",
+        stage: work.key,
+        provider: typeof llmProvider === "string" ? llmProvider : "",
+        model: typeof llmModel === "string" ? llmModel : "",
+        inputCharacters: (typeof style === "string" ? style.length : 0) + 3000,
+        outputCharacters: 2400,
+        detail: "One LLM call per short writes its image prompts; its length is estimated.",
+      }),
+    ),
+    ...Array.from(
+      { length: images },
+      (): PricedRequest => ({
+        kind: "image",
+        stage: work.key,
+        provider: typeof provider === "string" ? provider : "",
+        model: typeof model === "string" ? model : "",
+        detail,
+      }),
+    ),
+  ];
+}
 
 export function priceRecipe(
   work: RebuildWork,
@@ -304,6 +356,21 @@ export function priceRecipe(
     };
   if (input.kind === "image")
     return { kind: "image", stage: work.key, provider: input.provider, model: input.model };
+  if (input.kind === "local" && input.operation === "shorts-pick-v1") {
+    const [, provider, model, , prompt, count] = Array.isArray(input.values) ? input.values : [];
+    return {
+      kind: "llm",
+      stage: work.key,
+      provider: typeof provider === "string" ? provider : "",
+      model: typeof model === "string" ? model : "",
+      inputCharacters:
+        (typeof prompt === "string" && prompt !== "" ? prompt.length : defaultShortsPrompt.length) +
+        shortsTranscriptEstimate,
+      outputCharacters: 400 * (typeof count === "number" ? count : 1),
+      detail:
+        "The numbered transcript is built when the step runs; its length is estimated. One more call is made when the first answer breaks the rules. Retries are excluded.",
+    };
+  }
   if (input.kind === "local" && input.operation === "youtube-description-v1") {
     const [, provider, model, , prompt] = Array.isArray(input.values) ? input.values : [];
     return {

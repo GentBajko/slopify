@@ -21,6 +21,8 @@ import {
 import { type DocumentSettings, defaultDocumentTheme } from "@app/slices/document/model.js";
 import type { Entry } from "@app/slices/library/model.js";
 import type { Chunking } from "@app/slices/narration/chunk.js";
+import type { PlayDraftForm } from "@app/slices/play-drafts/schema.js";
+import type { ShortsSettings } from "@app/slices/shorts/model.js";
 import type { StagedFile } from "@app/slices/storage/model.js";
 import { defaultSubtitles, type SubtitleConfig } from "@app/slices/subtitles/model.js";
 import { subtitlesFor } from "@/subtitles/config";
@@ -58,6 +60,9 @@ export interface LegacyPlayFormState {
   // The Video stage's YouTube description step and its Description prompt ("" is built-in).
   readonly youtubeDescription?: boolean | undefined;
   readonly descriptionPrompt?: string | undefined;
+  // The Video stage's Shorts step, as the draft holds it: the numbers as typed, and the two
+  // prompts' names ("" is built-in). Absent until Shorts is first touched: off.
+  readonly shorts?: ShortsForm | undefined;
   // The ticked image prompts, in tick order, each with its Number.
   readonly imagePrompts: readonly ImagePromptChoice[];
   readonly thumbnailPrompt: string;
@@ -77,6 +82,30 @@ export interface LegacyPlayFormState {
   // unticking a prompt and ticking it again gives its field back with what was in it.
   readonly values: Readonly<Record<string, string>>;
   readonly provided: ProvidedState;
+}
+
+export type ShortsForm = NonNullable<PlayDraftForm["shorts"]>;
+
+// Whether the run makes shorts: switched on, with narration to cut them from.
+export function shortsOn(form: {
+  readonly sources: { readonly audio: StageSource };
+  readonly shorts?: { readonly enabled: boolean } | undefined;
+}): boolean {
+  return form.shorts?.enabled === true && form.sources.audio !== "off";
+}
+
+// The typed numbers as the rule reads them: NaN while one is not a number, so the shared rule
+// refuses it in place.
+export function shortsSettingsOf(form: ShortsForm): ShortsSettings {
+  const typed = (value: string): number => (value.trim() === "" ? Number.NaN : Number(value));
+  return {
+    enabled: form.enabled,
+    count: typed(form.count),
+    minSeconds: typed(form.minSeconds),
+    maxSeconds: typed(form.maxSeconds),
+    ...(form.prompt.trim() ? { prompt: form.prompt } : {}),
+    ...(form.imagePrompt.trim() ? { imagePrompt: form.imagePrompt } : {}),
+  };
 }
 
 // Existing controls keep the numeric representation until their raw-input migration.
@@ -121,6 +150,7 @@ export function needsLlm(form: PlayFormState, entries: readonly Entry[]): boolea
   return (
     usesNarrationPreparation(form) ||
     usesYoutubeDescription(form) ||
+    shortsOn(form) ||
     form.sources.article === "generate" ||
     form.sources.thumbnail === "prompt_by_llm" ||
     (form.sources.audio === "generate" &&
@@ -181,6 +211,9 @@ export function draftOf(input: DraftInput): RunDraft {
           youtubeDescription: true,
           ...(form.descriptionPrompt?.trim() ? { descriptionPrompt: form.descriptionPrompt } : {}),
         }
+      : {}),
+    ...(shortsOn(form) && form.shorts !== undefined
+      ? { shorts: shortsSettingsOf(form.shorts) }
       : {}),
     imagePrompts: form.imagePrompts,
     thumbnailPrompt: form.thumbnailPrompt,

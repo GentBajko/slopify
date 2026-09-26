@@ -95,6 +95,17 @@ export const runDraftSchema = z.object({
   document: documentSettingsSchema.optional(),
   youtubeDescription: z.boolean().optional(),
   descriptionPrompt: z.string().optional(),
+  // The ranges are `slices/shorts/model.ts`'s, checked by admission, not the schema's.
+  shorts: z
+    .object({
+      enabled: z.boolean(),
+      count: z.number(),
+      minSeconds: z.number(),
+      maxSeconds: z.number(),
+      prompt: z.string().optional(),
+      imagePrompt: z.string().optional(),
+    })
+    .optional(),
 });
 
 export const runConfigSchema = runDraftSchema.extend({

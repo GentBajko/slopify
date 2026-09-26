@@ -1,4 +1,5 @@
 import type { PromptDraft, PromptKind } from "@app/slices/library/model.js";
+import { defaultShortsPrompt } from "@app/slices/shorts/model.js";
 import { defaultDescriptionPrompt } from "@app/slices/youtube/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
@@ -295,14 +296,15 @@ export function PromptEditorRoute({
   );
 }
 
-// The two kinds with a starting text: the documentary delivery cues, and the wording the
-// YouTube description uses when a project picks no prompt.
+// The kinds with a starting text: the documentary delivery cues, and the wording the YouTube
+// description and the shorts use when a project picks no prompt.
 function starterOf(
   kind: PromptKind,
 ): { readonly label: string; readonly body: string } | undefined {
   if (kind === "narration") return { label: "Use Documentary Starter", body: narrationStarter };
   if (kind === "description")
     return { label: "Use Built-in Starter", body: defaultDescriptionPrompt };
+  if (kind === "shorts") return { label: "Use Built-in Starter", body: defaultShortsPrompt };
   return undefined;
 }
 

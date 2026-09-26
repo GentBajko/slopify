@@ -160,6 +160,23 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
     after.youtubeDescription === true ? "On" : "Off",
   );
   add("Description prompt", before.descriptionPrompt, after.descriptionPrompt);
+  add(
+    "Shorts",
+    before.shorts?.enabled === true ? "On" : "Off",
+    after.shorts?.enabled === true ? "On" : "Off",
+  );
+  add("Number of shorts", before.shorts?.count, after.shorts?.count);
+  add(
+    "Short length (seconds)",
+    before.shorts === undefined
+      ? undefined
+      : `${String(before.shorts.minSeconds)}-${String(before.shorts.maxSeconds)}`,
+    after.shorts === undefined
+      ? undefined
+      : `${String(after.shorts.minSeconds)}-${String(after.shorts.maxSeconds)}`,
+  );
+  add("Shorts prompt", before.shorts?.prompt, after.shorts?.prompt);
+  add("Shorts image prompt", before.shorts?.imagePrompt, after.shorts?.imagePrompt);
   add("Silence gap (seconds)", before.silenceGapSeconds, after.silenceGapSeconds);
   add("Silence at start and end (seconds)", before.edgeSilenceSeconds, after.edgeSilenceSeconds);
   add("Seconds per image", before.imageSeconds, after.imageSeconds);

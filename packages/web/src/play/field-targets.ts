@@ -83,6 +83,7 @@ export function playFieldTarget(
             "document",
             "youtubeDescription",
             "descriptionPrompt",
+            "shorts",
           ])
         ? "outputs"
         : "review";

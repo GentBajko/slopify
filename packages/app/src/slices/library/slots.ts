@@ -9,6 +9,7 @@ import {
   type FieldError,
   normaliseDraft,
   usesNarrationPreparation,
+  usesShorts,
   usesYoutubeDescription,
 } from "../admission/rules.js";
 import { collectFields, render } from "../admission/substitute.js";
@@ -79,6 +80,21 @@ export function pickTemplates(
       "description",
       snapshot,
     );
+
+  // The Shorts step's two prompts; none picked is the built-in one, which asks for no keyword.
+  if (usesShorts(draft)) {
+    body(db, "shorts", draft.shorts?.prompt, "shorts.prompt", missing, text, "shorts", snapshot);
+    body(
+      db,
+      "image",
+      draft.shorts?.imagePrompt,
+      "shorts.imagePrompt",
+      missing,
+      image,
+      "shortsImage",
+      snapshot,
+    );
+  }
 
   if (sources.images === "generate") {
     for (const [index, picked] of draft.imagePrompts.entries()) {

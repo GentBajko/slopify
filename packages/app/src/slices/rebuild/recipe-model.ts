@@ -40,6 +40,8 @@ export const localOperations = [
   "narration-files-v1",
   "render-document",
   "youtube-description-v1",
+  "shorts-pick-v1",
+  "short-render-v1",
 ] as const;
 export const deferredOperations = [
   "narration-preparation",
@@ -53,6 +55,7 @@ export const deferredOperations = [
   "intro-narration",
   "outro-narration",
   "resolve-revision-recipe",
+  "shorts",
 ] as const;
 export type RecipeInput =
   | {

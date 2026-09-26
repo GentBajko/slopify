@@ -20,6 +20,12 @@ export function recipeProviderChoice(
   // The YouTube description's request is built when it runs, from the project's LLM row.
   if (input.kind === "local" && input.operation === "youtube-description-v1")
     return config.llm === undefined ? undefined : { ...config.llm, family: "llm" };
+  // So is the shorts' pick; what stands in for the rest of the step until it lands is
+  // mostly images, which are its cost.
+  if (input.kind === "local" && input.operation === "shorts-pick-v1")
+    return config.llm === undefined ? undefined : { ...config.llm, family: "llm" };
+  if (input.kind === "deferred" && input.operation === "shorts")
+    return config.images === undefined ? undefined : { ...config.images, family: "image" };
   if (input.kind !== "deferred") return undefined;
   const family =
     input.operation === "narration-preparation"

@@ -1,4 +1,4 @@
-import { usesYoutubeDescription } from "../admission/rules.js";
+import { usesShorts, usesYoutubeDescription } from "../admission/rules.js";
 import { audioExportArgs } from "../video/audio-export-args.js";
 import type { AudioRecipes } from "./recipe-audio.js";
 import {
@@ -34,9 +34,10 @@ export function exportRecipes(
       ),
     );
   const captions = config.subtitles !== undefined && config.subtitles.mode !== "off";
-  // The YouTube description's chapters use the same word timing, so it runs for them even
-  // with captions off; only the caption files below wait for captions.
-  if (!captions && !usesYoutubeDescription(config)) return recipes;
+  // The YouTube description's chapters and the shorts' clips and captions use the same word
+  // timing, so it runs for them even with captions off; only the caption files below wait
+  // for captions.
+  if (!captions && !usesYoutubeDescription(config) && !usesShorts(config)) return recipes;
   const timing = recipe(
     context,
     "subtitles:timing",

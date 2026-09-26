@@ -1,5 +1,6 @@
 import type { StageKind } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
+import { shortsSettingsProblems } from "../shorts/model.js";
 import type { StagedFile } from "../storage/model.js";
 import type { MotionStyle, ProviderChoice, RunDraft, StageSource } from "./model.js";
 import { sourceOf } from "./model.js";
@@ -111,7 +112,8 @@ export function admit(input: AdmissionInput): AdmissionResult {
     draft.intro?.mode === "llm" ||
     draft.outro?.mode === "llm" ||
     usesNarrationPreparation(draft) ||
-    usesYoutubeDescription(draft);
+    usesYoutubeDescription(draft) ||
+    usesShorts(draft);
   if (needsLlm && !chosen(draft.llm)) {
     fields.push({ field: "llm", message: "Choose a text (LLM) provider and model." });
   }
@@ -136,7 +138,8 @@ export function admit(input: AdmissionInput): AdmissionResult {
   if (
     (sources.images === "generate" ||
       sources.thumbnail === "from_prompt" ||
-      sources.thumbnail === "prompt_by_llm") &&
+      sources.thumbnail === "prompt_by_llm" ||
+      usesShorts(draft)) &&
     !chosen(draft.images)
   ) {
     fields.push({ field: "images", message: "Choose an image provider and model." });
@@ -156,6 +159,7 @@ export function admit(input: AdmissionInput): AdmissionResult {
     });
   }
   fields.push(...youtubeDescriptionFields(draft));
+  fields.push(...shortsFields(draft));
   checkProvided(draft, input.staged, fields);
   checkValues(draft, input.requiredSlots, fields);
 
@@ -384,6 +388,36 @@ export function youtubeDescriptionFields(
         },
       ]
     : [];
+}
+
+// Shorts are cut from the narration and captioned from its word timings, so they need
+// narration, like the YouTube description; they run whether the video renders or not.
+export function usesShorts(draft: Pick<RunDraft, "sources" | "shorts">): boolean {
+  return draft.shorts?.enabled === true && draft.sources.audio !== "off";
+}
+
+export function shortsFields(
+  draft: Pick<RunDraft, "sources" | "shorts" | "imageSeconds">,
+): readonly FieldError[] {
+  const shorts = draft.shorts;
+  if (shorts?.enabled !== true) return [];
+  if (draft.sources.audio === "off")
+    return [
+      {
+        field: "shorts.enabled",
+        message: "Shorts are cut from the narration. Turn narration on, or turn Shorts off.",
+      },
+    ];
+  const fields: FieldError[] = shortsSettingsProblems(shorts).map((problem) => ({
+    field: `shorts.${problem.field}`,
+    message: problem.message,
+  }));
+  // The shorts hold each image as long as the video does. With the video off nothing else
+  // checks the number.
+  const imageProblem =
+    draft.sources.video === "generate" ? undefined : imageSecondsProblem(draft.imageSeconds);
+  if (imageProblem !== undefined) fields.push({ field: "imageSeconds", message: imageProblem });
+  return fields;
 }
 
 function chosen(choice: ProviderChoice | undefined): boolean {

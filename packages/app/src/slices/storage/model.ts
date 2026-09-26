@@ -32,6 +32,10 @@ export const outputRoles = [
   "document_pdf",
   "youtube_description",
   "youtube_tags",
+  // The Shorts step: the picked clips (JSON), each clip's vertical images, and each clip.
+  "shorts",
+  "short_image",
+  "short_video",
 ] as const;
 export type OutputRole = (typeof outputRoles)[number];
 
@@ -50,6 +54,8 @@ export interface OutputMeta {
   // keeps the LLM's own wording the same way.
   readonly prompt?: string | undefined;
   readonly index?: number | undefined;
+  // Which short (1-based) a short's image or video belongs to.
+  readonly short?: number | undefined;
   readonly provider?: string | undefined;
   readonly model?: string | undefined;
   readonly voice?: string | undefined;

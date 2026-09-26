@@ -27,6 +27,7 @@ import { changeSource, editOfForm } from "./revision-form-state.js";
 import { RevisionNarration } from "./revision-narration.js";
 import { RevisionPrompts } from "./revision-prompts.js";
 import { RevisionProviders } from "./revision-providers.js";
+import { RevisionShorts } from "./revision-shorts.js";
 import type { EditorProps, EditSection } from "./revision-workspace.js";
 import { RevisionYoutube } from "./revision-youtube.js";
 export function RevisionForm(
@@ -489,6 +490,13 @@ export function RevisionForm(
         </section>
         <section aria-label="Prompts" hidden={current !== "prompts"} className={panel("prompts")}>
           <RevisionYoutube
+            edit={edit}
+            view={view}
+            prompts={prompts.data?.prompts ?? []}
+            problem={problem}
+            onChange={onChange}
+          />
+          <RevisionShorts
             edit={edit}
             view={view}
             prompts={prompts.data?.prompts ?? []}

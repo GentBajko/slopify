@@ -1,6 +1,10 @@
 import type { StageKind } from "@app/kernel/pipeline.js";
 import type { RunConfig } from "@app/slices/admission/model.js";
-import { usesNarrationPreparation, usesYoutubeDescription } from "@app/slices/admission/rules.js";
+import {
+  usesNarrationPreparation,
+  usesShorts,
+  usesYoutubeDescription,
+} from "@app/slices/admission/rules.js";
 import type { ProviderStatus } from "@app/slices/settings/model.js";
 import { providerUnavailableLabel } from "@/lib/provider-status";
 
@@ -44,6 +48,12 @@ export function unreadyFor(
   if (kind === "video" && usesYoutubeDescription(config)) {
     const description = unreadyFor("article", config, providers);
     if (description !== undefined) return description;
+  }
+  // So do the shorts, which also ask the image model for their pictures.
+  if (kind === "video" && usesShorts(config)) {
+    const shorts =
+      unreadyFor("article", config, providers) ?? unreadyFor("images", config, providers);
+    if (shorts !== undefined) return shorts;
   }
   const id = providerFor(kind, config);
   if (id === undefined || id === "") {

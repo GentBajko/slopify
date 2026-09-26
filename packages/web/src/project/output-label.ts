@@ -25,10 +25,17 @@ const labels: Readonly<Record<Output["role"], string>> = {
   document_pdf: "Document (PDF)",
   youtube_description: "YouTube description",
   youtube_tags: "YouTube tags",
+  shorts: "Shorts list",
+  short_image: "Short image",
+  short_video: "Short",
 };
 export function outputLabel(output: Output): string {
   if ((output.role === "narration_txt" || output.role === "tts_script") && output.meta.segment)
     return `${output.meta.segment === "body" ? "Body" : output.meta.segment === "intro" ? "Intro" : "Outro"} ${labels[output.role]}`;
+  if (output.role === "short_video" && typeof output.meta.short === "number")
+    return `Short ${String(output.meta.short)}`;
+  if (output.role === "short_image" && typeof output.meta.short === "number")
+    return `Short ${String(output.meta.short)} image ${String(output.meta.index ?? 1)}`;
   return output.role === "image" && typeof output.meta.index === "number"
     ? `Image ${output.meta.index}`
     : labels[output.role];
@@ -36,6 +43,8 @@ export function outputLabel(output: Output): string {
 
 export function outputSlotLabel(slot: string): string {
   if (slot.startsWith("image:")) return "Image";
+  if (/^shorts:\d+:render$/.test(slot)) return labels.short_video;
+  if (/^shorts:\d+:image:\d+$/.test(slot)) return labels.short_image;
   if (slot === "document:pdf") return labels.document_pdf;
   const role = slot.split(":").at(-1);
   return Object.entries(labels).find(([key]) => key === role)?.[1] ?? "Saved output";

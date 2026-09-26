@@ -299,3 +299,35 @@ it.each([
   const label = within(outputs).getByText("YouTube description");
   expect(label.nextElementSibling?.textContent).toBe(expected);
 });
+
+const shorts = {
+  enabled: true,
+  count: "3",
+  minSeconds: "60",
+  maxSeconds: "120",
+  prompt: "",
+  imagePrompt: "",
+};
+
+it.each([
+  ["a draft saved without Shorts", generated, "Off"],
+  [
+    "the built-in prompts",
+    { ...generated, form: { ...generated.form, shorts } },
+    "3 shorts of 60-120 s · Built-in prompt · Built-in image style · Vertical images and renders after subtitle timing",
+  ],
+  [
+    "picked prompts",
+    {
+      ...generated,
+      form: { ...generated.form, shorts: { ...shorts, prompt: "Hooks", imagePrompt: "Maps" } },
+    },
+    "3 shorts of 60-120 s · Hooks prompt · Maps image style · Vertical images and renders after subtitle timing",
+  ],
+])("names the Shorts for %s", async (_name, document, expected) => {
+  const harness = reviewHarness();
+  await harness.prepare(document);
+  const outputs = screen.getByRole("region", { name: "Outputs summary" });
+  const label = within(outputs).getByText("Shorts");
+  expect(label.nextElementSibling?.textContent).toBe(expected);
+});

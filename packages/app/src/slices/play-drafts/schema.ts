@@ -56,6 +56,20 @@ export const playDraftFormSchema = z
     // Absent on drafts and templates saved before the YouTube description: off, built-in prompt.
     youtubeDescription: z.boolean().optional(),
     descriptionPrompt: text.optional(),
+    // Absent on drafts and templates saved before Shorts: off. The numbers are raw text, like
+    // every other number on Play; the prompts are names, "" being the built-in ones.
+    shorts: z
+      .object({
+        enabled: z.boolean(),
+        count: text,
+        minSeconds: text,
+        maxSeconds: text,
+        prompt: text,
+        imagePrompt: text,
+      })
+      .strict()
+      .readonly()
+      .optional(),
     imagePrompts: z.array(z.object({ name: text, number: text }).strict().readonly()).readonly(),
     thumbnailPrompt: text,
     intro: text,

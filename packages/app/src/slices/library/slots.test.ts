@@ -70,6 +70,39 @@ describe("pickTemplates", () => {
     ).toBe("narrationPrompt");
     deps.db.close();
   });
+  it("freezes the picked Shorts and image-style prompts only while Shorts are on", () => {
+    const deps = library();
+    createPrompt(deps, { kind: "shorts", name: "Hooks", body: "Hooks about {{Topic}}." });
+    createPrompt(deps, { kind: "image", name: "Oils", body: "Oil paintings." });
+    const selected = draft({
+      shorts: {
+        enabled: true,
+        count: 3,
+        minSeconds: 60,
+        maxSeconds: 120,
+        prompt: "Hooks",
+        imagePrompt: "Oils",
+      },
+    });
+    const picked = pickTemplates(deps.db, selected);
+    expect(picked.requiredSlots).toEqual(["Topic"]);
+    expect(renderPicked(picked, { Topic: "rope" })).toEqual({
+      shorts: "Hooks about rope.",
+      shortsImage: "Oil paintings.",
+    });
+    expect(
+      pickTemplates(deps.db, {
+        ...selected,
+        shorts: { ...selected.shorts, enabled: false } as never,
+      }).bodies,
+    ).toEqual([]);
+    const missing = pickTemplates(deps.db, {
+      ...selected,
+      shorts: { enabled: true, count: 3, minSeconds: 60, maxSeconds: 120, prompt: "Deleted" },
+    }).missing;
+    expect(missing.map((one) => one.field)).toEqual(["shorts.prompt"]);
+    deps.db.close();
+  });
   it("freezes the picked Description prompt only while the YouTube description is on", () => {
     const deps = library();
     createPrompt(deps, { kind: "description", name: "Hooky", body: "Hook {{Topic}} fans." });

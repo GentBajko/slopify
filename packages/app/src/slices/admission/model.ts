@@ -124,6 +124,9 @@ export interface RunDraft {
   readonly youtubeDescription?: boolean | undefined;
   // The Description prompt from the library; absent or blank uses the built-in one.
   readonly descriptionPrompt?: string | undefined;
+  // The Video stage's optional Shorts step (`slices/shorts`). Absent reads as off, which is
+  // what every project saved before it was.
+  readonly shorts?: import("../shorts/model.js").ShortsSettings | undefined;
 }
 
 // The draft as accepted, coerced and trimmed. This is what the project's `config` column

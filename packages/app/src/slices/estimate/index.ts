@@ -2,12 +2,23 @@ import { z } from "zod";
 import type { Catalogue } from "../../catalog/schema.js";
 import type { CatalogueStore } from "../../catalog/store.js";
 import { type RunDraft, sourceOf } from "../admission/model.js";
-import { usesNarrationPreparation, usesYoutubeDescription } from "../admission/rules.js";
+import {
+  imageSecondsProblem,
+  usesNarrationPreparation,
+  usesShorts,
+  usesYoutubeDescription,
+} from "../admission/rules.js";
 import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
 import { chunkNarration, defaultChunking } from "../narration/chunk.js";
 import { normalizeNarrationText } from "../narration/plan.js";
 import { preparationMessages } from "../narration/preparation.js";
+import {
+  defaultShortsImagePrompt,
+  defaultShortsPrompt,
+  shortsImageUpperBound,
+  shortsSettingsProblems,
+} from "../shorts/model.js";
 import { defaultDescriptionPrompt } from "../youtube/model.js";
 import { estimateRequests, groupEstimateRows, type PricedRequest } from "./requests.js";
 
@@ -68,7 +79,11 @@ export function estimateRun(
   const generatedArticle = draft.sources.article === "generate";
   const articleChars = generatedArticle ? expectedWords * 6 : (draft.provided.article?.length ?? 0);
   const promptChars = Object.entries(rendered).reduce(
-    (sum, [key, value]) => sum + (key === "narration" || key === "description" ? 0 : value.length),
+    (sum, [key, value]) =>
+      sum +
+      (key === "narration" || key === "description" || key === "shorts" || key === "shortsImage"
+        ? 0
+        : value.length),
     0,
   );
   const local = (stage: string, detail: string): void => {
@@ -200,6 +215,40 @@ export function estimateRun(
       2400,
       "One LLM call on the timed transcript.",
     );
+  // Shorts: one call picks the clips from the numbered transcript, one per clip writes its
+  // image prompts, and the images are charged at the most the step can ask for, every clip
+  // at the longest length allowed.
+  const shorts = draft.shorts;
+  // Numbers the run would refuse are not priced: a typo of 3000 shorts would list them all.
+  if (
+    usesShorts(draft) &&
+    shorts !== undefined &&
+    shortsSettingsProblems(shorts).length === 0 &&
+    imageSecondsProblem(draft.imageSeconds) === undefined
+  ) {
+    text(
+      "Shorts",
+      (rendered.shorts?.trim() ? rendered.shorts.length : defaultShortsPrompt.length) +
+        Math.round(articleChars * 1.15) +
+        1500,
+      400 * shorts.count,
+      "One LLM call on the numbered transcript picks the clips.",
+    );
+    const style = rendered.shortsImage?.trim()
+      ? rendered.shortsImage.length
+      : defaultShortsImagePrompt.length;
+    for (let clip = 0; clip < shorts.count; clip++)
+      text("Shorts", style + 3000, 2400, "One LLM call per short writes its image prompts.");
+    const count = shortsImageUpperBound(shorts, draft.imageSeconds);
+    for (let index = 0; index < count; index++)
+      requests.push({
+        kind: "image",
+        stage: "Shorts",
+        provider: image.provider,
+        model: image.model,
+        detail: `Up to ${String(count)} vertical images. ${imageNote}`,
+      });
+  }
   if (sourceOf(draft.sources, "document") === "generate")
     local("Document", "Laid out locally from the article; no API fee.");
   return {

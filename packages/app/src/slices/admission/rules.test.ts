@@ -8,6 +8,7 @@ import {
   admit,
   allowedSources,
   usesNarrationPreparation,
+  usesShorts,
   usesYoutubeDescription,
 } from "./rules.js";
 
@@ -94,6 +95,42 @@ describe("YouTube description admission", () => {
     expect(fields(silent)).toEqual(["youtubeDescription"]);
     expect(usesYoutubeDescription(silent)).toBe(false);
     expect(fields({ ...silent, youtubeDescription: undefined })).toEqual([]);
+  });
+});
+
+describe("Shorts admission", () => {
+  const draft = (): RunDraft =>
+    provided({
+      sources: sources({ audio: "provide", images: "off", video: "off" }),
+      llm: { provider: "codex", model: "model" },
+      images: { provider: "fal", model: "image" },
+      shorts: { enabled: true, count: 3, minSeconds: 60, maxSeconds: 120 },
+    });
+  it("needs the shared LLM and an image model, with or without picked prompts", () => {
+    expect(fields(draft())).toEqual([]);
+    expect(fields({ ...draft(), llm: undefined })).toContain("llm");
+    expect(fields({ ...draft(), images: undefined })).toContain("images");
+    const off = {
+      ...draft(),
+      shorts: { enabled: false, count: 3, minSeconds: 60, maxSeconds: 120 },
+    };
+    expect(fields({ ...off, llm: undefined, images: undefined })).toEqual([]);
+  });
+  it("needs narration to cut the clips from", () => {
+    const silent = { ...draft(), sources: sources({ audio: "off", images: "off", video: "off" }) };
+    expect(fields(silent)).toEqual(["shorts.enabled"]);
+    expect(usesShorts(silent)).toBe(false);
+    expect(fields({ ...silent, shorts: undefined })).toEqual([]);
+  });
+  it("refuses numbers outside the ranges, a minimum past the maximum, and a bad image length", () => {
+    expect(
+      fields({ ...draft(), shorts: { enabled: true, count: 11, minSeconds: 10, maxSeconds: 120 } }),
+    ).toEqual(["shorts.count", "shorts.minSeconds"]);
+    expect(
+      fields({ ...draft(), shorts: { enabled: true, count: 3, minSeconds: 90, maxSeconds: 60 } }),
+    ).toEqual(["shorts.minSeconds", "shorts.maxSeconds"]);
+    // With the video off, nothing else checks how long each image is held.
+    expect(fields({ ...draft(), imageSeconds: 0 })).toEqual(["imageSeconds"]);
   });
 });
 

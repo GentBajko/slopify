@@ -9,7 +9,14 @@ import type { EntryMode } from "../admission/model.js";
 export type { EntryMode } from "../admission/model.js";
 export { entryModes } from "../admission/model.js";
 
-export const promptKinds = ["article", "image", "thumbnail", "narration", "description"] as const;
+export const promptKinds = [
+  "article",
+  "image",
+  "thumbnail",
+  "narration",
+  "description",
+  "shorts",
+] as const;
 export type PromptKind = (typeof promptKinds)[number];
 
 export const entryCategories = ["intro", "outro"] as const;

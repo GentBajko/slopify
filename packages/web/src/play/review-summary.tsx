@@ -6,6 +6,7 @@ import { documentThemeLabel } from "@app/slices/document/model.js";
 import type { Entry } from "@app/slices/library/model.js";
 import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import type { ProviderFamily, ProviderStatus, Voice } from "@app/slices/settings/model.js";
+import { defaultShortsPromptName } from "@app/slices/shorts/model.js";
 import { defaultDescriptionPromptName } from "@app/slices/youtube/model.js";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
@@ -16,7 +17,7 @@ import { entriesQuery, providersQuery, voicesQuery } from "@/queries";
 import { type FontSummary, fontsKey } from "@/subtitles/api";
 import { usePlaySession } from "./draft-context";
 import { CheckpointReview } from "./run-review";
-import { sourceLabels } from "./state";
+import { shortsOn, sourceLabels } from "./state";
 
 interface RequiredProvider {
   readonly field: string;
@@ -57,6 +58,7 @@ function requiredProviders(
     form.sources.article === "generate" ||
     form.sources.thumbnail === "prompt_by_llm" ||
     usesYoutubeDescription(form) ||
+    shortsOn(form) ||
     (generatedAudio &&
       (["intro", "outro"] as const).some((kind) =>
         entries.some(
@@ -87,7 +89,7 @@ function requiredProviders(
           },
         ]
       : []),
-    ...((form.sources.images === "generate" || generatedThumbnail) && form.images
+    ...((form.sources.images === "generate" || generatedThumbnail || shortsOn(form)) && form.images
       ? [
           {
             field: "images.provider",
@@ -235,6 +237,7 @@ export function ReviewSummary({
     form.sources.article === "generate" ||
     form.sources.thumbnail === "prompt_by_llm" ||
     usesYoutubeDescription(form) ||
+    shortsOn(form) ||
     (generatedAudio &&
       (["intro", "outro"] as const).some((kind) =>
         entries?.entries.some(
@@ -351,7 +354,7 @@ export function ReviewSummary({
             ? row("Narration file", "provided.audio", form.provided.audio?.name)
             : null}
           {row("Images", "sources.images", sourceLabels[form.sources.images])}
-          {form.sources.images === "generate" || generatedThumbnail ? (
+          {form.sources.images === "generate" || generatedThumbnail || shortsOn(form) ? (
             <>
               {row("Image provider", "images.provider", providerName(form.images.provider))}
               {row(
@@ -422,6 +425,15 @@ export function ReviewSummary({
                 "youtubeDescription",
                 form.youtubeDescription === true
                   ? `${form.descriptionPrompt || defaultDescriptionPromptName} prompt · One LLM call after subtitle timing`
+                  : "Off",
+              )
+            : null}
+          {form.sources.audio !== "off"
+            ? row(
+                "Shorts",
+                "shorts.enabled",
+                shortsOn(form) && form.shorts !== undefined
+                  ? `${form.shorts.count} shorts of ${form.shorts.minSeconds}-${form.shorts.maxSeconds} s · ${form.shorts.prompt || defaultShortsPromptName} prompt · ${form.shorts.imagePrompt || defaultShortsPromptName} image style · Vertical images and renders after subtitle timing`
                   : "Off",
               )
             : null}

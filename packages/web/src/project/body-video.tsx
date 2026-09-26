@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
+import { currentShorts, ShortsBlock } from "./body-shorts.js";
 import { YoutubeBlock } from "./body-youtube.js";
 import { ConfirmedButton } from "./controls.js";
 import { DownloadMenu, OutputFolder, StageBody } from "./parts.js";
@@ -9,7 +10,7 @@ import { duration, percent, preparingSubtitles } from "./summary.js";
 
 // The final stage plays an MP4 or, when Video is Off, the combined narration WAV.
 // The previous file stays playable until ffmpeg successfully replaces it. The YouTube
-// description, when the project writes one, sits below the downloads.
+// description and the shorts, when the project makes them, sit below the downloads.
 export function VideoBody({ stage, project, outputs, actions, busy, subtitleControls }: BodyProps) {
   const audioExport =
     project.config.sources.video === "off" && project.config.sources.audio !== "off";
@@ -19,6 +20,9 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
   const vtt = roleOf(subtitleOutputs, "subtitles_vtt");
   const description = roleOf(subtitleOutputs, "youtube_description");
   const tags = roleOf(subtitleOutputs, "youtube_tags");
+  const shorts = currentShorts(subtitleOutputs, "short_video").toSorted(
+    (left, right) => (left.meta.short ?? 0) - (right.meta.short ?? 0),
+  );
   const media = useOutputMedia(video);
   const captions = useOutputMedia(vtt);
   const playedSubtitles = video?.meta.subtitlesMode ?? project.config.subtitles?.mode;
@@ -112,6 +116,10 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
             { output: vtt, label: "Subtitles (.vtt)" },
             { output: description, label: "YouTube description (.txt)" },
             { output: tags, label: "YouTube tags (.txt)" },
+            ...shorts.map((output) => ({
+              output,
+              label: `Short ${String(output.meta.short ?? "")} (.mp4)`,
+            })),
           ]}
         />
         <OutputFolder output={video} />
@@ -136,6 +144,7 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
         </details>
       ) : null}
       <YoutubeBlock stage={stage} project={project} outputs={outputs} />
+      <ShortsBlock stage={stage} project={project} outputs={outputs} />
       {subtitleControls ? (
         <details className="border-t border-line pt-3">
           <summary className="cursor-pointer text-small font-semibold">

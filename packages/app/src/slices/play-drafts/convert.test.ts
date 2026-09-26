@@ -377,3 +377,43 @@ it("saves the document theme outright, Plain for a draft that names none", () =>
     h.close();
   }
 });
+
+it("carries the Shorts settings only with narration on, refusing bad numbers in plain words", () => {
+  const h = draftFixture();
+  try {
+    const shorts = {
+      enabled: true,
+      count: "2",
+      minSeconds: "45",
+      maxSeconds: "90",
+      prompt: "Hooks",
+      imagePrompt: "",
+    };
+    const on = { ...h.document.form, shorts };
+    expect(convert({ ...h.document, form: on })).toMatchObject({
+      ok: true,
+      draft: {
+        shorts: { enabled: true, count: 2, minSeconds: 45, maxSeconds: 90, prompt: "Hooks" },
+      },
+    });
+    const silent = convert({
+      ...h.document,
+      form: { ...on, sources: { ...on.sources, audio: "off" as const } },
+    });
+    expect(silent.ok && silent.draft.shorts).toBe(undefined);
+    expect(convert({ ...h.document, form: { ...on, shorts: { ...shorts, count: "" } } })).toEqual({
+      ok: false,
+      fields: [
+        { field: "shorts.count", message: "Enter a whole number of shorts between 1 and 10." },
+      ],
+    });
+    expect(
+      convert({ ...h.document, form: { ...on, shorts: { ...shorts, maxSeconds: "30" } } }),
+    ).toMatchObject({
+      ok: false,
+      fields: [{ field: "shorts.minSeconds" }, { field: "shorts.maxSeconds" }],
+    });
+  } finally {
+    h.close();
+  }
+});

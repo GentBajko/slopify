@@ -24,7 +24,11 @@ export function preparedResult(
   meta: OutputMeta = {},
 ): PreparedOutput {
   return {
-    slot: role === "image" ? piece.key : `${context.work.kind}:${role}`,
+    // A project holds many images, and one video and several images per short.
+    slot:
+      role === "image" || role === "short_image" || role === "short_video"
+        ? piece.key
+        : `${context.work.kind}:${role}`,
     workKey: piece.key,
     fingerprint: piece.logicalFingerprint ?? piece.fingerprint,
     asset,
@@ -147,6 +151,15 @@ function pieceIndex(deps: RevisionDeps, context: StageContext, piece: WorkPiece)
   if (segment !== null) return Number(segment[2]) * 2 - (segment[1] === "intro" ? 1 : 0);
   if (piece.key === "entry:intro:text") return 1;
   if (piece.key === "entry:outro:text") return 2;
+  // The shorts' steps take places of their own, past every other step of the Video stage:
+  // the pick, then per short its prompts, its images and its render.
+  const short = /^shorts:(?:(\d+):(prompts|image:(\d+)|render)|pick)$/.exec(piece.key);
+  if (short !== null)
+    return short[1] === undefined
+      ? 10000
+      : 10000 +
+          Number(short[1]) * 1000 +
+          (short[2] === "prompts" ? 0 : short[2] === "render" ? 999 : Number(short[3]));
   const localOrder = [
     "audio:body:concat",
     "audio:intro",

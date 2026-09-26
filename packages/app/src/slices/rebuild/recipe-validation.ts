@@ -2,7 +2,9 @@ import type { RunConfig } from "../admission/model.js";
 import {
   type FieldError,
   narrationPreparationFields,
+  shortsFields,
   usesNarrationPreparation,
+  usesShorts,
   usesYoutubeDescription,
   youtubeDescriptionFields,
 } from "../admission/rules.js";
@@ -16,6 +18,7 @@ export function validateRecipeInputs(
   const fields: FieldError[] = [
     ...narrationPreparationFields(config),
     ...youtubeDescriptionFields(config),
+    ...shortsFields(config),
   ];
   const llm =
     (config.sources.research === "generate" && config.sources.article !== "provide") ||
@@ -23,6 +26,7 @@ export function validateRecipeInputs(
     config.sources.thumbnail === "prompt_by_llm" ||
     usesNarrationPreparation(config) ||
     usesYoutubeDescription(config) ||
+    usesShorts(config) ||
     (config.sources.audio === "generate" &&
       (config.intro?.mode === "llm" || config.outro?.mode === "llm"));
   if (llm && (!config.llm?.provider.trim() || !config.llm.model.trim()))
@@ -39,7 +43,8 @@ export function validateRecipeInputs(
   if (
     (generatedImages ||
       config.sources.thumbnail === "from_prompt" ||
-      config.sources.thumbnail === "prompt_by_llm") &&
+      config.sources.thumbnail === "prompt_by_llm" ||
+      usesShorts(config)) &&
     (!config.images?.provider.trim() || !config.images.model.trim())
   )
     fields.push({ field: "images", message: "Pick an image provider and model." });
@@ -75,6 +80,17 @@ export function validateRecipeInputs(
       raw: content.promptTemplates.description,
       literal: config.rendered.description,
     });
+  // Likewise the Shorts step's two prompts, each only when one is picked.
+  for (const [key, name] of [
+    ["shorts", config.shorts?.prompt],
+    ["shortsImage", config.shorts?.imagePrompt],
+  ] as const)
+    if (usesShorts(config) && name?.trim() && content.promptTemplates[key] != null)
+      prompts.push({
+        field: `rendered.${key}`,
+        raw: content.promptTemplates[key] ?? null,
+        literal: config.rendered[key],
+      });
   if (
     (config.sources.article === "generate" && !content.articleEdited) ||
     (config.sources.research === "generate" && config.sources.article !== "provide")

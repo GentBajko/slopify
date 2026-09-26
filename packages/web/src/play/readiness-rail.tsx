@@ -1,11 +1,12 @@
 import type { StageState } from "@app/kernel/pipeline.js";
 import type { FieldError } from "@app/slices/admission/rules.js";
 import { documentThemeLabels } from "@app/slices/document/model.js";
+import { defaultShortsPromptName } from "@app/slices/shorts/model.js";
 import { defaultDescriptionPromptName } from "@app/slices/youtube/model.js";
 import type { ReactElement } from "react";
 import { Lamp } from "@/components/lamp";
 import { cn } from "@/lib/utils";
-import type { PlayFormState } from "./state";
+import { type PlayFormState, shortsOn } from "./state";
 
 type Readiness = "ready" | "needs" | "off" | "provided";
 
@@ -120,6 +121,17 @@ export function readinessRows(form: PlayFormState, errors: readonly FieldError[]
       form.sources.audio === "off"
         ? "Needs narration"
         : `Chapters, hashtags and tags · ${form.descriptionPrompt || defaultDescriptionPromptName} prompt`,
+    ),
+    row(
+      "Shorts",
+      shortsOn(form) ? "generate" : "off",
+      ["shorts"],
+      "shorts.enabled",
+      form.sources.audio === "off"
+        ? "Needs narration"
+        : form.shorts?.enabled === true
+          ? `${form.shorts.count} vertical clips, ${form.shorts.minSeconds}-${form.shorts.maxSeconds} s · ${form.shorts.prompt || defaultShortsPromptName} prompt`
+          : "Vertical clips cut from the narration",
     ),
     row(
       "Document",

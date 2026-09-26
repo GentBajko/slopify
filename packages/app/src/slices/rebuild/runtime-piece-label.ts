@@ -16,6 +16,14 @@ export function pieceLabel(
   if (key === "article:body") return "Article";
   if (key === "document:pdf") return "Document";
   if (key === "youtube:description") return "YouTube description";
+  if (key === "shorts:pick" || key === "shorts:future") return "Shorts";
+  const short = /^shorts:(\d+):(prompts|image:(\d+)|render)$/.exec(key);
+  if (short !== null)
+    return short[2] === "prompts"
+      ? `Short ${short[1]} image prompts`
+      : short[2] === "render"
+        ? `Short ${short[1]}`
+        : `Short ${short[1]} image ${short[3]}`;
   if (key === "entry:intro:text") return "Intro text";
   if (key === "entry:outro:text") return "Outro text";
   if (key === "research:planner") return "Research plan";

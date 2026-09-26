@@ -78,6 +78,26 @@ describe("cost planning", () => {
       ),
     ).toBe(false);
   });
+  it("prices the shorts as the pick, one prompt call per short and every image they may need", () => {
+    const selected: RunDraft = {
+      ...draft,
+      llm: { provider: "codex", model: "test" },
+      images: { provider: "fal", model: "image" },
+      shorts: { enabled: true, count: 3, minSeconds: 60, maxSeconds: 120 },
+    };
+    const row = estimateRun(selected, {}, 1500, catalogue).rows.find(
+      (one) => one.stage === "Shorts",
+    );
+    expect(row?.detail).toContain("One LLM call on the numbered transcript picks the clips.");
+    for (const off of [
+      { ...selected, shorts: { enabled: false, count: 3, minSeconds: 60, maxSeconds: 120 } },
+      // Numbers the run would refuse are not priced.
+      { ...selected, shorts: { enabled: true, count: 3000, minSeconds: 60, maxSeconds: 120 } },
+    ])
+      expect(estimateRun(off, {}, 1500, catalogue).rows.some((one) => one.stage === "Shorts")).toBe(
+        false,
+      );
+  });
   it("prices a supplied article by characters and gives local/off stages zero API charges", () => {
     const estimate = estimateRun(draft, {}, 1500, catalogue);
     expect(estimate.low).toBe(0.25);

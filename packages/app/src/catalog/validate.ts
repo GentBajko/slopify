@@ -2,6 +2,7 @@ import type { RunDraft } from "../slices/admission/model.js";
 import {
   type FieldError,
   usesNarrationPreparation,
+  usesShorts,
   usesYoutubeDescription,
 } from "../slices/admission/rules.js";
 import { isLocalCliProvider } from "../slices/settings/model.js";
@@ -16,7 +17,8 @@ export function modelFields(draft: RunDraft, catalogue?: CatalogueStore): FieldE
     draft.intro?.mode === "llm" ||
     draft.outro?.mode === "llm" ||
     usesNarrationPreparation(draft) ||
-    usesYoutubeDescription(draft);
+    usesYoutubeDescription(draft) ||
+    usesShorts(draft);
   const checks = [
     { field: "llm", family: "llm", choice: draft.llm, needed: needLlm },
     {
@@ -31,7 +33,8 @@ export function modelFields(draft: RunDraft, catalogue?: CatalogueStore): FieldE
       choice: draft.images,
       needed:
         draft.sources.images === "generate" ||
-        ["from_prompt", "prompt_by_llm"].includes(draft.sources.thumbnail),
+        ["from_prompt", "prompt_by_llm"].includes(draft.sources.thumbnail) ||
+        usesShorts(draft),
     },
   ] as const;
   for (const { field, family, choice, needed } of checks) {
@@ -53,10 +56,22 @@ export function modelFields(draft: RunDraft, catalogue?: CatalogueStore): FieldE
         message:
           "This model cannot search the web for research. Choose another model or turn Research off.",
       });
-    else if ("image" in model && !model.image.aspectRatios.includes(draft.format))
+    else if (
+      "image" in model &&
+      (draft.sources.images === "generate" ||
+        ["from_prompt", "prompt_by_llm"].includes(draft.sources.thumbnail)) &&
+      !model.image.aspectRatios.includes(draft.format)
+    )
       fields.push({
         field,
         message: "This image model cannot make images in this video's shape. Choose another model.",
+      });
+    // The shorts are always vertical, whatever shape the video is.
+    else if ("image" in model && usesShorts(draft) && !model.image.aspectRatios.includes("9:16"))
+      fields.push({
+        field,
+        message:
+          "This image model cannot make the vertical (9:16) images Shorts need. Choose another image model, or turn Shorts off.",
       });
   }
   return fields;

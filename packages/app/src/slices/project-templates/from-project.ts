@@ -109,6 +109,13 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
           return { name: prompt.name, number: String(prompt.number) };
         });
   addPrompt("thumbnail", config.thumbnailPrompt, "thumbnailPrompt");
+  addPrompt("shorts", config.shorts?.prompt, "shorts");
+  // The shorts' image style may be the same Library prompt one of the slideshow images uses,
+  // and a snapshot holds one prompt per kind and name.
+  if (
+    !prompts.some((prompt) => prompt.kind === "image" && prompt.name === config.shorts?.imagePrompt)
+  )
+    addPrompt("image", config.shorts?.imagePrompt, "shortsImage");
   for (const category of ["intro", "outro"] as const) {
     const choice = config[category];
     const body = revision.content.promptTemplates[category] ?? config.rendered[category];
@@ -165,6 +172,18 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
       ...(config.descriptionPrompt === undefined
         ? {}
         : { descriptionPrompt: config.descriptionPrompt }),
+      ...(config.shorts === undefined
+        ? {}
+        : {
+            shorts: {
+              enabled: config.shorts.enabled,
+              count: String(config.shorts.count),
+              minSeconds: String(config.shorts.minSeconds),
+              maxSeconds: String(config.shorts.maxSeconds),
+              prompt: config.shorts.prompt ?? "",
+              imagePrompt: config.shorts.imagePrompt ?? "",
+            },
+          }),
       imagePrompts,
       thumbnailPrompt: config.thumbnailPrompt ?? "",
       intro: config.intro?.name ?? "",

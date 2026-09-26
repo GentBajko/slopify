@@ -69,6 +69,12 @@ export function legacyOutputWorkKey(output: Output, config?: Pick<RunConfig, "so
     case "youtube_description":
     case "youtube_tags":
       return "youtube:description";
+    case "shorts":
+      return "shorts:pick";
+    case "short_image":
+      return `shorts:${String(output.meta.short ?? 1)}:image:${String(output.meta.index ?? 1)}`;
+    case "short_video":
+      return `shorts:${String(output.meta.short ?? 1)}:render`;
     case "subtitles_srt":
     case "subtitles_vtt":
     case "subtitle_ass":

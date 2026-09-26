@@ -15,7 +15,7 @@ import { providedDependencyFingerprint } from "./provided-review.js";
 import { recipeInputSchema } from "./recipe-input-schema.js";
 import type { ResolvedWorkRecipe } from "./recipe-model.js";
 import { recipeProviderChoice } from "./recipe-provider-choice.js";
-import { priceRecipe } from "./recipe-work.js";
+import { priceRecipes } from "./recipe-work.js";
 import { reservationKey } from "./runtime-admission.js";
 import { narrationOrdinal } from "./runtime-narration-reuse.js";
 import { executionCatalogue } from "./runtime-plan.js";
@@ -197,8 +197,8 @@ export function planPreview(
       })),
     providedReuseRequired: execution.reviews.map((row) => row.key),
     costs: estimateRequests(
-      work.map((row) =>
-        priceRecipe(
+      work.flatMap((row) =>
+        priceRecipes(
           row.inflight || !requiresNewSubmission(deps, view.revision.id, row.key, row.fingerprint)
             ? { ...row, disposition: "reuse" }
             : row,

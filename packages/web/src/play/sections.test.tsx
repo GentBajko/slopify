@@ -200,5 +200,71 @@ it("keeps the YouTube description switch in place but disabled without narration
   );
   const on = screen.getByRole<HTMLInputElement>("checkbox", { name: /YouTube description/ });
   expect(on.disabled).toBe(true);
-  expect(screen.getByText("Needs narration.")).not.toBeNull();
+  // The YouTube description and the Shorts both say it.
+  expect(screen.getAllByText("Needs narration.")).toHaveLength(2);
+});
+
+it("switches Shorts on, sets how many and how long, picks both prompts and saves them into the draft", async () => {
+  const { requests } = await mountPlay();
+  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+  const on = screen.getByRole<HTMLInputElement>("checkbox", { name: /Shorts/ });
+  const count = screen.getByRole<HTMLInputElement>("textbox", { name: "How many shorts" });
+  const prompt = screen.getByRole<HTMLSelectElement>("combobox", { name: "Shorts prompt" });
+  const style = screen.getByRole<HTMLSelectElement>("combobox", { name: "Image style" });
+  expect(on.checked).toBe(false);
+  expect(count.disabled).toBe(true);
+  expect(count.value).toBe("3");
+  expect(prompt.selectedOptions[0]?.textContent).toBe("Built-in");
+  expect(screen.getAllByRole("button", { name: /^Shorts: Off/ }).length).toBeGreaterThan(0);
+  await userEvent.click(on);
+  await userEvent.clear(count);
+  await userEvent.type(count, "2");
+  const longest = screen.getByRole<HTMLInputElement>("textbox", {
+    name: "Longest short, in seconds",
+  });
+  await userEvent.clear(longest);
+  await userEvent.type(longest, "90");
+  await userEvent.selectOptions(prompt, "Hooks");
+  await userEvent.selectOptions(style, "Maps");
+  expect(screen.getAllByRole("button", { name: /^Shorts: Ready/ }).length).toBeGreaterThan(0);
+  await waitFor(async () => {
+    const saves = requests.filter(
+      (request) =>
+        ["PUT", "POST"].includes(request.method) &&
+        /\/api\/drafts(?:\/[a-f0-9-]+)?$/.test(request.url),
+    );
+    expect(await saves.at(-1)?.clone().json()).toMatchObject({
+      document: {
+        form: {
+          shorts: {
+            enabled: true,
+            count: "2",
+            minSeconds: "60",
+            maxSeconds: "90",
+            prompt: "Hooks",
+            imagePrompt: "Maps",
+          },
+        },
+      },
+    });
+  });
+});
+
+it("refuses a Shorts length whose shortest is longer than its longest, in plain words", async () => {
+  await mountPlay();
+  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+  await userEvent.click(screen.getByRole("checkbox", { name: /Shorts/ }));
+  const shortest = screen.getByRole<HTMLInputElement>("textbox", {
+    name: "Shortest short, in seconds",
+  });
+  await userEvent.clear(shortest);
+  await userEvent.type(shortest, "150");
+  // A problem shows once the field is left.
+  await userEvent.tab();
+  expect(
+    await screen.findByText(
+      "The longest a short may be must be at least the shortest. Raise the maximum or lower the minimum.",
+    ),
+  ).not.toBeNull();
+  expect(screen.getAllByRole("button", { name: /^Shorts: Needs setup/ }).length).toBeGreaterThan(0);
 });

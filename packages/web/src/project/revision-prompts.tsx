@@ -1,5 +1,6 @@
 import {
   usesNarrationPreparation,
+  usesShorts,
   usesYoutubeDescription,
   valueMax,
 } from "@app/slices/admission/rules.js";
@@ -32,6 +33,8 @@ export function RevisionPrompts({
       ...(usesYoutubeDescription(edit.config) && edit.config.descriptionPrompt
         ? ["description"]
         : []),
+      ...(usesShorts(edit.config) && edit.config.shorts?.prompt ? ["shorts"] : []),
+      ...(usesShorts(edit.config) && edit.config.shorts?.imagePrompt ? ["shortsImage"] : []),
       ...(["from_prompt", "prompt_by_llm"].includes(edit.config.sources.thumbnail)
         ? ["thumbnailPrompt"]
         : []),
@@ -64,9 +67,11 @@ export function RevisionPrompts({
                       ? "narration"
                       : key === "description"
                         ? "description"
-                        : key === "thumbnailPrompt"
-                          ? "thumbnail"
-                          : "image"),
+                        : key === "shorts"
+                          ? "shorts"
+                          : key === "thumbnailPrompt"
+                            ? "thumbnail"
+                            : "image"),
               );
         return (
           <fieldset key={key} className="min-w-0 space-y-3 rounded-control border border-line p-3">
@@ -116,9 +121,18 @@ export function RevisionPrompts({
                           ? { ...next.config, narrationPrompt: picked.name }
                           : key === "description"
                             ? { ...next.config, descriptionPrompt: picked.name }
-                            : key === "thumbnailPrompt"
-                              ? { ...next.config, thumbnailPrompt: picked.name }
-                              : next.config;
+                            : (key === "shorts" || key === "shortsImage") &&
+                                next.config.shorts !== undefined
+                              ? {
+                                  ...next.config,
+                                  shorts: {
+                                    ...next.config.shorts,
+                                    [key === "shorts" ? "prompt" : "imagePrompt"]: picked.name,
+                                  },
+                                }
+                              : key === "thumbnailPrompt"
+                                ? { ...next.config, thumbnailPrompt: picked.name }
+                                : next.config;
                   onChange({ ...next, config });
                 }}
               >
@@ -192,11 +206,15 @@ function libraryPrompt(
         ? config.narrationPrompt
         : key === "description"
           ? config.descriptionPrompt
-          : key === "thumbnailPrompt"
-            ? config.thumbnailPrompt
-            : image?.[1] !== undefined
-              ? config.imagePrompts[Number(image[1])]?.name
-              : undefined;
+          : key === "shorts"
+            ? config.shorts?.prompt
+            : key === "shortsImage"
+              ? config.shorts?.imagePrompt
+              : key === "thumbnailPrompt"
+                ? config.thumbnailPrompt
+                : image?.[1] !== undefined
+                  ? config.imagePrompts[Number(image[1])]?.name
+                  : undefined;
   if (name === undefined || name === "") return undefined;
   return options.find(
     (option): option is Prompt => !("category" in option) && option.name === name,
@@ -240,6 +258,8 @@ function promptLabel(key: string): string {
   if (key === "article") return "Article";
   if (key === "narration") return "Narration Preparation";
   if (key === "description") return "YouTube description";
+  if (key === "shorts") return "Shorts";
+  if (key === "shortsImage") return "Shorts image style";
   if (key === "thumbnailPrompt") return "Thumbnail";
   if (key === "intro") return "Intro";
   if (key === "outro") return "Outro";

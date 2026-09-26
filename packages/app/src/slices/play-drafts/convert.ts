@@ -13,6 +13,7 @@ import {
 import { runDraftSchema } from "../admission/schema.js";
 import { draftDocumentThemeOf } from "../document/model.js";
 import type { Entry } from "../library/model.js";
+import { defaultShorts, type ShortsSettings, shortsSettingsProblems } from "../shorts/model.js";
 import { defaultSubtitles } from "../subtitles/model.js";
 import type { DraftAttachment, PlayDraftDocument } from "./model.js";
 
@@ -97,6 +98,31 @@ export function toAdmissionDraft(input: {
         ? "files"
         : form.subtitles.mode;
   const chunkMode = sources.audio === "generate" ? form.chunking.mode : "whole";
+  const shortsOn = sources.audio !== "off" && form.shorts?.enabled === true;
+  // Refused in admission's words, so Play and the run say the same sentence.
+  const shortsOf = (raw: NonNullable<typeof form.shorts>): ShortsSettings => {
+    const whole = (value: string): number => (value.trim() === "" ? Number.NaN : Number(value));
+    const settings = {
+      enabled: true,
+      count: whole(raw.count),
+      minSeconds: whole(raw.minSeconds),
+      maxSeconds: whole(raw.maxSeconds),
+      ...(raw.prompt.trim() ? { prompt: raw.prompt } : {}),
+      ...(raw.imagePrompt.trim() ? { imagePrompt: raw.imagePrompt } : {}),
+    };
+    for (const problem of shortsSettingsProblems(settings))
+      fields.push({ field: `shorts.${problem.field}`, message: problem.message });
+    return {
+      ...settings,
+      count: Number.isFinite(settings.count) ? settings.count : defaultShorts.count,
+      minSeconds: Number.isFinite(settings.minSeconds)
+        ? settings.minSeconds
+        : defaultShorts.minSeconds,
+      maxSeconds: Number.isFinite(settings.maxSeconds)
+        ? settings.maxSeconds
+        : defaultShorts.maxSeconds,
+    };
+  };
   const draft: RunDraft = {
     ...(form.checkpoints === undefined ? {} : { checkpoints: form.checkpoints }),
     title: form.title,
@@ -131,6 +157,9 @@ export function toAdmissionDraft(input: {
           ...(form.descriptionPrompt?.trim() ? { descriptionPrompt: form.descriptionPrompt } : {}),
         }
       : {}),
+    // Cut from the narration too, so the same rule: a switch left on with narration Off asks
+    // for nothing.
+    ...(shortsOn && form.shorts !== undefined ? { shorts: shortsOf(form.shorts) } : {}),
     imagePrompts:
       sources.images === "generate"
         ? form.imagePrompts.map((prompt, index) => ({
@@ -183,7 +212,7 @@ export function toAdmissionDraft(input: {
     silenceGapSeconds: input.silenceGapSeconds,
     imageSeconds: measure(
       "imageSeconds",
-      sources.video === "generate",
+      sources.video === "generate" || shortsOn,
       defaultImageSeconds,
       imageSecondsProblem,
     ),
