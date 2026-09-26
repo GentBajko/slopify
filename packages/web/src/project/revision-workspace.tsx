@@ -1,7 +1,7 @@
 import type { RebuildPreview } from "@app/slices/rebuild/model.js";
 import type { RevisionEdit, RevisionView } from "@app/slices/revisions/model.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useRef, useState } from "react";
+import { type ReactNode, useMemo, useRef, useState } from "react";
 import { readProject } from "@/api";
 import { useApp } from "@/app-context";
 import { ActionBar, StatusSlot } from "@/components/kit/action-bar";
@@ -109,6 +109,18 @@ export function RevisionWorkspace({
   const saveMemory = useRef<RequestMemory | undefined>(undefined);
   const restoreMemory = useRef<RequestMemory | undefined>(undefined);
   const startMemory = useRef<RequestMemory | undefined>(undefined);
+  // Open is not the same as changed: the editor starts from a copy of the saved revision, so
+  // the tab only says "unsaved" once something differs from it or a remake or upload is queued.
+  const unsaved = useMemo(
+    () =>
+      edit !== undefined &&
+      (view === undefined ||
+        (edit.regenerate?.length ?? 0) > 0 ||
+        (edit.uploads?.length ?? 0) > 0 ||
+        JSON.stringify(edit.config) !== JSON.stringify(view.revision.config) ||
+        JSON.stringify(edit.content) !== JSON.stringify(view.revision.content)),
+    [edit, view],
+  );
   const remoteChanged =
     edit !== undefined &&
     view !== undefined &&
@@ -269,7 +281,7 @@ export function RevisionWorkspace({
     {
       id: "edit",
       label: "Edit",
-      ...(edit === undefined ? {} : { badge: "· unsaved" }),
+      ...(unsaved ? { badge: "· unsaved" } : {}),
     },
     { id: "history", label: "History" },
     ...(checkpoints === undefined

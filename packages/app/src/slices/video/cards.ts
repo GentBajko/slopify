@@ -16,11 +16,12 @@ export function cardsAss(
   offset = 0,
 ): string {
   const { width, height, fps } = edit;
-  // The title is sized from the frame's short side, so a vertical video's card fits too.
-  const size = Math.round(Math.min(width, height) * 0.08);
+  // The title is sized from the frame's short side, so a vertical video's card fits too. At
+  // 8% it read as a caption rather than a chapter title; 11% and bold gives it presence.
+  const size = Math.round(Math.min(width, height) * 0.11);
   // A wide, blurred, half-clear dark outline: a soft shadow all round that keeps the title
   // readable on a bright picture without a box behind it.
-  const outline = Math.max(2, Math.round(size / 14));
+  const outline = Math.max(2, Math.round(size / 10));
   const header = [
     "[Script Info]",
     "ScriptType: v4.00+",
@@ -31,8 +32,8 @@ export function cardsAss(
     "",
     "[V4+ Styles]",
     "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
-    // White text, the soft outline, no offset shadow, centred (alignment 5), letter-spaced.
-    `Style: Card,${fontName.replace(/,/g, " ")},${String(size)},&H00FFFFFF,&H00FFFFFF,&H70000000,&H00000000,0,0,0,0,100,100,${String(Math.round(size / 12))},0,1,${String(outline)},0,5,${String(Math.round(width * 0.1))},${String(Math.round(width * 0.1))},0,1`,
+    // White bold text, the soft outline, no offset shadow, centred (alignment 5), letter-spaced.
+    `Style: Card,${fontName.replace(/,/g, " ")},${String(size)},&H00FFFFFF,&H00FFFFFF,&H60000000,&H00000000,-1,0,0,0,100,100,${String(Math.round(size / 12))},0,1,${String(outline)},0,5,${String(Math.round(width * 0.1))},${String(Math.round(width * 0.1))},0,1`,
     "",
     "[Events]",
     "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
@@ -50,10 +51,19 @@ export function cardsAss(
         ? `\\fad(${String(fadeMs)},${String(fadeMs)})`
         : `\\fade(${String(Math.round(255 * Math.max(0, 1 - before / fadeMs)))},0,255,0,${String(Math.max(0, Math.round(fadeMs - before)))},${String(length - fadeMs)},${String(length)})`;
     return [
-      `Dialogue: 0,${assTime(Math.max(0, from) / fps)},${assTime(to / fps)},Card,,0,0,0,,{\\blur${String(outline)}${fade}}${assText(card.title)}`,
+      `Dialogue: 0,${assTime(Math.max(0, from) / fps)},${assTime(to / fps)},Card,,0,0,0,,{\\blur${String(outline)}${fade}${settle(before)}}${assText(card.title)}`,
     ];
   });
   return `${[...header, ...events].join("\n")}\n`;
+}
+
+// The title settles from 96% to full size while it fades in, a small movement that reads as
+// a title arriving rather than text appearing. A card carried on from the clip before is
+// already settled.
+function settle(before: number): string {
+  if (before >= fadeMs) return "";
+  const from = Math.round(96 + (4 * before) / fadeMs);
+  return `\\fscx${String(from)}\\fscy${String(from)}\\t(0,${String(Math.round(fadeMs - before))},\\fscx100\\fscy100)`;
 }
 
 // h:mm:ss.cc, the centiseconds ASS counts in.

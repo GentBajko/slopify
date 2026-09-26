@@ -414,3 +414,31 @@ it("opens Edit project with a change the Output tab asks for, in the section it 
   const body = saveRevisionSchema.parse(await request.json());
   expect(body.edit.regenerate).toEqual(["shorts:2"]);
 });
+
+it("says unsaved only once the draft differs from the saved revision", async () => {
+  const user = userEvent.setup();
+  const baseline = revisionView();
+  renderApp(
+    <RevisionWorkspace projectId="p1" currentRevisionId="r1" renderEditor={titleEditor} />,
+    testDeps({
+      "GET /api/projects/p1/revisions/r1": jsonAnswer({ view: baseline }),
+      "POST /api/projects/p1/revisions/prepare": jsonAnswer({
+        ok: true,
+        view: baseline,
+        created: false,
+      }),
+      "GET /api/projects/p1": jsonAnswer(currentBody(baseline)),
+    }),
+  );
+  await user.click(screen.getByRole("button", { name: "Edit project" }));
+  const title = await screen.findByRole("textbox", { name: "Project title" });
+  expect(screen.getByRole("tab", { name: /^Edit/ }).textContent).not.toContain("unsaved");
+  await user.type(title, "!");
+  await waitFor(() =>
+    expect(screen.getByRole("tab", { name: /^Edit/ }).textContent).toContain("unsaved"),
+  );
+  await user.type(title, "{Backspace}");
+  await waitFor(() =>
+    expect(screen.getByRole("tab", { name: /^Edit/ }).textContent).not.toContain("unsaved"),
+  );
+});
