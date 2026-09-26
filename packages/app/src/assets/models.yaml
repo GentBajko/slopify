@@ -2,7 +2,7 @@
 # A private copy in the Slopify data directory reloads automatically.
 # Omitted pricing means unknown, never free. Provider concurrency is capped at five.
 schemaVersion: 1
-updatedAt: 2026-09-24
+updatedAt: 2026-09-26
 providers:
   openrouter:
     maxConcurrent: 3
@@ -237,6 +237,87 @@ image:
     pricing:
       note: Price depends on your account or generated output; estimate unavailable.
     image: *a4
+  # Image-to-video models, marked by the `video` keyword: Animate images turns a still into a
+  # 5-second clip with one of these. perImage is the price of one 5-second clip.
+  - provider: fal
+    id: fal-ai/kling-video/v2.5-turbo/pro/image-to-video
+    name: Kling 2.5 Turbo Pro (image to video)
+    source: https://fal.ai/models/fal-ai/kling-video/v2.5-turbo/pro/image-to-video
+    keywords:
+      - video
+    pricing:
+      perImage: 0.35
+      note: Public fal.ai rate verified 2026-09-26, one 5-second clip.
+    image:
+      aspectRatios:
+        - 16:9
+        - 9:16
+  - provider: fal
+    id: fal-ai/wan-25-preview/image-to-video
+    name: Wan 2.5 (image to video, 720p)
+    source: https://fal.ai/models/fal-ai/wan-25-preview/image-to-video
+    keywords:
+      - video
+    pricing:
+      perImage: 0.5
+      note: Public fal.ai rate verified 2026-09-26, $0.10 a second at 720p, one 5-second clip.
+    image:
+      aspectRatios:
+        - 16:9
+        - 9:16
+  - provider: fal
+    id: fal-ai/bytedance/seedance/v1/pro/fast/image-to-video
+    name: Seedance 1.0 Pro Fast (image to video, 720p)
+    source: https://fal.ai/models/fal-ai/bytedance/seedance/v1/pro/fast/image-to-video
+    keywords:
+      - video
+    pricing:
+      perImage: 0.12
+      note: fal.ai bills by video tokens; about $0.12 for a 5-second 720p clip (verified
+        2026-09-26), more for larger frames.
+    image:
+      aspectRatios:
+        - 16:9
+        - 9:16
+  - provider: replicate
+    id: kwaivgi/kling-v2.5-turbo-pro
+    name: Kling 2.5 Turbo Pro (image to video)
+    source: https://replicate.com/kwaivgi/kling-v2.5-turbo-pro
+    keywords:
+      - video
+    pricing:
+      perImage: 0.35
+      note: Public Replicate rate verified 2026-09-26, $0.07 a second, one 5-second clip.
+    image:
+      aspectRatios:
+        - 16:9
+        - 9:16
+  - provider: replicate
+    id: wan-video/wan-2.5-i2v
+    name: Wan 2.5 (image to video, 720p)
+    source: https://replicate.com/wan-video/wan-2.5-i2v
+    keywords:
+      - video
+    pricing:
+      perImage: 0.5
+      note: Public Replicate rate verified 2026-09-26, $0.10 a second at 720p, one 5-second clip.
+    image:
+      aspectRatios:
+        - 16:9
+        - 9:16
+  - provider: replicate
+    id: bytedance/seedance-1-pro-fast
+    name: Seedance 1 Pro Fast (image to video, 720p)
+    source: https://replicate.com/bytedance/seedance-1-pro-fast
+    keywords:
+      - video
+    pricing:
+      perImage: 0.125
+      note: Public Replicate rate verified 2026-09-26, $0.025 a second at 720p, one 5-second clip.
+    image:
+      aspectRatios:
+        - 16:9
+        - 9:16
 tts:
   - provider: elevenlabs
     id: eleven_v3

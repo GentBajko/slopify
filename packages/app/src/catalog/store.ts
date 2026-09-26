@@ -3,12 +3,13 @@ import { join } from "node:path";
 import { parse } from "yaml";
 import type { ProviderFamily } from "../kernel/ports/model.js";
 import { isLocalCliProvider } from "../slices/settings/model.js";
-import { type Catalogue, type CatalogueModel, catalogueSchema } from "./schema.js";
+import { type Catalogue, type CatalogueModel, catalogueSchema, isVideoModel } from "./schema.js";
 
 export const catalogueSource =
   "https://raw.githubusercontent.com/GentBajko/slopify/main/packages/app/src/assets/models.yaml";
 export interface CatalogueStore {
   readonly read: () => Catalogue;
+  // The image family leaves out the image-to-video models, which `videoModelsOf` lists.
   readonly models: (provider: string, family: ProviderFamily) => readonly CatalogueModel[];
   readonly refresh: () => Promise<void>;
   readonly status: () => {
@@ -98,7 +99,9 @@ export function createCatalogueStore(deps: {
   return {
     read,
     models: (provider, family) =>
-      read()[family].filter((m) => m.provider === provider && m.enabled && !m.deprecated),
+      read()[family].filter(
+        (m) => m.provider === provider && m.enabled && !m.deprecated && !isVideoModel(m),
+      ),
     status: () => ({ updatedAt: read().updatedAt, path, warning, source: catalogueSource }),
     refresh: () => {
       refreshing ??= refresh().finally(() => {

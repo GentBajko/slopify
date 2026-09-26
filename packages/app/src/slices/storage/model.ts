@@ -36,6 +36,8 @@ export const outputRoles = [
   "shorts",
   "short_image",
   "short_video",
+  // An image of the slideshow brought to life by an image-to-video model (Animate images).
+  "animated_image",
 ] as const;
 export type OutputRole = (typeof outputRoles)[number];
 
@@ -59,6 +61,9 @@ export interface OutputMeta {
   // The first and last sentence of the narration that short was cut from, so a clip picked
   // again with the same sentences still finds its video.
   readonly sentences?: readonly [number, number] | undefined;
+  // What the video could not do as asked, in plain sentences for the project page: an image
+  // shown still because it could not be animated.
+  readonly warnings?: readonly string[] | undefined;
   readonly provider?: string | undefined;
   readonly model?: string | undefined;
   readonly voice?: string | undefined;

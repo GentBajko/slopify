@@ -5,7 +5,8 @@ import type { Output } from "./model.js";
 // draws, and `downloads.ts` reads the disk: importing it into the SPA would drag
 // `node:fs` and the zip encoder into the browser bundle. Nothing here touches IO.
 
-// An output's role is its asset name; images add their place in the slideshow, and the
+// An output's role is its asset name; images (and animated images) add their place in the
+// slideshow, and the
 // instructions add their stage, those being the two roles a project holds more than one of -
 // research and the article each store what they sent.
 export function assetOf(output: Output): string {
@@ -23,7 +24,8 @@ export function assetOf(output: Output): string {
   if (output.role === "instructions") {
     return `${output.stageKind}-${asset}`;
   }
-  return output.role === "image" && output.meta.index !== undefined
+  return (output.role === "image" || output.role === "animated_image") &&
+    output.meta.index !== undefined
     ? `${asset}-${String(output.meta.index)}`
     : asset;
 }

@@ -1,7 +1,13 @@
 import { z } from "zod";
 import type { Clock } from "../../kernel/clock.js";
 import { redact } from "../../kernel/log.js";
-import type { GeneratedImage, ImagePort, ImageRequest } from "../../kernel/ports/image.js";
+import type {
+  AnimateRequest,
+  GeneratedImage,
+  GeneratedVideo,
+  ImagePort,
+  ImageRequest,
+} from "../../kernel/ports/image.js";
 import type { ModelInfo, ProviderErrorKind } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 import {
@@ -14,6 +20,7 @@ import {
 } from "../explain.js";
 import { retryAfter } from "../retry-after.js";
 import { downloadImage } from "./bytes.js";
+import { dataUri, downloadVideo } from "./video.js";
 
 // The HTTP gateway adapter for Replicate: `fetch`, the injected clock and the downloader
 // beside this file, no SDK. The `replicate` package wraps exactly the two requests below, so
@@ -99,8 +106,46 @@ export function replicateImage(deps: ReplicateImageDeps): ImagePort {
         signal: req.signal,
       });
     },
+    // The same prediction, polled the same way; a clip outlives `Prefer: wait` every time, so
+    // it is not asked for.
+    animate: async (req: AnimateRequest): Promise<GeneratedVideo> => {
+      const response = await deps.fetch(`${replicateBase}/models/${req.model}/predictions`, {
+        method: "POST",
+        signal: req.signal,
+        headers: { ...auth(deps), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          input: {
+            prompt: req.prompt,
+            [Object.hasOwn(videoImageField, req.model)
+              ? (videoImageField[req.model] ?? "image")
+              : "image"]: dataUri(req.image),
+            duration: Math.round(req.seconds),
+            ...(Object.hasOwn(videoResolution, req.model) ? { resolution: "720p" } : {}),
+          },
+        }),
+      });
+      if (!response.ok) throw await failure(response, "video clip request");
+      const url = await settle(deps, parse(await response.text()), req.signal);
+      return await downloadVideo({
+        fetch: deps.fetch,
+        provider: "Replicate",
+        url,
+        signal: req.signal,
+      });
+    },
   };
 }
+
+// Replicate's image-to-video models name the still differently: Kling calls it
+// `start_image`, the others `image`. Wan and Seedance default to larger frames than the
+// render needs, so they are asked for 720p, which is what the catalogue prices.
+const videoImageField: Readonly<Record<string, string>> = {
+  "kwaivgi/kling-v2.5-turbo-pro": "start_image",
+};
+const videoResolution: Readonly<Record<string, true>> = {
+  "wan-video/wan-2.5-i2v": true,
+  "bytedance/seedance-1-pro-fast": true,
+};
 
 // `Prefer: wait` answers `starting` when the model outlived its 60 s; Replicate's guidance
 // is to poll `urls.get` until the prediction settles.
@@ -188,7 +233,7 @@ function kindOf(status: number): ProviderErrorKind {
   return "other";
 }
 
-async function failure(response: Response): Promise<Error> {
+async function failure(response: Response, subject = "image request"): Promise<Error> {
   const text = await response.text().catch(() => "");
   const parsed = errorBody.safeParse(safeJson(text));
   // The provider's own words, through the redactor - an error body may quote the key back.
@@ -201,7 +246,7 @@ async function failure(response: Response): Promise<Error> {
       provider: "Replicate",
       status: response.status,
       detail: message || response.statusText,
-      subject: "image request",
+      subject,
     }),
     ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
   });

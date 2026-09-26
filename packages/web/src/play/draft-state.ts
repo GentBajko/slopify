@@ -12,6 +12,7 @@ import {
   playDraftDocumentSchema,
 } from "@app/slices/play-drafts/schema.js";
 import { defaultSubtitles } from "@app/slices/subtitles/model.js";
+import { defaultVideoEdit } from "@app/slices/video/edit-settings.js";
 
 export type PlayFormState = PlayDraftForm;
 export const freshDraftDocument: PlayDraftDocument = playDraftDocumentSchema.parse({
@@ -48,6 +49,9 @@ export const freshDraftDocument: PlayDraftDocument = playDraftDocumentSchema.par
     edgeSilenceSeconds: String(defaultEdgeSilenceSeconds),
     zoomPercent: String(defaultZoomPercent),
     motionStyle: defaultMotionStyle,
+    // A new project follows the narration; a draft saved before this has none and cuts every
+    // N seconds as it did.
+    videoEdit: defaultVideoEdit,
     values: {},
     provided: { research: "", article: "", audio: null, images: [], thumbnail: null },
   },

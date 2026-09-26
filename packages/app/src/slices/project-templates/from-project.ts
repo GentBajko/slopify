@@ -186,6 +186,9 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
               ...shortsExtrasForm(config.shorts),
             },
           }),
+      // A project without edit settings makes a template without them, so a video made from
+      // it cuts every N seconds like the project did.
+      ...(config.videoEdit === undefined ? {} : { videoEdit: config.videoEdit }),
       imagePrompts,
       thumbnailPrompt: config.thumbnailPrompt ?? "",
       intro: config.intro?.name ?? "",

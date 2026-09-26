@@ -19,7 +19,18 @@ import {
   shortsImageUpperBound,
   shortsSettingsProblems,
 } from "../shorts/model.js";
+import {
+  animatedClipSeconds,
+  animatedImageIndexes,
+  usesAnimation,
+  videoEditProblems,
+} from "../video/edit-settings.js";
 import { defaultDescriptionPrompt } from "../youtube/model.js";
+
+// ceiling: the most chapters "Chapter openers" is charged for before the article exists, the
+// top of the 5-12 chapters the built-in YouTube description prompt asks for.
+const chapterOpenersMax = 12;
+
 import { estimateRequests, groupEstimateRows, type PricedRequest } from "./requests.js";
 
 export { estimateRequests, type PricedRequest } from "./requests.js";
@@ -247,6 +258,31 @@ export function estimateRun(
         provider: image.provider,
         model: image.model,
         detail: `Up to ${String(count)} vertical images. ${imageNote}`,
+      });
+  }
+  // Animated images: one clip from the image-to-video model per animated image, each priced
+  // as the catalogue prices one clip. Only drawn images are animated; the chapter openers are
+  // charged at the most there can be, one per image up to twelve chapters.
+  const edit = draft.videoEdit;
+  if (usesAnimation(draft) && edit !== undefined && videoEditProblems(draft).length === 0) {
+    const clips =
+      edit.animate === "every"
+        ? animatedImageIndexes(edit, images).length
+        : Math.min(images, chapterOpenersMax);
+    const note =
+      data.image.find(
+        (model) => model.provider === image.provider && model.id === edit.animateModel,
+      )?.pricing.note ?? "Model or account pricing is unknown.";
+    for (let index = 0; index < clips; index++)
+      requests.push({
+        kind: "image",
+        stage: "Animated images",
+        provider: image.provider,
+        model: edit.animateModel,
+        detail:
+          edit.animate === "every"
+            ? `${String(clips)} clips of ${String(animatedClipSeconds)} seconds. ${note}`
+            : `Up to ${String(clips)} clips of ${String(animatedClipSeconds)} seconds, one per chapter opening. ${note}`,
       });
   }
   if (sourceOf(draft.sources, "document") === "generate")

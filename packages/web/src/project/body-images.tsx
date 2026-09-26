@@ -133,16 +133,29 @@ function ImageTile({
 
   return (
     <figure className="group relative m-0 overflow-hidden rounded-control border border-line bg-panel2">
-      <img
-        src={media?.url}
-        loading="lazy"
-        alt={image.meta.prompt ?? `Slideshow image${place}`}
-        // The image fades in as it lands, which is the grid's whole motion budget.
-        className={cn(
-          "block w-full object-cover animate-tick-in motion-reduce:animate-none",
-          aspectOf(format),
-        )}
-      />
+      {/\.(mp4|mov|m4v|webm|mkv)$/i.test(image.path) ? (
+        // An uploaded clip in an image's place, played muted as the video will.
+        <video
+          src={media?.url}
+          muted
+          loop
+          controls
+          preload="metadata"
+          aria-label={`Video clip${place}`}
+          className={cn("block w-full object-cover", aspectOf(format))}
+        />
+      ) : (
+        <img
+          src={media?.url}
+          loading="lazy"
+          alt={image.meta.prompt ?? `Slideshow image${place}`}
+          // The image fades in as it lands, which is the grid's whole motion budget.
+          className={cn(
+            "block w-full object-cover animate-tick-in motion-reduce:animate-none",
+            aspectOf(format),
+          )}
+        />
+      )}
       {/* Revealed by hover and by focus alike, and always in the tab order, so nothing
           here is hover-only information. */}
       <figcaption className="absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-between gap-1 bg-panel/90 p-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100 motion-reduce:transition-none">

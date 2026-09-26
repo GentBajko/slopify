@@ -1,13 +1,23 @@
 import type { Format, MotionStyle } from "../admission/model.js";
+import type { TimedChapter } from "./chapters.js";
+import { chapterCuts, narrationShotFrames } from "./cuts.js";
 import {
   type AudioKind,
   type AudioSegment,
+  type Card,
+  type CardFont,
   type EditList,
   editListVersion,
+  type Look,
   type Shot,
   type SpokenKind,
+  type TransitionStyle,
+  type VideoSource,
 } from "./edit-list.js";
+import { chapterCardSeconds } from "./edit-settings.js";
+import { hasLook } from "./look.js";
 import { motionFor } from "./motion.js";
+import { withTransitions } from "./transitions.js";
 
 // 30 fps, 1920×1080 for 16:9 and 1080×1920 for 9:16.
 export const fps = 30;
@@ -80,6 +90,26 @@ export interface PlanInput {
   // Absolute paths in slideshow order.
   readonly images: readonly string[];
   readonly output: string;
+  // Absent is the slideshow as it always was.
+  readonly edit?: PlanEdit | undefined;
+}
+
+// What the Video stage's edit settings add, already resolved from the project's files.
+export interface PlanEdit {
+  // Present when the cuts follow the narration: the sentence pauses and chapter starts, in
+  // seconds (`cuts.ts`).
+  readonly narration?:
+    | { readonly cutPoints: readonly number[]; readonly chapterStarts: readonly number[] }
+    | undefined;
+  readonly transition?: { readonly kind: TransitionStyle; readonly seconds: number } | undefined;
+  readonly look?: Look | undefined;
+  // A card at each chapter start, in the font given.
+  readonly cards?:
+    | { readonly chapters: readonly TimedChapter[]; readonly font: CardFont }
+    | undefined;
+  // Moving clips shown in place of the image at the same place in `images`: uploaded clips
+  // and animated images.
+  readonly clips?: readonly (VideoSource | undefined)[] | undefined;
 }
 
 export function planRender(input: PlanInput): RenderPlan {
@@ -97,6 +127,24 @@ export function planRender(input: PlanInput): RenderPlan {
       ? input.images.length * input.imageSeconds
       : audio.reduce((sum, segment) => sum + segment.seconds, 0);
   const totalFrames = Math.max(1, Math.round(totalSeconds * fps));
+  const edit = input.edit;
+  const narration = input.body === undefined ? undefined : edit?.narration;
+  const lengths =
+    narration === undefined
+      ? everyLengths(Math.max(1, Math.round(input.imageSeconds * fps)), totalFrames)
+      : narrationShotFrames({
+          totalFrames,
+          fps,
+          imageSeconds: input.imageSeconds,
+          cutPoints: narration.cutPoints,
+          chapterStarts: narration.chapterStarts,
+        });
+  const planned = shots(input, lengths);
+  const transition = edit?.transition;
+  const cards =
+    edit?.cards === undefined
+      ? []
+      : chapterCards(edit.cards.chapters, narration?.cutPoints ?? [], totalFrames);
   return {
     gapSeconds: input.gapSeconds,
     edgeSeconds: input.edgeSeconds,
@@ -109,12 +157,42 @@ export function planRender(input: PlanInput): RenderPlan {
       height: frame.height,
       fps,
       audio,
-      shots: shots(input, Math.max(1, Math.round(input.imageSeconds * fps)), totalFrames),
+      shots:
+        transition === undefined
+          ? planned
+          : withTransitions(planned, transition.kind, Math.round(transition.seconds * fps)),
+      ...(edit?.look !== undefined && hasLook(edit.look) ? { look: edit.look } : {}),
+      ...(cards.length > 0 && edit?.cards !== undefined
+        ? { cards, cardFont: edit.cards.font }
+        : {}),
     },
     totalFrames,
     totalSeconds,
     output: input.output,
   };
+}
+
+// A card at each chapter start, on the cut the chapter's shot starts with (a chapter at the
+// very start stays there), for 2.5 s or what is left of the video.
+function chapterCards(
+  chapters: readonly TimedChapter[],
+  cutPoints: readonly number[],
+  totalFrames: number,
+): readonly Card[] {
+  const length = Math.round(chapterCardSeconds * fps);
+  const cards: Card[] = [];
+  for (const chapter of chapters) {
+    const title = chapter.title.trim();
+    const moved = chapter.start < 1 / fps ? [] : chapterCuts([chapter.start], cutPoints, Infinity);
+    const startFrame = Math.max(0, Math.round((moved[0] ?? chapter.start) * fps));
+    const frames = Math.min(length, totalFrames - startFrame);
+    if (title === "" || frames < 1) continue;
+    // Two chapters inside 2.5 s would stack their cards; the second is left out.
+    const previous = cards.at(-1);
+    if (previous !== undefined && startFrame < previous.startFrame + previous.frames) continue;
+    cards.push({ title, startFrame, frames });
+  }
+  return cards;
 }
 
 export function spoken(kind: AudioKind): kind is SpokenKind {
@@ -158,19 +236,30 @@ export function audioTimeline(
   return segments;
 }
 
-// The images take turns in slideshow order, each for `each` frames, starting over after the
-// last until the timeline is full; the last shot is cut to what is left. A timeline shorter
-// than one shot is a single shot. The motion goes by the shot's place, not the image
-// (`motion.ts`), so an image that comes round again may move another way.
-function shots(
-  input: Pick<PlanInput, "images" | "motionStyle" | "zoomPercent">,
-  each: number,
-  totalFrames: number,
-): readonly Shot[] {
+// Every N seconds: each shot `each` frames until the timeline is full; the last shot is cut
+// to what is left. A timeline shorter than one shot is a single shot.
+function everyLengths(each: number, totalFrames: number): readonly number[] {
   const count = Math.ceil(totalFrames / each);
-  return Array.from({ length: count }, (_value, at) => ({
-    source: { kind: "image", path: input.images[at % input.images.length] ?? "" },
-    frames: Math.min(each, totalFrames - each * at),
-    motion: motionFor(input.motionStyle, at, input.zoomPercent),
-  }));
+  return Array.from({ length: count }, (_value, at) => Math.min(each, totalFrames - each * at));
+}
+
+// The images take turns in slideshow order, one per shot, starting over after the last until
+// the timeline is full. The motion goes by the shot's place, not the image (`motion.ts`), so
+// an image that comes round again may move another way. A moving clip in an image's place
+// plays as it is, with no motion of its own.
+function shots(
+  input: Pick<PlanInput, "images" | "motionStyle" | "zoomPercent" | "edit">,
+  lengths: readonly number[],
+): readonly Shot[] {
+  return lengths.map((frames, at) => {
+    const index = at % input.images.length;
+    const clip = input.edit?.clips?.[index];
+    return clip === undefined
+      ? {
+          source: { kind: "image", path: input.images[index] ?? "" },
+          frames,
+          motion: motionFor(input.motionStyle, at, input.zoomPercent),
+        }
+      : { source: clip, frames, motion: { kind: "still" } };
+  });
 }

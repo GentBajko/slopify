@@ -28,6 +28,7 @@ const labels: Readonly<Record<Output["role"], string>> = {
   shorts: "Shorts list",
   short_image: "Short image",
   short_video: "Short",
+  animated_image: "Animated image",
 };
 export function outputLabel(output: Output): string {
   if ((output.role === "narration_txt" || output.role === "tts_script") && output.meta.segment)
@@ -36,6 +37,8 @@ export function outputLabel(output: Output): string {
     return `Short ${String(output.meta.short)}`;
   if (output.role === "short_image" && typeof output.meta.short === "number")
     return `Short ${String(output.meta.short)} image ${String(output.meta.index ?? 1)}`;
+  if (output.role === "animated_image" && typeof output.meta.index === "number")
+    return `Animated image ${String(output.meta.index)}`;
   return output.role === "image" && typeof output.meta.index === "number"
     ? `Image ${output.meta.index}`
     : labels[output.role];
@@ -43,6 +46,7 @@ export function outputLabel(output: Output): string {
 
 export function outputSlotLabel(slot: string): string {
   if (slot.startsWith("image:")) return "Image";
+  if (slot.startsWith("animate:")) return labels.animated_image;
   if (/^shorts:\d+:render$/.test(slot)) return labels.short_video;
   if (/^shorts:\d+:image:\d+$/.test(slot)) return labels.short_image;
   if (slot === "document:pdf") return labels.document_pdf;

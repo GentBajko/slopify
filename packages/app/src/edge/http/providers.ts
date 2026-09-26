@@ -2,6 +2,7 @@ import { zValidator } from "@hono/zod-validator";
 import type { Context } from "hono";
 import { Hono } from "hono";
 import { z } from "zod";
+import { videoModelsOf } from "../../catalog/schema.js";
 import { cliPathMaxLength, saveCliPath } from "../../slices/settings/cli-paths.js";
 import type { KeysDeps } from "../../slices/settings/keys.js";
 import { keyStatus, removeProviderKey, saveProviderKey } from "../../slices/settings/keys.js";
@@ -72,6 +73,13 @@ export function providerRoutes(deps: AppDeps) {
       .get("/", async (c) => c.json({ providers: await providerStatuses(readiness) }))
       .get("/:id/models", zValidator("param", providerParam, onInvalid), async (c) => {
         const { id } = c.req.valid("param");
+        // Animate images lists the provider's image-to-video models, which only the catalogue
+        // names.
+        if (c.req.query("video") === "1")
+          return c.json({
+            models: deps.catalogue === undefined ? [] : videoModelsOf(deps.catalogue.read(), id),
+            allowsCustom: false,
+          });
         if (deps.catalogue && !isLocalCliProvider(id))
           return c.json({
             models: deps.catalogue.models(id, providerById(id).family).map((m) => ({

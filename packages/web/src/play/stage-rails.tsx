@@ -12,6 +12,7 @@ import type { RailProps } from "@/play/rail-frame";
 import { promptNames, railBeneath, railControls, SourceSwitch, StageRail } from "@/play/rail-frame";
 import { freshShorts, Shorts } from "@/play/shorts";
 import { YoutubeDescription } from "@/play/youtube-description";
+import { useVideoEditControls } from "@/video/edit-controls";
 
 export function ResearchRail({ form, problem, update }: RailProps) {
   return (
@@ -174,6 +175,13 @@ export function VideoRail({
       else update({ [field]: value.trim() === "" ? Number.NaN : Number(value) });
     },
   });
+  const edit = useVideoEditControls({
+    value: form.videoEdit,
+    narrated: form.sources.audio !== "off",
+    imageProvider: form.images.provider,
+    problem,
+    onChange: (videoEdit) => update({ videoEdit }),
+  });
 
   return (
     <StageRail kind="video" name="Export" dim={form.sources.video === "off"}>
@@ -227,6 +235,7 @@ export function VideoRail({
               )}
             </LabelledField>
           ) : null}
+          {form.sources.video === "generate" ? edit.cuts : null}
           {form.sources.audio !== "off" ? (
             <NumberField
               field="edgeSilenceSeconds"
@@ -239,6 +248,7 @@ export function VideoRail({
           ) : null}
         </div>
       ) : null}
+      {form.sources.video === "generate" ? <div className={railBeneath}>{edit.look}</div> : null}
       <div className={railBeneath}>
         <YoutubeDescription
           enabled={form.youtubeDescription === true}

@@ -26,7 +26,10 @@ export function preparedResult(
   return {
     // A project holds many images, and one video and several images per short.
     slot:
-      role === "image" || role === "short_image" || role === "short_video"
+      role === "image" ||
+      role === "short_image" ||
+      role === "short_video" ||
+      role === "animated_image"
         ? piece.key
         : `${context.work.kind}:${role}`,
     workKey: piece.key,
@@ -138,7 +141,7 @@ function pieceKind(piece: WorkPiece): StagePiece["kind"] {
   if (piece.input.kind === "provided" && /^audio:body:.+:\d+$/.test(piece.key)) return "chunk";
   if (piece.input.kind === "provided" && /^audio:(intro|outro):\d+$/.test(piece.key))
     return "segment";
-  if (piece.key.startsWith("image:")) return "image";
+  if (piece.key.startsWith("image:") || piece.key.startsWith("animate:")) return "image";
   if (piece.key.startsWith("research:chapter:")) return "chapter";
   if (piece.key.startsWith("entry:")) return "segment";
   if (piece.key === "research:planner" || piece.key === "thumbnail:prompt") return "prompt_written";
@@ -162,6 +165,12 @@ function pieceIndex(deps: RevisionDeps, context: StageContext, piece: WorkPiece)
       : 10000 +
           Number(short[1]) * 1000 +
           (short[2] === "prompts" ? 0 : short[2] === "render" ? 999 : Number(short[3]));
+  // Animated images take places past the shorts', one per image of the slideshow.
+  if (piece.key.startsWith("animate:")) {
+    const order = executionView(deps, context.work.projectId, context.work.revisionId)?.revision
+      .content.imageOrder;
+    return 900000 + (order?.indexOf(piece.key.slice("animate:".length)) ?? -1) + 1;
+  }
   const localOrder = [
     "audio:body:concat",
     "audio:intro",

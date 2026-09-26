@@ -6,6 +6,7 @@ import {
   usesYoutubeDescription,
 } from "@app/slices/admission/rules.js";
 import type { ProviderStatus } from "@app/slices/settings/model.js";
+import { usesAnimation } from "@app/slices/video/edit-settings.js";
 import { providerUnavailableLabel } from "@/lib/provider-status";
 
 // A stage whose provider has no key or usable agent CLI cannot be retried or re-run. The control
@@ -54,6 +55,11 @@ export function unreadyFor(
     const shorts =
       unreadyFor("article", config, providers) ?? unreadyFor("images", config, providers);
     if (shorts !== undefined) return shorts;
+  }
+  // Animated images are made by the image provider's image-to-video model.
+  if (kind === "video" && usesAnimation(config)) {
+    const animated = unreadyFor("images", config, providers);
+    if (animated !== undefined) return animated;
   }
   const id = providerFor(kind, config);
   if (id === undefined || id === "") {

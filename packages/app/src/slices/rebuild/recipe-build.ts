@@ -1,5 +1,6 @@
 import { audioRecipes } from "./recipe-audio.js";
 import { documentRecipes } from "./recipe-document.js";
+import { editPlan } from "./recipe-edit.js";
 import { exportRecipes } from "./recipe-exports.js";
 import type { RecipeContext, ResolvedWorkRecipe } from "./recipe-model.js";
 import { shortsRecipes } from "./recipe-shorts.js";
@@ -13,11 +14,12 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
   const exports = exportRecipes(context, audio);
   const captions = exports.find((value) => value.key === "subtitles:files");
   const thumbnail = thumbnailRecipes(context, text.recipes);
+  const youtube = youtubeRecipes(context, exports);
   return [
     ...text.recipes,
     ...audio.recipes,
     ...exports,
-    ...youtubeRecipes(context, exports),
+    ...youtube,
     ...shortsRecipes(context, exports),
     ...thumbnail,
     ...documentRecipes(context, text, thumbnail),
@@ -28,6 +30,7 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
         context.content,
         audio.mediaFingerprint,
         captions?.fingerprint ?? null,
+        (images) => editPlan(context, exports, youtube, images),
       ),
     ),
   ];

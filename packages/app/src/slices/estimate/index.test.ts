@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { stringify } from "yaml";
 import { createCatalogueStore } from "../../catalog/store.js";
 import type { RunDraft } from "../admission/model.js";
+import { legacyVideoEdit } from "../video/edit-settings.js";
 import { estimateRun } from "./index.js";
 
 const catalogue = createCatalogueStore({
@@ -97,6 +98,41 @@ describe("cost planning", () => {
       expect(estimateRun(off, {}, 1500, catalogue).rows.some((one) => one.stage === "Shorts")).toBe(
         false,
       );
+  });
+  it("prices each animated image as one clip of the image-to-video model", () => {
+    // The bundled catalogue prices Kling 2.5 Turbo Pro on fal.ai at $0.35 a clip.
+    const animated: RunDraft = {
+      ...draft,
+      sources: { ...draft.sources, images: "generate", video: "generate" },
+      images: { provider: "google-image", model: "gemini-3.1-flash-image" },
+      imagePrompts: [{ name: "a", number: 6 }],
+      videoEdit: {
+        ...legacyVideoEdit,
+        animate: "every",
+        animateEvery: 3,
+        animateModel: "fal-ai/kling-video/v2.5-turbo/pro/image-to-video",
+      },
+    };
+    const onFal = { ...animated, images: { provider: "fal", model: "fal-ai/flux-2" } };
+    const row = estimateRun(onFal, {}, 1500, catalogue).rows.find(
+      (one) => one.stage === "Animated images",
+    );
+    // Six images, every 3rd from the first: two clips.
+    expect(row?.low).toBeCloseTo(0.7);
+    expect(row?.detail).toContain("2 clips of 5 seconds");
+    const chapters = estimateRun(
+      { ...onFal, videoEdit: { ...onFal.videoEdit, animate: "chapters" } as RunDraft["videoEdit"] },
+      {},
+      1500,
+      catalogue,
+    ).rows.find((one) => one.stage === "Animated images");
+    // At most one per image, and six images.
+    expect(chapters?.high).toBeCloseTo(6 * 0.35);
+    expect(
+      estimateRun({ ...onFal, videoEdit: legacyVideoEdit }, {}, 1500, catalogue).rows.some(
+        (one) => one.stage === "Animated images",
+      ),
+    ).toBe(false);
   });
   it("prices a supplied article by characters and gives local/off stages zero API charges", () => {
     const estimate = estimateRun(draft, {}, 1500, catalogue);

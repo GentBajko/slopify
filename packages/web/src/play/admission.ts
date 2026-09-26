@@ -146,6 +146,11 @@ const readingOrder: readonly string[] = [
   "shorts.speed",
   "shorts.musicVolume",
   "shorts.fullVideoLink",
+  "videoEdit.transitionSeconds",
+  "videoEdit.chapterCards",
+  "videoEdit.animate",
+  "videoEdit.animateEvery",
+  "videoEdit.animateModel",
 ];
 
 export function firstBlocker(form: PlayFormState, result: AdmissionResult): Blocker | undefined {

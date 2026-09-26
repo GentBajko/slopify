@@ -50,16 +50,28 @@ export function ImagePreview({
             : retained.state === "outdated"
               ? "Outdated image retained until rebuilt"
               : "Current image retained";
+  // An uploaded clip plays in the image's place; it is shown as the muted clip it will be.
+  const clip = available && /\.(mp4|mov|m4v|webm|mkv)$/i.test(retained.output.path);
   return (
     <>
-      {!available || view === undefined ? null : (
+      {!available || view === undefined ? null : clip ? (
+        <video
+          className="max-h-32 rounded-control object-contain"
+          aria-label={`Video clip ${index + 1}`}
+          muted
+          loop
+          controls
+          preload="metadata"
+          src={revisionFileUrl(api, view.revision.projectId, view.revision.id, retained.recordId)}
+        />
+      ) : (
         <img
           className="max-h-32 rounded-control object-contain"
           alt={`Retained scene ${index + 1}`}
           src={revisionFileUrl(api, view.revision.projectId, view.revision.id, retained.recordId)}
         />
       )}
-      <p>{status}</p>
+      <p>{clip ? `${status} · video clip, played muted` : status}</p>
     </>
   );
 }

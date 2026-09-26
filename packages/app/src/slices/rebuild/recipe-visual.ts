@@ -1,6 +1,7 @@
 import type { RunConfig } from "../admission/model.js";
 import { render } from "../admission/substitute.js";
 import type { RevisionContent } from "../revisions/model.js";
+import type { EditPlan } from "./recipe-edit.js";
 import {
   type RecipeContext,
   type ResolvedWorkRecipe,
@@ -14,6 +15,8 @@ export function visualRecipes(
   content: RevisionContent,
   audioFingerprint: string | null,
   captionFingerprint: string | null,
+  // What the Video stage's edit settings add (`recipe-edit.ts`), from the images planned here.
+  edit?: (images: readonly ResolvedWorkRecipe[]) => EditPlan,
 ): readonly ResolvedWorkRecipe[] {
   const recipes: ResolvedWorkRecipe[] = [];
   const imageKeys = config.sources.images === "off" ? [] : content.imageOrder;
@@ -49,6 +52,7 @@ export function visualRecipes(
     );
   }
   if (config.sources.video !== "off") {
+    const edited = edit?.([...recipes]) ?? { recipes: [], values: [], dependsOn: [] };
     const audioKeys =
       config.sources.audio === "off"
         ? []
@@ -86,16 +90,22 @@ export function visualRecipes(
             ...(config.motionStyle === "zoom" ? [] : [config.motionStyle]),
             // v1 split the timeline evenly across the images; v2 cycles them.
             "slideshow-zoom-v2",
+            // Only what the edit settings change; nothing at all for today's slideshow, so
+            // its fingerprint is the one it always had.
+            ...(edited.values.length === 0 ? [] : [["video-edit", ...edited.values]]),
           ],
         },
         [
           ...recipes.map((value) => value.key),
           ...audioKeys,
           ...(config.subtitles?.mode === "burn-in" ? ["subtitles:files"] : []),
+          ...edited.dependsOn,
         ],
         { unresolved: imageKeys.length === 0 },
       ),
     );
+    // After the export, so the images' recipes above stay the only ones its first values list.
+    recipes.splice(recipes.length - 1, 0, ...edited.recipes);
   }
   return recipes;
 }

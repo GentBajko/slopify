@@ -12,6 +12,7 @@ export const metaSchema = z.object({
   index: z.number().optional(),
   short: z.number().optional(),
   sentences: z.tuple([z.number(), z.number()]).optional(),
+  warnings: z.array(z.string()).optional(),
   provider: z.string().optional(),
   model: z.string().optional(),
   voice: z.string().optional(),

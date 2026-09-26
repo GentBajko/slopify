@@ -5,6 +5,7 @@ import { documentThemeLabel } from "../document/model.js";
 import type { RevisionDeps, RevisionView } from "../revisions/model.js";
 import { getRevisionView } from "../revisions/view.js";
 import { musicVolumeOf, shortsSpeedOf } from "../shorts/model.js";
+import { videoEditOf, videoEditRows } from "../video/edit-settings.js";
 import type { RebuildPreview } from "./model.js";
 import type { ResolvedWorkRecipe } from "./recipe-model.js";
 
@@ -211,6 +212,10 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
   add("Seconds per image", before.imageSeconds, after.imageSeconds);
   add("Zoom (%)", before.zoomPercent, after.zoomPercent);
   add("Motion", motionStyleLabels[before.motionStyle], motionStyleLabels[after.motionStyle]);
+  // Row by row, so turning on grain says "Film grain: Off → Subtle" and nothing else.
+  const editBefore = videoEditRows(videoEditOf(before));
+  const editAfter = new Map(videoEditRows(videoEditOf(after)));
+  for (const [label, value] of editBefore) add(label, value, editAfter.get(label));
   add("Intro", before.intro, after.intro);
   add("Outro", before.outro, after.outro);
   add("Subtitle settings", before.subtitles, after.subtitles);

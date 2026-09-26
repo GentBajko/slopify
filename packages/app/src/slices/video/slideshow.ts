@@ -1,8 +1,10 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { extname, join } from "node:path";
 import type { Log } from "../../kernel/log.js";
+import { cardsAss } from "./cards.js";
 import type { EditList } from "./edit-list.js";
-import { clipArgs, concatList, joinArgs, runFfmpeg, slideshowClips } from "./ffmpeg.js";
+import { concatList, joinArgs, runFfmpeg, segmentArgs, slideshowClips } from "./ffmpeg.js";
+import { cardsIn } from "./look.js";
 
 // The two steps `ffmpeg.ts` explains, run one ffmpeg at a time: the distinct clips into a
 // working directory beside the project's files, then the join into the output.
@@ -36,24 +38,50 @@ export async function renderSlideshow(run: SlideshowRun): Promise<void> {
     joinMs,
     edit.audio.reduce((sum, segment) => sum + segment.seconds * 1000, 0),
   );
-  const clipMs = clips.reduce((sum, clip) => sum + msOf(clip.shot.frames), 0);
+  const clipMs = clips.reduce((sum, clip) => sum + msOf(clip.frames), 0);
   const work = clipMs * clipWeight + joinMs * (run.burnSubtitles ? 1 : copyWeight);
   const report = (done: number): void => {
     run.onProgress(work > 0 ? Math.round((Math.min(done, work) / work) * totalMs) : 0);
   };
   const workspace = mkdtempSync(join(run.scratch, "render-"));
   try {
+    // Chapter cards are drawn by the clips from a script and a font beside them.
+    const cards = edit.cards ?? [];
+    const font = edit.cardFont;
+    if (cards.length > 0) {
+      if (font === undefined)
+        throw new Error(
+          "Slopify hit an internal error (the chapter cards have no font). Use Re-run section on Video; if it happens again, use Download diagnostics in Settings and report it.",
+        );
+      mkdirSync(join(workspace, "fonts"), { mode: 0o700 });
+      copyFileSync(font.path, join(workspace, "fonts", `card${extname(font.path)}`));
+    }
     let rendered = 0;
     for (const clip of clips) {
       const before = rendered;
+      const script = clip.name.replace(/\.mp4$/, ".ass");
+      const shown = cardsIn(cards, clip.segment.start, clip.segment.count);
+      if (shown.length > 0 && font !== undefined)
+        writeFileSync(
+          join(workspace, script),
+          cardsAss(edit, shown, font.name, clip.segment.start),
+          { mode: 0o600 },
+        );
       await runFfmpeg({
         bin: run.bin,
-        args: clipArgs(edit, clip.shot, join(workspace, clip.name), run.burnSubtitles),
+        ...(cards.length > 0 ? { cwd: workspace } : {}),
+        args: segmentArgs(
+          edit,
+          clip.segment,
+          join(workspace, clip.name),
+          run.burnSubtitles,
+          script,
+        ),
         signal: run.signal,
         log: run.log,
         onProgress: (elapsedMs) => report(before + elapsedMs * clipWeight),
       });
-      rendered += msOf(clip.shot.frames) * clipWeight;
+      rendered += msOf(clip.frames) * clipWeight;
     }
     const list = join(workspace, "slides.ffconcat");
     writeFileSync(list, concatList(order), { mode: 0o600 });

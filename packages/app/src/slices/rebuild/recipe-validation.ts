@@ -6,10 +6,12 @@ import {
   usesNarrationPreparation,
   usesShorts,
   usesYoutubeDescription,
+  videoEditFields,
   youtubeDescriptionFields,
 } from "../admission/rules.js";
 import { detectSlots, render } from "../admission/substitute.js";
 import type { RevisionContent } from "../revisions/model.js";
+import { usesAnimation } from "../video/edit-settings.js";
 
 export function validateRecipeInputs(
   config: RunConfig,
@@ -19,6 +21,7 @@ export function validateRecipeInputs(
     ...narrationPreparationFields(config),
     ...youtubeDescriptionFields(config),
     ...shortsFields(config),
+    ...videoEditFields(config),
   ];
   const llm =
     (config.sources.research === "generate" && config.sources.article !== "provide") ||
@@ -44,7 +47,8 @@ export function validateRecipeInputs(
     (generatedImages ||
       config.sources.thumbnail === "from_prompt" ||
       config.sources.thumbnail === "prompt_by_llm" ||
-      usesShorts(config)) &&
+      usesShorts(config) ||
+      usesAnimation(config)) &&
     (!config.images?.provider.trim() || !config.images.model.trim())
   )
     fields.push({ field: "images", message: "Pick an image provider and model." });

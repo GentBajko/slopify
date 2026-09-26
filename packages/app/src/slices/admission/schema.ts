@@ -4,6 +4,14 @@ import { checkpointStageSchema } from "../checkpoints/schema.js";
 import { documentSettingsSchema } from "../document/theme-schema.js";
 import { chunkModes } from "../narration/chunk.js";
 import { subtitleConfigSchema } from "../subtitles/model.js";
+import {
+  animateModes,
+  atmospheres,
+  colorGrades,
+  cutModes,
+  lookLevels,
+  transitionKinds,
+} from "../video/edit-settings.js";
 import { entryModes, formats, motionStyles, stageSources } from "./model.js";
 import {
   defaultEdgeSilenceSeconds,
@@ -18,6 +26,19 @@ const providerChoice = z.object({
   thinking: z.enum(thinkingModes).optional(),
 });
 const entryChoice = z.object({ name: z.string(), mode: z.enum(entryModes) });
+export const videoEditSchema = z.object({
+  cuts: z.enum(cutModes),
+  transition: z.enum(transitionKinds),
+  transitionSeconds: z.number(),
+  vignette: z.enum(lookLevels),
+  grain: z.enum(lookLevels),
+  grade: z.enum(colorGrades),
+  atmosphere: z.enum(atmospheres),
+  chapterCards: z.boolean(),
+  animate: z.enum(animateModes),
+  animateEvery: z.number(),
+  animateModel: z.string(),
+});
 
 // The shape Play posts and the shape `projects.config` holds, in one place: the second
 // is the first plus the rendered prompt texts.
@@ -110,6 +131,8 @@ export const runDraftSchema = z.object({
       speed: z.number().optional(),
     })
     .optional(),
+  // The ranges are `slices/video/edit-settings.ts`'s, checked by admission, not the schema's.
+  videoEdit: videoEditSchema.optional(),
 });
 
 export const runConfigSchema = runDraftSchema.extend({

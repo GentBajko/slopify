@@ -288,6 +288,27 @@ export function priceRecipes(
         }),
       ),
     ];
+  // What stands in for the chapter openers' clips until the chapters are known: one clip for
+  // the opening and for each chapter the article's headings promise, the most it can cost.
+  if (
+    work.disposition === "generate" &&
+    input?.kind === "deferred" &&
+    input.operation === "animate" &&
+    Array.isArray(input.template)
+  ) {
+    const [, , provider, model, upper] = input.template;
+    const clips = typeof upper === "number" ? upper : 0;
+    return Array.from(
+      { length: clips },
+      (): PricedRequest => ({
+        kind: "image",
+        stage: work.key,
+        provider: typeof provider === "string" ? provider : "",
+        model: typeof model === "string" ? model : "",
+        detail: `Up to ${String(clips)} animated clips, one per chapter opening; the chapters are found when the word timing lands, so fewer may be made.`,
+      }),
+    );
+  }
   if (
     work.disposition !== "generate" ||
     input?.kind !== "deferred" ||

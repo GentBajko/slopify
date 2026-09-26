@@ -189,5 +189,7 @@ function futureKey(recipe: ResolvedWorkRecipe): string {
   const clip = /^(shorts:\d+):(?:image:\d+|render)$/.exec(recipe.key);
   if (clip?.[1] !== undefined) return `${clip[1]}:prompts`;
   if (recipe.key.startsWith("shorts:")) return "shorts:pick";
+  // The chapter openers' clips unfold from the deferred request that stood in for them.
+  if (recipe.key.startsWith("animate:")) return "animate:future";
   return recipe.key;
 }

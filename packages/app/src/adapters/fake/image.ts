@@ -1,5 +1,11 @@
 import type { Clock } from "../../kernel/clock.js";
-import type { GeneratedImage, ImagePort, ImageRequest } from "../../kernel/ports/image.js";
+import type {
+  AnimateRequest,
+  GeneratedImage,
+  GeneratedVideo,
+  ImagePort,
+  ImageRequest,
+} from "../../kernel/ports/image.js";
 import type { ModelInfo, ProviderErrorInit } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
 
@@ -14,11 +20,16 @@ export interface FakeImageOptions {
   readonly failOnAttempt?: Readonly<Record<number, ProviderErrorInit>>;
   // A content-policy refusal, which is never retried.
   readonly refuse?: string;
+  // The clip every animation answers with; absent, the fake cannot animate at all.
+  readonly video?: Uint8Array;
+  // Animations that fail, by call number, like `failOnAttempt`.
+  readonly failAnimateOnAttempt?: Readonly<Record<number, ProviderErrorInit>>;
 }
 
 export interface FakeImage extends ImagePort {
   readonly calls: () => number;
   readonly seen: () => readonly ImageRequest[];
+  readonly animated: () => readonly AnimateRequest[];
 }
 
 export function fakeImage(options: FakeImageOptions = {}): FakeImage {
@@ -28,6 +39,7 @@ export function fakeImage(options: FakeImageOptions = {}): FakeImage {
   }
   let calls = 0;
   const seen: ImageRequest[] = [];
+  const animated: AnimateRequest[] = [];
 
   return {
     id: options.id ?? "fake-image",
@@ -35,6 +47,18 @@ export function fakeImage(options: FakeImageOptions = {}): FakeImage {
       Promise.resolve(options.models ?? [{ id: "fake-diffusion", name: "Fake Diffusion" }]),
     calls: (): number => calls,
     seen: (): readonly ImageRequest[] => seen,
+    animated: (): readonly AnimateRequest[] => animated,
+    ...(options.video === undefined
+      ? {}
+      : {
+          animate: (req: AnimateRequest): Promise<GeneratedVideo> => {
+            animated.push(req);
+            const failure = options.failAnimateOnAttempt?.[animated.length];
+            if (failure !== undefined) return Promise.reject(providerError(failure));
+            req.signal.throwIfAborted();
+            return Promise.resolve({ bytes: options.video ?? new Uint8Array(), mime: "video/mp4" });
+          },
+        }),
     generate: async (req: ImageRequest): Promise<GeneratedImage> => {
       calls += 1;
       seen.push(req);

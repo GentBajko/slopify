@@ -2,9 +2,10 @@ import { randomUUID } from "node:crypto";
 import type { Clock } from "../clock.js";
 import type { Log } from "../log.js";
 import type { Format } from "../pipeline.js";
-import type { GeneratedImage } from "../ports/image.js";
+import type { GeneratedImage, GeneratedVideo } from "../ports/image.js";
 import type { LlmEvent, Message, ThinkingConfig, Usage } from "../ports/llm.js";
 import type { LlmDocument } from "../ports/llm-documents.js";
+import { providerError } from "../ports/model.js";
 import type { Registry } from "../ports/registry.js";
 import type { AttemptContext } from "./attempt.js";
 import { attempt } from "./attempt.js";
@@ -62,6 +63,15 @@ export interface ImageCall {
   readonly aspect: Format;
 }
 
+export interface AnimateCall {
+  readonly provider: string;
+  readonly model: string;
+  readonly prompt: string;
+  readonly image: GeneratedImage;
+  readonly aspect: Format;
+  readonly seconds: number;
+}
+
 export interface StageProviders {
   // `onEvent` sees the deltas of the attempt in flight. A retry starts the
   // answer again; the text returned is only ever the successful attempt's.
@@ -73,6 +83,8 @@ export interface StageProviders {
   // observer copies preview bytes and resets on every retry.
   readonly tts: (call: TtsCall, observe?: ObserveTts) => Promise<AttemptResult<NarratedAudio>>;
   readonly image: (call: ImageCall) => Promise<AttemptResult<GeneratedImage>>;
+  // Optional so a stage that never animates can be handed a fake without it.
+  readonly animate?: ((call: AnimateCall) => Promise<AttemptResult<GeneratedVideo>>) | undefined;
   // The same calls, recorded against one resumable piece.
   readonly forPiece: (pieceId: string) => StageProviders;
 }
@@ -258,6 +270,34 @@ export function stageProviders(
             }),
           // One request, one answer: the 300 s runs over the whole call.
           { kind: "image" },
+        ),
+      );
+    },
+
+    animate: (call: AnimateCall): Promise<AttemptResult<GeneratedVideo>> => {
+      const port = deps.registry.image(call.provider);
+      const animate = port.animate;
+      if (animate === undefined)
+        return Promise.reject(
+          providerError({
+            kind: "unsupported",
+            message: `${call.provider} can't turn images into video clips. Choose fal.ai or Replicate as the image provider in Edit project → Providers, or turn Animate images off in Edit project → Inputs → Look.`,
+          }),
+        );
+      return schedule(call.provider, () =>
+        attempt(
+          ctx,
+          (signal: AbortSignal): Promise<GeneratedVideo> =>
+            animate({
+              model: call.model,
+              prompt: call.prompt,
+              image: call.image,
+              aspect: call.aspect,
+              seconds: call.seconds,
+              signal,
+            }),
+          // Queued and slow: the 900 s runs over the whole call, polling included.
+          { kind: "video" },
         ),
       );
     },

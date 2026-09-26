@@ -61,6 +61,7 @@ Use a scenario when changing one of the listed workflows. Article is the only re
 | 26 Document (article as a styled PDF) | [26-document.md](26-document.md) |
 | 27 YouTube description (Video stage step) | [27-youtube-description.md](27-youtube-description.md) |
 | 28 Shorts (Video stage step: vertical clips with word-by-word captions) | [28-shorts.md](28-shorts.md) |
+| 29 Video editing (cuts on sentences, transitions, the Look, chapter cards, clips and animated images) | [29-video-editing.md](29-video-editing.md) |
 
 ## Branches
 

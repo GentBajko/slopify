@@ -26,6 +26,15 @@ export function recipeProviderChoice(
     return config.llm === undefined ? undefined : { ...config.llm, family: "llm" };
   if (input.kind === "deferred" && input.operation === "shorts")
     return config.images === undefined ? undefined : { ...config.images, family: "image" };
+  // The chapter openers' clips are asked of the image provider's image-to-video model.
+  if (input.kind === "deferred" && input.operation === "animate")
+    return config.images === undefined
+      ? undefined
+      : {
+          provider: config.images.provider,
+          model: config.videoEdit?.animateModel ?? "",
+          family: "image",
+        };
   if (input.kind !== "deferred") return undefined;
   const family =
     input.operation === "narration-preparation"
