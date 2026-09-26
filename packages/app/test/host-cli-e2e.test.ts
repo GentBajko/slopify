@@ -176,7 +176,9 @@ describe.skipIf(process.platform === "win32")("real host processes over the Unix
     // Beyond the runner's one-second SIGTERM grace, after which it sends SIGKILL.
     await expect.poll(() => alive(call.pid), { timeout: 5_000 }).toBe(false);
     await expect.poll(() => existsSync(call.cwd), { timeout: 5_000 }).toBe(false);
-  });
+    // The two waits above may take up to ten seconds between them on a busy CI machine, more
+    // than the default five-second test budget, which is what failed there.
+  }, 20_000);
   it.each(["canceled", "unavailable"] as const)(
     "records %s once when a submitted host call is aborted",
     async (outcome) => {
