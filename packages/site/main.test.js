@@ -19,6 +19,7 @@ const live = {
   thumbnails_made: 300,
   documents_made: 1234,
   descriptions_made: 56,
+  shorts_made: 7890,
   audio_seconds: 15_555_600,
   tokens_used: 1_200_000_000,
 };
@@ -41,6 +42,7 @@ describe("counterText", () => {
     expect(counterText(live, "audio_seconds")).toBe("4,321");
     expect(counterText(live, "documents_made")).toBe("1,234");
     expect(counterText(live, "descriptions_made")).toBe("56");
+    expect(counterText(live, "shorts_made")).toBe("7,890");
   });
 
   // Dashes, never a zero that reads as a real count.
@@ -50,6 +52,7 @@ describe("counterText", () => {
     "images_made",
     "documents_made",
     "descriptions_made",
+    "shorts_made",
     "tokens_used",
     "installs",
   ])("shows a dash for %s when there are no aggregates", (key) => {

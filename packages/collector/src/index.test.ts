@@ -115,6 +115,8 @@ describe("POST /events", () => {
             id: "e7",
             payload: { appVersion: "2.1.1", descriptions: 1, tokensIn: 100, tokensOut: 20 },
           }),
+          // A rendered short names no stage either: a short, never a video.
+          event({ id: "e8", payload: { appVersion: "2.2.0", shorts: 1 } }),
         ],
       }),
       { DB: db },
@@ -128,6 +130,7 @@ describe("POST /events", () => {
       thumbnails_made: 1,
       documents_made: 1,
       descriptions_made: 1,
+      shorts_made: 1,
       audio_seconds: 13,
       tokens_used: 135,
     });
@@ -280,6 +283,7 @@ describe("GET /aggregates", () => {
       thumbnails_made: 0,
       documents_made: 0,
       descriptions_made: 0,
+      shorts_made: 0,
       audio_seconds: 0,
       tokens_used: 0,
     });

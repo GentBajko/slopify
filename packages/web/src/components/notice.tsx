@@ -19,6 +19,7 @@ const tracked = [
   "Videos rendered",
   "PDF documents made",
   "YouTube descriptions written",
+  "Shorts made",
   "Projects created",
   "That this machine installed Slopify",
   "The time each of those happened",

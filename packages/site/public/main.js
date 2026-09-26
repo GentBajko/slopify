@@ -34,6 +34,7 @@ const formats = {
   images_made: (value) => grouped.format(Math.round(value)),
   documents_made: (value) => grouped.format(Math.round(value)),
   descriptions_made: (value) => grouped.format(Math.round(value)),
+  shorts_made: (value) => grouped.format(Math.round(value)),
   tokens_used: compactNumber,
   installs: (value) => grouped.format(Math.round(value)),
 };

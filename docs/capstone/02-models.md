@@ -775,8 +775,10 @@ Source: `packages/app/src/slices/fonts/model.ts:8`.
 | audioSeconds | `number \| undefined` | no |
 | images | `number \| undefined` | no |
 | thumbnails | `number \| undefined` | no |
+| descriptions | `number \| undefined` | no |
+| shorts | `number \| undefined` | no |
 
-Source: `packages/app/src/slices/telemetry/model.ts:60`.
+Source: `packages/app/src/slices/telemetry/model.ts:66`.
 
 ### TelemetryPayload
 
@@ -791,9 +793,11 @@ Source: `packages/app/src/slices/telemetry/model.ts:60`.
 | audioSeconds | `number \| undefined` | no |
 | images | `number \| undefined` | no |
 | thumbnails | `number \| undefined` | no |
+| descriptions | `number \| undefined` | no |
+| shorts | `number \| undefined` | no |
 | appVersion | `string` | yes |
 
-Source: `packages/app/src/slices/telemetry/model.ts:73`.
+Source: `packages/app/src/slices/telemetry/model.ts:81`.
 
 ### TelemetryEvent
 
@@ -1362,10 +1366,13 @@ Source: `packages/app/src/slices/subtitles/model.ts:22`.
 | videos_made | `number` | yes |
 | images_made | `number` | yes |
 | thumbnails_made | `number` | yes |
+| documents_made | `number` | yes |
+| descriptions_made | `number` | yes |
+| shorts_made | `number` | yes |
 | audio_seconds | `number` | yes |
 | tokens_used | `number` | yes |
 
-Source: `packages/collector/src/model.ts:31`.
+Source: `packages/collector/src/model.ts:34`.
 
 ### AudioExportRecord
 

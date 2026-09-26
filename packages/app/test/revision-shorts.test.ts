@@ -10,6 +10,7 @@ import { fakeTts } from "../src/adapters/fake/tts.js";
 import type { LlmCompletion } from "../src/kernel/ports/llm.js";
 import { previewRebuild } from "../src/slices/rebuild/service.js";
 import { outputPath } from "../src/slices/storage/layout.js";
+import { allTelemetryEvents, insertMachine } from "../src/slices/telemetry/repo.js";
 import { resolveFfmpeg } from "../src/slices/video/ffmpeg.js";
 import { composedFixture, current, save, start } from "./revision-rebuild.fake.js";
 
@@ -157,6 +158,12 @@ it("picks the clips, writes their prompts, makes vertical images and renders eve
     expect.arrayContaining(["subtitles:timing", "shorts:pick", "shorts:future"]),
   );
 
+  // A dismissed notice, so the run's usage counts are written.
+  insertMachine(h.deps.db, {
+    machineId: "5b0c1f9e-0d4e-4d7a-9a55-3b1f2f1e7c11",
+    noticeSeenAt: new Date().toISOString(),
+    appVersion: "test",
+  });
   const started = await start(h.deps, h.projectId, ["export:wav", "shorts:pick", "shorts:future"]);
   // The change list names the switch and the settings in words.
   expect(started.preview.review?.inputChanges).toEqual(
@@ -172,6 +179,14 @@ it("picks the clips, writes their prompts, makes vertical images and renders eve
     .prepare("SELECT state,failure_reason FROM stages WHERE project_id=? AND kind='video'")
     .get(h.projectId);
   expect(stage).toEqual({ state: "done", failure_reason: null });
+  // One short counted per render, with no stage: a short is not a finished video.
+  const counted = allTelemetryEvents(h.deps.db)
+    .map((event) => event.payload)
+    .filter((payload) => payload.shorts !== undefined);
+  expect(counted).toEqual([
+    { appVersion: "test", shorts: 1 },
+    { appVersion: "test", shorts: 1 },
+  ]);
   // The pick twice (the second with what was wrong), then one prompt call per clip.
   expect(model.calls()).toBe(4);
   const retry = model.seen()[1] ?? [];

@@ -294,6 +294,9 @@ async function render(
       { short: clip.number, start: clip.start, end: clip.end, durationMs },
       asset,
     );
+    // One per rendered short, with no stage: stage "video" would read as a finished video.
+    // Its pick and prompt tokens are not counted here.
+    deps.count?.("stage.completed", { shorts: 1 });
     return "done";
   } finally {
     discardPreparedAssets(deps, [pending, ...prepared.map((one) => one.asset)]);

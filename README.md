@@ -109,7 +109,7 @@ reaches the port controls the app and its keys.
 ## Telemetry
 
 Slopify sends anonymous counts (installs, projects, stages, images, videos, PDFs, YouTube
-descriptions, audio seconds and token totals) to show the totals on
+descriptions, shorts, audio seconds and token totals) to show the totals on
 [slopify.stream](https://slopify.stream). Never your keys, prompts, keywords, titles,
 text, files or anything about your machine beyond a random id.
 

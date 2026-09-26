@@ -16,7 +16,7 @@ export interface CollectorDb {
   readonly prepare: (query: string) => CollectorStatement;
 }
 
-// The totals the marketing page reads. Seven of the nine counters are shown; the other two
+// The totals the marketing page reads. Eight of the ten counters are shown; the other two
 // are kept because the app counts them all the same.
 export const aggregateKeys = [
   "installs",
@@ -26,6 +26,7 @@ export const aggregateKeys = [
   "thumbnails_made",
   "documents_made",
   "descriptions_made",
+  "shorts_made",
   "audio_seconds",
   "tokens_used",
 ] as const;
@@ -109,6 +110,9 @@ export function deltasFor(event: CollectorEvent): readonly (readonly [AggregateK
     }
     deltas.push(["images_made", count(event.payload.images)]);
     deltas.push(["descriptions_made", count(event.payload.descriptions)]);
+    // 2.2 added shorts, cut from the narration inside the Video stage; like a description
+    // the event names no stage.
+    deltas.push(["shorts_made", count(event.payload.shorts)]);
   }
   // Seconds are rounded per event; the page shows hours, so the drift is invisible and
   // the column stays an integer.
@@ -128,6 +132,7 @@ export function emptyAggregates(): Aggregates {
     thumbnails_made: 0,
     documents_made: 0,
     descriptions_made: 0,
+    shorts_made: 0,
     audio_seconds: 0,
     tokens_used: 0,
   };
