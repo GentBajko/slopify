@@ -40,9 +40,9 @@
 </p>
 
 <p align="center">
-  <a href="https://slopify.stream"><img src="packages/site/public/assets/play-run-poster.jpg" width="720"
-    alt="Slopify playing a finished demo video, The Rise of AI Slop. Watch the walkthrough on slopify.stream."></a><br>
-  <sub><a href="https://slopify.stream">Watch the 40-second walkthrough on slopify.stream</a></sub>
+  <a href="https://slopify.stream"><img src="docs/assets/play-run-preview.webp" width="900"
+    alt="Slopify making a video end to end: a prompt and a topic in Play, the stages running, and the finished narrated video."></a><br>
+  <sub><a href="https://slopify.stream">Watch it in full quality on slopify.stream</a></sub>
 </p>
 
 <p align="center">
