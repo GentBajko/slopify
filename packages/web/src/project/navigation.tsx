@@ -24,9 +24,11 @@ export function RundownStrip({
   outputs,
   selected,
   onSelect,
+  resumable = false,
 }: {
   readonly stages: readonly Stage[];
   readonly project: ProjectSummary;
+  readonly resumable?: boolean;
   readonly outputs: readonly Output[];
   readonly selected: SectionKind;
   readonly onSelect: (kind: SectionKind) => void;
@@ -88,7 +90,9 @@ export function RundownStrip({
                     kind={sectionLead(section)}
                     className="size-[13px] shrink-0 text-ink3"
                   />
-                  <span className="truncate">{sectionSummary(section, outputs, project)}</span>
+                  <span className="truncate">
+                    {sectionSummary(section, outputs, project, resumable)}
+                  </span>
                 </span>
               </button>
             );

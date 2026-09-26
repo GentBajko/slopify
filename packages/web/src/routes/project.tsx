@@ -135,6 +135,7 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
               project={summary}
               outputs={outputs}
               selected={selected}
+              resumable={project.data.resumable}
               onSelect={(stage) => {
                 selectStage(stage);
                 setTab("output");
@@ -167,6 +168,7 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
                     outputs={outputs}
                     providers={providers.data?.providers ?? []}
                     actions={actions}
+                    resumable={project.data.resumable}
                   >
                     <StageBodyFor
                       stage={section.stage}

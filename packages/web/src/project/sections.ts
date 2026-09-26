@@ -76,9 +76,10 @@ export function sectionSummary(
   section: Section,
   outputs: readonly Output[],
   project: ProjectSummary,
+  resumable = false,
 ): string {
   const shown = shownStage(section);
-  const summary = summaryOf(shown, outputs, project);
+  const summary = summaryOf(shown, outputs, project, resumable);
   return shown === section.companion && section.stage.state !== "skipped"
     ? `${stageNames[shown.kind]}: ${summary}`
     : summary;

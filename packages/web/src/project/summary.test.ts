@@ -60,6 +60,12 @@ describe("the summary in a rundown row", () => {
     );
   });
 
+  it("says a stage whose work is held after a save waits for Resume, not for the stages above", () => {
+    expect(summaryOf(stage("audio", "pending"), [], project, true)).toBe("Waiting for Resume");
+    expect(summaryOf(stage("images", "pending"), [], project, true)).toBe("Waiting for Resume");
+    expect(summaryOf(stage("audio", "done"), [], project, true)).not.toBe("Waiting for Resume");
+  });
+
   it("names the file behind a provided stage", () => {
     const outputs = [output("audio_body", "audio", { originalFilename: "body.mp3" })];
     expect(summaryOf(stage("audio", "provided"), outputs, project)).toBe("body.mp3");

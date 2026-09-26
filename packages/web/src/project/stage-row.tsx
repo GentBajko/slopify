@@ -41,6 +41,7 @@ export function StageRow({
   actions,
   children,
   active = true,
+  resumable = false,
 }: {
   readonly section: Section;
   readonly project: ProjectSummary;
@@ -49,6 +50,7 @@ export function StageRow({
   readonly actions: ProjectActions;
   readonly children: ReactNode;
   readonly active?: boolean;
+  readonly resumable?: boolean;
 }) {
   const { stage, companion } = section;
   const both = companion === undefined ? [stage] : [stage, companion];
@@ -89,7 +91,9 @@ export function StageRow({
           <h2 className="text-row font-bold">
             {stage.kind === "video" && name === "Audio export" ? "Listen & export" : titles[lead]}
           </h2>
-          <p className="text-small text-ink2">{sectionSummary(section, outputs, project)}</p>
+          <p className="text-small text-ink2">
+            {sectionSummary(section, outputs, project, resumable)}
+          </p>
         </div>
         <span className="text-small text-run-text tabular-nums">
           {shown.state === "running"

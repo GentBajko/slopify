@@ -59,17 +59,21 @@ const segments: Readonly<Record<string, string>> = {
   audio_outro: "outro",
 };
 
+// `resumable` is the project body's own word: nothing is running and the work left is held
+// until Resume, as it is after a save or a restart. Those stages wait on the button, not on
+// the stages above them.
 export function summaryOf(
   stage: Stage,
   outputs: readonly Output[],
   project: ProjectSummary,
+  resumable = false,
 ): string {
   const mine = outputs.filter((output) => output.stageKind === stage.kind);
   switch (stage.state) {
     case "skipped":
       return "Not part of this run";
     case "pending":
-      if (project.status === "paused") return "Waiting for Resume";
+      if (project.status === "paused" || resumable) return "Waiting for Resume";
       if (stage.kind === "images" || (stage.kind === "thumbnail" && stage.source === "from_prompt"))
         return "Ready to run";
       return "Waits for the stages above";
