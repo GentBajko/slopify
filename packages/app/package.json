@@ -1,6 +1,6 @@
 {
   "name": "@gentbajko/slopify",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "description": "Turn a prompt into a finished video, locally, with your own provider keys",
   "license": "MIT",
   "author": "Gent Bajko",
