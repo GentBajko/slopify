@@ -1,16 +1,23 @@
-import type { StageKind } from "@app/kernel/pipeline.js";
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
 import type { Output } from "@app/slices/storage/model.js";
 import { StageGlyph } from "@/components/glyph";
 import { Lamp } from "@/components/lamp";
 import { StateWord } from "@/components/state-word";
 import { cn } from "@/lib/utils";
-import { stageName, summaryOf } from "./summary";
+import {
+  type SectionKind,
+  sectionLead,
+  sectionName,
+  sectionSummary,
+  sectionsOf,
+  shownStage,
+} from "./sections";
 import { overallProgress } from "./workspace";
 
 // The rundown: one cell for the whole run and one per stage, in a single row under the page
 // bar. It is the project's navigation, its progress and its status at once, so none of those
 // is said a second time further down the page. A running stage pulses here and only here.
+// Research and the thumbnail have no cell of their own: they light Article and Images.
 export function RundownStrip({
   stages,
   project,
@@ -21,8 +28,8 @@ export function RundownStrip({
   readonly stages: readonly Stage[];
   readonly project: ProjectSummary;
   readonly outputs: readonly Output[];
-  readonly selected: StageKind;
-  readonly onSelect: (kind: StageKind) => void;
+  readonly selected: SectionKind;
+  readonly onSelect: (kind: SectionKind) => void;
 }) {
   const progress = overallProgress(stages);
   return (
@@ -53,17 +60,18 @@ export function RundownStrip({
         aria-label="Project stages"
         className="relative min-w-0 overflow-x-auto [scrollbar-width:thin]"
       >
-        <div className="grid min-w-[740px] grid-cols-7">
-          {stages.map((stage) => {
-            const active = stage.kind === selected;
-            const name = stageName(stage.kind, project.config);
+        <div className="grid min-w-[560px] grid-cols-5">
+          {sectionsOf(stages).map((section) => {
+            const active = section.kind === selected;
+            const name = sectionName(section, project.config);
+            const stage = shownStage(section);
             return (
               <button
-                key={stage.id}
+                key={section.stage.id}
                 type="button"
                 aria-label={`${name}, ${stage.state}`}
                 aria-current={active ? "step" : undefined}
-                onClick={() => onSelect(stage.kind)}
+                onClick={() => onSelect(section.kind)}
                 className={cn(
                   "flex min-w-0 flex-col items-start gap-1 border-r border-line px-3 py-3 text-left last:border-r-0 hover:bg-panel2 focus-visible:outline-offset-[-3px]",
                   active && "bg-panel2 shadow-[inset_0_-2px_0_var(--color-lamp-run)]",
@@ -76,8 +84,11 @@ export function RundownStrip({
                 </span>
                 <StateWord state={stage.state} announce={name} />
                 <span className="flex w-full min-w-0 items-center gap-1 text-label text-ink2">
-                  <StageGlyph kind={stage.kind} className="size-[13px] shrink-0 text-ink3" />
-                  <span className="truncate">{summaryOf(stage, outputs, project)}</span>
+                  <StageGlyph
+                    kind={sectionLead(section)}
+                    className="size-[13px] shrink-0 text-ink3"
+                  />
+                  <span className="truncate">{sectionSummary(section, outputs, project)}</span>
                 </span>
               </button>
             );

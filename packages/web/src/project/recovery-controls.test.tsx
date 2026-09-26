@@ -165,7 +165,7 @@ it("allows canceled Resume and paused Retry without approving a checkpoint or op
         primaryOutput={undefined}
       />
       <StageRow
-        stage={stage("audio", "failed")}
+        section={{ kind: "audio", stage: stage("audio", "failed") }}
         project={{ ...project, status: "paused" }}
         outputs={[]}
         providers={[]}
@@ -220,7 +220,7 @@ it.each([
         {(["audio", "images"] as const).map((kind) => (
           <StageRow
             key={kind}
-            stage={stage(kind, "failed")}
+            section={{ kind, stage: stage(kind, "failed") }}
             project={project}
             outputs={[]}
             providers={[]}

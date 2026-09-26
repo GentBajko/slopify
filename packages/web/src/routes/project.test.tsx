@@ -34,7 +34,8 @@ describe("the project rundown", () => {
   it("shows a skeleton in the final shape while the project is coming", async () => {
     const { container } = renderRouted(<ProjectRoute projectId="p1" />, testDeps({}));
     await waitFor(() => {
-      expect(container.querySelectorAll(".rounded-full").length).toBe(7);
+      // Five sections: research and the thumbnail live inside Article and Images.
+      expect(container.querySelectorAll(".rounded-full").length).toBe(5);
     });
   });
 
@@ -46,13 +47,26 @@ describe("the project rundown", () => {
     expect(await screen.findByText("No project has that id.")).not.toBeNull();
   });
 
-  it("gives every stage a lamp, a state word and a live announcement", async () => {
+  it("gives every section a lamp, a state word and a live announcement", async () => {
     renderRouted(<ProjectRoute projectId="p1" />, deps());
-    await screen.findByText("Research");
+    const navigation = await screen.findByRole("navigation", { name: "Project stages" });
+    expect(
+      within(navigation)
+        .getAllByRole("button")
+        .map((cell) => cell.textContent),
+    ).toEqual([
+      expect.stringMatching(/^Article/),
+      expect.stringMatching(/^Audio/),
+      expect.stringMatching(/^Images/),
+      expect.stringMatching(/^Video/),
+      expect.stringMatching(/^Document/),
+    ]);
     const announced = screen.getAllByRole("status").map((live) => live.textContent);
     expect(announced).toContain("Video: done");
-    expect(announced).toContain("Research: skipped");
     expect(announced).toContain("Document: skipped");
+    // Research and the thumbnail have no cell of their own to announce.
+    expect(announced.some((line) => line?.startsWith("Research"))).toBe(false);
+    expect(announced.some((line) => line?.startsWith("Thumbnail"))).toBe(false);
   });
 
   it("shows the Document row switched off, and its PDF once rendered", async () => {
@@ -286,7 +300,7 @@ describe("cancelling a run", () => {
 
   it("offers no Cancel once the run is over", async () => {
     renderRouted(<ProjectRoute projectId="p1" />, deps());
-    await screen.findByText("Research");
+    await screen.findByRole("navigation", { name: "Project stages" });
     await userEvent.click(screen.getByRole("button", { name: "More project actions" }));
     expect(
       (await screen.findByRole("menuitem", { name: "Cancel run" })).getAttribute("aria-disabled"),
@@ -367,10 +381,124 @@ describe("the stage bodies", () => {
     );
   });
 
-  it("shows the thumbnail with the prompt that made it", async () => {
+  it("shows the thumbnail large at the top of Images, without its prompt", async () => {
     renderRouted(<ProjectRoute projectId="p1" />, deps());
-    await selectProjectStage("Thumbnail");
-    expect(screen.getByText("A cracked skull with gemstone eyes")).not.toBeNull();
+    const images = await selectProjectStage("Images");
+    const thumbnail = within(images).getByRole("region", { name: "Thumbnail" });
+    expect(
+      within(thumbnail).getByRole("img", { name: "Thumbnail for Rope Tricks" }),
+    ).not.toBeNull();
+    expect(within(thumbnail).getByRole("button", { name: "Regenerate thumbnail" })).not.toBeNull();
+    expect(
+      within(thumbnail).getByRole("link", { name: "Download thumbnail" }).getAttribute("href"),
+    ).toBe(`${testOrigin}/files/p1/thumbnail`);
+    expect(within(thumbnail).getByRole("button", { name: "Open folder" })).not.toBeNull();
+    expect(screen.queryByText("A cracked skull with gemstone eyes")).toBeNull();
+    // The thumbnail comes before the slideshow's own groups.
+    const headings = within(images)
+      .getAllByRole("heading")
+      .map((one) => one.textContent);
+    expect(headings.indexOf("Thumbnail")).toBeLessThan(headings.indexOf("Slideshow images"));
+  });
+
+  it("shows a research failure on Article, with the Research tab open and its own Retry", async () => {
+    const retried = vi.fn();
+    renderRouted(
+      <ProjectRoute projectId="p1" />,
+      deps({
+        "GET /api/projects/p1": jsonAnswer(
+          body({
+            status: "failed",
+            stages: [
+              stage("research", "failed", { failureReason: "openrouter: 401", attemptCount: 1 }),
+              stage("article", "pending"),
+              stage("audio", "pending"),
+              stage("images", "pending"),
+              stage("thumbnail", "skipped"),
+              stage("video", "pending"),
+            ],
+            outputs: [],
+          }),
+        ),
+        "POST /api/projects/p1/stages/research/retry": (request) => {
+          retried();
+          return jsonAnswer(recoveryAccepted)(request);
+        },
+      }),
+    );
+    // The failed research is the stage that needs attention, so its section opens first.
+    const article = await screen.findByRole("region", { name: "Article workspace" });
+    expect(
+      within(screen.getByRole("navigation", { name: "Project stages" })).getByRole("button", {
+        name: "Article, failed",
+      }).textContent,
+    ).toContain("Research: Stopped after 1 attempt");
+    expect(
+      within(article).getByText("Research stopped with an error. Open Error details to see why."),
+    ).not.toBeNull();
+    expect(
+      within(article).getByRole("tab", { name: "Research" }).getAttribute("aria-selected"),
+    ).toBe("true");
+    await userEvent.click(within(article).getByRole("button", { name: "Retry research" }));
+    await waitFor(() => expect(retried).toHaveBeenCalledTimes(1));
+  });
+
+  it("keeps the thumbnail in its own section when Images is switched off", async () => {
+    renderRouted(
+      <ProjectRoute projectId="p1" />,
+      deps({
+        "GET /api/projects/p1": jsonAnswer(
+          body({
+            status: "done",
+            stages: [
+              ...finished.stages.filter((one) => one.kind !== "images"),
+              stage("images", "skipped"),
+            ],
+            outputs: finished.outputs.filter((one) => one.stageKind !== "images"),
+          }),
+        ),
+      }),
+    );
+    const section = await selectProjectStage("Thumbnail");
+    expect(within(section).getByRole("heading", { name: "Thumbnail", level: 2 })).not.toBeNull();
+    expect(within(section).getByRole("img", { name: "Thumbnail for Rope Tricks" })).not.toBeNull();
+    expect(within(section).queryByRole("button", { name: "Re-run stage" })).toBeNull();
+    expect(within(section).queryByText(/switched off/)).toBeNull();
+  });
+
+  it("says a failed thumbnail on Images, with its own Retry", async () => {
+    const retried = vi.fn();
+    renderRouted(
+      <ProjectRoute projectId="p1" />,
+      deps({
+        "GET /api/projects/p1": jsonAnswer(
+          body({
+            status: "failed",
+            stages: [
+              ...finished.stages.filter((one) => one.kind !== "thumbnail"),
+              stage("thumbnail", "failed", { failureReason: "fal.ai: 500", attemptCount: 2 }),
+            ],
+            outputs: finished.outputs.filter((one) => one.stageKind !== "thumbnail"),
+          }),
+        ),
+        "POST /api/projects/p1/stages/thumbnail/retry": (request) => {
+          retried();
+          return jsonAnswer(recoveryAccepted)(request);
+        },
+      }),
+    );
+    const navigation = await screen.findByRole("navigation", { name: "Project stages" });
+    const cell = within(navigation).getByRole("button", { name: "Images, failed" });
+    expect(cell.textContent).toContain("Thumbnail: Stopped after 2 attempts");
+    const images = await selectProjectStage("Images");
+    expect(
+      within(images).getByText("Thumbnail stopped with an error. Open Error details to see why."),
+    ).not.toBeNull();
+    expect(
+      within(images).getByText("No thumbnail was made. Use Retry thumbnail above to try again."),
+    ).not.toBeNull();
+    await userEvent.click(within(images).getByRole("button", { name: "Retry thumbnail" }));
+    await waitFor(() => expect(retried).toHaveBeenCalledTimes(1));
   });
 
   it("keeps pending export actions unavailable while showing the existing file", async () => {

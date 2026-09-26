@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { BodyProps } from "./body.js";
 import { outputsOf } from "./body.js";
+import { ThumbnailPanel } from "./body-thumbnail.js";
 import { ConfirmedButton } from "./controls.js";
 import { groupImages } from "./image-groups.js";
 import { ActionRow, DownloadLink, EngravedLabel, OutputDownload, StageBody } from "./parts.js";
@@ -12,27 +13,43 @@ import { useOutputMedia } from "./revision-media.js";
 
 // Images: a grid per image prompt, 6 columns at 1440 px, prompt name as an engraved header with
 // '× N'; per image on hover and focus: Download, Regenerate, Delete; 'Download all' and 'Re-run
-// stage' at the group's right.
+// stage' at the group's right. The thumbnail, when the run makes one, sits large above them all;
+// with Images switched off it is the section's only content.
 
 export function aspectOf(format: Format): string {
   return format === "9:16" ? "aspect-[9/16]" : "aspect-video";
 }
 
-export function ImagesBody({ stage, project, outputs, actions, busy }: BodyProps) {
+export function ImagesBody({ stage, companion, project, outputs, actions, busy }: BodyProps) {
   const groups = groupImages(
     outputsOf(outputs, stage),
     project.config.imagePrompts?.map((prompt) => prompt.name) ?? [],
   );
+  const thumbnail =
+    companion?.kind === "thumbnail" ? (
+      <ThumbnailPanel
+        stage={companion}
+        project={project}
+        outputs={outputs}
+        actions={actions}
+        busy={busy}
+      />
+    ) : null;
+  if (stage.state === "skipped") return <StageBody>{thumbnail}</StageBody>;
 
   return (
     <StageBody>
+      {thumbnail}
+      {thumbnail === null ? null : (
+        <h3 className="engraved border-t border-line pt-4 text-ink3">Slideshow images</h3>
+      )}
       <ActionRow>
         <ConfirmedButton
           action={{ kind: "rerun", stage: stage.kind }}
           run={() => {
             actions.run({ kind: "rerun", stage: stage.kind });
           }}
-          disabled={busy}
+          disabled={busy || stage.state === "pending"}
           pending={actions.pending}
         >
           Re-run stage

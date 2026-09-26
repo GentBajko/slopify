@@ -1,5 +1,8 @@
+import type { Stage } from "@app/slices/admission/model.js";
+import type { Output } from "@app/slices/storage/model.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { afterEach, expect, it, vi } from "vitest";
 import { body, output, stage } from "@/routes/project-fixtures";
 import { jsonAnswer, renderApp, testDeps, testOrigin } from "@/test-app";
 import { ArticleBody } from "./body-article.js";
@@ -206,4 +209,127 @@ it("shows no tab row for an article without sources or a glossary", async () => 
   );
   await screen.findByText("Just the article.");
   expect(screen.queryByRole("tablist")).toBeNull();
+});
+
+function mountWithResearch(
+  article: Stage,
+  research: Stage,
+  outputs: readonly Output[],
+  files: Readonly<Record<string, string>>,
+) {
+  const saved = revisionView();
+  const config = {
+    ...saved.revision.config,
+    sources: { ...saved.revision.config.sources, research: "generate", article: "generate" },
+  } as const;
+  const project = {
+    ...body({ status: "done", stages: [research, article], outputs }).project,
+    format: "16:9" as const,
+    config,
+  };
+  renderApp(
+    <RevisionMedia projectId="p1" revisionId="r1">
+      <RevisionControlContext value>
+        <ArticleBody
+          stage={article}
+          companion={research}
+          project={project}
+          outputs={outputs}
+          busy={false}
+          actions={{
+            run: () => undefined,
+            pending: false,
+            refusal: undefined,
+            dismissRefusal: () => undefined,
+          }}
+        />
+      </RevisionControlContext>
+    </RevisionMedia>,
+    testDeps({
+      "GET /api/projects/p1/revisions/r1": jsonAnswer({
+        view: {
+          ...saved,
+          revision: { ...saved.revision, config },
+          outputs: outputs.map((one) => ({
+            recordId: one.role,
+            publicationId: null,
+            selected: true,
+            available: true,
+            slot: `${one.stageKind}:${one.role}`,
+            workKey: `${one.stageKind}:body`,
+            assetId: one.id,
+            output: one,
+            fingerprint: one.stageKind,
+            state: "ready" as const,
+          })),
+        },
+      }),
+      ...Object.fromEntries(
+        Object.entries(files).map(([role, text]) => [
+          `GET /files/p1/revisions/r1/${role}`,
+          () => new Response(text),
+        ]),
+      ),
+    }),
+  );
+}
+
+it("puts Research second among the article's tabs and copies its notes", async () => {
+  const writeText = vi.fn(async () => undefined);
+  vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+  mountWithResearch(
+    stage("article", "done"),
+    stage("research", "done"),
+    [output("notes", "research"), output("article_md", "article")],
+    {
+      notes: "Liches keep phylacteries.",
+      article_md: [
+        "# Szass Tam",
+        "",
+        "The body of the article.",
+        "",
+        "## Sources Consulted",
+        "",
+        "TSR, Monster Manual (1977)",
+        "",
+        "## Pronunciation Glossary",
+        "",
+        "| Name / Term | IPA |",
+        "|---|---|",
+        "| lich | /lɪtʃ/ |",
+      ].join("\n"),
+    },
+  );
+  await screen.findByText("The body of the article.");
+  expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+    "Article",
+    "Research",
+    "Sources1",
+    "Pronunciation",
+  ]);
+  await userEvent.click(screen.getByRole("tab", { name: "Research" }));
+  const notes = await screen.findByRole("region", { name: "Research notes" });
+  expect(await within(notes).findByText("Liches keep phylacteries.")).not.toBeNull();
+  expect(screen.getByRole("button", { name: "Re-run research" })).not.toBeNull();
+  await userEvent.click(await screen.findByRole("button", { name: "Copy research notes" }));
+  expect(writeText).toHaveBeenLastCalledWith("Liches keep phylacteries.\n");
+  vi.unstubAllGlobals();
+});
+
+it("opens on Research while the research has failed and the article waits", async () => {
+  mountWithResearch(stage("article", "pending"), stage("research", "failed"), [], {});
+  const tab = await screen.findByRole("tab", { name: "Research" });
+  expect(tab.getAttribute("aria-selected")).toBe("true");
+  expect(
+    screen.getByText(
+      "Research stopped before any notes were saved. Use Retry research above to try again.",
+    ),
+  ).not.toBeNull();
+  expect(
+    ((await screen.findByRole("button", { name: "Re-run research" })) as HTMLButtonElement)
+      .disabled,
+  ).toBe(false);
+  await userEvent.click(screen.getByRole("tab", { name: "Article" }));
+  expect(screen.getByText("The article is written once the research has finished.")).not.toBeNull();
+  expect((screen.getByRole("button", { name: "Re-run" }) as HTMLButtonElement).disabled).toBe(true);
 });

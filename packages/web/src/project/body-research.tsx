@@ -1,46 +1,49 @@
-import type { BodyProps } from "./body.js";
-import { outputsOf, roleOf } from "./body.js";
-import { ConfirmedButton } from "./controls.js";
-import { ActionRow, Instructions, OutputDownload, OutputText, StageBody } from "./parts.js";
+import type { Stage } from "@app/slices/admission/model.js";
+import type { Output } from "@app/slices/storage/model.js";
+import { LiveWriting } from "./live-writing.js";
+import { OutputText } from "./parts.js";
 
-// Research: the notes in a 75 ch measure; 'Show instructions' toggle; Download.
-export function ResearchBody({ stage, outputs, actions, busy }: BodyProps) {
-  const mine = outputsOf(outputs, stage);
-  const notes = roleOf(mine, "notes");
-  if (stage.state === "running" && notes === undefined) return null;
-
+// The Article section's Research tab: the notes in a 75 ch measure, and the live writing above
+// them while the research runs. Its actions sit in the Article body's action row with the tab.
+export function ResearchNotes({
+  projectId,
+  stage,
+  notes,
+}: {
+  readonly projectId: string;
+  readonly stage: Stage;
+  readonly notes: Output | undefined;
+}) {
+  const running = stage.state === "running";
   return (
-    <StageBody>
-      <ActionRow>
-        <ConfirmedButton
-          action={{ kind: "rerun", stage: stage.kind }}
-          run={() => {
-            actions.run({ kind: "rerun", stage: stage.kind });
-          }}
-          disabled={busy}
-          pending={actions.pending}
+    <div className="flex min-w-0 flex-col gap-4">
+      {running ? <LiveWriting projectId={projectId} stage="research" className="" /> : null}
+      {running && notes === undefined ? null : (
+        <section
+          aria-label="Research notes"
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users need to scroll this reading region.
+          tabIndex={0}
+          className="max-h-[min(58vh,640px)] min-h-48 overflow-auto pr-3"
         >
-          Re-run
-        </ConfirmedButton>
-        <Instructions output={roleOf(mine, "instructions")} />
-        {notes === undefined ? null : <OutputDownload output={notes} />}
-      </ActionRow>
-      <section
-        aria-label="Research notes"
-        // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users need to scroll this reading region.
-        tabIndex={0}
-        className="max-h-[min(58vh,640px)] min-h-48 overflow-auto pr-3"
-      >
-        {notes === undefined ? (
-          <p className="text-small text-ink2">
-            {stage.state === "running"
-              ? "Research notes will be saved when the writing above finishes."
-              : "No notes were written."}
-          </p>
-        ) : (
-          <OutputText output={notes} />
-        )}
-      </section>
-    </StageBody>
+          {notes === undefined ? (
+            <p className="text-small text-ink2">{missing(stage)}</p>
+          ) : (
+            <OutputText output={notes} />
+          )}
+        </section>
+      )}
+    </div>
   );
+}
+
+function missing(stage: Stage): string {
+  switch (stage.state) {
+    case "failed":
+    case "canceled":
+      return "Research stopped before any notes were saved. Use Retry research above to try again.";
+    case "pending":
+      return "The research runs first; its notes appear here when it finishes.";
+    default:
+      return "No notes were written.";
+  }
 }

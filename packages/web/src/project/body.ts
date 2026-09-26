@@ -3,11 +3,14 @@ import type { Output, OutputRole } from "@app/slices/storage/model.js";
 import type { ReactNode } from "react";
 import type { ProjectActions } from "./use-actions.js";
 
-// What every stage body is handed. One shape, so the six of them stay interchangeable and
+// What every stage body is handed. One shape, so the five of them stay interchangeable and
 // the row that opens them does not have to know which is which.
 
 export interface BodyProps {
   readonly stage: Stage;
+  // Research on Article, the thumbnail on Images: the stage shown inside this one's section,
+  // present only when the run includes it.
+  readonly companion?: Stage;
   readonly project: ProjectSummary;
   // The project's whole output set: the article body wants its sources, the video body
   // wants nothing else, and filtering is each body's own business.

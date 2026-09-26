@@ -3,6 +3,7 @@ import type { StageKind } from "@app/kernel/pipeline.js";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Picker } from "@/components/ui/picker";
+import { cn } from "@/lib/utils";
 import { useProjectRevision } from "./live-revision.js";
 
 export const writingKey = (projectId: string, revisionId: string | null = null) =>
@@ -41,9 +42,12 @@ export function appendWriting(
 export function LiveWriting({
   projectId,
   stage,
+  className = "mx-5 mt-5",
 }: {
   readonly projectId: string;
   readonly stage: StageKind;
+  // The inset under a section's header row; a tab inside a body is already inset.
+  readonly className?: string;
 }) {
   const revisionId = useProjectRevision(projectId);
   const previews = useQuery({
@@ -62,7 +66,7 @@ export function LiveWriting({
   }, [follow, selected?.text]);
   if (calls.length === 0 && stage !== "research" && stage !== "article") return null;
   return (
-    <div className="mx-5 mt-5 rounded-control border border-line2 bg-panel2">
+    <div className={cn("rounded-control border border-line2 bg-panel2", className)}>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
         <span className="text-small font-semibold text-run-text">Live writing</span>
         {calls.length > 1 ? (

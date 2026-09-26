@@ -1,4 +1,3 @@
-import { type StageKind, stageKinds } from "@app/kernel/pipeline.js";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
@@ -16,6 +15,7 @@ import { RevisionForm } from "@/project/revision-form";
 import { RevisionMedia } from "@/project/revision-media";
 import { type ProjectTab, RevisionWorkspace } from "@/project/revision-workspace";
 import { SaveProjectTemplate } from "@/project/save-template";
+import { type SectionKind, sectionKinds, sectionOf, sectionsOf } from "@/project/sections";
 import { StageRow } from "@/project/stage-row";
 import { finalOutput } from "@/project/summary";
 import { useProjectActions } from "@/project/use-actions";
@@ -37,7 +37,7 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
   const prompts = useQuery(promptsQuery(api));
   const actions = useProjectActions(projectId);
   const [selection, setSelection] = useState<
-    { readonly projectId: string; readonly stage: StageKind } | undefined
+    { readonly projectId: string; readonly stage: SectionKind } | undefined
   >();
   const [tab, setTab] = useState<ProjectTab>("output");
   const tutorialStep = useTutorialProjectStep(projectId);
@@ -79,8 +79,9 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
   }
 
   const { project: summary, stages, outputs } = project.data;
-  const selected = selection?.projectId === projectId ? selection.stage : suggestedStage(stages);
-  const selectStage = (stage: StageKind) => setSelection({ projectId, stage });
+  const selected =
+    selection?.projectId === projectId ? selection.stage : sectionOf(suggestedStage(stages));
+  const selectStage = (stage: SectionKind) => setSelection({ projectId, stage });
   const primaryOutput =
     outputs.find((output) => output.role === "video" || output.role === "audio_export") ??
     (summary.config.sources.video === "off" && summary.config.sources.audio === "off"
@@ -157,25 +158,28 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
             )}
             output={
               <div className="min-w-0">
-                {stages.map((stage) => (
+                {sectionsOf(stages).map((section) => (
                   <StageRow
-                    key={stage.id}
-                    active={stage.kind === selected}
-                    stage={stage}
+                    key={section.stage.id}
+                    active={section.kind === selected}
+                    section={section}
                     project={summary}
                     outputs={outputs}
                     providers={providers.data?.providers ?? []}
                     actions={actions}
                   >
                     <StageBodyFor
-                      stage={stage}
+                      stage={section.stage}
+                      {...(section.companion === undefined ? {} : { companion: section.companion })}
                       project={summary}
                       outputs={outputs}
                       actions={actions}
                       busy={
                         project.data.revisionId === null
                           ? busy
-                          : actions.pending || stage.state === "running"
+                          : actions.pending ||
+                            section.stage.state === "running" ||
+                            section.companion?.state === "running"
                       }
                     />
                   </StageRow>
@@ -211,9 +215,9 @@ function SkeletonRundown() {
         <span className="ml-auto h-8 w-72 rounded-control bg-panel2" />
       </div>
       <div className="mb-2 min-h-8" />
-      <div className="mb-4 grid h-[78px] grid-cols-[112px_repeat(7,minmax(0,1fr))] overflow-hidden rounded-panel border border-line bg-panel">
+      <div className="mb-4 grid h-[78px] grid-cols-[112px_repeat(5,minmax(0,1fr))] overflow-hidden rounded-panel border border-line bg-panel">
         <span className="border-r border-line" />
-        {stageKinds.map((cell) => (
+        {sectionKinds.map((cell) => (
           <span
             key={cell}
             className="flex items-start gap-2 border-r border-line p-3 last:border-r-0"

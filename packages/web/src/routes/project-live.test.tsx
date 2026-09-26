@@ -245,7 +245,17 @@ describe("the page under a live run", () => {
   it("keeps distinct live writing tasks and replaces replayed text without duplicate output", async () => {
     const server: Server = { landed: 0, video: "pending", research: "running" };
     const { source, reads } = mount(server);
-    await screen.findByRole("region", { name: "Research workspace" });
+    // Research has no section of its own: it is the Article section's Research tab, open
+    // while the research runs.
+    const article = await screen.findByRole("region", { name: "Article workspace" });
+    expect(
+      within(article).getByRole("tab", { name: "Research" }).getAttribute("aria-selected"),
+    ).toBe("true");
+    expect(
+      within(screen.getByRole("navigation", { name: "Project stages" })).getByRole("button", {
+        name: "Article, running",
+      }).textContent,
+    ).toContain("Research: Running");
     const before = reads();
     source.emit({
       type: "llm.preview",
@@ -298,7 +308,7 @@ describe("the page under a live run", () => {
       text: "Replayed current notes.",
       reset: true,
     });
-    await selectProjectStage("Research");
+    await selectProjectStage("Article");
     expect(screen.getByRole("region", { name: "Live writing preview" }).textContent).toBe(
       "Replayed current notes.",
     );
