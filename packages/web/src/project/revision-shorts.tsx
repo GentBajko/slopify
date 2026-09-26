@@ -339,22 +339,13 @@ function PickedClips({
             adjusted={ranges[String(clip.number)] !== undefined}
             locked={repicking}
             remade={edit.regenerate?.includes(remakeKey(clip.number)) === true}
-            problem={
-              problem(`content.shortsRanges.${String(clip.number)}`) ??
-              (() => {
-                const range = ranges[String(clip.number)];
-                return range === undefined
-                  ? undefined
-                  : rangeProblem(
-                      pick.picked,
-                      clip.number,
-                      range.first,
-                      range.last,
-                      settings,
-                      clips,
-                    );
-              })()
-            }
+            problem={(() => {
+              // Checked as it is typed, so a range put right stops showing the save's refusal.
+              const range = ranges[String(clip.number)];
+              return range === undefined
+                ? problem(`content.shortsRanges.${String(clip.number)}`)
+                : rangeProblem(pick.picked, clip.number, range.first, range.last, settings, clips);
+            })()}
             onRange={(first, last) => setRange(clip, first, last)}
             onRemake={(remake) =>
               onChange(
