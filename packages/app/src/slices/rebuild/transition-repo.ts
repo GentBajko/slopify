@@ -103,6 +103,17 @@ export function transitionRevisionWork(
         throw new Error(
           "Slopify hit an internal error (a planned step doesn't match the saved project version). Try again; if it happens again, use Download diagnostics in Settings and report it.",
         );
+      // An undo, a restore or a save repeated while a step waits for Resume asks for a
+      // step the project already has a row for. A finished one is the result itself; a
+      // held copy nobody started is the same placeholder. Minting another each time left a
+      // new held row per save, and an undo re-queued work that had already finished.
+      const existing = existingWork(db, input.projectId, key, fp);
+      if (existing !== undefined) {
+        db.prepare(
+          `INSERT INTO revision_work_reservations(project_id,revision_id,work_key,work_id,piece_id,fingerprint) VALUES (?,?,?,?,?,?)`,
+        ).run(input.projectId, input.revisionId, key, existing.workId, existing.pieceId, fp);
+        continue;
+      }
       const kind = exact?.stage ?? stageForKey(key);
       const stage = db
         .prepare("SELECT id FROM stages WHERE project_id=? AND kind=?")
@@ -148,6 +159,31 @@ export function transitionRevisionWork(
       ).run(input.projectId, input.revisionId, key, workId, pieceId, fp);
     }
   });
+}
+// A finished row wins over a held one. A held row counts only while nothing ran for it:
+// no attempt, nothing submitted, and no planning context (admission gives a row that).
+function existingWork(
+  db: RevisionDeps["db"],
+  projectId: string,
+  key: string,
+  fingerprint: string,
+): { readonly workId: string; readonly pieceId: string } | undefined {
+  const row = db
+    .prepare(
+      `SELECT w.id AS work_id,p.id AS piece_id FROM revision_work w
+      JOIN revision_work_pieces p ON p.work_id=w.id
+      WHERE w.project_id=? AND p.work_key=? AND p.fingerprint=? AND (
+        (w.state='done' AND p.state='done') OR
+        (w.state='pending' AND w.dispatch_state='held' AND p.state='held'
+          AND p.submitted_at IS NULL AND w.recipe_context IS NULL
+          AND NOT EXISTS(SELECT 1 FROM attempts a WHERE a.work_id=w.id))
+      )
+      ORDER BY CASE w.state WHEN 'done' THEN 0 ELSE 1 END, w.rowid DESC LIMIT 1`,
+    )
+    .get(projectId, key, fingerprint);
+  return row === undefined
+    ? undefined
+    : { workId: z.string().parse(row.work_id), pieceId: z.string().parse(row.piece_id) };
 }
 function stageForKey(key: string): StageKind {
   const prefix = key.split(":")[0];

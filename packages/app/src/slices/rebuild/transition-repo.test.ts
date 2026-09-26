@@ -244,3 +244,30 @@ it("refuses a stale base rather than revoking the current head work", async () =
   ).toThrow("The project was changed while this was being saved");
   expect(maySubmit(deps.db, work, "piece1")).toBe(true);
 });
+it("reserves a finished row with the same fingerprint instead of minting a held copy", async () => {
+  const { deps, work, nextRevision } = await fixture();
+  deps.db.exec(
+    "UPDATE revision_work SET state='done'; UPDATE revision_work_pieces SET state='done'",
+  );
+  nextRevision("changed", { "image:i1": "new" });
+  transitionRevisionWork(deps, {
+    projectId: "p1",
+    baseRevisionId: work.revisionId,
+    revisionId: "changed",
+    fingerprints: { "image:i1": "new" },
+  });
+  deps.db.exec("UPDATE project_heads SET revision_id='changed'");
+  nextRevision("back", { "image:i1": "old" });
+  transitionRevisionWork(deps, {
+    projectId: "p1",
+    baseRevisionId: "changed",
+    revisionId: "back",
+    fingerprints: { "image:i1": "old" },
+  });
+  expect(
+    deps.db
+      .prepare("SELECT work_id,piece_id FROM revision_work_reservations WHERE revision_id='back'")
+      .all(),
+  ).toEqual([{ work_id: "w1", piece_id: "piece1" }]);
+  expect(deps.db.prepare("SELECT count(*) AS n FROM revision_work").get()).toEqual({ n: 2 });
+});

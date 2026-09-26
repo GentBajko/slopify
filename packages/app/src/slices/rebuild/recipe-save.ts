@@ -169,7 +169,11 @@ export function planRevision(
         : prepared.outputs.includes(row) || (unchanged && row.state === "ready")
           ? "ready"
           : row.fingerprint === next.fingerprint
-            ? row.state
+            ? // An outdated result made for exactly this step is current again: an undo
+              // or a second edit that lands back on it must not ask for it to be redone.
+              row.state === "outdated"
+              ? "ready"
+              : row.state
             : next.kind === "provided"
               ? "review"
               : "outdated";
