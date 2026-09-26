@@ -313,10 +313,7 @@
               <span class="lamp" data-lamp="done" aria-hidden="true"></span>
               <span class="engraved engraved-strong">Node</span>
               <span>
-                <p class="step-line">
-                  Slopify needs Node 26 or newer. npm comes with it. Take whichever line is
-                  yours, or download it from <a href="https://nodejs.org">nodejs.org</a>.
-                </p>
+                <p class="step-line">Slopify needs Node 26 or newer. Pick your line, or get it from <a href="https://nodejs.org">nodejs.org</a>.</p>
                 <dl class="picks">
                   <div class="pick">
                     <dt class="engraved">Windows</dt>
@@ -353,215 +350,68 @@
                     </dd>
                   </div>
                 </dl>
-                <p class="step-line">
-                  Already have it? <code>node --version</code> says which.
-                </p>
               </span>
             </li>
             <li class="rundown-row">
               <span class="lamp" data-lamp="done" aria-hidden="true"></span>
               <span class="engraved engraved-strong">Run it</span>
-              <span>
-                <code>npx @gentbajko/slopify@latest</code> starts the app and opens a browser at
-                <code>http://127.0.0.1:6969</code>. Node 26 or newer, nothing else to install.
-                Add <code>--yes</code> to skip the prompt npx shows the first time.
-              </span>
-            </li>
-            <li class="rundown-row">
-              <span class="lamp" data-lamp="done" aria-hidden="true"></span>
-              <span class="engraved engraved-strong">Or install it</span>
-              <span>
-                <span class="command command-inline">
-                  <code>npm install -g @gentbajko/slopify</code>
-                  <button class="key key-small" type="button" data-copy="npm install -g @gentbajko/slopify">
-                    <span data-copy-label>Copy</span>
-                    <span class="visually-hidden"> the install command</span>
-                  </button>
-                </span>
-                puts a <code>slopify</code> command on your path, so every run afterwards is
-                just <code>slopify</code>. It works the same in any shell and in a script, and
-                there is no prompt to answer. Update it with
-                <code>npm install -g @gentbajko/slopify@latest</code>.
-              </span>
+              <span>Copy a command from the top of the page. Slopify opens at <code>http://127.0.0.1:6969</code>.</span>
             </li>
             <li class="rundown-row" id="docker">
               <span class="lamp" data-lamp="done" aria-hidden="true"></span>
               <span class="engraved engraved-strong">Docker</span>
               <div>
-                <p class="step-line">
-                  On Linux with Docker, Node 26+ and util-linux (flock), run <code>npx @gentbajko/slopify@latest --docker</code>
-                  or <code>slopify --docker</code> after a global install. The launcher detects installed
-                  Codex, Claude Code and Gemini CLIs. It asks once before setting up a private host helper
-                  and automatic startup, including user lingering. The CLIs run on your machine;
-                  logins stay on the host. The optional host helper requires systemd. Native installs need no helper.
-                </p>
-                <p>The managed launcher saves project files in <code>~/Slopify/Projects</code>;
-                  the database and credentials stay private in the named volume. Custom container
-                  names get their own folder. Use <code>--projects-dir</code> or
-                  <code>SLOPIFY_DOCKER_PROJECTS_DIR</code> to select a dedicated folder; updates
-                  remember it. Existing files are copied and verified before activation.</p>
-                <p>Folder actions show the path on the machine running Slopify. Downloads remain
-                  available, including with <code>--host-cli=off</code>; file access needs no helper.
-                  Plain Docker does not set up a host project folder. Use the managed launcher
-                  for automatic setup and recovery.</p>
-                <p class="step-line">
-                  Plain Docker is API-only unless connected to an existing helper. It does not install host services.
-                  Add <code>--host-cli=off</code> to the launcher, or run the image directly:
-                </p>
-                <div class="command docker-command">
-                  <code>docker run -d --name slopify --restart always -p 127.0.0.1:6969:6969 -v slopify-data:/data ghcr.io/gentbajko/slopify:latest</code>
-                  <button class="key" type="button" data-copy="docker run -d --name slopify --restart always -p 127.0.0.1:6969:6969 -v slopify-data:/data ghcr.io/gentbajko/slopify:latest">
-                    <span data-copy-label>Copy</span>
-                    <span class="visually-hidden"> the direct Docker command</span>
-                  </button>
-                </div>
-                <p class="step-line">
-                  Both use <code>http://127.0.0.1:6969</code>, keep private data in <code>slopify-data</code>,
-                  and restart the container when Docker starts. Keep the localhost binding: Slopify has no login.
-                  See the <a href="https://github.com/GentBajko/slopify#docker">Docker guide</a> for helper permissions, updates and disable commands.
-                </p>
+                <p class="step-line">On Linux, <code>npx @gentbajko/slopify@latest --docker</code> keeps it running in the background, with project files in <code>~/Slopify/Projects</code>.</p>
+                <details class="more">
+                  <summary>Docker details</summary>
+                  <p>The launcher asks once before setting up a small host helper (it needs systemd) so your Claude Code, Codex and Gemini CLIs run on your machine; their logins stay on the host. The database and credentials stay private in the <code>slopify-data</code> volume. Pick another folder with <code>--projects-dir</code> or <code>SLOPIFY_DOCKER_PROJECTS_DIR</code>. Open folder opens it through the helper, or shows its path on the machine running Slopify.</p>
+                  <p>Plain Docker is API-only and does not set up a host project folder. Keep the localhost binding: Slopify has no login.</p>
+                  <div class="command docker-command">
+                    <code>docker run -d --name slopify --restart always -p 127.0.0.1:6969:6969 -v slopify-data:/data ghcr.io/gentbajko/slopify:latest</code>
+                    <button class="key" type="button" data-copy="docker run -d --name slopify --restart always -p 127.0.0.1:6969:6969 -v slopify-data:/data ghcr.io/gentbajko/slopify:latest">
+                      <span data-copy-label>Copy</span>
+                      <span class="visually-hidden"> the direct Docker command</span>
+                    </button>
+                  </div>
+                  <p>More in the <a href="https://github.com/GentBajko/slopify#docker">Docker guide</a>.</p>
+                </details>
               </div>
             </li>
             <li class="rundown-row">
               <span class="lamp" data-lamp="done" aria-hidden="true"></span>
               <span class="engraved engraved-strong">Keys</span>
-              <span>
-                Settings takes your own provider keys and voices. They are stored in
-                <code>~/.slopify/slopify.db</code> on your machine and are sent to the provider
-                you chose, nowhere else. For text, you can also use Codex, Claude Code or
-                Gemini CLI with their own login. Set each executable path in Settings.
-                Narrate with ElevenLabs, OpenAI, Cartesia or Inworld TTS-2 and TTS-2 Flash.
-              </span>
+              <span>Add your provider keys and voices in Settings. They stay on your machine. Or use the Claude Code, Codex or Gemini CLI you are already signed in to.</span>
             </li>
             <li class="rundown-row">
               <span class="lamp" data-lamp="done" aria-hidden="true"></span>
               <span class="engraved engraved-strong">Prompts</span>
-              <span>
-                Prompts writes the article, image and thumbnail prompts once, with
-                <code>&#123;&#123;keywords&#125;&#125;</code> where the subject goes, and reuses them for every run.
-              </span>
+              <span>Write article, image and thumbnail prompts once, with <code>&#123;&#123;keywords&#125;&#125;</code> where the subject goes.</span>
             </li>
             <li class="rundown-row">
               <span class="lamp" data-lamp="done" aria-hidden="true"></span>
               <span class="engraved engraved-strong">Play</span>
-              <span>
-                Play autosaves your setup across Content, Outputs, Style and Review. Pick the
-                prompts, fill in the keywords, choose a voice and format, inspect the cost, then
-                Start. Keep only the stages you need: the article is required, everything else
-                is optional. Export video or WAV audio.
-              </span>
-            </li>
-            <li class="rundown-row">
-              <span class="lamp" data-lamp="done" aria-hidden="true"></span>
-              <span class="engraved engraved-strong">Project</span>
-              <span>
-                The project workspace shows total progress, live writing and streamed audio, and holds the results: the
-                article, narration, images, thumbnail and final export. Download each output,
-                or all images as a zip. Pause a run to change providers, then resume. Edit a
-                paused or completed project, save a retained revision, preview what changed and
-                rebuild only the outputs you choose.
-              </span>
-            </li>
-            <li class="rundown-row">
-              <span class="lamp" data-lamp="done" aria-hidden="true"></span>
-              <span class="engraved engraved-strong">Reuse & schedule</span>
-              <span>
-                Save a Play setup or project revision as a reusable template. Apply it to a fresh
-                draft, or schedule one-off, daily or weekly runs with keyword variants, timezone
-                handling, run history and an optional spend ceiling. Slopify must be open when a
-                scheduled run is due.
-              </span>
-            </li>
-            <li class="rundown-row">
-              <span class="lamp" data-lamp="done" aria-hidden="true"></span>
-              <span class="engraved engraved-strong">Checkpoints</span>
-              <span>
-                Hold Audio, Images or Video until you approve the work feeding that step.
-                Independent work keeps moving, and Save never spends money or silently approves
-                a checkpoint.
-              </span>
-            </li>
-            <li class="rundown-row">
-              <span class="lamp" data-lamp="done" aria-hidden="true"></span>
-              <span class="engraved engraved-strong">Plan & queue</span>
-              <span>
-                Review estimated provider costs before starting. Queue keyword variations with
-                the same setup, one video at a time. Requests share a five-call limit, long
-                narration splits automatically, and the editable model catalogue keeps your
-                provider choices current.
-              </span>
-            </li>
-            <li class="rundown-row">
-              <span class="lamp" data-lamp="done" aria-hidden="true"></span>
-              <span class="engraved engraved-strong">Subtitles</span>
-              <span>
-                Version 1.0 includes free English subtitles timed locally from your article and
-                narration. Download SRT and VTT files or burn captions into your video. Choose
-                a system font or upload your own, then preview size and five positions in your
-                landscape or portrait frame. Works with completed projects, too. The
-                first use downloads a 95 MB speech model; no extra API key is needed.
-              </span>
+              <span>Pick your prompts, fill in the keywords, check the cost, press Start.</span>
             </li>
           </ol>
 
-          <h3 id="options-title">Options</h3>
-          <p class="guide-note">
-            Every option is a flag or an environment variable of the same name. A flag beats
-            the variable, the variable beats the default.
-          </p>
-          <div class="sheet">
-            <!-- Below 700 px the cells stack into a card per option. The header row goes
-                 away with them, so the default value carries its own label there; the
-                 flag, the variable and the sentence read for themselves. -->
-            <table class="options">
-              <thead>
-                <tr>
-                  <th scope="col" class="engraved">flag</th>
-                  <th scope="col" class="engraved">variable</th>
-                  <th scope="col" class="engraved">default</th>
-                  <th scope="col" class="engraved">does</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <th scope="row"><code>--port</code></th>
-                  <td><code>SLOPIFY_PORT</code></td>
-                  <td data-label="default"><code>6969</code></td>
-                  <td>The port the app listens on.</td>
-                </tr>
-                <tr>
-                  <th scope="row"><code>--host</code></th>
-                  <td><code>SLOPIFY_HOST</code></td>
-                  <td data-label="default"><code>127.0.0.1</code></td>
-                  <td>
-                    The address it binds to. There is no login, so any other value prints a
-                    warning: whoever reaches the port controls the app and its keys.
-                  </td>
-                </tr>
-                <tr>
-                  <th scope="row"><code>--data-dir</code></th>
-                  <td><code>SLOPIFY_DATA_DIR</code></td>
-                  <td data-label="default"><code>~/.slopify</code></td>
-                  <td>Where the database, the projects, the staged uploads and the logs live.</td>
-                </tr>
-                <tr>
-                  <th scope="row"><code>--no-open</code></th>
-                  <td><code>SLOPIFY_NO_OPEN</code></td>
-                  <td data-label="default">the browser opens</td>
-                  <td>Keeps the browser shut and prints the URL instead.</td>
-                </tr>
-                <tr>
-                  <th scope="row" class="options-none">no flag</th>
-                  <td><code>SLOPIFY_FFMPEG</code></td>
-                  <td data-label="default">the bundled binary</td>
-                  <td>
-                    Path to an ffmpeg to render with. Slopify never picks one off your
-                    <code>PATH</code>.
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <h3 id="features-title">What you get</h3>
+          <ul class="features" aria-labelledby="features-title">
+            <li><strong>Narrated video</strong> with moving images and free burned-in or downloadable captions</li>
+            <li><strong>PDF document</strong> of the article, with contents, sources and cover</li>
+            <li><strong>YouTube description</strong> with chapter timestamps, hashtags and tags</li>
+            <li><strong>Edit and rebuild</strong> only what changed, with full history</li>
+            <li><strong>Templates and schedules</strong> to run the same setup on a timer</li>
+            <li><strong>Checkpoints</strong> to approve work before the next step spends</li>
+          </ul>
+
+          <details class="options-details">
+            <summary><h3 id="options-title">All options</h3></summary>
+            <p class="guide-note">
+              Every option is a flag or an environment variable of the same name. A flag beats
+              the variable, the variable beats the default.
+            </p>
+{table}
+          </details>
         </section>
 
       </main>

@@ -429,8 +429,25 @@ h1 {
   outline-offset: 2px;
 }
 
+/* The three panels share one grid cell, so the box is always as tall as the tallest and
+   switching tabs never moves what sits below it. A hidden panel keeps its space but is
+   invisible, which also takes it out of the accessibility tree. */
+.install-options {
+  grid-template-areas: "tabs" "panel";
+}
+
+.install-tabs {
+  grid-area: tabs;
+}
+
+.install-panel {
+  grid-area: panel;
+  min-width: 0;
+}
+
 .install-panel[hidden] {
-  display: none;
+  display: block;
+  visibility: hidden;
 }
 
 .install-label,
@@ -755,6 +772,51 @@ h1 {
   margin: 0 0 calc(var(--step) * 2.5);
   color: var(--ink2);
   font-size: 13px;
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: calc(var(--step) * 2) calc(var(--step) * 6);
+  margin: 0;
+  padding: 0;
+  color: var(--ink2);
+  list-style: none;
+}
+
+.features strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.more > summary {
+  margin-top: calc(var(--step) * 1.5);
+  color: var(--ink2);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.more > p {
+  margin: calc(var(--step) * 2) 0 0;
+  color: var(--ink2);
+}
+
+.options-details {
+  margin-top: calc(var(--step) * 8);
+}
+
+.options-details > summary {
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.options-details > summary h3 {
+  display: inline;
+  margin: 0;
+}
+
+.options-details[open] > summary {
+  margin-bottom: calc(var(--step) * 2);
 }
 
 .sheet,
