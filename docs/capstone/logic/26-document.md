@@ -26,7 +26,7 @@ An optional seventh stage that lays the project's article out as a styled PDF: a
 ## Trigger & preconditions
 
 - Document is Generate or Off on Play and in Edit project → Inputs; Off is the default, and every project made before the stage existed has a `document` stage row that is `skipped` with source `off` (migration `0014-document-stage.sql`). A config, draft, template or backup without `sources.document` reads as Off (`sourceOf`, `packages/app/src/slices/admission/model.ts`).
-- The theme is a project setting, `document: { theme: "dicemaster" | "plain" }`, default DiceMaster (`packages/app/src/slices/document/model.ts`).
+- The theme is a project setting, `document: { theme: "plain", custom? }`; Plain is the only built-in and the default, and every new project saves its theme (`packages/app/src/slices/document/model.ts`, `packages/app/src/slices/admission/start.ts`). The retired `"dicemaster"` still parses: a project saved with it, or with the stage on and no theme, keeps drawing with the legacy DiceMaster values and keeps its PDF fingerprint (`packages/app/src/slices/document/legacy-dicemaster.ts`). It is never offered in a picker.
 - The stage needs no provider, key or model and costs nothing; Play's estimate lists it as a local row.
 - It waits for `article:body` only, plus `research:notes` when research is on (for its links) and `thumbnail:image` when a thumbnail is on (for the cover). It never waits for narration, images or the video, so it runs beside them (`packages/app/src/slices/rebuild/recipe-document.ts`, `packages/app/src/kernel/runner/graph.ts`).
 
@@ -40,7 +40,7 @@ An optional seventh stage that lays the project's article out as a styled PDF: a
 
 ## Branches
 
-- Theme: DiceMaster (parchment texture, brand on the title page and header, closing "About DiceMaster.io" page) or Plain (flat page, no brand, no closing page).
+- Theme: Plain (flat page, no brand, no closing page) or a copy of a Library → Documents theme. The parchment texture is a background any theme can use. Migration 0017 saves the old DiceMaster values as a Library theme named "DiceMaster" on installs that had already used the Document stage.
 - No thumbnail → no cover. A thumbnail that is not PNG, JPEG or WebP → no cover and a `document.cover` warning in the log; the document still finishes.
 - No sources section and no research links → no Sources page.
 - Re-run section on Document regenerates only `document:pdf`; it refuses while the article or thumbnail it needs is unfinished.
