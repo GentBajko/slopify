@@ -1,4 +1,4 @@
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { body, output, stage } from "@/routes/project-fixtures";
@@ -58,11 +58,12 @@ it("shows the description and tags read-only, copies each and offers both files"
   const writeText = vi.fn(async () => undefined);
   vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
   mount();
-  const text = screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Description" });
-  await waitFor(() => expect(text.value).toBe(description));
-  expect(text.readOnly).toBe(true);
-  const tags = screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Tags" });
-  await waitFor(() => expect(tags.value).toBe("rope, knots, sailing knots"));
+  const text = screen.getByLabelText("Description");
+  await waitFor(() => expect(text.textContent).toBe(description));
+  // Read-only text, not a field: nothing here takes typing.
+  expect(screen.queryByRole("textbox")).toBeNull();
+  const tags = screen.getByLabelText("Tags");
+  await waitFor(() => expect(tags.textContent).toBe("rope, knots, sailing knots"));
 
   await userEvent.click(screen.getByRole("button", { name: "Copy description" }));
   expect(writeText).toHaveBeenLastCalledWith(description);
@@ -101,7 +102,17 @@ it("says in the status line when the clipboard refuses", async () => {
 
 it("keeps the block in place with Copy disabled until the step has written", () => {
   mount([]);
-  expect(screen.getByRole("heading", { name: "YouTube" })).not.toBeNull();
+  const block = screen.getByRole("region", { name: "YouTube" });
+  // A part of the stage body under a rule, not a bordered box inside the stage's own card.
+  expect(block.className).not.toContain("rounded");
+  expect(
+    within(block)
+      .getAllByRole("heading")
+      .map((heading) => heading.textContent),
+  ).toEqual(["YouTube", "Description", "Tags"]);
+  expect(screen.getByLabelText("Description").textContent).toBe(
+    "Not written yet. It is made with the video.",
+  );
   expect(
     (screen.getByRole("button", { name: "Copy description" }) as HTMLButtonElement).disabled,
   ).toBe(true);

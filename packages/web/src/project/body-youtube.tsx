@@ -1,14 +1,16 @@
 import { useId, useState } from "react";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { ActionRow, OutputDownload, useOutputText } from "./parts.js";
 
-// The Video stage's YouTube block: the description and the tags as written, each with Copy,
-// and both files to download. Everything stays mounted while the step runs or waits, so
-// nothing moves when the text lands; a copy says how it went in the reserved status line.
+// The Video stage's YouTube part: the description and the tags as written, each with Copy,
+// and both files to download. It is a part of the stage body, set off by a rule and a heading
+// rather than a box of its own, and the text is read-only text rather than a field. Everything
+// stays mounted while the step runs or waits, so nothing moves when the text lands; a copy says
+// how it went in the reserved status line.
 export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actions" | "busy">) {
   const id = useId();
   const own = outputsOf(outputs, stage);
@@ -40,31 +42,17 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
   return (
     <section
       aria-labelledby={`${id}-title`}
-      className="flex min-w-0 flex-col gap-3 rounded-control border border-line p-4"
+      className="flex min-w-0 flex-col gap-3 border-t border-line pt-4"
     >
-      <h3 id={`${id}-title`} className="text-small font-semibold">
+      <h3 id={`${id}-title`} className="engraved text-ink3">
         YouTube
       </h3>
-      <label htmlFor={`${id}-description`} className="flex min-w-0 flex-col gap-1 text-small">
-        Description
-        <Textarea
-          id={`${id}-description`}
-          readOnly
-          rows={8}
-          placeholder={waiting}
-          value={descriptionText ?? ""}
-        />
-      </label>
-      <label htmlFor={`${id}-tags`} className="flex min-w-0 flex-col gap-1 text-small">
-        Tags
-        <Textarea
-          id={`${id}-tags`}
-          readOnly
-          rows={2}
-          placeholder={waiting}
-          value={tagsText ?? ""}
-        />
-      </label>
+      <ReadOnlyText id={`${id}-description`} label="Description" placeholder={waiting}>
+        {descriptionText}
+      </ReadOnlyText>
+      <ReadOnlyText id={`${id}-tags`} label="Tags" placeholder={waiting}>
+        {tagsText}
+      </ReadOnlyText>
       <ActionRow>
         <Button
           type="button"
@@ -87,5 +75,36 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
       </ActionRow>
       <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
     </section>
+  );
+}
+
+function ReadOnlyText({
+  id,
+  label,
+  placeholder,
+  children,
+}: {
+  readonly id: string;
+  readonly label: string;
+  readonly placeholder: string;
+  readonly children: string | undefined;
+}) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      <h4 id={`${id}-label`} className="text-small font-semibold text-ink2">
+        {label}
+      </h4>
+      <section
+        aria-labelledby={`${id}-label`}
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users need to scroll a long description.
+        tabIndex={0}
+        className={cn(
+          "max-h-64 max-w-[75ch] overflow-auto whitespace-pre-wrap break-words text-small",
+          children === undefined ? "text-ink3" : "text-ink",
+        )}
+      >
+        {children ?? placeholder}
+      </section>
+    </div>
   );
 }

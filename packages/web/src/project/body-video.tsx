@@ -106,7 +106,7 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
         </span>
       </ActionRow>
       {video?.meta.subtitleOmissions?.length ? (
-        <details className="rounded-control border border-line p-3 text-small">
+        <details className="border-t border-line pt-3 text-small">
           <summary className="cursor-pointer font-semibold">
             Subtitles recovered after missing narration ({video.meta.subtitleOmissions.length})
           </summary>
@@ -132,7 +132,7 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
       ) : null}
       <YoutubeBlock stage={stage} project={project} outputs={outputs} />
       {subtitleControls ? (
-        <details className="mt-2 rounded-control border border-line px-4 py-3">
+        <details className="border-t border-line pt-3">
           <summary className="cursor-pointer text-small font-semibold">
             Subtitles &amp; fonts
           </summary>
