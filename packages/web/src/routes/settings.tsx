@@ -1,14 +1,20 @@
 import type { Appearance, AppSettings } from "@app/slices/settings/model.js";
+import type { ItemCounts } from "@app/slices/storage/backup-import.js";
 import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
-import { readStorageUsage, saveAppSettings } from "@/api";
+import {
+  type BackupImportSummary,
+  readBackupExportSummary,
+  readStorageUsage,
+  saveAppSettings,
+} from "@/api";
 import { useApp } from "@/app-context";
 import { CatalogueSettings } from "@/components/catalogue";
 import { PageBar } from "@/components/kit/page-bar";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
 import { ProviderKeys } from "@/components/provider-keys";
-import { Rail, RailGroup } from "@/components/rail";
+import { Rail, RailGroup, RailMeter } from "@/components/rail";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +22,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Voices } from "@/components/voices";
 import { cn } from "@/lib/utils";
 import { keys, settingsQuery } from "@/queries";
+import { schedulesKey } from "@/schedules/api";
 import { fontsKey } from "@/subtitles/api";
 import { templatesKey } from "@/templates/api";
 import { UsageBoard } from "./usage";
@@ -24,6 +31,12 @@ const storageQueryKey = ["storage-usage"] as const;
 export const portableMaxUploadBytes = 100 * 1024 * 1024;
 export const portableImportQueryKeys = [
   storageQueryKey,
+  keys.projects,
+  ["project"] as const,
+  keys.usage,
+  keys.documentThemes,
+  schedulesKey,
+  ["play-drafts"] as const,
   keys.settings,
   keys.providers,
   keys.voices,
@@ -154,6 +167,19 @@ export function SettingsRoute({
   );
 }
 
+type ExportState =
+  | { readonly phase: "idle" }
+  | { readonly phase: "preparing" }
+  | { readonly phase: "downloading"; readonly bytes: number; readonly projects: number };
+
+type ImportState =
+  | { readonly phase: "idle" }
+  | { readonly phase: "uploading"; readonly sent: number; readonly total: number }
+  | { readonly phase: "importing" };
+
+const importFailed =
+  "The backup wasn't imported. Check it is a file made with Export everything (.tar) or Export backup (.zip), then try again.";
+
 function StorageTools() {
   const { api } = useApp();
   const queryClient = useQueryClient();
@@ -163,46 +189,94 @@ function StorageTools() {
     staleTime: 30_000,
   });
   const [busy, setBusy] = useState(false);
+  const [exporting, setExporting] = useState<ExportState>({ phase: "idle" });
+  const [importing, setImporting] = useState<ImportState>({ phase: "idle" });
+  const [result, setResult] = useState<BackupImportSummary | null>(null);
   const notify = useToast();
   const [error, setError] = useState<string | null>(null);
 
+  // Asked first, because a download link cannot show a refusal: the browser would save the
+  // error as the backup. The download itself is the browser's, so a multi-gigabyte archive
+  // goes straight to disk and its progress shows in the browser's downloads.
+  async function exportEverything(): Promise<void> {
+    setError(null);
+    setExporting({ phase: "preparing" });
+    try {
+      const summary = await readBackupExportSummary(api);
+      if (!summary.ready) {
+        setExporting({ phase: "idle" });
+        setError(summary.detail ?? "The backup can't be made right now. Try again in a moment.");
+        return;
+      }
+      setExporting({
+        phase: "downloading",
+        bytes: summary.bytes ?? 0,
+        projects: summary.projects ?? 0,
+      });
+      const link = document.createElement("a");
+      link.href = `${api.origin}/api/storage/export`;
+      link.download = "";
+      document.body.append(link);
+      link.click();
+      link.remove();
+    } catch (caught) {
+      setExporting({ phase: "idle" });
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "The backup couldn't be prepared. Try again in a moment.",
+      );
+    }
+  }
+
   async function importBackup(file: File): Promise<void> {
-    if (file.size === 0 || file.size > portableMaxUploadBytes) {
-      setError("This file is empty or larger than 100 MB. Choose a .zip made with Export backup.");
+    // The settings-only backups older versions wrote are ZIPs, read whole in memory by the
+    // server, so they keep their 100 MB limit. A full backup is a tar streamed to disk.
+    const legacy = file.name.toLowerCase().endsWith(".zip") || file.type === "application/zip";
+    if (file.size === 0 || (legacy && file.size > portableMaxUploadBytes)) {
+      setError(
+        legacy
+          ? "This file is empty or larger than 100 MB. Choose a .zip made with Export backup, or a .tar made with Export everything."
+          : "This file is empty. Choose the .tar made with Export everything.",
+      );
       return;
     }
     setBusy(true);
     setError(null);
+    setResult(null);
+    setImporting({ phase: "uploading", sent: 0, total: file.size });
     try {
-      const response = await api.fetch(`${api.origin}/api/storage/import`, {
-        method: "PUT",
-        headers: { "content-type": "application/zip" },
-        body: file,
-      });
+      const response = await api.upload(
+        `${api.origin}/api/storage/import`,
+        file,
+        legacy ? "application/zip" : "application/x-tar",
+        (sent, total) => {
+          setImporting(
+            sent >= total ? { phase: "importing" } : { phase: "uploading", sent, total },
+          );
+        },
+      );
       const body = (await response.json()) as {
         detail?: string;
         templates?: number;
         fonts?: number;
         fontFallbacks?: number;
         stagedFiles?: number;
-      };
-      if (!response.ok)
-        throw new Error(
-          body.detail ??
-            "The backup wasn't imported. Check it is a .zip made with Export backup, then try again.",
+      } & Partial<BackupImportSummary>;
+      if (!response.ok) throw new Error(body.detail ?? importFailed);
+      if (body.projects !== undefined) {
+        setResult(body as BackupImportSummary);
+        notify("Backup imported.", "success");
+      } else
+        notify(
+          `Imported ${body.templates ?? 0} template(s), ${body.fonts ?? 0} uploaded font(s), and ${body.stagedFiles ?? 0} staged file(s).${body.fontFallbacks ? ` ${body.fontFallbacks} missing legacy font reference(s) now use the default font.` : ""}`,
+          "success",
         );
-      notify(
-        `Imported ${body.templates ?? 0} template(s), ${body.fonts ?? 0} uploaded font(s), and ${body.stagedFiles ?? 0} staged file(s).${body.fontFallbacks ? ` ${body.fontFallbacks} missing legacy font reference(s) now use the default font.` : ""}`,
-        "success",
-      );
       await refreshPortableImportQueries(queryClient);
     } catch (caught) {
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "The backup wasn't imported. Check it is a .zip made with Export backup, then try again.",
-      );
+      setError(caught instanceof Error ? caught.message : importFailed);
     } finally {
+      setImporting({ phase: "idle" });
       setBusy(false);
     }
   }
@@ -230,24 +304,23 @@ function StorageTools() {
     }
   }
 
+  const working = busy || exporting.phase === "preparing";
   return (
     <div>
       <SectionHead
         title="Backup & storage"
-        info="Backups include templates, prompts, voices, settings and staged assets. Provider keys and telemetry are never included. Existing projects and their retained revisions stay untouched when a backup is imported."
+        info="Export everything saves every project with its files and history, your prompts, intros and outros, document themes, templates, schedules, Play drafts, uploaded fonts, settings and usage history in one .tar file. Importing adds to this install and never replaces anything: projects already here are skipped, items whose name is taken arrive as “(imported)”, and schedules arrive paused. Projects that are being made must finish or be paused before exporting."
       >
-        <Button asChild disabled={busy}>
-          <a href={`${api.origin}/api/storage/export`} download="slopify-backup.zip">
-            Export backup
-          </a>
+        <Button type="button" disabled={working} onClick={() => void exportEverything()}>
+          Export everything
         </Button>
         <label className="inline-flex h-8 cursor-pointer items-center rounded-control border border-line2 bg-panel2 px-3 text-body hover:border-ink3">
-          Import backup
+          Import a backup
           <input
             className="sr-only"
             type="file"
-            accept="application/zip,.zip"
-            disabled={busy}
+            accept=".tar,application/x-tar,.zip,application/zip"
+            disabled={working}
             onChange={(event) => {
               const file = event.target.files?.[0];
               if (file) void importBackup(file);
@@ -255,10 +328,49 @@ function StorageTools() {
             }}
           />
         </label>
-        <Button type="button" variant="ghost" disabled={busy} onClick={() => void cleanup()}>
+        <Button type="button" variant="ghost" disabled={working} onClick={() => void cleanup()}>
           Clean orphan files
         </Button>
       </SectionHead>
+      <RailGroup className="mb-4">
+        <Rail className="text-small text-ink2">
+          Provider keys are never included in a backup. After importing, enter them again in
+          Settings → Providers.
+        </Rail>
+        {exporting.phase === "preparing" ? (
+          <Rail className="text-small">
+            <span role="status">Preparing the backup…</span>
+          </Rail>
+        ) : null}
+        {exporting.phase === "downloading" ? (
+          <Rail className="flex-wrap justify-between gap-y-1 text-small">
+            <span role="status">
+              Downloading {formatBytes(exporting.bytes)} ({exporting.projects} project
+              {exporting.projects === 1 ? "" : "s"}). Your browser's downloads show its progress;
+              keep Slopify running until it finishes.
+            </span>
+            <Button type="button" variant="ghost" onClick={() => setExporting({ phase: "idle" })}>
+              Dismiss
+            </Button>
+          </Rail>
+        ) : null}
+        {importing.phase === "uploading" ? (
+          <Rail className="text-small">
+            <span role="status" className="tabular-nums">
+              Uploading the backup: {formatBytes(importing.sent)} of {formatBytes(importing.total)}
+            </span>
+            <RailMeter current={importing.sent} total={importing.total} />
+          </Rail>
+        ) : null}
+        {importing.phase === "importing" ? (
+          <Rail className="text-small">
+            <span role="status">
+              Checking and importing the backup… large projects can take a minute.
+            </span>
+          </Rail>
+        ) : null}
+      </RailGroup>
+      {result ? <ImportResult result={result} onDismiss={() => setResult(null)} /> : null}
       <RailGroup>
         {usage.data ? (
           <>
@@ -297,6 +409,74 @@ function StorageTools() {
         </p>
       ) : null}
     </div>
+  );
+}
+
+function counted(label: string, counts: ItemCounts): string | null {
+  const parts = [
+    counts.added > 0 ? `${counts.added} added` : null,
+    counts.renamed > 0
+      ? `${counts.renamed} added as “(imported)” because the name was taken`
+      : null,
+    counts.skipped > 0 ? `${counts.skipped} already here` : null,
+  ].filter((part) => part !== null);
+  return parts.length === 0 ? null : `${label}: ${parts.join(", ")}.`;
+}
+
+// What the last import brought in and what it left out, so nothing is skipped silently.
+export function ImportResult({
+  result,
+  onDismiss,
+}: {
+  readonly result: BackupImportSummary;
+  readonly onDismiss: () => void;
+}) {
+  const lines = [
+    result.projects.imported.length > 0
+      ? `Projects: ${result.projects.imported.length} added (${formatBytes(result.files.bytes)} of files).`
+      : "Projects: none added.",
+    counted("Prompts", result.prompts),
+    counted("Intros and outros", result.entries),
+    counted("Document themes", result.documentThemes),
+    counted("Templates", result.templates),
+    counted("Schedules", result.schedules),
+    result.schedules.paused > 0
+      ? `${result.schedules.paused} schedule(s) arrived paused so two installs never run them both; resume them on the Schedules screen.`
+      : null,
+    counted("Voices", result.voices),
+    counted("Play drafts", result.drafts),
+    result.settings.added + result.settings.kept > 0
+      ? `Settings: ${result.settings.added} filled in${result.settings.kept > 0 ? `, ${result.settings.kept} kept as this install has them` : ""}.`
+      : null,
+    result.fonts > 0 ? `Uploaded fonts: ${result.fonts} added.` : null,
+    result.usage.alreadyImported
+      ? "Usage: this backup's history was already added before, so it wasn't counted twice."
+      : `Usage: ${result.usage.events} recorded event(s) added to the totals.`,
+    "Provider keys are not in backups: enter them in Settings → Providers.",
+  ].filter((line) => line !== null);
+  return (
+    <RailGroup className="mb-4">
+      <Rail className="flex-wrap justify-between gap-y-1">
+        <span className="font-semibold">
+          Imported the backup from {result.backup.createdAt.slice(0, 10)}
+        </span>
+        <Button type="button" variant="ghost" onClick={onDismiss}>
+          Dismiss
+        </Button>
+      </Rail>
+      <ul aria-label="Import result" className="px-4 py-2 text-small text-ink2">
+        {lines.map((line) => (
+          <li key={line} className="py-0.5">
+            {line}
+          </li>
+        ))}
+        {result.projects.skipped.map((project) => (
+          <li key={project.id} className="py-0.5">
+            Skipped “{project.title}”: {project.reason}
+          </li>
+        ))}
+      </ul>
+    </RailGroup>
   );
 }
 

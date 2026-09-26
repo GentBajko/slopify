@@ -11,7 +11,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { createApi } from "@/api";
+import { createApi, xhrUpload } from "@/api";
 import type { AppDeps } from "@/app-context";
 import { AppProvider } from "@/app-context";
 import { createAppRouter } from "@/router";
@@ -22,7 +22,14 @@ import { createVersionWatch, watchingFetch } from "@/version";
 function start(container: HTMLElement): void {
   const version = createVersionWatch();
   const deps: AppDeps = {
-    api: createApi(window.location.origin, watchingFetch(window.fetch.bind(window), version)),
+    api: createApi(
+      window.location.origin,
+      watchingFetch(window.fetch.bind(window), version),
+      xhrUpload((response) => {
+        const seen = response.headers.get("X-Slopify-Version");
+        if (seen !== null) version.observe(seen);
+      }),
+    ),
     openEvents: (url) => new EventSource(url),
     version,
   };

@@ -1,0 +1,5 @@
+# Export and import everything
+
+- Settings → Backup & storage → Export everything writes one .tar with every project (its whole history and files, so it opens current in another install), prompts, intros and outros, document themes, templates with all their versions, schedules with their topic queues and run history, unstarted Play drafts, uploaded fonts, non-secret settings and the Usage history. Provider keys and the telemetry id are never included.
+- The export streams from disk with its exact size announced, so a project with a two-hour video downloads with real progress and without the server holding it in memory. It waits while a project is being made and names the projects it is waiting for.
+- Import a backup adds to the install and never replaces anything: projects already here are skipped, a library item whose name is taken comes in as "(imported)", settings only fill what is unset, schedules arrive paused, and Usage history is added once per backup. A backup from a newer Slopify is refused with "update first". Older settings-only .zip backups still import.
