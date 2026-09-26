@@ -1,5 +1,5 @@
 import { CopyIcon } from "lucide-react";
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -48,24 +48,30 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
       <h3 id={`${id}-title`} className="engraved text-ink3">
         YouTube
       </h3>
-      <ReadOnlyText
-        id={`${id}-description`}
-        label="Description"
-        placeholder={waiting}
-        copy={
-          descriptionText === undefined ? undefined : () => copy(descriptionText, "description")
-        }
-      >
-        {descriptionText}
-      </ReadOnlyText>
-      <ReadOnlyText
-        id={`${id}-tags`}
-        label="Tags"
-        placeholder={waiting}
-        copy={tagsText === undefined ? undefined : () => copy(tagsText, "tags")}
-      >
-        {tagsText}
-      </ReadOnlyText>
+      {/* The description reads best at a paragraph's width; the tags take the room beside
+          it, as chips, and drop below it on a narrow screen. */}
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-x-8 gap-y-4 lg:grid-cols-[minmax(0,75ch)_minmax(0,1fr)]">
+        <ReadOnlyText
+          id={`${id}-description`}
+          label="Description"
+          placeholder={waiting}
+          empty={descriptionText === undefined}
+          copy={
+            descriptionText === undefined ? undefined : () => copy(descriptionText, "description")
+          }
+        >
+          {descriptionText}
+        </ReadOnlyText>
+        <ReadOnlyText
+          id={`${id}-tags`}
+          label="Tags"
+          placeholder={waiting}
+          empty={tagsText === undefined}
+          copy={tagsText === undefined ? undefined : () => copy(tagsText, "tags")}
+        >
+          {tagsText === undefined ? undefined : <TagChips text={tagsText} />}
+        </ReadOnlyText>
+      </div>
       <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
     </section>
   );
@@ -75,18 +81,20 @@ function ReadOnlyText({
   id,
   label,
   placeholder,
+  empty,
   copy,
   children,
 }: {
   readonly id: string;
   readonly label: string;
   readonly placeholder: string;
+  readonly empty: boolean;
   // Undefined until there is text to copy.
   readonly copy: (() => void) | undefined;
-  readonly children: string | undefined;
+  readonly children: ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 max-w-[75ch] flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-1">
       <div className="flex min-h-8 items-center justify-between gap-3">
         <h4 id={`${id}-label`} className="text-small font-semibold text-ink2">
           {label}
@@ -108,11 +116,33 @@ function ReadOnlyText({
         tabIndex={0}
         className={cn(
           "max-h-64 overflow-auto whitespace-pre-wrap break-words text-small",
-          children === undefined ? "text-ink3" : "text-ink",
+          empty ? "text-ink3" : "text-ink",
         )}
       >
-        {children ?? placeholder}
+        {empty ? placeholder : children}
       </section>
     </div>
+  );
+}
+
+// The tags as the chips they become on YouTube. Copy still copies them exactly as written,
+// commas and all, for YouTube's Tags field.
+function TagChips({ text }: { readonly text: string }) {
+  const tags = text
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter((tag) => tag !== "");
+  return (
+    <ul className="flex flex-wrap gap-[6px] whitespace-normal">
+      {tags.map((tag, index) => (
+        <li
+          // biome-ignore lint/suspicious/noArrayIndexKey: a tag can repeat, and the list never reorders
+          key={index}
+          className="rounded-full border border-line bg-panel2 px-[9px] py-[2px] text-small text-ink"
+        >
+          {tag}
+        </li>
+      ))}
+    </ul>
   );
 }

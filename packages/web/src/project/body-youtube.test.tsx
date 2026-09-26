@@ -63,7 +63,13 @@ it("shows the description and tags read-only, each with Copy beside its heading"
   // Read-only text, not a field: nothing here takes typing.
   expect(screen.queryByRole("textbox")).toBeNull();
   const tags = screen.getByLabelText("Tags");
-  await waitFor(() => expect(tags.textContent).toBe("rope, knots, sailing knots"));
+  await waitFor(() =>
+    expect(
+      within(tags)
+        .getAllByRole("listitem")
+        .map((tag) => tag.textContent),
+    ).toEqual(["rope", "knots", "sailing knots"]),
+  );
 
   await userEvent.click(screen.getByRole("button", { name: "Copy description" }));
   expect(writeText).toHaveBeenLastCalledWith(description);
