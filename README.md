@@ -76,6 +76,7 @@ It opens at `http://127.0.0.1:6969`. Update by running the same command with `@l
 - **Videos** with moving images (zoom, pan or both), free local captions and silence padding
 - **PDF documents** of the article, with contents, sources and a cover
 - **YouTube descriptions** with chapter timestamps, hashtags and tags
+- **Shorts** cut from the narration: vertical clips with new images, word-by-word captions, titles and hashtags
 - **Templates, batches and schedules** that work through a list of topics
 - **Checkpoints, pause and resume, history** so nothing runs or changes without you
 
