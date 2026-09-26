@@ -1,4 +1,13 @@
 import { z } from "zod";
+import {
+  type Atmosphere,
+  atmospheres,
+  type ColorGrade,
+  colorGrades,
+  type LookLevel,
+  lookLevels,
+  type TransitionKind,
+} from "./edit-settings.js";
 
 // The edit list is the whole video as data: what plays, for how many frames, how it moves,
 // and the audio under it. Planning (`plan.ts`) writes one and the renderer (`ffmpeg.ts`,
@@ -7,11 +16,10 @@ import { z } from "zod";
 // It is plain JSON, recorded in render.json, and carries a version so a later Slopify can
 // tell an older list from its own.
 //
-// Extension points, none of them built yet: `Shot.source` gains a `video` kind for clips,
-// `Shot.transition` says how a shot enters from the one before, and effects (a colour
-// grade, a text card) become a list on the shot. Each is a new optional field or union
-// case, so a version-1 list stays readable; a change that alters what an existing field
-// means bumps the version instead.
+// Each extension is a new optional field or union case, so a version-1 list stays readable:
+// `Shot.source` has a `video` kind for clips, `Shot.transition` says how a shot enters from
+// the one before, and the list's `look` and `cards` are the effects every shot is rendered
+// with. A change that alters what an existing field means bumps the version instead.
 export const editListVersion = 1;
 
 export type SpokenKind = "intro" | "body" | "outro";
@@ -53,12 +61,53 @@ export interface ImageSource {
   readonly path: string;
 }
 
+// A moving clip: an uploaded video, or an image a model animated. It plays muted from its
+// start, slowed (at most to half speed) and then looped to fill its shot (`ffmpeg.ts`); its
+// own length is measured when the video is planned.
+export interface VideoSource {
+  readonly kind: "video";
+  readonly path: string;
+  readonly seconds: number;
+}
+
+export type TransitionStyle = Exclude<TransitionKind, "cut">;
+
+// How a shot enters from the one before, centred on the cut: the one before gives up its
+// last `floor(frames / 2)` frames and this one its first `ceil(frames / 2)`, and the two
+// play blended in one clip of `frames` frames in between, so the timeline keeps its length
+// (`transitions.ts`). Absent is a hard cut.
+export interface Transition {
+  readonly kind: TransitionStyle;
+  readonly frames: number;
+}
+
 export interface Shot {
-  readonly source: ImageSource;
+  readonly source: ImageSource | VideoSource;
   readonly frames: number;
   readonly motion: Motion;
-  // Reserved for the next step: every shot is a hard cut from the one before.
-  readonly transition?: undefined;
+  readonly transition?: Transition | undefined;
+}
+
+// Filters every shot is rendered with (`look.ts`). Absent renders exactly as before.
+export interface Look {
+  readonly vignette: LookLevel;
+  readonly grain: LookLevel;
+  readonly grade: ColorGrade;
+  readonly atmosphere: Atmosphere;
+}
+
+// A title card over the picture, from `startFrame` for `frames`, in the list's card font.
+export interface Card {
+  readonly title: string;
+  readonly startFrame: number;
+  readonly frames: number;
+}
+
+export interface CardFont {
+  // Absolute while rendering; project-relative in render.json.
+  readonly path: string;
+  // The family name the cards' ASS style asks libass for.
+  readonly name: string;
 }
 
 export interface EditList {
@@ -70,6 +119,10 @@ export interface EditList {
   readonly audio: readonly AudioSegment[];
   // Played back to back from the start of the video; together they run the full length.
   readonly shots: readonly Shot[];
+  readonly look?: Look | undefined;
+  // In timeline order; drawn with `cardFont`, which is present whenever cards are.
+  readonly cards?: readonly Card[] | undefined;
+  readonly cardFont?: CardFont | undefined;
 }
 
 // The same list with every file path passed through `map`: render.json records paths
@@ -85,6 +138,9 @@ export function withPaths(edit: EditList, map: (path: string) => string): EditLi
       ...shot,
       source: { ...shot.source, path: map(shot.source.path) },
     })),
+    ...(edit.cardFont === undefined
+      ? {}
+      : { cardFont: { ...edit.cardFont, path: map(edit.cardFont.path) } }),
   };
 }
 
@@ -97,6 +153,26 @@ const motionSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("still") }).strict(),
 ]);
 const count = z.number().int().positive();
+const sourceSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("image"), path: z.string().min(1) }).strict(),
+  z
+    .object({ kind: z.literal("video"), path: z.string().min(1), seconds: z.number().positive() })
+    .strict(),
+]);
+const transitionSchema = z
+  .object({ kind: z.enum(["crossfade", "fadeblack", "slide", "wipe"]), frames: count })
+  .strict();
+const lookSchema = z
+  .object({
+    vignette: z.enum(lookLevels),
+    grain: z.enum(lookLevels),
+    grade: z.enum(colorGrades),
+    atmosphere: z.enum(atmospheres),
+  })
+  .strict();
+const cardSchema = z
+  .object({ title: z.string().min(1), startFrame: z.number().int().nonnegative(), frames: count })
+  .strict();
 const editListSchema = z
   .object({
     version: z.literal(editListVersion),
@@ -116,13 +192,20 @@ const editListSchema = z
       .array(
         z
           .object({
-            source: z.object({ kind: z.literal("image"), path: z.string().min(1) }).strict(),
+            source: sourceSchema,
             frames: count,
             motion: motionSchema,
+            transition: transitionSchema.optional(),
           })
           .strict(),
       )
       .min(1),
+    look: lookSchema.optional(),
+    cards: z.array(cardSchema).optional(),
+    cardFont: z
+      .object({ path: z.string().min(1), name: z.string().min(1) })
+      .strict()
+      .optional(),
   })
   .strict();
 

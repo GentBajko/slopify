@@ -1,8 +1,10 @@
 import { spawn } from "node:child_process";
 import { isAbsolute, resolve as resolvePath } from "node:path";
 import type { Log } from "../../kernel/log.js";
-import type { EditList, Motion, Shot } from "./edit-list.js";
+import type { EditList, Motion, Shot, TransitionStyle } from "./edit-list.js";
+import { lookChain, lookEncoding, placed } from "./look.js";
 import { decimal, zoomRange } from "./plan.js";
+import { type Segment, segments, transitionHalves } from "./transitions.js";
 
 // Hand-rolled per the standards: the filtergraph is the load-bearing part of this slice
 // and a wrapper would hide it. Every value goes into an argument array, never a shell
@@ -52,29 +54,79 @@ export function resolveFfmpeg(
 // in the list, not the arguments; and a still that comes round with the same motion costs
 // no second zoompan. The clips are identical encodes, so without burned-in captions the
 // join copies them rather than encoding again.
+//
+// A transition is one more clip in the list (`transitions.ts`), and the Look is filters on
+// each clip (`look.ts`), so neither changes how the render runs: still one clip at a time,
+// still a concat join.
+export interface SlideshowClip {
+  // Named by its place in the list: `c1.mp4`, `c2.mp4`, ...
+  readonly name: string;
+  readonly segment: Segment;
+  // The shot the clip plays; for a transition, the shot it enters.
+  readonly shot: Shot;
+  readonly frames: number;
+}
+
 export interface SlideshowClips {
-  // One per distinct clip, named by its place in this list: `c1.mp4`, `c2.mp4`, ...
-  readonly clips: readonly { readonly name: string; readonly shot: Shot }[];
-  // The clip each shot plays, in timeline order.
+  // One per distinct clip.
+  readonly clips: readonly SlideshowClip[];
+  // The clip each segment of the timeline plays, in timeline order.
   readonly order: readonly string[];
 }
 
-export function slideshowClips(edit: Pick<EditList, "shots">): SlideshowClips {
-  const clips: { name: string; shot: Shot }[] = [];
+export function slideshowClips(
+  edit: Pick<EditList, "shots"> & Partial<Pick<EditList, "look" | "cards">>,
+): SlideshowClips {
+  const clips: SlideshowClip[] = [];
   const named = new Map<string, string>();
-  const order = edit.shots.map((shot) => {
-    // The motion is plain data built in a fixed key order, so equal motions stringify
-    // alike.
-    const key = JSON.stringify([shot.source, shot.motion, shot.frames]);
+  const order = segments(edit.shots).map((segment) => {
+    const key = clipKey(edit, segment);
     let name = named.get(key);
     if (name === undefined) {
       name = `c${clips.length + 1}.mp4`;
       named.set(key, name);
-      clips.push({ name, shot });
+      const shot = edit.shots[segment.kind === "shot" ? segment.shot : segment.to];
+      if (shot === undefined)
+        throw new Error(
+          "Slopify hit an internal error (the video's edit list lost a shot). Use Re-run section on Video; if it happens again, use Download diagnostics in Settings and report it.",
+        );
+      clips.push({ name, segment, shot, frames: segment.count });
     }
     return name;
   });
   return { clips, order };
+}
+
+// What makes two clips the same encode. The motion is plain data built in a fixed key order,
+// so equal motions stringify alike. A whole shot keeps the key it always had, so an edit
+// list without transitions or a Look dedupes exactly as before.
+function clipKey(
+  edit: Pick<EditList, "shots"> & Partial<Pick<EditList, "look" | "cards">>,
+  segment: Segment,
+): string {
+  const at = placed(edit, segment.start, segment.count) ? segment.start : null;
+  if (segment.kind === "transition") {
+    const from = edit.shots[segment.from];
+    const to = edit.shots[segment.to];
+    return JSON.stringify([
+      "transition",
+      from?.source,
+      from?.motion,
+      from?.frames,
+      to?.source,
+      to?.motion,
+      to?.frames,
+      to?.transition,
+      at,
+    ]);
+  }
+  const shot = edit.shots[segment.shot];
+  const whole = segment.from === 0 && segment.count === shot?.frames;
+  return JSON.stringify(
+    whole && at === null
+      ? [shot?.source, shot?.motion, shot?.frames]
+      : [shot?.source, shot?.motion, shot?.frames, segment.from, segment.count, at],
+  );
 }
 
 // Clips that are joined by copying get the final encode's settings. Clips that will be
@@ -82,35 +134,157 @@ export function slideshowClips(edit: Pick<EditList, "shots">): SlideshowClips {
 // encode is not a visible second generation.
 const intermediateCrf = "16";
 
+// A whole shot as one clip.
 export function clipArgs(
   frame: Pick<EditList, "width" | "height" | "fps">,
   shot: Shot,
   output: string,
   intermediate = false,
 ): string[] {
-  const move = zoompan(shot.motion, shot.frames);
-  // A still that does not move has no sub-pixel steps to smooth, so it is not prescaled.
-  const factor = move === undefined ? 1 : prescale;
-  const wide = frame.width * factor;
-  const tall = frame.height * factor;
+  return segmentArgs(
+    { ...frame, shots: [shot] },
+    { kind: "shot", shot: 0, from: 0, count: shot.frames, start: 0 },
+    output,
+    intermediate,
+  );
+}
+
+// One clip of the slideshow: part of a shot, or a transition between two, with the Look.
+export function segmentArgs(
+  edit: Pick<EditList, "width" | "height" | "fps" | "shots"> &
+    Partial<Pick<EditList, "look" | "cards">>,
+  segment: Segment,
+  output: string,
+  intermediate = false,
+  // The clip's own chapter-card script, beside it in the working folder (`cards.ts`).
+  cardsFile = "cards.ass",
+): string[] {
+  const inputs: string[] = [];
+  const chains: string[] = [];
+  const picture = (shot: Shot | undefined, from: number, label: string): void => {
+    if (shot === undefined)
+      throw new Error(
+        "Slopify hit an internal error (the video's edit list lost a shot). Use Re-run section on Video; if it happens again, use Download diagnostics in Settings and report it.",
+      );
+    const at = inputs.filter((one) => one === "-i").length;
+    const built = pictureChain(edit, shot, from, segment.count, at, label);
+    inputs.push(...built.inputs);
+    chains.push(built.chain);
+  };
+  const look = lookChain(edit, segment.start, segment.count, "[p]", "[v]", cardsFile);
+  const picked = look === undefined ? "[v]" : "[p]";
+  if (segment.kind === "shot") picture(edit.shots[segment.shot], segment.from, picked);
+  else {
+    const before = edit.shots[segment.from];
+    const after = edit.shots[segment.to];
+    const halves = transitionHalves(segment.count);
+    picture(before, (before?.frames ?? 0) - halves.tail, "[ta]");
+    picture(after, -halves.tail, "[tb]");
+    const style = after?.transition?.kind ?? "crossfade";
+    chains.push(
+      `[ta][tb]xfade=transition=${xfadeNames[style]}:duration=${seconds6(segment.count / edit.fps)}:offset=0${picked}`,
+    );
+  }
+  if (look !== undefined) chains.push(look);
   return [
     ...progressArgs,
-    "-i",
-    shot.source.path,
+    ...inputs,
     "-filter_complex",
-    `[0:v]trim=end_frame=1,setpts=PTS-STARTPTS,` +
-      // Cover the frame and centre-crop, never letterbox.
-      `scale=${wide}:${tall}:force_original_aspect_ratio=increase,crop=${wide}:${tall},` +
-      `zoompan=z='${move?.z ?? "1"}':d=${shot.frames}:` +
-      `x='${move?.x ?? centredX}':y='${move?.y ?? centredY}':` +
-      `s=${frame.width}x${frame.height}:fps=${frame.fps},setsar=1[v]`,
+    chains.join(";"),
     "-map",
     "[v]",
+    // The clip is exactly its frames, whatever a filter's rounding of seconds would give.
+    ...(segment.kind === "shot" && segment.from === 0 && look === undefined
+      ? []
+      : ["-frames:v", String(segment.count)]),
     ...videoCodec,
+    ...lookEncoding(edit.look),
     ...(intermediate ? ["-crf", intermediateCrf] : []),
     "-an",
     output,
   ];
+}
+
+const xfadeNames: Readonly<Record<TransitionStyle, string>> = {
+  crossfade: "fade",
+  fadeblack: "fadeblack",
+  slide: "slideleft",
+  wipe: "wipeleft",
+};
+
+// The picture of `count` frames of `shot` from its own frame `from`, into `label`. A frame
+// before the shot's first shows its first, and one past its last shows its last (a still's
+// motion holds) or plays on (a clip keeps running), which is what a transition overlapping
+// the cut shows.
+function pictureChain(
+  frame: Pick<EditList, "width" | "height" | "fps">,
+  shot: Shot,
+  from: number,
+  count: number,
+  input: number,
+  label: string,
+): { readonly inputs: readonly string[]; readonly chain: string } {
+  const source = shot.source;
+  if (source.kind === "video") {
+    const { width, height, fps } = frame;
+    const pad = Math.max(0, -from);
+    const first = from + pad;
+    return {
+      // Looped for as long as the shot needs; trim ends the stream.
+      inputs: ["-stream_loop", "-1", "-i", source.path],
+      chain:
+        `[${String(input)}:v]setpts=(PTS-STARTPTS)*${slowdown(source.seconds, shot.frames / fps)},` +
+        `fps=${String(fps)},` +
+        `scale=${String(width)}:${String(height)}:force_original_aspect_ratio=increase,` +
+        `crop=${String(width)}:${String(height)},setsar=1,` +
+        (pad > 0 ? `tpad=start=${String(pad)}:start_mode=clone,` : "") +
+        `trim=start_frame=${String(first)}:end_frame=${String(first + count)},` +
+        // Padding and trimming drop the declared rate, which a transition needs to match.
+        `setpts=PTS-STARTPTS,fps=${String(fps)},format=yuv420p${label}`,
+    };
+  }
+  const move = zoompan(shot.motion, shot.frames, frameExpression(from, count, shot.frames));
+  // A still that does not move has no sub-pixel steps to smooth, so it is not prescaled.
+  const factor = move === undefined ? 1 : prescale;
+  const wide = frame.width * factor;
+  const tall = frame.height * factor;
+  // Clips that meet in a transition are brought to one pixel format first, since xfade
+  // refuses to blend two that differ; a plain shot is left as it always was.
+  const plain = from === 0 && count === shot.frames;
+  return {
+    inputs: ["-i", source.path],
+    chain:
+      `[${String(input)}:v]trim=end_frame=1,setpts=PTS-STARTPTS,` +
+      // Cover the frame and centre-crop, never letterbox.
+      `scale=${wide}:${tall}:force_original_aspect_ratio=increase,crop=${wide}:${tall},` +
+      `zoompan=z='${move?.z ?? "1"}':d=${count}:` +
+      `x='${move?.x ?? centredX}':y='${move?.y ?? centredY}':` +
+      `s=${frame.width}x${frame.height}:fps=${frame.fps},setsar=1${plain ? "" : ",format=yuv420p"}${label}`,
+  };
+}
+
+// ceiling: a clip shorter than its shot is slowed to at most half speed, which still reads
+// as natural motion; past that it loops.
+const slowestSpeed = 2;
+
+// How much a clip of `clip` seconds is stretched to fill a shot of `shot` seconds, as exact
+// decimal text: 1 when it is long enough.
+export function slowdown(clip: number, shot: number): string {
+  if (!(clip > 0) || shot <= clip) return "1";
+  return decimal(Math.round(Math.min(slowestSpeed, shot / clip) * 1000));
+}
+
+// zoompan's `on` counts the clip's own frames from 0; a clip that starts `from` frames into
+// its shot adds that, and one that reaches before or past the shot holds at its ends.
+function frameExpression(from: number, count: number, frames: number): string {
+  const shifted = from === 0 ? "on" : `(on${from > 0 ? "+" : "-"}${String(Math.abs(from))})`;
+  return from < 0 || from + count > frames
+    ? `clip(${shifted},0,${String(Math.max(0, frames - 1))})`
+    : shifted;
+}
+
+function seconds6(value: number): string {
+  return value.toFixed(6);
 }
 
 // The concat demuxer's own format. Names are resolved beside the list and are this
@@ -120,7 +294,7 @@ export function concatList(order: readonly string[]): string {
 }
 
 export function joinArgs(
-  edit: Pick<EditList, "audio">,
+  edit: Pick<EditList, "audio"> & Partial<Pick<EditList, "look">>,
   output: string,
   list: string,
   burnSubtitles = false,
@@ -164,7 +338,7 @@ export function joinArgs(
     "-map",
     burnSubtitles ? "[v]" : "0:v",
     ...(edit.audio.length > 0 ? ["-map", "[a]"] : []),
-    ...(burnSubtitles ? videoCodec : ["-c:v", "copy"]),
+    ...(burnSubtitles ? [...videoCodec, ...lookEncoding(edit.look)] : ["-c:v", "copy"]),
     ...(edit.audio.length > 0 ? ["-c:a", "aac"] : ["-an"]),
     "-movflags",
     "+faststart",
@@ -195,10 +369,10 @@ interface Zoompan {
 }
 
 // zoompan's expressions for a motion, or undefined for one that does not move. `on` is
-// zoompan's output frame counter, 0 to d-1, and a one-frame shot has no span to divide
-// by, so it holds where it starts. `zoom` in x and y is the current zoom, so iw-iw/zoom
-// is the room the crop window has to travel in.
-function zoompan(motion: Motion, frames: number): Zoompan | undefined {
+// zoompan's output frame counter, 0 to d-1 (`at` shifts it for part of a shot), and a
+// one-frame shot has no span to divide by, so it holds where it starts. `zoom` in x and y is
+// the current zoom, so iw-iw/zoom is the room the crop window has to travel in.
+function zoompan(motion: Motion, frames: number, at = "on"): Zoompan | undefined {
   if (motion.kind === "still") return undefined;
   const range = zoomRange(motion.percent);
   if (range === undefined) return undefined;
@@ -209,27 +383,27 @@ function zoompan(motion: Motion, frames: number): Zoompan | undefined {
       motion.direction === "in"
         ? span < 1
           ? range.from
-          : `${range.from}+${range.by}*on/${span}`
+          : `${range.from}+${range.by}*${at}/${span}`
         : span < 1
           ? range.to
-          : `${range.to}-${range.by}*on/${span}`;
+          : `${range.to}-${range.by}*${at}/${span}`;
     return { z, x: centredX, y: centredY };
   }
   return {
     z: range.to,
-    x: `(iw-iw/zoom)*(${travel(motion.from.x, motion.to.x, span)})`,
-    y: `(ih-ih/zoom)*(${travel(motion.from.y, motion.to.y, span)})`,
+    x: `(iw-iw/zoom)*(${travel(motion.from.x, motion.to.x, span, at)})`,
+    y: `(ih-ih/zoom)*(${travel(motion.from.y, motion.to.y, span, at)})`,
   };
 }
 
 // A share of the room from `from` to `to`, linear over the shot. Built in whole
 // thousandths as decimal text, like the zoom, so 1 - 0.5 reads 0.5 and never
 // 0.49999999999999994.
-function travel(from: number, to: number, span: number): string {
+function travel(from: number, to: number, span: number, at: string): string {
   const start = Math.round(from * 1000);
   const by = Math.round(to * 1000) - start;
   if (span < 1 || by === 0) return decimal(start);
-  return `${decimal(start)}${by > 0 ? "+" : "-"}${decimal(Math.abs(by))}*on/${span}`;
+  return `${decimal(start)}${by > 0 ? "+" : "-"}${decimal(Math.abs(by))}*${at}/${span}`;
 }
 
 function seconds(value: number): string {
