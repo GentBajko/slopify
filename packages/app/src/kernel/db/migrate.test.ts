@@ -39,6 +39,7 @@ describe("migrate", () => {
 
     expect(names(db, "table")).toEqual([
       "attempts",
+      "backup_imports",
       "batches",
       "document_themes",
       "entries",

@@ -184,7 +184,7 @@ describe("the settings screen", () => {
     );
 
     const file = new File(["portable zip"], "slopify.zip", { type: "application/zip" });
-    await user.upload(await screen.findByLabelText("Import backup"), file);
+    await user.upload(await screen.findByLabelText("Import a backup"), file);
 
     expect(await screen.findByText(/Imported 0 template/)).not.toBeNull();
     expect(received).toBe("portable zip");
@@ -205,14 +205,128 @@ describe("the settings screen", () => {
     const file = new File(["zip"], "too-large.zip", { type: "application/zip" });
     Object.defineProperty(file, "size", { value: portableMaxUploadBytes + 1 });
 
-    await user.upload(await screen.findByLabelText("Import backup"), file);
+    await user.upload(await screen.findByLabelText("Import a backup"), file);
 
     expect(
       await screen.findByText(
-        "This file is empty or larger than 100 MB. Choose a .zip made with Export backup.",
+        "This file is empty or larger than 100 MB. Choose a .zip made with Export backup, or a .tar made with Export everything.",
       ),
     ).not.toBeNull();
     expect(requests).toBe(0);
+  });
+});
+
+describe("export everything and import a backup", () => {
+  const summary = {
+    backup: { id: "b1", createdAt: "2026-09-20T10:00:00.000Z", appVersion: "2.3.0" },
+    projects: {
+      imported: [{ id: "p2", title: "New run" }],
+      skipped: [{ id: "p1", title: "Old run", reason: "It is already in this install." }],
+    },
+    prompts: { added: 2, renamed: 1, skipped: 0 },
+    entries: { added: 0, renamed: 0, skipped: 0 },
+    documentThemes: { added: 1, renamed: 0, skipped: 0 },
+    templates: { added: 1, renamed: 0, skipped: 0 },
+    schedules: { added: 1, renamed: 0, skipped: 0, paused: 1 },
+    voices: { added: 0, renamed: 0, skipped: 0 },
+    drafts: { added: 0, renamed: 0, skipped: 0 },
+    settings: { added: 1, kept: 1 },
+    fonts: 0,
+    usage: { events: 12, alreadyImported: false },
+    files: { count: 4, bytes: 3 * 1024 * 1024 },
+  };
+
+  it("says keys are never included", async () => {
+    renderApp(<SettingsRoute section="storage" />, deps());
+    expect(await screen.findByText(/Provider keys are never included in a backup/)).not.toBeNull();
+  });
+
+  it("names the projects it waits for instead of downloading an error", async () => {
+    const user = userEvent.setup();
+    const busy =
+      'Slopify can\'t export while projects are being made ("Rope"): their files are still being written. Wait for them to finish, or pause them on their project page, then press Export everything again.';
+    renderApp(
+      <SettingsRoute section="storage" />,
+      deps({
+        "GET /api/storage/export/summary": jsonAnswer({ ready: false, detail: busy, busy: [] }),
+      }),
+    );
+    await user.click(await screen.findByRole("button", { name: "Export everything" }));
+    expect((await screen.findByRole("alert")).textContent).toBe(busy);
+    expect(screen.queryByText(/Downloading/)).toBeNull();
+  });
+
+  it("shows the size of the download it starts", async () => {
+    const user = userEvent.setup();
+    const clicked: string[] = [];
+    const click = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+      clicked.push(this.href);
+    };
+    try {
+      renderApp(
+        <SettingsRoute section="storage" />,
+        deps({
+          "GET /api/storage/export/summary": jsonAnswer({
+            ready: true,
+            projects: 2,
+            files: 9,
+            bytes: 5 * 1024 ** 3,
+          }),
+        }),
+      );
+      await user.click(await screen.findByRole("button", { name: "Export everything" }));
+      expect(await screen.findByText(/Downloading 5 GB \(2 projects\)/)).not.toBeNull();
+      expect(clicked).toEqual(["http://slopify.test/api/storage/export"]);
+    } finally {
+      HTMLAnchorElement.prototype.click = click;
+    }
+  });
+
+  it("sends a full backup as a tar and lists what came in and what was skipped", async () => {
+    const user = userEvent.setup();
+    let type = "";
+    renderApp(
+      <SettingsRoute section="storage" />,
+      deps({
+        "PUT /api/storage/import": (request) => {
+          type = request.headers.get("content-type") ?? "";
+          return jsonAnswer(summary)(request);
+        },
+      }),
+    );
+    const file = new File(["tar"], "slopify-backup-2026-09-20.tar");
+    await user.upload(await screen.findByLabelText("Import a backup"), file);
+
+    const list = await screen.findByRole("list", { name: "Import result" });
+    expect(type).toBe("application/x-tar");
+    const lines = within(list)
+      .getAllByRole("listitem")
+      .map((item) => item.textContent);
+    expect(lines).toContain("Projects: 1 added (3 MB of files).");
+    expect(lines).toContain(
+      "Prompts: 2 added, 1 added as “(imported)” because the name was taken.",
+    );
+    expect(lines).toContain(
+      "1 schedule(s) arrived paused so two installs never run them both; resume them on the Schedules screen.",
+    );
+    expect(lines).toContain("Usage: 12 recorded event(s) added to the totals.");
+    expect(lines).toContain("Skipped “Old run”: It is already in this install.");
+  });
+
+  it("shows the server's reason when a backup is refused", async () => {
+    const user = userEvent.setup();
+    const newer =
+      "This backup was made by a newer Slopify (9.0.0). Update Slopify first (npx @gentbajko/slopify@latest, or pull the latest Docker image), then import it again.";
+    renderApp(
+      <SettingsRoute section="storage" />,
+      deps({ "PUT /api/storage/import": problemAnswer(newer, 422) }),
+    );
+    await user.upload(
+      await screen.findByLabelText("Import a backup"),
+      new File(["tar"], "backup.tar"),
+    );
+    expect((await screen.findByRole("alert")).textContent).toBe(newer);
   });
 });
 

@@ -28,11 +28,12 @@ import type {
   Voice,
 } from "@app/slices/settings/model.js";
 import type { VoiceDraft } from "@app/slices/settings/voices.js";
+import type { BackupImportSummary } from "@app/slices/storage/backup-import.js";
 import type { Output, StagedFile } from "@app/slices/storage/model.js";
 import type { Usage } from "@app/slices/telemetry/usage.js";
 import { hc } from "hono/client";
 import type { Problem, SaveResult } from "./http.js";
-import { errorOf, failure, problemOf, reachingFetch, read, saved } from "./http.js";
+import { errorOf, failure, problemOf, reachingFetch, read, saved, unreachable } from "./http.js";
 
 export type {
   Appearance,
@@ -152,15 +153,83 @@ export interface Api {
   // Where `/files/...` and the SSE endpoints live. They are served by URL, not through
   // the API.
   readonly origin: string;
+  // A PUT of one large file that reports how much of it has been sent (a backup can be
+  // gigabytes). fetch cannot report upload progress, so the page wires an XHR in here.
+  readonly upload: Upload;
 }
 
-export function createApi(origin: string, fetchImpl: typeof fetch): Api {
+export type UploadProgress = (sent: number, total: number) => void;
+export type Upload = (
+  url: string,
+  body: Blob,
+  contentType: string,
+  onProgress: UploadProgress,
+) => Promise<Response>;
+
+export function createApi(origin: string, fetchImpl: typeof fetch, upload?: Upload): Api {
   const reaching = reachingFetch(fetchImpl);
   return {
     client: hc<AppType>(`${origin}/api`, { fetch: reaching }),
     fetch: reaching,
     origin,
+    upload: upload ?? fetchUpload(reaching),
   };
+}
+
+// Without XHR there is no progress to report until the answer: the whole file is sent.
+function fetchUpload(fetchImpl: typeof fetch): Upload {
+  return async (url, body, contentType, onProgress) => {
+    const response = await fetchImpl(url, {
+      method: "PUT",
+      headers: { "content-type": contentType },
+      body,
+    });
+    onProgress(body.size, body.size);
+    return response;
+  };
+}
+
+export function xhrUpload(onResponse: (response: Response) => void = () => {}): Upload {
+  return (url, body, contentType, onProgress) =>
+    new Promise<Response>((resolve, reject) => {
+      const request = new XMLHttpRequest();
+      request.open("PUT", url);
+      request.setRequestHeader("content-type", contentType);
+      request.upload.onprogress = (event) => {
+        onProgress(event.loaded, event.lengthComputable ? event.total : body.size);
+      };
+      request.onload = () => {
+        const headers = new Headers();
+        for (const line of request
+          .getAllResponseHeaders()
+          .trim()
+          .split(/[\r\n]+/)) {
+          const at = line.indexOf(":");
+          if (at > 0) headers.append(line.slice(0, at).trim(), line.slice(at + 1).trim());
+        }
+        const response = new Response(request.responseText, { status: request.status, headers });
+        onResponse(response);
+        resolve(response);
+      };
+      request.onerror = () => {
+        reject(new TypeError(unreachable));
+      };
+      request.send(body);
+    });
+}
+
+export type { BackupImportSummary };
+
+export interface BackupExportSummary {
+  readonly ready: boolean;
+  readonly projects?: number;
+  readonly files?: number;
+  readonly bytes?: number;
+  readonly detail?: string;
+}
+
+export async function readBackupExportSummary(api: Api): Promise<BackupExportSummary> {
+  return read<BackupExportSummary>(await api.fetch(`${api.origin}/api/storage/export/summary`));
 }
 
 export async function listProjects(api: Api): Promise<ProjectListBody> {
