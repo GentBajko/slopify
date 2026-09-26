@@ -29,7 +29,10 @@ export function RevisionUpload({
   disabled = false,
   onReady,
   onPending,
+  accept,
 }: {
+  // The file types offered; images (or audio) unless a caller asks for others.
+  readonly accept?: string;
   readonly disabled?: boolean;
   readonly label: string;
   readonly kind: UploadKind;
@@ -110,7 +113,7 @@ export function RevisionUpload({
           id={inputId}
           type="file"
           disabled={busy || disabled}
-          accept={kind === "audio" ? "audio/*" : "image/png,image/jpeg,image/webp"}
+          accept={accept ?? (kind === "audio" ? "audio/*" : "image/png,image/jpeg,image/webp")}
           onChange={(event) => {
             const file = event.target.files?.[0];
             event.target.value = "";

@@ -103,7 +103,14 @@ export function readinessRows(form: PlayFormState, errors: readonly FieldError[]
     row(
       "Export",
       form.sources.video,
-      ["sources.video", "imageSeconds", "zoomPercent", "motionStyle", "edgeSilenceSeconds"],
+      [
+        "sources.video",
+        "imageSeconds",
+        "zoomPercent",
+        "motionStyle",
+        "edgeSilenceSeconds",
+        "videoEdit",
+      ],
       "sources.video",
       form.sources.video === "generate"
         ? form.sources.audio === "off"

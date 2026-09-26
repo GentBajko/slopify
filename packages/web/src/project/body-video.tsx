@@ -86,6 +86,16 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
         </video>
       )}
 
+      {/* What the render could not do as asked: an image shown still because its clip could
+          not be made. */}
+      {video?.meta.warnings?.length ? (
+        <ul aria-label="Render notes" className="space-y-1 text-small text-ink2">
+          {video.meta.warnings.map((warning) => (
+            <li key={warning}>{warning}</li>
+          ))}
+        </ul>
+      ) : null}
+
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-small">
         {stage.state === "pending" || stage.state === "skipped" ? null : (
           <ConfirmedButton

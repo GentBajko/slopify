@@ -36,6 +36,24 @@ export function modelsQuery(api: Api, provider: string) {
   });
 }
 
+// The image provider's image-to-video models, which Animate images picks from. Asked for only
+// while Animate images is on.
+export function videoModelsQuery(api: Api, provider: string, enabled: boolean) {
+  return queryOptions({
+    queryKey: ["provider-video-models", provider] as const,
+    queryFn: async ({ signal }) =>
+      read<ProviderModels>(
+        await api.fetch(
+          `${api.origin}/api/providers/${encodeURIComponent(provider)}/models?video=1`,
+          { signal },
+        ),
+      ),
+    enabled: enabled && provider !== "",
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+}
+
 // These image adapters require one of the server's supported input schemas. A
 // failed discovery request must not turn their IDs into an unrestricted text field.
 export function customModelFallback(provider: string): boolean {

@@ -23,6 +23,7 @@ import { sourceOptions } from "@/play/state";
 import { entriesQuery, promptsQuery, providersQuery, voicesQuery } from "@/queries";
 import { subtitlesFor } from "@/subtitles/config";
 import { SubtitleControls } from "@/subtitles/controls";
+import { useVideoEditControls } from "@/video/edit-controls";
 import { changeSource, editOfForm } from "./revision-form-state.js";
 import { RevisionNarration } from "./revision-narration.js";
 import { RevisionPrompts } from "./revision-prompts.js";
@@ -61,6 +62,15 @@ export function RevisionForm(
         one.field === `config.${field}` ||
         one.field === `edit.config.${field}`,
     )?.message;
+  // Cuts, transitions, the Look and animated images; an old project gets settings only once
+  // one of them is changed.
+  const videoEdit = useVideoEditControls({
+    value: config.videoEdit,
+    narrated: config.sources.audio !== "off",
+    imageProvider: config.images?.provider ?? "",
+    problem,
+    onChange: (next) => onChange({ ...edit, config: { ...config, videoEdit: next } }),
+  });
   const sections: readonly {
     readonly id: EditSection;
     readonly label: string;
@@ -347,6 +357,8 @@ export function RevisionForm(
               </p>
             </div>
           )}
+          {config.sources.video === "off" ? null : videoEdit.cuts}
+          {config.sources.video === "off" ? null : videoEdit.look}
           {(["intro", "outro"] as const).map((category) => (
             <label
               htmlFor={`${formId}-entry-${category}`}

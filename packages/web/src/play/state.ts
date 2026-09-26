@@ -25,6 +25,7 @@ import type { PlayDraftForm } from "@app/slices/play-drafts/schema.js";
 import type { ShortsSettings } from "@app/slices/shorts/model.js";
 import type { StagedFile } from "@app/slices/storage/model.js";
 import { defaultSubtitles, type SubtitleConfig } from "@app/slices/subtitles/model.js";
+import type { VideoEditSettings } from "@app/slices/video/edit-settings.js";
 import { subtitlesFor } from "@/subtitles/config";
 import { freshDraftDocument } from "./draft-state";
 
@@ -76,6 +77,9 @@ export interface LegacyPlayFormState {
   readonly edgeSilenceSeconds: number;
   readonly zoomPercent: number;
   readonly motionStyle: MotionStyle;
+  // The Video stage's edit settings (cuts, transitions, the Look, animated images). Absent on
+  // drafts saved before them, which then render today's slideshow.
+  readonly videoEdit?: VideoEditSettings | undefined;
   // Read with the saved draft's absent Document fields filled in: Off and the default theme.
   readonly document: DocumentSettings;
   // Every value the user has typed, including one for a slot no prompt asks for any more:
@@ -236,6 +240,7 @@ export function draftOf(input: DraftInput): RunDraft {
     edgeSilenceSeconds: form.edgeSilenceSeconds,
     zoomPercent: form.zoomPercent,
     motionStyle: form.motionStyle,
+    ...(form.videoEdit === undefined ? {} : { videoEdit: form.videoEdit }),
     ...(form.sources.document === "generate" ? { document: form.document } : {}),
   };
 }

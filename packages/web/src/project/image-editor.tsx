@@ -1,5 +1,6 @@
 import type { RevisionEdit, RevisionView } from "@app/slices/revisions/model.js";
 import { useId, useRef, useState } from "react";
+import type { StagedFile } from "@/api";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { ImagePreview } from "./image-preview.js";
@@ -91,6 +92,34 @@ export function ImageEditor({
         raw,
       ),
     );
+  }
+  // An uploaded picture or clip goes to the end of the order, as a provided image.
+  function addProvided(file: StagedFile): void {
+    const edit = getEdit?.() ?? latest.current;
+    const content = edit.content;
+    const key = crypto.randomUUID();
+    emit({
+      ...edit,
+      config: {
+        ...edit.config,
+        sources: {
+          ...edit.config.sources,
+          images: edit.config.sources.images === "off" ? "provide" : edit.config.sources.images,
+        },
+      },
+      content: {
+        ...content,
+        imageOrder: [...content.imageOrder, key],
+        imageDefinitions: {
+          ...content.imageDefinitions,
+          [key]: { source: "provide", assetId: null, prompt: null },
+        },
+      },
+      uploads: [
+        ...(edit.uploads ?? []),
+        { stagedFileId: file.id, destination: { kind: "image", imageKey: key } },
+      ],
+    });
   }
   return (
     <section aria-label="Edit images" className="space-y-3">
@@ -262,40 +291,25 @@ export function ImageEditor({
       {content.imageOrder.length >= 60 ? (
         <p>At most 60 images can be included.</p>
       ) : (
-        <RevisionUpload
-          key={`new-image:${edit.config.sources.images === "off"}`}
-          label="Add provided image"
-          kind="images"
-          onPending={(pending) => onPending("image:new", pending)}
-          onReady={(file) => {
-            const edit = getEdit?.() ?? latest.current;
-            const content = edit.content;
-            const key = crypto.randomUUID();
-            emit({
-              ...edit,
-              config: {
-                ...edit.config,
-                sources: {
-                  ...edit.config.sources,
-                  images:
-                    edit.config.sources.images === "off" ? "provide" : edit.config.sources.images,
-                },
-              },
-              content: {
-                ...content,
-                imageOrder: [...content.imageOrder, key],
-                imageDefinitions: {
-                  ...content.imageDefinitions,
-                  [key]: { source: "provide", assetId: null, prompt: null },
-                },
-              },
-              uploads: [
-                ...(edit.uploads ?? []),
-                { stagedFileId: file.id, destination: { kind: "image", imageKey: key } },
-              ],
-            });
-          }}
-        />
+        <>
+          <RevisionUpload
+            key={`new-image:${edit.config.sources.images === "off"}`}
+            label="Add provided image"
+            kind="images"
+            onPending={(pending) => onPending("image:new", pending)}
+            onReady={addProvided}
+          />
+          {/* A clip takes an image's place in the order: it plays muted for as long as an
+              image would be shown, trimmed, slowed (to half speed at most) or looped to fit. */}
+          <RevisionUpload
+            key={`new-clip:${edit.config.sources.images === "off"}`}
+            label="Add a video clip"
+            kind="images"
+            accept="video/mp4,video/quicktime,video/webm,video/x-matroska,.mp4,.mov,.m4v,.webm,.mkv"
+            onPending={(pending) => onPending("clip:new", pending)}
+            onReady={addProvided}
+          />
+        </>
       )}
     </section>
   );

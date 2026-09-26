@@ -7,6 +7,14 @@ import type { Entry } from "@app/slices/library/model.js";
 import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import type { ProviderFamily, ProviderStatus, Voice } from "@app/slices/settings/model.js";
 import { defaultShortsPromptName } from "@app/slices/shorts/model.js";
+import {
+  cutModeLabels,
+  legacyVideoEdit,
+  usesAnimation,
+  type VideoEditSettings,
+  videoEditOf,
+  videoEditRows,
+} from "@app/slices/video/edit-settings.js";
 import { defaultDescriptionPromptName } from "@app/slices/youtube/model.js";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
@@ -18,6 +26,25 @@ import { type FontSummary, fontsKey } from "@/subtitles/api";
 import { usePlaySession } from "./draft-context";
 import { CheckpointReview } from "./run-review";
 import { shortsOn, sourceLabels } from "./state";
+
+// The Look in one line: only what differs from plain cuts, and the animated images with their
+// model and that they are paid.
+function lookSummary(form: { readonly videoEdit?: VideoEditSettings | undefined }): string {
+  const rows = videoEditRows(videoEditOf(form));
+  const plain = new Map(videoEditRows(legacyVideoEdit));
+  const changed = rows
+    .filter(([label, value]) => label !== "Cuts" && plain.get(label) !== value)
+    .map(([label, value]) =>
+      label === "Animate images"
+        ? `Animated images: ${value} (paid)`
+        : label === "Chapter cards"
+          ? "Chapter cards"
+          : label === "Transition"
+            ? value
+            : `${label}: ${value}`,
+    );
+  return changed.length === 0 ? "Plain cuts, no effects" : changed.join(" · ");
+}
 
 interface RequiredProvider {
   readonly field: string;
@@ -89,7 +116,11 @@ function requiredProviders(
           },
         ]
       : []),
-    ...((form.sources.images === "generate" || generatedThumbnail || shortsOn(form)) && form.images
+    ...((form.sources.images === "generate" ||
+      generatedThumbnail ||
+      shortsOn(form) ||
+      usesAnimation(form)) &&
+    form.images
       ? [
           {
             field: "images.provider",
@@ -412,6 +443,10 @@ export function ReviewSummary({
           {form.sources.video === "generate"
             ? row("Motion", "motionStyle", motionStyleLabels[form.motionStyle])
             : null}
+          {form.sources.video === "generate"
+            ? row("Cuts", "videoEdit.cuts", cutModeLabels[videoEditOf(form).cuts])
+            : null}
+          {form.sources.video === "generate" ? row("Look", "videoEdit", lookSummary(form)) : null}
           {form.sources.audio !== "off"
             ? row(
                 "Silence at start and end",

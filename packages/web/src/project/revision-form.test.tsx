@@ -569,3 +569,35 @@ it("switches Shorts on in Prompts, sets its numbers and prompts, and asks to mak
   await user.click(screen.getByRole("checkbox", { name: /Shorts/ }));
   expect(latest.config.shorts).toMatchObject({ enabled: false, count: 5, prompt: "Hooks" });
 });
+
+it("shows an old project's video as it was, and writes edit settings only once one changes", async () => {
+  const user = userEvent.setup();
+  const view = revisionView();
+  let latest = formOfRevision(view);
+  function Video(): import("react").ReactElement {
+    const [edit, setEdit] = useState(formOfRevision(view));
+    latest = edit;
+    return (
+      <RevisionForm view={view} edit={edit} onChange={setEdit} onPending={() => {}} fields={[]} />
+    );
+  }
+  renderApp(
+    <Video />,
+    testDeps({
+      "GET /api/providers": jsonAnswer({ providers: [] }),
+      "GET /api/settings/voices": jsonAnswer({ voices: [] }),
+      "GET /api/prompts": jsonAnswer({ prompts: [] }),
+      "GET /api/entries": jsonAnswer({ entries: [] }),
+    }),
+  );
+  await user.selectOptions(screen.getByRole("combobox", { name: "images source" }), "generate");
+  await user.selectOptions(screen.getByRole("combobox", { name: "video source" }), "generate");
+  // Saved before the settings: cuts every N seconds, a plain Look, and nothing written.
+  expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "Cuts" }).value).toBe("interval");
+  expect(screen.getByText("Plain cuts, no effects")).not.toBeNull();
+  expect(latest.config.videoEdit).toBeUndefined();
+  await user.click(screen.getByText("Look"));
+  await user.selectOptions(screen.getByRole("combobox", { name: "Colour grade" }), "sepia");
+  expect(latest.config.videoEdit).toMatchObject({ cuts: "interval", grade: "sepia" });
+  expect(screen.getByText("Look").nextElementSibling?.textContent).toBe("Sepia");
+});
