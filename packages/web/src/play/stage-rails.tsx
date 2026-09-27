@@ -46,9 +46,9 @@ export function ResearchRail({ form, problem, update }: RailProps) {
   );
 }
 
-export function ArticleRail({ form, prompts, problem, update }: RailProps) {
+export function ArticleRail({ form, prompts, problem, update, titled }: RailProps) {
   return (
-    <StageRail kind="article" name="Article" dim={false}>
+    <StageRail kind="article" name="Article" dim={false} titled={titled}>
       <SourceSwitch kind="article" form={form} update={update} />
       <div className={`${railBeneath} grid gap-4`}>
         {form.sources.article === "generate" ? (
@@ -177,6 +177,7 @@ export function VideoRail({
   rawTiming,
   extras = true,
   language,
+  titled,
 }: RailProps & {
   readonly rawTiming?: RawTiming;
   // The language the run is narrated in, the channel's when the draft picked none; a
@@ -211,7 +212,7 @@ export function VideoRail({
   });
 
   return (
-    <StageRail kind="video" name="Export" dim={form.sources.video === "off"}>
+    <StageRail kind="video" name="Export" dim={form.sources.video === "off"} titled={titled}>
       <SourceSwitch kind="video" form={form} update={update} />
       <span className={railControls}>
         <span className="engraved text-ink3">{explanation}</span>

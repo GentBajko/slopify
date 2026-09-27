@@ -28,7 +28,8 @@ function block(over: Partial<Parameters<typeof KeywordBlock>[0]> = {}) {
 describe("the keyword block", () => {
   it("shows each keyword once in a single labelled list", () => {
     block();
-    expect(screen.getByRole("heading", { name: "Keywords" })).not.toBeNull();
+    expect(screen.getByRole("region", { name: "Keywords" })).not.toBeNull();
+    expect(screen.queryByRole("heading", { name: "Keywords" })).toBeNull();
     expect(screen.getAllByRole("textbox")).toHaveLength(4);
     expect(screen.getAllByLabelText("topic")).toHaveLength(1);
   });

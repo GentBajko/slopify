@@ -26,7 +26,7 @@ export function PlayLanguage({ disabled = false }: { readonly disabled?: boolean
   const channel = channels.data?.find((one) => one.id === channelId);
   const { document } = session;
   return (
-    <div className="mt-5">
+    <div>
       <LanguageSelect
         value={document.form.language}
         inherited={{ label: "Channel's language", language: channel?.brand.language }}

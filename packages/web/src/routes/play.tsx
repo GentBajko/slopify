@@ -346,7 +346,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   };
   const editors: Readonly<Record<SetupRowId, SetupListRow["editor"]>> = {
     title: (
-      <div className="flex min-w-0 flex-col gap-5">
+      <div className="flex min-w-0 flex-col gap-4 py-4">
         {topics.length ? (
           <Field
             label="Title pattern"
@@ -404,10 +404,10 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     outputs: <ExtrasSection {...controls} />,
     reviews: undefined,
     channel: (
-      <>
+      <div className="flex min-w-0 flex-col gap-4 py-4">
         <ChannelPicker />
         <PlayLanguage />
-      </>
+      </div>
     ),
   };
   const rows: readonly SetupListRow[] = setupRows.map((row) => ({

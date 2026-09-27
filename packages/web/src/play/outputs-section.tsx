@@ -1,6 +1,6 @@
 import type { Entry } from "@app/slices/library/model.js";
 import type { ReactElement } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/kit/button";
 import { useDraftLanguage } from "@/language/play-language";
 import { useDraftCast } from "./channel-picker";
 import { usePlaySession } from "./draft-context";
@@ -30,6 +30,7 @@ export function NarrationSection(
   return (
     <AudioRail
       {...props}
+      titled={false}
       cast={cast}
       language={language}
       rawCounts={{
@@ -69,11 +70,11 @@ export function NarrationSection(
           ))}
           <div className="col-span-full flex flex-wrap gap-2">
             {form.narrationPrompt ? (
-              <Button variant="ghost" onClick={() => props.onKeyword("llm")}>
+              <Button variant="quiet" size="small" onClick={() => props.onKeyword("llm")}>
                 Choose text generation under Article
               </Button>
             ) : null}
-            <Button variant="ghost" onClick={props.onSettings}>
+            <Button variant="quiet" size="small" onClick={props.onSettings}>
               Settings
             </Button>
           </div>
@@ -89,6 +90,7 @@ export function ImagesSection(props: RailProps): ReactElement {
   return (
     <ImagesRail
       {...props}
+      titled={false}
       more={<ImageScaleControl document={document} problem={props.problem} onEdit={session.edit} />}
       rawNumbers={{
         values: document.form.imagePrompts,
@@ -119,6 +121,7 @@ export function VideoSection(
     <>
       <VideoRail
         {...props}
+        titled={false}
         extras={false}
         language={language}
         rawTiming={{
