@@ -169,6 +169,11 @@ it("shows costs and resolved text from one receipt without treating unknown char
   expect(
     within(screen.getByRole("dialog", { name: "Review" })).getByText("The supplied article."),
   ).not.toBeNull();
-  await userEvent.click(screen.getByText("Assumptions and stage details"));
-  expect(screen.getByText("Actual usage may differ")).not.toBeNull();
+  // The rail shows the total; the stages and their assumptions fold away under it.
+  const breakdown = screen.getByText("Cost by stage · 2 stages").closest("details");
+  expect(breakdown?.open).toBe(false);
+  expect(within(breakdown as HTMLElement).getByText("Known provider rate")).not.toBeNull();
+  await userEvent.click(screen.getByText("Cost by stage · 2 stages"));
+  expect(breakdown?.open).toBe(true);
+  expect(within(breakdown as HTMLElement).getByText("Actual usage may differ")).not.toBeNull();
 });

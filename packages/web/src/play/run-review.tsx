@@ -71,33 +71,38 @@ export function RunReview({
   const apiLow = estimates.reduce((n, e) => n + (e.apiLow ?? 0), 0);
   const apiHigh = estimates.reduce((n, e) => n + (e.apiHigh ?? 0), 0);
   const apiUnknown = estimates.reduce((n, e) => n + (e.apiUnknown ?? 0), 0);
+  if (estimates.length === 0) return <div />;
+  // The total is what decides a run; the stages, what each assumes and where the prices come
+  // from fold away under it.
   return (
-    <div className="flex flex-col gap-4">
-      {" "}
-      {estimates.length ? (
-        <>
-          <p className="text-title font-bold">
-            {unknown ? "Known subtotal: " : "Estimated total: "}
-            {money(low, high)}
-          </p>
-          {unknown ? (
-            <p className="text-body text-ink2">
-              Plus {unknown} stage charge{unknown === 1 ? "" : "s"} with unavailable pricing.
-            </p>
-          ) : null}
+    <div className="flex flex-col gap-2">
+      <p className="m-0 text-title-2 font-semibold">
+        {unknown ? "Known subtotal: " : "Estimated total: "}
+        {money(low, high)}
+      </p>
+      {unknown ? (
+        <p className="m-0 text-small text-ink-2">
+          Plus {unknown} stage charge{unknown === 1 ? "" : "s"} with unavailable pricing.
+        </p>
+      ) : null}
+      <details className="rounded-control border border-line px-3">
+        <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink-2">
+          Cost by stage · {rows.length} {rows.length === 1 ? "stage" : "stages"}
+        </summary>
+        <div className="flex flex-col gap-3 pt-1 pb-3">
           {onPlan ? (
-            <p className="text-body text-ink2">
+            <p className="m-0 text-small text-ink-2">
               {apiLow === 0 && apiHigh === 0
                 ? "CLI steps: $0 on your plan · no API price is listed for their models."
                 : `CLI steps: $0 on your plan · ~${money(apiLow, apiHigh)} via API${apiUnknown ? ` (plus ${String(apiUnknown)} with no API price)` : ""}.`}
             </p>
           ) : null}
-          <div className="divide-y divide-line">
+          <ul aria-label="Cost by stage" className="m-0 list-none divide-y divide-line p-0">
             {rows.map((r) => (
-              <div key={r.stage} className="py-2">
-                <div className="flex justify-between gap-4 text-body">
+              <li key={r.stage} className="py-2">
+                <div className="flex justify-between gap-4 text-small">
                   <span>{r.stage}</span>
-                  <span>
+                  <span className="text-right tabular-nums">
                     {r.onPlan === true
                       ? r.apiLow === null || r.apiHigh === null
                         ? "$0 on your plan · API price unknown"
@@ -107,30 +112,21 @@ export function RunReview({
                         : money(r.low, r.high)}
                   </span>
                 </div>
-              </div>
+                <p className="m-0 mt-0.5 text-label text-ink-3">{r.detail}</p>
+              </li>
             ))}
-          </div>
-          <details className="border-t border-line py-3">
-            <summary className="cursor-pointer text-small">Assumptions and stage details</summary>
-            <div className="mt-3 flex flex-col gap-2">
-              {rows.map((row) => (
-                <p key={row.stage} className="text-small text-ink2">
-                  {row.stage}: {row.detail}
-                </p>
-              ))}
-              {[...new Set(estimates.flatMap((estimate) => estimate.assumptions))].map((note) => (
-                <p key={note} className="text-small text-ink2">
-                  {note}
-                </p>
-              ))}
-            </div>
-          </details>
-          <p className="text-small text-ink3">
+          </ul>
+          {[...new Set(estimates.flatMap((estimate) => estimate.assumptions))].map((note) => (
+            <p key={note} className="m-0 text-small text-ink-2">
+              {note}
+            </p>
+          ))}
+          <p className="m-0 text-label text-ink-3">
             Catalogue verified {estimates[0]?.catalogueDate ?? "date unavailable"}. Batch rows show
             combined costs.
           </p>
-        </>
-      ) : null}
+        </div>
+      </details>
     </div>
   );
 }
