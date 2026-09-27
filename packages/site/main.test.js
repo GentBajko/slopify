@@ -387,7 +387,7 @@ describe("wireNextRelease", () => {
     expect(root.replaced).toEqual(["features"]);
   });
 
-  it("is off until 3.0 ships", () => {
-    expect(nextReleasePublished).toBe(false);
+  it("is on now that 3.0 has shipped", () => {
+    expect(nextReleasePublished).toBe(true);
   });
 });

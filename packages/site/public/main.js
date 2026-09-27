@@ -251,7 +251,7 @@ export function wireDonation(root, url) {
 // The 3.0 features are written down but not published: other work is still landing. They
 // ship inside an inert <template data-release>, which no browser renders and no screen
 // reader reads, and are put on the page only when this is true. Flip it at release time.
-export const nextReleasePublished = false;
+export const nextReleasePublished = true;
 
 export function wireNextRelease(root, published) {
   if (!published) return;
