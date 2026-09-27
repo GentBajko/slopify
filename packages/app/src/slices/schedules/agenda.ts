@@ -11,6 +11,7 @@ import {
   calendarMaxDays,
   type ScheduleSummary,
 } from "./schema.js";
+import { renderedTitle } from "./topic-list.js";
 
 // Enough for a run every day of the longest range, with room for a queue.
 const occurrencesMax = 1000;
@@ -71,7 +72,9 @@ function upcomingRuns(
       : paused
         ? nextOccurrence(schedule.cadence, schedule.timezone, now)
         : new Date(schedule.nextRunAt);
-  const templateName = deps.template(schedule.templateId, schedule.templateVersion)?.name ?? null;
+  const template = deps.template(schedule.templateId, schedule.templateVersion);
+  const templateName = template?.name ?? null;
+  const form = template?.document.form;
   const { items } = schedule;
   const generation = schedule.topicGeneration.mode;
   const held = generation === "hold" ? schedule.topics.held : 0;
@@ -79,6 +82,9 @@ function upcomingRuns(
   for (let k = 0; at !== null && at < to && k < occurrencesMax; k++) {
     if (generation === "off" && items.length > 0 && k >= items.length) break;
     const queuedTopic = items[k];
+    // Known for a queued topic, and for a run of the template as saved; a held or generated
+    // topic has no text yet.
+    const known = queuedTopic !== undefined || generation === "off";
     if (at >= from)
       runs.push({
         at: at.toISOString(),
@@ -99,6 +105,8 @@ function upcomingRuns(
               : k < items.length + held
                 ? "held"
                 : "generated",
+        renderedTitle:
+          form !== undefined && known ? renderedTitle(form, schedule, queuedTopic) : null,
       });
     if (schedule.cadence.kind === "once") break;
     at = nextOccurrence(schedule.cadence, schedule.timezone, new Date(at.valueOf() + 1000));

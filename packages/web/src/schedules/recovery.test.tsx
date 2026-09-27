@@ -11,15 +11,13 @@ import { freshDraftDocument } from "@/play/draft-state";
 import { SchedulesRoute } from "@/routes/schedules";
 import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
 
-// Pause, Resume, Cancel and Delete live in each row's "More" menu.
+// Edit, Pause or Resume, and Delete are visible on each row; Cancel sits in the picked
+// schedule's detail. Each is named for its schedule: "Pause Morning stories".
 async function choose(user: ReturnType<typeof userEvent.setup>, action: string): Promise<void> {
-  const [more] = await screen.findAllByRole("button", { name: /^More for / });
-  if (!more) throw new Error("no schedule row menu");
-  await user.click(more);
-  await user.click(await screen.findByRole("menuitem", { name: action }));
+  await user.click(await screen.findByRole("button", { name: `${action} Morning stories` }));
 }
 
-// The form opens in a drawer from the toolbar.
+// The form opens in place of the detail from the page header.
 async function openNew(user: ReturnType<typeof userEvent.setup>): Promise<void> {
   await user.click(await screen.findByRole("button", { name: "New schedule" }));
 }
@@ -62,7 +60,7 @@ it("shows schedules and sends a pause action with the current version", async ()
       "POST /api/schedules/22222222-2222-4222-8222-222222222222/pause": pause,
     }),
   );
-  await screen.findByText("Morning stories");
+  await screen.findByRole("button", { name: "Morning stories" });
   expect(screen.getByText(/Daily at 09:00/)).toBeTruthy();
   await choose(user, "Pause");
   await waitFor(() => expect(pause).toHaveBeenCalledOnce());
@@ -135,10 +133,7 @@ it("refreshes schedule state when an action commits but its response is lost", a
     "textContent",
     expect.stringContaining("Connection lost after save"),
   );
-  await user.click(
-    (await screen.findAllByRole("button", { name: /^More for / }))[0] as HTMLElement,
-  );
-  expect(await screen.findByRole("menuitem", { name: "Resume" })).toBeTruthy();
+  expect(await screen.findByRole("button", { name: "Resume Morning stories" })).toBeTruthy();
 });
 it("resolves one-off Run at in the selected timezone", async () => {
   const bodies: { cadence: { at: string } }[] = [];
@@ -224,7 +219,7 @@ it("edits the displayed version and retains values after conflict", async () => 
       [`PUT /api/schedules/${scheduleId}`]: update,
     }),
   );
-  await user.click(await screen.findByRole("button", { name: "Edit" }));
+  await user.click(await screen.findByRole("button", { name: "Edit Morning stories" }));
   await user.clear(screen.getByLabelText("Name"));
   await user.type(screen.getByLabelText("Name"), "Edited");
   await user.click(screen.getByRole("button", { name: "Save changes" }));
@@ -250,7 +245,7 @@ it("preserves pinned template version and keyword text during a title edit", asy
       [`PUT /api/schedules/${scheduleId}`]: update,
     }),
   );
-  await user.click(await screen.findByRole("button", { name: "Edit" }));
+  await user.click(await screen.findByRole("button", { name: "Edit Morning stories" }));
   expect(screen.getByRole("option", { name: "Stories · v1" })).toBeTruthy();
   await user.type(screen.getByLabelText("Name"), " edited");
   await user.click(screen.getByRole("button", { name: "Save changes" }));
@@ -344,7 +339,7 @@ it("keeps an older topic's saved values when the list is edited", async () => {
       [`PUT /api/schedules/${scheduleId}`]: update,
     }),
   );
-  await user.click(await screen.findByRole("button", { name: "Edit" }));
+  await user.click(await screen.findByRole("button", { name: "Edit Morning stories" }));
   const topics = screen.getByLabelText(/topics · next: A \| B/);
   await user.clear(topics);
   await user.type(topics, "A | B{Enter}Changed");
@@ -360,8 +355,8 @@ it.each(["completed", "canceled"])("does not offer Edit for a %s schedule", asyn
       "GET /api/project-templates": jsonAnswer({ templates: [] }),
     }),
   );
-  await screen.findByText("Morning stories");
-  expect(screen.getByRole("button", { name: "Edit" }).hasAttribute("disabled")).toBe(true);
+  const edit = await screen.findByRole("button", { name: "Edit Morning stories" });
+  expect(edit.hasAttribute("disabled")).toBe(true);
 });
 
 it("keeps deleted schedule history discoverable with project links and no live controls", async () => {
@@ -400,9 +395,10 @@ it("keeps deleted schedule history discoverable with project links and no live c
   expect(await screen.findByText(/No active schedules/)).toBeTruthy();
   await userEvent.setup().click(await screen.findByText(/^Deleted schedules ·/));
   expect(screen.getByText(/Deleted:/)).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
-  expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
-  await userEvent.setup().click(screen.getByRole("button", { name: "History" }));
+  expect(screen.queryByRole("button", { name: /^Edit / })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Delete / })).toBeNull();
+  // Picking the deleted schedule shows its run history beside the list.
+  await userEvent.setup().click(screen.getByRole("button", { name: "Morning stories" }));
   expect(await screen.findByText(/succeeded/)).toBeTruthy();
   expect(screen.getByRole("link", { name: "Project 1" }).getAttribute("href")).toBe(
     `/projects/${projectId}`,

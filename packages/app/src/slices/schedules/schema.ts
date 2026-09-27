@@ -189,6 +189,10 @@ export const calendarRunSchema = z
     index: z.number().int().nonnegative().nullable(),
     topic: z.string().nullable(),
     topicSource: z.enum(["queued", "held", "generated", "template"]),
+    // The project title this run will get, the way the scheduler builds it; null when it can't
+    // be known yet (a topic still to be approved or generated, or a deleted template). Older
+    // servers leave it out.
+    renderedTitle: z.string().nullable().default(null),
   })
   .strict()
   .readonly();
