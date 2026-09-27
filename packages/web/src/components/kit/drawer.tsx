@@ -65,7 +65,7 @@ export function Drawer({
       aria-labelledby={titleId}
       data-slot="drawer"
       className={cn(
-        "fixed top-12 right-0 bottom-0 z-30 flex w-full flex-col border-l border-line2 bg-panel shadow-[-12px_0_28px_-12px_var(--color-shadow)]",
+        "fixed top-0 right-0 bottom-0 z-50 flex w-full flex-col border-l border-line bg-raised shadow-[var(--shadow-dialog)]",
         width === "wide" ? "sm:w-[min(560px,100vw)]" : "sm:w-[min(440px,100vw)]",
         "data-[state=open]:animate-tick-in motion-reduce:animate-none",
         className,
