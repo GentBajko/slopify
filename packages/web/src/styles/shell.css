@@ -277,18 +277,6 @@
     color: #ece9e2;
     border-color: transparent;
   }
-  .sl-player video {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    display: block;
-    background: var(--color-screen);
-  }
-  .sl-player--portrait {
-    aspect-ratio: 9 / 16;
-  }
 
   /* Reading view: the table of contents sits beside the text on wide screens. */
   .sl-reading-layout {

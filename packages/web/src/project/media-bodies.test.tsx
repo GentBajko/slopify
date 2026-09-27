@@ -7,7 +7,7 @@ import { body, output, stage } from "@/routes/project-fixtures";
 import { renderApp, testDeps, testOrigin } from "@/test-app";
 import type { BodyProps } from "./body.js";
 import { ImagesBody } from "./body-images.js";
-import { VideoBody } from "./body-video.js";
+import { playerChapters, VideoBody } from "./body-video.js";
 import { revisionView } from "./revision-fixture.js";
 import type { Action } from "./use-actions.js";
 
@@ -103,4 +103,13 @@ it("plays the final video with the first thumbnail as its poster", () => {
   renderApp(<VideoBody {...given} stage={stage("video", "done")} />, testDeps({}));
   const player = screen.getByLabelText("Generated video", { selector: "video" });
   expect(player.getAttribute("poster")).toBe(url(thumbnails[1] as Output));
+});
+
+it("turns the YouTube chapters into the player's marks, fitted as YouTube takes them", () => {
+  expect(playerChapters("0:05 Intro\n1:00 The bowline\nA note\n2:30 Why it holds", 240)).toEqual([
+    { start: 0, title: "Intro" },
+    { start: 60, title: "The bowline" },
+    { start: 150, title: "Why it holds" },
+  ]);
+  expect(playerChapters("")).toEqual([]);
 });

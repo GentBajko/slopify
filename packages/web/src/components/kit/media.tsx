@@ -3,6 +3,7 @@ import { Dialog as DialogPrimitive } from "radix-ui";
 import type { KeyboardEvent, ReactElement, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { IconButton } from "./button.js";
+import { Player } from "./player.js";
 import { Lamp } from "./status.js";
 
 // Images and video live in a media frame: `screen` behind, a fixed aspect box so grids never
@@ -204,8 +205,13 @@ export function Lightbox({
               </div>
               <div className="sl-lightbox__stage">
                 {item.kind === "video" ? (
-                  // biome-ignore lint/a11y/useMediaCaption: generated narration has no caption track here; subtitles are burned in or shipped separately.
-                  <video key={item.src} src={item.src} poster={item.poster} controls />
+                  <Player
+                    key={item.src}
+                    src={item.src}
+                    label={item.alt}
+                    className="sl-lightbox__player"
+                    {...(item.poster === undefined ? {} : { poster: item.poster })}
+                  />
                 ) : (
                   <img key={item.src} src={item.src} alt={item.alt} />
                 )}
