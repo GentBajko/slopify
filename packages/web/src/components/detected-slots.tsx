@@ -22,7 +22,7 @@ export function DetectedSlots({
 }) {
   return (
     <>
-      <h2 className="engraved text-ink3">Detected slots</h2>
+      <h2 className="sl-kicker m-0">Detected slots</h2>
 
       {slots.length > 0 ? (
         <div className="flex flex-wrap gap-[6px]">
@@ -31,18 +31,18 @@ export function DetectedSlots({
           ))}
         </div>
       ) : body.trim() === "" ? (
-        <p className="text-small text-ink3">{"Slots appear here as you type {{name}}."}</p>
+        <p className="m-0 text-small text-ink-3">{"Slots appear here as you type {{name}}."}</p>
       ) : (
-        <p className="text-small text-ink2">{noSlots}</p>
+        <p className="m-0 text-small text-ink-2">{noSlots}</p>
       )}
 
       {lint.length === 0 ? null : (
         <div id={lintId} className="flex flex-col gap-[6px] border-t border-line pt-3">
-          <span className="engraved text-red">
+          <span className="sl-kicker text-danger">
             {lint.length === 1 ? "1 slot error" : `${String(lint.length)} slot errors`}
           </span>
           {lint.map((problem) => (
-            <span key={problem.message} className="text-small text-red">
+            <span key={problem.message} className="text-small text-danger">
               {problem.message}
             </span>
           ))}

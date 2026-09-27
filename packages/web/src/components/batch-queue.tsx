@@ -21,12 +21,9 @@ export function BatchQueue() {
   const projects = useQuery(projectsQuery(api));
   if (!queue.data?.queue.length) return null;
   return (
-    <section
-      aria-label="Video queue"
-      className="mb-4 overflow-hidden rounded-panel border border-line bg-panel"
-    >
+    <section aria-label="Video queue" className="mb-5 rounded-media border border-line bg-surface">
       <div className="flex min-h-10 items-center gap-2 border-b border-line px-4">
-        <h2 className="engraved text-ink3">Video queue · {queue.data.queue.length} remaining</h2>
+        <h2 className="sl-kicker m-0">Video queue · {queue.data.queue.length} remaining</h2>
         <InfoTip label="the video queue">
           <p>
             One batch video runs at a time. Pause holds the queue; failure or cancellation advances
@@ -65,7 +62,7 @@ export function BatchQueueCount() {
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="p-0">
-        <p className="border-b border-line px-3 py-2 text-small text-ink2">
+        <p className="border-b border-line px-3 py-2 text-small text-ink-2">
           One batch video runs at a time. Pause holds the queue; failure or cancellation advances
           it.
         </p>
@@ -89,13 +86,13 @@ function QueueList({
         return (
           <li key={entry.projectId} className="flex justify-between gap-3 py-1 text-small">
             <Link
-              className="truncate underline"
+              className="truncate"
               to="/projects/$projectId"
               params={{ projectId: entry.projectId }}
             >
               {i + 1}. {project?.title ?? "Video"}
             </Link>
-            <span className="shrink-0 text-ink2">
+            <span className="shrink-0 text-ink-2">
               {project?.status === "paused"
                 ? "Paused"
                 : entry.state === "active"

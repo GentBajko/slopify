@@ -4,10 +4,10 @@ import { cn } from "@/lib/utils";
 export type StatusTone = "info" | "error" | "warning" | "success";
 
 const tones: Readonly<Record<StatusTone, string>> = {
-  info: "text-ink2",
-  error: "text-red",
-  warning: "text-amber",
-  success: "text-done",
+  info: "text-ink-2",
+  error: "text-danger",
+  warning: "text-waiting",
+  success: "text-accent-ink",
 };
 
 // A reserved line for transient feedback. It is always rendered at the same height, empty or

@@ -21,7 +21,7 @@ export function InfoTip({
         type="button"
         aria-label={`About ${label}`}
         className={cn(
-          "inline-flex size-6 shrink-0 items-center justify-center rounded-full text-ink3 hover:bg-panel2 hover:text-ink",
+          "inline-flex size-6 shrink-0 items-center justify-center rounded-full text-ink-3 hover:bg-raised hover:text-ink",
           className,
         )}
       >

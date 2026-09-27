@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { StatusSlot } from "@/components/kit/action-bar";
+import { Button } from "@/components/kit/button";
 import { SavedTick } from "@/components/saved-tick";
-import { Button } from "@/components/ui/button";
 
 // The bar under an editor's sheet, pinned to the bottom of the viewport: Delete at the left
 // (its place kept even before there is a row to delete), then one status slot for the error,
@@ -36,10 +36,10 @@ export function EditorActions({
   return (
     <div
       data-slot="editor-actions"
-      className="sticky bottom-0 z-10 -mx-[18px] -mb-[18px] flex flex-wrap items-center gap-[10px] rounded-b-panel border-t border-line bg-panel px-[18px] py-3 shadow-[0_-6px_14px_-10px_var(--color-shadow)]"
+      className="sticky bottom-0 z-10 -mx-[18px] -mb-[18px] flex flex-wrap items-center gap-[10px] rounded-b-media border-t border-line bg-surface px-[18px] py-3 shadow-[0_-6px_14px_-10px_var(--color-shadow)]"
     >
       <Button
-        className="bg-transparent"
+        variant="destructive"
         onClick={onDelete}
         disabled={onDelete === undefined}
         aria-hidden={onDelete === undefined ? true : undefined}
