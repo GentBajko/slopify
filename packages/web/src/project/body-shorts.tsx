@@ -6,6 +6,7 @@ import { z } from "zod";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { InfoTip } from "@/components/kit/info-tip";
+import { FileLink } from "@/components/kit/link";
 import { MediaFrame } from "@/components/kit/media";
 import { Player } from "@/components/kit/player";
 import type { BodyProps } from "./body.js";
@@ -199,10 +200,10 @@ function ShortCard({
       <ReviewVerdict review={review} projectId={projectId} busy={state === "running"} />
       {/* The folder is the stage's one Open folder; each short only downloads here. */}
       {video !== undefined && media !== undefined ? (
-        <a href={media.url} download className="sl-btn sl-btn--quiet sl-btn--small self-start">
+        <FileLink href={media.url} download variant="quiet" size="small" className="self-start">
           <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
           Download
-        </a>
+        </FileLink>
       ) : null}
       {onRemake === undefined ? null : (
         <Button

@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/kit/button";
+import { Button, ButtonRow } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
 import { useToast } from "@/components/kit/toast";
 import { startedAt } from "@/lib/utils";
@@ -66,7 +66,7 @@ export function ReadyItem({ project }: { readonly project: ProjectListing }): Re
         <div className="text-small text-ink-2">
           {`${project.format} · finished ${startedAt(project.updatedAt)}${project.status === "partial" ? " · a step failed" : ""}`}
         </div>
-        <div className="sl-btn-row">
+        <ButtonRow>
           <PrepareUpload projectId={project.id} ready />
           <Button
             variant="quiet"
@@ -77,7 +77,7 @@ export function ReadyItem({ project }: { readonly project: ProjectListing }): Re
           >
             Mark uploaded
           </Button>
-        </div>
+        </ButtonRow>
       </div>
     </li>
   );

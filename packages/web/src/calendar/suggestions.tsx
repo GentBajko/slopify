@@ -1,6 +1,5 @@
 import type { ScheduleSummary } from "@app/slices/schedules/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { XIcon } from "lucide-react";
 import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
@@ -8,6 +7,7 @@ import { Button, IconButton } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { useCommand } from "@/components/kit/command-palette";
 import { InfoTip } from "@/components/kit/info-tip";
+import { TextLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
@@ -47,9 +47,7 @@ export function SuggestedTopics({
             suggestions wait here for you.
           </p>
           <div>
-            <Button asChild variant="secondary" size="small">
-              <Link to="/schedules">Open schedules</Link>
-            </Button>
+            <TextLink to="/schedules">Open schedules</TextLink>
           </div>
         </>
       ) : (

@@ -6,6 +6,7 @@ import { Button } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Rule } from "@/components/kit/layout";
+import { FileLink } from "@/components/kit/link";
 import {
   type Aspect,
   Lightbox,
@@ -261,15 +262,16 @@ function ReferencePanel({
             ? {}
             : {
                 actions: (
-                  <a
+                  <FileLink
                     href={media.url}
                     download
-                    className="sl-btn sl-btn--secondary sl-btn--small"
                     aria-label="Download the establishing image"
+                    variant="secondary"
+                    size="small"
                   >
                     <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
                     Download
-                  </a>
+                  </FileLink>
                 ),
               })}
         />
@@ -411,15 +413,16 @@ function ImageTile({
               Regenerate
             </Button>
             {media === undefined ? null : (
-              <a
+              <FileLink
                 href={media.url}
                 download
-                className="sl-btn sl-btn--secondary sl-btn--small"
                 aria-label={`Download ${name}`}
                 title={`Download ${name}`}
+                variant="secondary"
+                size="small"
               >
                 <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
-              </a>
+              </FileLink>
             )}
             {card ? null : (
               <Button

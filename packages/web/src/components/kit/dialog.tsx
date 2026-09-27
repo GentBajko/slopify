@@ -18,9 +18,13 @@ export function Dialog({
   footer,
   children,
   className,
+  dismissible = true,
 }: {
   readonly open: boolean;
-  readonly onOpenChange: (open: boolean) => void;
+  readonly onOpenChange?: (open: boolean) => void;
+  // false for a dialog whose one action is the only way on (the first-run notice, a stale
+  // tab): Esc and the scrim leave it open.
+  readonly dismissible?: boolean;
   readonly title: string;
   readonly description?: ReactNode;
   // The buttons, primary last: [Cancel] [Delete 3 images].
@@ -29,9 +33,15 @@ export function Dialog({
   readonly className?: string;
 }): ReactElement {
   return (
-    <DialogRoot open={open} onOpenChange={onOpenChange}>
+    <DialogRoot open={open} {...(onOpenChange === undefined ? {} : { onOpenChange })}>
       <DialogContent
         className={className}
+        {...(dismissible
+          ? {}
+          : {
+              onEscapeKeyDown: (event: Event) => event.preventDefault(),
+              onInteractOutside: (event: Event) => event.preventDefault(),
+            })}
         {...(description === undefined ? { "aria-describedby": undefined } : {})}
       >
         <DialogTitle>{title}</DialogTitle>

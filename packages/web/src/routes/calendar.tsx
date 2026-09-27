@@ -25,6 +25,7 @@ import { Button, IconButton } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
+import { TextLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { Status, type Tone } from "@/components/kit/status";
@@ -228,9 +229,7 @@ export function CalendarRoute(): ReactElement {
                 { value: "list", label: "List" },
               ]}
             />
-            <Button asChild variant="secondary">
-              <Link to="/schedules">Edit schedules</Link>
-            </Button>
+            <TextLink to="/schedules">Edit schedules</TextLink>
             <Button variant="primary" onClick={() => setAdding(true)}>
               <PlusIcon aria-hidden="true" strokeWidth={1.75} />
               Add to calendar

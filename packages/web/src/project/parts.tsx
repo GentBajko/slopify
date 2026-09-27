@@ -9,6 +9,7 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
+import { FileLink } from "@/components/kit/link";
 import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/kit/menu";
 import { readText } from "@/http";
 import { cn } from "@/lib/utils";
@@ -186,10 +187,10 @@ export function DownloadLink({
   if (media === undefined) return null;
   return (
     <span className="inline-flex flex-wrap items-center gap-x-1 gap-y-1">
-      <a href={media.url} download className="sl-btn sl-btn--quiet sl-btn--small">
+      <FileLink href={media.url} download variant="quiet" size="small">
         <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
         {label}
-      </a>
+      </FileLink>
       <OpenFolder projectId={projectId} asset={asset} folder={media.folder} />
     </span>
   );
@@ -206,10 +207,10 @@ export function OutputDownload({
   if (media === undefined) return null;
   return (
     <span className="inline-flex flex-wrap items-center gap-x-1 gap-y-1">
-      <a href={media.url} download className="sl-btn sl-btn--quiet sl-btn--small">
+      <FileLink href={media.url} download variant="quiet" size="small">
         <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
         {label ?? "Download"}
-      </a>
+      </FileLink>
       <OpenFolder projectId={output.projectId} asset={assetOf(output)} folder={media.folder} />
     </span>
   );

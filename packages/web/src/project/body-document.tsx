@@ -1,5 +1,6 @@
 import { documentThemeLabel } from "@app/slices/document/model.js";
 import { ExternalLink } from "lucide-react";
+import { FileLink } from "@/components/kit/link";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { ActionRow, EngravedLabel, OutputDownload, StageBody } from "./parts.js";
@@ -25,15 +26,16 @@ export function DocumentBody({ stage, project, outputs }: BodyProps) {
         {/* Only a revision's file answers `inline=1`; the older project-file route always
             downloads. */}
         {media?.folder ? (
-          <a
+          <FileLink
             href={`${media.url}?inline=1`}
             target="_blank"
             rel="noopener"
-            className="sl-btn sl-btn--secondary sl-btn--small"
+            variant="secondary"
+            size="small"
           >
             <ExternalLink aria-hidden="true" strokeWidth={1.75} />
             Open PDF
-          </a>
+          </FileLink>
         ) : null}
         {pdf === undefined ? null : <OutputDownload output={pdf} label="Download PDF" />}
       </ActionRow>

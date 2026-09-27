@@ -1,22 +1,20 @@
 import { CircleHelpIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, IconButton } from "@/components/kit/button";
 import { useTutorial } from "./context";
 
 export function TutorialLauncher() {
   const tutorial = useTutorial();
   if (!tutorial) return null;
   return (
-    <button
-      type="button"
-      className="flex shrink-0 items-center gap-[6px] whitespace-nowrap text-ink2 hover:text-ink"
+    <IconButton
+      label="Start interactive tutorial"
+      className="shrink-0"
       onClick={tutorial.start}
       disabled={tutorial.active}
-      aria-label="Start interactive tutorial"
-      title="Start interactive tutorial"
+      disabledReason="The tutorial is already running"
     >
-      <CircleHelpIcon className="size-4" aria-hidden="true" />
-      <span className="sr-only">Tutorial</span>
-    </button>
+      <CircleHelpIcon aria-hidden="true" strokeWidth={1.75} />
+    </IconButton>
   );
 }
 
@@ -32,7 +30,7 @@ export function TutorialInvite() {
           highlights the real controls you will use.
         </p>
       </div>
-      <Button variant="accent" onClick={tutorial.start}>
+      <Button variant="secondary" onClick={tutorial.start}>
         Start tutorial
       </Button>
     </div>

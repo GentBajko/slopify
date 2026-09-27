@@ -5,6 +5,7 @@ import { type ReactElement, useState } from "react";
 import { Button } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
+import { FileLink } from "@/components/kit/link";
 import { Lightbox, type LightboxItem, MediaFrame } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
 import { cn } from "@/lib/utils";
@@ -177,15 +178,16 @@ function ThumbnailVariant({
                     Regenerate
                   </Button>
                   {media === undefined ? null : (
-                    <a
+                    <FileLink
                       href={media.url}
                       download
-                      className="sl-btn sl-btn--secondary sl-btn--small"
                       aria-label={`Download ${name}`}
                       title={`Download ${name}`}
+                      variant="secondary"
+                      size="small"
                     >
                       <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
-                    </a>
+                    </FileLink>
                   )}
                 </>
               ),

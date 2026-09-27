@@ -4,8 +4,9 @@ import { Link } from "@tanstack/react-router";
 import { ListVideoIcon } from "lucide-react";
 import type { ProjectListing } from "@/api";
 import { useApp } from "@/app-context";
+import { Button } from "@/components/kit/button";
 import { InfoTip } from "@/components/kit/info-tip";
-import { Button } from "@/components/ui/button";
+import { SectionHead } from "@/components/kit/section-head";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { helpEntry } from "@/help/catalog";
 import { read } from "@/http";
@@ -23,10 +24,12 @@ export function BatchQueue() {
   if (!queue.data?.queue.length) return null;
   return (
     <section aria-label="Video queue" className="mb-5 rounded-media border border-line bg-surface">
-      <div className="flex min-h-10 items-center gap-2 border-b border-line px-4">
-        <h2 className="sl-kicker m-0">Video queue · {queue.data.queue.length} remaining</h2>
-        <InfoTip id="play.queue" />
-      </div>
+      <SectionHead
+        title={`Video queue · ${String(queue.data.queue.length)} remaining`}
+        info="play.queue"
+        size="small"
+        className="min-h-10 items-center border-b border-line px-4 py-2"
+      />
       <QueueList queue={queue.data.queue} projects={projects.data?.projects} />
     </section>
   );
@@ -49,7 +52,7 @@ export function BatchQueueCount() {
     <Popover>
       <PopoverTrigger asChild>
         <Button
-          variant="ghost"
+          variant="quiet"
           disabled={count === 0}
           aria-label={`Video queue: ${count} remaining`}
         >

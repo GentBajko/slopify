@@ -5,6 +5,7 @@ import { Button, ButtonRow, PlayKey } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { Field, Input } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
+import { SectionHead } from "@/components/kit/section-head";
 import type { Blocker } from "./admission";
 import { usePlaySession } from "./draft-context";
 import { pageVideos, pendingReviewUpload, startLabel } from "./review-state";
@@ -103,10 +104,7 @@ export function StartRail({
           </span>
         </div>
         <div className="flex min-w-0 flex-col gap-2">
-          <h2 className="m-0 flex items-center gap-1 text-title-3">
-            Estimated cost
-            <InfoTip id="play.estimate" />
-          </h2>
+          <SectionHead title="Estimated cost" info="play.estimate" size="small" className="pb-0" />
           {review.valid && review.receipt ? (
             <RunReview estimates={review.receipt.estimates} />
           ) : (
@@ -159,13 +157,19 @@ export function StartRail({
               {reason.text}
             </span>
           ) : (
-            <button
-              type="button"
-              className="border-0 bg-transparent p-0 text-center text-waiting underline-offset-2 hover:underline"
-              onClick={() => onReveal(reason.field ?? "")}
-            >
-              {reason.text}
-            </button>
+            <span className="inline-flex flex-wrap items-center justify-center gap-x-1">
+              <span id="play-start-field" className="text-waiting">
+                {reason.text}
+              </span>
+              <Button
+                variant="quiet"
+                size="small"
+                aria-describedby="play-start-field"
+                onClick={() => onReveal(reason.field ?? "")}
+              >
+                Go to the field
+              </Button>
+            </span>
           )}
         </div>
         <ButtonRow className="justify-center">

@@ -1,15 +1,16 @@
 import type { SampleId } from "@app/slices/onboarding/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { type FormEvent, type ReactElement, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { AutostartOffer } from "@/autostart/autostart-settings";
 import { ActionBar, StatusSlot } from "@/components/kit/action-bar";
+import { Button } from "@/components/kit/button";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { ButtonLink, TextLink } from "@/components/kit/link";
 import { PageBar } from "@/components/kit/page-bar";
 import { SectionHead } from "@/components/kit/section-head";
 import { Rail, RailGroup } from "@/components/rail";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Picker } from "@/components/ui/picker";
 import {
@@ -112,7 +113,7 @@ export function WelcomeRoute(): ReactElement {
         title="Welcome to Slopify"
         meta="Make a video from a topic, with the tools already on this computer."
         actions={
-          <Button variant="ghost" disabled={skip.isPending} onClick={() => skip.mutate()}>
+          <Button variant="quiet" disabled={skip.isPending} onClick={() => skip.mutate()}>
             Skip
           </Button>
         }
@@ -196,17 +197,13 @@ export function WelcomeRoute(): ReactElement {
                 <span className="text-small text-ink2">{one.summary}</span>
               </span>
               {projectId === null ? (
-                <Button asChild variant="ghost">
-                  <Link to="/settings" search={{ section: "storage" }}>
-                    Restore samples in Settings
-                  </Link>
-                </Button>
+                <TextLink to="/settings" search={{ section: "storage" }}>
+                  Restore samples in Settings
+                </TextLink>
               ) : (
-                <Button asChild>
-                  <Link to="/projects/$projectId" params={{ projectId }}>
-                    {one.action}
-                  </Link>
-                </Button>
+                <ButtonLink to="/projects/$projectId" params={{ projectId }}>
+                  {one.action}
+                </ButtonLink>
               )}
             </Rail>
           );
@@ -234,9 +231,7 @@ export function WelcomeRoute(): ReactElement {
       </RailGroup>
 
       <ActionBar status={<StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>}>
-        <Button asChild variant="ghost">
-          <Link to="/play">Set up a long video instead</Link>
-        </Button>
+        <TextLink to="/play">Set up a long video instead</TextLink>
       </ActionBar>
     </div>
   );

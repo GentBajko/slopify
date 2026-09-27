@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
 import { Drawer } from "@/components/kit/drawer";
+import { TextLink } from "@/components/kit/link";
 import { noticeQuery } from "@/queries";
 import { useTutorial } from "@/tutorial/context";
 import { whatsNewQuery, whatsNewTours } from "@/whats-new/tour";
@@ -56,11 +57,9 @@ export function PatchNotesPopup(): ReactElement | null {
       onClose={close}
       footer={
         <>
-          <Button asChild variant="quiet">
-            <Link to="/settings" search={{ section: "patch-notes" }} onClick={close}>
-              See all patch notes
-            </Link>
-          </Button>
+          <TextLink to="/settings" search={{ section: "patch-notes" }} onClick={close}>
+            See all patch notes
+          </TextLink>
           <span className="flex-1" />
           <Button variant="primary" disabled={dismiss.isPending} onClick={close}>
             Close notes

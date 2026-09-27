@@ -1,12 +1,13 @@
 import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
 import type { LimitWait } from "@app/slices/run-cost/panel.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { type ReactElement, type ReactNode, useRef, useState } from "react";
 import { useApp } from "@/app-context";
-import { Button, buttonClass } from "@/components/kit/button";
+import { Button } from "@/components/kit/button";
 import { Callout, type CalloutTone } from "@/components/kit/callout";
 import { ConfirmDialog } from "@/components/kit/dialog";
+import { ButtonLink } from "@/components/kit/link";
 import { NextAction as NextActionCard } from "@/components/kit/next-action";
 import { sentence } from "@/http";
 import { copySample } from "@/onboarding/api";
@@ -206,13 +207,14 @@ function ActionButton({
   const intent = action.intent;
   if (intent.kind === "open-settings")
     return (
-      <Link
+      <ButtonLink
         to="/settings"
         search={{ section: intent.section }}
-        className={`${buttonClass({ variant })} ${className ?? ""}`}
+        variant={variant}
+        {...(className === undefined ? {} : { className })}
       >
         {action.label}
-      </Link>
+      </ButtonLink>
     );
   const label = state.pending ? (busyLabel(intent) ?? action.label) : action.label;
   return (

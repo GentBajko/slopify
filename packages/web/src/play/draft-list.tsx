@@ -1,12 +1,13 @@
 import type { DraftSummary } from "@app/slices/play-drafts/model.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDownIcon } from "lucide-react";
+import { ChevronDownIcon, Trash2Icon } from "lucide-react";
 import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
-import { ConfirmDialog } from "@/components/confirm";
+import { Button, IconButton } from "@/components/kit/button";
+import { ConfirmDialog } from "@/components/kit/dialog";
 import { InfoTip } from "@/components/kit/info-tip";
+import { List, ListRow } from "@/components/kit/list-row";
 import { useToast } from "@/components/kit/toast";
-import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn, startedAt } from "@/lib/utils";
 import { listPlayDrafts } from "./draft-api";
@@ -74,7 +75,7 @@ export function DraftList(): ReactElement {
       </p>
       {session.status === "error" ? (
         <Button
-          variant="ghost"
+          variant="quiet"
           onClick={() => {
             if (!session.view && session.activeId && session.edited === 0)
               void session.open(session.activeId);
@@ -87,14 +88,14 @@ export function DraftList(): ReactElement {
       {session.status === "conflict" ? (
         <>
           <Button
-            variant="ghost"
+            variant="quiet"
             onClick={() => {
               if (session.activeId) void session.open(session.activeId);
             }}
           >
             Reload saved draft
           </Button>
-          <Button variant="ghost" onClick={() => void session.saveAsNew()}>
+          <Button variant="quiet" onClick={() => void session.saveAsNew()}>
             Save as a new draft
           </Button>
           <InfoTip id="play.draft-conflict" />
@@ -102,7 +103,7 @@ export function DraftList(): ReactElement {
       ) : null}
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="ghost">
+          <Button variant="quiet">
             Drafts
             <ChevronDownIcon aria-hidden="true" className="size-4" />
           </Button>
@@ -116,7 +117,7 @@ export function DraftList(): ReactElement {
           {list.error ? (
             <p role="alert" className="px-3 py-2 text-red">
               {list.error.message}{" "}
-              <Button variant="ghost" onClick={() => void list.refetch()}>
+              <Button variant="quiet" onClick={() => void list.refetch()}>
                 Retry
               </Button>
             </p>
@@ -127,51 +128,48 @@ export function DraftList(): ReactElement {
               {error}
             </p>
           ) : null}
-          <ul className="max-h-72 overflow-y-auto">
-            {list.data?.map((draft) => (
-              <li
-                key={draft.id}
-                className="flex flex-wrap items-center gap-2 border-t border-line px-3 py-2 first:border-t-0"
-              >
-                <div className="min-w-0 flex-1">
-                  <button
-                    type="button"
-                    className="w-full break-words text-left text-ink hover:underline"
-                    onClick={() => void session.open(draft.id)}
-                  >
-                    <span className="block">{draft.title || "Untitled draft"}</span>
-                  </button>
-                  <time dateTime={draft.updatedAt} className="block text-label text-ink3">
-                    Last edited {startedAt(draft.updatedAt)}
-                  </time>
-                </div>
-                {!draft.readable ? (
-                  <p className="basis-full text-label text-amber">
-                    Unsupported or corrupt draft. Try opening it to recover, or discard it.
-                  </p>
-                ) : null}
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setConfirm(draft);
-                    setError(null);
-                  }}
-                  aria-label={`Discard ${draft.title || "Untitled draft"}`}
+          {list.data?.length ? (
+            // The title opens the draft; Discard sits on the row.
+            <List label="Saved drafts" className="max-h-72 overflow-y-auto border-t-0">
+              {list.data.map((draft) => (
+                <ListRow
+                  key={draft.id}
+                  title={draft.title || "Untitled draft"}
+                  onSelect={() => void session.open(draft.id)}
+                  meta={
+                    <time dateTime={draft.updatedAt}>Last edited {startedAt(draft.updatedAt)}</time>
+                  }
+                  actions={
+                    <IconButton
+                      size="small"
+                      label={`Discard ${draft.title || "Untitled draft"}`}
+                      onClick={() => {
+                        setConfirm(draft);
+                        setError(null);
+                      }}
+                    >
+                      <Trash2Icon aria-hidden="true" />
+                    </IconButton>
+                  }
                 >
-                  Discard
-                </Button>
-              </li>
-            ))}
-          </ul>
+                  {draft.readable ? null : (
+                    <p className="m-0 text-label text-amber">
+                      Unsupported or corrupt draft. Try opening it to recover, or discard it.
+                    </p>
+                  )}
+                </ListRow>
+              ))}
+            </List>
+          ) : null}
         </PopoverContent>
       </Popover>
       <Button onClick={() => void session.newDraft()}>New draft</Button>
       <InfoTip id="play.drafts" />
       <ConfirmDialog
         open={confirm !== null}
-        title="Discard draft"
-        consequence={`Discard ${confirm?.title || "Untitled draft"}? This cannot be undone.`}
-        verb="Confirm discard"
+        title={`Discard ${confirm?.title || "Untitled draft"}?`}
+        consequence="The draft is removed. This cannot be undone."
+        confirmLabel="Discard draft"
         pending={busy}
         onConfirm={() => void discard()}
         onCancel={() => {

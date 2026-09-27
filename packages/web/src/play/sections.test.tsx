@@ -133,7 +133,8 @@ it("edits a provided article from the summary and preserves focus through autosa
   // The reason under the Play key names what is missing and goes to it.
   await userEvent.click(
     within(screen.getByRole("region", { name: "Start" })).getByRole("button", {
-      name: "Paste the article to play",
+      name: "Go to the field",
+      description: "Paste the article to play",
     }),
   );
   await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Article text")));

@@ -416,13 +416,9 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
   const feedback =
     refusal !== undefined ? (
       <Callout tone="danger" title={refusal.message}>
-        <button
-          type="button"
-          className="sl-btn sl-btn--quiet sl-btn--small mt-1"
-          onClick={actions.dismissRefusal}
-        >
+        <Button variant="quiet" size="small" className="mt-1" onClick={actions.dismissRefusal}>
           Dismiss
-        </button>
+        </Button>
       </Callout>
     ) : actions.notice !== undefined ? (
       <p role="status" className="m-0 text-small text-ink-2">

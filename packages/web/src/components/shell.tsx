@@ -16,7 +16,7 @@ import { useApp } from "@/app-context";
 import { useInstallKind } from "@/autostart/use-install-kind";
 import { ChannelPicker, CurrentChannelProvider, useCurrentChannel } from "@/channels/current";
 import { SupportGlyph } from "@/components/glyph";
-import { PlayKey } from "@/components/kit/button";
+import { IconButton, PlayKey } from "@/components/kit/button";
 import {
   CommandPaletteProvider,
   useCommand,
@@ -336,14 +336,13 @@ function ShellContent() {
               <span className="sl-wordmark__dot" aria-hidden="true" />
               <span className="max-[380px]:sr-only">Slopify</span>
             </Link>
-            <button
-              type="button"
-              aria-label="Search or run a command"
+            <IconButton
+              label="Search or run a command"
               onClick={() => palette.setOpen(true)}
-              className="sl-btn sl-btn--icon md:hidden"
+              className="md:hidden"
             >
               <SearchIcon {...iconProps} />
-            </button>
+            </IconButton>
             {running === 0 ? null : (
               <Link
                 to="/"

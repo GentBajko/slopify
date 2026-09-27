@@ -710,6 +710,20 @@
     flex-wrap: wrap;
     gap: 2px;
   }
+  .sl-row__body {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+  /* A link that reads as one (kit/link TextLink). */
+  .sl-link {
+    color: var(--color-accent-ink);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+  .sl-link:hover {
+    color: var(--color-ink);
+  }
 
   /* Stats */
   .sl-stats {

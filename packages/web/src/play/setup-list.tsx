@@ -1,6 +1,7 @@
 import type { ReactElement, ReactNode } from "react";
 import { Button } from "@/components/kit/button";
 import { Status } from "@/components/kit/status";
+import { SectionHead } from "@/components/kit/section-head";
 import type { SetupRowId } from "./setup-rows";
 
 export interface SetupListRow {
@@ -31,25 +32,26 @@ export function SetupList({
         const editorId = `play-row-${row.id}`;
         return (
           <li key={row.id} data-setup-row={row.id} className="border-b border-line">
-            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3.5">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <h2 className="m-0 text-title-3">{row.label}</h2>
-                  {row.problem ? <Status tone="failed">Needs setup</Status> : null}
-                </div>
-                {/* Folded, the row says what holds it back; open, the field itself says so. */}
-                <p
+            <SectionHead
+              title={row.label}
+              size="small"
+              className="items-center py-3.5"
+              status={row.problem ? <Status tone="failed">Needs setup</Status> : undefined}
+              meta={
+                // Folded, the row says what holds it back; open, the field itself says so.
+                <span
                   data-row-summary
                   className={
                     row.problem && !expanded
-                      ? "m-0 mt-0.5 text-small break-words text-danger"
-                      : "m-0 mt-0.5 truncate text-small text-ink-2"
+                      ? "block break-words text-danger"
+                      : "block truncate text-ink-2"
                   }
                   title={row.problem && !expanded ? undefined : row.summary}
                 >
                   {expanded ? row.summary : (row.problem ?? row.summary)}
-                </p>
-              </div>
+                </span>
+              }
+            >
               <Button
                 variant="quiet"
                 size="small"
@@ -60,7 +62,7 @@ export function SetupList({
               >
                 {expanded ? "Done" : "Change"}
               </Button>
-            </div>
+            </SectionHead>
             {expanded ? (
               <section id={editorId} aria-label={row.label} className="min-w-0 pb-6">
                 {row.editor}

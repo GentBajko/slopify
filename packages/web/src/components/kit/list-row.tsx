@@ -27,6 +27,7 @@ export function ListRow({
   selected = false,
   onSelect,
   className,
+  children,
 }: {
   // Plain text, or a router Link when the row opens a page.
   readonly title: ReactNode;
@@ -39,6 +40,8 @@ export function ListRow({
   // Makes the title a button that selects the row (list and detail).
   readonly onSelect?: () => void;
   readonly className?: string;
+  // What opens under the row across its full width: an inline editor, the row's details.
+  readonly children?: ReactNode;
 }): ReactElement {
   return (
     <li
@@ -64,6 +67,9 @@ export function ListRow({
         </div>
       </div>
       {actions === undefined ? null : <div className="sl-row__actions">{actions}</div>}
+      {children === undefined || children === null || children === false ? null : (
+        <div className="sl-row__body">{children}</div>
+      )}
     </li>
   );
 }

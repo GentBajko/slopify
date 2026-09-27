@@ -6,12 +6,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { removeProviderKey, saveProviderKey } from "@/api";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/kit/button";
+import { Button, ButtonRow } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Field, Input } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { Status } from "@/components/kit/status";
+import { SectionHead } from "@/components/kit/section-head";
 import { CliProviderDetail, cliState, providerTips } from "@/components/provider-cli";
 import { testKey } from "@/components/provider-upkeep-api";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
@@ -113,9 +114,12 @@ export function ProviderKeys() {
           className="grid items-start gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
         >
           <div className="min-w-0">
-            <h2 id={`keys-${family}-title`} className="sl-kicker m-0 mb-2">
-              {familyTitles[family]}
-            </h2>
+            <SectionHead
+              id={`keys-${family}-title`}
+              title={familyTitles[family]}
+              size="small"
+              className="pb-2"
+            />
             <List label={`${familyTitles[family]} providers`}>
               {listed
                 .filter((provider) => provider.family === family)
@@ -250,17 +254,16 @@ function KeyDetail({
       data-ready={hasKey}
       className="flex min-w-0 flex-col gap-5"
     >
-      <div>
-        <div className="flex items-center gap-2">
-          <h3 id={headingId} className="sl-section-head__title">
-            {hasKey ? provider.displayName : `Set up ${provider.displayName}`}
-          </h3>
-          <InfoTip id={providerTips[provider.id]} label={provider.displayName} />
-        </div>
-        <p className="sl-section-head__meta">
-          {familyTitles[provider.family]} · {hasKey ? "a key is saved" : "needs an API key"}
-        </p>
-      </div>
+      <SectionHead
+        as="h3"
+        size="default"
+        id={headingId}
+        title={hasKey ? provider.displayName : `Set up ${provider.displayName}`}
+        info={providerTips[provider.id]}
+        infoLabel={provider.displayName}
+        meta={`${familyTitles[provider.family]} · ${hasKey ? "a key is saved" : "needs an API key"}`}
+        className="pb-0"
+      />
 
       {guide === undefined ? null : hasKey ? (
         <details className="text-small text-ink-2">
@@ -321,7 +324,7 @@ function KeyDetail({
         </p>
       )}
 
-      <div className="sl-btn-row">
+      <ButtonRow>
         <Button
           aria-label={`Test ${provider.displayName} key`}
           disabled={!hasKey || testing}
@@ -344,7 +347,7 @@ function KeyDetail({
           Remove
         </Button>
         <span className="inline-flex w-[52px]">{saved ? <SavedTick /> : null}</span>
-      </div>
+      </ButtonRow>
 
       <ConfirmDialog
         open={asking}

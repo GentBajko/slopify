@@ -12,13 +12,14 @@ import {
   saveChannel,
 } from "@/channels/api";
 import { StatusSlot } from "@/components/kit/action-bar";
-import { Button, buttonClass } from "@/components/kit/button";
+import { Button } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
 import { ConfirmDialog, Dialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Field, Input } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
+import { TextLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 
 // Channels: one row per channel, each opening its page (brand kit, cast, templates,
@@ -127,14 +128,14 @@ export function ChannelsRoute(): ReactElement {
               } · ${String(channel.cast)} in the cast`}
               actions={
                 <>
-                  <Link
+                  <TextLink
                     to="/channels/$channelId"
                     params={{ channelId: channel.id }}
                     aria-label={`Open ${channel.name}`}
-                    className={buttonClass({ variant: "quiet", size: "small" })}
+                    className="px-2 text-small"
                   >
                     Open
-                  </Link>
+                  </TextLink>
                   <Button
                     variant="quiet"
                     size="small"

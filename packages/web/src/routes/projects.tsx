@@ -14,6 +14,7 @@ import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
 import { InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
+import { ButtonLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { Meter } from "@/components/kit/stats";
 import { Badge, Status, type Tone } from "@/components/kit/status";
@@ -153,12 +154,10 @@ export function ProjectsRoute(): ReactElement {
             : `${String(inChannel.length)} ${inChannel.length === 1 ? "project" : "projects"} · ${current.channel?.name ?? "every channel"}`
         }
         actions={
-          <Button asChild variant="primary">
-            <Link to="/play">
-              <PlusIcon aria-hidden="true" strokeWidth={1.75} />
-              New video
-            </Link>
-          </Button>
+          <ButtonLink to="/play" variant="primary">
+            <PlusIcon aria-hidden="true" strokeWidth={1.75} />
+            New video
+          </ButtonLink>
         }
       />
 
@@ -179,9 +178,9 @@ export function ProjectsRoute(): ReactElement {
         <EmptyState
           title="No projects yet"
           actions={
-            <Button asChild variant="primary">
-              <Link to="/play">Make your first video</Link>
-            </Button>
+            <ButtonLink to="/play" variant="primary">
+              Make your first video
+            </ButtonLink>
           }
         >
           Set up a run on Play: pick a template, type a topic and start.

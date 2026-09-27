@@ -2,10 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
 import { StatusSlot } from "@/components/kit/action-bar";
+import { Button } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
 import { InfoTip } from "@/components/kit/info-tip";
 import { Rail, RailGroup } from "@/components/rail";
-import { Button } from "@/components/ui/button";
 import { installPack, onboardingKey, readFirstRun } from "./api.js";
 
 // Library → Templates → Add pack: the four starter packs, each adding its prompts, a suggested

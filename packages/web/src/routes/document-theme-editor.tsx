@@ -10,11 +10,12 @@ import { previewDocumentTheme, removeDocumentTheme, saveDocumentTheme } from "@/
 import { useApp } from "@/app-context";
 import { EditorActions } from "@/components/editor-actions";
 import { EditorSkeleton } from "@/components/editor-states";
-import { Button } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Field, Input, Select, Textarea } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
+import { ButtonLink, FileLink } from "@/components/kit/link";
+import { SectionHead } from "@/components/kit/section-head";
 import { PdfPages } from "@/components/pdf-pages";
 import { useLeaveWhenSaved } from "@/components/saved-tick";
 import type { HelpId } from "@/help/catalog";
@@ -209,9 +210,9 @@ export function DocumentThemeEditorRoute({
             pending={save.isPending}
             saved={saved}
             cancel={
-              <Button asChild variant="secondary">
-                <Link to="/document-themes">Cancel</Link>
-              </Button>
+              <ButtonLink to="/document-themes" variant="secondary">
+                Cancel
+              </ButtonLink>
             }
             errors={[save.error, remove.error].flatMap((error) =>
               error === null ? [] : [error.message],
@@ -404,22 +405,13 @@ function Preview({ values }: { readonly values: DocumentTheme | undefined }) {
 
   return (
     <div className={editorAside}>
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="m-0 flex items-center gap-1 text-title-3 font-semibold">
-          Preview
-          <InfoTip id="library.theme.preview" />
-        </h2>
+      <SectionHead title="Preview" info="library.theme.preview" size="small" className="pb-0">
         {pdf === undefined ? null : (
-          <a
-            href={pdf.url}
-            target="_blank"
-            rel="noreferrer"
-            className="text-small text-accent-ink underline"
-          >
+          <FileLink href={pdf.url} target="_blank" rel="noreferrer" variant="quiet" size="small">
             Open full size
-          </a>
+          </FileLink>
         )}
-      </div>
+      </SectionHead>
       <div className="max-h-[calc(100vh-220px)] min-h-[320px] overflow-y-auto rounded-media border border-line bg-sunken p-3">
         <PdfPages
           data={pdf?.bytes}

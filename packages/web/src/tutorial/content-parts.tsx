@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/kit/button";
 
 export function External({
   href,

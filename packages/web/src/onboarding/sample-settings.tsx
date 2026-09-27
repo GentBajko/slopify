@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
 import { StatusSlot } from "@/components/kit/action-bar";
+import { Button } from "@/components/kit/button";
+import { TextLink } from "@/components/kit/link";
 import { SectionHead } from "@/components/kit/section-head";
 import { Rail, RailGroup } from "@/components/rail";
-import { Button } from "@/components/ui/button";
 import { keys } from "@/queries";
 import { onboardingKey, readSample, restoreSample, type SampleProjects, sampleKey } from "./api.js";
 
@@ -42,11 +42,9 @@ export function SampleSettings(): ReactElement {
                 {names[id]}: {projectId === null ? "not in your projects" : "in your projects"}
               </span>
               {projectId === null ? null : (
-                <Button asChild variant="ghost">
-                  <Link to="/projects/$projectId" params={{ projectId }}>
-                    Open
-                  </Link>
-                </Button>
+                <TextLink to="/projects/$projectId" params={{ projectId }}>
+                  Open
+                </TextLink>
               )}
             </Rail>
           );

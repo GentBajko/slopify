@@ -854,7 +854,8 @@ describe("explicit review error navigation", () => {
     // The reason under the key names the refusal and goes to the field.
     await userEvent.click(
       await within(screen.getByRole("region", { name: "Start" })).findByRole("button", {
-        name: "Complete the second video's topic.",
+        name: "Go to the field",
+        description: "Complete the second video's topic.",
       }),
     );
     const panel = await screen.findByRole("dialog", { name: "Video 2: Knot Tricks" });

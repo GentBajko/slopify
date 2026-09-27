@@ -11,7 +11,11 @@ export function SectionHead({
   kicker,
   meta,
   info,
+  infoLabel = title,
   as: Heading = "h2",
+  size = Heading === "h3" ? "small" : "default",
+  id,
+  status,
   className,
   children,
 }: {
@@ -21,7 +25,16 @@ export function SectionHead({
   readonly meta?: ReactNode;
   // The section's info button, from the help catalogue.
   readonly info?: HelpId;
+  // What the info button is "About", when that is not the title.
+  readonly infoLabel?: string;
   readonly as?: "h2" | "h3";
+  // "small" is the sub-head size (title-3), for a section inside a rail or a row; the heading
+  // level stays what `as` says.
+  readonly size?: "default" | "small";
+  // The heading's id, for a section that is `aria-labelledby` it.
+  readonly id?: string;
+  // A status beside the title: "Needs setup".
+  readonly status?: ReactNode;
   readonly className?: string;
   readonly children?: ReactNode;
 }): ReactElement {
@@ -30,10 +43,14 @@ export function SectionHead({
       <div className="min-w-0">
         {kicker === undefined ? null : <div className="sl-kicker">{kicker}</div>}
         <div className="flex items-center gap-2">
-          <Heading className={cn("sl-section-head__title", Heading === "h3" && "text-title-3")}>
+          <Heading
+            id={id}
+            className={cn("sl-section-head__title", size === "small" && "text-title-3")}
+          >
             {title}
           </Heading>
-          {info === undefined ? null : <InfoTip id={info} label={title} />}
+          {info === undefined ? null : <InfoTip id={info} label={infoLabel} />}
+          {status}
         </div>
         {meta === undefined ? null : <p className="sl-section-head__meta">{meta}</p>}
       </div>

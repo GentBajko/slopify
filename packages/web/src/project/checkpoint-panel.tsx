@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ComponentProps, type ReactElement, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
+import { SectionHead } from "@/components/kit/section-head";
 import { sentence } from "@/http";
 import { keys } from "@/queries";
 import {
@@ -86,7 +87,7 @@ function CurrentCheckpoints({
     );
   return (
     <section aria-label="Review checkpoints" className="flex flex-col gap-5">
-      <h2 className="sl-section-head__title m-0 text-title-3">Review checkpoints</h2>
+      <SectionHead title="Review checkpoints" size="small" className="pb-0" />
       {paused ? (
         <p className="m-0 text-small text-waiting">
           The project is paused. Continue the run before approving held work.
@@ -209,7 +210,7 @@ function Gate({
   }
   return (
     <div className="flex flex-col gap-2 border-t border-line pt-4">
-      <h3 className="m-0 text-title-3">{label(gate.stage)} checkpoint</h3>
+      <SectionHead as="h3" title={`${label(gate.stage)} checkpoint`} className="pb-0" />
       <p className="m-0 text-small text-ink-2">
         {gate.state === "released" && gate.approvedAt !== null
           ? "Authorized for this revision. Work can run when dependencies are ready and the project is resumed."

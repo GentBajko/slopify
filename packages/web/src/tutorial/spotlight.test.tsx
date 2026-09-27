@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ConfirmDialog } from "@/components/confirm";
+import { ConfirmDialog } from "@/components/kit/dialog";
 import {
   Select,
   SelectContent,
@@ -408,7 +408,7 @@ describe("interactive spotlight", () => {
               open={open}
               title="Remove this voice?"
               consequence="Existing audio stays."
-              verb="Remove"
+              confirmLabel="Remove"
               onConfirm={onConfirm}
               onCancel={() => setOpen(false)}
             />
