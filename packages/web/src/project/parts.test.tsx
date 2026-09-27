@@ -76,8 +76,8 @@ describe("an article read back as prose", () => {
 
 describe("taking the article's own title off the top", () => {
   it("splits a leading heading off and keeps the rest as markdown", () => {
-    const split = splitTitle("## The Archlich\n\nBody.");
-    expect(split.title).toBe("The Archlich");
+    const split = splitTitle("## The Pharaoh\n\nBody.");
+    expect(split.title).toBe("The Pharaoh");
     expect(split.body).toBe("Body.");
   });
 
@@ -106,15 +106,15 @@ describe("taking the article's own title off the top", () => {
   });
 
   it("hands the title over with its inline markup intact, for the renderer to typeset", () => {
-    expect(splitTitle("# The **Archlich**").title).toBe("The **Archlich**");
+    expect(splitTitle("# The **Pharaoh**").title).toBe("The **Pharaoh**");
   });
 });
 
 describe("the title line", () => {
   it("typesets its emphasis instead of showing the markers", () => {
-    const { container } = render(<InlineProse markdown="The **Archlich**" />);
-    expect(container.textContent).toBe("The Archlich");
-    expect(container.querySelector("strong")?.textContent).toBe("Archlich");
+    const { container } = render(<InlineProse markdown="The **Pharaoh**" />);
+    expect(container.textContent).toBe("The Pharaoh");
+    expect(container.querySelector("strong")?.textContent).toBe("Pharaoh");
   });
 
   it("stays on one line, with no block of its own", () => {

@@ -93,7 +93,7 @@ describe("brand kit defaults", () => {
       position: "bottom",
     },
   } as unknown as RunDraft;
-  const cast = [{ name: "Tiamat", aliases: [], description: "", images: ["a".repeat(64)] }];
+  const cast = [{ name: "Cleopatra", aliases: [], description: "", images: ["a".repeat(64)] }];
 
   it("adds caption colours, the title style, the end screen, the channel and the cast", () => {
     expect(brandedRun(draft, channel, cast, true)).toMatchObject({
@@ -162,12 +162,12 @@ describe("runs from a channel", () => {
         baseVersion: 1,
       });
       const member = randomUUID();
-      createCastMember(h.deps, id, { id: member, kind: "creature", name: "Tiamat" });
+      createCastMember(h.deps, id, { id: member, kind: "creature", name: "Cleopatra" });
       // A member without a finished picture is left out.
-      createCastMember(h.deps, id, { id: randomUUID(), kind: "place", name: "Avernus" });
+      createCastMember(h.deps, id, { id: randomUUID(), kind: "place", name: "Memphis" });
       uploadCastImage(h.deps, member, png);
       expect(castSnapshot(h.deps.db, id)).toEqual([
-        { name: "Tiamat", aliases: [], description: "", images: [expect.any(String)] },
+        { name: "Cleopatra", aliases: [], description: "", images: [expect.any(String)] },
       ]);
       const draftId = randomUUID();
       must(createDraft(h.deps, { id: draftId, document: { ...h.document, channelId: id } }));
@@ -176,7 +176,7 @@ describe("runs from a channel", () => {
         channelId: id,
         endScreen: { text: "Subscribe" },
         titleStyle: { color: "#FFD700" },
-        cast: [{ name: "Tiamat" }],
+        cast: [{ name: "Cleopatra" }],
       });
       const plainId = randomUUID();
       must(createDraft(h.deps, { id: plainId, document: h.document }));

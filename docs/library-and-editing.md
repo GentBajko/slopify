@@ -147,7 +147,7 @@ On Play the preview is drawn on a real picture when there is one, so the Look an
 judged on something like the video's own images: the establishing image the draft uploaded
 (Images → Establishing image → Upload, or the one a template brings along), else a picture of
 the channel's cast member the title or a keyword names, else the first cast member with a
-picture. The rail says which ("Drawn on Tiamat's picture"). The server reads it from the
+picture. The rail says which ("Drawn on Cleopatra's picture"). The server reads it from the
 upload, the project output or the cast picture itself (`slices/style-preview/images.ts`); the
 request can also name a project's own output, for Edit project. A picture the server can no
 longer find, or a file that is not a PNG, JPEG or WebP, falls back to the sample's images.

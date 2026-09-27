@@ -238,7 +238,7 @@ it("names the pronunciations a speaker's narration would skip and clears once th
     nativeDialogue: false,
     audioFiles: false,
   });
-  const rows = "Arda: /ˈɑɹdə/\nTiamat: TEE-ah-mat\nGarcia: /ɡɑɹˈçiə/";
+  const rows = "Arda: /ˈɑɹdə/\nCleopatra: klee-oh-PAT-ruh\nGarcia: /ɡɑɹˈçiə/";
   const view = renderRouted(
     <Subject language="en" initial={withPronunciations(rows)} />,
     testDeps({}),
@@ -250,7 +250,7 @@ it("names the pronunciations a speaker's narration would skip and clears once th
   expect(notice.textContent).toContain("Entry 3: use standard-English IPA only");
   expect(notice.textContent).toContain("Fix them in Pronunciations for Alex above");
   // The row's own text is never echoed back.
-  expect(notice.textContent).not.toContain("TEE-ah-mat");
+  expect(notice.textContent).not.toContain("klee-oh-PAT-ruh");
   // Fixing the rows clears the notice.
   const field = screen.getByLabelText("Pronunciations for Alex");
   await user.clear(field);

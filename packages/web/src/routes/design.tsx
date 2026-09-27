@@ -42,28 +42,32 @@ function art(hue: number, label: string, w = 1600, h = 900): string {
 }
 
 const images: readonly LightboxItem[] = [
-  { src: art(20, "Tiamat over Avernus"), alt: "Tiamat over Avernus", caption: "0:00–4:10" },
-  { src: art(200, "The five heads"), alt: "The five heads", caption: "4:10–9:32" },
-  { src: art(120, "The Well of Dragons"), alt: "The Well of Dragons", caption: "9:32–15:05" },
-  { src: art(280, "Bahamut"), alt: "Bahamut", caption: "15:05–21:40" },
+  { src: art(20, "Cleopatra over Memphis"), alt: "Cleopatra over Memphis", caption: "0:00–4:10" },
+  { src: art(200, "The five palaces"), alt: "The five palaces", caption: "4:10–9:32" },
+  {
+    src: art(120, "The Valley of the Kings"),
+    alt: "The Valley of the Kings",
+    caption: "9:32–15:05",
+  },
+  { src: art(280, "Ptolemy"), alt: "Ptolemy", caption: "15:05–21:40" },
 ];
 
-const article = `The Queen of Evil Dragons has five heads and one patience.
+const article = `The last queen of Egypt had five palaces and one patience.
 
 ## Origins
 
-In the Nine Hells, **Tiamat** waits. Search for "Tiamat" to see highlighting.
+In the Nile delta, **Cleopatra** waits. Search for "Cleopatra" to see highlighting.
 
-## The five heads
+## The five palaces
 
-Each head breathes its own ruin: fire, frost, lightning, acid and poison.
+Each palace kept its own treasure: gold, cedar, linen, lapis and papyrus.
 
-- White for frost
-- Red for fire
+- White for linen
+- Blue for lapis
 
 ## Her return
 
-Every cult of the dragon has one goal: to open the way for \`{{Topic}}\` to return.
+Every temple of the goddess has one goal: to open the way for \`{{Topic}}\` to return.
 `;
 
 type Theme = "system" | "dark" | "light";
@@ -125,7 +129,7 @@ export function DesignRoute(): ReactElement {
   const [dialog, setDialog] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [section, setSection] = useState("images");
-  const [selected, setSelected] = useState("tiamat");
+  const [selected, setSelected] = useState("cleopatra");
 
   useCommand({
     id: "design.toast",
@@ -167,8 +171,8 @@ export function DesignRoute(): ReactElement {
         title="Type"
         meta="display, title-1, title-2, title-3, body, small, label, counter, code"
       >
-        <p className="sl-display">Lore To Sleep To</p>
-        <p className="sl-title-1">D&amp;D Lore: Tiamat</p>
+        <p className="sl-display">History at Bedtime</p>
+        <p className="sl-title-1">History: Cleopatra</p>
         <p className="m-0 text-title-2 font-semibold">Images</p>
         <p className="m-0 text-title-3 font-semibold">Establishing image</p>
         <p className="m-0 text-body">
@@ -237,13 +241,13 @@ export function DesignRoute(): ReactElement {
       <Specimen title="Fields" meta="label, help, error; input, select, textarea">
         <div className="grid gap-5 md:grid-cols-2">
           <Field label="Title" help="Shown on YouTube and in the library.">
-            <Input defaultValue="D&D Lore: Tiamat" />
+            <Input defaultValue="History: Cleopatra" />
           </Field>
           <Field
             label="Topic"
             error="The topic is empty, so the prompt has nothing to fill {{Topic}} with. Type a topic."
           >
-            <Input placeholder="Tiamat" />
+            <Input placeholder="Cleopatra" />
           </Field>
           <Field label="Image model">
             <Select
@@ -300,7 +304,7 @@ export function DesignRoute(): ReactElement {
         <SectionHead
           kicker="Reference · not in the video"
           title="Establishing image"
-          meta="Every image below follows it for Tiamat's look, palette and style"
+          meta="Every image below follows it for Cleopatra's look, palette and style"
           info="play.reference"
         >
           <Button variant="primary">Regenerate</Button>
@@ -325,9 +329,9 @@ export function DesignRoute(): ReactElement {
           <Badge tone="waiting">Waiting for limits</Badge>
           <Badge tone="failed">Failed</Badge>
           <Badge tone="info">Outdated</Badge>
-          <Chip>Tiamat</Chip>
-          <Chip onRemove={() => {}} removeLabel="Remove keyword Bahamut">
-            Bahamut
+          <Chip>Cleopatra</Chip>
+          <Chip onRemove={() => {}} removeLabel="Remove keyword Ptolemy">
+            Ptolemy
           </Chip>
         </div>
       </Specimen>
@@ -364,8 +368,8 @@ export function DesignRoute(): ReactElement {
             />
           ))}
           <MediaFrame
-            alt="Tiamat's return"
-            title="Tiamat's return"
+            alt="Cleopatra's return"
+            title="Cleopatra's return"
             meta="27:12–33:40"
             generating="Codex is refining the image · 3 so far"
           />
@@ -411,9 +415,9 @@ export function DesignRoute(): ReactElement {
             poster={art(20, "Poster")}
             label="Sample player with no video loaded"
             chapters={[
-              { start: 0, title: "Tiamat over Avernus" },
-              { start: 1.5, title: "The five heads" },
-              { start: 3.2, title: "The Well of Dragons" },
+              { start: 0, title: "Cleopatra over Memphis" },
+              { start: 1.5, title: "The five palaces" },
+              { start: 3.2, title: "The Valley of the Kings" },
             ]}
           />
           <Player
@@ -520,8 +524,8 @@ export function DesignRoute(): ReactElement {
           list={
             <List label="Prompts">
               {[
-                ["tiamat", "D&D Lore article", "Article · edited today"],
-                ["sheet", "D&D Character Sheet", "Image · used by 14 projects"],
+                ["cleopatra", "History article", "Article · edited today"],
+                ["sheet", "Pharaoh Character Sheet", "Image · used by 14 projects"],
                 ["short", "Shorts hook", "Short · never used"],
               ].map(([id, title, meta]) => (
                 <ListRow
@@ -637,12 +641,12 @@ export function DesignRoute(): ReactElement {
           }
         >
           <Field label="Name">
-            <Input defaultValue="D&D Lore: Tiamat" />
+            <Input defaultValue="History: Cleopatra" />
           </Field>
         </Dialog>
         <ConfirmDialog
           open={confirm}
-          title="Delete 'D&D Lore: Tiamat'?"
+          title="Delete 'History: Cleopatra'?"
           consequence="The project and its 9 images are removed from disk."
           confirmLabel="Delete project"
           cancelLabel="Keep it"

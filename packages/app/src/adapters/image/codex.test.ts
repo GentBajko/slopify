@@ -365,8 +365,8 @@ it("copies every cast picture beside the establishing image and names each path"
     reference: { bytes: jpeg, mime: "image/jpeg" },
     cast: [
       {
-        name: "Tiamat",
-        description: "five-headed dragon",
+        name: "Cleopatra",
+        description: "last queen of Egypt",
         images: [{ bytes: png, mime: "image/png" }],
       },
     ],
@@ -379,7 +379,7 @@ it("copies every cast picture beside the establishing image and names each path"
     `Pass all of them in referenced_image_paths on every image generation call: ${join(directory, "reference.jpg")}, ${join(directory, "reference-2.png")}.`,
   );
   expect(text).toContain(
-    `${join(directory, "reference-2.png")} shows Tiamat (five-headed dragon): draw Tiamat to look exactly like this.`,
+    `${join(directory, "reference-2.png")} shows Cleopatra (last queen of Egypt): draw Cleopatra to look exactly like this.`,
   );
   expect(call?.args).toContain("view_image");
 });

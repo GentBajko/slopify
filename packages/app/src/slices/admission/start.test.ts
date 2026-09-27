@@ -87,8 +87,8 @@ describe("startRun", () => {
     const run = startRun(
       deps(),
       draft({
-        title: "D&D Lore: {{Topic}}",
-        values: { Topic: "Vecna" },
+        title: "History: {{Topic}}",
+        values: { Topic: "Hypatia" },
         sources: {
           ...draft().sources,
           audio: "off",
@@ -98,8 +98,8 @@ describe("startRun", () => {
       }),
       {},
     );
-    expect(run.project.title).toBe("D&D Lore: Vecna");
-    expect(run.project.config.title).toBe("D&D Lore: Vecna");
+    expect(run.project.title).toBe("History: Hypatia");
+    expect(run.project.config.title).toBe("History: Hypatia");
   });
   it("names Plain on a new project's document when the draft names no theme", () => {
     const storage = deps();

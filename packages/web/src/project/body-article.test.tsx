@@ -129,36 +129,36 @@ it("gives the sources and the pronunciation table tabs of their own, one source 
       "GET /files/p1/revisions/r1/article_md": () =>
         new Response(
           [
-            "# Szass Tam",
+            "# Ashurbanipal",
             "",
             "The body of the article.",
             "",
             "## Sources Consulted",
             "",
-            'Wikipedia, "Lich" — https://en.wikipedia.org/wiki/Lich',
-            "TSR, Monster Manual (1977)",
+            'Wikipedia, "Kish" — https://en.wikipedia.org/wiki/Kish',
+            "Oxford, Ancient Egypt (1977)",
             "",
             "## Pronunciation Glossary",
             "",
             "| Name / Term | IPA |",
             "|---|---|",
-            "| lich | /lɪtʃ/ |",
-            "| Tiamat | ˈtiːəmɑːt |",
-            "| Caverna do Dragão | kaˈvɛʁnɐ du dɾaˈɡɐ̃w̃ |",
+            "| kish | /kiːʃ/ |",
+            "| Cleopatra | kliːəˈpætrə |",
+            "| Serra da Estrela | ˈsɛʁɐ dɐ ɨʃˈtɾelɐ |",
           ].join("\n"),
         ),
     }),
   );
   await screen.findByText("The body of the article.");
   const reading = screen.getByRole("region", { name: "Article content" });
-  expect(within(reading).queryByText(/Monster Manual/u)).toBeNull();
+  expect(within(reading).queryByText(/Ancient Egypt/u)).toBeNull();
   screen.getByRole("tab", { name: /Sources/u }).click();
-  await screen.findByText("TSR, Monster Manual (1977)");
+  await screen.findByText("Oxford, Ancient Egypt (1977)");
   expect(
     within(screen.getByRole("tabpanel", { name: /Sources/u })).getAllByRole("listitem"),
   ).toHaveLength(2);
   screen.getByRole("tab", { name: "Pronunciation" }).click();
-  expect(await screen.findByRole("cell", { name: "/lɪtʃ/" })).toBeTruthy();
+  expect(await screen.findByRole("cell", { name: "/kiːʃ/" })).toBeTruthy();
   // The narration skips the row it can't use; the tab says which and why, not what it said.
   const skipped = within(screen.getByRole("tabpanel", { name: "Pronunciation" })).getByRole(
     "status",
@@ -166,7 +166,7 @@ it("gives the sources and the pronunciation table tabs of their own, one source 
   expect(skipped.textContent).toContain("1 entry is skipped by the narration");
   expect(skipped.textContent).toContain("Entry 3: use standard-English IPA only");
   expect(skipped.textContent).toContain("Edit settings → Article");
-  expect(skipped.textContent).not.toContain("Caverna");
+  expect(skipped.textContent).not.toContain("Serra");
 });
 
 it("shows no tab row for an article without sources or a glossary", async () => {
@@ -292,21 +292,21 @@ it("puts Research second among the article's tabs and copies its notes", async (
     stage("research", "done"),
     [output("notes", "research"), output("article_md", "article")],
     {
-      notes: "Liches keep phylacteries.",
+      notes: "Scribes keep papyri.",
       article_md: [
-        "# Szass Tam",
+        "# Ashurbanipal",
         "",
         "The body of the article.",
         "",
         "## Sources Consulted",
         "",
-        "TSR, Monster Manual (1977)",
+        "Oxford, Ancient Egypt (1977)",
         "",
         "## Pronunciation Glossary",
         "",
         "| Name / Term | IPA |",
         "|---|---|",
-        "| lich | /lɪtʃ/ |",
+        "| kish | /kiːʃ/ |",
       ].join("\n"),
     },
   );
@@ -319,9 +319,9 @@ it("puts Research second among the article's tabs and copies its notes", async (
   ]);
   await userEvent.click(screen.getByRole("tab", { name: "Research" }));
   const notes = await screen.findByRole("region", { name: "Research notes" });
-  expect(await within(notes).findByText("Liches keep phylacteries.")).not.toBeNull();
+  expect(await within(notes).findByText("Scribes keep papyri.")).not.toBeNull();
   await userEvent.click(await screen.findByRole("button", { name: "Copy research notes" }));
-  expect(writeText).toHaveBeenLastCalledWith("Liches keep phylacteries.\n");
+  expect(writeText).toHaveBeenLastCalledWith("Scribes keep papyri.\n");
   vi.unstubAllGlobals();
 });
 

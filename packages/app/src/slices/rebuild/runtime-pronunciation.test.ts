@@ -208,7 +208,7 @@ it("resolves generated glossary before literal/generated entry audio", async () 
 
 it("names the speaker pronunciation rows a multi-voice run skips in the rebuild review", async () => {
   const inworld = { provider: "inworld", model: "inworld-tts-2" };
-  const h = await narrationFixture("Alex: Arda waits.\n\nSam: So does Tiamat.", {
+  const h = await narrationFixture("Alex: Arda waits.\n\nSam: So does Cleopatra.", {
     config: {
       audio: { ...inworld, voice: "voice" },
       voices: {
@@ -220,7 +220,7 @@ it("names the speaker pronunciation rows a multi-voice run skips in the rebuild 
             name: "Alex",
             role: "host",
             voice: { ...inworld, voice: "a" },
-            pronunciations: "Arda: /ˈɑɹdə/\nTiamat: TEE-ah-mat",
+            pronunciations: "Arda: /ˈɑɹdə/\nCleopatra: klee-oh-PAT-ruh",
           },
           // An OpenAI voice never reads IPA, so its rows are not the run's concern.
           {
@@ -228,7 +228,7 @@ it("names the speaker pronunciation rows a multi-voice run skips in the rebuild 
             name: "Sam",
             role: "host",
             voice: { provider: "openai-tts", model: "tts", voice: "s" },
-            pronunciations: "Tiamat: TEE-ah-mat",
+            pronunciations: "Cleopatra: klee-oh-PAT-ruh",
           },
         ],
         turnGapSeconds: 0.35,
@@ -243,7 +243,7 @@ it("names the speaker pronunciation rows a multi-voice run skips in the rebuild 
     const plan = executionPlan(h.deps, h.view(), preparationCatalogue);
     expect(plan.speakerPronunciationNotice).toContain("Alex: entry 2: use slash-delimited");
     expect(plan.speakerPronunciationNotice).not.toContain("Sam");
-    expect(plan.speakerPronunciationNotice).not.toContain("TEE-ah-mat");
+    expect(plan.speakerPronunciationNotice).not.toContain("klee-oh-PAT-ruh");
     const preview = planPreview(
       h.deps,
       h.view(),

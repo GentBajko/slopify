@@ -75,11 +75,11 @@ function deps(extra: Readonly<Record<string, Answer>> = {}) {
   return testDeps({
     "GET /api/projects": jsonAnswer({
       projects: [
-        listing("p-run", "Demogorgon", "running", { progress: 0.4 }),
-        listing("p-wait", "Tiamat", "pending", { progress: 0.6 }),
-        listing("p-fail", "Orcus", "failed", { progress: 0.3 }),
-        listing("p-done", "Szass Tam", "done", { progress: 1 }),
-        listing("p-up", "Vecna", "done", { progress: 1, uploadedAt: "2026-09-26T10:00:00.000Z" }),
+        listing("p-run", "Sargon", "running", { progress: 0.4 }),
+        listing("p-wait", "Cleopatra", "pending", { progress: 0.6 }),
+        listing("p-fail", "Imhotep", "failed", { progress: 0.3 }),
+        listing("p-done", "Ashurbanipal", "done", { progress: 1 }),
+        listing("p-up", "Hypatia", "done", { progress: 1, uploadedAt: "2026-09-26T10:00:00.000Z" }),
         listing("p-else", "Elsewhere", "running", { channelId: "other" }),
       ],
     }),
@@ -134,9 +134,9 @@ function deps(extra: Readonly<Record<string, Answer>> = {}) {
           paused: false,
           templateId,
           templateVersion: 1,
-          templateName: "D&D Lore",
+          templateName: "History",
           index: 0,
-          topic: "Lolth",
+          topic: "Nefertiti",
           topicSource: "queued",
         },
       ],
@@ -145,7 +145,7 @@ function deps(extra: Readonly<Record<string, Answer>> = {}) {
     }),
     "GET /api/project-templates": jsonAnswer({
       templates: [
-        { id: templateId, name: "D&D Lore", version: 1, updatedAt: "x", channelId: channel },
+        { id: templateId, name: "History", version: 1, updatedAt: "x", channelId: channel },
       ],
     }),
     "GET /api/home/week": jsonAnswer({
@@ -217,11 +217,11 @@ describe("home", () => {
   it("shows the running run's steps and the images as they land", async () => {
     renderRouted(<HomeRoute />, deps());
     const running = await screen.findByRole("region", { name: "Running now" });
-    const steps = await within(running).findByRole("list", { name: "Steps of Demogorgon" });
+    const steps = await within(running).findByRole("list", { name: "Steps of Sargon" });
     expect(await within(steps).findByText("Article")).not.toBeNull();
     expect(within(steps).getByText("7 min")).not.toBeNull();
     expect(within(steps).getByText("2 of 8")).not.toBeNull();
-    const images = within(running).getByRole("list", { name: "Images of Demogorgon" });
+    const images = within(running).getByRole("list", { name: "Images of Sargon" });
     expect(within(images).getAllByRole("img")).toHaveLength(2);
     expect(within(images).getByText("Drawing · 2 so far")).not.toBeNull();
   });
@@ -229,11 +229,11 @@ describe("home", () => {
   it("lists what is coming up, what is ready to upload and this week's numbers", async () => {
     renderRouted(<HomeRoute />, deps());
     const coming = await screen.findByRole("region", { name: "Coming up" });
-    expect(await within(coming).findByText(/· Lolth$/)).not.toBeNull();
+    expect(await within(coming).findByText(/· Nefertiti$/)).not.toBeNull();
     const ready = screen.getByRole("region", { name: "Ready to upload" });
-    expect(within(ready).getByRole("link", { name: "Szass Tam" })).not.toBeNull();
+    expect(within(ready).getByRole("link", { name: "Ashurbanipal" })).not.toBeNull();
     // Marked uploaded: not listed.
-    expect(within(ready).queryByRole("link", { name: "Vecna" })).toBeNull();
+    expect(within(ready).queryByRole("link", { name: "Hypatia" })).toBeNull();
     expect(within(ready).getByRole("button", { name: "Prepare upload" })).not.toBeNull();
     const week = screen.getByRole("region", { name: "This week" });
     expect(await within(week).findByText("$9.40")).not.toBeNull();
@@ -260,8 +260,8 @@ describe("home", () => {
       expect(
         within(ready).getByText("Finished videos you haven't marked uploaded show here"),
       ).not.toBeNull();
-      expect(screen.getByText("Demogorgon")).not.toBeNull();
-      expect(within(ready).queryByRole("link", { name: "Szass Tam" })).toBeNull();
+      expect(screen.getByText("Sargon")).not.toBeNull();
+      expect(within(ready).queryByRole("link", { name: "Ashurbanipal" })).toBeNull();
     });
   });
 
@@ -273,7 +273,7 @@ describe("home", () => {
       deps({
         "GET /api/projects": jsonAnswer({
           projects: [
-            listing("p-run", "Demogorgon", "running", {
+            listing("p-run", "Sargon", "running", {
               limitWaits: [
                 {
                   name: "Codex",
@@ -325,7 +325,7 @@ describe("home", () => {
       <HomeRoute />,
       deps({
         "GET /api/projects": jsonAnswer({
-          projects: [listing("p-pause", "Asmodeus", "paused", { progress: 0.5 })],
+          projects: [listing("p-pause", "Xerxes", "paused", { progress: 0.5 })],
         }),
       }),
     );
@@ -333,7 +333,7 @@ describe("home", () => {
     expect(await within(needs).findByText("Paused")).not.toBeNull();
     expect(within(needs).getByRole("link", { name: "Open to continue" })).not.toBeNull();
     const running = screen.getByRole("region", { name: "Running now" });
-    expect(within(running).queryByText("Asmodeus")).toBeNull();
+    expect(within(running).queryByText("Xerxes")).toBeNull();
     expect(within(running).getByText("Nothing is running")).not.toBeNull();
   });
 

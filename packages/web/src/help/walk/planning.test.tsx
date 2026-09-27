@@ -66,8 +66,8 @@ const schedule = (id: string, name: string, items: readonly string[]) => ({
   deletedAt: null,
 });
 const schedules = [
-  schedule(scheduleId, "Lore", ["Tiamat", "Vecna"]),
-  schedule(otherId, "Other", ["Orcus"]),
+  schedule(scheduleId, "Lore", ["Cleopatra", "Hypatia"]),
+  schedule(otherId, "Other", ["Imhotep"]),
 ];
 const run = (day: number, index: number | null, topic: string | null, id = scheduleId) => ({
   at: inDays(day, 9),
@@ -86,8 +86,8 @@ const document_ = {
   ...freshDraftDocument,
   form: {
     ...freshDraftDocument.form,
-    title: "D&D Lore: {{Topic}}",
-    values: { Topic: "Szass Tam", "Min. Word Count": "15000", "Max. Word Count": "18000" },
+    title: "History: {{Topic}}",
+    values: { Topic: "Ashurbanipal", "Min. Word Count": "15000", "Max. Word Count": "18000" },
   },
 };
 
@@ -101,17 +101,17 @@ const planningRoutes: Readonly<Record<string, Answer>> = {
   }),
   [`GET /api/schedules/${scheduleId}`]: jsonAnswer({ schedule: schedules[0], runs: [] }),
   [`GET /api/schedules/${scheduleId}/topics/held`]: jsonAnswer({
-    topics: [{ id: topicId, title: "Owlbears", rank: 0, createdAt: "a" }],
+    topics: [{ id: topicId, title: "Pyramids", rank: 0, createdAt: "a" }],
   }),
   [`GET /api/schedules/${otherId}/topics/held`]: jsonAnswer({ topics: [] }),
   "GET /api/calendar": jsonAnswer({
     from: inDays(0, 0),
     to: inDays(28, 0),
     runs: [
-      run(1, 0, "Tiamat"),
-      run(2, 1, "Vecna"),
+      run(1, 0, "Cleopatra"),
+      run(2, 1, "Hypatia"),
       run(3, null, null),
-      run(2, 0, "Orcus", otherId),
+      run(2, 0, "Imhotep", otherId),
     ],
     projects: [],
     queued: [],
@@ -130,12 +130,12 @@ const channel: Channel = {
   createdAt: "a",
   updatedAt: "a",
 };
-const tiamat: CastMember = {
+const cleopatra: CastMember = {
   id: "7a0c1f3e-2b4d-4e6f-8a9b-0c1d2e3f4a5b",
   channelId,
   kind: "creature",
-  name: "Tiamat",
-  aliases: ["the Dragon Queen"],
+  name: "Cleopatra",
+  aliases: ["the Last Pharaoh"],
   description: "",
   version: 1,
   images: [
@@ -157,9 +157,9 @@ const memory = {
   id: "m1",
   channelId,
   projectId: "p1",
-  title: "Tiamat Awakens",
+  title: "Cleopatra Awakens",
   summary: "She woke under the mountain.",
-  cast: ["Tiamat"],
+  cast: ["Cleopatra"],
   source: "generated",
   createdAt: "2026-09-01",
   updatedAt: "2026-09-01",
@@ -168,7 +168,7 @@ const memory = {
 const channelRoutes: Readonly<Record<string, Answer>> = {
   ...planningRoutes,
   "GET /api/channels": jsonAnswer({ channels: [summary] }),
-  [`GET /api/channels/${channelId}`]: jsonAnswer({ channel, cast: [tiamat] }),
+  [`GET /api/channels/${channelId}`]: jsonAnswer({ channel, cast: [cleopatra] }),
   "GET /api/fonts": jsonAnswer({ fonts: [] }),
   "GET /api/entries": jsonAnswer({ entries: [] }),
   "GET /api/document-themes": jsonAnswer({ builtIns: [], themes: [] }),
@@ -176,8 +176,8 @@ const channelRoutes: Readonly<Record<string, Answer>> = {
   [`GET /api/channels/${channelId}/episodes`]: jsonAnswer({ enabled: true, memories: [memory] }),
   [`GET /api/channels/${channelId}/videos`]: jsonAnswer({ videos: [] }),
   [`POST /api/channels/${channelId}/videos/preview`]: jsonAnswer({
-    titles: ["D&D Lore: Vecna", "New World Guide"],
-    filter: "d&d",
+    titles: ["History: Hypatia", "New World Guide"],
+    filter: "history",
   }),
   "GET /api/settings/channel-links": jsonAnswer({ links: [{ name: "Patreon", url: "https://a" }] }),
 };
@@ -193,7 +193,7 @@ describe("the planning screens explain every control", () => {
     renderRouted(<SchedulesRoute />, testDeps(planningRoutes));
     const waiting = await screen.findByRole("list", { name: "Topics waiting" });
     await user.click(within(waiting).getByRole("button", { name: "Edit" }));
-    await screen.findByLabelText("Edit Owlbears");
+    await screen.findByLabelText("Edit Pyramids");
     expectExplained();
 
     await user.click(screen.getByRole("button", { name: "New schedule" }));
@@ -227,10 +227,10 @@ describe("the planning screens explain every control", () => {
   it("walks the Calendar: weeks, the list, suggestions and Add to calendar", async () => {
     const user = userEvent.setup();
     renderRouted(<CalendarRoute />, testDeps(planningRoutes));
-    await screen.findByRole("article", { name: /^Tiamat,/ });
+    await screen.findByRole("article", { name: /^Cleopatra,/ });
     expectExplained();
     await user.click(screen.getByRole("button", { name: "List" }));
-    await screen.findByLabelText("Move Tiamat to another schedule");
+    await screen.findByLabelText("Move Cleopatra to another schedule");
     expectExplained();
     await user.click(screen.getByRole("button", { name: "Add to calendar" }));
     await screen.findByLabelText("Topics, one per line");
@@ -255,7 +255,7 @@ describe("the planning screens explain every control", () => {
 
     await user.click(screen.getByRole("tab", { name: /Cast/ }));
     const grid = await screen.findByRole("region", { name: "Cast" });
-    await user.click(within(grid).getByRole("button", { name: "Edit Tiamat" }));
+    await user.click(within(grid).getByRole("button", { name: "Edit Cleopatra" }));
     await screen.findByLabelText("Picture to make");
     expectExplained();
     await user.click(screen.getAllByRole("button", { name: "Add to cast" })[0] as HTMLElement);
@@ -272,16 +272,16 @@ describe("the planning screens explain every control", () => {
 
     await user.click(screen.getByRole("tab", { name: "Episodes" }));
     await user.click(
-      await screen.findByRole("button", { name: "Open the summary of Tiamat Awakens" }),
+      await screen.findByRole("button", { name: "Open the summary of Cleopatra Awakens" }),
     );
     await screen.findByLabelText("Summary");
     expectExplained();
     await user.keyboard("{Escape}");
 
     await user.click(screen.getByRole("tab", { name: "Existing videos" }));
-    const csv = new File(["Video title\nD&D Lore: Vecna\n"], "studio.csv", { type: "text/csv" });
+    const csv = new File(["Video title\nHistory: Hypatia\n"], "studio.csv", { type: "text/csv" });
     await user.upload(await screen.findByLabelText("YouTube Studio CSV file"), csv);
-    await screen.findByLabelText("D&D Lore: Vecna");
+    await screen.findByLabelText("History: Hypatia");
     expectExplained();
   });
 

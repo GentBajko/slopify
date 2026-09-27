@@ -29,7 +29,7 @@ export function relatedEpisodes(
 ): readonly EpisodeMemory[] {
   const mentioned = new Set(castMentions(subject, cast).map((member) => member.name.toLowerCase()));
   const titles = memories.map((memory) => titleWords(memory.title));
-  // A word most of the channel's titles share is the template's ("D&D Lore: …"), not the
+  // A word most of the channel's titles share is the template's ("History: …"), not the
   // topic's, and relates nothing.
   const seen = new Map<string, number>();
   for (const set of titles) for (const word of set) seen.set(word, (seen.get(word) ?? 0) + 1);
@@ -54,7 +54,7 @@ export function relatedEpisodes(
     .map((row) => row.memory);
 }
 
-// A title's words as the topic checks compare them, less the one- and two-letter ones ("D&D"
+// A title's words as the topic checks compare them, less the one- and two-letter ones ("R&D"
 // is "d and d"), which relate nothing.
 function titleWords(text: string): ReadonlySet<string> {
   return new Set([...topicWords(text)].filter((word) => word.length > 2 || /\d/.test(word)));

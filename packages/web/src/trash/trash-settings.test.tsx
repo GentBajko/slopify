@@ -10,7 +10,7 @@ afterEach(cleanup);
 const item = (over: Partial<TrashItem>): TrashItem => ({
   kind: "project",
   id: "p1",
-  name: "Tiamat",
+  name: "Cleopatra",
   detail: null,
   deletedAt: "2026-09-27T10:00:00.000Z",
   purgeAt: "2026-10-27T10:00:00.000Z",
@@ -29,7 +29,7 @@ it("lists each item with its kind, deletion date and days left, and real buttons
   );
   const list = await screen.findByRole("list", { name: "Deleted items" });
   const rows = within(list).getAllByRole("listitem");
-  expect(rows[0]?.textContent).toContain("Tiamat");
+  expect(rows[0]?.textContent).toContain("Cleopatra");
   expect(rows[0]?.textContent).toContain("Project · deleted");
   expect(rows[0]?.textContent).toContain("30 days left");
   expect(rows[1]?.textContent).toContain("Prompt · article");
@@ -99,7 +99,7 @@ it("asks before Delete now, and removes the item only on confirm", async () => {
   expect(remove).not.toHaveBeenCalled();
   await userEvent.click(within(dialog).getByRole("button", { name: "Delete for good" }));
   await waitFor(() => expect(remove).toHaveBeenCalledTimes(1));
-  expect(await screen.findByText('Deleted "Tiamat" for good.')).not.toBeNull();
+  expect(await screen.findByText('Deleted "Cleopatra" for good.')).not.toBeNull();
 });
 
 it("names kinds and days left plainly", () => {

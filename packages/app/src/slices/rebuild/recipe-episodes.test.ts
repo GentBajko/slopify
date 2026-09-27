@@ -10,7 +10,7 @@ const written: RunConfig = {
   sources: { ...config.sources, article: "generate" },
   articlePrompt: "Lore",
   provided: {},
-  rendered: { article: "Write about Tiamat." },
+  rendered: { article: "Write about Cleopatra." },
 };
 const { articleMarkdown: _provided, ...writtenContent } = content;
 
@@ -31,20 +31,20 @@ describe("earlier episodes in the recipe", () => {
   it("are appended to the article prompt, changing the article's fingerprint", () => {
     const withMemory = planned({
       ...written,
-      earlierEpisodes: [{ title: "Tiamat Awakens", summary: "She woke." }],
+      earlierEpisodes: [{ title: "Cleopatra Awakens", summary: "She woke." }],
     });
     expect(withMemory.fingerprints["article:body"]).not.toBe(before["article:body"]);
     const article = withMemory.recipes.find((recipe) => recipe.key === "article:body");
     const message = article?.input.kind === "llm" ? article.input.messages.at(-1)?.content : "";
     expect(message).toBe(
       [
-        "Write about Tiamat.",
+        "Write about Cleopatra.",
         "",
         "Earlier episodes",
         "",
         "This channel has already made these related episodes. Stay consistent with them and never contradict them; refer back to one where it fits naturally, but don't retell it.",
         "",
-        '- "Tiamat Awakens": She woke.',
+        '- "Cleopatra Awakens": She woke.',
       ].join("\n"),
     );
   });

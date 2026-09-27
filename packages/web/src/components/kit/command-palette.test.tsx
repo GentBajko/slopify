@@ -43,14 +43,14 @@ describe("fuzzy matching", () => {
 
   it("matches several words across the title, the context and the keywords, in any order", () => {
     const list = [
-      command("i13", "Regenerate image 13", { context: "D&D Lore: Tiamat" }),
-      command("i3", "Regenerate image 3", { context: "D&D Lore: Tiamat" }),
+      command("i13", "Regenerate image 13", { context: "History: Cleopatra" }),
+      command("i3", "Regenerate image 3", { context: "History: Cleopatra" }),
       command("other", "Regenerate image 3", { context: "Knot Tricks" }),
       command("set", "Open settings", { keywords: ["keys"] }),
     ];
-    expect(matchCommands(list, "tiamat regenerate image 3").map((c) => c.id)[0]).toBe("i3");
-    expect(matchCommands(list, "3 image tiamat regen").map((c) => c.id)[0]).toBe("i3");
-    expect(matchCommands(list, "tiamat regenerate image 3").map((c) => c.id)).not.toContain(
+    expect(matchCommands(list, "cleopatra regenerate image 3").map((c) => c.id)[0]).toBe("i3");
+    expect(matchCommands(list, "3 image cleopatra regen").map((c) => c.id)[0]).toBe("i3");
+    expect(matchCommands(list, "cleopatra regenerate image 3").map((c) => c.id)).not.toContain(
       "other",
     );
     expect(matchCommands(list, "open keys").map((c) => c.id)).toEqual(["set"]);
@@ -60,7 +60,7 @@ describe("fuzzy matching", () => {
     const run = vi.fn();
     const list = [
       command("img", "Regenerate an image", {
-        context: "Tiamat",
+        context: "Cleopatra",
         numbered: (count) => `Regenerate image ${String(count)}`,
         run,
       }),
@@ -73,13 +73,13 @@ describe("fuzzy matching", () => {
   });
 
   it("keeps a search-only command out of an empty palette", () => {
-    const list = [command("a", "Open Tiamat", { searchOnly: true }), command("b", "Open home")];
+    const list = [command("a", "Open Cleopatra", { searchOnly: true }), command("b", "Open home")];
     expect(matchCommands(list, "").map((c) => c.id)).toEqual(["b"]);
-    expect(matchCommands(list, "tiamat").map((c) => c.id)).toEqual(["a"]);
+    expect(matchCommands(list, "cleopatra").map((c) => c.id)).toEqual(["a"]);
   });
 
   it("lists commands about the current screen first when nothing is typed", () => {
-    const list = [command("a", "Open settings"), command("b", "Approve", { context: "Tiamat" })];
+    const list = [command("a", "Open settings"), command("b", "Approve", { context: "Cleopatra" })];
     expect(matchCommands(list, "").map((c) => c.id)).toEqual(["b", "a"]);
   });
 });
@@ -101,7 +101,7 @@ function Screen({ onApprove }: { readonly onApprove: () => void }) {
     id: "project.approve",
     title: "Approve and render",
     group: "This project",
-    context: "Tiamat",
+    context: "Cleopatra",
     run: onApprove,
   });
   useCommand({

@@ -9,7 +9,7 @@ afterEach(cleanup);
 
 const project = (over: Partial<StorageUsage["byProject"][number]>) => ({
   id: "p1",
-  title: "Tiamat",
+  title: "Cleopatra",
   bytes: 3 * 1024 * 1024,
   outputsBytes: 1024 * 1024,
   workingBytes: 2 * 1024 * 1024,
@@ -30,7 +30,7 @@ it("splits each project into outputs and working files, largest first", () => {
   const rows = within(screen.getByRole("list", { name: "Storage by project" })).getAllByRole(
     "listitem",
   );
-  expect(rows[0]?.textContent).toContain("Tiamat");
+  expect(rows[0]?.textContent).toContain("Cleopatra");
   expect(rows[0]?.textContent).toContain("outputs 1 MB · working files 2 MB");
 });
 
@@ -47,7 +47,7 @@ it("spells out the trade-off before removing working files, then says what it fr
   expect(trim).not.toHaveBeenCalled();
   await userEvent.click(within(dialog).getByRole("button", { name: "Keep outputs only" }));
   await waitFor(() => expect(trim).toHaveBeenCalledTimes(1));
-  expect(await screen.findByText(/Freed 2 MB from "Tiamat"/)).not.toBeNull();
+  expect(await screen.findByText(/Freed 2 MB from "Cleopatra"/)).not.toBeNull();
 });
 
 it("offers nothing on a project that has not finished or has nothing left to remove", () => {

@@ -389,8 +389,8 @@ it("fills the chosen keyword and the project title from the first topic", async 
       ...h.document,
       form: {
         ...h.document.form,
-        title: "D&D Lore To Sleep To: {{Topic}}",
-        values: { Topic: "Szass Tam", "Min. Word Count": "1", "Max. Word Count": "2" },
+        title: "History at Bedtime: {{Topic}}",
+        values: { Topic: "Ashurbanipal", "Min. Word Count": "1", "Max. Word Count": "2" },
       },
     };
     expect(createTemplate(h.deps, { id: templateId, name: "Lore", document }).ok).toBe(true);
@@ -407,8 +407,8 @@ it("fills the chosen keyword and the project title from the first topic", async 
         cadence: { kind: "daily", time: "00:01" },
         timezone: "UTC",
         items: [
-          { title: "Owlbears", values: {} },
-          { title: "Mimics", values: {} },
+          { title: "Pyramids", values: {} },
+          { title: "Obelisks", values: {} },
         ],
         topicKeyword: "Topic",
         values: { "Min. Word Count": "15000", "Max. Word Count": "18000" },
@@ -420,12 +420,12 @@ it("fills the chosen keyword and the project title from the first topic", async 
     expect(h.events).toHaveLength(1);
     expect(
       h.deps.db.prepare("SELECT title FROM projects WHERE id=?").get(h.events[0] ?? ""),
-    ).toEqual({ title: "D&D Lore To Sleep To: Owlbears" });
+    ).toEqual({ title: "History at Bedtime: Pyramids" });
     const draft = h.deps.db
       .prepare("SELECT document_json FROM play_drafts ORDER BY created_at DESC LIMIT 1")
       .get();
     expect(JSON.parse(String(draft?.document_json)).form.values).toEqual({
-      Topic: "Owlbears",
+      Topic: "Pyramids",
       "Min. Word Count": "15000",
       "Max. Word Count": "18000",
     });
@@ -436,7 +436,7 @@ it("fills the chosen keyword and the project title from the first topic", async 
             ?.items_json,
         ),
       ),
-    ).toEqual([{ title: "Mimics", values: {} }]);
+    ).toEqual([{ title: "Obelisks", values: {} }]);
   } finally {
     h.close();
   }

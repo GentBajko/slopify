@@ -8,14 +8,14 @@ import {
 } from "./answer.js";
 
 const good = {
-  summary: "Szass Tam's plan, step by step.",
+  summary: "Ashurbanipal's plan, step by step.",
   chapters: [
     { start: "0:00", title: "Heist Approaches" },
     { start: "2:15", title: "Weapon Customisation" },
     { start: "18:43", title: "What Do You Want to See?" },
   ],
-  hashtags: ["#DnD", "ForgottenRealms", "#SzassTam"],
-  tags: ["dnd", "forgotten realms", "szass tam"],
+  hashtags: ["#History", "AncientEgypt", "#Ashurbanipal"],
+  tags: ["history", "ancient egypt", "ashurbanipal"],
 };
 const duration = 20 * 60;
 const check = (answer: unknown, seconds = duration) =>
@@ -36,16 +36,16 @@ describe("checkDescriptionAnswer", () => {
       if (!result.ok) throw new Error(result.reason);
       expect(assembleDescription(result.value)).toBe(
         [
-          "Szass Tam's plan, step by step.",
+          "Ashurbanipal's plan, step by step.",
           "",
           "0:00 Heist Approaches",
           "2:15 Weapon Customisation",
           "18:43 What Do You Want to See?",
           "",
-          "#DnD #ForgottenRealms #SzassTam",
+          "#History #AncientEgypt #Ashurbanipal",
         ].join("\n"),
       );
-      expect(tagsText(result.value.tags)).toBe("dnd, forgotten realms, szass tam");
+      expect(tagsText(result.value.tags)).toBe("history, ancient egypt, ashurbanipal");
     }
   });
 
@@ -142,16 +142,16 @@ describe("checkDescriptionAnswer", () => {
     expect(
       reason({ ...good, hashtags: Array.from({ length: 16 }, (_, index) => `#Tag${index}`) }),
     ).toMatch(/past 15, and it wrote 16/);
-    expect(reason({ ...good, hashtags: ["#Forgotten Realms"] })).toMatch(
-      /"#Forgotten Realms" is not one word/,
+    expect(reason({ ...good, hashtags: ["#Ancient Egypt"] })).toMatch(
+      /"#Ancient Egypt" is not one word/,
     );
   });
 
   it("refuses tags over YouTube's limits, repeated or with commas", () => {
     expect(reason({ ...good, tags: [] })).toMatch(/at least one tag/);
     expect(reason({ ...good, tags: ["x".repeat(101)] })).toMatch(/over 100 characters/);
-    expect(reason({ ...good, tags: ["dnd", "DnD"] })).toMatch(/"DnD" is listed twice/);
-    expect(reason({ ...good, tags: ["dnd, 5e"] })).toMatch(/contains a comma/);
+    expect(reason({ ...good, tags: ["history", "History"] })).toMatch(/"History" is listed twice/);
+    expect(reason({ ...good, tags: ["history, egypt"] })).toMatch(/contains a comma/);
     const many = Array.from(
       { length: 30 },
       (_, index) => `tag number ${String(index).padStart(3, "0")}`,
@@ -166,14 +166,14 @@ describe("checkDescriptionAnswer", () => {
 });
 
 it("counts the Tags field as YouTube does: commas, and quotes around tags with spaces", () => {
-  expect(tagsLength(["dnd", "forgotten realms"])).toBe(3 + 1 + 16 + 2);
+  expect(tagsLength(["history", "ancient egypt"])).toBe(7 + 1 + 13 + 2);
   expect(tagsLength([])).toBe(0);
 });
 
 it("sends the prompt, title, length and timed transcript, with the rules in the system message", () => {
   const messages = descriptionMessages({
     instruction: "Write it for {{Topic}} fans.",
-    title: "Szass Tam",
+    title: "Ashurbanipal",
     durationSeconds: 1250,
     transcript: "[0:02] Welcome.",
   });
@@ -184,7 +184,7 @@ it("sends the prompt, title, length and timed transcript, with the rules in the 
     [
       "Write it for {{Topic}} fans.",
       "",
-      "Video title: Szass Tam",
+      "Video title: Ashurbanipal",
       "Video length: 20:50",
       "",
       "Transcript, each passage led by the time it starts in the video:",

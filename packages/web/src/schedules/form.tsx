@@ -458,7 +458,7 @@ function GenerationFields({
           maxLength={briefMax}
           value={brief}
           onChange={(event) => onBrief(event.target.value)}
-          placeholder="D&D lore, documentary style. Famous villains and places first."
+          placeholder="Ancient history, documentary style. Famous rulers and places first."
         />
       </Field>
       <div className="grid gap-4 min-[700px]:grid-cols-2">

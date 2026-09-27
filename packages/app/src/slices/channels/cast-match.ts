@@ -2,7 +2,7 @@ import type { CastSnapshot } from "./model.js";
 
 // Which cast members a text mentions: a member's name or one of its aliases as a whole word,
 // ignoring case. A word boundary is anything that is not a letter or digit in any script, so
-// "Tiamat's lair" and "(Tiamat)" mention Tiamat and "Tiamatic" or "Tiamats" do not; a plural
+// "Cleopatra's palace" and "(Cleopatra)" mention Cleopatra and "Cleopatraic" or "Cleopatras" do not; a plural
 // is an alias to add. Spaces inside a name match any run of whitespace. The members come back
 // in the order the text first mentions them, then in cast order.
 export function castMentions(

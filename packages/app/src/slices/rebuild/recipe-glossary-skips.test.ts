@@ -55,12 +55,12 @@ it("keeps the 2.5.0 fingerprints of a glossary that already parsed", () => {
 
 it("narrates a bare-IPA table glossary and reports only the skipped row", () => {
   const markdown =
-    "Tiamat rules. Caverna do Dragão aired.\n\n## Pronunciation Glossary\n\n| Name / Term | IPA |\n|---|---|\n| Tiamat | ˈtiːəmɑːt |\n| Caverna do Dragão | kaˈvɛʁnɐ du dɾaˈɡɐ̃w̃ |";
+    "Cleopatra rules. Serra da Estrela aired.\n\n## Pronunciation Glossary\n\n| Name / Term | IPA |\n|---|---|\n| Cleopatra | kliːəˈpætrə |\n| Serra da Estrela | ˈsɛʁɐ dɐ ɨʃˈtɾelɐ |";
   const recipes = buildRecipes(context(markdown));
   expect(recipes.some((row) => row.refusal !== undefined)).toBe(false);
   const tts = recipes.flatMap((row) => (row.input.kind === "tts" ? [row.input.text] : []));
-  expect(tts.join(" ")).toContain("/ˈtiːəmɑːt/ rules.");
-  expect(tts.join(" ")).toContain("Caverna do Dragão aired.");
+  expect(tts.join(" ")).toContain("/kliːəˈpætrə/ rules.");
+  expect(tts.join(" ")).toContain("Serra da Estrela aired.");
   expect(narrationGlossary(context(markdown))).toMatchObject({
     ok: true,
     skipped: [{ row: 2 }],

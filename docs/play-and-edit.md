@@ -9,7 +9,7 @@ page is the audit of where they stand (3.0), what was closed, and what is still 
 Play is one path from topic to queue:
 
 1. **Template.** Picking one opens a fresh draft made from it. A topic already typed comes along.
-2. **Topic.** A title that names keywords (`D&D Lore: {{Topic}}`) asks for those keywords here,
+2. **Topic.** A title that names keywords (`History: {{Topic}}`) asks for those keywords here,
    with the title they make beneath. A title without keywords is typed itself.
 3. **More videos from the same setup.** Each chip is one more video with its own topic (the
    draft's `variants`; Start still refuses a review that covers a different number of videos).

@@ -118,7 +118,7 @@ export function TemplateField({
   );
 }
 
-// What the video is about. A title that names keywords ("D&D Lore: {{Topic}}") asks for those
+// What the video is about. A title that names keywords ("History: {{Topic}}") asks for those
 // keywords here, with the title they make beneath; a title without keywords is typed itself.
 export function TopicFields({
   topics,

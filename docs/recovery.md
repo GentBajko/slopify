@@ -49,7 +49,7 @@ written, the image is drawn from it, and the image keeps it as its prompt.
 ## Updating while work runs
 
 Pressing Update while a project is being made no longer refuses. The update waits: the button
-says "Update to 2.6.0 will install when 'Tiamat' finishes", and it installs by itself as soon as
+says "Update to 2.6.0 will install when 'Cleopatra' finishes", and it installs by itself as soon as
 no step is running. Pressing it again drops the wait. The Docker launcher does the same before
 it replaces the container (see [Docker](docker.md)).
 

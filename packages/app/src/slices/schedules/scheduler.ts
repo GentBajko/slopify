@@ -231,7 +231,7 @@ async function execute(deps: ScheduleDeps, claimed: ClaimedScheduleRun): Promise
 
 // One project per run. The first queued topic fills the chosen keyword, the schedule's fixed
 // values fill the rest over the template's own, and the template's title is filled from the
-// same keywords, so "D&D Lore: {{Topic}}" names the project after the topic. A topic saved
+// same keywords, so "History: {{Topic}}" names the project after the topic. A topic saved
 // before topics had a keyword brings its own title and values instead.
 function runForm<
   F extends { readonly title: string; readonly values: Readonly<Record<string, string>> },

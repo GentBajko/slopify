@@ -142,7 +142,7 @@ describe("the confirm dialog", () => {
     render(
       <ConfirmDialog
         open
-        title="Delete 'Tiamat'?"
+        title="Delete 'Cleopatra'?"
         consequence="The project and its 9 images are removed from disk."
         confirmLabel="Delete project"
         cancelLabel="Keep it"
@@ -150,7 +150,7 @@ describe("the confirm dialog", () => {
         onCancel={onCancel}
       />,
     );
-    const dialog = await screen.findByRole("dialog", { name: "Delete 'Tiamat'?" });
+    const dialog = await screen.findByRole("dialog", { name: "Delete 'Cleopatra'?" });
     const keep = within(dialog).getByRole("button", { name: "Keep it" });
     await waitFor(() => expect(document.activeElement).toBe(keep));
     // Focus stays inside: tabbing from the last button comes back to the first.
@@ -185,8 +185,8 @@ describe("the confirm dialog", () => {
 
 describe("media", () => {
   const items: readonly LightboxItem[] = [
-    { src: "/a.png", alt: "Tiamat" },
-    { src: "/b.png", alt: "Bahamut" },
+    { src: "/a.png", alt: "Cleopatra" },
+    { src: "/b.png", alt: "Ptolemy" },
     { src: "/c.png", alt: "The Well" },
   ];
 
@@ -211,18 +211,18 @@ describe("media", () => {
   it("opens the lightbox from a tile, pages with the arrows both ways, and closes on Esc", async () => {
     const user = userEvent.setup();
     render(<Gallery />);
-    await user.click(screen.getByRole("button", { name: "Open Bahamut full size" }));
+    await user.click(screen.getByRole("button", { name: "Open Ptolemy full size" }));
     const box = await screen.findByRole("dialog");
-    expect(within(box).getByRole("img", { name: "Bahamut" })).not.toBeNull();
-    expect(within(box).getByText("2 of 3 · Bahamut")).not.toBeNull();
+    expect(within(box).getByRole("img", { name: "Ptolemy" })).not.toBeNull();
+    expect(within(box).getByText("2 of 3 · Ptolemy")).not.toBeNull();
     await user.keyboard("{ArrowRight}");
     expect(within(box).getByRole("img", { name: "The Well" })).not.toBeNull();
     await user.keyboard("{ArrowRight}");
-    expect(within(box).getByRole("img", { name: "Tiamat" })).not.toBeNull();
+    expect(within(box).getByRole("img", { name: "Cleopatra" })).not.toBeNull();
     await user.keyboard("{ArrowLeft}");
     expect(within(box).getByRole("img", { name: "The Well" })).not.toBeNull();
     await user.click(within(box).getByRole("button", { name: "Previous" }));
-    expect(within(box).getByRole("img", { name: "Bahamut" })).not.toBeNull();
+    expect(within(box).getByRole("img", { name: "Ptolemy" })).not.toBeNull();
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
@@ -252,15 +252,15 @@ describe("the reading view", () => {
 
 ## Origins
 
-Tiamat waits in Avernus.
+Cleopatra waits in Memphis.
 
 \`\`\`
 ## not a heading
 \`\`\`
 
-## The five heads
+## The five palaces
 
-Five heads. Tiamat breathes.
+Five palaces. Cleopatra rules.
 
 ## Origins
 
@@ -272,7 +272,7 @@ Again.
     expect(sections.map((section) => section.id)).toEqual([
       "",
       "origins",
-      "the-five-heads",
+      "the-five-palaces",
       "origins-2",
     ]);
     expect(sections[1]?.markdown).toContain("## not a heading");
@@ -280,19 +280,19 @@ Again.
 
   it("nests the second heading level under the first, whichever two levels the text uses", () => {
     const titled =
-      "# Tiamat\n\nIntro.\n\n## Origins\n\nOld.\n\n### Deeper\n\nKept inside.\n\n# Bahamut\n\nGold.";
+      "# Cleopatra\n\nIntro.\n\n## Origins\n\nOld.\n\n### Deeper\n\nKept inside.\n\n# Ptolemy\n\nGold.";
     const outline = splitSections(titled).map((section) => [section.heading, section.depth]);
     expect(outline).toEqual([
-      ["Tiamat", 0],
+      ["Cleopatra", 0],
       ["Origins", 1],
-      ["Bahamut", 0],
+      ["Ptolemy", 0],
     ]);
     // A top section's copy holds its subsections; the third level stays in the body.
-    const [tiamat, origins] = splitSections(titled);
-    expect(tiamat?.markdown).toBe(
-      "# Tiamat\n\nIntro.\n\n## Origins\n\nOld.\n\n### Deeper\n\nKept inside.",
+    const [cleopatra, origins] = splitSections(titled);
+    expect(cleopatra?.markdown).toBe(
+      "# Cleopatra\n\nIntro.\n\n## Origins\n\nOld.\n\n### Deeper\n\nKept inside.",
     );
-    expect(tiamat?.body).toBe("Intro.");
+    expect(cleopatra?.body).toBe("Intro.");
     expect(origins?.body).toBe("Old.\n\n### Deeper\n\nKept inside.");
 
     const parts = "## One\n\nA.\n\n### One a\n\nB.\n\n## Two\n\nC.";
@@ -338,20 +338,20 @@ Again.
     const links = within(toc).getAllByRole("link");
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
       "#origins",
-      "#the-five-heads",
+      "#the-five-palaces",
       "#origins-2",
     ]);
     expect(links[0]?.getAttribute("aria-current")).toBe("true");
-    expect(document.getElementById("the-five-heads")?.tagName).toBe("H2");
+    expect(document.getElementById("the-five-palaces")?.tagName).toBe("H2");
   });
 
   it("marks every hit of the search and counts them", async () => {
     const user = userEvent.setup();
     const { container } = render(<ReadingView markdown={markdown} label="Article" />);
-    await user.type(screen.getByLabelText("Search the article"), "tiamat");
+    await user.type(screen.getByLabelText("Search the article"), "cleopatra");
     await waitFor(() => expect(screen.getByText("2 matches")).not.toBeNull());
     const marks = [...container.querySelectorAll("mark.sl-hit")].map((mark) => mark.textContent);
-    expect(marks).toEqual(["Tiamat", "Tiamat"]);
+    expect(marks).toEqual(["Cleopatra", "Cleopatra"]);
     await user.clear(screen.getByLabelText("Search the article"));
     await waitFor(() => expect(container.querySelectorAll("mark.sl-hit")).toHaveLength(0));
   });
@@ -361,8 +361,10 @@ Again.
     const writeText = vi.fn(async () => {});
     Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
     render(<ReadingView markdown={markdown} label="Article" />);
-    await user.click(screen.getByRole("button", { name: "Copy section: The five heads" }));
-    expect(writeText).toHaveBeenLastCalledWith("## The five heads\n\nFive heads. Tiamat breathes.");
+    await user.click(screen.getByRole("button", { name: "Copy section: The five palaces" }));
+    expect(writeText).toHaveBeenLastCalledWith(
+      "## The five palaces\n\nFive palaces. Cleopatra rules.",
+    );
     await user.click(screen.getByRole("button", { name: "Copy all" }));
     expect(writeText).toHaveBeenLastCalledWith(markdown);
   });
@@ -371,7 +373,7 @@ Again.
     const user = userEvent.setup();
     const { container } = render(<ReadingView markdown={markdown} label="Article" />);
     const search = screen.getByLabelText("Search the article");
-    await user.type(search, "tiamat");
+    await user.type(search, "cleopatra");
     await waitFor(() => expect(screen.getByText("2 matches")).not.toBeNull());
     await user.click(screen.getByRole("button", { name: "Next match" }));
     expect(screen.getByText("1 of 2")).not.toBeNull();
@@ -398,13 +400,13 @@ Again.
       />,
     );
     const region = screen.getByRole("region", { name: "Article content" });
-    expect(within(region).getByRole("heading", { name: "The five heads" }).id).toBe(
-      "article-the-five-heads",
+    expect(within(region).getByRole("heading", { name: "The five palaces" }).id).toBe(
+      "article-the-five-palaces",
     );
-    await user.click(screen.getByRole("button", { name: "Copy section: The five heads" }));
+    await user.click(screen.getByRole("button", { name: "Copy section: The five palaces" }));
     expect(onCopy).toHaveBeenLastCalledWith(
-      "## The five heads\n\nFive heads. Tiamat breathes.",
-      'section "The five heads"',
+      "## The five palaces\n\nFive palaces. Cleopatra rules.",
+      'section "The five palaces"',
     );
     await user.click(screen.getByRole("button", { name: "Copy all" }));
     expect(onCopy).toHaveBeenLastCalledWith(markdown, "article");

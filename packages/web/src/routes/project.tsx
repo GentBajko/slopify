@@ -202,7 +202,7 @@ function ProjectWorkspace({
       else next.run(intent.intent);
     },
   });
-  // "Regenerate image 3 in Tiamat" run from another screen opens the Images section; the
+  // "Regenerate image 3 in Cleopatra" run from another screen opens the Images section; the
   // images body then asks to regenerate the image (`project/regenerate-by-number.tsx`).
   useIntent(
     intents.showImages(projectId),

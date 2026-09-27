@@ -83,7 +83,7 @@ describe("channels", () => {
     const saved = updateChannel(deps, id, {
       name: "Lore Weekly",
       brand: { captionColor: "#ffd700", intro: "", endScreenText: "Subscribe" },
-      seriesBrief: "D&D lore, famous villains first",
+      seriesBrief: "Ancient history, famous rulers first",
       baseVersion: 1,
     });
     expect(saved).toMatchObject({
@@ -91,7 +91,7 @@ describe("channels", () => {
       value: {
         name: "Lore Weekly",
         brand: { captionColor: "#FFD700", endScreenText: "Subscribe" },
-        seriesBrief: "D&D lore, famous villains first",
+        seriesBrief: "Ancient history, famous rulers first",
         version: 2,
       },
     });
@@ -155,18 +155,18 @@ describe("the cast", () => {
     const created = createCastMember(deps, defaultChannelId, {
       id,
       kind: "creature",
-      name: "Tiamat",
-      aliases: ["tiamat", "Dragon Queen", "dragon queen", "Takhisis"],
-      description: "Five-headed dragon",
+      name: "Cleopatra",
+      aliases: ["cleopatra", "Last Pharaoh", "last pharaoh", "Philopator"],
+      description: "Last queen of Egypt",
     });
     expect(created).toMatchObject({
       ok: true,
-      value: { name: "Tiamat", aliases: ["Dragon Queen", "Takhisis"], images: [] },
+      value: { name: "Cleopatra", aliases: ["Last Pharaoh", "Philopator"], images: [] },
     });
     expect(
       updateCastMember(deps, id, {
         kind: "creature",
-        name: "Tiamat",
+        name: "Cleopatra",
         aliases: [""],
         baseVersion: 1,
       }),
@@ -175,18 +175,23 @@ describe("the cast", () => {
       message: "Enter a name, and remove empty aliases.",
     });
     expect(
-      updateCastMember(deps, id, { kind: "creature", name: "Tiamat", aliases: [], baseVersion: 1 }),
+      updateCastMember(deps, id, {
+        kind: "creature",
+        name: "Cleopatra",
+        aliases: [],
+        baseVersion: 1,
+      }),
     ).toMatchObject({ ok: true, value: { aliases: [], version: 2 } });
     expect(readChannel(deps, defaultChannelId)).toMatchObject({
       ok: true,
-      value: { cast: [{ id, name: "Tiamat" }] },
+      value: { cast: [{ id, name: "Cleopatra" }] },
     });
   });
 
   it("stores uploaded PNG and JPEG pictures by hash and refuses anything else", () => {
     const deps = fixture();
     const id = randomUUID();
-    createCastMember(deps, defaultChannelId, { id, kind: "place", name: "Waterdeep" });
+    createCastMember(deps, defaultChannelId, { id, kind: "place", name: "Alexandria" });
     const first = uploadCastImage(deps, id, png);
     expect(first).toMatchObject({ ok: true, value: { source: "upload", state: "ready" } });
     expect(uploadCastImage(deps, id, jpeg).ok).toBe(true);
@@ -209,7 +214,7 @@ describe("the cast", () => {
   it("makes a picture in the background, upright for characters", async () => {
     const deps = fixture();
     const id = randomUUID();
-    createCastMember(deps, defaultChannelId, { id, kind: "character", name: "Drizzt" });
+    createCastMember(deps, defaultChannelId, { id, kind: "character", name: "Herodotus" });
     const requests: unknown[] = [];
     let answer: (image: GeneratedImage) => void = () => undefined;
     const generateImage = (request: unknown) => {
@@ -219,14 +224,14 @@ describe("the cast", () => {
       });
     };
     const started = generateCastImage({ ...deps, generateImage }, id, {
-      prompt: "Drizzt, full body",
+      prompt: "Herodotus, full body",
       provider: "openai-image",
       model: "gpt-image-2",
     });
     expect(started).toMatchObject({ ok: true, value: { state: "generating", sha256: null } });
     expect(requests).toEqual([
       {
-        prompt: "Drizzt, full body",
+        prompt: "Herodotus, full body",
         provider: "openai-image",
         model: "gpt-image-2",
         aspect: "9:16",

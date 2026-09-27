@@ -12,7 +12,7 @@ const input = {
   version: 1 as const,
   provider: "codex-image",
   model: "codex-imagegen",
-  prompt: "Tiamat over Waterdeep",
+  prompt: "Cleopatra over Alexandria",
   aspect: "16:9" as const,
 };
 
@@ -27,10 +27,10 @@ it("sends each mentioned member's pictures, read by hash", () => {
   const sha = storeImageBlob(d.db, png, "image/png", "a");
   const call = imageCall(d, "p1", {
     ...input,
-    cast: [{ name: "Tiamat", description: "dragon", images: [sha] }],
+    cast: [{ name: "Cleopatra", description: "queen", images: [sha] }],
   });
   expect(call.cast).toEqual([
-    { name: "Tiamat", description: "dragon", images: [{ bytes: png, mime: "image/png" }] },
+    { name: "Cleopatra", description: "queen", images: [{ bytes: png, mime: "image/png" }] },
   ]);
   expect(imageCall(d, "p1", input)).not.toHaveProperty("cast");
 });
@@ -40,9 +40,9 @@ it("says what to do when a picture the project names is not in the database", ()
   expect(() =>
     imageCall(d, "p1", {
       ...input,
-      cast: [{ name: "Tiamat", description: "", images: ["0".repeat(64)] }],
+      cast: [{ name: "Cleopatra", description: "", images: ["0".repeat(64)] }],
     }),
   ).toThrow(
-    "A picture of Tiamat that this project was started with is not in this Slopify's database, so it can't be sent as a reference. Add the picture again in Channels → Cast, then start the video again from Play.",
+    "A picture of Cleopatra that this project was started with is not in this Slopify's database, so it can't be sent as a reference. Add the picture again in Channels → Cast, then start the video again from Play.",
   );
 });

@@ -4,18 +4,18 @@ import { parsePronunciationGlossary, pronunciationSpans } from "./pronunciation.
 import { prepareRequests } from "./steering.js";
 
 describe("IPA request boundaries", () => {
-  const parsed = parsePronunciationGlossary("Lich: /lɪtʃ/\nSzass Tam: /sæz tæm/");
+  const parsed = parsePronunciationGlossary("Kish: /kiːʃ/\nAmun Ra: /ɑmʊn rɑː/");
   if (!parsed.ok) throw new Error(parsed.reason);
   const entries = parsed.entries;
   it("sends one slash pair per word and preserves all clean characters", () => {
-    const source = "Szass \tTam is a LICH.";
+    const source = "Amun \tRa is a KISH.";
     expect(prepareRequests(source, [], 100, pronunciationSpans(source, entries))).toEqual({
       ok: true,
-      requests: [{ text: "/sæz/ \t/tæm/ is a /lɪtʃ/.", spokenText: source }],
+      requests: [{ text: "/ɑmʊn/ \t/rɑː/ is a /kiːʃ/.", spokenText: source }],
     });
   });
   it("keeps IPA and astral points atomic across every nearby UTF-16 cap", () => {
-    const source = "Lich 😀 Lich. Szass Tam.";
+    const source = "Kish 😀 Kish. Amun Ra.";
     for (let cap = 6; cap <= 40; cap++) {
       const result = prepareRequests(source, [], cap, pronunciationSpans(source, entries));
       expect(result.ok).toBe(true);
@@ -29,7 +29,7 @@ describe("IPA request boundaries", () => {
     }
   });
   it("counts carried directions and does not repeat one-shot sounds", () => {
-    const source = "Lich keeps speaking. Lich rests.";
+    const source = "Kish keeps speaking. Kish rests.";
     const result = prepareRequests(
       source,
       [
@@ -52,7 +52,7 @@ describe("IPA request boundaries", () => {
     expect(result.requests.every((part) => part.text.length <= 24)).toBe(true);
   });
   it("refuses an indivisible IPA token with no room after its required cue", () => {
-    const source = "Lich";
+    const source = "Kish";
     expect(prepareRequests(source, [], 5, pronunciationSpans(source, entries)).ok).toBe(false);
     expect(
       prepareRequests(
@@ -71,7 +71,7 @@ describe("IPA request boundaries", () => {
       ),
     ).toEqual({
       ok: true,
-      requests: [{ text: "[calm] /lɪtʃ/", spokenText: source }],
+      requests: [{ text: "[calm] /kiːʃ/", spokenText: source }],
     });
   });
   it("leaves existing steering requests unchanged when there are no matches", () => {
@@ -81,11 +81,11 @@ describe("IPA request boundaries", () => {
         prepareRequests(source, [], cap),
       );
   });
-  it.each(["'Lich'", "‘Lich’"])("preserves quotes around %s in both texts", (quoted) => {
+  it.each(["'Kish'", "‘Kish’"])("preserves quotes around %s in both texts", (quoted) => {
     const source = `The ${quoted} returns.`;
     expect(prepareRequests(source, [], 100, pronunciationSpans(source, entries))).toEqual({
       ok: true,
-      requests: [{ text: source.replace("Lich", "/lɪtʃ/"), spokenText: source }],
+      requests: [{ text: source.replace("Kish", "/kiːʃ/"), spokenText: source }],
     });
   });
   it("keeps punctuated terms intact at sentence and request boundaries", () => {

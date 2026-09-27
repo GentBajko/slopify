@@ -268,7 +268,7 @@ describe("clicks from the landing screen to done", () => {
       missedPolicy: "skip",
       overlapPolicy: "skip",
       spendLimitCents: null,
-      items: [{ title: "Owlbears", values: {} }],
+      items: [{ title: "Pyramids", values: {} }],
       topicKeyword: "Topic",
       status: "active",
       version: 1,
@@ -317,8 +317,8 @@ describe("clicks from the landing screen to done", () => {
     );
     const now = person();
     const queue = await screen.findByRole("region", { name: "Queued topics" });
-    await now.type(within(queue).getByRole("textbox", { name: "New topic" }), "Mimics{Enter}");
-    await waitFor(() => expect(saved).toHaveBeenLastCalledWith(["Owlbears", "Mimics"]));
+    await now.type(within(queue).getByRole("textbox", { name: "New topic" }), "Obelisks{Enter}");
+    await waitFor(() => expect(saved).toHaveBeenLastCalledWith(["Pyramids", "Obelisks"]));
     expect(now.clicks()).toBeLessThanOrEqual(clickBudget.changeScheduleTopics);
     cleanup();
 
@@ -333,9 +333,9 @@ describe("clicks from the landing screen to done", () => {
     const before = person();
     await before.click(await screen.findByRole("button", { name: "Edit Morning stories" }));
     await screen.findByLabelText("Each topic fills");
-    await before.type(screen.getByRole("textbox", { name: /topic · next/ }), "{Enter}Mimics");
+    await before.type(screen.getByRole("textbox", { name: /topic · next/ }), "{Enter}Obelisks");
     await before.click(screen.getByRole("button", { name: "Save changes" }));
-    await waitFor(() => expect(saved).toHaveBeenLastCalledWith(["Owlbears", "Mimics"]));
+    await waitFor(() => expect(saved).toHaveBeenLastCalledWith(["Pyramids", "Obelisks"]));
     expect(before.clicks()).toBe(3);
     expect(now.clicks()).toBeLessThan(before.clicks());
   });

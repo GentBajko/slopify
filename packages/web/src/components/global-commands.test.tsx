@@ -63,7 +63,7 @@ async function mount(onImage: (count: number | undefined) => void = () => {}) {
     testDeps({
       "GET /api/projects": jsonAnswer({
         projects: [
-          listing("p1", "D&D Lore: Tiamat", "generate"),
+          listing("p1", "History: Cleopatra", "generate"),
           listing("p2", "Knot Tricks", "generate"),
           listing("p3", "Audio Only", "off"),
         ],
@@ -80,15 +80,15 @@ describe("the palette from anywhere", () => {
   it("finds a project's image by name and number, and hands the number to the project", async () => {
     const onImage = vi.fn();
     const registry = await mount(onImage);
-    const found = matchCommands(registry.list(), "tiamat regenerate image 3");
-    expect(found[0]?.title).toBe("Regenerate image 3 in D&D Lore: Tiamat");
+    const found = matchCommands(registry.list(), "cleopatra regenerate image 3");
+    expect(found[0]?.title).toBe("Regenerate image 3 in History: Cleopatra");
     // Only the project named: the other project's image command needs its own name.
     expect(found.map((command) => command.title)).not.toContain(
       "Regenerate image 3 in Knot Tricks",
     );
     // Word order does not matter.
-    expect(matchCommands(registry.list(), "image 3 tiamat regenerate")[0]?.title).toBe(
-      "Regenerate image 3 in D&D Lore: Tiamat",
+    expect(matchCommands(registry.list(), "image 3 cleopatra regenerate")[0]?.title).toBe(
+      "Regenerate image 3 in History: Cleopatra",
     );
     await found[0]?.run();
     expect(onImage).toHaveBeenCalledWith(3);

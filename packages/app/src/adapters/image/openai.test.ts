@@ -253,7 +253,7 @@ describe("cast pictures", () => {
   it("go to the edits endpoint after the establishing image, each named in the prompt", async () => {
     const seen: Seen[] = [];
     const reference = { bytes: new Uint8Array(pngHead), mime: "image/png" as const };
-    const tiamat = { bytes: new Uint8Array([0xff, 0xd8, 0xff, 1]), mime: "image/jpeg" as const };
+    const cleopatra = { bytes: new Uint8Array([0xff, 0xd8, 0xff, 1]), mime: "image/jpeg" as const };
     await openAiImage({
       fetch: replaying(answering("openai-image-success.json"), seen),
       key: () => key,
@@ -262,7 +262,7 @@ describe("cast pictures", () => {
       prompt,
       aspect: "16:9",
       reference,
-      cast: [{ name: "Tiamat", description: "", images: [tiamat] }],
+      cast: [{ name: "Cleopatra", description: "", images: [cleopatra] }],
       signal: new AbortController().signal,
     });
     expect(seen[0]?.url).toBe(`${openAiImagesBase}/images/edits`);
@@ -270,8 +270,8 @@ describe("cast pictures", () => {
     if (!(form instanceof FormData)) throw new Error("no form");
     const images = form.getAll("image[]");
     expect(images).toHaveLength(2);
-    expect(new Uint8Array(await (images[1] as Blob).arrayBuffer())).toEqual(tiamat.bytes);
-    expect(String(form.get("prompt"))).toContain("Image 2 shows Tiamat");
+    expect(new Uint8Array(await (images[1] as Blob).arrayBuffer())).toEqual(cleopatra.bytes);
+    expect(String(form.get("prompt"))).toContain("Image 2 shows Cleopatra");
   });
 
   it("alone also use the edits endpoint", async () => {
@@ -285,7 +285,7 @@ describe("cast pictures", () => {
       aspect: "16:9",
       cast: [
         {
-          name: "Waterdeep",
+          name: "Alexandria",
           description: "",
           images: [{ bytes: new Uint8Array(pngHead), mime: "image/png" }],
         },

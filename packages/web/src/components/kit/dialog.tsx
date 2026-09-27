@@ -44,7 +44,7 @@ export function Dialog({
 }
 
 // The confirm pattern: one sentence of consequence and two named buttons, never OK/Cancel.
-// "Delete 'Tiamat'?" / "The project and its 9 images are removed from disk." /
+// "Delete 'Cleopatra'?" / "The project and its 9 images are removed from disk." /
 // [Keep it] [Delete project]. Focus starts on the way out, so Enter never destroys by
 // accident.
 export function ConfirmDialog({

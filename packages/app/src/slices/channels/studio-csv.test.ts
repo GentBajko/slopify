@@ -6,28 +6,34 @@ describe("titles from a CSV", () => {
     const studio = [
       "﻿Content,Video title,Video publish time,Duration,Views,Watch time (hours)",
       "Total,,,,12345,678.9",
-      'dQw4w9WgXcQ,"Tiamat, Queen of Dragons",Sep 1 2026,812,5000,300.1',
-      'aBcDeFgHiJk,"The ""Lich"" God\nExplained",Aug 30 2026,901,3000,200',
-      "zYxWvUtSrQp,Strahd von Zarovich,Aug 1 2026,700,1000,50",
+      'dQw4w9WgXcQ,"Cleopatra, Queen of the Nile",Sep 1 2026,812,5000,300.1',
+      'aBcDeFgHiJk,"The ""Last"" Scholar\nExplained",Aug 30 2026,901,3000,200',
+      "zYxWvUtSrQp,Ramesses the Great,Aug 1 2026,700,1000,50",
     ].join("\r\n");
     expect(titlesFromCsv(studio)).toEqual([
-      "Tiamat, Queen of Dragons",
-      'The "Lich" God Explained',
-      "Strahd von Zarovich",
+      "Cleopatra, Queen of the Nile",
+      'The "Last" Scholar Explained',
+      "Ramesses the Great",
     ]);
   });
 
   it("finds Title or Content headers in any case", () => {
-    expect(titlesFromCsv("Views,TITLE\n10,Vecna\n20,Acererak\n")).toEqual(["Vecna", "Acererak"]);
-    expect(titlesFromCsv("content,views\nBeholders,1\n")).toEqual(["Beholders"]);
+    expect(titlesFromCsv("Views,TITLE\n10,Hypatia\n20,Archimedes\n")).toEqual([
+      "Hypatia",
+      "Archimedes",
+    ]);
+    expect(titlesFromCsv("content,views\nZiggurats,1\n")).toEqual(["Ziggurats"]);
   });
 
   it("falls back to the first text column, with or without a header", () => {
-    expect(titlesFromCsv("Id,Name,Views\nabc,Mind Flayers,10\ndef,Owlbears,3\n")).toEqual([
-      "Mind Flayers",
-      "Owlbears",
+    expect(titlesFromCsv("Id,Name,Views\nabc,Hanging Gardens,10\ndef,Pyramids,3\n")).toEqual([
+      "Hanging Gardens",
+      "Pyramids",
     ]);
-    expect(titlesFromCsv("Mind Flayers,10\nOwlbears,3\n")).toEqual(["Mind Flayers", "Owlbears"]);
+    expect(titlesFromCsv("Hanging Gardens,10\nPyramids,3\n")).toEqual([
+      "Hanging Gardens",
+      "Pyramids",
+    ]);
   });
 
   it("reads semicolon-separated files", () => {

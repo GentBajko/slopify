@@ -95,7 +95,7 @@ const backups = {
 const trashed: TrashItem = {
   kind: "project",
   id: "p1",
-  name: "Tiamat",
+  name: "Cleopatra",
   detail: null,
   deletedAt: "2026-09-27T10:00:00.000Z",
   purgeAt: "2026-10-27T10:00:00.000Z",
@@ -137,7 +137,7 @@ function settingsDeps(extra: Readonly<Record<string, Answer>> = {}) {
       byProject: [
         {
           id: "p2",
-          title: "Vecna",
+          title: "Hypatia",
           bytes: 512,
           outputsBytes: 256,
           workingBytes: 256,
@@ -190,9 +190,9 @@ const loaded: Readonly<Record<SettingsSection, () => Promise<unknown>>> = {
   notifications: () => screen.findByDisplayValue("https://ntfy.sh/slopify-runs"),
   "channel-links": () => screen.findByRole("link", { name: "Open the default channel's links" }),
   studio: () => screen.findByDisplayValue("Lore"),
-  storage: () => screen.findByText("Vecna"),
+  storage: () => screen.findByText("Hypatia"),
   backups: () => screen.findByLabelText("Keep last"),
-  trash: () => screen.findByText("Tiamat"),
+  trash: () => screen.findByText("Cleopatra"),
   usage: () => screen.findByRole("heading", { level: 1, name: "Usage" }),
   "patch-notes": () => screen.findByRole("heading", { name: "Highlights" }),
   about: () => screen.findByRole("list", { name: "Links" }),
@@ -244,7 +244,7 @@ describe("Home", () => {
             {
               ...running.project,
               id: "p-done",
-              title: "Szass Tam",
+              title: "Ashurbanipal",
               status: "done",
               channelId: channel,
               uploadedAt: null,

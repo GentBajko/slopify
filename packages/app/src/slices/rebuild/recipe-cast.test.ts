@@ -7,21 +7,21 @@ import { castFor, castMembersPerImage } from "./recipe-cast.js";
 import { config, content } from "./recipe-fixture.js";
 import type { ResolvedWorkRecipe } from "./recipe-model.js";
 
-const tiamat: CastSnapshot = {
-  name: "Tiamat",
-  aliases: ["the Dragon Queen"],
-  description: "five-headed chromatic dragon",
+const cleopatra: CastSnapshot = {
+  name: "Cleopatra",
+  aliases: ["the Last Pharaoh"],
+  description: "last Ptolemaic ruler of Egypt",
   images: ["a".repeat(64), "b".repeat(64)],
 };
-const waterdeep: CastSnapshot = {
-  name: "Waterdeep",
+const alexandria: CastSnapshot = {
+  name: "Alexandria",
   aliases: ["City of Splendors"],
   description: "",
   images: ["c".repeat(64)],
 };
 const base: RunConfig = {
   ...config,
-  title: "The Rise of Tiamat",
+  title: "The Rise of Cleopatra",
   sources: { ...config.sources, thumbnail: "from_prompt" },
   images: { provider: "codex-image", model: "codex-imagegen" },
   thumbnailPrompt: "Thumbnail",
@@ -40,7 +40,7 @@ const briefs: RevisionContent = {
     lair: {
       source: "generate",
       assetId: null,
-      prompt: "The Dragon Queen coils above Waterdeep; Tiamatic runes glow",
+      prompt: "The Last Pharaoh coils above Alexandria; Cleopatraic runes glow",
     },
   },
 };
@@ -60,32 +60,35 @@ const find = (recipes: readonly ResolvedWorkRecipe[], key: string): ResolvedWork
 };
 
 describe("cast references per image", () => {
-  const withCast: RunConfig = { ...base, cast: [tiamat, waterdeep] };
+  const withCast: RunConfig = { ...base, cast: [cleopatra, alexandria] };
 
   it("sends each image the members its brief mentions, in the order it mentions them", () => {
     const recipes = recipesFor(withCast);
     expect(find(recipes, "image:harbor").input).toMatchObject({
-      cast: [{ name: "Waterdeep", description: "", images: ["c".repeat(64)] }],
+      cast: [{ name: "Alexandria", description: "", images: ["c".repeat(64)] }],
     });
     expect(find(recipes, "image:lair").input).toMatchObject({
-      cast: [{ name: "Tiamat", images: ["a".repeat(64), "b".repeat(64)] }, { name: "Waterdeep" }],
+      cast: [
+        { name: "Cleopatra", images: ["a".repeat(64), "b".repeat(64)] },
+        { name: "Alexandria" },
+      ],
     });
     expect(find(recipes, "image:hill").input).not.toHaveProperty("cast");
   });
 
   it("sends the thumbnail the members its brief or the title mentions", () => {
     expect(find(recipesFor(withCast), "thumbnail:image").input).toMatchObject({
-      cast: [{ name: "Tiamat" }],
+      cast: [{ name: "Cleopatra" }],
     });
   });
 
   it("sends the establishing image every member the title mentions", () => {
     const drawn = recipesFor({ ...withCast, reference: { source: "prompt", prompt: "Sheet" } });
-    expect(find(drawn, "reference:image").input).toMatchObject({ cast: [{ name: "Tiamat" }] });
+    expect(find(drawn, "reference:image").input).toMatchObject({ cast: [{ name: "Cleopatra" }] });
     // The other images keep their own members as well as the establishing image.
     expect(find(drawn, "image:lair").input).toMatchObject({
       reference: { assetId: null },
-      cast: [{ name: "Tiamat" }, { name: "Waterdeep" }],
+      cast: [{ name: "Cleopatra" }, { name: "Alexandria" }],
     });
   });
 
@@ -93,7 +96,7 @@ describe("cast references per image", () => {
     const plain = recipesFor(base);
     const unmentioned = recipesFor({
       ...base,
-      cast: [{ name: "Vecna", aliases: [], description: "", images: ["d".repeat(64)] }],
+      cast: [{ name: "Hypatia", aliases: [], description: "", images: ["d".repeat(64)] }],
     });
     for (const key of [
       "image:harbor",
@@ -117,7 +120,7 @@ describe("cast references per image", () => {
     expect(find(cast, "image:lair").fingerprint).not.toBe(find(plain, "image:lair").fingerprint);
     const newPicture = recipesFor({
       ...base,
-      cast: [{ ...tiamat, images: ["e".repeat(64)] }, waterdeep],
+      cast: [{ ...cleopatra, images: ["e".repeat(64)] }, alexandria],
     });
     expect(find(newPicture, "image:lair").fingerprint).not.toBe(
       find(cast, "image:lair").fingerprint,
@@ -146,7 +149,7 @@ describe("castFor", () => {
   });
 
   it("answers undefined without a cast or a mention", () => {
-    expect(castFor({}, "Tiamat")).toBeUndefined();
-    expect(castFor({ cast: [tiamat] }, "A hill", null, undefined)).toBeUndefined();
+    expect(castFor({}, "Cleopatra")).toBeUndefined();
+    expect(castFor({ cast: [cleopatra] }, "A hill", null, undefined)).toBeUndefined();
   });
 });

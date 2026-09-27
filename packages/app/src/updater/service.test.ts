@@ -83,7 +83,7 @@ describe("app updater", () => {
       currentVersion: "0.6.1",
       now: () => 0,
       busy: () => busy,
-      busyWith: () => (busy ? "Tiamat" : undefined),
+      busyWith: () => (busy ? "Cleopatra" : undefined),
       every: (callback) => {
         tick = callback;
         return () => {
@@ -102,7 +102,7 @@ describe("app updater", () => {
     });
     expect(await updater.start()).toMatchObject({
       ok: true,
-      info: { status: "waiting", pendingVersion: "0.6.2", waitingFor: "Tiamat" },
+      info: { status: "waiting", pendingVersion: "0.6.2", waitingFor: "Cleopatra" },
     });
     // A second click neither installs nor queues a second wait.
     expect(await updater.start()).toMatchObject({ ok: false, code: 409 });

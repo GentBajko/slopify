@@ -11,7 +11,7 @@ import {
 } from "./topic-list.js";
 
 const form = {
-  title: "D&D Lore: {{Topic}}",
+  title: "History: {{Topic}}",
   values: { Topic: "", "Min. Word Count": "1000", Tone: "" },
 };
 const keywords = templateKeywords(form);
@@ -24,33 +24,33 @@ describe("the topic list", () => {
 
   it("reads a YAML list of maps and plain topics, every value as the text written", () => {
     const parsed = parseTopicList(
-      "- Topic: Tiamat\n  Min. Word Count: 12000\n- Vecna\n- Topic: Mimics\n  Tone: yes\n",
+      "- Topic: Cleopatra\n  Min. Word Count: 12000\n- Hypatia\n- Topic: Obelisks\n  Tone: yes\n",
       options,
     );
     expect(parsed).toEqual({
       ok: true,
       rows: [
-        { title: "Tiamat", values: { "Min. Word Count": "12000" } },
-        { title: "Vecna", values: {} },
-        { title: "Mimics", values: { Tone: "yes" } },
+        { title: "Cleopatra", values: { "Min. Word Count": "12000" } },
+        { title: "Hypatia", values: {} },
+        { title: "Obelisks", values: { Tone: "yes" } },
       ],
     });
   });
 
   it("reads a JSON array the same way", () => {
     expect(
-      parseTopicList('[{"Topic": "Tiamat", "Min. Word Count": "12000"}, "Vecna"]', options),
+      parseTopicList('[{"Topic": "Cleopatra", "Min. Word Count": "12000"}, "Hypatia"]', options),
     ).toEqual({
       ok: true,
       rows: [
-        { title: "Tiamat", values: { "Min. Word Count": "12000" } },
-        { title: "Vecna", values: {} },
+        { title: "Cleopatra", values: { "Min. Word Count": "12000" } },
+        { title: "Hypatia", values: {} },
       ],
     });
   });
 
   it("names the row and the key of an unknown keyword or a missing topic", () => {
-    const parsed = parseTopicList("- Topic: Tiamat\n  Colour: red\n- Tone: calm\n", options);
+    const parsed = parseTopicList("- Topic: Cleopatra\n  Colour: red\n- Tone: calm\n", options);
     expect(parsed.ok).toBe(false);
     if (parsed.ok) return;
     expect(parsed.problems[0]).toContain("Topic 1: “Colour” is not a keyword of this template");
@@ -59,53 +59,55 @@ describe("the topic list", () => {
   });
 
   it("asks for a keyword with no every-run value on every row", () => {
-    const parsed = parseTopicList("- Topic: Tiamat\n- Topic: Vecna\n  Tone: calm\n", {
+    const parsed = parseTopicList("- Topic: Cleopatra\n- Topic: Hypatia\n  Tone: calm\n", {
       ...options,
       required: ["Tone"],
     });
     expect(parsed.ok).toBe(false);
     if (parsed.ok) return;
     expect(parsed.problems).toEqual([
-      "Topic 1 (Tiamat) has no “Tone”, and there is no every-run value to fall back on. Give this topic one, or fill “Tone” for every run.",
+      "Topic 1 (Cleopatra) has no “Tone”, and there is no every-run value to fall back on. Give this topic one, or fill “Tone” for every run.",
     ]);
   });
 
   it("refuses text that is not a list, nested values and broken YAML in plain words", () => {
-    const notList = parseTopicList("Topic: Tiamat", options);
+    const notList = parseTopicList("Topic: Cleopatra", options);
     expect(!notList.ok && notList.problems[0]).toContain("must be a list of topics");
-    const nested = parseTopicList("- Topic: Tiamat\n  Tone: [a, b]\n", options);
+    const nested = parseTopicList("- Topic: Cleopatra\n  Tone: [a, b]\n", options);
     expect(!nested.ok && nested.problems[0]).toContain("Topic 1: “Tone” holds a list or a map");
-    const broken = parseTopicList("- Topic: [Tiamat\n", options);
+    const broken = parseTopicList("- Topic: [Cleopatra\n", options);
     expect(!broken.ok && broken.problems[0]).toContain("couldn't be read as YAML or JSON");
     expect(parseTopicList("   ", options)).toEqual({ ok: true, rows: [] });
   });
 
   it("round-trips the queue through YAML and through lines", () => {
     const rows: readonly TopicRow[] = [
-      { title: "Tiamat", values: { "Min. Word Count": "12000", Tone: "a: b # not a comment" } },
+      { title: "Cleopatra", values: { "Min. Word Count": "12000", Tone: "a: b # not a comment" } },
       { title: "12000", values: {} },
-      { title: "Vecna", values: {} },
+      { title: "Hypatia", values: {} },
     ];
     const yaml = formatTopicList(rows, "Topic");
-    expect(yaml.startsWith("- Topic: Tiamat\n")).toBe(true);
+    expect(yaml.startsWith("- Topic: Cleopatra\n")).toBe(true);
     expect(parseTopicList(yaml, options)).toEqual({ ok: true, rows });
     // Lines carry only the topics; the values come back from the rows they match.
     expect(rowsFromLines(linesFromRows(rows), rows)).toEqual(rows);
-    expect(rowsFromLines("Vecna\n\n  New one  ", rows)).toEqual([
-      { title: "Vecna", values: {} },
+    expect(rowsFromLines("Hypatia\n\n  New one  ", rows)).toEqual([
+      { title: "Hypatia", values: {} },
       { title: "New one", values: {} },
     ]);
   });
 
   it("builds a run's project title the way the scheduler does", () => {
     const schedule = { topicKeyword: "Topic", values: { "Min. Word Count": "15000" } };
-    expect(renderedTitle(form, schedule, { title: "Tiamat", values: {} })).toBe("D&D Lore: Tiamat");
+    expect(renderedTitle(form, schedule, { title: "Cleopatra", values: {} })).toBe(
+      "History: Cleopatra",
+    );
     expect(
       renderedTitle({ ...form, title: "{{Topic}} in {{Min. Word Count}} words" }, schedule, {
-        title: "Vecna",
+        title: "Hypatia",
         values: { "Min. Word Count": "9000" },
       }),
-    ).toBe("Vecna in 9000 words");
+    ).toBe("Hypatia in 9000 words");
     // Without a topic keyword the topic is the whole title.
     expect(
       renderedTitle(form, { topicKeyword: null, values: {} }, { title: "Plain", values: {} }),

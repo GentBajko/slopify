@@ -5,13 +5,13 @@
 // - the texts are equal, or
 // - their word sets overlap by at least `jaccardMin` (shared words / all words), or
 // - one's words all appear in the other's and cover at least `containmentMin` of it
-//   ("Tiamat" and "Tiamat's Lair" are one video; "Red Dragons" and "Blue Dragons" are two).
+//   ("Cleopatra" and "Cleopatra's Palace" are one video; "Red Pyramids" and "Bent Pyramids" are two).
 // Words are compared without filler words ("the", "of", …) and without a plural "s".
 // A project title is compared more loosely: every word of the topic appearing in it is enough,
-// because the title wraps the topic in the template's own words ("D&D Lore: Tiamat"). A topic
-// of one or two words is too easily found inside an unrelated title ("Dragons" in "The Red
-// Dragons of Krynn"), so one of the title's clauses must hold exactly its words, leaving aside
-// question and framing words ("Vecna" in "Who is Vecna? The Lich God Explained").
+// because the title wraps the topic in the template's own words ("History: Cleopatra"). A topic
+// of one or two words is too easily found inside an unrelated title ("Pyramids" in "The Great
+// Pyramids of Giza"), so one of the title's clauses must hold exactly its words, leaving aside
+// question and framing words ("Hypatia" in "Who was Hypatia? The Last Scholar Explained").
 
 export const jaccardMin = 0.6;
 export const containmentMin = 0.5;
@@ -112,7 +112,7 @@ function sameWords(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
   return a.size > 0 && a.size === b.size && shared(a, b) === a.size;
 }
 
-// "D&D Lore: Tiamat (Part 2) | Who is Vecna?" → ["D&D Lore", "Tiamat", "Part 2", "Who is Vecna"].
+// "History: Cleopatra (Part 2) | Who is Hypatia?" → ["History", "Cleopatra", "Part 2", "Who is Hypatia"].
 function titleClauses(title: string): string[] {
   return title
     .split(/\s*[:|()[\]?!.,;\u2013\u2014]\s*|\s+-\s+/u)

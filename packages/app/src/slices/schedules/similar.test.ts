@@ -2,35 +2,37 @@ import { expect, it } from "vitest";
 import { newTopics, similarTopics, topicInTitle } from "./similar.js";
 
 it("treats rewordings of one topic as the same and different subjects as different", () => {
-  expect(similarTopics("Tiamat", "tiamat!")).toBe(true);
-  expect(similarTopics("Tiamat", "Tiamat's Lair")).toBe(true);
-  expect(similarTopics("The Mimics", "mimic")).toBe(true);
+  expect(similarTopics("Cleopatra", "cleopatra!")).toBe(true);
+  expect(similarTopics("Cleopatra", "Cleopatra's Palace")).toBe(true);
+  expect(similarTopics("The Obelisks", "obelisk")).toBe(true);
   expect(similarTopics("Café of Doom", "cafe doom")).toBe(true);
-  expect(similarTopics("Red Dragons", "Blue Dragons")).toBe(false);
-  expect(similarTopics("Vecna", "Strahd")).toBe(false);
+  expect(similarTopics("Red Pyramids", "Bent Pyramids")).toBe(false);
+  expect(similarTopics("Hypatia", "Ramesses")).toBe(false);
 });
 
 it("finds a topic inside a project title the template wrapped it in", () => {
-  expect(topicInTitle("Vecna", "D&D Lore: Vecna")).toBe(true);
-  expect(topicInTitle("Strahd", "D&D Lore: Vecna")).toBe(false);
-  expect(topicInTitle("Lady of Pain", "Sleep Lore | The Lady of Pain (Part 2)")).toBe(true);
-  expect(topicInTitle("Strahd von Zarovich", "Who was Strahd von Zarovich really?")).toBe(true);
+  expect(topicInTitle("Hypatia", "History: Hypatia")).toBe(true);
+  expect(topicInTitle("Ramesses", "History: Hypatia")).toBe(false);
+  expect(
+    topicInTitle("Library of Alexandria", "Sleep Stories | The Library of Alexandria (Part 2)"),
+  ).toBe(true);
+  expect(topicInTitle("Ramesses the Great", "Who was Ramesses the Great really?")).toBe(true);
 });
 
 it("needs a near-exact title part for a topic of one or two words", () => {
-  expect(topicInTitle("Dragons", "The Red Dragons of Krynn")).toBe(false);
-  expect(topicInTitle("Red Dragons", "Why Red Dragons Hoard Gold, and Blue Ones Don't")).toBe(
+  expect(topicInTitle("Pyramids", "The Great Pyramids of Giza")).toBe(false);
+  expect(topicInTitle("Red Pyramids", "Why Red Pyramids Hold Gold, and Bent Ones Don't")).toBe(
     false,
   );
-  expect(topicInTitle("Red Dragons", "D&D Lore - Red Dragons")).toBe(true);
-  expect(topicInTitle("Mimics", "The Mimic")).toBe(true);
+  expect(topicInTitle("Red Pyramids", "History - Red Pyramids")).toBe(true);
+  expect(topicInTitle("Obelisks", "The Obelisk")).toBe(true);
 });
 
 it("keeps new candidates in order and drops repeats among themselves", () => {
   expect(
-    newTopics(["Orcus", "orcus!", "Vecna", "Lolth", "Tiamat's Lair"], {
-      topics: ["Tiamat"],
-      projects: ["D&D Lore: Vecna"],
+    newTopics(["Imhotep", "imhotep!", "Hypatia", "Nefertiti", "Cleopatra's Palace"], {
+      topics: ["Cleopatra"],
+      projects: ["History: Hypatia"],
     }),
-  ).toEqual(["Orcus", "Lolth"]);
+  ).toEqual(["Imhotep", "Nefertiti"]);
 });

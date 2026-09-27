@@ -53,7 +53,7 @@ function rowsOf(node: MarkdownNode): readonly string[] {
       const cells = row.children ?? [];
       if (cells.length < 2) return textOf(row);
       const [term, ipa] = cells.slice(0, 2).map((cell) => textOf(cell).trim());
-      // A table's IPA column is often written without the slashes ("| Tiamat | ˈtiːəmɑːt |");
+      // A table's IPA column is often written without the slashes ("| Cleopatra | kliːəˈpætrə |");
       // the column already says what the cell is, so a bare cell reads as one /…/ pronunciation.
       return `${term}: ${ipa !== undefined && ipa !== "" && !ipa.includes("/") ? `/${ipa}/` : ipa}`;
     });

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 
 // A command run from anywhere that finishes on another screen ("New schedule" from Home,
-// "Regenerate image 3 in Tiamat" from Projects) navigates there and leaves an intent; the
+// "Regenerate image 3 in Cleopatra" from Projects) navigates there and leaves an intent; the
 // screen takes it once it is mounted and ready. An intent nobody takes within a few seconds
 // is dropped, so a later visit never acts on a stale one.
 

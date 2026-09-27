@@ -13,9 +13,9 @@ const memory: EpisodeMemory = {
   id: "m1",
   channelId: id,
   projectId: "p1",
-  title: "Tiamat Awakens",
+  title: "Cleopatra Awakens",
   summary: "She woke under the mountain.",
-  cast: ["Tiamat"],
+  cast: ["Cleopatra"],
   source: "generated",
   createdAt: "2026-09-01",
   updatedAt: "2026-09-01",
@@ -47,12 +47,12 @@ describe("Episodes tab", () => {
         ),
       }),
     );
-    expect(await screen.findByText("Tiamat Awakens")).not.toBeNull();
+    expect(await screen.findByText("Cleopatra Awakens")).not.toBeNull();
     const toggle = screen.getByRole("switch", { name: "Episode memory" });
     expect(toggle.getAttribute("aria-checked")).toBe("true");
     await user.click(toggle);
     await waitFor(() => expect(toggled).toEqual([{ enabled: false }]));
-    await user.click(screen.getByRole("button", { name: "Open the summary of Tiamat Awakens" }));
+    await user.click(screen.getByRole("button", { name: "Open the summary of Cleopatra Awakens" }));
     const box = await screen.findByLabelText("Summary");
     await user.clear(box);
     await user.type(box, "She slept.");
@@ -69,7 +69,7 @@ describe("Existing videos tab", () => {
       <VideosTab channelId={id} />,
       testDeps({
         [`GET /api/channels/${id}/videos`]: jsonAnswer({
-          videos: [{ id: "v1", title: "Vecna", createdAt: "a" }],
+          videos: [{ id: "v1", title: "Hypatia", createdAt: "a" }],
         }),
         [`POST /api/channels/${id}/videos`]: recording(
           jsonAnswer({ added: 1, skipped: 1 }, 201),
@@ -77,10 +77,10 @@ describe("Existing videos tab", () => {
         ),
       }),
     );
-    expect(await screen.findByText("Vecna")).not.toBeNull();
-    await user.type(screen.getByLabelText("Paste titles"), "Tiamat{enter}vecna");
+    expect(await screen.findByText("Hypatia")).not.toBeNull();
+    await user.type(screen.getByLabelText("Paste titles"), "Cleopatra{enter}hypatia");
     await user.click(screen.getByRole("button", { name: "Add titles" }));
-    await waitFor(() => expect(sent).toEqual([{ format: "lines", text: "Tiamat\nvecna" }]));
+    await waitFor(() => expect(sent).toEqual([{ format: "lines", text: "Cleopatra\nhypatia" }]));
     expect(await screen.findByText("Added 1 title; skipped 1 already listed.")).not.toBeNull();
   });
 
@@ -94,8 +94,13 @@ describe("Existing videos tab", () => {
         [`GET /api/channels/${id}/videos`]: jsonAnswer({ videos: [] }),
         [`POST /api/channels/${id}/videos/preview`]: recording(
           jsonAnswer({
-            titles: ["D&D Lore: Vecna", "New World Guide", "The Finals Tips", "d&d: Tiamat"],
-            filter: "d&d",
+            titles: [
+              "History: Hypatia",
+              "New World Guide",
+              "The Finals Tips",
+              "history: Cleopatra",
+            ],
+            filter: "history",
           }),
           previewed,
         ),
@@ -106,29 +111,29 @@ describe("Existing videos tab", () => {
       }),
     );
     await screen.findByText("No existing videos listed");
-    const csv = new File(["Video title\nD&D Lore: Vecna\n"], "studio.csv", { type: "text/csv" });
+    const csv = new File(["Video title\nHistory: Hypatia\n"], "studio.csv", { type: "text/csv" });
     await user.upload(screen.getByLabelText("YouTube Studio CSV file"), csv);
     await waitFor(() =>
-      expect(previewed).toEqual([{ format: "csv", text: "Video title\nD&D Lore: Vecna\n" }]),
+      expect(previewed).toEqual([{ format: "csv", text: "Video title\nHistory: Hypatia\n" }]),
     );
     const tick = (name: string) => screen.getByRole<HTMLInputElement>("checkbox", { name });
-    expect((await screen.findByLabelText<HTMLInputElement>("D&D Lore: Vecna")).checked).toBe(true);
+    expect((await screen.findByLabelText<HTMLInputElement>("History: Hypatia")).checked).toBe(true);
     expect(tick("New World Guide").checked).toBe(false);
-    expect(tick("d&d: Tiamat").checked).toBe(true);
+    expect(tick("history: Cleopatra").checked).toBe(true);
     await user.click(screen.getByRole("button", { name: "Tick all" }));
     expect(tick("The Finals Tips").checked).toBe(true);
     await user.click(screen.getByRole("button", { name: "Untick all" }));
-    expect(tick("D&D Lore: Vecna").checked).toBe(false);
+    expect(tick("History: Hypatia").checked).toBe(false);
     const filter = screen.getByLabelText("Keep only titles containing…");
     await user.clear(filter);
-    await user.type(filter, "LORE");
-    expect(tick("D&D Lore: Vecna").checked).toBe(true);
-    expect(tick("d&d: Tiamat").checked).toBe(false);
+    await user.type(filter, "HYPATIA");
+    expect(tick("History: Hypatia").checked).toBe(true);
+    expect(tick("history: Cleopatra").checked).toBe(false);
     await user.click(tick("New World Guide"));
     await user.click(screen.getByRole("button", { name: "Add 2 ticked titles" }));
     await waitFor(() =>
       expect(sent).toEqual([
-        { format: "lines", text: "D&D Lore: Vecna\nNew World Guide", filter: "LORE" },
+        { format: "lines", text: "History: Hypatia\nNew World Guide", filter: "HYPATIA" },
       ]),
     );
     expect(await screen.findByText("Added 2 titles.")).not.toBeNull();

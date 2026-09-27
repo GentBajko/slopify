@@ -66,7 +66,7 @@ export const planningHelp = {
   },
   "planning.schedule.topic-yaml": {
     title: "Topics as YAML or JSON",
-    body: 'A list such as "- Tiamat", or one map per topic such as "- Topic: Tiamat" with a line for each keyword it sets, like "Min. Word Count: 12000". A JSON array works too. A keyword a topic leaves out uses its every-run value. The schedule saves only once the list reads.',
+    body: 'A list such as "- Cleopatra", or one map per topic such as "- Topic: Cleopatra" with a line for each keyword it sets, like "Min. Word Count: 12000". A JSON array works too. A keyword a topic leaves out uses its every-run value. The schedule saves only once the list reads.',
   },
   "planning.schedule.topic-table": {
     title: "Topic table",
@@ -218,7 +218,7 @@ export const planningHelp = {
   },
   "planning.channel.videos-filter": {
     title: "Keep only titles containing",
-    body: 'Ticks only the titles containing this text, in any case, such as "D&D" or "Lore To Sleep To"; empty ticks them all. Use it when one Studio export holds several series. Remembered for this channel\'s next import.',
+    body: 'Ticks only the titles containing this text, in any case, such as "Egypt" or "History at Bedtime"; empty ticks them all. Use it when one Studio export holds several series. Remembered for this channel\'s next import.',
   },
   "planning.channel.videos-ticks": {
     title: "Titles in the CSV",
@@ -236,7 +236,7 @@ export const planningHelp = {
   },
   "planning.cast.aliases": {
     title: "Aliases",
-    body: "Other names that count as this member, matched as whole words, ignoring case: Tiamat is found in Tiamat's lair but not in Tiamatic. Add plurals and titles such as the Dragon Queen. Up to 20.",
+    body: "Other names that count as this member, matched as whole words, ignoring case: Cleopatra is found in Cleopatra's palace but not in Cleopatraic. Add plurals and titles such as the Last Pharaoh. Up to 20.",
   },
   "planning.cast.description": {
     title: "Description for the image model",

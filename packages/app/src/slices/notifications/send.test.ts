@@ -77,9 +77,9 @@ describe("noticeOf", () => {
 describe("noticeText", () => {
   it("says a video that is there despite a failed step is ready with problems", () => {
     expect(
-      noticeText("partial", { title: "Tiamat", makesVideo: true, reason: "Thumbnail refused" }),
+      noticeText("partial", { title: "Cleopatra", makesVideo: true, reason: "Thumbnail refused" }),
     ).toEqual({
-      headline: "Video ready with problems: Tiamat — Thumbnail refused",
+      headline: "Video ready with problems: Cleopatra — Thumbnail refused",
       detail: "Open the project to see which step failed and the button that fixes it.",
     });
   });

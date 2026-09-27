@@ -147,7 +147,7 @@ export function CastEditor({
             <Input
               value={alias}
               maxLength={200}
-              placeholder="Another name, such as the Dragon Queen"
+              placeholder="Another name, such as the Last Pharaoh"
               onChange={(event) => setAlias(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {

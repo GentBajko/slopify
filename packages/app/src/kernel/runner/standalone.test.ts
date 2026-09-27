@@ -52,8 +52,8 @@ describe("a provider call outside any project", () => {
     const metered: StandaloneMeteredCall[] = [];
     const port = llm(async function* (n) {
       if (n === 1) throw providerError({ kind: "rate_limit", message: "Busy." });
-      yield { type: "delta", text: "Owl" };
-      yield { type: "delta", text: "bears" };
+      yield { type: "delta", text: "Pyra" };
+      yield { type: "delta", text: "mids" };
       yield {
         type: "done",
         usage: { inputTokens: 120, outputTokens: 8, cachedInputTokens: 100, model: "opus-x" },
@@ -79,7 +79,7 @@ describe("a provider call outside any project", () => {
       ),
     );
     expect(answer).toEqual({
-      text: "Owlbears",
+      text: "Pyramids",
       usage: { inputTokens: 120, outputTokens: 8, cachedInputTokens: 100, model: "opus-x" },
       limits: { after: [{ kind: "weekly", usedPercent: 40, resetsAt: null }] },
     });

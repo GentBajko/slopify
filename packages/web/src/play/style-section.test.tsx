@@ -99,7 +99,7 @@ it("draws the preview on the channel cast's picture when there is one", async ()
           id: "7a0c1f3e-2b4d-4e6f-8a9b-0c1d2e3f4a5b",
           channelId: defaultChannelId,
           kind: "creature",
-          name: "Tiamat",
+          name: "Cleopatra",
           aliases: [],
           description: "",
           version: 1,
@@ -129,7 +129,7 @@ it("draws the preview on the channel cast's picture when there is one", async ()
     { timeout: 3000 },
   );
   const rail = screen.getByRole("complementary", { name: "Review and start" });
-  expect(within(rail).getByText(/Drawn on Tiamat's picture/)).not.toBeNull();
+  expect(within(rail).getByText(/Drawn on Cleopatra's picture/)).not.toBeNull();
 });
 
 it("keeps the sample and a raw invalid size, and says what to fix", async () => {

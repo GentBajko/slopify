@@ -19,9 +19,9 @@ everything:
   value with the topic under the topic keyword. A JSON array of the same shape works too.
 
   ```yaml
-  - Topic: Tiamat
+  - Topic: Cleopatra
     Min. Word Count: 12000
-  - Vecna
+  - Hypatia
   ```
 
   Values are read as the text written (`12000`, `yes` and `0012` stay text); a value that is a
@@ -78,13 +78,13 @@ ranked most view-worthy first and checked against those titles, dropping near-du
 - texts equal after normalising (accents dropped, lower case, punctuation to spaces, `&` as
   "and"), or
 - word sets overlapping by at least **0.6** (Jaccard, filler words and a plural "s" ignored), or
-- one's words all inside the other's and covering at least **half** of it ("Tiamat" and
-  "Tiamat's Lair" are one video; "Red Dragons" and "Blue Dragons" are two), or
-- every word of the topic inside a project's or existing video's title ("Strahd von Zarovich"
-  and "Who was Strahd von Zarovich really?"). A topic of one or two words must instead match a
+- one's words all inside the other's and covering at least **half** of it ("Cleopatra" and
+  "Cleopatra's Palace" are one video; "Red Pyramids" and "Bent Pyramids" are two), or
+- every word of the topic inside a project's or existing video's title ("Ramesses the Great"
+  and "Who was Ramesses the Great really?"). A topic of one or two words must instead match a
   clause of the title (split at `:`, `|`, `-`, brackets and sentence punctuation) exactly, apart
-  from question and framing words: "Vecna" matches "D&D Lore: Vecna" and "Who is Vecna? The
-  Lich God Explained", but "Dragons" doesn't match "The Red Dragons of Krynn".
+  from question and framing words: "Hypatia" matches "History: Hypatia" and "Who was Hypatia? The
+  Last Scholar Explained", but "Pyramids" doesn't match "The Great Pyramids of Giza".
 
 Only one generation per schedule runs at a time (a lease on the schedule row, taken over after
 15 minutes if Slopify died mid-call). A failure is shown on the schedule with its reason and

@@ -269,7 +269,7 @@ export function TopicFields({
                 rows: rowsFromLines(event.target.value, queue.base),
               })
             }
-            placeholder={"Owlbears\nGelatinous Cubes\nMimics"}
+            placeholder={"Pyramids\nSphinxes\nObelisks"}
           />
         </Field>
       ) : queue.mode === "yaml" ? (
@@ -284,7 +284,7 @@ export function TopicFields({
             spellCheck={false}
             value={queue.yaml}
             onChange={(event) => onQueue({ ...queue, yaml: event.target.value })}
-            placeholder={`- ${keyword ?? "Topic"}: Tiamat\n  ${keywords.find((name) => name !== keyword) ?? "Min. Word Count"}: 12000\n- Vecna`}
+            placeholder={`- ${keyword ?? "Topic"}: Cleopatra\n  ${keywords.find((name) => name !== keyword) ?? "Min. Word Count"}: 12000\n- Hypatia`}
           />
         </Field>
       ) : (

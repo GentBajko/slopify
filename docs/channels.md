@@ -39,8 +39,8 @@ four reference pictures each: upload a PNG or JPEG, or make one from a prompt wi
 provider. When the video's title or an image's brief mentions a member, that image is drawn
 with the member's pictures as references (after the establishing image, when it is on):
 
-- A name or alias matches as a **whole word, ignoring case**: "Tiamat" is found in "Tiamat's
-  lair" and "(Tiamat)", but not in "Tiamatic" or "Tiamats". Add plurals and other spellings as
+- A name or alias matches as a **whole word, ignoring case**: "Cleopatra" is found in "Cleopatra's
+  palace" and "(Cleopatra)", but not in "Cleopatraic" or "Cleopatras". Add plurals and other spellings as
   aliases.
 - Each image's own brief picks its members; the establishing image and the thumbnail also
   take the members the title mentions. At most four members go with one image.
@@ -69,7 +69,7 @@ up to five **related** earlier episodes appended to its prompt under "Earlier ep
 
 - An episode is related when it features a cast member the new title or keywords mention
   (strongest), or shares words of its title. Words most of the channel's titles share (a
-  template's "D&D Lore:") and one- or two-letter words don't count; an episode with the very
+  template's "History:") and one- or two-letter words don't count; an episode with the very
   same title is a remake, not an earlier episode, and is left out.
 - The summaries are copied into the project when it starts, so later edits or new memories
   never make a finished video outdated, and a project started without them is exactly what it
@@ -89,8 +89,8 @@ title column is found by its header ("Video title", else "Title", else "Content"
 that the first column of words; quoted titles with commas or line breaks, a byte-order mark,
 and Studio's "Total" row are handled. The CSV is not saved at once: its titles are listed with a
 tick each, all ticked, so videos of other channels in the same Studio export (another game,
-another series) can be left out. Type in **Keep only titles containing…** (for example "D&D" or
-"Lore To Sleep To", any case) to tick the titles holding that text and untick the rest; **Tick
+another series) can be left out. Type in **Keep only titles containing…** (for example "Egypt" or
+"History at Bedtime", any case) to tick the titles holding that text and untick the rest; **Tick
 all** and **Untick all** reset the ticks, and each title can be ticked by hand. **Add N ticked
 titles** saves only those. The filter is remembered per channel and applied to the next CSV.
 A title already listed (in any case) is skipped, and the import says how many were added and

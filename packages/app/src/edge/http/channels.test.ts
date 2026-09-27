@@ -118,7 +118,7 @@ describe("channel routes", () => {
     const created = await send(app, "POST", `/api/channels/${defaultChannelId}/cast`, {
       id: member,
       kind: "character",
-      name: "Drizzt",
+      name: "Herodotus",
       aliases: ["Do'Urden"],
     });
     expect(created.status).toBe(201);
@@ -138,7 +138,7 @@ describe("channel routes", () => {
     });
     expect(text.status).toBe(400);
     const generate = await send(app, "POST", `/api/channels/cast/${member}/generate`, {
-      prompt: "Drizzt",
+      prompt: "Herodotus",
       provider: "fal",
       model: "flux",
     });

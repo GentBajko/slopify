@@ -84,8 +84,8 @@ useCommand({
 ```
 
 Matching is fuzzy (letters in order, word starts and runs score higher). Several words match
-across the title, the context and the keywords in any order, so "tiamat regenerate image 3"
-finds "Regenerate image 3" in the project Tiamat. A `numbered` command takes the number typed
+across the title, the context and the keywords in any order, so "cleopatra regenerate image 3"
+finds "Regenerate image 3" in the project Cleopatra. A `numbered` command takes the number typed
 with it ("Regenerate image 3", handed to `run(3)`); a `searchOnly` command waits until
 something is typed. Arrow keys move, Enter runs, Esc closes; focus stays in the palette
 while it is open.

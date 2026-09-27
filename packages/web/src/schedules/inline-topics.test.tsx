@@ -21,8 +21,8 @@ const base = {
   overlapPolicy: "skip",
   spendLimitCents: null,
   items: [
-    { title: "Owlbears", values: {} },
-    { title: "Mimics", values: { "Min. Word Count": "900" } },
+    { title: "Pyramids", values: {} },
+    { title: "Obelisks", values: { "Min. Word Count": "900" } },
   ],
   topicKeyword: "Topic",
   status: "active",
@@ -79,27 +79,30 @@ it("adds, renames, moves and removes a queued topic from the schedule detail, ea
   mount(fake.routes);
   const queue = await screen.findByRole("region", { name: "Queued topics" });
 
-  await user.type(within(queue).getByRole("textbox", { name: "New topic" }), "Vecna{Enter}");
-  await waitFor(() => expect(fake.titles()).toEqual(["Owlbears", "Mimics", "Vecna"]));
+  await user.type(within(queue).getByRole("textbox", { name: "New topic" }), "Hypatia{Enter}");
+  await waitFor(() => expect(fake.titles()).toEqual(["Pyramids", "Obelisks", "Hypatia"]));
   expect(fake.sent[0]?.baseVersion).toBe(1);
   // A topic's own values travel with it untouched.
-  expect(fake.sent[0]?.items[1]).toEqual({ title: "Mimics", values: { "Min. Word Count": "900" } });
-  expect(await screen.findByText("Added “Vecna”.")).toBeTruthy();
+  expect(fake.sent[0]?.items[1]).toEqual({
+    title: "Obelisks",
+    values: { "Min. Word Count": "900" },
+  });
+  expect(await screen.findByText("Added “Hypatia”.")).toBeTruthy();
   expect(
     (within(queue).getByRole("textbox", { name: "New topic" }) as HTMLInputElement).value,
   ).toBe("");
 
   const first = within(queue).getByRole("textbox", { name: "Topic 1" });
   await user.clear(first);
-  await user.type(first, "Owlbear lairs{Enter}");
-  await waitFor(() => expect(fake.titles()).toEqual(["Owlbear lairs", "Mimics", "Vecna"]));
+  await user.type(first, "Pyramid tombs{Enter}");
+  await waitFor(() => expect(fake.titles()).toEqual(["Pyramid tombs", "Obelisks", "Hypatia"]));
   expect(fake.sent[1]?.baseVersion).toBe(2);
 
-  await user.click(within(queue).getByRole("button", { name: "Move Vecna up" }));
-  await waitFor(() => expect(fake.titles()).toEqual(["Owlbear lairs", "Vecna", "Mimics"]));
+  await user.click(within(queue).getByRole("button", { name: "Move Hypatia up" }));
+  await waitFor(() => expect(fake.titles()).toEqual(["Pyramid tombs", "Hypatia", "Obelisks"]));
 
-  await user.click(within(queue).getByRole("button", { name: "Remove Mimics" }));
-  await waitFor(() => expect(fake.titles()).toEqual(["Owlbear lairs", "Vecna"]));
+  await user.click(within(queue).getByRole("button", { name: "Remove Obelisks" }));
+  await waitFor(() => expect(fake.titles()).toEqual(["Pyramid tombs", "Hypatia"]));
   expect(fake.sent.map((one) => one.baseVersion)).toEqual([1, 2, 3, 4]);
 });
 
@@ -108,14 +111,17 @@ it("undoes a change from its toast", async () => {
   const fake = server();
   mount(fake.routes);
   const queue = await screen.findByRole("region", { name: "Queued topics" });
-  await user.click(within(queue).getByRole("button", { name: "Remove Owlbears" }));
-  await waitFor(() => expect(fake.titles()).toEqual(["Mimics"]));
-  const toast = await screen.findByText("Removed “Owlbears”.");
+  await user.click(within(queue).getByRole("button", { name: "Remove Pyramids" }));
+  await waitFor(() => expect(fake.titles()).toEqual(["Obelisks"]));
+  const toast = await screen.findByText("Removed “Pyramids”.");
   await user.click(
     within(toast.closest("div") as HTMLElement).getByRole("button", { name: "Undo" }),
   );
-  await waitFor(() => expect(fake.titles()).toEqual(["Owlbears", "Mimics"]));
-  expect(fake.sent[1]?.items[1]).toEqual({ title: "Mimics", values: { "Min. Word Count": "900" } });
+  await waitFor(() => expect(fake.titles()).toEqual(["Pyramids", "Obelisks"]));
+  expect(fake.sent[1]?.items[1]).toEqual({
+    title: "Obelisks",
+    values: { "Min. Word Count": "900" },
+  });
 });
 
 it("says what failed and what to do when a change is refused, and keeps an empty rename from saving", async () => {
@@ -124,13 +130,13 @@ it("says what failed and what to do when a change is refused, and keeps an empty
   mount({
     ...fake.routes,
     [`PUT /api/schedules/${scheduleId}/topics`]: problemAnswer(
-      "Topic 3 (“Tiamat”): “Mood” is not a keyword of this template.",
+      "Topic 3 (“Cleopatra”): “Mood” is not a keyword of this template.",
     ),
   });
   const queue = await screen.findByRole("region", { name: "Queued topics" });
-  await user.type(within(queue).getByRole("textbox", { name: "New topic" }), "Tiamat{Enter}");
+  await user.type(within(queue).getByRole("textbox", { name: "New topic" }), "Cleopatra{Enter}");
   expect((await within(queue).findByRole("alert")).textContent).toBe(
-    "The topics weren't saved: Topic 3 (“Tiamat”): “Mood” is not a keyword of this template.",
+    "The topics weren't saved: Topic 3 (“Cleopatra”): “Mood” is not a keyword of this template.",
   );
 
   const first = within(queue).getByRole("textbox", { name: "Topic 1" });

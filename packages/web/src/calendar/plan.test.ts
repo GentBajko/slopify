@@ -12,7 +12,7 @@ const run = (over: Partial<CalendarRun> = {}): CalendarRun => ({
   templateVersion: 1,
   templateName: "Stories",
   index: 0,
-  topic: "Tiamat",
+  topic: "Cleopatra",
   topicSource: "queued",
   renderedTitle: null,
   ...over,
@@ -121,10 +121,10 @@ describe("the keyboard's neighbour", () => {
   it("is the run one place earlier or later in the same schedule", () => {
     const runs = [
       run({ index: 0 }),
-      run({ index: 1, topic: "Vecna" }),
+      run({ index: 1, topic: "Hypatia" }),
       run({ scheduleId: "s2", index: 2 }),
     ];
-    expect(neighbour(runs, runs[1] as CalendarRun, -1)?.topic).toBe("Tiamat");
+    expect(neighbour(runs, runs[1] as CalendarRun, -1)?.topic).toBe("Cleopatra");
     expect(neighbour(runs, runs[1] as CalendarRun, 1)).toBeUndefined();
     expect(neighbour(runs, run({ index: null }), 1)).toBeUndefined();
   });
@@ -132,8 +132,8 @@ describe("the keyboard's neighbour", () => {
 
 describe("a run's title", () => {
   it("is the rendered project title when the server has one, else the topic or what stands in", () => {
-    expect(runTitle(run({ renderedTitle: "D&D Lore: Tiamat" }))).toBe("D&D Lore: Tiamat");
-    expect(runTitle(run())).toBe("Tiamat");
+    expect(runTitle(run({ renderedTitle: "History: Cleopatra" }))).toBe("History: Cleopatra");
+    expect(runTitle(run())).toBe("Cleopatra");
     expect(runTitle(run({ topic: null, topicSource: "held" }))).toBe(
       "A topic waiting for your approval",
     );

@@ -87,7 +87,7 @@ export function Player({
 }: {
   readonly src: string;
   readonly poster?: string;
-  // The accessible name: "D&D Lore: Tiamat, final video".
+  // The accessible name: "History: Cleopatra, final video".
   readonly label: string;
   readonly portrait?: boolean;
   // A WebVTT track, when there is one.

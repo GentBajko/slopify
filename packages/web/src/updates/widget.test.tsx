@@ -82,7 +82,7 @@ it("waits for running work instead of refusing, says for what, and cancels on th
     canUpdate: false,
     status: "waiting",
     pendingVersion: "0.8.3",
-    waitingFor: "Tiamat",
+    waitingFor: "Cleopatra",
   };
   let current: UpdateInfo = { ...available, busy: true };
   const install = vi.fn((request: Request) => {
@@ -105,7 +105,7 @@ it("waits for running work instead of refusing, says for what, and cancels on th
   await userEvent.click(control());
   expect(install).toHaveBeenCalledTimes(1);
   await waitFor(() =>
-    expect(control().title).toContain("Update to 0.8.3 will install when 'Tiamat' finishes."),
+    expect(control().title).toContain("Update to 0.8.3 will install when 'Cleopatra' finishes."),
   );
   expect(control().disabled).toBe(false);
   await userEvent.click(control());

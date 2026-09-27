@@ -35,7 +35,7 @@ export interface Command {
   readonly run: (count?: number) => void | Promise<void>;
   // Other words a person might type for it.
   readonly keywords?: readonly string[];
-  // Where the command acts, shown beside it ("D&D Lore: Tiamat"). Commands with a context
+  // Where the command acts, shown beside it ("History: Cleopatra"). Commands with a context
   // are about the screen in front of the person and are listed first; typing it finds them.
   readonly context?: string;
   readonly icon?: ReactNode;
@@ -44,7 +44,7 @@ export interface Command {
   // modifier are a sequence, pressed one after the other: ["G", "H"].
   readonly shortcut?: readonly string[];
   // Takes a number typed with it: digits in the query are handed to `run` rather than
-  // matched, and this names the result ("Regenerate image 3 in Tiamat").
+  // matched, and this names the result ("Regenerate image 3 in Cleopatra").
   readonly numbered?: (count: number) => string;
   // Listed only once something is typed: an index of every project would bury the screen's
   // own commands in an empty palette.
@@ -222,8 +222,8 @@ function best(query: string, fields: readonly Field[], whole: boolean): number |
 }
 
 // The query as a phrase against one field (the title, a keyword), or else word by word, each
-// word in any field and in any order: "tiamat regenerate image 3" finds "Regenerate image 3"
-// in the project "Tiamat".
+// word in any field and in any order: "cleopatra regenerate image 3" finds "Regenerate image 3"
+// in the project "Cleopatra".
 function scoreWords(words: readonly string[], fields: readonly Field[]): number | null {
   if (words.length === 0) return 0;
   const phrase = best(words.join(" "), fields, false);

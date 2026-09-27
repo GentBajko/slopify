@@ -59,7 +59,7 @@ function setup(options: {
       ...h.document,
       form: {
         ...h.document.form,
-        title: "D&D Lore: {{Topic}}",
+        title: "History: {{Topic}}",
         values: { Topic: "", ...options.keywords },
         llm: { provider: "template-llm", model: "template-model" },
       },
@@ -85,14 +85,14 @@ function setup(options: {
   const id = randomUUID();
   const schedule = createSchedule(deps, {
     id,
-    name: "D&D lore",
+    name: "Ancient history",
     templateId,
     templateVersion: 1,
     cadence: { kind: "daily", time: "00:01" },
     timezone: "UTC",
     items: (options.items ?? []).map((title) => ({ title, values: {} })),
     topicKeyword: "Topic",
-    brief: "D&D lore, documentary style. Famous villains and places first.",
+    brief: "Ancient history, documentary style. Famous rulers and places first.",
     topicGeneration: options.generation,
   });
   if (!schedule.ok) throw new Error(`schedule refused: ${schedule.reason}`);
@@ -129,25 +129,25 @@ const hold = (keepAtLeast: number): TopicGeneration => ({ mode: "hold", keepAtLe
 it("merges only new topics, dropping near-duplicates of what was queued or made, best first", async () => {
   const s = setup({
     generation: queue(3),
-    items: ["Tiamat"],
+    items: ["Cleopatra"],
     answers: async () =>
       JSON.stringify([
-        "Tiamat's Lair",
-        "Vecna",
-        "Strahd von Zarovich",
-        "strahd von zarovich!",
-        "The Lady of Pain",
-        "Acererak",
+        "Cleopatra's Palace",
+        "Hypatia",
+        "Ramesses the Great",
+        "ramesses the great!",
+        "The Library of Alexandria",
+        "Archimedes",
       ]),
   });
   try {
-    s.project("D&D Lore: Vecna");
+    s.project("History: Hypatia");
     const result = await generateTopics(s.deps, s.id);
     expect(result).toEqual({ ok: true, added: 2, mode: "queue" });
     expect(s.read().items.map((item) => item.title)).toEqual([
-      "Tiamat",
-      "Strahd von Zarovich",
-      "The Lady of Pain",
+      "Cleopatra",
+      "Ramesses the Great",
+      "The Library of Alexandria",
     ]);
     // The template's LLM is used when the schedule names none; the prompt carries the brief
     // and every title already known.
@@ -155,9 +155,9 @@ it("merges only new topics, dropping near-duplicates of what was queued or made,
     expect(call?.provider).toBe("template-llm");
     expect(call?.model).toBe("template-model");
     const prompt = call?.messages.map((message) => message.content).join("\n") ?? "";
-    expect(prompt).toContain("Famous villains and places first.");
-    expect(prompt).toContain("- Tiamat");
-    expect(prompt).toContain("- D&D Lore: Vecna");
+    expect(prompt).toContain("Famous rulers and places first.");
+    expect(prompt).toContain("- Cleopatra");
+    expect(prompt).toContain("- History: Hypatia");
     expect(prompt).toContain("{{Topic}}");
     expect(prompt).toContain("Suggest 7 new topics");
     expect(s.read().topics).toMatchObject({ error: null, generatingSince: null });
@@ -169,34 +169,34 @@ it("merges only new topics, dropping near-duplicates of what was queued or made,
 it("compares only with the projects of the schedule's own channel", async () => {
   const s = setup({
     generation: queue(2),
-    answers: async () => JSON.stringify(["Vecna", "Lolth", "Orcus"]),
+    answers: async () => JSON.stringify(["Hypatia", "Nefertiti", "Imhotep"]),
   });
   try {
     const other = randomUUID();
     createChannel(s.h.deps, { id: other, name: "Sleep" });
-    s.project("D&D Lore: Lolth");
-    const elsewhere = s.project("Sleep Stories: Vecna");
+    s.project("History: Nefertiti");
+    const elsewhere = s.project("Sleep Stories: Hypatia");
     setProjectChannel(s.h.deps.db, elsewhere, other);
-    expect(knownTitles(s.deps, s.id).projects).toEqual(["D&D Lore: Lolth"]);
+    expect(knownTitles(s.deps, s.id).projects).toEqual(["History: Nefertiti"]);
     expect(await generateTopics(s.deps, s.id)).toEqual({ ok: true, added: 2, mode: "queue" });
-    expect(s.read().items.map((item) => item.title)).toEqual(["Vecna", "Orcus"]);
+    expect(s.read().items.map((item) => item.title)).toEqual(["Hypatia", "Imhotep"]);
     const prompt = s.calls[0]?.messages.map((message) => message.content).join("\n") ?? "";
-    expect(prompt).not.toContain("Sleep Stories: Vecna");
+    expect(prompt).not.toContain("Sleep Stories: Hypatia");
   } finally {
     s.h.close();
   }
 });
 
 it("reads a numbered list when the LLM does not answer in JSON", () => {
-  expect(parseTopics('Sure!\n1. "Mind Flayers"\n2) Beholders\n- Liches\n')).toEqual([
+  expect(parseTopics('Sure!\n1. "Hanging Gardens"\n2) Ziggurats\n- Sphinxes\n')).toEqual([
     "Sure!",
-    "Mind Flayers",
-    "Beholders",
-    "Liches",
+    "Hanging Gardens",
+    "Ziggurats",
+    "Sphinxes",
   ]);
-  expect(parseTopics('```json\n["Owlbears", {"title": "Mimics"}]\n```')).toEqual([
-    "Owlbears",
-    "Mimics",
+  expect(parseTopics('```json\n["Pyramids", {"title": "Obelisks"}]\n```')).toEqual([
+    "Pyramids",
+    "Obelisks",
   ]);
 });
 
@@ -241,7 +241,7 @@ it("keeps at least N queued: the tick refills, runs keep going when the queue em
 it("skips a run with a plain reason when a generating schedule has no topic", async () => {
   const s = setup({
     generation: hold(2),
-    answers: async () => JSON.stringify(["Tarrasque", "Orcus"]),
+    answers: async () => JSON.stringify(["Hammurabi", "Imhotep"]),
   });
   try {
     await generateTopics(s.deps, s.id);
@@ -255,7 +255,7 @@ it("skips a run with a plain reason when a generating schedule has no topic", as
       {
         status: "skipped",
         error:
-          "Skipped because no topic was approved: 2 topics are waiting for you. Approve them under Schedules → D&D lore → Topics waiting.",
+          "Skipped because no topic was approved: 2 topics are waiting for you. Approve them under Schedules → Ancient history → Topics waiting.",
       },
     ]);
     expect(s.h.events).toEqual([]);
@@ -271,8 +271,8 @@ it("holds topics for approval, notifies once, and approves, edits and rejects th
     answers: async () => {
       round += 1;
       return round === 1
-        ? JSON.stringify(["Tarrasque", "Orcus", "Demogorgon", "Lolth"])
-        : JSON.stringify(["Orcus", "Tarrasque", "Asmodeus"]);
+        ? JSON.stringify(["Hammurabi", "Imhotep", "Sargon", "Nefertiti"])
+        : JSON.stringify(["Imhotep", "Hammurabi", "Xerxes"]);
     },
   });
   try {
@@ -280,7 +280,13 @@ it("holds topics for approval, notifies once, and approves, edits and rejects th
     expect(s.read().items).toEqual([]);
     expect(s.read().topics.held).toBe(3);
     expect(s.waiting).toEqual([
-      { type: "schedule.topics", scheduleId: s.id, scheduleName: "D&D lore", added: 3, waiting: 3 },
+      {
+        type: "schedule.topics",
+        scheduleId: s.id,
+        scheduleName: "Ancient history",
+        added: 3,
+        waiting: 3,
+      },
     ]);
     // Held topics count toward "keep at least", so nothing more is asked while they wait.
     expect(generationDue(s.read(), s.deps.clock.now())).toBe(false);
@@ -288,14 +294,12 @@ it("holds topics for approval, notifies once, and approves, edits and rejects th
     const [first, second, third] = heldTopics(s.deps, s.id);
     if (first === undefined || second === undefined || third === undefined)
       throw new Error("three held topics");
-    expect([first.title, second.title, third.title]).toEqual(["Tarrasque", "Orcus", "Demogorgon"]);
-    expect(
-      editHeldTopic(s.deps, s.id, third.id, { title: "Demogorgon, Prince of Demons" }).ok,
-    ).toBe(true);
+    expect([first.title, second.title, third.title]).toEqual(["Hammurabi", "Imhotep", "Sargon"]);
+    expect(editHeldTopic(s.deps, s.id, third.id, { title: "Sargon, King of Akkad" }).ok).toBe(true);
     expect(rejectHeldTopic(s.deps, s.id, second.id).ok).toBe(true);
-    const approved = approveHeldTopics(s.deps, s.id, [first.id], { [first.id]: "The Tarrasque" });
+    const approved = approveHeldTopics(s.deps, s.id, [first.id], { [first.id]: "The Hammurabi" });
     expect(approved.ok && approved.value.items.map((item) => item.title)).toEqual([
-      "The Tarrasque",
+      "The Hammurabi",
     ]);
     expect(rejectHeldTopic(s.deps, s.id, first.id)).toEqual({
       ok: false,
@@ -303,16 +307,16 @@ it("holds topics for approval, notifies once, and approves, edits and rejects th
     });
     const all = approveHeldTopics(s.deps, s.id, "all");
     expect(all.ok && all.value.items.map((item) => item.title)).toEqual([
-      "The Tarrasque",
-      "Demogorgon, Prince of Demons",
+      "The Hammurabi",
+      "Sargon, King of Akkad",
     ]);
     expect(s.read().topics.held).toBe(0);
 
     // The rejected topic and the queued ones are never suggested again.
     expect(await generateTopics(s.deps, s.id)).toEqual({ ok: true, added: 1, mode: "hold" });
-    expect(heldTopics(s.deps, s.id).map((topic) => topic.title)).toEqual(["Asmodeus"]);
+    expect(heldTopics(s.deps, s.id).map((topic) => topic.title)).toEqual(["Xerxes"]);
     const second_call = s.calls[1]?.messages.map((message) => message.content).join("\n") ?? "";
-    expect(second_call).toContain("- Orcus");
+    expect(second_call).toContain("- Imhotep");
   } finally {
     s.h.close();
   }
@@ -322,7 +326,7 @@ it("lets Edit set a held topic's keywords, checks them, and queues them with it"
   const s = setup({
     generation: hold(2),
     keywords: { "Word Count": "8000", Tone: "calm" },
-    answers: async () => JSON.stringify(["Tiamat", "Vecna"]),
+    answers: async () => JSON.stringify(["Cleopatra", "Hypatia"]),
   });
   try {
     await generateTopics(s.deps, s.id);
@@ -330,27 +334,27 @@ it("lets Edit set a held topic's keywords, checks them, and queues them with it"
     if (first === undefined || second === undefined) throw new Error("two held topics");
     expect(first.values).toEqual({});
     const refused = editHeldTopic(s.deps, s.id, first.id, {
-      title: "Tiamat",
+      title: "Cleopatra",
       values: { Mood: "grim" },
     });
     expect(refused).toMatchObject({ ok: false, reason: "invalid-topics" });
     expect(!refused.ok && refused.message).toContain("“Mood” is not a keyword of this template");
     const edited = editHeldTopic(s.deps, s.id, first.id, {
-      title: "Tiamat, Queen of Dragons",
+      title: "Cleopatra, Queen of the Nile",
       values: { "Word Count": " 12000 ", Tone: "" },
     });
     expect(edited).toMatchObject({
       ok: true,
-      value: { title: "Tiamat, Queen of Dragons", values: { "Word Count": "12000" } },
+      value: { title: "Cleopatra, Queen of the Nile", values: { "Word Count": "12000" } },
     });
     // A title-only edit keeps the keywords set before.
-    editHeldTopic(s.deps, s.id, first.id, { title: "Tiamat" });
+    editHeldTopic(s.deps, s.id, first.id, { title: "Cleopatra" });
     expect(heldTopics(s.deps, s.id)[0]?.values).toEqual({ "Word Count": "12000" });
-    editHeldTopic(s.deps, s.id, second.id, { title: "Vecna", values: { Tone: "grim" } });
+    editHeldTopic(s.deps, s.id, second.id, { title: "Hypatia", values: { Tone: "grim" } });
     rejectHeldTopic(s.deps, s.id, second.id);
     const approved = approveHeldTopics(s.deps, s.id, "all");
     expect(approved.ok && approved.value.items).toEqual([
-      { title: "Tiamat", values: { "Word Count": "12000" } },
+      { title: "Cleopatra", values: { "Word Count": "12000" } },
     ]);
     // Nothing is left behind for topics no longer held.
     expect(
@@ -381,7 +385,7 @@ it("never runs two generations for one schedule at once", async () => {
     await runner.tick(s.deps.clock.now());
     await Promise.resolve();
     expect(s.calls).toHaveLength(1);
-    release(JSON.stringify(["Beholders", "Mind Flayers"]));
+    release(JSON.stringify(["Ziggurats", "Hanging Gardens"]));
     expect(await first).toEqual({ ok: true, added: 2, mode: "queue" });
     expect(s.read().topics.generatingSince).toBeNull();
   } finally {
@@ -395,7 +399,7 @@ it("records a failure with a plain reason and retries on a later tick, not in a 
     generation: queue(1),
     answers: async () => {
       if (fails) throw new Error("Codex is signed out");
-      return JSON.stringify(["Beholders"]);
+      return JSON.stringify(["Ziggurats"]);
     },
   });
   try {
@@ -414,7 +418,7 @@ it("records a failure with a plain reason and retries on a later tick, not in a 
     await runner.tick(s.deps.clock.now());
     await runner.generated();
     expect(s.calls).toHaveLength(2);
-    expect(s.read().items.map((item) => item.title)).toEqual(["Beholders"]);
+    expect(s.read().items.map((item) => item.title)).toEqual(["Ziggurats"]);
     expect(s.read().topics).toMatchObject({ error: null, failedAt: null });
   } finally {
     s.h.close();
@@ -430,7 +434,7 @@ it("asks through the attempt wrapper, retrying a dropped call, and meters it on 
     complete: async function* () {
       asked += 1;
       if (asked === 1) throw providerError({ kind: "dropped", message: "Connection reset." });
-      yield { type: "delta", text: JSON.stringify(["Beholders"]) };
+      yield { type: "delta", text: JSON.stringify(["Ziggurats"]) };
       yield {
         type: "done",
         usage: { inputTokens: 400, outputTokens: 20 },
@@ -491,8 +495,8 @@ it("asks through the attempt wrapper, retrying a dropped call, and meters it on 
 it("counts an answer of only duplicates as a failure", async () => {
   const s = setup({
     generation: queue(2),
-    items: ["Mimics"],
-    answers: async () => JSON.stringify(["mimic", "The Mimics"]),
+    items: ["Obelisks"],
+    answers: async () => JSON.stringify(["obelisk", "The Obelisks"]),
   });
   try {
     expect(await generateTopics(s.deps, s.id)).toMatchObject({ ok: false, reason: "failed" });
@@ -515,10 +519,10 @@ it("saves an edited queue in place, keeping the next run, and refuses a stale or
       baseVersion: base.version,
       items: [
         { title: "B", values: {} },
-        { title: "  Vecna ", values: {} },
+        { title: "  Hypatia ", values: {} },
       ],
     });
-    expect(saved.ok && saved.value.items.map((item) => item.title)).toEqual(["B", "Vecna"]);
+    expect(saved.ok && saved.value.items.map((item) => item.title)).toEqual(["B", "Hypatia"]);
     expect(saved.ok && saved.value.version).toBe(base.version + 1);
     // Only the queue changes: the next run and every other setting stay as they were.
     expect(saved.ok && saved.value.nextRunAt).toBe(base.nextRunAt);
@@ -529,13 +533,13 @@ it("saves an edited queue in place, keeping the next run, and refuses a stale or
     });
     const refused = replaceTopics(s.deps, s.id, {
       baseVersion: base.version + 1,
-      items: [{ title: "Tiamat", values: { Mood: "grim" } }],
+      items: [{ title: "Cleopatra", values: { Mood: "grim" } }],
     });
     expect(refused.ok).toBe(false);
     if (refused.ok) return;
     expect(refused.reason).toBe("invalid-topics");
     expect(refused.message).toContain("“Mood” is not a keyword of this template");
-    expect(s.read().items.map((item) => item.title)).toEqual(["B", "Vecna"]);
+    expect(s.read().items.map((item) => item.title)).toEqual(["B", "Hypatia"]);
   } finally {
     s.h.close();
   }
@@ -586,20 +590,20 @@ it("reorders a queue and moves a topic to another schedule", () => {
 it("skips the titles of the channel's existing videos, and lists them in the prompt", async () => {
   const s = setup({
     generation: queue(3),
-    answers: async () => JSON.stringify(["Vecna", "Strahd von Zarovich", "Acererak"]),
+    answers: async () => JSON.stringify(["Hypatia", "Ramesses the Great", "Archimedes"]),
   });
   try {
     // The template names no channel, so the schedule is the default channel's.
     const imported = importChannelVideos(
       { db: s.h.deps.db, clock: s.deps.clock, uuid: randomUUID },
       defaultChannelId,
-      { format: "lines", text: "Who is Vecna? The Lich God Explained\n" },
+      { format: "lines", text: "Who was Hypatia? The Last Scholar Explained\n" },
     );
     expect(imported).toEqual({ ok: true, value: { added: 1, skipped: 0 } });
     expect(await generateTopics(s.deps, s.id)).toEqual({ ok: true, added: 2, mode: "queue" });
-    expect(s.read().items.map((item) => item.title)).toEqual(["Strahd von Zarovich", "Acererak"]);
+    expect(s.read().items.map((item) => item.title)).toEqual(["Ramesses the Great", "Archimedes"]);
     const prompt = s.calls[0]?.messages.map((message) => message.content).join("\n") ?? "";
-    expect(prompt).toContain("- Who is Vecna? The Lich God Explained");
+    expect(prompt).toContain("- Who was Hypatia? The Last Scholar Explained");
   } finally {
     s.h.close();
   }

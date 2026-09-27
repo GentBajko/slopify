@@ -134,7 +134,7 @@ describe("the next action", () => {
       <ProjectRoute projectId="p1" />,
       deps({
         "GET /files/p1/article-md": () =>
-          new Response(`# The Archlich\n\n${"A long finished article. ".repeat(500)}`),
+          new Response(`# The Pharaoh\n\n${"A long finished article. ".repeat(500)}`),
       }),
     );
     const video = await screen.findByRole("region", { name: "Video" });
@@ -406,7 +406,7 @@ describe("the stage bodies", () => {
     renderRouted(<ProjectRoute projectId="p1" />, deps());
     await selectProjectStage("Article");
     expect(await screen.findByText("Most villains want something.")).not.toBeNull();
-    expect(screen.getByText("The Archlich")).not.toBeNull();
+    expect(screen.getByText("The Pharaoh")).not.toBeNull();
     expect(screen.getByRole("link", { name: "Sources" }).getAttribute("href")).toBe(
       `${testOrigin}/files/p1/sources`,
     );

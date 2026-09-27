@@ -53,7 +53,7 @@ function harness(port?: LlmPort) {
   };
   const storage: StorageDeps = { db, paths, ids, clock, log, emit: (): void => {} };
   const calls: EpisodeLlmCall[] = [];
-  let answer: () => Promise<string> = async () => "Tiamat woke under the mountain.";
+  let answer: () => Promise<string> = async () => "Cleopatra woke under the mountain.";
   const summary: EpisodeSummaryDeps = {
     db,
     paths,
@@ -106,7 +106,7 @@ function harness(port?: LlmPort) {
 
 function draft(over: Partial<RunDraft> = {}): RunDraft {
   return {
-    title: "Tiamat's Lair",
+    title: "Cleopatra's Palace",
     format: "16:9",
     sources: {
       research: "off",
@@ -119,7 +119,7 @@ function draft(over: Partial<RunDraft> = {}): RunDraft {
     llm: { provider: "text", model: "text-model" },
     imagePrompts: [],
     values: {},
-    provided: { article: "Tiamat sleeps beneath the mountain. Bahamut watches." },
+    provided: { article: "Cleopatra sleeps beneath the mountain. Ptolemy watches." },
     silenceGapSeconds: 0,
     imageSeconds: 15,
     zoomPercent: 22.5,
@@ -157,14 +157,16 @@ describe("the episode summary", () => {
     const created = createCastMember({ db: h.db, clock, uuid: randomUUID }, defaultChannelId, {
       id: randomUUID(),
       kind: "character",
-      name: "Bahamut",
+      name: "Ptolemy",
     });
     expect(created.ok).toBe(true);
     const run = startRun(h.storage, draft(), {});
     expect(await summarizeEpisode(h.summary, run.project.id)).toBe("saved");
     expect(h.calls).toHaveLength(1);
     expect(h.calls[0]).toMatchObject({ provider: "text", model: "text-model" });
-    expect(h.calls[0]?.messages.at(-1)?.content).toContain("Tiamat sleeps beneath the mountain.");
+    expect(h.calls[0]?.messages.at(-1)?.content).toContain(
+      "Cleopatra sleeps beneath the mountain.",
+    );
     expect(h.calls[0]).toMatchObject({
       owner: { kind: "channel", id: defaultChannelId },
       purpose: "episode-summary",
@@ -172,9 +174,9 @@ describe("the episode summary", () => {
     const [saved] = memoriesOfChannel(h.db, defaultChannelId);
     expect(saved).toMatchObject({
       projectId: run.project.id,
-      title: "Tiamat's Lair",
-      summary: "Tiamat woke under the mountain.",
-      cast: ["Bahamut"],
+      title: "Cleopatra's Palace",
+      summary: "Cleopatra woke under the mountain.",
+      cast: ["Ptolemy"],
       source: "generated",
     });
     // The same article finished again asks nothing.
@@ -217,7 +219,7 @@ describe("the episode summary", () => {
       complete: async function* () {
         asked += 1;
         if (asked === 1) throw new TypeError("fetch failed");
-        yield { type: "delta", text: "Tiamat woke under the mountain." };
+        yield { type: "delta", text: "Cleopatra woke under the mountain." };
         yield {
           type: "done",
           usage: { inputTokens: 900, outputTokens: 60 },
@@ -281,37 +283,37 @@ describe("the episode summary", () => {
 
 describe("related earlier episodes", () => {
   it("rank shared cast first, then shared title words, newest first among equals, at most 5", () => {
-    const cast = [castOf("Tiamat", "Queen of Dragons"), castOf("Vecna")];
+    const cast = [castOf("Cleopatra", "Queen of the Nile"), castOf("Hypatia")];
     const memories = [
-      memory("Vecna's Rise", ["Vecna"]),
-      memory("Red Dragons of Faerûn"),
-      memory("Where Dragons Sleep", ["Tiamat"]),
-      memory("Mind Flayers"),
+      memory("Hypatia's Rise", ["Hypatia"]),
+      memory("Red Crowns of the Nile"),
+      memory("Where Pharaohs Sleep", ["Cleopatra"]),
+      memory("Hanging Gardens"),
     ];
-    const related = relatedEpisodes(memories, cast, "The Queen of Dragons returns", "Q");
+    const related = relatedEpisodes(memories, cast, "The Queen of the Nile returns", "Q");
     expect(related.map((row) => row.title)).toEqual([
-      "Where Dragons Sleep",
-      "Red Dragons of Faerûn",
+      "Where Pharaohs Sleep",
+      "Red Crowns of the Nile",
     ]);
     const many = Array.from({ length: 8 }, (_, index) =>
-      memory(`Episode ${String(index)}`, ["Tiamat"]),
+      memory(`Episode ${String(index)}`, ["Cleopatra"]),
     );
-    expect(relatedEpisodes(many, cast, "Tiamat again", "X")).toHaveLength(earlierEpisodesMax);
+    expect(relatedEpisodes(many, cast, "Cleopatra again", "X")).toHaveLength(earlierEpisodesMax);
   });
 
   it("ignore the template's words most titles share, and a remake of the same title", () => {
     const memories = [
-      memory("D&D Lore: Tiamat"),
-      memory("D&D Lore: Vecna"),
-      memory("D&D Lore: Bahamut"),
+      memory("History: Cleopatra"),
+      memory("History: Hypatia"),
+      memory("History: Ptolemy"),
     ];
-    expect(relatedEpisodes(memories, [], "D&D Lore: Strahd", "D&D Lore: Strahd")).toEqual([]);
+    expect(relatedEpisodes(memories, [], "History: Ramesses", "History: Ramesses")).toEqual([]);
     expect(
-      relatedEpisodes(memories, [], "D&D Lore: Tiamat", "D&D Lore: Tiamat").map((m) => m.title),
+      relatedEpisodes(memories, [], "History: Cleopatra", "History: Cleopatra").map((m) => m.title),
     ).toEqual([]);
     expect(
-      relatedEpisodes(memories, [], "D&D Lore: Tiamat and Vecna", "x").map((m) => m.title),
-    ).toEqual(["D&D Lore: Tiamat", "D&D Lore: Vecna"]);
+      relatedEpisodes(memories, [], "History: Cleopatra and Hypatia", "x").map((m) => m.title),
+    ).toEqual(["History: Cleopatra", "History: Hypatia"]);
   });
 });
 
@@ -337,24 +339,24 @@ describe("the earlier episodes block", () => {
     h.db
       .prepare(
         `INSERT INTO episode_memories(id,channel_id,project_id,title,summary,cast_json,source,created_at,updated_at)
-         VALUES ('m1',?,'p-old','Tiamat Awakens','She woke.','["Tiamat"]','generated','2026-09-01','2026-09-01')`,
+         VALUES ('m1',?,'p-old','Cleopatra Awakens','She woke.','["Cleopatra"]','generated','2026-09-01','2026-09-01')`,
       )
       .run(defaultChannelId);
     const written = draft({
-      title: "Tiamat's Children",
+      title: "Cleopatra's Children",
       sources: { ...draft().sources, article: "generate" },
       articlePrompt: "Lore",
       provided: {},
     });
-    const on = startRun(h.storage, written, { article: "Write about Tiamat." });
+    const on = startRun(h.storage, written, { article: "Write about Cleopatra." });
     expect(on.project.config.earlierEpisodes).toEqual([
-      { title: "Tiamat Awakens", summary: "She woke." },
+      { title: "Cleopatra Awakens", summary: "She woke." },
     ]);
     // A provided article is not written, so it needs no reminder.
-    const provided = startRun(h.storage, draft({ title: "Tiamat's Children" }), {});
+    const provided = startRun(h.storage, draft({ title: "Cleopatra's Children" }), {});
     expect(provided.project.config.earlierEpisodes).toBeUndefined();
     setEpisodeMemory(h.summary, defaultChannelId, { enabled: false });
-    const off = startRun(h.storage, written, { article: "Write about Tiamat." });
+    const off = startRun(h.storage, written, { article: "Write about Cleopatra." });
     expect(off.project.config).not.toHaveProperty("earlierEpisodes");
   });
 

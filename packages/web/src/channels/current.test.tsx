@@ -24,7 +24,7 @@ function Shows({ ids }: { readonly ids: readonly string[] }) {
   return <p>{`Showing: ${ids.filter((id) => current.includes(id)).join(", ")}`}</p>;
 }
 
-function mount(channels = [channel("c1", "My channel"), channel("c2", "Lore To Sleep To")]) {
+function mount(channels = [channel("c1", "My channel"), channel("c2", "History at Bedtime")]) {
   return renderApp(
     <CurrentChannelProvider>
       <ChannelPicker />
@@ -41,7 +41,7 @@ describe("the current channel", () => {
     expect(screen.getByText("Showing: c1, c2")).not.toBeNull();
     const picker = screen.getByLabelText("Channel");
     await waitFor(() =>
-      expect(screen.getByRole("option", { name: "Lore To Sleep To" })).not.toBeNull(),
+      expect(screen.getByRole("option", { name: "History at Bedtime" })).not.toBeNull(),
     );
     await user.selectOptions(picker, "c2");
     expect(screen.getByText("Showing: c2")).not.toBeNull();

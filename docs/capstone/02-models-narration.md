@@ -75,7 +75,7 @@ All fields are `readonly`. The producer emits one span per matched written word,
 |---|---|---|---|
 | start | `number` | yes | Inclusive source offset. |
 | end | `number` | yes | Exclusive source offset. |
-| text | `string` | yes | Replacement such as `/lɪtʃ/`. |
+| text | `string` | yes | Replacement such as `/kɪʃ/`. |
 
 ### PronunciationMatch
 

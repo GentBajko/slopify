@@ -143,7 +143,7 @@ export function AddToCalendar({
             <Textarea
               rows={8}
               value={text}
-              placeholder={"Lolth\nThe Eye and Hand of Vecna\nThe Dead Three"}
+              placeholder={"Nefertiti\nThe Library of Alexandria\nThe Old Kingdom"}
               onChange={(event) => setText(event.target.value)}
             />
           </Field>

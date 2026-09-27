@@ -410,8 +410,8 @@ it("queues pasted topics into the chosen keyword with fixed values for the rest"
   const create = vi.fn(async (request: Request) => {
     expect(await request.json()).toMatchObject({
       items: [
-        { title: "Owlbears", values: {} },
-        { title: "Mimics", values: {} },
+        { title: "Pyramids", values: {} },
+        { title: "Obelisks", values: {} },
       ],
       topicKeyword: "Topic",
       values: { "Min. Word Count": "15000", "Max. Word Count": "18000" },
@@ -422,8 +422,8 @@ it("queues pasted topics into the chosen keyword with fixed values for the rest"
     ...freshDraftDocument,
     form: {
       ...freshDraftDocument.form,
-      title: "D&D Lore To Sleep To: {{Topic}}",
-      values: { Topic: "Szass Tam", "Min. Word Count": "1", "Max. Word Count": "18000" },
+      title: "History at Bedtime: {{Topic}}",
+      values: { Topic: "Ashurbanipal", "Min. Word Count": "1", "Max. Word Count": "18000" },
     },
   };
   renderRouted(
@@ -449,13 +449,13 @@ it("queues pasted topics into the chosen keyword with fixed values for the rest"
   await user.type(screen.getByLabelText("Name"), "Nightly lore");
   await screen.findByRole("option", { name: "Stories · v1" });
   await user.selectOptions(screen.getByLabelText("Template"), templateId);
-  await user.type(screen.getByLabelText("One per line"), "  Owlbears {Enter}{Enter}Mimics");
+  await user.type(screen.getByLabelText("One per line"), "  Pyramids {Enter}{Enter}Obelisks");
   await screen.findByLabelText("Each topic fills");
   expect(screen.getByLabelText<HTMLSelectElement>("Each topic fills").value).toBe("Topic");
   const min = screen.getByLabelText("Min. Word Count for every run");
   await user.clear(min);
   await user.type(min, "15000");
-  expect(screen.getByText("D&D Lore To Sleep To: Owlbears")).toBeTruthy();
+  expect(screen.getByText("History at Bedtime: Pyramids")).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Save schedule" }));
   await waitFor(() => expect(create).toHaveBeenCalledOnce());
 });
@@ -466,7 +466,7 @@ it("lists the every-run keywords like Play does, each with what it feeds", async
     ...freshDraftDocument,
     form: {
       ...freshDraftDocument.form,
-      title: "D&D Lore: {{Topic}}",
+      title: "History: {{Topic}}",
       articlePrompt: "Dossier",
       values: { Topic: "", "Min. Word Count": "12000", Mood: "grim" },
     },
@@ -520,7 +520,7 @@ it("offers the title's keyword even when the template stored no value for it", a
     ...freshDraftDocument,
     form: {
       ...freshDraftDocument.form,
-      title: "D&D Lore: {{Topic}}",
+      title: "History: {{Topic}}",
       values: { "Min. Word Count": "15000", "Max. Word Count": "18000" },
     },
   };
@@ -545,10 +545,10 @@ it("offers the title's keyword even when the template stored no value for it", a
   await openNew(user);
   await screen.findByRole("option", { name: "Stories · v1" });
   await user.selectOptions(screen.getByLabelText("Template"), templateId);
-  await user.type(screen.getByLabelText("One per line"), "Owlbears");
+  await user.type(screen.getByLabelText("One per line"), "Pyramids");
   await screen.findByLabelText("Each topic fills");
   expect(screen.getByLabelText<HTMLSelectElement>("Each topic fills").value).toBe("Topic");
-  expect(screen.getByText("D&D Lore: Owlbears")).toBeTruthy();
+  expect(screen.getByText("History: Pyramids")).toBeTruthy();
 });
 
 it("explains that nonexistent one-off times are refused", async () => {

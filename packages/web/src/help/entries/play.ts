@@ -15,7 +15,7 @@ export const playHelp = {
   },
   "play.title-pattern": {
     title: "Title pattern",
-    body: "The title with its keywords in double braces, like D&D Lore: {{Topic}}. Each keyword in it is a topic you type at the top of Play, once per video, and templates save it empty. Change the pattern here; the topic values stay at the top.",
+    body: "The title with its keywords in double braces, like History: {{Topic}}. Each keyword in it is a topic you type at the top of Play, once per video, and templates save it empty. Change the pattern here; the topic values stay at the top.",
   },
   "play.topic": {
     title: "Topic",

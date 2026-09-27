@@ -67,13 +67,13 @@ describe("episode memory routes", () => {
     const { app, db } = harness();
     db.prepare(
       `INSERT INTO episode_memories(id,channel_id,project_id,title,summary,source,created_at,updated_at)
-       VALUES ('m1',?,'p1','Tiamat','She woke.','generated','2026-09-01','2026-09-01')`,
+       VALUES ('m1',?,'p1','Cleopatra','She woke.','generated','2026-09-01','2026-09-01')`,
     ).run(defaultChannelId);
     const read = await send(app, "GET", `${base}/episodes`);
     expect(read.status).toBe(200);
     expect(await read.json()).toMatchObject({
       enabled: true,
-      memories: [{ id: "m1", title: "Tiamat", summary: "She woke.", source: "generated" }],
+      memories: [{ id: "m1", title: "Cleopatra", summary: "She woke.", source: "generated" }],
     });
     const off = await send(app, "PUT", `${base}/episodes/setting`, { enabled: false });
     expect(await off.json()).toMatchObject({ enabled: false });
@@ -94,22 +94,22 @@ describe("existing video routes", () => {
     const { app } = harness();
     const pasted = await send(app, "POST", `${base}/videos`, {
       format: "lines",
-      text: "Tiamat Explained\nVecna\ntiamat explained\n",
+      text: "Cleopatra Explained\nHypatia\ncleopatra explained\n",
     });
     expect(pasted.status).toBe(201);
     expect(await pasted.json()).toEqual({ added: 2, skipped: 1 });
     const csv = await send(app, "POST", `${base}/videos`, {
       format: "csv",
-      text: "Content,Video title,Views\nTotal,,10\nabcdefghijk,VECNA,4\nbcdefghijkl,Strahd,6\n",
+      text: "Content,Video title,Views\nTotal,,10\nabcdefghijk,HYPATIA,4\nbcdefghijkl,Ramesses,6\n",
     });
     expect(await csv.json()).toEqual({ added: 1, skipped: 1 });
     const listed = (await (await send(app, "GET", `${base}/videos`)).json()) as {
       videos: { id: string; title: string }[];
     };
     expect(listed.videos.map((video) => video.title)).toEqual([
-      "Strahd",
-      "Tiamat Explained",
-      "Vecna",
+      "Cleopatra Explained",
+      "Hypatia",
+      "Ramesses",
     ]);
     const empty = await send(app, "POST", `${base}/videos`, { format: "csv", text: "Views\n1\n" });
     expect(empty.status).toBe(400);
@@ -122,26 +122,26 @@ describe("existing video routes", () => {
 
   it("preview a CSV without saving, save the ticked titles and remember the filter per channel", async () => {
     const { app } = harness();
-    const csv = "Content,Video title\nabcdefghijk,D&D Lore: Vecna\nbcdefghijkl,New World Guide\n";
+    const csv = "Content,Video title\nabcdefghijk,History: Hypatia\nbcdefghijkl,New World Guide\n";
     const first = await send(app, "POST", `${base}/videos/preview`, { format: "csv", text: csv });
     expect(first.status).toBe(200);
     expect(await first.json()).toEqual({
-      titles: ["D&D Lore: Vecna", "New World Guide"],
+      titles: ["History: Hypatia", "New World Guide"],
       filter: "",
     });
     const listed = await send(app, "GET", `${base}/videos`);
     expect(await listed.json()).toEqual({ videos: [] });
     const saved = await send(app, "POST", `${base}/videos`, {
       format: "lines",
-      text: "D&D Lore: Vecna",
-      filter: " d&d ",
+      text: "History: Hypatia",
+      filter: " history ",
     });
     expect(await saved.json()).toEqual({ added: 1, skipped: 0 });
     const again = await send(app, "POST", `${base}/videos/preview`, { format: "csv", text: csv });
-    expect(await again.json()).toMatchObject({ filter: "d&d" });
+    expect(await again.json()).toMatchObject({ filter: "history" });
     const long = await send(app, "POST", `${base}/videos`, {
       format: "lines",
-      text: "Vecna",
+      text: "Hypatia",
       filter: "x".repeat(201),
     });
     expect(((await long.json()) as { detail: string }).detail).toContain(

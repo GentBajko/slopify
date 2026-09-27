@@ -194,7 +194,7 @@ describe("the Number a ticked image prompt runs", () => {
   });
 
   it("refuses sixty-one across the run and takes sixty", () => {
-    const values = { ...generated.values, era: "AD&D 1e" };
+    const values = { ...generated.values, era: "Old Kingdom" };
     const over: PlayFormState = {
       ...generated,
       values,

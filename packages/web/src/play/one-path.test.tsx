@@ -27,7 +27,7 @@ const lore: PlayDraftDocument = {
     ...freshDraftDocument.form,
     title: "Lore: {{topic}}",
     articlePrompt: "Dossier",
-    values: { topic: "Tiamat", minWords: "1500" },
+    values: { topic: "Cleopatra", minWords: "1500" },
   },
 };
 
@@ -35,8 +35,8 @@ it("asks for the topic the title names and shows the title it makes", async () =
   await mountPlay();
   fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Lore: {{topic}}" } });
   const topic = await screen.findByRole("textbox", { name: "topic" });
-  await userEvent.type(topic, "Tiamat");
-  expect(screen.getByText("Lore: Tiamat")).not.toBeNull();
+  await userEvent.type(topic, "Cleopatra");
+  expect(screen.getByText("Lore: Cleopatra")).not.toBeNull();
   // The title itself moves into the Title and keywords row, where it can still be changed.
   expect(screen.queryByRole("textbox", { name: "Title" })).toBeNull();
 });
@@ -45,22 +45,22 @@ it("queues more videos from the same setup as topic chips", async () => {
   const h = reviewHarness();
   await h.prepare(lore);
   await userEvent.click(screen.getByRole("button", { name: "Add topic" }));
-  await userEvent.type(screen.getByLabelText("topic of another video"), "Lolth{Enter}");
-  await userEvent.type(screen.getByLabelText("topic of another video"), "Demogorgon{Enter}");
+  await userEvent.type(screen.getByLabelText("topic of another video"), "Nefertiti{Enter}");
+  await userEvent.type(screen.getByLabelText("topic of another video"), "Sargon{Enter}");
   const more = within(screen.getByRole("region", { name: "More videos from the same setup" }));
-  expect(more.getByRole("button", { name: "Change the keywords of Lolth" })).not.toBeNull();
+  expect(more.getByRole("button", { name: "Change the keywords of Nefertiti" })).not.toBeNull();
   expect(h.session().document.variants.map((one) => one.values.topic)).toEqual([
-    "Lolth",
-    "Demogorgon",
+    "Nefertiti",
+    "Sargon",
   ]);
   // Every other keyword comes from the first video's setup.
   expect(h.session().document.variants[0]?.values.minWords).toBe("1500");
   expect(screen.getByRole("button", { name: "Queue 3 videos" })).not.toBeNull();
-  await userEvent.click(more.getByRole("button", { name: "Remove Lolth" }));
-  expect(h.session().document.variants.map((one) => one.values.topic)).toEqual(["Demogorgon"]);
+  await userEvent.click(more.getByRole("button", { name: "Remove Nefertiti" }));
+  expect(h.session().document.variants.map((one) => one.values.topic)).toEqual(["Sargon"]);
   expect(screen.getByRole("button", { name: "Queue 2 videos" })).not.toBeNull();
-  await userEvent.click(more.getByRole("button", { name: "Change the keywords of Demogorgon" }));
-  const panel = await screen.findByRole("dialog", { name: "Video 2: Demogorgon" });
+  await userEvent.click(more.getByRole("button", { name: "Change the keywords of Sargon" }));
+  const panel = await screen.findByRole("dialog", { name: "Video 2: Sargon" });
   expect((within(panel).getByLabelText("minWords") as HTMLInputElement).value).toBe("1500");
 });
 
@@ -82,8 +82,8 @@ it("names what a template leaves out: the topic, and the other videos", () => {
   expect(oneOffNotes("Lore: {{Topic}}", { Topic: "" }, 0)).toEqual([
     "Topic is left empty in the template.",
   ]);
-  expect(oneOffNotes("Lore: {{Topic}}", { Topic: "Tiamat", minWords: "1500" }, 2)).toEqual([
-    'Topic is left empty in the template (this video\'s Topic, "Tiamat", is not saved).',
+  expect(oneOffNotes("Lore: {{Topic}}", { Topic: "Cleopatra", minWords: "1500" }, 2)).toEqual([
+    'Topic is left empty in the template (this video\'s Topic, "Cleopatra", is not saved).',
     "The 2 other videos queued here are not saved.",
   ]);
   expect(oneOffNotes("A fixed title", { minWords: "1500" }, 0)).toEqual([]);
@@ -93,13 +93,15 @@ it("saves a template from Play with the topic empty and the settings kept", asyn
   const h = reviewHarness();
   await h.prepare({
     ...lore,
-    variants: [{ id: crypto.randomUUID(), title: "Lore: {{topic}}", values: { topic: "Lolth" } }],
+    variants: [
+      { id: crypto.randomUUID(), title: "Lore: {{topic}}", values: { topic: "Nefertiti" } },
+    ],
   });
   await userEvent.click(screen.getByRole("button", { name: "Save as template" }));
   const dialog = await screen.findByRole("dialog", { name: "Save as template" });
   expect(within(dialog).getByText(/topic is left empty in the template/)).not.toBeNull();
   expect(within(dialog).getByText("The other video queued here is not saved.")).not.toBeNull();
-  await userEvent.type(within(dialog).getByLabelText("Template name"), "D&D Lore");
+  await userEvent.type(within(dialog).getByLabelText("Template name"), "History");
   await userEvent.click(within(dialog).getByRole("button", { name: "Save template" }));
   await waitFor(() =>
     expect(screen.queryByRole("dialog", { name: "Save as template" })).toBeNull(),
@@ -111,12 +113,12 @@ it("saves a template from Play with the topic empty and the settings kept", asyn
     name: string;
     document: PlayDraftDocument;
   };
-  expect(body.name).toBe("D&D Lore");
+  expect(body.name).toBe("History");
   expect(body.document.form.values).toEqual({ topic: "", minWords: "1500" });
   expect(body.document.form.title).toBe("Lore: {{topic}}");
   expect(body.document.variants).toEqual([]);
   // The draft on screen keeps its topic and its other video.
-  expect(h.session().document.form.values.topic).toBe("Tiamat");
+  expect(h.session().document.form.values.topic).toBe("Cleopatra");
   expect(h.session().document.variants).toHaveLength(1);
 });
 

@@ -21,10 +21,10 @@ Every run ever started, one row each.
 +--------------------------------------------------------------------+
 | PROJECTS [ + New run ] |
 | | Title | Status | Format | Created | |
-| | The Complete History of Vecna | running | 16:9 | 08:12 | |
-| | Acererak, Explained | done | 9:16 | 07:40 | |
+| | The Complete History of Hypatia | running | 16:9 | 08:12 | |
+| | Archimedes, Explained | done | 9:16 | 07:40 | |
 | | Kas the Betrayer | failed | 16:9 | 07:05 | |
-| | Sources of the Underdark | canceled | 16:9 | yesterday| |
+| | Sources of the Nile | canceled | 16:9 | yesterday| |
 +--------------------------------------------------------------------+
 | Free · your keys, your machine [Patreon] [☕] |
 +--------------------------------------------------------------------+

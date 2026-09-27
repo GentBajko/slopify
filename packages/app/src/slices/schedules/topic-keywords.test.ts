@@ -17,7 +17,7 @@ function fixture() {
     ...h.document,
     form: {
       ...h.document.form,
-      title: "D&D Lore: {{Topic}} ({{Min. Word Count}} words)",
+      title: "History: {{Topic}} ({{Min. Word Count}} words)",
       values: { Topic: "", "Min. Word Count": "1000" },
     },
   };
@@ -49,28 +49,28 @@ it("saves topics that set other keywords, and refuses unknown ones naming the to
   try {
     const saved = createSchedule(
       f.deps,
-      f.input([{ title: "Tiamat", values: { "Min. Word Count": "12000" } }]),
+      f.input([{ title: "Cleopatra", values: { "Min. Word Count": "12000" } }]),
     );
     expect(saved.ok).toBe(true);
     const refused = createSchedule(
       f.deps,
       f.input([
-        { title: "Tiamat", values: {} },
-        { title: "Vecna", values: { Colour: "red" } },
+        { title: "Cleopatra", values: {} },
+        { title: "Hypatia", values: { Colour: "red" } },
       ]),
     );
     expect(refused.ok).toBe(false);
     if (refused.ok) return;
     expect(refused.reason).toBe("invalid-topics");
     expect(refused.message).toContain(
-      "Topic 2 (Vecna): “Colour” is not a keyword of this template (its keywords are “Topic”, “Min. Word Count”).",
+      "Topic 2 (Hypatia): “Colour” is not a keyword of this template (its keywords are “Topic”, “Min. Word Count”).",
     );
     const long = createSchedule(
       f.deps,
-      f.input([{ title: "Tiamat", values: { "Min. Word Count": "9".repeat(2001) } }]),
+      f.input([{ title: "Cleopatra", values: { "Min. Word Count": "9".repeat(2001) } }]),
     );
     expect(!long.ok && long.message).toContain(
-      "Topic 1 (Tiamat): “Min. Word Count” is 2001 characters; a topic's value can be at most 2000.",
+      "Topic 1 (Cleopatra): “Min. Word Count” is 2001 characters; a topic's value can be at most 2000.",
     );
     const badKeyword = createSchedule(f.deps, { ...f.input([]), topicKeyword: "Subject" });
     expect(!badKeyword.ok && badKeyword.message).toContain(
@@ -111,8 +111,8 @@ it("gives each calendar run the project title it will get, or null when it isn't
       f.deps,
       f.input(
         [
-          { title: "Tiamat", values: { "Min. Word Count": "12000" } },
-          { title: "Vecna", values: {} },
+          { title: "Cleopatra", values: { "Min. Word Count": "12000" } },
+          { title: "Hypatia", values: {} },
         ],
         { mode: "queue", keepAtLeast: 5, llm: null },
       ),
@@ -125,13 +125,13 @@ it("gives each calendar run the project title it will get, or null when it isn't
     );
     if (!result.ok) throw new Error(result.reason);
     expect(result.value.runs.map((run) => [run.topic, run.renderedTitle])).toEqual([
-      ["Tiamat", "D&D Lore: Tiamat (12000 words)"],
-      ["Vecna", "D&D Lore: Vecna (15000 words)"],
+      ["Cleopatra", "History: Cleopatra (12000 words)"],
+      ["Hypatia", "History: Hypatia (15000 words)"],
       // A topic still to be generated has no title yet.
       [null, null],
     ]);
     expect(calendarSchema.parse(result.value).runs[0]?.renderedTitle).toBe(
-      "D&D Lore: Tiamat (12000 words)",
+      "History: Cleopatra (12000 words)",
     );
   } finally {
     f.h.close();

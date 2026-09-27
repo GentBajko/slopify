@@ -79,8 +79,8 @@ describe("plainText", () => {
   });
 
   it.each([
-    ["D&D.", "D&D.\n"],
-    ["D\\&D.", "D&D.\n"],
+    ["R&D.", "R&D.\n"],
+    ["R\\&D.", "R&D.\n"],
     ["\\*stars\\*, \\[brackets\\], a\\_b and \\#1.", "*stars*, [brackets], a_b and #1.\n"],
     ["&amp; &#38; &#x26; &unknown;", "& & & &unknown;\n"],
     [

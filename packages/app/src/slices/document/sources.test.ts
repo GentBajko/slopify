@@ -8,7 +8,7 @@ describe("markdownBlocks", () => {
       markdownBlocks(
         [
           "# Title",
-          "Some **bold** and *slanted* text with [a link](https://example.com) and D\\&D.",
+          "Some **bold** and *slanted* text with [a link](https://example.com) and R\\&D.",
           "#### Deep heading",
           "1. First\n2. Second\n   - Nested",
           "> Quoted line",
@@ -26,7 +26,7 @@ describe("markdownBlocks", () => {
           { text: "slanted", strong: false, emphasis: true, href: null },
           { text: " text with ", strong: false, emphasis: false, href: null },
           { text: "a link", strong: false, emphasis: false, href: "https://example.com" },
-          { text: " and D&D.", strong: false, emphasis: false, href: null },
+          { text: " and R&D.", strong: false, emphasis: false, href: null },
         ],
       },
       { kind: "heading", level: 3, text: "Deep heading" },
@@ -65,7 +65,7 @@ describe("documentText", () => {
         "**Sources Consulted:**",
         "- [Book](https://example.com/book)\n- A magazine, https://example.com/mag",
         "## Pronunciation Glossary",
-        "- Tarrasque: TAR-ask",
+        "- Hammurabi: TAR-ask",
       ].join("\n\n"),
       "Notes cite [the wiki](https://example.com/wiki) and https://example.com/book again.",
     );
@@ -89,13 +89,13 @@ describe("documentText", () => {
 });
 
 it("reads one source per line when the model left no blank lines between them", () => {
-  const article = `# T\n\nBody.\n\n## Sources Consulted\n\nWikipedia, "Lich" — https://en.wikipedia.org/wiki/Lich\nTSR, *Monster Manual* (1977)\n- [Dragon #26](https://example.com/26)\n  continued on the next line\n`;
+  const article = `# T\n\nBody.\n\n## Sources Consulted\n\nWikipedia, "Kish" — https://en.wikipedia.org/wiki/Kish\nOxford, *Ancient Egypt* (1977)\n- [Antiquity #26](https://example.com/26)\n  continued on the next line\n`;
   expect(documentText(article, null).sources).toEqual([
     {
-      text: 'Wikipedia, "Lich" — https://en.wikipedia.org/wiki/Lich',
-      href: "https://en.wikipedia.org/wiki/Lich",
+      text: 'Wikipedia, "Kish" — https://en.wikipedia.org/wiki/Kish',
+      href: "https://en.wikipedia.org/wiki/Kish",
     },
-    { text: "TSR, Monster Manual (1977)", href: null },
-    { text: "Dragon #26 continued on the next line", href: "https://example.com/26" },
+    { text: "Oxford, Ancient Egypt (1977)", href: null },
+    { text: "Antiquity #26 continued on the next line", href: "https://example.com/26" },
   ]);
 });

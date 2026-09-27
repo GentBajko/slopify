@@ -62,8 +62,8 @@ const run = (day: number, index: number | null, topic: string | null, schedule =
 function deps(
   extra: Readonly<Record<string, Answer>> = {},
   schedules = [
-    summary(scheduleId, "Lore", ["Tiamat", "Vecna"]),
-    summary(otherId, "Other", ["Orcus"]),
+    summary(scheduleId, "Lore", ["Cleopatra", "Hypatia"]),
+    summary(otherId, "Other", ["Imhotep"]),
   ],
 ) {
   return testDeps({
@@ -71,10 +71,10 @@ function deps(
       from: inDays(0, 0),
       to: inDays(28, 0),
       runs: [
-        run(1, 0, "Tiamat"),
-        run(2, 1, "Vecna"),
+        run(1, 0, "Cleopatra"),
+        run(2, 1, "Hypatia"),
         run(3, null, null),
-        run(2, 0, "Orcus", otherId),
+        run(2, 0, "Imhotep", otherId),
       ],
       projects: [],
       queued: [],
@@ -88,7 +88,7 @@ describe("the calendar", () => {
   it("lays the weeks out Monday to Sunday with each run's topic on its day", async () => {
     renderRouted(<CalendarRoute />, deps());
     const chip = await screen.findByRole("article", {
-      name: /^Tiamat, .*Lore\. Alt\+arrow keys move it\.$/,
+      name: /^Cleopatra, .*Lore\. Alt\+arrow keys move it\.$/,
     });
     expect(chip.getAttribute("draggable")).toBe("true");
     expect(screen.getByText("A topic Slopify will suggest")).not.toBeNull();
@@ -98,13 +98,13 @@ describe("the calendar", () => {
   });
 
   it("moves a topic a place with Alt+arrow keys, sending the version it showed", async () => {
-    const move = vi.fn(jsonAnswer(summary(scheduleId, "Lore", ["Vecna", "Tiamat"])));
+    const move = vi.fn(jsonAnswer(summary(scheduleId, "Lore", ["Hypatia", "Cleopatra"])));
     renderRouted(
       <CalendarRoute />,
       deps({ [`POST /api/schedules/${scheduleId}/topics/move`]: move }),
     );
-    const vecna = await screen.findByRole("article", { name: /^Vecna,/ });
-    fireEvent.keyDown(vecna, { key: "ArrowLeft", altKey: true });
+    const hypatia = await screen.findByRole("article", { name: /^Hypatia,/ });
+    fireEvent.keyDown(hypatia, { key: "ArrowLeft", altKey: true });
     await waitFor(() => expect(move).toHaveBeenCalledOnce());
     const request = move.mock.calls[0]?.[0] as Request;
     expect(JSON.parse(await request.text())).toEqual({ baseVersion: 4, from: 1, to: 0 });
@@ -113,18 +113,18 @@ describe("the calendar", () => {
   it("moves a dragged topic onto another schedule's run at that run's place", async () => {
     const transfer = vi.fn(
       jsonAnswer({
-        source: summary(scheduleId, "Lore", ["Vecna"]),
-        target: summary(otherId, "Other", ["Tiamat", "Orcus"]),
+        source: summary(scheduleId, "Lore", ["Hypatia"]),
+        target: summary(otherId, "Other", ["Cleopatra", "Imhotep"]),
       }),
     );
     renderRouted(
       <CalendarRoute />,
       deps({ [`POST /api/schedules/${scheduleId}/topics/transfer`]: transfer }),
     );
-    const tiamat = await screen.findByRole("article", { name: /^Tiamat,/ });
-    const orcus = screen.getByRole("article", { name: /^Orcus,/ });
-    fireEvent.dragStart(tiamat, { dataTransfer: { setData: () => {}, effectAllowed: "" } });
-    fireEvent.drop(orcus, { dataTransfer: { getData: () => "" } });
+    const cleopatra = await screen.findByRole("article", { name: /^Cleopatra,/ });
+    const imhotep = screen.getByRole("article", { name: /^Imhotep,/ });
+    fireEvent.dragStart(cleopatra, { dataTransfer: { setData: () => {}, effectAllowed: "" } });
+    fireEvent.drop(imhotep, { dataTransfer: { getData: () => "" } });
     await waitFor(() => expect(transfer).toHaveBeenCalledOnce());
     const request = transfer.mock.calls[0]?.[0] as Request;
     expect(JSON.parse(await request.text())).toEqual({
@@ -137,12 +137,12 @@ describe("the calendar", () => {
 
   it("says why a topic can't be dropped on a day with no run", async () => {
     renderRouted(<CalendarRoute />, deps());
-    const tiamat = await screen.findByRole("article", { name: /^Tiamat,/ });
+    const cleopatra = await screen.findByRole("article", { name: /^Cleopatra,/ });
     const empty = [...document.querySelectorAll<HTMLElement>(".sl-cal-day")].find(
       (day) => day.querySelectorAll("article").length === 0,
     );
     expect(empty).toBeDefined();
-    fireEvent.dragStart(tiamat, { dataTransfer: { setData: () => {}, effectAllowed: "" } });
+    fireEvent.dragStart(cleopatra, { dataTransfer: { setData: () => {}, effectAllowed: "" } });
     fireEvent.drop(empty as HTMLElement, { dataTransfer: { getData: () => "" } });
     expect(
       await screen.findByText(/^No run is planned on .* Drop the topic on a day that has one/),
@@ -151,40 +151,43 @@ describe("the calendar", () => {
 
   it("offers the same moves as buttons in the list view", async () => {
     const user = userEvent.setup();
-    const move = vi.fn(jsonAnswer(summary(scheduleId, "Lore", ["Vecna", "Tiamat"])));
+    const move = vi.fn(jsonAnswer(summary(scheduleId, "Lore", ["Hypatia", "Cleopatra"])));
     renderRouted(
       <CalendarRoute />,
       deps({ [`POST /api/schedules/${scheduleId}/topics/move`]: move }),
     );
-    await screen.findByRole("article", { name: /^Tiamat,/ });
+    await screen.findByRole("article", { name: /^Cleopatra,/ });
     await user.click(screen.getByRole("button", { name: "List" }));
-    await user.click(screen.getByRole("button", { name: "Move Vecna earlier" }));
+    await user.click(screen.getByRole("button", { name: "Move Hypatia earlier" }));
     await waitFor(() => expect(move).toHaveBeenCalledOnce());
     expect(
-      screen.getByRole("combobox", { name: "Move Tiamat to another schedule" }),
+      screen.getByRole("combobox", { name: "Move Cleopatra to another schedule" }),
     ).not.toBeNull();
   });
 
   it("adds typed topics to the end of a schedule's queue", async () => {
     const user = userEvent.setup();
     const put = vi.fn(
-      jsonAnswer(summary(scheduleId, "Lore", ["Tiamat", "Vecna", "Lolth", "Bane"])),
+      jsonAnswer(summary(scheduleId, "Lore", ["Cleopatra", "Hypatia", "Nefertiti", "Solon"])),
     );
     renderRouted(<CalendarRoute />, deps({ [`PUT /api/schedules/${scheduleId}`]: put }));
-    await screen.findByRole("article", { name: /^Tiamat,/ });
+    await screen.findByRole("article", { name: /^Cleopatra,/ });
     await user.click(screen.getByRole("button", { name: "Add to calendar" }));
     const dialog = screen.getByRole("dialog", { name: "Add to calendar" });
-    await user.type(within(dialog).getByLabelText("Topics, one per line"), "Lolth\n\n  Bane  ");
+    await user.type(
+      within(dialog).getByLabelText("Topics, one per line"),
+      "Nefertiti\n\n  Solon  ",
+    );
     await user.click(within(dialog).getByRole("button", { name: "Add 2 topics" }));
     await waitFor(() => expect(put).toHaveBeenCalledOnce());
     const body = JSON.parse(
       (await (put.mock.calls[0]?.[0] as Request | undefined)?.text()) ?? "{}",
     );
     expect(body.items.map((item: { title: string }) => item.title)).toEqual([
-      "Tiamat",
-      "Vecna",
-      "Lolth",
-      "Bane",
+      "Cleopatra",
+      "Hypatia",
+      "Nefertiti",
+      "Solon",
     ]);
     expect(body.baseVersion).toBe(4);
   });
@@ -317,7 +320,7 @@ describe("the batch queue", () => {
 describe("suggested topics", () => {
   it("offers the sign-in fix when suggesting topics failed, and asks again once signed in", async () => {
     const user = userEvent.setup();
-    const failing = summary(scheduleId, "Lore", ["Tiamat"], {
+    const failing = summary(scheduleId, "Lore", ["Cleopatra"], {
       topicGeneration: { mode: "hold", keepAtLeast: 10, llm: { provider: "codex", model: "gpt" } },
       topics: {
         held: 0,
@@ -357,7 +360,7 @@ describe("suggested topics", () => {
     await waitFor(() => expect(generate).toHaveBeenCalledOnce());
   });
 
-  const holding = summary(scheduleId, "Lore", ["Tiamat"], {
+  const holding = summary(scheduleId, "Lore", ["Cleopatra"], {
     topicGeneration: { mode: "hold", keepAtLeast: 10, llm: null },
     topics: { held: 2, generatingSince: null, generatedAt: null, failedAt: null, error: null },
   });
@@ -375,13 +378,13 @@ describe("suggested topics", () => {
             topics: [
               {
                 id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-                title: "Orcus",
+                title: "Imhotep",
                 rank: 0,
                 createdAt: "x",
               },
               {
                 id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-                title: "Asmodeus",
+                title: "Xerxes",
                 rank: 1,
                 createdAt: "x",
               },
@@ -397,9 +400,9 @@ describe("suggested topics", () => {
       ),
     );
     const panel = await screen.findByRole("region", { name: "Suggested topics for Lore" });
-    await user.click(await within(panel).findByRole("button", { name: "Queue Orcus" }));
+    await user.click(await within(panel).findByRole("button", { name: "Queue Imhotep" }));
     await waitFor(() => expect(approve).toHaveBeenCalledOnce());
-    await user.click(within(panel).getByRole("button", { name: "Reject Asmodeus" }));
+    await user.click(within(panel).getByRole("button", { name: "Reject Xerxes" }));
     await waitFor(() => expect(reject).toHaveBeenCalledOnce());
     await user.click(within(panel).getByRole("button", { name: "Queue all 2" }));
     await waitFor(() => expect(all).toHaveBeenCalledOnce());

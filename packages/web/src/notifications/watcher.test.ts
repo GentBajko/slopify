@@ -131,7 +131,7 @@ describe("suggested topics", () => {
     });
     return { watcher, shown };
   }
-  const event = { scheduleId: "s1", scheduleName: "D&D lore", added: 5, waiting: 7 };
+  const event = { scheduleId: "s1", scheduleName: "Ancient history", added: 5, waiting: 7 };
 
   it("says how many new topics wait and where to find them", async () => {
     const { watcher, shown } = topicsHarness(true);
@@ -143,7 +143,7 @@ describe("suggested topics", () => {
         text: {
           headline: "5 new topics are waiting for you",
           detail:
-            "Open Calendar → Suggested topics → D&D lore to queue or reject them. 7 are waiting in all.",
+            "Open Calendar → Suggested topics → Ancient history to queue or reject them. 7 are waiting in all.",
         },
       },
     ]);

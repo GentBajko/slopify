@@ -35,7 +35,7 @@ function fixture() {
     baseVersion: 1,
   });
   const member = randomUUID();
-  createCastMember(deps, lore, { id: member, kind: "creature", name: "Tiamat" });
+  createCastMember(deps, lore, { id: member, kind: "creature", name: "Cleopatra" });
   uploadCastImage(deps, member, png);
   const config: RunConfig = {
     ...h.config,
@@ -68,7 +68,7 @@ describe("changing a project's channel in Edit project", () => {
     const revision = await save(h, { ...h.base.revision.config, channelId: h.lore });
     expect(revision.config).toMatchObject({
       channelId: h.lore,
-      cast: [{ name: "Tiamat", aliases: [], description: "", images: [expect.any(String)] }],
+      cast: [{ name: "Cleopatra", aliases: [], description: "", images: [expect.any(String)] }],
       subtitles: { fontId: "barlow", color: "#FFD700" },
       titleStyle: { color: "#FF0000" },
       endScreen: { text: "Subscribe for more lore" },

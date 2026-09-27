@@ -34,7 +34,7 @@ function member(name: string, sha256: string | null, aliases: readonly string[] 
 const cast = [
   member("Ada", null),
   member("Brom", "b".repeat(64)),
-  member("Tiamat", "t".repeat(64), ["the Dragon Queen"]),
+  member("Cleopatra", "t".repeat(64), ["the Last Pharaoh"]),
 ];
 
 it("draws on the uploaded establishing image first", () => {
@@ -69,10 +69,10 @@ it("draws on the uploaded establishing image first", () => {
 it("draws on the picture of the cast member the title or a keyword names, else the first one", () => {
   expect(
     previewImageOf(
-      { ...freshForm, title: "How {{topic}} fell", values: { topic: "the Dragon Queen" } },
+      { ...freshForm, title: "How {{topic}} fell", values: { topic: "the Last Pharaoh" } },
       cast,
     ),
-  ).toEqual({ image: { kind: "picture", sha256: "t".repeat(64) }, drawnOn: "Tiamat's picture" });
+  ).toEqual({ image: { kind: "picture", sha256: "t".repeat(64) }, drawnOn: "Cleopatra's picture" });
   expect(previewImageOf({ ...freshForm, title: "Nobody" }, cast)?.image).toEqual({
     kind: "picture",
     sha256: "b".repeat(64),

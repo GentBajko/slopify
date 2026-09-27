@@ -34,7 +34,7 @@ const document = {
   form: {
     ...freshDraftDocument.form,
     title: "Lore: {{Topic}} ({{Min. Word Count}} words)",
-    values: { Topic: "Szass Tam", "Min. Word Count": "15000" },
+    values: { Topic: "Ashurbanipal", "Min. Word Count": "15000" },
   },
 };
 const routes = {
@@ -61,8 +61,8 @@ it("sets a keyword per topic in the table, previews each title, and saves it on 
       topicKeyword: "Topic",
       values: { "Min. Word Count": "15000" },
       items: [
-        { title: "Tiamat", values: { "Min. Word Count": "12000" } },
-        { title: "Vecna", values: {} },
+        { title: "Cleopatra", values: { "Min. Word Count": "12000" } },
+        { title: "Hypatia", values: {} },
       ],
     });
     return Response.json(summary);
@@ -76,14 +76,14 @@ it("sets a keyword per topic in the table, previews each title, and saves it on 
     }),
   );
   await openForm(user);
-  await user.type(screen.getByLabelText("One per line"), "Tiamat{Enter}Vecna");
+  await user.type(screen.getByLabelText("One per line"), "Cleopatra{Enter}Hypatia");
   await user.click(screen.getByRole("button", { name: "Table" }));
   await user.selectOptions(screen.getByLabelText("Set a keyword per topic"), "Min. Word Count");
   const table = screen.getByRole("table", { name: "Topics" });
   await user.type(within(table).getByLabelText("Topic 1 Min. Word Count"), "12000");
-  expect(within(table).getByText("Lore: Tiamat (12000 words)")).toBeTruthy();
+  expect(within(table).getByText("Lore: Cleopatra (12000 words)")).toBeTruthy();
   // A blank cell uses the every-run value.
-  expect(within(table).getByText("Lore: Vecna (15000 words)")).toBeTruthy();
+  expect(within(table).getByText("Lore: Hypatia (15000 words)")).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Save schedule" }));
   await waitFor(() => expect(create).toHaveBeenCalledOnce());
 });
@@ -103,7 +103,7 @@ it("reads a pasted YAML list, names bad rows, and converts back to lines without
   await user.click(screen.getByRole("button", { name: "YAML / JSON" }));
   const yaml = screen.getByLabelText("Topics as YAML or JSON");
   fireEvent.change(yaml, {
-    target: { value: "- Topic: Tiamat\n  Colour: red\n- Vecna\n" },
+    target: { value: "- Topic: Cleopatra\n  Colour: red\n- Hypatia\n" },
   });
   expect(
     await screen.findByText(/Topic 1: “Colour” is not a keyword of this template/),
@@ -115,22 +115,22 @@ it("reads a pasted YAML list, names bad rows, and converts back to lines without
   expect(create).not.toHaveBeenCalled();
 
   fireEvent.change(screen.getByLabelText("Topics as YAML or JSON"), {
-    target: { value: '[{"Topic": "Tiamat", "Min. Word Count": "12000"}, "Vecna"]' },
+    target: { value: '[{"Topic": "Cleopatra", "Min. Word Count": "12000"}, "Hypatia"]' },
   });
   const titles = await screen.findByRole("region", { name: "Project titles" });
   expect(
     within(titles)
       .getAllByRole("listitem")
       .map((item) => item.textContent),
-  ).toEqual(["Lore: Tiamat (12000 words)", "Lore: Vecna (15000 words)"]);
+  ).toEqual(["Lore: Cleopatra (12000 words)", "Lore: Hypatia (15000 words)"]);
   // To lines and back: the topic's own word count survives.
   await user.click(screen.getByRole("button", { name: "One per line" }));
-  expect(screen.getByLabelText<HTMLTextAreaElement>(/2 topics · next: Tiamat/).value).toBe(
-    "Tiamat\nVecna",
+  expect(screen.getByLabelText<HTMLTextAreaElement>(/2 topics · next: Cleopatra/).value).toBe(
+    "Cleopatra\nHypatia",
   );
   await user.click(screen.getByRole("button", { name: "YAML / JSON" }));
   expect(screen.getByLabelText<HTMLTextAreaElement>("Topics as YAML or JSON").value).toBe(
-    '- Topic: Tiamat\n  Min. Word Count: "12000"\n- Vecna\n',
+    '- Topic: Cleopatra\n  Min. Word Count: "12000"\n- Hypatia\n',
   );
 });
 
@@ -154,9 +154,9 @@ it("shows the next run's project title from the calendar on the schedule's row",
             templateVersion: 1,
             templateName: "Stories",
             index: 0,
-            topic: "Tiamat",
+            topic: "Cleopatra",
             topicSource: "queued",
-            renderedTitle: "Lore: Tiamat (12000 words)",
+            renderedTitle: "Lore: Cleopatra (12000 words)",
           },
         ],
         projects: [],
@@ -164,5 +164,5 @@ it("shows the next run's project title from the calendar on the schedule's row",
       }),
     }),
   );
-  expect(await screen.findByText(/Next: .* · “Lore: Tiamat \(12000 words\)”/)).toBeTruthy();
+  expect(await screen.findByText(/Next: .* · “Lore: Cleopatra \(12000 words\)”/)).toBeTruthy();
 });

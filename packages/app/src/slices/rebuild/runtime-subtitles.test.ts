@@ -215,11 +215,11 @@ it("reuses the saved font when changing caption size after the system font is un
 
 it("names the time, the chunk and the words when the audio stops matching", () => {
   const chunks = [
-    { key: "audio:body:a-1", spokenText: "Richard Lee Byers wrote the novels. " },
+    { key: "audio:body:a-1", spokenText: "Mary Beard wrote the books. " },
     {
       key: "audio:body:b-1",
       spokenText:
-        "Around its March 2023 release, Collider ran explainers. Early reviews disagreed with each other. Wargamer's headline was \"I tested D&D's new Deadfall adventure.\"",
+        "Around its March 2023 release, Collider ran explainers. Early reviews disagreed with each other. Wargamer's headline was \"I tested R&D's new Egypt tour.\"",
     },
   ];
   expect(

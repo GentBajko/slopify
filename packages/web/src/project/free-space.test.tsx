@@ -24,7 +24,7 @@ function show(
   routes: Readonly<Record<string, Answer>>,
 ): void {
   renderRouted(
-    <FreeSpaceOffer projectId="p1" title="Tiamat" status={status} sample={sample} />,
+    <FreeSpaceOffer projectId="p1" title="Cleopatra" status={status} sample={sample} />,
     testDeps(routes),
   );
 }
@@ -45,7 +45,7 @@ it("offers a finished project's working files, says what it frees, and asks firs
   expect(trim).not.toHaveBeenCalled();
   await user.click(within(dialog).getByRole("button", { name: "Free 1.2 GB" }));
   await waitFor(() => expect(trim).toHaveBeenCalledOnce());
-  expect(await screen.findByText(/Freed 1.2 GB from "Tiamat"/)).not.toBeNull();
+  expect(await screen.findByText(/Freed 1.2 GB from "Cleopatra"/)).not.toBeNull();
 });
 
 it("offers nothing on a sample, a running project, or one with nothing left to drop", async () => {

@@ -169,7 +169,7 @@ export function parseTopicList(
     return {
       ok: false,
       problems: [
-        `The list couldn't be read as YAML or JSON: ${message ?? ""}. Write one item per topic, such as "- Topic: Tiamat".`,
+        `The list couldn't be read as YAML or JSON: ${message ?? ""}. Write one item per topic, such as "- Topic: Cleopatra".`,
       ],
     };
   }
@@ -190,7 +190,7 @@ export function parseTopicList(
     }
     if (item === null || typeof item !== "object" || Array.isArray(item)) {
       problems.push(
-        `${name} is not a topic or a set of keywords. Write it as "- Tiamat" or "- Topic: Tiamat".`,
+        `${name} is not a topic or a set of keywords. Write it as "- Cleopatra" or "- Topic: Cleopatra".`,
       );
       return;
     }

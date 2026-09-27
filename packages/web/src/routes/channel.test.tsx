@@ -22,12 +22,12 @@ const channel: Channel = {
   createdAt: "a",
   updatedAt: "a",
 };
-const tiamat: CastMember = {
+const cleopatra: CastMember = {
   id: "7a0c1f3e-2b4d-4e6f-8a9b-0c1d2e3f4a5b",
   channelId: id,
   kind: "creature",
-  name: "Tiamat",
-  aliases: ["the Dragon Queen"],
+  name: "Cleopatra",
+  aliases: ["the Last Pharaoh"],
   description: "",
   version: 1,
   images: [
@@ -58,7 +58,7 @@ function Page({ start = "brand" as ChannelTab }) {
 }
 
 const common = {
-  [`GET /api/channels/${id}`]: jsonAnswer({ channel, cast: [tiamat] }),
+  [`GET /api/channels/${id}`]: jsonAnswer({ channel, cast: [cleopatra] }),
   "GET /api/fonts": jsonAnswer({ fonts: [] }),
   "GET /api/entries": jsonAnswer({ entries: [] }),
   "GET /api/document-themes": jsonAnswer({ builtIns: [], themes: [] }),
@@ -222,7 +222,7 @@ describe("Channels", () => {
         ...common,
         [`POST /api/channels/${id}/cast`]: recording(
           jsonAnswer(
-            { ...tiamat, id: "9c2e3f4a-5b6c-4d7e-8f9a-0b1c2d3e4f5a", name: "Waterdeep" },
+            { ...cleopatra, id: "9c2e3f4a-5b6c-4d7e-8f9a-0b1c2d3e4f5a", name: "Alexandria" },
             201,
           ),
           seen,
@@ -230,15 +230,15 @@ describe("Channels", () => {
       }),
     );
     const grid = await screen.findByRole("region", { name: "Cast" });
-    expect(within(grid).getByText("Tiamat")).not.toBeNull();
+    expect(within(grid).getByText("Cleopatra")).not.toBeNull();
     expect(within(grid).getByText("Creature · 1 picture")).not.toBeNull();
     // Edit opens the member beside the gallery, with its aliases.
-    await user.click(within(grid).getByRole("button", { name: "Edit Tiamat" }));
-    expect(screen.getByRole("button", { name: "Remove alias the Dragon Queen" })).not.toBeNull();
+    await user.click(within(grid).getByRole("button", { name: "Edit Cleopatra" }));
+    expect(screen.getByRole("button", { name: "Remove alias the Last Pharaoh" })).not.toBeNull();
     // The page header's primary action on the Cast tab.
     await user.click(screen.getAllByRole("button", { name: "Add to cast" })[0] as HTMLElement);
     await user.selectOptions(screen.getByLabelText("Kind"), "place");
-    await user.type(screen.getByLabelText("Name"), "Waterdeep");
+    await user.type(screen.getByLabelText("Name"), "Alexandria");
     await user.type(screen.getByLabelText("Aliases"), "City of Splendors{Enter}");
     expect(screen.getByRole("button", { name: "Remove alias City of Splendors" })).not.toBeNull();
     // The editor's own submit button, after the header's opener.
@@ -250,7 +250,7 @@ describe("Channels", () => {
     await waitFor(() => expect(seen).toHaveLength(1));
     expect(seen[0]).toMatchObject({
       kind: "place",
-      name: "Waterdeep",
+      name: "Alexandria",
       aliases: ["City of Splendors"],
       description: "",
       host: false,
@@ -264,14 +264,14 @@ describe("Channels", () => {
       <Page start="cast" />,
       testDeps({
         ...common,
-        [`PUT /api/channels/cast/${tiamat.id}`]: recording(
-          jsonAnswer({ ...tiamat, host: true }),
+        [`PUT /api/channels/cast/${cleopatra.id}`]: recording(
+          jsonAnswer({ ...cleopatra, host: true }),
           seen,
         ),
       }),
     );
     const grid = await screen.findByRole("region", { name: "Cast" });
-    await user.click(within(grid).getByRole("button", { name: "Edit Tiamat" }));
+    await user.click(within(grid).getByRole("button", { name: "Edit Cleopatra" }));
     await user.click(screen.getByRole("switch", { name: "One of the channel's hosts" }));
     // A host without a voice joins nothing yet, and the editor says so.
     expect(
@@ -279,7 +279,7 @@ describe("Channels", () => {
     ).not.toBeNull();
     await user.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(seen).toHaveLength(1));
-    expect(seen[0]).toMatchObject({ name: "Tiamat", host: true });
+    expect(seen[0]).toMatchObject({ name: "Cleopatra", host: true });
   });
 
   it("offers a cast member the voices that speak the channel's language, with Show all voices", async () => {
@@ -290,7 +290,7 @@ describe("Channels", () => {
         ...common,
         [`GET /api/channels/${id}`]: jsonAnswer({
           channel: { ...channel, brand: { language: "de" } },
-          cast: [{ ...tiamat, voice: { provider: "openai-tts", model: "tts-1", voice: "" } }],
+          cast: [{ ...cleopatra, voice: { provider: "openai-tts", model: "tts-1", voice: "" } }],
         }),
         "GET /api/settings/voices": jsonAnswer({
           voices: [
@@ -301,7 +301,7 @@ describe("Channels", () => {
       }),
     );
     const grid = await screen.findByRole("region", { name: "Cast" });
-    await user.click(within(grid).getByRole("button", { name: "Edit Tiamat" }));
+    await user.click(within(grid).getByRole("button", { name: "Edit Cleopatra" }));
     const names = () =>
       within(screen.getByLabelText("Voice"))
         .getAllByRole("option")

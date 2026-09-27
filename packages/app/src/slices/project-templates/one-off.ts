@@ -2,7 +2,7 @@ import { detectSlots } from "../admission/substitute.js";
 import type { PlayDraftDocument } from "../play-drafts/model.js";
 
 // A template keeps the settings, never what was typed for one video. A keyword the project
-// title names ({{Topic}} in "D&D Lore: {{Topic}}") is the video's topic: it changes with every
+// title names ({{Topic}} in "History: {{Topic}}") is the video's topic: it changes with every
 // video, so a template stores it empty. Every other keyword ({{minWords}}, {{style}}) is a
 // setting and keeps its value.
 export function topicKeywords(title: string): readonly string[] {

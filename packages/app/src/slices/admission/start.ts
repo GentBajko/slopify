@@ -62,7 +62,7 @@ export function startRun(
     draft.sources.audio === "generate" && draft.audio?.useNarrationAliases === true
       ? listNarrationAliases(deps.db)
       : [];
-  // The title may name keywords too ("D&D Lore: {{Topic}}"), filled like a prompt's, so a
+  // The title may name keywords too ("History: {{Topic}}"), filled like a prompt's, so a
   // template or Play keeps the pattern and each project gets its own title.
   const title = render(draft.title, draft.values).trim() || draft.title;
   // The channel's related earlier episodes as they are now (`slices/episodes`): later edits

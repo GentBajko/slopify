@@ -154,13 +154,13 @@ describe("createRunNotifier", () => {
     notifier.observeTopics({
       type: "schedule.topics",
       scheduleId: "s1",
-      scheduleName: "D&D lore",
+      scheduleName: "Ancient history",
       added: 5,
       waiting: 7,
     });
     await notifier.settled();
     expect(posted[0]?.body).toBe(
-      "5 new topics are waiting for you\nOpen Calendar → Suggested topics → D&D lore to queue or reject them. 7 are waiting in all.\n",
+      "5 new topics are waiting for you\nOpen Calendar → Suggested topics → Ancient history to queue or reject them. 7 are waiting in all.\n",
     );
   });
 });

@@ -122,13 +122,13 @@ it("approves a held topic from its row in the picked schedule's detail", async (
       }),
       "GET /api/project-templates": jsonAnswer({ templates: [] }),
       [`GET /api/schedules/${summary.id}/topics/held`]: jsonAnswer({
-        topics: [{ id: topicId, title: "Owlbears", rank: 0, createdAt: summary.createdAt }],
+        topics: [{ id: topicId, title: "Pyramids", rank: 0, createdAt: summary.createdAt }],
       }),
       [`POST /api/schedules/${summary.id}/topics/held/${topicId}/approve`]: approve,
     }),
   );
   const waiting = await screen.findByRole("list", { name: "Topics waiting" });
-  expect(within(waiting).getByText("Owlbears")).toBeTruthy();
+  expect(within(waiting).getByText("Pyramids")).toBeTruthy();
   await user.click(within(waiting).getByRole("button", { name: "Approve" }));
   await waitFor(() => expect(approve).toHaveBeenCalledOnce());
 });
@@ -141,7 +141,7 @@ it("edits a held topic's keywords beside its title, showing the every-run value 
     body = await request.json();
     return jsonAnswer({
       id: topicId,
-      title: "Owlbears",
+      title: "Pyramids",
       values: { "Word Count": "12000" },
       rank: 0,
       createdAt: summary.createdAt,
@@ -188,7 +188,7 @@ it("edits a held topic's keywords beside its title, showing the every-run value 
         topics: [
           {
             id: topicId,
-            title: "Owlbears",
+            title: "Pyramids",
             values: { Tone: "grim" },
             rank: 0,
             createdAt: summary.createdAt,
@@ -208,5 +208,5 @@ it("edits a held topic's keywords beside its title, showing the every-run value 
   await user.clear(within(waiting).getByLabelText("Tone"));
   await user.click(within(waiting).getByRole("button", { name: "Save" }));
   await waitFor(() => expect(edit).toHaveBeenCalledOnce());
-  expect(body).toEqual({ title: "Owlbears", values: { "Word Count": "12000" } });
+  expect(body).toEqual({ title: "Pyramids", values: { "Word Count": "12000" } });
 });

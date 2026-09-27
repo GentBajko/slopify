@@ -158,7 +158,7 @@ export function deps(routes: Readonly<Record<string, Answer>> = {}) {
     "GET /api/settings/voices": jsonAnswer({
       voices: [{ id: "v1", provider: "elevenlabs", name: "Narrator M", voiceId: "narrator-m" }],
     }),
-    "GET /files/p1/article-md": textAnswer("# The Archlich\n\nMost villains want something."),
+    "GET /files/p1/article-md": textAnswer("# The Pharaoh\n\nMost villains want something."),
     "GET /files/p1/notes": textAnswer("Chapter 1 of 7."),
     "POST /api/projects/p1/revisions/prepare": jsonAnswer({
       ok: true,

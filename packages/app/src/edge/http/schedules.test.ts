@@ -29,7 +29,7 @@ it("refuses a topic naming a keyword the template doesn't use with a 400 naming 
         templateVersion: 1,
         cadence: { kind: "daily", time: "09:00" },
         timezone: "UTC",
-        items: [{ title: "Vecna", values: { Colour: "red" } }],
+        items: [{ title: "Hypatia", values: { Colour: "red" } }],
         topicKeyword: "Topic",
       }),
     });
@@ -37,7 +37,7 @@ it("refuses a topic naming a keyword the template doesn't use with a 400 naming 
     const body = (await response.json()) as { detail: string; reason: string };
     expect(body.reason).toBe("invalid-topics");
     expect(body.detail).toBe(
-      "The schedule wasn't saved. Topic 1 (Vecna): “Colour” is not a keyword of this template (its keywords are “Topic”). Rename it to one of them or remove it.",
+      "The schedule wasn't saved. Topic 1 (Hypatia): “Colour” is not a keyword of this template (its keywords are “Topic”). Rename it to one of them or remove it.",
     );
   } finally {
     h.close();

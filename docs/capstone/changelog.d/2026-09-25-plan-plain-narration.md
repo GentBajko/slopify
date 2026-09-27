@@ -7,4 +7,4 @@ key: plan/2026-09-25-plain-narration@Q1
 - Task 1: test-first direct prose projection; retain helper signature and all existing call sites.
 - Coverage: five requirements and five behavior rules mapped, with no forward dependency or placeholder; full pass rechecked spec, tasks and test cases.
 - Constraints: strict typing, existing dependencies, no schema/API, no blanket backslash removal, no historical rewrite, no production/provider execution; source-only commit after article/narration/rebuild tests, typecheck, lint and diff checks.
-- Task 1 proves D&D no longer acquires a narration backslash while paths and literal punctuation survive. Execution follows Docker storage under the user's ordered work.
+- Task 1 proves R&D no longer acquires a narration backslash while paths and literal punctuation survive. Execution follows Docker storage under the user's ordered work.

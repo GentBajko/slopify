@@ -69,9 +69,9 @@ it.each([false, true])(
 );
 
 it("preserves joining hyphens instead of partially pronouncing compounds", () => {
-  const body = "Lich-king Lich‐king Lich‑king.";
+  const body = "Kish-king Kish‐king Kish‑king.";
   const recipes = buildRecipes(
-    context(`${body}\n\n## Pronunciation Glossary\nLich: /lɪtʃ/`, false, 500),
+    context(`${body}\n\n## Pronunciation Glossary\nKish: /kiːʃ/`, false, 500),
   );
   expect(part(recipes).input.text).toBe(body);
 });
@@ -328,7 +328,7 @@ it("reports a blocked physical request when one IPA atom exceeds the catalog lim
 });
 
 it("adds the other projects' pronunciations when sharing, with the project's own first", () => {
-  const base = context("John and Szass Tam read.\n\n## Pronunciation Glossary\nJohn: /dʒɑn/");
+  const base = context("John and Amun Ra read.\n\n## Pronunciation Glossary\nJohn: /dʒɑn/");
   const shared = {
     ...base,
     config: {
@@ -342,7 +342,7 @@ it("adds the other projects' pronunciations when sharing, with the project's own
       },
       sharedGlossary: [
         { term: "john", ipa: ["ʒɑn"] },
-        { term: "Szass Tam", ipa: ["sæs", "tæm"] },
+        { term: "Amun Ra", ipa: ["ɑmʊn", "rɑː"] },
       ],
     },
   };
@@ -350,7 +350,7 @@ it("adds the other projects' pronunciations when sharing, with the project's own
     ok: true,
     entries: [
       { term: "John", ipa: ["dʒɑn"] },
-      { term: "Szass Tam", ipa: ["sæs", "tæm"] },
+      { term: "Amun Ra", ipa: ["ɑmʊn", "rɑː"] },
     ],
   });
   // Off, or a project saved before sharing existed, ignores a copied list.

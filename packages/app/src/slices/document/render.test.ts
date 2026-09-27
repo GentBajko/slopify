@@ -4,9 +4,9 @@ import { readDocumentAssets } from "./fonts.js";
 import { type DocumentInput, renderDocument } from "./render.js";
 import { builtInTheme } from "./theme.js";
 
-const article = `# The Tarrasque
+const article = `# The Hammurabi
 
-The Tarrasque is a legendary creature whose **appetite** is matched only by its *resilience*, and whose story runs through [decades of lore](https://example.com/lore).
+The Hammurabi is a legendary creature whose **appetite** is matched only by its *resilience*, and whose story runs through [decades of lore](https://example.com/lore).
 
 ## Origins
 
@@ -27,15 +27,15 @@ Short.
 
 ## Sources Consulted
 
-- [Monster Manual](https://example.com/mm)
-- Dragon Magazine, issue 90
+- [Ancient Egypt](https://example.com/mm)
+- Antiquity, issue 90
 `;
 
 const assets = readDocumentAssets();
 
 function input(over: Partial<DocumentInput> = {}): DocumentInput {
   return {
-    title: "The Tarrasque",
+    title: "The Hammurabi",
     articleMarkdown: article,
     researchNotes: null,
     cover: null,
@@ -159,7 +159,7 @@ describe("renderDocument", () => {
 
   it("refuses an article with nothing to print", () => {
     expect(() =>
-      renderDocument(input({ articleMarkdown: "# The Tarrasque\n\n## Sources Consulted\n\n- x" })),
+      renderDocument(input({ articleMarkdown: "# The Hammurabi\n\n## Sources Consulted\n\n- x" })),
     ).toThrow(/Edit project → Article.*Try again on Document/);
   });
 

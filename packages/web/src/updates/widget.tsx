@@ -78,7 +78,7 @@ export function UpdateWidget({ reload }: { readonly reload: () => void }): React
   );
 }
 
-// "Update to 2.6.0 will install when 'Tiamat' finishes."
+// "Update to 2.6.0 will install when 'Cleopatra' finishes."
 export function waitingSentence(info: UpdateInfo | undefined): string {
   const version = info?.pendingVersion ?? info?.latestVersion ?? "the new version";
   return info?.waitingFor === undefined

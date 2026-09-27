@@ -15,7 +15,7 @@ interface ChangeRequest {
 }
 
 // "Regenerate image 3" and "Regenerate on-screen card 2" from the palette, for every image
-// whether or not its group is expanded, and "Regenerate image 3 in Tiamat" run from another
+// whether or not its group is expanded, and "Regenerate image 3 in Cleopatra" run from another
 // screen (`components/global-commands.tsx`). Both ask first, as the Regenerate button does.
 // An image's number is its place in the slideshow, the "#3" on its frame.
 export function useRegenerateByNumber(
