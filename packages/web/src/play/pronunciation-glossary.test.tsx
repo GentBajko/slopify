@@ -93,7 +93,7 @@ function PlaySubject({
   };
   return (
     <>
-      <ContentSection {...props} entries={[]} fields={[]} onLibrary={() => {}} />
+      <ContentSection {...props} entries={[]} onLibrary={() => {}} />
       <AudioRail {...props} />
       <output aria-label="Saved audio">{JSON.stringify(form.audio)}</output>
     </>

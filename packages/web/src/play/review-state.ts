@@ -214,7 +214,9 @@ export function createReviewOwner({
       }
     },
     start: async () => {
-      if (state.starting || state.created || current().document.section !== "review") return;
+      // The Play key sits beside the review in the right rail, so Start no longer waits for a
+      // Review step to be open; a valid review of exactly these videos is what it needs.
+      if (state.starting || state.created) return;
       if (
         !attempt &&
         (!state.valid ||

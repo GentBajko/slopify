@@ -14,9 +14,9 @@ afterEach(() => {
 });
 it("opens Review with the keyboard without posting Start", async () => {
   const { requests } = await mountPlay();
-  screen.getByLabelText("Project title").focus();
+  screen.getByLabelText("Title").focus();
   await userEvent.keyboard("{Control>}{Enter}{/Control}");
-  expect(screen.getByRole("button", { name: "Review" }).getAttribute("aria-current")).toBe("step");
+  expect(screen.getByRole("dialog", { name: "Review" })).not.toBeNull();
   expect(screen.getByRole("button", { name: "Start run" })).not.toBeNull();
   expect(requests.some((request) => new URL(request.url).pathname.endsWith("/start"))).toBe(false);
 });

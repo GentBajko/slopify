@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import { mountSupplied, ready, response } from "./draft-upload-test-fixture";
+import { openSection } from "./play-test-fixture";
 
 afterEach(() => {
   cleanup();
@@ -25,7 +26,7 @@ it("uploads the shorts' background music as a draft attachment from More shorts 
       return response({ ...ready(sent), name: "bed.mp3" });
     },
   });
-  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+  await openSection("Outputs");
   const music = screen.getByLabelText(/^Background music/);
   // Kept on screen with Shorts off, but not pickable.
   expect(music.hasAttribute("disabled")).toBe(true);

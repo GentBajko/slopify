@@ -467,6 +467,12 @@
   .sl-workspace--no-aside {
     grid-template-columns: 180px minmax(0, 1fr);
   }
+  /* Play: no section rail, a wider action rail for the style preview and the Play key. On
+     narrow screens the rail follows the form, so the key comes after the topic. */
+  .sl-workspace.sl-workspace--play {
+    grid-template-columns: minmax(0, 1fr) 400px;
+    gap: var(--space-7);
+  }
   .sl-workspace__sections,
   .sl-workspace__aside {
     position: sticky;
@@ -504,6 +510,24 @@
       position: static;
       grid-column: 1 / -1;
       order: -1;
+    }
+    .sl-workspace.sl-workspace--play {
+      grid-template-columns: minmax(0, 1fr) 340px;
+      gap: var(--space-6);
+    }
+    .sl-workspace--play .sl-workspace__aside {
+      position: sticky;
+      grid-column: auto;
+      order: 0;
+    }
+  }
+  @media (max-width: 899px) {
+    .sl-workspace.sl-workspace--play {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .sl-workspace--play .sl-workspace__aside {
+      position: static;
+      order: 1;
     }
   }
 

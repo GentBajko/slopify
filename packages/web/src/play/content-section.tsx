@@ -1,50 +1,26 @@
-import { titleMax } from "@app/slices/admission/rules.js";
-import type { Field } from "@app/slices/admission/substitute.js";
 import type { Entry } from "@app/slices/library/model.js";
-import type { ReactElement, ReactNode } from "react";
-import { useId } from "react";
+import type { ReactElement } from "react";
 import { InfoTip } from "@/components/kit/info-tip";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { keywordOrigins } from "./admission";
-import { KeywordBlock } from "./keywords";
 import { ModelPicker, ProviderPicker } from "./pickers";
 import type { RailProps } from "./rail-frame";
 import { ArticleRail, ResearchRail } from "./stage-rails";
 import { needsLlm } from "./state";
 import { ThinkingPicker } from "./thinking";
+// The Article row of Play: the article's source and prompt, the text generation every
+// generated text shares, and research.
 export function ContentSection(
   props: RailProps & {
-    readonly fields: readonly Field[];
     readonly entries: readonly Entry[];
     readonly onLibrary: (path: "/prompts" | "/settings") => void;
-    // The channel picker under the title; Play passes it, the section's own tests do not.
-    readonly channel?: ReactNode;
   },
 ): ReactElement {
-  const { form, problem, update, fields, entries, onLibrary } = props;
-  const id = useId();
+  const { form, problem, update, entries, onLibrary } = props;
   const prompt = props.prompts.find(
     (item) => item.kind === "article" && item.name === form.articlePrompt,
   );
   return (
     <>
-      <div className="mt-7">
-        <Label htmlFor={id} className="mb-2">
-          Project title
-        </Label>
-        <Input
-          id={id}
-          data-play-field="title"
-          value={form.title}
-          maxLength={titleMax}
-          aria-invalid={problem("title") !== undefined}
-          onChange={(event) => update({ title: event.target.value })}
-        />
-        {problem("title") ? <p className="text-small text-red">{problem("title")}</p> : null}
-      </div>
-      {props.channel}
       <ArticleRail {...props} />
       {form.sources.article === "generate" ? (
         <div className="flex flex-wrap items-start gap-3 py-3">
@@ -77,18 +53,6 @@ export function ContentSection(
           words · {form.provided.article.length} characters
         </p>
       )}
-      <KeywordBlock
-        fields={fields}
-        origins={keywordOrigins({
-          form,
-          prompts: props.prompts,
-          entries,
-          silenceGapSeconds: props.silenceGapSeconds,
-        })}
-        values={form.values}
-        problem={problem}
-        onChange={(name, value) => update({ values: { ...form.values, [name]: value } })}
-      />
       {needsLlm(form, entries) ? (
         <section className="border-y border-line py-4">
           <div className="mb-3 flex items-center gap-1">
