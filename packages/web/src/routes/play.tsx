@@ -119,11 +119,15 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     session.invalidateReview(true);
   };
 
+  // This run's own silence gap when one was typed, else the one Settings has; text that is not
+  // a number reaches the rule as NaN, which it refuses in place.
+  const settingsGap = settings.data?.silenceGapSeconds ?? 3;
+  const typedGap = document.form.silenceGapSeconds?.trim() ?? "";
   const input = {
     form,
     prompts: choices.prompts,
     entries: choices.entries,
-    silenceGapSeconds: settings.data?.silenceGapSeconds ?? 3,
+    silenceGapSeconds: typedGap === "" ? settingsGap : Number(typedGap),
   };
   const { fields, result, blocker: admissionBlocker } = admission(input);
   const origins = keywordOrigins(input);

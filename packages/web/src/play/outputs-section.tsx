@@ -5,7 +5,7 @@ import { usePlaySession } from "./draft-context";
 import { AudioRail, ImagesRail } from "./media-rails";
 import { OptionPicker } from "./pickers";
 import type { RailProps } from "./rail-frame";
-import { DocumentRail, ThumbnailRail, VideoExtras, VideoRail } from "./stage-rails";
+import { DocumentRail, NumberField, ThumbnailRail, VideoExtras, VideoRail } from "./stage-rails";
 import { StyleSection } from "./style-section";
 
 // The editors behind Play's Narration, Images, Video and style, and Outputs rows. Each is the
@@ -119,6 +119,25 @@ export function VideoSection(
             session.edit({ ...document, form: { ...document.form, [field]: value } }),
         }}
       />
+      {document.form.sources.audio !== "off" ? (
+        <div className="grid min-w-0 grid-cols-1 gap-4 border-b border-line py-4 min-[700px]:grid-cols-2">
+          <NumberField
+            field="silenceGapSeconds"
+            label="Silence between segments (seconds)"
+            help={`The pause between narrated parts in this video. Leave it empty to use the ${String(props.silenceGapSeconds)} s set in Settings.`}
+            step={0.1}
+            problem={props.problem("silenceGapSeconds")}
+            value={document.form.silenceGapSeconds ?? ""}
+            onChange={(silenceGapSeconds) => {
+              const { silenceGapSeconds: _gap, ...form } = document.form;
+              session.edit({
+                ...document,
+                form: silenceGapSeconds.trim() === "" ? form : { ...form, silenceGapSeconds },
+              });
+            }}
+          />
+        </div>
+      ) : null}
       <StyleSection problem={props.problemOf} />
     </>
   );

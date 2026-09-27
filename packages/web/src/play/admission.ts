@@ -313,7 +313,32 @@ function push(into: string[], body: string | undefined): void {
   }
 }
 
-export function keywordOrigins(input: AdmissionInput): ReadonlyMap<string, readonly string[]> {
+// What a keyword list needs to say what each keyword feeds: the choices that name prompts, from
+// Play's form or a saved template's (whose numbers are still text).
+export interface KeywordOriginsInput {
+  readonly form: Pick<
+    PlayFormState,
+    | "title"
+    | "narrationPrompt"
+    | "articlePrompt"
+    | "thumbnailPrompt"
+    | "intro"
+    | "outro"
+    | "youtubeDescription"
+    | "descriptionPrompt"
+  > & {
+    readonly sources: RunDraft["sources"];
+    readonly imagePrompts: readonly { readonly name: string }[];
+    readonly shorts?: { readonly enabled: boolean; readonly prompt: string; readonly imagePrompt: string } | undefined;
+    readonly reference?: { readonly source: string; readonly prompt: string } | undefined;
+  };
+  readonly prompts: readonly Prompt[];
+  readonly entries: readonly Entry[];
+}
+
+export function keywordOrigins(
+  input: KeywordOriginsInput,
+): ReadonlyMap<string, readonly string[]> {
   const origins = new Map<string, string[]>();
   const add = (body: string | undefined, label: string): void => {
     if (!body) return;
@@ -329,9 +354,12 @@ export function keywordOrigins(input: AdmissionInput): ReadonlyMap<string, reado
     add(bodyOf(prompts, "narration", form.narrationPrompt ?? ""), "Narration Preparation");
   if (form.sources.article === "generate")
     add(bodyOf(prompts, "article", form.articlePrompt), "Article");
-  if (form.sources.images === "generate")
+  if (form.sources.images === "generate") {
     for (const prompt of form.imagePrompts)
       add(bodyOf(prompts, "image", prompt.name), `Image: ${prompt.name}`);
+    if (form.reference?.source === "prompt")
+      add(bodyOf(prompts, "image", form.reference.prompt), "Establishing image");
+  }
   if (form.sources.thumbnail === "from_prompt" || form.sources.thumbnail === "prompt_by_llm")
     add(bodyOf(prompts, "thumbnail", form.thumbnailPrompt), "Thumbnail");
   if (form.sources.audio === "generate")

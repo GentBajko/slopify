@@ -3,14 +3,14 @@ import {
   usesReference,
   usesShorts,
   usesYoutubeDescription,
-  valueMax,
 } from "@app/slices/admission/rules.js";
 import { detectSlots } from "@app/slices/admission/substitute.js";
 import type { RevisionEdit } from "@app/slices/revisions/model.js";
 import { useId } from "react";
 import type { Entry, Prompt } from "@/api";
+import { KeywordList } from "@/components/keyword-list";
 import { Button } from "@/components/ui/button";
-import { Input, Textarea } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/input";
 import { Picker } from "@/components/ui/picker";
 import { editOfForm, setPrompt } from "./revision-form-state.js";
 export function RevisionPrompts({
@@ -54,6 +54,15 @@ export function RevisionPrompts({
       ),
     ]),
   ];
+  // What each keyword feeds, in the project's own copies of its prompts: the same list Play
+  // and templates show.
+  const feeds = (name: string): readonly string[] => [
+    ...(detectSlots(edit.config.title).names.includes(name) ? ["Project title"] : []),
+    ...Object.entries(edit.content.promptTemplates).flatMap(([key, raw]) =>
+      raw !== null && detectSlots(raw).names.includes(name) ? [promptLabel(key)] : [],
+    ),
+  ];
+  const topics = detectSlots(edit.config.title).names;
   return (
     <section aria-label="Prompt snapshots" className="space-y-3">
       {keys.map((key) => {
@@ -171,31 +180,28 @@ export function RevisionPrompts({
           </fieldset>
         );
       })}
-      {slots.map((name) => (
-        <label
-          htmlFor={`${formId}-keyword-${name}`}
-          key={name}
-          className="block space-y-1 text-small"
-        >
-          Keyword {name}
-          <Input
-            id={`${formId}-keyword-${name}`}
-            maxLength={valueMax}
-            value={edit.config.values[name] ?? ""}
-            onChange={(event) =>
+      {slots.length ? (
+        <section aria-label="Keywords" className="space-y-3 pt-3">
+          <h3 className="m-0 text-title-3">Keywords</h3>
+          <KeywordList
+            fieldPrefix="config.values"
+            keywords={slots.map((name) => ({
+              name,
+              value: edit.config.values[name] ?? "",
+              feeds: feeds(name),
+              topic: topics.includes(name),
+            }))}
+            onChange={(name, value) =>
               onChange(
                 editOfForm({
                   ...edit,
-                  config: {
-                    ...edit.config,
-                    values: { ...edit.config.values, [name]: event.target.value },
-                  },
+                  config: { ...edit.config, values: { ...edit.config.values, [name]: value } },
                 }),
               )
             }
           />
-        </label>
-      ))}
+        </section>
+      ) : null}
     </section>
   );
 }

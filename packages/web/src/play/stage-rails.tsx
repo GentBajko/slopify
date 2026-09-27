@@ -351,7 +351,7 @@ export function VideoExtras({
   );
 }
 
-function NumberField({
+export function NumberField({
   field,
   label,
   help,
