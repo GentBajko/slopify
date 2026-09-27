@@ -11,7 +11,12 @@ const common = z.object({
   variable: z.boolean().optional(),
   expectedWords: quantity.optional(),
 });
-const provider = common.extend({ provider: z.string(), model: z.string() });
+const provider = common.extend({
+  provider: z.string(),
+  model: z.string(),
+  // A CLI request whose API figure cannot be told in advance.
+  apiUnknown: z.literal(true).optional(),
+});
 const requestSchema = z.discriminatedUnion("kind", [
   provider
     .extend({ kind: z.literal("llm"), inputCharacters: quantity, outputCharacters: quantity })
@@ -108,7 +113,7 @@ function onPlan(
       ? apiEquivalentOf(request.provider, request.model, catalogue)
       : undefined;
   const amount =
-    api === undefined || request.kind !== "llm"
+    api === undefined || request.kind !== "llm" || request.apiUnknown === true
       ? null
       : tokenCost(api.pricing, request.inputCharacters / 4, request.outputCharacters / 4);
   return {

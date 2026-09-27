@@ -41,7 +41,7 @@ export function pronunciationChunks(
     const start = source.indexOf(text, offset);
     if (start < 0)
       throw new Error(
-        "Slopify hit an internal error (a narration chunk isn't in the article text). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+        "Slopify hit an internal error (a narration chunk isn't in the article text). Try again; if it happens again, use Download diagnostics in Settings and report it.",
       );
     offset = start + text.length;
     return { key: nextKey(text), text, start, end: offset };
@@ -106,7 +106,7 @@ export function pronunciationChunks(
     const chunk = chunks[index];
     if (chunk === undefined)
       throw new Error(
-        "Slopify hit an internal error (a narration chunk went missing). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+        "Slopify hit an internal error (a narration chunk went missing). Try again; if it happens again, use Download diagnostics in Settings and report it.",
       );
     while ((matches[matchIndex]?.end ?? Infinity) <= chunk.end) matchIndex++;
     const match = matches[matchIndex];
@@ -121,7 +121,7 @@ export function pronunciationChunks(
     const first = chunks[from];
     if (first === undefined)
       throw new Error(
-        "Slopify hit an internal error (a group of narration chunks is empty). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+        "Slopify hit an internal error (a group of narration chunks is empty). Try again; if it happens again, use Download diagnostics in Settings and report it.",
       );
     const text = source.slice(first.start, chunk.end);
     result.push(

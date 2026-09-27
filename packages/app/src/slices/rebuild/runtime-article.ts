@@ -24,7 +24,7 @@ export async function executeArticleRequests(
 ): Promise<AttemptResult<LlmAnswer>> {
   if (initial.input.kind !== "llm")
     throw new Error(
-      "Slopify hit an internal error (the article step has no AI request). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (the article step has no AI request). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   let piece = initial;
   let text = "";
@@ -33,7 +33,7 @@ export async function executeArticleRequests(
   for (let part = 0; part <= continuationLimit; part += 1) {
     if (piece.input.kind !== "llm")
       throw new Error(
-        "Slopify hit an internal error (an article continuation has no AI request). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+        "Slopify hit an internal error (an article continuation has no AI request). Try again; if it happens again, use Download diagnostics in Settings and report it.",
       );
     const saved = deps.db
       .prepare("SELECT result_json FROM revision_work_pieces WHERE id=? AND work_id=?")
@@ -55,9 +55,9 @@ export async function executeArticleRequests(
           previewLabel: part === 0 ? "Article" : `Continuation ${part}`,
           check: (value) =>
             value.text.trim() === ""
-              ? "The AI model returned an empty article. Retry stage; if it keeps happening, choose a different model in Edit project → Providers."
+              ? "The AI model returned an empty article. Try again; if it keeps happening, choose a different model in Edit project → Providers."
               : part === continuationLimit && value.finishReason === "length"
-                ? `The article was still unfinished after ${continuationLimit} continuations because the AI model kept stopping at its length limit. Ask for a shorter article in Edit project → Prompts, or choose a model with a larger output limit in Edit project → Providers, then Retry stage.`
+                ? `The article was still unfinished after ${continuationLimit} continuations because the AI model kept stopping at its length limit. Ask for a shorter article in Edit project → Prompts, or choose a model with a larger output limit in Edit project → Providers, then Try again.`
                 : undefined,
         },
         (event) => {
@@ -92,7 +92,7 @@ export async function executeArticleRequests(
     piece = next;
   }
   throw new Error(
-    `The article was still unfinished after ${continuationLimit} continuations because the AI model kept stopping at its length limit. Ask for a shorter article in Edit project → Prompts, or choose a model with a larger output limit in Edit project → Providers, then Retry stage.`,
+    `The article was still unfinished after ${continuationLimit} continuations because the AI model kept stopping at its length limit. Ask for a shorter article in Edit project → Prompts, or choose a model with a larger output limit in Edit project → Providers, then Try again.`,
   );
 }
 

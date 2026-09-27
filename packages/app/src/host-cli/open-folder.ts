@@ -83,7 +83,7 @@ export function createHostFolderOpener(deps: HostFolderDeps): (path: string) => 
       const s = await lstat(current).catch(() => undefined);
       if (!s?.isDirectory() || s.isSymbolicLink() || s.uid !== deps.uid)
         throw new HostFolderRefused(
-          `The Slopify host helper did not open ${current} because it is missing, a link or a file, or isn't owned by you. Use Re-run section on the project page to make the file again, or copy the path into your file manager.`,
+          `The Slopify host helper did not open ${current} because it is missing, a link or a file, or isn't owned by you. Use More → make it again in its section on the project page to make the file again, or copy the path into your file manager.`,
         );
     }
   }

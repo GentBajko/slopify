@@ -1,14 +1,14 @@
-import type { RebuildPreview } from "@app/slices/rebuild/model.js";
+import type { RebuildPreview, RebuildSelection } from "@app/slices/rebuild/model.js";
 import type { RevisionEdit, RevisionView } from "@app/slices/revisions/model.js";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useMemo, useRef, useState } from "react";
+import { type UseQueryResult, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type ReactElement, type ReactNode, useMemo, useRef, useState } from "react";
 import { readProject } from "@/api";
 import { useApp } from "@/app-context";
 import { ActionBar, StatusSlot } from "@/components/kit/action-bar";
+import { Button } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
 import { SectionHead } from "@/components/kit/section-head";
 import { type TabItem, TabPanel, Tabs } from "@/components/kit/tabs";
-import { Button } from "@/components/ui/button";
 import { keys } from "@/queries";
 import { outputLabel } from "./output-label.js";
 import { type RebuildConsent, RebuildReview } from "./rebuild-review.js";
@@ -52,45 +52,52 @@ export interface EditorProps {
 
 export type ProjectTab = "output" | "live" | "edit" | "history" | "checkpoints" | "cost";
 
-// The project page's secondary surfaces are tabs under the rundown, never blocks inserted
-// above the output: Edit, History and Checkpoints each replace the Output panel while open,
-// and rebuild review opens in a drawer over whichever tab is showing.
-export function RevisionWorkspace({
-  projectId,
-  currentRevisionId,
-  renderEditor,
-  tab: controlledTab,
-  onTab,
-  output,
-  live,
-  checkpoints,
-  checkpointBadge,
-  cost,
-  trailing,
-}: {
-  readonly projectId: string;
-  readonly currentRevisionId: string | null;
-  readonly renderEditor: (props: EditorProps) => ReactNode;
-  readonly tab?: ProjectTab;
-  readonly onTab?: (tab: ProjectTab) => void;
-  // The stage output panel. Without it (a unit test of the workspace alone) there is no
-  // Output tab and Edit opens first.
-  readonly output?: ReactNode;
-  // The live build view: the article as it is written, images as they land, the narration's
-  // waveform growing.
-  readonly live?: ReactNode;
-  readonly checkpoints?: ReactNode;
-  readonly checkpointBadge?: string;
-  // What the run's provider calls used and cost; the Run cost tab shows it.
-  readonly cost?: ReactNode;
-  readonly trailing?: ReactNode;
-}): import("react").ReactElement {
-  const [ownTab, setOwnTab] = useState<ProjectTab>(output === undefined ? "edit" : "output");
-  const tab = controlledTab ?? ownTab;
-  const selectTab = (next: ProjectTab) => {
-    setOwnTab(next);
-    onTab?.(next);
-  };
+// Everything the project's saved revisions do: the settings draft and its save, the history
+// and its restore, and rebuilds (the one-press remake of outdated outputs as well as the full
+// rebuild review). One hook, so the project page's next action, its settings view and its
+// history all act on the same draft and the same preview.
+export interface RevisionController {
+  readonly saved: UseQueryResult<RevisionView>;
+  readonly view: RevisionView | undefined;
+  readonly edit: RevisionEdit | undefined;
+  readonly preview: RebuildPreview | undefined;
+  readonly focus: { readonly section: EditSection } | undefined;
+  readonly pending: boolean;
+  readonly uploading: boolean;
+  readonly error: string | undefined;
+  readonly refusal: RevisionRefusal | undefined;
+  readonly unsaved: boolean;
+  readonly remoteChanged: boolean;
+  // Something is open or on its way: a draft, a preview, a request.
+  readonly busy: boolean;
+  readonly setEdit: (edit: RevisionEdit) => void;
+  readonly setUploading: (pending: boolean) => void;
+  readonly openEditor: () => void;
+  readonly discard: () => void;
+  readonly save: () => void;
+  readonly reloadDraft: () => void;
+  readonly reloadCurrent: () => void;
+  readonly requestEdit: (request: EditRequest) => void;
+  // Previews a rebuild. With `autoStart`, a preview that needs no consent (nothing blocked,
+  // no provided content to confirm, no unknown cost) starts at once; otherwise the review
+  // drawer opens so the person can see why.
+  readonly review: (
+    selection: RebuildSelection,
+    options?: { readonly autoStart?: boolean },
+  ) => void;
+  readonly start: (consent: RebuildConsent) => void;
+  readonly closePreview: () => void;
+  readonly restore: (targetRevisionId: string) => void;
+}
+
+export function useRevisionController(
+  projectId: string,
+  currentRevisionId: string | null,
+  options: {
+    // Called when a change asked for from the page opens the settings draft.
+    readonly onOpenEdit?: () => void;
+  } = {},
+): RevisionController {
   const { api } = useApp();
   const client = useQueryClient();
   const saved = useQuery({
@@ -117,8 +124,10 @@ export function RevisionWorkspace({
   const saveMemory = useRef<RequestMemory | undefined>(undefined);
   const restoreMemory = useRef<RequestMemory | undefined>(undefined);
   const startMemory = useRef<RequestMemory | undefined>(undefined);
+  const openEdit = useRef(options.onOpenEdit);
+  openEdit.current = options.onOpenEdit;
   // Open is not the same as changed: the editor starts from a copy of the saved revision, so
-  // the tab only says "unsaved" once something differs from it or a remake or upload is queued.
+  // the view only says "unsaved" once something differs from it or a remake or upload is queued.
   const unsaved = useMemo(
     () =>
       edit !== undefined &&
@@ -165,23 +174,6 @@ export function RevisionWorkspace({
       });
     return result.value.view;
   }
-  function requestEdit(request: EditRequest): void {
-    void perform(async () => {
-      let base = view;
-      let draft = edit;
-      if (base === undefined || draft === undefined) {
-        base = await prepare(false);
-        if (base === undefined) return;
-        draft = {
-          config: structuredClone(base.revision.config),
-          content: structuredClone(base.revision.content),
-        };
-      }
-      setEdit(request.change(draft, base));
-      setFocus({ section: request.section });
-      selectTab("edit");
-    });
-  }
   async function accepted(next: RevisionView): Promise<void> {
     const latest = await readProject(api, projectId);
     client.setQueryData(keys.project(projectId), latest);
@@ -217,23 +209,9 @@ export function RevisionWorkspace({
     await accepted(result.value.view);
     saveMemory.current = undefined;
   }
-  async function review(): Promise<void> {
-    const current = await prepare(false);
-    if (current === undefined) return;
-    const result = await previewProjectRebuild(api, projectId, {
-      baseRevisionId: current.revision.id,
-      request: { kind: "allAffected" },
-    });
-    if (!result.ok) {
-      setRefusal(result);
-      return;
-    }
-    setPreview(result.value.value);
-    startMemory.current = undefined;
-  }
-  async function start(consent: RebuildConsent): Promise<void> {
-    if (preview === undefined) return;
-    const payload = { baseRevisionId: preview.baseRevisionId, previewId: preview.id, ...consent };
+  async function start(consent: RebuildConsent, shown = preview): Promise<void> {
+    if (shown === undefined) return;
+    const payload = { baseRevisionId: shown.baseRevisionId, previewId: shown.id, ...consent };
     const memory = requestFor(startMemory.current, payload, () => crypto.randomUUID());
     startMemory.current = memory;
     const result = await startProjectRebuild(api, projectId, {
@@ -248,6 +226,25 @@ export function RevisionWorkspace({
     startMemory.current = undefined;
     setPreview(undefined);
     await client.invalidateQueries({ queryKey: keys.project(projectId) });
+  }
+  async function review(selection: RebuildSelection, autoStart: boolean): Promise<void> {
+    const current = await prepare(false);
+    if (current === undefined) return;
+    const result = await previewProjectRebuild(api, projectId, {
+      baseRevisionId: current.revision.id,
+      request: selection,
+    });
+    if (!result.ok) {
+      setRefusal(result);
+      return;
+    }
+    const shown = result.value.value;
+    startMemory.current = undefined;
+    if (autoStart && needsNoConsent(shown)) {
+      await start({ acknowledgeUnknownCosts: false, confirmedProvidedWorkKeys: [] }, shown);
+      return;
+    }
+    setPreview(shown);
   }
   async function restore(targetRevisionId: string): Promise<void> {
     const current = view ?? saved.data ?? (await prepare(false));
@@ -266,31 +263,301 @@ export function RevisionWorkspace({
     await accepted(result.value.view);
     restoreMemory.current = undefined;
   }
-  const busy = pending || uploading || edit !== undefined || preview !== undefined;
-  const reloadCurrent = (
-    <Button
-      type="button"
-      disabled={pending}
-      onClick={() =>
-        void perform(async () => {
-          restoreMemory.current = undefined;
-          startMemory.current = undefined;
-          setPreview(undefined);
-          await prepare(false);
-          await client.invalidateQueries({ queryKey: keys.project(projectId) });
-        })
-      }
-    >
-      Reload current revision
-    </Button>
+  return {
+    saved,
+    view,
+    edit,
+    preview,
+    focus,
+    pending,
+    uploading,
+    error,
+    refusal,
+    unsaved,
+    remoteChanged,
+    busy: pending || uploading || edit !== undefined || preview !== undefined,
+    setEdit,
+    setUploading,
+    openEditor: () =>
+      void perform(async () => {
+        await prepare(true);
+      }),
+    discard: () => {
+      setEdit(undefined);
+      setRefusal(undefined);
+      setUploading(false);
+      saveMemory.current = undefined;
+    },
+    save: () => void perform(save),
+    reloadDraft: () =>
+      void perform(async () => {
+        saveMemory.current = undefined;
+        setUploading(false);
+        await prepare(true);
+        setRefusal(undefined);
+      }),
+    reloadCurrent: () =>
+      void perform(async () => {
+        restoreMemory.current = undefined;
+        startMemory.current = undefined;
+        setPreview(undefined);
+        await prepare(false);
+        await client.invalidateQueries({ queryKey: keys.project(projectId) });
+      }),
+    requestEdit: (request) =>
+      void perform(async () => {
+        let base = view;
+        let draft = edit;
+        if (base === undefined || draft === undefined) {
+          base = await prepare(false);
+          if (base === undefined) return;
+          draft = {
+            config: structuredClone(base.revision.config),
+            content: structuredClone(base.revision.content),
+          };
+        }
+        setEdit(request.change(draft, base));
+        setFocus({ section: request.section });
+        openEdit.current?.();
+      }),
+    review: (selection, reviewOptions) =>
+      void perform(() => review(selection, reviewOptions?.autoStart === true)),
+    start: (consent) => void perform(() => start(consent)),
+    closePreview: () => {
+      if (pending) return;
+      setPreview(undefined);
+      startMemory.current = undefined;
+    },
+    restore: (id) => void perform(() => restore(id)),
+  };
+}
+
+// A preview that can start without asking anything: nothing blocked, no provided content
+// to confirm and every cost known.
+export function needsNoConsent(preview: RebuildPreview): boolean {
+  return (
+    !preview.work.some((work) => work.disposition === "blocked") &&
+    preview.providedReuseRequired.length === 0 &&
+    preview.costs.unknown === 0
   );
+}
+
+// The project's settings: the draft editor with its Save, or the button that opens it.
+export function RevisionEditPanel({
+  controller,
+  renderEditor,
+  active = true,
+  intro,
+}: {
+  readonly controller: RevisionController;
+  readonly renderEditor: (props: EditorProps) => ReactNode;
+  // Feedback is said only in the view on screen, so one refusal is not announced twice.
+  readonly active?: boolean;
+  // Shown above the Edit project button while no draft is open.
+  readonly intro?: ReactNode;
+}): ReactElement {
+  const c = controller;
+  if (c.view === undefined || c.edit === undefined)
+    return (
+      <div className="flex flex-col gap-4">
+        {intro ?? (
+          <>
+            <SectionHead
+              title="Saved revision"
+              info="Continuing a run uses the current saved revision. Edit project saves a new revision without starting work; a remake of outdated outputs is offered as the project's next action, and Choose what to remake opens the full rebuild review."
+            />
+            {c.saved.error === null ? null : (
+              <p role="alert" className="m-0 text-small text-danger">
+                {c.saved.error.message}
+              </p>
+            )}
+            {c.saved.data === undefined ? null : (
+              <ul aria-label="Saved output status" className="sl-list m-0 list-none p-0">
+                {c.saved.data.outputs
+                  .filter((output) => output.selected)
+                  .map((output) => (
+                    <li key={output.recordId} className="sl-row">
+                      <span className="sl-row__title">{outputLabel(output.output)}</span>
+                      <span className="sl-row__meta">
+                        {output.available
+                          ? output.state === "ready"
+                            ? "Ready"
+                            : output.state === "outdated"
+                              ? "Outdated; the retained version stays until it is remade"
+                              : "Provided content needs review"
+                          : "Retained file missing"}
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </>
+        )}
+        {c.preview === undefined && active ? (
+          <RevisionFeedback error={c.error} refusal={c.refusal} />
+        ) : null}
+        <ActionBar>
+          {c.refusal?.reason === "conflict" && active ? (
+            <Button disabled={c.pending} onClick={c.reloadCurrent}>
+              Reload current revision
+            </Button>
+          ) : null}
+          <Button
+            disabled={c.busy}
+            onClick={() => c.review({ kind: "allAffected" })}
+            variant="secondary"
+          >
+            Choose what to remake
+          </Button>
+          <Button variant="primary" disabled={c.busy} onClick={c.openEditor}>
+            Edit project
+          </Button>
+        </ActionBar>
+      </div>
+    );
+  return (
+    <form
+      aria-label="Edit project"
+      onSubmit={(event) => {
+        event.preventDefault();
+        c.save();
+      }}
+    >
+      <fieldset disabled={c.pending} className="m-0 min-w-0 border-0 p-0">
+        {renderEditor({
+          view: c.view,
+          edit: c.edit,
+          fields: c.refusal?.fields ?? [],
+          onChange: c.setEdit,
+          onPending: c.setUploading,
+          ...(c.focus === undefined ? {} : { focus: c.focus }),
+        })}
+      </fieldset>
+      {c.preview === undefined ? <RevisionFeedback error={c.error} refusal={c.refusal} /> : null}
+      <ActionBar
+        status={
+          <StatusSlot tone={c.remoteChanged ? "warning" : "info"}>
+            {c.remoteChanged
+              ? "A newer revision is available. Your unsaved changes are kept below."
+              : c.uploading
+                ? "Waiting for uploads to finish…"
+                : undefined}
+          </StatusSlot>
+        }
+      >
+        {c.remoteChanged || c.refusal?.reason === "conflict" ? (
+          <Button disabled={c.pending || c.uploading} onClick={c.reloadDraft}>
+            Reload current revision and discard my draft
+          </Button>
+        ) : null}
+        <Button variant="quiet" disabled={c.pending || c.uploading} onClick={c.discard}>
+          Discard changes
+        </Button>
+        <Button variant="primary" type="submit" disabled={c.pending || c.uploading}>
+          Save changes
+        </Button>
+      </ActionBar>
+    </form>
+  );
+}
+
+export function RevisionHistoryPanel({
+  controller,
+  projectId,
+  active,
+}: {
+  readonly controller: RevisionController;
+  readonly projectId: string;
+  readonly active: boolean;
+}): ReactElement | null {
+  const c = controller;
+  if (!active) return null;
+  return (
+    <>
+      {c.preview === undefined && (c.error || c.refusal) ? (
+        <div className="mb-4 flex flex-col gap-3">
+          <RevisionFeedback error={c.error} refusal={c.refusal} />
+          {c.edit === undefined && c.refusal?.reason === "conflict" ? (
+            <Button disabled={c.pending} onClick={c.reloadCurrent} className="self-start">
+              Reload current revision
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+      <RevisionHistory projectId={projectId} pending={c.busy} onRestore={c.restore} />
+    </>
+  );
+}
+
+// The rebuild review, over whichever view is showing.
+export function RebuildDrawer({
+  controller,
+}: {
+  readonly controller: RevisionController;
+}): ReactElement | null {
+  const c = controller;
+  return (
+    <Drawer open={c.preview !== undefined} title="Choose what to remake" onClose={c.closePreview}>
+      {c.preview === undefined ? null : (
+        <RebuildReview
+          key={c.preview.id}
+          preview={c.preview}
+          feedback={<RevisionFeedback error={c.error} refusal={c.refusal} />}
+          pending={c.pending}
+          onStart={c.start}
+          onCancel={c.closePreview}
+        />
+      )}
+    </Drawer>
+  );
+}
+
+// The saved revisions on their own, as tabs: Edit and History, with the page's other views
+// passed in. The project page lays these views out in its own section rail; this keeps them
+// usable, and tested, as one piece.
+export function RevisionWorkspace({
+  projectId,
+  currentRevisionId,
+  renderEditor,
+  tab: controlledTab,
+  onTab,
+  output,
+  live,
+  checkpoints,
+  checkpointBadge,
+  cost,
+  trailing,
+}: {
+  readonly projectId: string;
+  readonly currentRevisionId: string | null;
+  readonly renderEditor: (props: EditorProps) => ReactNode;
+  readonly tab?: ProjectTab;
+  readonly onTab?: (tab: ProjectTab) => void;
+  // The stage output panel. Without it (a unit test of the workspace alone) there is no
+  // Output tab and Edit opens first.
+  readonly output?: ReactNode;
+  readonly live?: ReactNode;
+  readonly checkpoints?: ReactNode;
+  readonly checkpointBadge?: string;
+  readonly cost?: ReactNode;
+  readonly trailing?: ReactNode;
+}): ReactElement {
+  const [ownTab, setOwnTab] = useState<ProjectTab>(output === undefined ? "edit" : "output");
+  const tab = controlledTab ?? ownTab;
+  const selectTab = (next: ProjectTab) => {
+    setOwnTab(next);
+    onTab?.(next);
+  };
+  const controller = useRevisionController(projectId, currentRevisionId, {
+    onOpenEdit: () => selectTab("edit"),
+  });
   const tabs: TabItem<ProjectTab>[] = [
     ...(output === undefined ? [] : [{ id: "output" as const, label: "Output" }]),
     ...(live === undefined ? [] : [{ id: "live" as const, label: "Live" }]),
     {
       id: "edit",
       label: "Edit",
-      ...(unsaved ? { badge: "· unsaved" } : {}),
+      ...(controller.unsaved ? { badge: "· unsaved" } : {}),
     },
     { id: "history", label: "History" },
     ...(checkpoints === undefined
@@ -317,154 +584,33 @@ export function RevisionWorkspace({
       />
       {output === undefined ? null : (
         <TabPanel idPrefix="project" id="output" active={tab === "output"}>
-          <EditRequestContext value={pending || preview !== undefined ? undefined : requestEdit}>
+          <EditRequestContext
+            value={
+              controller.pending || controller.preview !== undefined
+                ? undefined
+                : controller.requestEdit
+            }
+          >
             {output}
           </EditRequestContext>
         </TabPanel>
       )}
       <TabPanel idPrefix="project" id="edit" active={tab === "edit"}>
-        {view === undefined || edit === undefined ? (
-          <div>
-            <SectionHead
-              title="Saved revision"
-              info="Resume uses the current saved revision. Edit project saves a new revision without starting work; Rebuild affected outputs opens optional Advanced rebuild review for selection, cost details and supplied-content confirmation."
-            />
-            {saved.error === null ? null : (
-              <p role="alert" className="mb-3 text-small text-red">
-                {saved.error.message}
-              </p>
-            )}
-            {saved.data === undefined ? null : (
-              <ul
-                aria-label="Saved output status"
-                className="overflow-hidden rounded-panel border border-line bg-panel"
-              >
-                {saved.data.outputs
-                  .filter((output) => output.selected)
-                  .map((output) => (
-                    <li
-                      key={output.recordId}
-                      className="flex flex-wrap justify-between gap-x-4 border-b border-line px-4 py-2 text-small last:border-b-0"
-                    >
-                      <span className="font-semibold">{outputLabel(output.output)}: </span>
-                      <span className="text-ink2">
-                        {output.available
-                          ? output.state === "ready"
-                            ? "Ready"
-                            : output.state === "outdated"
-                              ? "Needs rebuild; retained output available"
-                              : "Provided content needs review"
-                          : "Retained file missing"}
-                      </span>
-                    </li>
-                  ))}
-              </ul>
-            )}
-            {preview === undefined && tab === "edit" ? (
-              <RevisionFeedback error={error} refusal={refusal} />
-            ) : null}
-            <ActionBar>
-              {refusal?.reason === "conflict" && tab === "edit" ? reloadCurrent : null}
-              <Button type="button" disabled={busy} onClick={() => void perform(review)}>
-                Rebuild affected outputs
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                disabled={busy}
-                onClick={() =>
-                  void perform(async () => {
-                    await prepare(true);
-                  })
-                }
-              >
-                Edit project
-              </Button>
-            </ActionBar>
-          </div>
-        ) : (
-          <form
-            aria-label="Edit project"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void perform(save);
-            }}
-          >
-            <fieldset disabled={pending} className="min-w-0">
-              {renderEditor({
-                view,
-                edit,
-                fields: refusal?.fields ?? [],
-                onChange: setEdit,
-                onPending: setUploading,
-                ...(focus === undefined ? {} : { focus }),
-              })}
-            </fieldset>
-            {preview === undefined ? <RevisionFeedback error={error} refusal={refusal} /> : null}
-            <ActionBar
-              status={
-                <StatusSlot tone={remoteChanged ? "warning" : "info"}>
-                  {remoteChanged
-                    ? "A newer revision is available. Your unsaved changes are kept below."
-                    : uploading
-                      ? "Waiting for uploads to finish…"
-                      : undefined}
-                </StatusSlot>
-              }
-            >
-              {remoteChanged || refusal?.reason === "conflict" ? (
-                <Button
-                  type="button"
-                  disabled={pending || uploading}
-                  onClick={() =>
-                    void perform(async () => {
-                      saveMemory.current = undefined;
-                      setUploading(false);
-                      await prepare(true);
-                      setRefusal(undefined);
-                    })
-                  }
-                >
-                  Reload current revision and discard my draft
-                </Button>
-              ) : null}
-              <Button
-                type="button"
-                disabled={pending || uploading}
-                onClick={() => {
-                  setEdit(undefined);
-                  setRefusal(undefined);
-                  setUploading(false);
-                  saveMemory.current = undefined;
-                }}
-              >
-                Discard changes
-              </Button>
-              <Button variant="primary" type="submit" disabled={pending || uploading}>
-                Save changes
-              </Button>
-            </ActionBar>
-          </form>
-        )}
+        <RevisionEditPanel
+          controller={controller}
+          renderEditor={renderEditor}
+          active={tab === "edit"}
+        />
       </TabPanel>
       <TabPanel idPrefix="project" id="history" active={tab === "history"}>
-        {tab === "history" && preview === undefined && (error || refusal) ? (
-          <div className="mb-4 space-y-3">
-            <RevisionFeedback error={error} refusal={refusal} />
-            {edit === undefined && refusal?.reason === "conflict" ? reloadCurrent : null}
-          </div>
-        ) : null}
-        {tab === "history" ? (
-          <RevisionHistory
-            projectId={projectId}
-            pending={busy}
-            onRestore={(id) => void perform(() => restore(id))}
-          />
-        ) : null}
+        <RevisionHistoryPanel
+          controller={controller}
+          projectId={projectId}
+          active={tab === "history"}
+        />
       </TabPanel>
       {live === undefined ? null : (
         <TabPanel idPrefix="project" id="live" active={tab === "live"}>
-          {/* Mounted only while open: it reads the waveform and repeats the stage names. */}
           {tab === "live" ? live : null}
         </TabPanel>
       )}
@@ -478,29 +624,7 @@ export function RevisionWorkspace({
           {cost}
         </TabPanel>
       )}
-      <Drawer
-        open={preview !== undefined}
-        title="Review affected rebuild"
-        onClose={() => {
-          if (pending) return;
-          setPreview(undefined);
-          startMemory.current = undefined;
-        }}
-      >
-        {preview === undefined ? null : (
-          <RebuildReview
-            key={preview.id}
-            preview={preview}
-            feedback={<RevisionFeedback error={error} refusal={refusal} />}
-            pending={pending}
-            onStart={(consent) => void perform(() => start(consent))}
-            onCancel={() => {
-              setPreview(undefined);
-              startMemory.current = undefined;
-            }}
-          />
-        )}
-      </Drawer>
+      <RebuildDrawer controller={controller} />
     </section>
   );
 }

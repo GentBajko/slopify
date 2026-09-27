@@ -123,7 +123,7 @@ export function planRender(input: PlanInput): RenderPlan {
   if (input.images.length === 0) {
     // Admission permits Video only with an image source, so an empty set is a bug upstream.
     throw new Error(
-      "The video needs at least one image, but there are none. Check the Images section in Edit project, then Retry stage.",
+      "The video needs at least one image, but there are none. Check the Images section in Edit project, then Try again.",
     );
   }
   const frame = frames[input.format];

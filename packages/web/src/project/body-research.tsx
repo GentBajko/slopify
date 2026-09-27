@@ -23,7 +23,7 @@ export function ResearchNotes({
     <div className="flex min-w-0 flex-col gap-4">
       {running ? <LiveWriting projectId={projectId} stage="research" className="" /> : null}
       {running && notes === undefined ? null : text.error !== null ? (
-        <p className="text-body text-red">{text.error.message}</p>
+        <p className="text-body text-danger">{text.error.message}</p>
       ) : (
         <ReadingView
           markdown={text.data ?? ""}
@@ -35,9 +35,9 @@ export function ResearchNotes({
           copyAll={false}
         >
           {notes === undefined ? (
-            <p className="text-small text-ink2">{missing(stage)}</p>
+            <p className="text-small text-ink-2">{missing(stage)}</p>
           ) : (
-            <span className="block h-4 w-[40ch] max-w-full rounded-control bg-panel2" />
+            <span className="block h-4 w-[40ch] max-w-full rounded-control bg-raised" />
           )}
         </ReadingView>
       )}
@@ -49,7 +49,7 @@ function missing(stage: Stage): string {
   switch (stage.state) {
     case "failed":
     case "canceled":
-      return "Research stopped before any notes were saved. Use Retry research above to try again.";
+      return "Research stopped before any notes were saved. Try the research again with the next action beside it.";
     case "pending":
       return "The research runs first; its notes appear here when it finishes.";
     default:

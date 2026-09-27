@@ -186,7 +186,7 @@ describe("the page under a live run", () => {
   it("flips a lamp and its state word from the event alone", async () => {
     const server: Server = { landed: 0, video: "pending" };
     const { source, reads } = mount(server);
-    await screen.findByText("Images");
+    await screen.findByRole("navigation", { name: "Project sections" });
     const before = reads();
 
     server.video = "running";
@@ -204,7 +204,7 @@ describe("the page under a live run", () => {
   it("moves a meter without asking the server at all", async () => {
     const server: Server = { landed: 0, video: "pending" };
     const { source, reads } = mount(server);
-    await screen.findByText("Images");
+    await screen.findByRole("navigation", { name: "Project sections" });
     const before = reads();
 
     for (let at = 1; at <= 20; at += 1) {
@@ -219,9 +219,7 @@ describe("the page under a live run", () => {
 
     await waitFor(() => {
       expect(
-        within(screen.getByRole("region", { name: "Images workspace" })).getByText(
-          "image 20 of 20",
-        ),
+        within(screen.getByRole("list", { name: "Run steps" })).getByText("image 20 of 20"),
       ).not.toBeNull();
     });
     expect(reads()).toBe(before);
@@ -230,7 +228,7 @@ describe("the page under a live run", () => {
   it("shows article text as it streams, without a request per token", async () => {
     const server: Server = { landed: 0, video: "pending", article: "running" };
     const { source, reads } = mount(server);
-    await screen.findByText("Article");
+    await screen.findByRole("navigation", { name: "Project sections" });
     const before = reads();
 
     for (const word of ["Most ", "villains ", "want."]) {
@@ -247,15 +245,13 @@ describe("the page under a live run", () => {
     const { source, reads } = mount(server);
     // Research has no section of its own: it is the Article section's Research tab, open
     // while the research runs.
-    const article = await screen.findByRole("region", { name: "Article workspace" });
+    const article = await screen.findByRole("region", { name: "Article" });
     expect(
       within(article).getByRole("tab", { name: "Research" }).getAttribute("aria-selected"),
     ).toBe("true");
     expect(
-      within(screen.getByRole("navigation", { name: "Project stages" })).getByRole("button", {
-        name: "Article, running",
-      }).textContent,
-    ).toContain("Research: Running");
+      within(screen.getByRole("list", { name: "Run steps" })).getByText("Research").textContent,
+    ).toBe("Research, Running");
     const before = reads();
     source.emit({
       type: "llm.preview",
@@ -318,7 +314,7 @@ describe("the page under a live run", () => {
   it("folds a burst of landed images into far fewer reads than events", async () => {
     const server: Server = { landed: 0, video: "pending" };
     const { source, reads } = mount(server);
-    await screen.findByText("Images");
+    await screen.findByRole("navigation", { name: "Project sections" });
     const before = reads();
 
     server.landed = 6;
@@ -332,7 +328,7 @@ describe("the page under a live run", () => {
     }
 
     await waitFor(() => {
-      expect(screen.getByText("Oils × 6")).not.toBeNull();
+      expect(screen.getByRole("region", { name: "Oils × 6" })).not.toBeNull();
     });
     expect(reads() - before).toBeLessThan(6);
   });
@@ -340,7 +336,7 @@ describe("the page under a live run", () => {
   it("refetches on a reconnect, because the events it missed are never replayed", async () => {
     const server: Server = { landed: 0, video: "pending" };
     const { source, reads } = mount(server);
-    await screen.findByText("Images");
+    await screen.findByRole("navigation", { name: "Project sections" });
     // The first open is the subscription itself.
     source.reopen();
     const before = reads();
@@ -352,7 +348,7 @@ describe("the page under a live run", () => {
       expect(reads()).toBeGreaterThan(before);
     });
     await waitFor(() => {
-      expect(screen.getByText("Oils × 2")).not.toBeNull();
+      expect(screen.getByRole("region", { name: "Oils × 2" })).not.toBeNull();
     });
   });
 });
@@ -462,5 +458,5 @@ it("keeps a newly saved pending stage unchanged by old failures, progress, and t
   );
   expect(screen.queryByText(/Obsolete/)).toBeNull();
   expect(screen.queryByText("image 99 of 100")).toBeNull();
-  expect(within(content).queryByText("Original article.")).toBeNull();
+  expect(screen.queryByText("Original article.")).toBeNull();
 });

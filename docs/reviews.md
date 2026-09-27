@@ -48,7 +48,7 @@ Beside the article, the narration, the thumbnail and each short, and on each ima
 reasons. For a failed item:
 
 - **Overrule** accepts it as it is.
-- **Redo** makes it again the way Re-run section does (a new version of the project, then the
+- **Redo** makes it again the way a section's More → make it again does (a new version of the project, then the
   item and what depends on it are rebuilt), and it is reviewed again.
 
 ## How it runs

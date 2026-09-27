@@ -12,7 +12,7 @@ import {
   type Voice,
 } from "@/api";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/kit/button";
 import { ChunkingControl } from "@/play/chunking";
 import { NarrationAliasesToggle } from "@/play/narration-aliases";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
@@ -61,7 +61,7 @@ function useSharedGlossary(
   const count = config.sharedGlossary?.length ?? 0;
   const note =
     audio?.shareGlossary === true ? (
-      <p className="flex flex-wrap items-center gap-2 text-label text-ink2">
+      <p className="flex flex-wrap items-center gap-2 text-label text-ink-2">
         {state.error !== undefined
           ? `Couldn't read your other projects' pronunciations: ${state.error}`
           : count === 0
@@ -71,7 +71,7 @@ function useSharedGlossary(
                   ? "your other projects"
                   : `${String(state.projects)} other ${state.projects === 1 ? "project" : "projects"}`
               }.`}
-        <Button type="button" variant="ghost" disabled={state.busy} onClick={() => void copy()}>
+        <Button type="button" variant="quiet" disabled={state.busy} onClick={() => void copy()}>
           {state.busy ? "Copying…" : "Update from other projects"}
         </Button>
       </p>
@@ -126,13 +126,13 @@ function useAliases(edit: RevisionEdit, onChange: (edit: RevisionEdit) => void) 
     },
     note:
       audio?.useNarrationAliases === true ? (
-        <p className="flex flex-wrap items-center gap-2 text-label text-ink2">
+        <p className="flex flex-wrap items-center gap-2 text-label text-ink-2">
           {state.error !== undefined
             ? `Couldn't read Library → Aliases: ${state.error} Try Update from Library again.`
             : count === 0
               ? "No aliases are copied yet. Add some in Library → Aliases."
               : `${String(count)} ${count === 1 ? "alias" : "aliases"} copied from Library → Aliases.`}
-          <Button type="button" variant="ghost" disabled={state.busy} onClick={() => void copy()}>
+          <Button type="button" variant="quiet" disabled={state.busy} onClick={() => void copy()}>
             {state.busy ? "Copying…" : "Update from Library"}
           </Button>
         </p>

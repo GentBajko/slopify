@@ -50,7 +50,7 @@ Prompts and Templates → Keywords, each keyword with everything it feeds.
 | Intro, outro | Narration › Advanced | Inputs + Prompts | none | same |
 | Chunking | Narration › Advanced | Providers | `ChunkingControl` | same |
 | Image provider, model, effort | Images | Providers | the pickers | same |
-| Image prompts and Numbers | Images | Prompts edits each prompt's text; Images adds or removes single images | none | **open**: Edit can't change which prompts or how many images each makes |
+| Image prompts and Numbers | Images | Images (which prompts, each Number); Prompts edits each prompt's text; Images adds or removes single images | `ImagePrompts` | **closed in 3.0**: saving replans the images (`slices/revisions/image-plan.ts`) |
 | Establishing image (+ thumbnail too) | Images | Images | `ReferenceImage` | same |
 | Thumbnail prompt, 1 or 3 thumbnails | Outputs | Prompts, Images | `ThumbnailCountPicker` | same |
 | Supplied audio, images, thumbnail | their rows | Replace provided … | none | same |
@@ -65,19 +65,35 @@ Prompts and Templates → Keywords, each keyword with everything it feeds.
 | Automatic reviews | Reviews (side panel) | Reviews | `ReviewSettings` | same |
 | Checkpoints | Reviews (side panel) | the project's Checkpoints tab | none | same settings, another surface |
 | Keyword values | Topic + Title and keywords | Prompts › Keywords | `KeywordList` | **shared in 3.0** |
-| Channel, brand kit | Channel | none | none | **open** |
-| Cast (and the aliases on cast members) | follows the channel | none | none | **open**, with the channel |
+| Channel, brand kit | Channel | Inputs › Channel | none (both a select and a switch) | **closed in 3.0**: saving a change applies the kit again (`slices/channels/rebrand.ts`) |
+| Cast (and the aliases on cast members) | follows the channel | follows the channel | none | **closed in 3.0**, with the channel |
 | Title style, end screen | from the brand kit only | from the brand kit only | none | neither side sets them directly |
 | Voice formats and speakers (multiple voices) | Narration | Providers | the speakers panel from main | same |
 | Narration aliases | on cast members (Channels), used by both | on cast members | none | same |
 
+## Closed in 3.0
+
+- **Image prompts and Numbers in Edit project.** Images → Image prompts is Play's control. The
+  edit carries the new `imagePrompts`; its image definitions and prompt wording stay in the
+  numbering the revision was saved with until saving, when `saveRevision` plans them again
+  (`slices/revisions/image-plan.ts`, the layout Play's run plans: prompts in selection order,
+  Number images each). A prompt is matched by name. One left as it was keeps its definitions,
+  so its images keep their fingerprints and are reused; a raised Number adds definitions right
+  after the prompt's last image, a lowered one drops its last ones, an unticked prompt's
+  definitions go, and a newly ticked one gets its Library wording and Number new images at the
+  end. Images written or uploaded one at a time stay where they are. The control says what
+  saving will do, worked out with the same function. The rebuild review then lists only the
+  new images to make.
+- **Channel and brand kit in Edit project.** Inputs › Channel picks the channel and "Use the
+  channel's brand kit". When either changes, saving takes the new channel's cast as it is now
+  and applies the kit again (`slices/channels/rebrand.ts`): a setting at its default, or at the
+  value the old channel's kit gave it, takes the new kit's (caption font and colours, title
+  style, end screen, intro and outro, document theme); one set by hand stays. Turning the kit
+  off takes the old kit's values off and keeps the cast, as on Play. The project moves to the
+  channel (`project_channels`) with the saved revision, and a restored revision takes its
+  channel back. `useBrandKit` is saved only when off, so every existing project keeps its config
+  and fingerprints; saving any other change leaves the channel, cast and brand as they were.
+
 ## Still open
 
-- **Image prompts and Numbers in Edit project.** A project's images are planned per prompt when
-  the run is adopted (`slices/revisions/adopt-content.ts`), so changing a Number means adding or
-  removing image definitions, not only a control. It needs a server replan before the Play
-  control (`play/image-prompts.tsx`) can be reused.
-- **Channel and brand kit in Edit project.** Changing the channel must take a new cast snapshot
-  and apply the brand kit again (`slices/channels/runs.ts`) when the revision is saved, and
-  `useBrandKit` is not part of a project's config yet. Until then a project stays in the channel
-  it was made in.
+Nothing in this audit.

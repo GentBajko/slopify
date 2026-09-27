@@ -44,7 +44,7 @@ export function PrepareUpload({
       >
         Prepare upload
       </Button>
-      {open ? <UploadDrawer projectId={projectId} onClose={() => setOpen(false)} /> : null}
+      {open ? <PrepareUploadDrawer projectId={projectId} onClose={() => setOpen(false)} /> : null}
     </>
   );
 }
@@ -63,7 +63,7 @@ function itemKey(item: PackItem): string {
   return item.kind === "video" ? "video" : `short-${String(item.short)}`;
 }
 
-function UploadDrawer({
+export function PrepareUploadDrawer({
   projectId,
   onClose,
 }: {

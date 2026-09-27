@@ -6,16 +6,15 @@ import { usesVoices } from "@app/slices/voices/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useId, useMemo, useState } from "react";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
+import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { ReadingView } from "@/components/kit/reading-view";
 import { TabPanel, Tabs } from "@/components/kit/tabs";
-import { Button } from "@/components/ui/button";
 import { keys } from "@/queries";
 import { ScriptView } from "@/voices/script-view";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { ResearchNotes } from "./body-research.js";
-import { ConfirmedButton } from "./controls.js";
 import { useProjectRevision } from "./live-revision.js";
 import { LiveWriting, type WritingPreview, writingKey } from "./live-writing.js";
 import {
@@ -41,7 +40,7 @@ function withoutHeading(section: string): string {
   return section.replace(/^\s*[^\n]*\n?/u, "").trim();
 }
 
-export function ArticleBody({ stage, companion, project, outputs, actions, busy }: BodyProps) {
+export function ArticleBody({ stage, companion, project, outputs, busy }: BodyProps) {
   const reviews = useReviews(project.id);
   const revisionId = useProjectRevision(project.id);
   const mine = outputsOf(outputs, stage);
@@ -157,44 +156,24 @@ export function ArticleBody({ stage, companion, project, outputs, actions, busy 
         projectId={project.id}
         busy={busy}
       />
-      <div className="flex flex-wrap items-baseline gap-[14px] text-small text-ink2">
-        <span className="text-row font-semibold text-ink">
+      <div className="flex flex-wrap items-baseline gap-3 text-small text-ink-2">
+        <span className="text-title-3 font-semibold text-ink">
           <InlineProse markdown={title} />
         </span>
         {sources === undefined ? null : <OutputDownload output={sources} label="Sources" />}
         {glossary === undefined ? null : <OutputDownload output={glossary} label="Glossary" />}
       </div>
 
-      <p className="text-small text-ink2">
-        Use Edit project to save changes, then Resume to recover affected work. Advanced rebuild
-        review is optional.
-      </p>
-      {/* The row acts on the open tab: the research's own Re-run, instructions and notes
-          while Research is open, the article's otherwise. */}
+      {/* The row acts on the open tab: the research's instructions and notes while Research
+          is open, the article's otherwise. Writing either again is in the section's More. */}
       <ActionRow>
         {open === "research" && research !== undefined ? (
           <>
-            <ConfirmedButton
-              action={{ kind: "rerun", stage: research.kind }}
-              run={() => actions.run({ kind: "rerun", stage: research.kind })}
-              disabled={busy || !ran(research)}
-              pending={actions.pending}
-            >
-              Re-run research
-            </ConfirmedButton>
             <Instructions output={roleOf(researched, "instructions")} />
             {notes === undefined ? null : <OutputDownload output={notes} />}
           </>
         ) : (
           <>
-            <ConfirmedButton
-              action={{ kind: "rerun", stage: stage.kind }}
-              run={() => actions.run({ kind: "rerun", stage: stage.kind })}
-              disabled={busy || !ran(stage)}
-              pending={actions.pending}
-            >
-              Re-run
-            </ConfirmedButton>
             <Instructions output={roleOf(mine, "instructions")} />
             {markdown === undefined ? null : <OutputDownload output={markdown} />}
           </>
@@ -204,14 +183,16 @@ export function ArticleBody({ stage, companion, project, outputs, actions, busy 
             ? research?.state === "running" || notesText.data === undefined
             : running || text === ""
         ) ? null : (
-          <Button type="button" onClick={() => copy(open)}>
+          <Button variant="quiet" size="small" onClick={() => copy(open)}>
             Copy {names[open]}
           </Button>
         )}
       </ActionRow>
       <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
 
-      {stored.error === null ? null : <p className="text-body text-red">{stored.error.message}</p>}
+      {stored.error === null ? null : (
+        <p className="m-0 text-body text-danger">{stored.error.message}</p>
+      )}
 
       {tabs.length > 1 ? (
         <Tabs
@@ -252,9 +233,9 @@ export function ArticleBody({ stage, companion, project, outputs, actions, busy 
             copyAll={false}
           >
             {ran(stage) && markdown !== undefined && stored.data === undefined ? (
-              <span className="block h-4 w-[40ch] max-w-full rounded-control bg-panel2" />
+              <span className="block h-4 w-[40ch] max-w-full rounded-control bg-sunken" />
             ) : (
-              <p className="text-small text-ink2">
+              <p className="m-0 text-small text-ink-2">
                 {!ran(stage)
                   ? research === undefined
                     ? "The article will be written when its inputs are ready."
@@ -307,16 +288,16 @@ export function ArticleBody({ stage, companion, project, outputs, actions, busy 
               className="mb-3"
               title={`${skipped.length === 1 ? "1 entry is" : `${skipped.length} entries are`} skipped by the narration and read as ordinary text`}
             >
-              <ul className="space-y-1">
+              <ul className="m-0 flex flex-col gap-1 pl-5">
                 {skipped.map((row) => (
                   <li key={row.row}>
                     Entry {row.row}: {row.reason}.
                   </li>
                 ))}
               </ul>
-              <p>
+              <p className="m-0 mt-1">
                 The other entries are used. To fix these, edit the Pronunciation Glossary at the end
-                of the article in Edit project → Article.
+                of the article in Edit settings → Article.
               </p>
             </Callout>
           )}

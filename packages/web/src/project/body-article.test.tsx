@@ -165,7 +165,7 @@ it("gives the sources and the pronunciation table tabs of their own, one source 
   );
   expect(skipped.textContent).toContain("1 entry is skipped by the narration");
   expect(skipped.textContent).toContain("Entry 3: use standard-English IPA only");
-  expect(skipped.textContent).toContain("Edit project → Article");
+  expect(skipped.textContent).toContain("Edit settings → Article");
   expect(skipped.textContent).not.toContain("Caverna");
 });
 
@@ -320,7 +320,6 @@ it("puts Research second among the article's tabs and copies its notes", async (
   await userEvent.click(screen.getByRole("tab", { name: "Research" }));
   const notes = await screen.findByRole("region", { name: "Research notes" });
   expect(await within(notes).findByText("Liches keep phylacteries.")).not.toBeNull();
-  expect(screen.getByRole("button", { name: "Re-run research" })).not.toBeNull();
   await userEvent.click(await screen.findByRole("button", { name: "Copy research notes" }));
   expect(writeText).toHaveBeenLastCalledWith("Liches keep phylacteries.\n");
   vi.unstubAllGlobals();
@@ -332,14 +331,9 @@ it("opens on Research while the research has failed and the article waits", asyn
   expect(tab.getAttribute("aria-selected")).toBe("true");
   expect(
     screen.getByText(
-      "Research stopped before any notes were saved. Use Retry research above to try again.",
+      "Research stopped before any notes were saved. Try the research again with the next action beside it.",
     ),
   ).not.toBeNull();
-  expect(
-    ((await screen.findByRole("button", { name: "Re-run research" })) as HTMLButtonElement)
-      .disabled,
-  ).toBe(false);
   await userEvent.click(screen.getByRole("tab", { name: "Article" }));
   expect(screen.getByText("The article is written once the research has finished.")).not.toBeNull();
-  expect((screen.getByRole("button", { name: "Re-run" }) as HTMLButtonElement).disabled).toBe(true);
 });

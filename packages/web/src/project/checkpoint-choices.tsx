@@ -1,7 +1,7 @@
 import type { Stage } from "@app/slices/admission/model.js";
 import { type ReactElement, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/kit/button";
 import { sentence } from "@/http";
 import {
   type CheckpointChange,

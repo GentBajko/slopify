@@ -40,14 +40,14 @@ export async function writeSegment(
   const body = config.rendered[category];
   if (body === undefined)
     throw new Error(
-      `Slopify hit an internal error (the ${category} text was never filled in). Retry stage; if it happens again, use Download diagnostics in Settings and report it.`,
+      `Slopify hit an internal error (the ${category} text was never filled in). Try again; if it happens again, use Download diagnostics in Settings and report it.`,
     );
   const common = { category, name: picked.name, mode: picked.mode };
   if (picked.mode === "text")
     return { ok: true, value: { ...common, text: body, tokens: noTokens } };
   if (choice === undefined)
     throw new Error(
-      `No AI model is set for writing the ${category}. Choose one in Edit project → Providers, then Retry stage.`,
+      `No AI model is set for writing the ${category}. Choose one in Edit project → Providers, then Try again.`,
     );
   const messages = segmentMessages(body, config, article);
   sent.push({ label: category === "intro" ? "Intro" : "Outro", messages });
@@ -58,7 +58,7 @@ export async function writeSegment(
     messages,
     check: (given: LlmAnswer): string | undefined =>
       given.text.trim() === ""
-        ? `The AI model returned an empty ${category}. Retry stage; if it keeps happening, choose a different model in Edit project → Providers.`
+        ? `The AI model returned an empty ${category}. Try again; if it keeps happening, choose a different model in Edit project → Providers.`
         : undefined,
   });
   if (!answer.ok) return answer;

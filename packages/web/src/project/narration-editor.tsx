@@ -3,8 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useId, useRef, useState } from "react";
 import { z } from "zod";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/input";
+import { Button } from "@/components/kit/button";
+import { Textarea } from "@/components/kit/field";
 import { type NarrationChunkOrder, narrationChunkOrderOf } from "./revision-api.js";
 import { RevisionUpload } from "./revision-upload.js";
 
@@ -123,7 +123,10 @@ export function NarrationEditor({
       {groups.map((chunk, index) => {
         const override = edit.content.narrationOverrides[chunk.key];
         return (
-          <fieldset key={chunk.key} className="space-y-2 rounded-control border border-line2 p-3">
+          <fieldset
+            key={chunk.key}
+            className="space-y-2 rounded-control border border-line-strong p-3"
+          >
             <legend>Narration chunk {index + 1}</legend>
             <p>
               {chunk.parts} audio {chunk.parts === 1 ? "part" : "parts"} in this narration chunk.
@@ -181,11 +184,11 @@ export function NarrationEditor({
               }}
             />
             {edit.regenerate?.includes(chunk.key) ? (
-              <p className="flex flex-wrap items-center gap-2 text-small text-done">
+              <p className="flex flex-wrap items-center gap-2 text-small text-accent-ink">
                 Narration chunk {index + 1} will be regenerated when you save and Resume.
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="quiet"
                   onClick={() => {
                     const current = getEdit?.() ?? latest.current;
                     emit({

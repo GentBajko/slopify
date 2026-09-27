@@ -88,6 +88,64 @@ Projects show only its work, or every channel's. `useCurrentChannel().includes(c
 answers whether something is in view; the choice is kept per browser. Every destination, each
 channel ("Switch to …") and New video are Ctrl+K commands; each screen adds its own actions.
 
+The rail's surface and hairline are painted on the shell itself as well (`.sl-app`'s
+background), so on a long page the rail's column never ends at the first screen, even where
+`position: sticky` gives up.
+
+### The project page
+
+A Workspace (`routes/project.tsx`). The title row carries the way back to Projects, the state
+word, Edit settings and a More menu (Choose what to remake…, Save as template…, Cancel the
+run…). The left rail lists the sections (Article, Narration, Images, Video, Shorts, YouTube,
+PDF when the run makes one, Cost, Live), each stage with its lamp and "3 outdated" when it has
+outdated outputs, then the views that replace the main column (Settings, Checkpoints with
+"1 held", History). The right rail has the next action, the run's steps with their times and
+one detail line each, and the cost so far with each CLI plan's share. Below 1180px the rails
+sit above the column; on phones the section rail scrolls sideways as tabs and only the next
+action stays above it.
+
+Media is a MediaFrame in one MediaGrid per image prompt, opening the Lightbox; the video plays
+in the Player; shorts are 9:16 players in their own grid; review verdicts are badges on the
+frame with Overrule and Redo among its actions. Making a whole stage again is rare, so it sits
+behind each section's More, confirmed first.
+
+### Controls that say what they do: the next action
+
+A project shows exactly one next action, named for its result, only when it applies: in the
+right rail as the primary button, and beside the item it affects as a callout with the same
+action as a secondary button. `project/next-action.ts` decides it from the project's state in
+one pure function (`nextActionFor`, every row tested in `next-action.test.ts`); the page, the
+section callouts and Ctrl+K all read it. The first situation that holds wins, in this order:
+
+| Situation | When | Status | Action | Beside |
+| --- | --- | --- | --- | --- |
+| Sample | the bundled sample project | Sample project | Make my own copy | none |
+| Paused | the project is paused | Paused | Continue the run | none |
+| Failed | a step failed and will not retry by itself | Failed | the fix-it (below), else Try images again / Try the article again | the step's section, with Error details |
+| Held | a checkpoint holds work for review | Waiting for you | Approve and render the video (or … make the images / record the narration) | the held stage's section |
+| Waiting | a CLI plan's limit is reached, or a step waits to retry by itself | Waiting for limits / Waiting to try again | none: when it carries on, in words | the waiting stage's section |
+| Running | the run is at work | Running | Pause | none (the section shows progress) |
+| Stopped | canceled, failed without a failed step, or resumable work nothing will start | Stopped / Canceled | Continue the run | none |
+| Queued | pending in the queue | Queued | none | none |
+| Outdated | the last saved edit made outputs outdated | Outdated | Remake 3 outdated images (the first group in run order: article, narration, establishing image, images, animated images, thumbnails, video, shorts, YouTube description, PDF) | that group's section |
+| Done | done or done with problems, and a video exists | Done | Prepare upload | YouTube |
+
+The fix-it of a failed step (`slices/fixes/rules.ts`): a signed-out CLI says the command to
+run and offers Try … again; a refused image prompt offers Soften and retry (confirmed); a
+refused text prompt and a retired model open the settings (Edit the prompt, Switch model); a
+rejected key links to Settings → Providers → the provider; a full disk to Settings → Storage.
+
+Remake uses the rebuild flow for exactly those outputs: a preview of the outdated outputs' work
+keys, started at once when it needs no consent (nothing blocked, no provided content to
+confirm, every cost known), otherwise opened in the rebuild review so the person sees why.
+The full review (Choose what to remake) stays in the More menu and Ctrl+K.
+
+Every project action is a Ctrl+K command: the next action by its name, Pause the run /
+Continue the run, Prepare upload, Edit project settings, Choose what to remake, Remake …
+outdated … and Remake everything outdated, Save as template, Cancel the run, Make my own copy,
+Open the project folder, Copy description, Copy tags, Regenerate image N and Regenerate
+thumbnail N.
+
 ## Rules in short
 
 - **Voice.** Name actions for their result ("Remake 3 outdated images", never "Submit" or

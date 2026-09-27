@@ -1,33 +1,76 @@
 import type { Format } from "@app/kernel/pipeline.js";
 import type { Output } from "@app/slices/storage/model.js";
-import { type ReactNode, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { DownloadIcon, RefreshCwIcon, Trash2Icon } from "lucide-react";
+import { type ReactElement, type ReactNode, useState } from "react";
+import { Button } from "@/components/kit/button";
+import { useCommand } from "@/components/kit/command-palette";
+import { ConfirmDialog } from "@/components/kit/dialog";
+import { Rule } from "@/components/kit/layout";
+import {
+  type Aspect,
+  Lightbox,
+  type LightboxItem,
+  MediaFrame,
+  MediaGrid,
+} from "@/components/kit/media";
+import { SectionHead } from "@/components/kit/section-head";
+import { Badge } from "@/components/kit/status";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { ThumbnailPanel } from "./body-thumbnail.js";
-import { ConfirmedButton } from "./controls.js";
+import { confirmationFor } from "./confirmations.js";
 import { groupImages } from "./image-groups.js";
-import { ActionRow, DownloadLink, EngravedLabel, OutputDownload, StageBody } from "./parts.js";
+import { useOutdated, useOutputChange } from "./output-change.js";
+import { DownloadLink } from "./parts.js";
 import type { Review } from "./review-api.js";
 import { ReviewActions, ReviewChip, reviewFor, useReviews } from "./review-verdict.js";
-import { useOutputMedia } from "./revision-media.js";
+import { useOutputMedia, useOutputMediaList } from "./revision-media.js";
+import { SectionMore } from "./stage-section.js";
 
-// Images: a grid per image prompt, 6 columns at 1440 px, prompt name as an engraved header with
-// '× N'; per image on hover and focus: Download, Regenerate, Delete; 'Download all' and 'Re-run
-// stage' at the group's right. The thumbnail, when the run makes one, sits large above them all;
-// with Images switched off it is the section's only content.
+// Images: the establishing image the others follow, the thumbnails, then the slideshow images
+// grouped by the prompt that made them. Every picture is a media frame: a fixed aspect box on
+// `screen`, its caption, its review badge in the corner, Regenerate, Download and Delete on
+// hover and focus, and a press opens it full size in the lightbox.
 
 export function aspectOf(format: Format): string {
   return format === "9:16" ? "aspect-[9/16]" : "aspect-video";
 }
 
+export function frameAspect(format: Format): Aspect {
+  return format === "9:16" ? "portrait" : "landscape";
+}
+
 export function ImagesBody({ stage, companion, project, outputs, actions, busy }: BodyProps) {
   const reviews = useReviews(project.id);
-  const groups = groupImages(
-    outputsOf(outputs, stage),
-    project.config.imagePrompts?.map((prompt) => prompt.name) ?? [],
-  );
+  const own = outputsOf(outputs, stage);
+  const groups = groupImages(own, project.config.imagePrompts?.map((prompt) => prompt.name) ?? []);
+  const all = groups.flatMap((group) => group.images);
+  const files = useOutputMediaList(all);
+  const [open, setOpen] = useState<number | null>(null);
+  const items: LightboxItem[] = all.flatMap((image) => {
+    const file = files.get(image.id);
+    return file === undefined
+      ? []
+      : [
+          {
+            src: file.url,
+            alt: image.meta.prompt ?? `Image ${String(image.meta.index ?? "")}`,
+            ...(isClip(image) ? { kind: "video" as const } : {}),
+            caption: image.meta.prompt ?? image.meta.promptName ?? "Slideshow image",
+          },
+        ];
+  });
+  const reference =
+    project.config.reference === undefined ? null : (
+      <ReferencePanel
+        image={roleOf(own, "reference")}
+        format={project.format}
+        generated={project.config.reference.source === "prompt"}
+        affected={all.length}
+        actions={actions}
+        busy={busy}
+      />
+    );
   const thumbnail =
     companion?.kind === "thumbnail" ? (
       <ThumbnailPanel
@@ -38,148 +81,212 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
         busy={busy}
       />
     ) : null;
-  if (stage.state === "skipped") return <StageBody>{thumbnail}</StageBody>;
-
+  const running = stage.state === "running";
+  const waiting =
+    running && stage.progressTotal !== null ? Math.max(0, stage.progressTotal - all.length) : 0;
+  const reviewed = reviews.filter((review) => all.some((image) => image.id === review.outputId));
+  const redone = reviewed.filter((review) => review.passed && review.attempt > 1).length;
+  const flagged = reviewed.filter((review) => !review.passed && review.action === null).length;
+  const meta = [
+    all.length === 0 ? undefined : `${String(all.length)} in the video`,
+    reviewed.length === 0 ? undefined : "reviewed",
+    redone === 0 ? undefined : `${String(redone)} redone after review`,
+    flagged === 0 ? undefined : `${String(flagged)} flagged`,
+  ]
+    .filter((part) => part !== undefined)
+    .join(" · ");
   return (
-    <StageBody>
+    <>
+      {reference}
+      {reference === null || (thumbnail === null && stage.state === "skipped") ? null : (
+        <Rule className="m-0" />
+      )}
       {thumbnail}
-      {thumbnail === null ? null : (
-        <h3 className="engraved border-t border-line pt-4 text-ink3">Slideshow images</h3>
-      )}
-      <ActionRow>
-        <ConfirmedButton
-          action={{ kind: "rerun", stage: stage.kind }}
-          run={() => {
-            actions.run({ kind: "rerun", stage: stage.kind });
-          }}
-          disabled={busy || stage.state === "pending"}
-          pending={actions.pending}
-        >
-          Re-run stage
-        </ConfirmedButton>
-        <DownloadLink projectId={project.id} asset="images.zip" label="Download all" />
-      </ActionRow>
-
-      {groups.length === 0 ? (
-        <p className="text-small text-ink2">No images have landed yet.</p>
-      ) : null}
-
-      {groups.map((group) => (
-        <ImageGroup key={group.name} name={group.name} count={group.images.length}>
-          {(limit) =>
-            group.images
-              .slice(0, limit)
-              .map((image) => (
-                <ImageTile
-                  key={image.id}
-                  image={image}
-                  projectId={project.id}
-                  review={reviewFor(reviews, { outputId: image.id })}
-                  format={project.format}
-                  actions={actions}
-                  busy={busy}
+      {thumbnail === null || stage.state === "skipped" ? null : <Rule className="m-0" />}
+      {stage.state === "skipped" ? null : (
+        <section aria-label="Slideshow images" className="flex min-w-0 flex-col gap-5">
+          <SectionHead title="Images" {...(meta === "" ? {} : { meta })}>
+            <DownloadLink projectId={project.id} asset="images.zip" label="Download all" />
+            <SectionMore stages={[stage]} project={project} actions={actions} />
+          </SectionHead>
+          {groups.length === 0 && waiting === 0 ? (
+            <p className="m-0 text-small text-ink-2">
+              {stage.state === "pending"
+                ? "The images are made once the narration is timed."
+                : "No images have landed yet."}
+            </p>
+          ) : null}
+          {groups.map((group, index) => (
+            <ImageGroup
+              key={group.name}
+              name={group.name}
+              count={group.images.length}
+              showName={groups.length > 1}
+              trailing={
+                index === groups.length - 1 && waiting > 0
+                  ? Array.from({ length: Math.min(waiting, 3) }, (_, slot) => (
+                      <MediaFrame
+                        // biome-ignore lint/suspicious/noArrayIndexKey: placeholders have no identity of their own.
+                        key={slot}
+                        alt="An image being made"
+                        aspect={frameAspect(project.format)}
+                        generating={slot === 0 ? "Drawing the next image" : "Waiting its turn"}
+                      />
+                    ))
+                  : null
+              }
+            >
+              {(limit) =>
+                group.images.slice(0, limit).map((image) => {
+                  const at = all.indexOf(image);
+                  return (
+                    <ImageTile
+                      key={image.id}
+                      image={image}
+                      projectId={project.id}
+                      review={reviewFor(reviews, { outputId: image.id })}
+                      format={project.format}
+                      actions={actions}
+                      busy={busy}
+                      onOpen={() => setOpen(at)}
+                    />
+                  );
+                })
+              }
+            </ImageGroup>
+          ))}
+          {groups.length === 0 && waiting > 0 ? (
+            <MediaGrid label="Images being made">
+              {Array.from({ length: Math.min(waiting, 3) }, (_, slot) => (
+                <MediaFrame
+                  // biome-ignore lint/suspicious/noArrayIndexKey: placeholders have no identity of their own.
+                  key={slot}
+                  alt="An image being made"
+                  aspect={frameAspect(project.format)}
+                  generating={slot === 0 ? "Drawing the first image" : "Waiting its turn"}
                 />
-              ))
-          }
-        </ImageGroup>
-      ))}
-      {project.config.reference === undefined ? null : (
-        <ReferencePanel
-          image={roleOf(outputsOf(outputs, stage), "reference")}
-          format={project.format}
-          generated={project.config.reference.source === "prompt"}
-          actions={actions}
-          busy={busy}
-        />
+              ))}
+            </MediaGrid>
+          ) : null}
+          <Lightbox items={items} index={open} onIndex={setOpen} onClose={() => setOpen(null)} />
+        </section>
       )}
-    </StageBody>
+    </>
   );
 }
 
-// The establishing image, under the slideshow it is never part of: labelled as the reference
+const isClip = (image: Output): boolean => /\.(mp4|mov|m4v|webm|mkv)$/i.test(image.path);
+
+// The establishing image, above the slideshow it is never part of: labelled as the reference
 // the other images are drawn from, with Regenerate when it was made from a prompt.
 function ReferencePanel({
   image,
   format,
   generated,
+  affected,
   actions,
   busy,
 }: {
   readonly image: Output | undefined;
   readonly format: Format;
   readonly generated: boolean;
+  // How many images follow it, and so become outdated when it is made again.
+  readonly affected: number;
   readonly actions: BodyProps["actions"];
   readonly busy: boolean;
 }) {
   const media = useOutputMedia(image);
+  const change = useOutputChange(image, actions, busy);
   return (
-    <section aria-label="Establishing image" className="flex flex-col gap-[10px]">
-      <EngravedLabel>Establishing image · reference, not in the video</EngravedLabel>
-      <div className="grid grid-cols-3 gap-2 min-[900px]:grid-cols-6">
-        <figure className="m-0 overflow-hidden rounded-control border border-line bg-panel2">
-          {image === undefined ? (
-            <p
-              className={cn(
-                "flex items-center justify-center p-2 text-center text-label text-ink2",
-                aspectOf(format),
-              )}
-            >
-              Not made yet
-            </p>
-          ) : (
-            <img
-              src={media?.url}
-              alt={image.meta.prompt ?? "Establishing image"}
-              className={cn("block w-full object-cover", aspectOf(format))}
-            />
-          )}
-        </figure>
-      </div>
-      <ActionRow>
+    <section aria-label="Establishing image" className="flex min-w-0 flex-col gap-5">
+      <SectionHead
+        kicker="Reference · not in the video"
+        title="Establishing image"
+        meta="Every image follows it for the look, palette and style"
+      >
         {image !== undefined && generated ? (
-          <ConfirmedButton
-            action={{ kind: "regenerate-image", outputId: image.id }}
-            run={() => {
-              actions.run({ kind: "regenerate-image", outputId: image.id });
-            }}
-            disabled={busy}
-            pending={actions.pending}
+          <Button
+            disabled={change.unavailable}
+            disabledReason="Wait until the work on this project is done"
+            onClick={() => change.act("regenerate-image")}
           >
-            Regenerate establishing image
-          </ConfirmedButton>
+            Make the establishing image again
+          </Button>
         ) : null}
-        {image === undefined ? null : (
-          <OutputDownload output={image} label="Download establishing image" />
-        )}
-      </ActionRow>
+      </SectionHead>
+      <div className="grid min-w-0 items-start gap-6 md:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+        <MediaFrame
+          alt={image?.meta.prompt ?? "Establishing image"}
+          aspect={frameAspect(format)}
+          {...(media === undefined ? {} : { src: media.url })}
+          title="Establishing image"
+          {...(image === undefined ? { meta: "Not made yet" } : {})}
+          {...(image === undefined || media === undefined
+            ? {}
+            : {
+                actions: (
+                  <a
+                    href={media.url}
+                    download
+                    className="sl-btn sl-btn--secondary sl-btn--small"
+                    aria-label="Download the establishing image"
+                  >
+                    <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
+                    Download
+                  </a>
+                ),
+              })}
+        />
+        {generated && affected > 0 ? (
+          <p className="m-0 text-small text-ink-2">
+            {`Making it again marks ${String(affected)} image${affected === 1 ? "" : "s"} outdated. They keep their current version until you remake them.`}
+          </p>
+        ) : null}
+      </div>
+      <ConfirmDialog
+        open={change.asking !== undefined}
+        tone="primary"
+        title="Make the establishing image again?"
+        consequence={`A new establishing image replaces this one${affected > 0 ? `, and the ${String(affected)} images drawn from it become outdated until you remake them` : ""}. The old one stays in History.`}
+        confirmLabel="Make it again"
+        cancelLabel="Keep this one"
+        pending={actions.pending}
+        onConfirm={change.confirm}
+        onCancel={change.dismiss}
+      />
     </section>
   );
 }
 
-// Two rows of six, then "Show all": a group of sixty images no longer turns the Output tab
-// into a page of several thousand pixels. The cap is the reader's to lift.
+// Two rows, then "Show all": a group of sixty images does not turn the section into a page
+// of several thousand pixels. The cap is the reader's to lift.
 export const imageGroupCap = 12;
 
 function ImageGroup({
   name,
   count,
+  showName,
+  trailing,
   children,
 }: {
   readonly name: string;
   readonly count: number;
+  readonly showName: boolean;
+  readonly trailing?: ReactNode;
   readonly children: (limit: number) => ReactNode;
 }) {
   const [expanded, setExpanded] = useState(false);
   const capped = count > imageGroupCap && !expanded;
   return (
-    <section className="flex flex-col gap-[10px]">
-      <EngravedLabel>{`${name} × ${String(count)}`}</EngravedLabel>
-      <div className="grid grid-cols-3 gap-2 min-[900px]:grid-cols-6">
+    <section aria-label={`${name} × ${String(count)}`} className="flex flex-col gap-3">
+      {showName ? <h3 className="sl-kicker m-0">{`${name} × ${String(count)}`}</h3> : null}
+      <MediaGrid>
         {children(capped ? imageGroupCap : count)}
-      </div>
+        {trailing}
+      </MediaGrid>
       {count > imageGroupCap ? (
         <Button
-          variant="ghost"
+          variant="quiet"
           aria-expanded={expanded}
           className="self-start"
           onClick={() => setExpanded((open) => !open)}
@@ -198,6 +305,7 @@ function ImageTile({
   format,
   actions,
   busy,
+  onOpen,
 }: {
   readonly image: Output;
   readonly projectId: string;
@@ -206,66 +314,101 @@ function ImageTile({
   readonly format: Format;
   readonly actions: BodyProps["actions"];
   readonly busy: boolean;
-}) {
+  readonly onOpen: () => void;
+}): ReactElement {
   const media = useOutputMedia(image);
-  const place = image.meta.index === undefined ? "" : ` ${String(image.meta.index)}`;
-
+  const number = image.meta.index === undefined ? "" : ` ${String(image.meta.index)}`;
+  const name = `image${number}`;
+  const change = useOutputChange(image, actions, busy);
+  const outdated = useOutdated(image);
+  // Every image is a palette command too: "Regenerate image 4".
+  useCommand({
+    id: `project.image.${image.id}`,
+    title: `Regenerate image${number}`,
+    group: "This project",
+    keywords: ["image", "redraw", "remake", image.meta.promptName ?? ""],
+    run: () => change.act("regenerate-image"),
+  });
+  const flagged = review !== undefined && !review.passed && review.action === null;
+  const copy =
+    change.asking === undefined
+      ? undefined
+      : confirmationFor({ kind: change.asking, outputId: image.id });
   return (
-    <figure className="group relative m-0 overflow-hidden rounded-control border border-line bg-panel2">
-      {/\.(mp4|mov|m4v|webm|mkv)$/i.test(image.path) ? (
-        // An uploaded clip in an image's place, played muted as the video will.
-        <video
-          src={media?.url}
-          muted
-          loop
-          controls
-          preload="metadata"
-          aria-label={`Video clip${place}`}
-          className={cn("block w-full object-cover", aspectOf(format))}
-        />
-      ) : (
-        <img
-          src={media?.url}
-          loading="lazy"
-          alt={image.meta.prompt ?? `Slideshow image${place}`}
-          // The image fades in as it lands, which is the grid's whole motion budget.
-          className={cn(
-            "block w-full object-cover animate-tick-in motion-reduce:animate-none",
-            aspectOf(format),
-          )}
-        />
-      )}
-      <ReviewChip review={review} />
-      {/* Revealed by hover and by focus alike, and always in the tab order, so nothing
-          here is hover-only information. */}
-      <figcaption className="absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-between gap-1 bg-panel/90 p-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100 motion-reduce:transition-none">
-        <OutputDownload output={image} />
-        {review === undefined ? null : (
-          <ReviewActions review={review} projectId={projectId} busy={busy} />
-        )}
-        <ConfirmedButton
-          action={{ kind: "regenerate-image", outputId: image.id }}
-          run={() => {
-            actions.run({ kind: "regenerate-image", outputId: image.id });
-          }}
-          disabled={busy}
-          pending={actions.pending}
-          variant="ghost"
-        >
-          Regenerate
-        </ConfirmedButton>
-        <ConfirmedButton
-          action={{ kind: "delete-image", outputId: image.id }}
-          run={() => {
-            actions.run({ kind: "delete-image", outputId: image.id });
-          }}
-          disabled={busy}
-          pending={actions.pending}
-          variant="ghost"
-        >
-          Delete
-        </ConfirmedButton>
-      </figcaption>
-    </figure>
+    <>
+      <MediaFrame
+        alt={image.meta.prompt ?? `Slideshow ${name}`}
+        kind={isClip(image) ? "video" : "image"}
+        aspect={frameAspect(format)}
+        {...(media === undefined ? {} : { src: media.url })}
+        title={image.meta.prompt ?? `Image${number}`}
+        {...(image.meta.index === undefined ? {} : { meta: `#${String(image.meta.index)}` })}
+        onOpen={onOpen}
+        openLabel={`Open ${name} full size`}
+        {...(review === undefined && !outdated
+          ? {}
+          : {
+              badge: (
+                <span className="inline-flex flex-wrap gap-1">
+                  {outdated ? <Badge tone="info">Outdated</Badge> : null}
+                  {review === undefined ? null : <ReviewChip review={review} />}
+                </span>
+              ),
+            })}
+        actionsShown={flagged}
+        actions={
+          <>
+            {flagged && review !== undefined ? (
+              <ReviewActions review={review} projectId={projectId} busy={busy} />
+            ) : null}
+            <Button
+              size="small"
+              disabled={change.unavailable}
+              disabledReason="Wait until the work on this project is done"
+              onClick={() => change.act("regenerate-image")}
+              aria-label={`Regenerate ${name}`}
+            >
+              <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} />
+              Regenerate
+            </Button>
+            {media === undefined ? null : (
+              <a
+                href={media.url}
+                download
+                className="sl-btn sl-btn--secondary sl-btn--small"
+                aria-label={`Download ${name}`}
+                title={`Download ${name}`}
+              >
+                <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
+              </a>
+            )}
+            <Button
+              size="small"
+              variant="destructive"
+              disabled={change.unavailable}
+              disabledReason="Wait until the work on this project is done"
+              onClick={() => change.act("delete-image")}
+              aria-label={`Delete ${name}`}
+              title={`Delete ${name}`}
+            >
+              <Trash2Icon aria-hidden="true" strokeWidth={1.75} />
+            </Button>
+          </>
+        }
+      />
+      <ConfirmDialog
+        open={change.asking !== undefined}
+        tone={change.asking === "delete-image" ? "destructive" : "primary"}
+        title={copy?.title ?? ""}
+        consequence={copy?.consequence ?? ""}
+        confirmLabel={
+          change.asking === "delete-image" ? "Delete the image" : "Regenerate the image"
+        }
+        cancelLabel="Keep it"
+        pending={actions.pending}
+        onConfirm={change.confirm}
+        onCancel={change.dismiss}
+      />
+    </>
   );
 }

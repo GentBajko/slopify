@@ -3,10 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Picker } from "@/components/ui/picker";
+import { Button } from "@/components/kit/button";
+import { Input, Select } from "@/components/kit/field";
 import { customModelFallback, listProviderModels, modelsKey, modelsQuery } from "@/lib/models";
 import { providerUnavailableLabel } from "@/lib/provider-status";
 import { cn } from "@/lib/utils";
@@ -47,15 +45,20 @@ export function LabelledField({
   return (
     <div
       className={cn(
-        inline ? "flex min-w-0 max-w-full items-center gap-[10px]" : "min-w-0 [&>span]:w-full",
+        inline
+          ? "flex min-w-0 max-w-full items-center gap-[10px]"
+          : "min-w-0 [&>span]:w-full [&>select]:w-full",
       )}
     >
-      <Label htmlFor={fieldId} className={inline ? "shrink-0" : "mb-[5px]"}>
+      <label
+        htmlFor={fieldId}
+        className={cn("sl-field__label block", inline ? "shrink-0" : "mb-[5px]")}
+      >
         {label}
-      </Label>
+      </label>
       {children({ field, id: fieldId, describedBy: problem === undefined ? undefined : noteId })}
       {problem === undefined ? null : (
-        <p id={noteId} className={cn("text-label text-red", inline ? "" : "mt-1")}>
+        <p id={noteId} className={cn("text-label text-danger", inline ? "" : "mt-1")}>
           {problem}
         </p>
       )}
@@ -87,7 +90,7 @@ export function OptionPicker({
   return (
     <LabelledField field={field} label={label} problem={problem} inline={inline}>
       {({ id, describedBy }) => (
-        <Picker
+        <Select
           id={id}
           data-play-field={field}
           value={value}
@@ -108,7 +111,7 @@ export function OptionPicker({
               {option.label}
             </option>
           ))}
-        </Picker>
+        </Select>
       )}
     </LabelledField>
   );
@@ -215,7 +218,12 @@ function ProviderModelPicker({
               .filter(Boolean)
               .join(" ") || undefined;
           return (
-            <div className={cn("min-w-0 [&>span]:w-full", inline ? "max-w-[260px]" : "w-full")}>
+            <div
+              className={cn(
+                "min-w-0 [&>span]:w-full [&>select]:w-full",
+                inline ? "max-w-[260px]" : "w-full",
+              )}
+            >
               {typing ? (
                 <Input
                   id={id}
@@ -229,7 +237,7 @@ function ProviderModelPicker({
                   onChange={(event) => onPick(event.target.value)}
                 />
               ) : (
-                <Picker
+                <Select
                   id={id}
                   data-play-field={field}
                   value={value}
@@ -265,7 +273,7 @@ function ProviderModelPicker({
                         ))}
                     </optgroup>
                   ))}
-                </Picker>
+                </Select>
               )}
             </div>
           );
@@ -275,7 +283,7 @@ function ProviderModelPicker({
         <div className="mt-1 flex flex-wrap items-center gap-1">
           <Button
             type="button"
-            variant="ghost"
+            variant="quiet"
             className="px-2 text-label"
             aria-label={`Refresh ${label} list`}
             title="Refresh models"
@@ -291,7 +299,7 @@ function ProviderModelPicker({
           {allowsCustom ? (
             <Button
               type="button"
-              variant="ghost"
+              variant="quiet"
               className="px-2 text-label"
               aria-label={typing ? `Choose ${label} from list` : `Enter ${label} ID`}
               onClick={() => setCustom(!typing)}
@@ -302,12 +310,12 @@ function ProviderModelPicker({
         </div>
       ) : null}
       {catalogue.data?.notice ? (
-        <p id={noticeId} className="mt-1 max-w-[360px] text-label text-ink3">
+        <p id={noticeId} className="mt-1 max-w-[360px] text-label text-ink-3">
           {catalogue.data.notice}
         </p>
       ) : null}
       {warning ? (
-        <p id={noteId} className="mt-1 max-w-[360px] text-label text-ink3" role="status">
+        <p id={noteId} className="mt-1 max-w-[360px] text-label text-ink-3" role="status">
           {warning}
         </p>
       ) : null}

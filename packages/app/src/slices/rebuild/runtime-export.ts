@@ -46,11 +46,11 @@ export async function executeExportRecipe(
   const wav = piece.key === "export:wav";
   if (!wav && piece.key !== "export:video")
     throw new Error(
-      "Slopify hit an internal error (unknown kind of export). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (unknown kind of export). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   if (wav && audio.length === 0)
     throw new Error(
-      "The audio export has nothing to export because narration is turned off for this project. Turn narration on in Edit project, then Retry stage.",
+      "The audio export has nothing to export because narration is turned off for this project. Turn narration on in Edit project, then Try again.",
     );
   if (!wav && usesShortMode(view.revision.config))
     return executeShortExport(deps, context, piece, snapshot, audio);
@@ -197,7 +197,7 @@ export function slideshowImages(
     );
     if (row === undefined)
       throw new Error(
-        "The video export can't find one of the slideshow images. Use Re-run section on Images (or regenerate that image in Edit project → Images), then Retry stage.",
+        "The video export can't find one of the slideshow images. Use More → make it again in its section on Images (or regenerate that image in Edit project → Images), then Try again.",
       );
     return outputPath(deps.paths, context.work.projectId, row.output.path);
   });
@@ -215,7 +215,7 @@ function captionDirectory(
   const font = find("subtitle_font");
   if (ass === undefined || font === undefined)
     throw new Error(
-      "Burned-in captions are missing their caption file or font. Use Re-run section on Video (or choose the caption font again in Edit project → Subtitles), then Retry stage.",
+      "Burned-in captions are missing their caption file or font. Use More → Render the video again in the Video section (or choose the caption font again in Edit project → Subtitles), then Try again.",
     );
   const directory = mkdtempSync(join(projectDir(deps.paths, context.work.projectId), "render-"));
   try {

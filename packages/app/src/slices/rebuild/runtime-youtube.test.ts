@@ -83,7 +83,7 @@ it("fails in plain words when every answer breaks YouTube's chapter rules", asyn
     await expect(
       executeYoutubeRecipe(h.deps, context, providersAnswering([chapters("0:02")], calls), piece),
     ).rejects.toThrow(
-      "The AI model's chapters broke YouTube's rules (the first chapter must start at 0:00). Retry stage, or choose another model in Edit project → Providers.",
+      "The AI model's chapters broke YouTube's rules (the first chapter must start at 0:00). Try again, or choose another model in Edit project → Providers.",
     );
     // The narration is 4 s with 2 s of silence either side, and the words were offset by
     // the silence at the start.

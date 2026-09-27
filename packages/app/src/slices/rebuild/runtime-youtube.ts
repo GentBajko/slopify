@@ -39,14 +39,14 @@ export async function executeYoutubeRecipe(
   const input = piece.input;
   if (input.kind !== "local" || input.operation !== "youtube-description-v1")
     throw new Error(
-      "Slopify hit an internal error (the YouTube description step was set up wrongly). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (the YouTube description step was set up wrongly). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   const { view } = exportSnapshot(deps, context, piece);
   const config = view.revision.config;
   const llm = config.llm;
   if (llm === undefined || llm.provider.trim() === "" || llm.model.trim() === "")
     throw new Error(
-      "The YouTube description needs an AI text model, and none is chosen. Choose one in Edit project → Providers, then Retry stage.",
+      "The YouTube description needs an AI text model, and none is chosen. Choose one in Edit project → Providers, then Try again.",
     );
   const timing = view.outputs.find(
     (row) =>
@@ -58,7 +58,7 @@ export async function executeYoutubeRecipe(
   );
   if (timing === undefined)
     throw new Error(
-      "The narration's word timing, which the YouTube description's chapters come from, is missing. Use Re-run section on Video, then Retry stage.",
+      "The narration's word timing, which the YouTube description's chapters come from, is missing. Use More → Render the video again in the Video section, then Try again.",
     );
   const { words } = wordsSchema.parse(
     JSON.parse(
@@ -68,7 +68,7 @@ export async function executeYoutubeRecipe(
   const passages = transcriptPassages(words);
   if (passages.length === 0)
     throw new Error(
-      "The narration's word timing holds no words, so there is nothing to write the YouTube description from. Use Re-run section on Video, then Retry stage.",
+      "The narration's word timing holds no words, so there is nothing to write the YouTube description from. Use More → Render the video again in the Video section, then Try again.",
     );
   // The same timeline the timing walked: silence at the start, intro, gaps, body, outro and
   // silence at the end.

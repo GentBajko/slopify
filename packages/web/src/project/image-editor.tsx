@@ -1,8 +1,8 @@
 import type { RevisionEdit, RevisionView } from "@app/slices/revisions/model.js";
 import { useId, useRef, useState } from "react";
 import type { StagedFile } from "@/api";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/input";
+import { Button } from "@/components/kit/button";
+import { Textarea } from "@/components/kit/field";
 import { ImagePreview } from "./image-preview.js";
 import { setPrompt } from "./revision-form-state.js";
 import { RevisionUpload } from "./revision-upload.js";
@@ -133,7 +133,7 @@ export function ImageEditor({
             </p>
           );
         return (
-          <fieldset key={key} className="space-y-2 rounded-control border border-line2 p-3">
+          <fieldset key={key} className="space-y-2 rounded-control border border-line-strong p-3">
             <legend>Image {index + 1}</legend>
             <ImagePreview edit={edit} view={view} imageKey={key} index={index} />
             {image.source !== "generate" ? null : (

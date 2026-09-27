@@ -1,7 +1,11 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
+import type { FieldError } from "../admission/rules.js";
+import { rebrandedEdit } from "../channels/rebrand.js";
+import { projectChannelId, resolveChannelId, setProjectChannel } from "../channels/repo.js";
 import { carryCheckpointGates } from "../checkpoints/recovery.js";
+import { promptByName } from "../library/repo.js";
 import { narrationRegenerationKey } from "../narration/plan.js";
 import { recipeInputSchema } from "../rebuild/recipe-input-schema.js";
 import { planRevision } from "../rebuild/recipe-save.js";
@@ -10,11 +14,13 @@ import { projectStandings } from "../rebuild/runtime-store.js";
 import { discardPreparedAssets } from "../storage/assets.js";
 import { deleteStagedFile } from "../storage/repo.js";
 import { releaseStagedFile } from "../storage/staging-refs.js";
+import { imagePromptFields, replanImagePrompts, sameImagePrompts } from "./image-plan.js";
 import type {
   ProjectRevision,
   RevisionDeps,
   RevisionEdit,
   RevisionMutationResult,
+  RevisionView,
 } from "./model.js";
 import {
   validateAssetReferences,
@@ -70,7 +76,18 @@ export async function saveRevision(
   const checked = checkMutation(deps, identity);
   if (checked !== undefined) return checked;
   const base = requiredView(deps, input.projectId, input.baseRevisionId);
-  const edit = bindNarrationSources(base, submitted);
+  const replanned = replannedImages(deps, base, submitted);
+  if (!replanned.ok)
+    return {
+      ok: false,
+      reason: "invalid-edit",
+      currentRevisionId: base.revision.id,
+      fields: replanned.fields,
+    };
+  const edit = bindNarrationSources(
+    base,
+    rebrandedEdit(deps.db, base.revision.config, replanned.edit),
+  );
   const fields = [
     ...validateUploads(deps, edit),
     ...validateTemplateIntent(base, edit),
@@ -214,6 +231,46 @@ export async function saveRevision(
     );
   }
 }
+// The image prompts or their Numbers changed: the image definitions are planned again from
+// them (`image-plan.ts`), keeping every image an unchanged prompt already has.
+function replannedImages(
+  deps: RevisionDeps,
+  base: RevisionView,
+  edit: RevisionEdit,
+):
+  | { readonly ok: true; readonly edit: RevisionEdit }
+  | { readonly ok: false; readonly fields: readonly FieldError[] } {
+  const from = base.revision.config.imagePrompts;
+  const to = edit.config.imagePrompts;
+  if (sameImagePrompts(from, to)) return { ok: true, edit };
+  if (edit.config.sources.images !== "generate")
+    return {
+      ok: false,
+      fields: [
+        {
+          field: "imagePrompts",
+          message:
+            "Image prompts are used only while Images is set to Generate. Set Images to Generate on Inputs, or leave the prompts as they were.",
+        },
+      ],
+    };
+  const fields = imagePromptFields(to);
+  if (fields.length > 0) return { ok: false, fields };
+  const plan = replanImagePrompts({
+    from,
+    to,
+    content: edit.content,
+    rendered: edit.config.rendered,
+    values: edit.config.values,
+    body: (name) => promptByName(deps.db, "image", name)?.body,
+    key: () => deps.ids.next(),
+  });
+  if (!plan.ok) return plan;
+  return {
+    ok: true,
+    edit: { ...edit, config: { ...edit.config, rendered: plan.rendered }, content: plan.content },
+  };
+}
 export function advanceHead(
   db: DatabaseSync,
   projectId: string,
@@ -224,6 +281,15 @@ export function advanceHead(
     .prepare("UPDATE project_heads SET revision_id = ? WHERE project_id = ? AND revision_id = ?")
     .run(revision.id, projectId, baseRevisionId);
   if (Number(result.changes) !== 1) return false;
+  // The project's channel follows its settings: moved in Edit project, or restored to a
+  // version from another channel. A channel since deleted leaves the project where it is.
+  const channelId = revision.config.channelId;
+  if (
+    channelId !== undefined &&
+    resolveChannelId(db, channelId) === channelId &&
+    projectChannelId(db, projectId) !== channelId
+  )
+    setProjectChannel(db, projectId, channelId);
   db.prepare(
     "UPDATE projects SET title = ?, format = ?, config = ?, updated_at = ? WHERE id = ?",
   ).run(

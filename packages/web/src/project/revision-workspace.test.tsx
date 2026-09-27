@@ -328,22 +328,22 @@ it.each(["transport", "readiness", "stale-preview", "conflict"] as const)(
         },
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Rebuild affected outputs" }));
-    await screen.findByRole("button", { name: "Start rebuild" });
+    await user.click(screen.getByRole("button", { name: "Choose what to remake" }));
+    await screen.findByRole("button", { name: /^Remake \d+ outputs?$/ });
     expect(screen.getByRole("button", { name: "Edit project" }).hasAttribute("disabled")).toBe(
       true,
     );
     expect(sent).toEqual([]);
     const acknowledgement = screen.getByRole("checkbox", { name: /cost estimates are unknown/ });
     await user.click(acknowledgement);
-    await user.click(screen.getByRole("button", { name: "Start rebuild" }));
+    await user.click(screen.getByRole("button", { name: /^Remake \d+ outputs?$/ }));
     if (failure === "stale-preview" || failure === "conflict") {
       const alert = await screen.findByRole("alert");
       expect(alert.textContent).toContain("Review this project again.");
       expect(screen.queryByRole("region", { name: "Review affected rebuild" })).toBeNull();
       await waitFor(() => expect(document.activeElement).toBe(alert));
       expect(
-        screen.getByRole("button", { name: "Rebuild affected outputs" }).hasAttribute("disabled"),
+        screen.getByRole("button", { name: "Choose what to remake" }).hasAttribute("disabled"),
       ).toBe(false);
       return;
     }
@@ -354,7 +354,7 @@ it.each(["transport", "readiness", "stale-preview", "conflict"] as const)(
     );
     await waitFor(() => expect(document.activeElement).toBe(alert));
     expect(acknowledgement instanceof HTMLInputElement && acknowledgement.checked).toBe(true);
-    await user.click(screen.getByRole("button", { name: "Start rebuild" }));
+    await user.click(screen.getByRole("button", { name: /^Remake \d+ outputs?$/ }));
     await waitFor(() => expect(sent).toHaveLength(2));
     expect(sent[0]).toBe(sent[1]);
   },

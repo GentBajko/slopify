@@ -4,7 +4,9 @@ import { CopyIcon, DownloadIcon } from "lucide-react";
 import { use, useId, useState } from "react";
 import { z } from "zod";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/kit/button";
+import { MediaFrame } from "@/components/kit/media";
+import { Player } from "@/components/kit/player";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { useOutputText } from "./parts.js";
@@ -67,32 +69,25 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
     );
   };
   return (
-    <section
-      aria-labelledby={`${id}-title`}
-      className="flex min-w-0 flex-col gap-3 border-t border-line pt-4"
-    >
+    <section aria-labelledby={`${id}-title`} className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 id={`${id}-title`} className="engraved text-ink3">
-          Shorts
+        <h3 id={`${id}-title`} className="sl-kicker m-0">
+          {clips.length === 0 ? "Shorts" : `${String(clips.length)} shorts · 9:16`}
         </h3>
         {editable && clips.length > 0 ? (
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => requestEdit({ section: "shorts", change: pickAgain })}
-          >
+          <Button onClick={() => requestEdit({ section: "shorts", change: pickAgain })}>
             Pick different moments
           </Button>
         ) : null}
       </div>
       {clips.length === 0 ? (
-        <p className="text-small text-ink2">
+        <p className="m-0 text-small text-ink-2">
           {stage.state === "running"
             ? "The clips are picked after the subtitle timing."
             : "Not made yet. They are made with the video."}
         </p>
       ) : (
-        <ul className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3">
+        <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-x-5 gap-y-7 p-0">
           {clips.map((clip) => (
             <ShortCard
               key={clip.number}
@@ -156,7 +151,7 @@ function ShortCard({
   const id = useId();
   const media = useOutputMedia(video);
   const progress = failed
-    ? "Couldn't make this short. Open Error details above to see why, then Retry stage."
+    ? "Couldn't make this short. Open Error details in the Video section to see why."
     : state !== "running"
       ? "Not made yet. It is made with the video."
       : images < wanted
@@ -165,58 +160,50 @@ function ShortCard({
   return (
     <li aria-labelledby={`${id}-title`} className="flex min-w-0 flex-col gap-2">
       {video !== undefined && media !== undefined ? (
-        // biome-ignore lint/a11y/useMediaCaption: the captions are burned into the short.
-        <video
-          key={video.id}
-          controls
-          preload="metadata"
-          src={media.url}
-          aria-label={`Short ${String(clip.number)}`}
-          className="aspect-[9/16] w-full rounded-control bg-screen"
-        />
-      ) : (
-        <div
-          className={`flex aspect-[9/16] w-full items-center justify-center rounded-control bg-panel2 p-3 text-center text-small ${failed ? "text-red" : "text-ink2"}`}
-        >
-          {progress}
+        <Player key={video.id} src={media.url} label={`Short ${String(clip.number)}`} portrait />
+      ) : failed || state !== "running" ? (
+        <div className="sl-media__frame sl-media__frame--portrait">
+          <p
+            className={`m-0 flex size-full items-center justify-center p-3 text-center text-small ${failed ? "text-danger" : "text-ink-3"}`}
+          >
+            {progress}
+          </p>
         </div>
+      ) : (
+        <MediaFrame alt={`Short ${String(clip.number)}`} aspect="portrait" generating={progress} />
       )}
       <div className="flex min-w-0 items-start justify-between gap-2">
         <h4 id={`${id}-title`} className="min-w-0 break-words text-small font-semibold text-ink">
           {clip.title}
         </h4>
         <Button
-          type="button"
-          variant="ghost"
+          variant="quiet"
+          size="small"
           aria-label={`Copy short ${String(clip.number)}'s title, description and hashtags`}
           onClick={onCopy}
         >
-          <CopyIcon aria-hidden="true" className="size-[14px] shrink-0" />
+          <CopyIcon aria-hidden="true" strokeWidth={1.75} />
           Copy
         </Button>
       </div>
-      <p className="text-label text-ink3">
+      <p className="m-0 text-label text-ink-3">
         {duration(video?.durationMs ?? Math.round((clip.end - clip.start) * 1000))}
       </p>
-      <p className="break-words text-small text-ink2">{clip.description}</p>
-      <p className="break-words text-label text-ink3">{link}</p>
-      <p className="break-words text-small text-ink2">{clip.hashtags.join(" ")}</p>
+      <p className="m-0 break-words text-small text-ink-2">{clip.description}</p>
+      <p className="m-0 break-words text-label text-ink-3">{link}</p>
+      <p className="m-0 break-words text-small text-ink-2">{clip.hashtags.join(" ")}</p>
       <ReviewVerdict review={review} projectId={projectId} busy={state === "running"} />
       {/* The folder is the stage's one Open folder; each short only downloads here. */}
       {video !== undefined && media !== undefined ? (
-        <a
-          href={media.url}
-          download
-          className="inline-flex items-center gap-[5px] self-start rounded-control text-small text-ink2 hover:text-ink"
-        >
-          <DownloadIcon aria-hidden="true" className="size-[14px] shrink-0" />
+        <a href={media.url} download className="sl-btn sl-btn--quiet sl-btn--small self-start">
+          <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
           Download
         </a>
       ) : null}
       {onRemake === undefined ? null : (
         <Button
-          type="button"
-          variant="ghost"
+          variant="quiet"
+          size="small"
           className="self-start"
           aria-label={`Make short ${String(clip.number)} again`}
           onClick={onRemake}

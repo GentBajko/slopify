@@ -52,7 +52,7 @@ export function brandedForm(
   };
 }
 
-function brandDocument(db: DatabaseSync, brand: BrandKit): PlayDraftForm["document"] {
+export function brandDocument(db: DatabaseSync, brand: BrandKit): PlayDraftForm["document"] {
   const name = brand.documentTheme;
   if (name === undefined) return undefined;
   const builtIn = documentThemes.find((theme) => theme === name);
@@ -89,6 +89,8 @@ export function brandedRun(
   return {
     ...draft,
     channelId: channel.id,
+    // Kept only when off, so a run with the kit on saves the config it always did.
+    ...(useBrandKit ? {} : { useBrandKit: false as const }),
     ...(draft.subtitles !== undefined && Object.keys(colours).length > 0
       ? { subtitles: { ...colours, ...draft.subtitles } }
       : {}),

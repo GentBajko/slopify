@@ -73,7 +73,7 @@ export async function joinNarration(deps: JoinDeps, input: JoinInput): Promise<n
   if (first === undefined) {
     // The stage refuses an empty narration before it gets here, so this is a bug.
     throw new Error(
-      "Slopify hit an internal error (there is no narration audio to join). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (there is no narration audio to join). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   }
   mkdirSync(dirname(input.output), { recursive: true, mode: 0o700 });

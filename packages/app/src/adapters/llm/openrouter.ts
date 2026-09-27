@@ -231,7 +231,7 @@ function streamFailure(status: number, detail: string): string {
         "OpenRouter",
         "stopped part-way through the answer",
         detail,
-        "Use Retry stage; if it keeps happening, choose another model in the Providers section of Edit project.",
+        "Use Try again; if it keeps happening, choose another model in the Providers section of Edit project.",
       );
 }
 

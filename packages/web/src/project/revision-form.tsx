@@ -14,9 +14,9 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
 import { useApp } from "@/app-context";
 import { DocumentThemePicker } from "@/components/document-theme-picker";
-import { Button } from "@/components/ui/button";
-import { Input, Textarea } from "@/components/ui/input";
-import { Picker } from "@/components/ui/picker";
+import { Button } from "@/components/kit/button";
+import { Field, Input, Select, Textarea } from "@/components/kit/field";
+import { Rule } from "@/components/kit/layout";
 import { cn } from "@/lib/utils";
 import { FormatPicker } from "@/play/format-picker";
 import { sourceOptions } from "@/play/state";
@@ -25,6 +25,7 @@ import { subtitlesFor } from "@/subtitles/config";
 import { SubtitleControls } from "@/subtitles/controls";
 import { useVideoEditControls } from "@/video/edit-controls";
 import { StylePreview } from "@/video/style-preview";
+import { EditChannel } from "./edit-channel.js";
 import { changeSource, editOfForm } from "./revision-form-state.js";
 import { RevisionNarration } from "./revision-narration.js";
 import { RevisionPrompts } from "./revision-prompts.js";
@@ -33,6 +34,35 @@ import { RevisionReviews } from "./revision-reviews.js";
 import { RevisionShorts } from "./revision-shorts.js";
 import type { EditorProps, EditSection } from "./revision-workspace.js";
 import { RevisionYoutube } from "./revision-youtube.js";
+
+const stageLabels: Readonly<Record<(typeof stageKinds)[number], string>> = {
+  research: "Research source",
+  article: "Article source",
+  audio: "Audio source",
+  images: "Images source",
+  thumbnail: "Thumbnail source",
+  video: "Video source",
+  document: "Document source",
+};
+
+// A group of settings inside a section: a sub-head, then its fields two to a row on desktop.
+function Group({
+  title,
+  children,
+  columns = true,
+}: {
+  readonly title: string;
+  readonly children: ReactNode;
+  readonly columns?: boolean;
+}) {
+  return (
+    <div className="space-y-4">
+      <h3 className="m-0 text-title-3">{title}</h3>
+      <div className={cn("grid min-w-0 gap-4", columns && "md:grid-cols-2")}>{children}</div>
+    </div>
+  );
+}
+
 export function RevisionForm(
   props: EditorProps & { readonly renderContent?: (props: EditorProps) => ReactNode },
 ): import("react").ReactElement {
@@ -117,11 +147,13 @@ export function RevisionForm(
     },
   ];
   const current = sections.some((one) => one.id === section) ? section : "inputs";
-  const panel = (id: EditSection) => cn("min-w-0 space-y-3", current === id ? undefined : "hidden");
+  const panel = (id: EditSection) => cn("min-w-0 space-y-6", current === id ? undefined : "hidden");
+  const number = (value: number) => (Number.isFinite(value) ? value : "");
+  const video = config.sources.video !== "off";
   return (
-    <div className="grid min-w-0 gap-6 md:grid-cols-[180px_minmax(0,1fr)]">
+    <div className="grid min-w-0 gap-8 md:grid-cols-[180px_minmax(0,1fr)]">
       <nav aria-label="Edit sections" className="min-w-0 md:sticky md:top-16 md:self-start">
-        <ul className="flex gap-1 overflow-x-auto [scrollbar-width:none] md:flex-col">
+        <ul className="m-0 flex list-none gap-1 overflow-x-auto p-0 [scrollbar-width:none] md:flex-col">
           {sections.map((one) => (
             <li key={one.id} className="shrink-0">
               <button
@@ -131,20 +163,20 @@ export function RevisionForm(
                 className={cn(
                   "flex min-h-9 w-full items-center justify-between gap-3 rounded-control px-3 text-left whitespace-nowrap",
                   one.id === current
-                    ? "bg-panel2 font-semibold text-ink shadow-[inset_2px_0_0_var(--color-lamp-run)]"
-                    : "text-ink2 hover:bg-panel2 hover:text-ink",
+                    ? "bg-raised font-semibold text-ink shadow-[inset_2px_0_0_var(--color-accent)]"
+                    : "text-ink-2 hover:bg-raised hover:text-ink",
                 )}
               >
                 {one.label}
                 {one.badge === undefined ? null : (
-                  <span className="text-label font-normal text-ink3">{one.badge}</span>
+                  <span className="text-label font-normal text-ink-3">{one.badge}</span>
                 )}
               </button>
             </li>
           ))}
         </ul>
       </nav>
-      <div className="min-w-0 space-y-3 rounded-panel border border-line bg-panel p-4">
+      <div className="min-w-0 space-y-6">
         {Object.entries({
           providers: providers.error,
           voices: voices.error,
@@ -154,13 +186,13 @@ export function RevisionForm(
           error === null
             ? []
             : [
-                <p key={name} role="alert" className="text-small text-red">
+                <p key={name} role="alert" className="m-0 text-small text-danger">
                   {error.message}
                 </p>,
               ],
         )}
         {fields.length === 0 ? null : (
-          <ul role="alert">
+          <ul role="alert" className="m-0 space-y-1 pl-5 text-small text-danger">
             {fields.map((field) => (
               <li key={`${field.field}-${field.message}`}>
                 {field.field}: {field.message}
@@ -169,115 +201,120 @@ export function RevisionForm(
           </ul>
         )}
         <section aria-label="Inputs" hidden={current !== "inputs"} className={panel("inputs")}>
-          <label htmlFor={`${formId}-title`} className="block space-y-1 text-small">
-            Project title
-            <Input
-              id={`${formId}-title`}
-              value={config.title}
-              maxLength={titleMax}
-              onChange={(event) =>
-                onChange({ ...edit, config: { ...config, title: event.target.value } })
-              }
+          <Group title="Project">
+            <Field label="Project title" error={problem("title")} className="md:col-span-2">
+              <Input
+                value={config.title}
+                maxLength={titleMax}
+                onChange={(event) =>
+                  onChange({ ...edit, config: { ...config, title: event.target.value } })
+                }
+              />
+            </Field>
+            <div className="md:col-span-2">
+              <FormatPicker
+                value={config.format}
+                onPick={(format) => onChange({ ...edit, config: { ...config, format } })}
+              />
+            </div>
+          </Group>
+          <Rule />
+          <Group title="Channel" columns={false}>
+            <EditChannel
+              edit={edit}
+              saved={view.revision.config}
+              problem={problem}
+              onChange={onChange}
             />
-          </label>
-          <FormatPicker
-            value={config.format}
-            onPick={(format) => onChange({ ...edit, config: { ...config, format } })}
-          />
-          {stageKinds.map((kind) => (
-            <label
-              htmlFor={`${formId}-source-${kind}`}
-              key={kind}
-              className="flex min-w-0 flex-col gap-1 text-small"
-            >
-              {kind} source
-              <Picker
-                id={`${formId}-source-${kind}`}
-                value={sourceOf(config.sources, kind)}
-                onChange={(event) => {
-                  const option = sourceOptions(kind).find(
-                    (one) => one.value === event.target.value,
-                  );
-                  if (option === undefined) return;
-                  const next = changeSource(edit, kind, option.value);
-                  onChange(
-                    kind === "article" && option.value === "provide" && !edit.content.articleEdited
-                      ? {
-                          ...next,
-                          content: {
-                            ...next.content,
-                            articleMarkdown: view.articleMarkdown ?? edit.content.articleMarkdown,
-                          },
-                        }
-                      : next,
-                  );
+          </Group>
+          <Rule />
+          <Group title="Stages">
+            {stageKinds.map((kind) => (
+              <Field key={kind} label={stageLabels[kind]} error={problem(`sources.${kind}`)}>
+                <Select
+                  value={sourceOf(config.sources, kind)}
+                  onChange={(event) => {
+                    const option = sourceOptions(kind).find(
+                      (one) => one.value === event.target.value,
+                    );
+                    if (option === undefined) return;
+                    const next = changeSource(edit, kind, option.value);
+                    onChange(
+                      kind === "article" &&
+                        option.value === "provide" &&
+                        !edit.content.articleEdited
+                        ? {
+                            ...next,
+                            content: {
+                              ...next.content,
+                              articleMarkdown: view.articleMarkdown ?? edit.content.articleMarkdown,
+                            },
+                          }
+                        : next,
+                    );
+                  }}
+                >
+                  {sourceOptions(kind).map((option) => (
+                    <option
+                      key={option.value}
+                      value={option.value}
+                      disabled={
+                        kind === "video" &&
+                        option.value === "generate" &&
+                        config.sources.images === "off"
+                      }
+                    >
+                      {option.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            ))}
+            {config.sources.images === "off" ? (
+              <p className="m-0 text-small text-ink-2 md:col-span-2">
+                Images are Off. Video is also Off in these changes.
+              </p>
+            ) : null}
+            <Field label="Document theme" id={`${formId}-document-theme`}>
+              <DocumentThemePicker
+                id={`${formId}-document-theme`}
+                disabled={sourceOf(config.sources, "document") === "off"}
+                value={config.document}
+                onChange={(document) => {
+                  onChange({ ...edit, config: { ...config, document } });
                 }}
+              />
+            </Field>
+          </Group>
+          <Rule />
+          <Group title="Timing">
+            <Field label="Silence gap (seconds)" error={problem("silenceGapSeconds")}>
+              <Input
+                type="number"
+                min={0}
+                max={silenceGapSecondsMax}
+                step={0.1}
+                value={number(config.silenceGapSeconds)}
+                onChange={(event) =>
+                  onChange({
+                    ...edit,
+                    config: { ...config, silenceGapSeconds: Number(event.target.value) },
+                  })
+                }
+              />
+            </Field>
+            {config.sources.audio === "off" ? null : (
+              <Field
+                label="Silence at start and end (seconds)"
+                help="Quiet time before the narration starts and after it ends."
+                error={problem("edgeSilenceSeconds")}
               >
-                {sourceOptions(kind).map((option) => (
-                  <option
-                    key={option.value}
-                    value={option.value}
-                    disabled={
-                      kind === "video" &&
-                      option.value === "generate" &&
-                      config.sources.images === "off"
-                    }
-                  >
-                    {option.label}
-                  </option>
-                ))}
-              </Picker>
-            </label>
-          ))}
-          {config.sources.images === "off" ? (
-            <p>Images are Off. Video is also Off in these changes.</p>
-          ) : null}
-          <label
-            htmlFor={`${formId}-document-theme`}
-            className="flex min-w-0 flex-col gap-1 text-small"
-          >
-            Document theme
-            <DocumentThemePicker
-              id={`${formId}-document-theme`}
-              disabled={sourceOf(config.sources, "document") === "off"}
-              value={config.document}
-              onChange={(document) => {
-                onChange({ ...edit, config: { ...config, document } });
-              }}
-            />
-          </label>
-          <label htmlFor={`${formId}-gap`} className="block space-y-1 text-small">
-            Silence gap (seconds)
-            <Input
-              id={`${formId}-gap`}
-              type="number"
-              min={0}
-              max={silenceGapSecondsMax}
-              step={0.1}
-              value={Number.isFinite(config.silenceGapSeconds) ? config.silenceGapSeconds : ""}
-              onChange={(event) =>
-                onChange({
-                  ...edit,
-                  config: { ...config, silenceGapSeconds: Number(event.target.value) },
-                })
-              }
-            />
-          </label>
-          {config.sources.audio === "off" ? null : (
-            <div className="space-y-1 text-small">
-              <label htmlFor={`${formId}-edge`} className="block space-y-1">
-                Silence at start and end (seconds)
                 <Input
-                  id={`${formId}-edge`}
-                  aria-describedby={`${formId}-edge-hint`}
                   type="number"
                   min={0}
                   max={edgeSilenceSecondsMax}
                   step={0.5}
-                  aria-invalid={problem("edgeSilenceSeconds") !== undefined}
-                  value={
-                    Number.isFinite(config.edgeSilenceSeconds) ? config.edgeSilenceSeconds : ""
-                  }
+                  value={number(config.edgeSilenceSeconds)}
                   onChange={(event) =>
                     onChange({
                       ...edit,
@@ -285,28 +322,20 @@ export function RevisionForm(
                     })
                   }
                 />
-              </label>
-              <p id={`${formId}-edge-hint`} className="text-label text-ink3">
-                Quiet time before the narration starts and after it ends.
-              </p>
-              {problem("edgeSilenceSeconds") ? (
-                <p className="text-label text-red">{problem("edgeSilenceSeconds")}</p>
-              ) : null}
-            </div>
-          )}
-          {config.sources.video === "off" ? null : (
-            <div className="space-y-1 text-small">
-              <label htmlFor={`${formId}-image-seconds`} className="block space-y-1">
-                Seconds per image
+              </Field>
+            )}
+            {video ? (
+              <Field
+                label="Seconds per image"
+                help="Each image stays on screen this long, then the next one; after the last image they start again."
+                error={problem("imageSeconds")}
+              >
                 <Input
-                  id={`${formId}-image-seconds`}
-                  aria-describedby={`${formId}-image-seconds-hint`}
                   type="number"
                   min={imageSecondsMin}
                   max={imageSecondsMax}
                   step={1}
-                  aria-invalid={problem("imageSeconds") !== undefined}
-                  value={Number.isFinite(config.imageSeconds) ? config.imageSeconds : ""}
+                  value={number(config.imageSeconds)}
                   onChange={(event) =>
                     onChange({
                       ...edit,
@@ -314,29 +343,20 @@ export function RevisionForm(
                     })
                   }
                 />
-              </label>
-              <p id={`${formId}-image-seconds-hint`} className="text-label text-ink3">
-                Each image stays on screen this long, then the next one; after the last image they
-                start again.
-              </p>
-              {problem("imageSeconds") ? (
-                <p className="text-label text-red">{problem("imageSeconds")}</p>
-              ) : null}
-            </div>
-          )}
-          {config.sources.video === "off" ? null : (
-            <div className="space-y-1 text-small">
-              <label htmlFor={`${formId}-zoom`} className="block space-y-1">
-                Zoom (%)
+              </Field>
+            ) : null}
+            {video ? (
+              <Field
+                label="Zoom (%)"
+                help="How far each image zooms in or out over its time on screen. 0 keeps images still."
+                error={problem("zoomPercent")}
+              >
                 <Input
-                  id={`${formId}-zoom`}
-                  aria-describedby={`${formId}-zoom-hint`}
                   type="number"
                   min={0}
                   max={zoomPercentMax}
                   step={0.5}
-                  aria-invalid={problem("zoomPercent") !== undefined}
-                  value={Number.isFinite(config.zoomPercent) ? config.zoomPercent : ""}
+                  value={number(config.zoomPercent)}
                   onChange={(event) =>
                     onChange({
                       ...edit,
@@ -344,22 +364,11 @@ export function RevisionForm(
                     })
                   }
                 />
-              </label>
-              <p id={`${formId}-zoom-hint`} className="text-label text-ink3">
-                How far each image zooms in or out over its time on screen. 0 keeps images still.
-              </p>
-              {problem("zoomPercent") ? (
-                <p className="text-label text-red">{problem("zoomPercent")}</p>
-              ) : null}
-            </div>
-          )}
-          {config.sources.video === "off" ? null : (
-            <div className="space-y-1 text-small">
-              <label htmlFor={`${formId}-motion`} className="flex min-w-0 flex-col gap-1">
-                Motion
-                <Picker
-                  id={`${formId}-motion`}
-                  aria-describedby={`${formId}-motion-hint`}
+              </Field>
+            ) : null}
+            {video ? (
+              <Field label="Motion" help="How each image moves while it's on screen.">
+                <Select
                   value={config.motionStyle}
                   onChange={(event) =>
                     onChange({
@@ -373,95 +382,105 @@ export function RevisionForm(
                       {motionStyleLabels[style]}
                     </option>
                   ))}
-                </Picker>
-              </label>
-              <p id={`${formId}-motion-hint`} className="text-label text-ink3">
-                How each image moves while it's on screen.
-              </p>
-            </div>
-          )}
-          {config.sources.video === "off" ? null : videoEdit.cuts}
-          {config.sources.video === "off" ? null : videoEdit.look}
-          {(["intro", "outro"] as const).map((category) => (
-            <label
-              htmlFor={`${formId}-entry-${category}`}
-              key={category}
-              className="flex min-w-0 flex-col gap-1 text-small"
-            >
-              {category}
-              <Picker
-                id={`${formId}-entry-${category}`}
-                value={config[category]?.name ?? ""}
-                onChange={(event) => {
-                  const selected = entries.data?.entries.find(
-                    (entry) => entry.category === category && entry.name === event.target.value,
-                  );
-                  const next = { ...config };
-                  if (selected === undefined) delete next[category];
-                  else next[category] = { name: selected.name, mode: selected.mode };
-                  onChange(
-                    editOfForm({
-                      ...edit,
-                      config: next,
-                      content:
-                        selected === undefined
-                          ? edit.content
-                          : {
-                              ...edit.content,
-                              promptTemplates: {
-                                ...edit.content.promptTemplates,
-                                [category]: selected.body,
+                </Select>
+              </Field>
+            ) : null}
+          </Group>
+          {video ? (
+            <>
+              <Rule />
+              <Group title="Cuts and look" columns={false}>
+                {videoEdit.cuts}
+                {videoEdit.look}
+              </Group>
+            </>
+          ) : null}
+          <Rule />
+          <Group title="Intro and outro">
+            {(["intro", "outro"] as const).map((category) => (
+              <Field key={category} label={category === "intro" ? "Intro" : "Outro"}>
+                <Select
+                  value={config[category]?.name ?? ""}
+                  onChange={(event) => {
+                    const selected = entries.data?.entries.find(
+                      (entry) => entry.category === category && entry.name === event.target.value,
+                    );
+                    const next = { ...config };
+                    if (selected === undefined) delete next[category];
+                    else next[category] = { name: selected.name, mode: selected.mode };
+                    onChange(
+                      editOfForm({
+                        ...edit,
+                        config: next,
+                        content:
+                          selected === undefined
+                            ? edit.content
+                            : {
+                                ...edit.content,
+                                promptTemplates: {
+                                  ...edit.content.promptTemplates,
+                                  [category]: selected.body,
+                                },
                               },
-                            },
-                    }),
-                  );
-                }}
-              >
-                <option value="">Off</option>
-                {config[category] !== undefined &&
-                !entries.data?.entries.some(
-                  (entry) => entry.category === category && entry.name === config[category]?.name,
-                ) ? (
-                  <option value={config[category]?.name}>
-                    {config[category]?.name} (saved entry)
-                  </option>
-                ) : null}
-                {entries.data?.entries
-                  .filter((entry) => entry.category === category)
-                  .map((entry) => (
-                    <option key={entry.id} value={entry.name}>
-                      {entry.name}
+                      }),
+                    );
+                  }}
+                >
+                  <option value="">Off</option>
+                  {config[category] !== undefined &&
+                  !entries.data?.entries.some(
+                    (entry) => entry.category === category && entry.name === config[category]?.name,
+                  ) ? (
+                    <option value={config[category]?.name}>
+                      {config[category]?.name} (saved entry)
                     </option>
-                  ))}
-              </Picker>
-            </label>
-          ))}
+                  ) : null}
+                  {entries.data?.entries
+                    .filter((entry) => entry.category === category)
+                    .map((entry) => (
+                      <option key={entry.id} value={entry.name}>
+                        {entry.name}
+                      </option>
+                    ))}
+                </Select>
+              </Field>
+            ))}
+          </Group>
           {config.sources.research === "provide" ? (
-            <label htmlFor={`${formId}-research`} className="block space-y-1 text-small">
-              Research notes
-              <Textarea
-                id={`${formId}-research`}
-                rows={6}
-                value={config.provided.research ?? ""}
-                onChange={(event) =>
-                  onChange({
-                    ...edit,
-                    config: {
-                      ...config,
-                      provided: { ...config.provided, research: event.target.value },
-                    },
-                  })
-                }
-              />
-            </label>
+            <>
+              <Rule />
+              <Group title="Research" columns={false}>
+                <Field label="Research notes" error={problem("provided.research")}>
+                  <Textarea
+                    rows={6}
+                    value={config.provided.research ?? ""}
+                    onChange={(event) =>
+                      onChange({
+                        ...edit,
+                        config: {
+                          ...config,
+                          provided: { ...config.provided, research: event.target.value },
+                        },
+                      })
+                    }
+                  />
+                </Field>
+              </Group>
+            </>
           ) : null}
         </section>
         <section aria-label="Article" hidden={current !== "article"} className={panel("article")}>
-          <label htmlFor={`${formId}-article`} className="block space-y-1 text-small">
-            Article text
+          <Field
+            label="Article text"
+            error={problem("content.articleMarkdown") ?? problem("provided.article")}
+            help={
+              edit.content.articleEdited
+                ? "Your edited article is kept when other settings change. Regenerating it replaces it after the rebuild review."
+                : undefined
+            }
+          >
             <Textarea
-              id={`${formId}-article`}
-              rows={6}
+              rows={12}
               maxLength={500000}
               value={
                 (edit.content.articleEdited
@@ -482,16 +501,9 @@ export function RevisionForm(
                 })
               }
             />
-          </label>
-          {edit.content.articleEdited ? (
-            <p>
-              Your edited article is retained when other settings change. Explicit regeneration
-              replaces it after rebuild review.
-            </p>
-          ) : null}
+          </Field>
           {config.sources.article === "generate" ? (
             <Button
-              type="button"
               onClick={() =>
                 onChange({
                   ...edit,
@@ -533,6 +545,7 @@ export function RevisionForm(
           />
           <RevisionPrompts
             edit={edit}
+            saved={view.revision.config.imagePrompts}
             prompts={prompts.data?.prompts ?? []}
             entries={entries.data?.entries ?? []}
             onChange={onChange}
@@ -567,7 +580,7 @@ export function RevisionForm(
               value={config.subtitles ?? defaultSubtitles}
               format={config.format}
               audioEnabled={config.sources.audio !== "off"}
-              videoEnabled={config.sources.video !== "off"}
+              videoEnabled={video}
               onChange={(subtitles) =>
                 onChange({
                   ...edit,
@@ -579,7 +592,7 @@ export function RevisionForm(
             />
           </div>
           {/* Mounted only while the section is open: each change renders a few seconds of video. */}
-          {current !== "subtitles" || config.sources.video === "off" ? null : (
+          {current !== "subtitles" || !video ? null : (
             <StylePreview
               settings={{
                 format: config.format,

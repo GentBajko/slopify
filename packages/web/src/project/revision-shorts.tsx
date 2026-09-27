@@ -14,8 +14,8 @@ import {
 } from "@app/slices/shorts/model.js";
 import { clipBounds, type ShortPick } from "@app/slices/shorts/pick.js";
 import { type ReactElement, useId, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Picker } from "@/components/ui/picker";
+import { Button } from "@/components/kit/button";
+import { Field, Select } from "@/components/kit/field";
 import { Shorts } from "@/play/shorts";
 import type { ShortsForm } from "@/play/state";
 import { editOfForm, setPrompt } from "./revision-form-state";
@@ -204,11 +204,11 @@ function Music({
   return (
     <div className="basis-full space-y-2">
       {pending || set ? (
-        <p className="flex flex-wrap items-center gap-2 text-small text-ink2">
+        <p className="flex flex-wrap items-center gap-2 text-small text-ink-2">
           {pending
             ? "New background music chosen. It is mixed under every short when you save and Resume."
             : "Background music plays quietly under every short and dips while the narrator speaks."}
-          <Button type="button" variant="ghost" disabled={disabled} onClick={remove}>
+          <Button type="button" variant="quiet" disabled={disabled} onClick={remove}>
             Remove the music
           </Button>
         </p>
@@ -298,16 +298,16 @@ function PickedClips({
   return (
     <section aria-labelledby={`${id}-clips`} className="space-y-3 border-t border-line pt-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h4 id={`${id}-clips`} className="engraved text-ink3">
+        <h4 id={`${id}-clips`} className="sl-kicker m-0">
           Picked clips
         </h4>
         {again ? (
-          <p className="flex flex-wrap items-center gap-2 text-small text-done">
+          <p className="flex flex-wrap items-center gap-2 text-small text-accent-ink">
             The moments will be picked again when you save and Resume; clips on the same sentences
             keep their images.
             <Button
               type="button"
-              variant="ghost"
+              variant="quiet"
               onClick={() =>
                 onChange({
                   ...edit,
@@ -325,7 +325,7 @@ function PickedClips({
         )}
       </div>
       {repicking && !again ? (
-        <p className="text-small text-ink2">
+        <p className="text-small text-ink-2">
           These settings pick the moments again when you save and Resume, so the clips below can be
           adjusted once the new ones are picked.
         </p>
@@ -395,7 +395,7 @@ function ClipRow({
   const nudge = (label: string, first: number, last: number, enabled: boolean) => (
     <Button
       type="button"
-      variant="ghost"
+      variant="quiet"
       aria-label={`${label} of short ${number}`}
       disabled={locked || !enabled}
       onClick={() => onRange(first, last)}
@@ -407,46 +407,43 @@ function ClipRow({
   return (
     <li
       aria-labelledby={`${id}-title`}
-      className="space-y-2 rounded-control border border-line p-3"
+      className="space-y-2 border-t border-line pt-3 first:border-t-0 first:pt-0"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h5 id={`${id}-title`} className="min-w-0 text-small font-semibold text-ink">
           Short {number} · {clip.title}
         </h5>
-        <span className="text-label text-ink3">
+        <span className="text-label text-ink-3">
           Sentences {String(clip.first)}-{String(clip.last)} · {String(seconds)} s
           {adjusted ? " · set by hand" : ""}
         </span>
       </div>
       {sentences.length === 0 ? (
-        <p className="text-small text-ink2">
+        <p className="text-small text-ink-2">
           These shorts were picked before clips could be moved by hand. Use Pick different moments
           to adjust them.
         </p>
       ) : (
         <>
-          <p className="flex flex-wrap items-center gap-x-2 text-small text-ink2">
+          <p className="flex flex-wrap items-center gap-x-2 text-small text-ink-2">
             <span className="min-w-0 flex-1">Starts: “{text(clip.first)}”</span>
             {nudge("Earlier start", clip.first - 1, clip.last, clip.first > 1)}
             {nudge("Later start", clip.first + 1, clip.last, clip.first < clip.last)}
           </p>
-          <p className="flex flex-wrap items-center gap-x-2 text-small text-ink2">
+          <p className="flex flex-wrap items-center gap-x-2 text-small text-ink-2">
             <span className="min-w-0 flex-1">Ends: “{text(clip.last)}”</span>
             {nudge("Earlier end", clip.first, clip.last - 1, clip.last > clip.first)}
             {nudge("Later end", clip.first, clip.last + 1, clip.last < sentences.length)}
           </p>
           {own ? (
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="grid gap-3 md:grid-cols-2">
               {(["first", "last"] as const).map((end) => (
-                <label
+                <Field
                   key={end}
-                  htmlFor={`${id}-${end}`}
-                  className="flex items-center gap-2 text-small"
+                  id={`${id}-${end}`}
+                  label={end === "first" ? "Start sentence" : "End sentence"}
                 >
-                  {end === "first" ? "Start sentence" : "End sentence"}
-                  <Picker
-                    id={`${id}-${end}`}
-                    className="w-auto max-w-[320px]"
+                  <Select
                     value={String(clip[end])}
                     disabled={locked}
                     onChange={(event) => {
@@ -462,28 +459,28 @@ function ClipRow({
                           : sentence.text}
                       </option>
                     ))}
-                  </Picker>
-                </label>
+                  </Select>
+                </Field>
               ))}
             </div>
           ) : null}
         </>
       )}
       {problem !== undefined ? (
-        <p role="alert" className="text-small text-red">
+        <p role="alert" className="text-small text-danger">
           {problem}
         </p>
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
         {sentences.length === 0 ? null : (
-          <Button type="button" variant="ghost" disabled={locked} onClick={() => setOwn(!own)}>
+          <Button type="button" variant="quiet" disabled={locked} onClick={() => setOwn(!own)}>
             {own ? "Hide the sentence lists" : "Use my own range"}
           </Button>
         )}
         {adjusted ? (
           <Button
             type="button"
-            variant="ghost"
+            variant="quiet"
             disabled={locked}
             onClick={() => {
               const model = picked.shorts.find((one) => one.number === clip.number);
@@ -494,9 +491,9 @@ function ClipRow({
           </Button>
         ) : null}
         {remade ? (
-          <p className="flex flex-wrap items-center gap-2 text-small text-done">
+          <p className="flex flex-wrap items-center gap-2 text-small text-accent-ink">
             Short {number} will be made again, with new images, when you save and Resume.
-            <Button type="button" variant="ghost" onClick={() => onRemake(false)}>
+            <Button type="button" variant="quiet" onClick={() => onRemake(false)}>
               Keep this short
             </Button>
           </p>

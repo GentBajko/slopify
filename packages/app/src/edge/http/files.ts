@@ -74,7 +74,7 @@ function missing(
     "unknown-asset":
       "This project has no file by that name. Reload the page to see its current files.",
     "missing-file":
-      "This file was deleted or moved from the project folder. Use Re-run section on the project page to make it again.",
+      "This file was deleted or moved from the project folder. Use More → make it again in its section on the project page to make it again.",
     "no-images":
       "This project has no images or thumbnail yet. Wait for the Images step to finish, then try again.",
   };

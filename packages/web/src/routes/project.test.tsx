@@ -17,7 +17,6 @@ import {
   deps,
   finished,
   output,
-  ready,
   recoveryAccepted,
   selectProjectStage,
   stage,
@@ -25,19 +24,18 @@ import {
 
 afterEach(cleanup);
 
-// Cancel run sits in the page bar's "More" menu, behind its confirmation.
+// Cancel the run sits in the title row's "More" menu, behind its confirmation.
 async function pressCancelRun(): Promise<void> {
   await userEvent.click(await screen.findByRole("button", { name: "More project actions" }));
-  await userEvent.click(await screen.findByRole("menuitem", { name: "Cancel run" }));
+  await userEvent.click(await screen.findByRole("menuitem", { name: "Cancel the run…" }));
 }
 
-describe("the project rundown", () => {
+const nextAction = () => screen.getByRole("region", { name: "Next action" });
+
+describe("the project workspace", () => {
   it("shows a skeleton in the final shape while the project is coming", async () => {
-    const { container } = renderRouted(<ProjectRoute projectId="p1" />, testDeps({}));
-    await waitFor(() => {
-      // Five sections: research and the thumbnail live inside Article and Images.
-      expect(container.querySelectorAll(".rounded-full").length).toBe(5);
-    });
+    renderRouted(<ProjectRoute projectId="p1" />, testDeps({}));
+    expect(await screen.findByRole("status", { name: "Loading project" })).not.toBeNull();
   });
 
   it("names the problem when the project cannot be read", async () => {
@@ -45,67 +43,57 @@ describe("the project rundown", () => {
       <ProjectRoute projectId="p1" />,
       deps({ "GET /api/projects/p1": problemAnswer("No project has that id.", 404) }),
     );
-    expect(await screen.findByText("No project has that id.")).not.toBeNull();
+    expect(await screen.findByText(/No project has that id\./)).not.toBeNull();
   });
 
-  it("gives every section a lamp, a state word and a live announcement", async () => {
+  it("lists the sections in the rail, each stage with its lamp, then the views", async () => {
     renderRouted(<ProjectRoute projectId="p1" />, deps());
-    const navigation = await screen.findByRole("navigation", { name: "Project stages" });
+    const rail = await screen.findByRole("navigation", { name: "Project sections" });
     expect(
-      within(navigation)
+      within(rail)
         .getAllByRole("button")
-        .map((cell) => cell.textContent),
-    ).toEqual([
-      expect.stringMatching(/^Article/),
-      expect.stringMatching(/^Audio/),
-      expect.stringMatching(/^Images/),
-      expect.stringMatching(/^Video/),
-      expect.stringMatching(/^Document/),
-    ]);
-    const announced = screen.getAllByRole("status").map((live) => live.textContent);
-    expect(announced).toContain("Video: done");
-    expect(announced).toContain("Document: skipped");
-    // Research and the thumbnail have no cell of their own to announce.
-    expect(announced.some((line) => line?.startsWith("Research"))).toBe(false);
-    expect(announced.some((line) => line?.startsWith("Thumbnail"))).toBe(false);
+        .map((item) => item.textContent),
+    ).toEqual(["Article", "Narration", "Images", "Video", "Cost", "Live", "Settings", "History"]);
+    expect(
+      within(rail).getByRole("button", { name: "Video" }).querySelector("[data-tone]"),
+    ).not.toBeNull();
+    expect(screen.getAllByRole("status").map((live) => live.textContent)).toContain(
+      "Project: Done",
+    );
   });
 
-  it("shows the Document row switched off, and its PDF once rendered", async () => {
-    const off = renderRouted(<ProjectRoute projectId="p1" />, deps());
-    const skipped = await selectProjectStage("Document");
-    expect(within(skipped).getByText("Document was switched off for this run.")).not.toBeNull();
-    off.unmount();
-
-    const rendered = body({
-      status: "done",
-      stages: [
-        ...finished.stages.filter((one) => one.kind !== "document"),
-        stage("document", "done"),
-      ],
-      outputs: [...finished.outputs, output("document_pdf", "document")],
-    });
+  it("adds the PDF section once the run makes one", async () => {
     renderRouted(
       <ProjectRoute projectId="p1" />,
-      deps({ "GET /api/projects/p1": jsonAnswer(rendered) }),
+      deps({
+        "GET /api/projects/p1": jsonAnswer(
+          body({
+            status: "done",
+            stages: [
+              ...finished.stages.filter((one) => one.kind !== "document"),
+              stage("document", "done"),
+            ],
+            outputs: [...finished.outputs, output("document_pdf", "document")],
+          }),
+        ),
+      }),
     );
-    const navigation = await screen.findByRole("navigation", { name: "Project stages" });
-    expect(within(navigation).getByRole("button", { name: "Document, done" })).not.toBeNull();
-    expect(within(navigation).getByText("PDF · DiceMaster theme")).not.toBeNull();
-    const workspace = await selectProjectStage("Document");
-    expect(within(workspace).getByRole("link", { name: "Download PDF" }).getAttribute("href")).toBe(
+    const pdf = await selectProjectStage("Document");
+    expect(within(pdf).getByText("PDF · DiceMaster theme")).not.toBeNull();
+    expect(within(pdf).getByRole("link", { name: "Download PDF" }).getAttribute("href")).toBe(
       `${testOrigin}/files/p1/document-pdf`,
     );
   });
 
   it("carries a back link to the projects list", async () => {
     renderRouted(<ProjectRoute projectId="p1" />, deps());
-    const back = await screen.findByText("< Projects");
+    const back = await screen.findByRole("link", { name: "Projects" });
     expect(back.getAttribute("href")).toBe("/projects");
   });
 });
 
-describe("the focused project workspace", () => {
-  it("opens the final player and download before a long finished article", async () => {
+describe("the next action", () => {
+  it("opens a finished project on its video, with Prepare upload the one action", async () => {
     renderRouted(
       <ProjectRoute projectId="p1" />,
       deps({
@@ -113,23 +101,21 @@ describe("the focused project workspace", () => {
           new Response(`# The Archlich\n\n${"A long finished article. ".repeat(500)}`),
       }),
     );
-    const workspace = await screen.findByRole("region", { name: "Video workspace" });
-    expect(within(workspace).getByLabelText("Generated video")).not.toBeNull();
+    const video = await screen.findByRole("region", { name: "Video" });
+    expect(within(video).getByLabelText("Generated video")).not.toBeNull();
     expect(await downloadItem("Video (.mp4)")).not.toBeNull();
-    expect(screen.getByRole("link", { name: "Download video" })).not.toBeNull();
-    expect(screen.getByRole("button", { name: "Video, done" }).getAttribute("aria-current")).toBe(
-      "step",
+    expect(within(nextAction()).getByRole("button", { name: "Prepare upload" })).not.toBeNull();
+    // One primary action on the page.
+    const shown = [...document.querySelectorAll(".sl-btn--primary")].filter(
+      (button) => button.closest("[hidden]") === null,
     );
-    expect(screen.queryByRole("region", { name: "Article workspace" })).toBeNull();
-    expect(
-      screen.getByRole("progressbar", { name: "Overall progress" }).getAttribute("aria-valuenow"),
-    ).toBe("100");
+    expect(shown).toHaveLength(1);
     const article = await selectProjectStage("Article");
     expect(await within(article).findByText(/A long finished article/)).not.toBeNull();
-    expect(screen.queryByRole("region", { name: "Video workspace" })).toBeNull();
   });
 
-  it("keeps overall progress visible while reviewing a different stage", async () => {
+  it("offers Pause while the run is at work, and the steps with their state", async () => {
+    const paused = vi.fn();
     renderRouted(
       <ProjectRoute projectId="p1" />,
       deps({
@@ -143,25 +129,23 @@ describe("the focused project workspace", () => {
               stage("images", "pending"),
               stage("thumbnail", "pending"),
               stage("video", "pending"),
-              stage("document", "pending"),
             ],
             outputs: [output("article_md", "article")],
           }),
         ),
+        "POST /api/projects/p1/pause": (request) => {
+          paused();
+          return jsonAnswer(recoveryAccepted)(request);
+        },
       }),
     );
-    await screen.findByRole("region", { name: "Audio workspace" });
-    expect(
-      screen.getByRole("progressbar", { name: "Overall progress" }).getAttribute("aria-valuenow"),
-    ).toBe("25");
-    expect(
-      screen.getByRole("progressbar", { name: "Overall progress" }).getAttribute("aria-valuetext"),
-    ).toContain("1 of 5 stages finished");
-    await selectProjectStage("Article");
-    expect(
-      screen.getByRole("progressbar", { name: "Overall progress" }).getAttribute("aria-valuenow"),
-    ).toBe("25");
-    expect(screen.getByRole("button", { name: "Pause" })).not.toBeNull();
+    await screen.findByRole("region", { name: "Narration" });
+    expect(within(nextAction()).getByText("Making the narration · 1 of 4.")).not.toBeNull();
+    const steps = screen.getByRole("list", { name: "Run steps" });
+    expect(within(steps).getByText("Narration").textContent).toBe("Narration, Running");
+    expect(within(steps).queryByText(/^Research/)).toBeNull();
+    await userEvent.click(within(nextAction()).getByRole("button", { name: "Pause" }));
+    await waitFor(() => expect(paused).toHaveBeenCalledTimes(1));
   });
 });
 
@@ -180,20 +164,19 @@ describe("a failed stage", () => {
     outputs: [output("article_md", "article")],
   });
 
-  it("shows the provider's own words, unaltered, with the attempt count and a Retry", async () => {
+  it("opens on the failed step and shows the provider's own words beside it", async () => {
     renderRouted(
       <ProjectRoute projectId="p1" />,
       deps({ "GET /api/projects/p1": jsonAnswer(failed) }),
     );
-
-    const workspace = await screen.findByRole("region", { name: "Images workspace" });
-    await userEvent.click(within(workspace).getByText("Error details"));
-    // The details open in a popover over the page, so the sentence is read from the page.
-    const line = await screen.findByText(verbatim);
+    const images = await screen.findByRole("region", { name: "Images" });
+    const beside = within(images).getByRole("alert");
+    expect(within(beside).getByText("Images stopped with an error.")).not.toBeNull();
+    await userEvent.click(within(beside).getByText("Error details"));
     // Verbatim: the whole sentence is one text node, neither truncated nor rewritten.
-    expect(line.textContent).toBe(verbatim);
-    expect(within(workspace).getByText("4 attempts")).not.toBeNull();
-    expect(within(workspace).getByRole("button", { name: "Retry stage" })).not.toBeNull();
+    expect(within(beside).getByText(verbatim).textContent).toBe(verbatim);
+    expect(within(beside).getByRole("button", { name: "Try images again" })).not.toBeNull();
+    expect(within(nextAction()).getByRole("button", { name: "Try images again" })).not.toBeNull();
   });
 
   it("retries the failed stage without a dialog, because a retry destroys nothing", async () => {
@@ -208,27 +191,36 @@ describe("a failed stage", () => {
         },
       }),
     );
-
-    await userEvent.click(await screen.findByRole("button", { name: "Retry stage" }));
+    await screen.findByRole("region", { name: "Next action" });
+    await userEvent.click(within(nextAction()).getByRole("button", { name: "Try images again" }));
     await waitFor(() => {
       expect(retried).toHaveBeenCalledTimes(1);
     });
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("disables Retry and names the missing key when the provider has none", async () => {
+  it("sends a rejected key to the provider settings instead of a retry", async () => {
     renderRouted(
       <ProjectRoute projectId="p1" />,
       deps({
-        "GET /api/projects/p1": jsonAnswer(failed),
-        "GET /api/providers": jsonAnswer({
-          providers: [{ ...ready[2], readiness: { kind: "keyed", hasKey: false } }],
-        }),
+        "GET /api/projects/p1": jsonAnswer(
+          body({
+            ...failed,
+            status: "failed",
+            stages: failed.stages.map((one) =>
+              one.kind === "images"
+                ? { ...one, failureKind: "missing_key", failureReason: "No key saved." }
+                : one,
+            ),
+            outputs: failed.outputs,
+          }),
+        ),
       }),
     );
-
-    const control = await screen.findByRole("button", { name: "Key Missing" });
-    expect(control.hasAttribute("disabled")).toBe(true);
-    expect(screen.getByRole("link", { name: "Open Settings" })).not.toBeNull();
+    const link = await within(
+      await screen.findByRole("region", { name: "Next action" }),
+    ).findByRole("link", { name: "Open Settings → Providers → fal.ai" });
+    expect(link.getAttribute("href")).toBe("/settings?section=providers");
   });
 });
 
@@ -302,14 +294,16 @@ describe("cancelling a run", () => {
 
   it("offers no Cancel once the run is over", async () => {
     renderRouted(<ProjectRoute projectId="p1" />, deps());
-    await screen.findByRole("navigation", { name: "Project stages" });
+    await screen.findByRole("navigation", { name: "Project sections" });
     await userEvent.click(screen.getByRole("button", { name: "More project actions" }));
     expect(
-      (await screen.findByRole("menuitem", { name: "Cancel run" })).getAttribute("aria-disabled"),
+      (await screen.findByRole("menuitem", { name: "Cancel the run…" })).getAttribute(
+        "aria-disabled",
+      ),
     ).toBe("true");
   });
 
-  it("keeps article output read-only and offers revision editing while a stage runs", async () => {
+  it("keeps article output read-only and offers the settings while a stage runs", async () => {
     renderRouted(
       <ProjectRoute projectId="p1" />,
       deps({ "GET /api/projects/p1": jsonAnswer(running) }),
@@ -317,15 +311,13 @@ describe("cancelling a run", () => {
     await selectProjectStage("Article");
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
     await openProjectTab("Edit");
-    expect(screen.getByRole("button", { name: "Edit project" }).hasAttribute("disabled")).toBe(
-      false,
-    );
+    expect(await screen.findByRole("form", { name: "Edit project" })).not.toBeNull();
   });
 });
 
 describe("the stage bodies", () => {
   it("plays the three narration segments and offers each for download", async () => {
-    const { container } = renderRouted(<ProjectRoute projectId="p1" />, deps());
+    renderRouted(<ProjectRoute projectId="p1" />, deps());
     const workspace = await selectProjectStage("Audio");
 
     const players = [...workspace.querySelectorAll("audio")];
@@ -335,36 +327,38 @@ describe("the stage bodies", () => {
       `${testOrigin}/files/p1/audio-outro`,
     ]);
     expect(screen.getByLabelText("Body narration")).not.toBeNull();
-    expect(
-      await within(
-        container.querySelector('[data-tour="project-audio"]') as HTMLElement,
-      ).findByText("Narrator M"),
-    ).not.toBeNull();
+    expect(await within(workspace).findByText("Narrator M")).not.toBeNull();
     expect(screen.getByText("Chunking: every 500 words")).not.toBeNull();
   });
 
-  it("draws the image grid from the run's own prompt groups", async () => {
-    const { container } = renderRouted(<ProjectRoute projectId="p1" />, deps());
-    await selectProjectStage("Images");
-
-    expect(screen.getByText("Oil painting scenes × 2")).not.toBeNull();
-    const tiles = [...container.querySelectorAll("figure img")];
+  it("draws the image grid from the run's own prompt groups, opening each full size", async () => {
+    renderRouted(<ProjectRoute projectId="p1" />, deps());
+    const images = await selectProjectStage("Images");
+    const slideshow = within(images).getByRole("region", { name: "Slideshow images" });
+    expect(
+      within(slideshow).getByRole("region", { name: "Oil painting scenes × 2" }),
+    ).not.toBeNull();
+    const tiles = [...slideshow.querySelectorAll("figure img")];
     expect(tiles.map((tile) => tile.getAttribute("src"))).toEqual([
       `${testOrigin}/files/p1/image-1`,
       `${testOrigin}/files/p1/image-2`,
     ]);
-    expect(screen.getByRole("link", { name: "Download all" }).getAttribute("href")).toBe(
+    expect(within(slideshow).getByRole("link", { name: "Download all" }).getAttribute("href")).toBe(
       `${testOrigin}/files/p1/images.zip`,
     );
+    await userEvent.click(
+      within(slideshow).getByRole("button", { name: "Open image 2 full size" }),
+    );
+    const lightbox = await screen.findByRole("dialog");
+    expect(within(lightbox).getByText(/^2 of 2/)).not.toBeNull();
   });
 
-  it("plays the video and offers the mp4", async () => {
+  it("plays the video in a real player and offers the mp4", async () => {
     const { container } = renderRouted(<ProjectRoute projectId="p1" />, deps());
-    await screen.findByText("Video");
-
-    expect(container.querySelector("video")?.getAttribute("src")).toBe(
-      `${testOrigin}/files/p1/video`,
-    );
+    await screen.findByRole("region", { name: "Video" });
+    const player = container.querySelector(".sl-player video");
+    expect(player?.getAttribute("src")).toBe(`${testOrigin}/files/p1/video`);
+    expect(player?.hasAttribute("controls")).toBe(true);
     const download = await downloadItem("Video (.mp4)");
     expect(download.getAttribute("href")).toBe(`${testOrigin}/files/p1/video`);
     expect(download.hasAttribute("download")).toBe(true);
@@ -383,27 +377,27 @@ describe("the stage bodies", () => {
     );
   });
 
-  it("shows the thumbnail large at the top of Images, without its prompt", async () => {
+  it("shows the thumbnail above the slideshow images, without its prompt", async () => {
     renderRouted(<ProjectRoute projectId="p1" />, deps());
     const images = await selectProjectStage("Images");
     const thumbnail = within(images).getByRole("region", { name: "Thumbnail" });
     expect(
       within(thumbnail).getByRole("img", { name: "Thumbnail for Rope Tricks" }),
     ).not.toBeNull();
-    expect(within(thumbnail).getByRole("button", { name: "Regenerate thumbnail" })).not.toBeNull();
     expect(
-      within(thumbnail).getByRole("link", { name: "Download thumbnail" }).getAttribute("href"),
+      within(thumbnail).getByRole("button", { name: "Regenerate the thumbnail" }),
+    ).not.toBeNull();
+    expect(
+      within(thumbnail).getByRole("link", { name: "Download the thumbnail" }).getAttribute("href"),
     ).toBe(`${testOrigin}/files/p1/thumbnail`);
-    expect(within(thumbnail).getByRole("button", { name: "Open folder" })).not.toBeNull();
     expect(screen.queryByText("A cracked skull with gemstone eyes")).toBeNull();
-    // The thumbnail comes before the slideshow's own groups.
-    const headings = within(images)
-      .getAllByRole("heading")
-      .map((one) => one.textContent);
-    expect(headings.indexOf("Thumbnail")).toBeLessThan(headings.indexOf("Slideshow images"));
+    const regions = within(images)
+      .getAllByRole("region")
+      .map((one) => one.getAttribute("aria-label"));
+    expect(regions.indexOf("Thumbnail")).toBeLessThan(regions.indexOf("Slideshow images"));
   });
 
-  it("shows a research failure on Article, with the Research tab open and its own Retry", async () => {
+  it("opens on Article for a research failure, with the Research tab open", async () => {
     const retried = vi.fn();
     renderRouted(
       <ProjectRoute projectId="p1" />,
@@ -428,24 +422,18 @@ describe("the stage bodies", () => {
         },
       }),
     );
-    // The failed research is the stage that needs attention, so its section opens first.
-    const article = await screen.findByRole("region", { name: "Article workspace" });
-    expect(
-      within(screen.getByRole("navigation", { name: "Project stages" })).getByRole("button", {
-        name: "Article, failed",
-      }).textContent,
-    ).toContain("Research: Stopped after 1 attempt");
-    expect(
-      within(article).getByText("Research stopped with an error. Open Error details to see why."),
-    ).not.toBeNull();
+    const article = await screen.findByRole("region", { name: "Article" });
+    expect(within(article).getByText("Research stopped with an error.")).not.toBeNull();
     expect(
       within(article).getByRole("tab", { name: "Research" }).getAttribute("aria-selected"),
     ).toBe("true");
-    await userEvent.click(within(article).getByRole("button", { name: "Retry research" }));
+    await userEvent.click(
+      within(nextAction()).getByRole("button", { name: "Try the research again" }),
+    );
     await waitFor(() => expect(retried).toHaveBeenCalledTimes(1));
   });
 
-  it("keeps the thumbnail in its own section when Images is switched off", async () => {
+  it("keeps the thumbnail in Images when the slideshow is switched off", async () => {
     renderRouted(
       <ProjectRoute projectId="p1" />,
       deps({
@@ -462,13 +450,12 @@ describe("the stage bodies", () => {
       }),
     );
     const section = await selectProjectStage("Thumbnail");
-    expect(within(section).getByRole("heading", { name: "Thumbnail", level: 2 })).not.toBeNull();
     expect(within(section).getByRole("img", { name: "Thumbnail for Rope Tricks" })).not.toBeNull();
-    expect(within(section).queryByRole("button", { name: "Re-run stage" })).toBeNull();
+    expect(within(section).queryByRole("region", { name: "Slideshow images" })).toBeNull();
     expect(within(section).queryByText(/switched off/)).toBeNull();
   });
 
-  it("says a failed thumbnail on Images, with its own Retry", async () => {
+  it("says a failed thumbnail on Images, with its retry as the next action", async () => {
     const retried = vi.fn();
     renderRouted(
       <ProjectRoute projectId="p1" />,
@@ -489,17 +476,12 @@ describe("the stage bodies", () => {
         },
       }),
     );
-    const navigation = await screen.findByRole("navigation", { name: "Project stages" });
-    const cell = within(navigation).getByRole("button", { name: "Images, failed" });
-    expect(cell.textContent).toContain("Thumbnail: Stopped after 2 attempts");
-    const images = await selectProjectStage("Images");
-    expect(
-      within(images).getByText("Thumbnail stopped with an error. Open Error details to see why."),
-    ).not.toBeNull();
-    expect(
-      within(images).getByText("No thumbnail was made. Use Retry thumbnail above to try again."),
-    ).not.toBeNull();
-    await userEvent.click(within(images).getByRole("button", { name: "Retry thumbnail" }));
+    const images = await screen.findByRole("region", { name: "Images" });
+    expect(within(images).getByText("Thumbnail stopped with an error.")).not.toBeNull();
+    expect(within(images).getByText("Not made")).not.toBeNull();
+    await userEvent.click(
+      within(nextAction()).getByRole("button", { name: "Try the thumbnail again" }),
+    );
     await waitFor(() => expect(retried).toHaveBeenCalledTimes(1));
   });
 
@@ -516,8 +498,8 @@ describe("the stage bodies", () => {
         ),
       }),
     );
-    await screen.findByText("Video");
-    expect(screen.queryByRole("button", { name: "Re-render" })).toBeNull();
+    await screen.findByRole("region", { name: "Video" });
+    expect(screen.queryByRole("button", { name: "More actions for Video" })).toBeNull();
     expect(screen.getByLabelText("Generated video")).not.toBeNull();
     expect(screen.queryByLabelText("Subtitles", { selector: "select" })).toBeNull();
   });

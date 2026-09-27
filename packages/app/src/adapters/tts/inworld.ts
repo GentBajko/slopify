@@ -74,7 +74,7 @@ async function* synthesizeRequest(
     throw providerError({
       kind: "unsupported",
       message:
-        "Inworld was sent an empty piece of narration. Check the article has text in the Article section of Edit project, then use Retry stage.",
+        "Inworld was sent an empty piece of narration. Check the article has text in the Article section of Edit project, then use Try again.",
     });
   if ((request.model ?? "inworld-tts-2") === "inworld-tts-2" && request.text.length > 4000) {
     yield* inworldAsync(deps, request, key);

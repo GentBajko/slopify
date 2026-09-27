@@ -133,7 +133,7 @@ describe("fal.ai image-to-video", () => {
     const error = await port.animate?.(request(model)).catch((failure: unknown) => failure);
     expect(isProviderError(error)).toBe(true);
     expect(String((error as Error).message)).toMatch(
-      /fal\.ai could not make the video clip.*GPU ran out.*Retry stage/,
+      /fal\.ai could not make the video clip.*GPU ran out.*Try again/,
     );
   });
 

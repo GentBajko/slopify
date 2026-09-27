@@ -148,7 +148,7 @@ export async function resumeAfterRestart(
         log.write("warn", "plan-limits", {
           projectId,
           detail:
-            "A project waiting for CLI limits could not be resumed after the restart; use Resume on the project page.",
+            "A project waiting for CLI limits could not be resumed after the restart; use Continue the run on the project page.",
         });
     } catch (error) {
       log.write("error", "plan-limits", { projectId, detail: causedBy(error) });

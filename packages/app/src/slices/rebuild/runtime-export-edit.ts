@@ -160,7 +160,7 @@ function timingWords(deps: ExportExecutionDeps, context: StageContext, view: Rev
   );
   if (timing === undefined)
     throw new Error(
-      "The narration's word timing, which the video's cuts and chapter cards follow, is missing. Use Re-run section on Video, then Retry stage.",
+      "The narration's word timing, which the video's cuts and chapter cards follow, is missing. Use More → Render the video again in the Video section, then Try again.",
     );
   return wordsSchema.parse(
     JSON.parse(
@@ -202,7 +202,7 @@ async function clipSeconds(
   }
   if (!(ms > 0))
     throw new Error(
-      `Image ${String(place)} is a video clip Slopify can't read, so the video can't show it. Replace it with another clip or an image in Edit project → Images, then Retry stage.`,
+      `Image ${String(place)} is a video clip Slopify can't read, so the video can't show it. Replace it with another clip or an image in Edit project → Images, then Try again.`,
     );
   return ms / 1000;
 }

@@ -9,8 +9,8 @@ describe("an article read back as prose", () => {
     const { container } = render(<Prose markdown={"# Top\n\n## Under\n\n###### Deep"} />);
     const headings = [...container.querySelectorAll("h3")];
     expect(headings.map((heading) => heading.textContent)).toEqual(["Top", "Under", "Deep"]);
-    expect(headings[0]?.className).toContain("text-title");
-    expect(headings[1]?.className).toContain("text-row");
+    expect(headings[0]?.className).toContain("text-title-2");
+    expect(headings[1]?.className).toContain("text-title-3");
   });
 
   it("typesets a bulleted list as a list, not as its source text", () => {
@@ -65,7 +65,7 @@ describe("an article read back as prose", () => {
 
   it("keeps the prose measure the type scale locks", () => {
     const { container } = render(<Prose markdown="Body." />);
-    expect(container.firstElementChild?.className).toContain("max-w-[75ch]");
+    expect(container.firstElementChild?.className).toContain("max-w-[68ch]");
   });
 
   it("renders nothing at all for an empty article", () => {

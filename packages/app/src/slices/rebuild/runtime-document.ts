@@ -42,7 +42,7 @@ export async function executeDocumentRecipe(
       : text("article_md", "article:body");
   if (article === null)
     throw new Error(
-      "The article isn't finished yet, so there's nothing to make the document from. Let the Article stage finish (Resume, or Retry stage on Article), then use Retry stage on Document.",
+      "The article isn't finished yet, so there's nothing to make the document from. Let the Article stage finish (Resume, or Try again on Article), then use Try again on Document.",
     );
   const thumbnail = ready(view, "thumbnail", "thumbnail:image");
   let cover: Uint8Array | null = null;
@@ -53,7 +53,7 @@ export async function executeDocumentRecipe(
       );
     } catch (error) {
       throw new Error(
-        `The document's cover is the project's thumbnail, and its file can't be read (${error instanceof Error ? error.message : String(error)}). Regenerate or upload the thumbnail again (Re-run section on Thumbnail, or Edit project → Thumbnail), then use Retry stage on Document.`,
+        `The document's cover is the project's thumbnail, and its file can't be read (${error instanceof Error ? error.message : String(error)}). Regenerate or upload the thumbnail again (More → make it again in its section on Thumbnail, or Edit project → Thumbnail), then use Try again on Document.`,
         { cause: error },
       );
     }
@@ -99,14 +99,14 @@ function documentView(
     .get(context.work.workId);
   if (view === undefined || row === undefined)
     throw new Error(
-      "Slopify hit an internal error (the project version the document belongs to is missing). Use Retry stage on Document; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (the project version the document belongs to is missing). Use Try again on Document; if it happens again, use Download diagnostics in Settings and report it.",
     );
   const recipe = executionPlan(deps, view, savedCatalogue(row.recipe_context)).recipes.find(
     (one) => one.key === piece.key && one.fingerprint === piece.fingerprint,
   );
   if (recipe === undefined || recipe.unresolved)
     throw new Error(
-      "The project changed after this document was queued, so it no longer matches the saved article. Use Rebuild affected outputs (or Retry stage on Document) to make it from the current version.",
+      "The project changed after this document was queued, so it no longer matches the saved article. Use Choose what to remake (in the project's More menu) (or Try again on Document) to make it from the current version.",
     );
   return view;
 }

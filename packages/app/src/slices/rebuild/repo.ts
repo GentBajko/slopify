@@ -22,7 +22,7 @@ export function publicationTargets(
   const { work, pieceId, publicationId } = publication;
   if (publicationId !== (pieceId ?? work.workId))
     throw new Error(
-      "Slopify hit an internal error (a finished result is filed under the wrong step). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (a finished result is filed under the wrong step). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   if (!workExists(db, work)) return [];
   if (pieceId !== null) {
@@ -31,11 +31,11 @@ export function publicationTargets(
       .get(pieceId, work.workId);
     if (piece === undefined)
       throw new Error(
-        "Slopify hit an internal error (a finished result belongs to a different step). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+        "Slopify hit an internal error (a finished result belongs to a different step). Try again; if it happens again, use Download diagnostics in Settings and report it.",
       );
     if (piece.work_key !== workKey || piece.fingerprint !== workFingerprint)
       throw new Error(
-        "Slopify hit an internal error (a finished result doesn't match its saved step). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+        "Slopify hit an internal error (a finished result doesn't match its saved step). Try again; if it happens again, use Download diagnostics in Settings and report it.",
       );
   }
   const currentId = currentRevisionId(db, work.projectId);

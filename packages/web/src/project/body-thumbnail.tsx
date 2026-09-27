@@ -1,18 +1,26 @@
 import { type ProjectSummary, type Stage, thumbnailCountOf } from "@app/slices/admission/model.js";
 import type { Output } from "@app/slices/storage/model.js";
-import { useId } from "react";
+import { DownloadIcon, RefreshCwIcon } from "lucide-react";
+import { type ReactElement, useState } from "react";
+import { Button } from "@/components/kit/button";
+import { useCommand } from "@/components/kit/command-palette";
+import { ConfirmDialog } from "@/components/kit/dialog";
+import { Lightbox, type LightboxItem, MediaFrame } from "@/components/kit/media";
+import { SectionHead } from "@/components/kit/section-head";
 import { cn } from "@/lib/utils";
 import type { BodyProps } from "./body.js";
-import { outputsOf, roleOf } from "./body.js";
-import { ConfirmedButton } from "./controls.js";
-import { ActionRow, OutputDownload } from "./parts.js";
+import { outputsOf } from "./body.js";
+import { frameAspect } from "./body-images.js";
+import { confirmationFor } from "./confirmations.js";
+import { useOutputChange } from "./output-change.js";
 import type { Review } from "./review-api.js";
-import { ReviewVerdict, reviewFor, useReviews } from "./review-verdict.js";
-import { useOutputMedia } from "./revision-media.js";
+import { ReviewActions, ReviewChip, reviewFor, useReviews } from "./review-verdict.js";
+import { useOutputMedia, useOutputMediaList } from "./revision-media.js";
+import { SectionMore } from "./stage-section.js";
 
-// The thumbnail at the top of the Images section: the picture itself, large, with Regenerate
-// and its download; or, when the project makes three, the three side by side, each with its
-// own Regenerate. The prompt behind it is not shown; the picture is what gets judged.
+// The thumbnails above the slideshow images: one, or three side by side for YouTube's Test &
+// compare, each a media frame with its own Regenerate and Download and its review badge. The
+// prompt behind them is not shown; the picture is what gets judged.
 export function ThumbnailPanel({
   stage,
   project,
@@ -25,104 +33,87 @@ export function ThumbnailPanel({
   readonly outputs: readonly Output[];
   readonly actions: BodyProps["actions"];
   readonly busy: boolean;
-}) {
-  const id = useId();
+}): ReactElement {
   const own = outputsOf(outputs, stage);
-  const image = roleOf(own, "thumbnail");
-  const media = useOutputMedia(image);
-  const tall = project.format === "9:16";
   const reviews = useReviews(project.id);
   const count = thumbnailCountOf(project.config);
-  const regenerateAll = (
-    <ConfirmedButton
-      action={{ kind: "rerun", stage: stage.kind }}
-      run={() => {
-        actions.run({ kind: "rerun", stage: stage.kind });
-      }}
-      disabled={busy || stage.state === "pending"}
-      pending={actions.pending}
+  const variants = Array.from({ length: count }, (_, index) => index + 1).map((variant) => ({
+    variant,
+    output: own.find(
+      (output) => output.role === "thumbnail" && (output.meta.index ?? 1) === variant,
+    ),
+  }));
+  const made = variants.flatMap((one) => (one.output === undefined ? [] : [one.output]));
+  const files = useOutputMediaList(made);
+  const [open, setOpen] = useState<number | null>(null);
+  const items: LightboxItem[] = made.flatMap((output) => {
+    const file = files.get(output.id);
+    return file === undefined
+      ? []
+      : [{ src: file.url, alt: `Thumbnail ${String(output.meta.index ?? 1)}` }];
+  });
+  const tall = project.format === "9:16";
+  return (
+    <section
+      aria-label={count === 1 ? "Thumbnail" : "Thumbnails"}
+      className="flex min-w-0 flex-col gap-5"
     >
-      {count === 1 ? "Regenerate thumbnail" : "Regenerate all thumbnails"}
-    </ConfirmedButton>
-  );
-  if (count > 1)
-    return (
-      <section aria-labelledby={`${id}-title`} className="flex min-w-0 flex-col gap-[10px]">
-        <h3 id={`${id}-title`} className="engraved text-ink3">
-          Thumbnails
-        </h3>
-        {/* Side by side for comparing, as Test & compare will; each is made again on its own. */}
-        <ul className={cn("grid gap-3", tall ? "grid-cols-3 max-w-[720px]" : "sm:grid-cols-3")}>
-          {Array.from({ length: count }, (_, index) => index + 1).map((variant) => (
+      <SectionHead
+        title={count === 1 ? "Thumbnail" : "Thumbnails"}
+        meta={
+          count === 1
+            ? "The picture YouTube shows before the video plays"
+            : `${String(count)} variants for YouTube's Test & compare`
+        }
+      >
+        <SectionMore stages={[stage]} project={project} actions={actions} />
+      </SectionHead>
+      <ul
+        className={cn(
+          "m-0 grid list-none gap-5 p-0",
+          count === 1
+            ? tall
+              ? "max-w-[280px]"
+              : "max-w-[480px]"
+            : tall
+              ? "max-w-[720px] grid-cols-3"
+              : "sm:grid-cols-3",
+        )}
+      >
+        {variants.map(({ variant, output }) => (
+          <li key={variant} className="min-w-0">
             <ThumbnailVariant
-              key={variant}
               variant={variant}
-              output={own.find(
-                (output) => output.role === "thumbnail" && (output.meta.index ?? 1) === variant,
-              )}
-              review={reviewFor(reviews, {
-                outputId: own.find(
-                  (output) => output.role === "thumbnail" && (output.meta.index ?? 1) === variant,
-                )?.id,
-              })}
+              count={count}
+              output={output}
+              review={reviewFor(reviews, { outputId: output?.id })}
               stage={stage}
               project={project}
               actions={actions}
               busy={busy}
+              onOpen={() => setOpen(output === undefined ? null : made.indexOf(output))}
             />
-          ))}
-        </ul>
-        <ActionRow>{regenerateAll}</ActionRow>
-      </section>
-    );
-  return (
-    <section aria-labelledby={`${id}-title`} className="flex min-w-0 flex-col gap-[10px]">
-      <h3 id={`${id}-title`} className="engraved text-ink3">
-        Thumbnail
-      </h3>
-      {/* The frame is drawn before the picture lands, so nothing below it moves when it does. */}
-      <div
-        className={cn(
-          "w-full overflow-hidden rounded-control border border-line bg-panel2",
-          tall ? "aspect-[9/16] max-w-[320px]" : "aspect-video max-w-[720px]",
-        )}
-      >
-        {image === undefined ? (
-          <p className="flex h-full items-center justify-center p-4 text-center text-small text-ink2">
-            {missing(stage)}
-          </p>
-        ) : (
-          <img
-            src={media?.url}
-            alt={`Thumbnail for ${project.title}`}
-            className="block size-full object-cover animate-tick-in motion-reduce:animate-none"
-          />
-        )}
-      </div>
-      <ReviewVerdict
-        review={reviewFor(reviews, { outputId: image?.id })}
-        projectId={project.id}
-        busy={busy}
-      />
-      <ActionRow>
-        {regenerateAll}
-        {image === undefined ? null : <OutputDownload output={image} label="Download thumbnail" />}
-      </ActionRow>
+          </li>
+        ))}
+      </ul>
+      <Lightbox items={items} index={open} onIndex={setOpen} onClose={() => setOpen(null)} />
     </section>
   );
 }
 
-// One of three thumbnails: its frame, its own Regenerate and its download, always visible.
 function ThumbnailVariant({
   variant,
+  count,
   output,
   review,
   stage,
   project,
   actions,
   busy,
+  onOpen,
 }: {
   readonly variant: number;
+  readonly count: number;
   readonly output: Output | undefined;
   // The automatic review's verdict on this thumbnail, when it had one.
   readonly review: Review | undefined;
@@ -130,61 +121,99 @@ function ThumbnailVariant({
   readonly project: ProjectSummary;
   readonly actions: BodyProps["actions"];
   readonly busy: boolean;
-}) {
+  readonly onOpen: () => void;
+}): ReactElement {
   const media = useOutputMedia(output);
-  const tall = project.format === "9:16";
+  const change = useOutputChange(output, actions, busy);
+  const name = count === 1 ? "the thumbnail" : `thumbnail ${String(variant)}`;
+  useCommand({
+    id: `project.thumbnail.${String(variant)}`,
+    title: count === 1 ? "Regenerate the thumbnail" : `Regenerate thumbnail ${String(variant)}`,
+    group: "This project",
+    keywords: ["thumbnail", "redraw", "remake"],
+    run: () => change.act("regenerate-image"),
+  });
+  const flagged = review !== undefined && !review.passed && review.action === null;
+  const letter = String.fromCharCode(64 + variant);
+  const copy =
+    change.asking === undefined || output === undefined
+      ? undefined
+      : confirmationFor({ kind: change.asking, outputId: output.id });
   return (
-    <li className="flex min-w-0 flex-col gap-2">
-      <div
-        className={cn(
-          "w-full overflow-hidden rounded-control border border-line bg-panel2",
-          tall ? "aspect-[9/16]" : "aspect-video",
-        )}
-      >
-        {output === undefined ? (
-          <p className="flex h-full items-center justify-center p-2 text-center text-small text-ink2">
-            {missing(stage)}
-          </p>
-        ) : (
-          <img
-            src={media?.url}
-            alt={`Thumbnail ${String(variant)} for ${project.title}`}
-            className="block size-full object-cover animate-tick-in motion-reduce:animate-none"
-          />
-        )}
-      </div>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="text-small font-semibold text-ink2">{`Thumbnail ${String(variant)}`}</span>
-        {output === undefined ? null : (
-          <ConfirmedButton
-            action={{ kind: "regenerate-image", outputId: output.id }}
-            run={() => {
-              actions.run({ kind: "regenerate-image", outputId: output.id });
-            }}
-            disabled={busy}
-            pending={actions.pending}
-            variant="ghost"
-          >
-            Regenerate
-          </ConfirmedButton>
-        )}
-        {output === undefined ? null : (
-          <OutputDownload output={output} label={`Download ${String(variant)}`} />
-        )}
-      </div>
-      <ReviewVerdict review={review} projectId={project.id} busy={busy} />
-    </li>
+    <>
+      <MediaFrame
+        alt={
+          count === 1
+            ? `Thumbnail for ${project.title}`
+            : `Thumbnail ${String(variant)} for ${project.title}`
+        }
+        aspect={frameAspect(project.format)}
+        {...(media === undefined ? {} : { src: media.url })}
+        {...(output === undefined && stage.state === "running"
+          ? { generating: "Making the thumbnail" }
+          : {})}
+        title={count === 1 ? "Thumbnail" : letter}
+        {...(output === undefined ? { meta: missing(stage) } : {})}
+        onOpen={onOpen}
+        openLabel={`Open ${name} full size`}
+        {...(review === undefined ? {} : { badge: <ReviewChip review={review} /> })}
+        actionsShown={flagged}
+        {...(output === undefined
+          ? {}
+          : {
+              actions: (
+                <>
+                  {flagged && review !== undefined ? (
+                    <ReviewActions review={review} projectId={project.id} busy={busy} />
+                  ) : null}
+                  <Button
+                    size="small"
+                    disabled={change.unavailable}
+                    disabledReason="Wait until the work on this project is done"
+                    onClick={() => change.act("regenerate-image")}
+                    aria-label={`Regenerate ${name}`}
+                  >
+                    <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} />
+                    Regenerate
+                  </Button>
+                  {media === undefined ? null : (
+                    <a
+                      href={media.url}
+                      download
+                      className="sl-btn sl-btn--secondary sl-btn--small"
+                      aria-label={`Download ${name}`}
+                      title={`Download ${name}`}
+                    >
+                      <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
+                    </a>
+                  )}
+                </>
+              ),
+            })}
+      />
+      <ConfirmDialog
+        open={change.asking !== undefined}
+        tone="primary"
+        title={copy?.title ?? ""}
+        consequence={copy?.consequence ?? ""}
+        confirmLabel="Regenerate the thumbnail"
+        cancelLabel="Keep it"
+        pending={actions.pending}
+        onConfirm={change.confirm}
+        onCancel={change.dismiss}
+      />
+    </>
   );
 }
 
 function missing(stage: Stage): string {
   switch (stage.state) {
     case "running":
-      return "Making the thumbnail…";
+      return "Being made";
     case "failed":
     case "canceled":
-      return "No thumbnail was made. Use Retry thumbnail above to try again.";
+      return "Not made";
     default:
-      return "No thumbnail has landed yet.";
+      return "Not made yet";
   }
 }

@@ -1,7 +1,7 @@
 import { InfoIcon } from "lucide-react";
 import type { ReactElement, ReactNode } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "./popover.js";
 
 // Help hides until asked. A press (not a hover) opens it, so touch and keyboard reach the same
 // text a pointer does, and nothing below the control moves when it opens.

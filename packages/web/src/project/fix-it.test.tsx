@@ -4,25 +4,28 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { body, stage } from "@/routes/project-fixtures";
 import { renderRouted, testDeps } from "@/test-app";
-import { OpenProjectTab } from "./fix-it.js";
-import { RevisionControlContext } from "./revision-action-context.js";
+import type { SectionId } from "./next-action.js";
+import { NextActionBeside, NextActionPanel, useNextAction } from "./next-action-view.js";
 import { revisionView } from "./revision-fixture.js";
-import type { SectionKind } from "./sections.js";
-import { StageRow } from "./stage-row.js";
+import type { RevisionController } from "./revision-workspace.js";
 import type { Action, ProjectActions } from "./use-actions.js";
+
+// A failed step's fix is the project's next action (next-action.ts decides which); these check
+// that each one does what its name says from the rail and beside the step.
 
 afterEach(cleanup);
 
-function setup(kind: SectionKind, over: Partial<Stage>) {
-  const failed = stage(kind, "failed", over);
-  const run = vi.fn((_action: Action) => undefined);
-  const openTab = vi.fn();
-  const actions: ProjectActions = {
-    run,
-    pending: false,
-    refusal: undefined,
-    dismissRefusal: () => undefined,
-  };
+function Harness({
+  failed,
+  actions,
+  openSection,
+  review,
+}: {
+  readonly failed: Stage;
+  readonly actions: ProjectActions;
+  readonly openSection: (section: SectionId) => void;
+  readonly review: RevisionController["review"];
+}) {
   const summary = body({ status: "failed", stages: [], outputs: [] }).project;
   const project = {
     ...summary,
@@ -33,48 +36,91 @@ function setup(kind: SectionKind, over: Partial<Stage>) {
       images: { provider: "fal", model: "flux" },
     },
   };
-  renderRouted(
-    <RevisionControlContext value={true}>
-      <OpenProjectTab value={openTab}>
-        <StageRow
-          section={{ kind, stage: failed }}
-          project={project}
-          outputs={[]}
-          providers={[]}
-          actions={actions}
-        >
-          {null}
-        </StageRow>
-      </OpenProjectTab>
-    </RevisionControlContext>,
-    testDeps({}),
+  const state = useNextAction({
+    project,
+    stages: [failed],
+    resumable: false,
+    sample: false,
+    gates: [],
+    outdated: [],
+    waits: [],
+    uploadReady: false,
+    actions,
+    controller: { review, pending: false } as unknown as RevisionController,
+    openSection,
+    openUpload: () => undefined,
+  });
+  return (
+    <>
+      <NextActionPanel state={state} />
+      <section aria-label="Beside the step">
+        <NextActionBeside state={state} section={state.next?.section ?? "article"} />
+      </section>
+    </>
   );
-  return { run, openTab };
 }
 
-it("shows the sign-in command for a signed-out CLI, with Re-check", async () => {
-  setup("article", {
+function setup(kind: Stage["kind"], over: Partial<Stage>) {
+  const run = vi.fn((_action: Action) => undefined);
+  const openSection = vi.fn();
+  const review = vi.fn();
+  const actions: ProjectActions = {
+    run,
+    pending: false,
+    refusal: undefined,
+    dismissRefusal: () => undefined,
+  };
+  renderRouted(
+    <Harness
+      failed={stage(kind, "failed", over)}
+      actions={actions}
+      openSection={openSection}
+      review={review}
+    />,
+    testDeps({}),
+  );
+  return { run, openSection };
+}
+
+const rail = () => screen.findByRole("region", { name: "Next action" });
+const beside = () => screen.findByRole("region", { name: "Beside the step" });
+
+it("names a signed-out CLI, gives its command, and retries the step", async () => {
+  const { run } = setup("article", {
     failureKind: "missing_key",
     failureReason:
-      'The Codex CLI is not signed in, or its sign-in has expired. Open a terminal on the computer running the CLI, run "codex login" and sign in, then use Retry stage.',
+      'The Codex CLI is not signed in, or its sign-in has expired. Open a terminal on the computer running the CLI, run "codex login" and sign in, then use Try again.',
   });
-  expect(await screen.findByText("codex login")).not.toBeNull();
-  expect(screen.getByRole("button", { name: "Re-check" })).not.toBeNull();
+  const next = await screen.findByRole("region", { name: "Next action" });
+  expect(within(next).getByText("Codex is signed out, so the article stopped.")).not.toBeNull();
+  expect(within(next).getByText(/codex login/)).not.toBeNull();
+  await userEvent.click(within(next).getByRole("button", { name: "Try the article again" }));
+  expect(run).toHaveBeenCalledWith({ kind: "retry", stage: "article" });
 });
 
-it("softens a refused image prompt after saying what it will do, or opens Edit", async () => {
+it("softens a refused image prompt after saying what it will do", async () => {
   const user = userEvent.setup();
-  const { run, openTab } = setup("images", {
+  const { run } = setup("images", {
     failureKind: "refusal",
     failureReason: "fal.ai refused to make this image under its content rules.",
   });
-  await user.click(await screen.findByRole("button", { name: "Soften and retry" }));
+  await user.click(await within(await rail()).findByRole("button", { name: "Soften and retry" }));
   const dialog = await screen.findByRole("dialog");
   expect(within(dialog).getByText(/rewrites each refused prompt/)).not.toBeNull();
+  expect(run).not.toHaveBeenCalled();
   await user.click(within(dialog).getByRole("button", { name: "Soften and retry" }));
   expect(run).toHaveBeenCalledWith({ kind: "soften", stage: "images" });
-  await user.click(screen.getByRole("button", { name: "Edit prompt" }));
-  expect(openTab).toHaveBeenCalledWith("edit");
+});
+
+it("opens the settings for a refused article prompt, beside the step as in the rail", async () => {
+  const { openSection } = setup("article", {
+    failureKind: "refusal",
+    failureReason: "The model refused to write this.",
+  });
+  await userEvent.click(
+    await within(await beside()).findByRole("button", { name: "Edit the prompt" }),
+  );
+  expect(openSection).toHaveBeenCalledWith("settings");
 });
 
 it("links a rejected key to the provider's settings and a full disk to storage", async () => {
@@ -83,13 +129,20 @@ it("links a rejected key to the provider's settings and a full disk to storage",
     failureReason: "fal.ai did not accept the API key (error 401).",
   });
   expect(
-    (await screen.findByRole("link", { name: "Open Settings → Providers → fal.ai" })).getAttribute(
-      "href",
-    ),
+    (
+      await within(await rail()).findByRole("link", { name: "Open Settings → Providers → fal.ai" })
+    ).getAttribute("href"),
   ).toContain("section=providers");
   cleanup();
   setup("video", { failureReason: "ffmpeg: No space left on device" });
-  expect((await screen.findByRole("link", { name: "Free space" })).getAttribute("href")).toContain(
-    "section=storage",
-  );
+  expect(
+    (await within(await rail()).findByRole("link", { name: "Free space" })).getAttribute("href"),
+  ).toContain("section=storage");
+});
+
+it("shows the step's own words behind Error details, beside the step", async () => {
+  setup("images", { failureReason: "fal.ai: 500 Internal Server Error" });
+  const step = await beside();
+  await userEvent.click(within(step).getByText("Error details"));
+  expect(within(step).getByText("fal.ai: 500 Internal Server Error")).not.toBeNull();
 });

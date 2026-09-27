@@ -32,7 +32,7 @@ export async function executeShortExport(
   const seconds = timeline.reduce((sum, segment) => sum + segment.seconds, 0);
   if (seconds <= 0)
     throw new Error(
-      "The short has no narration to play, so there is nothing to render. Let the Narration stage finish (Resume, or Retry stage on it), then retry this stage.",
+      "The short has no narration to play, so there is nothing to render. Let the Narration stage finish (Resume, or Try again on it), then retry this stage.",
     );
   const font = await resolveBoldFont(deps.paths, config.subtitles?.fontId ?? "default");
   if (!context.maySubmit(piece.id)) return "held";

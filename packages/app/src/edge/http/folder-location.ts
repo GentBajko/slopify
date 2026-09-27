@@ -60,7 +60,7 @@ export async function replyForFolder(
         status: 404,
         title: titleOf(404),
         detail:
-          "This output's folder was deleted or moved. Use Re-run section on the project page to make the file again.",
+          "This output's folder was deleted or moved. Use More → make it again in its section on the project page to make the file again.",
       });
     }
   }

@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ComponentProps, type ReactElement, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/kit/button";
 import { sentence } from "@/http";
 import { keys } from "@/queries";
 import {
@@ -22,6 +22,9 @@ interface Props {
   readonly revisionId: string | null;
   readonly paused: boolean;
   readonly stages: ComponentProps<typeof CheckpointChoices>["stages"];
+  // The gate the project's next action approves: its button is in the right rail, so the
+  // row here says so instead of offering a second one.
+  readonly approvedInRail?: string | undefined;
 }
 export function CheckpointPanel(props: Props): ReactElement | null {
   if (props.revisionId === null) return null;
@@ -38,6 +41,7 @@ function CurrentCheckpoints({
   revisionId,
   paused,
   stages,
+  approvedInRail,
 }: Props & { readonly revisionId: string }): ReactElement | null {
   const { api } = useApp();
   const client = useQueryClient();
@@ -60,35 +64,34 @@ function CurrentCheckpoints({
   if (status.isPending) return null;
   if (status.error || result?.ok === false)
     return (
-      <section aria-label="Review checkpoints">
-        <p role="alert">
+      <section aria-label="Review checkpoints" className="flex flex-col items-start gap-3">
+        <p role="alert" className="m-0 text-small text-danger">
           {status.error?.message ??
             (result?.ok === false
               ? result.message
               : "Checkpoints couldn't be loaded. Press Reload checkpoints.")}
         </p>
-        <Button type="button" onClick={() => void reload()}>
-          Reload checkpoints
-        </Button>
+        <Button onClick={() => void reload()}>Reload checkpoints</Button>
       </section>
     );
   if (!result?.ok) return null;
   if (result.value.revisionId !== revisionId)
     return (
-      <section aria-label="Review checkpoints">
-        <p role="alert">
+      <section aria-label="Review checkpoints" className="flex flex-col items-start gap-3">
+        <p role="alert" className="m-0 text-small text-danger">
           The project was edited after these checkpoints loaded. Press Reload checkpoints before
           approving.
         </p>
       </section>
     );
   return (
-    <section
-      aria-label="Review checkpoints"
-      className="space-y-3 rounded-panel border border-line bg-panel p-4"
-    >
-      <h2>Review checkpoints</h2>
-      {paused ? <p>Project is paused. Resume it before approving held work.</p> : null}
+    <section aria-label="Review checkpoints" className="flex flex-col gap-5">
+      <h2 className="sl-section-head__title m-0 text-title-3">Review checkpoints</h2>
+      {paused ? (
+        <p className="m-0 text-small text-waiting">
+          The project is paused. Continue the run before approving held work.
+        </p>
+      ) : null}
       <CheckpointChoices
         projectId={projectId}
         revisionId={revisionId}
@@ -114,6 +117,7 @@ function CurrentCheckpoints({
             )
           }
           reload={reload}
+          {...(gate.checkpointId === approvedInRail ? { inRail: true } : {})}
         />
       ))}
     </section>
@@ -127,10 +131,12 @@ function Gate({
   gate,
   disabled,
   reload,
+  inRail = false,
 }: {
   readonly gate: CheckpointGate;
   readonly disabled: boolean;
   readonly reload: () => Promise<boolean>;
+  readonly inRail?: boolean;
 }): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
@@ -202,9 +208,9 @@ function Gate({
     }
   }
   return (
-    <div className="space-y-2 rounded-control border border-line p-3">
-      <h3>{label(gate.stage)} checkpoint</h3>
-      <p>
+    <div className="flex flex-col gap-2 border-t border-line pt-4">
+      <h3 className="m-0 text-title-3">{label(gate.stage)} checkpoint</h3>
+      <p className="m-0 text-small text-ink-2">
         {gate.state === "released" && gate.approvedAt !== null
           ? "Authorized for this revision. Work can run when dependencies are ready and the project is resumed."
           : gate.state === "satisfied"
@@ -215,24 +221,35 @@ function Gate({
                 ? `${label(gate.stage)} is held for your review. Its dependent work waits for this approval; independent work can continue.`
                 : `Checkpoint ${gate.state}.`}
       </p>
-      <p>Reviewed revision: {gate.revisionId}</p>
+      <p className="m-0 text-small text-ink-3">Reviewed revision: {gate.revisionId}</p>
       {gate.dependents.length ? (
-        <ul aria-label="Dependent work">
+        <ul aria-label="Dependent work" className="m-0 flex list-none flex-wrap gap-2 p-0">
           {gate.dependents.map((stage) => (
-            <li key={stage}>{label(stage)}</li>
+            <li key={stage} className="sl-chip">
+              {label(stage)}
+            </li>
           ))}
         </ul>
       ) : (
-        <p>No dependent stages.</p>
+        <p className="m-0 text-small text-ink-2">No dependent stages.</p>
       )}
       {outcome ? (
-        <p ref={feedback} tabIndex={-1} role={outcome.kind === "success" ? "status" : "alert"}>
+        <p
+          ref={feedback}
+          tabIndex={-1}
+          role={outcome.kind === "success" ? "status" : "alert"}
+          className={outcome.kind === "success" ? "m-0 text-small" : "m-0 text-small text-danger"}
+        >
           {outcome.message}
         </p>
       ) : null}
-      {eligible ? (
+      {eligible && inRail && outcome === null ? (
+        <p className="m-0 text-small text-ink-2">
+          Its approval is the project's next action, in the right rail.
+        </p>
+      ) : eligible ? (
         <Button
-          type="button"
+          className="self-start"
           disabled={
             disabled || pending || outcome?.kind === "refused" || outcome?.kind === "success"
           }
@@ -247,7 +264,7 @@ function Gate({
       ) : null}
       {outcome?.kind === "refused" ? (
         <Button
-          type="button"
+          className="self-start"
           onClick={async () => {
             if (await reload()) setOutcome(null);
           }}

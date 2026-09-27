@@ -6,7 +6,7 @@ import type { RebuildDeps } from "./service.js";
 // the head can still retrieve. Work behind a pause or a failed/canceled sibling of its
 // admission never starts, and leftovers of superseded revisions never run; counting either
 // would refuse every later rerun of the section. An accepted job nothing will collect is
-// reported apart: waiting or pausing cannot clear it, only Retry or Resume can.
+// reported apart: waiting or pausing cannot clear it, only Retry or Continue the run can.
 export type ActiveConflict = "running" | "accepted-job";
 //
 // An automatic redo (`pendingSuperseded`) runs while the rest of the run waits: admitted work
@@ -43,7 +43,7 @@ export function activeConflict(
   return rows.some((row) => Number(row.live) === 1) ? "running" : "accepted-job";
 }
 export const acceptedJobMessage =
-  "An accepted provider job for this section is waiting to be collected. Use Retry stage or Resume, then rerun.";
+  "An accepted provider job for this section is waiting to be collected. Use Try again or Continue the run, then rerun.";
 export function conflictRefusal(conflict: ActiveConflict): RecoveryResult {
   return conflict === "running"
     ? { ok: false, reason: "running" }

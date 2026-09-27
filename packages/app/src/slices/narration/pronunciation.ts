@@ -174,7 +174,7 @@ export function pronunciationMatches(
     const entry = ordered.find((_, index) => match[index + 1] !== undefined);
     if (entry === undefined)
       throw new Error(
-        "Slopify hit an internal error (a pronunciation glossary term has no pronunciation). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+        "Slopify hit an internal error (a pronunciation glossary term has no pronunciation). Try again; if it happens again, use Download diagnostics in Settings and report it.",
       );
     matches.push({ start: match.index, end, entry });
   }
@@ -191,7 +191,7 @@ export function pronunciationSpans(
       const ipa = match.entry.ipa[index];
       if (ipa === undefined)
         throw new Error(
-          "Slopify hit an internal error (a pronunciation glossary term is missing a word). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+          "Slopify hit an internal error (a pronunciation glossary term is missing a word). Try again; if it happens again, use Download diagnostics in Settings and report it.",
         );
       const start = match.start + word.index;
       spans.push({ start, end: start + word[0].length, text: `/${ipa}/` });

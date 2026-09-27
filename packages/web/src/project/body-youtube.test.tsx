@@ -86,7 +86,9 @@ it("shows the description in its parts with placeholders filled, and copies it f
     "How rope holds. Support: https://patreon.com/rope\n\n0:00 Opening\n0:20 Knots\n0:40 Close\n\n#Rope #Knots",
   );
   await waitFor(() =>
-    expect(screen.getByRole("status").textContent).toBe("Copied the description."),
+    expect(screen.getAllByRole("status").map((one) => one.textContent)).toContain(
+      "Copied the description.",
+    ),
   );
   await userEvent.click(screen.getByRole("button", { name: "Copy tags" }));
   expect(writeText).toHaveBeenLastCalledWith("rope, knots, sailing knots");

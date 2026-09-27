@@ -1,6 +1,7 @@
 import type { Box } from "./spotlight-geometry";
 
-const portalSelector = '[data-slot="select-content"], [data-slot="dropdown-menu-content"]';
+const portalSelector =
+  '[data-slot="select-content"], [data-slot="dropdown-menu-content"], [data-slot="menu-content"]';
 
 export function getTarget(selector: string): HTMLElement | null {
   try {

@@ -128,7 +128,7 @@ it("shows each short as a small vertical player with its title, length, Copy and
   if (one === undefined || two === undefined) throw new Error("Expected two shorts");
   const player = await within(one).findByLabelText("Short 1");
   expect(player.tagName).toBe("VIDEO");
-  expect(player.className).toContain("aspect-[9/16]");
+  expect(player.closest(".sl-player--portrait")).not.toBeNull();
   expect(within(one).getByText("01:01")).not.toBeNull();
   expect(within(one).getByText("#Rope #Knots #Friction")).not.toBeNull();
   expect(within(one).getByRole("link", { name: "Download" }).getAttribute("href")).toBe(
@@ -161,7 +161,7 @@ it("says how far each short got while the stage runs, and which one failed", asy
   );
   expect(
     await screen.findByText(
-      "Couldn't make this short. Open Error details above to see why, then Retry stage.",
+      "Couldn't make this short. Open Error details in the Video section to see why.",
     ),
   ).not.toBeNull();
   expect(screen.getAllByText("Not made yet. It is made with the video.")).toHaveLength(1);

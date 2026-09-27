@@ -41,17 +41,17 @@ export function PageBar({
           <Link
             to={back.to}
             {...(back.search ? { search: back.search } : {})}
-            className="shrink-0 text-small text-ink2 hover:text-ink"
+            className="shrink-0 text-small text-ink-2 hover:text-ink"
           >
             &lt; {back.label}
           </Link>
         ) : null}
         {lead}
-        <h1 className="min-w-0 break-words text-title font-bold tracking-[-0.01em]">{title}</h1>
+        <h1 className="min-w-0 break-words text-title-3 font-bold tracking-[-0.01em]">{title}</h1>
         {status === undefined ? null : (
           <span className="inline-flex min-w-[88px] items-center">{status}</span>
         )}
-        {meta ? <span className="min-w-0 text-small text-ink2">{meta}</span> : null}
+        {meta ? <span className="min-w-0 text-small text-ink-2">{meta}</span> : null}
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </div>

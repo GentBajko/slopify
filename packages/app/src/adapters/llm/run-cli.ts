@@ -183,7 +183,7 @@ export async function deliveredInput(run: CliRun): Promise<void> {
     throw providerError({
       kind: "unavailable",
       message:
-        "Slopify could not hand the whole prompt to the CLI, so it cannot tell what the CLI worked on (it may already have used your quota). Use Retry stage to run it again.",
+        "Slopify could not hand the whole prompt to the CLI, so it cannot tell what the CLI worked on (it may already have used your quota). Use Try again to run it again.",
     });
   }
 }
@@ -194,7 +194,7 @@ export function cliInput(text: string): string {
     throw providerError({
       kind: "unsupported",
       message:
-        "This prompt is larger than the CLI accepts (8 MB), so nothing was sent. Make the inputs shorter in Edit project, or choose an API provider such as OpenRouter in its Providers section, then use Retry stage.",
+        "This prompt is larger than the CLI accepts (8 MB), so nothing was sent. Make the inputs shorter in Edit project, or choose an API provider such as OpenRouter in its Providers section, then use Try again.",
     });
   return text;
 }
@@ -230,9 +230,9 @@ export function promptOf(messages: readonly Message[]): string {
 export function endedWithout(binary: string, ended: CliEnded, stderr: string): string {
   const said = redact(stderr.trim());
   if (ended.error !== null)
-    return `The ${cliName(binary)} could not be started${quoted("", redact(ended.error.message))}. Check it is installed and set up in Settings → Providers, then use Retry stage.`;
+    return `The ${cliName(binary)} could not be started${quoted("", redact(ended.error.message))}. Check it is installed and set up in Settings → Providers, then use Try again.`;
   const how = ended.code === null ? "killed by the system" : `exit code ${String(ended.code)}`;
-  return `The ${cliName(binary)} stopped without answering${quoted(how, said)}. Run ${commandOf(binary)} in a terminal to check it works and is signed in, then use Retry stage.`;
+  return `The ${cliName(binary)} stopped without answering${quoted(how, said)}. Run ${commandOf(binary)} in a terminal to check it works and is signed in, then use Try again.`;
 }
 
 // A CLI the system killed mid-answer (out of memory, a sleep, a closed session) dropped the
@@ -243,7 +243,7 @@ export function endedKind(ended: CliEnded | undefined): "dropped" | "other" {
 
 // The run outlived both the polite and the forced stop.
 export function stuckCli(binary: string): string {
-  return `The ${cliName(binary)} stopped responding and could not be shut down. Close any leftover ${commandOf(binary)} processes or restart your computer, then use Retry stage.`;
+  return `The ${cliName(binary)} stopped responding and could not be shut down. Close any leftover ${commandOf(binary)} processes or restart your computer, then use Try again.`;
 }
 
 // Unreachable while stdio names `pipe` for fd 1; it is here so the type carries no null
@@ -271,7 +271,7 @@ export function cliEvent(
     // know. The text is not echoed back: half a JSON object is noise to the user.
     throw providerError({
       kind: "other",
-      message: `The ${cliName(binary)} sent output Slopify could not read. Update it to the latest version, then use Retry stage.`,
+      message: `The ${cliName(binary)} sent output Slopify could not read. Update it to the latest version, then use Try again.`,
     });
   }
   return { type: parsed.data.type, value };
@@ -282,7 +282,7 @@ export function cliShaped<T>(binary: string, schema: z.ZodType<T>, value: unknow
   if (!parsed.success) {
     throw providerError({
       kind: "other",
-      message: `The ${cliName(binary)} sent output Slopify could not read. Update it to the latest version, then use Retry stage.`,
+      message: `The ${cliName(binary)} sent output Slopify could not read. Update it to the latest version, then use Try again.`,
     });
   }
   return parsed.data;

@@ -19,7 +19,7 @@ import {
 } from "@app/slices/youtube/placeholders.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CopyIcon, PencilIcon } from "lucide-react";
-import { type ReactElement, type ReactNode, useId, useState } from "react";
+import { type ReactElement, type ReactNode, useId, useRef, useState } from "react";
 import {
   type ProjectDescriptionEdits,
   readChannelLinks,
@@ -29,9 +29,10 @@ import {
 } from "@/api";
 import { useApp } from "@/app-context";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
-import { Button } from "@/components/ui/button";
-import { Input, Textarea } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/kit/button";
+import { useCommand } from "@/components/kit/command-palette";
+import { Input, Textarea } from "@/components/kit/field";
+import { useToast } from "@/components/kit/toast";
 import { cn } from "@/lib/utils";
 import { DiffColumns } from "@/library/diff-view";
 import { keys } from "@/queries";
@@ -72,6 +73,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
     queryFn: () => readChannelLinks(api),
   });
   const [status, setStatus] = useState<{ text: string; tone: StatusTone } | undefined>();
+  const notify = useToast();
   const saved = (next: ProjectDescriptionEdits) =>
     queryClient.setQueryData(keys.youtubeEdits(project.id), next);
   const save = useMutation({
@@ -90,6 +92,31 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
         tone: "error",
       }),
   });
+  // Copy description and Copy tags are palette commands too; they copy what is shown here,
+  // placeholders filled, so they read the latest text when run.
+  const copyLatest = useRef<{ description?: () => void; tags?: () => void }>({});
+  useCommand({
+    id: "project.copy-description",
+    title: "Copy description",
+    group: "This project",
+    context: project.title,
+    keywords: ["youtube", "description", "chapters", "clipboard"],
+    run: () =>
+      copyLatest.current.description === undefined
+        ? notify("The description has not been written yet.", "info")
+        : copyLatest.current.description(),
+  });
+  useCommand({
+    id: "project.copy-tags",
+    title: "Copy tags",
+    group: "This project",
+    context: project.title,
+    keywords: ["youtube", "tags", "clipboard"],
+    run: () =>
+      copyLatest.current.tags === undefined
+        ? notify("The tags have not been written yet.", "info")
+        : copyLatest.current.tags(),
+  });
   if (project.config.youtubeDescription !== true && description === undefined) return null;
 
   const generated: DescriptionFields | undefined =
@@ -107,19 +134,29 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
   const written = generated !== undefined;
 
   const copy = (text: string, what: string) => {
+    const failed = `Couldn't copy the ${what}. Select the text in the YouTube section and copy it.`;
     if (!navigator.clipboard) {
-      setStatus({ text: `Couldn't copy the ${what}. Select the text and copy it.`, tone: "error" });
+      setStatus({ text: failed, tone: "error" });
+      notify(failed, "error");
       return;
     }
     void navigator.clipboard.writeText(text).then(
-      () => setStatus({ text: `Copied the ${what}.`, tone: "success" }),
-      () =>
-        setStatus({
-          text: `Couldn't copy the ${what}. Select the text and copy it.`,
-          tone: "error",
-        }),
+      () => {
+        setStatus({ text: `Copied the ${what}.`, tone: "success" });
+        notify(`Copied the ${what}.`, "success");
+      },
+      () => {
+        setStatus({ text: failed, tone: "error" });
+        notify(failed, "error");
+      },
     );
   };
+  copyLatest.current = written
+    ? {
+        description: () => copy(filledDescription.text, "description"),
+        tags: () => copy(filledTags.text, "tags"),
+      }
+    : {};
   const waiting =
     stage.state === "running"
       ? "Written after the subtitle timing."
@@ -159,11 +196,8 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
   );
 
   return (
-    <section
-      aria-labelledby={`${id}-title`}
-      className="flex min-w-0 flex-col gap-3 border-t border-line pt-4"
-    >
-      <h3 id={`${id}-title`} className="engraved text-ink3">
+    <section aria-labelledby={`${id}-title`} className="flex min-w-0 flex-col gap-4">
+      <h3 id={`${id}-title`} className="sr-only">
         YouTube
       </h3>
       {/* The description reads best at a paragraph's width; the tags take the room beside
@@ -203,7 +237,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
         </div>
       </div>
       {unknown.length === 0 ? null : (
-        <p className="text-small text-amber">
+        <p className="text-small text-waiting">
           {`No link is saved for ${unknown.map((name) => `{{${name}}}`).join(", ")}, so it stays as typed. Add it in Settings → Channel links${unknown.some((name) => linkKey(name) === linkKey(previousVideoLink)) ? ", or set this project's Previous video below" : ""}.`}
         </p>
       )}
@@ -237,18 +271,18 @@ function PartHead({
 }): ReactElement {
   return (
     <div className="flex min-h-8 flex-wrap items-center gap-3">
-      <h4 id={id} className="text-small font-semibold text-ink2">
+      <h4 id={id} className="text-small font-semibold text-ink-2">
         {label}
       </h4>
       {count === undefined ? null : (
-        <span className={cn("text-small tabular-nums", over ? "text-red" : "text-ink3")}>
+        <span className={cn("text-small tabular-nums", over ? "text-danger" : "text-ink-3")}>
           {over ? `${count}, over YouTube's limit` : count}
         </span>
       )}
       <span className="flex-1" />
       <Button
         type="button"
-        variant="ghost"
+        variant="quiet"
         disabled={copy === undefined}
         aria-label={`Copy ${label.toLowerCase()}`}
         onClick={copy}
@@ -294,15 +328,15 @@ function EditableField({
   return (
     <div className="flex min-w-0 flex-col gap-1">
       <div className="flex min-h-8 flex-wrap items-center gap-2">
-        <h5 id={`${id}-label`} className="engraved text-ink3">
+        <h5 id={`${id}-label`} className="sl-kicker text-ink-3">
           {label}
         </h5>
-        {value.edited ? <span className="text-small text-ink2">Your edit</span> : null}
+        {value.edited ? <span className="text-small text-ink-2">Your edit</span> : null}
         <span className="flex-1" />
         {value.edited && !editing ? (
           <Button
             type="button"
-            variant="ghost"
+            variant="quiet"
             disabled={disabled}
             aria-label={`Use the generated ${lower}`}
             onClick={onUseGenerated}
@@ -312,7 +346,7 @@ function EditableField({
         ) : null}
         <Button
           type="button"
-          variant="ghost"
+          variant="quiet"
           disabled={disabled || editing}
           aria-label={`Edit ${lower}`}
           onClick={() => setDraft(value.text)}
@@ -322,7 +356,7 @@ function EditableField({
         </Button>
       </div>
       {value.pending === undefined ? null : (
-        <div className="flex flex-col gap-2 border-l-2 border-amber pl-3">
+        <div className="flex flex-col gap-2 border-l-2 border-waiting pl-3">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-small text-ink">New generated version available.</p>
             <Button
@@ -343,7 +377,7 @@ function EditableField({
             </Button>
             <Button
               type="button"
-              variant="ghost"
+              variant="quiet"
               aria-expanded={diff}
               aria-label={`${diff ? "Hide" : "View"} the ${lower} diff`}
               onClick={() => setDiff((now) => !now)}
@@ -363,9 +397,9 @@ function EditableField({
       )}
       {editing ? (
         <div className="flex flex-col gap-2">
-          <Label htmlFor={`${id}-edit`} className="sr-only">
+          <label htmlFor={`${id}-edit`} className="sr-only">
             {label}
-          </Label>
+          </label>
           {multiline ? (
             <Textarea
               id={`${id}-edit`}
@@ -392,7 +426,7 @@ function EditableField({
             >
               Save {lower}
             </Button>
-            <Button type="button" variant="ghost" onClick={() => setDraft(undefined)}>
+            <Button type="button" variant="quiet" onClick={() => setDraft(undefined)}>
               Cancel
             </Button>
           </div>
@@ -402,7 +436,7 @@ function EditableField({
           aria-labelledby={`${id}-label`}
           className={cn(
             "min-w-0 whitespace-pre-wrap break-words text-small",
-            value.text === "" ? "text-ink3" : "text-ink",
+            value.text === "" ? "text-ink-3" : "text-ink",
           )}
         >
           {value.text === "" ? (
@@ -438,7 +472,7 @@ function Filled({
           <mark
             key={key}
             title={`No link named ${part.name}`}
-            className="rounded-[2px] bg-amber/25 px-[2px] text-ink"
+            className="rounded-[2px] bg-waiting/25 px-[2px] text-ink"
           >
             {part.raw}
           </mark>
@@ -478,7 +512,7 @@ function TagChips({
         <li
           // biome-ignore lint/suspicious/noArrayIndexKey: a tag can repeat, and the list never reorders
           key={index}
-          className="rounded-full border border-line bg-panel2 px-[9px] py-[2px] text-small text-ink"
+          className="rounded-full border border-line bg-raised px-[9px] py-[2px] text-small text-ink"
         >
           <Filled text={tag} links={links} />
         </li>
@@ -526,7 +560,9 @@ function PreviousVideo({
   return (
     <div className="flex flex-wrap items-end gap-2">
       <div className="flex min-w-[260px] flex-1 flex-col gap-1 sm:max-w-[520px]">
-        <Label htmlFor={id}>Previous video for this project</Label>
+        <label className="sl-field__label" htmlFor={id}>
+          Previous video for this project
+        </label>
         <Input
           id={id}
           type="url"

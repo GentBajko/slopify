@@ -74,7 +74,7 @@ export function saveVerdict(db: DatabaseSync, record: ReviewRecord): ReviewRecor
   const saved = verdictByReview(db, record.projectId, record.reviewFingerprint);
   if (saved === undefined)
     throw new Error(
-      "Slopify hit an internal error (a review's verdict could not be saved). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (a review's verdict could not be saved). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   return saved;
 }

@@ -1,17 +1,23 @@
-import { cn } from "@/lib/utils";
+import { assetOf } from "@app/slices/storage/asset-name.js";
+import { useApp } from "@/app-context";
+import { useCommand } from "@/components/kit/command-palette";
+import { Player } from "@/components/kit/player";
+import { useToast } from "@/components/kit/toast";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
-import { currentShorts, ShortsBlock, useShortClips } from "./body-shorts.js";
-import { YoutubeBlock } from "./body-youtube.js";
-import { ConfirmedButton } from "./controls.js";
+import { currentShorts, useShortClips } from "./body-shorts.js";
+import { dockerFolderHelp, openFolder } from "./open-folder.js";
 import { DownloadMenu, OutputFolder, StageBody } from "./parts.js";
 import { useOutputMedia } from "./revision-media.js";
 import { duration, percent, preparingSubtitles } from "./summary.js";
 
-// The final stage plays an MP4 or, when Video is Off, the combined narration WAV.
-// The previous file stays playable until ffmpeg successfully replaces it. The YouTube
-// description and the shorts, when the project makes them, sit below the downloads.
-export function VideoBody({ stage, project, outputs, actions, busy, subtitleControls }: BodyProps) {
+// The final stage plays the MP4 in a real player or, when Video is Off, the combined narration
+// WAV. The previous file stays playable until ffmpeg successfully replaces it. Every file the
+// stage made is behind one Download menu, with one folder for them all. The YouTube text and
+// the shorts have their own sections.
+export function VideoBody({ stage, project, outputs, subtitleControls }: BodyProps) {
+  const { api } = useApp();
+  const notify = useToast();
   const audioExport =
     project.config.sources.video === "off" && project.config.sources.audio !== "off";
   const video = roleOf(outputsOf(outputs, stage), audioExport ? "audio_export" : "video");
@@ -32,26 +38,54 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
   const playedSubtitles = video?.meta.subtitlesMode ?? project.config.subtitles?.mode;
   const rendering = stage.state === "running";
   const done = percent(stage.progressCurrent ?? 0, stage.progressTotal ?? 0);
+  useCommand({
+    id: "project.folder",
+    title: "Open the project folder",
+    group: "This project",
+    context: project.title,
+    keywords: ["folder", "files", "finder", "explorer", "video"],
+    run: async () => {
+      if (video === undefined) {
+        notify("The video has not been saved yet, so there is no folder to open.", "info");
+        return;
+      }
+      try {
+        const reply = await openFolder(api, {
+          projectId: project.id,
+          asset: assetOf(video),
+          folder: media?.folder ?? null,
+        });
+        if (!reply.opened) notify(`${dockerFolderHelp} ${reply.path}`, "info");
+      } catch (error) {
+        notify(
+          error instanceof Error
+            ? error.message
+            : "The folder couldn't be opened. Use Open folder under the video.",
+          "error",
+        );
+      }
+    },
+  });
 
   if (project.config.sources.video === "off" && !audioExport)
     return <StageBody>{subtitleControls}</StageBody>;
 
   return (
-    <StageBody>
+    <StageBody className="p-0">
       {rendering ? (
-        <p className="text-small text-run-text">
+        <p className="m-0 text-small text-accent-ink">
           {preparingSubtitles(stage, project.config)
             ? `Preparing subtitles · ${String(percent(stage.progressCurrent ?? 0, 35))}%`
             : audioExport
               ? "Exporting combined audio"
               : stage.progressTotal === null
-                ? "Re-rendering"
-                : `Re-rendering · ${String(done)}%`}
+                ? "Rendering"
+                : `Rendering · ${String(done)}%`}
         </p>
       ) : null}
 
       {video === undefined ? (
-        <p className="text-small text-ink2">
+        <p className="m-0 text-small text-ink-2">
           {audioExport ? "No combined audio export has landed yet." : "No render has landed yet."}
         </p>
       ) : audioExport ? (
@@ -62,67 +96,22 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
           preload="metadata"
           aria-label="Combined narration"
           src={media?.url}
-          className="h-9 w-full max-w-[720px]"
+          className="h-10 w-full max-w-[720px]"
         />
-      ) : (
-        // biome-ignore lint/a11y/useMediaCaption: the conditional track uses generated VTT only in files mode; burned captions are already visible.
-        <video
+      ) : media === undefined ? null : (
+        <Player
           key={video.id}
-          controls
-          preload="metadata"
-          src={media?.url}
-          aria-label="Generated video"
-          className={cn(
-            "mx-auto block max-h-[min(58vh,560px)] w-auto max-w-full rounded-control bg-screen",
-            project.format === "9:16" ? "aspect-[9/16]" : "aspect-video",
-          )}
-        >
-          {playedSubtitles === "files" && vtt && captions ? (
-            <track
-              key={vtt.id}
-              kind="captions"
-              srcLang="en"
-              label="English"
-              default
-              src={captions?.url}
-            />
-          ) : null}
-        </video>
+          src={media.url}
+          label="Generated video"
+          portrait={project.format === "9:16"}
+          className={project.format === "9:16" ? "max-w-[360px]" : "max-w-[1100px]"}
+          {...(playedSubtitles === "files" && vtt && captions
+            ? { captions: { src: captions.url, lang: "en", label: "English" } }
+            : {})}
+        />
       )}
 
-      {/* What the render could not do as asked: an image shown still because its clip could
-          not be made. */}
-      {video?.meta.warnings?.length ? (
-        <ul aria-label="Render notes" className="space-y-1 text-small text-ink2">
-          {video.meta.warnings.map((warning) => (
-            <li key={warning}>{warning}</li>
-          ))}
-        </ul>
-      ) : null}
-
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-small">
-        {stage.state === "pending" || stage.state === "skipped" ? null : (
-          <ConfirmedButton
-            action={{ kind: "rerun", stage: stage.kind }}
-            run={() => {
-              actions.run({ kind: "rerun", stage: stage.kind });
-            }}
-            disabled={busy || !["done", "failed", "canceled"].includes(stage.state)}
-            pending={actions.pending}
-          >
-            {audioExport ? "Re-export" : "Re-render"}
-          </ConfirmedButton>
-        )}
-        <span className="text-ink2">
-          {[
-            duration(video?.durationMs ?? undefined),
-            audioExport ? "WAV · stereo · 48 kHz" : project.format,
-          ]
-            .filter((part) => part !== undefined)
-            .join(" · ")}
-        </span>
-        <span className="flex-1" />
-        {/* Every file the stage made behind one button, and one folder for them all. */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <DownloadMenu
           files={[
             { output: video, label: audioExport ? "Audio (.wav)" : "Video (.mp4)" },
@@ -139,17 +128,38 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
           ]}
         />
         <OutputFolder output={video} />
+        <span className="text-small text-ink-2">
+          {[
+            duration(video?.durationMs ?? undefined),
+            audioExport ? "WAV · stereo · 48 kHz" : project.format,
+          ]
+            .filter((part) => part !== undefined)
+            .join(" · ")}
+        </span>
       </div>
+
+      {/* What the render could not do as asked: an image shown still because its clip could
+          not be made. */}
+      {video?.meta.warnings?.length ? (
+        <ul
+          aria-label="Render notes"
+          className="m-0 flex flex-col gap-1 pl-5 text-small text-ink-2"
+        >
+          {video.meta.warnings.map((warning) => (
+            <li key={warning}>{warning}</li>
+          ))}
+        </ul>
+      ) : null}
       {video?.meta.subtitleOmissions?.length ? (
         <details className="border-t border-line pt-3 text-small">
           <summary className="cursor-pointer font-semibold">
             Subtitles recovered after missing narration ({video.meta.subtitleOmissions.length})
           </summary>
-          <p className="mt-2 text-ink2">
+          <p className="m-0 mt-2 text-ink-2">
             These transcript passages could not be matched to the audio and were left out of the
             captions. The audio is unchanged. Review these passages before sharing.
           </p>
-          <ul className="mt-2 space-y-2">
+          <ul className="m-0 mt-2 flex flex-col gap-2 pl-5">
             {video.meta.subtitleOmissions.map((omission) => (
               <li key={`${omission.start}-${omission.text}`}>
                 <strong>{new Date(omission.start * 1000).toISOString().slice(11, 19)}</strong> —{" "}
@@ -159,8 +169,6 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
           </ul>
         </details>
       ) : null}
-      <YoutubeBlock stage={stage} project={project} outputs={outputs} />
-      <ShortsBlock stage={stage} project={project} outputs={outputs} />
       {subtitleControls ? (
         <details className="border-t border-line pt-3">
           <summary className="cursor-pointer text-small font-semibold">

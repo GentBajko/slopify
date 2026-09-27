@@ -203,9 +203,12 @@ export function planPreview(
             ? { ...row, disposition: "reuse" }
             : row,
           recipes.find((recipe) => recipe.key === row.key),
+          view.revision.config,
         ),
       ),
-      snapshot,
+      // The whole catalogue, as Play's review prices with: a CLI row's API figure is read
+      // from the API models, which the execution snapshot leaves out.
+      catalogue,
     ),
     wholeRequestNotice: plan.wholeRequestNotice,
     warnings: [

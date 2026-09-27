@@ -55,7 +55,7 @@ export async function runArticle(
     // Admission refuses a run whose article is Generate without both, so
     // reaching here is a bug in admission rather than something the user did.
     throw new Error(
-      "No AI model or article prompt is set for writing the article. Choose a model in Edit project → Providers and check Edit project → Prompts, then Retry stage.",
+      "No AI model or article prompt is set for writing the article. Choose a model in Edit project → Providers and check Edit project → Prompts, then Try again.",
     );
   }
   const notes = researchNotes(deps, projectId);

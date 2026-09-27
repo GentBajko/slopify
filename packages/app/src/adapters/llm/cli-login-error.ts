@@ -17,6 +17,6 @@ export function cliLoginError(provider: string, text: string): ProviderError | u
         : "codex login";
   return providerError({
     kind: "missing_key",
-    message: `The ${cliName(provider)} is not signed in, or its sign-in has expired. Open a terminal on the computer running the CLI, run "${command}" and sign in, then use Retry stage.`,
+    message: `The ${cliName(provider)} is not signed in, or its sign-in has expired. Open a terminal on the computer running the CLI, run "${command}" and sign in, then use Try again.`,
   });
 }
