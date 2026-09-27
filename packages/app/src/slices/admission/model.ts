@@ -83,6 +83,32 @@ export interface ProvidedFiles {
   readonly shortsMusic?: string | undefined;
 }
 
+// How many thumbnails a generated thumbnail step makes. Three gives two more drawn from the
+// same prompt with other compositions, for YouTube's Test & Compare. Absent reads as one,
+// which is what every project saved before it was.
+export const thumbnailCounts = [1, 3] as const;
+export type ThumbnailCount = (typeof thumbnailCounts)[number];
+// The work key of each thumbnail: the first keeps the key every thumbnail always had.
+export function thumbnailKey(variant: number): string {
+  return variant <= 1 ? "thumbnail:image" : `thumbnail:image:${String(variant)}`;
+}
+// Which thumbnail (1-3) a work key is, or undefined for any other key.
+export function thumbnailVariant(key: string): number | undefined {
+  if (key === "thumbnail:image") return 1;
+  const match = /^thumbnail:image:([23])$/.exec(key);
+  return match === null ? undefined : Number(match[1]);
+}
+// How many thumbnails the run makes: three only when asked for and the image provider draws
+// them; an uploaded thumbnail is always one.
+export function thumbnailCountOf(
+  draft: Pick<RunDraft, "sources" | "thumbnailCount">,
+): ThumbnailCount {
+  return draft.thumbnailCount === 3 &&
+    (draft.sources.thumbnail === "from_prompt" || draft.sources.thumbnail === "prompt_by_llm")
+    ? 3
+    : 1;
+}
+
 // The Images stage's establishing image: made first (from a library image prompt) or uploaded,
 // then every other image of the run - the video's, the shorts' and, unless `thumbnail` is
 // false, the thumbnail - is drawn with it as a visual reference for characters, style and
@@ -118,6 +144,8 @@ export interface RunDraft {
   readonly narrationPrompt?: string | undefined;
   readonly imagePrompts: readonly ImagePromptChoice[];
   readonly thumbnailPrompt?: string | undefined;
+  // `thumbnailCountOf` reads it; absent is one thumbnail.
+  readonly thumbnailCount?: ThumbnailCount | undefined;
   readonly intro?: EntryChoice | undefined;
   readonly outro?: EntryChoice | undefined;
   readonly values: Readonly<Record<string, string>>;
@@ -155,10 +183,30 @@ export interface RunDraft {
   // (`video/edit-settings.ts`). Absent reads as today's slideshow, which is what every project
   // saved before it rendered.
   readonly videoEdit?: import("../video/edit-settings.js").VideoEditSettings | undefined;
+  // Automatic reviews per stage (`slices/reviews`). Absent reads as every review Off, which is
+  // what every project saved before them was.
+  readonly reviews?: import("../reviews/model.js").ReviewSettings | undefined;
+  // The channel the run was started in (`slices/channels`). Absent on everything saved before
+  // channels, which reads as the default channel.
+  readonly channelId?: string | undefined;
+  // The channel's cast as the run was started with it: an image whose brief mentions a member
+  // is drawn with that member's pictures as references (`recipe-cast.ts`). Absent is none.
+  readonly cast?: readonly import("../channels/model.js").CastSnapshot[] | undefined;
+  // The chapter cards' and end screen's font and colour, from the channel's brand kit. Absent
+  // is the caption font in white, as every video before it.
+  readonly titleStyle?: TitleStyle | undefined;
+  // A card over the video's last seconds, from the brand kit. Absent is none.
+  readonly endScreen?: { readonly text: string } | undefined;
   // Multiple voices: an audiobook, podcast, radio drama or interview narrated by several
   // speakers from a script (`slices/voices`). Absent is the Narration format, one voice
   // reading the article, which is what every project saved before it was.
   readonly voices?: import("../voices/model.js").VoicesSettings | undefined;
+}
+
+export interface TitleStyle {
+  readonly fontId?: string | undefined;
+  // #RRGGBB.
+  readonly color?: string | undefined;
 }
 
 // The draft as accepted, coerced and trimmed. This is what the project's `config` column
@@ -190,6 +238,10 @@ export interface Stage {
   readonly progressTotal: number | null;
   readonly startedAt: string | null;
   readonly finishedAt: string | null;
+  // The provider error's kind behind `failureReason`, which picks the fix-it button.
+  readonly failureKind?: string;
+  // Waiting to run again by itself after a failure time can fix (a rate limit, a timeout).
+  readonly retryAt?: string;
 }
 
 export interface ProjectSummary extends Project {

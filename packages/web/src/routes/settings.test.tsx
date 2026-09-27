@@ -119,9 +119,12 @@ describe("the settings screen", () => {
       "Models",
       "Playback & appearance",
       "Notifications",
+      "Channel links",
+      "YouTube Studio",
       "Backup & storage",
       "Backups",
       "Usage",
+      "About",
     ]);
     expect(
       within(nav).getByRole("button", { name: "Providers" }).getAttribute("aria-current"),

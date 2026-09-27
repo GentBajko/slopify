@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
+import { resolveChannelId, templateChannels } from "../channels/repo.js";
 import type { DraftView } from "../play-drafts/model.js";
 import { requestHash } from "../play-drafts/repo.js";
 import { createDraft, readDraft } from "../play-drafts/service.js";
@@ -13,8 +14,14 @@ import {
 } from "./schema.js";
 import { freshTemplateDraft, templateSetup } from "./setup.js";
 
-export function listTemplates(deps: TemplateDeps): readonly TemplateSummary[] {
-  return templateSummaries(deps.db);
+export function listTemplates(
+  deps: TemplateDeps,
+): readonly (TemplateSummary & { readonly channelId: string })[] {
+  const channels = templateChannels(deps.db);
+  return templateSummaries(deps.db).map((template) => ({
+    ...template,
+    channelId: channels.get(template.id) ?? resolveChannelId(deps.db, undefined),
+  }));
 }
 export function readTemplate(
   deps: TemplateDeps,
@@ -54,11 +61,13 @@ export function createTemplate(
       createdAt: at,
       updatedAt: at,
     };
+    // The channel is the template's, not part of its setup: moving it (Channels)
+    // makes no new version, and a draft made from it asks the template (`draftChannel`).
     deps.db
       .prepare(
-        "INSERT INTO project_templates(id,head_version,creation_hash,created_at) VALUES (?,1,?,?)",
+        "INSERT INTO project_templates(id,head_version,creation_hash,created_at,channel_id) VALUES (?,1,?,?,?)",
       )
-      .run(id, hash, at);
+      .run(id, hash, at, resolveChannelId(deps.db, document.channelId));
     insertTemplateRevision(deps.db, value);
     return { ok: true, value };
   });

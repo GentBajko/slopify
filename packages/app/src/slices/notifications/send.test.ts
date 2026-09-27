@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { noticeOf, notificationUrlProblem } from "./rules.js";
+import { noticeOf, noticeText, notificationUrlProblem } from "./rules.js";
 import { createNotificationSender } from "./send.js";
 
 describe("createNotificationSender", () => {
@@ -66,9 +66,21 @@ describe("noticeOf", () => {
   it("speaks only for a run seen running", () => {
     expect(noticeOf("running", "done")).toBe("ready");
     expect(noticeOf("running", "failed")).toBe("failed");
+    expect(noticeOf("running", "partial")).toBe("partial");
     expect(noticeOf("running", "pending")).toBe("waiting");
     expect(noticeOf("running", "paused")).toBeUndefined();
     expect(noticeOf(undefined, "done")).toBeUndefined();
     expect(noticeOf("pending", "failed")).toBeUndefined();
+  });
+});
+
+describe("noticeText", () => {
+  it("says a video that is there despite a failed step is ready with problems", () => {
+    expect(
+      noticeText("partial", { title: "Tiamat", makesVideo: true, reason: "Thumbnail refused" }),
+    ).toEqual({
+      headline: "Video ready with problems: Tiamat — Thumbnail refused",
+      detail: "Open the project to see which step failed and the button that fixes it.",
+    });
   });
 });

@@ -6,8 +6,10 @@ import { ActionBar, StatusSlot } from "@/components/kit/action-bar";
 import { Drawer } from "@/components/kit/drawer";
 import { PageBar } from "@/components/kit/page-bar";
 import { Button } from "@/components/ui/button";
+import { Welcome } from "@/components/welcome";
 import { usePlayDraft } from "@/lib/form-drafts";
 import { admission } from "@/play/admission";
+import { ChannelPicker } from "@/play/channel-picker";
 import { checkpointTarget } from "@/play/checkpoints";
 import { ContentSection } from "@/play/content-section";
 import { usePlaySession } from "@/play/draft-context";
@@ -258,6 +260,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
         meta={form.title.trim() === "" ? "Untitled draft" : form.title}
         actions={<DraftList />}
       />
+      <Welcome onDefaults={session.adoptDefaults} />
       <SectionNavigation
         section={session.section}
         underneath={editorSection}
@@ -290,6 +293,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
               {...controls}
               fields={fields}
               entries={choices.entries}
+              channel={<ChannelPicker />}
               onLibrary={(to) => {
                 void library(to);
               }}

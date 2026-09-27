@@ -1,7 +1,7 @@
 import { titleMax } from "@app/slices/admission/rules.js";
 import type { Field } from "@app/slices/admission/substitute.js";
 import type { Entry } from "@app/slices/library/model.js";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { useId } from "react";
 import { InfoTip } from "@/components/kit/info-tip";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,8 @@ export function ContentSection(
     readonly fields: readonly Field[];
     readonly entries: readonly Entry[];
     readonly onLibrary: (path: "/prompts" | "/settings") => void;
+    // The channel picker under the title; Play passes it, the section's own tests do not.
+    readonly channel?: ReactNode;
   },
 ): ReactElement {
   const { form, problem, update, fields, entries, onLibrary } = props;
@@ -43,6 +45,7 @@ export function ContentSection(
         />
         {problem("title") ? <p className="text-small text-red">{problem("title")}</p> : null}
       </div>
+      {props.channel}
       <ArticleRail {...props} />
       {form.sources.article === "generate" ? (
         <div className="flex flex-wrap items-start gap-3 py-3">

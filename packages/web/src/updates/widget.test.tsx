@@ -75,19 +75,42 @@ it("a check discovers an update without installing until the next click", async 
   expect(install).toHaveBeenCalledTimes(1);
 });
 
-it("keeps blocked installs out of the click action and explains why on hover", async () => {
-  const install = vi.fn();
+it("waits for running work instead of refusing, says for what, and cancels on the next click", async () => {
+  const waiting: UpdateInfo = {
+    ...available,
+    busy: true,
+    canUpdate: false,
+    status: "waiting",
+    pendingVersion: "0.8.3",
+    waitingFor: "Tiamat",
+  };
+  let current: UpdateInfo = { ...available, busy: true };
+  const install = vi.fn((request: Request) => {
+    current = waiting;
+    return jsonAnswer(waiting, 202)(request);
+  });
+  const cancel = vi.fn((request: Request) => {
+    current = { ...available, busy: true };
+    return jsonAnswer(current)(request);
+  });
   renderApp(
     <UpdateWidget reload={vi.fn()} />,
     testDeps({
-      "GET /api/update": jsonAnswer({ ...available, busy: true }),
+      "GET /api/update": (request) => jsonAnswer(current)(request),
       "POST /api/update": install,
+      "DELETE /api/update": cancel,
     }),
   );
   await ready();
-  expect(control().title).toContain("Pause running projects");
   await userEvent.click(control());
-  expect(install).not.toHaveBeenCalled();
+  expect(install).toHaveBeenCalledTimes(1);
+  await waitFor(() =>
+    expect(control().title).toContain("Update to 0.8.3 will install when 'Tiamat' finishes."),
+  );
+  expect(control().disabled).toBe(false);
+  await userEvent.click(control());
+  expect(cancel).toHaveBeenCalledTimes(1);
+  expect(install).toHaveBeenCalledTimes(1);
 });
 
 it("shows installation failures without automatic retries", async () => {

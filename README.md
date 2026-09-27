@@ -58,7 +58,10 @@ npm install -g @gentbajko/slopify      # or install it, then run: slopify
 npx @gentbajko/slopify@latest --docker # or keep it running in Docker (Linux)
 ```
 
-It opens at `http://127.0.0.1:6969`. Update by running the same command with `@latest`.
+It opens at `http://127.0.0.1:6969`. To update, press **Update** in Settings or run
+`npx @gentbajko/slopify@latest update` (Docker or not). Either way it waits for running
+work, keeps a copy to go back to, and puts the previous version back if the new one
+doesn't start.
 
 ## How it works
 
@@ -88,11 +91,12 @@ It opens at `http://127.0.0.1:6969`. Update by running the same command with `@l
 npx @gentbajko/slopify@latest --docker
 ```
 
-Runs Slopify in the background on Linux, restarting with Docker. Project files go to
-`~/Slopify/Projects`; the database and keys stay private in the `slopify-data` volume.
-If you use the Claude Code, Codex or Gemini CLI, it asks once to set up a small helper so
-they run on your machine with your existing logins. Full details, including plain
-`docker run`, in the [Docker guide](docs/docker.md).
+Runs Slopify in the background on Linux from one [compose.yaml](compose.yaml), restarting
+with Docker. Project files go to `~/Slopify/Projects`; the database and keys stay private in
+the `slopify-data` volume. If you use the Claude Code, Codex or Gemini CLI, it asks once to
+set up a small helper so they run on your machine with your existing logins. Update with
+`npx @gentbajko/slopify@latest update`. Full details, including running the compose file
+yourself, in the [Docker guide](docs/docker.md).
 
 ## Options
 
@@ -114,6 +118,20 @@ Slopify sends anonymous counts (installs, projects, stages, images, videos, PDFs
 descriptions, shorts, audio seconds and token totals) to show the totals on
 [slopify.stream](https://slopify.stream). Never your keys, prompts, keywords, titles,
 text, files or anything about your machine beyond a random id.
+
+## Support
+
+Slopify is free and open source. If it saves you time, you can support it on
+[Patreon](https://www.patreon.com/cw/GentBajko) or with a
+[coffee](https://buymeacoffee.com/gentbajko). [How I run a channel with it](https://slopify.stream/channel.html)
+shows a lore channel run on Slopify from topic to upload.
+
+<!-- Donation page: not known yet, so nothing links to it. When it is, put the address in
+     `donationUrl` in packages/site/public/main.js and packages/web/src/lib/support-links.ts
+     (both hold the placeholder https://example.com/donate and show no link while they do),
+     update their "ships with the placeholder" tests, and uncomment this line with it:
+- [Donate](https://example.com/donate)
+-->
 
 ## Licence
 

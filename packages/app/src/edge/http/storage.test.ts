@@ -23,6 +23,33 @@ it("reports aggregate and per-project storage without exposing backup contents",
   }
 });
 
+it("drops working files only for a finished project that exists", async () => {
+  const h = startFixture();
+  try {
+    const app = new Hono().route("/api/storage", storageRoutes(h.deps as unknown as AppDeps));
+    const missing = await app.request("/api/storage/projects/nope/keep-outputs", {
+      method: "POST",
+    });
+    expect(missing.status).toBe(404);
+    h.deps.db.prepare("INSERT INTO projects VALUES ('p1','Running','16:9','{}','t','t')").run();
+    h.deps.db
+      .prepare(
+        "INSERT INTO stages (id,project_id,kind,source,state) VALUES ('s1','p1','video','generate','running')",
+      )
+      .run();
+    const running = await app.request("/api/storage/projects/p1/keep-outputs", {
+      method: "POST",
+    });
+    expect(running.status).toBe(409);
+    expect(await running.json()).toMatchObject({ detail: expect.stringMatching(/finished/) });
+    h.deps.db.exec("UPDATE stages SET state='done'");
+    const done = await app.request("/api/storage/projects/p1/keep-outputs", { method: "POST" });
+    expect(await done.json()).toEqual({ ok: true, files: 0, bytesFreed: 0 });
+  } finally {
+    h.close();
+  }
+});
+
 it("refuses non-ZIP imports before reading the request body", async () => {
   const h = startFixture();
   try {

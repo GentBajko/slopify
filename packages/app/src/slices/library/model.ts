@@ -16,6 +16,7 @@ export const promptKinds = [
   "narration",
   "description",
   "shorts",
+  "review",
   // Speaker turns for a multi-voice run (`slices/voices/script.ts`), in place of an article.
   "script",
 ] as const;

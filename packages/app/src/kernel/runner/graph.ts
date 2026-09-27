@@ -3,14 +3,15 @@ import type { ProjectState, StageKind, StageState } from "../pipeline.js";
 // Images use saved prompts and can run immediately. A thumbnail's source and an
 // audio-only export narrow these dependencies through dependenciesOf(). The document is
 // laid out from the article alone, with the thumbnail as its cover when there is one, so it
-// runs beside narration and images rather than after them.
+// runs beside narration and images rather than after them. The video never reads the
+// thumbnail, so a thumbnail that fails does not hold the video back.
 export const deps = {
   research: [],
   article: ["research"],
   audio: ["article"],
   images: [],
   thumbnail: ["article"],
-  video: ["article", "audio", "images", "thumbnail"],
+  video: ["article", "audio", "images"],
   document: ["article", "thumbnail"],
 } as const satisfies Readonly<Record<StageKind, readonly StageKind[]>>;
 
@@ -22,26 +23,48 @@ export function satisfied(state: StageState): boolean {
 export interface StageStanding {
   readonly kind: StageKind;
   readonly state: StageState;
+  // Set on a `pending` stage waiting to run again by itself after a failure time can fix.
+  readonly retryAt?: string | null | undefined;
 }
 
+// What a run is for, in order: the first of these the run asks for is the one that has to be
+// there for the run to count as finished. Anything else failing leaves it done with
+// problems rather than failed.
+const headline: readonly StageKind[] = ["video", "audio", "article"];
+
 // Stage state is derived; an explicit persisted pause takes precedence while calls
-// drain. Completed independent images do not imply that a run was canceled.
+// drain. Completed independent images do not imply that a run was canceled. A stage
+// waiting out a rate limit is still part of a run in progress.
 export function derive(stages: readonly StageStanding[], paused = false): ProjectState {
   if (paused) return "paused";
-  if (stages.some((stage) => stage.state === "running")) {
+  if (stages.some((stage) => stage.state === "running" || waiting(stage))) {
     return "running";
   }
   if (stages.some((stage) => stage.state === "canceled")) {
     return "canceled";
   }
   if (stages.some((stage) => stage.state === "failed")) {
-    return "failed";
+    return headlineMade(stages) ? "partial" : "failed";
   }
   if (stages.length > 0 && stages.every((stage) => satisfied(stage.state))) {
     return "done";
   }
   // Includes a run created but not yet claimed and unfinished work after restart.
   return "pending";
+}
+
+function waiting(stage: StageStanding): boolean {
+  return stage.state === "pending" && stage.retryAt !== undefined && stage.retryAt !== null;
+}
+
+function headlineMade(stages: readonly StageStanding[]): boolean {
+  for (const kind of headline) {
+    const stage = stages.find((one) => one.kind === kind);
+    if (stage === undefined || stage.state === "skipped") continue;
+    // A file the user supplied is not something this run made.
+    return stage.state === "done";
+  }
+  return false;
 }
 
 export function dependenciesOf(

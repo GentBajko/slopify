@@ -19,14 +19,13 @@
   "files": [
     "dist",
     "SUBTITLES.md",
-    "scripts/docker-run.sh",
     "!dist/**/*.d.ts"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node scripts/copy-migrations.mjs && node scripts/copy-assets.mjs && node scripts/copy-web.mjs",
     "build:types": "tsc -p tsconfig.build.json --declaration --emitDeclarationOnly",
     "typecheck": "tsc --noEmit",
-    "smoke:docker-projects": "node scripts/docker-projects-smoke.mjs"
+    "smoke:docker-install": "node scripts/docker-install-smoke.mjs"
   },
   "dependencies": {
     "@fastify/busboy": "^3.2.2",

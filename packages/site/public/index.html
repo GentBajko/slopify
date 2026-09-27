@@ -78,6 +78,9 @@
             <span class="glyph glyph-coffee" aria-hidden="true"></span>
             Buy Me a Coffee
           </a>
+          <!-- main.js puts a Donate link here once `donationUrl` is a real address, never before. -->
+          <span data-donate hidden></span>
+          <a href="/channel.html">How I run a channel</a>
         </nav>
       </header>
 
@@ -290,11 +293,12 @@
                 Reusable prompts. Your outputs. A finished project, ready to download.
               </p>
               <p class="showcase-description" id="showcase-description">
-                A silent, edited walkthrough of the actual app with a demo project, "The Rise of
-                AI Slop": a finished narrated video with captions, a prompt with a
-                &#123;&#123;Topic&#125;&#125; keyword, a Play setup with the video, PDF and YouTube
-                description outputs switched on, the review before starting, and the finished
-                project with its images, PDF, video downloads and a copyable YouTube description.
+                A silent walkthrough of the actual app, recorded by a script against a demo
+                project, "The Keeper of the Drowned Light", whose images and narration are
+                placeholders made on the machine: the finished project with its video, the
+                YouTube description with chapter timestamps and tags, and a vertical short with
+                its title and hashtags; then Play, where a new run gets its title, a saved
+                article prompt, its &#123;&#123;Topic&#125;&#125; keyword and its outputs.
               </p>
             </figcaption>
           </figure>
@@ -308,6 +312,7 @@
               <span class="glyph glyph-large glyph-coffee" aria-hidden="true"></span>
               Buy Me a Coffee
             </a>
+            <span data-donate="support-key" hidden></span>
           </p>
         </section>
 
@@ -363,6 +368,54 @@
               </ul>
             </div>
           </div>
+          <!-- 3.0, written down but NOT published: several of these are still being built.
+               The <template> is inert (never rendered, never read out). At release, set
+               `nextReleasePublished` in main.js to true, or swap <template> for <div> so it
+               also shows without JavaScript. Describe only what has shipped. -->
+          <template data-release="3.0">
+            <div class="feature-next">
+              <h3 class="engraved">New in 3.0</h3>
+              <p class="feature-note">Fewer manual steps per published video: approve the topics, look over the finished video, press Publish in YouTube Studio.</p>
+              <div class="feature-groups">
+                <div class="feature-group">
+                  <h3 class="engraved">Checked</h3>
+                  <ul>
+                    <li><strong>Automatic reviews:</strong> a reviewer model checks the article, images, narration, thumbnail and shorts before the run moves on, and sends work back with its reasons</li>
+                    <li><strong>A retry limit per item</strong> (2 by default), then the item is kept and flagged for you; every verdict is saved beside the item so you can overrule it</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h3 class="engraved">Scheduled</h3>
+                  <ul>
+                    <li><strong>Schedules that fill themselves:</strong> from a series brief, new topics when the queue runs low, never a title already made or queued</li>
+                    <li><strong>Queue them or hold them</strong> for your approval</li>
+                    <li><strong>Channels and cast:</strong> brand kit, series brief, templates, schedule and a cast library of reference images, so a character looks the same in video 1 and video 40</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h3 class="engraved">Published</h3>
+                  <ul>
+                    <li><strong>YouTube Studio prep:</strong> Prepare upload fills the title, description with chapters, tags, thumbnail, audience and playlist in Studio in your own browser; you press Publish</li>
+                    <li><strong>An upload pack</strong> without the extension: the files and every text, each with a Copy button</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h3 class="engraved">Counted</h3>
+                  <ul>
+                    <li><strong>Run cost:</strong> the estimate before Start and the real cost per stage after</li>
+                    <li><strong>CLI limits:</strong> how much of the 5-hour and weekly limit a run took, and a run that waits for limits to reset instead of failing</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h3 class="engraved">Faster</h3>
+                  <ul>
+                    <li><strong>A reading view</strong> for the article, research and narration, with contents, copy and search</li>
+                    <li><strong>Ctrl+K</strong> for everything: new video, schedule, regenerate an image</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </template>
         </section>
 
         <section class="guide" aria-labelledby="guide-title">
@@ -551,6 +604,8 @@
           <span class="glyph glyph-coffee" aria-hidden="true"></span>
           Buy Me a Coffee
         </a>
+        <span data-donate="donate" hidden></span>
+        <a class="donate" href="/channel.html">How I run a channel with it</a>
       </footer>
     </div>
   </body>

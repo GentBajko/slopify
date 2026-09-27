@@ -12,11 +12,23 @@ export function pieceLabel(
   piece: Pick<WorkPiece, "key">,
 ): string | undefined {
   const { key } = piece;
+  const variant = /^thumbnail:image:([23])$/.exec(key);
+  if (variant !== null) return `Thumbnail ${variant[1] ?? ""}`;
   if (key === "thumbnail:image" || key.startsWith("thumbnail:")) return "Thumbnail";
   if (key === "reference:image") return "Establishing image";
   if (key === "article:body") return "Article";
   if (key === "document:pdf") return "Document";
   if (key === "youtube:description") return "YouTube description";
+  if (key.startsWith("review:")) {
+    const item = key.slice("review:".length);
+    const itemLabel =
+      item === "narration"
+        ? "Narration"
+        : /^shorts:\d+$/.test(item)
+          ? `Short ${item.slice("shorts:".length)}`
+          : pieceLabel(deps, context, { key: item });
+    return `Review of ${itemLabel ?? "an item"}`;
+  }
   if (key === "voices:files") return "MP3 and M4B files";
   if (key === "script:attribute") return "Speaker split";
   const turn = /^audio:body:turn:(\d+):\d+$/.exec(key);

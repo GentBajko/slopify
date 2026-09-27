@@ -200,7 +200,10 @@ describe("requested work pricing", () => {
       outputCharacters: 4000,
     } as const;
     expect(estimateRequests([request], partial).unknown).toBe(1);
-    expect(estimateRequests([{ ...request, provider: "codex" }], catalogue).unknown).toBe(1);
+    // A CLI runs on the plan: known at $0, never priced from a same-named row of another provider.
+    const cli = estimateRequests([{ ...request, provider: "codex" }], catalogue);
+    expect(cli.unknown).toBe(0);
+    expect(cli.rows[0]).toMatchObject({ low: 0, high: 0, onPlan: true, apiLow: null });
   });
 
   it.each([Number.NaN, Number.POSITIVE_INFINITY, -1])(

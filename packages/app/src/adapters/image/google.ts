@@ -7,7 +7,7 @@ import { httpFailure, missingKey, noImage, quoted, refusedImage, unreadable } fr
 import { retryAfter } from "../retry-after.js";
 import { describeBytes, sniffImage } from "./bytes.js";
 import { discoverGoogleImages } from "./models.js";
-import { withReferenceNote } from "./reference.js";
+import { referencePictures, withReferences } from "./reference.js";
 
 // The HTTP gateway adapter for Google's own image generation, billed to a Gemini API key
 // rather than to a host reselling the same models. Like the OpenAI one it hands back the
@@ -86,15 +86,15 @@ export function googleImage(deps: GoogleImageDeps): ImagePort {
           // With an establishing image the input is two parts, the image first; the Gemini
           // image models draw with an input image as their reference.
           input:
-            req.reference === undefined
+            referencePictures(req).length === 0
               ? req.prompt
               : [
-                  {
+                  ...referencePictures(req).map(({ image }) => ({
                     type: "image",
-                    mime_type: req.reference.mime,
-                    data: Buffer.from(req.reference.bytes).toString("base64"),
-                  },
-                  { type: "text", text: withReferenceNote(req.prompt, req.reference) },
+                    mime_type: image.mime,
+                    data: Buffer.from(image.bytes).toString("base64"),
+                  })),
+                  { type: "text", text: withReferences(req.prompt, req) },
                 ],
           // The stage sends Number as that many independent calls, one piece each, so one
           // image per request is what it asks for. Nothing about style is set: the stage
@@ -184,6 +184,8 @@ function kindOf(
   // ceiling: everything else is `other` and is retried, so a prompt past the model's limit
   // fails the same way four times over. A terminal "this will never work" kind has to reach
   // the port's error contract first, which is not this adapter's to widen.
+  // The provider's own server failed; the same request may well succeed later.
+  if (status >= 500) return "dropped";
   return "other";
 }
 

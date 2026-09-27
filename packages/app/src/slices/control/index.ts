@@ -185,7 +185,8 @@ function editable(db: DatabaseSync, id: string, runner: Runner): ControlResult {
   const stages = stagesOf(db, id);
   if (stages.some((stage) => stage.state === "running") || runner.hasInflight?.(id))
     return { ok: false, reason: "running" };
-  if (project.paused !== true && derive(stages) !== "failed")
+  const status = derive(stages);
+  if (project.paused !== true && status !== "failed" && status !== "partial")
     return { ok: false, reason: "not-editable" };
   return { ok: true };
 }

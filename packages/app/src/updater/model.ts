@@ -1,4 +1,6 @@
-export type UpdateStatus = "idle" | "checking" | "installing" | "restarting" | "error";
+// `waiting`: the update was asked for while work was running; it installs by itself as soon
+// as nothing is.
+export type UpdateStatus = "idle" | "checking" | "waiting" | "installing" | "restarting" | "error";
 
 export interface UpdateInfo {
   readonly currentVersion: string;
@@ -9,6 +11,11 @@ export interface UpdateInfo {
   readonly blockedReason?: string;
   readonly status: UpdateStatus;
   readonly error?: string;
+  // While `waiting`: the version that will install.
+  readonly pendingVersion?: string;
+  // While work runs: the project it belongs to, which an update waits on. The Docker
+  // launcher reads it too, before it replaces the container.
+  readonly waitingFor?: string;
 }
 
 export interface UpdateResult {
@@ -22,6 +29,8 @@ export interface AppUpdater {
   readonly activate: (token: string) => Promise<boolean>;
   readonly check: (refresh?: boolean) => Promise<UpdateInfo>;
   readonly start: () => Promise<UpdateResult>;
+  // Drops an update that is waiting for running work. False when none was waiting.
+  readonly cancelWaiting: () => boolean;
   readonly locked: () => boolean;
   readonly beginMutation: () => (() => void) | undefined;
 }

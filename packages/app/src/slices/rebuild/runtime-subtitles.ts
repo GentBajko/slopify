@@ -289,6 +289,8 @@ async function files(
           fontName: font.assName,
           fontSize: config.fontSize,
           position: config.position,
+          color: config.color,
+          outlineColor: config.outlineColor,
           speakers,
           overlay,
         }),

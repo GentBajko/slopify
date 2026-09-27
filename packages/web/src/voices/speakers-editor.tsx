@@ -15,12 +15,13 @@ import {
 } from "@app/slices/voices/model.js";
 import { parseScript } from "@app/slices/voices/script.js";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { type ReactElement, useEffect, useId, useMemo, useState } from "react";
+import { type ReactElement, useEffect, useMemo, useState } from "react";
 import { quoteAuditions, speakAudition, type Voice } from "@/api";
 import { useApp } from "@/app-context";
+import { Button } from "@/components/kit/button";
+import { Field, Input, Textarea } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
-import { Button } from "@/components/ui/button";
-import { Input, Textarea } from "@/components/ui/input";
+import { Switch } from "@/components/kit/switch";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
 
 // Multiple voices, the same control on Play and in Edit project: the format, where the script
@@ -112,19 +113,19 @@ export function SpeakersEditor({
         ) : null}
       </div>
       {value === undefined ? (
-        <p className="text-small text-ink2">
+        <p className="text-small text-ink-2">
           One voice reads the article. Pick a format for an audiobook, podcast, radio drama or
           interview with several speakers.
         </p>
       ) : (
         <>
-          <p className="text-small text-ink2">
+          <p className="text-small text-ink-2">
             {value.source === "script"
               ? "The article prompt must be a Script prompt: the text model writes speaker turns, one `Name: words` paragraph each."
               : "The article is written or pasted as usual; the text model then hands its narration and dialogue to the speakers."}
           </p>
           {problem?.("voices.speakers") === undefined ? null : (
-            <p className="text-label text-red">{problem("voices.speakers")}</p>
+            <p className="text-label text-danger">{problem("voices.speakers")}</p>
           )}
           <ol aria-label="Speakers" className="divide-y divide-line border-y border-line">
             {value.speakers.map((speaker, index) => (
@@ -163,25 +164,25 @@ export function SpeakersEditor({
               onPick={(gap) => set({ turnGapSeconds: Number(gap) })}
             />
           </div>
-          <div className="space-y-1">
-            <Check
+          <div className="flex flex-col items-start gap-2">
+            <Switch
               label="Speaker names on captions"
               checked={value.nameTags}
               onChange={(nameTags) => set({ nameTags })}
             />
-            <Check
+            <Switch
               label="One request for consecutive turns where the voice provider can (ElevenLabs v3)"
               checked={value.nativeDialogue}
               onChange={(nativeDialogue) => set({ nativeDialogue })}
             />
-            <Check
+            <Switch
               label="Also make MP3 and M4B files with chapter markers"
               checked={value.audioFiles}
               onChange={(audioFiles) => set({ audioFiles })}
             />
           </div>
           {value.format === "podcast" || value.format === "interview" ? (
-            <p className="text-small text-ink2">
+            <p className="text-small text-ink-2">
               The speaker panel (a tile per speaker, the one talking lit, their name below) is drawn
               with the captions: set Captions to Burn in under Style to see it in the video.
             </p>
@@ -201,30 +202,6 @@ function newSpeaker(speakers: readonly Speaker[]): Speaker {
     role: "character",
     voice: { provider: "", model: "", voice: "" },
   };
-}
-
-function Check({
-  label,
-  checked,
-  onChange,
-}: {
-  readonly label: string;
-  readonly checked: boolean;
-  readonly onChange: (checked: boolean) => void;
-}): ReactElement {
-  const id = useId();
-  return (
-    <label htmlFor={id} className="flex min-h-8 items-center gap-3 text-small">
-      <input
-        id={id}
-        type="checkbox"
-        checked={checked}
-        className="size-4 accent-accent"
-        onChange={(event) => onChange(event.currentTarget.checked)}
-      />
-      {label}
-    </label>
-  );
 }
 
 function SpeakerRow({
@@ -247,7 +224,6 @@ function SpeakerRow({
   readonly onRemove: (() => void) | undefined;
 }): ReactElement {
   const field = `voices.speakers.${String(index)}`;
-  const nameId = useId();
   const mine = voices.filter((voice) => voice.provider === speaker.voice.provider);
   const voice = speaker.voice;
   return (
@@ -258,21 +234,13 @@ function SpeakerRow({
           className="mb-2 size-3 shrink-0 rounded-full"
           style={{ background: `var(--color-speaker-${String((index % 6) + 1)})` }}
         />
-        <div className="min-w-0 flex-1">
-          <label htmlFor={nameId} className="mb-[5px] block text-label text-ink2">
-            Speaker name
-          </label>
+        <Field label="Speaker name" error={problem?.(`${field}.name`)} className="min-w-0 flex-1">
           <Input
-            id={nameId}
             value={speaker.name}
             maxLength={40}
-            aria-invalid={problem?.(`${field}.name`) !== undefined}
             onChange={(event) => onChange({ ...speaker, name: event.target.value })}
           />
-          {problem?.(`${field}.name`) === undefined ? null : (
-            <p className="mt-1 text-label text-red">{problem(`${field}.name`)}</p>
-          )}
-        </div>
+        </Field>
       </div>
       <OptionPicker
         label="Role"
@@ -326,7 +294,7 @@ function SpeakerRow({
         }}
       />
       <details className="col-span-full text-small">
-        <summary className="flex min-h-8 cursor-pointer items-center gap-2 text-ink2">
+        <summary className="flex min-h-8 cursor-pointer items-center gap-2 text-ink-2">
           Pronunciations for {speaker.name.trim() || "this speaker"}
           {speaker.pronunciations?.trim() ? " · set" : ""}
           <InfoTip label="speaker pronunciations">
@@ -353,7 +321,7 @@ function SpeakerRow({
         <Audition speaker={speaker} line={line} />
         <span className="flex-1" />
         {onRemove === undefined ? null : (
-          <Button type="button" variant="ghost" onClick={onRemove}>
+          <Button type="button" variant="quiet" onClick={onRemove}>
             Remove {speaker.name.trim() || "speaker"}
           </Button>
         )}
@@ -421,7 +389,7 @@ function Audition({
       >
         {speak.isPending ? "Speaking…" : `Audition${price === undefined ? "" : ` · ${price}`}`}
       </Button>
-      <span className="min-h-5 text-label text-ink2" aria-live="polite">
+      <span className="min-h-5 text-label text-ink-2" aria-live="polite">
         {!ready
           ? "Pick a provider, model and voice to audition."
           : speak.error !== null

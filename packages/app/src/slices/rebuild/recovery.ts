@@ -9,6 +9,7 @@ import type { RebuildSelection } from "./model.js";
 import { type PreviewPlan, planPreview } from "./preview-plan.js";
 import { retainedPreviewPlan } from "./preview-retained.js";
 import { recipeProviderChoice } from "./recipe-provider-choice.js";
+import type { RevisionWorkPlan } from "./recipe-work.js";
 import { acceptedJobMessage, activeConflict, conflictRefusal } from "./recovery-conflict.js";
 import {
   type RecoveryRequest,
@@ -25,6 +26,7 @@ import {
 import {
   dependentClosure,
   recoverySelection,
+  redoTarget,
   regenerationEdit,
   sectionRoots,
 } from "./recovery-selection.js";
@@ -58,7 +60,10 @@ export async function recoverProject(
   deps: RebuildDeps,
   projectId: string,
   raw: RecoveryRequest,
+  // Set only by an automatic review redo (`review-redo.ts`): see `activeConflict`.
+  options: { readonly pendingSuperseded?: boolean } = {},
 ): Promise<RecoveryResult> {
+  const superseded = options.pendingSuperseded === true;
   const parsed = recoveryRequestSchema.safeParse(raw);
   if (!parsed.success)
     return {
@@ -70,6 +75,13 @@ export async function recoverProject(
       })),
     };
   const input = parsed.data;
+  // Where a rerun or a redo starts: the stage's generated work, or the reviewed item's.
+  const rootsOf = (view: RevisionView, plan: RevisionWorkPlan): readonly string[] =>
+    input.action.kind === "rerun"
+      ? sectionRoots(view, plan, input.action.stage)
+      : input.action.kind === "redo"
+        ? (redoTarget(view, plan, input.action.item)?.roots ?? [])
+        : [];
   const prepared = await withProjectControl(
     deps.db,
     projectId,
@@ -87,7 +99,11 @@ export async function recoverProject(
         if (!base.current) return { ok: false, reason: "conflict" };
         const plan = retainedPreviewPlan(deps, base, deps.catalogue.read());
         const edit =
-          input.action.kind === "rerun" ? regenerationEdit(base, plan, input.action.stage) : null;
+          input.action.kind === "rerun"
+            ? regenerationEdit(base, plan, input.action.stage)
+            : input.action.kind === "redo"
+              ? redoTarget(base, plan, input.action.item)?.edit
+              : null;
         if (edit === undefined)
           return {
             ok: false,
@@ -96,7 +112,9 @@ export async function recoverProject(
               {
                 field: "stage",
                 message:
-                  "This section has no generated work to rerun. Use Edit project to change its source.",
+                  input.action.kind === "redo"
+                    ? "This item is no longer made by the project (it was removed, or its source changed), so it can't be made again. Reload the project page."
+                    : "This section has no generated work to rerun. Use Edit project to change its source.",
               },
             ],
           };
@@ -116,19 +134,20 @@ export async function recoverProject(
       let view = base;
       if (record.edit !== null) {
         const prior = retainedPreviewPlan(deps, base, deps.catalogue.read());
-        const action = input.action;
-        if (action.kind !== "rerun")
+        if (input.action.kind !== "rerun" && input.action.kind !== "redo")
           throw new Error(
             "Slopify hit an internal error (a recovery edit has nothing to re-run). Try again; if it happens again, use Download diagnostics in Settings and report it.",
           );
-        const affected = dependentClosure(prior.recipes, sectionRoots(base, prior, action.stage));
+        const affected = dependentClosure(prior.recipes, rootsOf(base, prior));
         const savedIntent = deps.db
           .prepare(
             "SELECT result_revision_id FROM revision_mutations WHERE project_id=? AND idempotency_key=?",
           )
           .get(projectId, recoveryKey(input, "save"));
         const conflict =
-          savedIntent === undefined ? activeConflict(deps, projectId, affected) : undefined;
+          savedIntent === undefined
+            ? activeConflict(deps, projectId, affected, superseded)
+            : undefined;
         if (conflict !== undefined) return finish(conflictRefusal(conflict));
         const saved = await saveRevision(deps, {
           projectId,
@@ -136,7 +155,7 @@ export async function recoverProject(
           idempotencyKey: recoveryKey(input, "save"),
           edit: record.edit,
           beforeCommit: () => {
-            const late = activeConflict(deps, projectId, affected);
+            const late = activeConflict(deps, projectId, affected, superseded);
             return late === undefined
               ? undefined
               : {
@@ -168,11 +187,11 @@ export async function recoverProject(
         return finish({ ok: false, reason: "conflict" });
       const plan = retainedPreviewPlan(deps, view, deps.catalogue.read());
       const rerunKeys =
-        input.action.kind === "rerun"
-          ? dependentClosure(plan.recipes, sectionRoots(view, plan, input.action.stage))
+        input.action.kind === "rerun" || input.action.kind === "redo"
+          ? dependentClosure(plan.recipes, rootsOf(view, plan))
           : [];
       const selection: RebuildSelection =
-        input.action.kind === "rerun"
+        input.action.kind === "rerun" || input.action.kind === "redo"
           ? { kind: "selected", workKeys: rerunKeys }
           : recoverySelection(plan, input.action.kind === "retry" ? input.action.stage : undefined);
       if (selection.kind === "selected" && selection.workKeys.length === 0)
@@ -230,7 +249,7 @@ export async function recoverProject(
           ],
         });
       const conflict =
-        rerunKeys.length > 0 ? activeConflict(deps, projectId, rerunKeys) : undefined;
+        rerunKeys.length > 0 ? activeConflict(deps, projectId, rerunKeys, superseded) : undefined;
       if (conflict !== undefined) return finish(conflictRefusal(conflict));
       storePreview(deps, preview.value.preview, preview.value.execution);
       const stored = previewById(deps.db, projectId, preview.value.preview.id);
@@ -254,7 +273,9 @@ export async function recoverProject(
   } catch {
     deps.log.write("warn", "project.recovery", {
       projectId,
-      ...(input.action.kind === "resume" ? {} : { stage: input.action.stage }),
+      ...(input.action.kind === "resume" || input.action.kind === "redo"
+        ? {}
+        : { stage: input.action.stage }),
       detail: "Provider readiness could not be loaded.",
     });
     ready = {
@@ -293,7 +314,7 @@ export async function recoverProject(
         return finish({ ok: false, reason: "readiness", fields: [...ready.fields] });
       const conflict =
         prepared.rerunKeys.length > 0
-          ? activeConflict(deps, projectId, prepared.rerunKeys)
+          ? activeConflict(deps, projectId, prepared.rerunKeys, superseded)
           : undefined;
       if (conflict !== undefined) return finish(conflictRefusal(conflict));
       const admitted = admitCheckedPreview(

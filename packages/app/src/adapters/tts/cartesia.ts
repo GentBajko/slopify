@@ -94,6 +94,8 @@ function kindOf(status: number): ProviderErrorKind {
     return "rate_limit";
   }
   // ceiling: as in the other two adapters, everything else is `other` and is retried.
+  // The provider's own server failed; the same request may well succeed later.
+  if (status >= 500) return "dropped";
   return "other";
 }
 

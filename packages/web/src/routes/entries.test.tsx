@@ -107,13 +107,19 @@ describe("the intros and outros list", () => {
     );
 
     await screen.findByText("Cold open");
-    await user.click(screen.getByRole("button", { name: "More for Cold open" }));
+    const actions = screen.getByRole("group", { name: "Actions for Cold open" });
+    expect([...actions.querySelectorAll("a, button")].map((one) => one.textContent)).toEqual([
+      "Edit",
+      "Duplicate",
+      "Use in Play",
+      "History",
+      "Delete",
+    ]);
+    expect(
+      within(actions).getByRole("link", { name: "Duplicate Cold open" }).getAttribute("href"),
+    ).toBe("/entries/new?category=intro&from=e1");
 
-    expect(screen.getByRole("menuitem", { name: "Duplicate" }).getAttribute("href")).toBe(
-      "/entries/new?category=intro&from=e1",
-    );
-
-    await user.click(screen.getByRole("menuitem", { name: "Delete" }));
+    await user.click(within(actions).getByRole("button", { name: "Delete Cold open" }));
 
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText('Delete "Cold open"?')).not.toBeNull();

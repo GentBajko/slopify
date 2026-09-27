@@ -21,6 +21,9 @@ export function assetOf(output: Output): string {
     return `${asset}-${String(output.meta.short)}`;
   if (output.role === "short_image" && output.meta.short !== undefined)
     return `${asset}-${String(output.meta.short)}-${String(output.meta.index ?? 1)}`;
+  // A project can hold three thumbnails; the second and third carry their number.
+  if (output.role === "thumbnail" && output.meta.index !== undefined && output.meta.index > 1)
+    return `${asset}-${String(output.meta.index)}`;
   if (output.role === "instructions") {
     return `${output.stageKind}-${asset}`;
   }

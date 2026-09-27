@@ -1,3 +1,4 @@
+import { templateChannelId } from "../channels/repo.js";
 import type { LibrarySnapshot } from "../library/snapshot.js";
 import { snapshotEntry, snapshotPrompt } from "../library/snapshot.js";
 import type { PlayDraftDocument } from "../play-drafts/model.js";
@@ -23,6 +24,10 @@ export function templateSetup(
     { kind: "thumbnail" as const, name: input.form.thumbnailPrompt },
     { kind: "shorts" as const, name: input.form.shorts?.prompt ?? "" },
     { kind: "image" as const, name: input.form.shorts?.imagePrompt ?? "" },
+    ...Object.values(input.form.reviews?.stages ?? {}).map((stage) => ({
+      kind: "review" as const,
+      name: stage.mode === "off" ? "" : stage.prompt,
+    })),
     {
       kind: "image" as const,
       name: input.form.reference?.source === "prompt" ? input.form.reference.prompt : "",
@@ -41,7 +46,7 @@ export function templateSetup(
     if (!row) return { ok: false, reason: "missing-prompt" };
     entries.push(row);
   }
-  const { templateSource: _source, ...document } = input;
+  const { templateSource: _source, channelId: _channel, ...document } = input;
   return {
     ok: true,
     value: { ...document, fontUpload: null, librarySnapshot: { prompts, entries } },
@@ -63,6 +68,7 @@ export function freshTemplateDraft(
     section: "content",
     fontUpload: null,
     templateSource: source,
+    channelId: templateChannelId(deps.db, source.id),
     variants: document.variants.map((variant) => ({ ...variant, id: deps.uuid() })),
     form: {
       ...document.form,

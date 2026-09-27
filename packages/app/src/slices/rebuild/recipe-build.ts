@@ -5,6 +5,7 @@ import { editPlan } from "./recipe-edit.js";
 import { exportRecipes } from "./recipe-exports.js";
 import type { RecipeContext, ResolvedWorkRecipe } from "./recipe-model.js";
 import { imageReference, referenceRecipe } from "./recipe-reference.js";
+import { withReviews } from "./recipe-reviews.js";
 import { shortsRecipes } from "./recipe-shorts.js";
 import { textRecipes } from "./recipe-text.js";
 import { thumbnailRecipes, visualAssets, visualRecipes } from "./recipe-visual.js";
@@ -24,7 +25,7 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
     referenceForThumbnail(context.config) ? drawnFrom : undefined,
   );
   const youtube = youtubeRecipes(context, exports);
-  return [
+  return withReviews(context, [
     ...text.recipes,
     ...audio.recipes,
     ...exports,
@@ -44,5 +45,5 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
         drawnFrom,
       ),
     ),
-  ];
+  ]);
 }

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import {
+  cancelUpdate,
   checkUpdate,
   installUpdate,
   type UpdateInfo,
@@ -9,6 +10,7 @@ import {
   updateKey,
   updateReconnectInterval,
   updateRecoveryTimeout,
+  updateWaitInterval,
 } from "./api.js";
 
 interface UpdateView {
@@ -20,6 +22,8 @@ interface UpdateView {
   readonly error: string | undefined;
   readonly refresh: () => void;
   readonly install: () => void;
+  // Drops an update waiting for running work.
+  readonly cancel: () => void;
 }
 
 export function useUpdate(reload: () => void): UpdateView {
@@ -35,13 +39,15 @@ export function useUpdate(reload: () => void): UpdateView {
     staleTime: updateCheckInterval,
     refetchOnWindowFocus: "always",
     refetchInterval: (query) =>
-      !recoveryTimedOut &&
-      (acceptedVersion !== null ||
-        query.state.data?.status === "checking" ||
-        query.state.data?.status === "installing" ||
-        query.state.data?.status === "restarting")
-        ? updateReconnectInterval
-        : updateCheckInterval,
+      query.state.data?.status === "waiting"
+        ? updateWaitInterval
+        : !recoveryTimedOut &&
+            (acceptedVersion !== null ||
+              query.state.data?.status === "checking" ||
+              query.state.data?.status === "installing" ||
+              query.state.data?.status === "restarting")
+          ? updateReconnectInterval
+          : updateCheckInterval,
     retry: false,
   });
 
@@ -76,10 +82,30 @@ export function useUpdate(reload: () => void): UpdateView {
     retry: false,
   });
 
+  const cancel = useMutation({
+    mutationFn: () => cancelUpdate(api),
+    onSuccess: (info) => {
+      setAcceptedVersion(null);
+      client.setQueryData(updateKey, info);
+    },
+    onError: () => {
+      void client.invalidateQueries({ queryKey: updateKey });
+    },
+    retry: false,
+  });
+
+  // An update waiting for running work is not installing yet: no recovery clock runs, and
+  // the tab only follows it so it can reload once the new version is up.
+  const waiting = status.data?.status === "waiting";
+  useEffect(() => {
+    if (waiting && acceptedVersion === null && status.data !== undefined)
+      setAcceptedVersion(status.data.currentVersion);
+  }, [waiting, acceptedVersion, status.data]);
   const recoveryActive =
-    acceptedVersion !== null ||
-    status.data?.status === "installing" ||
-    status.data?.status === "restarting";
+    !waiting &&
+    (acceptedVersion !== null ||
+      status.data?.status === "installing" ||
+      status.data?.status === "restarting");
 
   useEffect(() => {
     if (!recoveryActive || recoveryTimedOut) return;
@@ -95,6 +121,7 @@ export function useUpdate(reload: () => void): UpdateView {
 
   useEffect(() => {
     if (acceptedVersion === null || status.data === undefined) return;
+    if (status.data.status === "waiting") return;
     const activated = status.data.status === "idle" || status.data.status === "error";
     // A replacement answers health checks before its activation commits. Keep this
     // tab on the current build until that candidate leaves the restart barrier.
@@ -113,6 +140,7 @@ export function useUpdate(reload: () => void): UpdateView {
 
   const updating =
     !recoveryTimedOut &&
+    !waiting &&
     (acceptedVersion !== null ||
       status.data?.status === "installing" ||
       status.data?.status === "restarting");
@@ -120,6 +148,7 @@ export function useUpdate(reload: () => void): UpdateView {
     recoveryError ??
     install.error?.message ??
     refresh.error?.message ??
+    cancel.error?.message ??
     (updating ? undefined : (status.error?.message ?? status.data?.error));
 
   return {
@@ -140,6 +169,9 @@ export function useUpdate(reload: () => void): UpdateView {
       setRecoveryTimedOut(false);
       setRecoveryError(undefined);
       install.mutate();
+    },
+    cancel: () => {
+      cancel.mutate();
     },
   };
 }

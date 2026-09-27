@@ -115,6 +115,9 @@ const costRowSchema = z.object({
   low: z.number().finite().nonnegative().nullable(),
   high: z.number().finite().nonnegative().nullable(),
   detail: z.string(),
+  onPlan: z.boolean().optional(),
+  apiLow: z.number().finite().nonnegative().nullable().optional(),
+  apiHigh: z.number().finite().nonnegative().nullable().optional(),
 });
 
 const costEstimateSchema: z.ZodType<CostEstimate> = z.object({
@@ -123,6 +126,9 @@ const costEstimateSchema: z.ZodType<CostEstimate> = z.object({
   low: z.number().finite().nonnegative(),
   high: z.number().finite().nonnegative(),
   unknown: z.number().int().nonnegative(),
+  apiLow: z.number().finite().nonnegative().optional(),
+  apiHigh: z.number().finite().nonnegative().optional(),
+  apiUnknown: z.number().int().nonnegative().optional(),
   expectedWords: z.number().finite().nonnegative(),
   catalogueDate: z.string().nullable(),
   assumptions: z.array(z.string()),

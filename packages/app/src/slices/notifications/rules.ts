@@ -4,7 +4,7 @@ import type { ProjectState } from "../../kernel/pipeline.js";
 // notifications so both say the same thing about the same transition. Pure: the web bundle
 // imports this file.
 
-export type RunNotice = "ready" | "failed" | "waiting";
+export type RunNotice = "ready" | "partial" | "failed" | "waiting";
 
 // Only a run seen running can finish, fail or stop to wait: a project first seen already done
 // was done before anyone was watching. Paused and canceled are what the user just pressed, so
@@ -18,6 +18,8 @@ export function noticeOf(
   switch (next) {
     case "done":
       return "ready";
+    case "partial":
+      return "partial";
     case "failed":
       return "failed";
     case "pending":
@@ -58,6 +60,16 @@ export function noticeText(kind: RunNotice, subject: NoticeSubject): NoticeText 
       return subject.makesVideo
         ? { headline: `Video ready: ${title}`, detail: "Open the project to watch it." }
         : { headline: `Run finished: ${title}`, detail: "Open the project to see its files." };
+    case "partial": {
+      const reason = shortReason(subject.reason);
+      const made = subject.makesVideo
+        ? `Video ready with problems: ${title}`
+        : `Run finished with problems: ${title}`;
+      return {
+        headline: reason === undefined ? made : `${made} — ${reason}`,
+        detail: "Open the project to see which step failed and the button that fixes it.",
+      };
+    }
     case "failed": {
       const reason = shortReason(subject.reason);
       return {
@@ -72,6 +84,24 @@ export function noticeText(kind: RunNotice, subject: NoticeSubject): NoticeText 
         detail: "Open the project to review the held step or press Resume.",
       };
   }
+}
+
+// A schedule that holds its generated topics for approval says so once per generation.
+export interface TopicsNoticeSubject {
+  readonly scheduleName: string;
+  readonly added: number;
+  readonly waiting: number;
+}
+
+export function topicsNoticeText(subject: TopicsNoticeSubject): NoticeText {
+  const name =
+    subject.scheduleName.trim() === "" ? "Untitled schedule" : subject.scheduleName.trim();
+  const count = subject.added;
+  const total = subject.waiting > count ? ` ${String(subject.waiting)} are waiting in all.` : "";
+  return {
+    headline: `${String(count)} new ${count === 1 ? "topic is" : "topics are"} waiting for you`,
+    detail: `Open Schedules → ${name} → Topics waiting to approve, edit or reject ${count === 1 ? "it" : "them"}.${total}`,
+  };
 }
 
 export const testNotice: NoticeText = {

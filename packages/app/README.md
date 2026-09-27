@@ -30,42 +30,22 @@ slopify
 
 Both commands launch the same local app.
 
-For Docker on Linux with Node 26+ and util-linux (`flock`), use `slopify --docker` or
-`npx @gentbajko/slopify@latest --docker`. The launcher detects installed Codex,
-Claude Code and Gemini CLIs. It asks once before installing a private host helper
-and enabling automatic startup, including user lingering. The CLIs run on your
-host with their existing logins; credentials never move into Docker.
+For Docker on Linux with Node 26+, Docker Engine and the Docker Compose plugin, use
+`slopify --docker` or `npx @gentbajko/slopify@latest --docker`. It writes one
+`compose.yaml` and its `.env` under `~/.local/share/slopify/docker/slopify/` and starts
+Slopify at `http://127.0.0.1:6969`, restarting with Docker. Project files go to
+`~/Slopify/Projects` (`--projects-dir` to choose another, `--port` for the port); the
+database, keys and logs stay private in the `slopify-data` volume.
 
-Slopify runs in the background at `http://127.0.0.1:6969` and restarts with Docker.
-The managed Linux launcher saves generated project files in `~/Slopify/Projects`.
-Custom container names use `~/Slopify/<container>/Projects`. The database,
-credentials, logs and staging stay private in the named `slopify-data` volume.
-Run as your normal user with Node 26+, Docker access and util-linux (`flock`).
-Systemd is needed only for the optional host CLI helper. Native installs continue
-using their configured data directory and need no helper.
+If Claude Code, Codex or Gemini is installed, it asks once before setting up the host CLI
+bridge, a private helper that runs those CLIs on your machine with their existing logins.
+Use `--host-cli=off` for API keys only, or `--accept-host-cli` to approve without a prompt.
 
-Use `--projects-dir "/path/to/Projects"` or `SLOPIFY_DOCKER_PROJECTS_DIR` to choose
-a dedicated folder. Later launches remember that absolute path when the override
-is omitted. `--port 7070` changes the localhost port. Custom installations sharing
-a machine need distinct `SLOPIFY_DOCKER_NAME` and `SLOPIFY_DOCKER_VOLUME` values.
-Do not store unrelated documents in the managed Projects tree: storage
-reconciliation owns it. Moving to another folder performs a verified copy;
-existing unrelated contents are never merged or overwritten.
-
-Existing installations are stopped, copied and verified before the new folder
-is activated. Current and historical output actions show the real host folder
-on the machine running Slopify; downloads remain available. This also works with
-`--host-cli=off`, without installing a host helper. Docker does not open a desktop
-window on your browser's machine.
-
-Rerun the launcher after changing host CLI installations or search paths.
-Plain `docker run` is API-only unless connected to an already configured helper.
-It does not set up a host project folder or install host services; its files stay
-in the private named volume. Use the managed launcher for automatic migration
-and host-folder access. Use `--host-cli=off` for API-only launcher setup, or
-`--accept-host-cli` to approve non-interactive setup.
-See the [Docker setup guide](https://github.com/GentBajko/slopify#docker) for
-updates and the dedicated helper's status/disable commands.
+Update with `npx @gentbajko/slopify@latest update`, Docker or not. It waits for running
+work, keeps a copy to go back to (the database, or a recovery volume in Docker), and puts
+the previous version back if the new one doesn't start. Installations made by 2.5.0 or
+earlier are taken over as they are: same volume, same project folder. See the
+[Docker guide](https://github.com/GentBajko/slopify/blob/main/docs/docker.md) for details.
 
 ## How to use it
 
@@ -110,14 +90,15 @@ for account limits. Both model IDs are bundled; Inworld's LLM catalogue does not
 | `--data-dir` | `SLOPIFY_DATA_DIR` | `~/.slopify` |
 | `--projects-dir` (Docker only) | `SLOPIFY_DOCKER_PROJECTS_DIR` | remembered path; otherwise `~/Slopify/Projects` (custom names: `~/Slopify/<container>/Projects`) |
 | `--no-open` | `SLOPIFY_NO_OPEN` | the browser opens |
-| `--docker` | — | run locally; with the flag, launch Docker with host CLI detection |
+| `--docker` | — | run locally; with the flag, install or update the Docker version |
+| `update` | — | update the running app, or the Docker installation if you have one |
 | — | `SLOPIFY_FFMPEG` | the bundled binary |
 
 There is no login. Binding to anything but `127.0.0.1` hands the app and every key in
 it to whoever reaches the port, and the CLI says so on startup.
 
 Native installations keep `slopify.db`, `projects/`, `staging/` and `logs/` under
-their configured data directory. Managed Docker places only projects in its
+their configured data directory. Docker places only projects in its
 remembered host folder; keep both that folder and the named private volume when
 backing up an installation. The portable settings archive is not a project/history backup.
 

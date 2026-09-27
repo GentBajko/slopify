@@ -112,6 +112,8 @@ function kindOf(status: number): ProviderErrorKind {
   }
   // ceiling: as in the OpenRouter adapter, a 400 is retried three more times because the
   // port's error contract has no terminal kind for a request that cannot be repaired.
+  // The provider's own server failed; the same request may well succeed later.
+  if (status >= 500) return "dropped";
   return "other";
 }
 

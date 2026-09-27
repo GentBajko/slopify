@@ -264,7 +264,17 @@ it("reports project folder usage alongside aggregate storage totals", () => {
     mkdirSync(projectDir(h.deps.paths, "p1"), { recursive: true });
     writeFileSync(`${projectDir(h.deps.paths, "p1")}/video.mp4`, Buffer.alloc(7));
     expect(storageUsage(h.deps).byProject).toEqual([
-      { id: "p1", title: "Storage sample", bytes: 7 },
+      {
+        id: "p1",
+        title: "Storage sample",
+        bytes: 7,
+        // No record names the file, so it is neither an output nor removable.
+        outputsBytes: 0,
+        workingBytes: 7,
+        removableFiles: 0,
+        removableBytes: 0,
+        finished: false,
+      },
     ]);
   } finally {
     h.close();

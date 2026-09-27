@@ -110,7 +110,12 @@ it("advertises one built-in capability and passes prompt/aspect as data to an is
   const fake = generatedRun();
   const port = codexImage({ run: fake.run, binary: "/configured/codex", env: fake.env });
   expect(await port.models()).toEqual([{ id: "codex-imagegen", name: "Codex default" }]);
-  expect(await port.generate(request())).toEqual({ bytes: png, mime: "image/png" });
+  // The turn's token counts ride along, for the Run cost tab.
+  expect(await port.generate(request())).toEqual({
+    bytes: png,
+    mime: "image/png",
+    usage: { inputTokens: 1, outputTokens: 1 },
+  });
   const call = fake.calls[0];
   expect(call?.binary).toBe("/configured/codex");
   expect(call?.directory).not.toBe(process.cwd());
@@ -345,4 +350,36 @@ it("rejects duplicate session events rather than selecting an unrelated output",
   await expect(codexImage({ run: fake.run }).generate(request())).rejects.toMatchObject({
     fault: { kind: "unavailable" },
   });
+});
+
+it("copies every cast picture beside the establishing image and names each path", async () => {
+  const fake = generatedRun((path, _dir) => writeFileSync(path, png));
+  const written: Buffer[] = [];
+  const run: RunCli = (binary, args, signal, options) => {
+    written.push(readFileSync(join(options?.cwd ?? "", "reference.jpg")));
+    written.push(readFileSync(join(options?.cwd ?? "", "reference-2.png")));
+    return fake.run(binary, args, signal, options);
+  };
+  await codexImage({ run, env: fake.env }).generate({
+    ...request(),
+    reference: { bytes: jpeg, mime: "image/jpeg" },
+    cast: [
+      {
+        name: "Tiamat",
+        description: "five-headed dragon",
+        images: [{ bytes: png, mime: "image/png" }],
+      },
+    ],
+  });
+  const call = fake.calls[0];
+  const text = call?.args.at(-1) ?? "";
+  const directory = call?.directory ?? "";
+  expect(written).toEqual([jpeg, png]);
+  expect(text).toContain(
+    `Pass all of them in referenced_image_paths on every image generation call: ${join(directory, "reference.jpg")}, ${join(directory, "reference-2.png")}.`,
+  );
+  expect(text).toContain(
+    `${join(directory, "reference-2.png")} shows Tiamat (five-headed dragon): draw Tiamat to look exactly like this.`,
+  );
+  expect(call?.args).toContain("view_image");
 });

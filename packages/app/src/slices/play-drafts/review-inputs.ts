@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { CatalogueStore } from "../../catalog/store.js";
 import { modelFields } from "../../catalog/validate.js";
 import { admit, type FieldError } from "../admission/rules.js";
+import { brandedForm, brandedRun, castSnapshot, draftChannel } from "../channels/runs.js";
 import { estimateRun } from "../estimate/index.js";
 import type { ResolvedFont } from "../fonts/model.js";
 import { listEntries } from "../library/repo.js";
@@ -71,12 +72,26 @@ export function resolveReviewInputs(
       message:
         "You can review at most 50 videos at once, counting the first one. Remove some variations.",
     });
-  const converted = toAdmissionDraft({
-    document,
+  const entries = [...(document.librarySnapshot?.entries ?? []), ...listEntries(deps.db)];
+  // The channel's brand kit fills what the setup leaves at its default, and its cast rides
+  // along for the images (`slices/channels/runs.ts`).
+  const channel = draftChannel(deps.db, document);
+  const useBrandKit = document.form.useBrandKit !== false;
+  const branded = toAdmissionDraft({
+    document: {
+      ...document,
+      form: brandedForm(deps.db, document.form, channel.brand, entries),
+    },
     attachments: fresh.value.attachments,
-    entries: [...(document.librarySnapshot?.entries ?? []), ...listEntries(deps.db)],
+    entries,
     silenceGapSeconds: readSettings(deps).silenceGapSeconds,
   });
+  const converted = branded.ok
+    ? ({
+        ok: true,
+        draft: brandedRun(branded.draft, channel, castSnapshot(deps.db, channel.id), useBrandKit),
+      } as const)
+    : branded;
   if (!converted.ok) fields.push(...converted.fields);
   if (!converted.ok || !words.success || fields.length) return reviewRefusal(view, fields);
   const catalogue = deps.catalogue.read();

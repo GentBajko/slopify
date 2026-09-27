@@ -4,6 +4,8 @@ import { Link } from "@tanstack/react-router";
 import { ChevronDownIcon, ChevronUpIcon, EllipsisIcon, PlusIcon } from "lucide-react";
 import { type ReactElement, useRef, useState } from "react";
 import { useApp } from "@/app-context";
+import { channelsQuery, defaultChannelId } from "@/channels/api";
+import { channelOfTemplate } from "@/channels/members-tabs";
 import { ConfirmDialog } from "@/components/confirm";
 import { StatusSlot } from "@/components/kit/action-bar";
 import { Drawer } from "@/components/kit/drawer";
@@ -18,6 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Picker } from "@/components/ui/picker";
 import {
   deleteSchedule,
   readSchedule,
@@ -26,6 +29,7 @@ import {
   schedulesQuery,
 } from "@/schedules/api";
 import { ScheduleForm } from "@/schedules/form";
+import { TopicGenerationPanel } from "@/schedules/held-topics";
 import { formatScheduleDate } from "@/schedules/time";
 import { templatesQuery } from "@/templates/api";
 import { LibraryToolbar } from "./library.js";
@@ -41,7 +45,16 @@ export function SchedulesRoute(): ReactElement {
   const [creating, setCreating] = useState(false);
   const [formBusy, setFormBusy] = useState(false);
   const active = useRef(false);
-  const liveSchedules = schedules.data?.filter((schedule) => schedule.deletedAt === null) ?? [];
+  const channels = useQuery(channelsQuery(api));
+  // "" shows every channel's schedules; a schedule's channel is its template's.
+  const [channelFilter, setChannelFilter] = useState("");
+  const inChannel = (schedule: ScheduleSummary): boolean => {
+    if (channelFilter === "") return true;
+    const template = templates.data?.find((one) => one.id === schedule.templateId);
+    return (template ? channelOfTemplate(template) : defaultChannelId) === channelFilter;
+  };
+  const liveSchedules =
+    schedules.data?.filter((schedule) => schedule.deletedAt === null && inChannel(schedule)) ?? [];
   const deletedSchedules = schedules.data?.filter((schedule) => schedule.deletedAt !== null) ?? [];
   const mutation = useMutation({
     onError: (cause: Error) => setError(cause.message),
@@ -101,6 +114,19 @@ export function SchedulesRoute(): ReactElement {
           </Button>
         }
       >
+        <Picker
+          aria-label="Show schedules of"
+          value={channelFilter}
+          className="w-auto min-w-[160px]"
+          onChange={(event) => setChannelFilter(event.target.value)}
+        >
+          <option value="">All channels</option>
+          {(channels.data ?? []).map((channel) => (
+            <option key={channel.id} value={channel.id}>
+              {channel.name}
+            </option>
+          ))}
+        </Picker>
         <p className="flex items-center gap-1 text-small text-ink2">
           {templates.data?.length === 0 ? (
             <>
@@ -128,9 +154,11 @@ export function SchedulesRoute(): ReactElement {
       {schedules.data && liveSchedules.length === 0 ? (
         <RailGroup>
           <p className="px-4 py-6 text-ink2">
-            {deletedSchedules.length === 0
-              ? "No schedules yet. Your first one can be a one-off run or a recurring series."
-              : "No active schedules. Create one or review deleted history below."}
+            {channelFilter !== ""
+              ? "No schedules run this channel's templates."
+              : deletedSchedules.length === 0
+                ? "No schedules yet. Your first one can be a one-off run or a recurring series."
+                : "No active schedules. Create one or review deleted history below."}
           </p>
         </RailGroup>
       ) : null}
@@ -268,9 +296,11 @@ function ScheduleCard({
           <p className="text-small text-ink2">
             {cadence} · {schedule.timezone} ·{" "}
             {schedule.items.length === 0
-              ? "Template as saved"
-              : `${String(schedule.items.length)} ${schedule.items.length === 1 ? "topic" : "topics"} left`}{" "}
-            ·{" "}
+              ? schedule.topicGeneration.mode === "off"
+                ? "Template as saved"
+                : "No topics queued"
+              : `${String(schedule.items.length)} ${schedule.items.length === 1 ? "topic" : "topics"} left`}
+            {schedule.topics.held > 0 ? ` · ${String(schedule.topics.held)} waiting for you` : ""} ·{" "}
             {schedule.deletedAt !== null
               ? `Deleted: ${formatScheduleDate(schedule.deletedAt, schedule.timezone)}`
               : schedule.nextRunAt === null
@@ -386,6 +416,7 @@ function ScheduleCard({
           });
         }}
       />
+      <TopicGenerationPanel schedule={schedule} />
       {open ? (
         <div className="mt-3 border-t border-line pt-3 pl-6">
           {details.isPending ? (

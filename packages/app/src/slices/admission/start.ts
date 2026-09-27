@@ -2,6 +2,7 @@ import { transact } from "../../kernel/db/tx.js";
 import type { StageKind, StageState } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
 import { storeArticleText } from "../article/store.js";
+import { resolveChannelId, setProjectChannel } from "../channels/repo.js";
 import { defaultDocumentTheme } from "../document/model.js";
 import { collectSharedGlossary } from "../narration/shared-glossary.js";
 import { admitInitialRevision } from "../rebuild/runtime-admission.js";
@@ -100,6 +101,7 @@ export function startRun(
   try {
     transact(deps.db, () => {
       insertProject(deps.db, project);
+      setProjectChannel(deps.db, id, resolveChannelId(deps.db, draft.channelId));
       for (const stage of stages) {
         insertStage(deps.db, stage);
       }

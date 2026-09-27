@@ -246,7 +246,23 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
             signal.throwIfAborted();
             clearTimeout(timer);
             timer = setTimeout(() => controller.abort(), 120_000);
-            const parsed = hostFrameSchema.parse(event);
+            // The bridge frame keeps its shape across versions: the cached-token count, the
+            // answering model and the plan windows stay on this side of it.
+            const parsed = hostFrameSchema.parse(
+              event.type === "done"
+                ? {
+                    type: "done",
+                    usage:
+                      event.usage === null
+                        ? null
+                        : {
+                            inputTokens: event.usage.inputTokens,
+                            outputTokens: event.usage.outputTokens,
+                          },
+                    finishReason: event.finishReason,
+                  }
+                : event,
+            );
             if (done || parsed.type === "error")
               throw new Error(
                 "Slopify hit an internal error (the AI tool on your computer sent a reply Slopify could not read). Try again; if it keeps happening, use Download diagnostics in Settings and report it.",
@@ -288,7 +304,21 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
     const signal = AbortSignal.any([job.signal, controller.signal]);
     const timer = setTimeout(() => controller.abort(), agentImageTimeoutMs);
     try {
-      const { reference, thinking, ...rest } = body.data;
+      const { reference, thinking, cast: bridgedCast, ...rest } = body.data;
+      const cast = bridgedCast?.map((member) => ({
+        name: member.name,
+        description: member.description,
+        images: member.images.map((picture) => ({
+          bytes: new Uint8Array(Buffer.from(picture.base64, "base64")),
+          mime: picture.mime,
+        })),
+      }));
+      if (
+        cast?.some((member) =>
+          member.images.some((picture) => sniffImage(picture.bytes) !== picture.mime),
+        )
+      )
+        return invalid(c);
       const image =
         reference === undefined
           ? undefined
@@ -301,6 +331,7 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
         ...rest,
         ...(thinking === undefined ? {} : { thinking }),
         ...(image === undefined ? {} : { reference: image }),
+        ...(cast === undefined ? {} : { cast }),
         signal,
       });
       if (signal.aborted) throw providerError({ kind: "unavailable", message: unavailable });

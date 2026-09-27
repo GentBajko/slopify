@@ -64,7 +64,7 @@ export async function renderSlideshow(run: SlideshowRun): Promise<void> {
       if (shown.length > 0 && font !== undefined)
         writeFileSync(
           join(workspace, script),
-          cardsAss(edit, shown, font.name, clip.segment.start),
+          cardsAss(edit, shown, font.name, clip.segment.start, edit.cardColor),
           { mode: 0o600 },
         );
       await runFfmpeg({

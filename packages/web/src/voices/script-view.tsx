@@ -15,7 +15,7 @@ export function ScriptView({
   const parsed = useMemo(() => parseScript(script, voices.speakers), [script, voices.speakers]);
   if (!parsed.ok)
     return (
-      <p className="text-small text-red">
+      <p className="text-small text-danger">
         This script can't be narrated yet: {parsed.reason} Fix it in Edit project → Article.
       </p>
     );
@@ -29,10 +29,10 @@ export function ScriptView({
         return (
           <li key={turn.index} className="space-y-2">
             {section === undefined ? null : (
-              <h3 className="pt-2 text-row font-semibold text-ink">{section.title}</h3>
+              <h3 className="pt-2 text-title-3 font-semibold text-ink">{section.title}</h3>
             )}
             <div className="border-l-4 pl-3" style={{ borderColor: colour }}>
-              <p className="text-label font-semibold text-ink2">
+              <p className="text-label font-semibold text-ink-2">
                 {names.get(turn.speaker) ?? turn.speaker}
               </p>
               <p className="text-body text-ink">{turn.text}</p>

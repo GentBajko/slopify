@@ -191,6 +191,12 @@ describe("boot", { timeout: 30_000 }, () => {
       { version: 19 },
       { version: 22 },
       { version: 24 },
+      { version: 25 },
+      { version: 26 },
+      { version: 27 },
+      { version: 30 },
+      { version: 31 },
+      { version: 32 },
       { version: 34 },
     ]);
     db.close();
@@ -244,7 +250,7 @@ describe("boot", { timeout: 30_000 }, () => {
 
     const response = await fetch(`${url}/api/update`, { method: "POST" });
     expect(response.status).toBe(400);
-    expect(await response.text()).toContain("pulling a new image");
+    expect(await response.text()).toContain("npx @gentbajko/slopify@latest update");
   });
 
   it("releases the lock when the port is already taken", async () => {

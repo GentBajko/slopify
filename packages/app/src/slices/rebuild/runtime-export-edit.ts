@@ -76,20 +76,26 @@ export async function exportEdit(
       .safeParse(JSON.parse(row.piece.payload ?? "null"));
     return parsed.success ? [parsed.data.fallback] : [];
   });
-  if (config.videoEdit === undefined)
+  const endScreen = config.endScreen?.text.trim() ?? "";
+  if (config.videoEdit === undefined) {
+    const titles = endScreen === "" ? undefined : await titleFont(deps, config);
     return {
-      edit: clips.some((clip) => clip !== undefined) ? { clips } : undefined,
+      edit:
+        titles !== undefined
+          ? { clips, cards: { chapters: [], ...titles, endScreen } }
+          : clips.some((clip) => clip !== undefined)
+            ? { clips }
+            : undefined,
       warnings,
       settings: undefined,
     };
+  }
   const settings = videoEditOf(config);
   const cuts = usesNarrationCuts(config);
   const cards = usesChapterCards(config);
   const words = cuts || cards ? timingWords(deps, context, view) : [];
   const chapters = cuts || cards ? chaptersOf(view, config, words) : [];
-  const font = cards
-    ? await resolveFont(deps.paths, config.subtitles?.fontId ?? "default")
-    : undefined;
+  const titles = cards || endScreen !== "" ? await titleFont(deps, config) : undefined;
   return {
     edit: {
       clips,
@@ -110,12 +116,36 @@ export async function exportEdit(
         grade: settings.grade,
         atmosphere: settings.atmosphere,
       },
-      ...(font === undefined
+      ...(titles === undefined
         ? {}
-        : { cards: { chapters, font: { path: font.path, name: font.assName } } }),
+        : {
+            cards: {
+              chapters: cards ? chapters : [],
+              ...titles,
+              ...(endScreen === "" ? {} : { endScreen }),
+            },
+          }),
     },
     warnings,
     settings,
+  };
+}
+
+// The cards' font and colour: the brand kit's title style, else the caption font in white.
+async function titleFont(
+  deps: ExportExecutionDeps,
+  config: RunConfig,
+): Promise<{
+  readonly font: { readonly path: string; readonly name: string };
+  readonly color?: string;
+}> {
+  const font = await resolveFont(
+    deps.paths,
+    config.titleStyle?.fontId ?? config.subtitles?.fontId ?? "default",
+  );
+  return {
+    font: { path: font.path, name: font.assName },
+    ...(config.titleStyle?.color === undefined ? {} : { color: config.titleStyle.color }),
   };
 }
 

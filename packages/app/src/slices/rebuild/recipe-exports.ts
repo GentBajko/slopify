@@ -1,5 +1,6 @@
 import type { FingerprintValue } from "../../kernel/runner/work.js";
 import { usesShorts, usesYoutubeDescription } from "../admission/rules.js";
+import { reviewsNarration } from "../reviews/rules.js";
 import { audioExportArgs } from "../video/audio-export-args.js";
 import { editNeedsTiming } from "../video/edit-settings.js";
 import { usesVoices, type VoicesSettings } from "../voices/model.js";
@@ -46,6 +47,7 @@ export function exportRecipes(
     !usesYoutubeDescription(config) &&
     !usesShorts(config) &&
     !editNeedsTiming(config) &&
+    !reviewsNarration(config) &&
     voices?.audioFiles !== true
   )
     return recipes;
@@ -135,6 +137,10 @@ export function exportRecipes(
           config.subtitles.fontId,
           config.subtitles.fontSize,
           config.subtitles.position,
+          // Only when the brand kit set them, so captions made before keep their fingerprint.
+          ...(config.subtitles.color === undefined && config.subtitles.outlineColor === undefined
+            ? []
+            : [["colours", config.subtitles.color ?? null, config.subtitles.outlineColor ?? null]]),
           ...(voices === undefined ? [] : [captionSpeakerValues(voices, audio.mediaFingerprint)]),
         ],
       },

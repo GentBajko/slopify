@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { StageBodyFor } from "@/project/bodies";
 import { checkpointRevisionKey, checkpointStatus } from "@/project/checkpoint-api";
 import { CheckpointPanel } from "@/project/checkpoint-panel";
+import { OpenProjectTab } from "@/project/fix-it";
 import { ProjectHeader } from "@/project/header";
 import { RundownStrip } from "@/project/navigation";
 import { RevisionControlContext } from "@/project/revision-action-context";
@@ -14,6 +15,7 @@ import { RevisionContentEditors } from "@/project/revision-content";
 import { RevisionForm } from "@/project/revision-form";
 import { RevisionMedia } from "@/project/revision-media";
 import { type ProjectTab, RevisionWorkspace } from "@/project/revision-workspace";
+import { limitWaitMessage, RunCostPanel } from "@/project/run-cost";
 import { SaveProjectTemplate } from "@/project/save-template";
 import { type SectionKind, sectionKinds, sectionOf, sectionsOf } from "@/project/sections";
 import { StageRow } from "@/project/stage-row";
@@ -21,7 +23,8 @@ import { finalOutput } from "@/project/summary";
 import { useProjectActions } from "@/project/use-actions";
 import { useLiveProject } from "@/project/use-live";
 import { suggestedStage } from "@/project/workspace";
-import { projectQuery, promptsQuery, providersQuery } from "@/queries";
+import { projectQuery, promptsQuery, providersQuery, runCostQuery } from "@/queries";
+import { PrepareUpload } from "@/studio/prepare-upload";
 import { useTutorialProjectStep } from "@/tutorial/context";
 
 // Keep stage bodies mounted when navigating: editors and players retain their local state.
@@ -35,6 +38,8 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
   const project = useQuery(projectQuery(api, projectId));
   const providers = useQuery(providersQuery(api));
   const prompts = useQuery(promptsQuery(api));
+  // Also read for the status line: a stage waiting for a CLI's plan limits says so there.
+  const runCost = useQuery(runCostQuery(api, projectId));
   const actions = useProjectActions(projectId);
   const [selection, setSelection] = useState<
     { readonly projectId: string; readonly stage: SectionKind } | undefined
@@ -99,109 +104,120 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
   return (
     <RevisionMedia projectId={projectId} revisionId={project.data.revisionId}>
       <RevisionControlContext value={project.data.revisionId !== null}>
-        <div>
-          <div data-tour="project-controls">
-            <ProjectHeader
-              project={summary}
-              prompts={prompts.data?.prompts}
-              actions={actions}
-              inFlight={inFlight}
-              resumable={project.data.resumable}
-              primaryOutput={primaryOutput}
-            >
-              <SaveProjectTemplate
-                projectId={projectId}
-                revisionId={project.data.revisionId}
-                title={summary.title}
-              />
-            </ProjectHeader>
-            {/* One reserved line for what the last action said: a refusal from any stage,
+        <OpenProjectTab value={setTab}>
+          <div>
+            <div data-tour="project-controls">
+              <ProjectHeader
+                project={summary}
+                prompts={prompts.data?.prompts}
+                actions={actions}
+                inFlight={inFlight}
+                resumable={project.data.resumable}
+                primaryOutput={primaryOutput}
+              >
+                <PrepareUpload
+                  projectId={projectId}
+                  ready={outputs.some((output) => output.role === "video")}
+                />
+                <SaveProjectTemplate
+                  projectId={projectId}
+                  revisionId={project.data.revisionId}
+                  title={summary.title}
+                />
+              </ProjectHeader>
+              {/* One reserved line for what the last action said: a refusal from any stage,
                 or the server's guidance after an accepted one. It is always here, so a
                 message arriving never pushes the rundown down. */}
-            <div className="mb-2 flex min-h-8 items-center gap-2">
-              {refusal === undefined ? (
-                <StatusSlot tone="info">{actions.notice}</StatusSlot>
-              ) : (
-                <>
-                  <StatusSlot tone="error">{refusal.message}</StatusSlot>
-                  <Button variant="ghost" onClick={actions.dismissRefusal}>
-                    Dismiss
-                  </Button>
-                </>
-              )}
-            </div>
-            <RundownStrip
-              stages={stages}
-              project={summary}
-              outputs={outputs}
-              selected={selected}
-              resumable={project.data.resumable}
-              onSelect={(stage) => {
-                selectStage(stage);
-                setTab("output");
-              }}
-            />
-          </div>
-          <RevisionWorkspace
-            projectId={projectId}
-            currentRevisionId={project.data.revisionId}
-            tab={tab}
-            onTab={setTab}
-            trailing={<BatchQueueCount />}
-            {...(held === 0 ? {} : { checkpointBadge: `· ${String(held)} held` })}
-            renderEditor={(props) => (
-              <RevisionForm
-                {...props}
-                renderContent={(contentProps) => (
-                  <RevisionContentEditors key={contentProps.view.revision.id} {...contentProps} />
+              <div className="mb-2 flex min-h-8 items-center gap-2">
+                {refusal === undefined ? (
+                  <StatusSlot tone="info">
+                    {actions.notice ?? limitWaitMessage(runCost.data?.waits ?? [])}
+                  </StatusSlot>
+                ) : (
+                  <>
+                    <StatusSlot tone="error">{refusal.message}</StatusSlot>
+                    <Button variant="ghost" onClick={actions.dismissRefusal}>
+                      Dismiss
+                    </Button>
+                  </>
                 )}
+              </div>
+              <RundownStrip
+                stages={stages}
+                project={summary}
+                outputs={outputs}
+                selected={selected}
+                resumable={project.data.resumable}
+                onSelect={(stage) => {
+                  selectStage(stage);
+                  setTab("output");
+                }}
               />
-            )}
-            output={
-              <div className="min-w-0">
-                {sectionsOf(stages).map((section) => (
-                  <StageRow
-                    key={section.stage.id}
-                    active={section.kind === selected}
-                    section={section}
-                    project={summary}
-                    outputs={outputs}
-                    providers={providers.data?.providers ?? []}
-                    actions={actions}
-                    resumable={project.data.resumable}
-                  >
-                    <StageBodyFor
-                      stage={section.stage}
-                      {...(section.companion === undefined ? {} : { companion: section.companion })}
+            </div>
+            <RevisionWorkspace
+              projectId={projectId}
+              currentRevisionId={project.data.revisionId}
+              tab={tab}
+              onTab={setTab}
+              trailing={<BatchQueueCount />}
+              {...(held === 0 ? {} : { checkpointBadge: `· ${String(held)} held` })}
+              cost={<RunCostPanel projectId={projectId} />}
+              renderEditor={(props) => (
+                <RevisionForm
+                  {...props}
+                  renderContent={(contentProps) => (
+                    <RevisionContentEditors key={contentProps.view.revision.id} {...contentProps} />
+                  )}
+                />
+              )}
+              output={
+                <div className="min-w-0">
+                  {sectionsOf(stages).map((section) => (
+                    <StageRow
+                      key={section.stage.id}
+                      active={section.kind === selected}
+                      section={section}
                       project={summary}
                       outputs={outputs}
+                      providers={providers.data?.providers ?? []}
                       actions={actions}
-                      busy={
-                        project.data.revisionId === null
-                          ? busy
-                          : actions.pending ||
-                            section.stage.state === "running" ||
-                            section.companion?.state === "running"
-                      }
-                    />
-                  </StageRow>
-                ))}
-              </div>
-            }
-            {...(project.data.revisionId === null
-              ? {}
-              : {
-                  checkpoints: (
-                    <CheckpointPanel
-                      projectId={projectId}
-                      revisionId={project.data.revisionId}
-                      paused={summary.status === "paused"}
-                      stages={stages}
-                    />
-                  ),
-                })}
-          />
-        </div>
+                      resumable={project.data.resumable}
+                    >
+                      <StageBodyFor
+                        stage={section.stage}
+                        {...(section.companion === undefined
+                          ? {}
+                          : { companion: section.companion })}
+                        project={summary}
+                        outputs={outputs}
+                        actions={actions}
+                        busy={
+                          project.data.revisionId === null
+                            ? busy
+                            : actions.pending ||
+                              section.stage.state === "running" ||
+                              section.companion?.state === "running"
+                        }
+                      />
+                    </StageRow>
+                  ))}
+                </div>
+              }
+              {...(project.data.revisionId === null
+                ? {}
+                : {
+                    checkpoints: (
+                      <CheckpointPanel
+                        projectId={projectId}
+                        revisionId={project.data.revisionId}
+                        paused={summary.status === "paused"}
+                        stages={stages}
+                      />
+                    ),
+                  })}
+            />
+          </div>
+        </OpenProjectTab>
       </RevisionControlContext>
     </RevisionMedia>
   );

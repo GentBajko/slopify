@@ -13,6 +13,8 @@ export function checkpointTarget(
   field: string,
   form: PlayFormState,
 ): { readonly section: "review"; readonly field: string } | undefined {
+  // The automatic reviews sit on the same step as the checkpoints.
+  if (field === "reviews" || field.startsWith("reviews.")) return { section: "review", field };
   if (field !== "checkpoints" && !field.startsWith("checkpoints.")) return undefined;
   const suffix = field.slice("checkpoints.".length);
   const stage = /^\d+$/.test(suffix) ? form.checkpoints?.[Number(suffix)] : suffix;

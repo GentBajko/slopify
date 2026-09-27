@@ -16,6 +16,10 @@ export interface StageStateEvent extends EventOrigin {
   readonly stage: StageKind;
   readonly state: StageState;
   readonly failureReason?: string;
+  // The provider error's kind on a failed step, which picks its fix-it button.
+  readonly failureKind?: string;
+  // A step waiting to run again by itself after a failure time can fix.
+  readonly retryAt?: string;
 }
 
 export interface StageProgressEvent extends EventOrigin {
@@ -63,6 +67,18 @@ export interface ProjectUpdatedEvent extends EventOrigin {
 export interface RunningCountEvent extends EventOrigin {
   readonly type: "running.count";
   readonly count: number;
+}
+
+// A schedule's topic generation held new topics for approval. Not a project event: the
+// notifications slice turns it into "5 new topics are waiting for you" and open pages
+// refresh their schedules.
+export interface ScheduleTopicsEvent {
+  readonly type: "schedule.topics";
+  readonly scheduleId: string;
+  readonly scheduleName: string;
+  // Held by this generation, and held in total now.
+  readonly added: number;
+  readonly waiting: number;
 }
 
 export type ProjectEvent =

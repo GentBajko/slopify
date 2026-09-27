@@ -7,6 +7,7 @@ import { replicateImage } from "./adapters/image/replicate.js";
 import { claudeCodeLlm } from "./adapters/llm/claude-code.js";
 import { nodeClaudeCodeModels } from "./adapters/llm/claude-code-models.js";
 import { codexLlm } from "./adapters/llm/codex.js";
+import { nodeCodexLimits } from "./adapters/llm/codex-limits.js";
 import { nodeCodexModels } from "./adapters/llm/codex-models.js";
 import { geminiLlm } from "./adapters/llm/gemini.js";
 import { nodeGeminiModels } from "./adapters/llm/gemini-models.js";
@@ -76,6 +77,7 @@ export function buildRegistry(deps: RegistryDeps): Registry {
       codexLlm({
         run: cliFor("codex"),
         readModels: () => nodeCodexModels(process.env, cliBinary(deps.db, "codex")),
+        readLimits: () => nodeCodexLimits(cliBinary(deps.db, "codex"), process.env),
       }),
     ],
     [
@@ -112,6 +114,7 @@ export function buildRegistry(deps: RegistryDeps): Registry {
         run: cliFor("codex"),
         // The same list, and so the same models and efforts, as the Codex text provider.
         readModels: () => nodeCodexModels(process.env, cliBinary(deps.db, "codex")),
+        readLimits: () => nodeCodexLimits(cliBinary(deps.db, "codex"), process.env),
       }),
     ],
   ]);

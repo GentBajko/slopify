@@ -12,6 +12,7 @@ import type { BackupConfigInput, BackupView } from "@app/slices/backups/model.js
 import type { DocumentThemeName, SavedDocumentTheme } from "@app/slices/document/model.js";
 import type { DocumentTheme } from "@app/slices/document/theme.js";
 import type { CostEstimate } from "@app/slices/estimate/index.js";
+import type { LibraryItemKind, LibraryVersion } from "@app/slices/library/history.js";
 import type {
   Entry,
   EntryCategory,
@@ -21,6 +22,8 @@ import type {
   PromptDraft,
   PromptKind,
 } from "@app/slices/library/model.js";
+import type { UsedBy } from "@app/slices/library/used-by.js";
+import type { RunCost } from "@app/slices/run-cost/panel.js";
 import type {
   Appearance,
   AppSettings,
@@ -32,7 +35,11 @@ import type {
 import type { VoiceDraft } from "@app/slices/settings/voices.js";
 import type { BackupImportSummary } from "@app/slices/storage/backup-import.js";
 import type { Output, StagedFile } from "@app/slices/storage/model.js";
+import type { StudioPairingView, UploadPack } from "@app/slices/studio/model.js";
 import type { Usage } from "@app/slices/telemetry/usage.js";
+import type { DescriptionField } from "@app/slices/youtube/edits.js";
+import type { ProjectDescriptionEdits } from "@app/slices/youtube/edits-repo.js";
+import type { ChannelLink } from "@app/slices/youtube/placeholders.js";
 import { hc } from "hono/client";
 import type { Problem, SaveResult } from "./http.js";
 import { errorOf, failure, problemOf, reachingFetch, read, saved, unreachable } from "./http.js";
@@ -104,6 +111,12 @@ export interface StorageUsage {
     readonly id: string;
     readonly title: string;
     readonly bytes: number;
+    // What gets published, and what the project was made from (slices/storage/trim.ts).
+    readonly outputsBytes: number;
+    readonly workingBytes: number;
+    readonly removableFiles: number;
+    readonly removableBytes: number;
+    readonly finished: boolean;
   }[];
 }
 export interface NoticeBody {
@@ -255,6 +268,11 @@ export async function readProject(api: Api, id: string): Promise<ProjectBody> {
   return read<ProjectBody>(await api.client.projects[":id"].$get({ param: { id } }));
 }
 
+// The Run cost tab and the "Waiting for … limits" line (`edge/http/run-cost.ts`).
+export async function readRunCost(api: Api, id: string): Promise<RunCost> {
+  return read<RunCost>(await api.client.projects[":id"]["run-cost"].$get({ param: { id } }));
+}
+
 // A refused run is an expected outcome, not a fault: the server names every failing field
 // and Play marks each one in place. So this answers with a value carrying the 400's
 // `fields[]`, the way a refused template does. A creation that failed on this machine is
@@ -284,6 +302,19 @@ export async function listStaged(api: Api): Promise<StagingListBody> {
 
 export async function readStorageUsage(api: Api): Promise<StorageUsage> {
   return read<StorageUsage>(await api.fetch(`${api.origin}/api/storage`));
+}
+
+// Keep outputs only: a finished project drops the working files it was made from.
+export async function keepOutputsOnly(
+  api: Api,
+  projectId: string,
+): Promise<{ readonly files: number; readonly bytesFreed: number }> {
+  return read<{ readonly files: number; readonly bytesFreed: number }>(
+    await api.fetch(
+      `${api.origin}/api/storage/projects/${encodeURIComponent(projectId)}/keep-outputs`,
+      { method: "POST" },
+    ),
+  );
 }
 
 export async function uploadStaged(api: Api, kind: UploadKind, file: File): Promise<StagedFile> {
@@ -389,6 +420,47 @@ export async function sendTestNotification(api: Api, url: string): Promise<void>
   );
 }
 
+// Settings → YouTube Studio: the playlist every upload pack names, and the extension's pairing.
+export interface StudioSettingsBody {
+  readonly playlist: string | null;
+  readonly pairing: StudioPairingView;
+}
+
+export async function readStudioSettings(api: Api): Promise<StudioSettingsBody> {
+  return read<StudioSettingsBody>(await api.client.studio.settings.$get());
+}
+
+export async function saveStudioPlaylist(
+  api: Api,
+  playlist: string,
+): Promise<{ readonly playlist: string | null }> {
+  return detailed(await api.client.studio.settings.playlist.$put({ json: { playlist } }));
+}
+
+export async function newStudioPairing(api: Api): Promise<{ readonly pairing: StudioPairingView }> {
+  return detailed(await api.client.studio.settings.pairing.$post());
+}
+
+export async function readUploadPack(api: Api, projectId: string): Promise<UploadPack> {
+  return detailed<UploadPack>(
+    await api.client.studio.packs[":projectId"].$get({ param: { projectId } }),
+  );
+}
+
+// Makes this pack item the one the Studio extension fills in next.
+export async function chooseUploadPack(
+  api: Api,
+  projectId: string,
+  short: number | undefined,
+): Promise<void> {
+  await detailed(
+    await api.client.studio.packs[":projectId"].choose.$post({
+      param: { projectId },
+      json: short === undefined ? {} : { short },
+    }),
+  );
+}
+
 export async function listVoices(api: Api): Promise<VoiceListBody> {
   return read<VoiceListBody>(await api.client.settings.voices.$get());
 }
@@ -472,6 +544,130 @@ export async function removePrompt(api: Api, id: string): Promise<void> {
   if (!response.ok) {
     throw await failure(response);
   }
+}
+
+export type {
+  ChannelLink,
+  DescriptionField,
+  LibraryItemKind,
+  LibraryVersion,
+  ProjectDescriptionEdits,
+  UsedBy,
+};
+
+// Settings → Channel links: the named links `{{Name}}` fills from in YouTube descriptions.
+export async function readChannelLinks(api: Api): Promise<readonly ChannelLink[]> {
+  return (
+    await read<{ links: readonly ChannelLink[] }>(await api.client.settings["channel-links"].$get())
+  ).links;
+}
+
+export async function saveChannelLinks(
+  api: Api,
+  links: readonly ChannelLink[],
+): Promise<readonly ChannelLink[]> {
+  return (
+    await read<{ links: readonly ChannelLink[] }>(
+      await api.client.settings["channel-links"].$put({ json: { links: [...links] } }),
+    )
+  ).links;
+}
+
+// The project page's hand edits to the YouTube description (`slices/youtube/edits.ts`).
+export async function readDescriptionEdits(
+  api: Api,
+  projectId: string,
+): Promise<ProjectDescriptionEdits> {
+  return read<ProjectDescriptionEdits>(
+    await api.client.projects[":id"]["youtube-edits"].$get({ param: { id: projectId } }),
+  );
+}
+
+// Saves the user's text for a field with the generated text it was made from; `null` drops the
+// edit, so the field follows the generated text again.
+export async function saveDescriptionEdit(
+  api: Api,
+  projectId: string,
+  field: DescriptionField,
+  edit: { readonly text: string; readonly base: string } | null,
+): Promise<ProjectDescriptionEdits> {
+  const param = { id: projectId, field };
+  return read<ProjectDescriptionEdits>(
+    edit === null
+      ? await api.client.projects[":id"]["youtube-edits"].fields[":field"].$delete({ param })
+      : await api.client.projects[":id"]["youtube-edits"].fields[":field"].$put({
+          param,
+          json: { text: edit.text, base: edit.base },
+        }),
+  );
+}
+
+export async function saveProjectLinks(
+  api: Api,
+  projectId: string,
+  links: readonly ChannelLink[],
+): Promise<ProjectDescriptionEdits> {
+  return read<ProjectDescriptionEdits>(
+    await api.client.projects[":id"]["youtube-edits"].links.$put({
+      param: { id: projectId },
+      json: { links: [...links] },
+    }),
+  );
+}
+
+export interface LibraryHistoryBody {
+  readonly versions: readonly LibraryVersion[];
+}
+
+// History and Used by for one Library prompt or intro/outro (`slices/library/history.ts`,
+// `slices/library/used-by.ts`).
+export async function readLibraryHistory(
+  api: Api,
+  item: LibraryItemKind,
+  id: string,
+): Promise<LibraryHistoryBody> {
+  const param = { param: { id } };
+  return read<LibraryHistoryBody>(
+    item === "prompt"
+      ? await api.client.prompts[":id"].history.$get(param)
+      : await api.client.entries[":id"].history.$get(param),
+  );
+}
+
+export async function readLibraryUsedBy(
+  api: Api,
+  item: LibraryItemKind,
+  id: string,
+): Promise<UsedBy> {
+  const param = { param: { id } };
+  return read<UsedBy>(
+    item === "prompt"
+      ? await api.client.prompts[":id"]["used-by"].$get(param)
+      : await api.client.entries[":id"]["used-by"].$get(param),
+  );
+}
+
+// Restore saves the old version again as a new one. A name another item took since is the one
+// refusal the user can fix, so it is said in those terms.
+export async function restoreLibraryVersion(
+  api: Api,
+  item: LibraryItemKind,
+  id: string,
+  version: number,
+): Promise<void> {
+  const param = { param: { id, version: String(version) } };
+  const response =
+    item === "prompt"
+      ? await api.client.prompts[":id"].history[":version"].restore.$post(param)
+      : await api.client.entries[":id"].history[":version"].restore.$post(param);
+  if (response.ok) return;
+  if (response.status === 409) {
+    const noun = item === "prompt" ? "prompt" : "intro or outro";
+    throw new Error(
+      `Couldn't restore version ${String(version)}: another ${noun} now has the name it had. Rename that one in the Library, then press Restore again.`,
+    );
+  }
+  throw await failure(response);
 }
 
 export async function listEntries(api: Api): Promise<EntryListBody> {

@@ -9,13 +9,25 @@ import {
   type ImagePort,
   type ImageRequest,
 } from "../../kernel/ports/image.js";
+import type { Usage } from "../../kernel/ports/llm.js";
 import type { ModelInfo } from "../../kernel/ports/model.js";
 import { providerError } from "../../kernel/ports/model.js";
+import type { LimitWindow } from "../../kernel/ports/plan-limits.js";
 import { cliReported, quoted, refusedImage } from "../explain.js";
 import { cliLoginError } from "../llm/cli-login-error.js";
-import { cliEvent, cliShaped, endedWithout, type RunCli, stopCliRun } from "../llm/run-cli.js";
+import { codexLimitError, readingOf } from "../llm/codex.js";
+import { codexPlanLimit } from "../llm/codex-limits.js";
+import {
+  cliEvent,
+  cliShaped,
+  endedKind,
+  endedWithout,
+  type RunCli,
+  stopCliRun,
+} from "../llm/run-cli.js";
 import { lines } from "../llm/sse-lines.js";
 import { codexGeneratedImage, codexImageCount } from "./codex-output.js";
+import { type ReferencePicture, referencePictures } from "./reference.js";
 
 // "Codex default" puts no model and no effort on the command line, so the CLI's own defaults
 // draw the image; it is what every project saved before the choice existed runs. Every other
@@ -49,11 +61,14 @@ const alwaysDisabled = [
 ] as const;
 type CodexImageRequest = Pick<ImageRequest, "model" | "prompt" | "aspect" | "thinking"> & {
   readonly reference?: GeneratedImage | undefined;
+  readonly cast?: ImageRequest["cast"];
 };
 
 function reviews(req: CodexImageRequest): boolean {
   return (
-    req.model !== codexImageModel.id || req.thinking !== undefined || req.reference !== undefined
+    req.model !== codexImageModel.id ||
+    req.thinking !== undefined ||
+    referencePictures(req).length > 0
   );
 }
 
@@ -64,15 +79,57 @@ export function codexReferencePath(directory: string, image: GeneratedImage): st
   return join(directory, image.mime === "image/jpeg" ? "reference.jpg" : "reference.png");
 }
 
-export function codexImageInstructions(req: CodexImageRequest, reference?: string): string {
+// Every picture the request carries, each at its own path: the establishing image keeps the
+// name it always had, the cast pictures follow it as reference-2, reference-3 and so on.
+export function codexReferencePaths(
+  directory: string,
+  req: CodexImageRequest,
+): readonly { readonly path: string; readonly picture: ReferencePicture }[] {
+  return referencePictures(req).map((picture, index) => ({
+    picture,
+    path:
+      index === 0
+        ? codexReferencePath(directory, picture.image)
+        : join(
+            directory,
+            `reference-${String(index + 1)}${picture.image.mime === "image/jpeg" ? ".jpg" : ".png"}`,
+          ),
+  }));
+}
+
+function castInstructions(req: CodexImageRequest, directory: string): string {
+  const paths = codexReferencePaths(directory, req);
+  return [
+    `Reference images are saved at these paths. Pass all of them in referenced_image_paths on every image generation call: ${paths.map((row) => row.path).join(", ")}.`,
+    ...paths.map((row) =>
+      row.picture.member === undefined
+        ? `${row.path} is the establishing image: keep its characters, rendering style and colour palette.`
+        : `${row.path} shows ${row.picture.member}${describeMember(req, row.picture.member)}: draw ${row.picture.member} to look exactly like this.`,
+    ),
+    "Use them as references only: do not copy their composition, pose or framing; compose this image from the brief.",
+  ].join(" ");
+}
+
+function describeMember(req: CodexImageRequest, name: string): string {
+  const description = req.cast?.find((member) => member.name === name)?.description.trim() ?? "";
+  return description === "" ? "" : ` (${description})`;
+}
+
+export function codexImageInstructions(
+  req: CodexImageRequest,
+  reference?: string,
+  directory?: string,
+): string {
   return [
     "You are making one finished image for Slopify, a video creation app, with the image generation tool.",
     "Fidelity to the brief comes first. Before calling the tool, write its prompt yourself as a detailed, faithful visual description of the brief: the subject and what it is doing, the setting, composition and framing for the target aspect ratio, lighting, colour palette, style and mood, and any text that must appear, spelled exactly. Take every element from the brief and keep its wording where it is specific. Do not add subjects, text, logos or story the brief does not ask for, and do not pad the prompt with generic quality words.",
-    ...(reference === undefined
-      ? []
-      : [
-          `A reference image is saved at ${reference}. Pass exactly that path in referenced_image_paths on every image generation call. Use it as the reference for style, characters and palette: keep the same characters, rendering style and colour palette, but do not copy its composition, pose or framing; compose this image from the brief.`,
-        ]),
+    ...(req.cast !== undefined && req.cast.length > 0 && directory !== undefined
+      ? [castInstructions(req, directory)]
+      : reference === undefined
+        ? []
+        : [
+            `A reference image is saved at ${reference}. Pass exactly that path in referenced_image_paths on every image generation call. Use it as the reference for style, characters and palette: keep the same characters, rendering style and colour palette, but do not copy its composition, pose or framing; compose this image from the brief.`,
+          ]),
     "Take the time you need. After each image, look at it and compare it with the brief; if anything is missing, wrong or distorted, revise the prompt and generate again. Deliver exactly one final image: the last image you generate is the one Slopify uses, so stop once it matches the brief.",
     "Let the image generation tool save its output in its default location. Slopify will collect it. Use PNG or JPEG. Do not copy, rename, edit or create any other file, and do not put the image or a link in your reply.",
     `Target aspect ratio: ${req.aspect}.`,
@@ -132,11 +189,20 @@ export function codexImageArgs(req: CodexImageRequest, directory: string): strin
       : ["-c", `model_reasoning_effort="${req.thinking === "off" ? "none" : req.thinking}"`]),
     ...(req.model === codexImageModel.id ? [] : ["-m", req.model]),
     "--",
-    codexImageInstructions(req, reference),
+    codexImageInstructions(req, reference, directory),
   ];
 }
 
 const failure = z.object({ error: z.object({ message: z.string() }) });
+const turnUsage = z.object({
+  usage: z
+    .object({
+      input_tokens: z.number(),
+      output_tokens: z.number(),
+      cached_input_tokens: z.number().optional(),
+    })
+    .nullish(),
+});
 const errorEvent = z.object({ message: z.string() });
 const item = z.object({ item: z.object({ type: z.string(), text: z.string().optional() }) });
 
@@ -147,6 +213,8 @@ export function codexImage(deps: {
   // The Codex CLI's model list, the one its text provider reads. A failed read leaves only
   // the default, which needs no list.
   readonly readModels?: (() => Promise<readonly ModelInfo[]>) | undefined;
+  // The Codex plan windows, as the Codex text provider reads them (`codex-limits.ts`).
+  readonly readLimits?: (() => Promise<readonly LimitWindow[] | null>) | undefined;
 }): ImagePort {
   const binary = deps.binary ?? "codex";
   return {
@@ -175,6 +243,8 @@ export function codexImage(deps: {
       let threadId: string | undefined;
       let run: ReturnType<RunCli> | undefined;
       let reported = -1;
+      let usage: Usage | undefined;
+      const before = deps.readLimits?.().catch(() => null);
       // A line for the stage's live panel each time this thread's image count moves.
       const report = (): void => {
         if (req.onProgress === undefined) return;
@@ -192,10 +262,8 @@ export function codexImage(deps: {
         }
       };
       try {
-        if (req.reference !== undefined)
-          writeFileSync(codexReferencePath(directory, req.reference), req.reference.bytes, {
-            mode: 0o600,
-          });
+        for (const { path, picture } of codexReferencePaths(directory, req))
+          writeFileSync(path, picture.image.bytes, { mode: 0o600 });
         report();
         try {
           run = deps.run(binary, codexImageArgs(req, directory), req.signal, {
@@ -230,11 +298,23 @@ export function codexImage(deps: {
               z.object({ thread_id: z.string() }),
               event.value,
             ).thread_id;
-          } else if (event.type === "turn.completed") completed = true;
-          else if (event.type === "turn.failed") {
+          } else if (event.type === "turn.completed") {
+            completed = true;
+            const counted = turnUsage.safeParse(event.value);
+            if (counted.success && counted.data.usage)
+              usage = {
+                inputTokens: counted.data.usage.input_tokens,
+                outputTokens: counted.data.usage.output_tokens,
+                ...(counted.data.usage.cached_input_tokens
+                  ? { cachedInputTokens: counted.data.usage.cached_input_tokens }
+                  : {}),
+              };
+          } else if (event.type === "turn.failed") {
             const message = cliShaped(binary, failure, event.value).error.message;
             const login = cliLoginError("codex", message);
             if (login) throw login;
+            const planLimit = codexPlanLimit(message, new Date());
+            if (planLimit !== undefined) throw codexLimitError(message, planLimit);
             throw providerError({
               kind: /refus|content.policy|safety/i.test(message) ? "refusal" : "other",
               message: /refus|content.policy|safety/i.test(message)
@@ -245,6 +325,8 @@ export function codexImage(deps: {
             const message = cliShaped(binary, errorEvent, event.value).message;
             const login = cliLoginError("codex", message);
             if (login) throw login;
+            const planLimit = codexPlanLimit(message, new Date());
+            if (planLimit !== undefined) throw codexLimitError(message, planLimit);
             throw providerError({
               kind: /image.generation|image tool|feature.*unavailable/i.test(message)
                 ? "unsupported"
@@ -273,11 +355,14 @@ export function codexImage(deps: {
             message:
               "The Codex CLI could not be started. Check it is installed and set up in Settings → Providers, then use Retry stage.",
           });
+        const stderrLimit = codexPlanLimit(run.stderr(), new Date());
+        if ((ended.code !== 0 || !completed) && stderrLimit !== undefined)
+          throw codexLimitError(run.stderr().trim(), stderrLimit);
         if (ended.code !== 0 || !completed)
           throw (
             cliLoginError("codex", run.stderr()) ??
             providerError({
-              kind: unavailable ? "unsupported" : "other",
+              kind: unavailable ? "unsupported" : endedKind(ended),
               message: endedWithout(binary, ended, run.stderr()),
             })
           );
@@ -286,7 +371,13 @@ export function codexImage(deps: {
             kind: "unsupported",
             message: `The Codex CLI cannot make images. ${cannotDraw}`,
           });
-        return codexGeneratedImage(env, threadId, startedAt);
+        const image = codexGeneratedImage(env, threadId, startedAt);
+        const limits = await readingOf(before, deps.readLimits);
+        return {
+          ...image,
+          ...(usage === undefined ? {} : { usage }),
+          ...(limits === undefined ? {} : { limits }),
+        };
       } catch (error) {
         req.signal.throwIfAborted();
         throw error;

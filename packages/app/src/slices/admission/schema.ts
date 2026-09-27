@@ -1,8 +1,10 @@
 import { z } from "zod";
 import { thinkingModes } from "../../kernel/ports/llm.js";
+import { castSnapshotSchema } from "../channels/schema.js";
 import { checkpointStageSchema } from "../checkpoints/schema.js";
 import { documentSettingsSchema } from "../document/theme-schema.js";
 import { chunkModes } from "../narration/chunk.js";
+import { reviewModes, reviewStages } from "../reviews/model.js";
 import { subtitleConfigSchema } from "../subtitles/model.js";
 import {
   animateModes,
@@ -21,6 +23,7 @@ import {
   defaultZoomPercent,
 } from "./rules.js";
 
+const hexColour = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
 const providerChoice = z.object({
   provider: z.string(),
   model: z.string(),
@@ -94,6 +97,7 @@ export const runDraftSchema = z.object({
   narrationPrompt: z.string().optional(),
   imagePrompts: z.array(z.object({ name: z.string(), number: z.number() })),
   thumbnailPrompt: z.string().optional(),
+  thumbnailCount: z.union([z.literal(1), z.literal(3)]).optional(),
   intro: entryChoice.optional(),
   outro: entryChoice.optional(),
   values: z.record(z.string(), z.string()),
@@ -144,6 +148,32 @@ export const runDraftSchema = z.object({
     .optional(),
   // The ranges are `slices/video/edit-settings.ts`'s, checked by admission, not the schema's.
   videoEdit: videoEditSchema.optional(),
+  channelId: z.string().optional(),
+  cast: castSnapshotSchema.optional(),
+  titleStyle: z
+    .object({
+      fontId: z
+        .string()
+        .max(160)
+        .regex(/^[A-Za-z0-9_-]+$/)
+        .optional(),
+      color: hexColour.optional(),
+    })
+    .optional(),
+  endScreen: z.object({ text: z.string().max(200) }).optional(),
+  // The retry range is `slices/reviews/model.ts`'s, checked by admission, not the schema's.
+  reviews: z
+    .object({
+      provider: z.string(),
+      model: z.string(),
+      thinking: z.enum(thinkingModes).optional(),
+      retries: z.number().optional(),
+      stages: z.partialRecord(
+        z.enum(reviewStages),
+        z.object({ mode: z.enum(reviewModes), prompt: z.string().optional() }),
+      ),
+    })
+    .optional(),
   // The rules are `slices/voices/model.ts`'s, checked by admission, not the schema's.
   voices: voicesSettingsSchema.optional(),
 });

@@ -110,7 +110,7 @@ export function admitPreview(
         if (existing.state !== "running") {
           deps.db
             .prepare(
-              "UPDATE revision_work SET state='pending',dispatch_state='allowed',failure_reason=NULL WHERE id=?",
+              "UPDATE revision_work SET state='pending',dispatch_state='allowed',failure_reason=NULL,failure_kind=NULL,retry_at=NULL,auto_retries=0 WHERE id=?",
             )
             .run(String(existing.id));
           deps.db

@@ -81,6 +81,8 @@ export interface LegacyPlayFormState {
   // The ticked image prompts, in tick order, each with its Number.
   readonly imagePrompts: readonly ImagePromptChoice[];
   readonly thumbnailPrompt: string;
+  // One or three generated thumbnails; absent is one.
+  readonly thumbnailCount?: 1 | 3 | undefined;
   // The picked entry's name, or "" for Off.
   readonly intro: string;
   readonly outro: string;
@@ -254,6 +256,11 @@ export function draftOf(input: DraftInput): RunDraft {
       : {}),
     imagePrompts: form.imagePrompts,
     thumbnailPrompt: form.thumbnailPrompt,
+    // As `slices/play-drafts/convert.ts` sends it: three only for a drawn thumbnail.
+    ...(form.thumbnailCount === 3 &&
+    (form.sources.thumbnail === "from_prompt" || form.sources.thumbnail === "prompt_by_llm")
+      ? { thumbnailCount: 3 as const }
+      : {}),
     ...pick(entryChoice(input, "intro"), (intro) => ({ intro })),
     ...pick(entryChoice(input, "outro"), (outro) => ({ outro })),
     values: valuesFor(form.values, input.slots),

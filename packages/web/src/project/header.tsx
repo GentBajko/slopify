@@ -48,6 +48,7 @@ export function ProjectHeader({
     resumable ||
     project.status === "paused" ||
     project.status === "failed" ||
+    project.status === "partial" ||
     project.status === "canceled";
   const cancelCopy = confirmationFor({ kind: "cancel" });
   return (
@@ -73,7 +74,7 @@ export function ProjectHeader({
             </Button>
           )}
           {primaryOutput ? (
-            <span className="inline-flex h-8 items-center rounded-control border border-accent bg-accent px-3 [&_a]:font-semibold [&_a]:text-accent-ink [&_button]:text-accent-ink">
+            <span className="inline-flex h-8 items-center rounded-control border border-accent bg-accent px-3 [&_a]:font-semibold [&_a]:text-on-accent [&_button]:text-on-accent">
               <OutputDownload
                 output={primaryOutput}
                 label={

@@ -16,6 +16,7 @@ import { shortsOn } from "@/play/state";
 import { YoutubeDescription } from "@/play/youtube-description";
 import { useVideoEditControls } from "@/video/edit-controls";
 import { articleKind } from "./article-kind";
+import { ThumbnailCountPicker } from "./thumbnail-count.js";
 
 export function ResearchRail({ form, problem, update }: RailProps) {
   return (
@@ -116,6 +117,14 @@ export function ThumbnailRail({
             problem={problem("thumbnailPrompt")}
             onPick={(thumbnailPrompt) => {
               update({ thumbnailPrompt });
+            }}
+          />
+        ) : null}
+        {generating ? (
+          <ThumbnailCountPicker
+            value={form.thumbnailCount === 3 ? 3 : 1}
+            onPick={(thumbnailCount) => {
+              update({ thumbnailCount });
             }}
           />
         ) : null}
