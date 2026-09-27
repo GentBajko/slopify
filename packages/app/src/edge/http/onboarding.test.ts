@@ -167,6 +167,32 @@ describe("starter packs over HTTP", () => {
       404,
     );
   });
+
+  it("still offers a pack's template after the first short used its prompts and voice", async () => {
+    const h = harness();
+    upsertKey(h.db, "openai-tts", "sk-test", clock.now().toISOString());
+    const made = await h.app.request("/api/onboarding/short", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ topic: "Hypatia", packId: "history", requestId: randomUUID() }),
+    });
+    expect(made.status).toBe(201);
+    expect(await json(await h.app.request("/api/onboarding"))).toMatchObject({
+      packs: expect.arrayContaining([
+        expect.objectContaining({ id: "history", installed: false, templateId: null }),
+      ]),
+    });
+    const added = await json(
+      await h.app.request("/api/onboarding/packs/history", { method: "POST" }),
+    );
+    expect(added).toMatchObject({ packId: "history", added: true });
+    expect(added.templateId).toEqual(expect.any(String));
+    expect(await json(await h.app.request("/api/onboarding"))).toMatchObject({
+      packs: expect.arrayContaining([
+        expect.objectContaining({ id: "history", installed: true, templateId: added.templateId }),
+      ]),
+    });
+  });
 });
 
 describe("Make a 60-second short", () => {

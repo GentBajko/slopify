@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { readinessIsUsable } from "../../kernel/ports/model.js";
+import { templateById } from "../project-templates/repo.js";
 import type { ProviderStatus } from "../settings/model.js";
 import type { FirstRunView } from "./model.js";
 import { starterPacks } from "./packs.js";
@@ -25,13 +26,20 @@ export function firstRunView(db: DatabaseSync, statuses: readonly ProviderStatus
     sampleProjectId: samples.library,
     samples,
     clis: detectedClis(statuses),
-    packs: starterPacks.map((pack) => ({
-      id: pack.id,
-      name: pack.name,
-      summary: pack.summary,
-      installed: packs[pack.id] !== undefined,
-      templateId: packs[pack.id]?.template ?? null,
-    })),
+    // A pack counts as added only with its template: the first short adds a pack's prompts and
+    // voice but no template, and Add pack must still be able to add that template later (or
+    // again, after it was deleted).
+    packs: starterPacks.map((pack) => {
+      const template = packs[pack.id]?.template;
+      const kept = template !== undefined && templateById(db, template) !== undefined;
+      return {
+        id: pack.id,
+        name: pack.name,
+        summary: pack.summary,
+        installed: kept,
+        templateId: kept ? template : null,
+      };
+    }),
   };
 }
 
