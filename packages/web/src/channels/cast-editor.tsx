@@ -11,6 +11,7 @@ import { Rule } from "@/components/kit/layout";
 import { MediaFrame } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
 import { Badge, Chip } from "@/components/kit/status";
+import { Switch } from "@/components/kit/switch";
 import { useVoicesForLanguage, VoiceLanguageNote } from "@/language/voice-language";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
 import { providersQuery, voicesQuery } from "@/queries";
@@ -55,6 +56,7 @@ export function CastEditor({
   const [alias, setAlias] = useState("");
   const [description, setDescription] = useState(member?.description ?? "");
   const [voice, setVoice] = useState<CastVoice | undefined>(member?.voice);
+  const [host, setHost] = useState(member?.host === true);
   const refresh = () =>
     Promise.all([
       client.invalidateQueries({ queryKey: channelKey(channelId) }),
@@ -72,6 +74,7 @@ export function CastEditor({
           voice !== undefined && voice.provider !== "" && voice.model !== "" && voice.voice !== ""
             ? voice
             : null,
+        host,
       };
       return member === undefined
         ? createCastMember(api, channelId, crypto.randomUUID(), input)
@@ -181,6 +184,20 @@ export function CastEditor({
           />
         </Field>
         <CastVoiceFields channelId={channelId} value={voice} onChange={setVoice} />
+        <div className="flex flex-col items-start gap-1">
+          <Switch
+            label="One of the channel's hosts"
+            tip="planning.cast.host"
+            checked={host}
+            onChange={setHost}
+          />
+          {host && (voice === undefined || voice.voice === "") ? (
+            <p className="m-0 text-small text-waiting">
+              A host joins new podcasts and interviews only with a voice. Pick one under Voice
+              above.
+            </p>
+          ) : null}
+        </div>
         <div className="flex flex-wrap items-center gap-3">
           <StatusSlot tone={save.error ? "error" : "info"}>
             {save.error?.message ??

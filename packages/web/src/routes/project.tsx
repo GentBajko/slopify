@@ -52,12 +52,20 @@ import { useLiveProject } from "@/project/use-live";
 import { suggestedStage } from "@/project/workspace";
 import { projectQuery, promptsQuery, runCostQuery } from "@/queries";
 import { PrepareUploadDrawer } from "@/studio/prepare-upload";
+import { makeNextChapter } from "@/templates/api";
 import { useTutorialProjectStep } from "@/tutorial/context";
 
 // Keep stage bodies mounted when navigating: editors and players retain their local state.
 // Project identity resets the entire workspace so drafts cannot cross project boundaries.
-export function ProjectRoute({ projectId }: { readonly projectId: string }) {
-  return <ProjectWorkspace key={projectId} projectId={projectId} />;
+export function ProjectRoute({
+  projectId,
+  openDraft,
+}: {
+  readonly projectId: string;
+  // Opens a Play draft and shows Play: where "Make the next chapter" lands. Absent hides it.
+  readonly openDraft?: ((draftId: string) => Promise<boolean>) | undefined;
+}) {
+  return <ProjectWorkspace key={projectId} projectId={projectId} openDraft={openDraft} />;
 }
 
 interface RailItem {
@@ -83,9 +91,16 @@ const toneOf = (stages: readonly (Stage | undefined)[]): Tone | undefined => {
   return "off";
 };
 
-function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
+function ProjectWorkspace({
+  projectId,
+  openDraft,
+}: {
+  readonly projectId: string;
+  readonly openDraft: ((draftId: string) => Promise<boolean>) | undefined;
+}) {
   const { api } = useApp();
   const notify = useToast();
+  const nextChapter = useNextChapter(projectId, openDraft);
   const project = useQuery(projectQuery(api, projectId));
   const prompts = useQuery(promptsQuery(api));
   const runCost = useQuery(runCostQuery(api, projectId));
@@ -468,6 +483,7 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
                 editing={selected === "settings"}
                 onEdit={() => setChosen("settings")}
                 more={more}
+                nextChapter={nextChapter}
               />
             </div>
             <StageAnnouncements stages={stages} />
@@ -761,4 +777,47 @@ function SkeletonWorkspace() {
       </Workspace>
     </div>
   );
+}
+
+// "Make the next chapter": the server makes the draft, then Play opens on it. A retry of a press
+// whose answer was lost reuses the same draft id, so it never makes a second draft.
+function useNextChapter(
+  projectId: string,
+  openDraft: ((draftId: string) => Promise<boolean>) | undefined,
+):
+  | { readonly run: () => void; readonly pending: boolean; readonly error: string | undefined }
+  | undefined {
+  const { api } = useApp();
+  const draftId = useRef<string | undefined>(undefined);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | undefined>(undefined);
+  if (openDraft === undefined) return undefined;
+  return {
+    pending,
+    error,
+    run: () => {
+      if (pending) return;
+      draftId.current ??= crypto.randomUUID();
+      setPending(true);
+      setError(undefined);
+      void makeNextChapter(api, projectId, draftId.current)
+        .then(async (reply) => {
+          if (!reply.ok) {
+            setError(reply.message);
+            return;
+          }
+          if (await openDraft(reply.value.draft.id)) draftId.current = undefined;
+          else
+            setError(
+              "The next chapter's draft was made, but Play could not open it because the draft open there is not saved yet. Open Play, let it save, then press Make the next chapter again.",
+            );
+        })
+        .catch((thrown: unknown) =>
+          setError(
+            `The next chapter could not be made (${thrown instanceof Error ? thrown.message : "the connection dropped"}). Press Make the next chapter again.`,
+          ),
+        )
+        .finally(() => setPending(false));
+    },
+  };
 }

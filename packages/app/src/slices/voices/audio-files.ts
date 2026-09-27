@@ -42,9 +42,18 @@ export function audioChapters(input: {
   }));
 }
 
-// FFMETADATA1: `=`, `;`, `#`, `\` and line breaks are escaped with a backslash.
-export function ffmetadata(title: string, chapters: readonly Chapter[]): string {
+// FFMETADATA1: `=`, `;`, `#`, `\` and line breaks are escaped with a backslash. A chapter of a
+// book also carries the book as its album and the chapter number as its track (ID3 TALB and
+// TRCK in the MP3, the album and track atoms in the M4B), so a player files the chapters together
+// and in order.
+export function ffmetadata(
+  title: string,
+  chapters: readonly Chapter[],
+  book?: { readonly title: string; readonly chapter: number },
+): string {
   const lines = [";FFMETADATA1", `title=${escapeMeta(title)}`];
+  if (book !== undefined)
+    lines.push(`album=${escapeMeta(book.title.trim())}`, `track=${String(book.chapter)}`);
   for (const chapter of chapters)
     lines.push(
       "",

@@ -238,6 +238,10 @@ export const planningHelp = {
     title: "Cast voice",
     body: "How this member speaks in multi-voice runs: pick them under Speakers on Play and they read with this voice, model and pace in every episode. The list shows voices that speak the channel's language. Leave the provider empty for no voice. A run keeps the voice it started with.",
   },
+  "planning.cast.host": {
+    title: "Channel host",
+    body: "A recurring voice of this channel. When you pick Podcast or Interview on Play, the draft starts with the channel's hosts that have a voice as its hosts, so you don't add them every episode. You can still remove or add speakers on the draft. Projects already made are unchanged.",
+  },
   "planning.cast.pictures": {
     title: "Reference pictures",
     body: "Up to 4 pictures per member, sent with every image whose brief, or the video's title, names it, so it looks the same each time. Upload a PNG or JPEG up to 10 MB, or generate one below. Videos already made keep the pictures they started with.",

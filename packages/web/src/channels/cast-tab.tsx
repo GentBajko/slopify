@@ -86,7 +86,7 @@ export function CastTab({
                   {...(first ? { src: pictureUrl(api, first) } : {})}
                   alt={one.name}
                   title={one.name}
-                  meta={`${castKindLabels[one.kind]} · ${String(ready.length)} ${
+                  meta={`${castKindLabels[one.kind]}${one.host === true ? " · Host" : ""} · ${String(ready.length)} ${
                     ready.length === 1 ? "picture" : "pictures"
                   }`}
                   {...(ready.length === 0
