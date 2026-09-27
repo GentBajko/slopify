@@ -180,6 +180,12 @@ export function SpeakersEditor({
               onChange={(audioFiles) => set({ audioFiles })}
             />
           </div>
+          {value.format === "podcast" || value.format === "interview" ? (
+            <p className="text-small text-ink2">
+              The speaker panel (a tile per speaker, the one talking lit, their name below) is drawn
+              with the captions: set Captions to Burn in under Style to see it in the video.
+            </p>
+          ) : null}
         </>
       )}
     </div>
