@@ -90,7 +90,7 @@ export function createCatalogueStore(deps: {
       }
     } catch {
       warning =
-        "Your models.yaml file is missing or has a mistake, so Slopify is still using the last working model list. Fix the file, or use Refresh published catalogue in Settings → Models to replace it.";
+        "Your models.yaml file is missing or has a mistake, so Slopify is still using the last working model list. Fix the file, or use Replace with published file in Settings → Models.";
     }
     return current;
   }

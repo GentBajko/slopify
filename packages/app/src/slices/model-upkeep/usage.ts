@@ -9,38 +9,11 @@ import { documentOf } from "../play-drafts/service.js";
 import { templateById } from "../project-templates/repo.js";
 import { currentRevisionId, revisionById } from "../revisions/repo.js";
 import { isLocalCliProvider } from "../settings/model.js";
+import type { ModelChoice, RetiredUsage, UsageKind, UsageSlot } from "./model.js";
+import { usageSlots } from "./model.js";
 
-// The four model choices a run makes, and the catalogue list each one comes from.
-export const usageSlots = ["llm", "audio", "images", "animate"] as const;
-export type UsageSlot = (typeof usageSlots)[number];
-export const usageKinds = ["template", "schedule", "draft", "project"] as const;
-export type UsageKind = (typeof usageKinds)[number];
-export const slotLabels: Readonly<Record<UsageSlot, string>> = {
-  llm: "Text model",
-  audio: "Voice model",
-  images: "Image model",
-  animate: "Animation model",
-};
-
-export interface ModelChoice {
-  readonly provider: string;
-  readonly model: string;
-}
-// One place a model that is no longer offered is still chosen.
-export interface RetiredUsage {
-  readonly key: string;
-  readonly kind: UsageKind;
-  readonly id: string;
-  readonly name: string;
-  readonly slot: UsageSlot;
-  readonly provider: string;
-  readonly model: string;
-  // "retired": the catalogue lists it as deprecated; "unlisted": it is not in the list at all.
-  readonly why: "retired" | "unlisted";
-  readonly replacement: { readonly id: string; readonly name: string } | null;
-  // Why the one-click switch cannot be used here, and what to do instead.
-  readonly blocked: string | null;
-}
+export type { ModelChoice, RetiredUsage, UsageKind, UsageSlot } from "./model.js";
+export { slotLabels, usageKinds, usageSlots } from "./model.js";
 
 function familyOf(slot: UsageSlot): "llm" | "tts" | "image" {
   return slot === "llm" ? "llm" : slot === "audio" ? "tts" : "image";
