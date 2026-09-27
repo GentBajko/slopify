@@ -81,13 +81,25 @@ shows the channel picked in the rail, or every channel.
   schedule's run to move it into that schedule's queue at that place. Without a mouse: focus a
   topic and press Alt+← or Alt+→, or use the list view's Earlier, Later and **Move to…**.
   A drop the calendar can't carry out (a day with no run, a run with no queued topic) says why.
+- **Needs you**, above the weeks, lists the projects in the range that wait for the person
+  (failed, paused, held at a review checkpoint, or an automatic review's failed item waiting for
+  Overrule or Redo) with **Open to fix / continue / review**, then the finished videos ready to
+  upload (not marked uploaded, not a bundled sample) with **Prepare upload**. On its day, a
+  project says the same, or "Waiting for Codex limits (resets at 14:00)".
+- The **Batch queue** is only here now (Projects no longer repeats it): each queued video in
+  its order, running now, waiting its turn, or paused (which holds the queue).
 - **Add to calendar** puts topics typed one per line at the end of a schedule's queue.
 - **Suggested topics**, beside the weeks, lists what each schedule with topic generation
   suggested, with **Queue** and **Reject** on each and **Queue all**; **Suggest topics now**
   asks for more. **Edit schedules** opens `/schedules`, which sits under the same rail item.
 
 Each run carries `renderedTitle`, the project title it will get (built as the run builds it),
-or null while its topic waits for approval or generation.
+or null while its topic waits for approval or generation. Each project carries, when they
+apply, `needs` (`failed`, `paused`, `review`), `readyToUpload: true` and `limitWaits`.
+
+A failed topic generation shows its fix-it beside the error (on the calendar and on Schedules):
+a signed-out CLI gets Copy sign-in command and Check again, which asks for topics again once the
+CLI is signed in; a rejected key links to Settings → Providers.
 
 API: `GET /api/calendar?from=&to=` (at most 92 days; four weeks from now by default),
 `POST /api/schedules/:id/topics/move` `{baseVersion, from, to}`,

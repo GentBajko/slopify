@@ -131,10 +131,19 @@ section callouts and Ctrl+K all read it. The first situation that holds wins, in
 | Outdated | the last saved edit made outputs outdated | Outdated | Remake 3 outdated images (the first group in run order: article, narration, establishing image, images, animated images, thumbnails, video, shorts, YouTube description, PDF) | that group's section |
 | Done | done or done with problems, and a video exists | Done | Prepare upload | YouTube |
 
-The fix-it of a failed step (`slices/fixes/rules.ts`): a signed-out CLI says the command to
-run and offers Try … again; a refused image prompt offers Soften and retry (confirmed); a
+The fix-it of a failed step (`slices/fixes/rules.ts`): a signed-out CLI offers Copy sign-in
+command (`codex login`, `claude auth login`) and Check again, which asks that CLI alone whether
+it is signed in (`POST /api/providers/health?provider=`) and then tries the step again; a refused image prompt offers Soften and retry (confirmed); a
 refused text prompt and a retired model open the settings (Edit the prompt, Switch model); a
 rejected key links to Settings → Providers → the provider; a full disk to Settings → Storage.
+The same rules and buttons (`fixes/fix-actions.tsx`) serve a schedule's failed topic generation
+(Check again asks for topics again) and a cast picture that could not be made (Check again
+makes it again; a refused prompt offers Reword the picture). Home's Needs you offers Copy
+sign-in command beside Open to retry.
+
+A wait for CLI limits reads the same everywhere (`project/limit-wait.ts`): "Waiting for Codex
+limits (resets at 14:00)" on the project page, Home's Running now, the Projects row and the
+calendar.
 
 Remake uses the rebuild flow for exactly those outputs: a preview of the outdated outputs' work
 keys, started at once when it needs no consent (nothing blocked, no provided content to
