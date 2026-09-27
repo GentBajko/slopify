@@ -16,8 +16,40 @@ const pairingSchema = z.object({
   pairedAt: z.string().nullable(),
 });
 
-export function readStudioPlaylist(db: DatabaseSync): string | null {
-  const stored = readSetting(db, studioPlaylistKey);
+// A channel's own playlist is a row of its own, `studio.playlist.<channelId>`; a channel
+// without one uses the default above.
+export const studioChannelPlaylistPrefix = `${studioPlaylistKey}.`;
+
+function playlistKey(channelId: string | undefined): string {
+  return channelId === undefined ? studioPlaylistKey : `${studioChannelPlaylistPrefix}${channelId}`;
+}
+
+// The playlist an upload pack names: the channel's own, else the default. Without a channel,
+// the default alone.
+export function readStudioPlaylist(db: DatabaseSync, channelId?: string): string | null {
+  if (channelId !== undefined) {
+    const own = storedPlaylist(db, playlistKey(channelId));
+    if (own !== null) return own;
+  }
+  return storedPlaylist(db, studioPlaylistKey);
+}
+
+// Every channel's own playlist, by channel id.
+export function readChannelPlaylists(db: DatabaseSync): Record<string, string> {
+  const prefix = studioChannelPlaylistPrefix;
+  const rows = db
+    .prepare("SELECT key FROM settings WHERE substr(key, 1, ?) = ? ORDER BY key")
+    .all(prefix.length, prefix) as { key: string }[];
+  const out: Record<string, string> = {};
+  for (const { key } of rows) {
+    const value = storedPlaylist(db, key);
+    if (value !== null) out[key.slice(prefix.length)] = value;
+  }
+  return out;
+}
+
+function storedPlaylist(db: DatabaseSync, key: string): string | null {
+  const stored = readSetting(db, key);
   if (stored === undefined) return null;
   try {
     const value: unknown = JSON.parse(stored);
@@ -33,13 +65,20 @@ export function studioPlaylistProblem(raw: string): string | undefined {
     : undefined;
 }
 
-export function saveStudioPlaylist(db: DatabaseSync, raw: string): string | null {
+// Saves the default playlist, or a channel's own; empty clears it (the channel then uses the
+// default again).
+export function saveStudioPlaylist(
+  db: DatabaseSync,
+  raw: string,
+  channelId?: string,
+): string | null {
   const value = raw.trim();
+  const key = playlistKey(channelId);
   if (value === "") {
-    db.prepare("DELETE FROM settings WHERE key = ?").run(studioPlaylistKey);
+    db.prepare("DELETE FROM settings WHERE key = ?").run(key);
     return null;
   }
-  writeSetting(db, studioPlaylistKey, JSON.stringify(value));
+  writeSetting(db, key, JSON.stringify(value));
   return value;
 }
 
@@ -87,12 +126,20 @@ export function studioPairing(db: DatabaseSync): StudioPairingView {
   return resetStudioPairing(db);
 }
 
+// What is waiting to be filled in Studio is kept per pairing (`queue.ts`): one row,
+// `studio.fillQueue.<token hash>`, so a new token starts with nothing waiting.
+export const studioFillQueuePrefix = "studio.fillQueue.";
+
 export function resetStudioPairing(db: DatabaseSync): StudioPairingView {
   const pairing: StudioPairingView = {
     token: randomBytes(24).toString("base64url"),
     origin: null,
     pairedAt: null,
   };
+  db.prepare("DELETE FROM settings WHERE substr(key, 1, ?) = ?").run(
+    studioFillQueuePrefix.length,
+    studioFillQueuePrefix,
+  );
   writeSetting(db, studioPairingKey, JSON.stringify(pairing));
   return pairing;
 }
