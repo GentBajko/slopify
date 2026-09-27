@@ -11,6 +11,7 @@ import type { FieldError } from "@app/slices/admission/rules.js";
 import type { BackupConfigInput, BackupView } from "@app/slices/backups/model.js";
 import type { DocumentThemeName, SavedDocumentTheme } from "@app/slices/document/model.js";
 import type { DocumentTheme } from "@app/slices/document/theme.js";
+import type { CostEstimate } from "@app/slices/estimate/index.js";
 import type {
   Entry,
   EntryCategory,
@@ -547,4 +548,27 @@ export async function removeEntry(api: Api, id: string): Promise<void> {
 
 export function eventsUrl(api: Api, path: string): string {
   return `${api.origin}/api/events/${path}`;
+}
+
+// Voice auditions (`edge/http/auditions.ts`): the price of each speaker's line first, and the
+// spoken line only on the Audition button, which says it was confirmed.
+export interface AuditionLine {
+  readonly speaker: string;
+  readonly provider: string;
+  readonly model: string;
+  readonly text: string;
+}
+export async function quoteAuditions(
+  api: Api,
+  lines: readonly AuditionLine[],
+): Promise<{ readonly estimate: CostEstimate | null }> {
+  return read(await api.client.auditions.quote.$post({ json: { lines: [...lines] } }));
+}
+export async function speakAudition(
+  api: Api,
+  line: Omit<AuditionLine, "speaker"> & { readonly voice: string },
+): Promise<Blob> {
+  const response = await api.client.auditions.$post({ json: { ...line, confirmed: true } });
+  if (!response.ok) throw await failure(response);
+  return await response.blob();
 }

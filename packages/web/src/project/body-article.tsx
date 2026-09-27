@@ -1,12 +1,14 @@
 import type { Stage } from "@app/slices/admission/model.js";
 import { sourceEntries } from "@app/slices/article/source-lines.js";
 import { splitEndMatter } from "@app/slices/article/split.js";
+import { usesVoices } from "@app/slices/voices/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { useId, useMemo, useState } from "react";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { TabPanel, Tabs } from "@/components/kit/tabs";
 import { Button } from "@/components/ui/button";
 import { keys } from "@/queries";
+import { ScriptView } from "@/voices/script-view";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { ResearchNotes } from "./body-research.js";
@@ -28,7 +30,7 @@ import { shownStage } from "./sections.js";
 // A stage that has not started, or is not part of the run, has nothing to re-run yet.
 const ran = (stage: Stage): boolean => stage.state !== "pending" && stage.state !== "skipped";
 
-type Part = "article" | "research" | "sources" | "pronunciation";
+type Part = "article" | "script" | "research" | "sources" | "pronunciation";
 
 // A section's text without its own heading line, which the tab already names.
 function withoutHeading(section: string): string {
@@ -45,6 +47,10 @@ export function ArticleBody({ stage, companion, project, outputs, actions, busy 
   const markdown = roleOf(mine, "article_md") ?? roleOf(mine, "article_txt");
   const sources = roleOf(mine, "sources");
   const glossary = roleOf(mine, "glossary");
+  // A multi-voice run's script: the article itself, or the speaker split made from it.
+  const voices = usesVoices(project.config) ? project.config.voices : undefined;
+  const speakerSplit = roleOf(mine, "script_md");
+  const speakerSplitText = useOutputText(speakerSplit);
 
   const stored = useOutputText(markdown);
   const previews = useQuery({
@@ -75,8 +81,15 @@ export function ArticleBody({ stage, companion, project, outputs, actions, busy 
   );
   const entries = useMemo(() => sourceEntries(parts.sources), [parts.sources]);
   const table = withoutHeading(parts.glossary);
+  const script =
+    voices === undefined || running
+      ? ""
+      : voices.source === "script"
+        ? splitEndMatter(text).body
+        : (speakerSplitText.data ?? "");
   const tabs = [
-    { id: "article" as const, label: "Article" },
+    { id: "article" as const, label: voices?.source === "script" ? "Script text" : "Article" },
+    ...(script.trim() === "" ? [] : [{ id: "script" as const, label: "Speakers" }]),
     ...(research === undefined ? [] : [{ id: "research" as const, label: "Research" }]),
     ...(entries.length > 0
       ? [{ id: "sources" as const, label: "Sources", badge: String(entries.length) }]
@@ -97,12 +110,14 @@ export function ArticleBody({ stage, companion, project, outputs, actions, busy 
   // Markdown, so it pastes cleanly into a document, a post or a description.
   const copyText: Record<Part, string> = {
     article: `${split.title === undefined ? "" : `# ${split.title}\n\n`}${parts.body.trim()}\n`,
+    script: `${script.trim()}\n`,
     research: `${(notesText.data ?? "").trim()}\n`,
     sources: `${entries.map((entry) => `- ${entry}`).join("\n")}\n`,
     pronunciation: `${table}\n`,
   };
   const names: Record<Part, string> = {
     article: "article",
+    script: "script",
     research: "research notes",
     sources: "sources",
     pronunciation: "pronunciation table",
@@ -214,6 +229,18 @@ export function ArticleBody({ stage, companion, project, outputs, actions, busy 
           )}
         </section>
       </TabPanel>
+      {voices === undefined || script.trim() === "" ? null : (
+        <TabPanel idPrefix={idPrefix} id="script" active={open === "script"}>
+          <section
+            aria-label="Script by speaker"
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users need to scroll this reading region.
+            tabIndex={0}
+            className="max-h-[min(58vh,640px)] min-h-48 overflow-auto pr-3"
+          >
+            <ScriptView script={script} voices={voices} />
+          </section>
+        </TabPanel>
+      )}
       {research === undefined ? null : (
         <TabPanel idPrefix={idPrefix} id="research" active={open === "research"}>
           <ResearchNotes projectId={project.id} stage={research} notes={notes} />

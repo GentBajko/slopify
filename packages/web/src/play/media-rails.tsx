@@ -6,6 +6,7 @@ import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
 import { FilePick } from "@/play/provided";
 import type { RailProps } from "@/play/rail-frame";
 import { railBeneath, railControls, SourceSwitch, StageRail } from "@/play/rail-frame";
+import { SpeakersEditor, voiceFormatLabel } from "@/voices/speakers-editor";
 import { NarrationPreparation } from "./narration-preparation";
 import { PronunciationGlossary } from "./pronunciation-glossary";
 import { ReferenceImage, referenceOff } from "./reference-image";
@@ -84,6 +85,29 @@ export function AudioRail({
                 update({ audio: { ...form.audio, voice } });
               }}
             />
+            <details className="col-span-full rounded-control border border-line px-3">
+              <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink2">
+                Speakers ·{" "}
+                {form.voices === undefined
+                  ? "Narration, one voice"
+                  : `${voiceFormatLabel(form.voices.format)}, ${String(form.voices.speakers.length)} ${form.voices.speakers.length === 1 ? "speaker" : "speakers"}`}
+              </summary>
+              <div className="pt-2 pb-3">
+                <SpeakersEditor
+                  value={form.voices}
+                  providers={providers}
+                  voices={voices}
+                  script={form.sources.article === "provide" ? form.provided.article : undefined}
+                  problem={problem}
+                  onChange={(next) => update({ voices: next })}
+                />
+                {form.voices === undefined ? null : (
+                  <p className="mt-3 text-small text-ink2">
+                    The TTS voice above reads the intro and outro.
+                  </p>
+                )}
+              </div>
+            </details>
             <details className="col-span-full rounded-control border border-line px-3">
               <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink2">
                 Audio Advanced · {advancedSummary}
