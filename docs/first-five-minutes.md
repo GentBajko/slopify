@@ -27,6 +27,14 @@ word-by-word captions and the title on top (`slices/rebuild/runtime-export-short
 short's values are added to the render fingerprint only in short mode, so long videos keep
 their fingerprints. The same `requestId` returns the same project.
 
+Once the short is done, its next action is **Make the full video on this topic**:
+`POST /api/onboarding/full-video {projectId, draftId}` (`slices/onboarding/full-video.ts`)
+opens a Play draft for a long video on the same topic. It uses the starter pack the short was
+written from (found by its short-script prompt; its template is installed if it was not yet),
+or the Starter set's settings without saving a template, and fills in the topic, the title and
+the text, image and voice providers the short used. Nothing starts until you press Play. The
+same `draftId` opens the same draft.
+
 ## Live view
 
 The project page has a **Live** tab: the steps, the article as it is written, the images as

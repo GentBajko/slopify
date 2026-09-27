@@ -47,7 +47,10 @@ Beside the article, the narration, the thumbnail and each short, and on each ima
 **Review passed**, **Flagged by review**, **Being made again** or **Accepted by you**, with the
 reasons. For a failed item:
 
-- **Overrule** accepts it as it is.
+- **Overrule** accepts it as it is. On an item whose automatic redo is still waiting to start
+  (**Waiting to be made again**) it also calls the redo off, and what depends on the item goes
+  ahead with it as it is. Once Slopify has started making it again (**Being made again**),
+  Overrule waits for the new version.
 - **Redo** makes it again the way a section's More → make it again does (a new version of the project, then the
   item and what depends on it are rebuilt), and it is reviewed again.
 

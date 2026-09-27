@@ -108,9 +108,18 @@ same renderer as the finished video, at a small size, with the project's format,
 size and position, the Look, the transition and a chapter card (when chapter cards are on). It
 renders when the section opens and again a moment after a setting changes; **Render again**
 renders it from scratch. Captions show in the preview only when they are burned in, because a
-caption file is drawn by the player in its own style. The pictures are three stills and the
-sound is silence, all made by ffmpeg on your computer, so a preview never calls a provider and
-costs nothing.
+caption file is drawn by the player in its own style. The pictures are three of the bundled
+sample project's images (landscape or portrait by format) and the sound is six seconds of its
+narration, with the word timing its alignment found (`assets/style-preview/`,
+`slices/style-preview/narration.ts`), so the captions follow the voice word by word. A typed
+Sample text other than the default is spread over the stretches the narration speaks. A
+preview never calls a provider and costs nothing.
+
+**Shorts preview**: Play's and Edit project's Shorts section shows one under **More shorts
+options** while Shorts is on. It renders the same sample as a 9:16 short through the Shorts
+renderer (`renderShort`, at preview size): the big word-by-word captions in the caption font,
+the title as a headline when **Title on screen** is on (the sample's title), and the chosen
+**Speed**. The request's `shorts: {titleOnScreen, speed?, title?}` picks this layout.
 
 On Play the preview is drawn on a real picture when there is one, so the Look and captions are
 judged on something like the video's own images: the establishing image the draft uploaded
@@ -119,7 +128,7 @@ the channel's cast member the title or a keyword names, else the first cast memb
 picture. The rail says which ("Drawn on Tiamat's picture"). The server reads it from the
 upload, the project output or the cast picture itself (`slices/style-preview/images.ts`); the
 request can also name a project's own output, for Edit project. A picture the server can no
-longer find, or a file that is not a PNG, JPEG or WebP, falls back to the stills.
+longer find, or a file that is not a PNG, JPEG or WebP, falls back to the sample's images.
 
 Previews are saved in `<data-dir>/cache/style-preview/`, named by a hash of the settings, so a
 style you have seen before plays at once; the 200 most recent are kept, and deleting the folder

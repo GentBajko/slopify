@@ -129,6 +129,7 @@ section callouts and Ctrl+K all read it. The first situation that holds wins, in
 | Stopped | canceled, failed without a failed step, or resumable work nothing will start | Stopped / Canceled | Continue the run | none |
 | Queued | pending in the queue | Queued | none | none |
 | Outdated | the last saved edit made outputs outdated | Outdated | Remake 3 outdated images (the first group in run order: article, narration, establishing image, images, animated images, thumbnails, video, shorts, YouTube description, PDF) | that group's section |
+| Done (a short) | a short-mode project is done | Done | Make the full video on this topic (Play opens on a long video with the same topic, starter pack and providers) | none |
 | Done | done or done with problems, and a video exists | Done | Prepare upload | YouTube |
 
 The fix-it of a failed step (`slices/fixes/rules.ts`): a signed-out CLI says the command to
