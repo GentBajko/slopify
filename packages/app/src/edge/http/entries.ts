@@ -1,14 +1,16 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
+import { versionsOrCurrent } from "../../slices/library/history.js";
 import { entryCategories, entryModes } from "../../slices/library/model.js";
-import { listEntries } from "../../slices/library/repo.js";
+import { entryById, listEntries } from "../../slices/library/repo.js";
 import type { LibraryDeps } from "../../slices/library/save.js";
-import { createEntry, removeEntry, updateEntry } from "../../slices/library/save.js";
+import { createEntry, removeEntry, restoreEntry, updateEntry } from "../../slices/library/save.js";
+import { usedBy } from "../../slices/library/used-by.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid } from "./problem.js";
 // One rule set for prompts and entries, so one refusal mapping too.
-import { refused } from "./prompts.js";
+import { refused, versionParam } from "./prompts.js";
 
 const idParam = z.object({
   id: z
@@ -45,6 +47,23 @@ export function entryRoutes(deps: AppDeps) {
         return result.ok ? c.json(result.value) : refused(c, result, "entry");
       },
     )
+    .get("/:id/history", zValidator("param", idParam, onInvalid), (c) => {
+      const entry = entryById(deps.db, c.req.valid("param").id);
+      return entry === undefined
+        ? refused(c, { ok: false, reason: "not-found" }, "entry")
+        : c.json({ versions: versionsOrCurrent(deps.db, "entry", entry) });
+    })
+    .post("/:id/history/:version/restore", zValidator("param", versionParam, onInvalid), (c) => {
+      const { id, version } = c.req.valid("param");
+      const result = restoreEntry(library, id, version);
+      return result.ok ? c.json(result.value) : refused(c, result, "entry");
+    })
+    .get("/:id/used-by", zValidator("param", idParam, onInvalid), (c) => {
+      const entry = entryById(deps.db, c.req.valid("param").id);
+      return entry === undefined
+        ? refused(c, { ok: false, reason: "not-found" }, "entry")
+        : c.json(usedBy(deps.db, { item: "entry", category: entry.category, name: entry.name }));
+    })
     .delete("/:id", zValidator("param", idParam, onInvalid), (c) => {
       const result = removeEntry(library, c.req.valid("param").id);
       return result.ok ? c.body(null, 204) : refused(c, result, "entry");

@@ -9,10 +9,25 @@ import { extendTailwindMerge } from "tailwind-merge";
 const twMerge = extendTailwindMerge({
   extend: {
     theme: {
-      text: ["label", "small", "body", "row", "title", "wordmark", "counter"],
-      radius: ["control", "panel"],
-      animate: ["lamp-pulse", "dialog-in", "tick-in"],
-      font: ["sans", "condensed"],
+      text: [
+        "display",
+        "title-1",
+        "title-2",
+        "title-3",
+        "counter",
+        "body",
+        "small",
+        "label",
+        "reading",
+        "code",
+        // Deprecated 2.x sizes, until the screen redesign drops them.
+        "row",
+        "title",
+        "wordmark",
+      ],
+      radius: ["control", "media", "pill", "panel"],
+      animate: ["lamp-pulse", "dialog-in", "tick-in", "enter"],
+      font: ["sans", "condensed", "mono"],
     },
   },
 });

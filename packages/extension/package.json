@@ -1,0 +1,15 @@
+{
+  "name": "@slopify/extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Fills YouTube Studio's upload dialog from a Slopify project's upload pack. Never publishes.",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1",
+    "fflate": "^0.8.3"
+  }
+}

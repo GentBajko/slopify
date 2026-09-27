@@ -1,5 +1,6 @@
 import type { LlmDocument } from "./llm-documents.js";
 import type { ModelInfo } from "./model.js";
+import type { PlanLimitReading } from "./plan-limits.js";
 
 export const messageRoles = ["system", "user", "assistant"] as const;
 export type MessageRole = (typeof messageRoles)[number];
@@ -14,6 +15,11 @@ export interface Message {
 export interface Usage {
   readonly inputTokens: number;
   readonly outputTokens: number;
+  // Input tokens read from the provider's prompt cache, reported beside `inputTokens` (which
+  // already counts them) where the provider says so.
+  readonly cachedInputTokens?: number | undefined;
+  // The model that actually answered, when the provider names one.
+  readonly model?: string | undefined;
 }
 
 export interface LlmDelta {
@@ -25,6 +31,8 @@ export interface LlmDone {
   readonly type: "done";
   readonly usage: Usage | null;
   readonly finishReason: string | null;
+  // A CLI's plan windows as it reported them around this call; absent when it reported none.
+  readonly limits?: PlanLimitReading | undefined;
 }
 
 // Provider activity refreshes the idle deadline without exposing reasoning or tools.

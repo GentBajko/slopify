@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Catalogue } from "../../catalog/schema.js";
 import type { CatalogueStore } from "../../catalog/store.js";
-import { type RunDraft, sourceOf } from "../admission/model.js";
+import { type RunDraft, sourceOf, thumbnailCountOf } from "../admission/model.js";
 import {
   imageSecondsProblem,
   usesNarrationPreparation,
@@ -14,6 +14,7 @@ import { splitEndMatter } from "../article/split.js";
 import { chunkNarration, defaultChunking } from "../narration/chunk.js";
 import { normalizeNarrationText } from "../narration/plan.js";
 import { preparationMessages } from "../narration/preparation.js";
+import { isLocalCliProvider } from "../settings/model.js";
 import {
   defaultShortsImagePrompt,
   defaultShortsPrompt,
@@ -41,6 +42,11 @@ export interface CostRow {
   readonly low: number | null;
   readonly high: number | null;
   readonly detail: string;
+  // A CLI charge: $0 on the user's plan, and what the same work would cost through the API
+  // (null when the catalogue has no API price for it). Absent for keyed providers.
+  readonly onPlan?: boolean | undefined;
+  readonly apiLow?: number | null | undefined;
+  readonly apiHigh?: number | null | undefined;
 }
 export interface CostEstimate {
   readonly currency: "USD";
@@ -48,6 +54,11 @@ export interface CostEstimate {
   readonly low: number;
   readonly high: number;
   readonly unknown: number;
+  // The API-equivalent range of the rows on a plan, and how many of them have no API price.
+  // Absent when no row runs on a plan.
+  readonly apiLow?: number | undefined;
+  readonly apiHigh?: number | undefined;
+  readonly apiUnknown?: number | undefined;
   readonly expectedWords: number;
   readonly catalogueDate: string | null;
   readonly assumptions: readonly string[];
@@ -71,23 +82,25 @@ export function estimateRun(
   const llm = draft.llm ?? { provider: "", model: "" };
   const tts = draft.audio ?? { provider: "", model: "" };
   const image = draft.images ?? { provider: "", model: "" };
-  const textNote =
-    data.llm.find(
-      (model) =>
-        model.provider === llm.provider &&
-        model.id === llm.model &&
-        model.enabled &&
-        !model.deprecated,
-    )?.pricing.note ??
-    "CLI subscription or model pricing is unavailable; usage may be billed by your account.";
-  const imageNote =
-    data.image.find(
-      (model) =>
-        model.provider === image.provider &&
-        model.id === image.model &&
-        model.enabled &&
-        !model.deprecated,
-    )?.pricing.note ?? "Model or account pricing is unknown.";
+  const textNote = isLocalCliProvider(llm.provider)
+    ? "Runs on your CLI plan, so it adds no charge; the API figure is what the same tokens would cost through the API."
+    : (data.llm.find(
+        (model) =>
+          model.provider === llm.provider &&
+          model.id === llm.model &&
+          model.enabled &&
+          !model.deprecated,
+      )?.pricing.note ??
+      "CLI subscription or model pricing is unavailable; usage may be billed by your account.");
+  const imageNote = isLocalCliProvider(image.provider)
+    ? "Runs on your Codex plan, so it adds no charge; no API price is given for agent-drawn images."
+    : (data.image.find(
+        (model) =>
+          model.provider === image.provider &&
+          model.id === image.model &&
+          model.enabled &&
+          !model.deprecated,
+      )?.pricing.note ?? "Model or account pricing is unknown.");
   const generatedArticle = draft.sources.article === "generate";
   const articleChars = generatedArticle ? expectedWords * 6 : (draft.provided.article?.length ?? 0);
   const promptChars = Object.entries(rendered).reduce(
@@ -212,12 +225,13 @@ export function estimateRun(
       model: image.model,
     });
   if (["from_prompt", "prompt_by_llm"].includes(draft.sources.thumbnail))
-    requests.push({
-      kind: "image",
-      stage: "Thumbnail",
-      provider: image.provider,
-      model: image.model,
-    });
+    for (let variant = 1; variant <= thumbnailCountOf(draft); variant++)
+      requests.push({
+        kind: "image",
+        stage: "Thumbnail",
+        provider: image.provider,
+        model: image.model,
+      });
   else local("Thumbnail", "Provided or off.");
   if (draft.sources.thumbnail === "prompt_by_llm")
     text("Thumbnail prompt", promptChars + articleChars, 1200);

@@ -1,9 +1,9 @@
-import type { ProjectEvent } from "../../kernel/events.js";
+import type { ProjectEvent, ScheduleTopicsEvent } from "../../kernel/events.js";
 import type { Log } from "../../kernel/log.js";
 import { redact } from "../../kernel/log.js";
 import type { ProjectState } from "../../kernel/pipeline.js";
-import type { NoticeSubject } from "./rules.js";
-import { noticeOf, noticeText, webhookBody } from "./rules.js";
+import type { NoticeSubject, NoticeText } from "./rules.js";
+import { noticeOf, noticeText, topicsNoticeText, webhookBody } from "./rules.js";
 import type { SendNotification } from "./send.js";
 import { sendFailureText } from "./send.js";
 
@@ -19,6 +19,8 @@ export interface RunNotifier {
   // Sees every event the hub is handed. Returns at once and never throws: a run never waits
   // on, or fails because of, a notification.
   readonly observe: (event: ProjectEvent) => void;
+  // A schedule held generated topics for approval. Same promises as `observe`.
+  readonly observeTopics: (event: ScheduleTopicsEvent) => void;
   // Resolves once every POST started so far has answered or timed out. Tests and shutdown.
   readonly settled: () => Promise<void>;
   // Shutdown: every stage is about to be aborted, which is not news, and the database is
@@ -39,19 +41,28 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
     const subject = deps.subject(projectId);
     if (subject === undefined) return;
     const text = noticeText(kind, { ...subject, reason: reasons.get(projectId) });
+    post(url, text, kind, { projectId });
+  };
+
+  const post = (
+    url: string,
+    text: NoticeText,
+    kind: string,
+    about: { readonly projectId?: string },
+  ): void => {
     const body = redact(webhookBody(text));
     const sending = deps
       .send(url, body)
       .then((result) => {
         if (!result.ok)
           deps.log.write("warn", "notification.failed", {
-            projectId,
+            ...about,
             detail: `${kind} notification not delivered: ${sendFailureText(result)}`,
           });
       })
       .catch((error: unknown) => {
         deps.log.write("warn", "notification.failed", {
-          projectId,
+          ...about,
           detail: `${kind} notification not delivered: ${error instanceof Error ? error.message : String(error)}`,
         });
       })
@@ -81,6 +92,18 @@ export function createRunNotifier(deps: RunNotifierDeps): RunNotifier {
         deps.log.write("warn", "notification.failed", {
           projectId: event.projectId,
           detail: `notification skipped: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
+    },
+    observeTopics: (event) => {
+      if (closed || event.added === 0) return;
+      try {
+        const url = deps.url();
+        if (url === null) return;
+        post(url, topicsNoticeText(event), "topics", {});
+      } catch (error) {
+        deps.log.write("warn", "notification.failed", {
+          detail: `topics notification skipped: ${error instanceof Error ? error.message : String(error)}`,
         });
       }
     },
