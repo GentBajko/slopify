@@ -74,6 +74,10 @@ function readiness(provider: ProviderStatus | undefined): {
               : `CLI ready · ${provider.readiness.version}`,
         }
       : { ok: false, text: provider.readiness.issue ?? "CLI not found" };
+  if (provider.readiness.kind === "local")
+    return provider.readiness.available
+      ? { ok: true, text: `Built-in voice · ${provider.readiness.engine ?? "ready"}` }
+      : { ok: false, text: provider.readiness.issue ?? "No speech program found" };
   return provider.readiness.hasKey
     ? { ok: true, text: "API key saved" }
     : { ok: false, text: "API key missing" };

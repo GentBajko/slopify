@@ -286,6 +286,8 @@ describe("Home", () => {
 
 const firstRun: FirstRunView = {
   show: true,
+  settle: false,
+  voice: { keyed: null, system: { available: true, engine: "eSpeak NG", issue: null } },
   sampleProjectId: "sample-1",
   samples: { library: "sample-1", audiobook: null, podcast: null },
   clis: [
@@ -330,8 +332,9 @@ describe("Welcome", () => {
         "GET /api/settings/autostart": jsonAnswer(autostart),
       }),
     );
-    await screen.findByRole("option", { name: "History" });
-    await screen.findByRole("button", { name: "Start when I log in" });
+    // Every step's panel is in the page, the ones not picked hidden.
+    await screen.findByRole("button", { name: "Use History", hidden: true });
+    await screen.findByRole("button", { name: "Start when I log in", hidden: true });
     expect(screen.getByLabelText("Topic")).not.toBeNull();
     expectExplained();
   });

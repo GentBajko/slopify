@@ -106,6 +106,12 @@ export async function firstRunStatus(
   const names = detected
     .filter((cli) => cli.usable && cli.id !== "codex-image")
     .map((cli) => cli.displayName);
+  const systemVoice = statuses.some(
+    (status) => status.readiness.kind === "local" && status.readiness.available,
+  );
+  const narration = systemVoice
+    ? "Narration can use your computer's built-in voice (System voice in Settings → Voices); add an ElevenLabs or OpenAI key later for a better one."
+    : "Narration still needs a voice provider key, or turn Audio off or upload your own.";
   return {
     firstRun,
     detected,
@@ -118,7 +124,7 @@ export async function firstRunStatus(
     detail: !firstRun
       ? null
       : names.length > 0
-        ? `Slopify found ${list(names)} and picked ${names.length === 1 ? "it" : "them"} on Play. Narration still needs a voice provider key, or turn Audio off or upload your own. Keys are optional extras in Settings → Providers.`
+        ? `Slopify found ${list(names)} and picked ${names.length === 1 ? "it" : "them"} on Play. ${narration} Keys are optional extras in Settings → Providers.`
         : "Install Claude Code, Codex or Gemini CLI and sign in once in a terminal, then reload this page. Or paste an API key in Settings → Providers.",
   };
 }

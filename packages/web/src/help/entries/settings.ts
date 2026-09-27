@@ -59,6 +59,10 @@ export const settingsHelp = {
     title: "Inworld",
     body: "Narrates the script with Inworld voices, billed per character from your Inworld account. Paste the Base64 credentials of a Standard key exactly as shown; Realtime-only keys do not work.",
   },
+  "settings.provider.system-voice": {
+    title: "System voice",
+    body: "Narrates with the speech your computer already has: macOS voices, Windows voices, or on Linux Piper, SVOX Pico or eSpeak NG. No key, no account and no charge, but it sounds robotic next to ElevenLabs or OpenAI. On Linux, install espeak-ng if nothing is found. Its models are the speech programs Slopify found; add one of their voices in Settings → Voices.",
+  },
   "settings.provider.fal": {
     title: "fal.ai",
     body: "Draws the images and thumbnails with the image models fal.ai hosts, charged per image from prepaid credit. fal.ai locks the account when the balance runs out, so a run stops at the images step until you add credit.",
@@ -253,11 +257,15 @@ export const settingsHelp = {
   },
   "welcome.found": {
     title: "Found on this computer",
-    body: "Claude Code, Codex and Gemini CLI write the text with your own sign-in, so no API key is needed for it, and Codex also draws the images. The narration needs a voice key (OpenAI, ElevenLabs, Cartesia or Inworld) in Settings → Providers.",
+    body: "Claude Code, Codex and Gemini CLI write the text with your own sign-in, so no API key is needed for it, and Codex also draws the images. The narration uses a voice key (OpenAI, ElevenLabs, Cartesia or Inworld) when one is saved in Settings → Providers, and otherwise your computer's built-in voice, so no key is needed to start.",
+  },
+  "welcome.voice": {
+    title: "Narration voice",
+    body: "Who reads the script aloud. With a voice key saved (OpenAI, ElevenLabs, Cartesia or Inworld), that provider narrates. Without one, your computer's own speech does it for free: macOS or Windows voices, or eSpeak NG on Linux. It sounds robotic, so add a key in Settings → Providers when you want a better voice.",
   },
   "welcome.short": {
     title: "Make a 60-second short",
-    body: "Slopify writes a script of about 150 words, narrates it, draws four vertical images and renders a captioned 9:16 short, usually in about five minutes with the command-line tools. The narration uses your voice provider's credit; text and images through a command-line tool count toward its plan.",
+    body: "Slopify writes a script of about 150 words, narrates it, draws four vertical images and renders a captioned 9:16 short, usually in about five minutes with the command-line tools. The narration uses your voice provider's credit, or nothing with the built-in voice; text and images through a command-line tool count toward its plan.",
   },
   "welcome.topic": {
     title: "Topic",
@@ -265,7 +273,7 @@ export const settingsHelp = {
   },
   "welcome.pack": {
     title: "Style",
-    body: "The starter pack whose prompts, voice and art direction the short uses. General is a neutral explainer style. Picking a pack does not add it to your library; use Add pack below for that.",
+    body: "The starter pack whose prompts, voice and art direction the short uses. General is a neutral explainer style. Picking a pack does not add it to your library; use Add to library for that.",
   },
   "welcome.packs": {
     title: "Starter packs",

@@ -9,6 +9,8 @@ afterEach(cleanup);
 
 const view: FirstRunView = {
   show: true,
+  settle: false,
+  voice: { keyed: null, system: { available: true, engine: "eSpeak NG", issue: null } },
   sampleProjectId: "sample-1",
   samples: { library: "sample-1", audiobook: "sample-2", podcast: null },
   clis: [
@@ -58,27 +60,53 @@ const view: FirstRunView = {
   ],
 };
 
-describe("the first-run screen", () => {
-  it("says what this computer can already do and links the sample", async () => {
+describe("the first-run steps", () => {
+  it("starts with what this computer can already do, the voice included", async () => {
     renderRouted(<WelcomeRoute />, testDeps({ "GET /api/onboarding": jsonAnswer(view) }));
     expect(
-      await screen.findByText(/no API keys are needed for the text or the images/),
+      await screen.findByText(
+        "You can make a video now: no API keys are needed for the text, the images or the narration.",
+      ),
     ).not.toBeNull();
     expect(screen.getByText("Ready · 0.160.0 · writes and draws")).not.toBeNull();
     expect(screen.getByText("Not found")).not.toBeNull();
-    expect(screen.getByRole("link", { name: "Explore the sample" }).getAttribute("href")).toBe(
-      "/projects/sample-1",
-    );
-    expect(screen.getByRole("link", { name: "See an audiobook" }).getAttribute("href")).toBe(
-      "/projects/sample-2",
-    );
-    // A sample that was deleted points to where it comes back.
-    expect(screen.queryByRole("link", { name: "Hear a podcast" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Restore samples in Settings" })).not.toBeNull();
-    expect(screen.getByRole("button", { name: "Added" }).hasAttribute("disabled")).toBe(true);
+    expect(
+      screen.getByText(
+        "Narration uses your computer's built-in voice (eSpeak NG); add an ElevenLabs or OpenAI key later for a better one.",
+      ),
+    ).not.toBeNull();
+    expect(
+      screen.getByRole("tab", { name: "1 · What you have" }).getAttribute("aria-selected"),
+    ).toBe("true");
   });
 
-  it("starts a short from a topic with the picked pack, and says why it can't", async () => {
+  it("offers the fix inline when no voice can narrate", async () => {
+    renderRouted(
+      <WelcomeRoute />,
+      testDeps({
+        "GET /api/onboarding": jsonAnswer({
+          ...view,
+          voice: {
+            keyed: null,
+            system: {
+              available: false,
+              engine: null,
+              issue: "No speech program was found on this computer. Install espeak-ng.",
+            },
+          },
+        }),
+      }),
+    );
+    // Said on the first step, and again on the last one beside Make.
+    expect(await screen.findAllByText("No voice can narrate the short yet.")).toHaveLength(2);
+    expect(screen.getAllByText(/Install espeak-ng/).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: "Add a voice key" })[0]?.getAttribute("href")).toBe(
+      "/settings?section=providers",
+    );
+    expect(screen.getByRole("button", { name: "Check again" })).not.toBeNull();
+  });
+
+  it("walks to a style, then makes the short from a topic and links its live view", async () => {
     const user = userEvent.setup();
     const sent: unknown[] = [];
     let refuse = true;
@@ -94,10 +122,19 @@ describe("the first-run screen", () => {
         },
       }),
     );
-    const button = await screen.findByRole("button", { name: "Make a 60-second short" });
+    await user.click(await screen.findByRole("button", { name: "Next: Pick a style" }));
+    expect(
+      screen.getByRole("button", { name: "Add History to library" }).hasAttribute("disabled"),
+    ).toBe(false);
+    expect(
+      screen.getByRole("button", { name: "Science explainers is in your library" }),
+    ).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "Use History" }));
+    await user.click(screen.getByRole("button", { name: "Next: Make your first short" }));
+    expect(screen.getByText(/^Style: History\./)).not.toBeNull();
+    const button = screen.getByRole("button", { name: "Make a 60-second short" });
     expect(button.hasAttribute("disabled")).toBe(true);
     await user.type(screen.getByPlaceholderText("Why the sea glows at night"), "Tides");
-    await user.selectOptions(screen.getByLabelText("Starter pack"), "history");
     await user.click(button);
     expect(await screen.findByText("No voice is ready to narrate the short.")).not.toBeNull();
     refuse = false;
@@ -108,6 +145,20 @@ describe("the first-run screen", () => {
     expect((sent[1] as { requestId: string }).requestId).toBe(
       (sent[0] as { requestId: string }).requestId,
     );
+    expect(await screen.findByText("Your short is being made.")).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Watch it being made" }).getAttribute("href")).toBe(
+      "/projects/p9",
+    );
+    // The samples are there as extras while it runs.
+    expect(screen.getByRole("link", { name: "Explore the sample" }).getAttribute("href")).toBe(
+      "/projects/sample-1",
+    );
+    expect(screen.getByRole("link", { name: "See an audiobook" }).getAttribute("href")).toBe(
+      "/projects/sample-2",
+    );
+    // A sample that was deleted points to where it comes back.
+    expect(screen.queryByRole("link", { name: "Hear a podcast" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Restore samples in Settings" })).not.toBeNull();
   });
 
   it("is skipped for good with Skip", async () => {
