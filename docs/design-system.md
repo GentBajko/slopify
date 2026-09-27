@@ -56,8 +56,9 @@ the label; Input, Select, Textarea, Code) · `kit/switch` (Switch, Segmented, bo
 `kit/info-tip` (InfoTip, reading the help catalogue; `helpScope`) · `kit/tabs` (roving focus: arrows, Home, End) ·
 `kit/section-head` (kicker, title, meta, info, actions) · `kit/status` (Lamp, Status, Badge,
 Chip) · `kit/media` (MediaFrame with aspect, caption, badge, hover and focus actions and a
-generating state; MediaGrid; Lightbox with arrow paging and Esc) · `kit/player` (a real
-`<video controls>` with its poster) · `kit/rail` (Rail, RailLink with `aria-current`,
+generating state; MediaGrid, the one gallery grid: `shorts` for 9:16 tiles, `density="compact"`
+for a drawer, side panel or Home card, `list` for `<li>` tiles; Lightbox with arrow paging, Esc
+and `actions` for the picture shown) · `kit/player` (Player, see below) · `kit/rail` (Rail, RailLink with `aria-current`,
 RailButton) · `kit/steps` · `kit/next-action` · `kit/callout` (danger, waiting, info, with
 actions) · `kit/list-row` (List, ListRow with visible actions) · `kit/stats` (Stats, Stat,
 Meter, DataTable) · `kit/command-palette` · `kit/dialog` (Dialog, ConfirmDialog) · `kit/toast`
@@ -143,9 +144,26 @@ one detail line each, and the cost so far with each CLI plan's share. Below 1180
 sit above the column; on phones the section rail scrolls sideways as tabs and only the next
 action stays above it.
 
-Media is a MediaFrame in one MediaGrid per image prompt, opening the Lightbox; the video plays
-in the Player; shorts are 9:16 players in their own grid; review verdicts are badges on the
-frame with Overrule and Redo among its actions. Making a whole stage again is rare, so it sits
+Media is a MediaFrame in one MediaGrid per image prompt, opening the Lightbox, whose bar carries
+the picture's Regenerate and Download; the video plays in the Player with the first thumbnail as
+its poster and the YouTube chapters on its track; shorts are 9:16 players in the shorts grid,
+each with its first still as the poster; review verdicts are badges on the frame with Overrule
+and Redo among its actions.
+
+**Player.** Every video that plays uses `kit/player`, never the browser's own controls (a muted
+preview inside a MediaFrame may stay plain). Before it starts: the poster and a big lime play
+key in the middle. Then a bar on a dark gradient: play/pause, current / total time in tabular
+numerals, the lime track (buffered range behind, chapter marks with their title on hover, a
+time tip under the pointer, click or drag to seek, touch too), mute and volume, playback speed
+0.75–2× in its own menu, captions (only when there is a text track), picture in picture (when
+the browser has it) and full screen on the whole player. The bar hides while the video plays
+and nobody touches it, never while a menu is open or focus is inside. Keys, anywhere inside
+the player: Space or K play and pause, J and L jump 10 s, ← and → 5 s, M mutes, F full screen,
+C captions, 0–9 jump to that tenth. Seek and volume are sliders whose value reads in words
+("12:40 of 2:04:11"). Props: `src`, `poster`, `label`, `portrait` (9:16), `captions`,
+`chapters` (`{ start, title }[]`), `ref` to the `<video>`, `className`, `children`. The screen is
+dark in both themes, so the bar's colours are fixed. A narrow player puts the track on its own
+row and drops time, volume and speed; the keys still do all of it. Making a whole stage again is rare, so it sits
 behind each section's More, confirmed first.
 
 ### Controls that say what they do: the next action
@@ -228,7 +246,8 @@ calls, money, time, disk), in the Voice below. One thing has one id, reused wher
   buttons, links go somewhere. A project shows exactly one primary action for its situation
   (the next action rule). Row actions are visible. Every frequent action is in the palette.
 - **Media.** A media frame with a fixed aspect box, a caption, actions on hover and focus, a
-  status badge; one gallery grid; click opens the lightbox; video plays in a real player.
+  status badge; one gallery grid; click opens the lightbox with the picture's actions; video
+  plays in the kit Player with its poster.
 - **States and motion.** The lamp is the status mark and always sits next to its word. Hover
   lifts to `raised`, focus draws a 2px ring offset 2px, disabled controls say why. 120ms for
   hover and toggles, 200ms for things entering; reduced motion stops the pulse and the slides.

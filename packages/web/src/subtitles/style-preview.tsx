@@ -72,7 +72,7 @@ export function SubtitlePreview({
         aria-label="Subtitle style preview"
         data-format={format}
         data-position={value.position ?? "bottom"}
-        className="relative mx-auto w-full overflow-hidden rounded-control border border-line-strong bg-screen text-center text-white"
+        className="sl-media__frame mx-auto w-full text-center text-white"
         style={{
           aspectRatio: `${frame.width} / ${frame.height}`,
           maxWidth:

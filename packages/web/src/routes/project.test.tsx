@@ -358,7 +358,9 @@ describe("the stage bodies", () => {
     await screen.findByRole("region", { name: "Video" });
     const player = container.querySelector(".sl-player video");
     expect(player?.getAttribute("src")).toBe(`${testOrigin}/files/p1/video`);
-    expect(player?.hasAttribute("controls")).toBe(true);
+    // Slopify's own controls, not the browser's.
+    expect(player?.hasAttribute("controls")).toBe(false);
+    expect(screen.getByRole("slider", { name: "Seek" })).not.toBeNull();
     const download = await downloadItem("Video (.mp4)");
     expect(download.getAttribute("href")).toBe(`${testOrigin}/files/p1/video`);
     expect(download.hasAttribute("download")).toBe(true);

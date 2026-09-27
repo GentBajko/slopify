@@ -1,15 +1,22 @@
 import { wordTimingUnavailable } from "@app/kernel/ports/languages.js";
 import { masterText } from "@app/slices/loudness/model.js";
 import { assetOf } from "@app/slices/storage/asset-name.js";
+import type { Output } from "@app/slices/storage/model.js";
+import { fitChapters } from "@app/slices/youtube/chapters.js";
+import { resolveFields, shownFields, splitDescription } from "@app/slices/youtube/edits.js";
+import { parseTimestamp } from "@app/slices/youtube/timestamps.js";
+import { useQuery } from "@tanstack/react-query";
+import { readDescriptionEdits } from "@/api";
 import { useApp } from "@/app-context";
 import { useCommand } from "@/components/kit/command-palette";
-import { Player } from "@/components/kit/player";
+import { Player, type PlayerChapter } from "@/components/kit/player";
 import { useToast } from "@/components/kit/toast";
+import { keys } from "@/queries";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
 import { currentShorts, useShortClips } from "./body-shorts.js";
 import { dockerFolderHelp, openFolder } from "./open-folder.js";
-import { DownloadMenu, OutputFolder, StageBody } from "./parts.js";
+import { DownloadMenu, OutputFolder, StageBody, useOutputText } from "./parts.js";
 import { useOutputMedia } from "./revision-media.js";
 import { duration, percent, preparingSubtitles } from "./summary.js";
 
@@ -36,6 +43,10 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
     (left, right) => (left.meta.short ?? 0) - (right.meta.short ?? 0),
   );
   const media = useOutputMedia(video);
+  // The thumbnail stands in for the video until it plays: the first variant when there are
+  // several.
+  const poster = useOutputMedia(posterOf(outputs));
+  const chapters = useVideoChapters(project.id, description, tags, video?.durationMs ?? null);
   const captions = useOutputMedia(vtt);
   const playedSubtitles = video?.meta.subtitlesMode ?? project.config.subtitles?.mode;
   const rendering = stage.state === "running";
@@ -105,6 +116,8 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
           key={video.id}
           src={media.url}
           label="Generated video"
+          {...(poster === undefined ? {} : { poster: poster.url })}
+          chapters={chapters}
           portrait={project.format === "9:16"}
           className={project.format === "9:16" ? "max-w-[360px]" : "max-w-[1100px]"}
           {...(playedSubtitles === "files" && vtt && captions
@@ -190,4 +203,47 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
       ) : null}
     </StageBody>
   );
+}
+
+// The project's first thumbnail, which the player shows until the video plays.
+export function posterOf(outputs: readonly Output[]): Output | undefined {
+  return outputs
+    .filter((output) => output.role === "thumbnail")
+    .toSorted((left, right) => (left.meta.index ?? 1) - (right.meta.index ?? 1))[0];
+}
+
+// The YouTube chapters as marks on the player's track: the description's chapters as the
+// YouTube section shows them (the user's edit kept, fitted to YouTube's rules), so a mark sits
+// where YouTube will put its chapter. None until the description is written.
+function useVideoChapters(
+  projectId: string,
+  description: Output | undefined,
+  tags: Output | undefined,
+  durationMs: number | null,
+): readonly PlayerChapter[] {
+  const { api } = useApp();
+  const text = useOutputText(description).data;
+  const tagsText = useOutputText(tags).data;
+  const edits = useQuery({
+    queryKey: keys.youtubeEdits(projectId),
+    queryFn: () => readDescriptionEdits(api, projectId),
+    enabled: description !== undefined,
+  });
+  if (text === undefined) return [];
+  const shown = shownFields(
+    resolveFields(splitDescription(text, tagsText ?? ""), edits.data?.fields ?? {}),
+  );
+  return playerChapters(shown.chapters, durationMs === null ? undefined : durationMs / 1000);
+}
+
+// "0:00 Intro" lines, fitted as YouTube takes them, as start times and titles.
+export function playerChapters(text: string, durationSeconds?: number): readonly PlayerChapter[] {
+  return fitChapters(text, durationSeconds)
+    .text.split("\n")
+    .flatMap((line) => {
+      const match = /^(\S+)\s+(.+)$/u.exec(line.trim());
+      const start = match === null ? undefined : parseTimestamp(match[1] ?? "");
+      const title = match?.[2]?.trim() ?? "";
+      return start === undefined || title === "" ? [] : [{ start, title }];
+    });
 }

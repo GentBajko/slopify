@@ -31,6 +31,8 @@ export function useOutputChange(
   readonly confirm: () => void;
   readonly dismiss: () => void;
   readonly unavailable: boolean;
+  // The change opens in Edit project rather than asking here.
+  readonly viaEdit: boolean;
   // Whether the project's revision has loaded, so `act` takes the path it will keep taking.
   readonly ready: boolean;
 } {
@@ -79,6 +81,7 @@ export function useOutputChange(
     dismiss: () => setAsking(undefined),
     unavailable:
       output === undefined || busy || actions.pending || (viaEdit && requestEdit === undefined),
+    viaEdit,
     ready: !revisioned || view !== undefined,
   };
 }

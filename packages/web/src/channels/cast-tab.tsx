@@ -5,7 +5,7 @@ import { StatusSlot } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
-import { MediaFrame, MediaGrid } from "@/components/kit/media";
+import { Lightbox, type LightboxItem, MediaFrame, MediaGrid } from "@/components/kit/media";
 import { Badge } from "@/components/kit/status";
 import { cn } from "@/lib/utils";
 import {
@@ -52,6 +52,17 @@ export function CastTab({
     },
   });
   const member = cast.find((one) => one.id === selected);
+  // Each member's first ready picture, full size in the lightbox.
+  const pictured = cast.flatMap((one) => {
+    const first = one.images.find((image) => image.state === "ready")?.sha256;
+    return first ? [{ member: one, src: pictureUrl(api, first) }] : [];
+  });
+  const items: LightboxItem[] = pictured.map((one) => ({
+    src: one.src,
+    alt: one.member.name,
+    caption: `${castKindLabels[one.member.kind]} · ${one.member.description || "No description yet"}`,
+  }));
+  const [open, setOpen] = useState<number | null>(null);
   const editing = selected === "new" || member !== undefined;
   return (
     <div className="grid grid-cols-1 items-start gap-8 min-[1024px]:grid-cols-[minmax(0,1fr)_440px]">
@@ -85,6 +96,8 @@ export function CastTab({
                   )}
                   {...(first ? { src: pictureUrl(api, first) } : {})}
                   alt={one.name}
+                  onOpen={() => setOpen(pictured.findIndex((entry) => entry.member.id === one.id))}
+                  openLabel={`Open ${one.name}'s picture full size`}
                   title={one.name}
                   meta={`${castKindLabels[one.kind]} · ${String(ready.length)} ${
                     ready.length === 1 ? "picture" : "pictures"
@@ -122,6 +135,26 @@ export function CastTab({
             })}
           </MediaGrid>
         )}
+        <Lightbox
+          items={items}
+          index={open}
+          onIndex={setOpen}
+          onClose={() => setOpen(null)}
+          actions={(_, index) => {
+            const entry = pictured[index];
+            return entry === undefined ? null : (
+              <Button
+                size="small"
+                onClick={() => {
+                  setOpen(null);
+                  select(entry.member.id);
+                }}
+              >
+                {`Edit ${entry.member.name}`}
+              </Button>
+            );
+          }}
+        />
         <StatusSlot tone="error" className="mt-2">
           {deleting ? undefined : remove.error?.message}
         </StatusSlot>
