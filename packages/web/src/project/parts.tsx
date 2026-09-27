@@ -71,9 +71,7 @@ const article: Components = {
     </a>
   ),
   code: ({ children }) => (
-    <code className="rounded-control bg-sunken px-1 py-0.5 font-mono text-small">
-      {children}
-    </code>
+    <code className="rounded-control bg-sunken px-1 py-0.5 font-mono text-small">{children}</code>
   ),
   pre: ({ children }) => (
     <pre className="m-0 overflow-x-auto rounded-control bg-sunken p-3 font-mono text-small">
@@ -92,9 +90,7 @@ const article: Components = {
   th: ({ children }) => (
     <th className="sl-kicker border-b border-line py-2 pr-4 text-left">{children}</th>
   ),
-  td: ({ children }) => (
-    <td className="border-b border-line py-2 pr-4 align-top">{children}</td>
-  ),
+  td: ({ children }) => <td className="border-b border-line py-2 pr-4 align-top">{children}</td>,
 };
 
 // The article's own title, typeset on the row that carries it: a heading's worth of

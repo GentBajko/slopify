@@ -3,8 +3,8 @@ import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
 import { StatusSlot } from "@/components/kit/action-bar";
+import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
-import { Rail, RailGroup } from "@/components/rail";
 import { Button } from "@/components/ui/button";
 import { keys } from "@/queries";
 import { onboardingKey, readSample, restoreSample, type SampleProjects, sampleKey } from "./api.js";
@@ -33,33 +33,33 @@ export function SampleSettings(): ReactElement {
   return (
     <div className="mt-8">
       <SectionHead title="Sample projects" info="settings.sample.restore" />
-      <RailGroup>
+      <List label="Sample projects">
         {(Object.keys(names) as (keyof SampleProjects)[]).map((id) => {
           const projectId = samples?.[id] ?? null;
           return (
-            <Rail key={id}>
-              <span className="min-w-0 flex-1 text-small text-ink-2">
-                {names[id]}: {projectId === null ? "not in your projects" : "in your projects"}
-              </span>
-              {projectId === null ? null : (
-                <Button asChild variant="ghost">
-                  <Link to="/projects/$projectId" params={{ projectId }}>
-                    Open
-                  </Link>
-                </Button>
-              )}
-            </Rail>
+            <ListRow
+              key={id}
+              title={names[id]}
+              meta={projectId === null ? "Not in your projects" : "In your projects"}
+              actions={
+                projectId === null ? undefined : (
+                  <Button asChild variant="ghost">
+                    <Link to="/projects/$projectId" params={{ projectId }}>
+                      Open
+                    </Link>
+                  </Button>
+                )
+              }
+            />
           );
         })}
-        <Rail>
-          <span className="min-w-0 flex-1 text-small text-ink-2">
-            Puts all three back as they shipped.
-          </span>
-          <Button disabled={restore.isPending} onClick={() => restore.mutate()}>
-            {restore.isPending ? "Restoring…" : "Restore samples"}
-          </Button>
-        </Rail>
-      </RailGroup>
+      </List>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <Button disabled={restore.isPending} onClick={() => restore.mutate()}>
+          {restore.isPending ? "Restoring…" : "Restore samples"}
+        </Button>
+        <span className="text-small text-ink-2">Puts all three back as they shipped.</span>
+      </div>
       <StatusSlot tone={restore.error ? "error" : "success"}>
         {restore.error?.message ??
           (restore.isSuccess ? "The samples are back in Projects." : undefined)}

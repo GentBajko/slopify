@@ -420,7 +420,7 @@ function Preview({ values }: { readonly values: DocumentTheme | undefined }) {
           </a>
         )}
       </div>
-      <div className="max-h-[calc(100vh-220px)] min-h-[320px] overflow-y-auto rounded-media border border-line bg-sunken p-3">
+      <div className="max-h-[calc(100vh-220px)] min-h-[320px] overflow-y-auto rounded-media bg-sunken p-3">
         <PdfPages
           data={pdf?.bytes}
           label="The sample article laid out with this theme"
@@ -544,7 +544,7 @@ function Setting({
               type="color"
               aria-label={`${field.label} colour`}
               value={full}
-              className="h-8 w-10 cursor-pointer rounded-control border border-line-strong bg-sunken p-0.5"
+              className="h-8 w-10 cursor-pointer rounded-control border border-line-strong bg-transparent p-0.5"
               onChange={(event) => {
                 set(event.target.value);
               }}
