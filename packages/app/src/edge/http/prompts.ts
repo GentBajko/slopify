@@ -2,10 +2,17 @@ import { zValidator } from "@hono/zod-validator";
 import type { Context } from "hono";
 import { Hono } from "hono";
 import { z } from "zod";
+import { versionsOrCurrent } from "../../slices/library/history.js";
 import { promptKinds } from "../../slices/library/model.js";
-import { listPrompts } from "../../slices/library/repo.js";
+import { listPrompts, promptById } from "../../slices/library/repo.js";
 import type { LibraryDeps, SaveFailure } from "../../slices/library/save.js";
-import { createPrompt, removePrompt, updatePrompt } from "../../slices/library/save.js";
+import {
+  createPrompt,
+  removePrompt,
+  restorePrompt,
+  updatePrompt,
+} from "../../slices/library/save.js";
+import { usedBy } from "../../slices/library/used-by.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
 
@@ -16,6 +23,9 @@ const idParam = z.object({
     .max(64)
     .regex(/^[0-9A-Za-z_-]+$/),
 });
+
+// History's Restore names the version by its number.
+export const versionParam = idParam.extend({ version: z.coerce.number().int().positive() });
 
 // Shape only. The rules - trimming, emptiness, length, the slot lint - are the slice's,
 // so one set of messages reaches the editor.
@@ -48,6 +58,25 @@ export function promptRoutes(deps: AppDeps) {
           return result.ok ? c.json(result.value) : refused(c, result, "prompt");
         },
       )
+      // Every saved version, newest first (`slices/library/history.ts`).
+      .get("/:id/history", zValidator("param", idParam, onInvalid), (c) => {
+        const prompt = promptById(deps.db, c.req.valid("param").id);
+        return prompt === undefined
+          ? refused(c, { ok: false, reason: "not-found" }, "prompt")
+          : c.json({ versions: versionsOrCurrent(deps.db, "prompt", prompt) });
+      })
+      .post("/:id/history/:version/restore", zValidator("param", versionParam, onInvalid), (c) => {
+        const { id, version } = c.req.valid("param");
+        const result = restorePrompt(library, id, version);
+        return result.ok ? c.json(result.value) : refused(c, result, "prompt");
+      })
+      // The templates, schedules and projects that name it.
+      .get("/:id/used-by", zValidator("param", idParam, onInvalid), (c) => {
+        const prompt = promptById(deps.db, c.req.valid("param").id);
+        return prompt === undefined
+          ? refused(c, { ok: false, reason: "not-found" }, "prompt")
+          : c.json(usedBy(deps.db, { item: "prompt", kind: prompt.kind, name: prompt.name }));
+      })
       // A project holds its own rendered text, so nothing cascades and a
       // template used by past projects is deleted like any other.
       .delete("/:id", zValidator("param", idParam, onInvalid), (c) => {

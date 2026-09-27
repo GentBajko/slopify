@@ -49,6 +49,7 @@ import { telemetryRoutes } from "./telemetry.js";
 import { tutorialRoutes } from "./tutorial.js";
 import { updateRoutes } from "./update.js";
 import { usageRoutes } from "./usage.js";
+import { youtubeEditRoutes } from "./youtube-edits.js";
 
 export interface AppDeps {
   readonly hostCliStatus?:
@@ -129,6 +130,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       // are their own router because they are their own concern.
       .route("/projects", actionRoutes(deps))
       .route("/projects", subtitleRoutes(deps))
+      .route("/projects", youtubeEditRoutes(deps))
       .route("/fonts", fontsRoutes(deps))
       .route("/prompts", promptRoutes(deps))
       .route("/entries", entryRoutes(deps))

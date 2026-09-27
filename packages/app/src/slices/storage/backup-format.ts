@@ -54,6 +54,7 @@ export const projectTables = [
   "review_checkpoints",
   "review_checkpoint_approvals",
   "project_recovery_requests",
+  "youtube_description_edits",
 ] as const;
 export type ProjectTable = (typeof projectTables)[number];
 
