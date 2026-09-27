@@ -104,7 +104,7 @@ it("retries an uncertain pause with its original identity after the current revi
   );
   await screen.findByText("r1");
   await user.click(screen.getByRole("button", { name: "Pause" }));
-  await screen.findByText(unreachable);
+  await screen.findByText(unreachable());
   await user.click(screen.getByRole("button", { name: "New revision" }));
   await screen.findByText("r2");
   seen.length = 0;
@@ -149,7 +149,7 @@ it("prepares a legacy baseline before controlling it and keeps pause and cancel 
     }),
   );
   await user.click(screen.getByRole("button", { name: "Pause" }));
-  await screen.findByText(unreachable);
+  await screen.findByText(unreachable());
   await user.click(screen.getByRole("button", { name: "Cancel" }));
   await waitFor(() => expect(requests).toHaveLength(2));
   expect(operations).toEqual(["prepare", "pause", "prepare", "cancel"]);

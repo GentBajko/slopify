@@ -233,7 +233,7 @@ export function xhrUpload(onResponse: (response: Response) => void = () => {}): 
         resolve(response);
       };
       request.onerror = () => {
-        reject(new TypeError(unreachable));
+        reject(new TypeError(unreachable()));
       };
       request.send(body);
     });

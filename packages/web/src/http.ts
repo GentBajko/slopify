@@ -79,16 +79,31 @@ export async function problemOf(response: Response): Promise<Problem | undefined
   return (await response.json()) as Problem;
 }
 
+// Which kind of installation this page talks to, learnt from the start-at-login view
+// (`rememberInstall`) while the server still answered. Unknown until then.
+export type InstallKind = "native" | "docker";
+let installKind: InstallKind | undefined;
+
+export function rememberInstall(kind: InstallKind | undefined): void {
+  installKind = kind;
+}
+
 // Said when the browser could not reach the server at all: the app stopped, its container is
-// restarting, or an update is replacing it. The request never got an answer to explain.
-export const unreachable =
-  "Slopify isn't responding. If you're running it in Docker, check the container is running, then reload this page.";
+// restarting, or an update is replacing it. The request never got an answer to explain, so the
+// sentence names the fix for the installation the page last heard from.
+export function unreachable(): string {
+  if (installKind === "docker")
+    return "Slopify isn't responding. Check that its Docker container is running (Docker Desktop, or docker ps in a terminal) and start it if it stopped, then reload this page.";
+  if (installKind === "native")
+    return "Slopify isn't responding. It stopped, or it is restarting after an update: wait a moment, or start it again with npx @gentbajko/slopify in a terminal, then reload this page.";
+  return "Slopify isn't responding. Check that Slopify is still running (started with npx @gentbajko/slopify, or its Docker container), then reload this page.";
+}
 
 // A reply that is not the server's own problem document: a gateway in front of a stopped app,
 // or a fault that escaped before the server could write a sentence for it.
 function unexplained(status: number): string {
   if (status === 502 || status === 503 || status === 504) {
-    return unreachable;
+    return unreachable();
   }
   return `Slopify hit an unexpected error (${String(status)}). Reload the page and try again. If it keeps happening, open Settings and use Download diagnostics.`;
 }
@@ -102,7 +117,7 @@ export function reachingFetch(inner: typeof fetch): typeof fetch {
       return await inner(input, init);
     } catch (cause) {
       if (cause instanceof TypeError) {
-        throw new TypeError(unreachable, { cause });
+        throw new TypeError(unreachable(), { cause });
       }
       throw cause;
     }

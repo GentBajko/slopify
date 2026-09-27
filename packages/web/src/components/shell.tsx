@@ -13,6 +13,7 @@ import {
 import { type ReactElement, useEffect, useState } from "react";
 import { eventsUrl } from "@/api";
 import { useApp } from "@/app-context";
+import { useInstallKind } from "@/autostart/use-install-kind";
 import { ChannelPicker, CurrentChannelProvider, useCurrentChannel } from "@/channels/current";
 import { SupportGlyph } from "@/components/glyph";
 import { PlayKey } from "@/components/kit/button";
@@ -251,6 +252,7 @@ function ShellContent() {
   const pathname = useLocation({ select: (location) => location.pathname });
   const runs = useRunNotifications();
   const palette = useCommandPalette();
+  useInstallKind();
 
   useEffect(() => {
     const refreshProjects = coalesce(() => {

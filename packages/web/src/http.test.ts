@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { errorOf, reachingFetch, sentence, understood, unreachable, unrecognised } from "./http";
+import {
+  errorOf,
+  reachingFetch,
+  rememberInstall,
+  sentence,
+  understood,
+  unreachable,
+  unrecognised,
+} from "./http";
 
 describe("reachingFetch", () => {
   it("says the server is not responding when nothing answered", async () => {
@@ -9,7 +17,7 @@ describe("reachingFetch", () => {
     });
     const caught = await fetch("http://localhost/api").catch((error: unknown) => error);
     expect(caught).toBeInstanceOf(TypeError);
-    expect((caught as Error).message).toBe(unreachable);
+    expect((caught as Error).message).toBe(unreachable());
     expect((caught as Error).cause).toBe(lost);
   });
 
@@ -22,9 +30,25 @@ describe("reachingFetch", () => {
   });
 });
 
+describe("unreachable", () => {
+  it("names the fix for the installation the page last heard from", () => {
+    try {
+      rememberInstall("native");
+      expect(unreachable()).toContain("npx @gentbajko/slopify");
+      expect(unreachable()).not.toContain("Docker");
+      rememberInstall("docker");
+      expect(unreachable()).toContain("Docker container is running");
+      rememberInstall(undefined);
+      expect(unreachable()).toContain("still running");
+    } finally {
+      rememberInstall(undefined);
+    }
+  });
+});
+
 describe("errorOf", () => {
   it("treats a gateway error with no problem document as the server being down", () => {
-    expect(errorOf(new Response(null, { status: 502 }), undefined).message).toBe(unreachable);
+    expect(errorOf(new Response(null, { status: 502 }), undefined).message).toBe(unreachable());
   });
 
   it("names the status and the next step for any other unexplained reply", () => {
