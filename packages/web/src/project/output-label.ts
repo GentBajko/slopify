@@ -29,6 +29,7 @@ const labels: Readonly<Record<Output["role"], string>> = {
   short_image: "Short image",
   short_video: "Short",
   animated_image: "Animated image",
+  reference: "Establishing image (reference)",
 };
 export function outputLabel(output: Output): string {
   if ((output.role === "narration_txt" || output.role === "tts_script") && output.meta.segment)

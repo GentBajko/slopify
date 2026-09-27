@@ -29,7 +29,15 @@ export async function revisionAction(
   const image =
     action.kind === "delete-image" || action.kind === "regenerate-image"
       ? view.outputs.find(
-          (row) => row.selected && row.output.id === action.outputId && row.output.role === "image",
+          (row) =>
+            row.selected &&
+            row.output.id === action.outputId &&
+            (row.output.role === "image" ||
+              // A generated establishing image is made again like any image; it is never deleted
+              // on its own (Edit project sets it Off), and an uploaded one has nothing to redo.
+              (action.kind === "regenerate-image" &&
+                row.output.role === "reference" &&
+                config.reference?.source === "prompt")),
         )
       : undefined;
   if ((action.kind === "delete-image" || action.kind === "regenerate-image") && image === undefined)

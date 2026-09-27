@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { type KeyboardEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { UploadKind } from "@/api";
 import { useApp } from "@/app-context";
 import { ActionBar, StatusSlot } from "@/components/kit/action-bar";
 import { Drawer } from "@/components/kit/drawer";
@@ -16,6 +15,7 @@ import { DraftList } from "@/play/draft-list";
 import { focusPlayField, playFieldTarget } from "@/play/field-targets";
 import { OutputPreview, useWidePlayLayout } from "@/play/output-preview";
 import { OutputsSection } from "@/play/outputs-section";
+import type { DraftUploadKind } from "@/play/rail-frame";
 import { ReadinessRail } from "@/play/readiness-rail";
 import { ReviewSection } from "@/play/review-section";
 import { SectionNavigation } from "@/play/section-navigation";
@@ -198,12 +198,12 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     }
   };
 
-  const onPickFiles = (kind: UploadKind, files: readonly File[]): void => {
+  const onPickFiles = (kind: DraftUploadKind, files: readonly File[]): void => {
     session.invalidateReview(true);
     void session.attach(kind, files);
   };
 
-  const onRemoveFile = (kind: UploadKind, key: string): void => {
+  const onRemoveFile = (kind: DraftUploadKind, key: string): void => {
     setForm((current) => ({
       ...current,
       provided:
@@ -214,7 +214,9 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
             }
           : kind === "audio"
             ? { ...current.provided, audio: undefined }
-            : { ...current.provided, thumbnail: undefined },
+            : kind === "reference"
+              ? { ...current.provided, reference: undefined }
+              : { ...current.provided, thumbnail: undefined },
     }));
   };
 
@@ -234,7 +236,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     update,
     onPickFiles,
     onRemoveFile,
-    onReattachFile: (kind: UploadKind, key: string, file: File) => {
+    onReattachFile: (kind: DraftUploadKind, key: string, file: File) => {
       void session.attach(kind, [file], key);
     },
   };

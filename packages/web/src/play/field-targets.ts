@@ -31,7 +31,15 @@ export function playFieldTarget(
           (upload) => upload && (upload.error !== undefined || upload.file === undefined),
         ),
     );
-    target = `provided.${slot ?? "audio"}`;
+    const reference = form.provided.reference;
+    target = `provided.${
+      slot ??
+      (form.reference?.source === "provide" &&
+      reference !== undefined &&
+      (reference.error !== undefined || reference.file === undefined)
+        ? "reference"
+        : "audio")
+    }`;
   }
   const image = /^imagePrompts\.(\d+)\.(.+)$/.exec(field);
   if (image) {
@@ -77,6 +85,8 @@ export function playFieldTarget(
             "provided.images",
             "thumbnailPrompt",
             "provided.thumbnail",
+            "provided.reference",
+            "reference",
             "provided",
             "sources",
             "imageSeconds",

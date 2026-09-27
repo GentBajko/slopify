@@ -4,7 +4,7 @@ import { type ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { BodyProps } from "./body.js";
-import { outputsOf } from "./body.js";
+import { outputsOf, roleOf } from "./body.js";
 import { ThumbnailPanel } from "./body-thumbnail.js";
 import { ConfirmedButton } from "./controls.js";
 import { groupImages } from "./image-groups.js";
@@ -78,7 +78,76 @@ export function ImagesBody({ stage, companion, project, outputs, actions, busy }
           }
         </ImageGroup>
       ))}
+      {project.config.reference === undefined ? null : (
+        <ReferencePanel
+          image={roleOf(outputsOf(outputs, stage), "reference")}
+          format={project.format}
+          generated={project.config.reference.source === "prompt"}
+          actions={actions}
+          busy={busy}
+        />
+      )}
     </StageBody>
+  );
+}
+
+// The establishing image, under the slideshow it is never part of: labelled as the reference
+// the other images are drawn from, with Regenerate when it was made from a prompt.
+function ReferencePanel({
+  image,
+  format,
+  generated,
+  actions,
+  busy,
+}: {
+  readonly image: Output | undefined;
+  readonly format: Format;
+  readonly generated: boolean;
+  readonly actions: BodyProps["actions"];
+  readonly busy: boolean;
+}) {
+  const media = useOutputMedia(image);
+  return (
+    <section aria-label="Establishing image" className="flex flex-col gap-[10px]">
+      <EngravedLabel>Establishing image · reference, not in the video</EngravedLabel>
+      <div className="grid grid-cols-3 gap-2 min-[900px]:grid-cols-6">
+        <figure className="m-0 overflow-hidden rounded-control border border-line bg-panel2">
+          {image === undefined ? (
+            <p
+              className={cn(
+                "flex items-center justify-center p-2 text-center text-label text-ink2",
+                aspectOf(format),
+              )}
+            >
+              Not made yet
+            </p>
+          ) : (
+            <img
+              src={media?.url}
+              alt={image.meta.prompt ?? "Establishing image"}
+              className={cn("block w-full object-cover", aspectOf(format))}
+            />
+          )}
+        </figure>
+      </div>
+      <ActionRow>
+        {image !== undefined && generated ? (
+          <ConfirmedButton
+            action={{ kind: "regenerate-image", outputId: image.id }}
+            run={() => {
+              actions.run({ kind: "regenerate-image", outputId: image.id });
+            }}
+            disabled={busy}
+            pending={actions.pending}
+          >
+            Regenerate establishing image
+          </ConfirmedButton>
+        ) : null}
+        {image === undefined ? null : (
+          <OutputDownload output={image} label="Download establishing image" />
+        )}
+      </ActionRow>
+    </section>
   );
 }
 

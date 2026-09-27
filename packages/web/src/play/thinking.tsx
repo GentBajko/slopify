@@ -3,28 +3,40 @@ import { useQuery } from "@tanstack/react-query";
 import { useApp } from "@/app-context";
 import { modelsQuery } from "@/lib/models";
 import { OptionPicker } from "./pickers";
+
+// The text model's Thinking, and the same control for images as Effort: the Codex CLI's
+// reasoning effort for the image agent. Drawn only when the chosen model lists modes, so an
+// image model without an effort setting shows nothing.
 export function ThinkingPicker({
   choice,
   onChange,
+  field = "llm.thinking",
+  label = "Thinking",
+  problem,
 }: {
   readonly choice: ProviderChoice;
   readonly onChange: (choice: ProviderChoice) => void;
+  readonly field?: string;
+  readonly label?: string;
+  // A sentence the rule or the server said about this control.
+  readonly problem?: string | undefined;
 }) {
   const { api } = useApp();
   const models = useQuery(modelsQuery(api, choice.provider));
   const modes = models.data?.models.find((m) => m.id === choice.model)?.thinkingModes ?? [];
   if (!modes.length && !choice.thinking) return null;
+  const noun = label === "Thinking" ? "thinking level" : label.toLowerCase();
   return (
     <div className="min-w-0">
       <OptionPicker
-        field="llm.thinking"
-        label="Thinking"
+        field={field}
+        label={label}
         value={choice.thinking ?? "default"}
         placeholder="Model default"
         problem={
           choice.thinking && !modes.includes(choice.thinking)
-            ? "Choose a supported thinking level."
-            : undefined
+            ? `Choose a supported ${noun}.`
+            : problem
         }
         options={[
           { value: "default", label: "Model default" },
@@ -38,10 +50,11 @@ export function ThinkingPicker({
         ]}
         onPick={(value) => {
           const thinking = modes.find((mode) => mode === value);
-          onChange({ ...choice, thinking });
+          const { thinking: _old, ...rest } = choice;
+          onChange(thinking === undefined ? rest : { ...rest, thinking });
         }}
       />
-      {modes.length && !modes.includes("off") ? (
+      {label === "Thinking" && modes.length && !modes.includes("off") ? (
         <p className="mt-1 text-small text-ink3">
           This model does not support turning thinking off.
         </p>

@@ -46,6 +46,8 @@ export interface ProvidedState {
   readonly audio: Upload | undefined;
   readonly images: readonly Upload[];
   readonly thumbnail: Upload | undefined;
+  // The uploaded establishing image; absent on drafts saved before it.
+  readonly reference?: Upload | undefined;
 }
 
 export interface LegacyPlayFormState {
@@ -56,6 +58,8 @@ export interface LegacyPlayFormState {
   readonly llm: ProviderChoice;
   readonly audio: VoiceChoice;
   readonly images: ProviderChoice;
+  // The Images stage's establishing image as the draft holds it; absent is Off.
+  readonly reference?: PlayDraftForm["reference"];
   readonly articlePrompt: string;
   readonly narrationPrompt?: string | undefined;
   // The Video stage's YouTube description step and its Description prompt ("" is built-in).
@@ -178,8 +182,8 @@ export function modeOf(
 // Every staged row the form knows about, which is what the admission rule checks the
 // provided ids against.
 export function stagedOf(provided: ProvidedState): readonly StagedFile[] {
-  return [provided.audio, provided.thumbnail, ...provided.images].flatMap((upload) =>
-    upload?.file === undefined ? [] : [upload.file],
+  return [provided.audio, provided.thumbnail, provided.reference, ...provided.images].flatMap(
+    (upload) => (upload?.file === undefined ? [] : [upload.file]),
   );
 }
 
@@ -207,6 +211,18 @@ export function draftOf(input: DraftInput): RunDraft {
     llm: form.llm,
     audio: form.audio,
     images: form.images,
+    // As `slices/play-drafts/convert.ts` sends it: only while images are generated.
+    ...(form.sources.images === "generate" &&
+    form.reference !== undefined &&
+    form.reference.source !== "off"
+      ? {
+          reference: {
+            source: form.reference.source,
+            ...(form.reference.source === "prompt" ? { prompt: form.reference.prompt } : {}),
+            thumbnail: form.reference.thumbnail,
+          },
+        }
+      : {}),
     articlePrompt: form.articlePrompt,
     ...(form.narrationPrompt === undefined ? {} : { narrationPrompt: form.narrationPrompt }),
     // As `slices/play-drafts/convert.ts` sends it: timed from the narration, so nothing with
@@ -230,6 +246,12 @@ export function draftOf(input: DraftInput): RunDraft {
       article: form.provided.article,
       ...pick(form.provided.audio?.file, (file) => ({ audio: file.id })),
       ...pick(form.provided.thumbnail?.file, (file) => ({ thumbnail: file.id })),
+      ...pick(
+        form.sources.images === "generate" && form.reference?.source === "provide"
+          ? form.provided.reference?.file
+          : undefined,
+        (file) => ({ reference: file.id }),
+      ),
       images: form.provided.images.flatMap((image) =>
         image.file === undefined ? [] : [image.file.id],
       ),

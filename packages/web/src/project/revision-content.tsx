@@ -1,14 +1,17 @@
 import type { RevisionEdit } from "@app/slices/revisions/model.js";
 import { captionCues } from "@app/slices/subtitles/captions.js";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/ui/button";
+import { promptsQuery } from "@/queries";
 import { CaptionEditor } from "./caption-editor.js";
 import { ImageEditor } from "./image-editor.js";
 import { NarrationEditor } from "./narration-editor.js";
 import { revisionFileUrl } from "./revision-api.js";
 import { captionNarrationDuration } from "./revision-caption-duration.js";
+import { RevisionReference } from "./revision-reference.js";
 import { RevisionUpload } from "./revision-upload.js";
 import type { EditorProps, EditSection } from "./revision-workspace.js";
 
@@ -62,11 +65,13 @@ function narrationIdentity(edit: RevisionEdit): string {
 export function RevisionContentEditors({
   view,
   edit,
+  fields,
   onChange,
   onPending,
   section,
 }: EditorProps): import("react").ReactElement {
   const { api } = useApp();
+  const prompts = useQuery(promptsQuery(api)).data?.prompts ?? [];
   const identity = narrationIdentity(edit);
   const currentNarration =
     edit.config.sources.audio !== "off" &&
@@ -181,6 +186,16 @@ export function RevisionContentEditors({
   return (
     <div className="space-y-5">
       <section aria-label="Images" hidden={!shows("images")} className="space-y-5">
+        <RevisionReference
+          edit={edit}
+          prompts={prompts}
+          problem={(field) =>
+            fields.find((one) => one.field === field || one.field === `content.${field}`)?.message
+          }
+          getEdit={() => latest.current.edit}
+          onChange={emit}
+          onPending={(active) => mark("provided:reference", active)}
+        />
         {(["audio", "thumbnail"] as const).map((stage) =>
           edit.config.sources[stage] !== "provide" ? null : (
             <RevisionUpload

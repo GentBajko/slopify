@@ -64,7 +64,7 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
       attachment?.state === "ready" && attachment.stagedFileId
         ? {
             id: attachment.stagedFileId,
-            stageKind: attachment.kind,
+            stageKind: attachment.kind === "reference" ? ("images" as const) : attachment.kind,
             path: attachment.stagedFileId,
             originalFilename: attachment.name,
             bytes: attachment.bytes,
@@ -111,9 +111,13 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
     edgeSilenceSeconds: typedNumber(form.edgeSilenceSeconds),
     zoomPercent: typedNumber(form.zoomPercent),
     provided: {
-      ...form.provided,
+      research: form.provided.research,
+      article: form.provided.article,
       audio: upload(form.provided.audio),
       thumbnail: upload(form.provided.thumbnail),
+      ...(form.provided.reference === undefined
+        ? {}
+        : { reference: upload(form.provided.reference) }),
       images: form.provided.images.flatMap((ref) => {
         const one = upload(ref);
         return one ? [one] : [];
@@ -181,9 +185,15 @@ export function usePlayDraft(): readonly [PlayFormState, Dispatch<SetStateAction
           ? before.form.zoomPercent
           : String(next.zoomPercent),
         provided: {
-          ...next.provided,
+          research: next.provided.research,
+          article: next.provided.article,
           audio: ref(next.provided.audio),
           thumbnail: ref(next.provided.thumbnail),
+          // Written once an establishing image has been picked, so a draft saved before it keeps
+          // its shape.
+          ...(next.provided.reference === undefined && before.form.provided.reference === undefined
+            ? {}
+            : { reference: ref(next.provided.reference) }),
           images: next.provided.images.map((one) => ({ attachmentId: one.key, name: one.name })),
         },
       },

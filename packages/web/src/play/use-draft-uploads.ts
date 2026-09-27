@@ -44,7 +44,7 @@ export function useDraftUploads({
   );
   const owns = (sent: UploadOwner): boolean => {
     const provided = state.current.document.form.provided;
-    const ref = [provided.audio, provided.thumbnail, ...provided.images].find(
+    const ref = [provided.audio, provided.thumbnail, provided.reference, ...provided.images].find(
       (one) => one?.attachmentId === sent.attachmentId,
     );
     return sameUploadOwner(

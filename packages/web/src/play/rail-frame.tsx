@@ -4,6 +4,10 @@ import type { Prompt } from "@app/slices/library/model.js";
 import type { ProviderStatus, Voice } from "@app/slices/settings/model.js";
 import type { ReactNode } from "react";
 import type { UploadKind } from "@/api";
+
+// What a Play draft uploads: a stage's files, or the Images stage's establishing image.
+export type DraftUploadKind = UploadKind | "reference";
+
 import { StageGlyph } from "@/components/glyph";
 import { cn } from "@/lib/utils";
 import type { PlayFormState } from "@/play/state";
@@ -23,9 +27,9 @@ export interface RailProps {
   // own refusal named it.
   readonly problem: (field: string) => string | undefined;
   readonly update: (patch: Partial<PlayFormState>) => void;
-  readonly onPickFiles: (kind: UploadKind, files: readonly File[]) => void;
-  readonly onReattachFile?: (kind: UploadKind, key: string, file: File) => void;
-  readonly onRemoveFile: (kind: UploadKind, key: string) => void;
+  readonly onPickFiles: (kind: DraftUploadKind, files: readonly File[]) => void;
+  readonly onReattachFile?: (kind: DraftUploadKind, key: string, file: File) => void;
+  readonly onRemoveFile: (kind: DraftUploadKind, key: string) => void;
   readonly subtitleSession?: {
     readonly previewText: string;
     readonly fontUploading: boolean;

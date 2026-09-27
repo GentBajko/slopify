@@ -8,6 +8,8 @@ import type { RailProps } from "@/play/rail-frame";
 import { railBeneath, railControls, SourceSwitch, StageRail } from "@/play/rail-frame";
 import { NarrationPreparation } from "./narration-preparation";
 import { PronunciationGlossary } from "./pronunciation-glossary";
+import { ReferenceImage, referenceOff } from "./reference-image";
+import { ThinkingPicker } from "./thinking";
 
 // The two rails that carry a provider, and with it everything a provider decides: the
 // voice and the chunking of the narration, and the model and the ticked
@@ -184,6 +186,15 @@ export function ImagesRail({
                 update({ imagePrompts });
               }}
             />
+            <ReferenceRow
+              form={form}
+              prompts={prompts}
+              problem={problem}
+              update={update}
+              onPickFiles={onPickFiles}
+              onRemoveFile={onRemoveFile}
+              {...(onReattachFile ? { onReattachFile } : {})}
+            />
           </>
         ) : null}
       </div>
@@ -238,6 +249,54 @@ export function ImageProviderControls({
         problem={problem("images.model")}
         onPick={(model) => update({ images: { ...form.images, model } })}
       />
+      <ThinkingPicker
+        field="images.thinking"
+        label="Effort"
+        choice={form.images}
+        problem={problem("images.thinking")}
+        onChange={(images) => update({ images })}
+      />
     </>
+  );
+}
+
+// The Images rail's establishing image: Off, from an image prompt, or an uploaded file.
+function ReferenceRow({
+  form,
+  prompts,
+  problem,
+  update,
+  onPickFiles,
+  onRemoveFile,
+  onReattachFile,
+}: Pick<
+  RailProps,
+  "form" | "prompts" | "problem" | "update" | "onPickFiles" | "onRemoveFile" | "onReattachFile"
+>) {
+  return (
+    <ReferenceImage
+      value={form.reference ?? referenceOff}
+      prompts={prompts}
+      problem={problem}
+      onChange={(reference) => update({ reference })}
+      upload={
+        <FilePick
+          field="provided.reference"
+          label="Establishing image file"
+          accept="image/png,image/jpeg"
+          uploads={form.provided.reference === undefined ? [] : [form.provided.reference]}
+          problem={problem("provided.reference")}
+          onPick={(files) => {
+            onPickFiles("reference", files);
+          }}
+          onReattach={
+            onReattachFile ? (key, file) => onReattachFile("reference", key, file) : undefined
+          }
+          onRemove={(key) => {
+            onRemoveFile("reference", key);
+          }}
+        />
+      }
+    />
   );
 }

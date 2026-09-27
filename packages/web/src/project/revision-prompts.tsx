@@ -1,5 +1,6 @@
 import {
   usesNarrationPreparation,
+  usesReference,
   usesShorts,
   usesYoutubeDescription,
   valueMax,
@@ -37,6 +38,9 @@ export function RevisionPrompts({
       ...(usesShorts(edit.config) && edit.config.shorts?.imagePrompt ? ["shortsImage"] : []),
       ...(["from_prompt", "prompt_by_llm"].includes(edit.config.sources.thumbnail)
         ? ["thumbnailPrompt"]
+        : []),
+      ...(usesReference(edit.config) && edit.config.reference?.source === "prompt"
+        ? ["referencePrompt"]
         : []),
       ...(edit.config.intro === undefined ? [] : ["intro"]),
       ...(edit.config.outro === undefined ? [] : ["outro"]),
@@ -132,7 +136,12 @@ export function RevisionPrompts({
                                 }
                               : key === "thumbnailPrompt"
                                 ? { ...next.config, thumbnailPrompt: picked.name }
-                                : next.config;
+                                : key === "referencePrompt" && next.config.reference !== undefined
+                                  ? {
+                                      ...next.config,
+                                      reference: { ...next.config.reference, prompt: picked.name },
+                                    }
+                                  : next.config;
                   onChange({ ...next, config });
                 }}
               >
@@ -212,9 +221,11 @@ function libraryPrompt(
               ? config.shorts?.imagePrompt
               : key === "thumbnailPrompt"
                 ? config.thumbnailPrompt
-                : image?.[1] !== undefined
-                  ? config.imagePrompts[Number(image[1])]?.name
-                  : undefined;
+                : key === "referencePrompt"
+                  ? config.reference?.prompt
+                  : image?.[1] !== undefined
+                    ? config.imagePrompts[Number(image[1])]?.name
+                    : undefined;
   if (name === undefined || name === "") return undefined;
   return options.find(
     (option): option is Prompt => !("category" in option) && option.name === name,
@@ -261,6 +272,7 @@ function promptLabel(key: string): string {
   if (key === "shorts") return "Shorts";
   if (key === "shortsImage") return "Shorts image style";
   if (key === "thumbnailPrompt") return "Thumbnail";
+  if (key === "referencePrompt") return "Establishing image";
   if (key === "intro") return "Intro";
   if (key === "outro") return "Outro";
   const image = /^imagePrompts\.(\d+)$/.exec(key);

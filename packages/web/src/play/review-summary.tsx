@@ -398,8 +398,24 @@ export function ReviewSummary({
                 imageModels?.models.find((model) => model.id === form.images.model)?.name ??
                   form.images.model,
               )}
+              {form.images.thinking === undefined
+                ? null
+                : row("Image effort", "images.thinking", form.images.thinking)}
             </>
           ) : null}
+          {form.sources.images === "generate" &&
+          form.reference !== undefined &&
+          form.reference.source !== "off"
+            ? row(
+                "Establishing image",
+                form.reference.source === "prompt" ? "reference.prompt" : "provided.reference",
+                `${
+                  form.reference.source === "prompt"
+                    ? form.reference.prompt || "(no prompt picked)"
+                    : (form.provided.reference?.name ?? "(no file attached)")
+                }${form.reference.thumbnail ? " · thumbnail too" : ""}`,
+              )
+            : null}
           {form.sources.images === "generate"
             ? form.imagePrompts.length
               ? form.imagePrompts.map((prompt, index) =>

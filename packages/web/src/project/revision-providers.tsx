@@ -216,6 +216,12 @@ export function RevisionProviders({
               onChange({ ...edit, config: { ...config, images: { ...images, model } } })
             }
           />
+          <ThinkingPicker
+            field="images.thinking"
+            label="Effort"
+            choice={images}
+            onChange={(choice) => onChange({ ...edit, config: { ...config, images: choice } })}
+          />
         </>
       ) : null}
     </section>

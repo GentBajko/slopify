@@ -72,6 +72,9 @@ export function keywordFields(input: AdmissionInput): readonly Field[] {
     for (const picked of form.imagePrompts) {
       push(image, bodyOf(input.prompts, "image", picked.name));
     }
+    // The establishing image's prompt fills the same keywords.
+    if (form.reference?.source === "prompt")
+      push(image, bodyOf(input.prompts, "image", form.reference.prompt));
   }
   if (form.sources.thumbnail === "from_prompt" || form.sources.thumbnail === "prompt_by_llm") {
     push(image, bodyOf(input.prompts, "thumbnail", form.thumbnailPrompt));
@@ -124,6 +127,8 @@ const readingOrder: readonly string[] = [
   "imagePrompts",
   "images",
   "provided.images",
+  "reference",
+  "provided.reference",
   "thumbnailPrompt",
   "provided.thumbnail",
   "subtitles",
@@ -181,6 +186,13 @@ function uploadBlocker(form: PlayFormState): Blocker | undefined {
   }
   if (sources.thumbnail === "provide" && provided.thumbnail !== undefined) {
     picked.push(provided.thumbnail);
+  }
+  if (
+    sources.images === "generate" &&
+    form.reference?.source === "provide" &&
+    provided.reference !== undefined
+  ) {
+    picked.push(provided.reference);
   }
   if (picked.some((upload) => upload.error !== undefined)) {
     return { field: "provided", hint: "Remove the upload that failed to play" };
@@ -260,6 +272,10 @@ function hintOf(form: PlayFormState, error: FieldError): string {
         : "Attach at least one image to play";
     case "provided.thumbnail":
       return "Attach the thumbnail image to play";
+    case "reference.prompt":
+      return "Pick the establishing image's prompt to play";
+    case "provided.reference":
+      return "Attach the establishing image to play";
     default:
       // A rule the form has no shorter sentence for says its own, verbatim: nothing is
       // invented and nothing is swallowed.
