@@ -23,6 +23,7 @@ import {
   templatesKey,
   templatesQuery,
 } from "@/templates/api";
+import { TemplateKeywords } from "@/templates/keywords";
 import { LibraryToolbar } from "./library.js";
 
 export function TemplatesRoute({
@@ -65,6 +66,8 @@ export function TemplatesRoute({
   const [saving, setSaving] = useState(false);
   const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState<TemplateSummary | null>(null);
+  // The template whose keywords are shown under its row.
+  const [keywordsOf, setKeywordsOf] = useState<string | null>(null);
   const active = useRef(false);
   const saveIdentity = useRef<{ readonly key: string; readonly id: string } | null>(null);
   const applications = useRef(new Map<string, string>());
@@ -277,6 +280,17 @@ export function TemplatesRoute({
                 <Button
                   type="button"
                   variant="ghost"
+                  aria-expanded={keywordsOf === template.id}
+                  aria-label={`Keywords of ${template.name}`}
+                  onClick={() =>
+                    setKeywordsOf((current) => (current === template.id ? null : template.id))
+                  }
+                >
+                  Keywords
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
                   aria-label={`Delete ${template.name}`}
                   disabled={pending}
                   onClick={() => {
@@ -287,6 +301,11 @@ export function TemplatesRoute({
                   Delete
                 </Button>
               </div>
+              {keywordsOf === template.id ? (
+                <div className="basis-full pb-2">
+                  <TemplateKeywords template={template} />
+                </div>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -318,6 +337,10 @@ export function TemplatesRoute({
             open Play
           </Link>{" "}
           to prepare one.
+        </p>
+        <p className="mb-4 text-small text-ink2">
+          A template keeps the settings, not one video&apos;s topic: keywords the project title
+          names, like {"{{Topic}}"}, are saved empty, and other keywords keep their values.
         </p>
         <form
           id="save-template-form"

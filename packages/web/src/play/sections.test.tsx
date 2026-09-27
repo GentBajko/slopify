@@ -1,32 +1,34 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
-import { mountPlay } from "./play-test-fixture";
+import { mountPlay, openRow, openSection } from "./play-test-fixture";
+
+// The Outputs row's one line: what the run makes besides the video.
+function outputsSummary(): string {
+  return document.querySelector('[data-setup-row="outputs"] [data-row-summary]')?.textContent ?? "";
+}
 
 afterEach(cleanup);
-it("offers four freely reachable sections and focuses only explicit navigation", async () => {
+it("folds the setup into rows that open in place and keep what was typed", async () => {
   const { requests } = await mountPlay();
-  const nav = screen.getByRole("navigation", { name: "Run setup" });
-  expect(
-    within(nav)
-      .getAllByRole("button")
-      .map((x) => x.textContent),
-  ).toHaveLength(4);
-  await userEvent.type(screen.getByLabelText("Project title"), "Retained");
-  for (const name of ["Style", "Outputs", "Review", "Content"]) {
-    await userEvent.click(within(nav).getByRole("button", { name }));
-    await waitFor(() =>
-      expect(document.activeElement).toBe(
-        screen.getByRole("heading", { name: name === "Style" ? "Make it look like yours." : name }),
-      ),
-    );
+  const rows = within(screen.getByRole("list", { name: "Setup" }));
+  expect(rows.getAllByRole("button", { name: /^(Change|Done with) / })).toHaveLength(8);
+  await userEvent.type(screen.getByLabelText("Title"), "Retained");
+  // Rows that need attention on a fresh draft start open; the others open with Change.
+  for (const name of ["Video and style", "Outputs", "Channel"]) {
+    const change = rows.getByRole("button", { name: `Change ${name.toLowerCase()}` });
+    expect(change.getAttribute("aria-expanded")).toBe("false");
+    await userEvent.click(change);
+    expect(screen.getByRole("region", { name })).not.toBeNull();
+    await userEvent.click(rows.getByRole("button", { name: `Done with ${name.toLowerCase()}` }));
+    expect(screen.queryByRole("region", { name })).toBeNull();
   }
-  expect((screen.getByLabelText("Project title") as HTMLInputElement).value).toBe("Retained");
+  expect((screen.getByLabelText("Title") as HTMLInputElement).value).toBe("Retained");
   expect(requests.some((r) => r.url.endsWith("/api/projects") && r.method === "POST")).toBe(false);
 });
 it("opens Review while invalid and reveals the exact error control", async () => {
   const { created } = await mountPlay();
-  await userEvent.click(screen.getByLabelText("Project title"));
+  await userEvent.click(screen.getByLabelText("Title"));
   await userEvent.keyboard("{Control>}{Enter}{/Control}");
   await screen.findByRole("heading", { name: "Review" });
   await userEvent.click(screen.getByRole("button", { name: "Pick an article prompt." }));
@@ -36,13 +38,13 @@ it("opens Review while invalid and reveals the exact error control", async () =>
 });
 it("does not mark untouched fields when another field changes", async () => {
   await mountPlay();
-  await userEvent.type(screen.getByLabelText("Project title"), "Title");
+  await userEvent.type(screen.getByLabelText("Title"), "Title");
   expect(screen.getByLabelText("Article prompt").getAttribute("aria-invalid")).toBe("false");
 });
 
 it("keeps every chunking mode selectable inside Audio Advanced", async () => {
   await mountPlay();
-  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+  await openSection("Outputs");
   await userEvent.click(screen.getByText(/Audio Advanced/));
   for (const name of [/Every .* words/, /Every .* characters/, "Paragraph", "Whole"]) {
     await userEvent.click(screen.getByRole("radio", { name }));
@@ -51,12 +53,12 @@ it("keeps every chunking mode selectable inside Audio Advanced", async () => {
 });
 it("focuses a stable image count after removing an earlier selected prompt", async () => {
   await mountPlay();
-  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+  await openSection("Outputs");
   await userEvent.click(screen.getByRole("checkbox", { name: "Oils" }));
   await userEvent.click(screen.getByRole("checkbox", { name: "Maps" }));
   await userEvent.clear(screen.getByLabelText("Number for Maps"));
   await userEvent.click(screen.getByRole("checkbox", { name: "Oils" }));
-  await userEvent.click(screen.getByRole("button", { name: "Review" }));
+  await openSection("Review");
   const error = within(screen.getByRole("list", { name: "Setup errors" })).getByRole("button", {
     name: /between 1 and 20/,
   });
@@ -82,6 +84,7 @@ it("retains hidden literal keyword values and renders prompt HTML as text", asyn
     }),
   });
   await userEvent.selectOptions(screen.getByLabelText("Article prompt"), "Dossier");
+  await openRow("Title and keywords");
   await userEvent.click(screen.getByText("View prompt"));
   expect(document.querySelector("pre img")).toBeNull();
   for (const name of ["__proto__", "topic.name", "with spaces"])
@@ -94,7 +97,7 @@ it("retains hidden literal keyword values and renders prompt HTML as text", asyn
 });
 it("flushes the active draft before Create prompt navigation", async () => {
   const { requests } = await mountPlay();
-  await userEvent.type(screen.getByLabelText("Project title"), "Keep this draft");
+  await userEvent.type(screen.getByLabelText("Title"), "Keep this draft");
   await userEvent.click(screen.getByRole("button", { name: "Create prompt" }));
   await waitFor(() =>
     expect(
@@ -118,8 +121,12 @@ it("edits a provided article from the summary and preserves focus through autosa
       name: "Provide",
     }),
   );
-  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
-  await userEvent.click(screen.getByRole("button", { name: /^Article:/ }));
+  // The reason under the Play key names what is missing and goes to it.
+  await userEvent.click(
+    within(screen.getByRole("region", { name: "Start" })).getByRole("button", {
+      name: "Paste the article to play",
+    }),
+  );
   await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Article text")));
   await userEvent.type(screen.getByLabelText("Article text"), "A provided article.");
   await screen.findByText("Saved");
@@ -128,7 +135,7 @@ it("edits a provided article from the summary and preserves focus through autosa
 
 it("switches the Document on, picks its theme and saves both into the draft", async () => {
   const { requests } = await mountPlay();
-  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+  await openSection("Outputs");
   const theme = screen.getByRole<HTMLSelectElement>("combobox", { name: "Theme" });
   // Plain is the one built-in; DiceMaster is no longer offered.
   expect(theme.value).toBe("builtin:plain");
@@ -139,14 +146,14 @@ it("switches the Document on, picks its theme and saves both into the draft", as
     ),
   ).toEqual(["Plain"]);
   expect(theme.disabled).toBe(true);
-  expect(screen.getAllByRole("button", { name: /^Document: Off/ }).length).toBeGreaterThan(0);
+  expect(outputsSummary()).not.toMatch(/PDF/);
   await userEvent.click(
     within(screen.getByRole("radiogroup", { name: "document source" })).getByRole("radio", {
       name: "Generate",
     }),
   );
   expect(theme.disabled).toBe(false);
-  expect(screen.getAllByRole("button", { name: /^Document: Ready/ }).length).toBeGreaterThan(0);
+  expect(outputsSummary()).toMatch(/PDF \(Plain\)/);
   await waitFor(async () => {
     const saves = requests.filter(
       (request) =>
@@ -162,22 +169,18 @@ it("switches the Document on, picks its theme and saves both into the draft", as
 
 it("switches the YouTube description on, picks its prompt and saves both into the draft", async () => {
   const { requests } = await mountPlay();
-  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+  await openSection("Outputs");
   const on = screen.getByRole<HTMLInputElement>("checkbox", { name: /YouTube description/ });
   const prompt = screen.getByRole<HTMLSelectElement>("combobox", { name: "Description prompt" });
   expect(on.checked).toBe(false);
   expect(prompt.disabled).toBe(true);
   expect(prompt.value).toBe("");
   expect(prompt.selectedOptions[0]?.textContent).toBe("Built-in");
-  expect(
-    screen.getAllByRole("button", { name: /^YouTube description: Off/ }).length,
-  ).toBeGreaterThan(0);
+  expect(outputsSummary()).not.toMatch(/YouTube description/);
   await userEvent.click(on);
   expect(prompt.disabled).toBe(false);
   await userEvent.selectOptions(prompt, "Hooky");
-  expect(
-    screen.getAllByRole("button", { name: /^YouTube description: Ready/ }).length,
-  ).toBeGreaterThan(0);
+  expect(outputsSummary()).toMatch(/YouTube description/);
   await waitFor(async () => {
     const saves = requests.filter(
       (request) =>
@@ -192,7 +195,7 @@ it("switches the YouTube description on, picks its prompt and saves both into th
 
 it("keeps the YouTube description switch in place but disabled without narration", async () => {
   await mountPlay();
-  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+  await openSection("Outputs");
   await userEvent.click(
     within(screen.getByRole("radiogroup", { name: "audio source" })).getByRole("radio", {
       name: "Off",
@@ -206,7 +209,7 @@ it("keeps the YouTube description switch in place but disabled without narration
 
 it("switches Shorts on, sets how many and how long, picks both prompts and saves them into the draft", async () => {
   const { requests } = await mountPlay();
-  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+  await openSection("Outputs");
   const on = screen.getByRole<HTMLInputElement>("checkbox", { name: /Shorts/ });
   const count = screen.getByRole<HTMLInputElement>("textbox", { name: "How many shorts" });
   const prompt = screen.getByRole<HTMLSelectElement>("combobox", { name: "Shorts prompt" });
@@ -215,7 +218,7 @@ it("switches Shorts on, sets how many and how long, picks both prompts and saves
   expect(count.disabled).toBe(true);
   expect(count.value).toBe("3");
   expect(prompt.selectedOptions[0]?.textContent).toBe("Built-in");
-  expect(screen.getAllByRole("button", { name: /^Shorts: Off/ }).length).toBeGreaterThan(0);
+  expect(outputsSummary()).not.toMatch(/shorts/);
   await userEvent.click(on);
   await userEvent.clear(count);
   await userEvent.type(count, "2");
@@ -226,7 +229,7 @@ it("switches Shorts on, sets how many and how long, picks both prompts and saves
   await userEvent.type(longest, "90");
   await userEvent.selectOptions(prompt, "Hooks");
   await userEvent.selectOptions(style, "Maps");
-  expect(screen.getAllByRole("button", { name: /^Shorts: Ready/ }).length).toBeGreaterThan(0);
+  expect(outputsSummary()).toMatch(/2 shorts/);
   await waitFor(async () => {
     const saves = requests.filter(
       (request) =>
@@ -252,7 +255,7 @@ it("switches Shorts on, sets how many and how long, picks both prompts and saves
 
 it("refuses a Shorts length whose shortest is longer than its longest, in plain words", async () => {
   await mountPlay();
-  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+  await openSection("Outputs");
   await userEvent.click(screen.getByRole("checkbox", { name: /Shorts/ }));
   const shortest = screen.getByRole<HTMLInputElement>("textbox", {
     name: "Shortest short, in seconds",
@@ -266,12 +269,16 @@ it("refuses a Shorts length whose shortest is longer than its longest, in plain 
       "The longest a short may be must be at least the shortest. Raise the maximum or lower the minimum.",
     ),
   ).not.toBeNull();
-  expect(screen.getAllByRole("button", { name: /^Shorts: Needs setup/ }).length).toBeGreaterThan(0);
+  expect(
+    within(
+      document.querySelector<HTMLElement>('[data-setup-row="outputs"]') ?? document.body,
+    ).getByText("Needs setup"),
+  ).not.toBeNull();
 });
 
 it("keeps the title, speed, music volume and link in More shorts options and saves them into the draft", async () => {
   const { requests } = await mountPlay();
-  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+  await openSection("Outputs");
   await userEvent.click(screen.getByRole("checkbox", { name: /Shorts/ }));
   // Closed until asked for; a new form starts with the title on screen.
   const more = screen.getByText(/More shorts options/);

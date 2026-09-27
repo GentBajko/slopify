@@ -174,7 +174,13 @@ export function VideoRail({
   onRemoveFile,
   onReattachFile,
   rawTiming,
-}: RailProps & { readonly rawTiming?: RawTiming }) {
+  extras = true,
+}: RailProps & {
+  readonly rawTiming?: RawTiming;
+  // Whether the YouTube description and Shorts are drawn here too; Play draws them under
+  // Outputs instead.
+  readonly extras?: boolean;
+}) {
   const explanation =
     form.sources.video === "generate"
       ? form.sources.audio === "off"
@@ -264,7 +270,44 @@ export function VideoRail({
         </div>
       ) : null}
       {form.sources.video === "generate" ? <div className={railBeneath}>{edit.look}</div> : null}
-      <div className={railBeneath}>
+      {extras ? (
+        <div className={railBeneath}>
+          <VideoExtras
+            form={form}
+            prompts={prompts}
+            problem={problem}
+            update={update}
+            onPickFiles={onPickFiles}
+            onRemoveFile={onRemoveFile}
+            {...(onReattachFile === undefined ? {} : { onReattachFile })}
+          />
+        </div>
+      ) : null}
+      {form.sources.images === "off" ? (
+        <p className={`${railBeneath} text-small text-ink2`}>
+          Video is Off because Images is Off. Generate or provide images to enable video.
+        </p>
+      ) : null}
+    </StageRail>
+  );
+}
+
+// The YouTube description and Shorts: made from the narrated video, set beside it.
+export function VideoExtras({
+  form,
+  prompts,
+  problem,
+  update,
+  onPickFiles,
+  onRemoveFile,
+  onReattachFile,
+}: Pick<
+  RailProps,
+  "form" | "prompts" | "problem" | "update" | "onPickFiles" | "onRemoveFile" | "onReattachFile"
+>) {
+  return (
+    <div className="flex min-w-0 flex-col gap-4">
+      <div>
         <YoutubeDescription
           enabled={form.youtubeDescription === true}
           prompt={form.descriptionPrompt ?? ""}
@@ -274,7 +317,7 @@ export function VideoRail({
           onChange={(next) => update(next)}
         />
       </div>
-      <div className={railBeneath}>
+      <div>
         <Shorts
           value={form.shorts ?? freshShorts}
           prompts={prompts}
@@ -306,16 +349,11 @@ export function VideoRail({
           onChange={(shorts) => update({ shorts })}
         />
       </div>
-      {form.sources.images === "off" ? (
-        <p className={`${railBeneath} text-small text-ink2`}>
-          Video is Off because Images is Off. Generate or provide images to enable video.
-        </p>
-      ) : null}
-    </StageRail>
+    </div>
   );
 }
 
-function NumberField({
+export function NumberField({
   field,
   label,
   help,

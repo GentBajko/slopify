@@ -114,10 +114,10 @@ describe("bound review identity", () => {
     await harness.restart();
     await waitFor(() => expect(harness.session().document.variants).toEqual(variants));
     expect(harness.session().document.expectedWords).toBe("");
-    await userEvent.click(screen.getByText(/Queue keyword variations/));
-    expect(
-      (screen.getByRole("button", { name: "Add keyword variation" }) as HTMLButtonElement).disabled,
-    ).toBe(true);
+    // Fifty videos is the most one Start queues: no more topics can be added.
+    expect((screen.getByRole("button", { name: "Add topic" }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
   });
 });
 

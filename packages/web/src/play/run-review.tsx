@@ -1,9 +1,6 @@
-import type { Field } from "@app/slices/admission/substitute.js";
 import type { CostEstimate } from "@app/slices/estimate/index.js";
 import type { PlayReview } from "@app/slices/play-drafts/model.js";
-import { type ReactElement, useId } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import type { ReactElement } from "react";
 import { checkpointOptions } from "./checkpoints";
 import type { PlayFormState } from "./state";
 
@@ -46,107 +43,6 @@ export function CheckpointReview({
   );
 }
 
-export interface BatchItem {
-  readonly key: string;
-  readonly title: string;
-  readonly values: Readonly<Record<string, string>>;
-}
-export function BatchEditor({
-  items,
-  fields,
-  title,
-  values,
-  problem,
-  onChange,
-}: {
-  readonly items: readonly BatchItem[];
-  readonly fields: readonly Field[];
-  readonly title: string;
-  readonly values: Readonly<Record<string, string>>;
-  readonly problem?: (field: string) => string | undefined;
-  readonly onChange: (items: readonly BatchItem[]) => void;
-}): ReactElement {
-  const prefix = useId();
-  return (
-    <details className="rounded-control border border-line p-3">
-      <summary className="cursor-pointer text-body font-medium">
-        Queue keyword variations {items.length ? `(${items.length + 1} videos)` : ""}
-      </summary>
-      <p className="my-3 text-small text-ink2">
-        The setup above is video 1. Add videos with different titles and keywords. They run one at a
-        time; a failed video releases the next, and a pause holds the queue.
-      </p>
-      {items.map((item, i) => (
-        <fieldset
-          key={item.key}
-          className="mb-3 flex min-w-0 flex-col gap-2 border-t border-line pt-3"
-        >
-          <legend className="text-small text-ink2">Video {i + 2}</legend>
-          <label htmlFor={`${prefix}-${item.key}-title`} className="text-small">
-            Title
-            <Input
-              id={`${prefix}-${item.key}-title`}
-              data-play-field={`items.${item.key}.title`}
-              aria-invalid={problem?.(`items.${i + 1}.title`) !== undefined}
-              value={item.title}
-              maxLength={200}
-              onChange={(e) =>
-                onChange(
-                  items.map((x) => (x.key === item.key ? { ...x, title: e.target.value } : x)),
-                )
-              }
-            />
-          </label>
-          {fields.map((field) => (
-            <label
-              key={field.name}
-              htmlFor={`${prefix}-${item.key}-${encodeURIComponent(field.name)}`}
-              className="text-small"
-            >
-              {field.name}
-              <Input
-                id={`${prefix}-${item.key}-${encodeURIComponent(field.name)}`}
-                data-play-field={`items.${item.key}.values.${field.name}`}
-                aria-invalid={problem?.(`items.${i + 1}.values.${field.name}`) !== undefined}
-                value={item.values[field.name] ?? ""}
-                onChange={(e) =>
-                  onChange(
-                    items.map((x) =>
-                      x.key === item.key
-                        ? { ...x, values: { ...x.values, [field.name]: e.target.value } }
-                        : x,
-                    ),
-                  )
-                }
-              />
-            </label>
-          ))}
-          <Button onClick={() => onChange(items.filter((x) => x.key !== item.key))}>
-            Remove video {i + 2}
-          </Button>
-        </fieldset>
-      ))}
-      <Button
-        disabled={items.length >= 49}
-        onClick={() =>
-          onChange([
-            ...items,
-            {
-              key: crypto.randomUUID(),
-              // A title that names keywords already differs per video once they are filled.
-              title: /\{\{[^}]+\}\}/.test(title)
-                ? title
-                : `${title || "Video"} ${items.length + 2}`,
-              values: { ...values },
-            },
-          ])
-        }
-      >
-        Add keyword variation
-      </Button>
-    </details>
-  );
-}
 export function RunReview({
   estimates,
 }: {
