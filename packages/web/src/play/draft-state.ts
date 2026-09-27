@@ -35,6 +35,7 @@ export const freshDraftDocument: PlayDraftDocument = playDraftDocumentSchema.par
       voice: "",
       usePronunciationGlossary: true,
       shareGlossary: true,
+      useNarrationAliases: true,
     },
     images: { provider: "", model: "" },
     articlePrompt: "",

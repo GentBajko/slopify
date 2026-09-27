@@ -1,4 +1,5 @@
 import type { AppType } from "@app/edge/http/app.js";
+import type { NarrationAlias } from "@app/kernel/ports/narration-aliases.js";
 import type {
   Project,
   ProjectListing,
@@ -11,6 +12,7 @@ import type { FieldError } from "@app/slices/admission/rules.js";
 import type { BackupConfigInput, BackupView } from "@app/slices/backups/model.js";
 import type { DocumentThemeName, SavedDocumentTheme } from "@app/slices/document/model.js";
 import type { DocumentTheme } from "@app/slices/document/theme.js";
+import type { CostEstimate } from "@app/slices/estimate/index.js";
 import type { LibraryItemKind, LibraryVersion } from "@app/slices/library/history.js";
 import type {
   Entry,
@@ -734,6 +736,19 @@ export async function readSharedPronunciations(
   return read(await api.client.pronunciations.shared.$get({ query: { except } }));
 }
 
+// Library → Aliases: the whole ordered list, read and saved at once.
+export async function readNarrationAliases(
+  api: Api,
+): Promise<{ readonly aliases: readonly NarrationAlias[] }> {
+  return read(await api.client.pronunciations.aliases.$get());
+}
+export async function saveNarrationAliases(
+  api: Api,
+  aliases: readonly NarrationAlias[],
+): Promise<SaveResult<{ readonly aliases: readonly NarrationAlias[] }>> {
+  return saved(await api.client.pronunciations.aliases.$put({ json: { aliases: [...aliases] } }));
+}
+
 export async function removeEntry(api: Api, id: string): Promise<void> {
   const response = await api.client.entries[":id"].$delete({ param: { id } });
   if (!response.ok) {
@@ -743,4 +758,27 @@ export async function removeEntry(api: Api, id: string): Promise<void> {
 
 export function eventsUrl(api: Api, path: string): string {
   return `${api.origin}/api/events/${path}`;
+}
+
+// Voice auditions (`edge/http/auditions.ts`): the price of each speaker's line first, and the
+// spoken line only on the Audition button, which says it was confirmed.
+export interface AuditionLine {
+  readonly speaker: string;
+  readonly provider: string;
+  readonly model: string;
+  readonly text: string;
+}
+export async function quoteAuditions(
+  api: Api,
+  lines: readonly AuditionLine[],
+): Promise<{ readonly estimate: CostEstimate | null }> {
+  return read(await api.client.auditions.quote.$post({ json: { lines: [...lines] } }));
+}
+export async function speakAudition(
+  api: Api,
+  line: Omit<AuditionLine, "speaker"> & { readonly voice: string },
+): Promise<Blob> {
+  const response = await api.client.auditions.$post({ json: { ...line, confirmed: true } });
+  if (!response.ok) throw await failure(response);
+  return await response.blob();
 }

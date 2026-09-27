@@ -2,6 +2,7 @@ import type { FieldError } from "@app/slices/admission/rules.js";
 import { documentThemeLabel } from "@app/slices/document/model.js";
 import type { ProviderStatus, Voice } from "@app/slices/settings/model.js";
 import { cutModeLabels, videoEditOf } from "@app/slices/video/edit-settings.js";
+import { voiceFormatLabels } from "@app/slices/voices/model.js";
 import type { PlaySection } from "./sections";
 import { type PlayFormState, shortsOn, sourceLabels } from "./state";
 
@@ -40,7 +41,16 @@ const owners: readonly (readonly [SetupRowId, readonly string[]])[] = [
   ],
   [
     "narration",
-    ["sources.audio", "audio", "provided.audio", "narrationPrompt", "intro", "outro", "chunking"],
+    [
+      "sources.audio",
+      "audio",
+      "voices",
+      "provided.audio",
+      "narrationPrompt",
+      "intro",
+      "outro",
+      "chunking",
+    ],
   ],
   [
     "images",
@@ -171,7 +181,9 @@ export function rowSummary(row: SetupRowId, form: PlayFormState, context: Summar
       );
       return join([
         provider(form.audio.provider),
-        voice?.name ?? (form.audio.voice || "no voice"),
+        form.voices === undefined
+          ? (voice?.name ?? (form.audio.voice || "no voice"))
+          : `${voiceFormatLabels[form.voices.format]}, ${String(form.voices.speakers.length)} speakers`,
         form.narrationPrompt ? `prepared with ${form.narrationPrompt}` : false,
         form.intro ? `intro ${form.intro}` : false,
         form.outro ? `outro ${form.outro}` : false,

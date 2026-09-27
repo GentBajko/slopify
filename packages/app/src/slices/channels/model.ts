@@ -56,6 +56,17 @@ export interface CastImage {
   readonly createdAt: string;
 }
 
+// How a cast member speaks when a multi-voice run casts them (`slices/voices`), so a character
+// or a channel's host sounds the same in every episode. Absent: they have no voice yet.
+export interface CastVoice {
+  readonly provider: string;
+  readonly model: string;
+  readonly voice: string;
+  readonly pace?: number | undefined;
+  // `Term: /IPA/` lines, the Pronunciation Glossary's format.
+  readonly pronunciations?: string | undefined;
+}
+
 export interface CastMember {
   readonly id: string;
   readonly channelId: string;
@@ -63,6 +74,7 @@ export interface CastMember {
   readonly name: string;
   readonly aliases: readonly string[];
   readonly description: string;
+  readonly voice?: CastVoice | undefined;
   readonly version: number;
   readonly images: readonly CastImage[];
   readonly createdAt: string;

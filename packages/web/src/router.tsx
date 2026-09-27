@@ -20,6 +20,7 @@ import { DocumentThemesRoute } from "@/routes/document-themes";
 import { EntriesRoute } from "@/routes/entries";
 import { EntryEditorRoute } from "@/routes/entry-editor";
 import { LibraryLayout } from "@/routes/library";
+import { NarrationAliasesRoute } from "@/routes/narration-aliases";
 import { PlayRoute } from "@/routes/play";
 import { ProjectRoute } from "@/routes/project";
 import { ProjectsRoute } from "@/routes/projects";
@@ -212,6 +213,12 @@ const entryRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "entries/$entryId",
   component: EntryPage,
+});
+
+const narrationAliasesRoute = createRoute({
+  getParentRoute: () => libraryRoute,
+  path: "narration-aliases",
+  component: NarrationAliasesRoute,
 });
 
 const documentThemesRoute = createRoute({
@@ -441,6 +448,7 @@ const routeTree = rootRoute.addChildren({
     entriesRoute,
     templatesRoute,
     documentThemesRoute,
+    narrationAliasesRoute,
     schedulesRoute,
     calendarRoute,
   }),

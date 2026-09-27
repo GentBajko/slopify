@@ -1,4 +1,5 @@
 import type { Format, ProjectState, StageKind, StageState } from "../../kernel/pipeline.js";
+import type { NarrationAlias } from "../../kernel/ports/narration-aliases.js";
 import type { DocumentSettings } from "../document/model.js";
 import type { Chunking } from "../narration/chunk.js";
 import type { SubtitleConfig } from "../subtitles/model.js";
@@ -43,6 +44,9 @@ export interface VoiceChoice extends ProviderChoice {
   // Also use the pronunciations of the user's other projects. Absent reads as off, so a
   // project saved before this existed narrates exactly as it did.
   readonly shareGlossary?: boolean | undefined;
+  // Say Library → Aliases' words the way they are listed ("Dr." as "Doctor"). Absent reads as
+  // off, so a project saved before aliases existed narrates exactly as it did.
+  readonly useNarrationAliases?: boolean | undefined;
 }
 
 // One shared pronunciation, copied into a project from another project's glossary.
@@ -131,6 +135,9 @@ export interface RunDraft {
   // The other projects' pronunciations as copied when this one started or was last refreshed
   // in Edit project; used only while `audio.shareGlossary` is on.
   readonly sharedGlossary?: readonly SharedPronunciation[] | undefined;
+  // Library → Aliases as copied when this project started or was last refreshed in Edit
+  // project; used only while `audio.useNarrationAliases` is on. Absent when none were copied.
+  readonly narrationAliases?: readonly NarrationAlias[] | undefined;
   readonly checkpoints?: readonly import("../checkpoints/model.js").CheckpointStage[] | undefined;
   readonly title: string;
   readonly format: Format;
@@ -197,6 +204,10 @@ export interface RunDraft {
   readonly titleStyle?: TitleStyle | undefined;
   // A card over the video's last seconds, from the brand kit. Absent is none.
   readonly endScreen?: { readonly text: string } | undefined;
+  // Multiple voices: an audiobook, podcast, radio drama or interview narrated by several
+  // speakers from a script (`slices/voices`). Absent is the Narration format, one voice
+  // reading the article, which is what every project saved before it was.
+  readonly voices?: import("../voices/model.js").VoicesSettings | undefined;
 }
 
 export interface TitleStyle {

@@ -143,6 +143,8 @@ it("gives the sources and the pronunciation table tabs of their own, one source 
             "| Name / Term | IPA |",
             "|---|---|",
             "| lich | /lɪtʃ/ |",
+            "| Tiamat | ˈtiːəmɑːt |",
+            "| Caverna do Dragão | kaˈvɛʁnɐ du dɾaˈɡɐ̃w̃ |",
           ].join("\n"),
         ),
     }),
@@ -157,6 +159,14 @@ it("gives the sources and the pronunciation table tabs of their own, one source 
   ).toHaveLength(2);
   screen.getByRole("tab", { name: "Pronunciation" }).click();
   expect(await screen.findByRole("cell", { name: "/lɪtʃ/" })).toBeTruthy();
+  // The narration skips the row it can't use; the tab says which and why, not what it said.
+  const skipped = within(screen.getByRole("tabpanel", { name: "Pronunciation" })).getByRole(
+    "status",
+  );
+  expect(skipped.textContent).toContain("1 entry is skipped by the narration");
+  expect(skipped.textContent).toContain("Entry 3: use standard-English IPA only");
+  expect(skipped.textContent).toContain("Edit project → Article");
+  expect(skipped.textContent).not.toContain("Caverna");
 });
 
 it("shows no tab row for an article without sources or a glossary", async () => {

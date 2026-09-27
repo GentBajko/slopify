@@ -148,3 +148,51 @@ it("shows actual changed inputs and stable request identity with its text", asyn
   await user.click(screen.getByText("View request text"));
   expect(screen.getByText("The fifth paragraph.")).toBeTruthy();
 });
+it("says why Start is off: each blocked reason once, and the unticked boxes", async () => {
+  const user = userEvent.setup();
+  const reason =
+    "Pronunciation Glossary entry 1: use slash-delimited standard-English IPA. Edit the glossary or turn off Use Pronunciation Glossary.";
+  const first = preview.work[0];
+  if (first === undefined) throw new Error("Missing fixture work");
+  const narration = (index: number) => ({
+    ...first,
+    key: `audio:body:chunk-${index}:1`,
+    kind: "provider" as const,
+    disposition: "blocked" as const,
+    reason,
+  });
+  render(
+    <RebuildReview
+      preview={{
+        ...preview,
+        providedReuseRequired: [],
+        work: [
+          narration(1),
+          narration(2),
+          narration(3),
+          { ...first, key: "export:wav", disposition: "local", reason: "Local." },
+        ],
+      }}
+      pending={false}
+      onStart={() => undefined}
+      onCancel={() => undefined}
+    />,
+  );
+  const alert = screen.getByRole("alert");
+  expect(alert.textContent).toContain("3 items can’t run");
+  expect(alert.textContent).toContain(`3 narration requests: ${reason}`);
+  expect(alert.textContent?.split(reason)).toHaveLength(2);
+  // The per-item list is folded away behind its counts.
+  expect(screen.getByText("Work items (4): 1 Build locally, 3 Unavailable")).toBeTruthy();
+  const button = screen.getByRole("button", { name: "Start rebuild" });
+  expect(button.hasAttribute("disabled")).toBe(true);
+  const why = document.getElementById(button.getAttribute("aria-describedby") ?? "");
+  expect(why?.textContent).toBe(
+    "Start rebuild is off until: 3 items are unavailable (reasons above); tick “I understand that 1 cost estimates are unknown”.",
+  );
+  await user.click(screen.getByRole("checkbox", { name: /I understand/ }));
+  expect(why?.textContent).toBe(
+    "Start rebuild is off until: 3 items are unavailable (reasons above).",
+  );
+  expect(button.hasAttribute("disabled")).toBe(true);
+});

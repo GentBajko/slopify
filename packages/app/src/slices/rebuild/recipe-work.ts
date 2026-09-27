@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Catalogue } from "../../catalog/schema.js";
 import type { CostEstimate, PricedRequest } from "../estimate/index.js";
 import { estimateRequests } from "../estimate/index.js";
+import { skippedGlossaryNotice } from "../narration/pronunciation.js";
 import type { ManifestPiece, ProjectRevision, RevisionManifest } from "../revisions/model.js";
 import { defaultShortsPrompt, shortsImageUpperBound } from "../shorts/model.js";
 import { planDependencies, type RetainedWork, type WorkRecipe } from "./dependencies.js";
@@ -15,6 +16,7 @@ import {
   type ResolvedWorkRecipe,
   selectedReference,
 } from "./recipe-model.js";
+import { narrationGlossary } from "./recipe-text.js";
 
 export interface RevisionWorkPlan {
   readonly recipes: readonly ResolvedWorkRecipe[];
@@ -22,6 +24,8 @@ export interface RevisionWorkPlan {
   readonly changedInputs: RebuildPreview["changedInputs"];
   readonly providedReuseRequired: readonly string[];
   readonly wholeRequestNotice: string | null;
+  // Pronunciation Glossary rows the narration skips, for the rebuild review to show.
+  readonly glossaryNotice?: string | null;
   readonly costs: CostEstimate;
 }
 export function planRevisionWork(
@@ -58,6 +62,7 @@ export function planRevisionWork(
     resolved: { ...resolved, articleMarkdown: usableArticle ? resolved.articleMarkdown : null },
   };
   const logical = buildRecipes(logicalContext);
+  const glossary = narrationGlossary(logicalContext);
   const context = { ...logicalContext, catalogue };
   const recipes = buildRecipes(context).map((row) => ({
     ...row,
@@ -126,6 +131,10 @@ export function planRevisionWork(
       revision.config.sources.audio === "generate" &&
       (revision.config.chunking?.mode ?? "whole") === "whole"
         ? "Whole-text narration is one logical request. Editing its text rebuilds every provider part of that request."
+        : null,
+    glossaryNotice:
+      glossary?.ok === true && glossary.skipped !== undefined
+        ? skippedGlossaryNotice(glossary.skipped)
         : null,
     costs: estimateRequests(priced, catalogue),
   };

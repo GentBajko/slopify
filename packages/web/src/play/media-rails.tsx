@@ -1,11 +1,14 @@
 import { usesPronunciationGlossary } from "@app/slices/admission/rules.js";
 import type { ComponentProps, ReactNode } from "react";
+import type { CastMember } from "@/channels/api";
 import { ChunkingControl } from "@/play/chunking";
 import { ImagePrompts } from "@/play/image-prompts";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
 import { FilePick } from "@/play/provided";
 import type { RailProps } from "@/play/rail-frame";
 import { railBeneath, railControls, SourceSwitch, StageRail } from "@/play/rail-frame";
+import { SpeakersEditor, voiceFormatLabel } from "@/voices/speakers-editor";
+import { NarrationAliasesToggle } from "./narration-aliases.js";
 import { NarrationPreparation } from "./narration-preparation";
 import { PronunciationGlossary } from "./pronunciation-glossary";
 import { ReferenceImage, referenceOff } from "./reference-image";
@@ -28,7 +31,10 @@ export function AudioRail({
   onReattachFile,
   rawCounts,
   advanced,
+  cast,
 }: RailProps & {
+  // The draft channel's cast, which speakers can be picked from.
+  readonly cast?: readonly CastMember[] | undefined;
   readonly rawCounts?: ComponentProps<typeof ChunkingControl>["rawCounts"];
   // Intro, outro and the links that go with them, drawn inside the Advanced disclosure.
   readonly advanced?: ReactNode;
@@ -86,6 +92,30 @@ export function AudioRail({
             />
             <details className="col-span-full rounded-control border border-line px-3">
               <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink2">
+                Speakers ·{" "}
+                {form.voices === undefined
+                  ? "Narration, one voice"
+                  : `${voiceFormatLabel(form.voices.format)}, ${String(form.voices.speakers.length)} ${form.voices.speakers.length === 1 ? "speaker" : "speakers"}`}
+              </summary>
+              <div className="pt-2 pb-3">
+                <SpeakersEditor
+                  value={form.voices}
+                  providers={providers}
+                  voices={voices}
+                  script={form.sources.article === "provide" ? form.provided.article : undefined}
+                  problem={problem}
+                  cast={cast}
+                  onChange={(next) => update({ voices: next })}
+                />
+                {form.voices === undefined ? null : (
+                  <p className="mt-3 text-small text-ink2">
+                    The TTS voice above reads the intro and outro.
+                  </p>
+                )}
+              </div>
+            </details>
+            <details className="col-span-full rounded-control border border-line px-3">
+              <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink2">
                 Audio Advanced · {advancedSummary}
               </summary>
               <div className="grid grid-cols-1 gap-4 pt-2 pb-3 min-[700px]:grid-cols-2">
@@ -122,6 +152,12 @@ export function AudioRail({
                     onChange: (shareGlossary) =>
                       update({ audio: { ...form.audio, shareGlossary } }),
                   }}
+                />
+                <NarrationAliasesToggle
+                  value={form.audio.useNarrationAliases}
+                  onChange={(useNarrationAliases) =>
+                    update({ audio: { ...form.audio, useNarrationAliases } })
+                  }
                 />
               </div>
             </details>

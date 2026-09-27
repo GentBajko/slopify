@@ -3,6 +3,7 @@ import type {
   CastImage,
   CastKind,
   CastMember,
+  CastVoice,
   Channel,
   ChannelSummary,
 } from "@app/slices/channels/model.js";
@@ -11,7 +12,7 @@ import type { Api } from "@/api";
 import { read } from "@/http";
 
 export { castKinds, defaultChannelId } from "@app/slices/channels/model.js";
-export type { BrandKit, CastImage, CastKind, CastMember, Channel, ChannelSummary };
+export type { BrandKit, CastImage, CastKind, CastMember, CastVoice, Channel, ChannelSummary };
 
 export const castKindLabels: Readonly<Record<CastKind, string>> = {
   character: "Character",
@@ -83,6 +84,8 @@ export interface CastMemberInput {
   readonly name: string;
   readonly aliases: readonly string[];
   readonly description: string;
+  // Absent keeps the saved voice; null removes it.
+  readonly voice?: CastVoice | null;
 }
 
 export async function createCastMember(

@@ -10,6 +10,7 @@ import { executeProviderRecipe } from "./runtime-provider.js";
 import { executeReviewRecipe } from "./runtime-review.js";
 import { executeShortsRecipe } from "./runtime-shorts.js";
 import { executeSubtitleRecipe } from "./runtime-subtitles.js";
+import { executeVoicesRecipe } from "./runtime-voices.js";
 import { executeYoutubeRecipe } from "./runtime-youtube.js";
 import { workPieces } from "./work-records.js";
 
@@ -33,17 +34,19 @@ export async function runRevisionInvocation(
             ? await executeDocumentRecipe(deps, context, piece)
             : piece.key.startsWith("review:")
               ? await executeReviewRecipe(deps, context, providers, piece)
-              : piece.key.startsWith("youtube:")
-                ? await executeYoutubeRecipe(deps, context, providers, piece)
-                : piece.key.startsWith("shorts:")
-                  ? await executeShortsRecipe(deps, context, providers, piece)
-                  : piece.key.startsWith("animate:")
-                    ? await executeAnimateRecipe(deps, context, providers, piece)
-                    : piece.input.kind === "llm" ||
-                        piece.input.kind === "tts" ||
-                        piece.input.kind === "image"
-                      ? await executeProviderRecipe(deps, context, providers, piece)
-                      : await executeLocalRecipe(deps, context, piece);
+              : piece.key.startsWith("voices:")
+                ? await executeVoicesRecipe(deps, context, piece)
+                : piece.key.startsWith("youtube:")
+                  ? await executeYoutubeRecipe(deps, context, providers, piece)
+                  : piece.key.startsWith("shorts:")
+                    ? await executeShortsRecipe(deps, context, providers, piece)
+                    : piece.key.startsWith("animate:")
+                      ? await executeAnimateRecipe(deps, context, providers, piece)
+                      : piece.input.kind === "llm" ||
+                          piece.input.kind === "tts" ||
+                          piece.input.kind === "image"
+                        ? await executeProviderRecipe(deps, context, providers, piece)
+                        : await executeLocalRecipe(deps, context, piece);
       if (outcome === "held") return outcome;
     } catch (error) {
       deps.db

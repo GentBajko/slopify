@@ -12,7 +12,13 @@ export function templateSetup(
   const prompts: LibrarySnapshot["prompts"][number][] = [];
   const entries: LibrarySnapshot["entries"][number][] = [];
   const choices = [
-    { kind: "article" as const, name: input.form.articlePrompt },
+    {
+      kind:
+        input.form.voices?.source === "script" && input.form.sources.audio === "generate"
+          ? ("script" as const)
+          : ("article" as const),
+      name: input.form.articlePrompt,
+    },
     { kind: "narration" as const, name: input.form.narrationPrompt ?? "" },
     { kind: "description" as const, name: input.form.descriptionPrompt ?? "" },
     ...input.form.imagePrompts.map((row) => ({ kind: "image" as const, name: row.name })),

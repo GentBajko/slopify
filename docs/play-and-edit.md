@@ -68,7 +68,8 @@ Prompts and Templates → Keywords, each keyword with everything it feeds.
 | Channel, brand kit | Channel | none | none | **open** |
 | Cast (and the aliases on cast members) | follows the channel | none | none | **open**, with the channel |
 | Title style, end screen | from the brand kit only | from the brand kit only | none | neither side sets them directly |
-| Narration aliases, formats, speakers | not in this version | not in this version | none | nothing to compare |
+| Voice formats and speakers (multiple voices) | Narration | Providers | the speakers panel from main | same |
+| Narration aliases | on cast members (Channels), used by both | on cast members | none | same |
 
 ## Still open
 

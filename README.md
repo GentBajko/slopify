@@ -20,8 +20,8 @@
     alt="Docker image on GitHub Container Registry"></a>
   <img src="https://img.shields.io/badge/runs-locally-444C56?style=flat-square" alt="Runs locally">
   <a href="LICENSE"><img
-    src="https://img.shields.io/badge/license-MIT-1F2328?style=flat-square"
-    alt="MIT licensed"></a>
+    src="https://img.shields.io/badge/license-Apache--2.0-1F2328?style=flat-square"
+    alt="Apache 2.0 licensed"></a>
 </p>
 
 <p align="center">
@@ -135,8 +135,10 @@ shows a lore channel run on Slopify from topic to upload.
 
 ## Licence
 
-MIT, see [LICENSE](./LICENSE). The licence covers the code, not the Slopify name or logo:
-a fork must use a name of its own and not present itself as Slopify. The bundled ffmpeg is a separate GPL program
+Apache License 2.0, see [LICENSE](./LICENSE) and [NOTICE](./NOTICE). Anyone who redistributes Slopify
+or builds on it must keep the NOTICE, which credits Gent Bajko as its author. The licence covers the
+code, not the Slopify name or logo: a fork must use a name of its own and not present itself as Slopify.
+Releases up to 2.5.x were published under MIT and stay available under MIT. The bundled ffmpeg is a separate GPL program
 ([details](docs/ffmpeg.md)); the Barlow and Cinzel fonts are SIL Open Font License 1.1.
 Supporters are listed in [SUPPORTERS.md](SUPPORTERS.md). To report a security problem, see
 [SECURITY.md](SECURITY.md).

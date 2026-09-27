@@ -2,6 +2,7 @@ import type { Entry } from "@app/slices/library/model.js";
 import type { ReactElement } from "react";
 import { InfoTip } from "@/components/kit/info-tip";
 import { Button } from "@/components/ui/button";
+import { articleKind } from "./article-kind";
 import { ModelPicker, ProviderPicker } from "./pickers";
 import type { RailProps } from "./rail-frame";
 import { ArticleRail, ResearchRail } from "./stage-rails";
@@ -17,7 +18,7 @@ export function ContentSection(
 ): ReactElement {
   const { form, problem, update, entries, onLibrary } = props;
   const prompt = props.prompts.find(
-    (item) => item.kind === "article" && item.name === form.articlePrompt,
+    (item) => item.kind === articleKind(form) && item.name === form.articlePrompt,
   );
   return (
     <>
@@ -38,9 +39,9 @@ export function ContentSection(
             </details>
           ) : (
             <p className="text-small text-ink2">
-              {props.prompts.some((item) => item.kind === "article")
-                ? "Choose a saved article prompt."
-                : "No article prompts saved. Create a prompt to begin."}
+              {props.prompts.some((item) => item.kind === articleKind(form))
+                ? `Choose a saved ${articleKind(form)} prompt.`
+                : `No ${articleKind(form)} prompts saved. Create a prompt to begin.`}
             </p>
           )}
           <Button variant="ghost" onClick={() => onLibrary("/prompts")}>

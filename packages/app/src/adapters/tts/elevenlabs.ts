@@ -23,6 +23,7 @@ export const elevenLabsModels: readonly ModelInfo[] = [
   { id: "eleven_turbo_v2_5", name: "Eleven Turbo v2.5 (deprecated)" },
   { id: "eleven_turbo_v2", name: "Eleven Turbo v2 (deprecated)" },
 ];
+export const elevenLabsDialogueModel = "eleven_v3";
 // mp3 at the port's container, 44.1 kHz, 128 kbps: `kernel/ports/tts.ts` fixes mp3 and the
 // concatenation keeps the provider's own sample rate.
 export const elevenLabsFormat = "mp3_44100_128";
@@ -55,7 +56,7 @@ const errorBody = z.object({
 export function elevenLabsTts(deps: ElevenLabsDeps): TtsPort {
   return {
     id: "elevenlabs",
-    capabilities: { streams: true },
+    capabilities: { streams: true, dialogue: true },
     models: async (): Promise<readonly ModelInfo[]> => {
       const response = await deps.fetch(`${elevenLabsBase}/models`, {
         headers: { "xi-api-key": keyOf(deps) },
@@ -75,17 +76,32 @@ export function elevenLabsTts(deps: ElevenLabsDeps): TtsPort {
     },
     synthesize: async (req: TtsRequest): Promise<TtsAudio> => {
       const voice = encodeURIComponent(req.voiceId);
-      const response = await deps.fetch(
-        `${elevenLabsBase}/text-to-speech/${voice}/stream?output_format=${elevenLabsFormat}`,
-        {
-          method: "POST",
-          signal: req.signal,
-          headers: { "xi-api-key": keyOf(deps), "Content-Type": "application/json" },
-          // No pre-check on length. A text past the model's limit comes
-          // back as the provider's own 400 and that is what the stage shows.
-          body: JSON.stringify({ text: req.text, model_id: req.model ?? elevenLabsModel }),
-        },
-      );
+      const response =
+        req.dialogue === undefined
+          ? await deps.fetch(
+              `${elevenLabsBase}/text-to-speech/${voice}/stream?output_format=${elevenLabsFormat}`,
+              {
+                method: "POST",
+                signal: req.signal,
+                headers: { "xi-api-key": keyOf(deps), "Content-Type": "application/json" },
+                // No pre-check on length. A text past the model's limit comes
+                // back as the provider's own 400 and that is what the stage shows.
+                body: JSON.stringify({ text: req.text, model_id: req.model ?? elevenLabsModel }),
+              },
+            )
+          : // Text to Dialogue: several voices in one conversation, on eleven_v3.
+            await deps.fetch(
+              `${elevenLabsBase}/text-to-dialogue/stream?output_format=${elevenLabsFormat}`,
+              {
+                method: "POST",
+                signal: req.signal,
+                headers: { "xi-api-key": keyOf(deps), "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  inputs: req.dialogue.map((line) => ({ text: line.text, voice_id: line.voiceId })),
+                  model_id: req.model ?? elevenLabsDialogueModel,
+                }),
+              },
+            );
       if (!response.ok) {
         throw await failure(response, req.voiceId);
       }

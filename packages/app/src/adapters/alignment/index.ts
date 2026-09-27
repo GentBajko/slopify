@@ -9,7 +9,7 @@ import { speechWords } from "./text.js";
 
 export const alignSubtitles: SubtitleAligner = async (request) => {
   request.signal.throwIfAborted();
-  speechWords(request.text);
+  speechWords(request.text, "", request.aliases ?? []);
   await mkdir(request.cacheDir, { recursive: true, mode: 0o700 });
   const release = await claimWorker(request.cacheDir, request.signal);
   try {
@@ -25,7 +25,12 @@ export const alignSubtitles: SubtitleAligner = async (request) => {
       await decodeAudio(request.ffmpeg, request.audioPath, pcmPath, request.signal);
       request.onProgress?.(25, 100);
       return await runAlignmentWorker(
-        { modelPath, pcmPath, text: request.text },
+        {
+          modelPath,
+          pcmPath,
+          text: request.text,
+          ...(request.aliases?.length ? { aliases: [...request.aliases] } : {}),
+        },
         request.signal,
         (current, total) => request.onProgress?.(25 + Math.round((current / total) * 75), 100),
         undefined,

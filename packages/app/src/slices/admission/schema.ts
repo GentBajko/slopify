@@ -3,6 +3,7 @@ import { thinkingModes } from "../../kernel/ports/llm.js";
 import { castSnapshotSchema } from "../channels/schema.js";
 import { checkpointStageSchema } from "../checkpoints/schema.js";
 import { documentSettingsSchema } from "../document/theme-schema.js";
+import { narrationAliasesSchema } from "../narration/aliases-schema.js";
 import { chunkModes } from "../narration/chunk.js";
 import { reviewModes, reviewStages } from "../reviews/model.js";
 import { subtitleConfigSchema } from "../subtitles/model.js";
@@ -14,6 +15,7 @@ import {
   lookLevels,
   transitionKinds,
 } from "../video/edit-settings.js";
+import { voicesSettingsSchema } from "../voices/model.js";
 import { entryModes, formats, motionStyles, referenceSources, stageSources } from "./model.js";
 import {
   defaultEdgeSilenceSeconds,
@@ -72,8 +74,10 @@ export const runDraftSchema = z.object({
       voice: z.string(),
       usePronunciationGlossary: z.boolean().optional(),
       shareGlossary: z.boolean().optional(),
+      useNarrationAliases: z.boolean().optional(),
     })
     .optional(),
+  narrationAliases: narrationAliasesSchema.optional(),
   sharedGlossary: z
     .array(
       z.object({
@@ -173,6 +177,8 @@ export const runDraftSchema = z.object({
       ),
     })
     .optional(),
+  // The rules are `slices/voices/model.ts`'s, checked by admission, not the schema's.
+  voices: voicesSettingsSchema.optional(),
 });
 
 export const runConfigSchema = runDraftSchema.extend({

@@ -299,6 +299,8 @@ export function toAdmissionDraft(input: {
     motionStyle: form.motionStyle,
     // Kept the same way; admission checks it only while the video renders.
     ...(form.videoEdit === undefined ? {} : { videoEdit: form.videoEdit }),
+    // Spoken by the speakers only while narration is generated.
+    ...(form.voices !== undefined && sources.audio === "generate" ? { voices: form.voices } : {}),
     edgeSilenceSeconds: measure(
       "edgeSilenceSeconds",
       sources.audio !== "off",

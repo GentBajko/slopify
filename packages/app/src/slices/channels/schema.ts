@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paceSteps } from "../voices/model.js";
 import { castKinds } from "./model.js";
 
 const id = z.uuid();
@@ -56,6 +57,26 @@ const term = z
   .trim()
   .min(1, "Enter a name, and remove empty aliases.")
   .max(200, "Keep names and aliases to 200 characters or fewer.");
+// A cast member's voice. The pace is one of the Speakers list's steps; the rest is checked
+// when a run uses it, like every other voice choice.
+export const castVoiceSchema = z
+  .object({
+    provider: z.string().trim().min(1, "Choose a voice provider.").max(100),
+    model: z.string().trim().min(1, "Choose a voice model.").max(200),
+    voice: z.string().trim().min(1, "Choose a voice.").max(200),
+    pace: z
+      .number()
+      .refine(
+        (value) => (paceSteps as readonly number[]).includes(value),
+        "Pick a pace from the list.",
+      )
+      .optional(),
+    pronunciations: z
+      .string()
+      .max(20_000, "Keep the pronunciations to 20,000 characters or fewer.")
+      .optional(),
+  })
+  .strict();
 export const castMemberInputSchema = z
   .object({
     kind: z.enum(castKinds),
@@ -66,6 +87,8 @@ export const castMemberInputSchema = z
       .trim()
       .max(2000, "Keep the description to 2,000 characters or fewer.")
       .default(""),
+    // Absent keeps the saved voice; null removes it.
+    voice: castVoiceSchema.nullable().optional(),
   })
   .strict();
 export const castMemberCreateSchema = castMemberInputSchema.extend({ id }).strict();

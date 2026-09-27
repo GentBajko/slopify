@@ -335,6 +335,7 @@ function librarySnapshot(deps: BackupDeps): { readonly part: LibraryPart } {
   put("entries", rowsOf(db, "SELECT * FROM entries ORDER BY rowid"));
   put("voices", rowsOf(db, "SELECT * FROM voices ORDER BY rowid"));
   put("document_themes", rowsOf(db, "SELECT * FROM document_themes ORDER BY rowid"));
+  put("narration_aliases", rowsOf(db, "SELECT * FROM narration_aliases ORDER BY position,rowid"));
   put("project_templates", rowsOf(db, "SELECT * FROM project_templates ORDER BY rowid"));
   put(
     "project_template_revisions",

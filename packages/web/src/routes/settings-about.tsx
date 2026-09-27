@@ -51,6 +51,10 @@ export function AboutSettings({
         Slopify is free and open source, and runs on your machine with your own keys. If it saves
         you time, you can support it here.
       </p>
+      <p className="mb-4 max-w-prose text-small text-ink2">
+        Made by Gent Bajko. Apache License 2.0: anyone who redistributes Slopify or builds on it
+        keeps this credit.
+      </p>
       <ul className="grid max-w-prose divide-y divide-line border-y border-line">
         {aboutLinks(donation).map((link) => (
           <li key={link.label} className="flex items-center gap-3 py-3">

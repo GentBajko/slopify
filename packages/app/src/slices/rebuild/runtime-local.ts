@@ -11,6 +11,8 @@ import type { PreparedAsset } from "../storage/assets.js";
 import { allocateAsset, discardPreparedAssets, sealAsset } from "../storage/assets.js";
 import { outputPath } from "../storage/layout.js";
 import type { OutputRole } from "../storage/model.js";
+import { probeDurationMs, runFfmpeg } from "../video/ffmpeg.js";
+import { turnJoinArgs } from "../voices/join.js";
 import { publishNarrationText } from "./runtime-narration-text.js";
 import { executionPlan, executionView, savedCatalogue } from "./runtime-plan.js";
 import type { ProviderExecutionDeps } from "./runtime-provider.js";
@@ -86,7 +88,7 @@ export async function executeLocalRecipe(
     await publishNarrationText(deps, context, piece);
     return "done";
   }
-  if (input.operation === "concat-narration") {
+  if (input.operation === "concat-narration" || input.operation === "concat-turns-v1") {
     await concatenate(deps, context, piece);
     return "done";
   }
@@ -171,15 +173,18 @@ async function concatenate(
   });
   const pending = allocateAsset(deps, context.work.projectId, "narration.mp3");
   try {
-    const durationMs = await joinNarration(
-      { bin: deps.ffmpeg, log: deps.log },
-      {
-        files,
-        output: pending.absolutePath,
-        listPath: join(dirname(pending.absolutePath), "parts.txt"),
-        signal: context.signal,
-      },
-    );
+    const durationMs =
+      recipe.input.kind === "local" && recipe.input.operation === "concat-turns-v1"
+        ? await joinTurns(deps, context, files, recipe.input.values, pending.absolutePath)
+        : await joinNarration(
+            { bin: deps.ffmpeg, log: deps.log },
+            {
+              files,
+              output: pending.absolutePath,
+              listPath: join(dirname(pending.absolutePath), "parts.txt"),
+              signal: context.signal,
+            },
+          );
     context.signal.throwIfAborted();
     const asset = sealAsset(deps, pending);
     const role =
@@ -226,4 +231,37 @@ async function concatenate(
   } finally {
     discardPreparedAssets(deps, [pending]);
   }
+}
+
+// A multi-voice narration: every turn at its speaker's pace with the gap between turns, as the
+// recipe laid it out (`recipe-voices.ts`), measured off the file that was written.
+async function joinTurns(
+  deps: LocalExecutionDeps,
+  context: StageContext,
+  files: readonly string[],
+  values: unknown,
+  output: string,
+): Promise<number> {
+  const layout = z
+    .tuple([z.unknown(), z.array(z.tuple([z.number().positive(), z.number().nonnegative()]))])
+    .parse(values)[1];
+  if (layout.length !== files.length || files.length === 0)
+    throw new Error(
+      "Slopify hit an internal error (the speaker turns to join don't match their audio). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    );
+  await runFfmpeg({
+    bin: deps.ffmpeg,
+    args: turnJoinArgs(
+      files.map((path, index) => ({
+        path,
+        pace: layout[index]?.[0] ?? 1,
+        gapAfter: layout[index]?.[1] ?? 0,
+      })),
+      output,
+    ),
+    signal: context.signal,
+    log: deps.log,
+    onProgress: (): void => {},
+  });
+  return probeDurationMs(deps.ffmpeg, output, context.signal, deps.log);
 }
