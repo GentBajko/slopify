@@ -30,11 +30,12 @@ import { Button, IconButton } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
-import { ButtonLink, TextLink } from "@/components/kit/link";
+import { ButtonLink } from "@/components/kit/link";
 import { hitArea, hitTarget, List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { Status } from "@/components/kit/status";
 import { Segmented } from "@/components/kit/switch";
+import { TabPanel, Tabs } from "@/components/kit/tabs";
 import { intents, useIntent } from "@/lib/intents";
 import { cn } from "@/lib/utils";
 import { projectsQuery } from "@/queries";
@@ -47,11 +48,21 @@ import {
   schedulesQuery,
   transferTopic,
 } from "@/schedules/api";
+import { SchedulesView } from "@/schedules/view";
 import { PrepareUpload } from "@/studio/prepare-upload";
 import { templatesQuery } from "@/templates/api";
 
 const weeks = 4;
 type View = "weeks" | "list";
+
+// The calendar's two tabs: the coming weeks, and the schedules that fill them. Only the
+// Schedules tab shows in the URL (`?tab=schedules`), so `/calendar` stays the weeks.
+export const calendarTabs = ["weeks", "schedules"] as const;
+export type CalendarTab = (typeof calendarTabs)[number];
+
+export function calendarTabOf(value: unknown): CalendarTab {
+  return value === "schedules" ? "schedules" : "weeks";
+}
 
 const dayLabel = new Intl.DateTimeFormat(undefined, { weekday: "short", day: "numeric" });
 const fullDay = new Intl.DateTimeFormat(undefined, { dateStyle: "full" });
@@ -70,14 +81,33 @@ function storedView(): View {
 // The coming four weeks on one screen: every scheduled run with the topic it will use, the
 // projects running or finished, and the batch queue. A topic is dragged to another day (or
 // moved with Alt+arrow keys, or the list view's buttons) to change when it runs, or dropped
-// on another schedule's run to move it there. Suggested topics wait beside it.
-export function CalendarRoute(): ReactElement {
+// on another schedule's run to move it there. Suggested topics wait beside it. The Schedules
+// tab holds every schedule, its detail and New schedule (`schedules/view.tsx`); `/schedules`
+// redirects there. Without `onTab` (a test rendering the screen alone) the tab lives here.
+export function CalendarRoute({
+  tab: tabProp,
+  schedule,
+  onTab,
+  onSchedule,
+}: {
+  readonly tab?: CalendarTab | undefined;
+  // The schedule picked on the Schedules tab.
+  readonly schedule?: string | undefined;
+  readonly onTab?: ((tab: CalendarTab) => void) | undefined;
+  readonly onSchedule?: ((scheduleId: string) => void) | undefined;
+} = {}): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
   const current = useCurrentChannel();
   // The window starts on this week's Monday, fixed for the life of the page.
   const [range] = useState(() => rangeOf(new Date(), weeks));
   const [view, setView] = useState<View>(storedView);
+  const [ownTab, setOwnTab] = useState<CalendarTab>(tabProp ?? "weeks");
+  const tab = onTab === undefined ? ownTab : (tabProp ?? "weeks");
+  const chooseTab = (next: CalendarTab) => {
+    if (onTab === undefined) setOwnTab(next);
+    else onTab(next);
+  };
   const [adding, setAdding] = useState(false);
   const calendar = useQuery(calendarQuery(api, range.from, range.to));
   const schedules = useQuery(schedulesQuery(api));
@@ -175,6 +205,7 @@ export function CalendarRoute(): ReactElement {
   };
   const chooseView = (next: View) => {
     setView(next);
+    if (tab !== "weeks") chooseTab("weeks");
     try {
       window.localStorage.setItem(viewKey, next);
     } catch {
@@ -188,6 +219,13 @@ export function CalendarRoute(): ReactElement {
     group: "Calendar",
     keywords: ["topics", "batch", "queue"],
     run: () => setAdding(true),
+  });
+  useCommand({
+    id: "calendar.schedules",
+    title: "Show the schedules",
+    group: "Calendar",
+    keywords: ["edit", "recurring", "pause", "resume"],
+    run: () => chooseTab("schedules"),
   });
   // "Add to calendar" run from another screen lands here (`components/global-commands.tsx`).
   useIntent(intents.addToCalendar, () => setAdding(true));
@@ -210,6 +248,7 @@ export function CalendarRoute(): ReactElement {
   );
   const status = message?.text ?? calendar.error?.message ?? schedules.error?.message;
   const today = dayKey(new Date());
+  const liveSchedules = (schedules.data ?? []).filter((one) => one.deletedAt === null).length;
 
   return (
     <div data-tour="calendar">
@@ -217,143 +256,167 @@ export function CalendarRoute(): ReactElement {
         title="Calendar"
         meta={`${current.channel?.name ?? "Every channel"} · ${String(allRuns.length)} scheduled ${allRuns.length === 1 ? "run" : "runs"} in the next ${String(weeks)} weeks · ${String(queued)} ${queued === 1 ? "topic" : "topics"} queued`}
         actions={
-          <>
-            <Segmented
-              label="Calendar view"
-              tip="planning.calendar.view"
-              value={view}
-              onChange={chooseView}
-              options={[
-                { value: "weeks", label: "Weeks" },
-                { value: "list", label: "List" },
-              ]}
-            />
-            <TextLink to="/schedules">Edit schedules</TextLink>
-            <Button variant="primary" onClick={() => setAdding(true)}>
-              <PlusIcon aria-hidden="true" strokeWidth={1.75} />
-              Add to calendar
-            </Button>
-          </>
+          tab === "schedules" ? undefined : (
+            <>
+              <Segmented
+                label="Calendar view"
+                tip="planning.calendar.view"
+                value={view}
+                onChange={chooseView}
+                options={[
+                  { value: "weeks", label: "Weeks" },
+                  { value: "list", label: "List" },
+                ]}
+              />
+              <Button variant="primary" onClick={() => setAdding(true)}>
+                <PlusIcon aria-hidden="true" strokeWidth={1.75} />
+                Add to calendar
+              </Button>
+            </>
+          )
         }
       />
-      <StatusSlot
-        tone={message?.tone === "info" ? "info" : status ? "error" : "info"}
-        className="mb-3"
-      >
-        {status}
-      </StatusSlot>
-      <Board split="aside">
-        <BoardColumn label="Coming weeks">
-          {attention.length === 0 ? null : (
-            <section aria-label="Needs you">
-              <SectionHead title="Needs you" meta={attentionMeta(attention)} />
-              <List label="Needs you">
-                {attention.map((project) => (
-                  <ProjectRow key={project.id} project={project} />
+      <Tabs
+        items={[
+          { id: "weeks", label: "Coming weeks" },
+          {
+            id: "schedules",
+            label: "Schedules",
+            ...(schedules.data === undefined ? {} : { badge: String(liveSchedules) }),
+          },
+        ]}
+        value={tab}
+        onChange={chooseTab}
+        label="Calendar sections"
+        idPrefix="calendar"
+        className="mb-6"
+      />
+      <TabPanel idPrefix="calendar" id="schedules" active={tab === "schedules"}>
+        {tab === "schedules" ? <SchedulesView pickedId={schedule} onPick={onSchedule} /> : null}
+      </TabPanel>
+      <TabPanel idPrefix="calendar" id="weeks" active={tab === "weeks"}>
+        <StatusSlot
+          tone={message?.tone === "info" ? "info" : status ? "error" : "info"}
+          className="mb-3"
+        >
+          {status}
+        </StatusSlot>
+        <Board split="aside">
+          <BoardColumn label="Coming weeks">
+            {attention.length === 0 ? null : (
+              <section aria-label="Needs you">
+                <SectionHead title="Needs you" meta={attentionMeta(attention)} />
+                <List label="Needs you">
+                  {attention.map((project) => (
+                    <ProjectRow key={project.id} project={project} />
+                  ))}
+                </List>
+              </section>
+            )}
+            {calendar.isPending ? (
+              <p className="m-0 text-small text-ink-3">Loading the calendar…</p>
+            ) : view === "weeks" ? (
+              <>
+                <p className="m-0 text-small text-ink-2">
+                  Drag a topic to another day to change when it runs, or onto another schedule's run
+                  to move it there. With the keyboard: focus a topic and press Alt+← or Alt+→.
+                </p>
+                {weekDays(new Date(range.from), weeks).map((week) => (
+                  <div key={dayKey(week[0] ?? new Date())} className="sl-cal-week">
+                    {week.map((date) => {
+                      const key = dayKey(date);
+                      const day = days.get(key);
+                      return (
+                        <DayCell
+                          key={key}
+                          date={date}
+                          today={key === today}
+                          day={day}
+                          dragging={dragging}
+                          busy={action.isPending}
+                          onDragStart={setDragging}
+                          onDragEnd={() => setDragging(null)}
+                          onDrop={(target) => {
+                            if (dragging === null) return;
+                            apply(planDrop(dragging, target, fullDay.format(date)));
+                            setDragging(null);
+                          }}
+                          onStep={step}
+                        />
+                      );
+                    })}
+                  </div>
                 ))}
-              </List>
-            </section>
-          )}
-          {calendar.isPending ? (
-            <p className="m-0 text-small text-ink-3">Loading the calendar…</p>
-          ) : view === "weeks" ? (
-            <>
-              <p className="m-0 text-small text-ink-2">
-                Drag a topic to another day to change when it runs, or onto another schedule's run
-                to move it there. With the keyboard: focus a topic and press Alt+← or Alt+→.
-              </p>
-              {weekDays(new Date(range.from), weeks).map((week) => (
-                <div key={dayKey(week[0] ?? new Date())} className="sl-cal-week">
-                  {week.map((date) => {
-                    const key = dayKey(date);
-                    const day = days.get(key);
-                    return (
-                      <DayCell
-                        key={key}
-                        date={date}
-                        today={key === today}
-                        day={day}
-                        dragging={dragging}
-                        busy={action.isPending}
-                        onDragStart={setDragging}
-                        onDragEnd={() => setDragging(null)}
-                        onDrop={(target) => {
-                          if (dragging === null) return;
-                          apply(planDrop(dragging, target, fullDay.format(date)));
-                          setDragging(null);
-                        }}
-                        onStep={step}
-                      />
-                    );
-                  })}
-                </div>
-              ))}
-            </>
-          ) : (
-            <ListView
-              days={days}
-              busy={action.isPending}
-              onStep={step}
-              schedules={mySchedules}
-              onTransfer={(run, targetId) => {
-                // To the end of the other schedule's queue.
-                if (run.index !== null)
-                  apply({
-                    kind: "transfer",
-                    scheduleId: run.scheduleId,
-                    baseVersion: run.scheduleVersion,
-                    index: run.index,
-                    targetId,
-                    position: undefined,
-                  });
-              }}
-            />
-          )}
-          {visible !== undefined && visible.queued.length > 0 ? (
-            <section aria-label="Batch queue">
-              <SectionHead
-                title="Batch queue"
-                meta={`${String(visible.queued.length)} waiting to start`}
-                info="play.queue"
+              </>
+            ) : (
+              <ListView
+                days={days}
+                busy={action.isPending}
+                onStep={step}
+                schedules={mySchedules}
+                onTransfer={(run, targetId) => {
+                  // To the end of the other schedule's queue.
+                  if (run.index !== null)
+                    apply({
+                      kind: "transfer",
+                      scheduleId: run.scheduleId,
+                      baseVersion: run.scheduleVersion,
+                      index: run.index,
+                      targetId,
+                      position: undefined,
+                    });
+                }}
               />
-              <List label="Batch queue">
-                {visible.queued
-                  .toSorted((a, b) => a.position - b.position)
-                  .map((item, index) => {
-                    // Pausing a queued project holds the whole queue, so it says so.
-                    const paused =
-                      visible.projects.find((one) => one.id === item.projectId)?.state === "paused";
-                    return (
-                      <ListRow
-                        key={item.projectId}
-                        title={
-                          <Link to="/projects/$projectId" params={{ projectId: item.projectId }}>
-                            {item.title}
-                          </Link>
-                        }
-                        meta={`${String(index + 1)} in line`}
-                        actions={
-                          <Status
-                            tone={paused ? "waiting" : item.state === "active" ? "running" : "off"}
-                          >
-                            {paused
-                              ? "Paused"
-                              : item.state === "active"
-                                ? "Running now"
-                                : "Waiting its turn"}
-                          </Status>
-                        }
-                      />
-                    );
-                  })}
-              </List>
-            </section>
-          ) : null}
-        </BoardColumn>
-        <BoardColumn as="aside" label="Suggested topics">
-          <SuggestedTopics schedules={mySchedules} />
-        </BoardColumn>
-      </Board>
+            )}
+            {visible !== undefined && visible.queued.length > 0 ? (
+              <section aria-label="Batch queue">
+                <SectionHead
+                  title="Batch queue"
+                  meta={`${String(visible.queued.length)} waiting to start`}
+                  info="play.queue"
+                />
+                <List label="Batch queue">
+                  {visible.queued
+                    .toSorted((a, b) => a.position - b.position)
+                    .map((item, index) => {
+                      // Pausing a queued project holds the whole queue, so it says so.
+                      const paused =
+                        visible.projects.find((one) => one.id === item.projectId)?.state ===
+                        "paused";
+                      return (
+                        <ListRow
+                          key={item.projectId}
+                          title={
+                            <Link to="/projects/$projectId" params={{ projectId: item.projectId }}>
+                              {item.title}
+                            </Link>
+                          }
+                          meta={`${String(index + 1)} in line`}
+                          actions={
+                            <Status
+                              tone={
+                                paused ? "waiting" : item.state === "active" ? "running" : "off"
+                              }
+                            >
+                              {paused
+                                ? "Paused"
+                                : item.state === "active"
+                                  ? "Running now"
+                                  : "Waiting its turn"}
+                            </Status>
+                          }
+                        />
+                      );
+                    })}
+                </List>
+              </section>
+            ) : null}
+          </BoardColumn>
+          <BoardColumn as="aside" label="Suggested topics">
+            <SuggestedTopics schedules={mySchedules} />
+          </BoardColumn>
+        </Board>
+      </TabPanel>
       <AddToCalendar open={adding} onOpenChange={setAdding} schedules={mySchedules} />
     </div>
   );
@@ -556,7 +619,11 @@ function ListView({
     return (
       <p className="m-0 text-ink-2">
         Nothing is planned for the next {weeks} weeks. Add topics with Add to calendar, or create a
-        schedule under <Link to="/schedules">Schedules</Link>.
+        schedule on the{" "}
+        <Link to="/calendar" search={{ tab: "schedules" }}>
+          Schedules
+        </Link>{" "}
+        tab.
       </p>
     );
   const targets = schedules.filter(

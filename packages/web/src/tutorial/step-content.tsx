@@ -356,7 +356,9 @@ export function StepContent({
         <>
           <p>
             The <strong>Calendar</strong> shows the coming weeks of uploads: what is ready, what
-            needs you, and the topics a schedule suggested, waiting for your approval.
+            needs you, and the topics a schedule suggested, waiting for your approval. Its{" "}
+            <strong>Schedules</strong> tab is where you create, pause and resume the schedules that
+            fill it.
           </p>
           <p>
             You have reached the end. Press the question-mark button at the foot of the sidebar

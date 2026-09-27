@@ -81,7 +81,7 @@ The channel's templates. Each has a channel picker: choosing another channel mov
 
 ### Schedules
 
-The schedules that run this channel's templates, with their status and next run. Edit them on the schedules page; see [Schedules](Schedules).
+The schedules that run this channel's templates, with their status and next run. Edit them on **Calendar → Schedules**; see [Schedules](Schedules).
 
 ### Episodes (episode memory)
 

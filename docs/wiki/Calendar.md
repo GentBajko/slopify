@@ -2,7 +2,7 @@
 
 The calendar shows the coming four weeks on one screen: what needs you, every scheduled run with the topic and title it will use, the projects running or finished on their day, and the batch queue. You can drag a topic to another day, move it to another schedule, add topics, and accept or reject topics Slopify suggested.
 
-**Where to find it:** **Calendar** in the sidebar. **Edit schedules** on the calendar opens the schedules page, which sits under the same sidebar item.
+**Where to find it:** **Calendar** in the sidebar. It has two tabs: **Coming weeks**, described here, and **Schedules**, where you create, edit, pause and resume the schedules themselves (see [Schedules](Schedules)).
 
 ## What the calendar shows
 
@@ -66,7 +66,7 @@ The topic now runs with the other schedule's template.
 3. Type or paste **Topics, one per line**. Blank lines are skipped.
 4. Press **Add N topics** (the button counts them). **Keep the calendar as it is** closes the form without adding anything.
 
-The topics go to the end of the schedule's queue, in order, and take its next free runs. Each topic fills the schedule's topic keyword; every other keyword keeps its every-run value. To give topics their own values, edit the schedule's topics as a table on the schedules page (see [Schedules](Schedules)).
+The topics go to the end of the schedule's queue, in order, and take its next free runs. Each topic fills the schedule's topic keyword; every other keyword keeps its every-run value. To give topics their own values, edit the schedule's topics as a table on the **Schedules** tab (see [Schedules](Schedules)).
 
 If you have no schedule yet, the calendar offers **Create a schedule**.
 
@@ -83,12 +83,16 @@ While Slopify is asking, the panel says so and the topics appear when it finishe
 
 Editing a suggestion's words before approving it is done under **Topics waiting** on the schedule itself.
 
+## The Schedules tab
+
+**Schedules**, the calendar's second tab, is where the schedules themselves live: the list with **Edit**, **Pause** or **Resume** and **Delete** on each row, **New schedule**, and the picked schedule's detail with its queued topics, topics waiting for approval and run history. The number beside the tab counts the schedules that aren't deleted. Links to the old schedules page open this tab. See [Schedules](Schedules).
+
 ## Tips
 
 - Use the list view if dragging is fiddly, for example on a touch screen or a narrow window.
 - A browser notification for new suggestions opens the calendar's **Suggested topics** when you click it. See [Notifications](Notifications).
 - `Ctrl+K` → **Add to calendar** works from any screen: it opens the calendar with the form. `G` then `C` goes to the calendar.
-- To change a schedule's queued topics one by one (rename, reorder, remove), use **Edit schedules**. See [Schedules](Schedules#edit-the-queued-topics-in-place).
+- To change a schedule's queued topics one by one (rename, reorder, remove), use the **Schedules** tab. See [Schedules](Schedules#edit-the-queued-topics-in-place).
 - To start one video right now instead of waiting for a run, use [Play](Play-Overview).
 
 ## Related pages

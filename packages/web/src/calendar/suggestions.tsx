@@ -49,7 +49,9 @@ export function SuggestedTopics({
             suggestions wait here for you.
           </p>
           <div>
-            <TextLink to="/schedules">Open schedules</TextLink>
+            <TextLink to="/calendar" search={{ tab: "schedules" }}>
+              Open schedules
+            </TextLink>
           </div>
         </>
       ) : (

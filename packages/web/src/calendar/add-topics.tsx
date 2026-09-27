@@ -123,7 +123,10 @@ export function AddToCalendar({
       {usable.length === 0 ? (
         <p className="m-0 text-ink-2">
           Topics go on a schedule, and there is none yet.{" "}
-          <Link to="/schedules">Create a schedule</Link> first.
+          <Link to="/calendar" search={{ tab: "schedules" }}>
+            Create a schedule
+          </Link>{" "}
+          first.
         </p>
       ) : (
         <div className="flex flex-col gap-4">

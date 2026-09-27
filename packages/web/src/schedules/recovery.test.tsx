@@ -8,7 +8,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it, vi } from "vitest";
 import { freshDraftDocument } from "@/play/draft-state";
-import { SchedulesRoute } from "@/routes/schedules";
+import { SchedulesView } from "@/schedules/view";
 import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
 
 // Edit, Pause or Resume, and Delete are visible on each row; Cancel sits in the picked
@@ -51,7 +51,7 @@ it("shows schedules and sends a pause action with the current version", async ()
   });
   const user = userEvent.setup();
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [summary] }),
       "GET /api/project-templates": jsonAnswer({
@@ -73,7 +73,7 @@ it("does not submit a second independently identified schedule while first is pe
   const bodies: { id: string }[] = [];
   const user = userEvent.setup();
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [] }),
       "GET /api/project-templates": jsonAnswer({
@@ -95,7 +95,7 @@ it("does not submit a second independently identified schedule while first is pe
 it("shows failed Pause transport errors", async () => {
   const user = userEvent.setup();
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [summary] }),
       "GET /api/project-templates": jsonAnswer({ templates: [] }),
@@ -114,7 +114,7 @@ it("refreshes schedule state when an action commits but its response is lost", a
   let committed = false;
   const user = userEvent.setup();
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       "GET /api/schedules": (request) =>
         jsonAnswer({
@@ -139,7 +139,7 @@ it("resolves one-off Run at in the selected timezone", async () => {
   const bodies: { cadence: { at: string } }[] = [];
   const user = userEvent.setup();
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [] }),
       "GET /api/project-templates": jsonAnswer({
@@ -169,7 +169,7 @@ it("rejects an invalid recurring timezone before submission", async () => {
   const create = vi.fn(() => Response.json(summary));
   const user = userEvent.setup();
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [] }),
       "GET /api/project-templates": jsonAnswer({
@@ -210,7 +210,7 @@ it("edits the displayed version and retains values after conflict", async () => 
     );
   });
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [summary] }),
       "GET /api/project-templates": jsonAnswer({
@@ -236,7 +236,7 @@ it("preserves pinned template version and keyword text during a title edit", asy
     return Response.json({ ...summary, version: 2 });
   });
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [{ ...summary, items }] }),
       "GET /api/project-templates": jsonAnswer({
@@ -258,7 +258,7 @@ it("requires confirmation before deletion and shows failures inside the dialog",
     Response.json({ title: "Unavailable", detail: "Could not archive schedule" }, { status: 500 }),
   );
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [{ ...summary, status: "completed" }] }),
       "GET /api/project-templates": jsonAnswer({ templates: [] }),
@@ -276,7 +276,7 @@ it("requires confirmation before canceling a schedule", async () => {
   const user = userEvent.setup();
   const cancel = vi.fn(() => Response.json({ ...summary, status: "canceled", version: 2 }));
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [summary] }),
       "GET /api/project-templates": jsonAnswer({ templates: [] }),
@@ -292,7 +292,7 @@ it("retries an uncertain create with the exact identity and input", async () => 
   const user = userEvent.setup();
   const bodies: unknown[] = [];
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [] }),
       "GET /api/project-templates": jsonAnswer({
@@ -330,7 +330,7 @@ it("keeps an older topic's saved values when the list is edited", async () => {
     return Response.json({ ...summary, version: 2 });
   });
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [{ ...summary, items }] }),
       "GET /api/project-templates": jsonAnswer({
@@ -349,7 +349,7 @@ it("keeps an older topic's saved values when the list is edited", async () => {
 
 it.each(["completed", "canceled"])("does not offer Edit for a %s schedule", async (status) => {
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [{ ...summary, status, nextRunAt: null }] }),
       "GET /api/project-templates": jsonAnswer({ templates: [] }),
@@ -368,7 +368,7 @@ it("keeps deleted schedule history discoverable with project links and no live c
     deletedAt: "2026-09-13T12:00:00.000Z",
   };
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [deleted] }),
       "GET /api/project-templates": jsonAnswer({ templates: [] }),
@@ -427,7 +427,7 @@ it("queues pasted topics into the chosen keyword with fixed values for the rest"
     },
   };
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [] }),
       "GET /api/project-templates": jsonAnswer({
@@ -485,7 +485,7 @@ it("lists the every-run keywords like Play does, each with what it feeds", async
     },
   };
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [] }),
       "GET /api/project-templates": jsonAnswer({
@@ -525,7 +525,7 @@ it("offers the title's keyword even when the template stored no value for it", a
     },
   };
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [] }),
       "GET /api/project-templates": jsonAnswer({
@@ -554,7 +554,7 @@ it("offers the title's keyword even when the template stored no value for it", a
 it("explains that nonexistent one-off times are refused", async () => {
   const user = userEvent.setup();
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [] }),
       "GET /api/project-templates": jsonAnswer({

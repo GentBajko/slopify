@@ -9,7 +9,7 @@ import { freshDraftDocument } from "@/play/draft-state";
 import { CalendarRoute } from "@/routes/calendar";
 import { ChannelRoute, type ChannelTab } from "@/routes/channel";
 import { ChannelsRoute } from "@/routes/channels";
-import { SchedulesRoute } from "@/routes/schedules";
+import { SchedulesView } from "@/schedules/view";
 import { type Answer, jsonAnswer, renderRouted, testDeps } from "@/test-app";
 import { ChannelLinksSettings } from "@/youtube/channel-links";
 
@@ -190,7 +190,7 @@ function ChannelPage({ start }: { readonly start: ChannelTab }) {
 describe("the planning screens explain every control", () => {
   it("walks Schedules: the list, the detail and the form with every option open", async () => {
     const user = userEvent.setup();
-    renderRouted(<SchedulesRoute />, testDeps(planningRoutes));
+    renderRouted(<SchedulesView />, testDeps(planningRoutes));
     const waiting = await screen.findByRole("list", { name: "Topics waiting" });
     await user.click(within(waiting).getByRole("button", { name: "Edit" }));
     await screen.findByLabelText("Edit Pyramids");

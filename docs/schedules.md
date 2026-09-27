@@ -100,6 +100,16 @@ week's Monday: every scheduled run with the title it will make (or whether it wa
 approval or a generation), projects running or finished on their day, and the batch queue. It
 shows the channel picked in the rail, or every channel.
 
+The calendar has two tabs (kit `Tabs`): **Coming weeks** and **Schedules**. The Schedules tab
+is the one place schedules are managed (`packages/web/src/schedules/view.tsx`): the list with
+Edit, Pause or Resume and Delete on each row, retired-model flags, the picked schedule's detail
+with its inline topics, held topics and their keywords, topic failures with their fix-its and
+run history, and **New schedule**. Only that tab shows in the URL: `/calendar?tab=schedules`,
+plus `&schedule=<id>` for the picked one. The old addresses redirect there: `/schedules` to the
+tab and `/schedules/<id>` to that schedule, so old links, the G then S shortcut and Ctrl+K's
+Open schedules and New schedule all land on it. There is no separate Schedules page or rail
+item.
+
 - **Weeks** (the default) and **List** switch the view; the choice is kept per browser.
 - Drag a topic to another day of its schedule to change when it runs, or onto another
   schedule's run to move it into that schedule's queue at that place. Without a mouse: focus a
@@ -115,7 +125,7 @@ shows the channel picked in the rail, or every channel.
 - **Add to calendar** puts topics typed one per line at the end of a schedule's queue.
 - **Suggested topics**, beside the weeks, lists what each schedule with topic generation
   suggested, with **Queue** and **Reject** on each and **Queue all**; **Suggest topics now**
-  asks for more. **Edit schedules** opens `/schedules`, which sits under the same rail item.
+  asks for more.
 
 Each run carries `renderedTitle`, the project title it will get (built as the run builds it),
 or null while its topic waits for approval or generation. Each project carries, when they

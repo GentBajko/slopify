@@ -8,13 +8,13 @@ import { useApp } from "@/app-context";
 import { channelsQuery, defaultChannelId } from "@/channels/api";
 import { channelOfTemplate } from "@/channels/members-tabs";
 import { StatusSlot } from "@/components/kit/action-bar";
-import { Button } from "@/components/kit/button";
+import { Button, ButtonRow } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Select } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
-import { ListDetail, PageHeader, Rule } from "@/components/kit/layout";
+import { ListDetail, Rule } from "@/components/kit/layout";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { Status, type Tone } from "@/components/kit/status";
@@ -38,10 +38,18 @@ import { templatesQuery } from "@/templates/api";
 type Reply = { readonly ok: true } | { readonly ok: false; readonly message: string };
 type Act = (job: () => Promise<Reply>) => void;
 
-// Calendar → Schedules: the schedules as a list beside the picked one's detail (its topics,
+// Calendar → Schedules tab: the schedules as a list beside the picked one's detail (its topics,
 // policy and run history). New schedule and Edit open the form in place of the detail. Every
-// row carries its own Edit, Pause or Resume, and Delete.
-export function SchedulesRoute(): ReactElement {
+// row carries its own Edit, Pause or Resume, and Delete. The calendar keeps the picked schedule
+// in its URL (`/calendar?tab=schedules&schedule=…`), so a link can open one; without
+// `onPick` the pick lives here.
+export function SchedulesView({
+  pickedId,
+  onPick,
+}: {
+  readonly pickedId?: string | undefined;
+  readonly onPick?: ((scheduleId: string) => void) | undefined;
+} = {}): ReactElement {
   const { api } = useApp();
   const queryClient = useQueryClient();
   const schedules = useQuery(schedulesQuery(api));
@@ -51,7 +59,12 @@ export function SchedulesRoute(): ReactElement {
   const [editing, setEditing] = useState<ScheduleSummary | null>(null);
   const [creating, setCreating] = useState(false);
   const [formBusy, setFormBusy] = useState(false);
-  const [picked, setPicked] = useState<string | null>(null);
+  const [ownPick, setOwnPick] = useState<string | null>(null);
+  const picked = onPick === undefined ? ownPick : (pickedId ?? null);
+  const setPicked = (scheduleId: string) => {
+    if (onPick === undefined) setOwnPick(scheduleId);
+    else onPick(scheduleId);
+  };
   const [confirm, setConfirm] = useState<{
     readonly kind: "cancel" | "delete";
     readonly schedule: ScheduleSummary;
@@ -163,11 +176,9 @@ export function SchedulesRoute(): ReactElement {
   const rowPending = mutation.isPending || formBusy || formOpen;
   return (
     <div>
-      <PageHeader
-        crumb={<Link to="/calendar">Calendar</Link>}
-        title="Schedules"
-        meta={
-          noTemplates ? (
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="m-0 min-w-0 text-small text-ink-2">
+          {noTemplates ? (
             <>
               Save a template in{" "}
               <Link className="underline" to="/templates">
@@ -180,39 +191,37 @@ export function SchedulesRoute(): ReactElement {
               Runs a saved template on this machine at a local time.
               <InfoTip id="planning.schedules" />
             </span>
-          )
-        }
-        actions={
-          <>
-            <Select
-              aria-label="Filter schedules by channel"
-              value={channelFilter}
-              className="w-auto min-w-[160px]"
-              onChange={(event) => setChannelFilter(event.target.value)}
-            >
-              <option value="">All channels</option>
-              {(channels.data ?? []).map((channel) => (
-                <option key={channel.id} value={channel.id}>
-                  {channel.name}
-                </option>
-              ))}
-            </Select>
-            <Button
-              variant="primary"
-              onClick={startNew}
-              disabled={formOpen || noTemplates}
-              disabledReason={
-                noTemplates
-                  ? "Save a template in Library → Templates first"
-                  : "Finish or cancel the open form first"
-              }
-            >
-              <PlusIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />
-              New schedule
-            </Button>
-          </>
-        }
-      />
+          )}
+        </p>
+        <ButtonRow>
+          <Select
+            aria-label="Filter schedules by channel"
+            value={channelFilter}
+            className="w-auto min-w-[160px]"
+            onChange={(event) => setChannelFilter(event.target.value)}
+          >
+            <option value="">All channels</option>
+            {(channels.data ?? []).map((channel) => (
+              <option key={channel.id} value={channel.id}>
+                {channel.name}
+              </option>
+            ))}
+          </Select>
+          <Button
+            variant="primary"
+            onClick={startNew}
+            disabled={formOpen || noTemplates}
+            disabledReason={
+              noTemplates
+                ? "Save a template in Library → Templates first"
+                : "Finish or cancel the open form first"
+            }
+          >
+            <PlusIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />
+            New schedule
+          </Button>
+        </ButtonRow>
+      </div>
       <StatusSlot tone={formOpen ? "info" : (status?.tone ?? "info")} className="mb-2">
         {formOpen ? undefined : status?.text}
       </StatusSlot>

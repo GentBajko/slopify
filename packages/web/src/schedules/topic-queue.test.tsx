@@ -2,7 +2,7 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { freshDraftDocument } from "@/play/draft-state";
-import { SchedulesRoute } from "@/routes/schedules";
+import { SchedulesView } from "@/schedules/view";
 import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
 
 afterEach(cleanup);
@@ -68,7 +68,7 @@ it("sets a keyword per topic in the table, previews each title, and saves it on 
     return Response.json(summary);
   });
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       ...routes,
       "GET /api/schedules": jsonAnswer({ schedules: [] }),
@@ -92,7 +92,7 @@ it("reads a pasted YAML list, names bad rows, and converts back to lines without
   const user = userEvent.setup();
   const create = vi.fn(() => Response.json(summary));
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       ...routes,
       "GET /api/schedules": jsonAnswer({ schedules: [] }),
@@ -136,7 +136,7 @@ it("reads a pasted YAML list, names bad rows, and converts back to lines without
 
 it("shows the next run's project title from the calendar on the schedule's row", async () => {
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       ...routes,
       "GET /api/schedules": jsonAnswer({ schedules: [summary] }),

@@ -82,7 +82,7 @@ A button does something; a link goes somewhere. The kit holds the line:
   step's Open in the tour), or one of a row of buttons it sits in (a Library row's Edit and
   Duplicate, an editor's Cancel beside Save). That is `ButtonLink` for a route and `FileLink`
   for a download or a file in a new tab (Download PDF, Download diagnostics).
-- **Any other navigation is a `TextLink`**: Open, Calendar, Edit schedules, See all patch notes,
+- **Any other navigation is a `TextLink`**: Open, Calendar, Open schedules, See all patch notes,
   Restore samples in Settings.
 - **Nothing that acts looks like text.** A chip's name that opens its keywords is a quiet
   button with a pencil; the reason under the Play key sits beside a Go to the field button.

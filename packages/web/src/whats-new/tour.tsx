@@ -67,7 +67,7 @@ export const whatsNewTours: Readonly<Record<number, readonly WhatsNewStep[]>> = 
     {
       id: "calendar",
       title: "The calendar",
-      body: "The coming weeks of uploads on one screen: what is ready, what needs you, and the topics still to come.",
+      body: "The coming weeks of uploads on one screen: what is ready, what needs you, and the topics still to come. Its Schedules tab holds every schedule.",
       to: "/calendar",
       place: "Calendar",
     },

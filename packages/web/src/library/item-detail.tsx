@@ -100,7 +100,11 @@ function UsedBySection({
           {data.schedules.map((one) => (
             <ListRow
               key={`s-${one.id}`}
-              title={<Link to="/schedules">{one.name}</Link>}
+              title={
+                <Link to="/calendar" search={{ tab: "schedules", schedule: one.id }}>
+                  {one.name}
+                </Link>
+              }
               meta={one.status === "paused" ? "Schedule · paused" : "Schedule"}
             />
           ))}

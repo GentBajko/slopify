@@ -4,7 +4,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { CommandPaletteProvider, CommandRegistry } from "@/components/kit/command-palette";
 import { freshDraftDocument } from "@/play/draft-state";
 import { jsonAnswer, renderRouted, testDeps } from "../test-app";
-import { SchedulesRoute } from "./schedules";
+import { SchedulesView } from "./view";
 
 afterEach(cleanup);
 
@@ -43,7 +43,7 @@ it("shows schedules and sends a pause action with the current version", async ()
   });
   const user = userEvent.setup();
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [summary] }),
       "GET /api/project-templates": jsonAnswer({
@@ -66,7 +66,7 @@ it("offers New schedule and pausing the picked schedule in the command palette",
   const pause = vi.fn(jsonAnswer({ ...summary, status: "paused", version: 2 }));
   renderRouted(
     <CommandPaletteProvider registry={registry}>
-      <SchedulesRoute />
+      <SchedulesView />
     </CommandPaletteProvider>,
     testDeps({
       "GET /api/schedules": jsonAnswer({ schedules: [summary] }),
@@ -103,7 +103,7 @@ it("approves a held topic from its row in the picked schedule's detail", async (
   const topicId = "55555555-5555-4555-8555-555555555555";
   const approve = vi.fn(jsonAnswer({ ...summary, version: 2 }));
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       "GET /api/schedules": jsonAnswer({
         schedules: [
@@ -148,7 +148,7 @@ it("edits a held topic's keywords beside its title, showing the every-run value 
     })(request);
   });
   renderRouted(
-    <SchedulesRoute />,
+    <SchedulesView />,
     testDeps({
       "GET /api/schedules": jsonAnswer({
         schedules: [

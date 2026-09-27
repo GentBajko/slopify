@@ -3,7 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import { ToastProvider } from "@/components/kit/toast";
-import { SchedulesRoute } from "@/routes/schedules";
+import { SchedulesView } from "@/schedules/view";
 import { jsonAnswer, problemAnswer, renderRouted, testDeps } from "@/test-app";
 
 afterEach(cleanup);
@@ -67,7 +67,7 @@ function server() {
 function mount(routes: Parameters<typeof testDeps>[0]) {
   renderRouted(
     <ToastProvider>
-      <SchedulesRoute />
+      <SchedulesView />
     </ToastProvider>,
     testDeps(routes),
   );

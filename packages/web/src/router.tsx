@@ -13,7 +13,7 @@ import { categoryOf } from "@/lib/entry-options";
 import { kindOf } from "@/lib/prompt-kinds";
 import { usePlaySession } from "@/play/draft-context";
 import { pickInPlay } from "@/play/pick-in-play";
-import { CalendarRoute } from "@/routes/calendar";
+import { CalendarRoute, type CalendarTab, calendarTabOf } from "@/routes/calendar";
 import { ChannelRoute, type ChannelTab, channelTabOf } from "@/routes/channel";
 import { ChannelsRoute } from "@/routes/channels";
 import { DocumentThemeEditorRoute } from "@/routes/document-theme-editor";
@@ -28,7 +28,6 @@ import { ProjectRoute } from "@/routes/project";
 import { type ProjectFilter, ProjectsRoute, projectFilterOf } from "@/routes/projects";
 import { PromptEditorRoute } from "@/routes/prompt-editor";
 import { PromptsRoute } from "@/routes/prompts";
-import { SchedulesRoute } from "@/routes/schedules";
 import { SettingsRoute, type SettingsSection, settingsSectionOf } from "@/routes/settings";
 import { TemplatesRoute } from "@/routes/templates";
 import { TutorialsRoute } from "@/routes/tutorials";
@@ -157,19 +156,75 @@ const templatesRoute = createRoute({
   component: TemplatesPage,
 });
 
-// The calendar is a destination of its own; its schedules sit beside it, under the same rail
-// item, at the addresses they always had.
-const schedulesRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "schedules",
-  component: SchedulesRoute,
-});
+// The calendar is a destination of its own; its schedules are its Schedules tab. The old
+// addresses (/schedules, /schedules/$scheduleId) still land there, on the schedule they named.
+interface CalendarSearch {
+  readonly tab?: CalendarTab;
+  readonly schedule?: string;
+}
+
+const scheduleIdPattern = /^[0-9A-Za-z-]{1,64}$/;
+
+export function calendarSearchOf(search: Record<string, unknown>): CalendarSearch {
+  if (calendarTabOf(search.tab) !== "schedules") return {};
+  return typeof search.schedule === "string" && scheduleIdPattern.test(search.schedule)
+    ? { tab: "schedules", schedule: search.schedule }
+    : { tab: "schedules" };
+}
 
 const calendarRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "calendar",
-  component: CalendarRoute,
+  validateSearch: calendarSearchOf,
+  component: CalendarPage,
 });
+
+const schedulesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "schedules",
+  beforeLoad: () => {
+    throw redirect({ to: "/calendar", search: { tab: "schedules" }, replace: true });
+  },
+});
+
+const scheduleRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "schedules/$scheduleId",
+  beforeLoad: ({ params }) => {
+    throw redirect({
+      to: "/calendar",
+      search: calendarSearchOf({ tab: "schedules", schedule: params.scheduleId }),
+      replace: true,
+    });
+  },
+});
+
+function CalendarPage() {
+  // The route's search carries the raw address's keys beside the checked ones, so the tab is
+  // read through `calendarTabOf` again.
+  const search = calendarSearchOf(calendarRoute.useSearch());
+  const navigate = useNavigate();
+  return (
+    <CalendarRoute
+      tab={search.tab ?? "weeks"}
+      schedule={search.schedule}
+      onTab={(next) => {
+        void navigate({
+          to: "/calendar",
+          search: next === "schedules" ? { tab: "schedules" } : {},
+          replace: true,
+        });
+      }}
+      onSchedule={(scheduleId) => {
+        void navigate({
+          to: "/calendar",
+          search: { tab: "schedules", schedule: scheduleId },
+          replace: true,
+        });
+      }}
+    />
+  );
+}
 
 function TemplatesPage(): import("react").ReactElement {
   const session = usePlaySession();
@@ -558,6 +613,7 @@ const routeTree = rootRoute.addChildren({
     narrationAliasesRoute,
   }),
   schedulesRoute,
+  scheduleRoute,
   calendarRoute,
   libraryIndexRoute,
   channelsRoute,

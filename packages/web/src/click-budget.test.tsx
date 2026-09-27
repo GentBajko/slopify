@@ -9,7 +9,7 @@ import { ProjectRoute } from "@/routes/project";
 import { body, finished, output, deps as projectDeps } from "@/routes/project-fixtures";
 import { PromptEditorRoute } from "@/routes/prompt-editor";
 import { PromptsRoute } from "@/routes/prompts";
-import { SchedulesRoute } from "@/routes/schedules";
+import { SchedulesView } from "@/schedules/view";
 import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
 
 // The five common tasks, each counted in clicks from the screen it starts on to done, the way a
@@ -311,7 +311,7 @@ describe("clicks from the landing screen to done", () => {
     // Now: the picked schedule's queue takes the new topic where it is shown.
     renderRouted(
       <ToastProvider>
-        <SchedulesRoute />
+        <SchedulesView />
       </ToastProvider>,
       testDeps(routes),
     );
@@ -326,7 +326,7 @@ describe("clicks from the landing screen to done", () => {
     // keyword values and the table and YAML ways of writing topics.
     renderRouted(
       <ToastProvider>
-        <SchedulesRoute />
+        <SchedulesView />
       </ToastProvider>,
       testDeps(routes),
     );

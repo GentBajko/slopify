@@ -265,10 +265,9 @@ describe("what needs you and what is ready", () => {
       minute: "2-digit",
     });
     expect(screen.getByText(`Waiting for Codex limits (resets at ${time})`)).not.toBeNull();
-    // The schedules themselves are edited from here.
-    expect(screen.getByRole("link", { name: "Edit schedules" }).getAttribute("href")).toBe(
-      "/schedules",
-    );
+    // The schedules themselves are edited from the calendar's own Schedules tab.
+    expect(screen.getByRole("tab", { name: /^Schedules/ })).not.toBeNull();
+    expect(screen.queryByRole("link", { name: "Edit schedules" })).toBeNull();
   });
 });
 
@@ -407,5 +406,74 @@ describe("suggested topics", () => {
     await user.click(within(panel).getByRole("button", { name: "Queue all 2" }));
     await waitFor(() => expect(all).toHaveBeenCalledOnce());
     expect(within(panel).getByText("Keeps at least 10 topics queued.")).not.toBeNull();
+  });
+});
+
+describe("the Schedules tab", () => {
+  // What the Schedules view reads beyond the calendar's own summary.
+  const full = (id: string, name: string, items: readonly string[], over = {}) =>
+    summary(id, name, items, {
+      topicKeyword: "Topic",
+      values: {},
+      brief: null,
+      topicGeneration: { mode: "off", keepAtLeast: 3, llm: null },
+      topics: { held: 0, generatingSince: null, generatedAt: null, failedAt: null, error: null },
+      ...over,
+    });
+  const tabDeps = () =>
+    deps(
+      {
+        "GET /api/project-templates": jsonAnswer({
+          templates: [{ id: templateId, name: "Stories", version: 1, updatedAt: inDays(0, 0) }],
+        }),
+        "GET /api/channels": jsonAnswer({ channels: [] }),
+        [`GET /api/schedules/${scheduleId}`]: jsonAnswer({
+          schedule: full(scheduleId, "Lore", ["Cleopatra", "Hypatia"]),
+          runs: [],
+        }),
+        [`GET /api/schedules/${otherId}`]: jsonAnswer({
+          schedule: full(otherId, "Other", ["Imhotep"]),
+          runs: [],
+        }),
+      },
+      [
+        full(scheduleId, "Lore", ["Cleopatra", "Hypatia"]),
+        full(otherId, "Other", ["Imhotep"], { status: "paused" }),
+      ],
+    );
+
+  it("holds every schedule, its row actions and New schedule, in place of the weeks", async () => {
+    const user = userEvent.setup();
+    renderRouted(<CalendarRoute />, tabDeps());
+    const tab = await screen.findByRole("tab", { name: /^Schedules/ });
+    expect(tab.getAttribute("aria-selected")).toBe("false");
+    await within(tab).findByText("2");
+    await user.click(tab);
+    expect(tab.getAttribute("aria-selected")).toBe("true");
+    const list = await screen.findByRole("list", { name: "Saved schedules" });
+    expect(within(list).getByRole("button", { name: "Pause Lore" })).not.toBeNull();
+    expect(within(list).getByRole("button", { name: "Resume Other" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: /New schedule/ })).not.toBeNull();
+    // The weeks and their primary action wait on the other tab.
+    expect(screen.queryByRole("button", { name: "Add to calendar" })).toBeNull();
+    expect(document.querySelector(".sl-cal-week")?.closest("[hidden]")).not.toBeNull();
+    await screen.findByRole("region", { name: "Lore detail" });
+    await user.click(screen.getByRole("tab", { name: "Coming weeks" }));
+    expect(screen.getByRole("button", { name: "Add to calendar" })).not.toBeNull();
+  });
+
+  it("opens on the schedule the address names and reports a new pick", async () => {
+    const user = userEvent.setup();
+    const onSchedule = vi.fn();
+    const onTab = vi.fn();
+    renderRouted(
+      <CalendarRoute tab="schedules" schedule={otherId} onTab={onTab} onSchedule={onSchedule} />,
+      tabDeps(),
+    );
+    await screen.findByRole("region", { name: "Other detail" });
+    await user.click(screen.getByRole("button", { name: "Lore" }));
+    expect(onSchedule).toHaveBeenCalledWith(scheduleId);
+    await user.click(screen.getByRole("tab", { name: "Coming weeks" }));
+    expect(onTab).toHaveBeenCalledWith("weeks");
   });
 });

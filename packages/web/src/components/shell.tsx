@@ -53,7 +53,8 @@ import { WhatsNewTour } from "@/whats-new/tour";
 // thin top bar for the running tally, updates and help; the page below, full width up to
 // content-max. On phones the rail becomes a bottom bar of five.
 //
-// `match` lists the paths a destination stays lit for. Schedules belong to the calendar.
+// `match` lists the paths a destination stays lit for. Schedules are the calendar's Schedules
+// tab; the old /schedules address redirects there.
 interface Destination {
   readonly id: string;
   readonly to: string;
@@ -88,7 +89,7 @@ const destinations: readonly Destination[] = [
     to: "/calendar",
     label: "Calendar",
     icon: <CalendarIcon {...iconProps} />,
-    match: ["/calendar", "/schedules"],
+    match: ["/calendar"],
     phone: true,
   },
   {
@@ -204,7 +205,9 @@ function NavigationCommands() {
     id: "nav.schedules",
     title: "Open schedules",
     group: "Go to",
-    run: go("/schedules"),
+    run: () => {
+      void navigate({ to: "/calendar", search: { tab: "schedules" } });
+    },
     keywords: ["calendar", "topics"],
     shortcut: shortcuts.goSchedules,
   });

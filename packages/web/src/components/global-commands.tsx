@@ -16,10 +16,16 @@ export function GlobalCommands(): ReactElement {
   const { api } = useApp();
   const projects = useQuery(projectsQuery(api));
   const pathname = useLocation({ select: (location) => location.pathname });
+  // The Schedules tab registers its own New schedule.
+  const onSchedules = useLocation({
+    select: (location) =>
+      location.pathname === "/calendar" &&
+      (location.search as { readonly tab?: unknown }).tab === "schedules",
+  });
   const current = /^\/projects\/([^/]+)/.exec(pathname)?.[1];
   return (
     <>
-      {pathname === "/schedules" ? null : <NewScheduleCommand />}
+      {onSchedules ? null : <NewScheduleCommand />}
       {pathname === "/calendar" ? null : <AddToCalendarCommand />}
       {(projects.data?.projects ?? [])
         .filter((project) => project.id !== current)
@@ -40,7 +46,7 @@ function NewScheduleCommand(): null {
     searchOnly: true,
     run: () => {
       requestIntent(intents.newSchedule);
-      void navigate({ to: "/schedules" });
+      void navigate({ to: "/calendar", search: { tab: "schedules" } });
     },
   });
   return null;

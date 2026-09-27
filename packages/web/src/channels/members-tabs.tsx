@@ -119,7 +119,7 @@ export function SchedulesTab({ channelId }: { readonly channelId: string }): Rea
     <div>
       <p className="m-0 mb-4 max-w-[68ch] text-small text-ink-2">
         A schedule belongs to the channel of the template it runs. Create and change schedules in{" "}
-        <Link to="/schedules" className="underline">
+        <Link to="/calendar" search={{ tab: "schedules" }} className="underline">
           Calendar → Schedules
         </Link>
         .

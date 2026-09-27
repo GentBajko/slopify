@@ -2,7 +2,7 @@
 
 A schedule starts a new project from a saved template at a set local time: every day, on chosen weekdays, or once. Give it a list of topics and each run takes the next one. Turn on topic generation and it asks your text model for new topics before the list runs dry.
 
-**Where to find it:** **Calendar → Edit schedules** (the `/schedules` page sits under the Calendar item in the sidebar). A channel's **Schedules** tab lists the schedules that run its templates.
+**Where to find it:** **Calendar → Schedules**, the second tab on the calendar. Old `/schedules` links and **G then S** open it too. A channel's **Schedules** tab lists the schedules that run its templates.
 
 ## Before you start
 
@@ -12,7 +12,7 @@ A schedule starts a new project from a saved template at a set local time: every
 
 ## Create a schedule
 
-1. Open **Calendar**, then **Edit schedules**, and press **New schedule**.
+1. Open **Calendar**, then the **Schedules** tab, and press **New schedule**.
 2. Fill in **Name** (up to 200 characters). It never appears in the videos.
 3. Pick the **Template** each run starts from. The schedule keeps the template's current version.
 4. Choose the **Cadence** and times (see below).

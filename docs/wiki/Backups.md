@@ -43,7 +43,7 @@ How an import merges:
 
 - Projects already here are skipped.
 - A name that is already taken arrives with "(imported)" after it.
-- Schedules arrive paused, so nothing starts by surprise. Resume them on the schedules page.
+- Schedules arrive paused, so nothing starts by surprise. Resume them on **Calendar → Schedules**.
 - Channels merge by id. The default channel "My channel" takes the backup's settings only while this install's default is untouched; otherwise yours is kept. Cast members, pictures, episode memories and existing videos come into the channel that is here. A video title the channel already has is skipped.
 - A prompt's history comes with the prompt when the prompt itself came in.
 - Pictures stored in the database are checked against their SHA-256 hash on import.
