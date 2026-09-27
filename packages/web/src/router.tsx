@@ -3,6 +3,7 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  lazyRouteComponent,
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
@@ -337,6 +338,21 @@ function useLeaveEntries(): (category: EntryCategory) => void {
   };
 }
 
+// Dev only: the design-system gallery (routes/design.tsx). Vite replaces the flag with
+// `false` in a production build, so the route is never built and its chunk drops out.
+function makeDesignRoute() {
+  return createRoute({
+    getParentRoute: () => rootRoute,
+    path: "design",
+    component: lazyRouteComponent(() => import("@/routes/design"), "DesignRoute"),
+  });
+}
+
+// Typed as present so the tree's types stay exact; nothing links to /design.
+const devRoutes = (import.meta.env.DEV ? { designRoute: makeDesignRoute() } : {}) as {
+  designRoute: ReturnType<typeof makeDesignRoute>;
+};
+
 const routeTree = rootRoute.addChildren({
   projectsRoute,
   playRoute,
@@ -357,6 +373,7 @@ const routeTree = rootRoute.addChildren({
   documentThemeRoute,
   settingsRoute,
   usageRoute,
+  ...devRoutes,
 });
 
 export function createAppRouter() {
