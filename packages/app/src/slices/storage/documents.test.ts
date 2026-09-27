@@ -28,7 +28,12 @@ describe("nodeDocumentsHost", () => {
     const path = "C:\\Users\\Élodie\\OneDrive - Société\\Документы";
     const exec = async () => new TextEncoder().encode(`${path}\r\n`);
     const node = nodeDocumentsHost(exec);
-    const windows: DocumentsHost = { ...node, platform: "win32", home: "C:\\Users\\Élodie", env: {} };
+    const windows: DocumentsHost = {
+      ...node,
+      platform: "win32",
+      home: "C:\\Users\\Élodie",
+      env: {},
+    };
     expect(await documentsDir(windows)).toBe(path);
   });
 });

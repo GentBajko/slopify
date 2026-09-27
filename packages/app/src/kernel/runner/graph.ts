@@ -4,7 +4,8 @@ import type { ProjectState, StageKind, StageState } from "../pipeline.js";
 // audio-only export narrow these dependencies through dependenciesOf(). The document is
 // laid out from the article alone, with the thumbnail as its cover when there is one, so it
 // runs beside narration and images rather than after them. The video never reads the
-// thumbnail, so a thumbnail that fails does not hold the video back.
+// thumbnail, so a thumbnail that fails does not hold the video back; neither does it hold
+// the document back (see `optionalDeps`).
 export const deps = {
   research: [],
   article: ["research"],
@@ -15,9 +16,27 @@ export const deps = {
   document: ["article", "thumbnail"],
 } as const satisfies Readonly<Record<StageKind, readonly StageKind[]>>;
 
+// Dependencies a stage waits for but can do without: the document takes the thumbnail as its
+// cover when there is one. A thumbnail that failed or was canceled releases the document,
+// which is then laid out with no cover, instead of holding it back with it. Making the
+// thumbnail again still redoes the document (reruns/cascade.ts follows `deps`), so it gets
+// its cover then.
+export const optionalDeps: Readonly<Partial<Record<StageKind, readonly StageKind[]>>> = {
+  document: ["thumbnail"],
+};
+
 // `provided` and `skipped` release a dependency exactly as `done` does.
 export function satisfied(state: StageState): boolean {
   return state === "done" || state === "provided" || state === "skipped";
+}
+
+// Whether `dependency`, in `state`, lets `kind` start.
+export function releases(kind: StageKind, dependency: StageKind, state: StageState): boolean {
+  if (satisfied(state)) return true;
+  return (
+    (state === "failed" || state === "canceled") &&
+    (optionalDeps[kind]?.includes(dependency) ?? false)
+  );
 }
 
 export interface StageStanding {

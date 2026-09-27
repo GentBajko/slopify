@@ -22,7 +22,10 @@ to wait and runs again by itself.
 ## Done with problems
 
 A failed step stops only the steps that need its output. The video never reads the thumbnail,
-so a failed thumbnail leaves the video rendering. A run whose main output was made (the video;
+so a failed thumbnail leaves the video rendering. The PDF only borrows the thumbnail as its
+cover: once the thumbnail has failed for good (or was canceled) the document is laid out with
+no cover, and making the thumbnail again later marks the document outdated so it can pick the
+cover up. A run whose main output was made (the video;
 or the narration when there is no video; or the article when there is neither) while another
 step failed ends **done with problems**, not failed, and each failed step shows its error and
 fix-it button.

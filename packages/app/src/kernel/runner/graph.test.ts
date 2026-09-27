@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { StageKind, StageState } from "../pipeline.js";
 import { stageKinds } from "../pipeline.js";
-import { dependenciesOf, deps, derive, progressOf, satisfied } from "./graph.js";
+import { dependenciesOf, deps, derive, progressOf, releases, satisfied } from "./graph.js";
 
 // A stage not named is waiting, except the document: most runs don't ask for one.
 function stages(states: Partial<Record<StageKind, StageState>>): Array<{
@@ -55,6 +55,21 @@ describe("satisfied", () => {
   });
 });
 
+describe("releases", () => {
+  it("lets a failed or canceled thumbnail release the document, which does without a cover", () => {
+    expect(releases("document", "thumbnail", "failed")).toBe(true);
+    expect(releases("document", "thumbnail", "canceled")).toBe(true);
+    expect(releases("document", "thumbnail", "running")).toBe(false);
+    expect(releases("document", "thumbnail", "pending")).toBe(false);
+  });
+
+  it("keeps every required dependency strict", () => {
+    expect(releases("document", "article", "failed")).toBe(false);
+    expect(releases("video", "audio", "failed")).toBe(false);
+    expect(releases("video", "audio", "done")).toBe(true);
+  });
+});
+
 describe("derive", () => {
   it("reads running while any stage runs, whatever else has happened", () => {
     expect(derive(stages({ research: "running" }))).toBe("running");
@@ -73,7 +88,7 @@ describe("derive", () => {
 
   it("reads done with problems when the video was made and another step failed", () => {
     expect(derive(stages({ thumbnail: "failed", video: "done" }))).toBe("partial");
-    // A document blocked behind the failed thumbnail does not undo the finished video.
+    // A document still waiting beside the failed thumbnail does not undo the finished video.
     expect(derive(stages({ thumbnail: "failed", document: "pending", video: "done" }))).toBe(
       "partial",
     );
