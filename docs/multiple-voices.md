@@ -39,6 +39,11 @@ the glossary's `Term: /IPA/` format (Inworld TTS-2 voices). The voice under Audi
 the intro and outro. **Audition** reads the speaker's first line of the script (or a sample
 line) in their voice; the button shows the price first and nothing is spoken until you click.
 
+A pronunciation row the narration can't use (no slashes, ARPAbet, sounds the project's language
+doesn't use) is skipped and that word is read as ordinary text; the rest still apply. The
+Speakers panel says which entries of which speaker are skipped and why as you type, and the
+rebuild review lists them again for speakers on Inworld TTS-2 voices.
+
 **Speakers are cast.** A channel's cast member can have a voice (Channels → the channel → Cast
 → edit a member → Voice). **Add from the cast** on the Speakers panel adds any member with a
 voice; every run started later takes that member's voice, pace and pronunciations as they are
@@ -47,8 +52,9 @@ voice they were made with.
 
 Every turn is its own request in its speaker's voice, joined with the **gap between turns**.
 Consecutive turns of speakers on ElevenLabs v3 go to ElevenLabs' Text to Dialogue in one
-request unless **One request for consecutive turns** is off. Changing one speaker's voice
-remakes only that speaker's turns.
+request unless **One request for consecutive turns** is off. Narration aliases apply to every
+line of that request, each turn on its own, and the request's size limit counts the aliased
+text. Changing one speaker's voice remakes only that speaker's turns.
 
 ## Captions and files
 

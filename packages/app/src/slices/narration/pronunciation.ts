@@ -147,6 +147,38 @@ export function skippedGlossaryNotice(skipped: readonly SkippedGlossaryRow[]): s
   );
 }
 
+// A speaker's own pronunciations (Speakers → Pronunciations for …) are parsed the same way, and
+// their bad rows are skipped the same way, so the run review and the speakers editor both say
+// which ones: by speaker name and entry number, never the row's text.
+export interface SkippedSpeakerPronunciations {
+  readonly speaker: string;
+  readonly skipped: readonly SkippedGlossaryRow[];
+}
+export function skippedSpeakerPronunciations(
+  speakers: readonly { readonly name: string; readonly pronunciations?: string | undefined }[],
+  language?: string | undefined,
+): readonly SkippedSpeakerPronunciations[] {
+  return speakers.flatMap((speaker) => {
+    if (!speaker.pronunciations?.trim()) return [];
+    const parsed = parsePronunciationGlossary(speaker.pronunciations, language);
+    const skipped = parsed.ok ? (parsed.skipped ?? []) : [];
+    return skipped.length === 0 ? [] : [{ speaker: speaker.name.trim() || "A speaker", skipped }];
+  });
+}
+export function skippedSpeakerPronunciationsNotice(
+  rows: readonly SkippedSpeakerPronunciations[],
+): string | null {
+  if (rows.length === 0) return null;
+  const parts = rows.map(
+    (row) =>
+      `${row.speaker}: ${row.skipped.map((one) => `entry ${one.row}: ${one.reason}`).join("; ")}`,
+  );
+  return (
+    `Speaker pronunciations: some entries are skipped and read as ordinary text (${parts.join(". ")}). ` +
+    "The rest are used. To use them, fix those entries under Speakers → Pronunciations for that speaker (Play → Audio, or Edit project → Providers)."
+  );
+}
+
 export interface PronunciationSpan {
   readonly start: number;
   readonly end: number;

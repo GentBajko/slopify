@@ -30,11 +30,18 @@ const voices: readonly Voice[] = [
   { id: "2", provider: "openai-tts", voiceId: "echo", name: "Echo" },
 ];
 
-function Subject({ initial }: { readonly initial?: VoicesSettings }): ReactElement {
+function Subject({
+  initial,
+  language,
+}: {
+  readonly initial?: VoicesSettings;
+  readonly language?: string;
+}): ReactElement {
   const [value, setValue] = useState<VoicesSettings | undefined>(initial);
   return (
     <>
       <SpeakersEditor
+        language={language}
         value={value}
         onChange={setValue}
         providers={providers}
@@ -209,4 +216,49 @@ it("adds a cast member with a voice as a speaker, keeping the link to the cast",
     castId: "0b7c1f2e-0000-4000-8000-000000000001",
   });
   expect(screen.getByLabelText<HTMLSelectElement>("Add from the cast").disabled).toBe(true);
+});
+
+it("names the pronunciations a speaker's narration would skip and clears once they are fixed", async () => {
+  const user = userEvent.setup();
+  const withPronunciations = (pronunciations: string): VoicesSettings => ({
+    format: "podcast",
+    source: "script",
+    speakers: [
+      {
+        id: "a",
+        name: "Alex",
+        role: "host",
+        voice: { provider: "inworld", model: "inworld-tts-2", voice: "v" },
+        pronunciations,
+      },
+      { id: "s", name: "Sam", role: "host", voice: { provider: "", model: "", voice: "" } },
+    ],
+    turnGapSeconds: 0.35,
+    nameTags: true,
+    nativeDialogue: false,
+    audioFiles: false,
+  });
+  const rows = "Arda: /ˈɑɹdə/\nTiamat: TEE-ah-mat\nGarcia: /ɡɑɹˈçiə/";
+  const view = renderRouted(
+    <Subject language="en" initial={withPronunciations(rows)} />,
+    testDeps({}),
+  );
+  const title = await screen.findByText("2 pronunciations for Alex are skipped");
+  const notice = title.closest('[role="status"]');
+  if (notice === null) throw new Error("The notice should be a status callout");
+  expect(notice.textContent).toContain("Entry 2: use slash-delimited standard-English IPA.");
+  expect(notice.textContent).toContain("Entry 3: use standard-English IPA only");
+  expect(notice.textContent).toContain("Fix them in Pronunciations for Alex above");
+  // The row's own text is never echoed back.
+  expect(notice.textContent).not.toContain("TEE-ah-mat");
+  // Fixing the rows clears the notice.
+  const field = screen.getByLabelText("Pronunciations for Alex");
+  await user.clear(field);
+  await user.type(field, "Arda: /ˈɑɹdə/");
+  expect(screen.queryByText(/pronunciations? for Alex (is|are) skipped/u)).toBeNull();
+  view.unmount();
+  // A French project accepts French sounds; only the ARPAbet-style row is left.
+  renderRouted(<Subject language="fr" initial={withPronunciations(rows)} />, testDeps({}));
+  expect(await screen.findByText("1 pronunciation for Alex is skipped")).toBeTruthy();
+  expect(screen.getByText("Entry 2: use slash-delimited IPA.")).toBeTruthy();
 });
