@@ -7,7 +7,7 @@ import { PlayForm } from "@/routes/play";
 import { renderRouted, testDeps } from "@/test-app";
 import { PlayDraftProvider } from "./draft-context";
 import { freshDraftDocument } from "./draft-state";
-import { mountPlay, playRoutes } from "./play-test-fixture";
+import { mountPlay, openRow, playRoutes } from "./play-test-fixture";
 import { reviewHarness, reviewStorage } from "./review-test-harness";
 import { oneOffNotes } from "./save-template-dialog";
 import { rowOf, rowsOfSection } from "./setup-rows";
@@ -174,4 +174,25 @@ it("offers every Play action in the command palette", async () => {
   expect(screen.getByLabelText("Title of another video")).not.toBeNull();
   await run("Save as template");
   expect(await screen.findByRole("dialog", { name: "Save as template" })).not.toBeNull();
+});
+
+it("names each stage once: the row says it, the editor under it starts at its source", async () => {
+  await mountPlay();
+  for (const [row, stage] of [
+    ["Article", "Article"],
+    ["Narration", "Audio"],
+    ["Images", "Images"],
+    ["Video and style", "Export"],
+  ] as const) {
+    await openRow(row);
+    const editor = screen.getByRole("region", { name: row });
+    expect(within(editor).queryByRole("heading", { name: stage })).toBeNull();
+    expect(within(editor).getAllByText("Source").length).toBeGreaterThan(0);
+  }
+  // A part of a row that is not the row itself keeps its own heading.
+  expect(
+    within(screen.getByRole("region", { name: "Article" })).getByRole("heading", {
+      name: "Research",
+    }),
+  ).not.toBeNull();
 });

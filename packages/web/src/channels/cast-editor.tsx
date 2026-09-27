@@ -10,6 +10,7 @@ import { Rule } from "@/components/kit/layout";
 import { MediaFrame } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
 import { Badge, Chip } from "@/components/kit/status";
+import { useVoicesForLanguage, VoiceLanguageNote } from "@/language/voice-language";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
 import { providersQuery, voicesQuery } from "@/queries";
 import {
@@ -19,6 +20,7 @@ import {
   castKindLabels,
   castKinds,
   channelKey,
+  channelQuery,
   channelsKey,
   createCastMember,
   deleteCastImage,
@@ -180,7 +182,7 @@ export function CastEditor({
             onChange={(event) => setDescription(event.target.value)}
           />
         </Field>
-        <CastVoiceFields value={voice} onChange={setVoice} />
+        <CastVoiceFields channelId={channelId} value={voice} onChange={setVoice} />
         <div className="flex flex-wrap items-center gap-3">
           <StatusSlot tone={save.error ? "error" : "info"}>
             {save.error?.message ??
@@ -355,18 +357,26 @@ function Pictures({
 
 // How this member speaks when a multi-voice run casts them: the Speakers panel on Play offers
 // every member with a voice, and a run takes the voice as it is when the run starts.
+// The voices listed are the ones that speak the channel's language, with Show all voices for
+// the rest, as on Play.
 function CastVoiceFields({
+  channelId,
   value,
   onChange,
 }: {
+  readonly channelId: string;
   readonly value: CastVoice | undefined;
   readonly onChange: (next: CastVoice | undefined) => void;
 }): ReactElement {
   const { api } = useApp();
   const providers = useQuery(providersQuery(api));
   const voices = useQuery(voicesQuery(api));
+  const channel = useQuery(channelQuery(api, channelId));
+  const language = channel.data?.channel.brand.language ?? "en";
   const voice = value ?? { provider: "", model: "", voice: "" };
-  const mine = (voices.data?.voices ?? []).filter((one) => one.provider === voice.provider);
+  const ofProvider = (voices.data?.voices ?? []).filter((one) => one.provider === voice.provider);
+  const byLanguage = useVoicesForLanguage(ofProvider, language, voice.voice || undefined);
+  const mine = byLanguage.listed;
   return (
     <fieldset className="m-0 flex flex-col gap-3 border-0 border-t border-line p-0 pt-4">
       <legend className="sl-kicker">Voice</legend>
@@ -399,6 +409,13 @@ function CastVoiceFields({
           options={mine.map((one) => ({ value: one.voiceId, label: one.name }))}
           problem={undefined}
           onPick={(picked) => onChange({ ...voice, voice: picked })}
+        />
+        <VoiceLanguageNote
+          language={language}
+          voice={ofProvider.find((one) => one.voiceId === voice.voice)}
+          hidden={byLanguage.hidden}
+          showAll={byLanguage.showAll}
+          onShowAll={byLanguage.setShowAll}
         />
         <OptionPicker
           label="Pace"

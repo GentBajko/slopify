@@ -4,7 +4,8 @@ import { KeywordList } from "@/components/keyword-list";
 
 // Play's keywords: the shared list, fed from the fields the picked prompts ask for. `topics`
 // are the keywords the project title names; `hide` leaves out the ones drawn elsewhere (the
-// Topic field at the top of Play).
+// Topic field at the top of Play). It sits in the Title and keywords row, which names it, so it
+// has no heading of its own.
 export function KeywordBlock({
   fields,
   values,
@@ -25,9 +26,8 @@ export function KeywordBlock({
   const shown = fields.filter((field) => !hide.includes(field.name));
   if (!shown.length) return null;
   return (
-    <section className="min-w-0 py-2">
-      <h3 className="m-0 mb-1 text-title-3">Keywords</h3>
-      <p className="m-0 mb-4 text-small text-ink-2">
+    <section aria-label="Keywords" className="min-w-0">
+      <p className="m-0 mb-3 text-small text-ink-2">
         Each keyword is entered once and fills every place that names it.
       </p>
       <KeywordList

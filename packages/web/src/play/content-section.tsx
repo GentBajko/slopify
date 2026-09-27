@@ -1,7 +1,7 @@
 import type { Entry } from "@app/slices/library/model.js";
 import type { ReactElement } from "react";
-import { InfoTip } from "@/components/kit/info-tip";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/kit/button";
+import { SectionHead } from "@/components/kit/section-head";
 import { articleKind } from "./article-kind";
 import { ModelPicker, ProviderPicker } from "./pickers";
 import type { RailProps } from "./rail-frame";
@@ -22,7 +22,7 @@ export function ContentSection(
   );
   return (
     <>
-      <ArticleRail {...props} />
+      <ArticleRail {...props} titled={false} />
       {form.sources.article === "generate" ? (
         <div className="flex flex-wrap items-start gap-3 py-3">
           {prompt ? (
@@ -44,7 +44,7 @@ export function ContentSection(
                 : `No ${articleKind(form)} prompts saved. Create a prompt to begin.`}
             </p>
           )}
-          <Button variant="ghost" onClick={() => onLibrary("/prompts")}>
+          <Button variant="quiet" size="small" onClick={() => onLibrary("/prompts")}>
             Create prompt
           </Button>
         </div>
@@ -55,20 +55,17 @@ export function ContentSection(
         </p>
       )}
       {needsLlm(form, entries) ? (
-        <section className="border-y border-line py-4">
-          <div className="mb-3 flex items-center gap-1">
-            <h3 className="text-row font-semibold">Text generation</h3>
-            <InfoTip label="text generation">
-              <p>
-                Shared by generated article, research, thumbnail wording, generated entries and
-                Narration Preparation when enabled.
-              </p>
-            </InfoTip>
-            <span className="flex-1" />
-            <Button variant="ghost" onClick={() => onLibrary("/settings")}>
+        <section aria-label="Text generation" className="border-y border-line py-4">
+          <SectionHead
+            as="h3"
+            title="Text generation"
+            info="Shared by generated article, research, thumbnail wording, generated entries and Narration Preparation when enabled."
+            className="pb-3"
+          >
+            <Button variant="quiet" size="small" onClick={() => onLibrary("/settings")}>
               Settings
             </Button>
-          </div>
+          </SectionHead>
           <div className="grid grid-cols-1 gap-4 min-[700px]:grid-cols-2">
             <ProviderPicker
               field="llm.provider"

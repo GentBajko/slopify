@@ -26,10 +26,12 @@ import { type StylePreviewSettings, sampleCues } from "./settings.js";
 // ASS script `prepareSubtitles` writes, and `renderSlideshow` encodes it clip by clip. Only the
 // inputs are stand-ins: three stills and silence made locally, no provider is ever called.
 
+// `picture` is a still to draw every shot from instead of the sample stills.
 export type StylePreviewRenderer = (
   settings: StylePreviewSettings,
   output: string,
   signal: AbortSignal,
+  picture?: string,
 ) => Promise<void>;
 
 export type StylePreviewFailure = "ffmpeg-missing" | "font-missing" | "render-failed";
@@ -85,9 +87,12 @@ export function ffmpegStylePreview(deps: FfmpegPreviewDeps): StylePreviewRendere
     });
     return samples;
   };
-  return async (settings, output, signal) => {
+  return async (settings, output, signal, picture) => {
     try {
-      const images = await ensureSamples(signal);
+      // A real picture is shown for all three shots: the motion, the Look and the captions read
+      // on it, and the transition and chapter card still show at the cuts.
+      const images =
+        picture === undefined ? await ensureSamples(signal) : [picture, picture, picture];
       await renderPreview(deps, settings, images, output, signal);
     } catch (error) {
       throw explained(deps.log, error);
@@ -126,6 +131,8 @@ async function renderPreview(
   output: string,
   signal: AbortSignal,
 ): Promise<void> {
+  // A render on a given picture never made the stills, which is what created the folder.
+  mkdirSync(deps.dir, { recursive: true, mode: 0o700 });
   const workspace = mkdtempSync(join(deps.dir, "work-"));
   try {
     const cardFont =

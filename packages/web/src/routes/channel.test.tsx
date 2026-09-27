@@ -253,4 +253,33 @@ describe("Channels", () => {
       description: "",
     });
   });
+
+  it("offers a cast member the voices that speak the channel's language, with Show all voices", async () => {
+    const user = userEvent.setup();
+    renderRouted(
+      <Page start="cast" />,
+      testDeps({
+        ...common,
+        [`GET /api/channels/${id}`]: jsonAnswer({
+          channel: { ...channel, brand: { language: "de" } },
+          cast: [{ ...tiamat, voice: { provider: "openai-tts", model: "tts-1", voice: "" } }],
+        }),
+        "GET /api/settings/voices": jsonAnswer({
+          voices: [
+            { id: "1", provider: "openai-tts", voiceId: "alloy", name: "Alloy", languages: ["en"] },
+            { id: "2", provider: "openai-tts", voiceId: "echo", name: "Echo", languages: ["de"] },
+          ],
+        }),
+      }),
+    );
+    const grid = await screen.findByRole("region", { name: "Cast" });
+    await user.click(within(grid).getByRole("button", { name: "Edit Tiamat" }));
+    const names = () =>
+      within(screen.getByLabelText("Voice"))
+        .getAllByRole("option")
+        .map((option) => option.textContent);
+    await waitFor(() => expect(names()).toEqual(["Pick a voice", "Echo"]));
+    await user.click(screen.getByLabelText(/Show all voices/));
+    expect(names()).toEqual(["Pick a voice", "Alloy", "Echo"]);
+  });
 });

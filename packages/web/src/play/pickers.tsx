@@ -5,7 +5,6 @@ import { type ReactNode, useId, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Picker } from "@/components/ui/picker";
 import { customModelFallback, listProviderModels, modelsKey, modelsQuery } from "@/lib/models";
 import { providerUnavailableLabel } from "@/lib/provider-status";
@@ -47,15 +46,18 @@ export function LabelledField({
   return (
     <div
       className={cn(
-        inline ? "flex min-w-0 max-w-full items-center gap-[10px]" : "min-w-0 [&>span]:w-full",
+        inline
+          ? "flex min-w-0 max-w-full flex-wrap items-center gap-x-[10px] gap-y-1"
+          : "sl-field [&>span]:w-full",
       )}
     >
-      <Label htmlFor={fieldId} className={inline ? "shrink-0" : "mb-[5px]"}>
+      {/* The kit's field label and error, as Field draws them. */}
+      <label htmlFor={fieldId} className={cn("sl-field__label", inline && "shrink-0")}>
         {label}
-      </Label>
+      </label>
       {children({ field, id: fieldId, describedBy: problem === undefined ? undefined : noteId })}
       {problem === undefined ? null : (
-        <p id={noteId} className={cn("text-label text-red", inline ? "" : "mt-1")}>
+        <p id={noteId} className={cn("sl-field__error m-0", inline && "basis-full")}>
           {problem}
         </p>
       )}

@@ -1,5 +1,8 @@
 import type { Format } from "@app/kernel/pipeline.js";
-import { stylePreviewRequestSchema } from "@app/slices/style-preview/schema.js";
+import {
+  type StylePreviewImage,
+  stylePreviewRequestSchema,
+} from "@app/slices/style-preview/schema.js";
 import type { SubtitleConfig } from "@app/slices/subtitles/model.js";
 import type { VideoEditSettings } from "@app/slices/video/edit-settings.js";
 import { useQuery } from "@tanstack/react-query";
@@ -26,6 +29,8 @@ export interface StylePreviewSettings {
   };
   readonly videoEdit?: VideoEditSettings | undefined;
   readonly previewText?: string | undefined;
+  // A picture to draw the preview on instead of the sample stills.
+  readonly image?: StylePreviewImage | undefined;
 }
 
 // ceiling: long enough that typing a size or stepping through pickers renders once.
@@ -40,13 +45,18 @@ type State =
 export function StylePreview({
   settings,
   label = "Style preview",
+  drawnOn,
 }: {
   readonly settings: StylePreviewSettings;
   readonly label?: string;
+  // What the picture in settings.image is, in words ("the establishing image").
+  readonly drawnOn?: string | undefined;
 }): ReactElement {
   const { api } = useApp();
   const fonts = useQuery({ queryKey: fontsKey, queryFn: () => listFonts(api), staleTime: 60_000 });
-  const { format, subtitles, videoEdit, previewText } = settings;
+  const { format, subtitles, videoEdit, previewText, image } = settings;
+  // The picture as text too: a new but equal object must not render again.
+  const picture = image === undefined ? "" : JSON.stringify(image);
   // The request as text, so an equal object from a new render does not render again.
   const request = useMemo(
     () =>
@@ -60,6 +70,7 @@ export function StylePreview({
         },
         ...(videoEdit === undefined ? {} : { videoEdit }),
         ...(previewText === undefined || previewText.trim() === "" ? {} : { previewText }),
+        ...(picture === "" ? {} : { image: JSON.parse(picture) as unknown }),
       }),
     [
       format,
@@ -69,6 +80,7 @@ export function StylePreview({
       subtitles.position,
       videoEdit,
       previewText,
+      picture,
     ],
   );
   const valid = useMemo(
@@ -168,7 +180,10 @@ export function StylePreview({
           The preview renders again once the caption size is between 16 and 120.
         </p>
       )}
-      <p className="text-small text-ink-2">{summary}</p>
+      <p className="text-small text-ink-2">
+        {summary}
+        {image === undefined || drawnOn === undefined ? "" : ` · Drawn on ${drawnOn}`}
+      </p>
     </section>
   );
 }
