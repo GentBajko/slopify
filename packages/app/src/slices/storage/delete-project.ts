@@ -3,12 +3,13 @@ import type { DatabaseSync } from "node:sqlite";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
 import { derive } from "../../kernel/runner/graph.js";
-import { projectExists, stagesOf } from "../admission/repo.js";
+import { stagesOf } from "../admission/repo.js";
 import { projectDir } from "./layout.js";
 
-// Delete on a project is refused while it is `running`; otherwise it removes the database rows
-// and the folder. It is irreversible and it is only available from the app. The confirmation in
-// front of it is 07 Projects'.
+// Removing a project for good is refused while it is `running`; otherwise it removes the
+// database rows and the folder. Delete on 07 Projects only moves a project to the trash
+// (`slices/trash`); this runs from Settings → Trash's Delete now and the daily purge, so a
+// project in the trash is found here too.
 
 export interface DeleteDeps {
   readonly db: DatabaseSync;
@@ -30,14 +31,21 @@ export type DeleteResult =
   | { readonly ok: true }
   | { readonly ok: false; readonly reason: DeleteRefusal; readonly detail?: string };
 
+// A run in flight: a call the runner holds, or a stage running or waiting out a retry.
+export function projectBusy(
+  deps: Pick<DeleteDeps, "db" | "hasInflight">,
+  projectId: string,
+): boolean {
+  return (
+    deps.hasInflight?.(projectId) === true || derive(stagesOf(deps.db, projectId)) === "running"
+  );
+}
+
 export function deleteProject(deps: DeleteDeps, projectId: string): DeleteResult {
-  if (!projectExists(deps.db, projectId)) {
+  if (deps.db.prepare("SELECT 1 FROM projects WHERE id = ?").get(projectId) === undefined) {
     return { ok: false, reason: "no-project" };
   }
-  if (
-    deps.hasInflight?.(projectId) === true ||
-    derive(stagesOf(deps.db, projectId)) === "running"
-  ) {
+  if (projectBusy(deps, projectId)) {
     return { ok: false, reason: "running" };
   }
 

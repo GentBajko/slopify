@@ -29,6 +29,8 @@ const slotsColumn = z.array(z.string());
 // `lower(name)` and not `name COLLATE NOCASE`: it is the expression the unique indexes
 // are built on, so a lookup by name reads the index instead of the table.
 const byName = "lower(name) = lower(?)";
+// A row in the trash is invisible to every read and write here; `slices/trash` owns it.
+const live = "deleted_at IS NULL";
 // The lists on 04 Prompts and the pickers on Play sort by name.
 const byNameOrder = "ORDER BY lower(name)";
 
@@ -50,7 +52,7 @@ export function insertPrompt(db: DatabaseSync, prompt: Prompt): void {
 export function replacePrompt(db: DatabaseSync, prompt: Prompt): boolean {
   const result = db
     .prepare(
-      "UPDATE prompts SET kind = ?, name = ?, body = ?, slots = ?, updated_at = ? WHERE id = ?",
+      `UPDATE prompts SET kind = ?, name = ?, body = ?, slots = ?, updated_at = ? WHERE id = ? AND ${live}`,
     )
     .run(
       prompt.kind,
@@ -63,26 +65,33 @@ export function replacePrompt(db: DatabaseSync, prompt: Prompt): boolean {
   return Number(result.changes) > 0;
 }
 
-// No foreign key points at this row, so a project that used the template keeps
-// its own rendered text and nothing cascades.
-export function deletePrompt(db: DatabaseSync, id: string): boolean {
-  return Number(db.prepare("DELETE FROM prompts WHERE id = ?").run(id).changes) > 0;
+// Delete moves the row to the trash (Settings → Trash): it keeps its versions and leaves
+// every list and lookup here. No foreign key points at it, so a project that used the
+// template keeps its own rendered text either way. `slices/trash` removes it for good.
+export function trashPrompt(db: DatabaseSync, id: string, at: string): boolean {
+  return (
+    Number(
+      db.prepare(`UPDATE prompts SET deleted_at = ? WHERE id = ? AND ${live}`).run(at, id).changes,
+    ) > 0
+  );
 }
 
 export function listPrompts(db: DatabaseSync): readonly Prompt[] {
   return db
-    .prepare(`SELECT * FROM prompts ${byNameOrder}`)
+    .prepare(`SELECT * FROM prompts WHERE ${live} ${byNameOrder}`)
     .all()
     .map((row) => toPrompt(promptRow.parse(row)));
 }
 
 export function promptById(db: DatabaseSync, id: string): Prompt | undefined {
-  const row = db.prepare("SELECT * FROM prompts WHERE id = ?").get(id);
+  const row = db.prepare(`SELECT * FROM prompts WHERE id = ? AND ${live}`).get(id);
   return row === undefined ? undefined : toPrompt(promptRow.parse(row));
 }
 
 export function promptByName(db: DatabaseSync, kind: PromptKind, name: string): Prompt | undefined {
-  const row = db.prepare(`SELECT * FROM prompts WHERE kind = ? AND ${byName}`).get(kind, name);
+  const row = db
+    .prepare(`SELECT * FROM prompts WHERE kind = ? AND ${byName} AND ${live}`)
+    .get(kind, name);
   return row === undefined ? undefined : toPrompt(promptRow.parse(row));
 }
 
@@ -103,7 +112,7 @@ export function insertEntry(db: DatabaseSync, entry: Entry): void {
 export function replaceEntry(db: DatabaseSync, entry: Entry): boolean {
   const result = db
     .prepare(
-      "UPDATE entries SET category = ?, mode = ?, name = ?, body = ?, slots = ?, updated_at = ? WHERE id = ?",
+      `UPDATE entries SET category = ?, mode = ?, name = ?, body = ?, slots = ?, updated_at = ? WHERE id = ? AND ${live}`,
     )
     .run(
       entry.category,
@@ -117,19 +126,23 @@ export function replaceEntry(db: DatabaseSync, entry: Entry): boolean {
   return Number(result.changes) > 0;
 }
 
-export function deleteEntry(db: DatabaseSync, id: string): boolean {
-  return Number(db.prepare("DELETE FROM entries WHERE id = ?").run(id).changes) > 0;
+export function trashEntry(db: DatabaseSync, id: string, at: string): boolean {
+  return (
+    Number(
+      db.prepare(`UPDATE entries SET deleted_at = ? WHERE id = ? AND ${live}`).run(at, id).changes,
+    ) > 0
+  );
 }
 
 export function listEntries(db: DatabaseSync): readonly Entry[] {
   return db
-    .prepare(`SELECT * FROM entries ${byNameOrder}`)
+    .prepare(`SELECT * FROM entries WHERE ${live} ${byNameOrder}`)
     .all()
     .map((row) => toEntry(entryRow.parse(row)));
 }
 
 export function entryById(db: DatabaseSync, id: string): Entry | undefined {
-  const row = db.prepare("SELECT * FROM entries WHERE id = ?").get(id);
+  const row = db.prepare(`SELECT * FROM entries WHERE id = ? AND ${live}`).get(id);
   return row === undefined ? undefined : toEntry(entryRow.parse(row));
 }
 
@@ -139,7 +152,7 @@ export function entryByName(
   name: string,
 ): Entry | undefined {
   const row = db
-    .prepare(`SELECT * FROM entries WHERE category = ? AND ${byName}`)
+    .prepare(`SELECT * FROM entries WHERE category = ? AND ${byName} AND ${live}`)
     .get(category, name);
   return row === undefined ? undefined : toEntry(entryRow.parse(row));
 }

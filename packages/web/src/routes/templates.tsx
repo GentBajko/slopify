@@ -162,7 +162,10 @@ export function TemplatesRoute({
     client.setQueryData<readonly TemplateSummary[]>(templatesKey, (current) =>
       current?.filter((template) => template.id !== deletedId),
     );
-    notify("Template deleted.", "success");
+    notify(
+      "Template moved to the trash. Restore it in Settings → Trash within 30 days.",
+      "success",
+    );
     await client.invalidateQueries({ queryKey: templatesKey });
   }
   const status =
@@ -381,7 +384,10 @@ export function TemplatesRoute({
       <ConfirmDialog
         open={deleting !== null}
         title={`Delete ${deleting?.name ?? "template"}?`}
-        consequence={error ?? "Existing projects and drafts keep their setup."}
+        consequence={
+          error ??
+          "Moves it to the trash for 30 days (Settings → Trash). Existing projects and drafts keep their setup."
+        }
         verb="Delete template"
         pending={pending}
         onConfirm={() => void execute(remove)}

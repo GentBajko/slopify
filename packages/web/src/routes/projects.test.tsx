@@ -157,7 +157,9 @@ describe("deleting a project", () => {
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText('Delete "Rope Tricks"?')).not.toBeNull();
     expect(
-      within(dialog).getByText("Deletes the project and every file it produced."),
+      within(dialog).getByText(
+        "Moves the project to the trash for 30 days. Restore it or delete it for good in Settings → Trash.",
+      ),
     ).not.toBeNull();
     expect(deleted).toBeUndefined();
 

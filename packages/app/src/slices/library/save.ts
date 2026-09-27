@@ -8,19 +8,19 @@ import { transact } from "../../kernel/db/tx.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { FieldError } from "../admission/rules.js";
 import { detectSlots } from "../admission/substitute.js";
-import { deleteVersions, recordVersion, versionOf } from "./history.js";
+import { recordVersion, versionOf } from "./history.js";
 import { lintEntry, lintPrompt } from "./lint.js";
 import type { Entry, EntryDraft, Prompt, PromptDraft } from "./model.js";
 import { entryCategories, promptKinds } from "./model.js";
 import {
-  deleteEntry,
-  deletePrompt,
   entryById,
   insertEntry,
   insertPrompt,
   promptById,
   replaceEntry,
   replacePrompt,
+  trashEntry,
+  trashPrompt,
 } from "./repo.js";
 
 export interface LibraryDeps {
@@ -92,13 +92,12 @@ export function restorePrompt(deps: LibraryDeps, id: string, version: number): S
   return updatePrompt(deps, id, { kind, name: saved.name, body: saved.body }, version);
 }
 
+// Delete moves the prompt to the trash with its history; Settings → Trash puts it back or
+// removes it for good (`slices/trash`).
 export function removePrompt(deps: LibraryDeps, id: string): SaveResult<null> {
-  return transact<SaveResult<null>>(deps.db, () => {
-    deleteVersions(deps.db, "prompt", id);
-    return deletePrompt(deps.db, id)
-      ? { ok: true, value: null }
-      : { ok: false, reason: "not-found" };
-  });
+  return trashPrompt(deps.db, id, deps.clock.now().toISOString())
+    ? { ok: true, value: null }
+    : { ok: false, reason: "not-found" };
 }
 
 export function createEntry(deps: LibraryDeps, draft: EntryDraft): SaveResult<Entry> {
@@ -163,12 +162,9 @@ export function restoreEntry(deps: LibraryDeps, id: string, version: number): Sa
 }
 
 export function removeEntry(deps: LibraryDeps, id: string): SaveResult<null> {
-  return transact<SaveResult<null>>(deps.db, () => {
-    deleteVersions(deps.db, "entry", id);
-    return deleteEntry(deps.db, id)
-      ? { ok: true, value: null }
-      : { ok: false, reason: "not-found" };
-  });
+  return trashEntry(deps.db, id, deps.clock.now().toISOString())
+    ? { ok: true, value: null }
+    : { ok: false, reason: "not-found" };
 }
 
 // The stored `slots` is recomputed from the body on every save, so the column can never

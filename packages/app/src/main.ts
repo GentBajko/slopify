@@ -42,6 +42,8 @@ import { openLog } from "./kernel/log.js";
 import type { Paths } from "./kernel/paths.js";
 import { ensureDirs, layout, subtitleModelDir } from "./kernel/paths.js";
 import { stageKinds } from "./kernel/pipeline.js";
+import type { Usage } from "./kernel/ports/llm.js";
+import type { PlanLimitReading } from "./kernel/ports/plan-limits.js";
 import type { Registry } from "./kernel/ports/registry.js";
 import { sqliteAttempts } from "./kernel/runner/attempt-repo.js";
 import { auditionVoice } from "./kernel/runner/audition.js";
@@ -58,7 +60,7 @@ import { standaloneImage } from "./kernel/runner/standalone.js";
 import type { WorkRef } from "./kernel/runner/work.js";
 import { readVersion } from "./kernel/version.js";
 import { modelSources } from "./model-catalog.js";
-import { projectById, projectPaused } from "./slices/admission/repo.js";
+import { projectById, projectPaused, projectTrashed } from "./slices/admission/repo.js";
 import { createBackupService } from "./slices/backups/service.js";
 import { pumpQueue, queueWaiting } from "./slices/batch/index.js";
 import { settleInterruptedCastImages } from "./slices/channels/cast-images.js";
@@ -68,6 +70,10 @@ import {
   recoverCheckpointWork,
   settleReleasedCheckpoints,
 } from "./slices/checkpoints/recovery.js";
+import {
+  createEpisodeMemoryWatcher,
+  type EpisodeMemoryWatcher,
+} from "./slices/episodes/summarize.js";
 import { resolveFont } from "./slices/fonts/index.js";
 import { createRunNotifier } from "./slices/notifications/notifier.js";
 import { createNotificationSender } from "./slices/notifications/send.js";
@@ -104,6 +110,7 @@ import { createFlusher } from "./slices/telemetry/flush.js";
 import type { RecordEvent } from "./slices/telemetry/model.js";
 import type { TelemetryDeps } from "./slices/telemetry/record.js";
 import { record } from "./slices/telemetry/record.js";
+import { createTrashPurge } from "./slices/trash/service.js";
 import { probeDurationMs } from "./slices/video/ffmpeg.js";
 
 import { watchActivation } from "./updater/candidate.js";
@@ -244,13 +251,19 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       send: sendNotification,
       log,
     });
+    // Episode memory summarises a project that has just finished; wired once the providers
+    // exist, below.
+    let episodes: EpisodeMemoryWatcher | undefined;
     const hub = observedHub(
       createHub({
         ids,
         log,
         acceptEvent: (event) => currentProjectEvent(eventDb, event),
       }),
-      notifier.observe,
+      (event) => {
+        notifier.observe(event);
+        episodes?.observe(event);
+      },
     );
     const version = readVersion();
     const telemetry: TelemetryDeps = { db, ids, clock, log, appVersion: version };
@@ -279,6 +292,34 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       }),
       catalogue,
     );
+    // The summary call belongs to the finished project: it is recorded on its Run cost, but it
+    // is no stage attempt, so it asks the provider directly, like topic generation.
+    const episodeMeter = createUsageMeter({ db, ids, clock, catalogue: () => catalogue.read() });
+    episodes = createEpisodeMemoryWatcher({
+      db,
+      paths,
+      clock,
+      log,
+      uuid: randomUUID,
+      meter: episodeMeter,
+      llm: async (call) => {
+        let text = "";
+        let usage: Usage | null = null;
+        let limits: PlanLimitReading | undefined;
+        for await (const event of registry.llm(call.provider).complete({
+          model: call.model,
+          messages: call.messages,
+          signal: call.signal,
+        })) {
+          if (event.type === "delta") text += event.text;
+          else if (event.type === "done") {
+            usage = event.usage;
+            limits = event.limits;
+          }
+        }
+        return { text, usage, ...(limits === undefined ? {} : { limits }) };
+      },
+    });
     const audioPreviews = createAudioPreviewStore();
     const reviewRedos = createReviewRedos();
     const runner = wireRunner({
@@ -583,6 +624,28 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         log.write("error", "backups.tick", { detail: causedBy(error) });
       });
     }, 60_000);
+    // Settings → Trash keeps deleted items 30 days; once a day (looked at hourly, and once at
+    // start) whatever is older goes for good, a project's folder with it.
+    const trashPurge = createTrashPurge({
+      db: updateDb,
+      paths,
+      clock,
+      log,
+      hasInflight: runner.hasInflight,
+    });
+    const purgeTrash = (): void => {
+      const release = updater.beginMutation();
+      if (!release) return;
+      try {
+        trashPurge.tick();
+      } catch (error) {
+        log.write("error", "trash.purge", { detail: causedBy(error) });
+      } finally {
+        release();
+      }
+    };
+    purgeTrash();
+    const trashTimer = setInterval(purgeTrash, 60 * 60_000);
     listeningPort = portOf(server) ?? config.port;
     // Whatever last run left queued goes out at start. Nothing waits for
     // it, and an unreachable collector costs one refused socket.
@@ -608,10 +671,12 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     shutdown = (): Promise<void> => {
       stopping ??= (async () => {
         notifier.close();
+        episodes?.close();
         clearInterval(queueTimer);
         clearInterval(scheduleTimer);
         clearInterval(retryTimer);
         clearInterval(backupTimer);
+        clearInterval(trashTimer);
         clearInterval(modelTimer);
         const mutationDrain = mutations.stop();
         const scheduleDrain = scheduleTicks.stop();
@@ -634,6 +699,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
           await topicDrain;
           await backupDrain;
           await runner.abortAll();
+          await episodes?.settled();
         } finally {
           serverClose.terminate();
           try {
@@ -754,7 +820,11 @@ export function wireRunner({
       },
       standingsOf: (projectId) => executionStandings(execution, projectId),
       ready: (work) => invocationReady(execution, work),
-      paused: (projectId) => projectPaused(db, projectId) || queueWaiting(db, projectId),
+      // A project in the trash (Settings → Trash) holds like a paused one until it is restored.
+      paused: (projectId) =>
+        projectPaused(db, projectId) ||
+        queueWaiting(db, projectId) ||
+        projectTrashed(db, projectId),
       claim: (work) => {
         const claimed = claimWork(db, work);
         projectStandings(execution, work.projectId);

@@ -189,7 +189,8 @@ export function SchedulesRoute(): ReactElement {
             Deleted schedules · {deletedSchedules.length}
           </summary>
           <p className="mt-2 text-small text-ink2">
-            Deleted schedules cannot run again. Their occurrence history remains available here.
+            Deleted schedules stay in Settings → Trash for 30 days, where Restore brings one back
+            paused. Their occurrence history remains available here.
           </p>
           <section
             className="mt-2 overflow-hidden rounded-panel border border-line bg-panel"
@@ -393,7 +394,7 @@ function ScheduleCard({
         title={confirm === "delete" ? "Delete schedule?" : "Cancel schedule?"}
         consequence={
           (confirm === "delete"
-            ? "Removes this schedule from the active list. Its run history is kept."
+            ? "Moves this schedule to the trash for 30 days (Settings → Trash). Its run history is kept."
             : "Stops future scheduled runs. Existing projects and run history are kept.") +
           (error ? ` ${error}` : "")
         }

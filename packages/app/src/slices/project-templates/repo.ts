@@ -3,7 +3,8 @@ import { z } from "zod";
 import type { ProjectTemplate, TemplateSummary } from "./model.js";
 import { projectTemplateSchema } from "./schema.js";
 
-const select = `SELECT t.id,r.version,r.name,t.created_at AS createdAt,r.created_at AS updatedAt,r.document_json AS document FROM project_templates t JOIN project_template_revisions r ON r.template_id=t.id`;
+// A template in the trash (`deleted_at` set, Settings → Trash) is invisible to every read here.
+const select = `SELECT t.id,r.version,r.name,t.created_at AS createdAt,r.created_at AS updatedAt,r.document_json AS document FROM project_templates t JOIN project_template_revisions r ON r.template_id=t.id AND t.deleted_at IS NULL`;
 const templateSummarySchema = z
   .object({
     id: z.uuid(),

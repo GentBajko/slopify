@@ -150,7 +150,11 @@ describe("the prompts list", () => {
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText('Delete "Documentary dossier"?')).not.toBeNull();
     // Nothing a past project made is touched by this.
-    expect(within(dialog).getByText("Projects that used it keep their text.")).not.toBeNull();
+    expect(
+      within(dialog).getByText(
+        "Moves it to the trash for 30 days (Settings → Trash). Projects that used it keep their text.",
+      ),
+    ).not.toBeNull();
 
     await user.click(within(dialog).getByRole("button", { name: "Delete" }));
     await waitFor(() => {

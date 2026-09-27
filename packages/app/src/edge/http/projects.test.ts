@@ -502,7 +502,7 @@ describe("DELETE /api/projects/:id", () => {
     return created.project.id;
   }
 
-  it("removes the project and its files once the run has stopped", async () => {
+  it("moves the project to the trash once the run has stopped", async () => {
     const { app, db } = harness();
     const id = await made(app);
     db.prepare("UPDATE stages SET state = 'done' WHERE project_id = ?").run(id);
@@ -511,7 +511,15 @@ describe("DELETE /api/projects/:id", () => {
 
     expect(response.status).toBe(204);
     expect(await (await app.request("/api/projects")).json()).toEqual({ projects: [] });
-    expect(db.prepare("SELECT count(*) AS n FROM outputs").get()).toEqual({ n: 0 });
+    // Kept for Settings → Trash: rows and files stay until Delete now or the daily purge.
+    expect(db.prepare("SELECT count(*) AS n FROM outputs").get()).not.toEqual({ n: 0 });
+    const opened = await app.request(`/api/projects/${id}`);
+    expect(opened.status).toBe(404);
+    expect(await opened.json()).toMatchObject({
+      detail: expect.stringMatching(/Settings → Trash/),
+    });
+    const again = await app.request(`/api/projects/${id}`, { method: "DELETE" });
+    expect(again.status).toBe(404);
   });
 
   it("refuses while the run is still going, and names the way out", async () => {

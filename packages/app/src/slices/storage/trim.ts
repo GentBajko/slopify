@@ -3,7 +3,7 @@ import { join, relative, sep } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import type { Paths } from "../../kernel/paths.js";
 import { derive } from "../../kernel/runner/graph.js";
-import { projectPaused, stagesOf } from "../admission/repo.js";
+import { projectExists, projectPaused, stagesOf } from "../admission/repo.js";
 import { backupsFolderName, projectDir } from "./layout.js";
 import type { OutputRole } from "./model.js";
 import { pieceFile } from "./reconcile.js";
@@ -79,8 +79,7 @@ export function projectStorage(deps: TrimDeps, projectId: string): ProjectStorag
 }
 
 export function keepOutputsOnly(deps: TrimDeps, projectId: string): TrimResult {
-  if (deps.db.prepare("SELECT 1 FROM projects WHERE id=?").get(projectId) === undefined)
-    return { ok: false, reason: "no-project" };
+  if (!projectExists(deps.db, projectId)) return { ok: false, reason: "no-project" };
   if (!finished(deps, projectId)) return { ok: false, reason: "not-finished" };
   const files = filesOf(deps.paths, projectId);
   const removable = removablePaths(deps.db, projectId, keptPaths(deps.db, projectId));

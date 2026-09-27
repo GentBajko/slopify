@@ -141,7 +141,9 @@ it("requires the thumbnail-only image provider and generated-entry text provider
   const h = reviewFixture();
   try {
     h.deps.db
-      .prepare("INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES ('p', 'thumbnail', 'Cover', 'Cover art', '[]', 'same')")
+      .prepare(
+        "INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES ('p', 'thumbnail', 'Cover', 'Cover art', '[]', 'same')",
+      )
       .run();
     h.deps.db
       .prepare(

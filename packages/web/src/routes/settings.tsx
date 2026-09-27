@@ -29,6 +29,7 @@ import { schedulesKey } from "@/schedules/api";
 import { StudioSettings } from "@/studio/settings-panel";
 import { fontsKey } from "@/subtitles/api";
 import { templatesKey } from "@/templates/api";
+import { TrashSettings } from "@/trash/trash-settings";
 import { ChannelLinksSettings } from "@/youtube/channel-links";
 import { AboutSettings } from "./settings-about";
 import { BackupSettings } from "./settings-backups";
@@ -93,6 +94,7 @@ export const settingsSections = [
   { id: "studio", label: "YouTube Studio" },
   { id: "storage", label: "Backup & storage" },
   { id: "backups", label: "Backups" },
+  { id: "trash", label: "Trash" },
   { id: "usage", label: "Usage" },
   { id: "about", label: "About" },
 ] as const;
@@ -173,6 +175,7 @@ export function SettingsRoute({
           {section === "studio" ? <StudioSettings /> : null}
           {section === "storage" ? <StorageTools /> : null}
           {section === "backups" ? <BackupSettings /> : null}
+          {section === "trash" ? <TrashSettings /> : null}
           {section === "usage" ? (
             <SectionHead
               title="Usage"
@@ -422,7 +425,8 @@ function StorageTools() {
   );
 }
 
-function counted(label: string, counts: ItemCounts): string | null {
+function counted(label: string, counts: ItemCounts | undefined): string | null {
+  if (counts === undefined) return null;
   const parts = [
     counts.added > 0 ? `${counts.added} added` : null,
     counts.renamed > 0
@@ -447,6 +451,10 @@ export function ImportResult({
       : "Projects: none added.",
     counted("Prompts", result.prompts),
     counted("Intros and outros", result.entries),
+    counted("Channels", result.channels),
+    counted("Cast members", result.cast),
+    counted("Episode memories", result.episodeMemories),
+    counted("Existing videos", result.channelVideos),
     counted("Document themes", result.documentThemes),
     counted("Templates", result.templates),
     counted("Schedules", result.schedules),

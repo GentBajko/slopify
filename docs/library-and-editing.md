@@ -58,6 +58,29 @@ When the description is written again, fields you did not change follow the new 
 you changed keeps your text and shows **New generated version available** with **Use it**,
 **Keep mine** and **View diff** instead of overwriting it.
 
+### Chapters follow YouTube's rules
+
+YouTube only turns a description's timestamps into chapters when the first is at 0:00, there
+are at least three, each lasts at least 10 seconds and they go up in time; otherwise it ignores
+the whole list. The written description already follows these rules, but a hand edit, or a
+video cut again to another length, can break them. So the chapters are fitted whenever the
+description is shown, copied, or handed to Prepare upload and the Studio extension:
+
+1. chapters out of time order are put in order (of two at the same time, the first listed
+   stays);
+2. a chapter starting after the video ends is removed;
+3. the first chapter moves to 0:00;
+4. a chapter shorter than 10 seconds is merged into the one before it (the first chapter into
+   the one after it, which then starts at 0:00), again until none is shorter;
+5. with fewer than three chapters left, the chapter list is left out.
+
+A note under the chapters says what changed, for example *Chapters adjusted for YouTube: moved
+the first, "Intro", from 0:05 to 0:00; merged "Blink" (6 s) into "Intro".* Your edit and the
+written file stay exactly as they were (so **Edit** starts from your own text, and nothing
+becomes outdated); only what is shown and copied is fitted. Other lines you typed among the
+chapters stay where they were. The last chapter's length is checked against the video's length
+once the video is made.
+
 ## Channel links and placeholders
 
 **Settings → Channel links** holds named links (Patreon, Discord, …). Write `{{Patreon}}` in a
@@ -72,3 +95,25 @@ The article, its research notes and sources, and the narration text (Audio secti
 as a reading view: a ~70-character measure, a contents list from the headings, **Search** with
 every hit marked (Enter / Shift+Enter or the arrows step through them), **Copy section** beside
 each heading and Copy all as Markdown.
+
+## Trash
+
+Deleting a project, a Library prompt or intro/outro, a template or a schedule moves it to
+**Settings → Trash** for 30 days instead of removing it. It disappears from every list,
+picker, lookup, the calendar and the batch queue; its name is free for a new item at once.
+Each row shows its kind, when it was deleted and the days left, with **Restore** and
+**Delete now** (which asks first).
+
+- **Restore** puts it back as it was. A prompt, intro/outro or template whose name a live item
+  took meanwhile comes back as "Name (restored)", then "Name (restored 2)"…; a renamed template
+  gets a new version.
+- A **project** still running cannot be deleted (Cancel run first, as before). One waiting its
+  turn (a queued batch item, a checkpoint) is held while in the trash, and picks up where it was
+  when restored.
+- A **template** used by a schedule that is not deleted cannot be deleted (as before). A
+  **schedule** comes back **paused** with no next run; press Resume on Schedules to run it again.
+  Its template must be restored first if it is in the trash too; if the template was removed for
+  good the schedule cannot be restored. A deleted schedule's run history stays on Schedules.
+- **Delete now**, and the daily purge of anything in the trash over 30 days, remove the item for
+  good: a project's folder first, then its rows (a folder that will not go keeps it in the trash
+  for the next try), a prompt or entry with its History.

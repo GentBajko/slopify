@@ -23,6 +23,7 @@ import { actionRoutes } from "./actions.js";
 import { audioPreviewRoutes } from "./audio-preview.js";
 import { type Audition, auditionRoutes } from "./auditions.js";
 import { backupRoutes } from "./backups.js";
+import { channelMemoryRoutes } from "./channel-memory.js";
 import { channelRoutes } from "./channels.js";
 import { checkpointRoutes } from "./checkpoints.js";
 import { diagnosticsRoutes } from "./diagnostics.js";
@@ -51,9 +52,11 @@ import { storageRoutes } from "./storage.js";
 import { studioRoutes } from "./studio.js";
 import { subtitleRoutes } from "./subtitles.js";
 import { telemetryRoutes } from "./telemetry.js";
+import { trashRoutes } from "./trash.js";
 import { tutorialRoutes } from "./tutorial.js";
 import { updateRoutes } from "./update.js";
 import { usageRoutes } from "./usage.js";
+import { whatsNewRoutes } from "./whats-new.js";
 import { youtubeEditRoutes } from "./youtube-edits.js";
 
 export interface AppDeps {
@@ -130,11 +133,13 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/staging", stagingRoutes(deps))
       .route("/storage", storageRoutes(deps))
       .route("/backups", backupRoutes(deps.backups))
+      .route("/trash", trashRoutes(deps))
       .route("/drafts", draftRoutes(deps.drafts))
       .route("/diagnostics", diagnosticsRoutes(deps))
       .route("/project-templates", projectTemplateRoutes(deps.drafts))
       .route("/schedules", scheduleRoutes(deps.schedules))
       .route("/channels", channelRoutes(deps))
+      .route("/channels", channelMemoryRoutes(deps))
       .route("/calendar", calendarRoutes(deps.schedules))
       .route("/projects", planningRoutes(deps))
       .route("/projects", projectRoutes(deps))
@@ -162,6 +167,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/settings", settingsRoutes(deps))
       .route("/studio", studioRoutes(deps))
       .route("/tutorial", tutorialRoutes(deps))
+      .route("/whats-new", whatsNewRoutes(deps))
       .route("/providers", providerRoutes(deps))
   );
 }

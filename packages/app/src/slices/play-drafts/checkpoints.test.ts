@@ -29,7 +29,9 @@ it("binds review closures and changes only checkpoint fingerprints whose inputs 
     const tts = h.deps.catalogue.read().tts[0];
     const image = h.deps.catalogue.read().image[0];
     if (!tts || !image) throw new Error("Missing fixture catalogue");
-    h.deps.db.exec("INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES ('img','image','Picture','A forest','[]','now')");
+    h.deps.db.exec(
+      "INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES ('img','image','Picture','A forest','[]','now')",
+    );
     const id = randomUUID();
     const document = {
       ...h.document,

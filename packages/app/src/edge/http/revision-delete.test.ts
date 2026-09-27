@@ -46,7 +46,12 @@ it("keeps revision history while an original request drains, then permits explic
     expect(h.deps.db.prepare("SELECT count(*) AS n FROM project_revisions").get()?.n).toBe(2);
     expect(existsSync(projectDir(h.deps.paths, h.projectId))).toBe(true);
     draining = false;
+    // Delete moves it to the trash: nothing is removed until Delete now (or the daily purge).
     expect((await app.request(endpoint, { method: "DELETE" })).status).toBe(204);
+    expect(h.deps.db.prepare("SELECT count(*) AS n FROM project_revisions").get()?.n).toBe(2);
+    expect(existsSync(projectDir(h.deps.paths, h.projectId))).toBe(true);
+    const now = await app.request(`/api/trash/project/${h.projectId}`, { method: "DELETE" });
+    expect(now.status).toBeLessThan(300);
     expect(h.deps.db.prepare("SELECT count(*) AS n FROM project_revisions").get()?.n).toBe(0);
     expect(h.deps.db.prepare("SELECT count(*) AS n FROM project_assets").get()?.n).toBe(0);
     expect(existsSync(projectDir(h.deps.paths, h.projectId))).toBe(false);

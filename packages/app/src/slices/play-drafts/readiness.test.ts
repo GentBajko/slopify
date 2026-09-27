@@ -236,7 +236,9 @@ it.each(["font", "template"] as const)(
       const tts = h.deps.catalogue.read().tts[0];
       if (!tts) throw new Error("Missing model");
       h.deps.db
-        .prepare("INSERT INTO entries (id,category,mode,name,body,slots,updated_at) VALUES ('e','intro','text','Opening','Hello','[]','now')")
+        .prepare(
+          "INSERT INTO entries (id,category,mode,name,body,slots,updated_at) VALUES ('e','intro','text','Opening','Hello','[]','now')",
+        )
         .run();
       h.deps.db
         .prepare(

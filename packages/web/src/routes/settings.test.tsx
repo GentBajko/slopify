@@ -123,6 +123,7 @@ describe("the settings screen", () => {
       "YouTube Studio",
       "Backup & storage",
       "Backups",
+      "Trash",
       "Usage",
       "About",
     ]);

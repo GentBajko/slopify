@@ -1,6 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
+import { projectExists } from "../../slices/admission/repo.js";
 import { runCostOf } from "../../slices/run-cost/panel.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
@@ -16,7 +17,7 @@ const idParam = z.object({ id: z.string().min(1).max(64) });
 export function runCostRoutes(deps: AppDeps) {
   return new Hono().get("/:id/run-cost", zValidator("param", idParam, onInvalid), (c) => {
     const id = c.req.valid("param").id;
-    if (deps.db.prepare("SELECT 1 FROM projects WHERE id = ?").get(id) === undefined)
+    if (!projectExists(deps.db, id))
       return problem(c, {
         status: 404,
         title: titleOf(404),

@@ -6,6 +6,7 @@
 
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+import { liveProject } from "../admission/repo.js";
 import type { EntryCategory, PromptKind } from "./model.js";
 
 export type LibraryRef =
@@ -117,7 +118,7 @@ export function usedBy(db: DatabaseSync, ref: LibraryRef): UsedBy {
     .prepare(
       `SELECT t.id,r.name,r.document_json FROM project_templates t
        JOIN project_template_revisions r ON r.template_id=t.id AND r.version=t.head_version
-       WHERE instr(lower(r.document_json),?)>0 ORDER BY lower(r.name),t.id`,
+       WHERE t.deleted_at IS NULL AND instr(lower(r.document_json),?)>0 ORDER BY lower(r.name),t.id`,
     )
     .all(plain)
     .flatMap((row) => {
@@ -145,7 +146,7 @@ export function usedBy(db: DatabaseSync, ref: LibraryRef): UsedBy {
         (SELECT count(*) FROM project_revisions x WHERE x.project_id=r.project_id) AS total
        FROM project_revisions r JOIN projects p ON p.id=r.project_id
        LEFT JOIN project_heads h ON h.project_id=r.project_id
-       WHERE instr(lower(r.config),?)>0
+       WHERE ${liveProject("p")} AND instr(lower(r.config),?)>0
        ORDER BY p.created_at DESC,p.id,r.created_at`,
     )
     .all(plain)
@@ -166,7 +167,8 @@ export function usedBy(db: DatabaseSync, ref: LibraryRef): UsedBy {
   for (const row of db
     .prepare(
       `SELECT p.id,p.title,p.config FROM projects p
-       WHERE NOT EXISTS (SELECT 1 FROM project_revisions r WHERE r.project_id=p.id)
+       WHERE ${liveProject("p")}
+       AND NOT EXISTS (SELECT 1 FROM project_revisions r WHERE r.project_id=p.id)
        AND instr(lower(p.config),?)>0 ORDER BY p.created_at DESC,p.id`,
     )
     .all(plain)

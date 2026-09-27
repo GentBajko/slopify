@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { projectExists } from "../admission/repo.js";
 import type { RevisionDeps, RevisionMutationResult, RevisionView } from "./model.js";
 import { currentRevisionId } from "./repo.js";
 import { getRevisionView } from "./view.js";
@@ -73,8 +74,7 @@ export function checkMutation(
       .get(input.projectId, input.idempotencyKey) !== undefined
   )
     return refusal(deps, input.projectId, "idempotency-conflict");
-  if (db.prepare("SELECT 1 FROM projects WHERE id=?").get(input.projectId) === undefined)
-    return refusal(deps, input.projectId, "no-project");
+  if (!projectExists(db, input.projectId)) return refusal(deps, input.projectId, "no-project");
   if (currentRevisionId(db, input.projectId) !== input.baseRevisionId)
     return refusal(deps, input.projectId, "conflict");
   return undefined;

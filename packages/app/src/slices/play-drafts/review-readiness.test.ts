@@ -15,7 +15,9 @@ it("uses installed CLI discovery for Review and Start without rewriting the save
   const h = startFixture();
   try {
     h.deps.db
-      .prepare("INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES (?, 'article', 'Story', 'About {{topic}}', ?, ?)")
+      .prepare(
+        "INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES (?, 'article', 'Story', 'About {{topic}}', ?, ?)",
+      )
       .run("prompt", JSON.stringify(["topic"]), "same");
     const id = randomUUID();
     must(

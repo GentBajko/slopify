@@ -7,6 +7,7 @@ import type { Project, ProjectListing, ProjectSummary } from "../../slices/admis
 import {
   listProjects,
   projectById,
+  projectTrashed,
   runDraftSchema,
   stageStandingsByProject,
   stagesOf,
@@ -19,12 +20,12 @@ import { pickTemplates, renderPicked } from "../../slices/library/slots.js";
 import { resumable } from "../../slices/rebuild/recovery-repo.js";
 import { adoptBaseline } from "../../slices/revisions/adopt.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
-import type { DeleteDeps, DeleteRefusal } from "../../slices/storage/delete-project.js";
-import { deleteProject } from "../../slices/storage/delete-project.js";
 import { outputsOf, stagedFiles } from "../../slices/storage/repo.js";
 import type { StorageDeps } from "../../slices/storage/staging.js";
 import type { TelemetryDeps } from "../../slices/telemetry/record.js";
 import { record } from "../../slices/telemetry/record.js";
+import type { TrashDeps } from "../../slices/trash/model.js";
+import { trashProject } from "../../slices/trash/service.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
 
@@ -57,9 +58,10 @@ export function projectRoutes(deps: AppDeps) {
     log: deps.log,
     appVersion: deps.version,
   };
-  const storageForDelete: DeleteDeps = {
+  const storageForTrash: TrashDeps = {
     db: deps.db,
     paths: deps.paths,
+    clock: deps.clock,
     log: deps.log,
     hasInflight: deps.runner.hasInflight,
   };
@@ -160,7 +162,9 @@ export function projectRoutes(deps: AppDeps) {
           return problem(c, {
             status: 404,
             title: titleOf(404),
-            detail: "This project no longer exists. Go back to Projects to pick another.",
+            detail: projectTrashed(deps.db, c.req.valid("param").id)
+              ? "This project is in the trash. Restore it in Settings → Trash to open it again."
+              : "This project no longer exists. Go back to Projects to pick another.",
           });
         }
         if (deps.catalogue !== undefined) adoptBaseline(deps, project.id);
@@ -172,34 +176,23 @@ export function projectRoutes(deps: AppDeps) {
           outputs: outputsOf(deps.db, project.id),
         });
       })
-      // Irreversible, and only from the app: the Projects screen puts a confirmation
-      // dialog in front of it.
+      // Moves the project to the trash (Settings → Trash) for 30 days; removing it for good is
+      // Delete now there, or the daily purge (`slices/trash`).
       .delete("/:id", zValidator("param", idParam, onInvalid), (c) => {
         const id = c.req.valid("param").id;
         return withProjectControl(deps.db, id, () => {
-          const result = deleteProject(storageForDelete, id);
+          const result = trashProject(storageForTrash, id);
           if (result.ok) return c.body(null, 204);
+          const status = result.reason === "running" ? 409 : 404;
           return problem(c, {
-            status: deleteStatus[result.reason],
-            title: titleOf(deleteStatus[result.reason]),
-            detail: result.detail ?? deleteDetails[result.reason],
+            status,
+            title: titleOf(status),
+            detail:
+              result.reason === "running"
+                ? "This project is still running. Use Cancel run on the project page first, then delete it."
+                : "This project no longer exists. Go back to Projects to pick another.",
           });
         });
       })
   );
 }
-
-const deleteStatus: Readonly<Record<DeleteRefusal, 404 | 409 | 500>> = {
-  "no-project": 404,
-  running: 409,
-  files: 500,
-};
-
-const deleteDetails: Readonly<Record<DeleteRefusal, string>> = {
-  "no-project": "This project no longer exists. Go back to Projects to pick another.",
-  // The run has to be stopped before its files can go.
-  running:
-    "This project is still running. Use Cancel run on the project page first, then delete it.",
-  files:
-    "Some of this project's files could not be removed. Close any program using files in the project folder, then try deleting again.",
-};
