@@ -108,6 +108,9 @@ export interface StorageUsage {
   readonly data: number;
   readonly projects: number;
   readonly staging: number;
+  // Projects in Settings → Trash. `projects` still counts their folders until the trash
+  // removes them for good.
+  readonly trash: { readonly projects: number; readonly bytes: number };
   readonly byProject: readonly {
     readonly id: string;
     readonly title: string;
