@@ -15,17 +15,19 @@ import { Button, IconButton } from "./button.js";
 import { useToast } from "./toast.js";
 
 // The reading view for long text (article, research, sources, narration), the one the whole
-// app uses: `reading` type at a 68ch measure, a table of contents built from its `##`
-// headings, a search that marks every hit and steps through them, and copy buttons that hand
-// back the Markdown source of one section or of the whole text. It is text to read, not a box
-// to edit.
+// app uses: `reading` type at a 68ch measure, a table of contents built from its headings (the
+// top two levels, nested), a search that marks every hit and steps through them, and copy
+// buttons that hand back the Markdown source of one section or of the whole text. It is text to
+// read, not a box to edit.
 
 export interface ReadingSection {
   // The anchor: a slug of the heading, unique in the document. "" for the text before the
   // first heading.
   readonly id: string;
   readonly heading: string | undefined;
-  // The section's own Markdown, heading line included.
+  // 0 for a top-level heading (and the text before the first), 1 for one nested under it.
+  readonly depth: 0 | 1;
+  // The section's Markdown, heading line and nested sections included.
   readonly markdown: string;
   // The Markdown under the heading.
   readonly body: string;
@@ -40,34 +42,79 @@ function slug(text: string): string {
   return base === "" ? "section" : base;
 }
 
-// Splits Markdown at its level-two headings, ignoring `##` inside fenced code.
-export function splitSections(markdown: string): readonly ReadingSection[] {
-  const sections: { heading: string | undefined; lines: string[] }[] = [
-    { heading: undefined, lines: [] },
-  ];
+const headingLine = /^(#{1,3})\s+(.+?)\s*#*\s*$/;
+
+// The heading lines of Markdown with their level, skipping `#` inside fenced code.
+function headingsOf(lines: readonly string[]): readonly (number | undefined)[] {
   let fenced = false;
-  for (const line of markdown.replace(/\r\n?/g, "\n").split("\n")) {
+  return lines.map((line) => {
     if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
-    const match = fenced ? null : /^##\s+(.+?)\s*#*\s*$/.exec(line);
-    if (match?.[1] !== undefined) sections.push({ heading: match[1], lines: [line] });
+    const match = fenced ? null : headingLine.exec(line);
+    return match?.[1]?.length;
+  });
+}
+
+// Splits Markdown at its headings: of `#`, `##` and `###`, the two highest levels the text
+// uses, the lower one nested under the one before it (`depth` 1), so parts and their
+// subsections read as one outline whether they are written `#`/`##` or `##`/`###`. Deeper
+// headings stay inside their section. `markdown` of a top section includes its subsections,
+// so Copy section copies all of it.
+export function splitSections(markdown: string): readonly ReadingSection[] {
+  const lines = markdown.replace(/\r\n?/g, "\n").split("\n");
+  const levels = headingsOf(lines);
+  // A lone top heading that opens the text is its title: it stays above the contents rather
+  // than holding every other section under it.
+  const first = levels.find((level) => level !== undefined);
+  const titled =
+    first !== undefined &&
+    levels.filter((level) => level === first).length === 1 &&
+    levels.every((level) => level === undefined || level >= first);
+  const used = [
+    ...new Set(levels.filter((level) => level !== undefined && !(titled && level === first))),
+  ].sort((a, b) => a - b);
+  const top = used[0];
+  const nested = used[1];
+  const sections: { heading: string | undefined; depth: 0 | 1; lines: string[] }[] = [
+    { heading: undefined, depth: 0, lines: [] },
+  ];
+  for (const [index, line] of lines.entries()) {
+    const level = levels[index];
+    const heading = level === top || level === nested ? headingLine.exec(line)?.[2] : undefined;
+    if (level !== undefined && heading !== undefined)
+      sections.push({ heading, depth: level === top ? 0 : 1, lines: [line] });
     else sections[sections.length - 1]?.lines.push(line);
   }
   const seen = new Map<string, number>();
-  return sections
-    .filter((section) => section.heading !== undefined || section.lines.join("").trim() !== "")
-    .map((section) => {
-      let id = "";
-      if (section.heading !== undefined) {
-        const base = slug(section.heading);
-        const count = (seen.get(base) ?? 0) + 1;
-        seen.set(base, count);
-        id = count === 1 ? base : `${base}-${String(count)}`;
-      }
-      const markdown = section.lines.join("\n").trim();
-      const body =
-        section.heading === undefined ? markdown : section.lines.slice(1).join("\n").trim();
-      return { id, heading: section.heading, markdown, body };
-    });
+  const kept = sections.filter(
+    (section) => section.heading !== undefined || section.lines.join("").trim() !== "",
+  );
+  return kept.map((section, at) => {
+    let id = "";
+    if (section.heading !== undefined) {
+      const base = slug(section.heading);
+      const count = (seen.get(base) ?? 0) + 1;
+      seen.set(base, count);
+      id = count === 1 ? base : `${base}-${String(count)}`;
+    }
+    const end = kept.findIndex(
+      (next, index) => index > at && next.depth <= section.depth && next.heading !== undefined,
+    );
+    const whole =
+      section.heading === undefined || section.depth === 1
+        ? section.lines
+        : kept.slice(at, end === -1 ? undefined : end).flatMap((part) => part.lines);
+    const body =
+      section.heading === undefined
+        ? section.lines.join("\n").trim()
+        : section.lines.slice(1).join("\n").trim();
+    return {
+      id,
+      heading: section.heading,
+      depth: section.depth,
+      markdown: whole.join("\n").trim(),
+      body,
+    };
+  });
 }
 
 // Minimal hast shapes: enough to split text nodes, without depending on @types/hast.
@@ -223,7 +270,7 @@ export function ReadingView({
       },
       { rootMargin: "0px 0px -70% 0px" },
     );
-    for (const heading of root.querySelectorAll("h2[id]")) observer.observe(heading);
+    for (const heading of root.querySelectorAll("h2[id], h3[id]")) observer.observe(heading);
     return () => observer.disconnect();
   }, [headingCount]);
 
@@ -269,7 +316,11 @@ export function ReadingView({
         <section key={section.id || "intro"} aria-labelledby={anchor(section.id) || undefined}>
           {section.heading === undefined ? null : (
             <div className="sl-reading__head">
-              <h2 id={anchor(section.id)}>{highlight(section.heading, query)}</h2>
+              {section.depth === 0 ? (
+                <h2 id={anchor(section.id)}>{highlight(section.heading, query)}</h2>
+              ) : (
+                <h3 id={anchor(section.id)}>{highlight(section.heading, query)}</h3>
+              )}
               <Button
                 variant="quiet"
                 size="small"
@@ -305,6 +356,7 @@ export function ReadingView({
               key={section.id}
               href={`#${anchor(section.id)}`}
               aria-current={anchor(section.id) === current ? "true" : undefined}
+              className={section.depth === 1 ? "sl-toc__nested" : undefined}
               onClick={(event) => {
                 event.preventDefault();
                 setCurrent(anchor(section.id));

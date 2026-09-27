@@ -259,6 +259,60 @@ Again.
     expect(sections[1]?.markdown).toContain("## not a heading");
   });
 
+  it("nests the second heading level under the first, whichever two levels the text uses", () => {
+    const titled =
+      "# Tiamat\n\nIntro.\n\n## Origins\n\nOld.\n\n### Deeper\n\nKept inside.\n\n# Bahamut\n\nGold.";
+    const outline = splitSections(titled).map((section) => [section.heading, section.depth]);
+    expect(outline).toEqual([
+      ["Tiamat", 0],
+      ["Origins", 1],
+      ["Bahamut", 0],
+    ]);
+    // A top section's copy holds its subsections; the third level stays in the body.
+    const [tiamat, origins] = splitSections(titled);
+    expect(tiamat?.markdown).toBe(
+      "# Tiamat\n\nIntro.\n\n## Origins\n\nOld.\n\n### Deeper\n\nKept inside.",
+    );
+    expect(tiamat?.body).toBe("Intro.");
+    expect(origins?.body).toBe("Old.\n\n### Deeper\n\nKept inside.");
+
+    const parts = "## One\n\nA.\n\n### One a\n\nB.\n\n## Two\n\nC.";
+    expect(splitSections(parts).map((section) => [section.id, section.depth])).toEqual([
+      ["one", 0],
+      ["one-a", 1],
+      ["two", 0],
+    ]);
+    // A lone `#` that opens the text is its title, not a section holding all the others.
+    const article = "# Rope\n\nWhy.\n\n## Knots\n\nA.\n\n### Bowline\n\nB.\n\n## Care\n\nC.";
+    const sections = splitSections(article);
+    expect(sections.map((section) => [section.heading, section.depth])).toEqual([
+      [undefined, 0],
+      ["Knots", 0],
+      ["Bowline", 1],
+      ["Care", 0],
+    ]);
+    expect(sections[0]?.body).toBe("# Rope\n\nWhy.");
+    // Only one level: every heading is a top section, as before.
+    expect(splitSections("### A\n\nx\n\n### B\n\ny").map((section) => section.depth)).toEqual([
+      0, 0,
+    ]);
+  });
+
+  it("shows nested headings indented in the contents and as h3 in the text", () => {
+    render(
+      <ReadingView markdown={"## One\n\nA.\n\n### One a\n\nB.\n\n## Two\n\nC."} label="Article" />,
+    );
+    const toc = screen.getByRole("navigation", { name: "Article contents" });
+    const links = within(toc).getAllByRole("link");
+    expect(links.map((link) => [link.textContent, link.className])).toEqual([
+      ["One", ""],
+      ["One a", "sl-toc__nested"],
+      ["Two", ""],
+    ]);
+    expect(document.getElementById("one-a")?.tagName).toBe("H3");
+    expect(screen.getByRole("button", { name: "Copy section: One a" })).not.toBeNull();
+  });
+
   it("builds the contents from the headings", () => {
     render(<ReadingView markdown={markdown} label="Article" />);
     const toc = screen.getByRole("navigation", { name: "Article contents" });

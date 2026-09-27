@@ -106,7 +106,9 @@ text.
 ## Reading view
 
 The article, its research notes and sources, and the narration text (Audio section) are shown
-as a reading view: a ~70-character measure, a contents list from the headings, **Search** with
+as a reading view: a ~70-character measure, a contents list from the headings (the two highest
+levels of `#`, `##` and `###`, the second indented under the first; a single `#` title that
+opens the text stays above the list), **Search** with
 every hit marked (Enter / Shift+Enter or the arrows step through them), **Copy section** beside
 each heading and Copy all as Markdown.
 
