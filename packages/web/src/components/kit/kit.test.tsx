@@ -260,7 +260,7 @@ describe("rows and tiles are one target", () => {
     render(
       <List label="Themes">
         <ListRow
-          title="D&D Parchment"
+          title="Parchment"
           meta="Serif · warm paper"
           onSelect={picked}
           actions={<Button onClick={removed}>Delete</Button>}
@@ -268,7 +268,7 @@ describe("rows and tiles are one target", () => {
       </List>,
     );
     const row = screen.getByRole("listitem");
-    const target = within(row).getByRole("button", { name: "D&D Parchment" });
+    const target = within(row).getByRole("button", { name: "Parchment" });
     expect(row.classList.contains(hitArea)).toBe(true);
     expect(target.classList.contains(hitTarget)).toBe(true);
     // One tab stop for the row, then its own actions.
@@ -298,9 +298,9 @@ describe("rows and tiles are one target", () => {
 
   it("makes the whole media figure, caption included, the open button", () => {
     render(
-      <MediaFrame src="/a.png" alt="Tiamat" title="Tiamat" meta="Image 1" onOpen={() => {}} />,
+      <MediaFrame src="/a.png" alt="Hypatia" title="Hypatia" meta="Image 1" onOpen={() => {}} />,
     );
-    const open = screen.getByRole("button", { name: "Open Tiamat full size" });
+    const open = screen.getByRole("button", { name: "Open Hypatia full size" });
     expect(open.parentElement?.tagName).toBe("FIGURE");
     expect(css).toMatch(/\.sl-media \{\s*position: relative;/);
   });
