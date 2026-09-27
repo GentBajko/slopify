@@ -22,6 +22,7 @@ import {
   type ScheduleReply,
   schedulesKey,
 } from "@/schedules/api";
+import { TopicFailure } from "@/schedules/topic-failure";
 
 // The calendar's side panel: topics Slopify suggested from a schedule's series brief, held for
 // the person to queue or reject. One block per schedule that holds its suggestions.
@@ -134,11 +135,14 @@ function ScheduleSuggestions({
           </>
         )}
       </SectionHead>
-      {schedule.topics.error === null ? null : (
-        <Callout tone="danger" title="The last suggestion failed.">
-          {schedule.topics.error}
-        </Callout>
-      )}
+      <TopicFailure
+        schedule={schedule}
+        title="The last suggestion failed."
+        retry={{
+          run: () => act.mutate(() => generateTopicsNow(api, schedule.id)),
+          busy: act.isPending || generating,
+        }}
+      />
       {held.error === null ? null : (
         <p className="m-0 text-small text-danger">
           {`The suggestions didn't load: ${held.error.message} Reload the page to try again.`}

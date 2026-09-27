@@ -1,3 +1,4 @@
+import { fixFor } from "@app/slices/fixes/rules.js";
 import { paceSteps } from "@app/slices/voices/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PlusIcon } from "lucide-react";
@@ -11,6 +12,7 @@ import { Rule } from "@/components/kit/layout";
 import { MediaFrame } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
 import { Badge, Chip } from "@/components/kit/status";
+import { FixActions } from "@/fixes/fix-actions";
 import { useVoicesForLanguage, VoiceLanguageNote } from "@/language/voice-language";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
 import { providersQuery, voicesQuery } from "@/queries";
@@ -212,6 +214,7 @@ function Pictures({
   const client = useQueryClient();
   const providers = useQuery(providersQuery(api));
   const file = useRef<HTMLInputElement>(null);
+  const promptField = useRef<HTMLTextAreaElement>(null);
   const [provider, setProvider] = useState("");
   const [model, setModel] = useState("");
   const [prompt, setPrompt] = useState(
@@ -276,7 +279,15 @@ function Pictures({
                 }
               />
               {image.state === "failed" && image.error ? (
-                <p className="m-0 mt-1 text-small text-danger">{image.error}</p>
+                <PictureFailure
+                  error={image.error}
+                  retry={
+                    provider === "" || model === "" || prompt.trim() === ""
+                      ? undefined
+                      : { run: () => generate.mutate(), busy: generate.isPending }
+                  }
+                  onReword={() => promptField.current?.focus()}
+                />
               ) : null}
             </li>
           ))}
@@ -332,6 +343,7 @@ function Pictures({
         </div>
         <Field label="Picture to make" tip="planning.cast.picture-prompt">
           <Textarea
+            ref={promptField}
             rows={3}
             value={prompt}
             maxLength={4000}
@@ -448,5 +460,42 @@ function CastVoiceFields({
         </Button>
       )}
     </fieldset>
+  );
+}
+
+// A picture that could not be made: the provider's words and the fix-it the same rules as a
+// failed project step name (`slices/fixes/rules.ts`). A signed-out CLI ends with Check again
+// making the picture once more; a refused prompt is reworded in the box below.
+export function PictureFailure({
+  error,
+  retry,
+  onReword,
+}: {
+  readonly error: string;
+  readonly retry: { readonly run: () => void; readonly busy: boolean } | undefined;
+  readonly onReword: () => void;
+}): ReactElement {
+  const fix = fixFor({ stage: "images", reason: error });
+  return (
+    <>
+      <p className="m-0 mt-1 text-small text-danger">{error}</p>
+      {fix === undefined ? null : (
+        <div className="sl-btn-row mt-2">
+          <FixActions
+            fix={fix}
+            retry={retry}
+            variant="secondary"
+            size="small"
+            edit={
+              fix.kind === "refused" ? (
+                <Button variant="secondary" size="small" onClick={onReword}>
+                  Reword the picture
+                </Button>
+              ) : undefined
+            }
+          />
+        </div>
+      )}
+    </>
   );
 }

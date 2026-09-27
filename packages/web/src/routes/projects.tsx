@@ -7,7 +7,6 @@ import { type ReactElement, useState } from "react";
 import { removeProject } from "@/api";
 import { useApp } from "@/app-context";
 import { useCurrentChannel } from "@/channels/current";
-import { BatchQueue } from "@/components/batch-queue";
 import { Button, IconButton } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
@@ -24,6 +23,7 @@ import { isWaiting } from "@/home/needs-you";
 import { isReadyToUpload } from "@/home/ready";
 import { startedAt } from "@/lib/utils";
 import { onboardingKey, readFirstRun } from "@/onboarding/api";
+import { limitWaitLine } from "@/project/limit-wait";
 import { keys, projectsQuery } from "@/queries";
 import { TutorialInvite } from "@/tutorial/launcher";
 
@@ -66,7 +66,10 @@ export function stateOf(project: ProjectListing): { readonly tone: Tone; readonl
     done: { tone: "done", word: "Done" },
     canceled: { tone: "off", word: "Canceled" },
   };
-  return isWaiting(project) ? { tone: "waiting", word: "Waiting for you" } : words[project.status];
+  if (isWaiting(project)) return { tone: "waiting", word: "Waiting for you" };
+  // Running, but a step waits for a CLI plan to reset: "Waiting for Codex limits (resets at 14:00)".
+  const limits = project.status === "running" ? limitWaitLine(project.limitWaits) : undefined;
+  return limits === undefined ? words[project.status] : { tone: "waiting", word: limits };
 }
 
 // "Documentary dossier · 16:9". The prompt name is the run's own copy of it; a run that
@@ -162,7 +165,6 @@ export function ProjectsRoute(): ReactElement {
         }
       />
 
-      <BatchQueue />
       {projects.data?.projects.length === 0 ? <TutorialInvite /> : null}
 
       {projects.error === null ? null : (

@@ -4,33 +4,11 @@ import { Link } from "@tanstack/react-router";
 import { ListVideoIcon } from "lucide-react";
 import type { ProjectListing } from "@/api";
 import { useApp } from "@/app-context";
-import { InfoTip } from "@/components/kit/info-tip";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { helpEntry } from "@/help/catalog";
 import { read } from "@/http";
 import { projectsQuery } from "@/queries";
-export function BatchQueue() {
-  const { api } = useApp();
-  const queue = useQuery({
-    queryKey: ["batch-queue"],
-    queryFn: async () =>
-      read<{ queue: QueueEntry[] }>(await api.fetch(`${api.origin}/api/projects/queue`)),
-    refetchInterval: 2000,
-    retry: false,
-  });
-  const projects = useQuery(projectsQuery(api));
-  if (!queue.data?.queue.length) return null;
-  return (
-    <section aria-label="Video queue" className="mb-5 rounded-media border border-line bg-surface">
-      <div className="flex min-h-10 items-center gap-2 border-b border-line px-4">
-        <h2 className="sl-kicker m-0">Video queue · {queue.data.queue.length} remaining</h2>
-        <InfoTip id="play.queue" />
-      </div>
-      <QueueList queue={queue.data.queue} projects={projects.data?.projects} />
-    </section>
-  );
-}
 
 // The queue as a count, for the project page bar: the list opens in a popover, so the page
 // under it never moves when a batch starts or drains.

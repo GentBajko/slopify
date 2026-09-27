@@ -8,6 +8,7 @@ import { useApp } from "@/app-context";
 import { MediaFrame } from "@/components/kit/media";
 import { Status } from "@/components/kit/status";
 import { type Step, Steps } from "@/components/kit/steps";
+import { limitWaitLine } from "@/project/limit-wait";
 import { stageName } from "@/project/summary";
 import { useLiveProject } from "@/project/use-live";
 import { projectQuery } from "@/queries";
@@ -71,6 +72,8 @@ export function RunningProject({
     .toSorted((left, right) => (left.meta.index ?? 0) - (right.meta.index ?? 0));
   const drawing = stages.find((stage) => stage.kind === "images" && stage.state === "running");
   const running = stages.find((stage) => stage.state === "running");
+  // "Waiting for Codex limits (resets at 14:00)": the run goes on by itself, so it stays here.
+  const waiting = limitWaitLine(project.limitWaits);
   // The last few that landed, and a tile for the one being drawn.
   const shown = images.slice(drawing === undefined ? -4 : -3);
   const steps: Step[] = stages.map((stage) => ({
@@ -95,6 +98,8 @@ export function RunningProject({
           </div>
           {project.status === "paused" ? (
             <Status tone="waiting">Paused</Status>
+          ) : waiting !== undefined ? (
+            <Status tone="waiting">{waiting}</Status>
           ) : (
             <Status tone="running">
               {running === undefined ? "Running" : `${stageName(running.kind, project.config)}`}
