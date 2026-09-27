@@ -251,4 +251,10 @@ export interface ProjectSummary extends Project {
 export interface ProjectListing extends ProjectSummary {
   // 0 to 1, averaged over the stages the run asked for (`kernel/runner/graph.ts`).
   readonly progress: number;
+  // The channel the project belongs to (`project_channels`), the default one when unset, so
+  // Home, the calendar and this list can show one channel at a time.
+  readonly channelId: string;
+  // When the person marked the finished video as uploaded (Home, Ready to upload); null
+  // while it is not.
+  readonly uploadedAt: string | null;
 }

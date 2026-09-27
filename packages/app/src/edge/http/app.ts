@@ -30,6 +30,7 @@ import { draftRoutes } from "./drafts.js";
 import { entryRoutes } from "./entries.js";
 import { fileRoutes } from "./files.js";
 import { fontsRoutes } from "./fonts.js";
+import { homeRoutes, uploadedRoutes } from "./home.js";
 import type { MutationLifecycle } from "./mutations.js";
 import { openFolderRoutes } from "./open-folder.js";
 import { planningRoutes } from "./planning.js";
@@ -142,6 +143,8 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/projects", openFolderRoutes(deps))
       .route("/projects", audioPreviewRoutes(deps))
       .route("/projects", runCostRoutes(deps))
+      .route("/projects", uploadedRoutes(deps))
+      .route("/home", homeRoutes(deps))
       .route("/update", updateRoutes(deps))
       // The re-run and cancel actions sit on the same prefix as the project itself; they
       // are their own router because they are their own concern.

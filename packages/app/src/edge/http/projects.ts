@@ -13,6 +13,8 @@ import {
 } from "../../slices/admission/repo.js";
 import { admit } from "../../slices/admission/rules.js";
 import { startRun } from "../../slices/admission/start.js";
+import { defaultChannelId } from "../../slices/channels/model.js";
+import { projectChannels } from "../../slices/channels/repo.js";
 import { withProjectControl } from "../../slices/control/lock.js";
 import { resolveFont } from "../../slices/fonts/index.js";
 import { pickTemplates, renderPicked } from "../../slices/library/slots.js";
@@ -25,6 +27,7 @@ import { outputsOf, stagedFiles } from "../../slices/storage/repo.js";
 import type { StorageDeps } from "../../slices/storage/staging.js";
 import type { TelemetryDeps } from "../../slices/telemetry/record.js";
 import { record } from "../../slices/telemetry/record.js";
+import { uploadedProjects } from "../../slices/uploads/repo.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
 
@@ -144,12 +147,16 @@ export function projectRoutes(deps: AppDeps) {
       // a status word and a meter, and both come out of the same five columns.
       .get("/", (c) => {
         const standings = stageStandingsByProject(deps.db);
+        const channels = projectChannels(deps.db);
+        const uploads = uploadedProjects(deps.db);
         const projects: ProjectListing[] = listProjects(deps.db).map((project) => {
           const stages = standings.get(project.id) ?? [];
           return {
             ...project,
             status: derive(stages, project.paused),
             progress: progressOf(stages),
+            channelId: channels.get(project.id) ?? defaultChannelId,
+            uploadedAt: uploads.get(project.id) ?? null,
           };
         });
         return c.json({ projects });
