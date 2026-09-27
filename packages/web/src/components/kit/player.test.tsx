@@ -1,70 +1,10 @@
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { stubMedia } from "./media-stub.js";
 import { Player, playerTime } from "./player.js";
 
 afterEach(cleanup);
-
-// jsdom has no media playback: the element gets a small fake that keeps its state and fires
-// the events a browser would, so the player is driven through the element as in a browser.
-function stubMedia(video: HTMLVideoElement, duration = 120) {
-  let paused = true;
-  let time = 0;
-  let muted = false;
-  let volume = 1;
-  let rate = 1;
-  const fire = (type: string) => video.dispatchEvent(new Event(type));
-  const play = vi.fn(() => {
-    paused = false;
-    fire("play");
-    return Promise.resolve();
-  });
-  const pause = vi.fn(() => {
-    paused = true;
-    fire("pause");
-  });
-  Object.defineProperties(video, {
-    paused: { get: () => paused, configurable: true },
-    ended: { get: () => false, configurable: true },
-    duration: { get: () => duration, configurable: true },
-    currentTime: {
-      get: () => time,
-      set: (next: number) => {
-        time = next;
-        fire("timeupdate");
-      },
-      configurable: true,
-    },
-    muted: {
-      get: () => muted,
-      set: (next: boolean) => {
-        muted = next;
-        fire("volumechange");
-      },
-      configurable: true,
-    },
-    volume: {
-      get: () => volume,
-      set: (next: number) => {
-        volume = next;
-        fire("volumechange");
-      },
-      configurable: true,
-    },
-    playbackRate: {
-      get: () => rate,
-      set: (next: number) => {
-        rate = next;
-        fire("ratechange");
-      },
-      configurable: true,
-    },
-    play: { value: play, configurable: true },
-    pause: { value: pause, configurable: true },
-  });
-  act(() => fire("durationchange"));
-  return { play, pause, time: () => time };
-}
 
 function mount(props: Partial<Parameters<typeof Player>[0]> = {}) {
   render(<Player src="/v.mp4" poster="/poster.png" label="Rope Tricks, final video" {...props} />);
@@ -87,7 +27,7 @@ it("shows the poster and a big play key, with its own controls instead of the br
   expect(video.getAttribute("poster")).toBe("/poster.png");
   expect(video.hasAttribute("controls")).toBe(false);
   const bar = screen.getByRole("group", { name: "Rope Tricks, final video controls" });
-  expect(within(bar).getByText("0:00 / 2:00")).not.toBeNull();
+  expect(bar.querySelector(".sl-player__time")?.textContent).toBe("0:00 / 2:00");
   await userEvent.click(screen.getByRole("button", { name: "Play Rope Tricks, final video" }));
   expect(media.play).toHaveBeenCalledTimes(1);
   // Started: the big key is gone and the bar's key pauses.

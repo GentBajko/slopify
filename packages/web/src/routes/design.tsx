@@ -9,6 +9,7 @@ import {
   Trash2Icon,
 } from "lucide-react";
 import { type ReactElement, type ReactNode, useEffect, useState } from "react";
+import { AudioPlayer } from "@/components/kit/audio-player";
 import { Board, BoardColumn } from "@/components/kit/board";
 import { Button, ButtonRow, IconButton, PlayKey } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
@@ -421,11 +422,30 @@ export function DesignRoute(): ReactElement {
             ]}
           />
           <Player
-            className="w-[200px]"
+            className="w-[260px]"
             portrait
             src=""
             poster={art(200, "Short", 900, 1600)}
             label="Sample short with no video loaded"
+          />
+        </div>
+      </Specimen>
+
+      <Specimen title="Audio player" meta="the Player's bar on its own; segment marks; compact">
+        <div className="flex flex-col gap-3">
+          <AudioPlayer
+            src={undefined}
+            label="Sample narration with no audio loaded"
+            marks={[
+              { start: 0, title: "Intro" },
+              { start: 12, title: "Hypatia at the Museum" },
+            ]}
+          />
+          <AudioPlayer
+            compact
+            className="max-w-[420px]"
+            src={undefined}
+            label="Sample compact narration with no audio loaded"
           />
         </div>
       </Specimen>

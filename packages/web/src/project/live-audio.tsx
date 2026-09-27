@@ -2,6 +2,7 @@ import type { AudioPreview } from "@app/kernel/audio-preview.js";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
+import { AudioPlayer } from "@/components/kit/audio-player";
 import { read } from "@/http";
 import { keys } from "@/queries";
 import { useProjectRevision } from "./live-revision.js";
@@ -107,15 +108,14 @@ function PreviewAudio({
     };
   }, []);
   return (
-    // biome-ignore lint/a11y/useMediaCaption: live generated narration has no timed captions yet.
-    <audio
+    <AudioPlayer
       ref={audio}
-      controls
+      compact
       preload="none"
-      aria-label={`Live ${label} narration`}
+      label={`Live ${label} narration`}
       src={url}
       onError={onError}
-      className="h-9 w-full max-w-[620px]"
+      className="max-w-[620px]"
     />
   );
 }

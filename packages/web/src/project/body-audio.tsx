@@ -4,6 +4,7 @@ import { defaultChunkCharacters, defaultChunkWords } from "@app/slices/narration
 import type { Output, OutputRole } from "@app/slices/storage/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { useApp } from "@/app-context";
+import { AudioPlayer } from "@/components/kit/audio-player";
 import { Fact, Facts } from "@/components/kit/facts";
 import { voicesQuery } from "@/queries";
 import type { BodyProps } from "./body.js";
@@ -103,15 +104,7 @@ function Player({ name, output }: { readonly name: string; readonly output: Outp
   return (
     <div className="grid grid-cols-[64px_minmax(0,1fr)] items-center gap-3 text-small sm:grid-cols-[64px_minmax(0,1fr)_auto]">
       <EngravedLabel>{name}</EngravedLabel>
-      {/* biome-ignore lint/a11y/useMediaCaption: this is the user's own narration of their
-          own article, and no caption track exists for it anywhere in the pipeline. */}
-      <audio
-        controls
-        preload="metadata"
-        aria-label={`${name} narration`}
-        src={media?.url}
-        className="h-10 w-full max-w-[640px]"
-      />
+      <AudioPlayer label={`${name} narration`} src={media?.url} className="max-w-[640px]" />
       {length === undefined ? null : (
         <span className="col-start-2 text-ink-2 tabular-nums sm:col-start-auto">{length}</span>
       )}

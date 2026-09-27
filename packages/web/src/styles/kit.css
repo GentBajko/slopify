@@ -511,7 +511,9 @@
     gap: var(--space-5);
   }
   .sl-grid--shorts {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    /* Vertical players 240 to 280 pixels wide: wide enough for one row of controls, two to
+       four across as the page allows, one down a phone. */
+    grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
   }
   .sl-grid--compact {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -586,10 +588,9 @@
     right: 0;
     bottom: 0;
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
-    column-gap: var(--space-2);
-    row-gap: 2px;
+    gap: var(--space-2);
     padding: 28px 10px 8px;
     background: linear-gradient(transparent, rgba(8, 8, 10, 0.85));
     color: var(--player-ink);
@@ -600,20 +601,22 @@
     opacity: 0;
     pointer-events: none;
   }
-  .sl-player .sl-player__bar .sl-btn {
+  :is(.sl-player .sl-player__bar, .sl-audio) .sl-btn {
+    flex: none;
     color: var(--player-ink);
     background: transparent;
     border-color: transparent;
   }
-  .sl-player .sl-player__bar .sl-btn:hover,
-  .sl-player .sl-player__bar .sl-btn[aria-expanded="true"] {
+  :is(.sl-player .sl-player__bar, .sl-audio) .sl-btn:hover,
+  :is(.sl-player .sl-player__bar, .sl-audio) .sl-btn[aria-expanded="true"] {
     background: rgb(236 233 226 / 0.14);
     color: #fff;
   }
-  .sl-player .sl-player__bar .sl-btn[aria-pressed="true"] {
+  :is(.sl-player .sl-player__bar, .sl-audio) .sl-btn[aria-pressed="true"] {
     color: var(--player-lime);
   }
   .sl-player__time {
+    flex: none;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
     padding: 0 var(--space-1);
@@ -621,7 +624,7 @@
   .sl-player__track {
     position: relative;
     flex: 1 1 120px;
-    min-width: 0;
+    min-width: 48px;
     height: 20px;
     display: flex;
     align-items: center;
@@ -707,6 +710,7 @@
     font-weight: 600;
   }
   .sl-player__volume {
+    flex: none;
     display: flex;
     align-items: center;
     width: 72px;
@@ -716,6 +720,7 @@
     border-radius: 4px;
   }
   .sl-player__speed {
+    flex: none;
     position: relative;
   }
   .sl-player__rate.sl-btn {
@@ -742,27 +747,101 @@
     color: var(--player-lime);
     font-weight: 600;
   }
-  /* A narrow player puts the track on its own row above the buttons, and drops what it has
-     no room for; the keys still do all of it. */
-  @container (max-width: 520px) {
-    .sl-player__track {
-      order: -1;
-      flex-basis: 100%;
+  /* A narrow player keeps one row: play, the track, captions and full screen always, and
+     drops what it has no room for, picture in picture first, then the volume slider, speed
+     and the total time, then mute. The keys still do all of it. */
+  @container (max-width: 600px) {
+    .sl-player .sl-player__pip {
+      display: none;
     }
-    .sl-player__time {
-      margin-right: auto;
+  }
+  @container (max-width: 480px) {
+    .sl-player .sl-player__volume {
+      display: none;
     }
-    .sl-player__volume {
+  }
+  @container (max-width: 380px) {
+    .sl-player .sl-player__speed,
+    .sl-player .sl-player__total {
       display: none;
     }
   }
   @container (max-width: 300px) {
-    .sl-player__time,
-    .sl-player__speed {
+    .sl-player .sl-player__mute {
       display: none;
     }
-    .sl-player__bar {
-      justify-content: space-between;
+  }
+  @container (max-width: 220px) {
+    .sl-player .sl-player__time {
+      display: none;
+    }
+  }
+  /* The audio strip: the Player's bar on its own, on the same dark screen in both themes. */
+  .sl-audio {
+    --player-ink: #ece9e2;
+    --player-lime: #a6d45c;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    min-width: 0;
+    max-width: 720px;
+    height: 48px;
+    padding: 0 12px 0 6px;
+    border-radius: 999px;
+    background: var(--color-screen);
+    color: var(--player-ink);
+    font-size: 13px;
+    container-type: inline-size;
+  }
+  .sl-audio audio {
+    display: none;
+  }
+  .sl-audio .sl-audio__key.sl-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--player-lime);
+    color: #101010;
+  }
+  .sl-audio .sl-audio__key.sl-btn:hover {
+    background: #b6e070;
+    color: #101010;
+  }
+  .sl-audio__key svg {
+    fill: currentColor;
+  }
+  .sl-audio__key[aria-label="Play"] svg {
+    margin-left: 2px;
+  }
+  .sl-audio .sl-player__menu {
+    bottom: calc(100% + 8px);
+  }
+  .sl-audio--compact {
+    height: 36px;
+    padding: 0 8px 0 3px;
+    gap: var(--space-1);
+  }
+  .sl-audio--compact .sl-audio__key.sl-btn {
+    width: 28px;
+    height: 28px;
+  }
+  .sl-audio--compact .sl-player__volume {
+    display: none;
+  }
+  .sl-audio--compact .sl-btn--small {
+    height: 28px;
+  }
+  @container (max-width: 420px) {
+    .sl-audio .sl-player__volume {
+      display: none;
+    }
+  }
+  @container (max-width: 300px) {
+    .sl-audio .sl-player__speed,
+    .sl-audio .sl-player__total {
+      display: none;
     }
   }
   @media (prefers-reduced-motion: reduce) {

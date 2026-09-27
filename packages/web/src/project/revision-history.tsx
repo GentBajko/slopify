@@ -3,6 +3,7 @@ import { DownloadIcon } from "lucide-react";
 import { useState } from "react";
 import { z } from "zod";
 import { useApp } from "@/app-context";
+import { AudioPlayer } from "@/components/kit/audio-player";
 import { Button, ButtonRow } from "@/components/kit/button";
 import { FileLink } from "@/components/kit/link";
 import { MediaFrame } from "@/components/kit/media";
@@ -170,11 +171,8 @@ export function RevisionHistory({
                     ) : ["audio_export", "audio_body", "audio_intro", "audio_outro"].includes(
                         output.output.role,
                       ) ? (
-                      // biome-ignore lint/a11y/useMediaCaption: retained narration parts have no individual caption track.
-                      <audio
-                        className="max-w-full"
-                        controls
-                        preload="metadata"
+                      <AudioPlayer
+                        label={outputLabel(output.output)}
                         src={revisionFileUrl(
                           api,
                           projectId,
@@ -213,11 +211,8 @@ export function RevisionHistory({
                   {piece.available ? (
                     <details>
                       <summary>Preview retained audio part</summary>
-                      {/* biome-ignore lint/a11y/useMediaCaption: retained narration parts have no individual caption track. */}
-                      <audio
-                        className="max-w-full"
-                        controls
-                        preload="metadata"
+                      <AudioPlayer
+                        label={`Narration part ${String(piece.piece.idx)}`}
                         src={revisionFileUrl(
                           api,
                           projectId,

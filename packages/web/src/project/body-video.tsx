@@ -8,6 +8,7 @@ import { parseTimestamp } from "@app/slices/youtube/timestamps.js";
 import { useQuery } from "@tanstack/react-query";
 import { readDescriptionEdits } from "@/api";
 import { useApp } from "@/app-context";
+import { AudioPlayer } from "@/components/kit/audio-player";
 import { useCommand } from "@/components/kit/command-palette";
 import { Player, type PlayerChapter } from "@/components/kit/player";
 import { useToast } from "@/components/kit/toast";
@@ -102,15 +103,7 @@ export function VideoBody({ stage, project, outputs, subtitleControls }: BodyPro
           {audioExport ? "No combined audio export has landed yet." : "No render has landed yet."}
         </p>
       ) : audioExport ? (
-        // biome-ignore lint/a11y/useMediaCaption: the export is the user's own narration and there is no caption track.
-        <audio
-          key={video.id}
-          controls
-          preload="metadata"
-          aria-label="Combined narration"
-          src={media?.url}
-          className="h-10 w-full max-w-[720px]"
-        />
+        <AudioPlayer key={video.id} label="Combined narration" src={media?.url} marks={chapters} />
       ) : media === undefined ? null : (
         <Player
           key={video.id}

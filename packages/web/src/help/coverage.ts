@@ -22,8 +22,8 @@ const controlSelector = [
 function skipped(control: Element): boolean {
   if (control.closest("[hidden],[aria-hidden=true],[inert]") !== null) return true;
   if (control instanceof HTMLInputElement && control.type === "file") return true;
-  // A video player's seek, volume and buttons play the media; they are not settings.
-  if (control.closest("[data-slot=player]") !== null) return true;
+  // A video or audio player's seek, volume and buttons play the media; they are not settings.
+  if (control.closest("[data-slot=player], [data-slot=audio-player]") !== null) return true;
   if (control.getAttribute("role") === "group") {
     return ![...control.children].some(
       (child) => child.hasAttribute("aria-pressed") || child.getAttribute("role") === "radio",
