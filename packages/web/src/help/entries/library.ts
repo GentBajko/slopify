@@ -27,7 +27,7 @@ export const libraryHelp = {
   },
   "library.prompt.body.narration": {
     title: "Narration Preparation prompt",
-    body: "Tells the text model how the narration should be delivered. It only adds cues, such as a short speaking direction or a laugh or sigh, and never rewrites the words. One call each for the body, the intro and the outro. Works only with the Inworld TTS-2 voice model and a single voice.",
+    body: "Tells the text model how the narration should be delivered. It only adds cues, such as a short speaking direction or a laugh or sigh, and never rewrites the words. One call each for the body, the intro and the outro. Works only with the Inworld TTS-2 voice model. With several speakers, each speaker on TTS-2 gets cues suited to their role.",
   },
   "library.prompt.body.description": {
     title: "YouTube Description prompt",

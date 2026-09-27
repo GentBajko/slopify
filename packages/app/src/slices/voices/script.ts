@@ -86,7 +86,7 @@ export function parseScript(
       reason:
         turn === null
           ? `Line ${String(number)} of the script is not a turn. Start every turn with a speaker's name and a colon (${names}), one turn per paragraph.`
-          : `Line ${String(number)} of the script is spoken by "${(turn[1] ?? "").trim()}", who is not one of the speakers (${names}). Use only these names, or add the speaker under Speakers (Play → Audio, or Edit project → Providers).`,
+          : `Line ${String(number)} of the script is spoken by "${(turn[1] ?? "").trim()}", who is not one of the speakers (${names}). Use only these names, or add the speaker under Speakers (Play → Narration, or Edit project → Providers).`,
     };
   }
   const spoken: ScriptTurn[] = [];

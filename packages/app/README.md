@@ -34,14 +34,16 @@ For Docker on Linux with Node 26+, Docker Engine and the Docker Compose plugin, 
 `slopify --docker` or `npx @gentbajko/slopify@latest --docker`. It writes one
 `compose.yaml` and its `.env` under `~/.local/share/slopify/docker/slopify/` and starts
 Slopify at `http://127.0.0.1:6969`, restarting with Docker. Project files go to
-`~/Slopify/Projects` (`--projects-dir` to choose another, `--port` for the port); the
+`Documents/Slopify/Projects` (`--projects-dir` to choose another, `--port` for the port); the
 database, keys and logs stay private in the `slopify-data` volume.
 
 If Claude Code, Codex or Gemini is installed, it asks once before setting up the host CLI
 bridge, a private helper that runs those CLIs on your machine with their existing logins.
 Use `--host-cli=off` for API keys only, or `--accept-host-cli` to approve without a prompt.
 
-Update with `npx @gentbajko/slopify@latest update`, Docker or not. It waits for running
+Update with `npx @gentbajko/slopify@latest update`, Docker or not. Without Docker, `update`
+asks the running app to update itself, so it works only while Slopify is running (to just
+start the newest version, run `npx @gentbajko/slopify@latest`). It waits for running
 work, keeps a copy to go back to (the database, or a recovery volume in Docker), and puts
 the previous version back if the new one doesn't start. Installations made by 2.5.0 or
 earlier are taken over as they are: same volume, same project folder. See the
@@ -88,10 +90,10 @@ for account limits. Both model IDs are bundled; Inworld's LLM catalogue does not
 | `--port` | `SLOPIFY_PORT` | `6969` |
 | `--host` | `SLOPIFY_HOST` | `127.0.0.1` |
 | `--data-dir` | `SLOPIFY_DATA_DIR` | `~/.slopify` |
-| `--projects-dir` (Docker only) | `SLOPIFY_DOCKER_PROJECTS_DIR` | remembered path; otherwise `~/Slopify/Projects` (custom names: `~/Slopify/<container>/Projects`) |
+| `--projects-dir` (Docker only) | `SLOPIFY_DOCKER_PROJECTS_DIR` | remembered path; otherwise `<Documents>/Slopify/Projects` (custom names: `<Documents>/Slopify/<container>/Projects`); installs from before 3.0 keep `~/Slopify/Projects` |
 | `--no-open` | `SLOPIFY_NO_OPEN` | the browser opens |
 | `--docker` | — | run locally; with the flag, install or update the Docker version |
-| `update` | — | update the running app, or the Docker installation if you have one |
+| `update` | — | update the running app (it must be running), or the Docker installation if you have one |
 | — | `SLOPIFY_FFMPEG` | the bundled binary |
 
 There is no login. Binding to anything but `127.0.0.1` hands the app and every key in

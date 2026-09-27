@@ -299,7 +299,7 @@ export function stageProviders(
               if (call.dialogue !== undefined && port.capabilities.dialogue !== true)
                 throw providerError({
                   kind: "unsupported",
-                  message: `${call.provider} can't speak several voices in one request. Turn off Native multi-speaker under Speakers (Play → Audio, or Edit project → Providers), then Try again.`,
+                  message: `${call.provider} can't speak several voices in one request. Turn off Native multi-speaker under Speakers (Play → Narration, or Edit project → Providers), then Try again.`,
                 });
               const spoken = await port.synthesize({
                 model: call.model,

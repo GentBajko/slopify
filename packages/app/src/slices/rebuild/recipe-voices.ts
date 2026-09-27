@@ -390,7 +390,7 @@ function speakerGlossary(
   if (!own.ok)
     return {
       ok: false,
-      reason: `${speaker.name.trim()}'s pronunciations can't be used: ${own.reason.replace("Edit the glossary or turn off Use Pronunciation Glossary.", "Fix them under Speakers (Play → Audio, or Edit project → Providers).")}`,
+      reason: `${speaker.name.trim()}'s pronunciations can't be used: ${own.reason.replace("Edit the glossary or turn off Use Pronunciation Glossary.", "Fix them under Speakers (Play → Narration, or Edit project → Providers).")}`,
     };
   const run =
     context.config.audio?.usePronunciationGlossary === true && glossary?.ok === true

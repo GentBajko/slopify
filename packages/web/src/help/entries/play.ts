@@ -117,7 +117,7 @@ export const playHelp = {
   },
   "play.intro": {
     title: "Intro",
-    body: "A Library entry read before the article. A text entry is read as written; an LLM entry is written by the text model for each video, one extra call. Off reads no intro. Write entries in Library → Entries.",
+    body: "A Library entry read before the article. A text entry is read as written; an LLM entry is written by the text model for each video, one extra call. Off reads no intro. Write entries in Library → Intros & Outros.",
   },
   "play.outro": {
     title: "Outro",

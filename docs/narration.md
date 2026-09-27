@@ -6,7 +6,7 @@ the narration treats them differently.
 
 ## Describe tables and figures in the narration
 
-Play → Audio → Audio Advanced, and Edit project → Providers. On by default for new runs and
+Play → Narration → Audio Advanced, and Edit project → Providers. On by default for new runs and
 templates; a project saved before the setting is unchanged until you turn it on.
 
 With it on, the article is walked block by block (`packages/app/src/slices/narration/blocks.ts`)
@@ -49,7 +49,7 @@ narration flattens the article as before.
 
 ## Show tables and figures on screen
 
-Play → Video, and Edit project → Video → Cuts and look; offered while the narration describes
+Play → Video and style, and Edit project → Video → Cuts and look; offered while the narration describes
 tables and figures. On by default for new runs and templates, stored only when on, so a
 project saved before it renders the video it always did.
 

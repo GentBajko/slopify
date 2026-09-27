@@ -175,7 +175,7 @@ export function skippedSpeakerPronunciationsNotice(
   );
   return (
     `Speaker pronunciations: some entries are skipped and read as ordinary text (${parts.join(". ")}). ` +
-    "The rest are used. To use them, fix those entries under Speakers → Pronunciations for that speaker (Play → Audio, or Edit project → Providers)."
+    "The rest are used. To use them, fix those entries under Speakers → Pronunciations for that speaker (Play → Narration, or Edit project → Providers)."
   );
 }
 

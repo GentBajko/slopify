@@ -1,4 +1,5 @@
 import { templateDocument, topicKeywords } from "@app/slices/project-templates/one-off.js";
+import { templateNameMax } from "@app/slices/project-templates/schema.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useRef, useState } from "react";
 import { useApp } from "@/app-context";
@@ -134,7 +135,7 @@ export function SaveTemplateDialog({
           <Input
             autoFocus
             value={name}
-            maxLength={200}
+            maxLength={templateNameMax}
             placeholder={document.form.title.replace(/\{\{[^}]*\}\}/g, "").trim() || "My setup"}
             onChange={(event) => setName(event.target.value)}
           />

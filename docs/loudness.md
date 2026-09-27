@@ -37,7 +37,7 @@ preview is silent, so it has nothing to level.
 - **Settings → General → Level the volume for new runs**: the app-wide default. On, at the
   recommended volumes, unless you change it. Play, templates, the quick short and every new
   draft start from it.
-- **Play → Outputs → Export → Level the volume**: this run's own choice. A draft that never
+- **Play → Video and style → Level the volume**: this run's own choice. A draft that never
   touched it follows Settings.
 - **Edit project → Pauses and volume**: turn it on or off for a project, or change the volumes.
 

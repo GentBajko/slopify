@@ -8,7 +8,7 @@ import { providers } from "../settings/model.js";
 export type SignInCli = "claude-code" | "codex" | "gemini";
 
 export type Fix =
-  // A CLI that is signed out: the command to run, then Re-check.
+  // A CLI that is signed out: the command to run, then Check again.
   | {
       readonly kind: "sign-in";
       readonly label: string;
@@ -67,7 +67,7 @@ export function fixFor(step: FailedStep): Fix | undefined {
   if (step.kind === "refusal" || refusedWords.test(reason))
     return drawn.includes(step.stage)
       ? { kind: "refused", label: "Soften and retry", soften: true }
-      : { kind: "refused", label: "Edit prompt", soften: false };
+      : { kind: "refused", label: "Edit the prompt", soften: false };
   if (retiredModel.test(reason)) return { kind: "switch-model", label: "Switch model" };
   if (step.kind === "auth" || step.kind === "missing_key" || keyTrouble.test(reason)) {
     const name = nameOf(step.provider);

@@ -1,3 +1,4 @@
+import { templateNameMax } from "@app/slices/project-templates/schema.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Fragment, type ReactElement, useEffect, useRef, useState } from "react";
@@ -314,7 +315,7 @@ export function TemplatesRoute({
                     title={
                       <InlineName
                         name={template.name}
-                        maxLength={120}
+                        maxLength={templateNameMax}
                         onSelect={() => setPicked(template.id)}
                         onRename={async (next) => {
                           const refused = await renameProjectTemplate(api, template.id, next);
@@ -464,7 +465,7 @@ export function TemplatesRoute({
             <Input
               value={name}
               required
-              maxLength={120}
+              maxLength={templateNameMax}
               disabled={pending}
               onChange={(event) => setName(event.target.value)}
             />

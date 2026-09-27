@@ -15,7 +15,7 @@ audiobook's relaxed pace, 0.8 and up sleep content. The pause between paragraphs
 default because paragraph pacing is mostly the narration prompt's and the voice's to make; set
 it when you want paragraphs to breathe more than sentences.
 
-Set them on **Play → Outputs → Export** beside Level the volume, or in **Edit project → Pauses
+Set them on **Play → Video and style** beside Level the volume, or in **Edit project → Pauses
 and volume**. A template carries them.
 
 ## How it works

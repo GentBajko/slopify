@@ -48,7 +48,7 @@ describe("caption font coverage", () => {
 
   it("uses a font on this computer for a script Slopify doesn't ship, else says what to do", async () => {
     await expect(captionFont(deps(), "default", "ja")).rejects.toThrow(
-      /no Japanese letters.*Settings → Fonts.*Noto Sans JP.*Edit project → Subtitles/,
+      /no Japanese letters.*Edit project → Subtitles.*Upload font.*Noto Sans JP/,
     );
     const arabic = { ...barlow, id: "system-x", path: asset("noto/NotoSansArabic-Regular.ttf") };
     await expect(captionFont(deps([arabic]), "default", "ko")).rejects.toThrow(/Korean/);

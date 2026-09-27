@@ -186,11 +186,11 @@ export const planningHelp = {
   },
   "planning.channel.brand.intro": {
     title: "Intro",
-    body: "A clip from Library → Entries played before every video of this channel whose template has no intro. Not set adds none. It adds its own length to each video and no provider cost.",
+    body: "An entry from Library → Intros & Outros, narrated before every video of this channel whose template has no intro. Not set adds none. It adds its own length to each video and costs one voice request, since it is narrated.",
   },
   "planning.channel.brand.outro": {
     title: "Outro",
-    body: "A clip from Library → Entries played after every video of this channel whose template has no outro. Not set adds none. It adds its own length to each video and no provider cost.",
+    body: "An entry from Library → Intros & Outros, narrated after every video of this channel whose template has no outro. Not set adds none. It adds its own length to each video and costs one voice request, since it is narrated.",
   },
   "planning.channel.brand.document-theme": {
     title: "Document theme",

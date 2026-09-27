@@ -60,7 +60,7 @@ export function helpText(version: string): string {
 Usage
   npx @gentbajko/slopify [options]            Start Slopify on this machine and open it in the browser
   npx @gentbajko/slopify --docker [options]   Install (or reinstall) Slopify in Docker (install --docker works too)
-  npx @gentbajko/slopify@latest update        Update Slopify (waits for running work first)
+  npx @gentbajko/slopify@latest update        Update Slopify while it runs, or the Docker install (waits for running work first)
 
 Options for starting Slopify
   --port <number>       The port the web app listens on (default 6969; or SLOPIFY_PORT)

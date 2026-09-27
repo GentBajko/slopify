@@ -33,17 +33,17 @@ fix-it button.
 ## Fix-it buttons
 
 A failed step's fix is the project's next action (docs/design-system.md), in the right rail and
-beside the step, in place of a plain Try … again. The mapping lives in one
+beside the step, in place of a plain **Try … again** (for example Try images again). The mapping lives in one
 place, `packages/app/src/slices/fixes/rules.ts`:
 
 | Failure | Button |
 | --- | --- |
-| A CLI is signed out | Sign in to Codex (or Claude Code, Gemini): the command to run, and Re-check |
-| A key was rejected or none is saved | Open Settings → Providers → the provider |
-| The disk is full | Free space, which opens Settings → Storage |
-| A content filter refused an image prompt | Soften and retry, and Edit prompt |
-| A content filter refused any other prompt | Edit prompt |
-| The model was retired | Switch model, which opens Edit |
+| A CLI is signed out | **Copy sign-in command** (codex login, claude auth login or gemini), then **Check again** |
+| A key was rejected or none is saved | **Open Settings → Providers → <provider>** |
+| The disk is full | **Free space**, which opens Settings → Storage |
+| A content filter refused an image prompt | **Soften and retry** |
+| A content filter refused any other prompt | **Edit the prompt**, which opens Edit |
+| The model was retired | **Switch model**, which opens Edit |
 
 Soften and retry asks the project's AI model to reword each refused image prompt without what a
 filter could flag, keeping the scene and style. The new wording streams onto the step as it is

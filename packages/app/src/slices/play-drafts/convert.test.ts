@@ -513,7 +513,7 @@ it("carries the shorts' background music only while Shorts is on, and names its 
       {
         field: "shorts.music",
         message: expect.stringContaining(
-          "Choose the file again under Outputs → Export → More shorts options → Background music",
+          "Choose the file again under Outputs → More shorts options → Background music",
         ),
       },
     ]);

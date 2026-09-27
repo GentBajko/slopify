@@ -59,8 +59,9 @@ npx @gentbajko/slopify@latest --docker # or keep it running in Docker (Linux)
 ```
 
 It opens at `http://127.0.0.1:6969`. To update, press **Update** in Settings or run
-`npx @gentbajko/slopify@latest update` (Docker or not). Either way it waits for running
-work, keeps a copy to go back to, and puts the previous version back if the new one
+`npx @gentbajko/slopify@latest update` (Docker or not). Without Docker, `update` asks the
+running app to update itself, so Slopify must be running; to just start the newest version, run
+`npx @gentbajko/slopify@latest`. Either way it waits for running work, keeps a copy to go back to, and puts the previous version back if the new one
 doesn't start.
 
 ## How it works
@@ -92,7 +93,8 @@ npx @gentbajko/slopify@latest --docker
 ```
 
 Runs Slopify in the background on Linux from one [compose.yaml](compose.yaml), restarting
-with Docker. Project files go to `~/Slopify/Projects`; the database and keys stay private in
+with Docker. Project files go to `Documents/Slopify/Projects` (installs from before 3.0 keep
+`~/Slopify/Projects`); the database and keys stay private in
 the `slopify-data` volume. If you use the Claude Code, Codex or Gemini CLI, it asks once to
 set up a small helper so they run on your machine with your existing logins. Update with
 `npx @gentbajko/slopify@latest update`. Full details, including running the compose file

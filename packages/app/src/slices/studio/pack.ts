@@ -127,7 +127,7 @@ export function uploadPack(deps: PackDeps, projectId: string): PackResult {
     missing.push(
       config.youtubeDescription === true
         ? "The YouTube description isn't written yet. It is written after the video's subtitle timing; wait for the Video stage to finish."
-        : "No YouTube description is written for this project. Turn on YouTube description in Edit project → Video to have one written with chapters and tags.",
+        : "No YouTube description is written for this project. Turn on YouTube description in Edit project → Prompts to have one written with chapters and tags.",
     );
   const count = thumbnailCountOf(config);
   // The first thumbnail, then the second and third, and never one left from when the project

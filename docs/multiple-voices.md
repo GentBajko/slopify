@@ -1,7 +1,7 @@
 # Multiple voices
 
 A run can be narrated by several speakers instead of one voice reading the article. Pick the
-format under **Play → Audio → Speakers** (or **Edit project → Providers → Speakers**):
+format under **Play → Narration → Speakers** (or **Edit project → Providers → Speakers**):
 
 | Format | Speakers | Video |
 |---|---|---|
@@ -70,7 +70,7 @@ text. Changing one speaker's voice remakes only that speaker's turns.
 
 ## Delivery cues
 
-With a **Narration Preparation** prompt (Audio → Advanced), every turn of a speaker on Inworld's
+With a **Narration Preparation** prompt (Narration → Audio Advanced), every turn of a speaker on Inworld's
 Realtime TTS-2 is prepared on its own before it is spoken: the text model gets the turn's
 sentences and who says them (`"Rat (character)"`), and answers cues in the same format as a
 single voice's preparation. They become Inworld's bracketed tags in that turn's request: a
@@ -122,7 +122,7 @@ inside a speaker's turn; the gap between turns stays the Turn gap.
 ## Books
 
 An audiobook can be one chapter of a book: turn on **A chapter of a book** under Speakers (Play →
-Audio, Audiobook format) and give the book's title and the chapter number. The MP3 and M4B are
+Narration, Audiobook format) and give the book's title and the chapter number. The MP3 and M4B are
 then tagged with the book as their album and the chapter as their track, and the project page
 and its row in Projects say "Book · Chapter N". Only the listening files are remade when the
 book or chapter changes; a project that is no chapter keeps its recipes exactly.

@@ -42,7 +42,7 @@ describe("voicesProblems", () => {
         speakers: [voiced("m", "Mara", "character")],
       }).map((problem) => problem.message),
     ).toEqual([
-      "An audiobook needs a narrator. Set one speaker's role to Narrator under Speakers (Play → Audio, or Edit project → Providers).",
+      "An audiobook needs a narrator. Set one speaker's role to Narrator under Speakers (Play → Narration, or Edit project → Providers).",
     ]);
     expect(
       voicesProblems({

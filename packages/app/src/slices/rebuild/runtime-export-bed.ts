@@ -26,7 +26,7 @@ export async function exportBed(
   if (bed.source !== "upload")
     return { source: { kind: "noise", preset: bed.source }, ...settings };
   const fix =
-    "Make the video again from Play with another file under Outputs → Export → Ambient sound, or pick Rain, Fireplace or Wind there instead.";
+    "Make the video again from Play with another file under Video and style → Ambient sound, or pick Rain, Fireplace or Wind there instead.";
   const assetId = view.revision.content.ambientBed;
   const row = z
     .object({ path: z.string() })

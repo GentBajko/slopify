@@ -1,5 +1,6 @@
 import type { DraftView, PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import { draftViewSchema, playDraftDocumentSchema } from "@app/slices/play-drafts/schema.js";
+import { templateNameMax } from "@app/slices/project-templates/schema.js";
 import type { UseQueryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import type { Api } from "@/api";
@@ -141,7 +142,7 @@ export async function saveTemplateFromProject(
   const body = z
     .object({
       id: z.uuid(),
-      name: z.string().trim().min(1).max(200),
+      name: z.string().trim().min(1).max(templateNameMax),
       revisionId: z.string().min(1).max(64),
     })
     .parse(input);

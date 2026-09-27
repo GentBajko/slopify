@@ -18,12 +18,13 @@ import { shortsExtrasForm } from "../shorts/model.js";
 import { ambientBedFormOf } from "../video/ambient-bed.js";
 import { usesScriptPrompt, type VoicesSettings } from "../voices/model.js";
 import type { ProjectTemplate, TemplateDeps, TemplateResult } from "./model.js";
+import { templateNameMax } from "./schema.js";
 import { createTemplate, readTemplate } from "./service.js";
 
 export const projectTemplateCreateSchema = z
   .object({
     id: z.uuid(),
-    name: z.string().trim().min(1).max(200),
+    name: z.string().trim().min(1).max(templateNameMax),
     projectId: z.string().min(1).max(64),
     revisionId: z.string().min(1).max(64),
   })

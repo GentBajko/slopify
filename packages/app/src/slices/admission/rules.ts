@@ -337,7 +337,7 @@ function checkShortsMusic(
 ): void {
   const id = draft.provided.shortsMusic;
   if (draft.shorts?.enabled !== true || id === undefined) return;
-  const where = "under Outputs → Export → More shorts options → Background music";
+  const where = "under Outputs → More shorts options → Background music";
   const file = staged.find((candidate) => candidate.id === id);
   if (file === undefined || file.stageKind !== "audio")
     fields.push({
@@ -440,7 +440,7 @@ export function voicesFields(
     fields.push({
       field: "narrationPrompt",
       message:
-        "Narration preparation adds delivery cues only to speakers on Inworld's TTS-2 model, and no speaker uses it. Choose that model for a speaker under Speakers, or clear Narration Preparation in Audio → Advanced.",
+        "Narration preparation adds delivery cues only to speakers on Inworld's TTS-2 model, and no speaker uses it. Choose that model for a speaker under Speakers, or clear Narration Preparation under Narration → Audio Advanced.",
     });
   return fields;
 }
@@ -546,7 +546,7 @@ export function ambientBedFields(
 ): readonly FieldError[] {
   const bed = draft.ambientBed;
   if (bed === undefined || !usesAmbientBed(draft)) return [];
-  const where = "under Outputs → Export → Ambient sound";
+  const where = "under Video and style → Ambient sound";
   const fields: FieldError[] = ambientBedProblems(bed).map((problem) => ({
     field: `ambientBed.${problem.field}`,
     message: `${problem.message} Change it ${where}.`,

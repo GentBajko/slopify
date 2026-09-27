@@ -44,7 +44,7 @@ export function pauseProblem(value: number, name: string): string | undefined {
     value <= pauseSecondsMax &&
     Math.abs(steps - Math.round(steps)) < 1e-6
     ? undefined
-    : `The pause between ${name} must be between 0 and ${String(pauseSecondsMax)} seconds, in steps of ${String(pauseSecondsStep)}. Change it under Play → Outputs → Export, or Edit project → Pauses and volume.`;
+    : `The pause between ${name} must be between 0 and ${String(pauseSecondsMax)} seconds, in steps of ${String(pauseSecondsStep)}. Change it under Play → Video and style, or Edit project → Pauses and volume.`;
 }
 
 export function pauseFields(config: {

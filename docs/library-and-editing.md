@@ -30,7 +30,7 @@ alias has **Whole word** (on: only where it stands as a word, not inside a longe
 form wins. **Save aliases** saves the whole list; a row it can't save is marked with the
 reason.
 
-Play's Audio Advanced and Edit project have **Use narration aliases** (on for new drafts; off,
+Play's Narration → Audio Advanced and Edit project have **Use narration aliases** (on for new drafts; off,
 and nothing copied, for projects from before aliases existed). A project copies the Library's
 aliases when it starts; editing the Library never changes a started project until you press
 **Update from Library** in Edit project. Aliases work with every generated voice.

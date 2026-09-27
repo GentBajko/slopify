@@ -531,7 +531,7 @@ const runErrors: Readonly<Record<string, string>> = {
   "missing-template":
     "The template this schedule uses was deleted or changed. Edit the schedule and choose a template again.",
   "unsupported-media":
-    "This template uses audio, images, a thumbnail, shorts background music or an ambient sound file you supplied, which scheduled runs cannot use. Pick a template that generates these instead, or on Play remove the music under Outputs → Export → More shorts options (or pick Rain, Fireplace or Wind under Outputs → Export → Ambient sound) and save the template again.",
+    "This template uses audio, images, a thumbnail, shorts background music or an ambient sound file you supplied, which scheduled runs cannot use. Pick a template that generates these instead, or on Play remove the music under Outputs → More shorts options (or pick Rain, Fireplace or Wind under Video and style → Ambient sound) and save the template again.",
   "spend-limit":
     "Not started: the estimated cost was above this schedule's spend limit, or some prices were unknown. Raise the spend limit or choose models with known prices.",
   readiness:

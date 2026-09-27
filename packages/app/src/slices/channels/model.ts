@@ -12,7 +12,7 @@ export type CastKind = (typeof castKinds)[number];
 // Everything optional: a field left out adds nothing to a run, so a channel with an empty kit
 // starts exactly the runs its templates always started. Colours are #RRGGBB.
 export interface BrandKit {
-  // Captions: a font from the fonts list (Settings → Fonts), text and outline colour.
+  // Captions: a font from the fonts list (uploaded in the caption font picker), text and outline colour.
   readonly captionFontId?: string | undefined;
   readonly captionColor?: string | undefined;
   readonly captionOutlineColor?: string | undefined;

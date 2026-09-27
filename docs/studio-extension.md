@@ -12,7 +12,7 @@ the order Studio's upload dialog asks for them:
 1. Video file: download it, or Open folder.
 2. Title.
 3. Description, with the chapters and hashtags (turn on YouTube description in Edit project →
-   Video to have one written).
+   Prompts to have one written).
 4. Thumbnail: the first goes under Thumbnail; with three thumbnails, all three go into
    Studio's A/B Testing (the button beside the title, which replaced Test & compare).
 5. Playlist: set it in Settings → YouTube Studio → Playlist, once as the default (Every

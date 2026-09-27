@@ -65,7 +65,7 @@ export async function executeVoicesRecipe(
   const audio = await revisionAudio(deps, context, view, { levelled: true });
   if (audio.length === 0)
     throw new Error(
-      "The MP3 and M4B files need narration audio, but this project has none. Turn narration on in Edit project, or turn Audio files off under Speakers (Play → Audio, or Edit project → Providers), then Try again.",
+      "The MP3 and M4B files need narration audio, but this project has none. Turn narration on in Edit project, or turn Audio files off under Speakers (Play → Narration, or Edit project → Providers), then Try again.",
     );
   const totalSeconds = audio.reduce((sum, segment) => sum + segment.seconds, 0);
   const chapters = audioChapters({

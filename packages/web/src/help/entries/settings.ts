@@ -277,11 +277,11 @@ export const settingsHelp = {
   },
   "welcome.topic": {
     title: "Topic",
-    body: "What the short is about, in a few words or a question, up to 200 characters. Slopify researches and writes the script from it, so a specific topic gives a sharper short than a broad one.",
+    body: "What the short is about, in a few words or a question, up to 200 characters. Slopify writes the script from it without a research step, to keep the first short quick, so a specific topic gives a sharper short than a broad one.",
   },
   "welcome.pack": {
     title: "Style",
-    body: "The starter pack whose prompts, voice and art direction the short uses. General is a neutral explainer style. Picking a pack does not add it to your library; use Add to library for that.",
+    body: "The starter pack whose prompts, voice and art direction the short uses. General is a neutral explainer style. Picking a pack adds its prompts and suggested voice to your library for the short; Add to library also adds its template for Play.",
   },
   "welcome.packs": {
     title: "Starter packs",

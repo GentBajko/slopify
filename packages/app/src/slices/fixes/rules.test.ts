@@ -72,7 +72,7 @@ describe("fixFor", () => {
       soften: true,
     });
     expect(fixFor({ stage: "article", kind: "refusal", reason: "I can't help with that" })).toEqual(
-      { kind: "refused", label: "Edit prompt", soften: false },
+      { kind: "refused", label: "Edit the prompt", soften: false },
     );
   });
 

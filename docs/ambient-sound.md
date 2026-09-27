@@ -1,7 +1,7 @@
 # Ambient sound under long videos
 
 An optional bed of rain, a fireplace, wind or your own audio file under the whole narration of
-the long video. Set it on **Play → Outputs → Export → Ambient sound** (saved with the setup and
+the long video. Set it on **Play → Video and style → Ambient sound** (saved with the setup and
 its template), or give a channel a default under **Brand kit → Ambient sound** on the channel
 page.
 

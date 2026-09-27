@@ -1,7 +1,7 @@
 # More images for long videos
 
-A long video with a fixed handful of images repeats them for an hour. **Play → Outputs →
-Images → More images for long videos** scales the number of images with the narration's
+A long video with a fixed handful of images repeats them for an hour. **Play → Images → More images
+for long videos** scales the number of images with the narration's
 length instead.
 
 ## Setting it
@@ -15,7 +15,7 @@ Both are the same setting; switching between them keeps the rate (every 5 minute
 hour). The line under it says what it makes for the expected length, for example *For about
 60 minutes (9,000 words expected, set on Review): 30 images, 26 more than the prompts' 4.*
 
-Switching it on also switches **Export → Motion** from Zoom in and out to **Mix of both**, so
+Switching it on also switches **Video and style → Motion** from Zoom in and out to **Mix of both**, so
 the images pan and zoom by turns. A Pan across or Still you picked stays; you can pick Zoom
 again.
 

@@ -71,7 +71,7 @@ export function makeNextChapter(deps: TemplateDeps, input: unknown): NextChapter
         ok: false,
         reason: "not-an-audiobook",
         message:
-          "Only an audiobook has chapters. Pick Audiobook under Speakers (Play → Audio) to start a book.",
+          "Only an audiobook has chapters. Pick Audiobook under Speakers (Play → Narration) to start a book.",
       };
     const book = nextBook(revision.config.title, voices.book);
     const document = documentFromProject(deps, revision);

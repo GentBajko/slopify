@@ -46,14 +46,14 @@ import type { DraftAttachment, PlayDraftDocument } from "./model.js";
 // Said where the control is, since the music sits in a closed disclosure on the Export rail.
 const musicMessages = {
   uploading:
-    "The shorts' background music is still uploading, so the run can't start yet. Wait for it to finish, or remove it under Outputs → Export → More shorts options → Background music.",
+    "The shorts' background music is still uploading, so the run can't start yet. Wait for it to finish, or remove it under Outputs → More shorts options → Background music.",
   missing:
-    "The shorts' background music file is no longer available (it was not uploaded again after the draft was copied, or the upload failed). Choose the file again under Outputs → Export → More shorts options → Background music, or remove it.",
+    "The shorts' background music file is no longer available (it was not uploaded again after the draft was copied, or the upload failed). Choose the file again under Outputs → More shorts options → Background music, or remove it.",
 } as const;
 function pickMusic(id: string | undefined): { readonly shortsMusic?: string } {
   return id === undefined ? {} : { shortsMusic: id };
 }
-const bedWhere = "under Outputs → Export → Ambient sound";
+const bedWhere = "under Video and style → Ambient sound";
 const bedMessages = {
   uploading: `The ambient sound's audio file is still uploading, so the run can't start yet. Wait for it to finish ${bedWhere}.`,
   missing: `The ambient sound's audio file is missing (it was never chosen, was not uploaded again after the draft was copied, or the upload failed). Choose the file ${bedWhere}, or pick Rain, Fireplace or Wind instead.`,

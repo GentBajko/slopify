@@ -52,7 +52,7 @@ export function ImageScaleControl({
         ...rest,
         ...(next === undefined ? {} : { imageScale: next }),
         // A long video pans and zooms by turns. Only the starting style is switched, so a
-        // Pan or Still the user picked stays; they can pick Zoom again under Export → Motion.
+        // Pan or Still the user picked stays; they can pick Zoom again under Video and style → Motion.
         ...(next !== undefined && scale === undefined && form.motionStyle === "zoom"
           ? { motionStyle: "mixed" as const }
           : {}),

@@ -170,7 +170,7 @@ describe("Play and the channel", () => {
     if (!bad.ok)
       expect(bad.fields).toContainEqual({
         field: "ambientBed.level",
-        message: expect.stringMatching(/Outputs → Export → Ambient sound/),
+        message: expect.stringMatching(/Video and style → Ambient sound/),
       });
     // With the video off there is nothing to lie under, so nothing is asked for.
     const wav = convert({
