@@ -1,14 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { CalendarIcon, PlusIcon } from "lucide-react";
 import { type ReactElement, useEffect, useMemo, useState } from "react";
 import { useApp } from "@/app-context";
 import { ChannelPicker, useCurrentChannel } from "@/channels/current";
 import { Board, BoardColumn } from "@/components/kit/board";
-import { Button } from "@/components/kit/button";
 import { EmptyState } from "@/components/kit/empty-state";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
+import { ButtonLink, TextLink } from "@/components/kit/link";
 import { SectionHead } from "@/components/kit/section-head";
 import { ComingUp } from "@/home/coming-up";
 import { FailedItem, HeldTopicsItem, isWaiting, PausedItem, WaitingItem } from "@/home/needs-you";
@@ -123,18 +123,14 @@ export function HomeRoute(): ReactElement {
         meta={current.channelId === null ? "Every channel" : undefined}
         actions={
           <>
-            <Button asChild variant="secondary">
-              <Link to="/calendar">
-                <CalendarIcon aria-hidden="true" strokeWidth={1.75} />
-                Open calendar
-              </Link>
-            </Button>
-            <Button asChild variant="secondary">
-              <Link to="/play">
-                <PlusIcon aria-hidden="true" strokeWidth={1.75} />
-                New video
-              </Link>
-            </Button>
+            <TextLink to="/calendar">
+              <CalendarIcon aria-hidden="true" strokeWidth={1.75} />
+              Open calendar
+            </TextLink>
+            <ButtonLink to="/play" variant="secondary">
+              <PlusIcon aria-hidden="true" strokeWidth={1.75} />
+              New video
+            </ButtonLink>
           </>
         }
       />
@@ -222,9 +218,7 @@ export function HomeRoute(): ReactElement {
         <BoardColumn>
           <section aria-label="Coming up">
             <SectionHead title="Coming up" info="home.coming-up" meta="Next 7 days">
-              <Button asChild variant="quiet" size="small">
-                <Link to="/calendar">Calendar</Link>
-              </Button>
+              <TextLink to="/calendar">Calendar</TextLink>
             </SectionHead>
             {calendar.error !== null ? (
               <p className="m-0 text-small text-danger">

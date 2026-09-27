@@ -3,8 +3,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/kit/button";
+import { Button, ButtonRow } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
+import { hitArea } from "@/components/kit/list-row";
 import { useToast } from "@/components/kit/toast";
 import { startedAt } from "@/lib/utils";
 import { keys } from "@/queries";
@@ -55,7 +56,7 @@ export function ReadyItem({ project }: { readonly project: ProjectListing }): Re
     run: () => mark.mutate(true),
   });
   return (
-    <li className="sl-home-ready">
+    <li className={`sl-home-ready ${hitArea}`}>
       <ProjectThumb projectId={project.id} />
       <div className="flex min-w-0 flex-col gap-2">
         <div className="sl-row__title">
@@ -66,7 +67,7 @@ export function ReadyItem({ project }: { readonly project: ProjectListing }): Re
         <div className="text-small text-ink-2">
           {`${project.format} · finished ${startedAt(project.updatedAt)}${project.status === "partial" ? " · a step failed" : ""}`}
         </div>
-        <div className="sl-btn-row">
+        <ButtonRow>
           <PrepareUpload projectId={project.id} ready />
           <Button
             variant="quiet"
@@ -77,7 +78,7 @@ export function ReadyItem({ project }: { readonly project: ProjectListing }): Re
           >
             Mark uploaded
           </Button>
-        </div>
+        </ButtonRow>
       </div>
     </li>
   );

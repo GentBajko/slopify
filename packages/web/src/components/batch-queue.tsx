@@ -4,7 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { ListVideoIcon } from "lucide-react";
 import type { ProjectListing } from "@/api";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/kit/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { helpEntry } from "@/help/catalog";
 import { read } from "@/http";
@@ -27,7 +27,7 @@ export function BatchQueueCount() {
     <Popover>
       <PopoverTrigger asChild>
         <Button
-          variant="ghost"
+          variant="quiet"
           disabled={count === 0}
           aria-label={`Video queue: ${count} remaining`}
         >

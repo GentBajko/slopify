@@ -15,6 +15,7 @@ import { ConfirmDialog } from "@/components/kit/dialog";
 import { Field, Input } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
+import { ButtonLink } from "@/components/kit/link";
 import { Switch } from "@/components/kit/switch";
 import { LabelledSwitch } from "@/components/labelled-switch";
 import { useLeaveWhenSaved } from "@/components/saved-tick";
@@ -290,17 +291,16 @@ export function PromptEditorRoute({
               pending={save.isPending}
               saved={saved}
               cancel={
-                <Button asChild variant="secondary">
-                  <Link
-                    to="/prompts"
-                    search={{ kind: draft.kind }}
-                    onClick={() => {
-                      setEdited(undefined);
-                    }}
-                  >
-                    Cancel
-                  </Link>
-                </Button>
+                <ButtonLink
+                  to="/prompts"
+                  search={{ kind: draft.kind }}
+                  onClick={() => {
+                    setEdited(undefined);
+                  }}
+                  variant="secondary"
+                >
+                  Cancel
+                </ButtonLink>
               }
               errors={[save.error, remove.error].flatMap((error) =>
                 error === null ? [] : [error.message],

@@ -8,11 +8,11 @@ import { useApp } from "@/app-context";
 import { DetectedSlots } from "@/components/detected-slots";
 import { EditorActions } from "@/components/editor-actions";
 import { EditorSkeleton } from "@/components/editor-states";
-import { Button } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Field, Input } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
+import { ButtonLink } from "@/components/kit/link";
 import { LabelledSwitch } from "@/components/labelled-switch";
 import { useLeaveWhenSaved } from "@/components/saved-tick";
 import { SlotBody } from "@/components/slot-body";
@@ -223,11 +223,9 @@ export function EntryEditorRoute({
             pending={save.isPending}
             saved={saved}
             cancel={
-              <Button asChild variant="secondary">
-                <Link to="/entries" search={{ category: draft.category }}>
-                  Cancel
-                </Link>
-              </Button>
+              <ButtonLink to="/entries" search={{ category: draft.category }} variant="secondary">
+                Cancel
+              </ButtonLink>
             }
             errors={[save.error, remove.error].flatMap((error) =>
               error === null ? [] : [error.message],

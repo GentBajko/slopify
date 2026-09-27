@@ -70,7 +70,7 @@ it("says right under the Play key why it can't start, and goes to the field", as
   expect((start.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled).toBe(
     true,
   );
-  const reason = start.getByRole("button", { name: /to play$/ });
+  const reason = start.getByRole("button", { name: "Go to the field", description: /to play$/ });
   expect(start.getByRole("button", { name: "Start run" }).getAttribute("aria-describedby")).toBe(
     "play-start-reason",
   );

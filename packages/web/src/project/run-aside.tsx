@@ -3,6 +3,7 @@ import { etaLabel, stageEta } from "@app/slices/eta/model.js";
 import type { RunCost } from "@app/slices/run-cost/panel.js";
 import type { Output } from "@app/slices/storage/model.js";
 import type { ReactElement } from "react";
+import { SectionHead } from "@/components/kit/section-head";
 import { Meter, Stat, Stats } from "@/components/kit/stats";
 import type { Tone } from "@/components/kit/status";
 import { type Step, Steps } from "@/components/kit/steps";
@@ -131,9 +132,7 @@ export function StageAnnouncements({
 export function RunSteps({ steps }: { readonly steps: readonly Step[] }): ReactElement {
   return (
     <section aria-labelledby="run-steps-title" className="flex flex-col gap-2">
-      <h2 id="run-steps-title" className="sl-kicker m-0">
-        Run
-      </h2>
+      <SectionHead id="run-steps-title" title="Run" size="small" className="pb-0" />
       <Steps steps={steps} label="Run steps" />
     </section>
   );
@@ -162,9 +161,7 @@ export function CostSoFar({ cost }: { readonly cost: RunCost | undefined }): Rea
   );
   return (
     <section aria-labelledby="cost-so-far-title" className="flex flex-col gap-3">
-      <h2 id="cost-so-far-title" className="sl-kicker m-0">
-        Cost so far
-      </h2>
+      <SectionHead id="cost-so-far-title" title="Cost so far" size="small" className="pb-0" />
       <Stats className="grid-cols-2">
         <Stat value={money(cost.cost)} label={cost.unpriced > 0 ? "known, spent" : "spent"} />
         {cost.apiEquivalent === null ? null : (

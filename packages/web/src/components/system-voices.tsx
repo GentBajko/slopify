@@ -1,13 +1,13 @@
 import type { SpeechVoice } from "@app/kernel/ports/system-speech.js";
 import type { ProviderStatus } from "@app/slices/settings/model.js";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { useId } from "react";
 import type { Api } from "@/api";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/kit/button";
+import { ButtonRow } from "@/components/kit/button";
 import { Select } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
+import { ButtonLink } from "@/components/kit/link";
 import { Lamp } from "@/components/kit/status";
 import { providerTips } from "@/components/provider-cli";
 import { read } from "@/http";
@@ -91,13 +91,11 @@ export function SystemVoiceDetail({
         </ul>
       )}
       {readiness.available ? (
-        <div className="sl-btn-row">
-          <Button asChild>
-            <Link to="/settings" search={{ section: "voices" }}>
-              Add a system voice
-            </Link>
-          </Button>
-        </div>
+        <ButtonRow>
+          <ButtonLink to="/settings" search={{ section: "voices" }}>
+            Add a system voice
+          </ButtonLink>
+        </ButtonRow>
       ) : null}
     </section>
   );

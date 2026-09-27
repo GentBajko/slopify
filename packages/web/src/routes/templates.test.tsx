@@ -110,7 +110,7 @@ it("applies a template as a fresh draft and preserves its identity after a lost 
     <TemplatesRoute onApplied={applied} />,
     testDeps({ ...routes, [`POST /api/project-templates/${templateId}/instantiate`]: apply }),
   );
-  const button = await screen.findByRole("button", { name: `Apply ${template.name}` });
+  const button = await screen.findByRole("button", { name: `Use ${template.name} in Play` });
   await user.click(button);
   expect(await screen.findByRole("alert")).toHaveProperty(
     "textContent",
@@ -131,7 +131,7 @@ it("applies a template under StrictMode effect replay", async () => {
     </StrictMode>,
     testDeps({ ...routes, [`POST /api/project-templates/${templateId}/instantiate`]: apply }),
   );
-  await user.click(await screen.findByRole("button", { name: `Apply ${template.name}` }));
+  await user.click(await screen.findByRole("button", { name: `Use ${template.name} in Play` }));
   await waitFor(() => expect(apply).toHaveBeenCalledOnce());
 });
 
@@ -161,7 +161,7 @@ it("opens an applied template through the real Play session", async () => {
         Response.json({ draft: draftView }),
     }),
   );
-  await user.click(await screen.findByRole("button", { name: `Apply ${template.name}` }));
+  await user.click(await screen.findByRole("button", { name: `Use ${template.name} in Play` }));
   await waitFor(() => expect(opened).toBe(true));
 });
 
@@ -198,7 +198,7 @@ it("does not install a template after the route unmounts during draft loading", 
         Response.json({ draft: draftView }),
     }),
   );
-  await user.click(await screen.findByRole("button", { name: `Apply ${template.name}` }));
+  await user.click(await screen.findByRole("button", { name: `Use ${template.name} in Play` }));
   await screen.findByRole("button", { name: "Refresh templates" });
   leave();
   await screen.findByText("Templates left");
@@ -242,7 +242,7 @@ it("retains the created draft identity when opening the new draft fails", async 
     <TemplatesRoute onApplied={opened} />,
     testDeps({ ...routes, [`POST /api/project-templates/${templateId}/instantiate`]: apply }),
   );
-  const button = await screen.findByRole("button", { name: `Apply ${template.name}` });
+  const button = await screen.findByRole("button", { name: `Use ${template.name} in Play` });
   await user.click(button);
   await screen.findByRole("alert");
   await user.click(button);
@@ -263,7 +263,7 @@ it("does not apply a delayed template after the Play session generation changes"
       [`POST /api/project-templates/${templateId}/instantiate`]: () => response.promise,
     }),
   );
-  await user.click(await screen.findByRole("button", { name: `Apply ${template.name}` }));
+  await user.click(await screen.findByRole("button", { name: `Use ${template.name} in Play` }));
   generation = 1;
   response.resolve(Response.json({ draft: draftView }));
   await waitFor(() => expect(opened).not.toHaveBeenCalled());
@@ -275,7 +275,7 @@ it("keeps an unsaved or uncertain Play session authoritative before applying", a
     <TemplatesRoute onApplied={vi.fn()} beforeApply={async () => false} />,
     testDeps({ ...routes, [`POST /api/project-templates/${templateId}/instantiate`]: apply }),
   );
-  fireEvent.click(await screen.findByRole("button", { name: `Apply ${template.name}` }));
+  fireEvent.click(await screen.findByRole("button", { name: `Use ${template.name} in Play` }));
   expect(await screen.findByRole("alert")).toHaveProperty(
     "textContent",
     expect.stringContaining("Save or discard the draft open in Play"),
@@ -308,7 +308,7 @@ it("deletes the selected version and refreshes the list", async () => {
   expect(remove).toHaveBeenCalledOnce();
 });
 
-it("shows Apply and Delete on the row itself and offers Save a setup in the command palette", async () => {
+it("shows the Library row actions on the row itself and offers Save a setup in the command palette", async () => {
   const registry = new CommandRegistry();
   renderRouted(
     <CommandPaletteProvider registry={registry}>
@@ -319,7 +319,13 @@ it("shows Apply and Delete on the row itself and offers Save a setup in the comm
   const actions = await screen.findByRole("group", { name: `Actions for ${template.name}` });
   expect(
     [...actions.querySelectorAll("button")].map((one) => one.getAttribute("aria-label")),
-  ).toEqual([`Apply ${template.name}`, `Keywords of ${template.name}`, `Delete ${template.name}`]);
+  ).toEqual([
+    `Edit ${template.name}`,
+    `Duplicate ${template.name}`,
+    `Use ${template.name} in Play`,
+    `History of ${template.name}`,
+    `Delete ${template.name}`,
+  ]);
 
   const save = registry.list().find((command) => command.title === "Save a setup as a template");
   expect(save?.group).toBe("Library");
@@ -361,11 +367,117 @@ it("shows a template's keywords with what each feeds, the topic saved empty", as
       [`GET /api/project-templates/${templateId}`]: jsonAnswer({ ...template, document }),
     }),
   );
-  await user.click(await screen.findByRole("button", { name: `Keywords of ${template.name}` }));
+  await user.click(await screen.findByRole("button", { name: `Edit ${template.name}` }));
   const list = await screen.findByRole("list", { name: "Keywords" });
   const rows = within(list).getAllByRole("listitem");
   expect(rows[0]?.textContent).toContain("{{Topic}}");
   expect(rows[0]?.textContent).toContain("Feeds Project title · Article · left empty in templates");
   expect(rows[1]?.textContent).toContain("1500");
   expect(rows[1]?.textContent).toContain("Feeds Article");
+});
+
+it("opens a template beside the list from Edit or a press on its row, and renames it with the pencil", async () => {
+  const user = userEvent.setup();
+  const sent: unknown[] = [];
+  renderRouted(
+    <TemplatesRoute onApplied={vi.fn()} />,
+    testDeps({
+      ...routes,
+      [`GET /api/project-templates/${templateId}`]: jsonAnswer({
+        ...template,
+        document: freshDraftDocument,
+      }),
+      [`PUT /api/project-templates/${templateId}`]: async (request) => {
+        const body = (await request.json()) as { name: string };
+        sent.push(body);
+        return Response.json({
+          ...template,
+          name: body.name,
+          version: 2,
+          document: freshDraftDocument,
+        });
+      },
+    }),
+  );
+  await user.click(await screen.findByRole("button", { name: `Edit ${template.name}` }));
+  expect(
+    await screen.findByRole("region", { name: `Keywords of ${template.name}` }),
+  ).not.toBeNull();
+  // The row's name is its select button; the whole row is that button's target.
+  const row = screen.getByRole("button", { name: template.name });
+  expect(row.closest("li")?.getAttribute("aria-current")).toBe("true");
+  await user.click(screen.getByRole("button", { name: `Rename ${template.name}` }));
+  const name = screen.getByLabelText(`New name for ${template.name}`);
+  await user.clear(name);
+  await user.type(name, "Monthly documentary");
+  await user.click(screen.getByRole("button", { name: "Save name" }));
+  await waitFor(() => expect(sent).toHaveLength(1));
+  expect(sent[0]).toMatchObject({ baseVersion: 1, name: "Monthly documentary" });
+});
+
+it("duplicates a template as a named copy", async () => {
+  const user = userEvent.setup();
+  const names: string[] = [];
+  const created = vi.fn(async (request: Request) => {
+    const body = (await request.json()) as { id: string; name: string };
+    names.push(body.name);
+    return Response.json(
+      { ...template, id: body.id, name: body.name, document: freshDraftDocument },
+      { status: 201 },
+    );
+  });
+  renderRouted(
+    <TemplatesRoute onApplied={vi.fn()} />,
+    testDeps({
+      ...routes,
+      [`GET /api/project-templates/${templateId}`]: jsonAnswer({
+        ...template,
+        document: freshDraftDocument,
+      }),
+      "POST /api/project-templates": created,
+    }),
+  );
+  await user.click(await screen.findByRole("button", { name: `Duplicate ${template.name}` }));
+  await waitFor(() => expect(created).toHaveBeenCalledOnce());
+  expect(names).toEqual([`${template.name} copy`]);
+});
+
+it("lists a template's versions in History and restores an older one as a new version", async () => {
+  const user = userEvent.setup();
+  const second = { ...template, version: 2, name: "Weekly documentary" };
+  const restored: unknown[] = [];
+  renderRouted(
+    <TemplatesRoute onApplied={vi.fn()} />,
+    testDeps({
+      ...routes,
+      "GET /api/project-templates": jsonAnswer({ templates: [second] }),
+      [`GET /api/project-templates/${templateId}`]: (request) => {
+        const version = new URL(request.url).searchParams.get("version");
+        return Response.json({
+          ...second,
+          version: Number(version ?? 2),
+          name: version === "1" ? "Old documentary" : second.name,
+          document: freshDraftDocument,
+        });
+      },
+      [`PUT /api/project-templates/${templateId}`]: async (request) => {
+        const body = (await request.json()) as { name: string };
+        restored.push(body);
+        return Response.json({
+          ...second,
+          version: 3,
+          name: body.name,
+          document: freshDraftDocument,
+        });
+      },
+    }),
+  );
+  await user.click(await screen.findByRole("button", { name: `History of ${second.name}` }));
+  const drawer = await screen.findByRole("dialog", { name: `History of ${second.name}` });
+  const versions = within(drawer).getByRole("list", { name: `Versions of ${second.name}` });
+  expect(within(versions).getAllByRole("listitem")).toHaveLength(2);
+  expect(await within(drawer).findByText(/Renamed from "Old documentary"/u)).not.toBeNull();
+  await user.click(within(drawer).getByRole("button", { name: "Restore version 1" }));
+  await waitFor(() => expect(restored).toHaveLength(1));
+  expect(restored[0]).toMatchObject({ baseVersion: 2, name: "Old documentary" });
 });

@@ -153,7 +153,8 @@ it("keeps an inactive in-flight font locked until explicit recovery and ignores 
   // The reason under the Play key says what it waits for and goes to it.
   await userEvent.click(
     within(screen.getByRole("region", { name: "Start" })).getByRole("button", {
-      name: "Wait for the subtitle font upload to finish to play",
+      name: "Go to the field",
+      description: "Wait for the subtitle font upload to finish to play",
     }),
   );
   await waitFor(() =>
@@ -163,7 +164,8 @@ it("keeps an inactive in-flight font locked until explicit recovery and ignores 
   await openSection("Outputs");
   await userEvent.click(
     within(screen.getByRole("region", { name: "Start" })).getByRole("button", {
-      name: "Wait for the subtitle font upload to finish to play",
+      name: "Go to the field",
+      description: "Wait for the subtitle font upload to finish to play",
     }),
   );
   await waitFor(() =>

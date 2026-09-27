@@ -1,6 +1,6 @@
 import { useId } from "react";
+import { Button } from "@/components/kit/button";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { HelpId } from "@/help/catalog";
@@ -140,7 +140,7 @@ export function FilePick({
               ) : null}
               {onRemove === undefined ? null : (
                 <Button
-                  variant="ghost"
+                  variant="quiet"
                   className="ml-auto"
                   aria-label={`Remove ${upload.name}`}
                   onClick={() => {

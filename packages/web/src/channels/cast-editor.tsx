@@ -5,10 +5,11 @@ import { PlusIcon } from "lucide-react";
 import { type ReactElement, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { StatusSlot } from "@/components/kit/action-bar";
-import { Button } from "@/components/kit/button";
+import { Button, ButtonRow } from "@/components/kit/button";
 import { Field, Input, Select, Textarea } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Rule } from "@/components/kit/layout";
+import { FileLink } from "@/components/kit/link";
 import { Lightbox, MediaFrame, MediaGrid } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
 import { Badge, Chip } from "@/components/kit/status";
@@ -329,15 +330,14 @@ function Pictures({
         actions={(_, index) => {
           const one = ready[index];
           return one === undefined ? null : (
-            <Button asChild size="small">
-              <a
-                href={one.src}
-                download
-                aria-label={`Download picture ${String(one.number)} of ${member.name}`}
-              >
-                Download
-              </a>
-            </Button>
+            <FileLink
+              href={one.src}
+              download
+              size="small"
+              aria-label={`Download picture ${String(one.number)} of ${member.name}`}
+            >
+              Download
+            </FileLink>
           );
         }}
       />
@@ -526,7 +526,7 @@ export function PictureFailure({
     <>
       <p className="m-0 mt-1 text-small text-danger">{error}</p>
       {fix === undefined ? null : (
-        <div className="sl-btn-row mt-2">
+        <ButtonRow className="mt-2">
           <FixActions
             fix={fix}
             retry={retry}
@@ -540,7 +540,7 @@ export function PictureFailure({
               ) : undefined
             }
           />
-        </div>
+        </ButtonRow>
       )}
     </>
   );

@@ -3,6 +3,7 @@ import { type ReactElement, useRef, useState } from "react";
 import { Button, IconButton } from "@/components/kit/button";
 import { Input } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { RowSelect } from "@/components/kit/list-row";
 import { useToast } from "@/components/kit/toast";
 import type { HelpId } from "@/help/catalog";
 
@@ -89,13 +90,9 @@ export function InlineName({
         {onSelect === undefined ? (
           <span className="min-w-0 break-words">{name}</span>
         ) : (
-          <button
-            type="button"
-            onClick={onSelect}
-            className="min-w-0 border-0 bg-transparent p-0 text-left font-[inherit] text-ink"
-          >
+          <RowSelect onSelect={onSelect} className="min-w-0">
             {name}
-          </button>
+          </RowSelect>
         )}
         <IconButton
           size="small"

@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useEffect, useId, useState } from "react";
 import { type ProviderListBody, saveProviderPath } from "@/api";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/kit/button";
+import { Button, ButtonRow } from "@/components/kit/button";
 import { Code, Field, Input } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
 import { Lamp } from "@/components/kit/status";
@@ -129,7 +129,7 @@ export function CliProviderDetail({
         </p>
       </div>
 
-      <div className="sl-btn-row">
+      <ButtonRow>
         {onHost ? (
           <span className="inline-flex items-center gap-1 text-small text-ink-2">
             Managed on host
@@ -145,7 +145,7 @@ export function CliProviderDetail({
           </Button>
         )}
         <span className="inline-flex w-[52px]">{saved ? <SavedTick /> : null}</span>
-      </div>
+      </ButtonRow>
 
       {onHost || !editing ? null : (
         <form

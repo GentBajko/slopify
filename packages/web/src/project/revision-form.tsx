@@ -19,6 +19,7 @@ import { Button } from "@/components/kit/button";
 import { Field, Input, Select, Textarea } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
 import { Rule } from "@/components/kit/layout";
+import { RailButton } from "@/components/kit/rail";
 import type { HelpId } from "@/help/catalog";
 import { RevisionLanguage } from "@/language/revision-language";
 import { cn } from "@/lib/utils";
@@ -193,22 +194,14 @@ export function RevisionForm(
         <ul className="m-0 flex list-none gap-1 overflow-x-auto p-0 [scrollbar-width:none] md:flex-col">
           {sections.map((one) => (
             <li key={one.id} className="shrink-0">
-              <button
-                type="button"
-                aria-current={one.id === current ? "page" : undefined}
+              <RailButton
+                current={one.id === current}
                 onClick={() => setSection(one.id)}
-                className={cn(
-                  "flex min-h-9 w-full items-center justify-between gap-3 rounded-control px-3 text-left whitespace-nowrap",
-                  one.id === current
-                    ? "bg-raised font-semibold text-ink shadow-[inset_2px_0_0_var(--color-accent)]"
-                    : "text-ink-2 hover:bg-raised hover:text-ink",
-                )}
+                meta={one.badge}
+                className="whitespace-nowrap"
               >
                 {one.label}
-                {one.badge === undefined ? null : (
-                  <span className="text-label font-normal text-ink-3">{one.badge}</span>
-                )}
-              </button>
+              </RailButton>
             </li>
           ))}
         </ul>

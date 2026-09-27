@@ -1,7 +1,6 @@
 import type { ProjectListing } from "@app/slices/admission/model.js";
-import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import { Button } from "@/components/kit/button";
+import { TextLink } from "@/components/kit/link";
 
 // Started but not begun: waiting its turn behind the runs ahead of it (a batch or a schedule
 // queues its runs one after another). A run that has made progress and stopped is waiting for
@@ -30,11 +29,10 @@ export function RunningMore({
     <div className="mt-3 flex flex-col gap-2">
       {moreRunning ? (
         <div>
-          <Button asChild variant="quiet" size="small">
-            <Link to="/projects" search={{ show: "running" }}>
-              {`See all ${String(running)} running`}
-            </Link>
-          </Button>
+          <TextLink
+            to="/projects"
+            search={{ show: "running" }}
+          >{`See all ${String(running)} running`}</TextLink>
         </div>
       ) : null}
       {queued.length === 0 ? null : (
@@ -44,11 +42,9 @@ export function RunningMore({
             {titles.join(", ")}
             {rest > 0 ? ` and ${String(rest)} more` : ""}
           </span>
-          <Button asChild variant="quiet" size="small">
-            <Link to="/projects" search={{ show: "queued" }}>
-              See queued
-            </Link>
-          </Button>
+          <TextLink to="/projects" search={{ show: "queued" }}>
+            See queued
+          </TextLink>
         </p>
       )}
     </div>

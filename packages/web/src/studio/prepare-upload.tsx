@@ -19,10 +19,11 @@ import {
 } from "@/api";
 import { useApp } from "@/app-context";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
-import { Button, buttonClass } from "@/components/kit/button";
+import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { Drawer } from "@/components/kit/drawer";
 import { InfoTip } from "@/components/kit/info-tip";
+import { FileLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { Lightbox, MediaFrame, MediaGrid } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
@@ -162,14 +163,14 @@ export function PrepareUploadDrawer({
         <>
           <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
           {paired === false ? (
-            <a
+            <FileLink
               href={studioUploadUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className={buttonClass({ variant: "quiet" })}
+              variant="quiet"
             >
               Open YouTube Studio
-            </a>
+            </FileLink>
           ) : null}
           <Button
             variant="primary"
@@ -312,12 +313,16 @@ function readDone(key: string): readonly string[] {
 // A download that looks like the row's other small quiet actions.
 function Download({ href, filename }: { readonly href: string; readonly filename: string }) {
   return (
-    <Button asChild variant="quiet" size="small">
-      <a href={href} download={filename} aria-label={`Download ${filename}`}>
-        <DownloadIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.75} />
-        Download
-      </a>
-    </Button>
+    <FileLink
+      href={href}
+      download={filename}
+      aria-label={`Download ${filename}`}
+      variant="quiet"
+      size="small"
+    >
+      <DownloadIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.75} />
+      Download
+    </FileLink>
   );
 }
 

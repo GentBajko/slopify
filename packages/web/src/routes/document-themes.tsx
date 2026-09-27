@@ -1,14 +1,13 @@
 import type { SavedDocumentTheme } from "@app/slices/document/model.js";
 import type { DocumentTheme } from "@app/slices/document/theme.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { type ReactElement, type ReactNode, useState } from "react";
 import { removeDocumentTheme } from "@/api";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { ListDetail } from "@/components/kit/layout";
+import { ButtonLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { faceFamilies } from "@/lib/document-theme-fields";
@@ -58,11 +57,9 @@ export function DocumentThemesRoute() {
     <div>
       <LibraryToolbar
         action={
-          <Button asChild variant="primary">
-            <Link to="/document-themes/new" search={{ from: "plain" }}>
-              New theme
-            </Link>
-          </Button>
+          <ButtonLink to="/document-themes/new" search={{ from: "plain" }} variant="primary">
+            New theme
+          </ButtonLink>
         }
       >
         <p className="m-0 text-small text-ink-2">
@@ -113,26 +110,26 @@ export function DocumentThemesRoute() {
                           <LibraryRowActions
                             name={theme.name}
                             edit={
-                              <Button asChild variant="quiet" size="small">
-                                <Link
-                                  to="/document-themes/$themeId"
-                                  params={{ themeId: theme.id }}
-                                  aria-label={`Edit ${theme.name}`}
-                                >
-                                  Edit
-                                </Link>
-                              </Button>
+                              <ButtonLink
+                                to="/document-themes/$themeId"
+                                params={{ themeId: theme.id }}
+                                aria-label={`Edit ${theme.name}`}
+                                variant="quiet"
+                                size="small"
+                              >
+                                Edit
+                              </ButtonLink>
                             }
                             duplicate={
-                              <Button asChild variant="quiet" size="small">
-                                <Link
-                                  to="/document-themes/new"
-                                  search={{ from: theme.id }}
-                                  aria-label={`Duplicate ${theme.name}`}
-                                >
-                                  Duplicate
-                                </Link>
-                              </Button>
+                              <ButtonLink
+                                to="/document-themes/new"
+                                search={{ from: theme.id }}
+                                aria-label={`Duplicate ${theme.name}`}
+                                variant="quiet"
+                                size="small"
+                              >
+                                Duplicate
+                              </ButtonLink>
                             }
                             onDelete={() => setDeleting(theme)}
                           />
@@ -161,15 +158,15 @@ export function DocumentThemesRoute() {
                       selected={theme.name === shownBuiltIn?.name}
                       onSelect={() => setPicked({ builtIn: theme.name })}
                       actions={
-                        <Button asChild variant="quiet" size="small">
-                          <Link
-                            to="/document-themes/new"
-                            search={{ from: theme.name }}
-                            aria-label={`Copy ${theme.label}`}
-                          >
-                            Copy
-                          </Link>
-                        </Button>
+                        <ButtonLink
+                          to="/document-themes/new"
+                          search={{ from: theme.name }}
+                          aria-label={`Copy ${theme.label}`}
+                          variant="quiet"
+                          size="small"
+                        >
+                          Copy
+                        </ButtonLink>
                       }
                     />
                   ))}
@@ -185,11 +182,13 @@ export function DocumentThemesRoute() {
                 meta={`Updated ${updatedOn(shownSaved.updatedAt)}`}
                 values={shownSaved.values}
                 action={
-                  <Button asChild size="small">
-                    <Link to="/document-themes/$themeId" params={{ themeId: shownSaved.id }}>
-                      Edit theme
-                    </Link>
-                  </Button>
+                  <ButtonLink
+                    to="/document-themes/$themeId"
+                    params={{ themeId: shownSaved.id }}
+                    size="small"
+                  >
+                    Edit theme
+                  </ButtonLink>
                 }
               />
             ) : shownBuiltIn !== undefined ? (
@@ -199,11 +198,13 @@ export function DocumentThemesRoute() {
                 meta="Built-in themes can't be changed. Copy one to make it yours."
                 values={shownBuiltIn.values}
                 action={
-                  <Button asChild size="small">
-                    <Link to="/document-themes/new" search={{ from: shownBuiltIn.name }}>
-                      Copy theme
-                    </Link>
-                  </Button>
+                  <ButtonLink
+                    to="/document-themes/new"
+                    search={{ from: shownBuiltIn.name }}
+                    size="small"
+                  >
+                    Copy theme
+                  </ButtonLink>
                 }
               />
             ) : null

@@ -22,9 +22,6 @@ export function buttonClass({
 export type ButtonProps = ComponentProps<"button"> & {
   readonly variant?: ButtonVariant;
   readonly size?: ButtonSize;
-  // Renders the child element with the button's look, for the rare case a router link must
-  // look like an action (the shell's New video). Links go somewhere; prefer a real button.
-  readonly asChild?: boolean;
   // Why a disabled button is disabled, shown as its tooltip.
   readonly disabledReason?: string;
 };
@@ -32,19 +29,17 @@ export type ButtonProps = ComponentProps<"button"> & {
 export function Button({
   variant = "secondary",
   size = "default",
-  asChild = false,
   disabledReason,
   className,
   type,
   title,
   ...props
 }: ButtonProps): ReactElement {
-  const Comp = asChild ? Slot.Root : "button";
   return (
-    <Comp
+    <button
       data-slot="button"
       data-variant={variant}
-      {...(asChild ? {} : { type: type ?? "button" })}
+      type={type ?? "button"}
       title={props.disabled && disabledReason !== undefined ? disabledReason : title}
       className={cn(buttonClass({ variant, size }), className)}
       {...props}
@@ -68,7 +63,8 @@ export function IconButton({
   );
 }
 
-// The Play key: the primary button at its largest, used only to start runs.
+// The Play key: the primary button at its largest, used only to start runs. `asChild` is for
+// the shell's New video, the one link that opens the run setup and so wears the key.
 export function PlayKey({
   className,
   asChild = false,

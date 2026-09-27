@@ -19,7 +19,7 @@ Operate surface, the Library's Templates tab at `/templates`, for saving an ackn
 
 ## Composition
 
-The Library page bar and tab links sit above the tab. Its LibraryToolbar holds one line (Apply creates a fresh draft to review) and Save a setup at right. Under it one StatusSlot (loading, list or apply errors) beside Refresh templates, then the templates as rows in one bordered list: name, version and updated date, Apply to Play and Delete (`packages/web/src/routes/templates.tsx`).
+The Library page bar and tab links sit above the tab. Its LibraryToolbar holds one line (Use in Play creates a fresh draft to review) and Save a setup at right. Under it one StatusSlot (loading, list or apply errors) beside Refresh templates, then the templates as rows in one bordered list: name, version and updated date, Apply to Play and Delete (`packages/web/src/routes/templates.tsx`).
 
 Save a setup opens a narrow Drawer with a saved Play draft select and a template name; its pinned footer holds a StatusSlot (Saving… or the error) and Save template.
 
@@ -37,7 +37,7 @@ The drawer enters with the 150 ms tick-in. Applying navigates to Play only after
 
 ## Copy
 
-Primary labels are Templates, Save a setup, Save template, Apply to Play and Delete template. Explanatory copy says saved setups include checkpoint choices and require review before Start (`packages/web/src/routes/templates.tsx`).
+Primary labels are Templates, Save a setup, Save template, Edit, Duplicate, Use in Play, History and Delete template. Explanatory copy says saved setups include checkpoint choices and require review before Start (`packages/web/src/routes/templates.tsx`).
 
 ## Not in play
 

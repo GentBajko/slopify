@@ -111,6 +111,41 @@
     min-width: 0;
   }
 
+  /* One target per row or card (kit/list-row `hitArea`, `hitTarget`): the row's title link or
+     select button stretches over the whole row, so a press anywhere on it - not only on the
+     name - opens or picks it. Every other control in the row sits above the stretch and keeps
+     working on its own. The target stays the one tab stop; its focus ring is drawn round the
+     row. */
+  .sl-hit {
+    position: relative;
+  }
+  .sl-hit :is(.sl-hit__target, .sl-row__title a)::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+  .sl-hit:has(:is(.sl-hit__target, .sl-row__title a)) {
+    cursor: pointer;
+  }
+  .sl-hit
+    :is(a, button, input, select, textarea, label, summary, [tabindex], .sl-row__body):not(
+      .sl-hit__target,
+      .sl-row__title a
+    ) {
+    position: relative;
+    z-index: 1;
+  }
+  .sl-hit :is(.sl-hit__target, .sl-row__title a):focus-visible {
+    outline: none;
+  }
+  .sl-hit:has(:is(.sl-hit__target, .sl-row__title a):focus-visible) {
+    outline: 2px solid var(--color-focus);
+    outline-offset: -2px;
+  }
+  .sl-hit:hover .sl-row__title a {
+    text-decoration: underline;
+  }
+
   /* Overlays mount over the page, not inside a preview box. */
   .sl-overlay {
     position: fixed;
@@ -212,6 +247,15 @@
   }
 
   /* Media: the whole frame opens the lightbox; the actions sit above that button. */
+  /* An openable frame is one target, caption included: the open button covers the figure and
+     the frame's own actions and badge sit above it. */
+  .sl-media {
+    position: relative;
+  }
+  .sl-media__actions,
+  .sl-media__badge {
+    z-index: 1;
+  }
   .sl-media__open {
     position: absolute;
     inset: 0;

@@ -1,5 +1,6 @@
 import { RefreshCw } from "lucide-react";
 import { type ReactElement, useEffect, useRef } from "react";
+import { IconButton } from "@/components/kit/button";
 import { useToast } from "@/components/kit/toast";
 import { cn } from "@/lib/utils";
 import type { UpdateInfo } from "./api.js";
@@ -44,20 +45,15 @@ export function UpdateWidget({ reload }: { readonly reload: () => void }): React
   const label = `Slopify updates: ${versions}. ${action}`;
   return (
     <>
-      <button
-        type="button"
-        aria-label={label}
-        title={label}
+      <IconButton
+        label={label}
         disabled={active || checking}
         onClick={() => {
           if (waiting) update.cancel();
           else if (info?.available && info.canUpdate && !blocked) update.install();
           else update.refresh();
         }}
-        className={cn(
-          "relative flex size-8 shrink-0 items-center justify-center rounded-control bg-transparent text-ink-2 hover:bg-raised hover:text-ink",
-          error && "text-waiting",
-        )}
+        className={cn("relative size-8 shrink-0", error && "text-waiting")}
       >
         <RefreshCw
           aria-hidden="true"
@@ -70,7 +66,7 @@ export function UpdateWidget({ reload }: { readonly reload: () => void }): React
             className="absolute top-1 right-1 size-2 rounded-full bg-accent"
           />
         ) : null}
-      </button>
+      </IconButton>
       <span className="sr-only" role={error ? "alert" : "status"}>
         {label}
       </span>

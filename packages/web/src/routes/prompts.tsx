@@ -1,10 +1,8 @@
 import type { Prompt, PromptKind } from "@app/slices/library/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { removePrompt, savePrompt } from "@/api";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { ariaKeyShortcuts, useSearchShortcut } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
@@ -12,6 +10,7 @@ import { EmptyState } from "@/components/kit/empty-state";
 import { Input, Select } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { ListDetail } from "@/components/kit/layout";
+import { ButtonLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { kindLabel, kindOptions } from "@/lib/prompt-kinds";
 import { HistoryDrawer } from "@/library/history-drawer";
@@ -143,28 +142,28 @@ export function PromptsRoute({
                       <LibraryRowActions
                         name={prompt.name}
                         edit={
-                          <Button asChild variant="quiet" size="small">
-                            <Link
-                              to="/prompts/$promptId"
-                              params={{ promptId: prompt.id }}
-                              aria-label={`Edit ${prompt.name}`}
-                            >
-                              Edit
-                            </Link>
-                          </Button>
+                          <ButtonLink
+                            to="/prompts/$promptId"
+                            params={{ promptId: prompt.id }}
+                            aria-label={`Edit ${prompt.name}`}
+                            variant="quiet"
+                            size="small"
+                          >
+                            Edit
+                          </ButtonLink>
                         }
                         // The copy is named "<name> copy" and opened for editing, so a name
                         // that is already taken is renamed before it is ever saved.
                         duplicate={
-                          <Button asChild variant="quiet" size="small">
-                            <Link
-                              to="/prompts/new"
-                              search={{ kind: prompt.kind, from: prompt.id }}
-                              aria-label={`Duplicate ${prompt.name}`}
-                            >
-                              Duplicate
-                            </Link>
-                          </Button>
+                          <ButtonLink
+                            to="/prompts/new"
+                            search={{ kind: prompt.kind, from: prompt.id }}
+                            aria-label={`Duplicate ${prompt.name}`}
+                            variant="quiet"
+                            size="small"
+                          >
+                            Duplicate
+                          </ButtonLink>
                         }
                         play={{
                           run: onUseInPlay === undefined ? undefined : () => onUseInPlay(prompt),
@@ -191,11 +190,13 @@ export function PromptsRoute({
                 body={selected.body}
                 slots={selected.slots}
                 actions={
-                  <Button asChild size="small">
-                    <Link to="/prompts/$promptId" params={{ promptId: selected.id }}>
-                      Edit prompt
-                    </Link>
-                  </Button>
+                  <ButtonLink
+                    to="/prompts/$promptId"
+                    params={{ promptId: selected.id }}
+                    size="small"
+                  >
+                    Edit prompt
+                  </ButtonLink>
                 }
                 onOpenHistory={() => setHistory(selected)}
               />
@@ -243,10 +244,8 @@ function promptMeta(prompt: Prompt): string {
 
 function NewPromptButton({ kind }: { readonly kind: PromptKind }) {
   return (
-    <Button asChild variant="primary">
-      <Link to="/prompts/new" search={{ kind }}>
-        New prompt
-      </Link>
-    </Button>
+    <ButtonLink to="/prompts/new" search={{ kind }} variant="primary">
+      New prompt
+    </ButtonLink>
   );
 }

@@ -1,11 +1,11 @@
 import type { WhatsNewView } from "@app/slices/settings/whats-new.js";
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { type ReactElement, useState } from "react";
 import type { Api } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
+import { ButtonLink, TextLink } from "@/components/kit/link";
 import { read } from "@/http";
 import { type PatchNotesView, patchNotesKey, patchNotesQuery } from "@/patch-notes/api";
 import { noticeQuery } from "@/queries";
@@ -216,24 +216,20 @@ export function WhatsNewTour(): ReactElement | null {
         <h3 className="m-0 text-title-3">{step.title}</h3>
         <p className="m-0 text-ink-2">{step.body}</p>
         <div className="flex flex-wrap gap-2">
-          <Button asChild>
-            <Link to={step.to} {...(step.search === undefined ? {} : { search: step.search })}>
-              {`Open ${step.place}`}
-            </Link>
-          </Button>
+          <ButtonLink to={step.to} {...(step.search === undefined ? {} : { search: step.search })}>
+            {`Open ${step.place}`}
+          </ButtonLink>
           {last ? (
-            <Button asChild variant="quiet">
-              <Link
-                to="/settings"
-                search={{
-                  section: "patch-notes",
-                  ...(currentNote === undefined ? {} : { note: currentNote }),
-                }}
-                onClick={close}
-              >
-                Read the full patch notes
-              </Link>
-            </Button>
+            <TextLink
+              to="/settings"
+              search={{
+                section: "patch-notes",
+                ...(currentNote === undefined ? {} : { note: currentNote }),
+              }}
+              onClick={close}
+            >
+              Read the full patch notes
+            </TextLink>
           ) : null}
         </div>
         {dismiss.error === null ? null : (

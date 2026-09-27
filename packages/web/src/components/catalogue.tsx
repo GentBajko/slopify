@@ -3,7 +3,7 @@ import type { RetiredUsage } from "@app/slices/model-upkeep/model.js";
 import { slotLabels } from "@app/slices/model-upkeep/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/kit/button";
+import { Button, ButtonRow } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
 import { InfoTip } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
@@ -216,7 +216,7 @@ export function CatalogueSettings() {
                     <p className="m-0 text-small text-waiting">{usage.blocked}</p>
                   )}
                 </div>
-                <div className="sl-btn-row">
+                <ButtonRow>
                   <Button
                     size="small"
                     disabled={usage.blocked !== null || usage.replacement === null || one.isPending}
@@ -226,7 +226,7 @@ export function CatalogueSettings() {
                       ? "No replacement"
                       : `Switch to ${usage.replacement.name}`}
                   </Button>
-                </div>
+                </ButtonRow>
               </li>
             ))}
           </ul>

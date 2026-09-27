@@ -1,10 +1,10 @@
 import type { Fix } from "@app/slices/fixes/rules.js";
 import type { HealthReport } from "@app/slices/settings/health.js";
 import { useMutation } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import type { ReactElement, ReactNode } from "react";
 import { useApp } from "@/app-context";
 import { Button, type ButtonSize } from "@/components/kit/button";
+import { ButtonLink } from "@/components/kit/link";
 import { useToast } from "@/components/kit/toast";
 import { checkHealth } from "@/components/provider-upkeep-api";
 
@@ -134,19 +134,15 @@ export function FixActions({
       return <SignInActions fix={fix} retry={retry} variant={variant} size={size} />;
     case "provider-settings":
       return (
-        <Button asChild variant={variant} size={size}>
-          <Link to="/settings" search={{ section: "providers" }}>
-            {fix.label}
-          </Link>
-        </Button>
+        <ButtonLink to="/settings" search={{ section: "providers" }} variant={variant} size={size}>
+          {fix.label}
+        </ButtonLink>
       );
     case "free-space":
       return (
-        <Button asChild variant={variant} size={size}>
-          <Link to="/settings" search={{ section: "storage" }}>
-            {fix.label}
-          </Link>
-        </Button>
+        <ButtonLink to="/settings" search={{ section: "storage" }} variant={variant} size={size}>
+          {fix.label}
+        </ButtonLink>
       );
     case "refused":
     case "switch-model":

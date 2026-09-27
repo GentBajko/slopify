@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/kit/button";
 import { type Box, spotlightHole, spotlightLayout } from "./spotlight-geometry";
 import { useSpotlightInteraction } from "./use-spotlight-interaction";
 import { useSpotlightMeasurement } from "./use-spotlight-measurement";
@@ -158,7 +158,7 @@ export function Spotlight({
         >
           <div className="flex shrink-0 items-center justify-between gap-3">
             <span className="engraved text-accent-ink">Getting started · {progress}</span>
-            <Button variant="ghost" onClick={onClose} aria-label="Exit guide" className="h-7 px-2">
+            <Button variant="quiet" onClick={onClose} aria-label="Exit guide" className="h-7 px-2">
               Exit
             </Button>
           </div>
@@ -190,7 +190,7 @@ export function Spotlight({
           <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-line pt-3">
             {onBack && <Button onClick={onBack}>Back</Button>}
             {onSkip && (
-              <Button variant="ghost" onClick={onSkip} className="px-2">
+              <Button variant="quiet" onClick={onSkip} className="px-2">
                 {skipLabel}
               </Button>
             )}

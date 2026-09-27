@@ -3,8 +3,8 @@ import { DownloadIcon } from "lucide-react";
 import { type ReactElement, useState } from "react";
 import { studioExtensionUrl } from "@/api";
 import { useApp } from "@/app-context";
-import { buttonClass } from "@/components/kit/button";
 import { Code } from "@/components/kit/field";
+import { FileLink } from "@/components/kit/link";
 import { Segmented } from "@/components/kit/switch";
 
 const browserLabels: Readonly<Record<StudioExtensionBrowser, string>> = {
@@ -38,14 +38,10 @@ export function ExtensionInstall(): ReactElement {
             label: browserLabels[value],
           }))}
         />
-        <a
-          href={studioExtensionUrl(api, browser)}
-          download={filename}
-          className={buttonClass({ variant: "secondary" })}
-        >
+        <FileLink href={studioExtensionUrl(api, browser)} download={filename}>
           <DownloadIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.75} />
           {`Download for ${browser === "chrome" ? "Chrome" : "Firefox"}`}
-        </a>
+        </FileLink>
       </div>
       <ol aria-label="Install steps" className="m-0 flex list-decimal flex-col gap-1 pl-5">
         {browser === "chrome" ? (

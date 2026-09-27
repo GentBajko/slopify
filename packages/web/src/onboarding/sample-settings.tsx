@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
 import { StatusSlot } from "@/components/kit/action-bar";
-import { List, ListRow } from "@/components/kit/list-row";
+import { Button } from "@/components/kit/button";
+import { TextLink } from "@/components/kit/link";
+import { hitTarget, List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
-import { Button } from "@/components/ui/button";
 import { keys } from "@/queries";
 import { onboardingKey, readSample, restoreSample, type SampleProjects, sampleKey } from "./api.js";
 
@@ -43,11 +43,9 @@ export function SampleSettings(): ReactElement {
               meta={projectId === null ? "Not in your projects" : "In your projects"}
               actions={
                 projectId === null ? undefined : (
-                  <Button asChild variant="ghost">
-                    <Link to="/projects/$projectId" params={{ projectId }}>
-                      Open
-                    </Link>
-                  </Button>
+                  <TextLink to="/projects/$projectId" params={{ projectId }} className={hitTarget}>
+                    Open
+                  </TextLink>
                 )
               }
             />

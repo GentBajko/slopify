@@ -1,5 +1,6 @@
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { ReactElement, ReactNode } from "react";
+import { ButtonRow } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
 import { PageHeader } from "@/components/kit/layout";
 import { TabLinks } from "@/components/kit/tabs";
@@ -123,7 +124,7 @@ export function LibraryToolbar({
       className={cn("mb-5 flex min-h-9 flex-wrap items-center gap-x-4 gap-y-3", className)}
     >
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">{children}</div>
-      {action === undefined ? null : <div className="sl-btn-row ml-auto shrink-0">{action}</div>}
+      {action === undefined ? null : <ButtonRow className="ml-auto shrink-0">{action}</ButtonRow>}
     </div>
   );
 }

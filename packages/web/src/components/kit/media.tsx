@@ -47,7 +47,8 @@ export function MediaFrame({
   readonly actionsShown?: boolean;
   // What is being made, in words: "Codex is refining the image · 3 so far".
   readonly generating?: ReactNode;
-  // Opens the lightbox. The whole frame becomes a button named `openLabel`.
+  // Opens the lightbox, or picks the item. The whole figure, caption included, becomes a button
+  // named `openLabel`; the frame's actions stay buttons of their own.
   readonly onOpen?: () => void;
   readonly openLabel?: string;
   readonly className?: string;
@@ -69,14 +70,6 @@ export function MediaFrame({
             <span>{generating}</span>
           </div>
         )}
-        {onOpen !== undefined && showing && src !== undefined ? (
-          <button
-            type="button"
-            className="sl-media__open"
-            aria-label={openLabel ?? `Open ${alt} full size`}
-            onClick={onOpen}
-          />
-        ) : null}
         {badge === undefined ? null : <span className="sl-media__badge">{badge}</span>}
         {actions === undefined ? null : (
           <div className={cn("sl-media__actions", actionsShown && "sl-media__actions--shown")}>
@@ -84,6 +77,15 @@ export function MediaFrame({
           </div>
         )}
       </div>
+      {/* The whole figure, caption included, is the one target (shell.css). */}
+      {onOpen !== undefined && showing && src !== undefined ? (
+        <button
+          type="button"
+          className="sl-media__open"
+          aria-label={openLabel ?? `Open ${alt} full size`}
+          onClick={onOpen}
+        />
+      ) : null}
       {title === undefined && meta === undefined ? null : (
         <figcaption className="sl-media__caption">
           {title === undefined ? <span /> : <strong className="min-w-0 truncate">{title}</strong>}

@@ -40,7 +40,7 @@ it("lists server drafts with no browser identity and offers recovery for unreada
   expect(screen.getByText(/unsupported or corrupt/i)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Discard Recovered" }));
   expect(remove).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole("button", { name: "Confirm discard" }));
+  fireEvent.click(screen.getByRole("button", { name: "Discard draft" }));
   await screen.findByText("Cannot discard");
   // The draft stays listed; the list reopens from the same Drafts control.
   fireEvent.click(screen.getByText("Drafts"));
@@ -96,7 +96,7 @@ it("discards an active dirty draft at the confirmed version without saving disca
   });
   fireEvent.click(screen.getByRole("button", { name: "Discard Active" }));
   expect(calls).toEqual([]);
-  fireEvent.click(screen.getByRole("button", { name: "Confirm discard" }));
+  fireEvent.click(screen.getByRole("button", { name: "Discard draft" }));
   await waitFor(() => expect(session?.view).toBeNull());
   expect(session?.document.form.title).toBe("");
   expect(calls).toEqual(["delete"]);
@@ -126,7 +126,7 @@ it("removes a successfully discarded draft from the open list immediately", asyn
   );
   fireEvent.click(await screen.findByText("Drafts"));
   fireEvent.click(await screen.findByRole("button", { name: "Discard To discard" }));
-  fireEvent.click(screen.getByRole("button", { name: "Confirm discard" }));
+  fireEvent.click(screen.getByRole("button", { name: "Discard draft" }));
   await waitFor(() => expect(screen.queryByText("To discard")).toBeNull());
 });
 
@@ -168,7 +168,7 @@ it("clears a corrupt remembered identity after explicit list discard", async () 
     await screen.findByText("Couldn't save");
     fireEvent.click(screen.getByText("Drafts"));
     fireEvent.click(screen.getByRole("button", { name: "Discard Broken" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm discard" }));
+    fireEvent.click(screen.getByRole("button", { name: "Discard draft" }));
     await waitFor(() => expect(map.has("slopify.play-draft")).toBe(false));
     await waitFor(() => expect(screen.queryByText("Couldn't save")).toBeNull());
   } finally {

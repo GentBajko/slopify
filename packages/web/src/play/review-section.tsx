@@ -1,7 +1,7 @@
 import type { FieldError } from "@app/slices/admission/rules.js";
 import type { Field } from "@app/slices/admission/substitute.js";
 import { type ReactElement, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/kit/button";
 import { CheckpointControls } from "./checkpoints";
 import { usePlaySession } from "./draft-context";
 import { ReviewSummary } from "./review-summary";
@@ -38,7 +38,7 @@ export function ReviewSection({
         <ul aria-label="Setup errors" className="text-small text-danger">
           {errors.map((error) => (
             <li key={`${error.field}-${error.message}`}>
-              <Button variant="ghost" onClick={() => onReveal(error.field)}>
+              <Button variant="quiet" onClick={() => onReveal(error.field)}>
                 {error.message}
               </Button>
             </li>

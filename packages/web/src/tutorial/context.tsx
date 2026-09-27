@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/kit/button";
 import type { TutorialEvent } from "./model";
 import { receiveTutorialEvent, tutorialSteps } from "./model";
 import { TutorialRunner } from "./runner";

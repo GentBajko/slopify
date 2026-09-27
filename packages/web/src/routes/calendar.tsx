@@ -30,7 +30,8 @@ import { Button, IconButton } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
-import { List, ListRow } from "@/components/kit/list-row";
+import { ButtonLink, TextLink } from "@/components/kit/link";
+import { hitArea, hitTarget, List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { Status } from "@/components/kit/status";
 import { Segmented } from "@/components/kit/switch";
@@ -227,9 +228,7 @@ export function CalendarRoute(): ReactElement {
                 { value: "list", label: "List" },
               ]}
             />
-            <Button asChild variant="secondary">
-              <Link to="/schedules">Edit schedules</Link>
-            </Button>
+            <TextLink to="/schedules">Edit schedules</TextLink>
             <Button variant="primary" onClick={() => setAdding(true)}>
               <PlusIcon aria-hidden="true" strokeWidth={1.75} />
               Add to calendar
@@ -427,11 +426,11 @@ function DayCell({
       {(day?.projects ?? []).map((project) => {
         const look = projectLook(project);
         return (
-          <div key={project.id} className="sl-cal-item sl-cal-item--project">
+          <div key={project.id} className={`sl-cal-item sl-cal-item--project ${hitArea}`}>
             <Link
               to="/projects/$projectId"
               params={{ projectId: project.id }}
-              className="text-small font-semibold"
+              className={`text-small font-semibold ${hitTarget}`}
             >
               {project.title}
             </Link>
@@ -519,11 +518,14 @@ function ProjectRow({ project }: { readonly project: CalendarProject }): ReactEl
           {look.action === undefined ? null : look.action.kind === "upload" ? (
             <PrepareUpload projectId={project.id} ready />
           ) : (
-            <Button asChild size="small" variant="secondary">
-              <Link to="/projects/$projectId" params={{ projectId: project.id }}>
-                {look.action.label}
-              </Link>
-            </Button>
+            <ButtonLink
+              to="/projects/$projectId"
+              params={{ projectId: project.id }}
+              size="small"
+              variant="secondary"
+            >
+              {look.action.label}
+            </ButtonLink>
           )}
         </>
       }

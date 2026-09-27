@@ -1,11 +1,11 @@
 import type { ChannelLink } from "@app/slices/youtube/placeholders.js";
-import { Link } from "@tanstack/react-router";
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import type { ReactElement } from "react";
 import { defaultChannelId } from "@/channels/api";
-import { Button, buttonClass } from "@/components/kit/button";
+import { Button } from "@/components/kit/button";
 import { Input } from "@/components/kit/field";
 import { helpScope } from "@/components/kit/info-tip";
+import { ButtonLink } from "@/components/kit/link";
 import { SectionHead } from "@/components/kit/section-head";
 
 // A channel's named links, edited on its Brand tab: the links a YouTube description's
@@ -89,13 +89,9 @@ export function ChannelLinksSettings(): ReactElement {
         before fill the default channel's descriptions until you save its Brand tab.
       </p>
       <div className="mt-3">
-        <Link
-          to="/channels/$channelId"
-          params={{ channelId: defaultChannelId }}
-          className={buttonClass({})}
-        >
+        <ButtonLink to="/channels/$channelId" params={{ channelId: defaultChannelId }}>
           Open the default channel's links
-        </Link>
+        </ButtonLink>
       </div>
     </div>
   );

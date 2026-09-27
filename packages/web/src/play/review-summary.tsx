@@ -23,7 +23,7 @@ import { defaultDescriptionPromptName } from "@app/slices/youtube/model.js";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/kit/button";
 import { modelsKey, type ProviderModels } from "@/lib/models";
 import { entriesQuery, providersQuery, voicesQuery } from "@/queries";
 import { type FontSummary, fontsKey } from "@/subtitles/api";
@@ -237,7 +237,7 @@ function PreflightSummary({
                       .join(" · ")}
               </span>
               {!ready ? (
-                <Button variant="ghost" onClick={() => onReveal(choice.field)}>
+                <Button variant="quiet" onClick={() => onReveal(choice.field)}>
                   Edit ↗
                 </Button>
               ) : null}
@@ -294,7 +294,7 @@ export function ReviewSummary({
       <dd className="min-w-0 whitespace-pre-wrap break-words py-2">{value || "Not selected"}</dd>
       {field ? (
         <dd>
-          <Button variant="ghost" aria-label={`Edit ${label}`} onClick={() => onReveal(field)}>
+          <Button variant="quiet" aria-label={`Edit ${label}`} onClick={() => onReveal(field)}>
             Edit ↗
           </Button>
         </dd>
@@ -517,7 +517,7 @@ export function ReviewSummary({
           reviewed={review.valid ? review.receipt?.checkpointSet : undefined}
         />
         <Button
-          variant="ghost"
+          variant="quiet"
           aria-label="Edit checkpoints"
           onClick={() => onReveal("checkpoints")}
         >

@@ -1,13 +1,13 @@
 import { titleMax, valueMax } from "@app/slices/admission/rules.js";
 import { render } from "@app/slices/admission/substitute.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { PlusIcon } from "lucide-react";
+import { PencilIcon, PlusIcon } from "lucide-react";
 import { type ReactElement, useId, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { channelsQuery } from "@/channels/api";
 import { channelOfTemplate } from "@/channels/members-tabs";
 import { KeywordList } from "@/components/keyword-list";
-import { Button } from "@/components/kit/button";
+import { Button, ButtonRow } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
 import { Field, Input, Select } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
@@ -244,7 +244,7 @@ export function MoreVideos({
         <span className="sl-kicker">More videos from the same setup</span>
         <InfoTip id="play.more-videos" className="-my-1" />
       </div>
-      <div className="sl-btn-row flex-wrap">
+      <ButtonRow className="flex-wrap">
         {variants.map((one, index) => {
           const name = labelOf(one) || `Video ${String(index + 2)}`;
           const refused = [
@@ -262,15 +262,18 @@ export function MoreVideos({
                     removeLabel: `Remove ${name}`,
                   })}
             >
-              <button
-                type="button"
+              {/* The chip's name is its Change button: a quiet button with a pencil, not text. */}
+              <Button
+                variant="quiet"
+                size="small"
                 data-play-field={`items.${one.id}`}
-                className="border-0 bg-transparent p-0 text-ink hover:underline"
+                className="-my-1 -ml-1.5 h-6 px-1.5 text-ink"
                 aria-label={`Change the keywords of ${name}`}
                 onClick={() => onOpen(one.id)}
               >
                 {name}
-              </button>
+                <PencilIcon aria-hidden="true" strokeWidth={1.75} />
+              </Button>
             </Chip>
           );
         })}
@@ -321,7 +324,7 @@ export function MoreVideos({
             Add topic
           </Button>
         )}
-      </div>
+      </ButtonRow>
       <Drawer
         open={variant !== undefined}
         title={variant ? `Video ${String(opened + 2)}: ${labelOf(variant) || "untitled"}` : ""}

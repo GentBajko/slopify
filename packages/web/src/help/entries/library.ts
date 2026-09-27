@@ -121,7 +121,7 @@ export const libraryHelp = {
     body: "Shows only the templates of one channel, or of all. A template's channel is the one a draft made from it runs in. Choosing here changes nothing about the templates.",
   },
   "templates.apply": {
-    title: "Apply to Play",
+    title: "Use in Play",
     body: "Makes a new Play draft from the template and opens it in Play for you to review; nothing starts. Keywords the project title names start empty for this video's topic, and uploaded files keep their names but must be attached again. The template itself is unchanged.",
   },
   "templates.save": {
@@ -135,6 +135,14 @@ export const libraryHelp = {
   "templates.save.name": {
     title: "Template name",
     body: "What the template is called in this list and wherever you pick a template, such as a schedule. Up to 120 characters.",
+  },
+  "templates.edit": {
+    title: "Edit a template",
+    body: "Shows the keywords the template fills and what each feeds. The pencil beside its name renames it; every save adds a version that History keeps. To change its settings, use it in Play, change the draft, then Save a setup.",
+  },
+  "templates.history": {
+    title: "Template versions",
+    body: "Every saved version of the template, newest first. Pick one to compare its setup with the current one. Restore saves the older setup again as a new version, so nothing is lost. Drafts and projects made from it keep their setup.",
   },
   "templates.save.channel": {
     title: "Template channel",

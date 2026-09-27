@@ -8,11 +8,14 @@ import { LayersIcon } from "lucide-react";
 import { type ReactElement, type ReactNode, useRef } from "react";
 import { readProject } from "@/api";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/kit/button";
+import { Button, ButtonRow } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
+import { ButtonLink } from "@/components/kit/link";
+import { hitArea, hitTarget } from "@/components/kit/list-row";
 import { Status } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
 import { copyText } from "@/fixes/fix-actions";
+import { cn } from "@/lib/utils";
 import {
   type ApprovalIdentity,
   approveCheckpoint,
@@ -58,14 +61,14 @@ function Item({
   readonly action: ReactNode;
 }): ReactElement {
   return (
-    <li className="sl-home-item">
+    <li className={cn("sl-home-item", hitArea)}>
       {lead}
       <div className="flex min-w-0 flex-col gap-1">
         {status}
         <div className="sl-row__title text-[17px]">{title}</div>
         <div className="text-small text-ink-2">{detail}</div>
       </div>
-      <div className="sl-btn-row sl-home-item__action">{action}</div>
+      <ButtonRow className="sl-home-item__action">{action}</ButtonRow>
     </li>
   );
 }
@@ -177,11 +180,13 @@ export function WaitingItem({
       }
       action={
         gate === undefined || label === undefined ? (
-          <Button asChild variant={primary ? "primary" : "secondary"}>
-            <Link to="/projects/$projectId" params={{ projectId: project.id }}>
-              Open to continue
-            </Link>
-          </Button>
+          <ButtonLink
+            to="/projects/$projectId"
+            params={{ projectId: project.id }}
+            variant={primary ? "primary" : "secondary"}
+          >
+            Open to continue
+          </ButtonLink>
         ) : (
           <Button
             variant={primary ? "primary" : "secondary"}
@@ -218,9 +223,13 @@ export function HeldTopicsItem({
       title={schedule.name}
       detail={`Slopify suggested ${count === 1 ? "a topic" : `${String(count)} topics`} for this schedule. Queue the ones you want and reject the rest.`}
       action={
-        <Button asChild variant={primary ? "primary" : "secondary"}>
-          <Link to="/calendar">Review topics</Link>
-        </Button>
+        <ButtonLink
+          to="/calendar"
+          variant={primary ? "primary" : "secondary"}
+          className={hitTarget}
+        >
+          Review topics
+        </ButtonLink>
       }
     />
   );
@@ -242,11 +251,13 @@ export function PausedItem({
       title={projectLink(project)}
       detail="You paused this run. Nothing more happens until you open it and press Continue the run."
       action={
-        <Button asChild variant={primary ? "primary" : "secondary"}>
-          <Link to="/projects/$projectId" params={{ projectId: project.id }}>
-            Open to continue
-          </Link>
-        </Button>
+        <ButtonLink
+          to="/projects/$projectId"
+          params={{ projectId: project.id }}
+          variant={primary ? "primary" : "secondary"}
+        >
+          Open to continue
+        </ButtonLink>
       }
     />
   );
@@ -282,35 +293,27 @@ export function FailedItem({
   const variant = primary ? "primary" : "secondary";
   const action =
     fix?.kind === "provider-settings" ? (
-      <Button asChild variant={variant}>
-        <Link to="/settings" search={{ section: "providers" }}>
-          {fix.label}
-        </Link>
-      </Button>
+      <ButtonLink to="/settings" search={{ section: "providers" }} variant={variant}>
+        {fix.label}
+      </ButtonLink>
     ) : fix?.kind === "free-space" ? (
-      <Button asChild variant={variant}>
-        <Link to="/settings" search={{ section: "storage" }}>
-          {fix.label}
-        </Link>
-      </Button>
+      <ButtonLink to="/settings" search={{ section: "storage" }} variant={variant}>
+        {fix.label}
+      </ButtonLink>
     ) : fix?.kind === "sign-in" ? (
       // The command to copy here; Check again on the project retries the step once signed in.
       <>
         <Button variant={variant} onClick={() => void copySignIn(fix.command)}>
           Copy sign-in command
         </Button>
-        <Button asChild variant="secondary">
-          <Link to="/projects/$projectId" params={{ projectId: project.id }}>
-            Open to retry
-          </Link>
-        </Button>
+        <ButtonLink to="/projects/$projectId" params={{ projectId: project.id }}>
+          Open to retry
+        </ButtonLink>
       </>
     ) : (
-      <Button asChild variant={variant}>
-        <Link to="/projects/$projectId" params={{ projectId: project.id }}>
-          {fix?.label ?? "Open to retry"}
-        </Link>
-      </Button>
+      <ButtonLink to="/projects/$projectId" params={{ projectId: project.id }} variant={variant}>
+        {fix?.label ?? "Open to retry"}
+      </ButtonLink>
     );
   return (
     <Item

@@ -1,6 +1,6 @@
 import type { SampleId } from "@app/slices/onboarding/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { type FormEvent, type ReactElement, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { AutostartOffer } from "@/autostart/autostart-settings";
@@ -9,7 +9,8 @@ import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
-import { List, ListRow } from "@/components/kit/list-row";
+import { ButtonLink, TextLink } from "@/components/kit/link";
+import { hitTarget, List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { Lamp } from "@/components/kit/status";
 import { TabPanel, Tabs } from "@/components/kit/tabs";
@@ -215,11 +216,9 @@ export function WelcomeRoute(): ReactElement {
             className="mb-6"
             title="Nothing on this computer can write the script yet."
             actions={
-              <Button asChild>
-                <Link to="/settings" search={{ section: "providers" }}>
-                  Open Settings → Providers
-                </Link>
-              </Button>
+              <ButtonLink to="/settings" search={{ section: "providers" }}>
+                Open Settings → Providers
+              </ButtonLink>
             }
           >
             Install Claude Code, Codex or Gemini CLI and sign in to it, then press Check again; or
@@ -343,11 +342,9 @@ export function WelcomeRoute(): ReactElement {
             className="mb-6"
             title="Your short is being made."
             actions={
-              <Button asChild variant="primary">
-                <Link to="/projects/$projectId" params={{ projectId: made }}>
-                  Watch it being made
-                </Link>
-              </Button>
+              <ButtonLink variant="primary" to="/projects/$projectId" params={{ projectId: made }}>
+                Watch it being made
+              </ButtonLink>
             }
           >
             It usually takes about five minutes. The live view shows each step as it runs; while you
@@ -366,17 +363,17 @@ export function WelcomeRoute(): ReactElement {
                 meta={one.summary}
                 actions={
                   projectId === null ? (
-                    <Button asChild variant="quiet">
-                      <Link to="/settings" search={{ section: "storage" }}>
-                        Restore samples in Settings
-                      </Link>
-                    </Button>
+                    <TextLink to="/settings" search={{ section: "storage" }}>
+                      Restore samples in Settings
+                    </TextLink>
                   ) : (
-                    <Button asChild>
-                      <Link to="/projects/$projectId" params={{ projectId }}>
-                        {one.action}
-                      </Link>
-                    </Button>
+                    <ButtonLink
+                      to="/projects/$projectId"
+                      params={{ projectId }}
+                      className={hitTarget}
+                    >
+                      {one.action}
+                    </ButtonLink>
                   )
                 }
               />
@@ -388,9 +385,7 @@ export function WelcomeRoute(): ReactElement {
       </TabPanel>
 
       <ActionBar status={<StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>}>
-        <Button asChild variant="quiet">
-          <Link to="/play">Set up a long video instead</Link>
-        </Button>
+        <TextLink to="/play">Set up a long video instead</TextLink>
         {back === undefined ? null : <Button onClick={() => setStep(back.id)}>Back</Button>}
         {next === undefined ? null : (
           <Button variant="primary" onClick={() => setStep(next.id)}>
@@ -420,11 +415,9 @@ function VoiceChoice({
           lead={<Lamp tone="done" />}
           title={voice.text}
           actions={
-            <Button asChild variant="quiet">
-              <Link to="/settings" search={{ section: "providers" }}>
-                Add a voice key
-              </Link>
-            </Button>
+            <ButtonLink variant="quiet" to="/settings" search={{ section: "providers" }}>
+              Add a voice key
+            </ButtonLink>
           }
         />
       </List>
@@ -436,11 +429,9 @@ function VoiceChoice({
       title="No voice can narrate the short yet."
       actions={
         <>
-          <Button asChild variant="primary">
-            <Link to="/settings" search={{ section: "providers" }}>
-              Add a voice key
-            </Link>
-          </Button>
+          <ButtonLink variant="primary" to="/settings" search={{ section: "providers" }}>
+            Add a voice key
+          </ButtonLink>
           <Button disabled={checking} onClick={onCheck}>
             {checking ? "Checking…" : "Check again"}
           </Button>

@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { dismissNotice } from "@/api";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/kit/button";
+import { Dialog } from "@/components/kit/dialog";
 import { keys, noticeQuery } from "@/queries";
 
 // The promise, checked against `slices/telemetry/model.ts` in notice.test.tsx: every key
@@ -55,37 +55,16 @@ export function FirstRunNotice() {
   const version = notice.data?.appVersion;
 
   return (
-    <Dialog open={open}>
-      <DialogContent
-        onEscapeKeyDown={(event) => {
-          event.preventDefault();
-        }}
-        onInteractOutside={(event) => {
-          event.preventDefault();
-        }}
-      >
-        <DialogTitle>Anonymous usage stats</DialogTitle>
-        <DialogDescription>
-          These numbers power the live counters on slopify.stream.
-        </DialogDescription>
-        <div className="grid grid-cols-2 gap-4">
-          <Column heading="Tracked" items={tracked} />
-          <Column heading="Never tracked" items={never} />
-        </div>
-        <p className="text-small text-ink-2">
-          Every event carries a random ID of its own and this machine's random ID, and nothing else.
-          Nothing you write, upload, or paste ever leaves your machine.
-        </p>
-        {version === undefined ? null : (
-          <p className="engraved text-ink-3">
-            {`Slopify ${version} · this version is included in each report`}
-          </p>
-        )}
+    <Dialog
+      open={open}
+      dismissible={false}
+      title="Anonymous usage stats"
+      description="These numbers power the live counters on slopify.stream."
+      footer={
         <Button
           // Focus starts on the one action.
           autoFocus
-          variant="play"
-          size="play"
+          variant="primary"
           disabled={dismiss.isPending}
           onClick={() => {
             dismiss.mutate();
@@ -93,12 +72,26 @@ export function FirstRunNotice() {
         >
           Got it
         </Button>
-        {dismiss.error === null ? null : (
-          <p role="alert" className="text-small text-danger">
-            {dismiss.error.message}
-          </p>
-        )}
-      </DialogContent>
+      }
+    >
+      <div className="grid grid-cols-2 gap-4">
+        <Column heading="Tracked" items={tracked} />
+        <Column heading="Never tracked" items={never} />
+      </div>
+      <p className="text-small text-ink-2">
+        Every event carries a random ID of its own and this machine's random ID, and nothing else.
+        Nothing you write, upload, or paste ever leaves your machine.
+      </p>
+      {version === undefined ? null : (
+        <p className="engraved text-ink-3">
+          {`Slopify ${version} · this version is included in each report`}
+        </p>
+      )}
+      {dismiss.error === null ? null : (
+        <p role="alert" className="text-small text-danger">
+          {dismiss.error.message}
+        </p>
+      )}
     </Dialog>
   );
 }

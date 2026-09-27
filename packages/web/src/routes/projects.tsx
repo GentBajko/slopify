@@ -15,6 +15,7 @@ import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
 import { InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
+import { ButtonLink, TextLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { Meter, Stat, Stats } from "@/components/kit/stats";
@@ -183,12 +184,10 @@ export function ProjectsRoute({
             : `${String(inChannel.length)} ${inChannel.length === 1 ? "project" : "projects"} · ${current.channel?.name ?? "every channel"}`
         }
         actions={
-          <Button asChild variant="primary">
-            <Link to="/play">
-              <PlusIcon aria-hidden="true" strokeWidth={1.75} />
-              New video
-            </Link>
-          </Button>
+          <ButtonLink to="/play" variant="primary">
+            <PlusIcon aria-hidden="true" strokeWidth={1.75} />
+            New video
+          </ButtonLink>
         }
       />
 
@@ -208,9 +207,9 @@ export function ProjectsRoute({
         <EmptyState
           title="No projects yet"
           actions={
-            <Button asChild variant="primary">
-              <Link to="/play">Make your first video</Link>
-            </Button>
+            <ButtonLink to="/play" variant="primary">
+              Make your first video
+            </ButtonLink>
           }
         >
           Set up a run on Play: pick a template, type a topic and start.
@@ -288,9 +287,7 @@ export function ProjectsRoute({
                 Videos started together, in the order they run, are on the calendar.
               </p>
               <div>
-                <Button asChild variant="secondary" size="small">
-                  <Link to="/calendar">Open calendar</Link>
-                </Button>
+                <TextLink to="/calendar">Open calendar</TextLink>
               </div>
             </section>
           </BoardColumn>

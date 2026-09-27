@@ -1,16 +1,15 @@
 import type { Entry, EntryCategory } from "@app/slices/library/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { removeEntry, saveEntry } from "@/api";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { ariaKeyShortcuts, useSearchShortcut } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Input } from "@/components/kit/field";
 import { ListDetail } from "@/components/kit/layout";
+import { ButtonLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { Segmented } from "@/components/kit/switch";
 import { categoryLabel, categoryOptions, modeLabel } from "@/lib/entry-options";
@@ -82,11 +81,9 @@ export function EntriesRoute({
     <div>
       <LibraryToolbar
         action={
-          <Button asChild variant="primary">
-            <Link to="/entries/new" search={{ category }}>
-              New intro or outro
-            </Link>
-          </Button>
+          <ButtonLink to="/entries/new" search={{ category }} variant="primary">
+            New intro or outro
+          </ButtonLink>
         }
       >
         <Input
@@ -147,28 +144,28 @@ export function EntriesRoute({
                       <LibraryRowActions
                         name={entry.name}
                         edit={
-                          <Button asChild variant="quiet" size="small">
-                            <Link
-                              to="/entries/$entryId"
-                              params={{ entryId: entry.id }}
-                              aria-label={`Edit ${entry.name}`}
-                            >
-                              Edit
-                            </Link>
-                          </Button>
+                          <ButtonLink
+                            to="/entries/$entryId"
+                            params={{ entryId: entry.id }}
+                            aria-label={`Edit ${entry.name}`}
+                            variant="quiet"
+                            size="small"
+                          >
+                            Edit
+                          </ButtonLink>
                         }
                         // The copy is named "<name> copy" and opened for editing, so a name
                         // that is already taken is renamed before it is ever saved.
                         duplicate={
-                          <Button asChild variant="quiet" size="small">
-                            <Link
-                              to="/entries/new"
-                              search={{ category: entry.category, from: entry.id }}
-                              aria-label={`Duplicate ${entry.name}`}
-                            >
-                              Duplicate
-                            </Link>
-                          </Button>
+                          <ButtonLink
+                            to="/entries/new"
+                            search={{ category: entry.category, from: entry.id }}
+                            aria-label={`Duplicate ${entry.name}`}
+                            variant="quiet"
+                            size="small"
+                          >
+                            Duplicate
+                          </ButtonLink>
                         }
                         play={{
                           run: onUseInPlay === undefined ? undefined : () => onUseInPlay(entry),
@@ -195,11 +192,9 @@ export function EntriesRoute({
                 body={selected.body}
                 slots={selected.slots}
                 actions={
-                  <Button asChild size="small">
-                    <Link to="/entries/$entryId" params={{ entryId: selected.id }}>
-                      {`Edit ${selected.category}`}
-                    </Link>
-                  </Button>
+                  <ButtonLink to="/entries/$entryId" params={{ entryId: selected.id }} size="small">
+                    {`Edit ${selected.category}`}
+                  </ButtonLink>
                 }
                 onOpenHistory={() => setHistory(selected)}
               />

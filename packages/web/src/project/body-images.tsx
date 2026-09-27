@@ -5,6 +5,7 @@ import { type ReactElement, type ReactNode, useState } from "react";
 import { Button } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Rule } from "@/components/kit/layout";
+import { FileLink } from "@/components/kit/link";
 import {
   type Aspect,
   Lightbox,
@@ -301,12 +302,10 @@ export function DownloadButton({
   readonly text?: string;
 }): ReactElement {
   return (
-    <Button asChild size="small">
-      <a href={href} download aria-label={label} title={label}>
-        <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
-        {text}
-      </a>
-    </Button>
+    <FileLink href={href} download aria-label={label} title={label} size="small">
+      <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
+      {text}
+    </FileLink>
   );
 }
 

@@ -113,7 +113,7 @@ it.each([
     fireEvent.click(screen.getByText("Drafts"));
     fireEvent.click(await screen.findByRole("button", { name: "Discard Tab B" }));
     if (outcome === "conflict") otherWriter(h, id, "Tab C");
-    fireEvent.click(screen.getByRole("button", { name: "Confirm discard" }));
+    fireEvent.click(screen.getByRole("button", { name: "Discard draft" }));
     if (outcome !== "success") {
       await screen.findByText(
         outcome === "conflict"
@@ -125,9 +125,9 @@ it.each([
       expect(session.activeId).toBe(id);
       expect(session.status).toBe("conflict");
       expect(session.document.form.title).toBe(lostCreate ? "Tab A" : "Tab A local");
-      expect(screen.getByRole("button", { name: "Confirm discard" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Discard draft" })).toBeTruthy();
       if (outcome === "lost delete acknowledgement")
-        fireEvent.click(screen.getByRole("button", { name: "Confirm discard" }));
+        fireEvent.click(screen.getByRole("button", { name: "Discard draft" }));
       else {
         const remaining = readDraft(h.deps, id);
         expect(remaining.ok && remaining.value.draft.document.form.title).toBe(
@@ -141,7 +141,7 @@ it.each([
     expect(readDraft(h.deps, id).ok).toBe(false);
     expect(session.status).toBe("unsaved");
     expect(session.document.form.title).toBe("");
-    expect(screen.queryByRole("button", { name: "Confirm discard" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Discard draft" })).toBeNull();
     expect(deleteVersions).toEqual(outcome === "lost delete acknowledgement" ? [2, 2] : [2]);
   } finally {
     cleanup();
@@ -199,7 +199,7 @@ it("waits for a creation retry before deleting so a late POST cannot recreate th
     await act(() => client.invalidateQueries({ queryKey: ["play-drafts"] }));
     fireEvent.click(screen.getByText("Drafts"));
     fireEvent.click(await screen.findByRole("button", { name: "Discard Retrying" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm discard" }));
+    fireEvent.click(screen.getByRole("button", { name: "Discard draft" }));
     await act(async () => {});
     expect(deletes).toBe(0);
     await act(async () => {

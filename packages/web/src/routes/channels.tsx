@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { PlusIcon } from "lucide-react";
 import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
@@ -12,13 +12,14 @@ import {
   saveChannel,
 } from "@/channels/api";
 import { StatusSlot } from "@/components/kit/action-bar";
-import { Button, buttonClass } from "@/components/kit/button";
+import { Button } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
 import { ConfirmDialog, Dialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Field, Input } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
 import { ListDetail, PageHeader } from "@/components/kit/layout";
+import { ButtonLink, TextLink } from "@/components/kit/link";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { Stat, Stats } from "@/components/kit/stats";
@@ -132,14 +133,14 @@ export function ChannelsRoute(): ReactElement {
                   } · ${String(channel.cast)} in the cast`}
                   actions={
                     <>
-                      <Link
+                      <TextLink
                         to="/channels/$channelId"
                         params={{ channelId: channel.id }}
                         aria-label={`Open ${channel.name}`}
-                        className={buttonClass({ variant: "quiet", size: "small" })}
+                        className="px-2 text-small"
                       >
                         Open
-                      </Link>
+                      </TextLink>
                       <Button
                         variant="quiet"
                         size="small"
@@ -252,25 +253,21 @@ function ChannelGlance({ channel }: { readonly channel: ChannelSummary }): React
         title={`About ${channel.name}`}
         meta={channel.isDefault ? "The default channel" : undefined}
       >
-        <Link
-          to="/channels/$channelId"
-          params={{ channelId: channel.id }}
-          className={buttonClass({ variant: "secondary" })}
-        >
+        <ButtonLink to="/channels/$channelId" params={{ channelId: channel.id }}>
           Open channel
-        </Link>
+        </ButtonLink>
       </SectionHead>
       <Stats className="mb-6">
         <Stat value={String(channel.templates)} label="Templates" />
         <Stat value={String(channel.cast)} label="In the cast" />
       </Stats>
-      <h3 className="m-0 mb-2 text-title-3">Series brief</h3>
+      <SectionHead as="h3" title="Series brief" className="pb-2" />
       <p className="m-0 mb-6 whitespace-pre-wrap text-body text-ink-2">
         {channel.seriesBrief.trim() === ""
           ? "No series brief yet. Open the channel to say what it covers."
           : channel.seriesBrief}
       </p>
-      <h3 className="m-0 mb-2 text-title-3">Brand kit</h3>
+      <SectionHead as="h3" title="Brand kit" className="pb-2" />
       <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-2 text-small">
         {facts.map(([label, value]) => (
           <div key={label} className="contents">

@@ -2,7 +2,7 @@ import { defaultLoudness } from "@app/slices/loudness/model.js";
 import type { Appearance, AppSettings } from "@app/slices/settings/model.js";
 import type { ItemCounts } from "@app/slices/storage/backup-import.js";
 import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   type BackupImportSummary,
   readBackupExportSummary,
@@ -12,11 +12,12 @@ import {
 import { useApp } from "@/app-context";
 import { AutostartSettings } from "@/autostart/autostart-settings";
 import { CatalogueSettings } from "@/components/catalogue";
-import { Button, buttonClass } from "@/components/kit/button";
+import { Button } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
 import { Field, Input } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader, Workspace } from "@/components/kit/layout";
+import { FileLink } from "@/components/kit/link";
 import { Rail, RailButton } from "@/components/kit/rail";
 import { SectionHead } from "@/components/kit/section-head";
 import { Meter } from "@/components/kit/stats";
@@ -27,7 +28,6 @@ import { ProviderKeys } from "@/components/provider-keys";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
 import { Voices } from "@/components/voices";
 import { Welcome } from "@/components/welcome";
-import { cn } from "@/lib/utils";
 import { NotificationSettings } from "@/notifications/settings-panel";
 import { SampleSettings } from "@/onboarding/sample-settings";
 import { patchNotesQuery } from "@/patch-notes/api";
@@ -258,13 +258,13 @@ export function SettingsRoute({
               </Button>
             ) : null}
             <span className="inline-flex items-center gap-1">
-              <a
-                className={buttonClass({ variant: "quiet" })}
+              <FileLink
+                variant="quiet"
                 href={`${api.origin}/api/diagnostics`}
                 download="slopify-diagnostics.json"
               >
                 Download diagnostics
-              </a>
+              </FileLink>
               <InfoTip id="settings.diagnostics" />
             </span>
           </>
@@ -478,6 +478,7 @@ function StorageTools() {
   });
 
   const working = busy || exporting.phase === "preparing";
+  const backupFile = useRef<HTMLInputElement>(null);
   return (
     <>
       <div>
@@ -485,26 +486,23 @@ function StorageTools() {
           <Button disabled={working} onClick={() => void exportEverything()}>
             Export everything
           </Button>
-          <label
-            className={cn(
-              buttonClass({ variant: "secondary" }),
-              "cursor-pointer focus-within:outline-2 focus-within:outline-focus",
-              working && "pointer-events-none opacity-50",
-            )}
-          >
+          <Button disabled={working} onClick={() => backupFile.current?.click()}>
             Import a backup
-            <input
-              className="sr-only"
-              type="file"
-              accept=".tar,application/x-tar,.zip,application/zip"
-              disabled={working}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) void importBackup(file);
-                event.target.value = "";
-              }}
-            />
-          </label>
+          </Button>
+          <input
+            ref={backupFile}
+            className="sr-only"
+            type="file"
+            tabIndex={-1}
+            aria-label="Import a backup"
+            accept=".tar,application/x-tar,.zip,application/zip"
+            disabled={working}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void importBackup(file);
+              event.target.value = "";
+            }}
+          />
           <span className="inline-flex items-center gap-1">
             <Button variant="quiet" disabled={working} onClick={() => void cleanup()}>
               Clean orphan files
