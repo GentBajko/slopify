@@ -10,6 +10,17 @@ ticked with one image, a thumbnail prompt switches the thumbnail to From prompt,
 Description or Shorts prompt turns that step on. The rest of the draft stays as it was. While
 Play is starting a run from its draft the button is off.
 
+### Renaming in the list
+
+The pencil beside a name on **Library → Prompts**, **Intros & Outros** and **Templates** renames
+it in the row (`library/inline-name.tsx`): Enter or **Save name** saves, Escape or **Cancel**
+keeps the old name, and the notice carries **Undo**. The text stays as it is. A prompt or
+intro/outro is saved through the same endpoint as its editor, so the rename is one version in
+History (a version is the whole row, name included, so Restore can put the old name back);
+templates that picked it by the old name use the copy saved with them until it is picked again.
+A template is saved as a new version with its setup unchanged; schedules keep the version they
+were made from. None of these rows has a description to edit.
+
 ## Narration aliases
 
 **Library → Aliases** lists words the narrator should say differently from how they are

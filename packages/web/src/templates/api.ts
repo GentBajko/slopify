@@ -106,6 +106,27 @@ export async function updateProjectTemplate(
     templateReplySchema,
   );
 }
+// A rename from the Library list: the template's setup as saved, under a new name. The server
+// keeps it as a new version, the way every template change is kept. Resolves to null when saved,
+// else the sentence to show beside the name.
+export async function renameProjectTemplate(
+  api: Api,
+  id: string,
+  name: string,
+): Promise<string | null> {
+  const current = await readProjectTemplate(api, id);
+  if (!current.ok)
+    return `The name wasn't saved: ${current.message} Press Refresh templates, then rename it again.`;
+  const reply = await updateProjectTemplate(api, id, {
+    baseVersion: current.value.version,
+    mutationId: crypto.randomUUID(),
+    name,
+    document: current.value.document,
+  });
+  return reply.ok
+    ? null
+    : `The name wasn't saved: ${reply.message}${reply.reason === "conflict" ? " Press Refresh templates, then rename it again." : ""}`;
+}
 export async function saveTemplateFromProject(
   api: Api,
   projectId: string,

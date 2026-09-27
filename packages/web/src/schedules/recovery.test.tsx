@@ -460,6 +460,60 @@ it("queues pasted topics into the chosen keyword with fixed values for the rest"
   await waitFor(() => expect(create).toHaveBeenCalledOnce());
 });
 
+it("lists the every-run keywords like Play does, each with what it feeds", async () => {
+  const user = userEvent.setup();
+  const document = {
+    ...freshDraftDocument,
+    form: {
+      ...freshDraftDocument.form,
+      title: "D&D Lore: {{Topic}}",
+      articlePrompt: "Dossier",
+      values: { Topic: "", "Min. Word Count": "12000", Mood: "grim" },
+    },
+    librarySnapshot: {
+      prompts: [
+        {
+          id: "p1",
+          kind: "article",
+          name: "Dossier",
+          body: "Write {{Min. Word Count}} words about {{Topic}}.",
+          slots: ["Min. Word Count", "Topic"],
+          updatedAt: summary.updatedAt,
+        },
+      ],
+      entries: [],
+    },
+  };
+  renderRouted(
+    <SchedulesRoute />,
+    testDeps({
+      "GET /api/schedules": jsonAnswer({ schedules: [] }),
+      "GET /api/project-templates": jsonAnswer({
+        templates: [{ id: templateId, name: "Stories", version: 1, updatedAt: summary.updatedAt }],
+      }),
+      [`GET /api/project-templates/${templateId}`]: jsonAnswer({
+        template: {
+          id: templateId,
+          name: "Stories",
+          version: 1,
+          updatedAt: summary.updatedAt,
+          document,
+        },
+      }),
+    }),
+  );
+  await openNew(user);
+  await screen.findByRole("option", { name: "Stories · v1" });
+  await user.selectOptions(screen.getByLabelText("Template"), templateId);
+  await screen.findByLabelText("Each topic fills");
+  expect(screen.getByText("Feeds Project title · Article")).toBeTruthy();
+  expect(screen.getByLabelText<HTMLInputElement>("Min. Word Count for every run").value).toBe(
+    "12000",
+  );
+  expect(screen.getByText("Feeds Article")).toBeTruthy();
+  expect(screen.getByText("Not used by any picked prompt")).toBeTruthy();
+});
+
 it("offers the title's keyword even when the template stored no value for it", async () => {
   const user = userEvent.setup();
   const document = {

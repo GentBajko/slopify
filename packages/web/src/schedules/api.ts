@@ -213,6 +213,19 @@ export async function moveTopic(
   );
 }
 
+// The whole queue as the schedule page's inline list edits it; nothing else about the schedule
+// changes.
+export async function replaceTopics(
+  api: Api,
+  id: string,
+  input: { readonly baseVersion: number; readonly items: ScheduleSummary["items"] },
+): Promise<ScheduleReply<ScheduleSummary>> {
+  return responseOf(
+    await api.fetch(`${root(api)}/${encodeURIComponent(id)}/topics`, json("PUT", input)),
+    scheduleSummarySchema,
+  );
+}
+
 export async function transferTopic(
   api: Api,
   id: string,

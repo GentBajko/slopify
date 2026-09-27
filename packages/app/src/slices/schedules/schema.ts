@@ -172,6 +172,15 @@ export const topicMoveSchema = z
   })
   .strict()
   .readonly();
+// The whole queue at once: the schedule page adds, renames, removes and reorders topics in
+// place, and Undo puts the queue back as it was.
+export const topicQueueSchema = z
+  .object({
+    baseVersion: z.number().int().positive(),
+    items: z.array(item).max(queueMax).readonly(),
+  })
+  .strict()
+  .readonly();
 // The calendar: what will run, what is running or finished, and what waits in the batch queue.
 // `topicSource` says where a run's topic comes from: the queue (`topic` names it), topics held
 // for approval, a generation still to come, or none (the template as saved).
