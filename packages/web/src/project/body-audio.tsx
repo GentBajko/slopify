@@ -15,7 +15,6 @@ import { NarrationText } from "./narration-text.js";
 import { EngravedLabel, MetaLine, StageBody, StageFiles } from "./parts.js";
 import { ReviewVerdict, reviewFor, useReviews } from "./review-verdict.js";
 import { useOutputMedia } from "./revision-media.js";
-import { duration } from "./summary.js";
 
 // Each completed segment keeps its player; every file (recordings, clean narration, TTS
 // scripts) is in the stage's one Download menu beside its one Open folder. Historical voice metadata
@@ -100,14 +99,11 @@ export function AudioBody({ stage, project, outputs, busy }: BodyProps) {
 
 function Player({ name, output }: { readonly name: string; readonly output: Output }) {
   const media = useOutputMedia(output);
-  const length = duration(output.durationMs ?? undefined);
+  // The player shows the length itself once the file's metadata is read.
   return (
-    <div className="grid grid-cols-[64px_minmax(0,1fr)] items-center gap-3 text-small sm:grid-cols-[64px_minmax(0,1fr)_auto]">
+    <div className="grid grid-cols-[64px_minmax(0,1fr)] items-center gap-3 text-small">
       <EngravedLabel>{name}</EngravedLabel>
       <AudioPlayer label={`${name} narration`} src={media?.url} className="max-w-[640px]" />
-      {length === undefined ? null : (
-        <span className="col-start-2 text-ink-2 tabular-nums sm:col-start-auto">{length}</span>
-      )}
     </div>
   );
 }
