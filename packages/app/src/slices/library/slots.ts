@@ -128,7 +128,8 @@ export function pickTemplates(
   }
 
   const fields = collectFields(
-    text.map((picked) => picked.body),
+    // The title's keywords are asked for like a prompt's: it is filled when the run starts.
+    [draft.title, ...text.map((picked) => picked.body)],
     image.map((picked) => picked.body),
   );
   return {

@@ -82,6 +82,24 @@ describe("initialState", () => {
 });
 
 describe("startRun", () => {
+  it("fills the title's keywords, so a template's pattern names each project", () => {
+    const run = startRun(
+      deps(),
+      draft({
+        title: "D&D Lore: {{Topic}}",
+        values: { Topic: "Vecna" },
+        sources: {
+          ...draft().sources,
+          audio: "off",
+          images: "off",
+          video: "off",
+        },
+      }),
+      {},
+    );
+    expect(run.project.title).toBe("D&D Lore: Vecna");
+    expect(run.project.config.title).toBe("D&D Lore: Vecna");
+  });
   it("names Plain on a new project's document when the draft names no theme", () => {
     const storage = deps();
     const sources = {

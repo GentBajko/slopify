@@ -48,6 +48,11 @@ function draft(over: Partial<RunDraft> = {}): RunDraft {
 }
 
 describe("pickTemplates", () => {
+  it("asks for a keyword the title names even when no prompt uses it", () => {
+    const deps = library();
+    const picked = pickTemplates(deps.db, draft({ title: "Lore: {{Topic}}" }));
+    expect(picked.requiredSlots).toContain("Topic");
+  });
   it("freezes narration slots separately and ignores the selection when Audio is off", () => {
     const deps = library();
     createPrompt(deps, {

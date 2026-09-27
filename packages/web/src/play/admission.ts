@@ -49,6 +49,8 @@ export function keywordFields(input: AdmissionInput): readonly Field[] {
   const { form } = input;
   const text: string[] = [];
   const image: string[] = [];
+  // The project title may name keywords too, filled when the run starts.
+  push(text, form.title);
   if (usesNarrationPreparation(form))
     push(text, bodyOf(input.prompts, "narration", form.narrationPrompt ?? ""));
 
@@ -300,6 +302,7 @@ export function keywordOrigins(input: AdmissionInput): ReadonlyMap<string, reado
     }
   };
   const { form, prompts, entries } = input;
+  add(form.title, "Project title");
   if (usesNarrationPreparation(form))
     add(bodyOf(prompts, "narration", form.narrationPrompt ?? ""), "Narration Preparation");
   if (form.sources.article === "generate")

@@ -19,6 +19,7 @@ import {
 } from "./model.js";
 import { insertProject, insertStage } from "./repo.js";
 import { usesPronunciationGlossary } from "./rules.js";
+import { render } from "./substitute.js";
 
 export interface StartedRun {
   readonly project: Project;
@@ -49,8 +50,12 @@ export function startRun(
     usesPronunciationGlossary(draft) && draft.audio?.shareGlossary === true
       ? collectSharedGlossary(deps).entries
       : [];
+  // The title may name keywords too ("D&D Lore: {{Topic}}"), filled like a prompt's, so a
+  // template or Play keeps the pattern and each project gets its own title.
+  const title = render(draft.title, draft.values).trim() || draft.title;
   const config: RunConfig = {
     ...draft,
+    title,
     // A new project always names its document theme: a config without one reads as the
     // DiceMaster of older projects (see documentThemeOf), which no new project should get.
     ...(sourceOf(draft.sources, "document") === "generate" && draft.document === undefined
@@ -61,7 +66,7 @@ export function startRun(
   };
   const project: Project = {
     id,
-    title: draft.title,
+    title,
     format: draft.format,
     config,
     createdAt: at,

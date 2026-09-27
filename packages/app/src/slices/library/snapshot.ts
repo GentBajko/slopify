@@ -33,6 +33,10 @@ export const librarySnapshotSchema = z
   .readonly();
 export type LibrarySnapshot = z.infer<typeof librarySnapshotSchema>;
 
+// A template names its prompts and intros/outros; the Library's current one of that name is
+// what a run from it uses, so editing a prompt reaches every template and schedule that names
+// it. The copy the template saved is only the fallback for one since deleted or renamed, so a
+// template never stops working because its Library changed.
 export function snapshotPrompt(
   db: DatabaseSync,
   snapshot: LibrarySnapshot | undefined,
@@ -40,9 +44,10 @@ export function snapshotPrompt(
   name: string,
 ): ReturnType<typeof promptByName> {
   return (
+    promptByName(db, kind, name) ??
     snapshot?.prompts.find(
       (row) => row.kind === kind && row.name.toLowerCase() === name.toLowerCase(),
-    ) ?? promptByName(db, kind, name)
+    )
   );
 }
 export function snapshotEntry(
@@ -52,8 +57,9 @@ export function snapshotEntry(
   name: string,
 ): ReturnType<typeof entryByName> {
   return (
+    entryByName(db, category, name) ??
     snapshot?.entries.find(
       (row) => row.category === category && row.name.toLowerCase() === name.toLowerCase(),
-    ) ?? entryByName(db, category, name)
+    )
   );
 }
