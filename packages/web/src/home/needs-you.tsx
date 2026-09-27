@@ -225,6 +225,32 @@ export function HeldTopicsItem({
   );
 }
 
+// A run the person paused: nothing more happens until they continue it on the project, so it
+// waits here rather than under Running now.
+export function PausedItem({
+  project,
+  primary,
+}: {
+  readonly project: ProjectListing;
+  readonly primary: boolean;
+}): ReactElement {
+  return (
+    <Item
+      lead={<ProjectThumb projectId={project.id} />}
+      status={<Status tone="waiting">Paused</Status>}
+      title={projectLink(project)}
+      detail="You paused this run. Nothing more happens until you open it and press Continue the run."
+      action={
+        <Button asChild variant={primary ? "primary" : "secondary"}>
+          <Link to="/projects/$projectId" params={{ projectId: project.id }}>
+            Open to continue
+          </Link>
+        </Button>
+      }
+    />
+  );
+}
+
 export function FailedItem({
   project,
   primary,

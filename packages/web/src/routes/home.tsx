@@ -11,7 +11,7 @@ import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { SectionHead } from "@/components/kit/section-head";
 import { ComingUp } from "@/home/coming-up";
-import { FailedItem, HeldTopicsItem, isWaiting, WaitingItem } from "@/home/needs-you";
+import { FailedItem, HeldTopicsItem, isWaiting, PausedItem, WaitingItem } from "@/home/needs-you";
 import { isReadyToUpload, ReadyItem } from "@/home/ready";
 import { RunningProject } from "@/home/running-now";
 import { ThisWeek } from "@/home/week";
@@ -71,10 +71,16 @@ export function HomeRoute(): ReactElement {
     [templates.data],
   );
   const mine = (projects.data?.projects ?? []).filter((one) => current.includes(one.channelId));
-  const running = mine.filter((one) => one.status === "running" || one.status === "paused");
+  // Paused runs wait for the person, so they sit under Needs you, not Running now.
+  const running = mine.filter((one) => one.status === "running");
+  const paused = mine.filter((one) => one.status === "paused");
   const waiting = mine.filter(isWaiting);
   const failed = mine.filter((one) => one.status === "failed");
-  const ready = mine.filter(isReadyToUpload);
+  // The bundled samples are finished videos too, but nobody uploads them.
+  const samples = new Set(
+    Object.values(firstRun.data?.samples ?? {}).filter((id): id is string => id !== null),
+  );
+  const ready = mine.filter((one) => isReadyToUpload(one) && !samples.has(one.id));
   const held = (schedules.data ?? []).filter(
     (one) =>
       one.deletedAt === null &&
@@ -87,6 +93,7 @@ export function HomeRoute(): ReactElement {
   );
   const needs = [
     ...waiting.map((project) => ({ kind: "waiting" as const, project })),
+    ...paused.map((project) => ({ kind: "paused" as const, project })),
     ...held.map((schedule) => ({ kind: "held" as const, schedule })),
     ...failed.slice(0, shownPerSection).map((project) => ({ kind: "failed" as const, project })),
   ];
@@ -144,6 +151,12 @@ export function HomeRoute(): ReactElement {
                 {needs.map((item, index) =>
                   item.kind === "waiting" ? (
                     <WaitingItem
+                      key={item.project.id}
+                      project={item.project}
+                      primary={index === 0}
+                    />
+                  ) : item.kind === "paused" ? (
+                    <PausedItem
                       key={item.project.id}
                       project={item.project}
                       primary={index === 0}

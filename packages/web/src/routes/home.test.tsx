@@ -241,6 +241,47 @@ describe("home", () => {
     expect(within(week).getByRole("meter", { name: "Weekly Codex limit" })).not.toBeNull();
   });
 
+  it("keeps the bundled samples off Ready to upload", async () => {
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/onboarding": jsonAnswer({
+          show: false,
+          sampleProjectId: "p-done",
+          samples: { library: "p-done", audiobook: null, podcast: null },
+          clis: [],
+          packs: [],
+        }),
+      }),
+    );
+    const ready = await screen.findByRole("region", { name: "Ready to upload" });
+    // Loaded (the projects and which of them are samples), and only then without the sample.
+    await waitFor(() => {
+      expect(
+        within(ready).getByText("Finished videos you haven't marked uploaded show here"),
+      ).not.toBeNull();
+      expect(screen.getByText("Demogorgon")).not.toBeNull();
+      expect(within(ready).queryByRole("link", { name: "Szass Tam" })).toBeNull();
+    });
+  });
+
+  it("lists a paused run under Needs you, not Running now", async () => {
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects": jsonAnswer({
+          projects: [listing("p-pause", "Asmodeus", "paused", { progress: 0.5 })],
+        }),
+      }),
+    );
+    const needs = await screen.findByRole("region", { name: "Needs you" });
+    expect(await within(needs).findByText("Paused")).not.toBeNull();
+    expect(within(needs).getByRole("link", { name: "Open to continue" })).not.toBeNull();
+    const running = screen.getByRole("region", { name: "Running now" });
+    expect(within(running).queryByText("Asmodeus")).toBeNull();
+    expect(within(running).getByText("Nothing is running")).not.toBeNull();
+  });
+
   it("marks a finished video uploaded", async () => {
     const user = userEvent.setup();
     const put = vi.fn(jsonAnswer({ uploadedAt: "2026-09-27T10:00:00.000Z" }));
