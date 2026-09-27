@@ -53,8 +53,10 @@ RailButton) · `kit/steps` · `kit/next-action` · `kit/callout` (danger, waitin
 actions) · `kit/list-row` (List, ListRow with visible actions) · `kit/stats` (Stats, Stat,
 Meter, DataTable) · `kit/command-palette` · `kit/dialog` (Dialog, ConfirmDialog) · `kit/toast`
 · `kit/empty-state` · `kit/reading-view` (contents from `##` headings, search that marks every
-hit, copy one section or all as Markdown) · `kit/layout` (PageHeader, Workspace, ListDetail,
-Rule).
+hit and steps through them, copy one section or all as Markdown; the one reading view, used by
+the project page too, where `regionLabel` puts the text in a scrolling region) · `kit/layout`
+(PageHeader, Workspace, ListDetail, Rule) · `kit/board` (Board and BoardColumn: `main-side`
+for Home, `aside` for the calendar beside its suggestions, `even`; stacked below 1024px).
 
 ### Command palette
 
@@ -76,12 +78,15 @@ Enter runs, Esc closes; focus stays in the palette while it is open.
 
 ### Shell
 
-A 232px rail (wordmark, the palette button, Home, Projects, Calendar, Channels, Library,
-Settings, the channel picker slot and the New video key), a thin top bar, and the page up to
-1680px. Below 768px the rail becomes a bottom bar of five (Channels is left out). Home and
-Channels point at the closest existing screens until their routes exist (see the TODO in
-`shell.tsx`). A channels screen renders its picker into the rail with
-`<ChannelPickerSlot>`.
+A 232px rail (wordmark, the palette button, Home `/`, Projects `/projects`, Calendar,
+Channels, Library, Settings, the channel picker and the New video key), a thin top bar, and the
+page up to 1680px. Below 768px the rail becomes a bottom bar of five (Channels is left out) and
+Home carries the channel picker itself.
+
+The channel picker (`channels/current.tsx`) is the current channel: Home, the calendar and
+Projects show only its work, or every channel's. `useCurrentChannel().includes(channelId)`
+answers whether something is in view; the choice is kept per browser. Every destination, each
+channel ("Switch to …") and New video are Ctrl+K commands; each screen adds its own actions.
 
 ## Rules in short
 

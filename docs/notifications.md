@@ -13,7 +13,9 @@ button.
 
 Turn **Browser notifications** on. The browser asks for permission then, never on page load.
 They work while any Slopify tab is open, in any section; with several tabs open you get one
-notification, not one per tab. Clicking it opens the project. The choice is remembered per
+notification, not one per tab. Clicking it opens the project. When a schedule holds topics it
+suggested ("5 new topics are waiting for you"), the browser says so too, and clicking it opens
+the calendar's Suggested topics. The choice is remembered per
 browser. If the browser blocked notifications earlier, allow them in the site settings (the
 icon left of the address bar), reload, and turn the toggle on again.
 

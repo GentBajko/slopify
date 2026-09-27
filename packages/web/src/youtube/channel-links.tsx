@@ -9,10 +9,9 @@ import { type ReactElement, useState } from "react";
 import { readChannelLinks, saveChannelLinks } from "@/api";
 import { useApp } from "@/app-context";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
+import { Button } from "@/components/kit/button";
+import { Input } from "@/components/kit/field";
 import { SectionHead } from "@/components/kit/section-head";
-import { RailGroup } from "@/components/rail";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { keys } from "@/queries";
 
 // Settings → Channel links: the named links a YouTube description's `{{Name}}` placeholders
@@ -40,11 +39,10 @@ export function ChannelLinksSettings(): ReactElement {
   return (
     <div>
       <SectionHead
-        title="Channel links"
+        title="Named links"
         info={`Write {{Name}} in a YouTube description, or ask for it in a Description prompt, and it is replaced by the link of that name when the description is shown or copied. For example {{Patreon}}, {{Discord}} or {{${previousVideoLink}}}. A placeholder with no link here stays as typed and is marked on the project page.`}
       >
         <Button
-          type="button"
           variant="primary"
           disabled={draft === undefined || save.isPending}
           onClick={() => {
@@ -59,18 +57,22 @@ export function ChannelLinksSettings(): ReactElement {
           Save
         </Button>
       </SectionHead>
-      {saved.error === null ? null : <p className="text-body text-red">{saved.error.message}</p>}
-      <RailGroup>
-        {rows.length === 0 ? (
-          <p className="px-4 py-4 text-ink2">
-            No channel links yet. Add one, then write its name in braces in a description.
-          </p>
-        ) : (
-          rows.map((row, index) => (
-            <div
+      {saved.error === null ? null : (
+        <p role="alert" className="m-0 mb-3 text-body text-danger">
+          The channel links couldn't be read: {saved.error.message}
+        </p>
+      )}
+      {rows.length === 0 ? (
+        <p className="m-0 border-y border-line py-4 text-ink-2">
+          No channel links yet. Add one, then write its name in braces in a description.
+        </p>
+      ) : (
+        <ul aria-label="Channel links" className="sl-list m-0 list-none p-0">
+          {rows.map((row, index) => (
+            <li
               // biome-ignore lint/suspicious/noArrayIndexKey: rows are edited in place and never reorder
               key={index}
-              className="grid grid-cols-[minmax(0,1fr)] items-center gap-2 border-b border-line px-4 py-[10px] last:border-b-0 md:grid-cols-[220px_minmax(0,1fr)_auto]"
+              className="grid grid-cols-[minmax(0,1fr)] items-center gap-2 border-b border-line py-[10px] md:grid-cols-[220px_minmax(0,1fr)_auto]"
             >
               <Input
                 aria-label={`Name of link ${String(index + 1)}`}
@@ -86,20 +88,21 @@ export function ChannelLinksSettings(): ReactElement {
                 onChange={(event) => change(index, { url: event.currentTarget.value })}
               />
               <Button
-                type="button"
-                variant="ghost"
+                variant="quiet"
+                size="small"
+                className="justify-self-start"
                 aria-label={`Remove link ${String(index + 1)}`}
                 onClick={() => setDraft(rows.filter((_row, at) => at !== index))}
               >
                 <Trash2Icon aria-hidden="true" className="size-[14px]" />
                 Remove
               </Button>
-            </div>
-          ))
-        )}
-      </RailGroup>
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Button type="button" onClick={() => setDraft([...rows, { name: "", url: "" }])}>
+        <Button onClick={() => setDraft([...rows, { name: "", url: "" }])}>
           <PlusIcon aria-hidden="true" className="size-[14px]" />
           Add link
         </Button>

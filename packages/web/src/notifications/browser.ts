@@ -1,4 +1,4 @@
-import type { ShownNotice } from "./watcher.js";
+import type { ShownNotice, ShownTopicsNotice } from "./watcher.js";
 
 // The browser half of run notifications: the per-browser toggle, the permission, the one-tab
 // claim and the Notification itself. Storage can be missing or throw (private windows, blocked
@@ -122,6 +122,20 @@ export function showBrowserNotification(
   shown.onclick = () => {
     window.focus();
     open(notice.projectId);
+    shown.close();
+  };
+}
+
+// The same notification for a schedule's suggested topics; clicking it opens the calendar,
+// where they wait in Suggested topics.
+export function showTopicsNotification(notice: ShownTopicsNotice, open: () => void): void {
+  const shown = new Notification(notice.text.headline, {
+    body: notice.text.detail,
+    tag: `slopify-topics-${notice.scheduleId}`,
+  });
+  shown.onclick = () => {
+    window.focus();
+    open();
     shown.close();
   };
 }

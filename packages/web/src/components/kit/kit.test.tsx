@@ -293,6 +293,62 @@ Again.
     await user.click(screen.getByRole("button", { name: "Copy all" }));
     expect(writeText).toHaveBeenLastCalledWith(markdown);
   });
+
+  it("steps through the hits and says when there are none", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<ReadingView markdown={markdown} label="Article" />);
+    const search = screen.getByLabelText("Search the article");
+    await user.type(search, "tiamat");
+    await waitFor(() => expect(screen.getByText("2 matches")).not.toBeNull());
+    await user.click(screen.getByRole("button", { name: "Next match" }));
+    expect(screen.getByText("1 of 2")).not.toBeNull();
+    await user.keyboard("{Enter}");
+    await user.click(screen.getByRole("button", { name: "Next match" }));
+    expect(screen.getByText("1 of 2")).not.toBeNull();
+    expect(container.querySelectorAll('mark.sl-hit[data-current="true"]')).toHaveLength(1);
+    await user.clear(search);
+    await user.type(search, "steel");
+    expect(await screen.findByText("No matches")).not.toBeNull();
+  });
+
+  it("hands copies to the caller, prefixes its anchors and scrolls in a named region", async () => {
+    const user = userEvent.setup();
+    const onCopy = vi.fn();
+    render(
+      <ReadingView
+        markdown={markdown}
+        label="Article"
+        what="article"
+        regionLabel="Article content"
+        anchorPrefix="article-"
+        onCopy={onCopy}
+      />,
+    );
+    const region = screen.getByRole("region", { name: "Article content" });
+    expect(within(region).getByRole("heading", { name: "The five heads" }).id).toBe(
+      "article-the-five-heads",
+    );
+    await user.click(screen.getByRole("button", { name: "Copy section: The five heads" }));
+    expect(onCopy).toHaveBeenLastCalledWith(
+      "## The five heads\n\nFive heads. Tiamat breathes.",
+      'section "The five heads"',
+    );
+    await user.click(screen.getByRole("button", { name: "Copy all" }));
+    expect(onCopy).toHaveBeenLastCalledWith(markdown, "article");
+  });
+
+  it("shows what it is given while there is no text, with search off", () => {
+    render(
+      <ReadingView markdown="" label="Research notes" copyAll={false}>
+        <p>Not yet.</p>
+      </ReadingView>,
+    );
+    expect(screen.getByText("Not yet.")).not.toBeNull();
+    expect((screen.getByLabelText("Search the research notes") as HTMLInputElement).disabled).toBe(
+      true,
+    );
+    expect(screen.queryByRole("button", { name: "Copy all" })).toBeNull();
+  });
 });
 
 describe("buttons", () => {

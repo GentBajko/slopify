@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useId, useMemo, useState } from "react";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Callout } from "@/components/kit/callout";
+import { ReadingView } from "@/components/kit/reading-view";
 import { TabPanel, Tabs } from "@/components/kit/tabs";
 import { Button } from "@/components/ui/button";
 import { keys } from "@/queries";
@@ -27,7 +28,6 @@ import {
   splitTitle,
   useOutputText,
 } from "./parts.js";
-import { ReadingView } from "./reading-view.js";
 import { ReviewVerdict, reviewFor, useReviews } from "./review-verdict.js";
 import { shownStage } from "./sections.js";
 
@@ -244,7 +244,9 @@ export function ArticleBody({ stage, companion, project, outputs, actions, busy 
         ) : (
           <ReadingView
             markdown={parts.body}
-            label="Article content"
+            label="Article"
+            regionLabel="Article content"
+            anchorPrefix="article-"
             what="article"
             onCopy={copyMarkdown}
             copyAll={false}
@@ -290,6 +292,8 @@ export function ArticleBody({ stage, companion, project, outputs, actions, busy 
           <ReadingView
             markdown={entries.map((entry, index) => `${String(index + 1)}. ${entry}`).join("\n")}
             label="Sources"
+            regionLabel="Sources"
+            anchorPrefix="sources-"
             what="sources"
             onCopy={copyMarkdown}
             copyAll={false}

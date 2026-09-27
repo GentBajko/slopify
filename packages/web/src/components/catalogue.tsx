@@ -3,6 +3,8 @@ import type { RetiredUsage } from "@app/slices/model-upkeep/model.js";
 import { slotLabels } from "@app/slices/model-upkeep/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApp } from "@/app-context";
+import { Button } from "@/components/kit/button";
+import { useCommand } from "@/components/kit/command-palette";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
 import {
@@ -14,8 +16,6 @@ import {
   switchRetired,
   upkeepKeys,
 } from "@/components/provider-upkeep-api";
-import { Rail, RailGroup } from "@/components/rail";
-import { Button } from "@/components/ui/button";
 import { schedulesKey } from "@/schedules/api";
 import { templatesKey } from "@/templates/api";
 
@@ -108,114 +108,133 @@ export function CatalogueSettings() {
     status.data?.warning ??
     sync?.warning ??
     null;
+  useCommand({
+    id: "settings.check-models",
+    title: "Check for new models",
+    group: "Settings",
+    context: "Models",
+    keywords: ["catalogue", "prices", "retired"],
+    run: () => {
+      if (!check.isPending && status.data?.path) check.mutate();
+    },
+  });
   return (
-    <div>
-      <SectionHead
-        title="Models"
-        info="Slopify checks the published model catalogue and OpenRouter's live model list when it starts and once a day. New models appear, prices follow the providers, and retired models are hidden from the pickers and listed below; nothing you made is changed until you choose Switch. Your own edits to the local file are kept. Replace with published file overwrites the local file instead and saves the previous one alongside it."
-      >
-        <Button disabled={check.isPending || !status.data?.path} onClick={() => check.mutate()}>
-          {check.isPending ? "Checking…" : "Check now"}
-        </Button>
-        <Button
-          variant="ghost"
-          disabled={replace.isPending || !status.data?.path}
-          onClick={() => replace.mutate()}
+    <>
+      <div>
+        <SectionHead
+          title="Model catalogue"
+          info="Slopify checks the published model catalogue and OpenRouter's live model list when it starts and once a day. New models appear, prices follow the providers, and retired models are hidden from the pickers and listed below; nothing you made is changed until you choose Switch. Your own edits to the local file are kept. Replace with published file overwrites the local file instead and saves the previous one alongside it."
         >
-          {replace.isPending ? "Replacing…" : "Replace with published file"}
-        </Button>
-      </SectionHead>
-      <RailGroup>
-        <Rail className="flex-wrap justify-between gap-y-1">
-          <span className="font-semibold">Catalogue file</span>
-          <span className="min-w-0 break-all font-mono text-small text-ink2">
+          <Button disabled={check.isPending || !status.data?.path} onClick={() => check.mutate()}>
+            {check.isPending ? "Checking…" : "Check now"}
+          </Button>
+          <Button
+            variant="quiet"
+            disabled={replace.isPending || !status.data?.path}
+            onClick={() => replace.mutate()}
+          >
+            {replace.isPending ? "Replacing…" : "Replace with published file"}
+          </Button>
+        </SectionHead>
+        <dl className="m-0 grid gap-x-6 border-t border-line text-small sm:grid-cols-[160px_minmax(0,1fr)]">
+          <dt className="pt-3 font-semibold text-ink sm:border-b sm:border-line sm:pb-3">
+            Catalogue file
+          </dt>
+          <dd className="m-0 min-w-0 border-b border-line pb-3 break-all font-mono text-ink-2 sm:pt-3">
             {status.data?.path ?? "Not available"}
-          </span>
-        </Rail>
-        <Rail className="flex-wrap justify-between gap-y-1">
-          <span className="font-semibold">Verified</span>
-          <span className="text-small text-ink2">
+          </dd>
+          <dt className="pt-3 font-semibold text-ink sm:border-b sm:border-line sm:pb-3">
+            Verified
+          </dt>
+          <dd className="m-0 border-b border-line pb-3 text-ink-2 sm:pt-3">
             {status.data?.updatedAt ?? "date unavailable"}
-          </span>
-        </Rail>
-        <Rail className="flex-wrap justify-between gap-y-1">
-          <span className="font-semibold">Last checked</span>
-          <span className="text-small text-ink2">
+          </dd>
+          <dt className="pt-3 font-semibold text-ink sm:border-b sm:border-line sm:pb-3">
+            Last checked
+          </dt>
+          <dd className="m-0 border-b border-line pb-3 text-ink-2 sm:pt-3">
             {sync?.checkedAt
               ? `${new Date(sync.checkedAt).toLocaleString()} · ${changeSummary(sync.changes)}`
               : "Not checked yet"}
-          </span>
-        </Rail>
+          </dd>
+        </dl>
         {sync !== undefined && sync.changes.retired.length + sync.changes.added.length > 0 ? (
-          <Rail className="flex-col items-stretch gap-1 text-small text-ink2">
+          <div className="mt-3 flex flex-col gap-1 text-small text-ink-2">
             {sync.changes.added.length > 0 ? (
               <span>New: {sync.changes.added.map((row) => row.name).join(", ")}</span>
             ) : null}
             {sync.changes.retired.length > 0 ? (
               <span>Retired: {sync.changes.retired.map((row) => row.name).join(", ")}</span>
             ) : null}
-          </Rail>
+          </div>
         ) : null}
-      </RailGroup>
-      {problem === null ? null : (
-        <p role="alert" className="mt-2 text-body text-red">
-          {problem}
-        </p>
-      )}
-      <section aria-label="Retired models in use" className="mt-8">
+        {problem === null ? null : (
+          <p role="alert" className="m-0 mt-3 text-body text-danger">
+            {problem}
+          </p>
+        )}
+      </div>
+      <section aria-label="Retired models in use">
         <SectionHead
           title="Retired models in use"
           info="Templates, schedules, drafts and projects with steps still to run that pick a model the provider no longer offers. A run that reaches one stops and says so. Switch replaces only that one model choice with the suggestion shown."
         >
-          <Button disabled={all.isPending || switchable.length === 0} onClick={() => all.mutate()}>
+          <Button
+            variant="primary"
+            disabled={all.isPending || switchable.length === 0}
+            onClick={() => all.mutate()}
+          >
             {all.isPending ? "Switching…" : "Switch all"}
           </Button>
         </SectionHead>
         {retired.error ? (
-          <p role="alert" className="text-body text-red">
+          <p role="alert" className="m-0 mb-2 text-body text-danger">
             {retired.error.message}
           </p>
         ) : null}
         {one.error ? (
-          <p role="alert" className="mb-2 text-body text-red">
+          <p role="alert" className="m-0 mb-2 text-body text-danger">
             {one.error.message}
           </p>
         ) : null}
         {usages.length === 0 ? (
-          <p className="text-small text-ink2">
+          <p className="m-0 text-small text-ink-2">
             {retired.isPending ? "Looking…" : "Nothing uses a retired model."}
           </p>
         ) : (
-          <RailGroup>
+          <ul aria-label="Retired models in use" className="sl-list m-0 list-none p-0">
             {usages.map((usage) => (
-              <Rail key={usage.key} className="flex-wrap gap-y-1">
-                <div className="min-w-0 flex-1">
-                  <p>
-                    <span className="engraved text-ink3">{kindLabels[usage.kind]}</span>{" "}
+              <li key={usage.key} className="sl-row max-sm:grid-cols-1">
+                <div className="min-w-0">
+                  <p className="m-0">
+                    <span className="sl-kicker">{kindLabels[usage.kind]}</span>{" "}
                     <span className="font-semibold">{usage.name}</span>
                   </p>
-                  <p className="text-small text-ink2">
+                  <p className="m-0 text-small text-ink-2">
                     {slotLabels[usage.slot]}: {usage.model} (
                     {usage.why === "retired" ? "retired" : "no longer listed"})
                   </p>
                   {usage.blocked === null ? null : (
-                    <p className="text-small text-amber">{usage.blocked}</p>
+                    <p className="m-0 text-small text-waiting">{usage.blocked}</p>
                   )}
                 </div>
-                <Button
-                  disabled={usage.blocked !== null || usage.replacement === null || one.isPending}
-                  onClick={() => one.mutate(usage)}
-                >
-                  {usage.replacement === null
-                    ? "No replacement"
-                    : `Switch to ${usage.replacement.name}`}
-                </Button>
-              </Rail>
+                <div className="sl-btn-row">
+                  <Button
+                    size="small"
+                    disabled={usage.blocked !== null || usage.replacement === null || one.isPending}
+                    onClick={() => one.mutate(usage)}
+                  >
+                    {usage.replacement === null
+                      ? "No replacement"
+                      : `Switch to ${usage.replacement.name}`}
+                  </Button>
+                </div>
+              </li>
             ))}
-          </RailGroup>
+          </ul>
         )}
       </section>
-    </div>
+    </>
   );
 }
 

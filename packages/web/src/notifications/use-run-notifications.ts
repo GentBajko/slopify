@@ -9,6 +9,7 @@ import {
   claimOnce,
   onBrowserNotificationsChange,
   showBrowserNotification,
+  showTopicsNotification,
 } from "./browser.js";
 import { createRunWatcher, type RunWatcher } from "./watcher.js";
 
@@ -39,6 +40,11 @@ export function useRunNotifications(): RunWatcher {
           };
         },
         claim: (key) => claimOnce(key),
+        showTopics: (notice) => {
+          showTopicsNotification(notice, () => {
+            void navigateRef.current({ to: "/calendar" });
+          });
+        },
         show: (notice) => {
           showBrowserNotification(notice, (projectId) => {
             void navigateRef.current({ to: "/projects/$projectId", params: { projectId } });

@@ -2,8 +2,12 @@ import type { ScheduleSummary } from "@app/slices/schedules/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/kit/button";
+import { Callout } from "@/components/kit/callout";
+import { Input } from "@/components/kit/field";
+import { Rule } from "@/components/kit/layout";
+import { List, ListRow } from "@/components/kit/list-row";
+import { SectionHead } from "@/components/kit/section-head";
 import {
   approveAllHeldTopics,
   approveHeldTopic,
@@ -63,120 +67,132 @@ export function TopicGenerationPanel({
   const busy = action.isPending;
   const rows = held.data ?? [];
   return (
-    <section className="mt-3 border-t border-line pt-3 pl-6" aria-label="Topic generation">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <p className="min-w-0 flex-1 text-small text-ink2">
-          {topics.generatingSince !== null
+    <section aria-label="Topic generation">
+      <Rule className="my-6" />
+      <SectionHead
+        as="h3"
+        title="Topic generation"
+        meta={`${
+          topics.generatingSince !== null
             ? "Generating topics now…"
             : topics.generatedAt !== null
               ? `Topics last generated ${formatScheduleDate(topics.generatedAt, schedule.timezone)}.`
-              : "No topics generated yet."}{" "}
-          Keeps at least {schedule.topicGeneration.keepAtLeast}{" "}
-          {schedule.topicGeneration.mode === "hold" ? "queued or waiting" : "queued"}.
-        </p>
+              : "No topics generated yet."
+        } Keeps at least ${String(schedule.topicGeneration.keepAtLeast)} ${
+          schedule.topicGeneration.mode === "hold" ? "queued or waiting" : "queued"
+        }.`}
+      >
         <Button
-          type="button"
           disabled={busy || topics.generatingSince !== null}
+          disabledReason="Topics are being generated now"
           onClick={() => action.mutate(() => generateTopicsNow(api, schedule.id))}
         >
           Generate topics now
         </Button>
-      </div>
+      </SectionHead>
       {topics.error !== null ? (
-        <p role="alert" className="mt-2 text-small text-red">
+        <Callout tone="danger" title="The last topic generation failed." className="mt-3">
           {topics.error}
-        </p>
+        </Callout>
       ) : null}
       {error !== null ? (
-        <p role="alert" className="mt-2 text-small text-red">
+        <Callout tone="danger" title="That didn't work." className="mt-3">
           {error}
-        </p>
+        </Callout>
       ) : null}
       {schedule.topicGeneration.mode === "hold" ? (
-        <div className="mt-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="flex-1 text-small font-semibold">Topics waiting · {rows.length}</h3>
+        <div className="mt-4">
+          <SectionHead as="h3" title={`Topics waiting · ${String(rows.length)}`}>
             <Button
-              type="button"
               variant="primary"
               disabled={busy || rows.length === 0}
+              disabledReason="Nothing is waiting"
               onClick={() => action.mutate(() => approveAllHeldTopics(api, schedule.id))}
             >
               Approve all
             </Button>
-          </div>
+          </SectionHead>
           {held.error ? (
-            <p className="mt-2 text-small text-red">{held.error.message}</p>
+            <p className="m-0 mt-2 text-small text-danger">
+              {`The waiting topics couldn't be loaded: ${held.error.message} Reload the page to try again.`}
+            </p>
           ) : rows.length === 0 ? (
-            <p className="mt-2 text-small text-ink3">
+            <p className="m-0 mt-2 text-small text-ink-3">
               Nothing is waiting. New topics appear here for you to approve.
             </p>
           ) : (
-            <ol className="mt-2 space-y-2">
+            <List label="Topics waiting" className="mt-2 [&_.sl-row__actions]:flex-wrap">
               {rows.map((topic) => (
-                <li key={topic.id} className="flex flex-wrap items-center gap-2 text-small">
-                  {editing?.id === topic.id ? (
-                    <Input
-                      aria-label={`Edit ${topic.title}`}
-                      className="min-w-0 flex-1"
-                      maxLength={200}
-                      value={editing.title}
-                      onChange={(event) => setEditing({ id: topic.id, title: event.target.value })}
-                    />
-                  ) : (
-                    <span className="min-w-0 flex-1 break-words">{topic.title}</span>
-                  )}
-                  {editing?.id === topic.id ? (
-                    <>
-                      <Button
-                        type="button"
-                        disabled={busy || editing.title.trim() === ""}
-                        onClick={() =>
-                          action.mutate(() =>
-                            editHeldTopic(api, schedule.id, topic.id, editing.title.trim()),
-                          )
+                <ListRow
+                  key={topic.id}
+                  title={
+                    editing?.id === topic.id ? (
+                      <Input
+                        aria-label={`Edit ${topic.title}`}
+                        className="w-full"
+                        maxLength={200}
+                        value={editing.title}
+                        onChange={(event) =>
+                          setEditing({ id: topic.id, title: event.target.value })
                         }
-                      >
-                        Save
-                      </Button>
-                      <Button type="button" variant="ghost" onClick={() => setEditing(null)}>
-                        Cancel
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        type="button"
-                        disabled={busy}
-                        onClick={() =>
-                          action.mutate(() => approveHeldTopic(api, schedule.id, topic.id))
-                        }
-                      >
-                        Approve
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        disabled={busy}
-                        onClick={() => setEditing({ id: topic.id, title: topic.title })}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        disabled={busy}
-                        onClick={() =>
-                          action.mutate(() => rejectHeldTopic(api, schedule.id, topic.id))
-                        }
-                      >
-                        Reject
-                      </Button>
-                    </>
-                  )}
-                </li>
+                      />
+                    ) : (
+                      topic.title
+                    )
+                  }
+                  actions={
+                    editing?.id === topic.id ? (
+                      <>
+                        <Button
+                          size="small"
+                          disabled={busy || editing.title.trim() === ""}
+                          onClick={() =>
+                            action.mutate(() =>
+                              editHeldTopic(api, schedule.id, topic.id, editing.title.trim()),
+                            )
+                          }
+                        >
+                          Save
+                        </Button>
+                        <Button variant="quiet" size="small" onClick={() => setEditing(null)}>
+                          Cancel
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          size="small"
+                          disabled={busy}
+                          onClick={() =>
+                            action.mutate(() => approveHeldTopic(api, schedule.id, topic.id))
+                          }
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          variant="quiet"
+                          size="small"
+                          disabled={busy}
+                          onClick={() => setEditing({ id: topic.id, title: topic.title })}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="quiet"
+                          size="small"
+                          disabled={busy}
+                          onClick={() =>
+                            action.mutate(() => rejectHeldTopic(api, schedule.id, topic.id))
+                          }
+                        >
+                          Reject
+                        </Button>
+                      </>
+                    )
+                  }
+                />
               ))}
-            </ol>
+            </List>
           )}
         </div>
       ) : null}

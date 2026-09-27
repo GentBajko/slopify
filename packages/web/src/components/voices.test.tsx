@@ -177,7 +177,7 @@ describe("the voice list", () => {
 
     await user.click(await screen.findByRole("button", { name: "Remove Narrator M" }));
     await user.click(
-      within(await screen.findByRole("dialog")).getByRole("button", { name: "Remove" }),
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Remove voice" }),
     );
     expect(await screen.findByText("No voice has that id.")).not.toBeNull();
   });
@@ -207,7 +207,7 @@ describe("the voice list", () => {
 
     await user.click(screen.getByRole("button", { name: "Remove Narrator M" }));
     await user.click(
-      within(await screen.findByRole("dialog")).getByRole("button", { name: "Remove" }),
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Remove voice" }),
     );
     await waitFor(() => {
       expect(deleted).toBe(1);

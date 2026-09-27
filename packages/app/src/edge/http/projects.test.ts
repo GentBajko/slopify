@@ -478,6 +478,7 @@ describe("GET /api/projects", () => {
 
     expect(body.projects[0]).not.toHaveProperty("stages");
     expect(Object.keys(body.projects[0] ?? {}).toSorted()).toEqual([
+      "channelId",
       "config",
       "createdAt",
       "format",
@@ -487,7 +488,13 @@ describe("GET /api/projects", () => {
       "status",
       "title",
       "updatedAt",
+      "uploadedAt",
     ]);
+    // Started from no template and no channel, it is in the default channel.
+    expect(body.projects[0]).toMatchObject({
+      channelId: "00000000-0000-4000-8000-000000000001",
+      uploadedAt: null,
+    });
   });
 });
 

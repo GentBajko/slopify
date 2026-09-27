@@ -19,6 +19,7 @@ import { DocumentThemeEditorRoute } from "@/routes/document-theme-editor";
 import { DocumentThemesRoute } from "@/routes/document-themes";
 import { EntriesRoute } from "@/routes/entries";
 import { EntryEditorRoute } from "@/routes/entry-editor";
+import { HomeRoute } from "@/routes/home";
 import { LibraryLayout } from "@/routes/library";
 import { NarrationAliasesRoute } from "@/routes/narration-aliases";
 import { PlayRoute } from "@/routes/play";
@@ -55,9 +56,17 @@ interface NewEntrySearch extends CategorySearch {
   readonly from?: string;
 }
 
-const projectsRoute = createRoute({
+// Home is the front door; the list of every project moved to /projects. Links into a project
+// (/projects/$projectId) are unchanged.
+const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
+  component: HomeRoute,
+});
+
+const projectsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "projects",
   component: ProjectsRoute,
 });
 
@@ -74,8 +83,8 @@ const playRoute = createRoute({
   component: PlayRoute,
 });
 
-// Channels, Prompts, Intros & Outros, Templates, Documents and Schedules are one destination. The
-// layout is pathless, so the four keep their own URLs and every existing link still lands.
+// Prompts, Intros & Outros, Templates and Documents are one destination. The layout is
+// pathless, so each keeps its own URL and every existing link still lands.
 const libraryRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "_library",
@@ -136,14 +145,16 @@ const templatesRoute = createRoute({
   component: TemplatesPage,
 });
 
+// The calendar is a destination of its own; its schedules sit beside it, under the same rail
+// item, at the addresses they always had.
 const schedulesRoute = createRoute({
-  getParentRoute: () => libraryRoute,
+  getParentRoute: () => rootRoute,
   path: "schedules",
   component: SchedulesRoute,
 });
 
 const calendarRoute = createRoute({
-  getParentRoute: () => libraryRoute,
+  getParentRoute: () => rootRoute,
   path: "calendar",
   component: CalendarRoute,
 });
@@ -449,6 +460,7 @@ const devRoutes = (import.meta.env.DEV ? { designRoute: makeDesignRoute() } : {}
 };
 
 const routeTree = rootRoute.addChildren({
+  homeRoute,
   projectsRoute,
   welcomeRoute,
   playRoute,
@@ -458,9 +470,9 @@ const routeTree = rootRoute.addChildren({
     templatesRoute,
     documentThemesRoute,
     narrationAliasesRoute,
-    schedulesRoute,
-    calendarRoute,
   }),
+  schedulesRoute,
+  calendarRoute,
   libraryIndexRoute,
   channelsRoute,
   channelRoute,

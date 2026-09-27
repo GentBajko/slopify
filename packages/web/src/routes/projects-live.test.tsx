@@ -19,7 +19,7 @@ it("refreshes the Projects list when another window pauses a failed run without 
     "GET /api/telemetry/notice": jsonAnswer({ seen: true, appVersion: testVersion }),
   });
   const router = createAppRouter();
-  router.update({ history: createMemoryHistory({ initialEntries: ["/"] }) });
+  router.update({ history: createMemoryHistory({ initialEntries: ["/projects"] }) });
   renderApp(<RouterProvider router={router} />, {
     ...app,
     openEvents: () => ({
@@ -28,7 +28,7 @@ it("refreshes the Projects list when another window pauses a failed run without 
         listeners.set(name, [...(listeners.get(name) ?? []), listener]),
     }),
   });
-  await screen.findByText("failed");
+  await screen.findByText("Failed", { selector: "[data-slot=status]" });
   const before = read.mock.calls.length;
   project = { ...project, status: "paused" };
   const event: GlobalEvent = { type: "project.state", projectId: "p1", state: "paused" };
@@ -36,7 +36,7 @@ it("refreshes the Projects list when another window pauses a failed run without 
     for (const listener of listeners.get(event.type) ?? [])
       listener(new MessageEvent(event.type, { data: JSON.stringify(event) }));
   });
-  await screen.findByText("paused");
+  await screen.findByText("Paused", { selector: "[data-slot=status]" });
   await waitFor(() => expect(read.mock.calls.length).toBeGreaterThan(before));
-  expect(screen.queryByText("failed")).toBeNull();
+  expect(screen.queryByText("Failed", { selector: "[data-slot=status]" })).toBeNull();
 });

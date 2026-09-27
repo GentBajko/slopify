@@ -29,7 +29,7 @@ export function useLeaveWhenSaved(saved: boolean, leave: () => void): void {
 
 export function SavedTick() {
   return (
-    <span className="inline-flex animate-tick-in items-center gap-1 text-label text-done motion-reduce:animate-none">
+    <span className="inline-flex animate-tick-in items-center gap-1 text-label text-accent-ink motion-reduce:animate-none">
       <CheckIcon aria-hidden="true" className="size-[14px]" />
       Saved
     </span>

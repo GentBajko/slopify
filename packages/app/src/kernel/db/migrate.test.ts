@@ -68,6 +68,7 @@ describe("migrate", () => {
       "project_template_instantiations",
       "project_template_revisions",
       "project_templates",
+      "project_uploads",
       "projects",
       "prompt_softening",
       "prompts",
@@ -168,6 +169,7 @@ describe("migrate", () => {
       { version: 32, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 34, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 35, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 37, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 38, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
@@ -178,7 +180,7 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 30 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 31 });
   });
 
   it("refuses a database newer than the app knows", () => {

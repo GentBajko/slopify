@@ -1,6 +1,5 @@
 import type { Usage } from "@app/slices/telemetry/usage.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { jsonAnswer, problemAnswer, renderApp, testDeps } from "@/test-app";
 import { SettingsRoute } from "./settings.js";
@@ -55,14 +54,11 @@ function deps(usage: Usage) {
 
 describe("the usage screen", () => {
   it("says whose numbers these are", async () => {
-    const user = userEvent.setup();
     renderApp(<SettingsRoute section="usage" />, deps(empty));
-    expect(await screen.findByRole("heading", { name: "Usage" })).not.toBeNull();
-    await user.click(screen.getByRole("button", { name: "About Usage" }));
+    expect(await screen.findByRole("heading", { level: 1, name: "Usage" })).not.toBeNull();
+    // One short line, so it sits under the title rather than behind an info button.
     expect(
-      await screen.findByText(
-        "This machine only. The same counters, anonymised, feed slopify.stream.",
-      ),
+      screen.getByText("This machine only. The same counters, anonymised, feed slopify.stream."),
     ).not.toBeNull();
   });
 

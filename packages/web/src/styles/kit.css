@@ -557,7 +557,8 @@
     color: var(--color-ink);
   }
   .sl-rail__item[aria-current="page"],
-  .sl-rail__item[aria-current="step"] {
+  .sl-rail__item[aria-current="step"],
+  .sl-rail__item[aria-current="true"] {
     background: var(--color-accent-tint);
     color: var(--color-ink);
     font-weight: 600;
@@ -706,6 +707,7 @@
   }
   .sl-row__actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 2px;
   }
 

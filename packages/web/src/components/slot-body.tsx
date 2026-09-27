@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { Textarea } from "@/components/ui/input";
+import { Textarea } from "@/components/kit/field";
 import { bodyPieces } from "@/lib/draft-lint";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +39,7 @@ export function SlotBody({
           // The transparent border keeps the mirror's box model identical to the
           // textarea's, so the first glyph of each line starts at the same pixel.
           "pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap",
-          "rounded-control border border-transparent bg-panel2 text-ink",
+          "rounded-control border border-transparent bg-sunken text-ink",
         )}
       >
         {bodyPieces(value).map((piece) => (
@@ -50,7 +50,7 @@ export function SlotBody({
             data-lint-mark={piece.marked ? piece.start : undefined}
             className={
               piece.marked
-                ? "text-red underline decoration-red decoration-2 underline-offset-[3px]"
+                ? "text-danger underline decoration-danger decoration-2 underline-offset-[3px]"
                 : undefined
             }
           >
@@ -74,7 +74,7 @@ export function SlotBody({
           // `block` and not the textarea's inline default: inline leaves a descender gap
           // under it, and the wrapper the overlay is stretched to would be taller than
           // the field it has to sit behind.
-          "relative block min-h-[520px] resize-y overflow-auto bg-transparent text-transparent caret-ink",
+          "relative block min-h-[520px] resize-y border-line-strong overflow-auto bg-transparent text-transparent caret-ink",
         )}
         onChange={(event) => {
           onChange(event.target.value);

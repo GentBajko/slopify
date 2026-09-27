@@ -4,8 +4,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useId, useState } from "react";
 import { setVoiceLanguages } from "@/api";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/kit/button";
+import { Input } from "@/components/kit/field";
 import { keys } from "@/queries";
 
 // "es, de" typed in the box, as the list the server stores.
@@ -48,9 +48,10 @@ export function VoiceLanguagesCell({ voice }: { readonly voice: Voice }): ReactE
   if (!editing)
     return (
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-ink2">{voiceLanguagesText(voice)}</span>
+        <span className="text-ink-2">{voiceLanguagesText(voice)}</span>
         <Button
-          className="bg-transparent"
+          variant="quiet"
+          size="small"
           aria-label={`Edit the languages of ${voice.name}`}
           onClick={() => setEditing(true)}
         >
@@ -71,14 +72,17 @@ export function VoiceLanguagesCell({ voice }: { readonly voice: Voice }): ReactE
           setRefusal(undefined);
         }}
       />
-      {refusal === undefined ? null : <p className="m-0 text-label text-red">{refusal}</p>}
-      {save.error === null ? null : <p className="m-0 text-label text-red">{save.error.message}</p>}
+      {refusal === undefined ? null : <p className="m-0 text-small text-danger">{refusal}</p>}
+      {save.error === null ? null : (
+        <p className="m-0 text-small text-danger">{save.error.message}</p>
+      )}
       <div className="flex gap-2">
-        <Button disabled={save.isPending} onClick={() => save.mutate()}>
+        <Button size="small" disabled={save.isPending} onClick={() => save.mutate()}>
           Save
         </Button>
         <Button
-          className="bg-transparent"
+          variant="quiet"
+          size="small"
           onClick={() => {
             setEditing(false);
             setRefusal(undefined);

@@ -1,11 +1,10 @@
-import type { HealthCheck, ProviderHealth } from "@app/slices/settings/health.js";
-import { useMutation } from "@tanstack/react-query";
+import type { HealthCheck, HealthReport, ProviderHealth } from "@app/slices/settings/health.js";
+import { type UseMutationResult, useMutation } from "@tanstack/react-query";
 import { useApp } from "@/app-context";
+import { Button } from "@/components/kit/button";
 import { SectionHead } from "@/components/kit/section-head";
-import { Lamp } from "@/components/lamp";
+import { Status, type Tone } from "@/components/kit/status";
 import { checkHealth } from "@/components/provider-upkeep-api";
-import { Rail, RailGroup } from "@/components/rail";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const stateWords: Readonly<Record<ProviderHealth["state"], string>> = {
@@ -14,72 +13,89 @@ const stateWords: Readonly<Record<ProviderHealth["state"], string>> = {
   problem: "Needs fixing",
   unused: "Not set up",
 };
-const lampOf = (state: ProviderHealth["state"]) =>
-  state === "ok" ? "done" : state === "problem" ? "failed" : "pending";
-const checkTone: Readonly<Record<HealthCheck["state"], string>> = {
-  ok: "text-ink2",
-  warning: "text-amber",
-  problem: "text-red",
-  skipped: "text-ink3",
+const toneOf: Readonly<Record<ProviderHealth["state"], Tone>> = {
+  ok: "done",
+  warning: "waiting",
+  problem: "failed",
+  unused: "off",
 };
+const checkTone: Readonly<Record<HealthCheck["state"], string>> = {
+  ok: "text-ink-2",
+  warning: "text-waiting",
+  problem: "text-danger",
+  skipped: "text-ink-3",
+};
+
+export type HealthRun = UseMutationResult<HealthReport, Error, void>;
+
+// Check all, held by whoever shows its button: Settings keeps it in the page header, so the
+// report stays while the person moves between sections.
+export function useProviderHealth(): HealthRun {
+  const { api } = useApp();
+  return useMutation({ mutationFn: () => checkHealth(api) });
+}
 
 // Check all: every command-line tool found and signed in, every saved key accepted, every
 // chosen model still offered. Providers neither set up nor chosen anywhere are summed up in
-// one line rather than listed.
-export function ProviderHealthCheck() {
-  const { api } = useApp();
-  const run = useMutation({ mutationFn: () => checkHealth(api) });
+// one line rather than listed. Handed a `run`, the button is the caller's; alone, it shows
+// its own.
+export function ProviderHealthCheck({ run: given }: { readonly run?: HealthRun } = {}) {
+  const own = useProviderHealth();
+  const run = given ?? own;
   const report = run.data;
   const shown = report?.providers.filter((row) => row.state !== "unused") ?? [];
   const unused = report?.providers.filter((row) => row.state === "unused") ?? [];
   return (
-    <section aria-label="Health check" className="mt-8">
+    <section aria-label="Health check">
       <SectionHead
         title="Health check"
         info="Asks each command-line tool whether it is signed in, makes the cheapest harmless call each saved key allows (nothing is generated or billed), and checks that the models your templates, schedules, drafts and projects use are still offered."
       >
-        <Button
-          disabled={run.isPending}
-          onClick={() => {
-            run.mutate();
-          }}
-        >
-          {run.isPending ? "Checking…" : "Check all"}
-        </Button>
+        {given === undefined ? (
+          <Button
+            disabled={run.isPending}
+            onClick={() => {
+              run.mutate();
+            }}
+          >
+            {run.isPending ? "Checking…" : "Check all"}
+          </Button>
+        ) : undefined}
       </SectionHead>
       {run.error === null ? null : (
-        <p role="alert" className="text-body text-red">
-          {run.error.message}
+        <p role="alert" className="m-0 mb-2 text-body text-danger">
+          The health check didn't finish: {run.error.message} Press Check all to try again.
         </p>
       )}
       {report === undefined ? (
-        <p className="text-small text-ink2">
+        <p className="m-0 text-small text-ink-2">
           {run.isPending ? "Checking every provider…" : "Not checked yet."}
         </p>
       ) : (
-        <RailGroup>
-          {shown.map((row) => (
-            <Rail key={row.id} className="flex-col items-stretch gap-1">
-              <div className="flex items-center gap-2">
-                <Lamp state={lampOf(row.state)} />
-                <span className="font-semibold">{row.displayName}</span>
-                <span className="engraved ml-auto text-ink3">{stateWords[row.state]}</span>
-              </div>
-              <ul className="space-y-1">
-                {row.checks.map((check) => (
-                  <li key={check.label} className={cn("text-small", checkTone[check.state])}>
-                    <span className="font-semibold">{check.label}:</span> {check.detail}
-                  </li>
-                ))}
-              </ul>
-            </Rail>
-          ))}
-          <Rail className="text-small text-ink2">
+        <>
+          <ul aria-label="Health by provider" className="sl-list m-0 list-none p-0">
+            {shown.map((row) => (
+              <li key={row.id} className="sl-row grid-cols-1 gap-1">
+                <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+                  <span className="sl-row__title">{row.displayName}</span>
+                  <Status tone={toneOf[row.state]}>{stateWords[row.state]}</Status>
+                </div>
+                <ul className="m-0 list-none space-y-1 p-0">
+                  {row.checks.map((check) => (
+                    <li key={check.label} className={cn("text-small", checkTone[check.state])}>
+                      <span className="font-semibold">{check.label}:</span> {check.detail}
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+          <p className="m-0 mt-3 text-small text-ink-2">
             {unused.length === 0
               ? `Checked at ${new Date(report.checkedAt).toLocaleTimeString()}.`
               : `Not set up and not used anywhere: ${unused.map((row) => row.displayName).join(", ")}.`}
-          </Rail>
-        </RailGroup>
+          </p>
+        </>
       )}
     </section>
   );

@@ -1,4 +1,9 @@
-import type { GlobalEvent, ProjectEvent, ProjectStateEvent } from "@app/edge/events/hub.js";
+import type {
+  GlobalEvent,
+  ProjectEvent,
+  ProjectStateEvent,
+  ScheduleTopicsEvent,
+} from "@app/edge/events/hub.js";
 import type { LlmPreviewEvent } from "@app/kernel/events.js";
 import type { PatchEvent } from "@/project/live";
 
@@ -40,7 +45,7 @@ export interface GlobalSink {
   // Every project's state change, for run notifications (`notifications/watcher.ts`).
   readonly projectState?: (event: ProjectStateEvent) => void;
   // A schedule held new generated topics for approval.
-  readonly scheduleTopics?: () => void;
+  readonly scheduleTopics?: (event: ScheduleTopicsEvent) => void;
 }
 
 const projectEventNames = [
@@ -105,7 +110,7 @@ export function subscribeGlobal(open: OpenEvents, url: string, sink: GlobalSink)
       return;
     }
     if (event.type === "schedule.topics") {
-      sink.scheduleTopics?.();
+      sink.scheduleTopics?.(event);
       return;
     }
     sink.stagingChanged();

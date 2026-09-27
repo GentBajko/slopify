@@ -7,17 +7,16 @@ import { useId, useState } from "react";
 import type { FieldError } from "@/api";
 import { removePrompt, savePrompt } from "@/api";
 import { useApp } from "@/app-context";
-import { ConfirmDialog } from "@/components/confirm";
 import { DetectedSlots } from "@/components/detected-slots";
 import { EditorActions } from "@/components/editor-actions";
-import { backLink, EditorNotice, EditorSkeleton, sheet } from "@/components/editor-states";
-import { PageBar } from "@/components/kit/page-bar";
+import { EditorSkeleton } from "@/components/editor-states";
+import { Button } from "@/components/kit/button";
+import { ConfirmDialog } from "@/components/kit/dialog";
+import { Field, Input } from "@/components/kit/field";
+import { PageHeader } from "@/components/kit/layout";
 import { LabelledSwitch } from "@/components/labelled-switch";
 import { useLeaveWhenSaved } from "@/components/saved-tick";
 import { SlotBody } from "@/components/slot-body";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   bodyProblems,
   draftProblems,
@@ -27,7 +26,8 @@ import {
 } from "@/lib/draft-lint";
 import { usePromptDraft } from "@/lib/form-drafts";
 import { narrationStarter } from "@/lib/narration-starter";
-import { kindOptions } from "@/lib/prompt-kinds";
+import { kindLabel, kindOptions } from "@/lib/prompt-kinds";
+import { EditorCrumb, EditorProblem, editorAside, editorSurface } from "@/library/editor-frame";
 import { promptsQuery } from "@/queries";
 import { useTutorialEvent, useTutorialProgress } from "@/tutorial/context";
 
@@ -50,8 +50,6 @@ export function PromptEditorRoute({
   const queryClient = useQueryClient();
   const tutorialEvent = useTutorialEvent();
   const prompts = useQuery(promptsQuery(api));
-  const nameId = useId();
-  const nameErrorId = useId();
   const bodyId = useId();
   const lintId = useId();
   const hintId = useId();
@@ -147,35 +145,38 @@ export function PromptEditorRoute({
 
   return (
     <div>
-      <PageBar
-        back={{ to: "/prompts", label: "Prompts", search: { kind: draft.kind } }}
+      <PageHeader
+        crumb={
+          <EditorCrumb>
+            <Link to="/prompts" search={{ kind: draft.kind }}>
+              Prompts
+            </Link>
+          </EditorCrumb>
+        }
         title={promptId === undefined ? "New prompt" : "Edit prompt"}
+        meta={`${kindLabel(draft.kind)} prompt`}
       />
 
       <div
         data-tour="prompt-editor"
         className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]"
       >
-        <div className={`${sheet} flex min-w-0 flex-col gap-[14px]`}>
+        <div className={`${editorSurface} flex min-w-0 flex-col gap-[14px]`}>
           <div className="flex flex-wrap items-end gap-[14px]">
-            <div data-tour="prompt-name" className="flex-1">
-              <Label htmlFor={nameId} className="mb-[5px]">
-                Name
-              </Label>
-              <Input
-                id={nameId}
-                value={draft.name}
-                aria-invalid={named.length > 0}
-                aria-describedby={named.length === 0 ? undefined : nameErrorId}
-                onChange={(event) => {
-                  edit({ ...draft, name: event.target.value }, "name");
-                }}
-              />
-              {named.length === 0 ? null : (
-                <p id={nameErrorId} className="mt-1 text-label text-red">
-                  {named.map((problem) => problem.message).join(" ")}
-                </p>
-              )}
+            <div data-tour="prompt-name" className="min-w-[min(100%,240px)] flex-1">
+              <Field
+                label="Name"
+                {...(named.length === 0
+                  ? {}
+                  : { error: named.map((problem) => problem.message).join(" ") })}
+              >
+                <Input
+                  value={draft.name}
+                  onChange={(event) => {
+                    edit({ ...draft, name: event.target.value }, "name");
+                  }}
+                />
+              </Field>
             </div>
             {/* The kind may change after creation, and a name is only taken
                 within its own kind, so a collision under the old one is moot. */}
@@ -193,11 +194,13 @@ export function PromptEditorRoute({
             {/* The starter sits on the label's own row, so switching Kind never moves the
                 body up or down. */}
             <div className="mb-[5px] flex min-h-8 items-end justify-between gap-3">
-              <Label htmlFor={bodyId}>Body</Label>
+              <label htmlFor={bodyId} className="sl-field__label">
+                Body
+              </label>
               {starterOf(draft.kind) ? (
                 <Button
-                  type="button"
-                  variant="ghost"
+                  variant="quiet"
+                  size="small"
                   onClick={() => {
                     const starter = starterOf(draft.kind);
                     if (starter === undefined) return;
@@ -234,7 +237,7 @@ export function PromptEditorRoute({
               pending={save.isPending}
               saved={saved}
               cancel={
-                <Button asChild>
+                <Button asChild variant="secondary">
                   <Link
                     to="/prompts"
                     search={{ kind: draft.kind }}
@@ -256,10 +259,7 @@ export function PromptEditorRoute({
           </div>
         </div>
 
-        <div
-          data-tour="prompt-slots"
-          className={`${sheet} flex flex-col gap-3 lg:sticky lg:top-16`}
-        >
+        <div data-tour="prompt-slots" className={editorAside}>
           <DetectedSlots slots={slots} body={draft.body} lint={lint} lintId={lintId} />
         </div>
       </div>
@@ -268,8 +268,8 @@ export function PromptEditorRoute({
         open={replacingBody}
         title="Replace this prompt body?"
         consequence="The starter replaces the text in this editor. Nothing is saved until you choose Save."
-        verb="Use starter"
-        pending={false}
+        confirmLabel="Use starter"
+        tone="primary"
         onConfirm={() => {
           const starter = starterOf(draft.kind);
           if (starter !== undefined) edit({ ...draft, body: starter.body }, "body");
@@ -281,7 +281,7 @@ export function PromptEditorRoute({
         open={deleting}
         title={`Delete "${draft.name}"?`}
         consequence="Projects that used it keep their text."
-        verb="Delete"
+        confirmLabel="Delete prompt"
         pending={remove.isPending}
         onConfirm={() => {
           if (promptId !== undefined) {
@@ -310,14 +310,14 @@ function starterOf(
 
 function Notice({ kind, children }: { readonly kind: PromptKind; readonly children: string }) {
   return (
-    <EditorNotice
+    <EditorProblem
       back={
-        <Link to="/prompts" search={{ kind }} className={backLink}>
+        <Link to="/prompts" search={{ kind }}>
           Back to Prompts
         </Link>
       }
     >
       {children}
-    </EditorNotice>
+    </EditorProblem>
   );
 }

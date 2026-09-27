@@ -100,7 +100,7 @@ export function topicsNoticeText(subject: TopicsNoticeSubject): NoticeText {
   const total = subject.waiting > count ? ` ${String(subject.waiting)} are waiting in all.` : "";
   return {
     headline: `${String(count)} new ${count === 1 ? "topic is" : "topics are"} waiting for you`,
-    detail: `Open Schedules → ${name} → Topics waiting to approve, edit or reject ${count === 1 ? "it" : "them"}.${total}`,
+    detail: `Open Calendar → Suggested topics → ${name} to queue or reject ${count === 1 ? "it" : "them"}.${total}`,
   };
 }
 

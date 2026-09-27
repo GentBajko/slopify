@@ -1,29 +1,15 @@
 import type { ProviderId, ProviderStatus, Voice } from "@app/slices/settings/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useState } from "react";
 import type { VoiceField, VoiceRefusal } from "@/api";
 import { addVoice, removeVoice } from "@/api";
 import { useApp } from "@/app-context";
-import { ConfirmDialog } from "@/components/confirm";
-import { Rail, RailGroup } from "@/components/rail";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Button } from "@/components/kit/button";
+import { ConfirmDialog } from "@/components/kit/dialog";
+import { Field, Input, Select } from "@/components/kit/field";
+import { SectionHead } from "@/components/kit/section-head";
 import { languagesOfText, VoiceLanguagesCell } from "@/language/voice-languages-cell";
-import { cn } from "@/lib/utils";
 import { keys, providersQuery, voicesQuery } from "@/queries";
-
-// The header, the listed rows and the add row are cells of one table, so the three line
-// up under each other the way the reference sheet draws them. The last column is wider
-// than the reference's 80 px because "Add voice" does not fit in 80.
-const cell = "px-4 align-top";
 
 // The voice list and the row that adds to it. Nothing here is checked against the provider: a
 // wrong voice ID is discovered when the audio stage uses it, so the only rule the form knows is
@@ -48,82 +34,95 @@ export function Voices() {
 
   if (voices.error !== null) {
     return (
-      <RailGroup>
-        <Rail>
-          <p className="text-body text-red">{voices.error.message}</p>
-        </Rail>
-      </RailGroup>
+      <p role="alert" className="m-0 text-body text-danger">
+        {voices.error.message}
+      </p>
     );
   }
 
   const listed = voices.data?.voices;
 
   return (
-    <RailGroup data-tour="voices">
-      <table className="w-full table-fixed border-collapse text-small">
-        <thead>
-          <tr className="border-b border-line">
-            <th className={cn(cell, "engraved w-[22%] py-3 text-left text-ink3")}>Name</th>
-            <th className={cn(cell, "engraved w-[18%] py-3 text-left text-ink3")}>Provider</th>
-            <th className={cn(cell, "engraved py-3 text-left text-ink3")}>Voice ID</th>
-            <th className={cn(cell, "engraved w-[24%] py-3 text-left text-ink3")}>Languages</th>
-            <th className={cn(cell, "w-[104px] py-3")}>
-              <span className="sr-only">Remove</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {listed === undefined ? (
-            <tr className="border-b border-line">
-              <td colSpan={5} className={cn(cell, "py-4")}>
-                <span className="block h-4 w-64 rounded-control bg-panel2" />
-              </td>
+    <div data-tour="voices" className="flex min-w-0 flex-col gap-10">
+      <div className="min-w-0 overflow-x-auto">
+        <table className="sl-table min-w-[640px] table-fixed">
+          <caption className="sr-only">Voices</caption>
+          <thead>
+            <tr>
+              <th scope="col" className="w-[22%] pr-4">
+                Name
+              </th>
+              <th scope="col" className="w-[18%] pr-4">
+                Provider
+              </th>
+              <th scope="col" className="pr-4">
+                Voice ID
+              </th>
+              <th scope="col" className="w-[26%] pr-4">
+                Languages
+              </th>
+              <th scope="col" className="w-[96px]">
+                <span className="sr-only">Remove</span>
+              </th>
             </tr>
-          ) : listed.length === 0 ? (
-            // An empty list teaches rather than showing a bare box.
-            <tr className="border-b border-line">
-              <td colSpan={5} className={cn(cell, "py-4 text-ink2")}>
-                Add a voice ID from your text-to-speech provider. Audio needs one to narrate.
-              </td>
-            </tr>
-          ) : (
-            listed.map((voice) => (
-              <tr key={voice.id} className="border-b border-line">
-                <td className={cn(cell, "py-3 font-semibold")}>{voice.name}</td>
-                <td className={cn(cell, "py-3 text-ink2")}>{nameOf(tts, voice.provider)}</td>
-                <td className={cn(cell, "py-3 text-ink2 tabular-nums")}>{voice.voiceId}</td>
-                <td className={cn(cell, "py-3")}>
-                  <VoiceLanguagesCell voice={voice} />
-                </td>
-                <td className={cn(cell, "py-3 text-right")}>
-                  <Button
-                    className="bg-transparent"
-                    aria-label={`Remove ${voice.name}`}
-                    onClick={() => {
-                      setRemoving(voice);
-                    }}
-                  >
-                    Remove
-                  </Button>
+          </thead>
+          <tbody>
+            {listed === undefined ? (
+              <tr>
+                <td colSpan={5}>
+                  <span className="block h-4 w-64 rounded-control bg-raised" />
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-        <tfoot>
-          <AddVoiceRow tts={tts} />
-        </tfoot>
-      </table>
+            ) : listed.length === 0 ? (
+              // An empty list teaches rather than showing a bare box.
+              <tr>
+                <td colSpan={5} className="text-ink-2">
+                  Add a voice ID from your text-to-speech provider. Audio needs one to narrate.
+                </td>
+              </tr>
+            ) : (
+              listed.map((voice) => (
+                <tr key={voice.id}>
+                  <td className="truncate pr-4 font-semibold">{voice.name}</td>
+                  <td className="truncate pr-4 text-ink-2">{nameOf(tts, voice.provider)}</td>
+                  <td className="truncate pr-4 text-ink-2">{voice.voiceId}</td>
+                  <td className="pr-4">
+                    <VoiceLanguagesCell voice={voice} />
+                  </td>
+                  <td className="text-right">
+                    <Button
+                      variant="quiet"
+                      size="small"
+                      aria-label={`Remove ${voice.name}`}
+                      onClick={() => {
+                        setRemoving(voice);
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+        {remove.error === null ? null : (
+          <p role="alert" className="m-0 mt-2 text-small text-danger">
+            {remove.error.message}
+          </p>
+        )}
+      </div>
 
-      {remove.error === null ? null : (
-        <p className="border-t border-line px-4 py-3 text-label text-red">{remove.error.message}</p>
-      )}
+      <div>
+        <SectionHead title="Add a voice" />
+        <AddVoiceRow tts={tts} />
+      </div>
 
       <ConfirmDialog
         open={removing !== undefined}
         title={removing === undefined ? "" : `Remove ${removing.name}?`}
         consequence="Projects that used this voice keep the audio they made with it."
-        verb="Remove"
+        confirmLabel="Remove voice"
         pending={remove.isPending}
         onConfirm={() => {
           if (removing !== undefined) {
@@ -134,23 +133,17 @@ export function Voices() {
           setRemoving(undefined);
         }}
       />
-    </RailGroup>
+    </div>
   );
 }
 
 function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
   const { api } = useApp();
   const queryClient = useQueryClient();
-  const nameId = useId();
-  const providerId = useId();
-  const providerLabelId = useId();
-  const voiceFieldId = useId();
-  const refusalId = useId();
 
   const [name, setName] = useState("");
   const [voiceId, setVoiceId] = useState("");
   const [languages, setLanguages] = useState("");
-  const languagesId = useId();
   const [picked, setPicked] = useState<ProviderId | undefined>(undefined);
   const [refusal, setRefusal] = useState<VoiceRefusal | undefined>(undefined);
 
@@ -189,108 +182,80 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
     refusal?.field === field ? refusal.message : undefined;
 
   return (
-    <tr>
-      <td className={cn(cell, "py-[14px]")}>
-        <Label htmlFor={nameId} className="mb-[5px]">
-          Voice name
-        </Label>
-        <Input
-          id={nameId}
-          value={name}
-          aria-invalid={problem("name") !== undefined}
-          onChange={(event) => {
-            const next = event.target.value;
-            edit("name", () => {
-              setName(next);
-            });
-          }}
-        />
-        <FieldError id={`${refusalId}-name`} message={problem("name")} />
-      </td>
-
-      <td className={cn(cell, "py-[14px]")}>
-        <Label id={providerLabelId} className="mb-[5px]">
-          Provider
-        </Label>
-        <Select
-          value={provider ?? ""}
-          onValueChange={(next) => {
-            const chosen = tts.find((option) => option.id === next);
-            if (chosen !== undefined) {
-              edit("provider", () => {
-                setPicked(chosen.id);
+    <div className="flex flex-col gap-3">
+      <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+        <Field label="Voice name" error={problem("name")}>
+          <Input
+            value={name}
+            onChange={(event) => {
+              const next = event.target.value;
+              edit("name", () => {
+                setName(next);
               });
-            }
-          }}
-        >
-          <SelectTrigger id={providerId} aria-labelledby={`${providerLabelId} ${providerId}`}>
-            <SelectValue placeholder="Pick a provider" />
-          </SelectTrigger>
-          <SelectContent>
+            }}
+          />
+        </Field>
+
+        <Field label="Provider" error={problem("provider")}>
+          <Select
+            value={provider ?? ""}
+            onChange={(event) => {
+              const chosen = tts.find((option) => option.id === event.target.value);
+              if (chosen !== undefined) {
+                edit("provider", () => {
+                  setPicked(chosen.id);
+                });
+              }
+            }}
+          >
+            {tts.length === 0 ? <option value="">No speech provider</option> : null}
             {tts.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
+              <option key={option.id} value={option.id}>
                 {option.displayName}
-              </SelectItem>
+              </option>
             ))}
-          </SelectContent>
-        </Select>
-        <FieldError id={`${refusalId}-provider`} message={problem("provider")} />
-      </td>
+          </Select>
+        </Field>
 
-      <td className={cn(cell, "py-[14px]")}>
-        <Label htmlFor={voiceFieldId} className="mb-[5px]">
-          Voice ID
-        </Label>
-        <Input
-          id={voiceFieldId}
-          className="tabular-nums"
-          value={voiceId}
-          aria-invalid={problem("voiceId") !== undefined}
-          aria-describedby={problem("voiceId") === undefined ? undefined : `${refusalId}-voiceId`}
-          onChange={(event) => {
-            const next = event.target.value;
-            edit("voiceId", () => {
-              setVoiceId(next);
-            });
-          }}
-        />
-        <FieldError id={`${refusalId}-voiceId`} message={problem("voiceId")} />
-        {provider === "inworld" ? (
-          <p className="mt-1 text-label text-ink3">
-            Use an Inworld voice ID, such as Dennis, or one from your workspace.
-          </p>
-        ) : null}
-        {add.error === null ? null : (
-          <p className="mt-1 text-label text-red">{add.error.message}</p>
-        )}
-      </td>
+        <Field
+          label="Voice ID"
+          error={problem("voiceId")}
+          {...(provider === "inworld"
+            ? { help: "Use an Inworld voice ID, such as Dennis, or one from your workspace." }
+            : {})}
+        >
+          <Input
+            className="tabular-nums"
+            value={voiceId}
+            onChange={(event) => {
+              const next = event.target.value;
+              edit("voiceId", () => {
+                setVoiceId(next);
+              });
+            }}
+          />
+        </Field>
 
-      <td className={cn(cell, "py-[14px]")}>
-        <Label htmlFor={languagesId} className="mb-[5px]">
-          Languages
-        </Label>
-        <Input
-          id={languagesId}
-          value={languages}
-          placeholder="es, de"
-          aria-invalid={problem("languages") !== undefined}
-          aria-describedby={`${refusalId}-languages-help`}
-          onChange={(event) => {
-            const next = event.target.value;
-            edit("languages", () => {
-              setLanguages(next);
-            });
-          }}
-        />
-        <FieldError id={`${refusalId}-languages`} message={problem("languages")} />
-        <p id={`${refusalId}-languages-help`} className="mt-1 text-label text-ink3">
-          Blank asks the provider when it can say.
-        </p>
-      </td>
+        <Field
+          label="Languages"
+          help="Codes such as es, de. Blank asks the provider when it can say."
+          error={problem("languages")}
+        >
+          <Input
+            value={languages}
+            placeholder="es, de"
+            onChange={(event) => {
+              const next = event.target.value;
+              edit("languages", () => {
+                setLanguages(next);
+              });
+            }}
+          />
+        </Field>
 
-      <td className={cn(cell, "py-[14px] text-right")}>
         <Button
-          className="mt-[22px]"
+          variant="primary"
+          className="md:mt-[22px]"
           disabled={provider === undefined || refusal !== undefined || add.isPending}
           onClick={() => {
             if (provider !== undefined) {
@@ -306,25 +271,13 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
         >
           Add voice
         </Button>
-      </td>
-    </tr>
-  );
-}
-
-function FieldError({
-  id,
-  message,
-}: {
-  readonly id: string;
-  readonly message: string | undefined;
-}) {
-  if (message === undefined) {
-    return null;
-  }
-  return (
-    <p id={id} className="mt-1 text-label text-red">
-      {message}
-    </p>
+      </div>
+      {add.error === null ? null : (
+        <p role="alert" className="m-0 text-small text-danger">
+          {add.error.message}
+        </p>
+      )}
+    </div>
   );
 }
 

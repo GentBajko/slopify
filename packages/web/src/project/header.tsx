@@ -53,7 +53,7 @@ export function ProjectHeader({
   const cancelCopy = confirmationFor({ kind: "cancel" });
   return (
     <PageBar
-      back={{ to: "/", label: "Projects" }}
+      back={{ to: "/projects", label: "Projects" }}
       lead={<Lamp state={project.status} />}
       title={project.title}
       status={<StateWord state={project.status} announce="Project" />}

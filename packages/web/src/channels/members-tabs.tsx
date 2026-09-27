@@ -3,8 +3,10 @@ import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
 import { StatusSlot } from "@/components/kit/action-bar";
-import { RailGroup } from "@/components/rail";
-import { Picker } from "@/components/ui/picker";
+import { EmptyState } from "@/components/kit/empty-state";
+import { Select } from "@/components/kit/field";
+import { List, ListRow } from "@/components/kit/list-row";
+import { Status, type Tone } from "@/components/kit/status";
 import { schedulesQuery } from "@/schedules/api";
 import { formatScheduleDate } from "@/schedules/time";
 import { templatesKey, templatesQuery } from "@/templates/api";
@@ -36,7 +38,7 @@ export function TemplatesTab({ channelId }: { readonly channelId: string }): Rea
   );
   return (
     <div>
-      <p className="mb-3 text-small text-ink2">
+      <p className="m-0 mb-4 max-w-[68ch] text-small text-ink-2">
         Runs from these templates use this channel's brand kit and cast. Save new ones from Play in{" "}
         <Link to="/templates" className="underline">
           Library → Templates
@@ -47,47 +49,38 @@ export function TemplatesTab({ channelId }: { readonly channelId: string }): Rea
         {move.error?.message ?? templates.error?.message}
       </StatusSlot>
       {templates.data && own.length === 0 ? (
-        <RailGroup>
-          <p className="px-4 py-6 text-ink2">
-            No templates in this channel. Pick this channel on Play, then save the setup as a
-            template, or move one here from another channel.
-          </p>
-        </RailGroup>
+        <EmptyState title="No templates in this channel">
+          Pick this channel on Play, then save the setup as a template, or move one here from
+          another channel.
+        </EmptyState>
       ) : null}
       {own.length > 0 ? (
-        <ul
-          className="overflow-hidden rounded-panel border border-line bg-panel"
-          aria-label="Channel templates"
-        >
+        <List label="Channel templates" className="[&_.sl-row__actions]:flex-wrap">
           {own.map((template) => (
-            <li
+            <ListRow
               key={template.id}
-              className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-line px-4 py-[10px] last:border-b-0"
-            >
-              <div className="min-w-0">
-                <h3 className="break-words font-semibold">{template.name}</h3>
-                <p className="text-small text-ink3">Version {template.version}</p>
-              </div>
-              <div className="flex items-center gap-2 text-small text-ink2">
-                Move to
-                <Picker
-                  aria-label={`Channel of ${template.name}`}
-                  value={channelId}
-                  disabled={move.isPending}
-                  onChange={(event) =>
-                    move.mutate({ templateId: template.id, channelId: event.target.value })
-                  }
-                >
-                  {(channels.data ?? []).map((channel) => (
-                    <option key={channel.id} value={channel.id}>
-                      {channel.name}
-                    </option>
-                  ))}
-                </Picker>
-              </div>
-            </li>
+              title={template.name}
+              meta={`Version ${String(template.version)}`}
+              actions={
+                <span className="flex items-center gap-2 text-small text-ink-2">
+                  Move to
+                  <Select
+                    aria-label={`Channel of ${template.name}`}
+                    value={channelId}
+                    disabled={move.isPending}
+                    onChange={(event) =>
+                      move.mutate({ templateId: template.id, channelId: event.target.value })
+                    }
+                    options={(channels.data ?? []).map((channel) => ({
+                      value: channel.id,
+                      label: channel.name,
+                    }))}
+                  />
+                </span>
+              }
+            />
           ))}
-        </ul>
+        </List>
       ) : null}
     </div>
   );
@@ -99,9 +92,15 @@ const statusLabels = {
   completed: "Completed",
   canceled: "Canceled",
 } as const;
+const statusTones: Readonly<Record<keyof typeof statusLabels, Tone>> = {
+  active: "running",
+  paused: "waiting",
+  completed: "done",
+  canceled: "off",
+};
 
 // The Schedules tab: the schedules that run this channel's templates. They are managed in
-// Library → Schedules.
+// Calendar → Schedules.
 export function SchedulesTab({ channelId }: { readonly channelId: string }): ReactElement {
   const { api } = useApp();
   const templates = useQuery(templatesQuery(api));
@@ -116,10 +115,10 @@ export function SchedulesTab({ channelId }: { readonly channelId: string }): Rea
   );
   return (
     <div>
-      <p className="mb-3 text-small text-ink2">
+      <p className="m-0 mb-4 max-w-[68ch] text-small text-ink-2">
         A schedule belongs to the channel of the template it runs. Create and change schedules in{" "}
         <Link to="/schedules" className="underline">
-          Library → Schedules
+          Calendar → Schedules
         </Link>
         .
       </p>
@@ -127,31 +126,31 @@ export function SchedulesTab({ channelId }: { readonly channelId: string }): Rea
         {schedules.error?.message}
       </StatusSlot>
       {schedules.data && own.length === 0 ? (
-        <RailGroup>
-          <p className="px-4 py-6 text-ink2">No schedules run this channel's templates.</p>
-        </RailGroup>
+        <EmptyState title="No schedules run this channel's templates">
+          Make one in Calendar → Schedules from one of this channel's templates.
+        </EmptyState>
       ) : null}
       {own.length > 0 ? (
-        <ul
-          className="overflow-hidden rounded-panel border border-line bg-panel"
-          aria-label="Channel schedules"
-        >
+        <List label="Channel schedules">
           {own.map((schedule) => (
-            <li
+            <ListRow
               key={schedule.id}
-              className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-line px-4 py-[10px] last:border-b-0"
-            >
-              <h3 className="break-words font-semibold">{schedule.name}</h3>
-              <p className="text-small text-ink3">
-                {statusLabels[schedule.status]} ·{" "}
-                {schedule.nextRunAt === null
-                  ? "No next run"
-                  : `Next run ${formatScheduleDate(schedule.nextRunAt, schedule.timezone)}`}{" "}
-                · {schedule.items.length} queued
-              </p>
-            </li>
+              title={schedule.name}
+              meta={
+                <>
+                  <Status tone={statusTones[schedule.status]}>
+                    {statusLabels[schedule.status]}
+                  </Status>
+                  {` · ${
+                    schedule.nextRunAt === null
+                      ? "No next run"
+                      : `Next run ${formatScheduleDate(schedule.nextRunAt, schedule.timezone)}`
+                  } · ${String(schedule.items.length)} queued`}
+                </>
+              }
+            />
           ))}
-        </ul>
+        </List>
       ) : null}
     </div>
   );

@@ -1,5 +1,4 @@
 import { transact } from "../../kernel/db/tx.js";
-import { render } from "../admission/substitute.js";
 import { reviewDraft } from "../play-drafts/review.js";
 import { createDraft } from "../play-drafts/service.js";
 import { startPlayDraft } from "../play-drafts/start.js";
@@ -18,6 +17,7 @@ import {
   updateRun,
 } from "./repo.js";
 import type { ScheduleRun, ScheduleSummary } from "./schema.js";
+import { renderedTitle, scheduledValues } from "./topic-list.js";
 import { generateTopics, generationDue, releaseTopicLeases } from "./topics.js";
 
 const missedGraceMs = 60_000;
@@ -236,19 +236,11 @@ async function execute(deps: ScheduleDeps, claimed: ClaimedScheduleRun): Promise
 function runForm<
   F extends { readonly title: string; readonly values: Readonly<Record<string, string>> },
 >(form: F, schedule: ScheduleSummary, topic: ScheduleSummary["items"][number] | undefined): F {
-  const values = {
-    ...form.values,
-    ...schedule.values,
-    ...(topic?.values ?? {}),
-    ...(topic !== undefined && schedule.topicKeyword !== null
-      ? { [schedule.topicKeyword]: topic.title }
-      : {}),
+  return {
+    ...form,
+    title: renderedTitle(form, schedule, topic),
+    values: scheduledValues(form, schedule, topic),
   };
-  const title =
-    topic !== undefined && schedule.topicKeyword === null
-      ? topic.title
-      : render(form.title, values);
-  return { ...form, title, values };
 }
 
 class ScheduleDispatchError extends Error {

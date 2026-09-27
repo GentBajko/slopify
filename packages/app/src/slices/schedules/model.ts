@@ -41,7 +41,11 @@ export type ScheduleResult<T> =
         | "readiness"
         | "queue-full"
         | "topic-not-found"
-        | "busy";
+        | "busy"
+        | "invalid-topics";
+      // The plain sentences for a refusal the reason alone can't explain: which topic and
+      // keyword, and how to fix it.
+      readonly message?: string;
     };
 
 export interface ClaimedScheduleRun {

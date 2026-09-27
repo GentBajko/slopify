@@ -77,7 +77,22 @@ describe("Prepare upload", () => {
       "Tags (under Show more) done",
     ]);
     expect(within(drawer).getByText("Fox tales")).not.toBeNull();
-    await user.click(within(drawer).getByRole("radio", { name: "Short 1" }));
+    // Each row carries its own small action: Copy for text, Download for files.
+    expect(within(drawer).getByRole("button", { name: "Copy title" })).not.toBeNull();
+    expect(
+      within(drawer).getByRole("link", { name: "Download the-fox-video.mp4" }).getAttribute("href"),
+    ).toBe("http://slopify.test/files/p1/video");
+    // The thumbnails sit under the list, lettered for Test & compare.
+    const thumbnails = within(drawer).getByRole("region", { name: "Thumbnails to upload" });
+    expect(
+      within(thumbnails)
+        .getAllByRole("img")
+        .map((img) => img.getAttribute("alt")),
+    ).toEqual(["Thumbnail A", "Thumbnail B"]);
+    const short = within(drawer).getByRole("button", { name: "Short 1" });
+    expect(short.getAttribute("aria-pressed")).toBe("false");
+    await user.click(short);
+    expect(short.getAttribute("aria-pressed")).toBe("true");
     // A short has no thumbnail step.
     expect(
       within(drawer)
