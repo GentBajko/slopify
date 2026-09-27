@@ -69,6 +69,20 @@
             <ytcp-button id="toggle-button" aria-label="Show more">Show more</ytcp-button>
           </div>
           <div id="advanced" hidden>
+            <div id="altered-content">
+              <tp-yt-paper-radio-button
+                name="VIDEO_HAS_ALTERED_CONTENT_YES"
+                role="radio"
+                aria-checked="false"
+                >Yes</tp-yt-paper-radio-button
+              >
+              <tp-yt-paper-radio-button
+                name="VIDEO_HAS_ALTERED_CONTENT_NO"
+                role="radio"
+                aria-checked="false"
+                >No</tp-yt-paper-radio-button
+              >
+            </div>
             <ytcp-form-input-container id="tags-container">
               <input id="text-input" type="text" aria-label="Tags" />
             </ytcp-form-input-container>

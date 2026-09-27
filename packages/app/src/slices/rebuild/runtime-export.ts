@@ -12,6 +12,8 @@ import { withPaths } from "../video/edit-list.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import { planRender } from "../video/plan.js";
 import { renderSlideshow } from "../video/slideshow.js";
+import { writePortraits } from "../voices/portraits.js";
+import { exportBed } from "./runtime-export-bed.js";
 import { exportEdit } from "./runtime-export-edit.js";
 import {
   type ExportSnapshot,
@@ -65,6 +67,10 @@ export async function executeExportRecipe(
     );
     const burn = !wav && view.revision.config.subtitles?.mode === "burn-in";
     if (burn) directory = captionDirectory(deps, context, snapshot);
+    const portraits =
+      directory === undefined
+        ? undefined
+        : writePortraits(deps.db, view.revision.config, directory);
     const mode = burn
       ? "burn-in"
       : captions.some((row) => row.output.role === "subtitles_srt") &&
@@ -80,6 +86,7 @@ export async function executeExportRecipe(
     };
     const images = wav ? [] : slideshowImages(deps, context, view);
     const edited = wav ? undefined : await exportEdit(deps, context, view, images);
+    const bed = wav ? undefined : await exportBed(deps, context, view);
     const plan = wav
       ? undefined
       : planRender({
@@ -95,6 +102,7 @@ export async function executeExportRecipe(
           images,
           output: pending.absolutePath,
           edit: edited?.edit,
+          bed,
         });
     const totalSeconds = plan?.totalSeconds ?? audio.reduce((sum, row) => sum + row.seconds, 0);
     const projectDirectory = projectDir(deps.paths, context.work.projectId);
@@ -120,6 +128,7 @@ export async function executeExportRecipe(
             output: pending.path,
             editList: withPaths(plan.editList, relativePath),
             subtitles: config.subtitles,
+            ...(portraits === undefined ? {} : { speakerPortraits: portraits.recorded }),
             ...(edited?.settings === undefined ? {} : { videoEdit: edited.settings }),
             ...(edited === undefined || edited.warnings.length === 0
               ? {}
@@ -149,6 +158,7 @@ export async function executeExportRecipe(
         output: plan.output,
         burnSubtitles: burn,
         cwd: directory,
+        ...(portraits === undefined ? {} : { portraits: portraits.overlays }),
         scratch: projectDirectory,
         signal: context.signal,
         log: deps.log,

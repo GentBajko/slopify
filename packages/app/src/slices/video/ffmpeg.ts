@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { isAbsolute, resolve as resolvePath } from "node:path";
 import type { Log } from "../../kernel/log.js";
+import { bedChains, bedInputs } from "./ambient-mix.js";
 import type { EditList, Motion, Shot, TransitionStyle } from "./edit-list.js";
 import { gradeFilter, lookChain, lookEncoding, placed } from "./look.js";
 import { decimal, zoomRange } from "./plan.js";
@@ -297,11 +298,22 @@ export function concatList(order: readonly string[]): string {
   return `ffconcat version 1.0\n${order.map((name) => `file ${name}`).join("\n")}\n`;
 }
 
+// A picture laid into the video before the captions are burned in: a podcast speaker's
+// portrait, scaled and centre-cropped to fill its square tile of the speaker panel.
+export interface PortraitOverlay {
+  // Resolved beside the caption file, like it.
+  readonly path: string;
+  readonly x: number;
+  readonly y: number;
+  readonly size: number;
+}
+
 export function joinArgs(
-  edit: Pick<EditList, "audio"> & Partial<Pick<EditList, "look">>,
+  edit: Pick<EditList, "audio"> & Partial<Pick<EditList, "look" | "bed">>,
   output: string,
   list: string,
   burnSubtitles = false,
+  portraits: readonly PortraitOverlay[] = [],
 ): string[] {
   const inputs: string[] = ["-f", "concat", "-i", list];
   const audioAt: number[] = [];
@@ -321,7 +333,8 @@ export function joinArgs(
     inputs.push("-i", segment.path);
   }
   const chains: string[] = [];
-  if (burnSubtitles) chains.push("[0:v]ass=filename=subtitles.ass:fontsdir=fonts[v]");
+  const overlaid = burnSubtitles && portraits.length > 0;
+  if (burnSubtitles && !overlaid) chains.push("[0:v]ass=filename=subtitles.ass:fontsdir=fonts[v]");
   audioAt.forEach((input, at) => {
     // The segments come from different files and the silence from lavfi, so they are
     // brought to one format before concat, which refuses to join mismatched streams.
@@ -329,10 +342,47 @@ export function joinArgs(
       `[${input}:a]aformat=sample_fmts=fltp:sample_rates=${sampleRate}:channel_layouts=${channelLayout}[a${at}]`,
     );
   });
+  // The ambient bed lies under the joined narration, ducked by it (`ambient-mix.ts`); without
+  // one the arguments are the ones every video was joined with.
+  const bed = audioAt.length > 0 ? edit.bed : undefined;
   if (audioAt.length > 0) {
     chains.push(
-      `${audioAt.map((_input, at) => `[a${at}]`).join("")}concat=n=${audioAt.length}:v=0:a=1[a]`,
+      `${audioAt.map((_input, at) => `[a${at}]`).join("")}concat=n=${audioAt.length}:v=0:a=1${bed === undefined ? "[a]" : "[narration]"}`,
     );
+  }
+  if (bed !== undefined) {
+    const total = edit.audio.reduce((sum, segment) => sum + segment.seconds, 0);
+    const first = 1 + audioAt.length;
+    inputs.push(...bedInputs(bed, total, sampleRate));
+    chains.push(
+      ...bedChains(
+        bed,
+        first,
+        total,
+        `aformat=sample_fmts=fltp:sample_rates=${sampleRate}:channel_layouts=${channelLayout}`,
+        "[narration]",
+        "[a]",
+      ),
+    );
+  }
+  // The portraits go in after every other input and under the captions, so the panel's lit
+  // outline is drawn over them; a video without any is joined exactly as before. A still
+  // image is one frame, which overlay holds to the end (`eof_action=repeat`).
+  if (overlaid) {
+    let first = inputs.filter((value) => value === "-i").length;
+    let source = "[0:v]";
+    const video: string[] = [];
+    portraits.forEach((portrait, at) => {
+      inputs.push("-i", portrait.path);
+      const size = String(portrait.size);
+      video.push(
+        `[${String(first)}:v]scale=${size}:${size}:force_original_aspect_ratio=increase,crop=${size}:${size},setsar=1[pic${String(at)}]`,
+        `${source}[pic${String(at)}]overlay=x=${String(portrait.x)}:y=${String(portrait.y)}:eof_action=repeat[panel${String(at)}]`,
+      );
+      source = `[panel${String(at)}]`;
+      first += 1;
+    });
+    chains.unshift(...video, `${source}ass=filename=subtitles.ass:fontsdir=fonts[v]`);
   }
 
   return [

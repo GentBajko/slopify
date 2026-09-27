@@ -60,7 +60,14 @@ export function CaptionEditor({
         setError(`Caption ${index + 1}: enter caption text.`);
         return;
       }
-      parsed.push({ id: cue.id, text: cue.text, start, end });
+      // The speaker is kept: editing a caption's text or timing doesn't change who says it.
+      parsed.push({
+        id: cue.id,
+        text: cue.text,
+        start,
+        end,
+        ...(cue.speaker === undefined ? {} : { speaker: cue.speaker }),
+      });
       previous = end;
     }
     onChange(parsed);

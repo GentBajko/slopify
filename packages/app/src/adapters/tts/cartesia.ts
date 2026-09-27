@@ -5,6 +5,7 @@ import { providerError } from "../../kernel/ports/model.js";
 import type { TtsAudio, TtsPort, TtsRequest } from "../../kernel/ports/tts.js";
 import { httpFailure, missingKey, noAudio, voiceFix } from "../explain.js";
 import { retryAfter } from "../retry-after.js";
+import { cartesiaLanguages, lookUp } from "./voice-languages.js";
 
 // The HTTP gateway adapter for Cartesia. `fetch` and
 // nothing else; `/tts/bytes` streams the audio it renders, so the response body is
@@ -45,6 +46,18 @@ export function cartesiaTts(deps: CartesiaDeps): TtsPort {
   return {
     id: "cartesia",
     capabilities: { streams: true },
+    voiceLanguages: async (voiceId, signal) => {
+      const key = deps.key();
+      if (key === undefined || key === "") return undefined;
+      return cartesiaLanguages(
+        await lookUp(
+          deps.fetch,
+          `${cartesiaBase}/voices/${encodeURIComponent(voiceId)}`,
+          { "X-API-Key": key, "Cartesia-Version": cartesiaVersion },
+          signal,
+        ),
+      );
+    },
     models: async (): Promise<readonly ModelInfo[]> => cartesiaModels,
     synthesize: async (req: TtsRequest): Promise<TtsAudio> => {
       const response = await deps.fetch(`${cartesiaBase}/tts/bytes`, {

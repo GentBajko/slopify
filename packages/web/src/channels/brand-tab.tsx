@@ -6,11 +6,14 @@ import { Button } from "@/components/kit/button";
 import { Field, Input, Select, Textarea } from "@/components/kit/field";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
+import { LanguageSelect } from "@/language/language-select";
 import { documentThemesQuery, entriesQuery } from "@/queries";
 import { fontsKey, listFonts } from "@/subtitles/api";
+import { ChannelAmbientBed, channelBedForm, channelBedOf } from "./ambient-bed-kit";
 import { type BrandKit, type Channel, channelKey, channelsKey, saveChannel } from "./api";
 
-type Draft = Required<{ readonly [K in keyof BrandKit]-?: string }>;
+// The ambient sound is not text; `ambient-bed-kit.tsx` keeps it.
+type Draft = Required<{ readonly [K in Exclude<keyof BrandKit, "ambientBed">]-?: string }>;
 const fields: readonly (keyof Draft)[] = [
   "captionFontId",
   "captionColor",
@@ -21,6 +24,7 @@ const fields: readonly (keyof Draft)[] = [
   "outro",
   "endScreenText",
   "documentTheme",
+  "language",
 ];
 
 function draftOf(brand: BrandKit): Draft {
@@ -39,14 +43,21 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
   const [name, setName] = useState(channel.name);
   const [brief, setBrief] = useState(channel.seriesBrief);
   const [kit, setKit] = useState<Draft>(draftOf(channel.brand));
+  const [bed, setBed] = useState(channelBedForm(channel.brand));
+  const bedSave = channelBedOf(bed);
   const save = useMutation({
     mutationFn: () =>
       saveChannel(api, channel.id, {
         name,
         seriesBrief: brief,
-        brand: Object.fromEntries(
-          fields.flatMap((field) => (kit[field].trim() === "" ? [] : [[field, kit[field].trim()]])),
-        ),
+        brand: {
+          ...Object.fromEntries(
+            fields.flatMap((field) =>
+              kit[field].trim() === "" ? [] : [[field, kit[field].trim()]],
+            ),
+          ),
+          ...bedSave.brand,
+        },
         baseVersion: channel.version,
       }),
     onSuccess: async (saved) => {
@@ -103,6 +114,15 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
           meta="Fills what a template leaves at its default. Blank fields add nothing."
           className="mt-2 border-t border-line pt-6"
         />
+        <section aria-label="Language" className="max-w-md">
+          {/* The channel's language applies with the brand kit off too: it is not styling. */}
+          <LanguageSelect
+            label="Language of new projects"
+            value={kit.language === "" ? undefined : kit.language}
+            inherited={{ label: "Not set", language: undefined }}
+            onChange={(language) => set("language")(language ?? "")}
+          />
+        </section>
         <section aria-label="Captions" className="grid grid-cols-1 gap-4 min-[700px]:grid-cols-3">
           <Choice
             label="Caption font"
@@ -160,6 +180,7 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
             onPick={set("documentTheme")}
           />
         </section>
+        <ChannelAmbientBed value={bed} onChange={setBed} />
       </div>
       <ActionBar
         status={
@@ -171,8 +192,10 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
         <Button
           type="submit"
           variant="primary"
-          disabled={save.isPending || name.trim() === ""}
-          disabledReason="Give the channel a name"
+          disabled={save.isPending || name.trim() === "" || bedSave.blocked}
+          disabledReason={
+            name.trim() === "" ? "Give the channel a name" : "Fix the ambient sound settings above"
+          }
         >
           Save channel
         </Button>

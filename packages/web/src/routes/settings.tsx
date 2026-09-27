@@ -9,6 +9,7 @@ import {
   saveAppSettings,
 } from "@/api";
 import { useApp } from "@/app-context";
+import { AutostartSettings } from "@/autostart/autostart-settings";
 import { CatalogueSettings } from "@/components/catalogue";
 import { Button, buttonClass } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
@@ -32,6 +33,7 @@ import { schedulesKey } from "@/schedules/api";
 import { StudioSettings } from "@/studio/settings-panel";
 import { fontsKey } from "@/subtitles/api";
 import { templatesKey } from "@/templates/api";
+import { TrashSettings } from "@/trash/trash-settings";
 import { ChannelLinksSettings } from "@/youtube/channel-links";
 import { AboutSettings } from "./settings-about";
 import { BackupSettings, useBackUpNow } from "./settings-backups";
@@ -89,6 +91,11 @@ export function gapProblem(value: string): string | undefined {
 // Each section's title is the page title, and its one line of meta sits under it.
 export const settingsSections = [
   {
+    id: "general",
+    label: "General",
+    meta: "How Slopify starts on this computer.",
+  },
+  {
     id: "providers",
     label: "Providers",
     meta: "Keys stay on this machine and go only to their provider. Readiness is checked again before each run.",
@@ -132,6 +139,11 @@ export const settingsSections = [
     id: "backups",
     label: "Backups",
     meta: "A daily copy of everything, in a folder you choose.",
+  },
+  {
+    id: "trash",
+    label: "Trash",
+    meta: "Deleted projects, prompts, templates and schedules, kept for 30 days.",
   },
   {
     id: "usage",
@@ -261,6 +273,7 @@ export function SettingsRoute({
               <ProviderHealthCheck run={health} />
             </>
           ) : null}
+          {section === "general" ? <AutostartSettings /> : null}
           {section === "voices" ? <Voices /> : null}
           {section === "models" ? <CatalogueSettings /> : null}
           {section === "playback" ? <Playback /> : null}
@@ -270,6 +283,7 @@ export function SettingsRoute({
           {section === "storage" ? <StorageTools /> : null}
           {section === "storage" ? <SampleSettings /> : null}
           {section === "backups" ? <BackupSettings /> : null}
+          {section === "trash" ? <TrashSettings /> : null}
           {section === "usage" ? <UsageBoard /> : null}
           {section === "about" ? <AboutSettings /> : null}
         </section>
@@ -519,8 +533,11 @@ function StorageTools() {
                 </span>
                 <span className="tabular-nums">
                   {" "}
-                  · {formatBytes(usage.data.projects)} project files ·{" "}
-                  {formatBytes(usage.data.staging)} staged files
+                  · {formatBytes(Math.max(0, usage.data.projects - usage.data.trash.bytes))} project
+                  files · {formatBytes(usage.data.staging)} staged files
+                  {usage.data.trash.projects > 0
+                    ? ` · ${formatBytes(usage.data.trash.bytes)} in the trash (${trashedProjects(usage.data.trash.projects)}), freed when removed for good`
+                    : null}
                 </span>
               </>
             ) : usage.error ? (
@@ -538,7 +555,14 @@ function StorageTools() {
   );
 }
 
-function counted(label: string, counts: ItemCounts): string | null {
+// Deleted projects keep their folders for 30 days (Settings → Trash), so their space only
+// comes back once Delete now or the daily purge removes them for good.
+function trashedProjects(count: number): string {
+  return count === 1 ? "1 deleted project" : `${String(count)} deleted projects`;
+}
+
+function counted(label: string, counts: ItemCounts | undefined): string | null {
+  if (counts === undefined) return null;
   const parts = [
     counts.added > 0 ? `${counts.added} added` : null,
     counts.renamed > 0
@@ -563,6 +587,10 @@ export function ImportResult({
       : "Projects: none added.",
     counted("Prompts", result.prompts),
     counted("Intros and outros", result.entries),
+    counted("Channels", result.channels),
+    counted("Cast members", result.cast),
+    counted("Episode memories", result.episodeMemories),
+    counted("Existing videos", result.channelVideos),
     counted("Document themes", result.documentThemes),
     counted("Templates", result.templates),
     counted("Schedules", result.schedules),

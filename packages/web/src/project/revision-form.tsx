@@ -13,10 +13,12 @@ import { defaultSubtitles } from "@app/slices/subtitles/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
 import { useApp } from "@/app-context";
+import { channelQuery, defaultChannelId } from "@/channels/api";
 import { DocumentThemePicker } from "@/components/document-theme-picker";
 import { Button } from "@/components/kit/button";
 import { Field, Input, Select, Textarea } from "@/components/kit/field";
 import { Rule } from "@/components/kit/layout";
+import { RevisionLanguage } from "@/language/revision-language";
 import { cn } from "@/lib/utils";
 import { FormatPicker } from "@/play/format-picker";
 import { sourceOptions } from "@/play/state";
@@ -26,6 +28,8 @@ import { SubtitleControls } from "@/subtitles/controls";
 import { useVideoEditControls } from "@/video/edit-controls";
 import { StylePreview } from "@/video/style-preview";
 import { EditChannel } from "./edit-channel.js";
+import { editPreviewImageOf } from "./edit-preview-image.js";
+import { EditAmbientBed } from "./edit-sound-and-scale.js";
 import { changeSource, editOfForm } from "./revision-form-state.js";
 import { RevisionNarration } from "./revision-narration.js";
 import { RevisionPrompts } from "./revision-prompts.js";
@@ -94,6 +98,9 @@ export function RevisionForm(
   const prompts = useQuery(promptsQuery(api));
   const entries = useQuery(entriesQuery(api));
   const { config } = edit;
+  // The style preview draws on the establishing image or a cast picture, as Play's does.
+  const cast = useQuery(channelQuery(api, config.channelId ?? defaultChannelId));
+  const drawn = editPreviewImageOf(view, edit, cast.data?.cast ?? []);
   const problem = (field: string) =>
     fields.find(
       (one) =>
@@ -108,6 +115,7 @@ export function RevisionForm(
     narrated: config.sources.audio !== "off",
     imageProvider: config.images?.provider ?? "",
     problem,
+    language: config.language,
     onChange: (next) => onChange({ ...edit, config: { ...config, videoEdit: next } }),
   });
   const sections: readonly {
@@ -393,6 +401,14 @@ export function RevisionForm(
                 {videoEdit.cuts}
                 {videoEdit.look}
               </Group>
+              {config.sources.audio === "off" ? null : (
+                <>
+                  <Rule />
+                  <Group title="Ambient sound" columns={false}>
+                    <EditAmbientBed edit={edit} problem={problem} onChange={onChange} />
+                  </Group>
+                </>
+              )}
             </>
           ) : null}
           <Rule />
@@ -520,6 +536,7 @@ export function RevisionForm(
           hidden={current !== "providers"}
           className={panel("providers")}
         >
+          <RevisionLanguage edit={edit} error={problem("language")} onChange={onChange} />
           <RevisionProviders
             projectId={view.revision.projectId}
             edit={edit}
@@ -594,6 +611,7 @@ export function RevisionForm(
           {/* Mounted only while the section is open: each change renders a few seconds of video. */}
           {current !== "subtitles" || !video ? null : (
             <StylePreview
+              drawnOn={drawn?.drawnOn}
               settings={{
                 format: config.format,
                 subtitles: {
@@ -603,6 +621,7 @@ export function RevisionForm(
                   position: (config.subtitles ?? defaultSubtitles).position ?? "bottom",
                 },
                 videoEdit: config.videoEdit,
+                image: drawn?.image,
               }}
             />
           )}

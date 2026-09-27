@@ -5,9 +5,13 @@ import type { ProviderCallKind } from "./attempt.js";
 // What one successful provider call used, as the provider reported it. Counts a provider did
 // not report are absent, never guessed; the run-cost slice prices it (main.ts wires it in,
 // since the kernel may not import a slice).
-export interface MeteredCall {
+export interface MeteredCall extends ProviderUse {
   readonly projectId: string;
   readonly stage: StageKind;
+}
+
+// The call itself, whoever it belongs to.
+export interface ProviderUse {
   readonly kind: ProviderCallKind;
   readonly provider: string;
   readonly model: string;
@@ -27,6 +31,25 @@ export interface MeteredCall {
 
 export interface UsageMeter {
   readonly record: (call: MeteredCall) => void;
+}
+
+// A call made outside any project (`standalone.ts`): a schedule's topic generation, a
+// channel's episode summary or cast picture. It is recorded against what it was made for, so
+// Home's "This week" counts it and can narrow it to that channel.
+export type StandaloneOwner =
+  | { readonly kind: "schedule"; readonly id: string }
+  | { readonly kind: "channel"; readonly id: string };
+export type StandalonePurpose = "topics" | "episode-summary" | "cast-image";
+
+export interface StandaloneUse {
+  readonly owner: StandaloneOwner;
+  readonly purpose: StandalonePurpose;
+}
+
+export interface StandaloneMeteredCall extends ProviderUse, StandaloneUse {}
+
+export interface StandaloneMeter {
+  readonly record: (call: StandaloneMeteredCall) => void;
 }
 
 export interface LimitWaiter {

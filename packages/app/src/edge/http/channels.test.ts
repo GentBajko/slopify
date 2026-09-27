@@ -88,6 +88,30 @@ describe("channel routes", () => {
     expect(((await gone.json()) as { detail: string }).detail).toContain("Rename it");
   });
 
+  it("save the YouTube AI disclosure on its own, leaving the Brand form's version alone", async () => {
+    const app = harness();
+    const url = `/api/channels/${defaultChannelId}/ai-disclosure`;
+    const saved = await send(app, "PUT", url, { aiDisclosure: "no" });
+    expect(saved.status).toBe(200);
+    expect(await saved.json()).toMatchObject({ aiDisclosure: "no", version: 1 });
+    const read = (await (await send(app, "GET", `/api/channels/${defaultChannelId}`)).json()) as {
+      channel: { aiDisclosure: string };
+    };
+    expect(read.channel.aiDisclosure).toBe("no");
+    const refused = await send(app, "PUT", url, { aiDisclosure: "maybe" });
+    expect(refused.status).toBe(400);
+    expect(await refused.json()).toMatchObject({
+      detail: "Choose Automatic, Always Yes or Always No.",
+    });
+    expect(
+      (
+        await send(app, "PUT", `/api/channels/${randomUUID()}/ai-disclosure`, {
+          aiDisclosure: "yes",
+        })
+      ).status,
+    ).toBe(404);
+  });
+
   it("upload a cast picture as the body and serve it back by hash", async () => {
     const app = harness();
     const member = randomUUID();

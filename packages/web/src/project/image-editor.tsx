@@ -1,3 +1,4 @@
+import { imagesPerVideoMax } from "@app/slices/images/scale.js";
 import type { RevisionEdit, RevisionView } from "@app/slices/revisions/model.js";
 import { useId, useRef, useState } from "react";
 import type { StagedFile } from "@/api";
@@ -36,6 +37,8 @@ export function ImageEditor({
   const editorId = useId();
   const [promptEdits, setPromptEdits] = useState<Readonly<Record<string, number>>>({});
   const { content } = edit;
+  // 60, or more for a project that scales its images with the narration's length.
+  const imagesMax = imagesPerVideoMax(edit.config);
   const latest = useRef(edit);
   latest.current = edit;
   function emit(next: RevisionEdit): void {
@@ -262,9 +265,9 @@ export function ImageEditor({
       })}
       <Button
         type="button"
-        disabled={content.imageOrder.length >= 60}
+        disabled={content.imageOrder.length >= imagesMax}
         onClick={() => {
-          if (content.imageOrder.length >= 60) return;
+          if (content.imageOrder.length >= imagesMax) return;
           const key = crypto.randomUUID();
           emit({
             ...edit,
@@ -288,8 +291,8 @@ export function ImageEditor({
       >
         Add generated image
       </Button>
-      {content.imageOrder.length >= 60 ? (
-        <p>At most 60 images can be included.</p>
+      {content.imageOrder.length >= imagesMax ? (
+        <p>At most {imagesMax} images can be included.</p>
       ) : (
         <>
           <RevisionUpload

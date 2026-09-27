@@ -9,3 +9,5 @@
 - Every project action is in the command palette (Ctrl+K), including Regenerate image N, Remake outdated, Copy description, Prepare upload, Open the project folder, and Pause or Continue the run.
 - The app rail no longer ends at the first screen on long pages.
 - Messages that named Retry stage, Re-run section, Resume or Rebuild affected outputs now name the new controls.
+- Edit project: Add from the cast in the speakers panel (the project's channel), voices filtered by the project's language, ambient sound (Rain, Fireplace, Wind or None), More images for long videos (saving adds the images and keeps every existing one), and a style preview drawn on the establishing image or the cast picture, as on Play.
+- Editing a caption's text or timing keeps who says it on a multi-voice run.

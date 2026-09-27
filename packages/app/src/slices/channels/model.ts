@@ -26,6 +26,12 @@ export interface BrandKit {
   readonly endScreenText?: string | undefined;
   // A saved theme's id or a built-in theme's name (Library → Documents).
   readonly documentTheme?: string | undefined;
+  // A built-in ambient bed under the long video (`video/ambient-bed.ts`), for a setup that
+  // leaves its own unset.
+  readonly ambientBed?: import("../video/ambient-bed.js").ChannelAmbientBed | undefined;
+  // The language new projects in this channel are made in (`kernel/ports/languages.ts`),
+  // unless Play picks one. Absent is English.
+  readonly language?: string | undefined;
 }
 
 export interface Channel {
@@ -36,6 +42,9 @@ export interface Channel {
   // What the channel covers and what "view-worthy" means for it; schedules read it through
   // their template's channel.
   readonly seriesBrief: string;
+  // YouTube's "Altered or synthetic content" answer for the channel's uploads: 'auto' follows
+  // the rule in `slices/studio/disclosure.ts`, 'yes' and 'no' override it.
+  readonly aiDisclosure: import("../studio/disclosure.js").AiDisclosureSetting;
   readonly version: number;
   readonly createdAt: string;
   readonly updatedAt: string;

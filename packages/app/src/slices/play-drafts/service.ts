@@ -253,6 +253,9 @@ export function forkDraft(
           ...(p.shortsMusic === undefined
             ? {}
             : { shortsMusic: p.shortsMusic === null ? null : rewrite(p.shortsMusic) }),
+          ...(p.ambientBed === undefined
+            ? {}
+            : { ambientBed: p.ambientBed === null ? null : rewrite(p.ambientBed) }),
         },
       },
     };

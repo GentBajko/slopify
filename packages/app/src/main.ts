@@ -14,6 +14,8 @@ import { createHostCliClient } from "./adapters/host-cli/index.js";
 import { nodeRunCli } from "./adapters/llm/run-cli.js";
 import { curateRegistry } from "./catalog/registry.js";
 import { type CatalogueStore, createCatalogueStore } from "./catalog/store.js";
+import { createAutostart } from "./edge/autostart/index.js";
+import type { AutostartService } from "./edge/autostart/service.js";
 import {
   dockerActivationCommitted,
   dockerFolderConfiguration,
@@ -55,11 +57,11 @@ import { createRunner } from "./kernel/runner/index.js";
 import type { ProviderDeps } from "./kernel/runner/providers.js";
 import { stageProviders } from "./kernel/runner/providers.js";
 import { createProviderQueue } from "./kernel/runner/queue.js";
-import { standaloneImage } from "./kernel/runner/standalone.js";
+import { type StandaloneDeps, standaloneImage, standaloneLlm } from "./kernel/runner/standalone.js";
 import type { WorkRef } from "./kernel/runner/work.js";
 import { readVersion } from "./kernel/version.js";
 import { modelSources } from "./model-catalog.js";
-import { projectById, projectPaused } from "./slices/admission/repo.js";
+import { projectById, projectPaused, projectTrashed } from "./slices/admission/repo.js";
 import { createBackupService } from "./slices/backups/service.js";
 import { pumpQueue, queueWaiting } from "./slices/batch/index.js";
 import { settleInterruptedCastImages } from "./slices/channels/cast-images.js";
@@ -69,6 +71,10 @@ import {
   recoverCheckpointWork,
   settleReleasedCheckpoints,
 } from "./slices/checkpoints/recovery.js";
+import {
+  createEpisodeMemoryWatcher,
+  type EpisodeMemoryWatcher,
+} from "./slices/episodes/summarize.js";
 import { resolveFont } from "./slices/fonts/index.js";
 import { decodePeaks } from "./slices/narration/peaks.js";
 import { createRunNotifier } from "./slices/notifications/notifier.js";
@@ -93,7 +99,7 @@ import {
 import type { RebuildDeps } from "./slices/rebuild/service.js";
 import { currentRevisionId } from "./slices/revisions/repo.js";
 import { createLimitGate, resumeAfterRestart } from "./slices/run-cost/limits.js";
-import { createUsageMeter } from "./slices/run-cost/meter.js";
+import { createStandaloneMeter, createUsageMeter } from "./slices/run-cost/meter.js";
 import type { ScheduleDeps } from "./slices/schedules/model.js";
 import { settleTerminalScheduleRuns } from "./slices/schedules/repo.js";
 import { createScheduleRunner } from "./slices/schedules/scheduler.js";
@@ -101,6 +107,7 @@ import { nodeCliProbe } from "./slices/settings/cli-status.js";
 import { isLocalCliProvider, localCliConcurrency } from "./slices/settings/model.js";
 import { providerStatuses } from "./slices/settings/readiness.js";
 import { reconcileStorage } from "./slices/storage/reconcile.js";
+import { previewPictures } from "./slices/style-preview/images.js";
 import { ffmpegStylePreview } from "./slices/style-preview/render.js";
 import { createStylePreviews, stylePreviewDir } from "./slices/style-preview/service.js";
 import { collectorEndpoint, httpPostEvents } from "./slices/telemetry/collector-client.js";
@@ -109,6 +116,7 @@ import { createFlusher } from "./slices/telemetry/flush.js";
 import type { RecordEvent } from "./slices/telemetry/model.js";
 import type { TelemetryDeps } from "./slices/telemetry/record.js";
 import { record } from "./slices/telemetry/record.js";
+import { createTrashPurge } from "./slices/trash/service.js";
 import { probeDurationMs } from "./slices/video/ffmpeg.js";
 import { watchActivation } from "./updater/candidate.js";
 import { launchUpdate } from "./updater/install.js";
@@ -128,9 +136,14 @@ export interface Boot {
   readonly paths: Paths;
   readonly url: string;
   readonly stop: () => Promise<void>;
+  // Settings → General's "Start Slopify when I log in", for the terminal's question.
+  readonly autostart: AutostartService;
 }
 
 export interface BootOptions {
+  // Keep an existing "Start Slopify when I log in" entry pointing at this Node and version.
+  // The CLI turns it on; tests never touch the login entries of the machine they run on.
+  readonly refreshAutostart?: boolean;
   // Ready the subtitle model in the background as soon as the app is up. The CLI turns it
   // on; tests boot without it so they never reach the network.
   readonly prefetchSubtitleModel?: boolean;
@@ -251,13 +264,19 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       send: sendNotification,
       log,
     });
+    // Episode memory summarises a project that has just finished; wired once the providers
+    // exist, below.
+    let episodes: EpisodeMemoryWatcher | undefined;
     const hub = observedHub(
       createHub({
         ids,
         log,
         acceptEvent: (event) => currentProjectEvent(eventDb, event),
       }),
-      notifier.observe,
+      (event) => {
+        notifier.observe(event);
+        episodes?.observe(event);
+      },
     );
     const version = readVersion();
     const telemetry: TelemetryDeps = { db, ids, clock, log, appVersion: version };
@@ -286,6 +305,22 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       }),
       catalogue,
     );
+    // Calls that belong to no project (topic generation, episode summaries, cast pictures)
+    // still go through the attempt wrapper, and are metered against their schedule or channel.
+    const standalone: StandaloneDeps = {
+      registry,
+      clock,
+      log,
+      meter: createStandaloneMeter({ db, ids, clock, catalogue: () => catalogue.read() }),
+    };
+    episodes = createEpisodeMemoryWatcher({
+      db,
+      paths,
+      clock,
+      log,
+      uuid: randomUUID,
+      llm: (call) => standaloneLlm(standalone, call),
+    });
     const audioPreviews = createAudioPreviewStore();
     const reviewRedos = createReviewRedos();
     const runner = wireRunner({
@@ -457,19 +492,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     const scheduleRunnerDeps: ScheduleDeps = {
       ...draftDeps,
       template: (id, templateVersion) => templateById(runtimeDb, id, templateVersion),
-      // Topic generation asks the provider directly: it belongs to no project, so there is
-      // no stage attempt to record it under.
-      topicLlm: async (call) => {
-        let text = "";
-        for await (const event of registry.llm(call.provider).complete({
-          model: call.model,
-          messages: call.messages,
-          ...(call.thinking === undefined ? {} : { thinking: call.thinking }),
-          signal: call.signal,
-        }))
-          if (event.type === "delta") text += event.text;
-        return text;
-      },
+      topicLlm: (call) => standaloneLlm(standalone, call),
       topicsWaiting: (event) => {
         hub.emitGlobal(event);
         notifier.observeTopics(event);
@@ -511,7 +534,21 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
           log.write("warn", "sample.seed", { detail: causedBy(error) });
         },
       );
+    const autostart = await createAutostart({
+      db,
+      dataDir: paths.dataDir,
+      logs: paths.logs,
+      port: config.port,
+      host: config.host,
+      version,
+      env: process.env,
+    });
+    if (options.refreshAutostart === true)
+      void autostart.refresh().catch((error: unknown) => {
+        log.write("warn", "autostart.refresh", { detail: causedBy(error) });
+      });
     const app = createApp({
+      autostart,
       rebuild,
       drafts: draftDeps,
       schedules: scheduleDeps,
@@ -535,10 +572,18 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       stylePreviews: createStylePreviews({
         dir: stylePreviewDir(paths.dataDir),
         render: ffmpegStylePreview({ ffmpeg, paths, log, dir: stylePreviewDir(paths.dataDir) }),
+        pictures: previewPictures({ db, paths }),
         log,
       }),
       ...modelSources(registry),
       audition: (call, signal) => auditionVoice({ registry, clock, log }, call, signal),
+      voiceLanguages: async (provider, voiceId, signal) => {
+        try {
+          return await registry.tts(provider).voiceLanguages?.(voiceId, signal);
+        } catch {
+          return undefined;
+        }
+      },
       catalogue,
       clock,
       ids,
@@ -548,7 +593,12 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       flushSoon: flusher.soon,
       probe: nodeCliProbe,
       hostCliStatus: hostCli?.status,
-      generateCastImage: (call) => standaloneImage({ registry, clock, log }, call, "channel-cast"),
+      generateCastImage: ({ channelId, ...call }) =>
+        standaloneImage(standalone, {
+          ...call,
+          owner: { kind: "channel", id: channelId },
+          purpose: "cast-image",
+        }),
       fetch: globalThis.fetch,
       ...(hostCli === undefined ? { cliLogin: readHostLogin } : {}),
     });
@@ -604,6 +654,28 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         log.write("error", "backups.tick", { detail: causedBy(error) });
       });
     }, 60_000);
+    // Settings → Trash keeps deleted items 30 days; once a day (looked at hourly, and once at
+    // start) whatever is older goes for good, a project's folder with it.
+    const trashPurge = createTrashPurge({
+      db: updateDb,
+      paths,
+      clock,
+      log,
+      hasInflight: runner.hasInflight,
+    });
+    const purgeTrash = (): void => {
+      const release = updater.beginMutation();
+      if (!release) return;
+      try {
+        trashPurge.tick();
+      } catch (error) {
+        log.write("error", "trash.purge", { detail: causedBy(error) });
+      } finally {
+        release();
+      }
+    };
+    purgeTrash();
+    const trashTimer = setInterval(purgeTrash, 60 * 60_000);
     listeningPort = portOf(server) ?? config.port;
     // Whatever last run left queued goes out at start. Nothing waits for
     // it, and an unreachable collector costs one refused socket.
@@ -629,10 +701,12 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     shutdown = (): Promise<void> => {
       stopping ??= (async () => {
         notifier.close();
+        episodes?.close();
         clearInterval(queueTimer);
         clearInterval(scheduleTimer);
         clearInterval(retryTimer);
         clearInterval(backupTimer);
+        clearInterval(trashTimer);
         clearInterval(modelTimer);
         const mutationDrain = mutations.stop();
         const scheduleDrain = scheduleTicks.stop();
@@ -655,6 +729,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
           await topicDrain;
           await backupDrain;
           await runner.abortAll();
+          await episodes?.settled();
         } finally {
           serverClose.terminate();
           try {
@@ -678,7 +753,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       stopActivation = watchActivation(updater, candidateToken, shutdown, (message) =>
         log.write("warn", "update", { detail: message }),
       );
-    return { paths, url: urlOf(config.host, listeningPort), stop: shutdown };
+    return { paths, url: urlOf(config.host, listeningPort), stop: shutdown, autostart };
   } catch (error) {
     db?.close();
     lock.release();
@@ -788,7 +863,11 @@ export function wireRunner({
       },
       standingsOf: (projectId) => executionStandings(execution, projectId),
       ready: (work) => invocationReady(execution, work),
-      paused: (projectId) => projectPaused(db, projectId) || queueWaiting(db, projectId),
+      // A project in the trash (Settings → Trash) holds like a paused one until it is restored.
+      paused: (projectId) =>
+        projectPaused(db, projectId) ||
+        queueWaiting(db, projectId) ||
+        projectTrashed(db, projectId),
       claim: (work) => {
         const claimed = claimWork(db, work);
         projectStandings(execution, work.projectId);

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { languageInfo } from "../../kernel/ports/languages.js";
 import type { Message } from "../../kernel/ports/llm.js";
 import type { AliasMatch } from "../../kernel/ports/narration-aliases.js";
 import { aliasedSentences } from "./aliases.js";
@@ -88,14 +89,25 @@ const contract = [
   "Use cues sparingly; an empty cues array is valid. Combine simultaneous directions.",
 ].join("\n");
 // `aliases` are the narration aliases found in `source`: the model reads the sentences as
-// they will be said. Without any, the request is exactly what it always was.
+// they will be said. Without any, the request is exactly what it always was. A narration in
+// another `language`: its directions still steer the voice in English, but the model has to
+// know the sentences are not English and must stay as they are. English gets the contract
+// alone, as it always did.
 export function preparationMessages(
   prompt: string,
   source: string,
   aliases: readonly AliasMatch[] = [],
+  language?: string | undefined,
 ): readonly Message[] {
+  const name = language === undefined || language === "en" ? undefined : languageInfo(language);
   return [
-    { role: "system", content: contract },
+    {
+      role: "system",
+      content:
+        name === undefined
+          ? contract
+          : `${contract}\nThe narration is in ${name.name}; keep it in ${name.name}. Directions stay in English.`,
+    },
     {
       role: "user",
       content: JSON.stringify({

@@ -206,7 +206,7 @@ export function EntriesRoute({
         title={deleting === undefined ? "" : `Delete "${deleting.name}"?`}
         // A project holds its own rendered text, so nothing it made is touched. It goes on
         // showing the name it was run with, marked "(deleted)".
-        consequence="Projects that used it keep their text."
+        consequence="Moves it to the trash for 30 days (Settings → Trash). Projects that used it keep their text."
         confirmLabel={`Delete ${deleting?.category ?? category}`}
         pending={remove.isPending}
         onConfirm={() => {

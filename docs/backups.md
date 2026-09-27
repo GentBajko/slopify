@@ -6,6 +6,30 @@ and history, prompts, intros and outros, document themes, templates, schedules, 
 uploaded fonts, settings and usage history. Provider keys are never included. Restore one
 with **Import a backup** on Backup & storage.
 
+## What an archive carries
+
+Since 3.0 it also carries: prompt and intro/outro history, channels (brand kit, series brief,
+Episode memory and AI disclosure settings) with their cast, cast pictures and end screen
+images, episode memories, each channel's existing videos, a project's channel, automatic
+review verdicts, run cost (provider usage and plan readings, and what topic generation,
+episode summaries and cast pictures cost), channel links and the provider
+defaults a new Play form starts with, and the trash (a trashed project, prompt, intro/outro,
+template or schedule comes back still in the trash, with its original date). Pictures kept in
+the database travel as files named by their SHA-256 (`files/images/…`) and are checked against
+that hash on import.
+
+Left out on purpose: provider keys, the telemetry machine id, the notification URL, the Studio
+extension's pairing, the tutorial's progress, the scheduled backups' folder and status, and
+state that only means something while this install is running (the queue, plan-limit waits,
+pending image-prompt softening). `backup-new-tables.test.ts` fails when a new table is neither
+carried nor listed as left out.
+
+Importing merges channels by id. The default channel has the same id on every install, so the
+backup's default fills this install's default only while it is untouched (never renamed or
+edited); otherwise this install's is kept. Cast members, pictures, memories and existing videos
+come in by id into the channel that is here; a video whose title the channel already has (in
+any case) is skipped. A prompt's history comes with the prompt when the prompt itself came in.
+
 ## Settings
 
 | Setting | Default | Notes |

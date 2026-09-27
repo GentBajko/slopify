@@ -4,6 +4,8 @@ export const workerInput = z.object({
   modelPath: z.string(),
   pcmPath: z.string(),
   text: z.string(),
+  // The project language; absent is English and its model.
+  language: z.string().optional(),
   // Narration aliases the audio was read with; see speechWords.
   aliases: z
     .array(

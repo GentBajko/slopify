@@ -1,8 +1,10 @@
 import type { Entry } from "@app/slices/library/model.js";
 import type { ReactElement } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/kit/button";
+import { useDraftLanguage } from "@/language/play-language";
 import { useDraftCast } from "./channel-picker";
 import { usePlaySession } from "./draft-context";
+import { ImageScaleControl } from "./image-scale";
 import { AudioRail, ImagesRail } from "./media-rails";
 import { OptionPicker } from "./pickers";
 import type { RailProps } from "./rail-frame";
@@ -23,11 +25,14 @@ export function NarrationSection(
   const session = usePlaySession();
   const document = session.document;
   const cast = useDraftCast();
+  const language = useDraftLanguage();
   const { form, entries, problem, update } = props;
   return (
     <AudioRail
       {...props}
+      titled={false}
       cast={cast}
+      language={language}
       rawCounts={{
         ...document.form.chunking,
         onChange: (mode, amount) =>
@@ -65,11 +70,11 @@ export function NarrationSection(
           ))}
           <div className="col-span-full flex flex-wrap gap-2">
             {form.narrationPrompt ? (
-              <Button variant="ghost" onClick={() => props.onKeyword("llm")}>
+              <Button variant="quiet" size="small" onClick={() => props.onKeyword("llm")}>
                 Choose text generation under Article
               </Button>
             ) : null}
-            <Button variant="ghost" onClick={props.onSettings}>
+            <Button variant="quiet" size="small" onClick={props.onSettings}>
               Settings
             </Button>
           </div>
@@ -85,6 +90,8 @@ export function ImagesSection(props: RailProps): ReactElement {
   return (
     <ImagesRail
       {...props}
+      titled={false}
+      more={<ImageScaleControl document={document} problem={props.problem} onEdit={session.edit} />}
       rawNumbers={{
         values: document.form.imagePrompts,
         onChange: (name, number) =>
@@ -109,11 +116,14 @@ export function VideoSection(
 ): ReactElement {
   const session = usePlaySession();
   const document = session.document;
+  const language = useDraftLanguage();
   return (
     <>
       <VideoRail
         {...props}
+        titled={false}
         extras={false}
+        language={language}
         rawTiming={{
           imageSeconds: document.form.imageSeconds,
           zoomPercent: document.form.zoomPercent,

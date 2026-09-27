@@ -36,24 +36,39 @@ import { insertStagedFile, stagedFiles } from "../slices/storage/repo.js";
 import { defaultVideoEdit } from "../slices/video/edit-settings.js";
 import { drawScene } from "./art.js";
 import {
+  type SampleStyle,
   sampleArticle,
   sampleImagePrompts,
   sampleThumbnailPrompt,
+  sampleThumbnailSubject,
   sampleTitle,
   sceneOf,
 } from "./content.js";
 import { scriptedAnswer } from "./script.js";
 
-// Builds the bundled sample project with Slopify's own pipeline, locally and for free: the
-// article is supplied, the "text model" and "image model" are local scripts registered under
-// the honest provider names sample-writer and sample-artist, the narration is an ambient
-// track (no local voice was available to speak it; the captions carry the words), and the
-// word timing paces the text at a reading speed. Everything after that - captions, the
-// render with its cuts and chapter cards, the YouTube description, the two shorts and the
-// PDF - is the real code path. The finished project is exported as a backup the app imports
-// on first launch.
+// Builds the bundled sample project with Slopify's own pipeline: the article is supplied and
+// the "text model" is a local script registered under the honest provider name sample-writer.
 //
-//   node packages/app/scripts/build-sample.mjs [--short] <out.tar>
+// With `--assets <folder>` (how the bundled archive is made) the narration and pictures are
+// made ahead of time and read from the folder:
+//   narration.mp3                                  the article's plain text, spoken
+//   harbor.jpg scrolls.jpg embers.jpg disc.jpg     the four scenes, 16:9
+//   harbor-vertical.jpg … disc-vertical.jpg        the same scenes, 9:16, for the shorts
+//   thumbnail.jpg                                  16:9
+// (`paint.ts` paints the pictures with the Codex CLI; docs/first-five-minutes.md says how the
+// narration was made.) The pictures are served by the sample-artist provider as model
+// codex-painted, and the words are timed against the narration by the real English aligner,
+// which downloads its model on first use.
+//
+// Without a folder (CI, or a machine with no provider) everything stays local and free: the
+// pictures are procedural art drawn by art.ts, the narration is an ambient track (the
+// captions carry the words), and the word timing paces the text at a reading speed.
+//
+// Everything after that - captions, the render with its cuts and chapter cards, the YouTube
+// description, the two shorts and the PDF - is the real code path. The finished project is
+// exported as a backup the app imports on first launch.
+//
+//   node packages/app/scripts/build-sample.mjs [--short] [--assets <folder>] <out.tar>
 
 const wordsPerMinute = 165;
 const leadSeconds = 0.4;
@@ -61,18 +76,27 @@ const leadSeconds = 0.4;
 async function main(): Promise<void> {
   const out = process.argv.at(-1);
   if (out === undefined || !out.endsWith(".tar"))
-    throw new Error("Usage: build-sample.mjs [--short] <out.tar>");
+    throw new Error("Usage: build-sample.mjs [--short] [--assets <folder>] <out.tar>");
   const short = process.argv.includes("--short");
+  const flag = process.argv.indexOf("--assets");
+  const assets = flag === -1 ? undefined : process.argv[flag + 1];
+  if (flag !== -1 && (assets === undefined || assets.endsWith(".tar")))
+    throw new Error("--assets needs the folder that holds narration.mp3 and the pictures.");
   const root = mkdtempSync(join(tmpdir(), "slopify-sample-"));
   process.env.SAMPLE_SCRATCH = root;
   try {
-    await build(join(root, "data"), out, short);
+    await build(join(root, "data"), out, short, assets);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
 }
 
-async function build(dataDir: string, out: string, short: boolean): Promise<void> {
+async function build(
+  dataDir: string,
+  out: string,
+  short: boolean,
+  assets: string | undefined,
+): Promise<void> {
   const paths = layout(dataDir);
   ensureDirs(paths, { mode: 0o700 });
   const db = openDb(paths.db);
@@ -86,22 +110,29 @@ async function build(dataDir: string, out: string, short: boolean): Promise<void
   };
   const ffmpeg = process.env.FFMPEG ?? "ffmpeg";
   const catalogue = staticCatalogue();
+  const style: SampleStyle = assets === undefined ? "procedural" : "painted";
 
-  const words = sampleWords();
-  const seconds = words.length / (wordsPerMinute / 60) + leadSeconds + 1;
+  const seconds = sampleWords().length / (wordsPerMinute / 60) + leadSeconds + 1;
   const audioId = ids.next();
-  writeFileSync(join(paths.staging, audioId), ambientTrack(ffmpeg, seconds, dataDir));
+  writeFileSync(
+    join(paths.staging, audioId),
+    assets === undefined
+      ? ambientTrack(ffmpeg, seconds, dataDir)
+      : readFileSync(join(assets, "narration.mp3")),
+  );
   insertStagedFile(db, {
     id: audioId,
     stageKind: "audio",
     path: audioId,
-    originalFilename: "ambient.mp3",
+    originalFilename: assets === undefined ? "ambient.mp3" : "narration.mp3",
     bytes: statSync(join(paths.staging, audioId)).size,
     state: "staged",
     createdAt: clock.now().toISOString(),
   });
   const at = clock.now().toISOString();
-  for (const prompt of sampleImagePrompts)
+  const imagePrompts = sampleImagePrompts(style);
+  const thumbnailPrompt = sampleThumbnailPrompt(style);
+  for (const prompt of imagePrompts)
     insertPrompt(db, {
       id: ids.next(),
       kind: "image",
@@ -113,8 +144,8 @@ async function build(dataDir: string, out: string, short: boolean): Promise<void
   insertPrompt(db, {
     id: ids.next(),
     kind: "thumbnail",
-    name: sampleThumbnailPrompt.name,
-    body: sampleThumbnailPrompt.body,
+    name: thumbnailPrompt.name,
+    body: thumbnailPrompt.body,
     slots: [],
     updatedAt: at,
   });
@@ -133,9 +164,12 @@ async function build(dataDir: string, out: string, short: boolean): Promise<void
       document: short ? "off" : "generate",
     },
     llm: { provider: "sample-writer", model: "scripted" },
-    images: { provider: "sample-artist", model: "procedural" },
-    imagePrompts: sampleImagePrompts.map((prompt) => ({ name: prompt.name, number: 1 })),
-    ...(short ? {} : { thumbnailPrompt: sampleThumbnailPrompt.name }),
+    images: {
+      provider: "sample-artist",
+      model: assets === undefined ? "procedural" : "codex-painted",
+    },
+    imagePrompts: imagePrompts.map((prompt) => ({ name: prompt.name, number: 1 })),
+    ...(short ? {} : { thumbnailPrompt: thumbnailPrompt.name }),
     values: {},
     provided: { article: sampleArticle, audio: audioId },
     silenceGapSeconds: 1,
@@ -194,11 +228,17 @@ async function build(dataDir: string, out: string, short: boolean): Promise<void
     hub,
     telemetry: { db, ids, clock, log, appVersion: "sample" },
     flusher: { soon: () => undefined, stop: () => undefined },
-    registry: sampleRegistry(),
+    registry: sampleRegistry(style, assets),
     catalogue,
     ffmpeg,
     audioPreviews: createAudioPreviewStore(),
-    alignSubtitles: async (request) => paced(request.text, leadSeconds, seconds - 1),
+    // A real narration is timed by the real aligner, wireRunner's default.
+    ...(assets === undefined
+      ? {
+          alignSubtitles: async (request: { readonly text: string }) =>
+            paced(request.text, leadSeconds, seconds - 1),
+        }
+      : {}),
   });
   runner.tick(project.id);
   for (;;) {
@@ -314,22 +354,38 @@ function swell(input: number, level: number, hertz: number, label: string): stri
   return `[${String(input)}:a]volume='${String(level)}*(0.7+0.3*sin(2*PI*${String(hertz)}*t))':eval=frame[${label}]`;
 }
 
-function sampleRegistry(): Registry {
+// A picture from the assets folder: the thumbnail by its subject, every other prompt by the
+// scene its words name, tall for a 9:16 request.
+function paintedPicture(folder: string, prompt: string, aspect: string): Uint8Array {
+  const file = prompt.includes(sampleThumbnailSubject)
+    ? "thumbnail.jpg"
+    : `${sceneOf(prompt)}${aspect === "9:16" ? "-vertical" : ""}.jpg`;
+  return readFileSync(join(folder, file));
+}
+
+function sampleRegistry(style: SampleStyle, assets: string | undefined): Registry {
   const writer: LlmPort = {
     id: "sample-writer",
     capabilities: { streams: true, reportsUsage: false, webSearch: false },
     models: async () => [{ id: "scripted", name: "Scripted sample text" }],
     complete: async function* (request: LlmCompletion): AsyncGenerator<LlmEvent> {
-      const text = scriptedAnswer(request.messages);
+      const text = scriptedAnswer(request.messages, style);
       for (const part of text.match(/.{1,80}/gs) ?? []) yield { type: "delta", text: part };
       yield { type: "done", usage: null, finishReason: "stop" };
     },
   };
   const artist: ImagePort = {
     id: "sample-artist",
-    models: async () => [{ id: "procedural", name: "Procedural art" }],
+    models: async () => [
+      assets === undefined
+        ? { id: "procedural", name: "Procedural art" }
+        : { id: "codex-painted", name: "Painted by the Codex CLI" },
+    ],
     generate: async (request) => ({
-      bytes: drawScene(sceneOf(request.prompt), request.aspect, seedOf(request.prompt)),
+      bytes:
+        assets === undefined
+          ? drawScene(sceneOf(request.prompt), request.aspect, seedOf(request.prompt))
+          : paintedPicture(assets, request.prompt, request.aspect),
       mime: "image/jpeg",
     }),
   };

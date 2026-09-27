@@ -1,8 +1,6 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
-import { defaultChannelId } from "../../slices/channels/model.js";
-import { projectChannels } from "../../slices/channels/repo.js";
 import { weekSummary } from "../../slices/run-cost/week.js";
 import { markUploaded } from "../../slices/uploads/repo.js";
 import type { AppDeps } from "./app.js";
@@ -18,16 +16,7 @@ const weekQuery = z.object({
 export function homeRoutes(deps: Pick<AppDeps, "db">) {
   return new Hono().get("/week", zValidator("query", weekQuery, onInvalid), (c) => {
     const { since, channelId } = c.req.valid("query");
-    const channels = channelId === undefined ? undefined : projectChannels(deps.db);
-    return c.json(
-      weekSummary(
-        deps.db,
-        new Date(since).toISOString(),
-        channels === undefined
-          ? undefined
-          : (projectId) => (channels.get(projectId) ?? defaultChannelId) === channelId,
-      ),
-    );
+    return c.json(weekSummary(deps.db, new Date(since).toISOString(), channelId));
   });
 }
 

@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import type { Message } from "../../kernel/ports/llm.js";
+import { liveProject } from "../admission/repo.js";
 import { scheduleChannel } from "../channels/repo.js";
+import { channelVideoTitles } from "../channels/videos.js";
 import type { ScheduleDeps, ScheduleResult } from "./model.js";
 import { scheduleById } from "./repo.js";
 import {
@@ -147,7 +149,9 @@ async function ask(
   ]);
   let answer: string;
   try {
-    answer = await deps.topicLlm({
+    const answered = await deps.topicLlm({
+      owner: { kind: "schedule", id: schedule.id },
+      purpose: "topics",
       provider: llm.provider,
       model: llm.model,
       ...(llm.thinking === undefined ? {} : { thinking: llm.thinking }),
@@ -159,6 +163,7 @@ async function ask(
       ),
       signal,
     });
+    answer = answered.text;
   } catch (error) {
     if (options.signal?.aborted === true)
       return { ok: false, reason: "failed", message: "Slopify was closing." };
@@ -239,7 +244,8 @@ function nextRank(deps: ScheduleDeps, scheduleId: string): number {
   return rank === null ? 0 : rank + 1;
 }
 
-// Everything this schedule has queued, held, turned down or used, and every project's title.
+// Everything this schedule has queued, held, turned down or used, every project's title, and
+// the titles of the videos its channel made before Slopify (Channel page → Existing videos).
 export function knownTitles(
   deps: Pick<ScheduleDeps, "db">,
   scheduleId: string,
@@ -250,12 +256,14 @@ export function knownTitles(
     .all(scheduleId)
     .map((row) => z.object({ title: z.string() }).parse(row).title);
   const projects = deps.db
-    .prepare("SELECT title FROM projects ORDER BY created_at DESC")
+    .prepare(`SELECT title FROM projects WHERE ${liveProject()} ORDER BY created_at DESC`)
     .all()
     .map((row) => z.object({ title: z.string() }).parse(row).title);
+  const channel = scheduleChannel(deps.db, scheduleId);
+  const existing = channel === undefined ? [] : channelVideoTitles(deps.db, channel.id);
   return {
     topics: [...new Set([...(schedule?.items.map((item) => item.title) ?? []), ...logged])],
-    projects: [...new Set(projects)],
+    projects: [...new Set([...projects, ...existing])],
   };
 }
 

@@ -23,7 +23,9 @@ import type { Hub } from "../events/hub.js";
 import { actionRoutes } from "./actions.js";
 import { audioPreviewRoutes } from "./audio-preview.js";
 import { type Audition, auditionRoutes } from "./auditions.js";
+import { autostartRoutes } from "./autostart.js";
 import { backupRoutes } from "./backups.js";
+import { channelMemoryRoutes } from "./channel-memory.js";
 import { channelRoutes } from "./channels.js";
 import { checkpointRoutes } from "./checkpoints.js";
 import { diagnosticsRoutes } from "./diagnostics.js";
@@ -56,12 +58,16 @@ import { studioRoutes } from "./studio.js";
 import { stylePreviewRoutes } from "./style-preview.js";
 import { subtitleRoutes } from "./subtitles.js";
 import { telemetryRoutes } from "./telemetry.js";
+import { trashRoutes } from "./trash.js";
 import { tutorialRoutes } from "./tutorial.js";
 import { updateRoutes } from "./update.js";
 import { usageRoutes } from "./usage.js";
+import { whatsNewRoutes } from "./whats-new.js";
 import { youtubeEditRoutes } from "./youtube-edits.js";
 
 export interface AppDeps {
+  // Settings → General's "Start Slopify when I log in"; absent answers that it can't be set.
+  readonly autostart?: import("../autostart/service.js").AutostartService | undefined;
   readonly hostCliStatus?:
     | import("../../kernel/ports/host-cli.js").HostCliPorts["status"]
     | undefined;
@@ -94,6 +100,15 @@ export interface AppDeps {
   readonly cliLogin?: import("../../slices/settings/health.js").LoginReader;
   // Speaks one voice audition through the attempt wrapper (`kernel/runner/audition.ts`).
   readonly audition?: Audition | undefined;
+  // Settings → Voices: what a voice's provider says it speaks, asked when a voice is added
+  // without languages. Absent, or undefined from it, is unknown.
+  readonly voiceLanguages?:
+    | ((
+        provider: string,
+        voiceId: string,
+        signal: AbortSignal,
+      ) => Promise<readonly string[] | undefined>)
+    | undefined;
   readonly updater?: AppUpdater;
   readonly mutations?: Pick<MutationLifecycle, "begin">;
   readonly audioPreviews?: AudioPreviewStore;
@@ -141,11 +156,13 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/staging", stagingRoutes(deps))
       .route("/storage", storageRoutes(deps))
       .route("/backups", backupRoutes(deps.backups))
+      .route("/trash", trashRoutes(deps))
       .route("/drafts", draftRoutes(deps.drafts))
       .route("/diagnostics", diagnosticsRoutes(deps))
       .route("/project-templates", projectTemplateRoutes(deps.drafts))
       .route("/schedules", scheduleRoutes(deps.schedules))
       .route("/channels", channelRoutes(deps))
+      .route("/channels", channelMemoryRoutes(deps))
       .route("/calendar", calendarRoutes(deps.schedules))
       .route("/projects", planningRoutes(deps))
       .route("/projects", projectRoutes(deps))
@@ -173,10 +190,12 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/auditions", auditionRoutes(deps))
       .route("/telemetry", telemetryRoutes(deps))
       .route("/usage", usageRoutes(deps))
+      .route("/settings/autostart", autostartRoutes(deps.autostart))
       .route("/settings", settingsRoutes(deps))
       .route("/studio", studioRoutes(deps))
       .route("/style-preview", stylePreviewRoutes(deps))
       .route("/tutorial", tutorialRoutes(deps))
+      .route("/whats-new", whatsNewRoutes(deps))
       .route("/providers", providerRoutes(deps))
       .route("/onboarding", onboardingRoutes(deps))
   );

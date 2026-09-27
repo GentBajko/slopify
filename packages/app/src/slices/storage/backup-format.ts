@@ -8,7 +8,8 @@ import { fontMaxBytes } from "../fonts/model.js";
 //   data/library.json            settings, library, templates, schedules, drafts
 //   data/usage.json              the Usage screen's event log
 //   data/projects/<id>.json      one per project: every row it needs to open and keep going
-//   files/...                    the bytes: project folders, uploaded fonts, draft uploads
+//   files/...                    the bytes: project folders, uploaded fonts, draft uploads and
+//                                the pictures kept in the database (cast, end screen)
 //   checksums.json               a SHA-256 per file, written as the files streamed out
 //
 // Rows travel as the database holds them, table by table, with the schema version they fit;
@@ -28,6 +29,9 @@ export const projectFileMember = (id: string, path: string): string =>
   `files/projects/${id}/${path}`;
 export const fontMember = (name: string): string => `files/fonts/${name}`;
 export const stagedMember = (id: string): string => `files/staging/${id}`;
+// A picture from image_blobs, named by its SHA-256: the database keeps the bytes (cast
+// pictures, the end screen image), so they travel as files rather than inside a JSON row.
+export const imageMember = (sha256: string): string => `files/images/${sha256}`;
 
 // Every table a project's rows live in, parents before children. The queue is left out on
 // purpose: a backup never carries a project that is waiting to run.
@@ -56,6 +60,13 @@ export const projectTables = [
   "project_recovery_requests",
   "youtube_description_edits",
   "project_uploads",
+  // Since 2.5.0. Left out on purpose: plan_limit_waits and plan_limit_waiters (an account's
+  // current wait, a lease of this install) and prompt_softening (a pending one-off request).
+  "review_verdicts",
+  "provider_usage",
+  "plan_limit_readings",
+  "project_channels",
+  "project_trash",
 ] as const;
 export type ProjectTable = (typeof projectTables)[number];
 
@@ -75,6 +86,17 @@ export const libraryTables = [
   "play_drafts",
   "play_draft_attachments",
   "project_template_instantiations",
+  // Since 2.5.0: prompt history, channels with their cast, episode memories and existing
+  // videos. image_blobs travel as files (`imageMember`), listed in the library part's `images`.
+  "library_versions",
+  "channels",
+  "cast_members",
+  "cast_images",
+  "episode_memories",
+  "channel_videos",
+  // Since 3.0.0: what topic generation, episode summaries and cast pictures cost, which
+  // belongs to a schedule or channel rather than a project.
+  "standalone_usage",
 ] as const;
 export type LibraryTable = (typeof libraryTables)[number];
 
@@ -148,6 +170,16 @@ export const manifestSchema = z
   .strict();
 export type BackupManifest = z.infer<typeof manifestSchema>;
 
+// A picture in image_blobs is at most this large (cast uploads are capped well below it).
+export const backupMaxImageBytes = 64 * 1024 * 1024;
+export const backupImage = z
+  .object({
+    sha256: z.string().regex(/^[a-f0-9]{64}$/),
+    mime: z.enum(["image/png", "image/jpeg"]),
+    bytes: z.number().int().min(1).max(backupMaxImageBytes),
+  })
+  .strict();
+
 const fileEntry = z.object({ path: relativePath, bytes: z.number().int().min(0) }).strict();
 
 export const libraryPartSchema = z
@@ -166,6 +198,8 @@ export const libraryPartSchema = z
     staged: z
       .array(z.object({ id: backupId, bytes: z.number().int().positive() }).strict())
       .max(10_000),
+    // Absent in backups made before channels.
+    images: z.array(backupImage).max(100_000).optional(),
   })
   .strict();
 export type LibraryPart = z.infer<typeof libraryPartSchema>;

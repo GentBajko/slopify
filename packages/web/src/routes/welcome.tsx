@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { type FormEvent, type ReactElement, useRef, useState } from "react";
 import { useApp } from "@/app-context";
+import { AutostartOffer } from "@/autostart/autostart-settings";
 import { ActionBar, StatusSlot } from "@/components/kit/action-bar";
 import { PageBar } from "@/components/kit/page-bar";
 import { SectionHead } from "@/components/kit/section-head";
@@ -174,6 +175,8 @@ export function WelcomeRoute(): ReactElement {
           )}
         </Rail>
       </RailGroup>
+
+      <AutostartOffer />
 
       <SectionHead
         title="Starter packs"

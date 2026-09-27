@@ -22,41 +22,80 @@ The famous picture of one great fire is almost certainly wrong. When Julius Caes
 The library did not vanish in a night. It faded over hundreds of years, as money, peace and attention ran out. Much of what it held survived only because copies had already travelled to other cities. Its real legacy is an idea: that knowledge is worth gathering, checking and sharing, and that it needs care to last. In 2002 Egypt opened the Bibliotheca Alexandrina near the old site, a new library built in honour of that idea.
 `;
 
+export type SampleScene = "harbor" | "scrolls" | "embers" | "disc";
+
+// How a prompt names the look of its picture. A build with a pictures folder uses the painted
+// look the folder's images were made with (by the Codex CLI, see sample-build/README in
+// generate.ts); a build without one draws procedural art locally, and its prompts say so.
+export type SampleStyle = "painted" | "procedural";
+
+const styleWords: Record<SampleStyle, string> = {
+  painted:
+    "Painterly documentary illustration, oil on canvas with visible brushwork, warm muted palette, soft cinematic light",
+  procedural: "Procedural art",
+};
+
+export function styled(style: SampleStyle, subject: string, vertical = false): string {
+  const words = styleWords[style];
+  return `${vertical ? `Vertical ${words.charAt(0).toLowerCase()}${words.slice(1)}` : words}: ${subject}`;
+}
+
 // The Images stage's prompts. Each says honestly what the sample's image step drew.
-export const sampleImagePrompts: readonly {
+const imageSubjects: readonly {
   readonly name: string;
-  readonly body: string;
-  readonly scene: "harbor" | "scrolls" | "embers" | "disc";
+  readonly subject: string;
+  readonly scene: SampleScene;
 }[] = [
   {
     name: "Sample · Harbor at dusk",
     scene: "harbor",
-    body: "Procedural art: the harbor of Alexandria at dusk, a lighthouse on the horizon, the sun setting over calm water. Warm sky, deep blue sea, no text.",
+    subject:
+      "the harbor of ancient Alexandria at dusk, the Pharos lighthouse on the horizon, merchant ships with furled sails, the sun setting over calm water. Warm sky, deep blue sea, no text.",
   },
   {
     name: "Sample · Scroll shelves",
     scene: "scrolls",
-    body: "Procedural art: shelves of rolled papyrus scrolls in lamplit niches, warm amber light and floating dust. No text.",
+    subject:
+      "shelves of rolled papyrus scrolls in lamplit stone niches inside the ancient library, a scholar reading at a long table, warm amber light and floating dust. No text.",
   },
   {
     name: "Sample · Ruined colonnade",
     scene: "embers",
-    body: "Procedural art: a ruined colonnade against an orange sky, one broken column, embers drifting in the air. No text.",
+    subject:
+      "a ruined colonnade against an orange sky, one broken column, embers drifting in the air. No text.",
   },
   {
     name: "Sample · New library at night",
     scene: "disc",
-    body: "Procedural art: a vast tilted disc roof rising from the waterfront at night, like the Bibliotheca Alexandrina, under a starry sky. No text.",
+    subject:
+      "a vast tilted disc roof rising from the waterfront at night, like the Bibliotheca Alexandrina, under a starry sky. No text.",
   },
 ];
 
-export const sampleThumbnailPrompt = {
-  name: "Sample · Thumbnail",
-  body: "Procedural art: stacks of scrolls glowing in lamplight, bold and simple enough to read at phone size. No text.",
-};
+export function sampleImagePrompts(style: SampleStyle): readonly {
+  readonly name: string;
+  readonly body: string;
+  readonly scene: SampleScene;
+}[] {
+  return imageSubjects.map((prompt) => ({
+    name: prompt.name,
+    scene: prompt.scene,
+    body: styled(style, prompt.subject),
+  }));
+}
+
+export const sampleThumbnailSubject =
+  "stacks of scrolls glowing in lamplight, bold and simple enough to read at phone size. No text.";
+
+export function sampleThumbnailPrompt(style: SampleStyle): {
+  readonly name: string;
+  readonly body: string;
+} {
+  return { name: "Sample · Thumbnail", body: styled(style, sampleThumbnailSubject) };
+}
 
 // Which scene an image request asks for, by the words its prompt uses.
-export function sceneOf(prompt: string): "harbor" | "scrolls" | "embers" | "disc" {
+export function sceneOf(prompt: string): SampleScene {
   const text = prompt.toLowerCase();
   if (text.includes("lighthouse") || text.includes("harbor")) return "harbor";
   if (text.includes("colonnade") || text.includes("ember") || text.includes("fire"))

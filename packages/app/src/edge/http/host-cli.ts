@@ -8,12 +8,16 @@ import { sniffImage } from "../../adapters/image/bytes.js";
 import { redact } from "../../kernel/log.js";
 import {
   bridgeLimits,
+  encodeHostImageReport,
   type HostCliRuntime,
   HostFolderRefused,
   hostCliIds,
   hostCliProtocol,
+  hostDoneFrame,
   type hostFaultSchema,
   hostFrameSchema,
+  hostFramesHeader,
+  hostImageReportHeader,
   hostImageSchema,
   hostLlmIds,
   hostLlmSchema,
@@ -227,6 +231,8 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
     if (!id.success) return c.notFound();
     const body = hostLlmSchema.safeParse(await json(c.req.raw));
     if (!body.success) return invalid(c);
+    // An app that sends no header reads the original frames (version 1).
+    const frames = Number(c.req.header(hostFramesHeader) ?? 1);
     const job = c.get("job");
     job.holdStream();
     const controller = new AbortController();
@@ -246,22 +252,12 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
             signal.throwIfAborted();
             clearTimeout(timer);
             timer = setTimeout(() => controller.abort(), 120_000);
-            // The bridge frame keeps its shape across versions: the cached-token count, the
-            // answering model and the plan windows stay on this side of it. Typed-ahead text
-            // stays here too: the bridge carries the committed answer only.
+            // The cached-token count, the answering model and the plan windows cross only to
+            // an app that asked for frame version 2; an older app rejects fields it does not
+            // know. Typed-ahead text stays here: the bridge carries the committed answer only.
             const parsed = hostFrameSchema.parse(
               event.type === "done"
-                ? {
-                    type: "done",
-                    usage:
-                      event.usage === null
-                        ? null
-                        : {
-                            inputTokens: event.usage.inputTokens,
-                            outputTokens: event.usage.outputTokens,
-                          },
-                    finishReason: event.finishReason,
-                  }
+                ? hostDoneFrame(event, frames)
                 : event.type === "partial"
                   ? { type: "activity" }
                   : event,
@@ -344,6 +340,9 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
         );
       c.header("Content-Type", result.mime);
       c.header("Content-Length", String(result.bytes.byteLength));
+      // Any app may get this: one from before it ignores headers it does not know.
+      const report = encodeHostImageReport(result);
+      if (report !== undefined) c.header(hostImageReportHeader, report);
       return c.body(new Uint8Array(result.bytes));
     } catch (error) {
       throw signal.aborted ? providerError({ kind: "unavailable", message: unavailable }) : error;

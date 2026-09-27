@@ -139,6 +139,15 @@ export async function moveTemplate(api: Api, templateId: string, channelId: stri
   await read(await api.fetch(`${root(api)}/templates/${templateId}`, json("PUT", { channelId })));
 }
 
+// Automatic, Always Yes or Always No for YouTube's AI disclosure; saved on its own.
+export async function saveAiDisclosure(
+  api: Api,
+  id: string,
+  aiDisclosure: Channel["aiDisclosure"],
+): Promise<Channel> {
+  return read(await api.fetch(`${root(api)}/${id}/ai-disclosure`, json("PUT", { aiDisclosure })));
+}
+
 export function pictureUrl(api: Api, sha256: string): string {
   return `${root(api)}/pictures/${sha256}`;
 }

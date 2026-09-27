@@ -250,7 +250,8 @@ export function SchedulesRoute(): ReactElement {
                   Deleted schedules · {deletedSchedules.length}
                 </summary>
                 <p className="m-0 mt-2 mb-2 text-small text-ink-2">
-                  Deleted schedules cannot run again. Pick one to see its run history.
+                  Deleted schedules stay in Settings → Trash for 30 days, where Restore brings one
+                  back paused. Pick one to see its run history.
                 </p>
                 <List label="Deleted schedules">
                   {deletedSchedules.map((schedule) => (
@@ -321,7 +322,7 @@ export function SchedulesRoute(): ReactElement {
         title={confirm?.kind === "delete" ? "Delete schedule?" : "Cancel schedule?"}
         consequence={
           (confirm?.kind === "delete"
-            ? "Removes this schedule from the active list. Its run history is kept."
+            ? "Moves this schedule to the trash for 30 days (Settings → Trash). Its run history is kept."
             : "Stops future scheduled runs. Existing projects and run history are kept.") +
           (error ? ` ${error}` : "")
         }

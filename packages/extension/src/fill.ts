@@ -1,5 +1,7 @@
 import type { PackItem } from "./pack.js";
 import {
+  alteredNo,
+  alteredYes,
   description,
   type FieldSelectors,
   findAll,
@@ -25,7 +27,14 @@ import {
 // sentence saying what to do by hand; one field failing never stops the others, and nothing
 // here presses Next, Save or Publish. The person reviews and publishes.
 
-export type FieldName = "title" | "description" | "thumbnails" | "playlist" | "audience" | "tags";
+export type FieldName =
+  | "title"
+  | "description"
+  | "thumbnails"
+  | "playlist"
+  | "audience"
+  | "altered"
+  | "tags";
 
 export interface FieldResult {
   readonly field: FieldName;
@@ -122,16 +131,48 @@ export async function fillStudio(
         "Couldn't find the audience question — choose \"No, it's not made for kids\" under Audience by hand.",
     },
   );
+  // Show more is a toggle: it is pressed at most once, and only while a field it reveals is
+  // not showing, so a second field never closes what the first opened.
+  let expanded = false;
+  const revealed = async (field: FieldSelectors): Promise<Element | null> => {
+    const found = findField(root, field);
+    if (found !== null && visible(found)) return found;
+    if (!expanded) {
+      const more = findField(root, showMore);
+      if (more !== null) {
+        click(more);
+        expanded = true;
+      }
+    }
+    return waitFor(field);
+  };
+  const altered = item.alteredContent;
+  if (altered !== undefined) {
+    const answer = altered.altered ? "Yes" : "No";
+    await attempt(
+      async () => {
+        const radio = await revealed(altered.altered ? alteredYes : alteredNo);
+        if (radio === null) throw new Error("missing");
+        click(radio);
+        if (!checked(radio)) throw new Error("not checked");
+        return {
+          field: "altered",
+          ok: true,
+          message: `Altered content set to "${answer}". ${altered.why}`,
+        };
+      },
+      {
+        field: "altered",
+        ok: false,
+        message: `Couldn't find the altered or synthetic content question — choose "${answer}" under Altered content (or AI use) by hand. ${altered.why}`,
+      },
+    );
+  }
   if (item.tags.length > 0) {
     const line = item.tags.join(", ");
     await attempt(
       async () => {
-        let input = findField(root, tags);
-        if (input === null || !visible(input)) {
-          const more = findField(root, showMore);
-          if (more !== null) click(more);
-          input = await waitFor(tags);
-        }
+        const input = await revealed(tags);
         if (!(input instanceof viewOf(root).HTMLInputElement)) throw new Error("missing");
         setInputValue(input, `${line},`);
         return { field: "tags", ok: true, message: `Tags filled (${String(item.tags.length)}).` };

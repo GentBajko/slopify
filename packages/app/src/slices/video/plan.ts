@@ -2,6 +2,7 @@ import type { Format, MotionStyle } from "../admission/model.js";
 import type { TimedChapter } from "./chapters.js";
 import { chapterCuts, narrationShotFrames } from "./cuts.js";
 import {
+  type AmbientBed,
   type AudioKind,
   type AudioSegment,
   type Card,
@@ -92,6 +93,16 @@ export interface PlanInput {
   readonly output: string;
   // Absent is the slideshow as it always was.
   readonly edit?: PlanEdit | undefined;
+  // The ambient bed (`ambient-bed.ts`), already resolved from the project's files. Absent, or a
+  // video without narration, is the narration alone, as every video before it.
+  readonly bed?: PlanBed | undefined;
+}
+
+export interface PlanBed {
+  readonly source: AmbientBed["source"];
+  readonly levelDb: number;
+  readonly fadeInSeconds: number;
+  readonly tailSeconds: number;
 }
 
 // What the Video stage's edit settings add, already resolved from the project's files.
@@ -127,7 +138,9 @@ export function planRender(input: PlanInput): RenderPlan {
     );
   }
   const frame = frames[input.format];
-  const audio = input.body === undefined ? [] : audioTimeline({ ...input, body: input.body });
+  const bed = input.body === undefined ? undefined : input.bed;
+  const timeline = input.body === undefined ? [] : audioTimeline({ ...input, body: input.body });
+  const audio = bed === undefined ? timeline : withTail(timeline, bed.tailSeconds);
   // A silent video shows every image once, which is the one length it has to go on.
   const totalSeconds =
     input.body === undefined
@@ -180,11 +193,39 @@ export function planRender(input: PlanInput): RenderPlan {
             ...(edit.cards.color === undefined ? {} : { cardColor: edit.cards.color }),
           }
         : {}),
+      ...(bed === undefined
+        ? {}
+        : {
+            bed: {
+              source: bed.source,
+              levelDb: bed.levelDb,
+              fadeInSeconds: bed.fadeInSeconds,
+              fadeOutAt: narrationEnd(timeline),
+              fadeOutSeconds: bed.tailSeconds,
+            },
+          }),
     },
     totalFrames,
     totalSeconds,
     output: input.output,
   };
+}
+
+// The timeline with the ambient bed's tail: the silence after the last spoken segment runs at
+// least `tail` seconds, so the bed can fade out under the end of the picture. A tail no longer
+// than that silence changes nothing, so the video keeps its length.
+export function withTail(audio: readonly AudioSegment[], tail: number): readonly AudioSegment[] {
+  const last = audio.at(-1);
+  if (last === undefined || tail <= 0) return audio;
+  if (last.kind === "edge")
+    return last.seconds >= tail ? audio : [...audio.slice(0, -1), { ...last, seconds: tail }];
+  return [...audio, { kind: "edge", path: null, seconds: tail }];
+}
+
+// Where the last spoken segment ends, in seconds from the start of the video.
+function narrationEnd(audio: readonly AudioSegment[]): number {
+  const trailing = audio.at(-1)?.kind === "edge" ? (audio.at(-1)?.seconds ?? 0) : 0;
+  return audio.reduce((sum, segment) => sum + segment.seconds, 0) - trailing;
 }
 
 // A card at each chapter start, on the cut the chapter's shot starts with (a chapter at the

@@ -75,7 +75,7 @@ export async function narrationFixture(
   ReturnType<typeof revisionFixture> & {
     readonly deps: ReturnType<typeof revisionFixture>["deps"] & { readonly ffmpeg: string };
     readonly count: ReturnType<typeof vi.fn>;
-    readonly calls: { kind: string; key: string; text: string }[];
+    readonly calls: { kind: string; key: string; text: string; dialogue?: readonly string[] }[];
     readonly view: () => RevisionView;
     readonly pump: (limit?: number) => Promise<void>;
   }
@@ -102,7 +102,7 @@ export async function narrationFixture(
       .run(kind, h.projectId, kind);
   const base = await ensureBaseline(deps, h.projectId);
   if (!base.ok) throw new Error("Missing baseline");
-  const calls: { kind: string; key: string; text: string }[] = [];
+  const calls: { kind: string; key: string; text: string; dialogue?: readonly string[] }[] = [];
   let activeKey = "";
   const providers: StageProviders = {
     llm: async (input) => {
@@ -125,7 +125,14 @@ export async function narrationFixture(
       };
     },
     tts: async (input) => {
-      calls.push({ kind: "tts", key: activeKey, text: input.text });
+      calls.push({
+        kind: "tts",
+        key: activeKey,
+        text: input.text,
+        ...(input.dialogue === undefined
+          ? {}
+          : { dialogue: input.dialogue.map((line) => line.text) }),
+      });
       return { ok: true, value: { bytes: narrationBytes(), container: "mp3" } };
     },
     image: async () => {

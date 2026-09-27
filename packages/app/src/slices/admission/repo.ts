@@ -62,7 +62,24 @@ export function insertStage(db: DatabaseSync, stage: Stage): void {
   ).run(stage.id, stage.projectId, stage.kind, stage.source, stage.state, stage.attemptCount);
 }
 
+// A project in the trash (`project_trash`, Settings → Trash) is not found by any of these
+// reads: it is listed nowhere, opens nowhere and takes no action until it is restored.
+// `slices/trash` and `slices/storage/delete-project.ts` read the table directly.
+export function liveProject(alias = "projects", column = "id"): string {
+  return `NOT EXISTS (SELECT 1 FROM project_trash WHERE project_trash.project_id = ${alias}.${column})`;
+}
+
+export function projectTrashed(db: DatabaseSync, id: string): boolean {
+  return db.prepare("SELECT 1 FROM project_trash WHERE project_id = ?").get(id) !== undefined;
+}
+
 export function projectById(db: DatabaseSync, id: string): Project | undefined {
+  const row = db.prepare(`${projectSelect} WHERE projects.id = ? AND ${liveProject()}`).get(id);
+  return row === undefined ? undefined : toProject(projectRow.parse(row));
+}
+
+// The same, trash or not: a backup carries a project in the trash and checks it can be read.
+export function projectByIdIncludingTrash(db: DatabaseSync, id: string): Project | undefined {
   const row = db.prepare(`${projectSelect} WHERE projects.id = ?`).get(id);
   return row === undefined ? undefined : toProject(projectRow.parse(row));
 }
@@ -71,13 +88,15 @@ export function projectById(db: DatabaseSync, id: string): Project | undefined {
 // asks whether the id names a project, and parsing the config to answer that would tie
 // cancelling to a schema it never reads.
 export function projectExists(db: DatabaseSync, id: string): boolean {
-  return db.prepare("SELECT 1 FROM projects WHERE id = ?").get(id) !== undefined;
+  return (
+    db.prepare(`SELECT 1 FROM projects WHERE id = ? AND ${liveProject()}`).get(id) !== undefined
+  );
 }
 
 // Newest first.
 export function listProjects(db: DatabaseSync): Project[] {
   return db
-    .prepare(`${projectSelect} ORDER BY created_at DESC, id DESC`)
+    .prepare(`${projectSelect} WHERE ${liveProject()} ORDER BY created_at DESC, id DESC`)
     .all()
     .map((row) => toProject(projectRow.parse(row)));
 }

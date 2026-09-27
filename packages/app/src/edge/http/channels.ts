@@ -20,6 +20,7 @@ import {
   listChannels,
   moveTemplate,
   readChannel,
+  setChannelAiDisclosure,
   updateCastMember,
   updateChannel,
 } from "../../slices/channels/service.js";
@@ -109,6 +110,10 @@ export function channelRoutes(deps: AppDeps) {
       })
       .put("/:id", zValidator("param", idParam, onInvalid), async (c) => {
         const result = updateChannel(service, c.req.valid("param").id, await body(c));
+        return result.ok ? c.json(result.value) : refused(c, result);
+      })
+      .put("/:id/ai-disclosure", zValidator("param", idParam, onInvalid), async (c) => {
+        const result = setChannelAiDisclosure(service, c.req.valid("param").id, await body(c));
         return result.ok ? c.json(result.value) : refused(c, result);
       })
       .delete("/:id", zValidator("param", idParam, onInvalid), (c) => {

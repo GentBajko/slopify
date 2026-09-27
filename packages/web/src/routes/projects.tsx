@@ -241,8 +241,8 @@ export function ProjectsRoute(): ReactElement {
       <ConfirmDialog
         open={deleting !== undefined}
         title={deleting === undefined ? "" : `Delete "${deleting.title}"?`}
-        // The rows and the folder both go, and nothing brings them back.
-        consequence="Deletes the project and every file it produced."
+        // Settings → Trash puts it back, or removes the rows and the folder for good.
+        consequence="Moves the project to the trash for 30 days. Restore it or delete it for good in Settings → Trash."
         confirmLabel="Delete project"
         cancelLabel="Keep it"
         pending={remove.isPending}

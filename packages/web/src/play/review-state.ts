@@ -11,7 +11,7 @@ import { sentence } from "@/http";
 import { type DraftRefusal, readPlayDraft, reviewPlayDraft, startPlayDraft } from "./draft-api";
 import { refreshDraftChoices, rememberDraft } from "./draft-restore";
 import type { DraftSessionState } from "./draft-save";
-import { shortsOn } from "./state";
+import { ambientUploadOn, shortsOn } from "./state";
 
 export interface ReviewedGeneration {
   readonly draftId: string;
@@ -301,6 +301,9 @@ export function pendingReviewUpload(
       : []),
     ...(shortsOn(document.form) && provided.shortsMusic
       ? [{ ref: provided.shortsMusic, field: "shorts.music" }]
+      : []),
+    ...(ambientUploadOn(document.form) && provided.ambientBed
+      ? [{ ref: provided.ambientBed, field: "ambientBed.file" }]
       : []),
   ];
   return active.find(

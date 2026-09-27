@@ -1,4 +1,5 @@
 import type { Message } from "../kernel/ports/llm.js";
+import { type SampleStyle, styled } from "./content.js";
 
 // The sample's "text model": fixed, hand-written answers to the three questions the pipeline
 // asks it - the YouTube description, which moments make the shorts, and each short's image
@@ -24,9 +25,9 @@ const shorts: readonly {
     description: "How Alexandria gathered books, paid scholars and measured the Earth.",
     hashtags: ["#history", "#science", "#alexandria"],
     scenes: [
-      "Vertical procedural art: shelves of rolled scrolls in lamplit niches, warm light",
-      "Vertical procedural art: the harbor at dusk with a lighthouse, the sun on the water",
-      "Vertical procedural art: scrolls stacked in niches, amber dust in the air",
+      "shelves of rolled scrolls in lamplit niches, warm light",
+      "the harbor at dusk with a lighthouse, the sun on the water",
+      "scrolls stacked in niches, amber dust in the air",
     ],
   },
   {
@@ -35,20 +36,21 @@ const shorts: readonly {
     description: "Why the story of a single great fire is almost certainly wrong.",
     hashtags: ["#history", "#myths", "#libraryofalexandria"],
     scenes: [
-      "Vertical procedural art: a ruined colonnade against an orange sky, embers drifting",
-      "Vertical procedural art: a broken column and embers, dark sky",
-      "Vertical procedural art: a tilted disc roof by the sea at night under stars",
+      "a ruined colonnade against an orange sky, embers drifting",
+      "a broken column and embers, dark sky",
+      "a tilted disc roof by the sea at night under stars",
     ],
   },
 ];
 
-export function scriptedAnswer(messages: readonly Message[]): string {
+export function scriptedAnswer(messages: readonly Message[], style: SampleStyle): string {
   const system = messages.find((message) => message.role === "system")?.content ?? "";
   // The first ask carries the transcript; a retry only adds what was wrong.
   const user = messages.find((message) => message.role === "user")?.content ?? "";
   if (system.startsWith("You write YouTube descriptions")) return description(user);
   if (system.startsWith("You pick clips")) return picks(user, system);
-  if (system.startsWith("You write prompts for an image model")) return prompts(user, system);
+  if (system.startsWith("You write prompts for an image model"))
+    return prompts(user, system, style);
   throw new Error(`The sample's text script has no answer for: ${system.slice(0, 80)}`);
 }
 
@@ -140,12 +142,14 @@ function picks(user: string, system: string): string {
   );
 }
 
-function prompts(user: string, system: string): string {
+function prompts(user: string, system: string, style: SampleStyle): string {
   const count = Number(/Exactly (\d+) prompt/.exec(system)?.[1] ?? 1);
   const title = /^Short: (.*)$/m.exec(user)?.[1] ?? "";
   const short = shorts.find((one) => one.title === title) ?? shorts[0];
   const scenes = short?.scenes ?? [];
   return JSON.stringify(
-    Array.from({ length: count }, (_value, at) => scenes[at % Math.max(1, scenes.length)] ?? ""),
+    Array.from({ length: count }, (_value, at) =>
+      styled(style, scenes[at % Math.max(1, scenes.length)] ?? "", true),
+    ),
   );
 }

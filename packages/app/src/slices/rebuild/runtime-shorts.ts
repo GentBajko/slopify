@@ -1,10 +1,12 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
+import { withLanguage, wordTimingUnavailable } from "../../kernel/ports/languages.js";
 import type { TimedWord } from "../../kernel/ports/subtitles.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { LlmCall, StageProviders } from "../../kernel/runner/providers.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
 import { usesShorts } from "../admission/rules.js";
+import { captionBoldFont } from "../fonts/coverage.js";
 import { resolveBoldFont } from "../fonts/index.js";
 import type { RevisionView } from "../revisions/model.js";
 import type { PreparedOutput } from "../revisions/publication-model.js";
@@ -129,7 +131,9 @@ async function pick(
     const checked = checkPicks(text, sentences, limits);
     return checked.ok ? undefined : checked.reason;
   });
-  const first = await providers.forPiece(piece.id).llm(ask(pickMessages(brief)));
+  const first = await providers
+    .forPiece(piece.id)
+    .llm(ask(withLanguage(pickMessages(brief), config.language)));
   if (!first.ok) return "held";
   let checked = checkPicks(first.value.text, sentences, limits);
   if (!checked.ok) throw new Error(checked.reason);
@@ -139,7 +143,14 @@ async function pick(
     if (!context.maySubmit(piece.id)) return "held";
     const second = await providers
       .forPiece(piece.id)
-      .llm(ask(pickRetryMessages(brief, first.value.text, checked.problems)));
+      .llm(
+        ask(
+          withLanguage(
+            pickRetryMessages(brief, first.value.text, checked.problems),
+            config.language,
+          ),
+        ),
+      );
     if (!second.ok) return "held";
     const again = checkPicks(second.value.text, sentences, limits);
     if (again.ok && again.picks.length >= checked.picks.length) checked = again;
@@ -292,7 +303,12 @@ async function render(
   const words = clipWords(timingWords(deps, context, view), clip.start, clip.end);
   const timeline = await revisionAudio(deps, context, view);
   // The bundled Barlow is drawn in its own Bold face; any other font is emboldened.
-  const font = await resolveBoldFont(deps.paths, config.subtitles?.fontId ?? "default");
+  // In another language, a font that has its letters (`fonts/coverage.ts`).
+  const font = await captionBoldFont(
+    deps.paths,
+    config.subtitles?.fontId ?? "default",
+    config.language,
+  );
   const shorts = config.shorts;
   const speed = shorts === undefined ? 1 : shortsSpeedOf(shorts);
   const music = await backgroundMusic(deps, context, view);
@@ -311,6 +327,7 @@ async function render(
       motionStyle: config.motionStyle,
       zoomPercent: config.zoomPercent,
       words,
+      ...(wordTimingUnavailable(config.language) === undefined ? {} : { wordByWord: false }),
       font,
       ...(shorts?.titleOnScreen === true ? { title: clip.title } : {}),
       speed,

@@ -85,6 +85,9 @@ export interface ProvidedFiles {
   // The Shorts step's background music, staged like narration audio. Copied into the project
   // as the revision's `shortsMusic` when the run starts; ignored while Shorts is off.
   readonly shortsMusic?: string | undefined;
+  // The ambient bed's own file, when `ambientBed.source` is "upload". Copied into the project
+  // as the revision's `ambientBed` when the run starts.
+  readonly ambientBed?: string | undefined;
 }
 
 // How many thumbnails a generated thumbnail step makes. Three gives two more drawn from the
@@ -157,6 +160,10 @@ export interface RunDraft {
   readonly articlePrompt?: string | undefined;
   readonly narrationPrompt?: string | undefined;
   readonly imagePrompts: readonly ImagePromptChoice[];
+  // More images for long videos: images per hour of narration and the length they are
+  // planned for (`images/scale.ts`); the prompts' Numbers stay the floor. Absent is each
+  // prompt's Number exactly, which is what every project saved before it made.
+  readonly imageScale?: import("../images/scale.js").ImageScale | undefined;
   readonly thumbnailPrompt?: string | undefined;
   // `thumbnailCountOf` reads it; absent is one thumbnail.
   readonly thumbnailCount?: ThumbnailCount | undefined;
@@ -209,6 +216,10 @@ export interface RunDraft {
   // The channel's cast as the run was started with it: an image whose brief mentions a member
   // is drawn with that member's pictures as references (`recipe-cast.ts`). Absent is none.
   readonly cast?: readonly import("../channels/model.js").CastSnapshot[] | undefined;
+  // Episode memory: the summaries of the channel's related earlier episodes as the run was
+  // started, appended to the article (or script) prompt (`slices/episodes/related.ts`). Absent
+  // is none, which is what every project made before episode memory, or with it off, has.
+  readonly earlierEpisodes?: readonly import("../episodes/repo.js").EarlierEpisode[] | undefined;
   // The chapter cards' and end screen's font and colour, from the channel's brand kit. Absent
   // is the caption font in white, as every video before it.
   readonly titleStyle?: TitleStyle | undefined;
@@ -218,6 +229,13 @@ export interface RunDraft {
   // speakers from a script (`slices/voices`). Absent is the Narration format, one voice
   // reading the article, which is what every project saved before it was.
   readonly voices?: import("../voices/model.js").VoicesSettings | undefined;
+  // Rain, fire, wind or the user's own file under the long video's narration, ducked under the
+  // voice (`video/ambient-bed.ts`), from the template or the channel's brand kit. Absent is
+  // none, which is what every project saved before it was.
+  readonly ambientBed?: import("../video/ambient-bed.js").AmbientBedSettings | undefined;
+  // The language the project is made in (`kernel/ports/languages.ts`). Absent is English, which is
+  // what every project saved before it was; English is never stored.
+  readonly language?: import("../../kernel/ports/languages.js").LanguageCode | undefined;
 }
 
 export interface TitleStyle {

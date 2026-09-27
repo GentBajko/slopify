@@ -1,6 +1,7 @@
 import { statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { z } from "zod";
+import type { Log } from "../../kernel/log.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
 import { referenceKey } from "../admission/model.js";
@@ -175,7 +176,12 @@ async function concatenate(
   try {
     const durationMs =
       recipe.input.kind === "local" && recipe.input.operation === "concat-turns-v1"
-        ? await joinTurns(deps, context, files, recipe.input.values, pending.absolutePath)
+        ? await joinTurns(
+            { bin: deps.ffmpeg, log: deps.log, signal: context.signal },
+            files,
+            recipe.input.values,
+            pending.absolutePath,
+          )
         : await joinNarration(
             { bin: deps.ffmpeg, log: deps.log },
             {
@@ -234,10 +240,10 @@ async function concatenate(
 }
 
 // A multi-voice narration: every turn at its speaker's pace with the gap between turns, as the
-// recipe laid it out (`recipe-voices.ts`), measured off the file that was written.
-async function joinTurns(
-  deps: LocalExecutionDeps,
-  context: StageContext,
+// recipe laid it out (`recipe-voices.ts`), measured off the file that was written. `values` is
+// the concat-turns-v1 recipe's own values.
+export async function joinTurns(
+  run: { readonly bin: string; readonly log: Log; readonly signal: AbortSignal },
   files: readonly string[],
   values: unknown,
   output: string,
@@ -250,7 +256,7 @@ async function joinTurns(
       "Slopify hit an internal error (the speaker turns to join don't match their audio). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   await runFfmpeg({
-    bin: deps.ffmpeg,
+    bin: run.bin,
     args: turnJoinArgs(
       files.map((path, index) => ({
         path,
@@ -259,9 +265,9 @@ async function joinTurns(
       })),
       output,
     ),
-    signal: context.signal,
-    log: deps.log,
+    signal: run.signal,
+    log: run.log,
     onProgress: (): void => {},
   });
-  return probeDurationMs(deps.ffmpeg, output, context.signal, deps.log);
+  return probeDurationMs(run.bin, output, run.signal, run.log);
 }

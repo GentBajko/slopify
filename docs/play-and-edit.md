@@ -18,9 +18,18 @@ Play is one path from topic to queue:
    Reviews, Channel. Each is one line of what the run will do. Change opens the stage's own
    editor under the row (Reviews opens the side panel with checkpoints, automatic reviews, the
    whole setup and the resolved prompts). Rows that need attention when a draft opens start open.
+   An editor never repeats its row's name: the stage the row is (Article, Narration's audio,
+   Images, the video export) starts at its **Source** switch, and only the parts inside it
+   (Research, Text generation, Thumbnail, Document) have headings. Fields use the 3.0 kit's
+   label and error style.
 5. **The right rail**: the rendered style preview, the videos count, the estimate (refreshed once
    typing pauses) and the Play key. When the key can't start, the reason is right under it, and
-   pressing it opens and focuses the field.
+   pressing it opens and focuses the field. The estimate shows the total; **Cost by stage**
+   folds the per-stage prices, their assumptions and the catalogue date under it.
+
+The language Play uses everywhere is the draft's own, else the channel's (`useDraftLanguage`):
+the voice lists, the Speakers panel and the Cuts control (a language without word timing cuts
+every N seconds) all follow a language inherited from the channel.
 
 Every Play action is in the command palette (Ctrl+K): Start or Queue, Add a topic, Save as
 template, Review the whole setup, Pick a template, and Change for each row.
@@ -55,7 +64,7 @@ Prompts and Templates → Keywords, each keyword with everything it feeds.
 | Thumbnail prompt, 1 or 3 thumbnails | Outputs | Prompts, Images | `ThumbnailCountPicker` | same |
 | Supplied audio, images, thumbnail | their rows | Replace provided … | none | same |
 | Captions (mode, font, size, position, upload) | Video and style | Subtitles | `SubtitleControls` | same |
-| Style preview (rendered) | right rail | Subtitles | `StylePreview` | same |
+| Style preview (rendered) | right rail | Subtitles | `StylePreview` | same: both draw on the establishing image or the cast picture the title names |
 | Seconds per image, zoom, motion, edge silence | Video and style | Inputs | none | same |
 | Silence between segments | Video and style (new, per run; empty uses Settings) | Inputs | none | **closed in 3.0** |
 | Cuts, transitions, the Look, chapter cards, animate images | Video and style | Inputs | `useVideoEditControls` | same |
@@ -68,7 +77,9 @@ Prompts and Templates → Keywords, each keyword with everything it feeds.
 | Channel, brand kit | Channel | Inputs › Channel | none (both a select and a switch) | **closed in 3.0**: saving a change applies the kit again (`slices/channels/rebrand.ts`) |
 | Cast (and the aliases on cast members) | follows the channel | follows the channel | none | **closed in 3.0**, with the channel |
 | Title style, end screen | from the brand kit only | from the brand kit only | none | neither side sets them directly |
-| Voice formats and speakers (multiple voices) | Narration | Providers | the speakers panel from main | same |
+| Voice formats and speakers (multiple voices) | Narration | Providers | `SpeakersEditor` | same: Add from the cast (the project's channel) and voices filtered by the project language on both |
+| Ambient sound | Video and style | Inputs › Ambient sound | `AmbientBedControls` | **closed in 3.0**: built-in beds or None; a project's own uploaded bed stays offered |
+| More images for long videos | Images | Images | none (the same rate control) | **closed in 3.0**: saving plans the extra images, keeping every existing one |
 | Narration aliases | on cast members (Channels), used by both | on cast members | none | same |
 
 ## Closed in 3.0
@@ -93,6 +104,15 @@ Prompts and Templates → Keywords, each keyword with everything it feeds.
   channel (`project_channels`) with the saved revision, and a restored revision takes its
   channel back. `useBrandKit` is saved only when off, so every existing project keeps its config
   and fingerprints; saving any other change leaves the channel, cast and brand as they were.
+
+- **Ambient sound and More images for long videos in Edit project.** Inputs › Ambient sound
+  offers Rain, Fireplace, Wind or None (and the project's own file while it has one; a new file
+  is chosen on Play); the numbers are checked on save as admission checks them. Images › More
+  images for long videos sets the rate, planned for the length the project was planned with or
+  its article's. Saving replans the images in the counts each prompt actually makes (its Number
+  plus its share of the extra images, `images/scale.ts`), so turning it on adds images and keeps
+  every existing one and its fingerprint. A setting left alone leaves the config as it was, so
+  nothing turns outdated.
 
 ## Still open
 

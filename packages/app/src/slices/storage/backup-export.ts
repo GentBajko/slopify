@@ -14,6 +14,7 @@ import {
   backupSchemaVersion,
   checksumsMember,
   fontMember,
+  imageMember,
   type LibraryPart,
   type LibraryTable,
   libraryMember,
@@ -65,9 +66,16 @@ export function busySentence(projects: readonly BusyProject[]): string {
   return `Slopify can't export while projects are being made (${named}${more}): their files are still being written. Wait for them to finish, or pause them on their project page, then press Export everything again.`;
 }
 
+// "bytes" is one of the JSON parts; "file" and "data" are the files the checksum list covers,
+// "data" being one whose bytes come from the database (a picture in image_blobs).
 type Member =
   | { readonly name: string; readonly kind: "bytes"; readonly content: Uint8Array }
-  | { readonly name: string; readonly kind: "file"; readonly path: string; readonly size: number };
+  | { readonly name: string; readonly kind: "file"; readonly path: string; readonly size: number }
+  | { readonly name: string; readonly kind: "data"; readonly content: Uint8Array };
+
+function memberSize(member: Member): number {
+  return member.kind === "file" ? member.size : member.content.byteLength;
+}
 
 export interface BackupPlan {
   readonly manifest: BackupManifest;
@@ -142,6 +150,8 @@ export function planBackup(deps: BackupDeps): BackupPlan {
       path: stagingPath(deps.paths, staged.id),
       size: staged.bytes,
     });
+  for (const image of snapshot.library.images)
+    files.push({ name: imageMember(image.sha256), kind: "data", content: image.content });
 
   const manifest: BackupManifest = {
     format: backupFormat,
@@ -156,7 +166,7 @@ export function planBackup(deps: BackupDeps): BackupPlan {
       bytes: project.part.files.reduce((sum, file) => sum + file.bytes, 0),
     })),
     files: files.length,
-    bytes: files.reduce((sum, file) => sum + (file.kind === "file" ? file.size : 0), 0),
+    bytes: files.reduce((sum, file) => sum + memberSize(file), 0),
   };
   const members: Member[] = [
     json(manifestMember, manifest),
@@ -167,12 +177,7 @@ export function planBackup(deps: BackupDeps): BackupPlan {
   ];
   const archiveBytes =
     members.reduce(
-      (sum, member) =>
-        sum +
-        tarMemberBytes({
-          name: member.name,
-          size: member.kind === "bytes" ? member.content.byteLength : member.size,
-        }),
+      (sum, member) => sum + tarMemberBytes({ name: member.name, size: memberSize(member) }),
       0,
     ) +
     tarMemberBytes({
@@ -198,9 +203,13 @@ export async function* streamBackup(plan: BackupPlan): AsyncGenerator<Uint8Array
   const digests = new Map<string, string>();
   const files: Member[] = [];
   for (const member of plan.members) {
-    const size = member.kind === "bytes" ? member.content.byteLength : member.size;
+    const size = memberSize(member);
     yield tarHeader({ name: member.name, size });
     if (member.kind === "bytes") {
+      yield member.content;
+    } else if (member.kind === "data") {
+      files.push(member);
+      digests.set(member.name, createHash("sha256").update(member.content).digest("hex"));
       yield member.content;
     } else {
       files.push(member);
@@ -318,7 +327,10 @@ function projectFiles(root: string): { path: string; bytes: number }[] {
   return out;
 }
 
-function librarySnapshot(deps: BackupDeps): { readonly part: LibraryPart } {
+function librarySnapshot(deps: BackupDeps): {
+  readonly part: LibraryPart;
+  readonly images: readonly { readonly sha256: string; readonly content: Uint8Array }[];
+} {
   const { db, paths } = deps;
   const tables: Partial<Record<LibraryTable, BackupRow[]>> = {};
   const put = (table: LibraryTable, rows: BackupRow[]): void => {
@@ -344,6 +356,26 @@ function librarySnapshot(deps: BackupDeps): { readonly part: LibraryPart } {
   put("schedules", rowsOf(db, "SELECT * FROM schedules ORDER BY rowid"));
   put("schedule_runs", rowsOf(db, "SELECT * FROM schedule_runs ORDER BY rowid"));
   put("schedule_topics", rowsOf(db, "SELECT * FROM schedule_topics ORDER BY rowid"));
+  put(
+    "library_versions",
+    rowsOf(db, "SELECT * FROM library_versions ORDER BY item_kind,item_id,version"),
+  );
+  put("channels", rowsOf(db, "SELECT * FROM channels ORDER BY rowid"));
+  put("cast_members", rowsOf(db, "SELECT * FROM cast_members ORDER BY rowid"));
+  put("cast_images", rowsOf(db, "SELECT * FROM cast_images ORDER BY rowid"));
+  put("episode_memories", rowsOf(db, "SELECT * FROM episode_memories ORDER BY rowid"));
+  put("channel_videos", rowsOf(db, "SELECT * FROM channel_videos ORDER BY rowid"));
+  put("standalone_usage", rowsOf(db, "SELECT * FROM standalone_usage ORDER BY rowid"));
+  // Every picture, not only the cast's: a project's config names the pictures it was started
+  // with by hash, and a Rebuild reads them from here.
+  const images = db
+    .prepare("SELECT sha256,mime,bytes FROM image_blobs ORDER BY sha256")
+    .all()
+    .flatMap((row) =>
+      row.bytes instanceof Uint8Array && row.bytes.byteLength > 0
+        ? [{ sha256: String(row.sha256), mime: String(row.mime), content: row.bytes }]
+        : [],
+    );
 
   // Play drafts are work the user typed and has not started yet, so they travel. A draft
   // that already became projects is not: its projects carry it. Its uploads travel with it
@@ -388,7 +420,23 @@ function librarySnapshot(deps: BackupDeps): { readonly part: LibraryPart } {
     name: font.name,
     bytes: font.bytes,
   }));
-  return { part: { tables, fonts, staged } };
+  return {
+    part: {
+      tables,
+      fonts,
+      staged,
+      ...(images.length === 0
+        ? {}
+        : {
+            images: images.map((image) => ({
+              sha256: image.sha256,
+              mime: image.mime as "image/png" | "image/jpeg",
+              bytes: image.content.byteLength,
+            })),
+          }),
+    },
+    images,
+  };
 }
 
 function fileBytes(path: string): number | undefined {

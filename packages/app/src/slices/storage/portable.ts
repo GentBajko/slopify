@@ -21,6 +21,7 @@ import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Paths } from "../../kernel/paths.js";
+import { liveProject } from "../admission/repo.js";
 import { silenceGapSecondsMax } from "../admission/rules.js";
 import { detectSlots } from "../admission/substitute.js";
 import { fontMaxBytes } from "../fonts/model.js";
@@ -31,11 +32,14 @@ import { listEntries, listPrompts } from "../library/repo.js";
 import { notificationUrlKey } from "../notifications/settings.js";
 import { projectTemplateSchema } from "../project-templates/schema.js";
 import { cliPathMaxLength } from "../settings/cli-paths.js";
+import { providerDefaultsKey, providerDefaultsSchema } from "../settings/first-run.js";
 import { appearances, providerById, providerIds } from "../settings/model.js";
 import { listVoices } from "../settings/repo.js";
 import { voiceIdMax, voiceNameMax } from "../settings/voices.js";
+import { whatsNewSeenKey } from "../settings/whats-new.js";
 import { studioPlaylistMax } from "../studio/model.js";
 import { studioPairingKey, studioPlaylistKey } from "../studio/settings.js";
+import { channelLinksKey } from "../youtube/edits-repo.js";
 import { defaultBackupsDir, projectDir, stagingPath } from "./layout.js";
 import { type StagedFile, stageKinds } from "./model.js";
 import { insertStagedFile, stagedFiles } from "./repo.js";
@@ -73,7 +77,18 @@ const libraryRow = z
   })
   .strict();
 const voiceRow = z
-  .object({ id: z.string(), provider: z.enum(providerIds), name: z.string(), voice_id: z.string() })
+  .object({
+    id: z.string(),
+    provider: z.enum(providerIds),
+    name: z.string(),
+    voice_id: z.string(),
+    // Absent from backups made before voice languages, and on a voice whose languages are
+    // unknown.
+    languages: z
+      .array(z.string().regex(/^[a-z]{2,3}$/))
+      .max(60)
+      .optional(),
+  })
   .strict();
 const stagedMeta = z
   .object({
@@ -137,6 +152,9 @@ export interface StorageUsage {
   readonly data: number;
   readonly projects: number;
   readonly staging: number;
+  // Projects in Settings → Trash: their folders still count in `projects` until the trash
+  // removes them for good (Delete now, or the daily purge after 30 days).
+  readonly trash: { readonly projects: number; readonly bytes: number };
   readonly byProject: readonly {
     readonly id: string;
     readonly title: string;
@@ -156,6 +174,11 @@ interface StagedExport {
   readonly path: string;
 }
 
+// The settings-only .zip. Nothing in the app writes it any more: Export everything (the tar in
+// `backup-export.ts`) replaced it in 2.5.0, and this stays so tests can make the .zip files
+// older versions wrote. Channels and their cast are deliberately not in it: they arrived after
+// the last version that could write a .zip, so no such file can hold one, and the full backup
+// already carries them (with cast pictures) through `backup-format.ts`.
 export function exportPortable(deps: PortableDeps): Uint8Array<ArrayBuffer> {
   const entries: Record<string, [Uint8Array, { readonly level: 0 }]> = {};
   const stagedPlan = planStagedExport(deps);
@@ -197,10 +220,11 @@ export function exportPortable(deps: PortableDeps): Uint8Array<ArrayBuffer> {
     provider: voice.provider,
     name: voice.name,
     voice_id: voice.voiceId,
+    ...(voice.languages === undefined ? {} : { languages: voice.languages }),
   }));
   const templates = deps.db
     .prepare(
-      "SELECT t.id,r.version,r.name,t.created_at AS createdAt,r.created_at AS updatedAt,r.document_json AS document FROM project_templates t JOIN project_template_revisions r ON r.template_id=t.id AND r.version=t.head_version ORDER BY t.id",
+      "SELECT t.id,r.version,r.name,t.created_at AS createdAt,r.created_at AS updatedAt,r.document_json AS document FROM project_templates t JOIN project_template_revisions r ON r.template_id=t.id AND r.version=t.head_version WHERE t.deleted_at IS NULL ORDER BY t.id",
     )
     .all()
     .map((row) =>
@@ -289,9 +313,15 @@ export function importPortable(deps: PortableDeps, bytes: Uint8Array): PortableI
       for (const row of manifest.voices) {
         deps.db
           .prepare(
-            "INSERT INTO voices(id,provider,name,voice_id) VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET provider=excluded.provider,name=excluded.name,voice_id=excluded.voice_id",
+            "INSERT INTO voices(id,provider,name,voice_id,languages_json) VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET provider=excluded.provider,name=excluded.name,voice_id=excluded.voice_id,languages_json=excluded.languages_json",
           )
-          .run(row.id, row.provider, row.name, row.voice_id);
+          .run(
+            row.id,
+            row.provider,
+            row.name,
+            row.voice_id,
+            row.languages === undefined ? null : JSON.stringify(row.languages),
+          );
         voices += 1;
       }
       let templateCount = 0;
@@ -419,18 +449,32 @@ const storedCliPath = z.string().max(cliPathMaxLength).nullable();
 const storedSilenceGap = z.number().int().min(0).max(silenceGapSecondsMax);
 const storedAppearance = z.enum(appearances);
 const storedPlaylist = z.string().max(studioPlaylistMax);
+// Settings → Channel links, and the providers a fresh Play form starts with.
+const storedChannelLinks = z
+  .array(z.object({ name: z.string().max(200), url: z.string().max(2000) }).strict())
+  .max(200);
 
 function portableSettings(settings: Readonly<Record<string, string>>): Record<string, string> {
   const portable: Record<string, string> = {};
   for (const [key, value] of Object.entries(settings)) {
     // The Notification URL stays on this machine: an ntfy topic in it is as good as a password.
     // So does the Studio extension's pairing: its token reads every project's upload pack.
-    if (key === "tutorial.session" || key === notificationUrlKey || key === studioPairingKey)
+    // Which "What's new" tour this install has closed is about this install, not the data.
+    if (
+      key === "tutorial.session" ||
+      // Whether this install showed its first-run welcome belongs to this install.
+      key === "first-run.done" ||
+      key === notificationUrlKey ||
+      key === studioPairingKey ||
+      key === whatsNewSeenKey
+    )
       continue;
     const parsed = storedJson(value);
     if (key === "silenceGapSeconds") storedSilenceGap.parse(parsed);
     else if (key === "appearance") storedAppearance.parse(parsed);
     else if (key === studioPlaylistKey) storedPlaylist.parse(parsed);
+    else if (key === channelLinksKey) storedChannelLinks.parse(parsed);
+    else if (key === providerDefaultsKey) providerDefaultsSchema.parse(parsed);
     else if (key.startsWith("cli.path.")) {
       const provider = providerById(z.enum(providerIds).parse(key.slice("cli.path.".length)));
       if (provider.auth !== "cli") throw new Error("A CLI path names a provider without a CLI.");
@@ -1081,7 +1125,9 @@ export function storageUsage(
 ): StorageUsage {
   const totals = storageBytes(deps.paths);
   const byProject = deps.db
-    .prepare("SELECT id,title FROM projects ORDER BY created_at DESC, id DESC")
+    .prepare(
+      `SELECT id,title FROM projects WHERE ${liveProject()} ORDER BY created_at DESC, id DESC`,
+    )
     .all()
     .flatMap((row) => {
       if (typeof row.id !== "string" || typeof row.title !== "string") return [];
@@ -1094,7 +1140,15 @@ export function storageUsage(
         },
       ];
     });
-  return { ...totals, byProject };
+  const trashed = deps.db
+    .prepare("SELECT project_id FROM project_trash ORDER BY project_id")
+    .all()
+    .flatMap((row) => (typeof row.project_id === "string" ? [row.project_id] : []));
+  const trash = {
+    projects: trashed.length,
+    bytes: trashed.reduce((sum, id) => sum + directoryBytes(projectDir(deps.paths, id)), 0),
+  };
+  return { ...totals, trash, byProject };
 }
 
 function directoryBytes(root: string): number {

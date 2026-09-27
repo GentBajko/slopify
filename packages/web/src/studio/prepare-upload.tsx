@@ -56,6 +56,7 @@ const stepLabels: Readonly<Record<StudioStep, string>> = {
   thumbnails: "Thumbnail",
   playlist: "Playlist",
   audience: "Audience",
+  altered: "Altered or synthetic content",
   tags: "Tags (under Show more)",
 };
 
@@ -273,6 +274,28 @@ function Steps({
             };
       case "audience":
         return { value: "No, it's not made for kids" };
+      case "altered":
+        return {
+          value: (
+            <span className="flex flex-col gap-1">
+              <span className="font-semibold">{item.alteredContent.altered ? "Yes" : "No"}</span>
+              <span className="text-ink-2">{item.alteredContent.why}</span>
+            </span>
+          ),
+        };
+      case "description":
+        return {
+          value:
+            item.chapterNotice === undefined ? (
+              copyTextOf(item, step) || <span className="text-ink-3">Not written yet.</span>
+            ) : (
+              <span className="flex flex-col gap-1">
+                <span>{item.description}</span>
+                <span className="text-waiting">{item.chapterNotice}</span>
+              </span>
+            ),
+          actions: copyAction(step),
+        };
       case "playlist":
         return {
           value: item.playlist ?? (

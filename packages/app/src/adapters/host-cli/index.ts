@@ -3,11 +3,13 @@ import type { z } from "zod";
 import { redact } from "../../kernel/log.js";
 import {
   bridgeLimits,
+  decodeHostImageReport,
   type HostCliClient,
   type HostCliId,
   hostFaultSchema,
   hostFrameSchema,
   hostHealthSchema,
+  hostImageReportHeader,
   hostImageSchema,
   hostLlmSchema,
   hostModelsSchema,
@@ -221,7 +223,11 @@ export function createHostCliClient(options: {
           if (mime !== "image/png" && mime !== "image/jpeg") throw hostUnavailable(true);
           const bytes = await readHostBytes(response, bridgeLimits.image);
           if (sniffImage(bytes) !== mime) throw hostUnavailable(true);
-          return { bytes, mime };
+          return {
+            bytes,
+            mime,
+            ...decodeHostImageReport(response.headers[hostImageReportHeader]),
+          };
         } catch (error) {
           if (isProviderError(error)) throw withPlanLimit(error, "codex-image");
           throw hostUnavailable(true);

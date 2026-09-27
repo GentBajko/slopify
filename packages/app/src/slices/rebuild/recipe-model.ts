@@ -27,6 +27,8 @@ export interface ResolvedRevisionInputs {
 export const localOperations = [
   "export-wav",
   "wav2vec2-en-a19f851-v2-omissions",
+  "wav2vec2-xlsr56-2d48b01-v1",
+  "sentence-timing-v1",
   "automatic-cues-v1",
   "manual-cues-v1",
   "subtitle-files-v1",

@@ -4,7 +4,7 @@ import { transact } from "../../kernel/db/tx.js";
 import { derive } from "../../kernel/runner/graph.js";
 import type { Runner } from "../../kernel/runner/index.js";
 import type { RunDraft } from "../admission/model.js";
-import { projectPaused, stagesOf } from "../admission/repo.js";
+import { liveProject, projectPaused, stagesOf } from "../admission/repo.js";
 import { startRun } from "../admission/start.js";
 import { deleteStagedFile } from "../storage/repo.js";
 import type { StorageDeps } from "../storage/staging.js";
@@ -17,10 +17,13 @@ const queueRow = z.object({
   state: z.enum(["queued", "active", "finished"]),
 });
 export type QueueEntry = z.infer<typeof queueRow>;
+// A project in the trash leaves the queue's view, so the queue moves on past it; restored,
+// it is back in its place.
 export function queueEntries(db: DatabaseSync, batchId?: string): QueueEntry[] {
   return db
     .prepare(`SELECT project_id AS projectId, batch_id AS batchId, position, state
     FROM project_queue ${batchId === undefined ? "WHERE state != 'finished'" : "WHERE batch_id = ?"}
+    AND ${liveProject("project_queue", "project_id")}
     ORDER BY position`)
     .all(...(batchId === undefined ? [] : [batchId]))
     .map((row) => queueRow.parse(row));
@@ -64,6 +67,8 @@ export function enqueueBatch(
         for (const id of draft.provided.images ?? []) used.add(id);
       if (draft.shorts?.enabled === true && draft.provided.shortsMusic)
         used.add(draft.provided.shortsMusic);
+      if (draft.ambientBed?.source === "upload" && draft.provided.ambientBed)
+        used.add(draft.provided.ambientBed);
     }
     for (const id of retainStaged ? [] : used) {
       sources.add(id);

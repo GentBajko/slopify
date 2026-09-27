@@ -1,6 +1,7 @@
 import { usesPronunciationGlossary } from "@app/slices/admission/rules.js";
 import type { ComponentProps, ReactNode } from "react";
 import type { CastMember } from "@/channels/api";
+import { useVoicesForLanguage, VoiceLanguageNote } from "@/language/voice-language";
 import { ChunkingControl } from "@/play/chunking";
 import { ImagePrompts } from "@/play/image-prompts";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
@@ -32,14 +33,24 @@ export function AudioRail({
   rawCounts,
   advanced,
   cast,
+  language,
+  titled,
 }: RailProps & {
+  // The project language the voice list is filtered by; absent lists every voice.
+  readonly language?: string | undefined;
   // The draft channel's cast, which speakers can be picked from.
   readonly cast?: readonly CastMember[] | undefined;
   readonly rawCounts?: ComponentProps<typeof ChunkingControl>["rawCounts"];
   // Intro, outro and the links that go with them, drawn inside the Advanced disclosure.
   readonly advanced?: ReactNode;
 }) {
-  const mine = voices.filter((voice) => voice.provider === form.audio.provider);
+  const ofProvider = voices.filter((voice) => voice.provider === form.audio.provider);
+  const byLanguage = useVoicesForLanguage(
+    ofProvider,
+    language ?? "en",
+    form.audio.voice || undefined,
+  );
+  const mine = language === undefined ? ofProvider : byLanguage.listed;
   // The disclosure's own line says what is not at its default, so a closed Advanced still
   // tells the reader what it holds.
   const advancedSummary = [
@@ -53,7 +64,7 @@ export function AudioRail({
     .join(" · ");
 
   return (
-    <StageRail kind="audio" name="Audio" dim={form.sources.audio === "off"}>
+    <StageRail kind="audio" name="Audio" dim={form.sources.audio === "off"} titled={titled}>
       <SourceSwitch kind="audio" form={form} update={update} />
       <div className={railControls}>
         {form.sources.audio === "generate" ? (
@@ -90,6 +101,15 @@ export function AudioRail({
                 update({ audio: { ...form.audio, voice } });
               }}
             />
+            {language === undefined ? null : (
+              <VoiceLanguageNote
+                language={language}
+                voice={ofProvider.find((voice) => voice.voiceId === form.audio.voice)}
+                hidden={byLanguage.hidden}
+                showAll={byLanguage.showAll}
+                onShowAll={byLanguage.setShowAll}
+              />
+            )}
             <details className="col-span-full rounded-control border border-line px-3">
               <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink2">
                 Speakers ·{" "}
@@ -105,6 +125,7 @@ export function AudioRail({
                   script={form.sources.article === "provide" ? form.provided.article : undefined}
                   problem={problem}
                   cast={cast}
+                  language={language}
                   onChange={(next) => update({ voices: next })}
                 />
                 {form.voices === undefined ? null : (
@@ -200,9 +221,15 @@ export function ImagesRail({
   onRemoveFile,
   onReattachFile,
   rawNumbers,
-}: RailProps & { readonly rawNumbers?: ComponentProps<typeof ImagePrompts>["rawNumbers"] }) {
+  more,
+  titled,
+}: RailProps & {
+  readonly rawNumbers?: ComponentProps<typeof ImagePrompts>["rawNumbers"];
+  // Controls shown under the prompts while images are generated: more images for long videos.
+  readonly more?: ReactNode;
+}) {
   return (
-    <StageRail kind="images" name="Images" dim={form.sources.images === "off"}>
+    <StageRail kind="images" name="Images" dim={form.sources.images === "off"} titled={titled}>
       <SourceSwitch kind="images" form={form} update={update} />
       <div className={railControls}>
         {form.sources.images === "generate" ? (
@@ -231,6 +258,7 @@ export function ImagesRail({
               onRemoveFile={onRemoveFile}
               {...(onReattachFile ? { onReattachFile } : {})}
             />
+            {more}
           </>
         ) : null}
       </div>

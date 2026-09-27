@@ -46,19 +46,17 @@ export function LabelledField({
     <div
       className={cn(
         inline
-          ? "flex min-w-0 max-w-full items-center gap-[10px]"
-          : "min-w-0 [&>span]:w-full [&>select]:w-full",
+          ? "flex min-w-0 max-w-full flex-wrap items-center gap-x-[10px] gap-y-1"
+          : "sl-field [&>span]:w-full [&>select]:w-full",
       )}
     >
-      <label
-        htmlFor={fieldId}
-        className={cn("sl-field__label block", inline ? "shrink-0" : "mb-[5px]")}
-      >
+      {/* The kit's field label and error, as Field draws them. */}
+      <label htmlFor={fieldId} className={cn("sl-field__label", inline && "shrink-0")}>
         {label}
       </label>
       {children({ field, id: fieldId, describedBy: problem === undefined ? undefined : noteId })}
       {problem === undefined ? null : (
-        <p id={noteId} className={cn("text-label text-danger", inline ? "" : "mt-1")}>
+        <p id={noteId} className={cn("sl-field__error m-0", inline && "basis-full")}>
           {problem}
         </p>
       )}

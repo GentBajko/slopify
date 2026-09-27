@@ -17,10 +17,38 @@ the order Studio's upload dialog asks for them:
    Test & compare.
 5. Playlist: set its name once in Settings → YouTube Studio.
 6. Audience: "No, it's not made for kids".
-7. Tags, under Studio's Show more.
+7. Altered or synthetic content: Yes or No, with why (see below).
+8. Tags, under Studio's Show more.
 
 Each step has Copy and a done tick (the ticks are remembered in this browser only). Shorts are
 listed too, one per short; a short has no thumbnail step, since Studio shows a frame of it.
+
+The description's chapters are fitted to YouTube's rules first; the Description step says
+what was changed (see [Chapters follow YouTube's rules](library-and-editing.md)).
+
+## Altered or synthetic content (AI disclosure)
+
+YouTube asks every upload whether it contains realistic altered or synthetic content. Its help
+page ([Disclosing use of altered or synthetic content](https://support.google.com/youtube/answer/14328491),
+read 2026-09-27) requires a Yes when AI makes realistic content: a real person saying or doing
+what they didn't, altered footage of real places or events, or realistic scenes that never
+happened. YouTube's [announcement](https://blog.youtube/news-and-events/disclosing-ai-generated-content/)
+names "synthetically generating a person's voice to narrate a video" as one such use. Clearly
+unrealistic content, small edits, and AI used for the script, title, thumbnail or captions
+need no disclosure. Disclosing doesn't limit a video's reach or its eligibility to earn money.
+
+Slopify answers for the video and every short, erring on the side of Yes, since it can't tell
+a photorealistic image style from a cartoon one:
+
+- **Yes** when an AI voice narrates (the Audio stage generates the narration), when the images
+  are generated or animated by AI, and always for a short (its images are always generated).
+- **No** only when the narration is your own recording (or there is none) and the images are
+  your own (or there are none). An AI-written article or an AI thumbnail doesn't count.
+
+Each channel can override it at the top of its **Brand** tab: **YouTube AI disclosure** is
+**Automatic** (the rule above), **Always Yes** or **Always No**. Use Always No for a channel
+whose videos are clearly unrealistic (cartoon images, a voice not posing as a real person).
+The rule lives in `packages/app/src/slices/studio/disclosure.ts`.
 
 ## Three thumbnails
 
@@ -68,7 +96,8 @@ Settings then shows the paired extension. **New pairing token** unpairs it.
    **Fill in YouTube Studio**. Studio's upload page opens in a new tab.
 2. Drop the video file into Studio's upload dialog.
 3. When the Details step appears, the extension fills the title, description, thumbnail(s),
-   playlist, audience and tags, then says what it did. **Fill again from Slopify** (bottom right)
+   playlist, audience, the Altered content answer (Yes or No, with why) and tags, then says
+   what it did. **Fill again from Slopify** (bottom right)
    repeats it.
 4. Check everything, go through Studio's remaining steps, and publish yourself. The extension
    never presses Next, Save, Schedule or Publish.
@@ -104,6 +133,8 @@ When a field stops filling:
    tried in order), and update the fixture to match.
 3. Run `npx vitest run --project extension`, rebuild, and reload the extension.
 
-Least certain, in order: the Test & compare dialog, the playlist list, the Tags input (Studio
+Least certain, in order: the Altered content radios (assumed to be among the fields Show more
+reveals, named `VIDEO_HAS_ALTERED_CONTENT_YES`/`_NO`; YouTube's help now calls the question "AI
+use" under Attributes, so its place and markup may have moved), the Test & compare dialog, the playlist list, the Tags input (Studio
 turns typed text into chips), and whether Studio keeps line breaks when the description is set
 this way.

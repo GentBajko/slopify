@@ -1,3 +1,4 @@
+import { languageInfo } from "@app/kernel/ports/languages.js";
 import type { FieldError } from "@app/slices/admission/rules.js";
 import { documentThemeLabel } from "@app/slices/document/model.js";
 import type { ProviderStatus, Voice } from "@app/slices/settings/model.js";
@@ -93,7 +94,7 @@ const owners: readonly (readonly [SetupRowId, readonly string[]])[] = [
     ],
   ],
   ["reviews", ["checkpoints", "reviews"]],
-  ["channel", ["channelId", "useBrandKit"]],
+  ["channel", ["channelId", "useBrandKit", "language"]],
 ];
 
 const owns = (prefixes: readonly string[], field: string): boolean =>
@@ -246,6 +247,8 @@ export function rowSummary(row: SetupRowId, form: PlayFormState, context: Summar
       return join([
         context.channel ?? "Default channel",
         context.brandKit ? "brand kit on" : "brand kit off",
+        // Only a language picked here; otherwise the channel's (or English) applies.
+        form.language === undefined ? undefined : languageInfo(form.language).name,
       ]);
   }
 }

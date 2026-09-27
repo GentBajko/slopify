@@ -446,3 +446,55 @@ describe("narration aliases", () => {
     expect(JSON.parse(String(first?.config)).narrationAliases).toHaveLength(1);
   });
 });
+
+describe("startRun with the ambient bed's own file", () => {
+  const bed = { levelDb: -18, fadeInSeconds: 3, tailSeconds: 6 } as const;
+  const headContent = (storage: StorageDeps, projectId: string): Record<string, unknown> => {
+    const row = storage.db
+      .prepare(
+        "SELECT r.content AS content FROM project_revisions r JOIN project_heads h ON h.revision_id=r.id WHERE h.project_id=?",
+      )
+      .get(projectId);
+    return JSON.parse(String(row?.content)) as Record<string, unknown>;
+  };
+
+  it("copies the file into the project as the first revision's ambientBed", async () => {
+    const storage = deps();
+    const audio = await upload(storage, "audio", "narration");
+    const image = await upload(storage, "images", "one");
+    const file = await upload(storage, "audio", "rain bytes");
+    const { project } = startRun(
+      storage,
+      draft({
+        ambientBed: { source: "upload", ...bed },
+        provided: { article: "x", audio, images: [image], ambientBed: file },
+      }),
+      {},
+    );
+    const asset = headContent(storage, project.id).ambientBed;
+    const row = storage.db
+      .prepare("SELECT path FROM project_assets WHERE project_id=? AND id=?")
+      .get(project.id, String(asset));
+    expect(readFileSync(join(storage.paths.projects, project.id, String(row?.path)), "utf8")).toBe(
+      "rain bytes",
+    );
+    expect(existsSync(join(storage.paths.staging, file))).toBe(false);
+  });
+
+  it("leaves a staged file alone for a built-in bed", async () => {
+    const storage = deps();
+    const audio = await upload(storage, "audio", "narration");
+    const image = await upload(storage, "images", "one");
+    const file = await upload(storage, "audio", "rain bytes");
+    const { project } = startRun(
+      storage,
+      draft({
+        ambientBed: { source: "rain", ...bed },
+        provided: { article: "x", audio, images: [image], ambientBed: file },
+      }),
+      {},
+    );
+    expect(project.config.ambientBed).toEqual({ source: "rain", ...bed });
+    expect(existsSync(join(storage.paths.staging, file))).toBe(true);
+  });
+});

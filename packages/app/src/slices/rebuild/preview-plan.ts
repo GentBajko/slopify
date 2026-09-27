@@ -218,6 +218,7 @@ export function planPreview(
           ]
         : []),
       ...(plan.glossaryNotice ? [plan.glossaryNotice] : []),
+      ...(plan.speakerPronunciationNotice ? [plan.speakerPronunciationNotice] : []),
     ],
   };
   return { ok: true, value: { preview, execution } };

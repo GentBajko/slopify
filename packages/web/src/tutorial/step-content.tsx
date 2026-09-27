@@ -133,8 +133,10 @@ export function StepContent({
             <strong>Voice</strong>.
           </p>
           <p>
-            Keep chunking on <strong>Whole</strong> for the short example: the narration is sent as
-            one request. Other chunking modes split longer text into pieces.
+            Keep <strong>Chunking</strong> (under <strong>Audio Advanced</strong>) on{" "}
+            <strong>Whole</strong> for the short example: the narration is sent as one request.
+            Other chunking modes split longer text into pieces. <strong>Speakers</strong> is where
+            an audiobook or podcast gets more than one voice; leave it on one voice for now.
           </p>
           <p>
             Use Provide to upload existing narration, including any intro and outro in that file, or
@@ -148,12 +150,12 @@ export function StepContent({
         <>
           <p>
             Leave <strong>Images</strong> on <strong>Generate</strong>. Choose the image{" "}
-            <strong>Provider</strong> and <strong>Model</strong>, select your image prompt, and set{" "}
-            <strong>Number</strong> to 2 for a small first run.
+            <strong>Provider</strong> and <strong>Model</strong>, tick your image prompt, and type{" "}
+            <strong>2</strong> in the number box beside it for a small first run.
           </p>
           <p>
-            Number means separate images made from that same prompt. It does not make one scene per
-            article paragraph. Add more image prompts when you want different scenes.
+            The number means separate images made from that same prompt. It does not make one scene
+            per article paragraph. Add more image prompts when you want different scenes.
           </p>
           <p>
             Use Provide for your own images or Off to skip them. Turning Images Off also turns Video
@@ -165,8 +167,9 @@ export function StepContent({
       return (
         <>
           <p>
-            Choose <strong>Generate</strong> for an MP4 slideshow. It needs generated or provided
-            images. With Audio Off, the video is silent and each image lasts 5 seconds.
+            On <strong>Export</strong>, choose <strong>Generate</strong> for an MP4 slideshow. It
+            needs generated or provided images. With Audio Off, the video is silent and each image
+            lasts 5 seconds.
           </p>
           <p>
             Choose <strong>Off</strong> to skip video. If Audio is active, Slopify exports one
@@ -226,8 +229,9 @@ export function StepContent({
             <strong>first-time travelers</strong> for <strong>audience</strong>.
           </p>
           <p>
-            A field under <strong>Common</strong> feeds both the article and images. Changing it
-            changes both prompts for this run.
+            Each keyword is asked once, with the prompts that use it named underneath. A keyword
+            both prompts use feeds the article and the images, so changing it changes both for this
+            run.
           </p>
           <p>
             Fill every visible field. Each value must fit on one line and be no more than 200
@@ -300,8 +304,9 @@ export function StepContent({
             The completed project stays in <strong>Projects</strong> so you can return to it.
           </p>
           <p>
-            Select Article, Audio or Images in <strong>Stages</strong> to download their outputs.{" "}
-            <strong>Download all</strong> under Images gives an image ZIP, not the video.
+            Select Article, Audio or Images in the stage list on the <strong>Output</strong> tab to
+            download their outputs. <strong>Download all</strong> under Images gives an image ZIP,
+            not the video.
           </p>
           <p>
             If subtitles are enabled, download the <strong>.srt</strong> or <strong>.vtt</strong>{" "}
@@ -309,8 +314,8 @@ export function StepContent({
             player.
           </p>
           <p>
-            You have reached the end. Open <strong>Tutorial</strong> in the navigation anytime to
-            walk through these steps again.
+            You have reached the end. Press the question-mark button in the top bar anytime to walk
+            through these steps again.
           </p>
         </>
       );

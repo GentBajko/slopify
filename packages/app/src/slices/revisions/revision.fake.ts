@@ -52,7 +52,7 @@ export function revisionFixture(upgradeFrom10 = false): {
       );
     }
     db.prepare(
-      "INSERT INTO prompts VALUES ('original','article','Original','Keep every original detail.','[]','old')",
+      "INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES ('original','article','Original','Keep every original detail.','[]','old')",
     ).run();
   }
   migrate(db, clock);

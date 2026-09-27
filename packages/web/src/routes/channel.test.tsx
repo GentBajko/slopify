@@ -17,6 +17,7 @@ const channel: Channel = {
   isDefault: true,
   brand: { endScreenText: "Subscribe" },
   seriesBrief: "",
+  aiDisclosure: "auto",
   version: 3,
   createdAt: "a",
   updatedAt: "a",
@@ -187,6 +188,29 @@ describe("Channels", () => {
     });
   });
 
+  it("saves the YouTube AI disclosure as soon as it is picked", async () => {
+    const user = userEvent.setup();
+    const seen: unknown[] = [];
+    renderRouted(
+      <Page />,
+      testDeps({
+        ...common,
+        [`PUT /api/channels/${id}/ai-disclosure`]: recording(
+          jsonAnswer({ ...channel, aiDisclosure: "no" }),
+          seen,
+        ),
+      }),
+    );
+    const picker = await screen.findByRole("combobox", { name: "YouTube AI disclosure" });
+    expect((picker as HTMLSelectElement).value).toBe("auto");
+    expect(
+      screen.getByText(/Automatic says Yes when an AI voice or AI images are used/),
+    ).not.toBeNull();
+    await user.selectOptions(picker, "no");
+    await waitFor(() => expect(seen).toEqual([{ aiDisclosure: "no" }]));
+    await waitFor(() => expect((picker as HTMLSelectElement).value).toBe("no"));
+  });
+
   it("shows the cast with its pictures and adds a member with aliases", async () => {
     const user = userEvent.setup();
     const seen: unknown[] = [];
@@ -228,5 +252,34 @@ describe("Channels", () => {
       aliases: ["City of Splendors"],
       description: "",
     });
+  });
+
+  it("offers a cast member the voices that speak the channel's language, with Show all voices", async () => {
+    const user = userEvent.setup();
+    renderRouted(
+      <Page start="cast" />,
+      testDeps({
+        ...common,
+        [`GET /api/channels/${id}`]: jsonAnswer({
+          channel: { ...channel, brand: { language: "de" } },
+          cast: [{ ...tiamat, voice: { provider: "openai-tts", model: "tts-1", voice: "" } }],
+        }),
+        "GET /api/settings/voices": jsonAnswer({
+          voices: [
+            { id: "1", provider: "openai-tts", voiceId: "alloy", name: "Alloy", languages: ["en"] },
+            { id: "2", provider: "openai-tts", voiceId: "echo", name: "Echo", languages: ["de"] },
+          ],
+        }),
+      }),
+    );
+    const grid = await screen.findByRole("region", { name: "Cast" });
+    await user.click(within(grid).getByRole("button", { name: "Edit Tiamat" }));
+    const names = () =>
+      within(screen.getByLabelText("Voice"))
+        .getAllByRole("option")
+        .map((option) => option.textContent);
+    await waitFor(() => expect(names()).toEqual(["Pick a voice", "Echo"]));
+    await user.click(screen.getByLabelText(/Show all voices/));
+    expect(names()).toEqual(["Pick a voice", "Alloy", "Echo"]);
   });
 });

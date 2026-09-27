@@ -32,8 +32,9 @@ it("bounds prompt strings, IDs and nested keys", () => {
     hostLlmSchema.safeParse({ ...valid, messages: [{ role: "user", content: "ok", env: {} }] })
       .success,
   ).toBe(false);
+  // Frames are read leniently so a newer helper can add fields; an unknown one is dropped,
+  // never passed on.
   expect(
-    hostFrameSchema.safeParse({ type: "done", usage: null, finishReason: null, token: "no" })
-      .success,
-  ).toBe(false);
+    hostFrameSchema.parse({ type: "done", usage: null, finishReason: null, token: "no" }),
+  ).not.toHaveProperty("token");
 });

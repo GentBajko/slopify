@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { problemAnswer } from "@/test-app";
 import { mountSupplied, ready, response } from "./draft-upload-test-fixture";
-import { deferred, openSection } from "./play-test-fixture";
+import { deferred, fill, openSection } from "./play-test-fixture";
 
 afterEach(() => {
   cleanup();
@@ -14,7 +14,7 @@ it.each(["remove", "replace"] as const)(
   async (action) => {
     const pending = deferred();
     let request: Request | undefined;
-    const { requests } = await mountSupplied({
+    const { requests, session } = await mountSupplied({
       "PUT /api/drafts/:id/attachments/:attachmentId/file": (sent) => {
         if (!request) {
           request = sent;
@@ -41,14 +41,20 @@ it.each(["remove", "replace"] as const)(
     expect(request?.signal.aborted).toBe(true);
     const saves = () =>
       requests.filter((sent) => sent.method === "PUT" && /\/drafts\/[a-f0-9-]+$/.test(sent.url));
-    // The rows stay where they are, so the autosave after the change is what drops the file.
-    await waitFor(async () => expect(await saves().at(-1)?.clone().text()).not.toContain(old));
+    // The rows stay where they are, so the save after the change is what drops the file. It is
+    // saved at once here rather than after the autosave pause (draft-session.test.tsx times it).
+    await act(async () => {
+      await session().flush();
+    });
+    expect(await saves().at(-1)?.clone().text()).not.toContain(old);
     await act(async () => {
       if (request) pending.resolve(response(ready(request)));
     });
-    await openSection("Content");
-    await userEvent.type(screen.getByLabelText("Title"), "Next autosave");
-    await screen.findByText("Saved");
+    await fill(screen.getByLabelText("Title"), "Next autosave");
+    await act(async () => {
+      await session().flush();
+    });
+    expect(screen.getByText("Saved")).not.toBeNull();
     expect(await saves().at(-1)?.clone().text()).not.toContain(old);
     await openSection("Outputs");
     expect(screen.queryByText("old.wav")).toBeNull();

@@ -72,7 +72,9 @@ export async function restoreSample(
       detail:
         "The sample project isn't part of this install, so it can't be restored. Update Slopify (npx @gentbajko/slopify@latest, or pull the latest Docker image) and try Restore sample again.",
     };
-  const current = sampleProjectId(deps.db);
+  // The recorded sample, even when it waits in Settings → Trash: its rows would stop the
+  // archive's copy (same ids) from coming in, so it is removed for good first.
+  const current = readSampleRecord(deps.db)?.projectId;
   if (current !== undefined) {
     const removed = deleteProject(
       {

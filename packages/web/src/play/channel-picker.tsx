@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { type ReactElement, useId } from "react";
+import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
 import { type CastMember, channelQuery, channelsQuery, defaultChannelId } from "@/channels/api";
 import { channelOfTemplate } from "@/channels/members-tabs";
-import { Label } from "@/components/ui/label";
-import { Picker } from "@/components/ui/picker";
+import { Field, Select } from "@/components/kit/field";
+import { Switch } from "@/components/kit/switch";
 import { templatesQuery } from "@/templates/api";
 import { usePlaySession } from "./draft-context";
 
@@ -35,8 +35,6 @@ export function ChannelPicker({ disabled = false }: { readonly disabled?: boolea
   const { api } = useApp();
   const session = usePlaySession();
   const channels = useQuery(channelsQuery(api));
-  const pickerId = useId();
-  const kitId = useId();
   const { document } = session;
   const current = useDraftChannelId();
   const channel = channels.data?.find((one) => one.id === current);
@@ -46,13 +44,9 @@ export function ChannelPicker({ disabled = false }: { readonly disabled?: boolea
     session.invalidateReview(true);
   };
   return (
-    <div className="mt-5 grid grid-cols-1 items-end gap-3 min-[700px]:grid-cols-[minmax(0,1fr)_auto]">
-      <div className="min-w-0 [&>span]:w-full">
-        <Label htmlFor={pickerId} className="mb-2">
-          Channel
-        </Label>
-        <Picker
-          id={pickerId}
+    <div className="grid grid-cols-1 items-end gap-3 min-[700px]:grid-cols-[minmax(0,1fr)_auto]">
+      <Field label="Channel">
+        <Select
           data-play-field="channelId"
           value={current}
           disabled={disabled}
@@ -65,26 +59,20 @@ export function ChannelPicker({ disabled = false }: { readonly disabled?: boolea
               {one.cast > 0 ? ` · ${String(one.cast)} in the cast` : ""}
             </option>
           ))}
-        </Picker>
-      </div>
-      <label htmlFor={kitId} className="flex min-h-8 items-center gap-2 text-small">
-        <input
-          id={kitId}
-          type="checkbox"
-          checked={useKit}
-          disabled={disabled}
-          onChange={(event) => {
-            const { useBrandKit: _kit, ...form } = document.form;
-            edit({
-              ...document,
-              form: event.target.checked ? form : { ...form, useBrandKit: false },
-            });
-          }}
-        />
-        Use the channel's brand kit
-      </label>
+        </Select>
+      </Field>
+      <Switch
+        label="Use the channel's brand kit"
+        checked={useKit}
+        disabled={disabled}
+        className="min-h-[38px]"
+        onChange={(checked) => {
+          const { useBrandKit: _kit, ...form } = document.form;
+          edit({ ...document, form: checked ? form : { ...form, useBrandKit: false } });
+        }}
+      />
       {channel ? (
-        <p className="text-small text-ink3 min-[700px]:col-span-2">
+        <p className="m-0 text-small text-ink-3 min-[700px]:col-span-2">
           <Link to="/channels/$channelId" params={{ channelId: channel.id }} className="underline">
             Edit {channel.name}
           </Link>

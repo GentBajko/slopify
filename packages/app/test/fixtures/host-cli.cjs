@@ -13,6 +13,32 @@ if (args.includes("--version")) {
   console.log(provider === "claude" ? "2.1.263" : provider === "codex" ? "0.149.1" : "0.61.0");
 } else if (args.includes("status")) {
   console.log(provider === "claude" ? '{"loggedIn":true}' : "Logged in using ChatGPT");
+} else if (provider === "codex" && args.includes("app-server")) {
+  // The plan windows the host reads around each Codex call: answer like the real app server.
+  let input = "";
+  process.stdin.setEncoding("utf8");
+  process.stdin.on("data", (text) => {
+    input += text;
+    let newline = input.indexOf("\n");
+    while (newline >= 0) {
+      const line = input.slice(0, newline).trim();
+      input = input.slice(newline + 1);
+      newline = input.indexOf("\n");
+      if (line === "") continue;
+      const message = JSON.parse(line);
+      if (message.id === 1) emit({ id: 1, result: {} });
+      else if (message.id === 2)
+        emit({
+          id: 2,
+          result: {
+            rateLimits: {
+              primary: { usedPercent: 12, windowDurationMins: 10080, resetsAt: 4102444800 },
+              secondary: null,
+            },
+          },
+        });
+    }
+  });
 } else if (provider === "claude" && args.includes("--input-format")) {
   let input = "";
   process.stdin.on("data", (bytes) => {

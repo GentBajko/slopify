@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+import { liveProject } from "../admission/repo.js";
 import type { Output, OutputMeta, StagedFile } from "./model.js";
 import { outputRoles, stagedFileStates, stageKinds } from "./model.js";
 import { metaSchema } from "./schema.js";
@@ -97,7 +98,9 @@ export function deleteStagedFile(db: DatabaseSync, id: string): void {
 }
 
 export function projectTitle(db: DatabaseSync, projectId: string): string | undefined {
-  const row = db.prepare("SELECT title FROM projects WHERE id = ?").get(projectId);
+  const row = db
+    .prepare(`SELECT title FROM projects WHERE id = ? AND ${liveProject()}`)
+    .get(projectId);
   if (row === undefined) {
     return undefined;
   }

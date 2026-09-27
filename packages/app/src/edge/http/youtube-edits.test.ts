@@ -159,6 +159,25 @@ describe("effectiveDescription", () => {
       tags: "rope, {{Discord}}",
     });
   });
+
+  it("fits hand-edited chapters to YouTube's rules and says what changed", async () => {
+    const { app, db } = harness();
+    const generated = {
+      description: "Summary.\n\n0:00 A\n0:20 B\n0:40 C\n\n#Rope",
+      tags: "rope",
+      durationSeconds: 90,
+    };
+    await send(app, "PUT", "/api/projects/p1/youtube-edits/fields/chapters", {
+      text: "0:03 A\n0:20 B\n0:26 Blink\n0:40 C",
+      base: "0:00 A\n0:20 B\n0:40 C",
+    });
+    expect(effectiveDescription(db, "p1", generated)).toEqual({
+      description: "Summary.\n\n0:00 A\n0:26 Blink\n0:40 C\n\n#Rope",
+      tags: "rope",
+      chapterNotice:
+        'Chapters adjusted for YouTube: moved the first, "A", from 0:03 to 0:00; merged "B" (6 s) into "A".',
+    });
+  });
 });
 
 describe("/api/settings/channel-links", () => {

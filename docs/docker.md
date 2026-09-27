@@ -107,6 +107,17 @@ step on every install and update.
   `POST /v1/image` (Codex images) and `POST /v1/open-folder` (only folders inside
   the Projects folder recorded in `install.json`, through `xdg-open`). Providers are
   `claude-code`, `codex` and `gemini`; request and response sizes are capped.
+- **Usage and plan limits.** Run cost and the plan-limit share work the same as
+  without Docker. The app sends `x-slopify-frames: 2` on `POST /v1/llm/:provider`;
+  only then does the helper add `cachedInputTokens` and `model` to the `done`
+  frame's `usage`, and `limits` (the plan windows: Claude's `rate_limit_event`,
+  Codex's `account/rateLimits/read` before and after the call). Without the header
+  (an older app) the frames keep their original shape, because that app
+  rejects fields it does not know. `POST /v1/image` puts the Codex image's tokens
+  and plan windows in an `x-slopify-image-report` header (base64url JSON), which an
+  older app ignores. Frames and the report are read leniently: an older helper's
+  frames read as "not reported", unknown fields are dropped. The health protocol
+  stays 1.
 - **Lifecycle.** Installs and updates pause its admissions and refuse to replace it
   while it runs a CLI. With the bridge off, compose mounts an empty folder and
   Settings shows the CLIs as unavailable.
@@ -139,6 +150,13 @@ running `up -d` again; that path has no automatic snapshot or rollback.
 
 Keep the localhost binding: anyone who reaches Slopify's port can control the app
 and its providers.
+
+## Starting at login
+
+The container restarts with Docker, so Slopify starts whenever Docker does. The installer asks
+"Start Slopify when you log in? (Y/n)" once (`--autostart` / `--no-autostart` skip it), reads
+whether Docker itself starts by itself (`systemctl is-enabled`, never changed) and records it for
+Settings → General. See [start-at-login.md](start-at-login.md#docker).
 
 ## Limits
 

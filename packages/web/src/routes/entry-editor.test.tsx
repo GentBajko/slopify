@@ -292,7 +292,11 @@ describe("an existing entry", () => {
 
     await user.click(screen.getByRole("button", { name: "Delete" }));
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("Projects that used it keep their text.")).not.toBeNull();
+    expect(
+      within(dialog).getByText(
+        "Moves it to the trash for 30 days (Settings → Trash). Projects that used it keep their text.",
+      ),
+    ).not.toBeNull();
     await user.click(within(dialog).getByRole("button", { name: "Delete intro" }));
 
     await waitFor(() => {

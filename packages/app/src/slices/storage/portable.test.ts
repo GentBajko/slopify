@@ -276,6 +276,33 @@ it("reports project folder usage alongside aggregate storage totals", () => {
         finished: false,
       },
     ]);
+    expect(storageUsage(h.deps).trash).toEqual({ projects: 0, bytes: 0 });
+  } finally {
+    h.close();
+  }
+});
+
+it("counts a trashed project's folder as trash, apart from the live projects", () => {
+  const h = draftFixture();
+  try {
+    const insert = h.deps.db.prepare("INSERT INTO projects VALUES (?, ?, '16:9', '{}', ?, ?)");
+    insert.run("live", "Live", "2026-09-12", "2026-09-12");
+    insert.run("gone", "Deleted", "2026-09-12", "2026-09-12");
+    h.deps.db
+      .prepare("INSERT INTO project_trash(project_id,deleted_at) VALUES('gone','2026-09-20')")
+      .run();
+    for (const [id, bytes] of [
+      ["live", 5],
+      ["gone", 11],
+    ] as const) {
+      mkdirSync(projectDir(h.deps.paths, id), { recursive: true });
+      writeFileSync(`${projectDir(h.deps.paths, id)}/video.mp4`, Buffer.alloc(bytes));
+    }
+    const usage = storageUsage(h.deps);
+    expect(usage.trash).toEqual({ projects: 1, bytes: 11 });
+    // The disk total still holds it until the trash removes it for good.
+    expect(usage.projects).toBe(16);
+    expect(usage.byProject.map((project) => project.id)).toEqual(["live"]);
   } finally {
     h.close();
   }
@@ -612,6 +639,7 @@ it("omits tutorial runtime state from exports and ignores it in older v1 imports
   try {
     writeSetting(source.deps.db, "appearance", JSON.stringify("dark"));
     writeSetting(source.deps.db, "tutorial.session", JSON.stringify({ projectId: "old-project" }));
+    writeSetting(source.deps.db, "whats-new.seen-major", "3");
     const exported = unzipSync(
       exportPortable({ ...source.deps, now: () => source.deps.clock.now().toISOString() }),
     );
@@ -748,5 +776,34 @@ it("refuses to export a manifest containing a library row that its readers rejec
     ).toThrow();
   } finally {
     source.close();
+  }
+});
+
+// Channels came after the last version that wrote a settings-only .zip, so the .zip never
+// carries them and importing one leaves the channels here alone (the full backup carries them).
+it("leaves channels out of the settings-only zip and untouched on import", () => {
+  const source = draftFixture();
+  const target = draftFixture();
+  try {
+    const insertChannel = (db: typeof source.deps.db, id: string, name: string) =>
+      db
+        .prepare(
+          "INSERT INTO channels(id,name,is_default,created_at,updated_at) VALUES (?,?,0,'t','t')",
+        )
+        .run(id, name);
+    insertChannel(source.deps.db, "c-source", "Only in the source");
+    insertChannel(target.deps.db, "c-target", "Already here");
+    const before = target.deps.db.prepare("SELECT * FROM channels ORDER BY id").all();
+    const archive = exportPortable({
+      ...source.deps,
+      now: () => source.deps.clock.now().toISOString(),
+    });
+    const manifest = JSON.parse(Buffer.from(unzipSync(archive)["manifest.json"] ?? []).toString());
+    expect(Object.keys(manifest)).not.toContain("channels");
+    importPortable({ ...target.deps, now: () => target.deps.clock.now().toISOString() }, archive);
+    expect(target.deps.db.prepare("SELECT * FROM channels ORDER BY id").all()).toEqual(before);
+  } finally {
+    source.close();
+    target.close();
   }
 });

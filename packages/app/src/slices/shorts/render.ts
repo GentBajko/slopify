@@ -165,6 +165,9 @@ export interface ShortRender {
   readonly zoomPercent: number;
   // On the clip's own timeline (`clipWords`).
   readonly words: readonly TimedWord[];
+  // False in a language timed by sentence, whose word times are estimates: the captions then
+  // show each group whole, with no word lit (`captions.ts`). Absent is true.
+  readonly wordByWord?: boolean | undefined;
   readonly font: { readonly path: string; readonly extension: string; readonly assName: string };
   // Drawn as a headline for the whole short when given.
   readonly title?: string | undefined;
@@ -202,6 +205,7 @@ export async function renderShort(run: ShortRender): Promise<void> {
       shortCaptionsAss(fasterWords(run.words, speed), {
         ...shortFrame,
         fontName: run.font.assName,
+        ...(run.wordByWord === false ? { wordByWord: false } : {}),
         ...(run.title === undefined ? {} : { title: { text: run.title, seconds } }),
       }),
       { mode: 0o600 },

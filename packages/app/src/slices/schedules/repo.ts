@@ -3,7 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
 import { derive } from "../../kernel/runner/graph.js";
-import { projectPaused, stagesOf } from "../admission/repo.js";
+import { projectExists, projectPaused, stagesOf } from "../admission/repo.js";
 import { readStartReceipt } from "../play-drafts/start-repo.js";
 import {
   type ScheduleRun,
@@ -412,7 +412,8 @@ export function settleTerminalScheduleRuns(db: DatabaseSync, settledAt: string):
 }
 
 function projectIsActive(db: DatabaseSync, projectId: string): boolean {
-  if (db.prepare("SELECT 1 FROM projects WHERE id=?").get(projectId) === undefined) return false;
+  // A project in the trash takes no part in a schedule's overlap: it cannot run there.
+  if (!projectExists(db, projectId)) return false;
   const state = derive(stagesOf(db, projectId), projectPaused(db, projectId));
   return state !== "done" && state !== "partial" && state !== "failed" && state !== "canceled";
 }
@@ -530,7 +531,7 @@ const runErrors: Readonly<Record<string, string>> = {
   "missing-template":
     "The template this schedule uses was deleted or changed. Edit the schedule and choose a template again.",
   "unsupported-media":
-    "This template uses audio, images, a thumbnail or shorts background music you supplied, which scheduled runs cannot use. Pick a template that generates these instead, or remove the music under Outputs → Export → More shorts options on Play and save the template again.",
+    "This template uses audio, images, a thumbnail, shorts background music or an ambient sound file you supplied, which scheduled runs cannot use. Pick a template that generates these instead, or on Play remove the music under Outputs → Export → More shorts options (or pick Rain, Fireplace or Wind under Outputs → Export → Ambient sound) and save the template again.",
   "spend-limit":
     "Not started: the estimated cost was above this schedule's spend limit, or some prices were unknown. Raise the spend limit or choose models with known prices.",
   readiness:

@@ -1,0 +1,195 @@
+import type { WhatsNewView } from "@app/slices/settings/whats-new.js";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { type ReactElement, useState } from "react";
+import type { Api } from "@/api";
+import { useApp } from "@/app-context";
+import { Button } from "@/components/kit/button";
+import { Drawer } from "@/components/kit/drawer";
+import { read } from "@/http";
+import { noticeQuery } from "@/queries";
+import { useTutorial } from "@/tutorial/context";
+
+// "What's new": a short tour on the first launch after a major update (never on a fresh
+// install; the server decides, see slices/settings/whats-new.ts). It is a non-modal drawer, so
+// "Open …" can take the person to the screen while the tour stays beside it. Closing it, from
+// any step, is what records it as seen for this install.
+
+export interface WhatsNewStep {
+  readonly id: string;
+  readonly title: string;
+  readonly body: string;
+  // Where "Open …" goes: a route, not an element, so a redesigned screen does not break it.
+  readonly to: string;
+  readonly search?: Readonly<Record<string, string>>;
+  readonly place: string;
+}
+
+// One tour per major version that has one. A major without an entry shows nothing.
+export const whatsNewTours: Readonly<Record<number, readonly WhatsNewStep[]>> = {
+  3: [
+    {
+      id: "home",
+      title: "Home",
+      body: "What is running and at which step, what is coming up, what needs you and what is ready to upload, on one screen.",
+      // Home's route; see the TODO in components/shell.tsx.
+      to: "/",
+      place: "Home",
+    },
+    {
+      id: "play",
+      title: "Play's one path",
+      body: "Pick a template, type the topic, press Start. Everything else stays folded away until it needs you.",
+      to: "/play",
+      place: "Play",
+    },
+    {
+      id: "reviews",
+      title: "Automatic reviews",
+      body: "A reviewer model checks the article, images, narration, thumbnail and shorts, and can send a failed item back to be made again. Turn it on in Play's Review step.",
+      to: "/play",
+      place: "Play",
+    },
+    {
+      id: "channels",
+      title: "Channels and cast",
+      body: "A channel keeps its brand kit, series brief, templates and schedules, and a cast of characters and places that look the same in every video.",
+      to: "/channels",
+      place: "Channels",
+    },
+    {
+      id: "calendar",
+      title: "The calendar",
+      body: "The coming weeks of uploads on one screen: what is ready, what needs you, and the topics still to come.",
+      to: "/calendar",
+      place: "Calendar",
+    },
+    {
+      id: "run-cost",
+      title: "What a run cost",
+      body: "Every project has a Run cost tab with the real cost per stage and model. Totals for all projects are in Settings, Usage.",
+      to: "/settings",
+      search: { section: "usage" },
+      place: "Usage",
+    },
+    {
+      id: "studio",
+      title: "YouTube Studio prep",
+      body: "Slopify never uploads. Prepare upload on a finished project lists everything Studio asks for, and the browser extension can fill it in for you.",
+      to: "/settings",
+      search: { section: "studio" },
+      place: "YouTube Studio settings",
+    },
+    {
+      id: "voices",
+      title: "Multiple voices",
+      body: "Audiobooks, podcasts, radio drama and interviews, with a voice per speaker. Pick the format under Audio, Speakers on Play.",
+      to: "/play",
+      place: "Play",
+    },
+    {
+      id: "languages",
+      title: "Other languages",
+      body: "A project can be made in another language: pick it on Play, and the article, narration and description are written in it.",
+      to: "/play",
+      place: "Play",
+    },
+  ],
+};
+
+export const whatsNewKey = ["whats-new"] as const;
+
+async function readWhatsNew(api: Api): Promise<WhatsNewView> {
+  return read<WhatsNewView>(await api.client["whats-new"].$get());
+}
+
+async function markWhatsNewSeen(api: Api): Promise<WhatsNewView> {
+  return read<WhatsNewView>(await api.client["whats-new"].seen.$post());
+}
+
+export function WhatsNewTour(): ReactElement | null {
+  const { api } = useApp();
+  const queryClient = useQueryClient();
+  const tutorial = useTutorial();
+  const notice = useQuery(noticeQuery(api));
+  // Asked only once the first-run notice is out of the way, so the two never stack.
+  const status = useQuery({
+    queryKey: whatsNewKey,
+    queryFn: () => readWhatsNew(api),
+    enabled: notice.data?.seen === true,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  const [at, setAt] = useState(0);
+  const dismiss = useMutation({
+    mutationFn: () => markWhatsNewSeen(api),
+    onSuccess: (body) => {
+      queryClient.setQueryData(whatsNewKey, body);
+    },
+  });
+
+  const major = status.data?.major;
+  const steps = major === undefined || major === null ? undefined : whatsNewTours[major];
+  // The interactive tutorial has the screen while it runs; the tour waits for it.
+  if (status.data?.show !== true || steps === undefined || tutorial?.active === true) return null;
+  const step = steps[Math.min(at, steps.length - 1)];
+  if (step === undefined) return null;
+  const index = steps.indexOf(step);
+  const last = index === steps.length - 1;
+  const close = () => {
+    dismiss.mutate();
+  };
+
+  return (
+    <Drawer
+      open
+      width="narrow"
+      title={`What's new in ${String(major)}.0`}
+      onClose={close}
+      footer={
+        <>
+          <Button variant="quiet" disabled={dismiss.isPending} onClick={close}>
+            Close tour
+          </Button>
+          <span className="flex-1" />
+          <Button
+            disabled={index === 0}
+            disabledReason="This is the first step"
+            onClick={() => {
+              setAt(index - 1);
+            }}
+          >
+            Back
+          </Button>
+          <Button
+            variant="primary"
+            disabled={dismiss.isPending}
+            onClick={() => {
+              if (last) close();
+              else setAt(index + 1);
+            }}
+          >
+            {last ? "Finish tour" : "Next"}
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <p className="m-0 text-label text-ink-3">{`${String(index + 1)} of ${String(steps.length)}`}</p>
+        <h3 className="m-0 text-title-3">{step.title}</h3>
+        <p className="m-0 text-ink-2">{step.body}</p>
+        <div>
+          <Button asChild>
+            <Link to={step.to} {...(step.search === undefined ? {} : { search: step.search })}>
+              {`Open ${step.place}`}
+            </Link>
+          </Button>
+        </div>
+        {dismiss.error === null ? null : (
+          <p role="alert" className="m-0 text-small text-danger">
+            {`Slopify could not save that you closed this tour: ${dismiss.error.message} Press Close tour to try again.`}
+          </p>
+        )}
+      </div>
+    </Drawer>
+  );
+}

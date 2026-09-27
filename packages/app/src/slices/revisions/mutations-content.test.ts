@@ -94,7 +94,7 @@ it.each(["deleted", "modified"] as const)(
   async (mode) => {
     const h = await fixture();
     h.deps.db.exec(
-      "INSERT INTO prompts VALUES ('lib','article','Original','Write {{topic}}','[\"topic\"]','old')",
+      "INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES ('lib','article','Original','Write {{topic}}','[\"topic\"]','old')",
     );
     const generated = {
       ...h.config,

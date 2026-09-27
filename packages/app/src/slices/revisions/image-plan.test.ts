@@ -262,6 +262,35 @@ describe("saving a revision with other image prompts", () => {
     );
   });
 
+  it("adds the images More images for long videos asks for, keeping every existing one", async () => {
+    const h = fixture();
+    const before = h.base.revision.content;
+    expect(before.imageOrder).toHaveLength(4);
+    // 9,000 words is an hour of narration: six images an hour asks for six, two more than the
+    // Numbers' four, handed to the prompts in order.
+    const saved = await saveRevision(h.deps, {
+      projectId: h.projectId,
+      baseRevisionId: h.base.revision.id,
+      idempotencyKey: "scale",
+      edit: {
+        config: { ...h.base.revision.config, imageScale: { perHour: 6, words: 9000 } },
+        content: before,
+      },
+    });
+    if (!saved.ok) throw new Error(JSON.stringify(saved));
+    const { content: after, fingerprints } = saved.view.revision;
+    expect(after.imageOrder).toHaveLength(6);
+    for (const key of before.imageOrder) {
+      expect(after.imageOrder).toContain(key);
+      expect(fingerprints[`image:${key}`]).toBe(h.base.revision.fingerprints[`image:${key}`]);
+    }
+    const added = after.imageOrder.filter((key) => !before.imageOrder.includes(key));
+    expect(added.map((key) => after.imageDefinitions[key]?.templateKey).sort()).toEqual([
+      "imagePrompts.0",
+      "imagePrompts.1",
+    ]);
+  });
+
   it("refuses a Number past the limit with the field to fix", async () => {
     const h = fixture();
     const saved = await saveRevision(h.deps, {

@@ -37,11 +37,24 @@ function atoms(
           "Slopify hit an internal error (a narration position is outside the article text). Try again; if it happens again, use Download diagnostics in Settings and report it.",
         );
       const text = String.fromCodePoint(point);
-      result.push({ text, spokenText: text });
+      // An empty span is a later word of a multi-word alias (its spoken form sits on the first
+      // word), so the whitespace in front of it would leave two spaces where one word was.
+      // It stays in the spoken (transcript) text, which the captions are aligned against.
+      result.push({ text: silencedBefore(source, at, spans) ? "" : text, spokenText: text });
       at += text.length;
     }
   }
   return result;
+}
+function silencedBefore(
+  source: string,
+  at: number,
+  spans: ReadonlyMap<number, PronunciationSpan>,
+): boolean {
+  if (!/\s/u.test(source[at] ?? "")) return false;
+  let next = at;
+  while (next < source.length && /\s/u.test(source[next] ?? "")) next += 1;
+  return spans.get(next)?.text === "";
 }
 function checkedSpans(source: string, pronunciation: readonly PronunciationSpan[]) {
   const spans = new Map<number, PronunciationSpan>();

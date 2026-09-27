@@ -1,4 +1,5 @@
 import { stageKinds } from "../../kernel/pipeline.js";
+import { languageInfo } from "../../kernel/ports/languages.js";
 import { type RunConfig, sourceOf } from "../admission/model.js";
 import { motionStyleLabels } from "../admission/rules.js";
 import { documentThemeLabel } from "../document/model.js";
@@ -11,6 +12,7 @@ import {
 import type { RevisionDeps, RevisionView } from "../revisions/model.js";
 import { getRevisionView } from "../revisions/view.js";
 import { musicVolumeOf, shortsSpeedOf } from "../shorts/model.js";
+import { ambientBedLabels } from "../video/ambient-bed.js";
 import { videoEditOf, videoEditRows } from "../video/edit-settings.js";
 import type { RebuildPreview } from "./model.js";
 import type { ResolvedWorkRecipe } from "./recipe-model.js";
@@ -174,6 +176,7 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
     add(`${name} model`, a?.model, b?.model);
     add(`${name} thinking`, a?.thinking, b?.thinking);
   }
+  add("Language", languageInfo(before.language).name, languageInfo(after.language).name);
   add("Narration voice", before.audio?.voice, after.audio?.voice);
   add("Narration Preparation", before.narrationPrompt, after.narrationPrompt);
   add("Narration chunking", before.chunking, after.chunking);
@@ -263,6 +266,7 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
   add("Short ranges set by hand", old.shortsRanges, next.shortsRanges);
   add("Silence gap (seconds)", before.silenceGapSeconds, after.silenceGapSeconds);
   add("Silence at start and end (seconds)", before.edgeSilenceSeconds, after.edgeSilenceSeconds);
+  add("Ambient sound", ambientBedLabel(before, old), ambientBedLabel(after, next));
   add("Seconds per image", before.imageSeconds, after.imageSeconds);
   add("Zoom (%)", before.zoomPercent, after.zoomPercent);
   add("Motion", motionStyleLabels[before.motionStyle], motionStyleLabels[after.motionStyle]);
@@ -311,6 +315,19 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
   }
   add("Manual captions", old.subtitleCues?.cues, next.subtitleCues?.cues);
   return changes;
+}
+
+// The ambient bed in one line; undefined without one, so a project that never had one lists
+// no change.
+function ambientBedLabel(
+  config: RunConfig,
+  content: RevisionView["revision"]["content"],
+): string | undefined {
+  const bed = config.ambientBed;
+  if (bed === undefined) return undefined;
+  const file =
+    bed.source === "upload" && content.ambientBed !== undefined ? " (uploaded file)" : "";
+  return `${ambientBedLabels[bed.source]}${file}, ${String(bed.levelDb)} dB, fade in ${String(bed.fadeInSeconds)} s, tail ${String(bed.tailSeconds)} s`;
 }
 
 function referenceLabel(config: Pick<RunConfig, "reference">): string {

@@ -12,6 +12,7 @@ import type { StageProviders } from "../../kernel/runner/providers.js";
 import type { AttemptResult, StageRunResult } from "../../kernel/runner/work.js";
 import type { ProviderChoice } from "../admission/model.js";
 import { projectById } from "../admission/repo.js";
+import { withEarlierEpisodes } from "../episodes/related.js";
 import { outputPath } from "../storage/layout.js";
 import { outputsOf } from "../storage/repo.js";
 import { storeText } from "../storage/staging.js";
@@ -59,7 +60,10 @@ export async function runArticle(
     );
   }
   const notes = researchNotes(deps, projectId);
-  const brief: ArticleBrief = { articlePrompt, ...(notes === undefined ? {} : { notes }) };
+  const brief: ArticleBrief = {
+    articlePrompt: withEarlierEpisodes(articlePrompt, project.config.earlierEpisodes),
+    ...(notes === undefined ? {} : { notes }),
+  };
 
   const result = await articleBody(deps, context, providers, choice, brief);
   if (!result.ok) return "held";

@@ -3,10 +3,13 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { PlusIcon } from "lucide-react";
 import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
+import { AiDisclosureSettingField } from "@/channels/ai-disclosure";
 import { channelQuery, channelsKey, deleteChannel } from "@/channels/api";
 import { BrandTab } from "@/channels/brand-tab";
 import { CastTab } from "@/channels/cast-tab";
+import { EpisodesTab } from "@/channels/episodes-tab";
 import { SchedulesTab, TemplatesTab } from "@/channels/members-tabs";
+import { VideosTab } from "@/channels/videos-tab";
 import { StatusSlot } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
@@ -14,13 +17,22 @@ import { ConfirmDialog } from "@/components/kit/dialog";
 import { PageHeader } from "@/components/kit/layout";
 import { TabPanel, Tabs } from "@/components/kit/tabs";
 
-export const channelTabs = ["brand", "cast", "templates", "schedules"] as const;
+export const channelTabs = [
+  "brand",
+  "cast",
+  "templates",
+  "schedules",
+  "episodes",
+  "videos",
+] as const;
 export type ChannelTab = (typeof channelTabs)[number];
 const labels: Readonly<Record<ChannelTab, string>> = {
   brand: "Brand",
   cast: "Cast",
   templates: "Templates",
   schedules: "Schedules",
+  episodes: "Episodes",
+  videos: "Existing videos",
 };
 
 export function channelTabOf(value: unknown): ChannelTab {
@@ -28,8 +40,9 @@ export function channelTabOf(value: unknown): ChannelTab {
 }
 
 // One channel: its brand kit and series brief, its cast, and the templates and schedules that
-// belong to it, as four tabs under the page header. The header carries the current tab's
-// primary action (Add to cast on Cast; the brand kit saves from its own action bar).
+// belong to it, its episode memory and its existing videos, as tabs under the page header.
+// The header carries the current tab's primary action (Add to cast on Cast; the brand kit
+// saves from its own action bar).
 export function ChannelRoute({
   channelId,
   tab,
@@ -118,6 +131,7 @@ export function ChannelRoute({
       {channel ? (
         <>
           <TabPanel idPrefix="channel" id="brand" active={tab === "brand"}>
+            <AiDisclosureSettingField channel={channel} />
             <BrandTab key={`${channel.id}:${String(channel.version)}`} channel={channel} />
           </TabPanel>
           <TabPanel idPrefix="channel" id="cast" active={tab === "cast"}>
@@ -133,6 +147,12 @@ export function ChannelRoute({
           </TabPanel>
           <TabPanel idPrefix="channel" id="schedules" active={tab === "schedules"}>
             {tab === "schedules" ? <SchedulesTab channelId={channel.id} /> : null}
+          </TabPanel>
+          <TabPanel idPrefix="channel" id="episodes" active={tab === "episodes"}>
+            {tab === "episodes" ? <EpisodesTab channelId={channel.id} /> : null}
+          </TabPanel>
+          <TabPanel idPrefix="channel" id="videos" active={tab === "videos"}>
+            {tab === "videos" ? <VideosTab channelId={channel.id} /> : null}
           </TabPanel>
         </>
       ) : null}

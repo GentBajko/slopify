@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { languageSchema } from "../../kernel/ports/languages.js";
 import { thinkingModes } from "../../kernel/ports/llm.js";
 import { castSnapshotSchema } from "../channels/schema.js";
 import { checkpointStageSchema } from "../checkpoints/schema.js";
@@ -7,6 +8,7 @@ import { narrationAliasesSchema } from "../narration/aliases-schema.js";
 import { chunkModes } from "../narration/chunk.js";
 import { reviewModes, reviewStages } from "../reviews/model.js";
 import { subtitleConfigSchema } from "../subtitles/model.js";
+import { ambientBedSchema } from "../video/ambient-bed-schema.js";
 import {
   animateModes,
   atmospheres,
@@ -108,6 +110,8 @@ export const runDraftSchema = z.object({
   articlePrompt: z.string().optional(),
   narrationPrompt: z.string().optional(),
   imagePrompts: z.array(z.object({ name: z.string(), number: z.number() })),
+  // The ranges are `slices/images/scale.ts`'s, checked by admission, not the schema's.
+  imageScale: z.object({ perHour: z.number(), words: z.number() }).optional(),
   thumbnailPrompt: z.string().optional(),
   thumbnailCount: z.union([z.literal(1), z.literal(3)]).optional(),
   intro: entryChoice.optional(),
@@ -122,6 +126,8 @@ export const runDraftSchema = z.object({
     reference: z.string().optional(),
     // The staged file of the shorts' background music; used only while Shorts is on.
     shortsMusic: z.string().optional(),
+    // The staged file of the ambient bed; used only while its source is "upload".
+    ambientBed: z.string().optional(),
   }),
   // Optional until Play carries the control; unknown keys are stripped by this schema, so
   // a mode not listed here would never reach the audio stage.
@@ -163,6 +169,10 @@ export const runDraftSchema = z.object({
   channelId: z.string().optional(),
   useBrandKit: z.literal(false).optional(),
   cast: castSnapshotSchema.optional(),
+  earlierEpisodes: z
+    .array(z.object({ title: z.string(), summary: z.string() }))
+    .readonly()
+    .optional(),
   titleStyle: z
     .object({
       fontId: z
@@ -189,6 +199,9 @@ export const runDraftSchema = z.object({
     .optional(),
   // The rules are `slices/voices/model.ts`'s, checked by admission, not the schema's.
   voices: voicesSettingsSchema.optional(),
+  ambientBed: ambientBedSchema.optional(),
+  // Absent is English (`kernel/ports/languages.ts`).
+  language: languageSchema.optional(),
 });
 
 export const runConfigSchema = runDraftSchema.extend({

@@ -30,7 +30,9 @@ const pack: UploadPack = {
       tags: ["fox", "cliff"],
       thumbnails: [file("thumbnail", "the-fox-thumbnail.png"), file("thumbnail-2", "t2.png")],
       audience: "not_made_for_kids",
+      alteredContent: { altered: true, why: "Yes because an AI voice narrates it." },
       playlist: "Fox tales",
+      chapterNotice: 'Chapters adjusted for YouTube: moved the first, "Intro", from 0:04 to 0:00.',
     },
     {
       kind: "short",
@@ -41,6 +43,7 @@ const pack: UploadPack = {
       tags: ["fox"],
       thumbnails: [],
       audience: "not_made_for_kids",
+      alteredContent: { altered: false, why: "This channel is set to Always No." },
       playlist: null,
     },
   ],
@@ -74,9 +77,13 @@ describe("Prepare upload", () => {
       "Thumbnail done",
       "Playlist done",
       "Audience done",
+      "Altered or synthetic content done",
       "Tags (under Show more) done",
     ]);
     expect(within(drawer).getByText("Fox tales")).not.toBeNull();
+    expect(within(drawer).getByText("Yes")).not.toBeNull();
+    expect(within(drawer).getByText("Yes because an AI voice narrates it.")).not.toBeNull();
+    expect(within(drawer).getByText(/moved the first, "Intro", from 0:04 to 0:00/)).not.toBeNull();
     // Each row carries its own small action: Copy for text, Download for files.
     expect(within(drawer).getByRole("button", { name: "Copy title" })).not.toBeNull();
     expect(
@@ -93,6 +100,9 @@ describe("Prepare upload", () => {
     expect(short.getAttribute("aria-pressed")).toBe("false");
     await user.click(short);
     expect(short.getAttribute("aria-pressed")).toBe("true");
+    // The short's own answer: its channel is set to Always No.
+    expect(within(drawer).getByText("No")).not.toBeNull();
+    expect(within(drawer).getByText("This channel is set to Always No.")).not.toBeNull();
     // A short has no thumbnail step.
     expect(
       within(drawer)

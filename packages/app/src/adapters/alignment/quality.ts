@@ -1,8 +1,15 @@
+import { englishSpec } from "./spec.js";
+
 // Compare acoustic recognition with the already aligned transcript. This catches extra
 // speech and missing phrases even when a few forced words individually score well.
-export function agreesWithSpeech(expected: string, observed: string, maximumError = 0.42): boolean {
-  const left = expected.toUpperCase().replace(/[^A-Z']/g, "");
-  const right = observed.toUpperCase().replace(/[^A-Z']/g, "");
+export function agreesWithSpeech(
+  expected: string,
+  observed: string,
+  maximumError = 0.42,
+  comparable: (text: string) => string = englishSpec.comparable,
+): boolean {
+  const left = comparable(expected);
+  const right = comparable(observed);
   if (left.length === 0 || right.length === 0) return false;
   let previous = Uint16Array.from({ length: right.length + 1 }, (_, index) => index);
   for (let row = 1; row <= left.length; row += 1) {

@@ -125,7 +125,11 @@ export function deleteTemplate(
         .get(parsed.data.id)
     )
       return { ok: false, reason: "referenced-by-schedule" };
-    deps.db.prepare("DELETE FROM project_templates WHERE id=?").run(parsed.data.id);
+    // Into the trash (Settings → Trash), not gone: `slices/trash` restores it or removes it
+    // for good. A schedule that is itself in the trash may still name it.
+    deps.db
+      .prepare("UPDATE project_templates SET deleted_at=? WHERE id=? AND deleted_at IS NULL")
+      .run(deps.clock.now().toISOString(), parsed.data.id);
     return { ok: true, value: { deleted: true } };
   });
 }

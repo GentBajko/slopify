@@ -9,6 +9,7 @@ import { ThumbnailCountPicker } from "@/play/thumbnail-count";
 import { promptsQuery } from "@/queries";
 import { CaptionEditor } from "./caption-editor.js";
 import { EditImagePrompts } from "./edit-image-prompts.js";
+import { EditImageScale } from "./edit-sound-and-scale.js";
 import { ImageEditor } from "./image-editor.js";
 import { NarrationEditor } from "./narration-editor.js";
 import { revisionFileUrl } from "./revision-api.js";
@@ -25,6 +26,8 @@ const timing = z.object({
         start: z.number().finite().nonnegative(),
         end: z.number().finite().positive(),
         confidence: z.number().optional(),
+        // Who says the word on a multi-voice run; the cue made from it keeps it.
+        speaker: z.string().min(1).optional(),
       }),
     )
     .min(1),
@@ -192,6 +195,13 @@ export function RevisionContentEditors({
           edit={edit}
           saved={view.revision.config.imagePrompts}
           prompts={prompts}
+          problem={(field) =>
+            fields.find((one) => one.field === field || one.field === `config.${field}`)?.message
+          }
+          onChange={emit}
+        />
+        <EditImageScale
+          edit={edit}
           problem={(field) =>
             fields.find((one) => one.field === field || one.field === `config.${field}`)?.message
           }

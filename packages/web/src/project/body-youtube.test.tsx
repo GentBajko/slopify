@@ -138,7 +138,9 @@ it("offers the new generated text beside an edit instead of overwriting it", asy
   let dropped = false;
   mount({
     edits: {
-      fields: { chapters: { base: "0:00 Old\n0:30 Older", text: "0:00 Mine\n0:20 Knots" } },
+      fields: {
+        chapters: { base: "0:00 Old\n0:30 Older", text: "0:00 Mine\n0:20 Knots\n0:40 End" },
+      },
       links: [],
     },
     extra: {
@@ -150,7 +152,7 @@ it("offers the new generated text beside an edit instead of overwriting it", asy
   });
   expect(await screen.findByText("New generated version available.")).not.toBeNull();
   expect(screen.getByRole("region", { name: "Chapters" }).textContent).toBe(
-    "0:00 Mine\n0:20 Knots",
+    "0:00 Mine\n0:20 Knots\n0:40 End",
   );
   await userEvent.click(screen.getByRole("button", { name: "View the chapters diff" }));
   expect(screen.getByRole("region", { name: "New generated" })).not.toBeNull();
@@ -161,6 +163,52 @@ it("offers the new generated text beside an edit instead of overwriting it", asy
       "0:00 Opening\n0:20 Knots\n0:40 Close",
     ),
   );
+});
+
+it("fits hand-edited chapters to YouTube's rules when shown and copied, and says what changed", async () => {
+  const writeText = vi.fn(async () => undefined);
+  vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+  const mine = "0:05 Opening\n0:20 Knots\n0:26 Blink\n0:40 Close";
+  mount({
+    edits: {
+      fields: { chapters: { base: "0:00 Opening\n0:20 Knots\n0:40 Close", text: mine } },
+      links: [],
+    },
+  });
+  await waitFor(() =>
+    expect(screen.getByRole("region", { name: "Chapters" }).textContent).toBe(
+      "0:00 Opening\n0:26 Blink\n0:40 Close",
+    ),
+  );
+  expect(
+    screen.getByText(
+      'Chapters adjusted for YouTube: moved the first, "Opening", from 0:05 to 0:00; merged "Knots" (6 s) into "Opening".',
+    ),
+  ).not.toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "Copy description" }));
+  expect(writeText).toHaveBeenLastCalledWith(
+    expect.stringContaining("\n\n0:00 Opening\n0:26 Blink\n0:40 Close\n\n"),
+  );
+  // Editing starts from the user's own text, not the fitted one.
+  await userEvent.click(screen.getByRole("button", { name: "Edit chapters" }));
+  expect((screen.getByRole("textbox", { name: "Chapters" }) as HTMLTextAreaElement).value).toBe(
+    mine,
+  );
+});
+
+it("leaves out a chapter list YouTube would ignore", async () => {
+  mount({
+    edits: {
+      fields: {
+        chapters: { base: "0:00 Opening\n0:20 Knots\n0:40 Close", text: "0:00 A\n0:30 B" },
+      },
+      links: [],
+    },
+  });
+  expect(await screen.findByText("Left out; see the note below.")).not.toBeNull();
+  expect(
+    screen.getByText(/left the chapter list out, since YouTube needs at least 3/u),
+  ).not.toBeNull();
 });
 
 it("keeps the block in place with Copy and Edit disabled until the step has written", () => {

@@ -3,7 +3,7 @@ import { isUniqueConstraint } from "../../kernel/db/index.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { ProviderId, Voice } from "./model.js";
 import { providerById } from "./model.js";
-import { deleteVoice, insertVoice, listVoices } from "./repo.js";
+import { deleteVoice, insertVoice, listVoices, updateVoiceLanguages } from "./repo.js";
 
 export interface VoicesDeps {
   readonly db: DatabaseSync;
@@ -14,6 +14,8 @@ export interface VoiceDraft {
   readonly provider: ProviderId;
   readonly name: string;
   readonly voiceId: string;
+  // Typed in Settings → Voices, or what the provider said (`edge/http/settings.ts`).
+  readonly languages?: readonly string[] | undefined;
 }
 
 export const voiceNameMax = 200;
@@ -25,7 +27,8 @@ export type AddVoiceReason =
   | "name-too-long"
   | "voice-id-too-long"
   | "not-a-tts-provider"
-  | "duplicate-voice-id";
+  | "duplicate-voice-id"
+  | "unknown-language";
 
 export type AddVoiceResult =
   | { readonly ok: true; readonly voice: Voice }
@@ -55,7 +58,15 @@ export function addVoice(deps: VoicesDeps, draft: VoiceDraft): AddVoiceResult {
     return { ok: false, reason: "voice-id-too-long" };
   }
 
-  const voice: Voice = { id: deps.ids.next(), provider: draft.provider, name, voiceId };
+  const languages = voiceLanguagesOf(draft.languages);
+  if (languages === null) return { ok: false, reason: "unknown-language" };
+  const voice: Voice = {
+    id: deps.ids.next(),
+    provider: draft.provider,
+    name,
+    voiceId,
+    ...(languages === undefined ? {} : { languages }),
+  };
   try {
     insertVoice(deps.db, voice);
   } catch (error) {
@@ -68,6 +79,29 @@ export function addVoice(deps: VoicesDeps, draft: VoiceDraft): AddVoiceResult {
     throw error;
   }
   return { ok: true, voice };
+}
+
+// Lower-case primary codes, each once; an empty list is unknown. Null when one is not a
+// language code at all.
+export function voiceLanguagesOf(
+  raw: readonly string[] | undefined,
+): readonly string[] | undefined | null {
+  if (raw === undefined) return undefined;
+  const codes = raw.map((one) => one.trim().toLowerCase()).filter((one) => one !== "");
+  if (codes.some((one) => !/^[a-z]{2,3}$/.test(one))) return null;
+  return codes.length === 0 ? undefined : [...new Set(codes)];
+}
+
+export function setVoiceLanguages(
+  deps: VoicesDeps,
+  id: string,
+  raw: readonly string[],
+): { readonly ok: true } | { readonly ok: false; readonly reason: "unknown-language" | "missing" } {
+  const languages = voiceLanguagesOf(raw);
+  if (languages === null) return { ok: false, reason: "unknown-language" };
+  return updateVoiceLanguages(deps.db, id, languages)
+    ? { ok: true }
+    : { ok: false, reason: "missing" };
 }
 
 export function removeVoice(deps: VoicesDeps, id: string): RemoveVoiceResult {

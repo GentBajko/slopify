@@ -35,6 +35,7 @@ import { keys } from "@/queries";
 import { TutorialProvider } from "@/tutorial/context";
 import { TutorialLauncher } from "@/tutorial/launcher";
 import { UpdateWidget } from "@/updates/widget";
+import { WhatsNewTour } from "@/whats-new/tour";
 
 // The 3.0 shell (docs/design-system.md, Layout): a 232px left rail with the wordmark, the
 // command palette button, the six destinations, the channel picker and the New video key; a
@@ -391,6 +392,7 @@ function ShellContent() {
 
       <AppearanceSkin />
       <FirstRunNotice />
+      <WhatsNewTour />
       <VersionPrompt
         reload={() => {
           window.location.reload();

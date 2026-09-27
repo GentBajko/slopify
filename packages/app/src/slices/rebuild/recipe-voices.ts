@@ -1,3 +1,4 @@
+import { applyAliases } from "../../kernel/ports/narration-aliases.js";
 import { splitText } from "../../kernel/ports/text.js";
 import type { FingerprintValue } from "../../kernel/runner/work.js";
 import { narrationAliasesOf } from "../admission/rules.js";
@@ -74,7 +75,13 @@ export function voiceBodyRecipes(
       "voices-transcript-v1",
       parsed.script.turns.map((turn) => [turn.speaker, turn.text]),
     ];
-    for (const group of groupTurns(parsed.script.turns, voices.speakers, voices.nativeDialogue)) {
+    const aliases = narrationAliasesOf(context.config);
+    for (const group of groupTurns(
+      parsed.script.turns,
+      voices.speakers,
+      voices.nativeDialogue,
+      (text) => applyAliases(text, aliases).length,
+    )) {
       const first = group.turns[0];
       const speaker = voices.speakers.find((one) => one.id === first?.speaker);
       if (first === undefined || speaker === undefined) continue;
@@ -148,7 +155,13 @@ function groupParts(
     ];
   if (native) {
     const byId = new Map(voices.speakers.map((one) => [one.id, one]));
-    const text = turns.map((turn) => turn.text).join("\n");
+    // Narration aliases reach every line of the one request, each turn on its own so an alias
+    // never joins the end of one turn to the start of the next. The clean turns stay the
+    // transcript, as they do for a voice that gets one request per turn.
+    const aliases = narrationAliasesOf(context.config);
+    const spoken = turns.map((turn) => applyAliases(turn.text, aliases));
+    const logicalText = turns.map((turn) => turn.text).join("\n");
+    const text = spoken.join("\n");
     return [
       recipe(
         context,
@@ -161,15 +174,16 @@ function groupParts(
           model: speaker.voice.model,
           voice: speaker.voice.voice,
           text,
+          ...(text === logicalText ? {} : { spokenText: logicalText }),
           logicalKey,
-          logicalText: text,
+          logicalText,
           segment: "body",
           pronunciation: null,
-          dialogue: turns.map((turn) => ({
+          dialogue: turns.map((turn, index) => ({
             speaker: turn.speaker,
             turn: turn.index,
             voice: byId.get(turn.speaker)?.voice.voice ?? "",
-            text: turn.text,
+            text: spoken[index] ?? turn.text,
           })),
         },
         script.dependsOn,
@@ -234,12 +248,9 @@ function speakerGlossary(
   speaker: Speaker,
   glossary: GlossaryResult | null,
 ): GlossaryResult {
-  const reads =
-    speaker.voice.provider === "inworld" &&
-    (speaker.voice.model === "inworld-tts-2" || speaker.voice.model === "inworld-tts-2-flash");
-  if (!reads) return { ok: true, entries: [] };
+  if (!readsIpa(speaker)) return { ok: true, entries: [] };
   const own = speaker.pronunciations?.trim()
-    ? parsePronunciationGlossary(speaker.pronunciations)
+    ? parsePronunciationGlossary(speaker.pronunciations, context.config.language)
     : { ok: true as const, entries: [] as readonly GlossaryEntry[] };
   if (!own.ok)
     return {
@@ -251,6 +262,13 @@ function speakerGlossary(
       ? glossary.entries
       : [];
   return { ok: true, entries: withSharedGlossary(own.entries, run) };
+}
+
+export function readsIpa(speaker: Speaker): boolean {
+  return (
+    speaker.voice.provider === "inworld" &&
+    (speaker.voice.model === "inworld-tts-2" || speaker.voice.model === "inworld-tts-2-flash")
+  );
 }
 
 function refused(

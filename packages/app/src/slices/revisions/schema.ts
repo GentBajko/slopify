@@ -2,6 +2,7 @@ import { z } from "zod";
 import { stageKinds } from "../../kernel/pipeline.js";
 import { pieceKinds, pieceStates } from "../../kernel/runner/piece-repo.js";
 import { runConfigSchema } from "../admission/schema.js";
+import { scaledImagesMax } from "../images/scale.js";
 import { outputSchema } from "../storage/schema.js";
 
 const id = z
@@ -17,6 +18,13 @@ const cue = z
     text: z.string().trim().min(1).max(10000),
     start: z.number().finite().nonnegative(),
     end: z.number().finite().positive(),
+    // The speaker's id on a multi-voice run (`voices/model.ts`); absent everywhere else.
+    speaker: z
+      .string()
+      .min(1)
+      .max(60)
+      .regex(/^[a-z0-9-]+$/)
+      .optional(),
   })
   .strict()
   .refine((value) => value.end > value.start, {
@@ -36,7 +44,8 @@ export const revisionContentSchema = z
         reference: id.optional(),
       })
       .strict(),
-    imageOrder: z.array(id).max(60),
+    // The most any project may hold; `rebuild/recipe-validation.ts` holds each to its own cap.
+    imageOrder: z.array(id).max(scaledImagesMax),
     imageDefinitions: z.record(
       id,
       z
@@ -96,6 +105,7 @@ export const revisionContentSchema = z
           .strict(),
       )
       .optional(),
+    ambientBed: id.optional(),
   })
   .strict();
 export const revisionEditSchema = z

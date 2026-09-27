@@ -245,7 +245,7 @@ export function EntryEditorRoute({
       <ConfirmDialog
         open={deleting}
         title={`Delete "${draft.name}"?`}
-        consequence="Projects that used it keep their text."
+        consequence="Moves it to the trash for 30 days (Settings → Trash). Projects that used it keep their text."
         confirmLabel={`Delete ${draft.category}`}
         pending={remove.isPending}
         onConfirm={() => {

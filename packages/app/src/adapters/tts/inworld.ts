@@ -7,6 +7,7 @@ import type { TtsPort, TtsRequest } from "../../kernel/ports/tts.js";
 import { httpFailure, missingKey, noAudio, unreadable, voiceFix } from "../explain.js";
 import { retryAfter } from "../retry-after.js";
 import { inworldAsync, streamFailure } from "./inworld-async.js";
+import { inworldLanguages, lookUp } from "./voice-languages.js";
 
 export const inworldModels: readonly ModelInfo[] = [
   { id: "inworld-tts-2", name: "Realtime TTS-2" },
@@ -26,6 +27,21 @@ export function inworldTts(deps: InworldDeps): TtsPort {
   return {
     id: "inworld",
     capabilities: { streams: true },
+    voiceLanguages: async (voiceId, signal) => {
+      const key = deps
+        .key()
+        ?.trim()
+        .replace(/^Basic\s+/i, "");
+      if (!key) return undefined;
+      return inworldLanguages(
+        await lookUp(
+          deps.fetch,
+          `https://api.inworld.ai/voices/v1/voices/${encodeURIComponent(voiceId)}`,
+          { Authorization: `Basic ${key}` },
+          signal,
+        ),
+      );
+    },
     models: async () => inworldModels,
     synthesize: async (request) => {
       const key = deps

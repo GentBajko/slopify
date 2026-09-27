@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { derive } from "../../kernel/runner/graph.js";
-import { projectPaused, stageStandingsByProject } from "../admission/repo.js";
+import { liveProject, projectPaused, stageStandingsByProject } from "../admission/repo.js";
 import { queueEntries } from "../batch/index.js";
 import { nextOccurrence } from "./calendar.js";
 import type { ScheduleDeps } from "./model.js";
@@ -139,7 +139,7 @@ function projectsIn(deps: Pick<ScheduleDeps, "db">, from: Date, to: Date): Calen
     .prepare(
       `SELECT projects.id,projects.title,projects.created_at,max(stages.finished_at) AS finished_at
        FROM projects LEFT JOIN stages ON stages.project_id=projects.id
-       WHERE projects.created_at<? GROUP BY projects.id ORDER BY projects.created_at,projects.id`,
+       WHERE projects.created_at<? AND ${liveProject()} GROUP BY projects.id ORDER BY projects.created_at,projects.id`,
     )
     .all(to.toISOString())
     .flatMap((row) => {
@@ -170,7 +170,7 @@ function queued(deps: Pick<ScheduleDeps, "db">): Calendar["queued"] {
     const row = deps.db
       .prepare(
         `SELECT projects.title, batches.created_at FROM projects, batches
-         WHERE projects.id=? AND batches.id=?`,
+         WHERE projects.id=? AND batches.id=? AND ${liveProject()}`,
       )
       .get(entry.projectId, entry.batchId);
     if (row === undefined) return [];

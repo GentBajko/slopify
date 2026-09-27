@@ -62,6 +62,21 @@ export const recipeInputSchema: z.ZodType<RecipeInput> = z.discriminatedUnion("k
       segment: z.enum(["body", "intro", "outro"]),
       pronunciation: z.null(),
       wholeRequest: z.boolean().optional(),
+      // A multi-voice run's turn requests; without them every such piece failed to store.
+      speaker: z.string().optional(),
+      turn: z.number().int().optional(),
+      dialogue: z
+        .array(
+          z
+            .object({
+              speaker: z.string(),
+              turn: z.number().int(),
+              voice: z.string(),
+              text: z.string(),
+            })
+            .strict(),
+        )
+        .optional(),
     })
     .strict(),
   z

@@ -3,6 +3,7 @@ import type { Project, RunDraft, Stage } from "../../slices/admission/model.js";
 import { stagesOf } from "../../slices/admission/repo.js";
 import { admit, type FieldError } from "../../slices/admission/rules.js";
 import { startRun } from "../../slices/admission/start.js";
+import { castVoicedRun } from "../../slices/channels/runs.js";
 import { resolveFont } from "../../slices/fonts/index.js";
 import { pickTemplates, renderPicked } from "../../slices/library/slots.js";
 import { stagedFiles } from "../../slices/storage/repo.js";
@@ -23,7 +24,9 @@ export type CreatedProject =
 // bodies are read now, the draft is admitted, the project and its first work are committed in
 // one transaction, and only then is the runner woken. "Make a 60-second short" starts its
 // project through the same door.
-export async function createProject(deps: AppDeps, draft: RunDraft): Promise<CreatedProject> {
+export async function createProject(deps: AppDeps, sent: RunDraft): Promise<CreatedProject> {
+  // Cast speakers take the cast's voices as they are now, as a run started from Play does.
+  const draft = castVoicedRun(deps.db, sent);
   if (draft.checkpoints?.length)
     return {
       ok: false,

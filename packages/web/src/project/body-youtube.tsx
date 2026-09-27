@@ -1,4 +1,5 @@
 import { tagsLength } from "@app/slices/youtube/answer.js";
+import { chapterNotice, fitChapters } from "@app/slices/youtube/chapters.js";
 import {
   composeDescription,
   type DescriptionField,
@@ -124,7 +125,18 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
   const resolved = resolveFields(generated, edits.data?.fields ?? {});
   const shown = shownFields(resolved);
   const links = mergeLinks(channelLinks.data ?? [], edits.data?.links ?? []);
-  const composed = composeDescription(shown);
+  // The chapters as YouTube will take them (`slices/youtube/chapters.ts`): shown and copied
+  // fitted, with a note saying what changed; the stored text and the user's edit stay as they
+  // are, so editing starts from what was written.
+  const video = roleOf(own, "video");
+  const fitted = fitChapters(
+    shown.chapters,
+    video?.durationMs === null || video?.durationMs === undefined
+      ? undefined
+      : video.durationMs / 1000,
+  );
+  const adjusted = chapterNotice(fitted.adjustments);
+  const composed = composeDescription({ ...shown, chapters: fitted.text });
   const filledDescription = fillPlaceholders(composed, links);
   const filledTags = fillPlaceholders(shown.tags, links);
   const unknown = [...filledDescription.unknown, ...filledTags.unknown].filter(
@@ -216,7 +228,14 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
             over={filledDescription.text.length > descriptionMaxCharacters}
           />
           {field("summary")}
-          {field("chapters")}
+          {field("chapters", () =>
+            fitted.text === "" ? (
+              <span className="text-ink-3">Left out; see the note below.</span>
+            ) : (
+              <Filled text={fitted.text} links={links} />
+            ),
+          )}
+          {adjusted === undefined ? null : <p className="text-small text-waiting">{adjusted}</p>}
           {field("hashtags")}
         </div>
         <div className="flex min-w-0 flex-col gap-3">

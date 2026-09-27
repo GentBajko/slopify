@@ -77,6 +77,8 @@ it("returns image bytes, never the host output path", async () => {
   const threadId = randomUUID();
   const imageDir = join(home, ".codex", "generated_images", threadId);
   const bytes = Buffer.from([0xff, 0xd8, 0xff, 0xd9]);
+  const limitReads: string[] = [];
+  const window = { kind: "five_hour" as const, usedPercent: 12, resetsAt: null };
   let directory = "";
   const run: RunCli = (_binary, _args, _signal, options) => {
     directory = options?.cwd ?? "";
@@ -103,6 +105,11 @@ it("returns image bytes, never the host output path", async () => {
     now: () => 0,
     resolve: async () => "/host/codex",
     login: async () => "signed-in",
+    // The plan windows are asked of the host's own Codex, as the app does without Docker.
+    readCodexLimits: async (binary) => {
+      limitReads.push(binary);
+      return [window];
+    },
   });
   expect(
     await ports.image.generate({
@@ -111,7 +118,8 @@ it("returns image bytes, never the host output path", async () => {
       aspect: "16:9",
       signal: AbortSignal.timeout(1000),
     }),
-  ).toEqual({ bytes, mime: "image/jpeg" });
+  ).toEqual({ bytes, mime: "image/jpeg", limits: { before: [window], after: [window] } });
+  expect(limitReads).toEqual(["/host/codex", "/host/codex"]);
   expect(existsSync(directory)).toBe(false);
   expect(existsSync(join(imageDir, "exec-test.png"))).toBe(true);
 });

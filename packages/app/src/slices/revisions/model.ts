@@ -21,6 +21,9 @@ export interface ManualCue {
   readonly text: string;
   readonly start: number;
   readonly end: number;
+  // Who says it on a multi-voice run: kept through edits of the text and timing, so the caption
+  // keeps its speaker's colour, name tag and speaker-panel light.
+  readonly speaker?: string | undefined;
 }
 export type NarrationOverride =
   | { readonly kind: "asset"; readonly assetId: string }
@@ -59,6 +62,9 @@ export interface RevisionContent {
   readonly shortsRanges?:
     | Readonly<Record<string, import("../shorts/clips.js").ShortRange>>
     | undefined;
+  // The ambient bed's own file (`config.ambientBed.source` "upload"): the project asset copied
+  // from Play's upload when the run started. Absent is none.
+  readonly ambientBed?: string | undefined;
 }
 export interface RevisionUpload {
   readonly stagedFileId: string;

@@ -32,6 +32,11 @@ interface MarkdownNode {
 const ipaAtom =
   "[ˈˌ]?[abdefghijklmnoprstuvwxzæðŋθɑɒɔəɚɛɜɝɡɪɹʃʊʌʒʔɫɾ][\\u0303\\u031a\\u0325\\u0329\\u032a\\u032c\\u032f\\u035c\\u0361ʰʲʷ]*[ːˑ]?";
 const ipaSymbols = new RegExp(`^(?:${ipaAtom})+(?:\\.(?:${ipaAtom})+)*$`, "u");
+// Another language's glossary needs that language's sounds: the full IPA consonant and vowel
+// charts (ç, ʁ, ø, y, ɲ, ʎ, x, β, …) and its diacritics, still never ARPAbet or tags.
+const worldAtom =
+  "[ˈˌ]?[a-zæçðøħŋœɐɑɒɓɔɕɖɗɘəɚɛɜɝɞɟɠɡɢɣɤɥɦɧɨɪɫɬɭɮɯɰɱɲɳɴɵɶɸɹɺɻɽɾʀʁʂʃʄʈʉʊʋʌʍʎʏʐʑʒʔʕʙʛʜʝʟʡʢβθχ][\\u0300-\\u036fʰʱʲʷʼˠˤ˞]*[ːˑ]?";
+const worldSymbols = new RegExp(`^(?:${worldAtom})+(?:\\.(?:${worldAtom})+)*$`, "u");
 
 function textOf(node: MarkdownNode): string {
   if (node.type === "break") return "\n";
@@ -68,7 +73,15 @@ function termIdentity(term: string): string {
     return match.test(folded) ? folded : match.test(lower) ? lower : character;
   }).join("");
 }
-export function parsePronunciationGlossary(markdown: string): GlossaryResult {
+// `language` is the project's (`kernel/ports/languages.ts`): absent or English accepts the
+// standard-English IPA Inworld asks for, as it always did; any other accepts full IPA.
+export function parsePronunciationGlossary(
+  markdown: string,
+  language?: string | undefined,
+): GlossaryResult {
+  const english = language === undefined || language === "en";
+  const symbols = english ? ipaSymbols : worldSymbols;
+  const kind = english ? "standard-English IPA" : "IPA";
   const rows = rowsOf(remark().use(remarkGfm).parse(markdown));
   const entries = new Map<string, GlossaryEntry>();
   const skipped: SkippedGlossaryRow[] = [];
@@ -92,15 +105,17 @@ export function parsePronunciationGlossary(markdown: string): GlossaryResult {
     }
     const notation = /^(\/[^/]+\/(?:\s+\/[^/]+\/)*)(?:\s+[^/]+)?$/u.exec(pronunciation);
     if (notation?.[1] === undefined) {
-      skip("use slash-delimited standard-English IPA");
+      skip(`use slash-delimited ${kind}`);
       continue;
     }
     const ipa = Array.from(notation[1].matchAll(/\/([^/]+)\//gu)).flatMap((match) =>
       (match[1] ?? "").trim().split(/\s+/u),
     );
-    if (ipa.length === 0 || ipa.some((word) => !ipaSymbols.test(word))) {
+    if (ipa.length === 0 || ipa.some((word) => !symbols.test(word))) {
       skip(
-        "use standard-English IPA only, not ARPAbet, delivery tags or non-English sounds; give a foreign name an English approximation",
+        english
+          ? "use standard-English IPA only, not ARPAbet, delivery tags or non-English sounds; give a foreign name an English approximation"
+          : "use IPA, not ARPAbet or delivery tags",
       );
       continue;
     }
@@ -129,6 +144,38 @@ export function skippedGlossaryNotice(skipped: readonly SkippedGlossaryRow[]): s
     `Pronunciation Glossary: ${skipped.length === 1 ? "1 entry is" : `${skipped.length} entries are`} ` +
     `skipped and read as ordinary text (${rows}). The rest of the glossary is used. ` +
     "To use them, fix those entries in the Pronunciation Glossary at the end of the article in Edit project → Article."
+  );
+}
+
+// A speaker's own pronunciations (Speakers → Pronunciations for …) are parsed the same way, and
+// their bad rows are skipped the same way, so the run review and the speakers editor both say
+// which ones: by speaker name and entry number, never the row's text.
+export interface SkippedSpeakerPronunciations {
+  readonly speaker: string;
+  readonly skipped: readonly SkippedGlossaryRow[];
+}
+export function skippedSpeakerPronunciations(
+  speakers: readonly { readonly name: string; readonly pronunciations?: string | undefined }[],
+  language?: string | undefined,
+): readonly SkippedSpeakerPronunciations[] {
+  return speakers.flatMap((speaker) => {
+    if (!speaker.pronunciations?.trim()) return [];
+    const parsed = parsePronunciationGlossary(speaker.pronunciations, language);
+    const skipped = parsed.ok ? (parsed.skipped ?? []) : [];
+    return skipped.length === 0 ? [] : [{ speaker: speaker.name.trim() || "A speaker", skipped }];
+  });
+}
+export function skippedSpeakerPronunciationsNotice(
+  rows: readonly SkippedSpeakerPronunciations[],
+): string | null {
+  if (rows.length === 0) return null;
+  const parts = rows.map(
+    (row) =>
+      `${row.speaker}: ${row.skipped.map((one) => `entry ${one.row}: ${one.reason}`).join("; ")}`,
+  );
+  return (
+    `Speaker pronunciations: some entries are skipped and read as ordinary text (${parts.join(". ")}). ` +
+    "The rest are used. To use them, fix those entries under Speakers → Pronunciations for that speaker (Play → Audio, or Edit project → Providers)."
   );
 }
 

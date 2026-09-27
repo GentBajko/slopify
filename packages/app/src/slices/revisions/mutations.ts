@@ -5,6 +5,7 @@ import type { FieldError } from "../admission/rules.js";
 import { rebrandedEdit } from "../channels/rebrand.js";
 import { projectChannelId, resolveChannelId, setProjectChannel } from "../channels/repo.js";
 import { carryCheckpointGates } from "../checkpoints/recovery.js";
+import { imageCountsOf, imageScaleProblem } from "../images/scale.js";
 import { promptByName } from "../library/repo.js";
 import { narrationRegenerationKey } from "../narration/plan.js";
 import { recipeInputSchema } from "../rebuild/recipe-input-schema.js";
@@ -14,6 +15,7 @@ import { projectStandings } from "../rebuild/runtime-store.js";
 import { discardPreparedAssets } from "../storage/assets.js";
 import { deleteStagedFile } from "../storage/repo.js";
 import { releaseStagedFile } from "../storage/staging-refs.js";
+import { ambientBedProblems } from "../video/ambient-bed.js";
 import { imagePromptFields, replanImagePrompts, sameImagePrompts } from "./image-plan.js";
 import type {
   ProjectRevision,
@@ -32,6 +34,7 @@ import {
   inspectCueAudio,
   measuredOutputs,
   validateProposedCues,
+  withCueSpeakers,
 } from "./mutation-cues.js";
 import { prepareEditAssets } from "./mutation-prepare.js";
 import { checkMutation, insertReceipt, requestHash, requiredView } from "./mutation-request.js";
@@ -89,6 +92,7 @@ export async function saveRevision(
     rebrandedEdit(deps.db, base.revision.config, replanned.edit),
   );
   const fields = [
+    ...settingProblems(edit),
     ...validateUploads(deps, edit),
     ...validateTemplateIntent(base, edit),
     ...validateNarrationIntent(base, edit),
@@ -104,7 +108,8 @@ export async function saveRevision(
       currentRevisionId: base.revision.id,
       fields: unavailable,
     };
-  const { edit: supplied, assets: prepared } = await prepareEditAssets(deps, base, edit);
+  const { edit: uploaded, assets: prepared } = await prepareEditAssets(deps, base, edit);
+  const supplied = withCueSpeakers(deps, base, uploaded);
   try {
     const durations = await inspectCueAudio(deps, base, supplied, prepared);
     const result = transact(deps.db, (): RevisionMutationResult => {
@@ -231,6 +236,29 @@ export async function saveRevision(
     );
   }
 }
+// Settings Edit project changes that admission checks at Play's Start: the ambient bed's
+// numbers and More images for long videos. Said where Edit project shows them.
+function settingProblems(edit: RevisionEdit): readonly FieldError[] {
+  const bed = edit.config.ambientBed;
+  const scale = edit.config.imageScale;
+  const scaleProblem = scale === undefined ? undefined : imageScaleProblem(scale);
+  return [
+    ...(bed === undefined
+      ? []
+      : ambientBedProblems(bed).map((problem) => ({
+          field: `ambientBed.${problem.field}`,
+          message: `${problem.message} Change it in Edit project → Inputs → Ambient sound.`,
+        }))),
+    ...(scaleProblem === undefined
+      ? []
+      : [
+          {
+            field: "imageScale",
+            message: `${scaleProblem} Change it in Edit project → Images → More images for long videos.`,
+          },
+        ]),
+  ];
+}
 // The image prompts or their Numbers changed: the image definitions are planned again from
 // them (`image-plan.ts`), keeping every image an unchanged prompt already has.
 function replannedImages(
@@ -240,8 +268,22 @@ function replannedImages(
 ):
   | { readonly ok: true; readonly edit: RevisionEdit }
   | { readonly ok: false; readonly fields: readonly FieldError[] } {
-  const from = base.revision.config.imagePrompts;
-  const to = edit.config.imagePrompts;
+  // Planned in the counts each prompt actually makes: its Number, plus its share of the extra
+  // images More images for long videos adds (`images/scale.ts`), as the run was adopted.
+  const effective = (config: RevisionEdit["config"]) => {
+    const counts = imageCountsOf(config);
+    return config.imagePrompts.map((prompt, index) => ({
+      ...prompt,
+      number: counts[index] ?? prompt.number,
+    }));
+  };
+  if (
+    edit.config.sources.images !== "generate" &&
+    sameImagePrompts(base.revision.config.imagePrompts, edit.config.imagePrompts)
+  )
+    return { ok: true, edit };
+  const from = effective(base.revision.config);
+  const to = effective(edit.config);
   if (sameImagePrompts(from, to)) return { ok: true, edit };
   if (edit.config.sources.images !== "generate")
     return {
@@ -254,7 +296,7 @@ function replannedImages(
         },
       ],
     };
-  const fields = imagePromptFields(to);
+  const fields = imagePromptFields(edit.config.imagePrompts);
   if (fields.length > 0) return { ok: false, fields };
   const plan = replanImagePrompts({
     from,

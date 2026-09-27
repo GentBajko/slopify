@@ -100,11 +100,13 @@ describe("prompt history", () => {
     expect(listVersions(library.db, "prompt", prompt.id)).toHaveLength(2);
   });
 
-  it("drops the versions with the prompt", () => {
+  // Delete moves the prompt to the trash; its History goes with it only when it is removed
+  // for good (slices/trash).
+  it("keeps the versions while the prompt is in the trash", () => {
     const library = deps();
     const prompt = saved(createPrompt(library, { kind: "article", name: "A", body: "x" }));
     removePrompt(library, prompt.id);
-    expect(listVersions(library.db, "prompt", prompt.id)).toEqual([]);
+    expect(listVersions(library.db, "prompt", prompt.id)).toHaveLength(1);
   });
 
   it("starts an imported prompt's history from its saved text", () => {
@@ -148,8 +150,9 @@ describe("intro and outro history", () => {
       mode: "text",
       restoredFrom: 1,
     });
+    // In the trash the versions stay, for Restore to bring back.
     removeEntry(library, entry.id);
-    expect(listVersions(library.db, "entry", entry.id)).toEqual([]);
+    expect(listVersions(library.db, "entry", entry.id)).toHaveLength(3);
   });
 });
 

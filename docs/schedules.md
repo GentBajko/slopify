@@ -50,7 +50,8 @@ Under **Edit → Topic generation** a schedule can ask an LLM for its next topic
 
 When the queue (plus held topics) drops below N, the next tick (every 15 s) starts one
 generation in the background. The prompt carries the brief and every title already known: the
-schedule's queued, held, rejected and used topics and every project's title. Suggestions are
+schedule's queued, held, rejected and used topics, every project's title, and the titles on
+its channel's **Existing videos** tab (see [Channels](channels.md)). Suggestions are
 ranked most view-worthy first and checked against those titles, dropping near-duplicates:
 
 - texts equal after normalising (accents dropped, lower case, punctuation to spaces, `&` as
@@ -58,7 +59,8 @@ ranked most view-worthy first and checked against those titles, dropping near-du
 - word sets overlapping by at least **0.6** (Jaccard, filler words and a plural "s" ignored), or
 - one's words all inside the other's and covering at least **half** of it ("Tiamat" and
   "Tiamat's Lair" are one video; "Red Dragons" and "Blue Dragons" are two), or
-- every word of the topic inside a project's title ("Vecna" and "D&D Lore: Vecna").
+- every word of the topic inside a project's or existing video's title ("Vecna" and "D&D
+  Lore: Vecna").
 
 Only one generation per schedule runs at a time (a lease on the schedule row, taken over after
 15 minutes if Slopify died mid-call). A failure is shown on the schedule with its reason and

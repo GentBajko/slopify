@@ -1,6 +1,7 @@
 import type { Catalogue } from "../../catalog/schema.js";
 import { fingerprint } from "../../kernel/runner/work.js";
 import { checkpointClosure, checkpointFingerprint } from "../checkpoints/fingerprint.js";
+import { imageCountsOf } from "../images/scale.js";
 import type { ResolvedPlayRun, ReviewedCheckpoint } from "../play-drafts/model.js";
 import type { ProjectRevision, RevisionContent } from "../revisions/model.js";
 import { buildRecipes } from "./recipe-build.js";
@@ -20,9 +21,10 @@ export function reviewCheckpointSet(
             id,
             { source: "provide", assetId: id, prompt: null, templateKey: null },
           ])
-        : config.imagePrompts.flatMap((prompt, index) =>
+        : // The count the run's first revision plans (`revisions/adopt-content.ts`).
+          imageCountsOf(config).flatMap((count, index) =>
             Array.from(
-              { length: prompt.number },
+              { length: count },
               (_, number): [string, RevisionContent["imageDefinitions"][string]] => [
                 `${index}:${number}`,
                 {

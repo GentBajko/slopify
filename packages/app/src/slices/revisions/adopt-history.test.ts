@@ -3,7 +3,7 @@ import { dirname } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { insertPiece } from "../../kernel/runner/piece-repo.js";
 import { projectById, updateProjectConfig } from "../admission/repo.js";
-import { deletePrompt, insertPrompt, replacePrompt } from "../library/repo.js";
+import { insertPrompt, replacePrompt, trashPrompt } from "../library/repo.js";
 import { outputPath } from "../storage/layout.js";
 import type { Output } from "../storage/model.js";
 import { insertOutput } from "../storage/repo.js";
@@ -159,7 +159,7 @@ it.each(["missing", "changed"])(
     };
     insertPrompt(h.deps.db, prompt);
     if (state === "changed") replacePrompt(h.deps.db, { ...prompt, body: "Different {template}" });
-    else deletePrompt(h.deps.db, prompt.id);
+    else trashPrompt(h.deps.db, prompt.id, h.deps.clock.now().toISOString());
     const result = await ensureBaseline(h.deps, h.projectId);
     if (!result.ok) throw new Error("Expected baseline.");
     expect(result.view.revision.config.rendered).toEqual(config.rendered);

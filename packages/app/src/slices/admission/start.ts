@@ -4,6 +4,7 @@ import { stageKinds } from "../../kernel/pipeline.js";
 import { storeArticleText } from "../article/store.js";
 import { resolveChannelId, setProjectChannel } from "../channels/repo.js";
 import { defaultDocumentTheme } from "../document/model.js";
+import { earlierEpisodesFor } from "../episodes/related.js";
 import { listNarrationAliases } from "../narration/aliases-library.js";
 import { collectSharedGlossary } from "../narration/shared-glossary.js";
 import { admitInitialRevision } from "../rebuild/runtime-admission.js";
@@ -14,6 +15,7 @@ import { prepareStagedFile } from "../storage/prepare.js";
 import type { StorageDeps } from "../storage/staging.js";
 import { attachStagedFile, storeText } from "../storage/staging.js";
 import { releaseStagedFile } from "../storage/staging-refs.js";
+import { usesAmbientBed } from "../video/ambient-bed.js";
 import {
   type Project,
   type RunConfig,
@@ -63,8 +65,12 @@ export function startRun(
   // The title may name keywords too ("D&D Lore: {{Topic}}"), filled like a prompt's, so a
   // template or Play keeps the pattern and each project gets its own title.
   const title = render(draft.title, draft.values).trim() || draft.title;
+  // The channel's related earlier episodes as they are now (`slices/episodes`): later edits
+  // there never change this project. A draft never brings its own.
+  const { earlierEpisodes: _carried, ...fresh } = draft;
+  const earlier = earlierEpisodesFor(deps.db, draft, title);
   const config: RunConfig = {
-    ...draft,
+    ...fresh,
     title,
     // A new project always names its document theme: a config without one reads as the
     // DiceMaster of older projects (see documentThemeOf), which no new project should get.
@@ -74,6 +80,7 @@ export function startRun(
     rendered,
     ...(shared.length === 0 ? {} : { sharedGlossary: shared }),
     ...(aliases.length === 0 ? {} : { narrationAliases: aliases }),
+    ...(earlier === undefined ? {} : { earlierEpisodes: earlier }),
   };
   const project: Project = {
     id,
@@ -105,6 +112,7 @@ export function startRun(
   // as the form left them and the same Play can simply be pressed again.
   const moved: string[] = [];
   let music: PreparedAsset | undefined;
+  let bed: PreparedAsset | undefined;
   try {
     transact(deps.db, () => {
       insertProject(deps.db, project);
@@ -114,15 +122,15 @@ export function startRun(
       }
       attachProvided(deps, id, draft, moved, retainStaged);
       music = attachShortsMusic(deps, id, draft, moved);
+      bed = attachAmbientBed(deps, id, draft, moved);
       // The music is named by the first revision, as Edit project → Shorts names it, so the
       // project gets its revision now even where it would otherwise wait for its first view.
-      if (deps.catalogue !== undefined || music !== undefined) {
-        const baseline = adoptBaseline(
-          deps,
-          id,
-          templates,
-          music === undefined ? {} : { shortsMusic: music.id },
-        );
+      // The ambient bed's own file is named the same way.
+      if (deps.catalogue !== undefined || music !== undefined || bed !== undefined) {
+        const baseline = adoptBaseline(deps, id, templates, {
+          ...(music === undefined ? {} : { shortsMusic: music.id }),
+          ...(bed === undefined ? {} : { ambientBed: bed.id }),
+        });
         if (!baseline.ok) throw new Error("The new project has no revision.");
         if (deps.catalogue !== undefined)
           admitInitialRevision(deps, baseline.view, deps.catalogue.read());
@@ -130,7 +138,8 @@ export function startRun(
     });
   } catch (error) {
     // The copy was written outside the transaction; nothing names it once it rolled back.
-    if (music !== undefined) discardPreparedAssets(deps, [music]);
+    const written = [music, bed].flatMap((asset) => (asset === undefined ? [] : [asset]));
+    if (written.length > 0) discardPreparedAssets(deps, written);
     throw error;
   }
   for (const source of retainStaged ? [] : moved) {
@@ -193,6 +202,26 @@ function attachShortsMusic(
   if (!result.ok)
     // admit() already refused a missing or still-copying file, as for the stages' own files.
     throw new Error(`the shorts' background music could not be attached: ${result.reason}`);
+  insertAsset(deps.db, result.asset);
+  collected.push(stagedFileId);
+  return result.asset;
+}
+
+// The ambient bed's own file, copied into the project as an asset of its own like the shorts'
+// music. Only while the long video gets the bed and its source is "upload".
+function attachAmbientBed(
+  deps: StorageDeps,
+  projectId: string,
+  draft: RunDraft,
+  collected: string[],
+): PreparedAsset | undefined {
+  const stagedFileId = draft.provided.ambientBed;
+  if (draft.ambientBed?.source !== "upload" || !usesAmbientBed(draft) || stagedFileId === undefined)
+    return undefined;
+  const result = prepareStagedFile(deps, { projectId, stagedFileId, role: "audio_body" });
+  if (!result.ok)
+    // admit() already refused a missing or still-copying file, as for the stages' own files.
+    throw new Error(`the ambient sound's audio file could not be attached: ${result.reason}`);
   insertAsset(deps.db, result.asset);
   collected.push(stagedFileId);
   return result.asset;

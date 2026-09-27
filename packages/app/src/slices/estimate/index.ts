@@ -11,6 +11,7 @@ import {
 } from "../admission/rules.js";
 import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
+import { narrationMinutes, plannedImageCount, scalesImages } from "../images/scale.js";
 import { chunkNarration, defaultChunking } from "../narration/chunk.js";
 import { normalizeNarrationText } from "../narration/plan.js";
 import { preparationMessages } from "../narration/preparation.js";
@@ -181,7 +182,7 @@ export function estimateRun(
         for (const source of known)
           text(
             "Narration Preparation",
-            preparationMessages(rendered.narration ?? "", source).reduce(
+            preparationMessages(rendered.narration ?? "", source, [], draft.language).reduce(
               (n, message) => n + message.content.length,
               0,
             ),
@@ -235,7 +236,8 @@ export function estimateRun(
   } else local("Narration", "Provided or off; no generation charge.");
   const images =
     draft.sources.images === "generate"
-      ? draft.imagePrompts.reduce((n, prompt) => n + prompt.number, 0)
+      ? // Each prompt's Number, or more for a long video (`images/scale.ts`).
+        plannedImageCount(draft)
       : 0;
   z.number().int().nonnegative().parse(images);
   for (let index = 0; index < images; index++)
@@ -244,7 +246,9 @@ export function estimateRun(
       stage: "Images",
       provider: image.provider,
       model: image.model,
-      detail: `${images} images. ${imageNote}`,
+      detail: scalesImages(draft)
+        ? `${images} images for about ${String(Math.round(narrationMinutes(draft.imageScale.words)))} minutes of narration (${draft.imageScale.words.toLocaleString()} words). ${imageNote}`
+        : `${images} images. ${imageNote}`,
     });
   if (images === 0) local("Images", "Provided or off.");
   // The establishing image is one more image when it is made from a prompt.

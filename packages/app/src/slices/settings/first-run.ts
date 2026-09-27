@@ -12,7 +12,8 @@ export const providerDefaultsSchema = z
   .object({ llm: choiceSchema.optional(), images: choiceSchema.optional() })
   .strict();
 export type ProviderDefaults = z.infer<typeof providerDefaultsSchema>;
-const defaultsKey = "provider.defaults";
+export const providerDefaultsKey = "provider.defaults";
+const defaultsKey = providerDefaultsKey;
 const doneKey = "first-run.done";
 
 export interface DetectedCli {

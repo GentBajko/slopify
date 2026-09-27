@@ -3,11 +3,14 @@ import { readFileSync, statSync } from "node:fs";
 import { z } from "zod";
 import type { CatalogueStore } from "../../catalog/store.js";
 import { modelFields } from "../../catalog/validate.js";
-import type { RunDraft } from "../admission/model.js";
 import { admit, type FieldError } from "../admission/rules.js";
-import type { CastMember } from "../channels/model.js";
-import { castOfChannel } from "../channels/repo.js";
-import { brandedForm, brandedRun, castSnapshot, draftChannel } from "../channels/runs.js";
+import {
+  brandedForm,
+  brandedRun,
+  castSnapshot,
+  castVoicedRun,
+  draftChannel,
+} from "../channels/runs.js";
 import { estimateRun } from "../estimate/index.js";
 import type { ResolvedFont } from "../fonts/model.js";
 import { listEntries } from "../library/repo.js";
@@ -15,7 +18,6 @@ import { pickTemplates, renderPicked } from "../library/slots.js";
 import { reviewCheckpointSet } from "../rebuild/recipe-checkpoints.js";
 import { readSettings } from "../settings/playback.js";
 import { stagedFiles } from "../storage/repo.js";
-import { withCastVoices } from "../voices/cast.js";
 import { toAdmissionDraft } from "./convert.js";
 import type {
   DraftResult,
@@ -93,9 +95,9 @@ export function resolveReviewInputs(
   const converted = branded.ok
     ? ({
         ok: true,
-        draft: castVoiced(
+        draft: castVoicedRun(
+          deps.db,
           brandedRun(branded.draft, channel, castSnapshot(deps.db, channel.id), useBrandKit),
-          castOfChannel(deps.db, channel.id),
         ),
       } as const)
     : branded;
@@ -162,6 +164,7 @@ export function resolveReviewInputs(
       run.draft.provided.reference,
       ...(run.draft.provided.images ?? []),
       run.draft.provided.shortsMusic,
+      run.draft.provided.ambientBed,
     ]),
   );
   const attachmentIdentity = fresh.value.attachments.flatMap((file) =>
@@ -204,11 +207,4 @@ export function resolveReviewInputs(
     ...(checkpointSet.length ? { checkpointSet } : {}),
   };
   return { ok: true, value: { ...resolved, fingerprint: requestHash({ ...resolved, fontHash }) } };
-}
-
-// Speakers picked from the cast speak with the cast's voices as they are when the run starts.
-function castVoiced(draft: RunDraft, members: readonly CastMember[]): RunDraft {
-  return draft.voices === undefined
-    ? draft
-    : { ...draft, voices: withCastVoices(draft.voices, members) };
 }

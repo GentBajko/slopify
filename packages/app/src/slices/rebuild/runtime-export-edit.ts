@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { RunConfig } from "../admission/model.js";
 import { usesYoutubeDescription } from "../admission/rules.js";
+import { captionFont, captionFontDeps } from "../fonts/coverage.js";
 import { resolveFont } from "../fonts/index.js";
 import type { RevisionView } from "../revisions/model.js";
 import { outputPath } from "../storage/layout.js";
@@ -139,10 +140,12 @@ async function titleFont(
   readonly font: { readonly path: string; readonly name: string };
   readonly color?: string;
 }> {
-  const font = await resolveFont(
-    deps.paths,
-    config.titleStyle?.fontId ?? config.subtitles?.fontId ?? "default",
-  );
+  const fontId = config.titleStyle?.fontId ?? config.subtitles?.fontId ?? "default";
+  // Chapter titles are in the project language too, so they need its letters.
+  const font =
+    config.language === undefined || config.language === "en"
+      ? await resolveFont(deps.paths, fontId)
+      : await captionFont(captionFontDeps(deps.paths), fontId, config.language);
   return {
     font: { path: font.path, name: font.assName },
     ...(config.titleStyle?.color === undefined ? {} : { color: config.titleStyle.color }),

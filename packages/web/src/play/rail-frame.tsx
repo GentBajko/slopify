@@ -33,17 +33,24 @@ export interface RailProps {
     readonly uploadSubtitleFont: (file: File) => Promise<void>;
   };
   readonly onSubtitleUpload?: (pending: boolean) => void;
+  // False when the rail is the setup row itself, which already names the stage.
+  readonly titled?: boolean | undefined;
 }
 
+// One stage inside a setup row's editor. A stage that is the row itself (Article under
+// Article, Audio under Narration) is untitled: the row already names it, so the source switch
+// sits under a plain Source label instead of a second heading.
 export function StageRail({
   kind,
   name,
   dim,
+  titled = true,
   children,
 }: {
   readonly kind: StageKind;
   readonly name: string;
   readonly dim: boolean;
+  readonly titled?: boolean | undefined;
   readonly children: ReactNode;
 }) {
   return (
@@ -51,8 +58,14 @@ export function StageRail({
       data-tour={`play-${kind}`}
       className="grid grid-cols-[24px_1fr_auto] items-center gap-x-2 gap-y-4 border-b border-line py-4 [&>div:empty]:hidden"
     >
-      <StageGlyph kind={kind} className={dim ? "text-ink3" : "text-ink2"} />
-      <h3 className={cn("text-row font-semibold", dim ? "text-ink3" : undefined)}>{name}</h3>
+      {titled ? (
+        <>
+          <StageGlyph kind={kind} className={dim ? "text-ink-3" : "text-ink-2"} />
+          <h3 className={cn("m-0 text-title-3", dim ? "text-ink-3" : undefined)}>{name}</h3>
+        </>
+      ) : (
+        <span className="sl-field__label col-span-2">Source</span>
+      )}
       {children}
     </section>
   );

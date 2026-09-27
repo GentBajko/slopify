@@ -7,8 +7,10 @@ import { castMemberById } from "./repo.js";
 import { castGenerateSchema } from "./schema.js";
 
 // Makes one picture from a prompt, with the provider's own retries; `main.ts` builds it from
-// the image registry. A cast picture belongs to no project, so no stage records its attempts.
+// the image registry. A cast picture belongs to no project, so no stage records its attempts;
+// its cost lands on Home's run cost against the member's channel.
 export type CastImageGenerator = (request: {
+  readonly channelId: string;
   readonly provider: string;
   readonly model: string;
   readonly prompt: string;
@@ -71,7 +73,11 @@ export function generateCastImage(
       "INSERT INTO cast_images(id,member_id,source,prompt,state,error,sha256,created_at) VALUES (?,?,'generate',?,'generating',NULL,NULL,?)",
     )
     .run(id, memberId, parsed.data.prompt, deps.clock.now().toISOString());
-  void generate({ ...parsed.data, aspect: aspectOf(room.value) }).then(
+  void generate({
+    ...parsed.data,
+    channelId: room.value.channelId,
+    aspect: aspectOf(room.value.kind),
+  }).then(
     (image) => {
       const mime = sniffImage(image.bytes);
       if (mime === undefined || image.bytes.byteLength > castImageMaxBytes) {
@@ -124,7 +130,10 @@ export function settleInterruptedCastImages(deps: Pick<ChannelDeps, "db">): numb
   return Number(changed.changes);
 }
 
-function roomFor(deps: Pick<ChannelDeps, "db">, memberId: string): ChannelResult<CastKind> {
+function roomFor(
+  deps: Pick<ChannelDeps, "db">,
+  memberId: string,
+): ChannelResult<{ readonly kind: CastKind; readonly channelId: string }> {
   const member = castMemberById(deps.db, memberId);
   if (member === undefined) return { ok: false, reason: "not-found" };
   if (member.images.filter((image) => image.state !== "failed").length >= castImagesPerMember)
@@ -133,7 +142,7 @@ function roomFor(deps: Pick<ChannelDeps, "db">, memberId: string): ChannelResult
       reason: "too-many-images",
       message: `${member.name} already has ${String(castImagesPerMember)} pictures. Delete one before adding another.`,
     };
-  return { ok: true, value: member.kind };
+  return { ok: true, value: { kind: member.kind, channelId: member.channelId } };
 }
 
 function aspectOf(kind: CastKind): Format {

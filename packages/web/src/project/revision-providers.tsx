@@ -4,6 +4,7 @@ import {
 } from "@app/slices/admission/rules.js";
 import type { RevisionEdit } from "@app/slices/revisions/model.js";
 import { usesVoices } from "@app/slices/voices/model.js";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   type ProviderStatus,
@@ -12,6 +13,7 @@ import {
   type Voice,
 } from "@/api";
 import { useApp } from "@/app-context";
+import { channelQuery, defaultChannelId } from "@/channels/api";
 import { Button } from "@/components/kit/button";
 import { ChunkingControl } from "@/play/chunking";
 import { NarrationAliasesToggle } from "@/play/narration-aliases";
@@ -158,6 +160,8 @@ export function RevisionProviders({
   const audio = config.audio ?? { provider: "", model: "", voice: "" };
   const shared = useSharedGlossary(projectId, edit, onChange);
   const aliases = useAliases(edit, onChange);
+  const { api } = useApp();
+  const cast = useQuery(channelQuery(api, config.channelId ?? defaultChannelId));
   const images = config.images ?? { provider: "", model: "" };
   const textNeeded =
     usesNarrationPreparation(config) ||
@@ -262,6 +266,10 @@ export function RevisionProviders({
             <h3 className="mb-2 text-small font-semibold">Speakers</h3>
             <SpeakersEditor
               value={config.voices}
+              // The project's channel's cast, for "Add from the cast", and its language, which
+              // filters each speaker's voices.
+              cast={cast.data?.cast ?? []}
+              language={config.language}
               providers={providers}
               voices={voices}
               script={edit.content.articleMarkdown ?? undefined}

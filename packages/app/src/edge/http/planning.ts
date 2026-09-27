@@ -5,6 +5,7 @@ import { modelFields } from "../../catalog/validate.js";
 import { runDraftSchema } from "../../slices/admission/repo.js";
 import { admit } from "../../slices/admission/rules.js";
 import { batchExists, enqueueBatch, pumpQueue, queueEntries } from "../../slices/batch/index.js";
+import { castVoicedRun } from "../../slices/channels/runs.js";
 import { estimateRun } from "../../slices/estimate/index.js";
 import { resolveFont } from "../../slices/fonts/index.js";
 import { pickTemplates, renderPicked } from "../../slices/library/slots.js";
@@ -36,8 +37,9 @@ export function planningRoutes(deps: AppDeps) {
       title: item.title,
       values: { ...input.draft.values, ...item.values },
     })) ?? [input.draft];
-    return drafts.map((draft, index) => {
-      const picked = pickTemplates(deps.db, draft);
+    return drafts.map((sent, index) => {
+      // Cast speakers take the cast's voices as they are now, as a run started from Play does.
+      const picked = pickTemplates(deps.db, castVoicedRun(deps.db, sent));
       const admitted = admit({
         draft: picked.draft,
         staged: stagedFiles(deps.db),

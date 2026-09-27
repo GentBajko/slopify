@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { withLanguage } from "../../kernel/ports/languages.js";
 import type { Message } from "../../kernel/ports/llm.js";
 import { documentIndex, type LlmDocument } from "../../kernel/ports/llm-documents.js";
 import { type FingerprintValue, fingerprint } from "../../kernel/runner/work.js";
@@ -8,6 +9,7 @@ import { articleMessages, continuationMessages } from "../article/continuation.j
 import { plainText } from "../article/plain.js";
 import { segmentMessages } from "../article/segments.js";
 import { splitEndMatter } from "../article/split.js";
+import { withEarlierEpisodes } from "../episodes/related.js";
 import { type GlossaryResult, parsePronunciationGlossary } from "../narration/pronunciation.js";
 import { withSharedGlossary } from "../narration/shared-glossary.js";
 import { researchDocuments } from "../research/documents.js";
@@ -171,13 +173,19 @@ export function textRecipes(context: RecipeContext): TextRecipes {
   const writesScript = voices?.source === "script";
   const articleNotes = documents.length ? documentIndex(documents) : (notes ?? undefined);
   // A script run writes speaker turns in place of the article, from the same prompt and notes.
-  const messages =
+  // The related earlier episodes go under the prompt only when the run carries them, so a
+  // project made without them keeps its fingerprint. Either is written in the project's
+  // language (`withLanguage`; English adds nothing).
+  const writtenPrompt = withEarlierEpisodes(brief.articlePrompt, config.earlierEpisodes);
+  const messages = withLanguage(
     voices !== undefined && writesScript
-      ? scriptMessages(voices.format, voices.speakers, brief.articlePrompt, articleNotes)
+      ? scriptMessages(voices.format, voices.speakers, writtenPrompt, articleNotes)
       : articleMessages({
-          articlePrompt: brief.articlePrompt,
+          articlePrompt: writtenPrompt,
           ...(articleNotes === undefined ? {} : { notes: articleNotes }),
-        });
+        }),
+    config.language,
+  );
   const scriptCheck =
     voices === undefined
       ? undefined
@@ -248,11 +256,17 @@ export function textRecipes(context: RecipeContext): TextRecipes {
               operation: "script-attribution",
               template: [
                 article.fingerprint,
-                llmInputFingerprint(context, attributionMessages("", voices.speakers)),
+                llmInputFingerprint(
+                  context,
+                  withLanguage(attributionMessages("", voices.speakers), config.language),
+                ),
               ],
             }
           : {
-              ...llmInput(context, attributionMessages(endMatter.body, voices.speakers)),
+              ...llmInput(
+                context,
+                withLanguage(attributionMessages(endMatter.body, voices.speakers), config.language),
+              ),
               script: scriptCheck,
             },
         [article.key],
@@ -281,11 +295,17 @@ export function textRecipes(context: RecipeContext): TextRecipes {
               version: 1,
               operation: key,
               template: [
-                llmInputFingerprint(context, segmentMessages(prompt, config, "")),
+                llmInputFingerprint(
+                  context,
+                  withLanguage(segmentMessages(prompt, config, ""), config.language),
+                ),
                 article.fingerprint,
               ],
             }
-          : llmInput(context, segmentMessages(prompt, config, articleText));
+          : llmInput(
+              context,
+              withLanguage(segmentMessages(prompt, config, articleText), config.language),
+            );
     const value = recipe(
       context,
       key,
@@ -376,7 +396,10 @@ function glossaryOf(
 ): GlossaryResult | null {
   if (!usesPronunciationGlossary(context.config)) return { ok: true, entries: [] };
   if (endMatter === null) return null;
-  return withShared(parsePronunciationGlossary(endMatter.glossary), context.config);
+  return withShared(
+    parsePronunciationGlossary(endMatter.glossary, context.config.language),
+    context.config,
+  );
 }
 // The narration glossary this revision uses, or null while its article is still unwritten.
 export function narrationGlossary(context: RecipeContext): GlossaryResult | null {

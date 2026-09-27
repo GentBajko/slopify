@@ -1,7 +1,7 @@
 import type { PlayReview } from "@app/slices/play-drafts/model.js";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { deferred } from "./play-test-fixture";
 import { sameReviewedGeneration } from "./review-state";
 import { reviewHarness, reviewStorage, suppliedDocument } from "./review-test-harness";
@@ -88,12 +88,19 @@ describe("bound review identity", () => {
     await waitFor(() => expect(harness.session().review.valid).toBe(true));
     const reviews = () => harness.requests.filter((request) => request.url.endsWith("/review"));
     const before = reviews().length;
-    act(() => {
-      const document = harness.session().document;
-      harness.session().edit({ ...document, expectedWords: "2500" });
-    });
-    expect(harness.session().review.valid).toBe(false);
-    await waitFor(() => expect(harness.session().review.valid).toBe(true), { timeout: 3000 });
+    // The check waits for typing to pause; the pause is moved past at once, not waited out.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      act(() => {
+        const document = harness.session().document;
+        harness.session().edit({ ...document, expectedWords: "2500" });
+      });
+      expect(harness.session().review.valid).toBe(false);
+      await act(() => vi.advanceTimersByTimeAsync(1000));
+    } finally {
+      vi.useRealTimers();
+    }
+    await waitFor(() => expect(harness.session().review.valid).toBe(true));
     expect(reviews().length).toBe(before + 1);
     expect((screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled).toBe(
       false,
@@ -169,6 +176,11 @@ it("shows costs and resolved text from one receipt without treating unknown char
   expect(
     within(screen.getByRole("dialog", { name: "Review" })).getByText("The supplied article."),
   ).not.toBeNull();
-  await userEvent.click(screen.getByText("Assumptions and stage details"));
-  expect(screen.getByText("Actual usage may differ")).not.toBeNull();
+  // The rail shows the total; the stages and their assumptions fold away under it.
+  const breakdown = screen.getByText("Cost by stage · 2 stages").closest("details");
+  expect(breakdown?.open).toBe(false);
+  expect(within(breakdown as HTMLElement).getByText("Known provider rate")).not.toBeNull();
+  await userEvent.click(screen.getByText("Cost by stage · 2 stages"));
+  expect(breakdown?.open).toBe(true);
+  expect(within(breakdown as HTMLElement).getByText("Actual usage may differ")).not.toBeNull();
 });

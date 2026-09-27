@@ -368,6 +368,32 @@ describe("joinArgs", () => {
     expect(args).not.toContain("copy");
   });
 
+  it("lays the speaker panel's portraits in under the captions, after every other input", () => {
+    const plain = joinArgs(plan(), "/p/video.mp4", "/w/l", true);
+    // No portraits is the join every video had.
+    expect(joinArgs(plan(), "/p/video.mp4", "/w/l", true, [])).toEqual(plain);
+    const args = joinArgs(plan(), "/p/video.mp4", "/w/l", true, [
+      { path: "portrait-0.jpg", x: 10, y: 20, size: 119 },
+      { path: "portrait-2.png", x: 300, y: 20, size: 119 },
+    ]);
+    const inputs = args.flatMap((value, at) => (value === "-i" ? [args[at + 1]] : []));
+    expect(inputs.slice(-2)).toEqual(["portrait-0.jpg", "portrait-2.png"]);
+    const first = inputs.length - 2;
+    const graph = args[args.indexOf("-filter_complex") + 1] ?? "";
+    expect(graph).toContain(
+      `[${String(first)}:v]scale=119:119:force_original_aspect_ratio=increase,crop=119:119,setsar=1[pic0]`,
+    );
+    expect(graph).toContain("[0:v][pic0]overlay=x=10:y=20:eof_action=repeat[panel0]");
+    expect(graph).toContain("[panel0][pic1]overlay=x=300:y=20:eof_action=repeat[panel1]");
+    expect(graph).toContain("[panel1]ass=filename=subtitles.ass:fontsdir=fonts[v]");
+    // Without burned-in captions there is no panel to fill.
+    expect(
+      joinArgs(plan(), "/p/video.mp4", "/w/l", false, [
+        { path: "portrait-0.jpg", x: 10, y: 20, size: 119 },
+      ]),
+    ).toEqual(joinArgs(plan(), "/p/video.mp4", "/w/l"));
+  });
+
   it("writes a silent video with no filtergraph and no audio stream", () => {
     const args = joinArgs(plan({ body: undefined }), "/p/video.mp4", "/w/l");
     expect(args).not.toContain("-filter_complex");
