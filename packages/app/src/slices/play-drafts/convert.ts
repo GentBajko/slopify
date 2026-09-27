@@ -198,6 +198,12 @@ export function toAdmissionDraft(input: {
           },
         }
       : {}),
+    // Three only for a thumbnail the image provider draws; one leaves it out, which is what
+    // every draft saved before it was.
+    ...(form.thumbnailCount === 3 &&
+    (sources.thumbnail === "from_prompt" || sources.thumbnail === "prompt_by_llm")
+      ? { thumbnailCount: 3 as const }
+      : {}),
     articlePrompt: sources.article === "generate" ? form.articlePrompt : undefined,
     ...(sources.audio === "generate" && form.narrationPrompt?.trim()
       ? { narrationPrompt: form.narrationPrompt }

@@ -26,6 +26,7 @@ import {
   schedulesQuery,
 } from "@/schedules/api";
 import { ScheduleForm } from "@/schedules/form";
+import { TopicGenerationPanel } from "@/schedules/held-topics";
 import { formatScheduleDate } from "@/schedules/time";
 import { templatesQuery } from "@/templates/api";
 import { LibraryToolbar } from "./library.js";
@@ -268,9 +269,11 @@ function ScheduleCard({
           <p className="text-small text-ink2">
             {cadence} · {schedule.timezone} ·{" "}
             {schedule.items.length === 0
-              ? "Template as saved"
-              : `${String(schedule.items.length)} ${schedule.items.length === 1 ? "topic" : "topics"} left`}{" "}
-            ·{" "}
+              ? schedule.topicGeneration.mode === "off"
+                ? "Template as saved"
+                : "No topics queued"
+              : `${String(schedule.items.length)} ${schedule.items.length === 1 ? "topic" : "topics"} left`}
+            {schedule.topics.held > 0 ? ` · ${String(schedule.topics.held)} waiting for you` : ""} ·{" "}
             {schedule.deletedAt !== null
               ? `Deleted: ${formatScheduleDate(schedule.deletedAt, schedule.timezone)}`
               : schedule.nextRunAt === null
@@ -386,6 +389,7 @@ function ScheduleCard({
           });
         }}
       />
+      <TopicGenerationPanel schedule={schedule} />
       {open ? (
         <div className="mt-3 border-t border-line pt-3 pl-6">
           {details.isPending ? (

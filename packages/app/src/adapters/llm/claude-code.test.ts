@@ -5,7 +5,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { describe, expect, it } from "vitest";
 import type { LlmCompletion, LlmEvent, Message } from "../../kernel/ports/llm.js";
 import { isProviderError } from "../../kernel/ports/model.js";
-import { claudeCodeArgs, claudeCodeLlm } from "./claude-code.js";
+import { claudeCodeArgs, claudeCodeLlm, claudePlanLimit } from "./claude-code.js";
 import type { CliEnded, CliRun, RunCli } from "./run-cli.js";
 import { nodeRunCli } from "./run-cli.js";
 
@@ -174,7 +174,24 @@ describe("claudeCodeLlm.complete", () => {
           "one connection and listens for events the server sends, rather than repeatedly " +
           "polling for new data.",
       },
-      { type: "done", usage: { inputTokens: 10, outputTokens: 187 }, finishReason: "end_turn" },
+      {
+        type: "done",
+        // Tokens in counts the prompt the CLI read from and wrote to its cache: 10 + 13527 + 12141.
+        usage: {
+          inputTokens: 25678,
+          outputTokens: 187,
+          cachedInputTokens: 13527,
+          model: "claude-haiku-4-5-20251001",
+        },
+        finishReason: "end_turn",
+        // The recorded rate_limit_event: 9% of the 5-hour window, 18% of the week.
+        limits: {
+          after: [
+            { kind: "five_hour", usedPercent: 9, resetsAt: "2026-09-03T06:40:00.000Z" },
+            { kind: "weekly", usedPercent: 18, resetsAt: "2026-09-09T03:00:00.000Z" },
+          ],
+        },
+      },
     ]);
   });
 
@@ -195,8 +212,19 @@ describe("claudeCodeLlm.complete", () => {
     expect(text).not.toContain("tool_use");
     expect(events.at(-1)).toEqual({
       type: "done",
-      usage: { inputTokens: 11745, outputTokens: 775 },
+      usage: {
+        inputTokens: 11745 + 9286 + 10111,
+        outputTokens: 775,
+        cachedInputTokens: 9286,
+        model: "claude-haiku-4-5-20251001",
+      },
       finishReason: "end_turn",
+      limits: {
+        after: [
+          { kind: "five_hour", usedPercent: 10, resetsAt: "2026-09-03T06:40:00.000Z" },
+          { kind: "weekly", usedPercent: 18, resetsAt: "2026-09-09T03:00:00.000Z" },
+        ],
+      },
     });
   });
 
@@ -221,6 +249,32 @@ describe("claudeCodeLlm.complete", () => {
     );
     expect(isProviderError(limited) && limited.fault.kind).toBe("rate_limit");
     expect(String(limited)).toContain("usage limit reached");
+    // "Claude AI usage limit reached|1788417600": the plan is used up until that time, so
+    // the call waits for it rather than failing.
+    expect(isProviderError(limited) && limited.fault.planLimit).toEqual({
+      account: "claude-code",
+      resetsAt: "2026-09-03T06:40:00.000Z",
+    });
+  });
+
+  it("tells a used-up plan from an ordinary rate limit", () => {
+    const rejected = {
+      status: "rejected",
+      resetsAt: 1788417600,
+      unifiedWindows: {
+        five_hour: { utilization: 1, resetsAt: 1788417600 },
+        seven_day: { utilization: 0.4, resetsAt: 1788922800 },
+      },
+    };
+    expect(claudePlanLimit("You've hit your limit", 429, rejected)).toEqual({
+      account: "claude-code",
+      resetsAt: "2026-09-03T06:40:00.000Z",
+    });
+    expect(claudePlanLimit("Too many requests", 429, { status: "allowed" })).toBeUndefined();
+    expect(claudePlanLimit("Claude AI usage limit reached", 429, undefined)).toEqual({
+      account: "claude-code",
+      resetsAt: null,
+    });
   });
 
   it("fails a stream cut off part-way rather than storing half an answer", async () => {

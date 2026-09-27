@@ -9,6 +9,7 @@ import { outputsOf, roleOf } from "./body.js";
 import { ConfirmedButton } from "./controls.js";
 import { LiveAudio } from "./live-audio.js";
 import { NarrationDownloads } from "./narration-downloads.js";
+import { NarrationText } from "./narration-text.js";
 import { ActionRow, EngravedLabel, OutputDownload, StageBody } from "./parts.js";
 import { ReviewVerdict, reviewFor, useReviews } from "./review-verdict.js";
 import { useOutputMedia } from "./revision-media.js";
@@ -54,6 +55,7 @@ export function AudioBody({ stage, project, outputs, actions, busy }: BodyProps)
         projectId={project.id}
         busy={busy}
       />
+      <NarrationText outputs={mine} />
       <NarrationDownloads outputs={mine} />
       <ActionRow>
         <ConfirmedButton

@@ -94,6 +94,7 @@ export const runDraftSchema = z.object({
   narrationPrompt: z.string().optional(),
   imagePrompts: z.array(z.object({ name: z.string(), number: z.number() })),
   thumbnailPrompt: z.string().optional(),
+  thumbnailCount: z.union([z.literal(1), z.literal(3)]).optional(),
   intro: entryChoice.optional(),
   outro: entryChoice.optional(),
   values: z.record(z.string(), z.string()),

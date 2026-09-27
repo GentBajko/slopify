@@ -22,12 +22,12 @@ export function useReviews(projectId: string): readonly Review[] {
 
 export function reviewFor(
   reviews: readonly Review[],
-  item: { readonly itemKey?: string; readonly outputId?: string },
+  item: { readonly itemKey?: string; readonly outputId?: string | undefined },
 ): Review | undefined {
   return reviews.find((review) =>
     item.itemKey !== undefined
       ? review.itemKey === item.itemKey
-      : review.outputId === item.outputId,
+      : item.outputId !== undefined && review.outputId === item.outputId,
   );
 }
 

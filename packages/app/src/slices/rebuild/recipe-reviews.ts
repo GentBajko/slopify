@@ -101,12 +101,11 @@ function reviewedItems(
         .filter((row) => row.key.startsWith("image:") && row.input.kind === "image")
         .map((row) => one(row.key, reference === undefined ? [row] : [row, reference], [row.key]));
     }
-    case "thumbnail": {
-      const thumbnail = byKey.get("thumbnail:image");
-      return thumbnail === undefined || thumbnail.kind !== "provider"
-        ? []
-        : [one(thumbnail.key, [thumbnail], [thumbnail.key])];
-    }
+    // One thumbnail, or each of three when the project makes three to compare.
+    case "thumbnail":
+      return recipes
+        .filter((row) => /^thumbnail:image(?::\d+)?$/.test(row.key) && row.kind === "provider")
+        .map((row) => one(row.key, [row], [row.key]));
     case "narration": {
       const timing = byKey.get("subtitles:timing");
       if (timing === undefined) return [];

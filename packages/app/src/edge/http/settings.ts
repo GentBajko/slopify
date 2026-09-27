@@ -20,6 +20,13 @@ import {
   voiceNameMax,
   voices,
 } from "../../slices/settings/voices.js";
+import { readChannelLinks, writeChannelLinks } from "../../slices/youtube/edits-repo.js";
+import {
+  channelLinkNameMax,
+  channelLinksMax,
+  channelLinksProblem,
+  channelLinkUrlMax,
+} from "../../slices/youtube/placeholders.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
 
@@ -34,6 +41,17 @@ const voiceBody = z.object({
 // Length and scheme are the slice's rules, so their sentences reach the field; this bound only
 // keeps a pasted novel off the parser.
 const notificationBody = z.object({ url: z.string().max(notificationUrlMax * 2) });
+// Shape and a generous bound only; `channelLinksProblem` says what is wrong in Settings' words.
+export const channelLinksBody = z.object({
+  links: z
+    .array(
+      z.object({
+        name: z.string().max(channelLinkNameMax * 4),
+        url: z.string().max(channelLinkUrlMax * 2),
+      }),
+    )
+    .max(channelLinksMax * 2),
+});
 const playbackBody = z.object({
   silenceGapSeconds: z.number(),
   appearance: z.enum(appearances),
@@ -46,91 +64,108 @@ export function settingsRoutes(deps: AppDeps) {
   const voiceDeps: VoicesDeps = { db: deps.db, ids: deps.ids };
   const send = deps.sendNotification ?? createNotificationSender(globalThis.fetch);
 
-  return new Hono()
-    .get("/", (c) => c.json(readSettings(playback)))
-    .put("/", zValidator("json", playbackBody, onInvalid), (c) => {
-      const result = saveSettings(playback, c.req.valid("json"));
-      if (!result.ok) {
-        return problem(c, {
-          status: 400,
-          title: titleOf(400),
-          detail: "These settings cannot be saved yet. Fix the highlighted fields and try again.",
-          extensions: { fields: result.fields },
-        });
-      }
-      return c.json(result.settings);
-    })
-    .get("/notifications", (c) => c.json({ url: readNotificationUrl(deps.db) }))
-    .put("/notifications", zValidator("json", notificationBody, onInvalid), (c) => {
-      const result = saveNotificationUrl(deps.db, c.req.valid("json").url);
-      if (!result.ok) {
-        return problem(c, {
-          status: 400,
-          title: titleOf(400),
-          detail: `The Notification URL wasn't saved: ${result.message} Fix it in Settings → Notifications → Notification URL, then press Save.`,
-          extensions: { fields: [{ field: "url", message: result.message }] },
-        });
-      }
-      return c.json({ url: result.url });
-    })
-    .post("/notifications/test", zValidator("json", notificationBody, onInvalid), async (c) => {
-      const url = c.req.valid("json").url.trim();
-      const invalid =
-        url === ""
-          ? "Enter a Notification URL first, for example https://ntfy.sh/your-topic."
-          : notificationUrlProblem(url);
-      if (invalid !== undefined) {
-        return problem(c, {
-          status: 400,
-          title: titleOf(400),
-          detail: `The test notification wasn't sent: ${invalid}`,
-          extensions: { fields: [{ field: "url", message: invalid }] },
-        });
-      }
-      const result = await send(url, webhookBody(testNotice));
-      if (!result.ok) {
-        deps.log.write("warn", "notification.test", { detail: sendFailureText(result) });
-        return problem(c, {
-          status: 502,
-          title: titleOf(502),
-          detail: `The test notification wasn't delivered: ${sendFailureText(result)}. Check the address in Settings → Notifications → Notification URL (for ntfy, https://ntfy.sh/your-topic), then press Send test notification again.`,
-        });
-      }
-      return c.json({ sent: true });
-    })
-    .get("/voices", (c) => c.json({ voices: voices(voiceDeps) }))
-    .post("/voices", zValidator("json", voiceBody, onInvalid), (c) => {
-      const result = addVoice(voiceDeps, c.req.valid("json"));
-      if (!result.ok) {
-        // A voice ID already listed for its provider is a conflict with
-        // a row that exists, which the form shows under the Voice ID input.
-        return result.reason === "duplicate-voice-id"
-          ? problem(c, {
-              status: 409,
-              title: titleOf(409),
-              detail:
-                "This voice ID is already saved for this provider. Use the existing voice, or enter a different voice ID.",
-            })
-          : problem(c, {
-              status: 400,
-              title: titleOf(400),
-              detail: "This voice cannot be added yet. Fix the highlighted field and try again.",
-              extensions: { fields: [fieldOf(result.reason)] },
-            });
-      }
-      return c.json(result.voice, 201);
-    })
-    .delete("/voices/:id", zValidator("param", idParam, onInvalid), (c) => {
-      if (!removeVoice(voiceDeps, c.req.valid("param").id).ok) {
-        return problem(c, {
-          status: 404,
-          title: titleOf(404),
-          detail:
-            "This voice no longer exists; it may have been deleted already. Reload the page to see your voices.",
-        });
-      }
-      return c.body(null, 204);
-    });
+  return (
+    new Hono()
+      .get("/", (c) => c.json(readSettings(playback)))
+      .put("/", zValidator("json", playbackBody, onInvalid), (c) => {
+        const result = saveSettings(playback, c.req.valid("json"));
+        if (!result.ok) {
+          return problem(c, {
+            status: 400,
+            title: titleOf(400),
+            detail: "These settings cannot be saved yet. Fix the highlighted fields and try again.",
+            extensions: { fields: result.fields },
+          });
+        }
+        return c.json(result.settings);
+      })
+      // The named links `{{Name}}` placeholders in YouTube descriptions fill from
+      // (`slices/youtube/placeholders.ts`).
+      .get("/channel-links", (c) => c.json({ links: readChannelLinks(deps.db) }))
+      .put("/channel-links", zValidator("json", channelLinksBody, onInvalid), (c) => {
+        const { links } = c.req.valid("json");
+        const refused = channelLinksProblem(links);
+        if (refused !== undefined)
+          return problem(c, {
+            status: 400,
+            title: titleOf(400),
+            detail: `The channel links weren't saved: ${refused} Then press Save in Settings → Channel links.`,
+          });
+        writeChannelLinks(deps.db, links);
+        return c.json({ links: readChannelLinks(deps.db) });
+      })
+      .get("/notifications", (c) => c.json({ url: readNotificationUrl(deps.db) }))
+      .put("/notifications", zValidator("json", notificationBody, onInvalid), (c) => {
+        const result = saveNotificationUrl(deps.db, c.req.valid("json").url);
+        if (!result.ok) {
+          return problem(c, {
+            status: 400,
+            title: titleOf(400),
+            detail: `The Notification URL wasn't saved: ${result.message} Fix it in Settings → Notifications → Notification URL, then press Save.`,
+            extensions: { fields: [{ field: "url", message: result.message }] },
+          });
+        }
+        return c.json({ url: result.url });
+      })
+      .post("/notifications/test", zValidator("json", notificationBody, onInvalid), async (c) => {
+        const url = c.req.valid("json").url.trim();
+        const invalid =
+          url === ""
+            ? "Enter a Notification URL first, for example https://ntfy.sh/your-topic."
+            : notificationUrlProblem(url);
+        if (invalid !== undefined) {
+          return problem(c, {
+            status: 400,
+            title: titleOf(400),
+            detail: `The test notification wasn't sent: ${invalid}`,
+            extensions: { fields: [{ field: "url", message: invalid }] },
+          });
+        }
+        const result = await send(url, webhookBody(testNotice));
+        if (!result.ok) {
+          deps.log.write("warn", "notification.test", { detail: sendFailureText(result) });
+          return problem(c, {
+            status: 502,
+            title: titleOf(502),
+            detail: `The test notification wasn't delivered: ${sendFailureText(result)}. Check the address in Settings → Notifications → Notification URL (for ntfy, https://ntfy.sh/your-topic), then press Send test notification again.`,
+          });
+        }
+        return c.json({ sent: true });
+      })
+      .get("/voices", (c) => c.json({ voices: voices(voiceDeps) }))
+      .post("/voices", zValidator("json", voiceBody, onInvalid), (c) => {
+        const result = addVoice(voiceDeps, c.req.valid("json"));
+        if (!result.ok) {
+          // A voice ID already listed for its provider is a conflict with
+          // a row that exists, which the form shows under the Voice ID input.
+          return result.reason === "duplicate-voice-id"
+            ? problem(c, {
+                status: 409,
+                title: titleOf(409),
+                detail:
+                  "This voice ID is already saved for this provider. Use the existing voice, or enter a different voice ID.",
+              })
+            : problem(c, {
+                status: 400,
+                title: titleOf(400),
+                detail: "This voice cannot be added yet. Fix the highlighted field and try again.",
+                extensions: { fields: [fieldOf(result.reason)] },
+              });
+        }
+        return c.json(result.voice, 201);
+      })
+      .delete("/voices/:id", zValidator("param", idParam, onInvalid), (c) => {
+        if (!removeVoice(voiceDeps, c.req.valid("param").id).ok) {
+          return problem(c, {
+            status: 404,
+            title: titleOf(404),
+            detail:
+              "This voice no longer exists; it may have been deleted already. Reload the page to see your voices.",
+          });
+        }
+        return c.body(null, 204);
+      })
+  );
 }
 
 function fieldOf(reason: Exclude<AddVoiceReason, "duplicate-voice-id">): {

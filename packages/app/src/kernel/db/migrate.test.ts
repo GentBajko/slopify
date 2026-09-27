@@ -43,8 +43,12 @@ describe("migrate", () => {
       "batches",
       "document_themes",
       "entries",
+      "library_versions",
       "machine",
       "outputs",
+      "plan_limit_readings",
+      "plan_limit_waiters",
+      "plan_limit_waits",
       "play_draft_attachments",
       "play_drafts",
       "play_start_receipts",
@@ -61,6 +65,7 @@ describe("migrate", () => {
       "projects",
       "prompts",
       "provider_keys",
+      "provider_usage",
       "rebuild_admissions",
       "rebuild_previews",
       "review_checkpoint_approvals",
@@ -74,6 +79,7 @@ describe("migrate", () => {
       "revision_work_pieces",
       "revision_work_reservations",
       "schedule_runs",
+      "schedule_topics",
       "schedules",
       "schema_migrations",
       "settings",
@@ -82,17 +88,20 @@ describe("migrate", () => {
       "stages",
       "telemetry_events",
       "voices",
+      "youtube_description_edits",
     ]);
     expect(names(db, "index")).toEqual([
       "document_themes_name",
       "entries_name",
       "outputs_project",
+      "plan_limit_readings_project",
       "play_draft_attachment_file",
       "play_draft_attachment_owner",
       "play_start_receipt_draft",
       "project_queue_state",
       "project_revisions_project",
       "prompts_name",
+      "provider_usage_project",
       "review_checkpoint_work",
       "review_verdicts_item",
       "review_verdicts_redo",
@@ -107,6 +116,7 @@ describe("migrate", () => {
       "revision_work_revision_identity",
       "revision_work_stage",
       "schedule_runs_schedule",
+      "schedule_topics_schedule",
       "schedules_due",
       "stages_project_identity",
     ]);
@@ -140,6 +150,9 @@ describe("migrate", () => {
       { version: 22, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 24, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 25, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 26, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 27, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 31, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -149,7 +162,7 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 22 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 25 });
   });
 
   it("refuses a database newer than the app knows", () => {
@@ -158,7 +171,7 @@ describe("migrate", () => {
     db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(42, clock.now().toISOString());
 
     expect(() => migrate(db, clock)).toThrow(
-      "database schema 42 is newer than this app knows (25)",
+      "database schema 42 is newer than this app knows (31)",
     );
   });
 

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CheckpointControls } from "./checkpoints";
 import { usePlaySession } from "./draft-context";
-import { pendingReviewUpload } from "./review-state";
+import { pendingReviewUpload, startLabel } from "./review-state";
 import { ReviewSummary } from "./review-summary";
 import { PlayReviews } from "./reviews";
 import { BatchEditor, RunReview } from "./run-review";
@@ -174,13 +174,7 @@ export function ReviewSection({
             void session.startRun();
           }}
         >
-          {review.starting
-            ? "Starting…"
-            : review.uncertain
-              ? "Check Start result"
-              : document.variants.length
-                ? `Queue ${document.variants.length + 1} videos`
-                : "Start run"}
+          {startLabel(review, document)}
         </Button>
       </div>
     </div>

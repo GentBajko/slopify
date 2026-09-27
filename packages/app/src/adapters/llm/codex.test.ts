@@ -238,7 +238,11 @@ describe("codexLlm.complete", () => {
         text: "Server-Sent Events aré a one-way 𝄞 push channel over HTTP.",
       },
       // Codex reports no stop reason, so there is nothing to report.
-      { type: "done", usage: { inputTokens: 2451, outputTokens: 118 }, finishReason: null },
+      {
+        type: "done",
+        usage: { inputTokens: 2451, outputTokens: 118, cachedInputTokens: 2304 },
+        finishReason: null,
+      },
     ]);
   });
 
@@ -247,7 +251,7 @@ describe("codexLlm.complete", () => {
     expect(events.filter((event) => event.type === "delta")).toHaveLength(1);
     expect(events.at(-1)).toEqual({
       type: "done",
-      usage: { inputTokens: 5120, outputTokens: 240 },
+      usage: { inputTokens: 5120, outputTokens: 240, cachedInputTokens: 4096 },
       finishReason: null,
     });
   });

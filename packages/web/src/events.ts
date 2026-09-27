@@ -37,6 +37,8 @@ export interface GlobalSink {
   readonly refetch: (projectId?: string) => void;
   // Every project's state change, for run notifications (`notifications/watcher.ts`).
   readonly projectState?: (event: ProjectStateEvent) => void;
+  // A schedule held new generated topics for approval.
+  readonly scheduleTopics?: () => void;
 }
 
 const projectEventNames = [
@@ -55,6 +57,7 @@ const globalEventNames = [
   "staging.failed",
   "project.updated",
   "project.state",
+  "schedule.topics",
 ] as const;
 
 export function subscribeProject(open: OpenEvents, url: string, sink: ProjectSink): () => void {
@@ -92,6 +95,10 @@ export function subscribeGlobal(open: OpenEvents, url: string, sink: GlobalSink)
     if (event.type === "project.updated" || event.type === "project.state") {
       if (event.type === "project.state") sink.projectState?.(event);
       sink.refetch(event.projectId);
+      return;
+    }
+    if (event.type === "schedule.topics") {
+      sink.scheduleTopics?.();
       return;
     }
     sink.stagingChanged();

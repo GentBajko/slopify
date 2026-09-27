@@ -20,6 +20,7 @@ import {
   remapForkEdits,
   retainUploadSettlements,
 } from "./draft-save";
+import { type FreshProviderDefaults, withProviderDefaults } from "./draft-state";
 import { createReviewOwner } from "./review-state";
 import { useDraftUploads } from "./use-draft-uploads";
 import { useReviewChoices } from "./use-review-choices";
@@ -152,6 +153,7 @@ export function useDraftSession(): PlaySession {
       queryClient,
       current: () => state.current,
       flush,
+      resave: () => edit(state.current.document),
       render: () => {
         if (alive) render();
       },
@@ -330,6 +332,14 @@ export function useDraftSession(): PlaySession {
       flush,
       open,
       newDraft,
+      // Defaults that arrive after Play opened fill a draft nobody has touched yet, without
+      // saving it: it is still the fresh form, only with the found providers picked.
+      adoptDefaults: (defaults: FreshProviderDefaults) => {
+        const current = state.current;
+        if (current.id !== null || current.clock.edited > 0 || current.view !== null) return;
+        const document = withProviderDefaults(current.document, defaults);
+        if (document !== current.document) publish({ document });
+      },
       discard,
       saveAsNew,
       navigate,
@@ -382,6 +392,7 @@ export function useDraftSession(): PlaySession {
     open: owner.open,
     generation: owner.generation,
     newDraft: owner.newDraft,
+    adoptDefaults: owner.adoptDefaults,
     discard: owner.discard,
     saveAsNew: owner.saveAsNew,
     navigate: owner.navigate,

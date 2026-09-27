@@ -24,6 +24,7 @@ import { createApp } from "./edge/http/app.js";
 import { createMutationLifecycle, drainMutationsWithDeadline } from "./edge/http/mutations.js";
 import { limitRequestTimes } from "./edge/http/timeouts.js";
 import { openFolder } from "./edge/open-folder.js";
+import { readHostLogin } from "./host-cli/status.js";
 import type { AudioPreviewStore } from "./kernel/audio-preview.js";
 import { createAudioPreviewStore } from "./kernel/audio-preview.js";
 import type { Clock } from "./kernel/clock.js";
@@ -70,6 +71,7 @@ import { createNotificationSender } from "./slices/notifications/send.js";
 import { readNotificationUrl } from "./slices/notifications/settings.js";
 import type { DraftStartDeps } from "./slices/play-drafts/model.js";
 import { templateById } from "./slices/project-templates/repo.js";
+import { recoverProject } from "./slices/rebuild/recovery.js";
 import { claimWork, finishWork, maySubmit } from "./slices/rebuild/repo.js";
 import { createReviewRedos, reviewHold } from "./slices/rebuild/review-redo.js";
 import { materializeAdmittedWork } from "./slices/rebuild/runtime-materialize.js";
@@ -82,6 +84,9 @@ import {
   recordWorkProgress,
 } from "./slices/rebuild/runtime-store.js";
 import type { RebuildDeps } from "./slices/rebuild/service.js";
+import { currentRevisionId } from "./slices/revisions/repo.js";
+import { createLimitGate, resumeAfterRestart } from "./slices/run-cost/limits.js";
+import { createUsageMeter } from "./slices/run-cost/meter.js";
 import type { ScheduleDeps } from "./slices/schedules/model.js";
 import { settleTerminalScheduleRuns } from "./slices/schedules/repo.js";
 import { createScheduleRunner } from "./slices/schedules/scheduler.js";
@@ -123,6 +128,9 @@ export interface BootOptions {
   readonly prefetchSubtitleModel?: boolean;
   // A verified model shipped with the install, copied instead of downloaded.
   readonly subtitleModelSeed?: string | undefined;
+  // Check the published model catalogue and OpenRouter's live list at start and once a day.
+  // The CLI turns it on; tests boot without it so they never reach the network.
+  readonly refreshModels?: boolean;
 }
 
 export interface ScheduleTickLifecycle {
@@ -388,6 +396,21 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     // Redos a review asked for before the last shutdown start now.
     reviewRedos.bind(rebuild);
     reviewRedos.kick();
+    // A stage that was waiting for a CLI's plan limits when the app stopped carries on waiting.
+    void resumeAfterRestart(
+      db,
+      async (projectId) => {
+        const baseRevisionId = currentRevisionId(runtimeDb, projectId);
+        if (baseRevisionId === undefined) return false;
+        const result = await recoverProject(rebuild, projectId, {
+          baseRevisionId,
+          idempotencyKey: randomUUID(),
+          action: { kind: "resume" },
+        });
+        return result.ok;
+      },
+      log,
+    );
     const draftDeps: DraftStartDeps = {
       db,
       paths,
@@ -406,11 +429,32 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         flusher.soon();
       },
     };
-    const scheduleDeps: ScheduleDeps = {
+    const scheduleRunnerDeps: ScheduleDeps = {
       ...draftDeps,
       template: (id, templateVersion) => templateById(runtimeDb, id, templateVersion),
+      // Topic generation asks the provider directly: it belongs to no project, so there is
+      // no stage attempt to record it under.
+      topicLlm: async (call) => {
+        let text = "";
+        for await (const event of registry.llm(call.provider).complete({
+          model: call.model,
+          messages: call.messages,
+          ...(call.thinking === undefined ? {} : { thinking: call.thinking }),
+          signal: call.signal,
+        }))
+          if (event.type === "delta") text += event.text;
+        return text;
+      },
+      topicsWaiting: (event) => {
+        hub.emitGlobal(event);
+        notifier.observeTopics(event);
+      },
     };
-    const scheduleRunner = createScheduleRunner(scheduleDeps);
+    const scheduleRunner = createScheduleRunner(scheduleRunnerDeps);
+    const scheduleDeps: ScheduleDeps = {
+      ...scheduleRunnerDeps,
+      requestTopics: scheduleRunner.requestTopics,
+    };
     scheduleRunner.recover(clock.now());
     const scheduleTicks = createScheduleTickLifecycle({
       beginMutation: updater.beginMutation,
@@ -464,6 +508,8 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       flushSoon: flusher.soon,
       probe: nodeCliProbe,
       hostCliStatus: hostCli?.status,
+      fetch: globalThis.fetch,
+      ...(hostCli === undefined ? { cliLogin: readHostLogin } : {}),
     });
     const server = await listen(app, config, log);
     const queueTimer = setInterval(() => {
@@ -483,6 +529,22 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     void scheduleTicks.tick();
     // Once a minute is plenty for a daily slot; the decision itself (slices/backups/schedule)
     // holds the first run back for a couple of minutes after a start.
+    // The model catalogue keeps itself current: once at start, then whenever a day has passed
+    // since the last check (looked at hourly, so a laptop that slept catches up).
+    const syncModels = (): void => {
+      if (!options.refreshModels || !catalogue.sync) return;
+      catalogue.sync().then(
+        (status) => {
+          if (status.warning !== null)
+            log.write("warn", "model-catalog.sync", { detail: status.warning });
+        },
+        (error: unknown) => log.write("warn", "model-catalog.sync", { detail: causedBy(error) }),
+      );
+    };
+    syncModels();
+    const modelTimer = setInterval(() => {
+      if (catalogue.syncDue?.(Date.now()) === true) syncModels();
+    }, 60 * 60_000);
     const backupTimer = setInterval(() => {
       backups.tick().catch((error: unknown) => {
         log.write("error", "backups.tick", { detail: causedBy(error) });
@@ -516,8 +578,10 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         clearInterval(queueTimer);
         clearInterval(scheduleTimer);
         clearInterval(backupTimer);
+        clearInterval(modelTimer);
         const mutationDrain = mutations.stop();
         const scheduleDrain = scheduleTicks.stop();
+        const topicDrain = scheduleRunner.stop();
         // A backup being written is stopped and its partial file removed, not waited for.
         const backupDrain = backups.stop();
         const serverClose = beginServerClose(server);
@@ -533,6 +597,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
             mutationDrainTimeoutMs,
           );
           await scheduleDrain;
+          await topicDrain;
           await backupDrain;
           await runner.abortAll();
         } finally {
@@ -615,6 +680,13 @@ export function wireRunner({
     attempts: sqliteAttempts(db, ids),
     clock,
     log,
+    meter: createUsageMeter({ db, ids, clock, catalogue: () => catalogue.read() }),
+    limits: createLimitGate({
+      db,
+      clock,
+      log,
+      changed: (projectId) => hub.emit(projectId, { type: "project.updated", projectId }),
+    }),
     queue: createProviderQueue((provider) =>
       isLocalCliProvider(provider)
         ? localCliConcurrency(provider)
