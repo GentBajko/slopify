@@ -1,16 +1,14 @@
 import type { FieldError } from "@app/slices/admission/rules.js";
 import type { Field } from "@app/slices/admission/substitute.js";
-import { type ReactElement, useEffect, useId } from "react";
-import { InfoTip } from "@/components/kit/info-tip";
+import { type ReactElement, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { CheckpointControls } from "./checkpoints";
 import { usePlaySession } from "./draft-context";
-import { pendingReviewUpload, startLabel } from "./review-state";
 import { ReviewSummary } from "./review-summary";
 import { PlayReviews } from "./reviews";
-import { BatchEditor, RunReview } from "./run-review";
 
+// The side panel behind Reviews and "Review the whole setup": every setting of the run in
+// words, the checkpoints and automatic reviews, and the prompts as they will be sent.
 export function ReviewSection({
   fields,
   errors,
@@ -25,33 +23,16 @@ export function ReviewSection({
   const session = usePlaySession();
   const { document, review } = session;
   const form = document.form;
-  const wordsId = useId();
-  const pendingUploads = pendingReviewUpload(document, session.view);
-  const locked = review.starting || review.uncertain;
+  // Opening the whole setup asks the server too: it knows rules the browser's copy can't see.
   useEffect(() => {
     void session.reviewDraft();
   }, [session.reviewDraft]);
-  // An edit made on this screen (a keyword variation, the expected words) leaves the review
-  // stale; it is checked again once typing pauses rather than waiting for Refresh review.
-  const stale =
-    !review.valid &&
-    !review.pending &&
-    !review.starting &&
-    !review.uncertain &&
-    review.error === null &&
-    errors.length === 0 &&
-    !pendingUploads;
-  // biome-ignore lint/correctness/useExhaustiveDependencies: each edit restarts the pause.
-  useEffect(() => {
-    if (!stale) return;
-    const timer = setTimeout(() => void session.reviewDraft(), 800);
-    return () => clearTimeout(timer);
-  }, [stale, document, session.reviewDraft]);
   const runs = review.valid ? (review.receipt?.runs ?? []) : [];
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <p className="text-body text-ink2">
-        Check your setup and estimated costs. Nothing starts until you choose Start run.
+      <p className="m-0 text-body text-ink-2">
+        Everything this run will do, the checkpoints it stops at and the reviews it runs. The
+        estimate and the Play key stay in the right rail.
       </p>
       {errors.length ? (
         <ul aria-label="Setup errors" className="text-small text-red">
@@ -64,46 +45,6 @@ export function ReviewSection({
           ))}
         </ul>
       ) : null}
-      {pendingUploads ? (
-        <Button variant="ghost" onClick={() => onReveal(pendingUploads)}>
-          Wait for uploads to finish before Start
-        </Button>
-      ) : null}
-      {review.error ? (
-        <p role="alert" className="text-body text-red">
-          {review.error}
-        </p>
-      ) : null}
-      <div className="flex flex-col gap-3">
-        <h3 className="flex items-center gap-1 font-semibold">
-          Estimated cost
-          <InfoTip label="the estimate">
-            <p>
-              Estimated provider charges in USD. Actual usage can differ. This estimate does not cap
-              spending.
-            </p>
-          </InfoTip>
-        </h3>
-        <label htmlFor={wordsId} className="text-body">
-          Expected article words per video
-          <Input
-            id={wordsId}
-            data-play-field="expectedWords"
-            type="number"
-            min={1}
-            max={100000}
-            value={document.expectedWords}
-            disabled={locked}
-            onChange={(event) => session.edit({ ...document, expectedWords: event.target.value })}
-          />
-        </label>
-        {review.pending ? <p role="status">Calculating estimate…</p> : null}
-        {review.valid && review.receipt ? (
-          <RunReview estimates={review.receipt.estimates} />
-        ) : (
-          <p className="text-small text-ink2">Review needs refreshing before Start.</p>
-        )}
-      </div>
       <CheckpointControls problem={problem} />
       <PlayReviews problem={problem} />
       <ReviewSummary fields={fields} onReveal={onReveal}>
@@ -137,46 +78,6 @@ export function ReviewSection({
           )}
         </details>
       </ReviewSummary>
-      <fieldset disabled={locked} className="min-w-0">
-        <BatchEditor
-          fields={fields}
-          items={document.variants.map(({ id, ...item }) => ({ ...item, key: id }))}
-          title={form.title}
-          values={form.values}
-          problem={problem}
-          onChange={(items) =>
-            session.edit({
-              ...document,
-              variants: items.map(({ key, ...item }) => ({ ...item, id: key })),
-            })
-          }
-        />
-      </fieldset>
-      <div className="sticky bottom-[-16px] -mx-4 -mb-4 flex flex-wrap items-center justify-end gap-3 border-t border-line bg-panel px-4 py-3">
-        <Button
-          variant="ghost"
-          disabled={review.pending || locked || Boolean(pendingUploads)}
-          onClick={() => {
-            void session.reviewDraft();
-          }}
-        >
-          Refresh review
-        </Button>
-        <Button
-          variant="play"
-          data-tour="play-start"
-          disabled={
-            review.starting ||
-            (!review.uncertain &&
-              (!review.valid || review.pending || errors.length > 0 || Boolean(pendingUploads)))
-          }
-          onClick={() => {
-            void session.startRun();
-          }}
-        >
-          {startLabel(review, document)}
-        </Button>
-      </div>
     </div>
   );
 }

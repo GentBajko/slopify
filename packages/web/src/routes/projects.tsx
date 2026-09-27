@@ -22,6 +22,7 @@ import { markUploaded } from "@/home/api";
 import { isWaiting } from "@/home/needs-you";
 import { isReadyToUpload } from "@/home/ready";
 import { startedAt } from "@/lib/utils";
+import { onboardingKey, readFirstRun } from "@/onboarding/api";
 import { keys, projectsQuery } from "@/queries";
 import { TutorialInvite } from "@/tutorial/launcher";
 
@@ -84,6 +85,9 @@ export function ProjectsRoute(): ReactElement {
   const projects = useQuery(projectsQuery(api));
   const [deleting, setDeleting] = useState<ProjectListing | undefined>(undefined);
   const [filter, setFilter] = useState<Filter>("all");
+  // The bundled sample project carries a Sample badge.
+  const firstRun = useQuery({ queryKey: onboardingKey, queryFn: () => readFirstRun(api) });
+  const sample = firstRun.data?.sampleProjectId ?? null;
   const [search, setSearch] = useState("");
 
   const remove = useMutation({
@@ -217,6 +221,7 @@ export function ProjectsRoute(): ReactElement {
                 <ProjectRow
                   key={project.id}
                   project={project}
+                  sample={project.id === sample}
                   onDelete={() => setDeleting(project)}
                   onUploaded={(next) => uploaded.mutate({ project, uploaded: next })}
                   busy={uploaded.isPending}
@@ -252,11 +257,13 @@ export function ProjectsRoute(): ReactElement {
 
 function ProjectRow({
   project,
+  sample,
   onDelete,
   onUploaded,
   busy,
 }: {
   readonly project: ProjectListing;
+  readonly sample: boolean;
   readonly onDelete: () => void;
   readonly onUploaded: (uploaded: boolean) => void;
   readonly busy: boolean;
@@ -267,9 +274,12 @@ function ProjectRow({
   return (
     <ListRow
       title={
-        <Link to="/projects/$projectId" params={{ projectId: project.id }}>
-          {project.title}
-        </Link>
+        <span className="flex flex-wrap items-center gap-2">
+          <Link to="/projects/$projectId" params={{ projectId: project.id }}>
+            {project.title}
+          </Link>
+          {sample ? <Badge>Sample</Badge> : null}
+        </span>
       }
       meta={
         <span className="flex flex-col gap-1">

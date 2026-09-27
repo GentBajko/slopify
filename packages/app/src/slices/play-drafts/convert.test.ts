@@ -558,3 +558,24 @@ it("carries only the reviews of stages that make something, and none when all ar
     h.close();
   }
 });
+it.each([
+  [undefined, 7],
+  ["", 7],
+  ["1.5", 1.5],
+  ["0", 0],
+])("sends the run's own silence gap %j, or the one Settings has", (typed, expected) => {
+  const h = draftFixture();
+  try {
+    const form = {
+      ...h.document.form,
+      sources: { ...h.document.form.sources, article: "provide" as const },
+    };
+    const result = convert({
+      ...h.document,
+      form: typed === undefined ? form : { ...form, silenceGapSeconds: typed },
+    });
+    expect(result.ok && result.draft.silenceGapSeconds).toBe(expected);
+  } finally {
+    h.close();
+  }
+});

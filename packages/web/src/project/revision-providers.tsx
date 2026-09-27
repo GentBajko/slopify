@@ -3,14 +3,22 @@ import {
   usesPronunciationGlossary,
 } from "@app/slices/admission/rules.js";
 import type { RevisionEdit } from "@app/slices/revisions/model.js";
+import { usesVoices } from "@app/slices/voices/model.js";
 import { useState } from "react";
-import { type ProviderStatus, readSharedPronunciations, type Voice } from "@/api";
+import {
+  type ProviderStatus,
+  readNarrationAliases,
+  readSharedPronunciations,
+  type Voice,
+} from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/ui/button";
 import { ChunkingControl } from "@/play/chunking";
+import { NarrationAliasesToggle } from "@/play/narration-aliases";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
 import { PronunciationGlossary } from "@/play/pronunciation-glossary";
 import { ThinkingPicker } from "@/play/thinking";
+import { SpeakersEditor } from "@/voices/speakers-editor";
 
 // "Also use pronunciations from my other projects" in Edit project: turning it on copies the
 // other projects' glossaries into this one, and the button copies them again, so a project
@@ -78,6 +86,60 @@ function useSharedGlossary(
   };
 }
 
+// "Use narration aliases" in Edit project: turning it on copies Library → Aliases into this
+// project, and the button copies them again, so a Library edit only reaches a project that
+// asks for it (and rebuilds only the narration the changed aliases touch).
+function useAliases(edit: RevisionEdit, onChange: (edit: RevisionEdit) => void) {
+  const { api } = useApp();
+  const [state, setState] = useState<{ busy: boolean; error?: string }>({ busy: false });
+  const { config } = edit;
+  const audio = config.audio;
+  const copy = async (): Promise<void> => {
+    if (audio === undefined) return;
+    setState({ busy: true });
+    try {
+      const { aliases } = await readNarrationAliases(api);
+      const { narrationAliases: _old, ...rest } = config;
+      onChange({
+        ...edit,
+        config: {
+          ...rest,
+          audio: { ...audio, useNarrationAliases: true },
+          ...(aliases.length === 0 ? {} : { narrationAliases: aliases }),
+        },
+      });
+      setState({ busy: false });
+    } catch (error) {
+      setState({ busy: false, error: error instanceof Error ? error.message : String(error) });
+    }
+  };
+  const count = config.narrationAliases?.length ?? 0;
+  return {
+    value: audio?.useNarrationAliases === true,
+    onChange: (on: boolean) => {
+      if (audio === undefined) return;
+      if (on) void copy();
+      else {
+        const { narrationAliases: _old, ...rest } = config;
+        onChange({ ...edit, config: { ...rest, audio: { ...audio, useNarrationAliases: false } } });
+      }
+    },
+    note:
+      audio?.useNarrationAliases === true ? (
+        <p className="flex flex-wrap items-center gap-2 text-label text-ink2">
+          {state.error !== undefined
+            ? `Couldn't read Library → Aliases: ${state.error} Try Update from Library again.`
+            : count === 0
+              ? "No aliases are copied yet. Add some in Library → Aliases."
+              : `${String(count)} ${count === 1 ? "alias" : "aliases"} copied from Library → Aliases.`}
+          <Button type="button" variant="ghost" disabled={state.busy} onClick={() => void copy()}>
+            {state.busy ? "Copying…" : "Update from Library"}
+          </Button>
+        </p>
+      ) : undefined,
+  };
+}
+
 export function RevisionProviders({
   projectId,
   edit,
@@ -95,12 +157,14 @@ export function RevisionProviders({
   const llm = config.llm ?? { provider: "", model: "" };
   const audio = config.audio ?? { provider: "", model: "", voice: "" };
   const shared = useSharedGlossary(projectId, edit, onChange);
+  const aliases = useAliases(edit, onChange);
   const images = config.images ?? { provider: "", model: "" };
   const textNeeded =
     usesNarrationPreparation(config) ||
     config.sources.research === "generate" ||
     config.sources.article === "generate" ||
     config.sources.thumbnail === "prompt_by_llm" ||
+    (usesVoices(config) && config.voices?.source === "attribute") ||
     (config.sources.audio === "generate" &&
       (config.intro?.mode === "llm" || config.outro?.mode === "llm"));
   const imagesNeeded =
@@ -193,6 +257,23 @@ export function RevisionProviders({
               })
             }
           />
+          <NarrationAliasesToggle {...aliases} />
+          <section aria-label="Speakers" className="col-span-full border-t border-line pt-3">
+            <h3 className="mb-2 text-small font-semibold">Speakers</h3>
+            <SpeakersEditor
+              value={config.voices}
+              providers={providers}
+              voices={voices}
+              script={edit.content.articleMarkdown ?? undefined}
+              onChange={(next) => {
+                const { voices: _old, ...rest } = config;
+                onChange({
+                  ...edit,
+                  config: next === undefined ? rest : { ...rest, voices: next },
+                });
+              }}
+            />
+          </section>
         </>
       ) : null}
       {imagesNeeded ? (

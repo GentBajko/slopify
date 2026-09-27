@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { CalendarIcon, PlusIcon } from "lucide-react";
 import { type ReactElement, useEffect, useMemo, useState } from "react";
 import { useApp } from "@/app-context";
@@ -14,6 +14,7 @@ import { FailedItem, HeldTopicsItem, isWaiting, WaitingItem } from "@/home/needs
 import { isReadyToUpload, ReadyItem } from "@/home/ready";
 import { RunningProject } from "@/home/running-now";
 import { ThisWeek } from "@/home/week";
+import { onboardingKey, readFirstRun } from "@/onboarding/api";
 import { projectsQuery } from "@/queries";
 import { calendarQuery, schedulesQuery } from "@/schedules/api";
 import { templatesQuery } from "@/templates/api";
@@ -26,6 +27,9 @@ const today = new Intl.DateTimeFormat(undefined, {
 });
 // Enough to see what matters without the page turning into the projects list.
 const shownPerSection = 4;
+
+// Set once the first-run screen was opened in this tab, so coming back to Home stays here.
+let welcomed = false;
 
 // Home: what needs the person, what is running, what is coming up on the calendar, what is
 // ready to upload and what this week cost, for the channel picked in the rail (or all).
@@ -46,6 +50,15 @@ export function HomeRoute(): ReactElement {
   });
   const calendar = useQuery(calendarQuery(api, range.from, range.to));
   // A clock for the running steps' times; once a second is what the eye reads.
+  const firstRun = useQuery({ queryKey: onboardingKey, queryFn: () => readFirstRun(api) });
+  const navigate = useNavigate();
+  // A fresh install opens on the first-run screen, once per visit.
+  useEffect(() => {
+    if (firstRun.data?.show === true && !welcomed) {
+      welcomed = true;
+      void navigate({ to: "/welcome" });
+    }
+  }, [firstRun.data?.show, navigate]);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);

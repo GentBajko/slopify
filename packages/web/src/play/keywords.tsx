@@ -1,84 +1,45 @@
-import { valueMax } from "@app/slices/admission/rules.js";
 import type { Field } from "@app/slices/admission/substitute.js";
-import { useId } from "react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import type { ReactElement } from "react";
+import { KeywordList } from "@/components/keyword-list";
 
+// Play's keywords: the shared list, fed from the fields the picked prompts ask for. `topics`
+// are the keywords the project title names; `hide` leaves out the ones drawn elsewhere (the
+// Topic field at the top of Play).
 export function KeywordBlock({
   fields,
   values,
   origins,
+  topics = [],
+  hide = [],
   problem,
   onChange,
 }: {
   readonly fields: readonly Field[];
   readonly values: Readonly<Record<string, string>>;
   readonly origins?: ReadonlyMap<string, readonly string[]>;
+  readonly topics?: readonly string[];
+  readonly hide?: readonly string[];
   readonly problem: (field: string) => string | undefined;
   readonly onChange: (name: string, value: string) => void;
-}) {
-  if (!fields.length) return null;
+}): ReactElement | null {
+  const shown = fields.filter((field) => !hide.includes(field.name));
+  if (!shown.length) return null;
   return (
-    <section data-tour="play-keywords" className="min-w-0 py-6">
-      <h3 className="mb-2 text-lg font-semibold">Keywords</h3>
-      <p className="mb-5 text-small text-ink3">
-        Each keyword is entered once. For example, {"{{topic}}"} becomes the topic you enter below.
+    <section className="min-w-0 py-2">
+      <h3 className="m-0 mb-1 text-title-3">Keywords</h3>
+      <p className="m-0 mb-4 text-small text-ink-2">
+        Each keyword is entered once and fills every place that names it.
       </p>
-      <div className="flex flex-col gap-4">
-        {fields.map((field) => (
-          <KeywordField
-            key={field.name}
-            name={field.name}
-            value={Object.hasOwn(values, field.name) ? (values[field.name] ?? "") : ""}
-            origins={origins?.get(field.name)}
-            problem={problem(`values.${field.name}`)}
-            onChange={onChange}
-          />
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function KeywordField({
-  name,
-  origins,
-  value,
-  problem,
-  onChange,
-}: {
-  readonly name: string;
-  readonly origins?: readonly string[] | undefined;
-  readonly value: string;
-  readonly problem: string | undefined;
-  readonly onChange: (name: string, value: string) => void;
-}) {
-  const fieldId = useId();
-  const noteId = useId();
-
-  return (
-    <div className="min-w-0">
-      <Label htmlFor={fieldId} className="mb-[5px]">
-        {name}
-      </Label>
-      <Input
-        id={fieldId}
-        data-play-field={`values.${name}`}
-        value={value}
-        maxLength={valueMax}
-        spellCheck={false}
-        aria-invalid={problem !== undefined}
-        aria-describedby={problem === undefined ? undefined : noteId}
-        onChange={(event) => {
-          onChange(name, event.target.value);
-        }}
+      <KeywordList
+        keywords={shown.map((field) => ({
+          name: field.name,
+          value: Object.hasOwn(values, field.name) ? (values[field.name] ?? "") : "",
+          feeds: origins?.get(field.name) ?? [],
+          topic: topics.includes(field.name),
+        }))}
+        problem={problem}
+        onChange={onChange}
       />
-      {origins?.length ? <p className="mt-1 text-small text-ink3">{origins.join(" · ")}</p> : null}
-      {problem === undefined ? null : (
-        <p id={noteId} className="mt-1 text-label text-red">
-          {problem}
-        </p>
-      )}
-    </div>
+    </section>
   );
 }

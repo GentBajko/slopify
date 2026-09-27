@@ -22,7 +22,8 @@ it.each(["title", "values.topic"])(
     await userEvent.click(await screen.findByRole("button", { name: "Correct this field" }));
     const input = document.querySelector(`[data-play-field="items.${id}.${suffix}"]`);
     await waitFor(() => expect(document.activeElement).toBe(input));
-    expect(input?.closest("details")?.open).toBe(true);
+    // The other video's title and keywords open in their own side panel.
+    expect(input?.closest('[role="dialog"]')?.getAttribute("aria-labelledby")).toBeTruthy();
     expect(input?.getAttribute("aria-invalid")).toBe("true");
   },
 );

@@ -44,6 +44,7 @@ RUN apt-get update \
     && mkdir -p /data/home \
     && chown -R node:node /data
 COPY --from=build /src/packages/app/dist packages/app/dist
+COPY LICENSE NOTICE packages/app/
 # The subtitle model ships in the image: the app copies it into /data on first start instead
 # of downloading 95 MB. prepareModel checks its size and SHA-256 before keeping it.
 COPY docker/subtitle-model/ models/english-subtitles/

@@ -3,6 +3,7 @@ import type { LibrarySnapshot } from "../library/snapshot.js";
 import { snapshotEntry, snapshotPrompt } from "../library/snapshot.js";
 import type { PlayDraftDocument } from "../play-drafts/model.js";
 import type { TemplateDeps, TemplateResult } from "./model.js";
+import { templateDocument } from "./one-off.js";
 
 export function templateSetup(
   deps: TemplateDeps,
@@ -11,7 +12,13 @@ export function templateSetup(
   const prompts: LibrarySnapshot["prompts"][number][] = [];
   const entries: LibrarySnapshot["entries"][number][] = [];
   const choices = [
-    { kind: "article" as const, name: input.form.articlePrompt },
+    {
+      kind:
+        input.form.voices?.source === "script" && input.form.sources.audio === "generate"
+          ? ("script" as const)
+          : ("article" as const),
+      name: input.form.articlePrompt,
+    },
     { kind: "narration" as const, name: input.form.narrationPrompt ?? "" },
     { kind: "description" as const, name: input.form.descriptionPrompt ?? "" },
     ...input.form.imagePrompts.map((row) => ({ kind: "image" as const, name: row.name })),
@@ -40,7 +47,8 @@ export function templateSetup(
     if (!row) return { ok: false, reason: "missing-prompt" };
     entries.push(row);
   }
-  const { templateSource: _source, channelId: _channel, ...document } = input;
+  // Only the settings are kept: the topic typed for one video is left empty (`one-off.ts`).
+  const { templateSource: _source, channelId: _channel, ...document } = templateDocument(input);
   return {
     ok: true,
     value: { ...document, fontUpload: null, librarySnapshot: { prompts, entries } },

@@ -13,6 +13,7 @@ import type { Paths } from "../../kernel/paths.js";
 import type { ModelInfo, ProviderFamily } from "../../kernel/ports/model.js";
 import type { Runner } from "../../kernel/runner/index.js";
 import type { BackupService } from "../../slices/backups/service.js";
+import { isSampleProject } from "../../slices/onboarding/sample.js";
 import type { DraftStartDeps } from "../../slices/play-drafts/model.js";
 import type { RebuildDeps } from "../../slices/rebuild/service.js";
 import type { ScheduleDeps } from "../../slices/schedules/model.js";
@@ -21,6 +22,7 @@ import type { AppUpdater } from "../../updater/model.js";
 import type { Hub } from "../events/hub.js";
 import { actionRoutes } from "./actions.js";
 import { audioPreviewRoutes } from "./audio-preview.js";
+import { type Audition, auditionRoutes } from "./auditions.js";
 import { backupRoutes } from "./backups.js";
 import { channelRoutes } from "./channels.js";
 import { checkpointRoutes } from "./checkpoints.js";
@@ -32,6 +34,8 @@ import { fileRoutes } from "./files.js";
 import { fontsRoutes } from "./fonts.js";
 import { homeRoutes, uploadedRoutes } from "./home.js";
 import type { MutationLifecycle } from "./mutations.js";
+import { type DecodePeaks, narrationPeakRoutes } from "./narration-peaks.js";
+import { onboardingRoutes } from "./onboarding.js";
 import { openFolderRoutes } from "./open-folder.js";
 import { planningRoutes } from "./planning.js";
 import { problem, problemFromError, titleOf } from "./problem.js";
@@ -49,6 +53,7 @@ import { settingsRoutes } from "./settings.js";
 import { stagingRoutes } from "./staging.js";
 import { storageRoutes } from "./storage.js";
 import { studioRoutes } from "./studio.js";
+import { stylePreviewRoutes } from "./style-preview.js";
 import { subtitleRoutes } from "./subtitles.js";
 import { telemetryRoutes } from "./telemetry.js";
 import { tutorialRoutes } from "./tutorial.js";
@@ -69,6 +74,10 @@ export interface AppDeps {
   readonly backups?: BackupService;
   readonly rebuild?: RebuildDeps;
   readonly measureAudio?: ((path: string, signal?: AbortSignal) => Promise<number>) | undefined;
+  // The bundled sample's archive; the one shipped in assets unless a test hands in another.
+  readonly sampleArchive?: string | undefined;
+  // Reads a narration file's loudness for the live view's waveform (ffmpeg in production).
+  readonly decodePeaks?: DecodePeaks | undefined;
   readonly openFolder?: (path: string) => Promise<void>;
   readonly installationPending?: () => boolean;
   readonly folderLocation?: {
@@ -83,9 +92,13 @@ export interface AppDeps {
   readonly fetch?: typeof globalThis.fetch;
   // Asks a CLI on this computer whether it is signed in, for the health check.
   readonly cliLogin?: import("../../slices/settings/health.js").LoginReader;
+  // Speaks one voice audition through the attempt wrapper (`kernel/runner/audition.ts`).
+  readonly audition?: Audition | undefined;
   readonly updater?: AppUpdater;
   readonly mutations?: Pick<MutationLifecycle, "begin">;
   readonly audioPreviews?: AudioPreviewStore;
+  // Edit project's and Play's rendered style preview; absent answers that it is unavailable.
+  readonly stylePreviews?: import("../../slices/style-preview/service.js").StylePreviews;
   // Settings → Notifications' test button. Handed in so a test never reaches the network.
   readonly sendNotification?: import("../../slices/notifications/send.js").SendNotification;
   readonly db: DatabaseSync;
@@ -142,6 +155,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/projects", revisionFolderRoutes(deps))
       .route("/projects", openFolderRoutes(deps))
       .route("/projects", audioPreviewRoutes(deps))
+      .route("/projects", narrationPeakRoutes(deps))
       .route("/projects", runCostRoutes(deps))
       .route("/projects", uploadedRoutes(deps))
       .route("/home", homeRoutes(deps))
@@ -156,12 +170,15 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/entries", entryRoutes(deps))
       .route("/document-themes", documentThemeRoutes(deps))
       .route("/pronunciations", pronunciationRoutes(deps))
+      .route("/auditions", auditionRoutes(deps))
       .route("/telemetry", telemetryRoutes(deps))
       .route("/usage", usageRoutes(deps))
       .route("/settings", settingsRoutes(deps))
       .route("/studio", studioRoutes(deps))
+      .route("/style-preview", stylePreviewRoutes(deps))
       .route("/tutorial", tutorialRoutes(deps))
       .route("/providers", providerRoutes(deps))
+      .route("/onboarding", onboardingRoutes(deps))
   );
 }
 
@@ -214,6 +231,26 @@ export function createApp(deps: AppDeps): Hono {
         releaseRequest?.();
       }
     })
+    // The bundled sample is read-only, so exploring it never reaches a paid provider: only
+    // what reads or previews it is let through.
+    .use("/api/projects/:id/*", async (c, next) => {
+      if (["GET", "HEAD", "OPTIONS"].includes(c.req.method)) return next();
+      const id = c.req.param("id");
+      // Deleting the sample is allowed: Settings → Restore sample brings it back.
+      if (
+        !isSampleProject(deps.db, id) ||
+        sampleReadOnlyExempt.test(c.req.path) ||
+        c.req.path.replace(/\/$/, "") === `/api/projects/${id}`
+      )
+        return next();
+      return problem(c, {
+        status: 409,
+        title: titleOf(409),
+        detail:
+          "This is the sample project, which is read-only so trying things on it never spends anything. Press Make my own copy at the top of the sample's page, then edit and rebuild the copy.",
+        extensions: { reason: "sample-read-only" },
+      });
+    })
     .onError((error, c) => problemFromError(c, error, deps))
     .notFound(missing)
     .route("/api", apiRoutes(deps, startedAt))
@@ -242,6 +279,10 @@ export function createApp(deps: AppDeps): Hono {
 
   return app;
 }
+
+// What the sample's page may still do: prepare its revision view, preview a rebuild (which
+// starts nothing) and open its folder.
+const sampleReadOnlyExempt = /\/(revisions\/prepare|rebuild\/preview|open-folder)\/?$/;
 
 function missing(c: Context): Response {
   return problem(c, {

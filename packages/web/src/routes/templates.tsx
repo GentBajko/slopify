@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Trash2Icon } from "lucide-react";
-import { type ReactElement, useEffect, useRef, useState } from "react";
+import { Fragment, type ReactElement, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { channelsQuery } from "@/channels/api";
 import { channelOfTemplate } from "@/channels/members-tabs";
@@ -16,6 +16,7 @@ import { Field, Input, Select } from "@/components/kit/field";
 import { List, ListRow } from "@/components/kit/list-row";
 import { useToast } from "@/components/kit/toast";
 import { ListSkeleton } from "@/library/list-states";
+import { PacksDrawer } from "@/onboarding/packs-drawer";
 import { listPlayDrafts, readPlayDraft } from "@/play/draft-api";
 import {
   deleteProjectTemplate,
@@ -25,6 +26,7 @@ import {
   templatesKey,
   templatesQuery,
 } from "@/templates/api";
+import { TemplateKeywords } from "@/templates/keywords";
 import { LibraryToolbar } from "./library.js";
 
 // Library → Templates: saved Play setups, each applied as a fresh draft to review. The rows
@@ -68,7 +70,10 @@ export function TemplatesRoute({
   const [error, setError] = useState<string | null>(null);
   const notify = useToast();
   const [saving, setSaving] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState<TemplateSummary | null>(null);
+  // The template whose keywords are shown under its row.
+  const [keywordsOf, setKeywordsOf] = useState<string | null>(null);
   const active = useRef(false);
   const saveIdentity = useRef<{ readonly key: string; readonly id: string } | null>(null);
   const applications = useRef(new Map<string, string>());
@@ -193,11 +198,23 @@ export function TemplatesRoute({
             : undefined;
   return (
     <div>
+      <PacksDrawer
+        open={adding}
+        onClose={() => setAdding(false)}
+        onInstalled={() =>
+          void client.invalidateQueries({ queryKey: templatesQuery(api).queryKey })
+        }
+      />
       <LibraryToolbar
         action={
-          <Button variant="primary" onClick={() => setSaving(true)} aria-expanded={saving}>
-            Save a setup
-          </Button>
+          <>
+            <Button variant="secondary" onClick={() => setAdding(true)} aria-expanded={adding}>
+              Add pack
+            </Button>
+            <Button variant="primary" onClick={() => setSaving(true)} aria-expanded={saving}>
+              Save a setup
+            </Button>
+          </>
         }
       >
         <Select
@@ -245,47 +262,64 @@ export function TemplatesRoute({
       {shown?.length ? (
         <List label="Project templates">
           {shown.map((template) => (
-            <ListRow
-              key={template.id}
-              className="max-md:grid-cols-1"
-              title={template.name}
-              meta={
-                <>
-                  {channelName(template) === undefined ? "" : `${channelName(template)} · `}
-                  Version {template.version} · updated{" "}
-                  <time dateTime={template.updatedAt}>{template.updatedAt.slice(0, 10)}</time>
-                </>
-              }
-              actions={
-                // biome-ignore lint/a11y/useSemanticElements: a group of buttons, not a fieldset of inputs.
-                <div
-                  role="group"
-                  aria-label={`Actions for ${template.name}`}
-                  className="flex flex-wrap items-center gap-[2px]"
-                >
-                  <Button
-                    variant="quiet"
-                    size="small"
-                    aria-label={`Apply ${template.name}`}
-                    disabled={pending || blocked}
-                    onClick={() => void execute(() => apply(template))}
+            <Fragment key={template.id}>
+              <ListRow
+                className="max-md:grid-cols-1"
+                title={template.name}
+                meta={
+                  <>
+                    {channelName(template) === undefined ? "" : `${channelName(template)} · `}
+                    Version {template.version} · updated{" "}
+                    <time dateTime={template.updatedAt}>{template.updatedAt.slice(0, 10)}</time>
+                  </>
+                }
+                actions={
+                  // biome-ignore lint/a11y/useSemanticElements: a group of buttons, not a fieldset of inputs.
+                  <div
+                    role="group"
+                    aria-label={`Actions for ${template.name}`}
+                    className="flex flex-wrap items-center gap-[2px]"
                   >
-                    Apply to Play
-                  </Button>
-                  <IconButton
-                    size="small"
-                    label={`Delete ${template.name}`}
-                    disabled={pending}
-                    onClick={() => {
-                      setDeleting(template);
-                      setError(null);
-                    }}
-                  >
-                    <Trash2Icon aria-hidden="true" />
-                  </IconButton>
-                </div>
-              }
-            />
+                    <Button
+                      variant="quiet"
+                      size="small"
+                      aria-label={`Apply ${template.name}`}
+                      disabled={pending || blocked}
+                      onClick={() => void execute(() => apply(template))}
+                    >
+                      Apply to Play
+                    </Button>
+                    <Button
+                      variant="quiet"
+                      size="small"
+                      aria-expanded={keywordsOf === template.id}
+                      aria-label={`Keywords of ${template.name}`}
+                      onClick={() =>
+                        setKeywordsOf((current) => (current === template.id ? null : template.id))
+                      }
+                    >
+                      Keywords
+                    </Button>
+                    <IconButton
+                      size="small"
+                      label={`Delete ${template.name}`}
+                      disabled={pending}
+                      onClick={() => {
+                        setDeleting(template);
+                        setError(null);
+                      }}
+                    >
+                      <Trash2Icon aria-hidden="true" />
+                    </IconButton>
+                  </div>
+                }
+              />
+              {keywordsOf === template.id ? (
+                <li className="px-3 pb-3">
+                  <TemplateKeywords template={template} />
+                </li>
+              ) : null}
+            </Fragment>
           ))}
         </List>
       ) : null}
@@ -316,6 +350,10 @@ export function TemplatesRoute({
             open Play
           </Link>{" "}
           to prepare one.
+        </p>
+        <p className="mb-4 text-small text-ink2">
+          A template keeps the settings, not one video&apos;s topic: keywords the project title
+          names, like {"{{Topic}}"}, are saved empty, and other keywords keep their values.
         </p>
         <form
           id="save-template-form"

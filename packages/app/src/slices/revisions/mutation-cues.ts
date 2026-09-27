@@ -92,6 +92,20 @@ export function validateProposedCues(
         ? undefined
         : parts.reduce<number>((sum, one) => sum + (one ?? 0), 0);
     }
+    // Speaker turns: each at its pace, with the gap after it (`recipe-voices.ts`).
+    if (recipe.input.kind === "local" && recipe.input.operation === "concat-turns-v1") {
+      const layout = Array.isArray(recipe.input.values) ? recipe.input.values[1] : undefined;
+      const parts = recipe.dependsOn.map(durationFor);
+      if (!Array.isArray(layout) || parts.some((one) => one === undefined)) return undefined;
+      return parts.reduce<number>((sum, one, index) => {
+        const [pace, gap] = Array.isArray(layout[index]) ? layout[index] : [1, 0];
+        return (
+          sum +
+          (one ?? 0) / (typeof pace === "number" && pace > 0 ? pace : 1) +
+          (typeof gap === "number" ? gap * 1000 : 0)
+        );
+      }, 0);
+    }
     if (plan.baseFingerprints[key] !== plan.fingerprints[key]) return undefined;
     const prefix = key.replace(/:1$/, ":");
     const parts = plan.manifest.pieces.filter(

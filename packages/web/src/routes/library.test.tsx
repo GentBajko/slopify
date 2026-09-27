@@ -7,7 +7,7 @@ import { LibraryLayout } from "./library.js";
 afterEach(cleanup);
 
 describe("the Library layout", () => {
-  it("titles the page and offers its four tabs; schedules and the calendar live elsewhere", async () => {
+  it("titles the page and offers its five tabs; schedules and the calendar live elsewhere", async () => {
     renderRouted(
       <CommandPaletteProvider>
         <LibraryLayout />
@@ -21,7 +21,7 @@ describe("the Library layout", () => {
       within(tabs)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual(["Prompts", "Intros & Outros", "Templates", "Documents"]);
+    ).toEqual(["Prompts", "Intros & Outros", "Templates", "Documents", "Aliases"]);
   });
 
   it("registers the Library's frequent actions in the command palette", async () => {

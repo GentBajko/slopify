@@ -202,11 +202,12 @@ function stageForKey(key: string): StageKind {
   if (key.startsWith("review:")) return stageForKey(key.slice("review:".length));
   const prefix = key.split(":")[0];
   if (prefix === "research") return "research";
-  if (prefix === "article" || prefix === "entry") return "article";
+  if (prefix === "article" || prefix === "entry" || prefix === "script") return "article";
   if (prefix === "audio" || prefix === "narration") return "audio";
   if (prefix === "image" || prefix === "reference") return "images";
   if (prefix === "thumbnail") return "thumbnail";
-  if (prefix === "export" || prefix === "subtitles" || prefix === "video") return "video";
+  if (prefix === "export" || prefix === "subtitles" || prefix === "video" || prefix === "voices")
+    return "video";
   if (prefix === "document") return "document";
   throw new Error(
     "Slopify hit an internal error (unknown kind of step). Try again; if it happens again, use Download diagnostics in Settings and report it.",

@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { jsonAnswer, problemAnswer } from "@/test-app";
 import { sqliteSessionFixture } from "./draft-sqlite-fixture";
-import { deferred } from "./play-test-fixture";
+import { deferred, openSection } from "./play-test-fixture";
 import { reviewHarness, reviewStorage, suppliedDocument } from "./review-test-harness";
 
 beforeEach(() =>
@@ -67,7 +67,7 @@ it.each(cases)(
           },
         },
       });
-      await userEvent.click(screen.getByRole("button", { name: "Style" }));
+      await openSection("Style");
       await userEvent.upload(
         screen.getByLabelText("Upload font (.ttf or .otf)"),
         new File(["bad"], "broken.ttf", { type: "font/ttf" }),
@@ -82,14 +82,14 @@ it.each(cases)(
           "off",
         );
       else {
-        await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+        await openSection("Outputs");
         await userEvent.click(
           within(screen.getByRole("radiogroup", { name: "audio source" })).getByRole("radio", {
             name: "Off",
           }),
         );
       }
-      await userEvent.click(screen.getByRole("button", { name: "Review" }));
+      await openSection("Review");
       if (reload) await harness.restart();
       const link = await screen.findByRole("button", {
         name: "Wait for the font upload to finish or choose another font.",
@@ -134,31 +134,38 @@ it("keeps an inactive in-flight font locked until explicit recovery and ignores 
       subtitles: { ...suppliedDocument.form.subtitles, mode: "files" },
     },
   });
-  await userEvent.click(screen.getByRole("button", { name: "Style" }));
+  await openSection("Style");
   await userEvent.upload(
     screen.getByLabelText("Upload font (.ttf or .otf)"),
     new File(["font"], "late.ttf", { type: "font/ttf" }),
   );
-  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+  await openSection("Outputs");
   await userEvent.click(
     within(screen.getByRole("radiogroup", { name: "audio source" })).getByRole("radio", {
       name: "Off",
     }),
   );
-  await userEvent.click(screen.getByRole("button", { name: "Review" }));
+  await openSection("Review");
   expect(harness.session().fontUploading).toBe(true);
   expect((screen.getByRole("button", { name: "Start run" }) as HTMLButtonElement).disabled).toBe(
     true,
   );
+  // The reason under the Play key says what it waits for and goes to it.
   await userEvent.click(
-    screen.getByRole("button", { name: "Wait for uploads to finish before Start" }),
+    within(screen.getByRole("region", { name: "Start" })).getByRole("button", {
+      name: "Wait for the subtitle font upload to finish to play",
+    }),
   );
   await waitFor(() =>
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Keep current font" })),
   );
   expect(screen.getByText("Uploading late.ttf…")).not.toBeNull();
-  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
-  await userEvent.click(screen.getByRole("button", { name: "Fix setup" }));
+  await openSection("Outputs");
+  await userEvent.click(
+    within(screen.getByRole("region", { name: "Start" })).getByRole("button", {
+      name: "Wait for the subtitle font upload to finish to play",
+    }),
+  );
   await waitFor(() =>
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Keep current font" })),
   );

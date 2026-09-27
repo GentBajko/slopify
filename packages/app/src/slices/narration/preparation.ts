@@ -1,5 +1,7 @@
 import { z } from "zod";
 import type { Message } from "../../kernel/ports/llm.js";
+import type { AliasMatch } from "../../kernel/ports/narration-aliases.js";
+import { aliasedSentences } from "./aliases.js";
 
 export type NarrationSegment = "body" | "intro" | "outro";
 export interface PreparationSource {
@@ -85,12 +87,21 @@ const contract = [
   "Never return or rewrite narration. Do not translate, correct, abbreviate or add dialogue.",
   "Use cues sparingly; an empty cues array is valid. Combine simultaneous directions.",
 ].join("\n");
-export function preparationMessages(prompt: string, source: string): readonly Message[] {
+// `aliases` are the narration aliases found in `source`: the model reads the sentences as
+// they will be said. Without any, the request is exactly what it always was.
+export function preparationMessages(
+  prompt: string,
+  source: string,
+  aliases: readonly AliasMatch[] = [],
+): readonly Message[] {
   return [
     { role: "system", content: contract },
     {
       role: "user",
-      content: JSON.stringify({ direction: prompt, sentences: sourceSentences(source) }),
+      content: JSON.stringify({
+        direction: prompt,
+        sentences: aliasedSentences(sourceSentences(source), aliases),
+      }),
     },
   ];
 }

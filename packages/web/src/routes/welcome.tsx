@@ -1,0 +1,206 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { type FormEvent, type ReactElement, useRef, useState } from "react";
+import { useApp } from "@/app-context";
+import { ActionBar, StatusSlot } from "@/components/kit/action-bar";
+import { PageBar } from "@/components/kit/page-bar";
+import { SectionHead } from "@/components/kit/section-head";
+import { Rail, RailGroup } from "@/components/rail";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Picker } from "@/components/ui/picker";
+import {
+  dismissFirstRun,
+  installPack,
+  makeShort,
+  onboardingKey,
+  readFirstRun,
+} from "@/onboarding/api";
+import { keys } from "@/queries";
+
+// The first-run screen: what this machine can already do, the one-minute short, the sample and
+// the starter packs. Shown on a fresh install until it is skipped or a real project exists.
+export function WelcomeRoute(): ReactElement {
+  const { api } = useApp();
+  const client = useQueryClient();
+  const navigate = useNavigate();
+  const view = useQuery({ queryKey: onboardingKey, queryFn: () => readFirstRun(api) });
+  const [topic, setTopic] = useState("");
+  const [pack, setPack] = useState("");
+  // One identity per press, kept across a retry of the same press.
+  const request = useRef<string | undefined>(undefined);
+
+  const skip = useMutation({
+    mutationFn: () => dismissFirstRun(api),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: onboardingKey });
+      await navigate({ to: "/" });
+    },
+  });
+  const install = useMutation({
+    mutationFn: (id: string) => installPack(api, id),
+    onSettled: () => client.invalidateQueries({ queryKey: onboardingKey }),
+  });
+  const short = useMutation({
+    mutationFn: () => {
+      request.current ??= crypto.randomUUID();
+      return makeShort(api, {
+        topic,
+        requestId: request.current,
+        ...(pack === "" ? {} : { packId: pack }),
+      });
+    },
+    onSuccess: async ({ projectId }) => {
+      request.current = undefined;
+      await client.invalidateQueries({ queryKey: keys.projects });
+      await client.invalidateQueries({ queryKey: onboardingKey });
+      await navigate({ to: "/projects/$projectId", params: { projectId } });
+    },
+  });
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (topic.trim() !== "") short.mutate();
+  };
+
+  const data = view.data;
+  const ready = data?.clis.filter((cli) => cli.ready) ?? [];
+  const status = short.error
+    ? { tone: "error" as const, text: short.error.message }
+    : install.error
+      ? { tone: "error" as const, text: install.error.message }
+      : skip.error
+        ? { tone: "error" as const, text: skip.error.message }
+        : short.isPending
+          ? { tone: "info" as const, text: "Starting your short…" }
+          : undefined;
+
+  return (
+    <div>
+      <PageBar
+        title="Welcome to Slopify"
+        meta="Make a video from a topic, with the tools already on this computer."
+        actions={
+          <Button variant="ghost" disabled={skip.isPending} onClick={() => skip.mutate()}>
+            Skip
+          </Button>
+        }
+      />
+      {view.error ? <p className="mb-3 text-body text-red">{view.error.message}</p> : null}
+
+      <SectionHead
+        title="Found on this computer"
+        info="Claude Code, Codex and Gemini CLI write the text with your own sign-in, so no API key is needed for it. Codex also draws the images. The narration needs a voice key (OpenAI, ElevenLabs, Cartesia or Inworld) in Settings → Providers."
+      />
+      <RailGroup className="mb-6">
+        {(data?.clis ?? []).map((cli) => (
+          <Rail key={cli.id}>
+            <span className="min-w-0 flex-1 font-semibold">{cli.name}</span>
+            <span className="text-small text-ink2">
+              {cli.ready
+                ? `Ready${cli.version === null ? "" : ` · ${cli.version}`}${cli.draws ? " · writes and draws" : " · writes"}`
+                : cli.installed
+                  ? (cli.issue ?? "Installed, not usable yet")
+                  : "Not found"}
+            </span>
+          </Rail>
+        ))}
+        {data === undefined ? <Rail>Looking for installed tools…</Rail> : null}
+      </RailGroup>
+      {data !== undefined && ready.length > 0 ? (
+        <p className="-mt-4 mb-6 text-small text-ink2">
+          You can make a video now: no API keys are needed for the text
+          {ready.some((cli) => cli.draws) ? " or the images" : ""}.
+        </p>
+      ) : null}
+
+      <SectionHead
+        title="Make a 60-second short"
+        info="Type a topic. Slopify writes a script of about 150 words, narrates it, draws four vertical images and renders a captioned 9:16 short, usually in about five minutes with the command-line tools."
+      />
+      <form onSubmit={submit} className="mb-6 flex flex-wrap items-end gap-3">
+        <label
+          htmlFor="welcome-topic"
+          className="flex min-w-[240px] flex-1 flex-col gap-1 text-label text-ink2"
+        >
+          Topic
+          <Input
+            id="welcome-topic"
+            value={topic}
+            maxLength={200}
+            placeholder="Why the sea glows at night"
+            onChange={(event) => setTopic(event.target.value)}
+          />
+        </label>
+        <label htmlFor="welcome-pack" className="flex flex-col gap-1 text-label text-ink2">
+          Style
+          <Picker
+            id="welcome-pack"
+            aria-label="Starter pack"
+            value={pack}
+            onChange={(event) => setPack(event.target.value)}
+          >
+            <option value="">General</option>
+            {(data?.packs ?? []).map((one) => (
+              <option key={one.id} value={one.id}>
+                {one.name}
+              </option>
+            ))}
+          </Picker>
+        </label>
+        <Button type="submit" variant="primary" disabled={topic.trim() === "" || short.isPending}>
+          Make a 60-second short
+        </Button>
+      </form>
+
+      <SectionHead title="Explore the sample" />
+      <RailGroup className="mb-6">
+        <Rail>
+          <span className="min-w-0 flex-1 text-small text-ink2">
+            A finished project with its video, two shorts, article, PDF, description and images. It
+            is read-only, so nothing you try on it costs anything.
+          </span>
+          {data?.sampleProjectId ? (
+            <Button asChild>
+              <Link to="/projects/$projectId" params={{ projectId: data.sampleProjectId }}>
+                Explore the sample
+              </Link>
+            </Button>
+          ) : (
+            <Button asChild variant="ghost">
+              <Link to="/settings" search={{ section: "storage" }}>
+                Restore sample in Settings
+              </Link>
+            </Button>
+          )}
+        </Rail>
+      </RailGroup>
+
+      <SectionHead
+        title="Starter packs"
+        info="Each pack adds prompts, a suggested voice and a Play template for one kind of channel. Adding a pack twice changes nothing, and it never replaces a prompt or template of yours with the same name."
+      />
+      <RailGroup>
+        {(data?.packs ?? []).map((one) => (
+          <Rail key={one.id}>
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="font-semibold">{one.name}</span>
+              <span className="text-small text-ink2">{one.summary}</span>
+            </span>
+            <Button
+              disabled={one.installed || install.isPending}
+              onClick={() => install.mutate(one.id)}
+            >
+              {one.installed ? "Added" : "Add pack"}
+            </Button>
+          </Rail>
+        ))}
+      </RailGroup>
+
+      <ActionBar status={<StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>}>
+        <Button asChild variant="ghost">
+          <Link to="/play">Set up a long video instead</Link>
+        </Button>
+      </ActionBar>
+    </div>
+  );
+}

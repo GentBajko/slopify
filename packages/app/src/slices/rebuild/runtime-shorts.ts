@@ -31,6 +31,7 @@ import { renderShort, type ShortMusic } from "../shorts/render.js";
 import { allocateAsset, discardPreparedAssets, sealAsset, writeAsset } from "../storage/assets.js";
 import { outputPath, projectDir } from "../storage/layout.js";
 import { probeDurationMs } from "../video/ffmpeg.js";
+import { usesVoices } from "../voices/model.js";
 import { sentencesText, transcriptSentences } from "../youtube/transcript.js";
 import { shortsPickKey } from "./recipe-shorts.js";
 import type { ExportExecutionDeps } from "./runtime-export.js";
@@ -115,7 +116,14 @@ async function pick(
     count: shorts.count,
     minSeconds: shorts.minSeconds,
     maxSeconds: shorts.maxSeconds,
-    sentences: sentencesText(sentences),
+    sentences: sentencesText(
+      sentences,
+      usesVoices(config) && config.voices !== undefined
+        ? Object.fromEntries(
+            config.voices.speakers.map((speaker) => [speaker.id, speaker.name.trim()]),
+          )
+        : undefined,
+    ),
   };
   const ask = llmCall(deps, context, piece, view, (text) => {
     const checked = checkPicks(text, sentences, limits);
@@ -408,7 +416,7 @@ async function backgroundMusic(
   return { path, volume: musicVolumeOf(shorts) };
 }
 
-function timingWords(
+export function timingWords(
   deps: ExportExecutionDeps,
   context: StageContext,
   view: RevisionView,

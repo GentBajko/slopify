@@ -33,7 +33,7 @@ import { type ShortsForm, shortsOn, sourceLabels } from "./state";
 
 // The Look in one line: only what differs from plain cuts, and the animated images with their
 // model and that they are paid.
-function lookSummary(form: { readonly videoEdit?: VideoEditSettings | undefined }): string {
+export function lookSummary(form: { readonly videoEdit?: VideoEditSettings | undefined }): string {
   const rows = videoEditRows(videoEditOf(form));
   const plain = new Map(videoEditRows(legacyVideoEdit));
   const changed = rows

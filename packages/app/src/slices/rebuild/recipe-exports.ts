@@ -1,7 +1,10 @@
+import type { FingerprintValue } from "../../kernel/runner/work.js";
 import { usesShorts, usesYoutubeDescription } from "../admission/rules.js";
+import { usesShortMode } from "../admission/short-mode.js";
 import { reviewsNarration } from "../reviews/rules.js";
 import { audioExportArgs } from "../video/audio-export-args.js";
 import { editNeedsTiming } from "../video/edit-settings.js";
+import { usesVoices, type VoicesSettings } from "../voices/model.js";
 import type { AudioRecipes } from "./recipe-audio.js";
 import {
   type RecipeContext,
@@ -36,15 +39,18 @@ export function exportRecipes(
       ),
     );
   const captions = config.subtitles !== undefined && config.subtitles.mode !== "off";
-  // The YouTube description's chapters, the shorts' clips and captions, and the video's cuts,
-  // chapter cards and chapter openers use the same word timing, so it runs for them even with
-  // captions off; only the caption files below wait for captions.
+  // The YouTube description's chapters, the shorts' clips and captions, a short's own
+  // captions, and the video's cuts, chapter cards and chapter openers use the same word timing,
+  // so it runs for them even with captions off; only the caption files below wait for captions.
+  const voices = usesVoices(config) ? config.voices : undefined;
   if (
     !captions &&
     !usesYoutubeDescription(config) &&
     !usesShorts(config) &&
+    !usesShortMode(config) &&
     !editNeedsTiming(config) &&
-    !reviewsNarration(config)
+    !reviewsNarration(config) &&
+    voices?.audioFiles !== true
   )
     return recipes;
   const timing = recipe(
@@ -61,11 +67,34 @@ export function exportRecipes(
         config.silenceGapSeconds,
         config.subtitles?.language ?? "en",
         config.edgeSilenceSeconds,
+        // Each word learns its speaker and turn on a multi-voice run.
+        ...(voices === undefined ? [] : ["voice-words-v1"]),
       ],
     },
     audio.keys,
   );
   recipes.push(timing);
+  if (voices?.audioFiles === true)
+    recipes.push(
+      recipe(
+        context,
+        "voices:files",
+        "video",
+        {
+          kind: "local",
+          version: 1,
+          operation: "audio-files-v1",
+          values: [
+            audio.mediaFingerprint,
+            resourceIdentity(context, timing),
+            (audio.sections ?? []).map((section) => [section.title, section.firstTurn]),
+            config.title,
+          ],
+        },
+        [...audio.keys, timing.key],
+        { unresolved: audio.sections === undefined },
+      ),
+    );
   if (config.subtitles === undefined || config.subtitles.mode === "off") return recipes;
   const cues = content.subtitleCues;
   const cueRecipe =
@@ -114,6 +143,7 @@ export function exportRecipes(
           ...(config.subtitles.color === undefined && config.subtitles.outlineColor === undefined
             ? []
             : [["colours", config.subtitles.color ?? null, config.subtitles.outlineColor ?? null]]),
+          ...(voices === undefined ? [] : [captionSpeakerValues(voices, audio.mediaFingerprint)]),
         ],
       },
       [cueRecipe.key],
@@ -136,4 +166,16 @@ export function manualCuesNeedReview(
         (value) => value.workKey === timing.key && value.state === "ready",
       )?.fingerprint
   );
+}
+
+// How the captions show the speakers: names, colours by place, name tags and, for a podcast or
+// interview, the speaker panel, which runs to the end of the narration.
+function captionSpeakerValues(voices: VoicesSettings, media: string | null): FingerprintValue {
+  return [
+    "voice-captions-v1",
+    voices.format,
+    voices.nameTags,
+    voices.speakers.map((speaker) => [speaker.id, speaker.name.trim()]),
+    media,
+  ];
 }

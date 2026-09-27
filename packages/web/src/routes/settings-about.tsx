@@ -46,7 +46,15 @@ export function AboutSettings({
 }): ReactElement {
   return (
     <div className="max-w-prose">
-      <SectionHead title="Support Slopify" meta="If it saves you time, you can support it here." />
+      <SectionHead title="About" />
+      <p className="m-0 mb-3 text-ink-2">
+        Slopify is free and open source, and runs on your machine with your own keys. If it saves
+        you time, you can support it here.
+      </p>
+      <p className="m-0 mb-4 text-small text-ink-2">
+        Made by Gent Bajko. Apache License 2.0: anyone who redistributes Slopify or builds on it
+        keeps this credit.
+      </p>
       <ul aria-label="Links" className="sl-list m-0 list-none p-0">
         {aboutLinks(donation).map((link) => (
           <li key={link.label} className="sl-row">

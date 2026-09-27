@@ -3,6 +3,7 @@ import type { DraftAttachment, DraftView } from "@app/slices/play-drafts/model.j
 import { createDraftInputSchema, saveDraftInputSchema } from "@app/slices/play-drafts/schema.js";
 import type { ProviderStatus, Voice } from "@app/slices/settings/model.js";
 import { type RenderResult, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { vi } from "vitest";
 import { PlayForm } from "@/routes/play";
@@ -131,6 +132,21 @@ export function playRoutes(
       ],
     }),
     "POST /api/projects": jsonAnswer({ project: { id: "p1", status: "running" }, stages: [] }, 201),
+    "GET /api/project-templates": jsonAnswer({ templates: [] }),
+    "POST /api/project-templates": async (request) => {
+      const body = (await request.json()) as { id: string; name: string; document: unknown };
+      return jsonAnswer(
+        { ...body, version: 1, updatedAt: "2026-09-27T00:00:00.000Z" },
+        201,
+      )(request);
+    },
+    // The rendered style preview in the right rail; the tests never render video.
+    "POST /api/style-preview": jsonAnswer({
+      hash: "f".repeat(64),
+      url: `/api/style-preview/${"f".repeat(64)}.mp4?v=1`,
+      cached: true,
+      seconds: 6,
+    }),
     "GET /api/fonts": jsonAnswer({
       fonts: [{ id: "default", name: "Default", family: "Arial", source: "bundled" }],
     }),
@@ -357,4 +373,35 @@ export function mountSession(
     </PlayDraftProvider>,
     testDeps(playRoutes(over)),
   );
+}
+
+// Play folds its settings into summary rows; a test opens the row that holds a control with
+// its Change button, as a person would. A row already open is left open.
+export async function openRow(label: string): Promise<void> {
+  const change = screen.queryByRole("button", { name: `Change ${label.toLowerCase()}` });
+  if (change && change.getAttribute("aria-expanded") === "false") await userEvent.click(change);
+}
+
+// The rows that hold what the Content, Outputs and Style tabs held before the rows, and the
+// side panel for Review.
+const sectionRows: Readonly<Record<string, readonly string[]>> = {
+  Content: ["Title and keywords", "Article", "Channel"],
+  Outputs: ["Narration", "Images", "Video and style", "Outputs"],
+  Style: ["Video and style"],
+};
+// Like the tabs did, going to a section closes the Review panel, and going to Review opens it
+// afresh (which asks the server for a new review).
+export async function openSection(name: string): Promise<void> {
+  const panel = screen.queryByRole("dialog", { name: "Review" });
+  if (panel)
+    await userEvent.click(
+      Array.from(panel.querySelectorAll("button")).find(
+        (button) => button.getAttribute("aria-label") === "Close",
+      ) ?? panel,
+    );
+  if (name === "Review") {
+    await userEvent.click(screen.getByRole("button", { name: "Review the whole setup" }));
+    return;
+  }
+  for (const label of sectionRows[name] ?? []) await openRow(label);
 }

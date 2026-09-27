@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { speechWords } from "./text.js";
+import { respoken, speechWords } from "./text.js";
 
 describe("subtitle speech normalization", () => {
   it("keeps displayed punctuation and spelling while matching numbers and acronyms", () => {
@@ -56,6 +56,30 @@ describe("subtitle speech normalization", () => {
       "AI GENERATED",
       "ISN'T",
     ]);
+  });
+  it("times written words against their aliased speech, keeping the written captions", () => {
+    const aliases = [
+      { written: "Dr.", spoken: "Doctor", wholeWord: true, caseSensitive: false },
+      { written: "et al.", spoken: "and others", wholeWord: true, caseSensitive: false },
+      { written: "&", spoken: " and ", wholeWord: false, caseSensitive: false },
+    ];
+    const words = speechWords("Dr. Grey et al. did R&D.", "", aliases);
+    expect(words.map((word) => word.text)).toEqual(["Dr.", "Grey", "et al.", "did", "R&D."]);
+    expect(words.map((word) => word.spoken)).toEqual([
+      "DOCTOR",
+      "GREY",
+      "AND OTHERS",
+      "DID",
+      "R AND D",
+    ]);
+    // Audio read without the alias (an uploaded chunk) still matches the written form.
+    const [doctor, , others] = words;
+    if (doctor === undefined || others === undefined) throw new Error("Missing words");
+    expect(respoken(doctor, "DR GREY").spoken).toBe("DR");
+    expect(respoken(others, "ET AL DID").spoken).toBe("ET AL");
+    expect(respoken(doctor, "DOCTOR GREY").spoken).toBe("DOCTOR");
+    // Without aliases nothing changes.
+    expect(speechWords("Dr. Grey").map((word) => word.spoken)).toEqual(["DR", "GREY"]);
   });
   it("refuses a transcript with no English speech", () => {
     expect(() => speechWords("你好 世界")).toThrow(/English/);

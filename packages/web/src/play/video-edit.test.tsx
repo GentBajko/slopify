@@ -1,7 +1,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
-import { mountPlay } from "./play-test-fixture";
+import { mountPlay, openSection } from "./play-test-fixture";
 
 afterEach(cleanup);
 
@@ -34,7 +34,7 @@ async function drafts(requests: readonly Request[]): Promise<unknown> {
 
 it("starts a new video following the narration, with a plain Look folded away", async () => {
   await mountPlay();
-  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+  await openSection("Outputs");
   const cuts = screen.getByRole<HTMLSelectElement>("combobox", { name: "Cuts" });
   expect(cuts.value).toBe("narration");
   expect(cuts.selectedOptions[0]?.textContent).toBe("Follow the narration");
@@ -47,7 +47,7 @@ it("starts a new video following the narration, with a plain Look folded away", 
 
 it("sets transitions, the Look, chapter cards and animated images, and saves them in the draft", async () => {
   const { requests } = await mountPlay(falModels);
-  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+  await openSection("Outputs");
   // The clips are made on the image provider, so its models are the ones offered.
   const provider = document.querySelector<HTMLSelectElement>('[data-play-field="images.provider"]');
   if (provider === null) throw new Error("The image provider picker is missing.");
@@ -101,7 +101,7 @@ it("sets transitions, the Look, chapter cards and animated images, and saves the
 
 it("keeps the transition length off while the transition is a cut", async () => {
   await mountPlay();
-  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+  await openSection("Outputs");
   await userEvent.click(screen.getByText("Look"));
   const length = screen.getByRole<HTMLSelectElement>("combobox", { name: "Transition length" });
   expect(length.disabled).toBe(true);
@@ -110,10 +110,10 @@ it("keeps the transition length off while the transition is a cut", async () => 
 
 it("asks for an image-to-video model in plain words when Animate images has none", async () => {
   await mountPlay(falModels);
-  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+  await openSection("Outputs");
   await userEvent.click(screen.getByText("Look"));
   await userEvent.selectOptions(screen.getByRole("combobox", { name: "Animate images" }), "every");
-  await userEvent.click(screen.getByRole("button", { name: "Review" }));
+  await openSection("Review");
   expect(
     (
       await screen.findAllByText(

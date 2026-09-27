@@ -22,7 +22,7 @@ it("selects each checkpoint and preserves it through saves, unrelated edits and 
   await act(() => h.session().navigate("review"));
   for (const name of choices) await userEvent.click(screen.getByRole("checkbox", { name }));
   await act(() => h.session().navigate("content"));
-  await userEvent.type(screen.getByLabelText("Project title"), " changed");
+  await userEvent.type(screen.getByLabelText("Title"), " changed");
   await act(() => h.session().flush());
   expect(h.session().view?.draft.document.form.checkpoints).toEqual(["audio", "images", "video"]);
   await act(() => h.restart());

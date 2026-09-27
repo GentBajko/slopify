@@ -92,7 +92,14 @@ const destinations: readonly Destination[] = [
     to: "/prompts",
     label: "Library",
     icon: <BookIcon {...iconProps} />,
-    match: ["/library", "/prompts", "/entries", "/templates", "/document-themes"],
+    match: [
+      "/library",
+      "/prompts",
+      "/entries",
+      "/templates",
+      "/document-themes",
+      "/narration-aliases",
+    ],
     phone: true,
   },
   {

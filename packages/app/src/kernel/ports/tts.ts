@@ -2,12 +2,23 @@ import type { ModelInfo } from "./model.js";
 
 export interface TtsCapabilities {
   readonly streams: boolean;
+  // Takes several voices in one request (`TtsRequest.dialogue`).
+  readonly dialogue?: boolean | undefined;
+}
+
+// One line of a multi-speaker request: the words and the voice that speaks them.
+export interface DialogueLine {
+  readonly voiceId: string;
+  readonly text: string;
 }
 
 export interface TtsRequest {
   readonly model?: string | undefined;
   readonly voiceId: string;
   readonly text: string;
+  // Present only for a provider whose capabilities say `dialogue`: every line in its own
+  // voice, spoken as one conversation. `voiceId` and `text` then describe the whole request.
+  readonly dialogue?: readonly DialogueLine[] | undefined;
   readonly signal: AbortSignal;
   // Successful status replies from a queued synthesis job also count as activity.
   readonly onActivity?: (() => void) | undefined;

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Catalogue } from "../../catalog/schema.js";
 import { createAudioPreviewStore } from "../../kernel/audio-preview.js";
+import type { ProjectEvent } from "../../kernel/events.js";
 import { stageKinds } from "../../kernel/pipeline.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageProviders } from "../../kernel/runner/providers.js";
@@ -204,12 +205,15 @@ it("streams narration with exact origin identity and keeps sibling previews", as
       },
       forPiece: () => providers,
     };
+    const emitted: ProjectEvent[] = [];
     const context: StageContext = {
       stage,
       work: stage.work,
       signal: new AbortController().signal,
       maySubmit: () => true,
-      emit: () => undefined,
+      emit: (event) => {
+        emitted.push(event);
+      },
     };
     const running = executeProviderRecipe({ ...h.deps, audioPreviews }, context, providers, piece);
     expect(audioPreviews.list(h.projectId)).toEqual(
@@ -226,6 +230,16 @@ it("streams narration with exact origin identity and keeps sibling previews", as
     );
     release();
     expect(await running).toBe("done");
+    // The live view's waveform grows by the piece that just landed.
+    expect(emitted).toContainEqual({
+      type: "narration.piece",
+      projectId: h.projectId,
+      key: piece.key,
+      durationMs: null,
+      revisionId: stage.work.revisionId,
+      workId: stage.work.workId,
+      workPieceId: piece.id,
+    });
     expect(audioPreviews.list(h.projectId)).toHaveLength(2);
     expect(audioPreviews.list(h.projectId).find((row) => row.workPieceId === piece.id)?.state).toBe(
       "ready",

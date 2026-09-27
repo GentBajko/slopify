@@ -2,7 +2,7 @@ import { open, readFile, stat } from "node:fs/promises";
 import { SubtitleMismatch, type TimedWord } from "../../kernel/ports/subtitles.js";
 import { mismatch } from "./ctc.js";
 import { type WorkerInput, workerInput } from "./protocol.js";
-import { type SpeechWord, speechWords } from "./text.js";
+import { respoken, type SpeechWord, speechWords } from "./text.js";
 import { subtitleThreads } from "./threads.js";
 import { alignSpeechWindow, greedy } from "./window.js";
 
@@ -43,7 +43,7 @@ async function run(input: WorkerInput): Promise<readonly TimedWord[]> {
     const totalSamples = (await stat(input.pcmPath)).size / 4;
     if (!Number.isInteger(totalSamples) || totalSamples < sampleRate / 10)
       throw new Error("The narration is too short to align subtitles.");
-    const source = speechWords(input.text);
+    const source = speechWords(input.text, "", input.aliases ?? []);
     const output: TimedWord[] = [];
     let cursor = 0;
     let omitted = 0;
@@ -221,8 +221,7 @@ function candidates(
   for (let index = cursor; index < source.length; index += 1) {
     const word = source[index];
     if (word === undefined) break;
-    const normalized = speechWords(word.text, observed)[0];
-    if (normalized === undefined) continue;
+    const normalized = respoken(word, observed);
     if (length + normalized.spoken.length + 1 > 900) break;
     selected.push(normalized);
     length += normalized.spoken.length + 1;

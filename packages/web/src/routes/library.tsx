@@ -15,6 +15,7 @@ export const libraryTabs = [
   { to: "/entries", label: "Intros & Outros" },
   { to: "/templates", label: "Templates" },
   { to: "/document-themes", label: "Documents" },
+  { to: "/narration-aliases", label: "Aliases" },
 ] as const;
 
 export function LibraryLayout(): ReactElement {
@@ -22,7 +23,7 @@ export function LibraryLayout(): ReactElement {
     <div>
       <PageHeader
         title="Library"
-        meta="Prompts, intros and outros, templates and document themes"
+        meta="Prompts, intros and outros, templates, document themes and narration aliases"
       />
       <TabLinks items={libraryTabs} label="Library sections" className="mb-6" />
       <LibraryCommands />

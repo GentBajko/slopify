@@ -95,6 +95,11 @@ function testRouter(ui: ReactNode) {
         component: nowhere,
       }),
       play: createRoute({ getParentRoute: () => rootRoute, path: "play", component: nowhere }),
+      welcome: createRoute({
+        getParentRoute: () => rootRoute,
+        path: "welcome",
+        component: nowhere,
+      }),
       schedules: createRoute({
         getParentRoute: () => rootRoute,
         path: "schedules",

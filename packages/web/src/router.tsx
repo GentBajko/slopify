@@ -21,6 +21,7 @@ import { EntriesRoute } from "@/routes/entries";
 import { EntryEditorRoute } from "@/routes/entry-editor";
 import { HomeRoute } from "@/routes/home";
 import { LibraryLayout } from "@/routes/library";
+import { NarrationAliasesRoute } from "@/routes/narration-aliases";
 import { PlayRoute } from "@/routes/play";
 import { ProjectRoute } from "@/routes/project";
 import { ProjectsRoute } from "@/routes/projects";
@@ -29,6 +30,7 @@ import { PromptsRoute } from "@/routes/prompts";
 import { SchedulesRoute } from "@/routes/schedules";
 import { SettingsRoute, type SettingsSection, settingsSectionOf } from "@/routes/settings";
 import { TemplatesRoute } from "@/routes/templates";
+import { WelcomeRoute } from "@/routes/welcome";
 
 // A code-based route tree: a handful of screens need no file convention, and the
 // generated tree a plugin would write would be one more artefact to keep honest.
@@ -66,6 +68,13 @@ const projectsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "projects",
   component: ProjectsRoute,
+});
+
+// The first-run screen; Projects sends a fresh install here once (`routes/projects.tsx`).
+const welcomeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "welcome",
+  component: WelcomeRoute,
 });
 
 const playRoute = createRoute({
@@ -223,6 +232,12 @@ const entryRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "entries/$entryId",
   component: EntryPage,
+});
+
+const narrationAliasesRoute = createRoute({
+  getParentRoute: () => libraryRoute,
+  path: "narration-aliases",
+  component: NarrationAliasesRoute,
 });
 
 const documentThemesRoute = createRoute({
@@ -447,12 +462,14 @@ const devRoutes = (import.meta.env.DEV ? { designRoute: makeDesignRoute() } : {}
 const routeTree = rootRoute.addChildren({
   homeRoute,
   projectsRoute,
+  welcomeRoute,
   playRoute,
   libraryRoute: libraryRoute.addChildren({
     promptsRoute,
     entriesRoute,
     templatesRoute,
     documentThemesRoute,
+    narrationAliasesRoute,
   }),
   schedulesRoute,
   calendarRoute,

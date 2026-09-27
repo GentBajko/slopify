@@ -29,6 +29,7 @@ import {
   usesAnimation,
   videoEditProblems,
 } from "../video/edit-settings.js";
+import { usesVoices } from "../voices/model.js";
 import { defaultDescriptionPrompt } from "../youtube/model.js";
 
 // ceiling: the most chapters "Chapter openers" is charged for before the article exists, the
@@ -198,15 +199,39 @@ export function estimateRun(
     const llmExtras =
       (draft.intro?.mode === "llm" ? 1200 : 0) + (draft.outro?.mode === "llm" ? 1200 : 0);
     const choice = { stage: "Narration", provider: tts.provider, model: tts.model };
-    requests.push(
-      generatedArticle || llmExtras > 0
-        ? { ...choice, kind: "tts-estimate", characters: articleChars + extras + llmExtras }
-        : {
-            ...choice,
-            kind: "tts",
-            text: (draft.provided.article ?? "") + (rendered.intro ?? "") + (rendered.outro ?? ""),
-          },
-    );
+    const speakers = usesVoices(draft) ? (draft.voices?.speakers ?? []) : [];
+    if (speakers.length > 0) {
+      // Each speaker's voice is priced on an equal share of the script; the intro and outro
+      // keep the narration voice.
+      for (const speaker of speakers)
+        requests.push({
+          kind: "tts-estimate",
+          stage: "Narration",
+          provider: speaker.voice.provider,
+          model: speaker.voice.model,
+          characters: Math.round(articleChars / speakers.length),
+          detail: `${speaker.name.trim() || "A speaker"}: assumes every speaker says about the same.`,
+        });
+      if (extras + llmExtras > 0)
+        requests.push({ ...choice, kind: "tts-estimate", characters: extras + llmExtras });
+      if (draft.voices?.source === "attribute")
+        text(
+          "Speaker split",
+          articleChars + 1500,
+          Math.round(articleChars * 1.1),
+          "One LLM call hands the text's passages to the speakers.",
+        );
+    } else
+      requests.push(
+        generatedArticle || llmExtras > 0
+          ? { ...choice, kind: "tts-estimate", characters: articleChars + extras + llmExtras }
+          : {
+              ...choice,
+              kind: "tts",
+              text:
+                (draft.provided.article ?? "") + (rendered.intro ?? "") + (rendered.outro ?? ""),
+            },
+      );
   } else local("Narration", "Provided or off; no generation charge.");
   const images =
     draft.sources.images === "generate"

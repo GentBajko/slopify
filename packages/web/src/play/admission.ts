@@ -14,6 +14,7 @@ import type { Entry, Prompt, PromptKind } from "@app/slices/library/model.js";
 import type { DraftInput, PlayFormState, Upload } from "@/play/state";
 import { draftOf, shortsOn, stagedOf } from "@/play/state";
 import { validSubtitleStyle } from "@/subtitles/config";
+import { articleKind } from "./article-kind";
 
 // Live admission. `admit` is the server's own function, imported through `@app/*`: the
 // sentence the form shows and the refusal the server writes are one rule, and the only
@@ -55,7 +56,7 @@ export function keywordFields(input: AdmissionInput): readonly Field[] {
     push(text, bodyOf(input.prompts, "narration", form.narrationPrompt ?? ""));
 
   if (form.sources.article === "generate") {
-    push(text, bodyOf(input.prompts, "article", form.articlePrompt));
+    push(text, bodyOf(input.prompts, articleKind(form), form.articlePrompt));
   }
   if (form.sources.audio === "generate") {
     push(text, entryBody(input.entries, "intro", form.intro));
@@ -123,6 +124,7 @@ const readingOrder: readonly string[] = [
   "provided.article",
   "audio",
   "provided.audio",
+  "voices",
   "narrationPrompt",
   "imagePrompts",
   "images",
@@ -240,7 +242,9 @@ function hintOf(form: PlayFormState, error: FieldError): string {
     case "llm":
       return "Pick an LLM provider and model to play";
     case "articlePrompt":
-      return "Pick an article prompt to play";
+      return articleKind(form) === "script"
+        ? "Pick a script prompt to play"
+        : "Pick an article prompt to play";
     case "audio":
       return "Pick a narration provider to play";
     case "audio.voice":
@@ -313,7 +317,33 @@ function push(into: string[], body: string | undefined): void {
   }
 }
 
-export function keywordOrigins(input: AdmissionInput): ReadonlyMap<string, readonly string[]> {
+// What a keyword list needs to say what each keyword feeds: the choices that name prompts, from
+// Play's form or a saved template's (whose numbers are still text).
+export interface KeywordOriginsInput {
+  readonly form: Pick<
+    PlayFormState,
+    | "title"
+    | "narrationPrompt"
+    | "articlePrompt"
+    | "thumbnailPrompt"
+    | "intro"
+    | "outro"
+    | "youtubeDescription"
+    | "descriptionPrompt"
+    | "voices"
+  > & {
+    readonly sources: RunDraft["sources"];
+    readonly imagePrompts: readonly { readonly name: string }[];
+    readonly shorts?:
+      | { readonly enabled: boolean; readonly prompt: string; readonly imagePrompt: string }
+      | undefined;
+    readonly reference?: { readonly source: string; readonly prompt: string } | undefined;
+  };
+  readonly prompts: readonly Prompt[];
+  readonly entries: readonly Entry[];
+}
+
+export function keywordOrigins(input: KeywordOriginsInput): ReadonlyMap<string, readonly string[]> {
   const origins = new Map<string, string[]>();
   const add = (body: string | undefined, label: string): void => {
     if (!body) return;
@@ -328,10 +358,13 @@ export function keywordOrigins(input: AdmissionInput): ReadonlyMap<string, reado
   if (usesNarrationPreparation(form))
     add(bodyOf(prompts, "narration", form.narrationPrompt ?? ""), "Narration Preparation");
   if (form.sources.article === "generate")
-    add(bodyOf(prompts, "article", form.articlePrompt), "Article");
-  if (form.sources.images === "generate")
+    add(bodyOf(prompts, articleKind(form), form.articlePrompt), "Article");
+  if (form.sources.images === "generate") {
     for (const prompt of form.imagePrompts)
       add(bodyOf(prompts, "image", prompt.name), `Image: ${prompt.name}`);
+    if (form.reference?.source === "prompt")
+      add(bodyOf(prompts, "image", form.reference.prompt), "Establishing image");
+  }
   if (form.sources.thumbnail === "from_prompt" || form.sources.thumbnail === "prompt_by_llm")
     add(bodyOf(prompts, "thumbnail", form.thumbnailPrompt), "Thumbnail");
   if (form.sources.audio === "generate")

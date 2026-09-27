@@ -3,6 +3,7 @@ import { extname, join, relative, sep } from "node:path";
 import type { SubtitleAligner } from "../../kernel/ports/subtitles.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
+import { usesShortMode } from "../admission/short-mode.js";
 import type { PreparedOutput } from "../revisions/publication-model.js";
 import { allocateAsset, discardPreparedAssets, sealAsset } from "../storage/assets.js";
 import { outputPath, projectDir } from "../storage/layout.js";
@@ -18,6 +19,7 @@ import {
   retainedOutput,
   revisionAudio,
 } from "./runtime-export-inputs.js";
+import { executeShortExport } from "./runtime-export-short.js";
 import type { LocalExecutionDeps } from "./runtime-local.js";
 import { preparedResult, preparedText, publishResult } from "./runtime-publication.js";
 import type { WorkPiece } from "./work-records.js";
@@ -50,6 +52,8 @@ export async function executeExportRecipe(
     throw new Error(
       "The audio export has nothing to export because narration is turned off for this project. Turn narration on in Edit project, then Retry stage.",
     );
+  if (!wav && usesShortMode(view.revision.config))
+    return executeShortExport(deps, context, piece, snapshot, audio);
   const filename = wav ? "audio.wav" : "video.mp4";
   const pending = allocateAsset(deps, context.work.projectId, filename);
   const prepared: PreparedOutput[] = [];
@@ -74,17 +78,7 @@ export async function executeExportRecipe(
         ? undefined
         : { path: row.path, seconds: row.seconds };
     };
-    const images = (wav ? [] : view.revision.content.imageOrder).map((key) => {
-      const row = view.outputs.find(
-        (one) =>
-          one.workKey === `image:${key}` && one.selected && one.available && one.state === "ready",
-      );
-      if (row === undefined)
-        throw new Error(
-          "The video export can't find one of the slideshow images. Use Re-run section on Images (or regenerate that image in Edit project → Images), then Retry stage.",
-        );
-      return outputPath(deps.paths, context.work.projectId, row.output.path);
-    });
+    const images = wav ? [] : slideshowImages(deps, context, view);
     const edited = wav ? undefined : await exportEdit(deps, context, view, images);
     const plan = wav
       ? undefined
@@ -189,6 +183,24 @@ export async function executeExportRecipe(
     discardPreparedAssets(deps, [pending, ...prepared.map((one) => one.asset)]);
     if (directory !== undefined) rmSync(directory, { recursive: true, force: true });
   }
+}
+// The project's images in slideshow order, as files.
+export function slideshowImages(
+  deps: ExportExecutionDeps,
+  context: StageContext,
+  view: ExportSnapshot["view"],
+): readonly string[] {
+  return view.revision.content.imageOrder.map((key) => {
+    const row = view.outputs.find(
+      (one) =>
+        one.workKey === `image:${key}` && one.selected && one.available && one.state === "ready",
+    );
+    if (row === undefined)
+      throw new Error(
+        "The video export can't find one of the slideshow images. Use Re-run section on Images (or regenerate that image in Edit project → Images), then Retry stage.",
+      );
+    return outputPath(deps.paths, context.work.projectId, row.output.path);
+  });
 }
 function captionDirectory(
   deps: ExportExecutionDeps,

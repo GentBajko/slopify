@@ -319,7 +319,7 @@ it("shows Apply and Delete on the row itself and offers Save a setup in the comm
   const actions = await screen.findByRole("group", { name: `Actions for ${template.name}` });
   expect(
     [...actions.querySelectorAll("button")].map((one) => one.getAttribute("aria-label")),
-  ).toEqual([`Apply ${template.name}`, `Delete ${template.name}`]);
+  ).toEqual([`Apply ${template.name}`, `Keywords of ${template.name}`, `Delete ${template.name}`]);
 
   const save = registry.list().find((command) => command.title === "Save a setup as a template");
   expect(save?.group).toBe("Library");
@@ -328,4 +328,44 @@ it("shows Apply and Delete on the row itself and offers Save a setup in the comm
     await save?.run();
   });
   expect(await screen.findByRole("form", { name: "Save a setup" })).not.toBeNull();
+});
+
+it("shows a template's keywords with what each feeds, the topic saved empty", async () => {
+  const user = userEvent.setup();
+  const document = {
+    ...freshDraftDocument,
+    librarySnapshot: {
+      prompts: [
+        {
+          id: "p1",
+          kind: "article" as const,
+          name: "Dossier",
+          body: "Write about {{Topic}} in {{minWords}} words.",
+          slots: ["Topic", "minWords"],
+          updatedAt: "2026-09-13T00:00:00Z",
+        },
+      ],
+      entries: [],
+    },
+    form: {
+      ...freshDraftDocument.form,
+      title: "Lore: {{Topic}}",
+      articlePrompt: "Dossier",
+      values: { Topic: "", minWords: "1500" },
+    },
+  };
+  renderRouted(
+    <TemplatesRoute onApplied={vi.fn()} />,
+    testDeps({
+      ...routes,
+      [`GET /api/project-templates/${templateId}`]: jsonAnswer({ ...template, document }),
+    }),
+  );
+  await user.click(await screen.findByRole("button", { name: `Keywords of ${template.name}` }));
+  const list = await screen.findByRole("list", { name: "Keywords" });
+  const rows = within(list).getAllByRole("listitem");
+  expect(rows[0]?.textContent).toContain("{{Topic}}");
+  expect(rows[0]?.textContent).toContain("Feeds Project title · Article · left empty in templates");
+  expect(rows[1]?.textContent).toContain("1500");
+  expect(rows[1]?.textContent).toContain("Feeds Article");
 });

@@ -4,7 +4,7 @@ import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { mountSupplied, ready, response } from "./draft-upload-test-fixture";
-import { draftView, mountPlay } from "./play-test-fixture";
+import { draftView, mountPlay, openSection } from "./play-test-fixture";
 
 afterEach(() => {
   cleanup();
@@ -45,7 +45,7 @@ it("offers Reattach after prerequisite Save retry and after reopening the saved 
     },
     "PUT /api/drafts/:id/attachments/:attachmentId/file": upload,
   });
-  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+  await openSection("Outputs");
   await userEvent.upload(
     screen.getByLabelText("Narration file"),
     new File(["wav"], "picked.wav", { type: "audio/wav" }),
@@ -75,7 +75,7 @@ it("offers Reattach after prerequisite Save retry and after reopening the saved 
     "GET /api/drafts/:id": () => response(saved),
     "PUT /api/drafts/:id/attachments/:attachmentId/file": upload,
   });
-  await userEvent.click(screen.getByRole("button", { name: "Outputs" }));
+  await openSection("Outputs");
   await userEvent.click(screen.getByRole("button", { name: "Drafts" }));
   await userEvent.click(await screen.findByRole("button", { name: "Reopen upload" }));
   await screen.findByLabelText("Reattach picked.wav");

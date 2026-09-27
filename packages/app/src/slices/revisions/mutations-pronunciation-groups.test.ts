@@ -75,7 +75,7 @@ function upload(deps: RevisionDeps, key: string): RevisionEdit["uploads"] {
 }
 
 it.each(
-  (["removed", "off", "invalid"] as const).flatMap((change) =>
+  (["removed", "off", "skipped"] as const).flatMap((change) =>
     (["text", "asset"] as const).map((kind) => ({ change, kind })),
   ),
 )("preserves saved $kind when the glossary is $change", async ({ change, kind }) => {
@@ -116,7 +116,7 @@ it.each(
       ...overridden.revision.content,
       articleMarkdown: markdown(
         h.source,
-        change === "invalid" ? "Broken: nope" : kind === "text" ? "P!nk: /pɪŋk/" : "",
+        change === "skipped" ? "Broken: nope" : kind === "text" ? "P!nk: /pɪŋk/" : "",
       ),
     },
   });
@@ -128,12 +128,12 @@ it.each(
       assetId: override?.kind === "asset" ? override.assetId : "missing",
     });
     expect(active?.refusal).toBeUndefined();
-  } else if (change === "invalid") {
-    expect(active?.refusal).toContain("Pronunciation Glossary");
   } else {
+    // A glossary whose only row is skipped narrates the saved text as written.
+    expect(active?.refusal).toBeUndefined();
     expect(active?.input).toMatchObject({
       kind: "tts",
-      text: change === "off" ? "P!nk waits." : "/pɪŋk/ waits.",
+      text: change === "removed" ? "/pɪŋk/ waits." : "P!nk waits.",
       logicalKey: h.key,
     });
   }

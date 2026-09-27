@@ -1,3 +1,4 @@
+import { paceSteps } from "@app/slices/voices/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PlusIcon } from "lucide-react";
 import { type ReactElement, useRef, useState } from "react";
@@ -9,11 +10,12 @@ import { Rule } from "@/components/kit/layout";
 import { MediaFrame } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
 import { Badge, Chip } from "@/components/kit/status";
-import { ModelPicker, ProviderPicker } from "@/play/pickers";
-import { providersQuery } from "@/queries";
+import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
+import { providersQuery, voicesQuery } from "@/queries";
 import {
   type CastKind,
   type CastMember,
+  type CastVoice,
   castKindLabels,
   castKinds,
   channelKey,
@@ -49,6 +51,7 @@ export function CastEditor({
   const [aliases, setAliases] = useState<readonly string[]>(member?.aliases ?? []);
   const [alias, setAlias] = useState("");
   const [description, setDescription] = useState(member?.description ?? "");
+  const [voice, setVoice] = useState<CastVoice | undefined>(member?.voice);
   const refresh = () =>
     Promise.all([
       client.invalidateQueries({ queryKey: channelKey(channelId) }),
@@ -56,7 +59,17 @@ export function CastEditor({
     ]);
   const save = useMutation({
     mutationFn: async () => {
-      const input = { kind, name: name.trim(), aliases, description };
+      const input = {
+        kind,
+        name: name.trim(),
+        aliases,
+        description,
+        // Only a complete voice is saved; clearing the provider removes it.
+        voice:
+          voice !== undefined && voice.provider !== "" && voice.model !== "" && voice.voice !== ""
+            ? voice
+            : null,
+      };
       return member === undefined
         ? createCastMember(api, channelId, crypto.randomUUID(), input)
         : saveCastMember(api, member.id, { ...input, baseVersion: member.version });
@@ -167,6 +180,7 @@ export function CastEditor({
             onChange={(event) => setDescription(event.target.value)}
           />
         </Field>
+        <CastVoiceFields value={voice} onChange={setVoice} />
         <div className="flex flex-wrap items-center gap-3">
           <StatusSlot tone={save.error ? "error" : "info"}>
             {save.error?.message ??
@@ -336,5 +350,76 @@ function Pictures({
               : undefined)}
       </StatusSlot>
     </section>
+  );
+}
+
+// How this member speaks when a multi-voice run casts them: the Speakers panel on Play offers
+// every member with a voice, and a run takes the voice as it is when the run starts.
+function CastVoiceFields({
+  value,
+  onChange,
+}: {
+  readonly value: CastVoice | undefined;
+  readonly onChange: (next: CastVoice | undefined) => void;
+}): ReactElement {
+  const { api } = useApp();
+  const providers = useQuery(providersQuery(api));
+  const voices = useQuery(voicesQuery(api));
+  const voice = value ?? { provider: "", model: "", voice: "" };
+  const mine = (voices.data?.voices ?? []).filter((one) => one.provider === voice.provider);
+  return (
+    <fieldset className="m-0 flex flex-col gap-3 border-0 border-t border-line p-0 pt-4">
+      <legend className="sl-kicker">Voice</legend>
+      <p className="text-small text-ink-2">
+        For multi-voice runs: pick this member under Speakers on Play and they read with this voice
+        in every episode.
+      </p>
+      <div className="grid grid-cols-1 gap-3 min-[600px]:grid-cols-2">
+        <ProviderPicker
+          label="Voice provider"
+          family="tts"
+          providers={providers.data?.providers ?? []}
+          value={voice.provider}
+          problem={undefined}
+          onPick={(provider) =>
+            onChange(provider === "" ? undefined : { provider, model: "", voice: "" })
+          }
+        />
+        <ModelPicker
+          label="Voice model"
+          provider={voice.provider}
+          value={voice.model}
+          problem={undefined}
+          onPick={(model) => onChange({ ...voice, model })}
+        />
+        <OptionPicker
+          label="Voice"
+          value={voice.voice}
+          placeholder={mine.length === 0 ? "No voices. Add one in Settings." : "Pick a voice"}
+          options={mine.map((one) => ({ value: one.voiceId, label: one.name }))}
+          problem={undefined}
+          onPick={(picked) => onChange({ ...voice, voice: picked })}
+        />
+        <OptionPicker
+          label="Pace"
+          value={String(voice.pace ?? 1)}
+          placeholder="Pick a pace"
+          options={paceSteps.map((step) => ({
+            value: String(step),
+            label: step === 1 ? "Normal" : `${String(step)}×`,
+          }))}
+          problem={undefined}
+          onPick={(pace) => {
+            const { pace: _old, ...rest } = voice;
+            onChange(Number(pace) === 1 ? rest : { ...rest, pace: Number(pace) });
+          }}
+        />
+      </div>
+      {value === undefined ? null : (
+        <Button variant="quiet" onClick={() => onChange(undefined)}>
+          Remove the voice
+        </Button>
+      )}
+    </fieldset>
   );
 }

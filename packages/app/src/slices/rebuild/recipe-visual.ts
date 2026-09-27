@@ -1,4 +1,6 @@
+import type { FingerprintValue } from "../../kernel/runner/work.js";
 import { type RunConfig, thumbnailCountOf, thumbnailKey } from "../admission/model.js";
+import { usesShortMode } from "../admission/short-mode.js";
 import { render } from "../admission/substitute.js";
 import type { RevisionContent } from "../revisions/model.js";
 import { castFor } from "./recipe-cast.js";
@@ -21,6 +23,8 @@ export function visualRecipes(
   edit?: (images: readonly ResolvedWorkRecipe[]) => EditPlan,
   // The establishing image the generated images are drawn from, when it is on.
   reference?: ImageReference,
+  // The word timing's identity, which a short's captions are drawn from.
+  timing: FingerprintValue = null,
 ): readonly ResolvedWorkRecipe[] {
   const recipes: ResolvedWorkRecipe[] = [];
   const imageKeys = config.sources.images === "off" ? [] : content.imageOrder;
@@ -57,7 +61,13 @@ export function visualRecipes(
     );
   }
   if (config.sources.video !== "off") {
-    const edited = edit?.([...recipes]) ?? { recipes: [], values: [], dependsOn: [] };
+    const short = usesShortMode(config);
+    // A short is rendered by the Shorts renderer, which has no cuts, transitions or Look.
+    const edited = (short ? undefined : edit?.([...recipes])) ?? {
+      recipes: [],
+      values: [],
+      dependsOn: [],
+    };
     const audioKeys =
       config.sources.audio === "off"
         ? []
@@ -98,12 +108,18 @@ export function visualRecipes(
             // Only what the edit settings change; nothing at all for today's slideshow, so
             // its fingerprint is the one it always had.
             ...(edited.values.length === 0 ? [] : [["video-edit", ...edited.values]]),
+            // Only for a short, so every long video keeps its fingerprint: the word-by-word
+            // captions are drawn from the word timing in the caption font, under the title.
+            ...(short
+              ? [["short-v1", config.subtitles?.fontId ?? "default", config.title, timing]]
+              : []),
           ],
         },
         [
           ...recipes.map((value) => value.key),
           ...audioKeys,
           ...(config.subtitles?.mode === "burn-in" ? ["subtitles:files"] : []),
+          ...(short ? ["subtitles:timing"] : []),
           ...edited.dependsOn,
         ],
         { unresolved: imageKeys.length === 0 },
