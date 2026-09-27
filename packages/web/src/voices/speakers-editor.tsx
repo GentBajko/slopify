@@ -24,6 +24,7 @@ import { Button } from "@/components/kit/button";
 import { Field, Input, Textarea } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
 import { Switch } from "@/components/kit/switch";
+import { useVoicesForLanguage, VoiceLanguageNote } from "@/language/voice-language";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
 
 // Multiple voices, the same control on Play and in Edit project: the format, where the script
@@ -46,9 +47,12 @@ export function SpeakersEditor({
   script,
   problem,
   cast = [],
+  language,
 }: {
   // The channel's cast; members with a voice can be added as speakers.
   readonly cast?: readonly CastMember[] | undefined;
+  // The project language each speaker's voice list is filtered by; absent lists every voice.
+  readonly language?: string | undefined;
   readonly value: VoicesSettings | undefined;
   readonly onChange: (next: VoicesSettings | undefined) => void;
   readonly providers: readonly ProviderStatus[];
@@ -147,6 +151,7 @@ export function SpeakersEditor({
                 line={auditionLine(speaker, parsed)}
                 providers={providers}
                 voices={voices}
+                language={language}
                 problem={problem}
                 onChange={(next) => setSpeaker(index, next)}
                 onRemove={
@@ -248,6 +253,7 @@ function SpeakerRow({
   line,
   providers,
   voices,
+  language,
   problem,
   onChange,
   onRemove,
@@ -257,13 +263,16 @@ function SpeakerRow({
   readonly line: string;
   readonly providers: readonly ProviderStatus[];
   readonly voices: readonly Voice[];
+  readonly language: string | undefined;
   readonly problem?: ((field: string) => string | undefined) | undefined;
   readonly onChange: (next: Speaker) => void;
   readonly onRemove: (() => void) | undefined;
 }): ReactElement {
   const field = `voices.speakers.${String(index)}`;
-  const mine = voices.filter((voice) => voice.provider === speaker.voice.provider);
   const voice = speaker.voice;
+  const ofProvider = voices.filter((one) => one.provider === voice.provider);
+  const byLanguage = useVoicesForLanguage(ofProvider, language, voice.voice || undefined);
+  const mine = language === undefined ? ofProvider : byLanguage.listed;
   return (
     <li className="grid grid-cols-1 gap-3 py-3 min-[700px]:grid-cols-2" data-play-field={field}>
       <div className="flex min-w-0 items-end gap-2">
@@ -316,6 +325,15 @@ function SpeakerRow({
         problem={problem?.(`${field}.voice.voice`)}
         onPick={(picked) => onChange({ ...speaker, voice: { ...voice, voice: picked } })}
       />
+      {language === undefined ? null : (
+        <VoiceLanguageNote
+          language={language}
+          voice={ofProvider.find((one) => one.voiceId === voice.voice)}
+          hidden={byLanguage.hidden}
+          showAll={byLanguage.showAll}
+          onShowAll={byLanguage.setShowAll}
+        />
+      )}
       <OptionPicker
         field={`${field}.pace`}
         label="Pace"

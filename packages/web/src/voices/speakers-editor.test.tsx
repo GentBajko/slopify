@@ -210,3 +210,46 @@ it("adds a cast member with a voice as a speaker, keeping the link to the cast",
   });
   expect(screen.getByLabelText<HTMLSelectElement>("Add from the cast").disabled).toBe(true);
 });
+
+it("lists each speaker only the voices that speak the project language, with Show all voices", async () => {
+  const user = userEvent.setup();
+  const multilingual: readonly Voice[] = [
+    { id: "1", provider: "openai-tts", voiceId: "alloy", name: "Alloy", languages: ["en"] },
+    { id: "2", provider: "openai-tts", voiceId: "echo", name: "Echo", languages: ["de"] },
+    // Saved before voices had languages: offered for every language.
+    { id: "3", provider: "openai-tts", voiceId: "fable", name: "Fable" },
+  ];
+  renderRouted(
+    <SpeakersEditor
+      value={{
+        format: "podcast",
+        source: "script",
+        speakers: [
+          {
+            id: "a",
+            name: "Alex",
+            role: "host",
+            voice: { provider: "openai-tts", model: "tts-1", voice: "" },
+          },
+        ],
+        turnGapSeconds: 0.35,
+        nameTags: true,
+        nativeDialogue: true,
+        audioFiles: true,
+      }}
+      onChange={() => {}}
+      providers={providers}
+      voices={multilingual}
+      language="de"
+    />,
+    testDeps({}),
+  );
+  const row = within(await screen.findByRole("list", { name: "Speakers" })).getByRole("listitem");
+  const names = () =>
+    within(within(row).getByLabelText("Voice"))
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+  expect(names()).toEqual(["Pick a voice", "Echo", "Fable"]);
+  await user.click(within(row).getByLabelText(/Show all voices/));
+  expect(names()).toEqual(["Pick a voice", "Alloy", "Echo", "Fable"]);
+});

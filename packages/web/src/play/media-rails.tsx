@@ -124,6 +124,7 @@ export function AudioRail({
                   script={form.sources.article === "provide" ? form.provided.article : undefined}
                   problem={problem}
                   cast={cast}
+                  language={language}
                   onChange={(next) => update({ voices: next })}
                 />
                 {form.voices === undefined ? null : (
