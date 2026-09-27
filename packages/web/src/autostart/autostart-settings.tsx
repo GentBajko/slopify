@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
+import { helpScope } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { Switch } from "@/components/kit/switch";
 import { Rail, RailGroup } from "@/components/rail";
@@ -42,11 +43,9 @@ export function AutostartSettings(): ReactElement {
   const { view, turn } = useAutostart();
   const data = view.data;
   return (
-    <div>
-      <SectionHead
-        title={title}
-        info="Slopify starts in the background when you log in, without opening a browser tab: open it from your bookmark. It uses your account's own start-up list, so no administrator password is needed. Turning it off removes exactly what turning it on added."
-      />
+    // The heading's info button explains the switch below it.
+    <div {...helpScope}>
+      <SectionHead title={title} info="settings.autostart" />
       {view.error === null ? null : (
         <p role="alert" className="m-0 mb-3 text-body text-danger">
           Starting at login couldn't be checked: {view.error.message}
@@ -120,10 +119,7 @@ export function AutostartOffer(): ReactElement | null {
   const error = turn.error ?? decline.error;
   return (
     <>
-      <SectionHead
-        title={title}
-        info="Slopify starts in the background when you log in, without opening a browser tab. You can change this any time in Settings → General."
-      />
+      <SectionHead title={title} info="settings.autostart" />
       <RailGroup className="mb-6">
         <Rail className="flex-wrap">
           <span className="min-w-0 flex-1 text-small text-ink-2">

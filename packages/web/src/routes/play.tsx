@@ -348,11 +348,7 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     title: (
       <div className="flex min-w-0 flex-col gap-4 py-4">
         {topics.length ? (
-          <Field
-            label="Title pattern"
-            help="Keywords in the title, like {{Topic}}, are the topic: typed per video at the top and left empty in templates."
-            error={problem("title")}
-          >
+          <Field label="Title pattern" tip="play.title-pattern" error={problem("title")}>
             <Input
               data-play-field="title"
               value={form.title}

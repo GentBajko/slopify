@@ -5,6 +5,7 @@ import { use, useId, useState } from "react";
 import { z } from "zod";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
+import { InfoTip } from "@/components/kit/info-tip";
 import { MediaFrame } from "@/components/kit/media";
 import { Player } from "@/components/kit/player";
 import type { BodyProps } from "./body.js";
@@ -75,9 +76,12 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
           {clips.length === 0 ? "Shorts" : `${String(clips.length)} shorts · 9:16`}
         </h3>
         {editable && clips.length > 0 ? (
-          <Button onClick={() => requestEdit({ section: "shorts", change: pickAgain })}>
-            Pick different moments
-          </Button>
+          <span className="inline-flex items-center gap-1">
+            <Button onClick={() => requestEdit({ section: "shorts", change: pickAgain })}>
+              Pick different moments
+            </Button>
+            <InfoTip id="project.shorts.pick-again" />
+          </span>
         ) : null}
       </div>
       {clips.length === 0 ? (

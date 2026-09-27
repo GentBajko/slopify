@@ -16,6 +16,7 @@ import { clipBounds, type ShortPick } from "@app/slices/shorts/pick.js";
 import { type ReactElement, useId, useState } from "react";
 import { Button } from "@/components/kit/button";
 import { Field, Select } from "@/components/kit/field";
+import { InfoTip } from "@/components/kit/info-tip";
 import { Shorts } from "@/play/shorts";
 import type { ShortsForm } from "@/play/state";
 import { editOfForm, setPrompt } from "./revision-form-state";
@@ -298,9 +299,12 @@ function PickedClips({
   return (
     <section aria-labelledby={`${id}-clips`} className="space-y-3 border-t border-line pt-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h4 id={`${id}-clips`} className="sl-kicker m-0">
-          Picked clips
-        </h4>
+        <span className="inline-flex items-center gap-1">
+          <h4 id={`${id}-clips`} className="sl-kicker m-0">
+            Picked clips
+          </h4>
+          <InfoTip id="project.shorts.clips" />
+        </span>
         {again ? (
           <p className="flex flex-wrap items-center gap-2 text-small text-accent-ink">
             The moments will be picked again when you save and Resume; clips on the same sentences
@@ -319,9 +323,12 @@ function PickedClips({
             </Button>
           </p>
         ) : (
-          <Button type="button" onClick={() => onChange(pickAgain(edit))}>
-            Pick different moments
-          </Button>
+          <span className="inline-flex items-center gap-1">
+            <Button type="button" onClick={() => onChange(pickAgain(edit))}>
+              Pick different moments
+            </Button>
+            <InfoTip id="project.shorts.pick-again" />
+          </span>
         )}
       </div>
       {repicking && !again ? (
@@ -442,6 +449,7 @@ function ClipRow({
                   key={end}
                   id={`${id}-${end}`}
                   label={end === "first" ? "Start sentence" : "End sentence"}
+                  tip="project.shorts.range"
                 >
                   <Select
                     value={String(clip[end])}
@@ -498,9 +506,12 @@ function ClipRow({
             </Button>
           </p>
         ) : (
-          <Button type="button" disabled={locked} onClick={() => onRemake(true)}>
-            Make this short again
-          </Button>
+          <span className="inline-flex items-center gap-1">
+            <Button type="button" disabled={locked} onClick={() => onRemake(true)}>
+              Make this short again
+            </Button>
+            <InfoTip id="project.shorts.remake" />
+          </span>
         )}
       </div>
     </li>

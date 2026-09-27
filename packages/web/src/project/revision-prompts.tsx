@@ -133,7 +133,11 @@ export function RevisionPrompts({
               library={libraryPrompt(edit, key, options, saved)}
               onUse={(body) => onChange(setPrompt(edit, key, body))}
             />
-            <Field label={`Use saved template for ${name}`} id={`${formId}-library-${key}`}>
+            <Field
+              label={`Use saved template for ${name}`}
+              id={`${formId}-library-${key}`}
+              tip="project.prompts.template"
+            >
               <Select
                 value=""
                 onChange={(event) => {
@@ -180,7 +184,11 @@ export function RevisionPrompts({
                 ))}
               </Select>
             </Field>
-            <Field label={`Raw prompt for ${name}`} id={`${formId}-raw-${key}`}>
+            <Field
+              label={`Raw prompt for ${name}`}
+              id={`${formId}-raw-${key}`}
+              tip="project.prompts.raw"
+            >
               <Textarea
                 rows={4}
                 value={raw ?? ""}

@@ -12,6 +12,7 @@ import { Button, IconButton } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
+import { InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { List, ListRow } from "@/components/kit/list-row";
 import { Meter } from "@/components/kit/stats";
@@ -312,6 +313,9 @@ function ProjectRow({
             >
               Mark uploaded
             </Button>
+          ) : null}
+          {isReadyToUpload(project) ? (
+            <InfoTip id="project.mark-uploaded" />
           ) : project.uploadedAt !== null ? (
             <>
               <Badge>Uploaded</Badge>

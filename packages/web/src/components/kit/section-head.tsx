@@ -1,4 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
+import type { HelpId } from "@/help/catalog";
 import { cn } from "@/lib/utils";
 import { InfoTip } from "./info-tip.js";
 
@@ -18,7 +19,8 @@ export function SectionHead({
   // An uppercase-by-style label; write it in sentence case.
   readonly kicker?: ReactNode;
   readonly meta?: ReactNode;
-  readonly info?: string;
+  // The section's info button, from the help catalogue.
+  readonly info?: HelpId;
   readonly as?: "h2" | "h3";
   readonly className?: string;
   readonly children?: ReactNode;
@@ -32,9 +34,7 @@ export function SectionHead({
             {title}
           </Heading>
           {info === undefined ? null : (
-            <InfoTip label={title}>
-              <p>{info}</p>
-            </InfoTip>
+            <InfoTip id={info} label={title} />
           )}
         </div>
         {meta === undefined ? null : <p className="sl-section-head__meta">{meta}</p>}

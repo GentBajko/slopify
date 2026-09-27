@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useEffect, useId, useRef } from "react";
 import { useApp } from "@/app-context";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Label } from "@/components/ui/label";
 import { type FontSummary, fontsKey, listFonts, uploadFont } from "./api";
 
@@ -75,10 +76,11 @@ function FontPickerFields({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-0 basis-full">
-          <Label htmlFor={id} className="mb-1">
-            Subtitle font
-          </Label>
+        <div className="min-w-0 basis-full" {...helpScope}>
+          <div className="mb-1 flex items-center gap-1">
+            <Label htmlFor={id}>Subtitle font</Label>
+            <InfoTip id="project.subtitles.font" className="-my-1" />
+          </div>
           <select
             id={id}
             data-play-field="subtitles.fontId"

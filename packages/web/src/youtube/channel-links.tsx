@@ -1,8 +1,4 @@
-import {
-  type ChannelLink,
-  channelLinksProblem,
-  previousVideoLink,
-} from "@app/slices/youtube/placeholders.js";
+import { type ChannelLink, channelLinksProblem } from "@app/slices/youtube/placeholders.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import { type ReactElement, useState } from "react";
@@ -11,6 +7,7 @@ import { useApp } from "@/app-context";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { Input } from "@/components/kit/field";
+import { helpScope } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { keys } from "@/queries";
 
@@ -37,11 +34,8 @@ export function ChannelLinksSettings(): ReactElement {
     setDraft(rows.map((row, at) => (at === index ? { ...row, ...next } : row)));
 
   return (
-    <div>
-      <SectionHead
-        title="Named links"
-        info={`Write {{Name}} in a YouTube description, or ask for it in a Description prompt, and it is replaced by the link of that name when the description is shown or copied. For example {{Patreon}}, {{Discord}} or {{${previousVideoLink}}}. A placeholder with no link here stays as typed and is marked on the project page.`}
-      >
+    <div {...helpScope}>
+      <SectionHead title="Named links" info="planning.links.named">
         <Button
           variant="primary"
           disabled={draft === undefined || save.isPending}

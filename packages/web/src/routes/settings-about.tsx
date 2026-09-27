@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { SupportGlyph, type SupportGlyphName } from "@/components/glyph";
+import { InfoTip } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { coffeeUrl, donationHref, donationUrl, patreonUrl, sourceUrl } from "@/lib/support-links";
 
@@ -50,6 +51,10 @@ export function AboutSettings({
       <p className="m-0 mb-3 text-ink-2">
         Slopify is free and open source, and runs on your machine with your own keys. If it saves
         you time, you can support it here.
+      </p>
+      <p className="m-0 mb-3 flex items-center gap-1 text-small text-ink-2">
+        Updates: the circular-arrows button at the top of every page.
+        <InfoTip id="settings.updates" />
       </p>
       <p className="m-0 mb-4 text-small text-ink-2">
         Made by Gent Bajko. Apache License 2.0: anyone who redistributes Slopify or builds on it

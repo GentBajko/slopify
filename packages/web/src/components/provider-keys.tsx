@@ -12,7 +12,7 @@ import { Field, Input } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { Status } from "@/components/kit/status";
-import { CliProviderDetail, cliState } from "@/components/provider-cli";
+import { CliProviderDetail, cliState, providerTips } from "@/components/provider-cli";
 import { testKey } from "@/components/provider-upkeep-api";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
 import { cn } from "@/lib/utils";
@@ -255,25 +255,29 @@ function KeyDetail({
           <h3 id={headingId} className="sl-section-head__title">
             {hasKey ? provider.displayName : `Set up ${provider.displayName}`}
           </h3>
-          {hasKey && guide !== undefined ? (
-            <InfoTip label={`${provider.displayName} keys`}>
-              <GuideSteps guide={guide} />
-            </InfoTip>
-          ) : null}
+          <InfoTip id={providerTips[provider.id]} label={provider.displayName} />
         </div>
         <p className="sl-section-head__meta">
           {familyTitles[provider.family]} · {hasKey ? "a key is saved" : "needs an API key"}
         </p>
       </div>
 
-      {!hasKey && guide !== undefined ? (
+      {guide === undefined ? null : hasKey ? (
+        <details className="text-small text-ink-2">
+          <summary className="cursor-pointer">Where to get a key</summary>
+          <div className="mt-2 flex flex-col gap-2">
+            <GuideSteps guide={guide} />
+          </div>
+        </details>
+      ) : (
         <div className="flex flex-col gap-2 text-small text-ink-2">
           <GuideSteps guide={guide} />
         </div>
-      ) : null}
+      )}
 
       <Field
         label={`${provider.displayName} API key`}
+        tip="settings.providers.api-key"
         help="Stored on this computer only. Never in backups or exports."
         error={failure}
       >
@@ -328,6 +332,7 @@ function KeyDetail({
         >
           {testing ? "Testing…" : "Test"}
         </Button>
+        <InfoTip id="settings.providers.test-key" label="Test" />
         <Button
           variant="quiet"
           aria-label={`Remove ${provider.displayName} key`}

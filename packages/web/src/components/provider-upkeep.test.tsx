@@ -52,13 +52,12 @@ describe("key setup", () => {
         },
       }),
     );
-    await userEvent.click(await screen.findByRole("button", { name: "About OpenRouter keys" }));
+    await userEvent.click(await screen.findByText("Where to get a key"));
     expect(
       (await screen.findByRole("link", { name: "openrouter.ai/settings/keys" })).getAttribute(
         "href",
       ),
     ).toBe("https://openrouter.ai/settings/keys");
-    await userEvent.keyboard("{Escape}");
     await userEvent.click(screen.getByRole("button", { name: "Test OpenRouter key" }));
     expect((await screen.findByRole("alert")).textContent).toBe(
       "OpenRouter did not accept this key (HTTP 401).",

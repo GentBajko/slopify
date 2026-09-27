@@ -105,12 +105,7 @@ export function StartRail({
         <div className="flex min-w-0 flex-col gap-2">
           <h2 className="m-0 flex items-center gap-1 text-title-3">
             Estimated cost
-            <InfoTip label="the estimate">
-              <p>
-                Estimated provider charges in USD. Actual usage can differ. This estimate does not
-                cap spending.
-              </p>
-            </InfoTip>
+            <InfoTip id="play.estimate" />
           </h2>
           {review.valid && review.receipt ? (
             <RunReview estimates={review.receipt.estimates} />
@@ -121,7 +116,11 @@ export function StartRail({
                 : "The estimate appears once the setup is complete."}
             </p>
           )}
-          <Field label="Expected article words per video" className="mt-2">
+          <Field
+            label="Expected article words per video"
+            tip="play.expected-words"
+            className="mt-2"
+          >
             <Input
               data-play-field="expectedWords"
               type="number"
@@ -170,16 +169,19 @@ export function StartRail({
           )}
         </div>
         <ButtonRow className="justify-center">
-          <Button
-            variant="quiet"
-            size="small"
-            disabled={review.pending || locked || Boolean(pendingUpload)}
-            onClick={() => {
-              void session.reviewDraft();
-            }}
-          >
-            Refresh review
-          </Button>
+          <span className="inline-flex items-center">
+            <Button
+              variant="quiet"
+              size="small"
+              disabled={review.pending || locked || Boolean(pendingUpload)}
+              onClick={() => {
+                void session.reviewDraft();
+              }}
+            >
+              Refresh review
+            </Button>
+            <InfoTip id="play.refresh-review" />
+          </span>
           <Button variant="quiet" size="small" onClick={onWholeSetup}>
             Review the whole setup
           </Button>

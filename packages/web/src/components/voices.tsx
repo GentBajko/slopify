@@ -7,6 +7,7 @@ import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Field, Input, Select } from "@/components/kit/field";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { Switch } from "@/components/kit/switch";
 import { languagesOfText, VoiceLanguagesCell } from "@/language/voice-languages-cell";
@@ -56,7 +57,7 @@ export function Voices() {
   return (
     <div data-tour="voices" className="flex min-w-0 flex-col gap-10">
       <div className="min-w-0 overflow-x-auto">
-        <table className="sl-table min-w-[640px] table-fixed">
+        <table className="sl-table min-w-[640px] table-fixed" {...helpScope}>
           <caption className="sr-only">Voices</caption>
           <thead>
             <tr>
@@ -70,10 +71,16 @@ export function Voices() {
                 Voice ID
               </th>
               <th scope="col" className="w-[22%] pr-4">
-                Languages
+                <span className="inline-flex items-center gap-1">
+                  Languages
+                  <InfoTip id="play.voices.languages" className="-my-1" />
+                </span>
               </th>
               <th scope="col" className="w-[20%] pr-4">
-                Real person
+                <span className="inline-flex items-center gap-1">
+                  Real person
+                  <InfoTip id="play.voices.real-person" className="-my-1" />
+                </span>
               </th>
               <th scope="col" className="w-[96px]">
                 <span className="sr-only">Remove</span>
@@ -135,11 +142,6 @@ export function Voices() {
             )}
           </tbody>
         </table>
-        <p className="m-0 mt-2 text-small text-ink-2">
-          Turn on Real person for a voice cloned from, or made to sound like, a real person. Prepare
-          upload then answers Yes to YouTube's AI use for videos it narrates. An AI voice that
-          doesn't imitate anyone stays off.
-        </p>
         {realPerson.error === null ? null : (
           <p role="alert" className="m-0 mt-2 text-small text-danger">
             {`Couldn't change Real person: ${realPerson.error.message} Press the switch again.`}
@@ -223,7 +225,7 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
-        <Field label="Voice name" error={problem("name")}>
+        <Field label="Voice name" tip="play.voices.name" error={problem("name")}>
           <Input
             value={name}
             onChange={(event) => {
@@ -235,7 +237,7 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
           />
         </Field>
 
-        <Field label="Provider" error={problem("provider")}>
+        <Field label="Provider" tip="play.voices.provider" error={problem("provider")}>
           <Select
             value={provider ?? ""}
             onChange={(event) => {
@@ -258,6 +260,7 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
 
         <Field
           label="Voice ID"
+          tip="play.voices.voice-id"
           error={problem("voiceId")}
           {...(provider === "inworld"
             ? { help: "Use an Inworld voice ID, such as Dennis, or one from your workspace." }
@@ -277,7 +280,8 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
 
         <Field
           label="Languages"
-          help="Codes such as es, de. Blank asks the provider when it can say."
+          tip="play.voices.languages"
+          help="Codes such as es, de."
           error={problem("languages")}
         >
           <Input

@@ -9,6 +9,7 @@ import { Callout } from "@/components/kit/callout";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Input, Select } from "@/components/kit/field";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { ListDetail } from "@/components/kit/layout";
 import { List, ListRow } from "@/components/kit/list-row";
 import { kindLabel, kindOptions } from "@/lib/prompt-kinds";
@@ -73,16 +74,19 @@ export function PromptsRoute({
           className="w-full min-w-0 sm:w-64"
           onChange={(event) => setQuery(event.target.value)}
         />
-        <Select
-          aria-label="Prompt kind"
-          value={kind}
-          className="w-full sm:w-56"
-          options={kindOptions}
-          onChange={(event) => {
-            const picked = kindOptions.find((option) => option.value === event.target.value);
-            if (picked !== undefined) onKind(picked.value);
-          }}
-        />
+        <span className="flex w-full items-center gap-1 sm:w-auto" {...helpScope}>
+          <Select
+            aria-label="Prompt kind"
+            value={kind}
+            className="w-full sm:w-56"
+            options={kindOptions}
+            onChange={(event) => {
+              const picked = kindOptions.find((option) => option.value === event.target.value);
+              if (picked !== undefined) onKind(picked.value);
+            }}
+          />
+          <InfoTip id="library.prompt.kind" />
+        </span>
       </LibraryToolbar>
 
       {prompts.error === null ? null : (

@@ -4,6 +4,7 @@ import type { Prompt } from "@app/slices/library/model.js";
 import type { ProviderStatus, Voice } from "@app/slices/settings/model.js";
 import type { ReactNode } from "react";
 import { StageGlyph } from "@/components/glyph";
+import type { HelpId } from "@/help/catalog";
 import { cn } from "@/lib/utils";
 import type { PlayFormState, UploadSlot } from "@/play/state";
 import { sourceOptions } from "@/play/state";
@@ -71,6 +72,16 @@ export function StageRail({
   );
 }
 
+const sourceTips = {
+  research: "play.source.research",
+  article: "play.source.article",
+  audio: "play.source.audio",
+  images: "play.source.images",
+  thumbnail: "play.source.thumbnail",
+  video: "play.source.video",
+  document: "play.source.document",
+} as const satisfies Readonly<Record<StageKind, HelpId>>;
+
 // The switch offers exactly what `slices/admission/rules.ts` allows for that stage, so a
 // source the server would refuse cannot be pressed here.
 export function SourceSwitch({
@@ -87,6 +98,7 @@ export function SourceSwitch({
       field={`sources.${kind}`}
       label={`${kind} source`}
       hideLabel
+      tip={sourceTips[kind]}
       className="max-[700px]:col-span-3 max-[700px]:justify-self-start [&_[data-slot=toggle-group]]:flex-wrap"
       value={form.sources[kind]}
       options={sourceOptions(kind).map((option) => ({

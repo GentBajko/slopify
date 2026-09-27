@@ -47,10 +47,7 @@ export function ProviderHealthCheck({ run: given }: { readonly run?: HealthRun }
   const unused = report?.providers.filter((row) => row.state === "unused") ?? [];
   return (
     <section aria-label="Health check">
-      <SectionHead
-        title="Health check"
-        info="Asks each command-line tool whether it is signed in, makes the cheapest harmless call each saved key allows (nothing is generated or billed), and checks that the models your templates, schedules, drafts and projects use are still offered."
-      >
+      <SectionHead title="Health check" info="settings.health">
         {given === undefined ? (
           <Button
             disabled={run.isPending}

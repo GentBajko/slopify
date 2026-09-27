@@ -13,9 +13,11 @@ import { EditorSkeleton } from "@/components/editor-states";
 import { Button } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Field, Input, Select, Textarea } from "@/components/kit/field";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { PdfPages } from "@/components/pdf-pages";
 import { useLeaveWhenSaved } from "@/components/saved-tick";
+import type { HelpId } from "@/help/catalog";
 import {
   type FieldPath,
   faceFamilies,
@@ -152,6 +154,7 @@ export function DocumentThemeEditorRoute({
         <div className={`${editorSurface} flex min-w-0 flex-col gap-[14px]`}>
           <Field
             label="Name"
+            tip="library.theme.name"
             {...(named.length === 0
               ? {}
               : { error: named.map((problem) => problem.message).join(" ") })}
@@ -239,6 +242,98 @@ export function DocumentThemeEditorRoute({
   );
 }
 
+// Each setting's info button, by the key a refused save names it with. A setting missing here
+// shows none, which the Library walk test (help/walk/library.test.tsx) catches.
+const settingTips: Readonly<Record<string, HelpId>> = {
+  "values.page.format": "library.theme.page.format",
+  "values.page.margin": "library.theme.page.margin",
+  "values.page.contentTop": "library.theme.page.content-top",
+  "values.background.image": "library.theme.background.image",
+  "values.background.color": "library.theme.background.color",
+  "values.colors.heading": "library.theme.colors.heading",
+  "values.colors.text": "library.theme.colors.text",
+  "values.colors.muted": "library.theme.colors.muted",
+  "values.colors.faint": "library.theme.colors.faint",
+  "values.fonts.body": "library.theme.fonts.body",
+  "values.fonts.strong": "library.theme.fonts.strong",
+  "values.fonts.emphasis": "library.theme.fonts.emphasis",
+  "values.fonts.heading": "library.theme.fonts.heading",
+  "values.fonts.dramatic": "library.theme.fonts.dramatic",
+  "values.fonts.decorative": "library.theme.fonts.decorative",
+  "values.fonts.dropCap": "library.theme.fonts.drop-cap",
+  "values.fonts.footer": "library.theme.fonts.footer",
+  "values.sizes.title": "library.theme.sizes.title",
+  "values.sizes.brand": "library.theme.sizes.brand",
+  "values.sizes.section": "library.theme.sizes.section",
+  "values.sizes.heading": "library.theme.sizes.heading",
+  "values.sizes.subheading": "library.theme.sizes.subheading",
+  "values.sizes.body": "library.theme.sizes.body",
+  "values.sizes.meta": "library.theme.sizes.meta",
+  "values.sizes.footer": "library.theme.sizes.footer",
+  "values.spacing.bodyLine": "library.theme.spacing.body-line",
+  "values.spacing.headingLine": "library.theme.spacing.heading-line",
+  "values.spacing.subheadingLine": "library.theme.spacing.subheading-line",
+  "values.spacing.paragraphGap": "library.theme.spacing.paragraph-gap",
+  "values.spacing.headingGap": "library.theme.spacing.heading-gap",
+  "values.spacing.itemGap": "library.theme.spacing.item-gap",
+  "values.spacing.listIndent": "library.theme.spacing.list-indent",
+  "values.spacing.quoteIndent": "library.theme.spacing.quote-indent",
+  "values.spacing.ruleWidth": "library.theme.spacing.rule-width",
+  "values.dropCap.enabled": "library.theme.drop-cap.enabled",
+  "values.dropCap.lines": "library.theme.drop-cap.lines",
+  "values.dropCap.scale": "library.theme.drop-cap.scale",
+  "values.dropCap.gap": "library.theme.drop-cap.gap",
+  "values.dropCap.minLength": "library.theme.drop-cap.min-length",
+  "values.dropCap.minRoom": "library.theme.drop-cap.min-room",
+  "values.titlePage.brandY": "library.theme.title-page.brand-y",
+  "values.titlePage.taglineOffset": "library.theme.title-page.tagline-offset",
+  "values.titlePage.titleY": "library.theme.title-page.title-y",
+  "values.titlePage.titleLine": "library.theme.title-page.title-line",
+  "values.titlePage.metaOffset": "library.theme.title-page.meta-offset",
+  "values.titlePage.metaLine": "library.theme.title-page.meta-line",
+  "values.titlePage.showDate": "library.theme.title-page.show-date",
+  "values.titlePage.showWordCount": "library.theme.title-page.show-word-count",
+  "values.titlePage.cover.enabled": "library.theme.title-page.cover",
+  "values.titlePage.cover.gap": "library.theme.title-page.cover-gap",
+  "values.titlePage.cover.maxHeight": "library.theme.title-page.cover-height",
+  "values.brand.name": "library.theme.brand.name",
+  "values.brand.tagline": "library.theme.brand.tagline",
+  "values.brand.url": "library.theme.brand.url",
+  "values.brand.linkLabel": "library.theme.brand.link-label",
+  "values.contents.enabled": "library.theme.contents.enabled",
+  "values.contents.title": "library.theme.contents.title",
+  "values.contents.depth": "library.theme.contents.depth",
+  "values.contents.titleOffset": "library.theme.contents.title-offset",
+  "values.contents.firstEntryOffset": "library.theme.contents.first-entry-offset",
+  "values.contents.line": "library.theme.contents.line",
+  "values.contents.indent": "library.theme.contents.indent",
+  "values.header.enabled": "library.theme.header.enabled",
+  "values.header.top": "library.theme.header.top",
+  "values.header.maxTitleCharacters": "library.theme.header.max-title",
+  "values.footer.enabled": "library.theme.footer.enabled",
+  "values.footer.text": "library.theme.footer.text",
+  "values.footer.bottom": "library.theme.footer.bottom",
+  "values.footer.reserve": "library.theme.footer.reserve",
+  "values.sources.enabled": "library.theme.sources.enabled",
+  "values.sources.title": "library.theme.sources.title",
+  "values.sources.titleOffset": "library.theme.sources.title-offset",
+  "values.sources.bodyOffset": "library.theme.sources.body-offset",
+  "values.sources.line": "library.theme.sources.line",
+  "values.sources.gap": "library.theme.sources.gap",
+  "values.endPage.enabled": "library.theme.end-page.enabled",
+  "values.endPage.title": "library.theme.end-page.title",
+  "values.endPage.lines": "library.theme.end-page.lines",
+  "values.endPage.showDocumentDetails": "library.theme.end-page.details",
+  "values.endPage.link": "library.theme.end-page.link",
+  "values.endPage.closing": "library.theme.end-page.closing",
+  "values.endPage.titleOffset": "library.theme.end-page.title-offset",
+  "values.endPage.bodyOffset": "library.theme.end-page.body-offset",
+  "values.metadata.author": "library.theme.metadata.author",
+  "values.metadata.subject": "library.theme.metadata.subject",
+  "values.metadata.keywords": "library.theme.metadata.keywords",
+  "values.metadata.creator": "library.theme.metadata.creator",
+};
+
 function problemFor(problems: readonly FieldError[], path: FieldPath): string | undefined {
   const key = fieldKey(path);
   const found = problems.filter(
@@ -310,7 +405,10 @@ function Preview({ values }: { readonly values: DocumentTheme | undefined }) {
   return (
     <div className={editorAside}>
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="m-0 text-title-3 font-semibold">Preview</h2>
+        <h2 className="m-0 flex items-center gap-1 text-title-3 font-semibold">
+          Preview
+          <InfoTip id="library.theme.preview" />
+        </h2>
         {pdf === undefined ? null : (
           <a
             href={pdf.url}
@@ -352,6 +450,9 @@ function Setting({
 }) {
   const id = useId();
   const value = valueAt(theme, field.path);
+  const tip = settingTips[fieldKey(field.path)];
+  const info =
+    tip === undefined ? null : <InfoTip id={tip} label={field.label} className="-my-1" />;
   const set = (next: unknown): void => {
     onChange(withValue(theme, field.path, next));
   };
@@ -384,26 +485,32 @@ function Setting({
   switch (field.kind) {
     case "toggle":
       return (
-        <div className="flex flex-col gap-1 sm:col-span-2">
-          <label htmlFor={id} className="flex min-h-8 items-center gap-3 text-small font-semibold">
-            <input
-              {...common}
-              type="checkbox"
-              checked={value === true}
-              className="size-4 accent-accent"
-              onChange={(event) => {
-                set(event.currentTarget.checked);
-              }}
-            />
-            {field.label}
-          </label>
+        <div className="flex flex-col gap-1 sm:col-span-2" {...helpScope}>
+          <span className="flex items-center gap-1">
+            <label
+              htmlFor={id}
+              className="flex min-h-8 items-center gap-3 text-small font-semibold"
+            >
+              <input
+                {...common}
+                type="checkbox"
+                checked={value === true}
+                className="size-4 accent-accent"
+                onChange={(event) => {
+                  set(event.currentTarget.checked);
+                }}
+              />
+              {field.label}
+            </label>
+            {info}
+          </span>
           {notes}
         </div>
       );
     case "number": {
       const { min, max } = rangeOf(field.path);
       return (
-        <Labelled id={id} label={field.label} notes={notes}>
+        <Labelled id={id} label={field.label} notes={notes} info={info}>
           <span className="flex items-center gap-2">
             <Input
               {...common}
@@ -431,7 +538,7 @@ function Setting({
           ? `#${[...hex.replace("#", "")].map((digit) => digit + digit).join("")}`
           : "#000000";
       return (
-        <Labelled id={id} label={field.label} notes={notes}>
+        <Labelled id={id} label={field.label} notes={notes} info={info}>
           <span className="flex items-center gap-2">
             <input
               type="color"
@@ -456,7 +563,7 @@ function Setting({
     }
     case "text":
       return (
-        <Labelled id={id} label={field.label} notes={notes}>
+        <Labelled id={id} label={field.label} notes={notes} info={info}>
           <Input
             {...common}
             value={typeof value === "string" ? value : ""}
@@ -468,7 +575,7 @@ function Setting({
       );
     case "optional-text":
       return (
-        <Labelled id={id} label={field.label} notes={notes}>
+        <Labelled id={id} label={field.label} notes={notes} info={info}>
           <Input
             {...common}
             value={typeof value === "string" ? value : ""}
@@ -481,7 +588,7 @@ function Setting({
     case "choice": {
       const index = field.options.findIndex((option) => option.value === value);
       return (
-        <Labelled id={id} label={field.label} notes={notes}>
+        <Labelled id={id} label={field.label} notes={notes} info={info}>
           <Select
             {...common}
             value={String(index)}
@@ -503,7 +610,7 @@ function Setting({
       const face = value as DocumentTheme["fonts"]["body"];
       const styles = faceStyles(face.family);
       return (
-        <Labelled id={id} label={field.label} notes={notes}>
+        <Labelled id={id} label={field.label} notes={notes} info={info}>
           <span className="flex flex-wrap items-center gap-2">
             <Select
               {...common}
@@ -556,10 +663,13 @@ function Setting({
     }
     case "lines":
       return (
-        <div className="flex flex-col gap-1 sm:col-span-2">
-          <label htmlFor={id} className="sl-field__label">
-            {field.label}
-          </label>
+        <div className="flex flex-col gap-1 sm:col-span-2" {...helpScope}>
+          <span className="flex items-center gap-1">
+            <label htmlFor={id} className="sl-field__label">
+              {field.label}
+            </label>
+            {info}
+          </span>
           <Textarea
             {...common}
             rows={8}
@@ -574,19 +684,27 @@ function Setting({
     case "link": {
       const link = value as DocumentTheme["endPage"]["link"];
       return (
-        <div className="flex flex-col gap-1 sm:col-span-2">
-          <label htmlFor={id} className="flex min-h-8 items-center gap-3 text-small font-semibold">
-            <input
-              id={id}
-              type="checkbox"
-              checked={link !== null}
-              className="size-4 accent-accent"
-              onChange={(event) => {
-                set(event.currentTarget.checked ? { text: "Visit the website", url: null } : null);
-              }}
-            />
-            {field.label}
-          </label>
+        <div className="flex flex-col gap-1 sm:col-span-2" {...helpScope}>
+          <span className="flex items-center gap-1">
+            <label
+              htmlFor={id}
+              className="flex min-h-8 items-center gap-3 text-small font-semibold"
+            >
+              <input
+                id={id}
+                type="checkbox"
+                checked={link !== null}
+                className="size-4 accent-accent"
+                onChange={(event) => {
+                  set(
+                    event.currentTarget.checked ? { text: "Visit the website", url: null } : null,
+                  );
+                }}
+              />
+              {field.label}
+            </label>
+            {info}
+          </span>
           {link === null ? null : (
             <span className="grid grid-cols-[minmax(0,1fr)] gap-2 sm:grid-cols-2">
               <Input
@@ -618,18 +736,23 @@ function Labelled({
   id,
   label,
   notes,
+  info,
   children,
 }: {
   readonly id: string;
   readonly label: string;
   readonly notes: ReactNode;
+  readonly info: ReactNode;
   readonly children: ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1">
-      <label htmlFor={id} className="sl-field__label">
-        {label}
-      </label>
+    <div className="flex min-w-0 flex-col gap-1" {...helpScope}>
+      <span className="flex items-center gap-1">
+        <label htmlFor={id} className="sl-field__label">
+          {label}
+        </label>
+        {info}
+      </span>
       {children}
       {notes}
     </div>

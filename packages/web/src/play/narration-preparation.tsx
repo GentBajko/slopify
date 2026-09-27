@@ -1,7 +1,7 @@
 import type { Prompt } from "@app/slices/library/model.js";
 import { Link } from "@tanstack/react-router";
 import { type ReactElement, useId } from "react";
-import { InfoTip } from "@/components/kit/info-tip";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Picker } from "@/components/ui/picker";
 
 export function NarrationPreparation({
@@ -26,23 +26,18 @@ export function NarrationPreparation({
     error ??
     (value !== "" && !supported ? "Choose Inworld TTS-2 or turn preparation Off." : undefined);
   return (
-    <div className="col-span-full min-w-0 space-y-2">
+    <div className="col-span-full min-w-0 space-y-2" {...helpScope}>
       <span className="flex items-center gap-1">
         <label htmlFor={id} className="text-small font-semibold">
           Narration Preparation
         </label>
-        <InfoTip label="Narration Preparation">
-          <p>
-            Optional. Uses the selected LLM once per narration chunk and entry. Supports Inworld
-            TTS-2; the article and clean narration stay unchanged.
-          </p>
-        </InfoTip>
+        <InfoTip id="play.narration-preparation" />
       </span>
       <Picker
         id={id}
         data-play-field="narrationPrompt"
         value={value}
-        aria-describedby={`${id}-help${issue ? ` ${id}-error` : ""}`}
+        aria-describedby={issue ? `${id}-error` : undefined}
         aria-invalid={issue === undefined ? undefined : true}
         onChange={(event) => onChange(event.target.value)}
       >
@@ -56,10 +51,6 @@ export function NarrationPreparation({
           </option>
         ))}
       </Picker>
-      <p id={`${id}-help`} className="sr-only">
-        Optional. Uses the selected LLM once per narration chunk and entry. Supports Inworld TTS-2;
-        the article and clean narration stay unchanged.
-      </p>
       {issue ? (
         <p id={`${id}-error`} className="text-small text-red">
           {issue}

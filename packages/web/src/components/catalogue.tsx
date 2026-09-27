@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
+import { InfoTip } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
 import {
@@ -121,20 +122,20 @@ export function CatalogueSettings() {
   return (
     <>
       <div>
-        <SectionHead
-          title="Model catalogue"
-          info="Slopify checks the published model catalogue and OpenRouter's live model list when it starts and once a day. New models appear, prices follow the providers, and retired models are hidden from the pickers and listed below; nothing you made is changed until you choose Switch. Your own edits to the local file are kept. Replace with published file overwrites the local file instead and saves the previous one alongside it."
-        >
+        <SectionHead title="Model catalogue" info="settings.models.catalogue">
           <Button disabled={check.isPending || !status.data?.path} onClick={() => check.mutate()}>
             {check.isPending ? "Checking…" : "Check now"}
           </Button>
-          <Button
-            variant="quiet"
-            disabled={replace.isPending || !status.data?.path}
-            onClick={() => replace.mutate()}
-          >
-            {replace.isPending ? "Replacing…" : "Replace with published file"}
-          </Button>
+          <span className="inline-flex items-center gap-1">
+            <Button
+              variant="quiet"
+              disabled={replace.isPending || !status.data?.path}
+              onClick={() => replace.mutate()}
+            >
+              {replace.isPending ? "Replacing…" : "Replace with published file"}
+            </Button>
+            <InfoTip id="settings.models.replace" />
+          </span>
         </SectionHead>
         <dl className="m-0 grid gap-x-6 border-t border-line text-small sm:grid-cols-[160px_minmax(0,1fr)]">
           <dt className="pt-3 font-semibold text-ink sm:border-b sm:border-line sm:pb-3">
@@ -175,10 +176,7 @@ export function CatalogueSettings() {
         )}
       </div>
       <section aria-label="Retired models in use">
-        <SectionHead
-          title="Retired models in use"
-          info="Templates, schedules, drafts and projects with steps still to run that pick a model the provider no longer offers. A run that reaches one stops and says so. Switch replaces only that one model choice with the suggestion shown."
-        >
+        <SectionHead title="Retired models in use" info="settings.models.retired">
           <Button
             variant="primary"
             disabled={all.isPending || switchable.length === 0}

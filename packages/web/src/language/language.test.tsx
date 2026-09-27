@@ -66,7 +66,7 @@ describe("voices by language", () => {
       "Ana",
       "Cleo",
     ]);
-    await userEvent.click(screen.getByLabelText(/Show all voices/));
+    await userEvent.click(screen.getByRole("checkbox", { name: /Show all voices/ }));
     expect(screen.getAllByRole("listitem")).toHaveLength(3);
   });
 

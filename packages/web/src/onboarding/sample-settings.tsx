@@ -26,10 +26,7 @@ export function SampleSettings(): ReactElement {
   const id = restore.data?.projectId ?? sample.data?.projectId ?? null;
   return (
     <div className="mt-8">
-      <SectionHead
-        title="Sample project"
-        info="The finished example that comes with Slopify. Restore sample adds it back if it was deleted, or replaces it with the original. Your own copies of it are not touched."
-      />
+      <SectionHead title="Sample project" info="settings.sample.restore" />
       <RailGroup>
         <Rail>
           <span className="min-w-0 flex-1 text-small text-ink2">

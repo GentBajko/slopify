@@ -1,4 +1,5 @@
 import type { FieldError } from "@/api";
+import { InfoTip } from "@/components/kit/info-tip";
 import { SlotChip } from "@/components/slot-chip";
 
 // The editor's right-hand panel: every `{{name}}` the body holds, and beneath them the lint the
@@ -22,7 +23,10 @@ export function DetectedSlots({
 }) {
   return (
     <>
-      <h2 className="sl-kicker m-0">Detected slots</h2>
+      <div className="flex items-center gap-1">
+        <h2 className="sl-kicker m-0">Detected slots</h2>
+        <InfoTip id="library.slots" className="-my-1" />
+      </div>
 
       {slots.length > 0 ? (
         <div className="flex flex-wrap gap-[6px]">

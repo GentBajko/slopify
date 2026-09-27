@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
 import { StatusSlot } from "@/components/kit/action-bar";
 import { Drawer } from "@/components/kit/drawer";
+import { InfoTip } from "@/components/kit/info-tip";
 import { Rail, RailGroup } from "@/components/rail";
 import { Button } from "@/components/ui/button";
 import { installPack, onboardingKey, readFirstRun } from "./api.js";
@@ -47,9 +48,9 @@ export function PacksDrawer({
         </StatusSlot>
       }
     >
-      <p className="mb-4 text-small text-ink2">
-        Prompts, a suggested voice, style and art direction for one kind of channel. Pick the
-        template on Play, type a topic, go.
+      <p className="mb-4 flex items-center gap-1 text-small text-ink2">
+        Prompts, a suggested voice and a template for one kind of channel.
+        <InfoTip id="welcome.packs" />
       </p>
       <RailGroup>
         {(view.data?.packs ?? []).map((pack) => (

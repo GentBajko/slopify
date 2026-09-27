@@ -24,7 +24,7 @@ import type { CastMember } from "@/channels/api";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { Field, Input, Textarea } from "@/components/kit/field";
-import { InfoTip } from "@/components/kit/info-tip";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Switch } from "@/components/kit/switch";
 import { useVoicesForLanguage, VoiceLanguageNote } from "@/language/voice-language";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
@@ -108,6 +108,7 @@ export function SpeakersEditor({
         <OptionPicker
           field="voices.format"
           label="Format"
+          tip="play.speakers.format"
           value={value?.format ?? ""}
           placeholder="Narration (one voice)"
           options={voiceFormats.map((format) => ({
@@ -121,6 +122,7 @@ export function SpeakersEditor({
           <OptionPicker
             field="voices.source"
             label="Script"
+            tip="play.speakers.script"
             value={value.source}
             placeholder="Pick where the script comes from"
             options={[
@@ -177,6 +179,7 @@ export function SpeakersEditor({
             </Button>
             <OptionPicker
               label="Add from the cast"
+              tip="play.speakers.add-from-cast"
               value=""
               placeholder={
                 voiced.length === 0
@@ -197,6 +200,7 @@ export function SpeakersEditor({
             <OptionPicker
               field="voices.turnGapSeconds"
               label="Gap between turns"
+              tip="play.speakers.turn-gap"
               value={String(value.turnGapSeconds)}
               placeholder="Pick a gap"
               options={turnGapSteps.map((step) => ({ value: String(step), label: `${step} s` }))}
@@ -207,16 +211,19 @@ export function SpeakersEditor({
           <div className="flex flex-col items-start gap-2">
             <Switch
               label="Speaker names on captions"
+              tip="play.speakers.name-tags"
               checked={value.nameTags}
               onChange={(nameTags) => set({ nameTags })}
             />
             <Switch
               label="One request for consecutive turns where the voice provider can (ElevenLabs v3)"
+              tip="play.speakers.native-dialogue"
               checked={value.nativeDialogue}
               onChange={(nativeDialogue) => set({ nativeDialogue })}
             />
             <Switch
               label="Also make MP3 and M4B files with chapter markers"
+              tip="play.speakers.audio-files"
               checked={value.audioFiles}
               onChange={(audioFiles) => set({ audioFiles })}
             />
@@ -293,7 +300,12 @@ function SpeakerRow({
           className="mb-2 size-3 shrink-0 rounded-full"
           style={{ background: `var(--color-speaker-${String((index % 6) + 1)})` }}
         />
-        <Field label="Speaker name" error={problem?.(`${field}.name`)} className="min-w-0 flex-1">
+        <Field
+          label="Speaker name"
+          tip="play.speaker.name"
+          error={problem?.(`${field}.name`)}
+          className="min-w-0 flex-1"
+        >
           <Input
             value={speaker.name}
             maxLength={40}
@@ -303,6 +315,7 @@ function SpeakerRow({
       </div>
       <OptionPicker
         label="Role"
+        tip="play.speaker.role"
         value={speaker.role}
         placeholder="Pick a role"
         options={speakerRoles.map((role) => ({ value: role, label: roleLabels[role] }))}
@@ -315,6 +328,7 @@ function SpeakerRow({
       <ProviderPicker
         field={`${field}.voice`}
         label="Voice provider"
+        tip="play.speaker.provider"
         family="tts"
         providers={providers}
         value={voice.provider}
@@ -323,6 +337,7 @@ function SpeakerRow({
       />
       <ModelPicker
         label="Voice model"
+        tip="play.speaker.model"
         provider={voice.provider}
         value={voice.model}
         problem={undefined}
@@ -331,6 +346,7 @@ function SpeakerRow({
       <OptionPicker
         field={`${field}.voice.voice`}
         label="Voice"
+        tip="play.speaker.voice"
         value={voice.voice}
         placeholder={mine.length === 0 ? "No voices. Add one in Settings." : "Pick a voice"}
         options={mine.map((one) => ({ value: one.voiceId, label: one.name }))}
@@ -349,6 +365,7 @@ function SpeakerRow({
       <OptionPicker
         field={`${field}.pace`}
         label="Pace"
+        tip="play.speaker.pace"
         value={String(speaker.pace ?? 1)}
         placeholder="Pick a pace"
         options={paceSteps.map((step) => ({
@@ -361,16 +378,11 @@ function SpeakerRow({
           onChange(Number(pace) === 1 ? rest : { ...rest, pace: Number(pace) });
         }}
       />
-      <details className="col-span-full text-small">
+      <details className="col-span-full text-small" {...helpScope}>
         <summary className="flex min-h-8 cursor-pointer items-center gap-2 text-ink-2">
           Pronunciations for {speaker.name.trim() || "this speaker"}
           {speaker.pronunciations?.trim() ? " · set" : ""}
-          <InfoTip label="speaker pronunciations">
-            <p>
-              One <code>Term: /IPA/</code> per line, like the article's Pronunciation Glossary. Used
-              for this speaker only, on Inworld TTS-2 voices, ahead of the glossary.
-            </p>
-          </InfoTip>
+          <InfoTip id="play.speaker.pronunciations" />
         </summary>
         <Textarea
           rows={3}
@@ -468,14 +480,17 @@ function Audition({
         : `about ${money.format(estimate.high)}`;
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-3">
-      <Button
-        type="button"
-        disabled={!ready || speak.isPending}
-        onClick={() => speak.mutate()}
-        title={`Reads: ${line}`}
-      >
-        {speak.isPending ? "Speaking…" : `Audition${price === undefined ? "" : ` · ${price}`}`}
-      </Button>
+      <span className="inline-flex items-center gap-1">
+        <Button
+          type="button"
+          disabled={!ready || speak.isPending}
+          onClick={() => speak.mutate()}
+          title={`Reads: ${line}`}
+        >
+          {speak.isPending ? "Speaking…" : `Audition${price === undefined ? "" : ` · ${price}`}`}
+        </Button>
+        <InfoTip id="play.speaker.audition" />
+      </span>
       <span className="min-h-5 text-label text-ink-2" aria-live="polite">
         {!ready
           ? "Pick a provider, model and voice to audition."

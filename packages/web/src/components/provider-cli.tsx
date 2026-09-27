@@ -1,5 +1,5 @@
 import { readinessIsUsable } from "@app/kernel/ports/model.js";
-import type { ProviderStatus } from "@app/slices/settings/model.js";
+import type { ProviderId, ProviderStatus } from "@app/slices/settings/model.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useEffect, useId, useState } from "react";
 import { type ProviderListBody, saveProviderPath } from "@/api";
@@ -9,7 +9,25 @@ import { Code, Field, Input } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
 import { Lamp } from "@/components/kit/status";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
+import type { HelpId } from "@/help/catalog";
 import { keys } from "@/queries";
+
+// What each provider does and costs, behind the info button beside its name.
+export const providerTips = {
+  openrouter: "settings.provider.openrouter",
+  "claude-code": "settings.provider.claude-code",
+  codex: "settings.provider.codex",
+  gemini: "settings.provider.gemini",
+  elevenlabs: "settings.provider.elevenlabs",
+  "openai-tts": "settings.provider.openai-tts",
+  cartesia: "settings.provider.cartesia",
+  inworld: "settings.provider.inworld",
+  fal: "settings.provider.fal",
+  replicate: "settings.provider.replicate",
+  "openai-image": "settings.provider.openai-image",
+  "google-image": "settings.provider.google-image",
+  "codex-image": "settings.provider.codex-image",
+} as const satisfies Readonly<Record<ProviderId, HelpId>>;
 
 type CliReadiness = Extract<ProviderStatus["readiness"], { readonly kind: "cli" }>;
 
@@ -91,21 +109,7 @@ export function CliProviderDetail({
           <h3 id={headingId} className="sl-section-head__title">
             {provider.displayName}
           </h3>
-          <InfoTip label={`${provider.displayName} sign-in`}>
-            {onHost ? (
-              <p>
-                Runs on your host using its existing CLI login. Rerun the Docker launcher after
-                changing CLI installations.
-              </p>
-            ) : null}
-            <p>
-              Sign in through {provider.displayName} itself before generating; Slopify uses that
-              login.
-              {provider.id === "codex-image"
-                ? " Executable path and login are shared with Codex text generation."
-                : null}
-            </p>
-          </InfoTip>
+          <InfoTip id={providerTips[provider.id]} label={provider.displayName} />
         </div>
         <p className="sl-section-head__meta">{kind} · command line, no key needed</p>
       </div>
@@ -125,7 +129,10 @@ export function CliProviderDetail({
 
       <div className="sl-btn-row">
         {onHost ? (
-          <span className="text-small text-ink-2">Managed on host</span>
+          <span className="inline-flex items-center gap-1 text-small text-ink-2">
+            Managed on host
+            <InfoTip id="settings.cli.managed-on-host" />
+          </span>
         ) : (
           <Button
             aria-expanded={editing}
@@ -148,6 +155,7 @@ export function CliProviderDetail({
         >
           <Field
             label="Executable path"
+            tip="settings.cli.path"
             help={
               <>
                 Leave blank to find <Code>{defaultCommand}</Code> on PATH. Use an absolute path

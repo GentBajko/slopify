@@ -7,6 +7,7 @@ import { useApp } from "@/app-context";
 import { InfoTip } from "@/components/kit/info-tip";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { helpEntry } from "@/help/catalog";
 import { read } from "@/http";
 import { projectsQuery } from "@/queries";
 export function BatchQueue() {
@@ -24,12 +25,7 @@ export function BatchQueue() {
     <section aria-label="Video queue" className="mb-5 rounded-media border border-line bg-surface">
       <div className="flex min-h-10 items-center gap-2 border-b border-line px-4">
         <h2 className="sl-kicker m-0">Video queue · {queue.data.queue.length} remaining</h2>
-        <InfoTip label="the video queue">
-          <p>
-            One batch video runs at a time. Pause holds the queue; failure or cancellation advances
-            it.
-          </p>
-        </InfoTip>
+        <InfoTip id="play.queue" />
       </div>
       <QueueList queue={queue.data.queue} projects={projects.data?.projects} />
     </section>
@@ -63,8 +59,7 @@ export function BatchQueueCount() {
       </PopoverTrigger>
       <PopoverContent align="end" className="p-0">
         <p className="border-b border-line px-3 py-2 text-small text-ink-2">
-          One batch video runs at a time. Pause holds the queue; failure or cancellation advances
-          it.
+          {helpEntry("play.queue").body}
         </p>
         <QueueList queue={queue.data?.queue ?? []} projects={projects.data?.projects} />
       </PopoverContent>

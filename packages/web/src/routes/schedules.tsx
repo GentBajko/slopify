@@ -162,20 +162,14 @@ export function SchedulesRoute(): ReactElement {
           ) : (
             <span className="inline-flex items-center gap-1">
               Runs a saved template on this machine at a local time.
-              <InfoTip label="Schedules">
-                <p>
-                  Each schedule keeps a durable history and creates fresh projects, so changing a
-                  template never rewrites an old run. Schedules use the selected template version
-                  and never include uploaded media.
-                </p>
-              </InfoTip>
+              <InfoTip id="planning.schedules" />
             </span>
           )
         }
         actions={
           <>
             <Select
-              aria-label="Show schedules of"
+              aria-label="Filter schedules by channel"
               value={channelFilter}
               className="w-auto min-w-[160px]"
               onChange={(event) => setChannelFilter(event.target.value)}

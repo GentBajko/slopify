@@ -1,6 +1,7 @@
 import type { ProviderChoice } from "@app/slices/admission/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { useApp } from "@/app-context";
+import type { HelpId } from "@/help/catalog";
 import { modelsQuery } from "@/lib/models";
 import { OptionPicker } from "./pickers";
 
@@ -12,12 +13,14 @@ export function ThinkingPicker({
   onChange,
   field = "llm.thinking",
   label = "Thinking",
+  tip = "play.llm.thinking",
   problem,
 }: {
   readonly choice: ProviderChoice;
   readonly onChange: (choice: ProviderChoice) => void;
   readonly field?: string;
   readonly label?: string;
+  readonly tip?: HelpId;
   // A sentence the rule or the server said about this control.
   readonly problem?: string | undefined;
 }) {
@@ -31,6 +34,7 @@ export function ThinkingPicker({
       <OptionPicker
         field={field}
         label={label}
+        tip={tip}
         value={choice.thinking ?? "default"}
         placeholder="Model default"
         problem={

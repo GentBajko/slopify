@@ -6,6 +6,7 @@ import { newStudioPairing, readStudioSettings, saveStudioPlaylist } from "@/api"
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Field, Input } from "@/components/kit/field";
+import { InfoTip } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
 
@@ -16,10 +17,7 @@ export const studioSettingsKey = ["studio", "settings"] as const;
 export function StudioSettings() {
   return (
     <div>
-      <SectionHead
-        title="Upload pack and extension"
-        info="Slopify never uploads or publishes. A finished project's Prepare upload lists everything Studio asks for with Copy buttons. The optional Slopify Studio browser extension fills Studio's upload dialog for you; you still press Publish. Install steps: docs/studio-extension.md in the Slopify repository."
-      />
+      <SectionHead title="Upload pack and extension" info="settings.studio.extension" />
       <div className="flex flex-col gap-8">
         <Playlist />
         <Pairing />
@@ -50,7 +48,11 @@ function Playlist() {
   });
   const error = tooLong ?? save.error?.message;
   return (
-    <Field label="Playlist" help="The playlist every upload pack names.">
+    <Field
+      label="Playlist"
+      tip="settings.studio.playlist"
+      help="The playlist every upload pack names."
+    >
       <div className="flex flex-wrap items-center gap-2">
         <Input
           autoComplete="off"
@@ -108,7 +110,10 @@ function Pairing() {
   };
   return (
     <div className="sl-field">
-      <span className="sl-field__label">Extension pairing token</span>
+      <div className="flex min-w-0 items-center gap-1">
+        <span className="sl-field__label">Extension pairing token</span>
+        <InfoTip id="settings.studio.pairing" className="-my-1" />
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         <code className="sl-code min-w-0 flex-1 basis-[220px] truncate py-[6px] select-all">
           {pairing?.token ?? "…"}

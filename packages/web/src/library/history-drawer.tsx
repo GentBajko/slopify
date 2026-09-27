@@ -96,7 +96,7 @@ export function HistoryDrawer({
         <section className="flex flex-col gap-3">
           <SectionHead title="Compare" as="h3" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Older">
+            <Field label="Older" tip="library.history.compare">
               <Select
                 value={before === undefined ? "" : String(before)}
                 disabled={versions.length === 0}
@@ -111,7 +111,7 @@ export function HistoryDrawer({
                 ))}
               </Select>
             </Field>
-            <Field label="Newer">
+            <Field label="Newer" tip="library.history.compare">
               <Select
                 value={after === undefined ? "" : String(after)}
                 disabled={versions.length === 0}
@@ -147,7 +147,7 @@ export function HistoryDrawer({
         </section>
 
         <section className="flex flex-col gap-2">
-          <SectionHead title="Versions" as="h3" />
+          <SectionHead title="Versions" as="h3" info="library.history.versions" />
           <List label={`Versions of ${name}`}>
             {versions.map((one) => (
               <ListRow

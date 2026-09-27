@@ -3,9 +3,9 @@ import { motionStyleLabels } from "@app/slices/admission/rules.js";
 import { usesScriptPrompt } from "@app/slices/voices/model.js";
 import { Link } from "@tanstack/react-router";
 import { DocumentThemePicker } from "@/components/document-theme-picker";
-import { InfoTip } from "@/components/kit/info-tip";
 import { Input } from "@/components/ui/input";
 import { Picker } from "@/components/ui/picker";
+import type { HelpId } from "@/help/catalog";
 import { ImageProviderControls } from "@/play/media-rails";
 import { LabelledField, OptionPicker } from "@/play/pickers";
 import { FilePick, PasteArea } from "@/play/provided";
@@ -33,6 +33,7 @@ export function ResearchRail({ form, problem, update }: RailProps) {
           <PasteArea
             field="provided.research"
             label="Research notes"
+            tip="play.provided.research"
             value={form.provided.research}
             placeholder="Paste the notes the article will be written from."
             problem={problem("provided.research")}
@@ -55,6 +56,7 @@ export function ArticleRail({ form, prompts, problem, update, titled }: RailProp
           <OptionPicker
             field="articlePrompt"
             label={usesScriptPrompt(form) ? "Script prompt" : "Article prompt"}
+            tip="play.article-prompt"
             value={form.articlePrompt}
             placeholder="Pick a prompt"
             options={promptNames(prompts, articleKind(form))}
@@ -70,6 +72,7 @@ export function ArticleRail({ form, prompts, problem, update, titled }: RailProp
           <PasteArea
             field="provided.article"
             label="Article text"
+            tip="play.provided.article"
             value={form.provided.article}
             placeholder="Paste the article that will be narrated."
             problem={problem("provided.article")}
@@ -112,6 +115,7 @@ export function ThumbnailRail({
           <OptionPicker
             field="thumbnailPrompt"
             label="Thumbnail prompt"
+            tip="play.thumbnail-prompt"
             value={form.thumbnailPrompt}
             placeholder="Pick a prompt"
             options={promptNames(prompts, "thumbnail")}
@@ -153,9 +157,6 @@ export function ThumbnailRail({
     </StageRail>
   );
 }
-
-// Edit project → Inputs says the same under its own Motion select.
-const motionHint = "How each image moves while it's on screen.";
 
 export type TimingField = "imageSeconds" | "zoomPercent" | "edgeSilenceSeconds";
 
@@ -223,7 +224,7 @@ export function VideoRail({
             <NumberField
               field="imageSeconds"
               label="Seconds per image"
-              help="Each image stays on screen this long, then the next one; after the last image they start again."
+              tip="play.image-seconds"
               step={1}
               problem={problem("imageSeconds")}
               {...timing("imageSeconds")}
@@ -233,33 +234,28 @@ export function VideoRail({
             <NumberField
               field="zoomPercent"
               label="Zoom (%)"
-              help="How far each image zooms in or out over its time on screen. 0 keeps images still."
+              tip="play.zoom"
               step={0.5}
               problem={problem("zoomPercent")}
               {...timing("zoomPercent")}
             />
           ) : null}
           {form.sources.video === "generate" ? (
-            <LabelledField label="Motion" problem={undefined} inline>
+            <LabelledField label="Motion" tip="play.motion" problem={undefined} inline>
               {({ id }) => (
-                <>
-                  <Picker
-                    id={id}
-                    data-play-field="motionStyle"
-                    className="w-auto min-w-[120px]"
-                    value={form.motionStyle}
-                    onChange={(event) => update({ motionStyle: event.target.value as MotionStyle })}
-                  >
-                    {motionStyles.map((style) => (
-                      <option key={style} value={style}>
-                        {motionStyleLabels[style]}
-                      </option>
-                    ))}
-                  </Picker>
-                  <InfoTip label="motion">
-                    <p>{motionHint}</p>
-                  </InfoTip>
-                </>
+                <Picker
+                  id={id}
+                  data-play-field="motionStyle"
+                  className="w-auto min-w-[120px]"
+                  value={form.motionStyle}
+                  onChange={(event) => update({ motionStyle: event.target.value as MotionStyle })}
+                >
+                  {motionStyles.map((style) => (
+                    <option key={style} value={style}>
+                      {motionStyleLabels[style]}
+                    </option>
+                  ))}
+                </Picker>
               )}
             </LabelledField>
           ) : null}
@@ -268,7 +264,7 @@ export function VideoRail({
             <NumberField
               field="edgeSilenceSeconds"
               label="Silence at start and end (seconds)"
-              help="Quiet time before the narration starts and after it ends."
+              tip="play.edge-silence"
               step={0.5}
               problem={problem("edgeSilenceSeconds")}
               {...timing("edgeSilenceSeconds")}
@@ -375,7 +371,8 @@ export function VideoExtras({
 export function NumberField({
   field,
   label,
-  help,
+  tip,
+  placeholder,
   step,
   problem,
   value,
@@ -383,31 +380,28 @@ export function NumberField({
 }: {
   readonly field: string;
   readonly label: string;
-  readonly help: string;
+  readonly tip: HelpId;
+  readonly placeholder?: string | undefined;
   readonly step: number;
   readonly problem: string | undefined;
   readonly value: string;
   readonly onChange: (value: string) => void;
 }) {
   return (
-    <LabelledField label={label} problem={problem} inline>
+    <LabelledField label={label} tip={tip} problem={problem} inline>
       {({ id, describedBy }) => (
-        <>
-          <Input
-            id={id}
-            data-play-field={field}
-            type="text"
-            inputMode={step < 1 ? "decimal" : "numeric"}
-            className="w-[80px] tabular-nums"
-            aria-invalid={problem !== undefined}
-            aria-describedby={describedBy}
-            value={value}
-            onChange={(event) => onChange(event.target.value)}
-          />
-          <InfoTip label={label.toLowerCase()}>
-            <p>{help}</p>
-          </InfoTip>
-        </>
+        <Input
+          id={id}
+          data-play-field={field}
+          type="text"
+          inputMode={step < 1 ? "decimal" : "numeric"}
+          className="w-[80px] tabular-nums"
+          aria-invalid={problem !== undefined}
+          aria-describedby={describedBy}
+          placeholder={placeholder}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
       )}
     </LabelledField>
   );
@@ -420,7 +414,7 @@ export function DocumentRail({ form, update }: RailProps) {
     <StageRail kind="document" name="Document" dim={off}>
       <SourceSwitch kind="document" form={form} update={update} />
       <div className={railControls}>
-        <LabelledField label="Theme" problem={undefined} inline>
+        <LabelledField label="Theme" tip="play.document-theme" problem={undefined} inline>
           {({ id }) => (
             <span className="flex flex-wrap items-center gap-3">
               <DocumentThemePicker

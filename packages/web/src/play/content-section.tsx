@@ -56,12 +56,7 @@ export function ContentSection(
       )}
       {needsLlm(form, entries) ? (
         <section aria-label="Text generation" className="border-y border-line py-4">
-          <SectionHead
-            as="h3"
-            title="Text generation"
-            info="Shared by generated article, research, thumbnail wording, generated entries and Narration Preparation when enabled."
-            className="pb-3"
-          >
+          <SectionHead as="h3" title="Text generation" info="play.text-generation" className="pb-3">
             <Button variant="quiet" size="small" onClick={() => onLibrary("/settings")}>
               Settings
             </Button>
@@ -70,6 +65,7 @@ export function ContentSection(
             <ProviderPicker
               field="llm.provider"
               label="LLM"
+              tip="play.llm.provider"
               family="llm"
               providers={props.providers}
               value={form.llm.provider}
@@ -81,6 +77,7 @@ export function ContentSection(
             <ModelPicker
               field="llm.model"
               label="Text model"
+              tip="play.llm.model"
               provider={form.llm.provider}
               value={form.llm.model}
               problem={

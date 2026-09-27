@@ -5,6 +5,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactElement, useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
+import { helpEntry } from "@/help/catalog";
 import { revisionView } from "@/project/revision-fixture";
 import { formOfRevision } from "@/project/revision-form-state";
 import { RevisionProviders } from "@/project/revision-providers";
@@ -149,16 +150,13 @@ it("uses an explicitly typed native checkbox with an associated label and help",
   expect(input.type).toBe("checkbox");
   expect(input.checked).toBe(false);
   expect(input.getAttribute("data-play-field")).toBe("audio.usePronunciationGlossary");
-  const helpId = input.getAttribute("aria-describedby");
-  if (helpId === null) throw new Error("Missing checkbox description");
-  expect(document.getElementById(helpId)?.textContent).toContain("Arda: /ˈɑɹdə/");
-  // It says what to ask the article prompt for, so the glossary is one narration can use.
-  expect(document.getElementById(helpId)?.textContent).toContain(
-    "slash-delimited standard-English IPA (Term: /IPA/)",
-  );
-  expect(document.getElementById(helpId)?.textContent).toContain(
-    "English approximation for foreign names",
-  );
+  // Its info button says what it reads and what to ask the article prompt for, so the
+  // glossary is one narration can use.
+  const help = helpEntry("play.pronunciation-glossary").body;
+  expect(screen.getByRole("button", { name: "About Pronunciation Glossary" })).not.toBeNull();
+  expect(help).toContain("Arda: /ˈɑɹdə/");
+  expect(help).toContain("slash-delimited standard-English IPA (Term: /IPA/)");
+  expect(help).toContain("English approximation for foreign names");
   await user.tab();
   expect(document.activeElement).toBe(input);
   await user.keyboard(" ");

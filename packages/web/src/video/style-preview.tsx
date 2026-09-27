@@ -141,7 +141,12 @@ export function StylePreview({
 
   return (
     <section aria-label="Style preview" className="min-w-0 space-y-3">
-      <SectionHead as="h3" title="Style preview" meta="6 seconds rendered with your settings">
+      <SectionHead
+        as="h3"
+        title="Style preview"
+        meta="6 seconds rendered with your settings"
+        info="project.video.style-preview"
+      >
         <Button
           variant="quiet"
           size="small"

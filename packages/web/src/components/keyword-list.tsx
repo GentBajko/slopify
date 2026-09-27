@@ -70,6 +70,7 @@ export function KeywordList({
         <Field
           key={keyword.name}
           label={keyword.name}
+          tip="play.keyword"
           help={feeds(keyword)}
           error={problem?.(`${fieldPrefix}.${keyword.name}`)}
         >

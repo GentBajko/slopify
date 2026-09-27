@@ -7,6 +7,7 @@ import { useApp } from "@/app-context";
 import { ActionBar, StatusSlot } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
+import { InfoTip } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { type TabItem, TabPanel, Tabs } from "@/components/kit/tabs";
 import { keys } from "@/queries";
@@ -362,10 +363,7 @@ export function RevisionEditPanel({
       <div className="flex flex-col gap-4">
         {intro ?? (
           <>
-            <SectionHead
-              title="Saved revision"
-              info="Continuing a run uses the current saved revision. Edit project saves a new revision without starting work; a remake of outdated outputs is offered as the project's next action, and Choose what to remake opens the full rebuild review."
-            />
+            <SectionHead title="Saved revision" info="project.saved-revision" />
             {c.saved.error === null ? null : (
               <p role="alert" className="m-0 text-small text-danger">
                 {c.saved.error.message}
@@ -402,13 +400,16 @@ export function RevisionEditPanel({
               Reload current revision
             </Button>
           ) : null}
-          <Button
-            disabled={c.busy}
-            onClick={() => c.review({ kind: "allAffected" })}
-            variant="secondary"
-          >
-            Choose what to remake
-          </Button>
+          <span className="inline-flex items-center gap-1">
+            <Button
+              disabled={c.busy}
+              onClick={() => c.review({ kind: "allAffected" })}
+              variant="secondary"
+            >
+              Choose what to remake
+            </Button>
+            <InfoTip id="project.choose-remake" />
+          </span>
           <Button variant="primary" disabled={c.busy} onClick={c.openEditor}>
             Edit project
           </Button>

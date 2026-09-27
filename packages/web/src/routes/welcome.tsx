@@ -4,6 +4,7 @@ import { type FormEvent, type ReactElement, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { AutostartOffer } from "@/autostart/autostart-settings";
 import { ActionBar, StatusSlot } from "@/components/kit/action-bar";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageBar } from "@/components/kit/page-bar";
 import { SectionHead } from "@/components/kit/section-head";
 import { Rail, RailGroup } from "@/components/rail";
@@ -88,10 +89,7 @@ export function WelcomeRoute(): ReactElement {
       />
       {view.error ? <p className="mb-3 text-body text-red">{view.error.message}</p> : null}
 
-      <SectionHead
-        title="Found on this computer"
-        info="Claude Code, Codex and Gemini CLI write the text with your own sign-in, so no API key is needed for it. Codex also draws the images. The narration needs a voice key (OpenAI, ElevenLabs, Cartesia or Inworld) in Settings → Providers."
-      />
+      <SectionHead title="Found on this computer" info="welcome.found" />
       <RailGroup className="mb-6">
         {(data?.clis ?? []).map((cli) => (
           <Rail key={cli.id}>
@@ -114,16 +112,15 @@ export function WelcomeRoute(): ReactElement {
         </p>
       ) : null}
 
-      <SectionHead
-        title="Make a 60-second short"
-        info="Type a topic. Slopify writes a script of about 150 words, narrates it, draws four vertical images and renders a captioned 9:16 short, usually in about five minutes with the command-line tools."
-      />
+      <SectionHead title="Make a 60-second short" info="welcome.short" />
       <form onSubmit={submit} className="mb-6 flex flex-wrap items-end gap-3">
-        <label
-          htmlFor="welcome-topic"
-          className="flex min-w-[240px] flex-1 flex-col gap-1 text-label text-ink2"
-        >
-          Topic
+        <div className="flex min-w-[240px] flex-1 flex-col gap-1" {...helpScope}>
+          <span className="flex items-center gap-1">
+            <label htmlFor="welcome-topic" className="text-label text-ink2">
+              Topic
+            </label>
+            <InfoTip id="welcome.topic" className="-my-1" />
+          </span>
           <Input
             id="welcome-topic"
             value={topic}
@@ -131,9 +128,14 @@ export function WelcomeRoute(): ReactElement {
             placeholder="Why the sea glows at night"
             onChange={(event) => setTopic(event.target.value)}
           />
-        </label>
-        <label htmlFor="welcome-pack" className="flex flex-col gap-1 text-label text-ink2">
-          Style
+        </div>
+        <div className="flex flex-col gap-1" {...helpScope}>
+          <span className="flex items-center gap-1">
+            <label htmlFor="welcome-pack" className="text-label text-ink2">
+              Style
+            </label>
+            <InfoTip id="welcome.pack" className="-my-1" />
+          </span>
           <Picker
             id="welcome-pack"
             aria-label="Starter pack"
@@ -147,13 +149,13 @@ export function WelcomeRoute(): ReactElement {
               </option>
             ))}
           </Picker>
-        </label>
+        </div>
         <Button type="submit" variant="primary" disabled={topic.trim() === "" || short.isPending}>
           Make a 60-second short
         </Button>
       </form>
 
-      <SectionHead title="Explore the sample" />
+      <SectionHead title="Explore the sample" info="settings.sample.restore" />
       <RailGroup className="mb-6">
         <Rail>
           <span className="min-w-0 flex-1 text-small text-ink2">
@@ -178,10 +180,7 @@ export function WelcomeRoute(): ReactElement {
 
       <AutostartOffer />
 
-      <SectionHead
-        title="Starter packs"
-        info="Each pack adds prompts, a suggested voice and a Play template for one kind of channel. Adding a pack twice changes nothing, and it never replaces a prompt or template of yours with the same name."
-      />
+      <SectionHead title="Starter packs" info="welcome.packs" />
       <RailGroup>
         {(data?.packs ?? []).map((one) => (
           <Rail key={one.id}>

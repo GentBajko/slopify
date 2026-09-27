@@ -75,6 +75,7 @@ function UsedBySection({
         title="Used by"
         as="h3"
         className="pb-0"
+        info="library.used-by"
         {...(data === undefined ? {} : { meta: usedByCounts(data) })}
       />
       {usedBy.error === null ? null : (
@@ -144,6 +145,7 @@ function LatestChange({
         title="History"
         as="h3"
         className="pb-0"
+        info="library.history"
         {...(newer === undefined
           ? {}
           : {

@@ -2,6 +2,7 @@ import type { ManualCue } from "@app/slices/revisions/model.js";
 import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/kit/button";
 import { Input, Textarea } from "@/components/kit/field";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 
 export function CaptionEditor({
   cues,
@@ -75,8 +76,12 @@ export function CaptionEditor({
     setDirty(false);
   }
   return (
-    <section aria-label="Edit caption cues" className="space-y-3">
-      <h3>Caption text and timing</h3>
+    // One tip for every cue: each caption's text, start and end work the same way.
+    <section aria-label="Edit caption cues" className="space-y-3" {...helpScope}>
+      <div className="flex items-center gap-1">
+        <h3>Caption text and timing</h3>
+        <InfoTip id="project.captions.editor" />
+      </div>
       {draft.map((cue, index) => (
         <fieldset key={cue.id} className="space-y-2 rounded-control border border-line-strong p-3">
           <legend>Caption {index + 1}</legend>
@@ -124,9 +129,12 @@ export function CaptionEditor({
           {error}
         </p>
       )}
-      <Button type="button" onClick={apply}>
-        Apply caption edits to draft
-      </Button>
+      <span className="inline-flex items-center gap-1">
+        <Button type="button" onClick={apply}>
+          Apply caption edits to draft
+        </Button>
+        <InfoTip id="project.captions.apply" />
+      </span>
       {dirty ? <p>Apply these caption edits before saving the project.</p> : null}
     </section>
   );

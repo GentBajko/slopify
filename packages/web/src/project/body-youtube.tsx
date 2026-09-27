@@ -33,7 +33,9 @@ import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
 import { Input, Textarea } from "@/components/kit/field";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { useToast } from "@/components/kit/toast";
+import type { HelpId } from "@/help/catalog";
 import { cn } from "@/lib/utils";
 import { DiffColumns } from "@/library/diff-view";
 import { keys } from "@/queries";
@@ -47,6 +49,13 @@ const labels: Readonly<Record<DescriptionField, string>> = {
   hashtags: "Hashtags",
   tags: "Tags",
 };
+
+const fieldTips = {
+  Summary: "project.youtube.summary",
+  Chapters: "project.youtube.chapters",
+  Hashtags: "project.youtube.hashtags",
+  Tags: "project.youtube.tags",
+} as const satisfies Readonly<Record<string, HelpId>>;
 
 // The Video stage's YouTube part: the description (summary, chapters, hashtags) and the tags as
 // written, each editable in place. An edit is kept as the user's own and survives the next
@@ -344,12 +353,16 @@ function EditableField({
   const [diff, setDiff] = useState(false);
   const editing = draft !== undefined;
   const lower = label.toLowerCase();
+  const tip = label in fieldTips ? fieldTips[label as keyof typeof fieldTips] : undefined;
   return (
-    <div className="flex min-w-0 flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-1" {...helpScope}>
       <div className="flex min-h-8 flex-wrap items-center gap-2">
-        <h5 id={`${id}-label`} className="sl-kicker text-ink-3">
-          {label}
-        </h5>
+        <span className="inline-flex items-center gap-1">
+          <h5 id={`${id}-label`} className="sl-kicker text-ink-3">
+            {label}
+          </h5>
+          {tip === undefined ? null : <InfoTip id={tip} label={lower} className="-my-1" />}
+        </span>
         {value.edited ? <span className="text-small text-ink-2">Your edit</span> : null}
         <span className="flex-1" />
         {value.edited && !editing ? (
@@ -578,10 +591,13 @@ function PreviousVideo({
   });
   return (
     <div className="flex flex-wrap items-end gap-2">
-      <div className="flex min-w-[260px] flex-1 flex-col gap-1 sm:max-w-[520px]">
-        <label className="sl-field__label" htmlFor={id}>
-          Previous video for this project
-        </label>
+      <div className="flex min-w-[260px] flex-1 flex-col gap-1 sm:max-w-[520px]" {...helpScope}>
+        <div className="flex items-center gap-1">
+          <label className="sl-field__label" htmlFor={id}>
+            Previous video for this project
+          </label>
+          <InfoTip id="project.youtube.previous-video" className="-my-1" />
+        </div>
         <Input
           id={id}
           type="url"

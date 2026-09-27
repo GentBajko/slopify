@@ -301,7 +301,7 @@ export function DesignRoute(): ReactElement {
           kicker="Reference · not in the video"
           title="Establishing image"
           meta="Every image below follows it for Tiamat's look, palette and style"
-          info="Regenerating it marks every image outdated."
+          info="play.reference"
         >
           <Button variant="primary">Regenerate</Button>
           <Button variant="quiet">Replace with upload</Button>

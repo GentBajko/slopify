@@ -1,7 +1,9 @@
 import { useId } from "react";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { HelpId } from "@/help/catalog";
 import type { Upload } from "@/play/state";
 
 // What a stage set to Provide draws instead of its generation controls:
@@ -17,6 +19,7 @@ export function PasteArea({
   value,
   placeholder,
   problem,
+  tip,
   onChange,
 }: {
   readonly label: string;
@@ -24,16 +27,19 @@ export function PasteArea({
   readonly value: string;
   readonly placeholder: string;
   readonly problem: string | undefined;
+  // The info button beside the label, from the help catalogue.
+  readonly tip?: HelpId | undefined;
   readonly onChange: (next: string) => void;
 }) {
   const fieldId = useId();
   const noteId = useId();
 
   return (
-    <div>
-      <Label htmlFor={fieldId} className="mb-[5px]">
-        {label}
-      </Label>
+    <div {...(tip === undefined ? {} : helpScope)}>
+      <span className="mb-[5px] flex items-center gap-1">
+        <Label htmlFor={fieldId}>{label}</Label>
+        {tip === undefined ? null : <InfoTip id={tip} label={label} className="-my-1" />}
+      </span>
       <Textarea
         id={fieldId}
         data-play-field={field}

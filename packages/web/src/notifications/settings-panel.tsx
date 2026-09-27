@@ -28,10 +28,7 @@ const cantShow =
 export function NotificationSettings() {
   return (
     <div>
-      <SectionHead
-        title="Browser and phone"
-        info="Slopify tells you when a run finishes, fails, or stops to wait for your review or for you to continue the run. Browser notifications work while any Slopify tab is open. A Notification URL works with no tab open: Slopify POSTs a short plain-text message (the project title and what happened, never your keys) to it. For your phone, install the ntfy app, subscribe to a topic with a long random name, and paste https://ntfy.sh/that-topic here. Any address that accepts a POST works too."
-      />
+      <SectionHead title="Browser and phone" info="settings.notifications" />
       <div className="flex flex-col gap-8">
         <BrowserNotifications />
         <NotificationUrl />
@@ -84,6 +81,7 @@ function BrowserNotifications() {
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
         <Switch
           label="Browser notifications"
+          tip="settings.notifications.browser"
           checked={active}
           disabled={asking}
           onChange={(next) => void turn(next)}
@@ -154,6 +152,7 @@ function NotificationUrl() {
   return (
     <Field
       label="Notification URL"
+      tip="settings.notifications.url"
       help="Works with no tab open, for example an ntfy topic on your phone."
     >
       <div className="flex flex-wrap items-center gap-2">

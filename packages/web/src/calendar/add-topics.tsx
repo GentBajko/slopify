@@ -127,7 +127,7 @@ export function AddToCalendar({
         </p>
       ) : (
         <div className="flex flex-col gap-4">
-          <Field label="Schedule">
+          <Field label="Schedule" tip="planning.calendar.add-schedule">
             <Select
               value={picked?.id ?? ""}
               onChange={(event) => setScheduleId(event.target.value)}
@@ -139,7 +139,7 @@ export function AddToCalendar({
               ))}
             </Select>
           </Field>
-          <Field label="Topics, one per line" error={error}>
+          <Field label="Topics, one per line" error={error} tip="planning.calendar.add-topics">
             <Textarea
               rows={8}
               value={text}

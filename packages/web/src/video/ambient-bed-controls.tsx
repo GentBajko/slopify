@@ -11,9 +11,7 @@ import {
 } from "@app/slices/video/ambient-bed.js";
 import type { ReactElement, ReactNode } from "react";
 import { Field, Input, Select } from "@/components/kit/field";
-
-const help =
-  "Rain, a fireplace or wind, made on this computer, or your own audio file, under the whole narration of the long video. It dips while the narrator speaks, fades in at the start and keeps playing for the tail after the narration ends; a tail longer than the silence at the end makes the video that much longer. Shorts don't get it.";
+import type { HelpId } from "@/help/catalog";
 
 // The ambient bed's settings: Play's (with None and My own file) and the channel brand kit's
 // (the built-in beds only). `value` undefined is the inherited choice `inherit` names: the
@@ -57,9 +55,10 @@ export function AmbientBedControls({
     field: "level" | "fadeIn" | "tail",
     label: string,
     hint: string,
+    tip: HelpId,
   ): ReactElement | null =>
     value === undefined || !playing ? null : (
-      <Field label={label} help={hint} error={problem(field)}>
+      <Field label={label} help={hint} tip={tip} error={problem(field)}>
         <Input
           data-play-field={`${fieldPrefix}.${field}`}
           type="text"
@@ -72,7 +71,7 @@ export function AmbientBedControls({
     );
   return (
     <div className="grid min-w-0 grid-cols-1 gap-3">
-      <Field label="Ambient sound" help={help} error={problem("source")}>
+      <Field label="Ambient sound" tip="project.ambient.source" error={problem("source")}>
         <Select
           data-play-field={`${fieldPrefix}.source`}
           className="w-auto min-w-[180px]"
@@ -95,12 +94,19 @@ export function AmbientBedControls({
             "level",
             "Level (dB)",
             `${String(ambientLevelMin)} to ${String(ambientLevelMax)}; 0 is about as loud as the voice.`,
+            "project.ambient.level",
           )}
-          {number("fadeIn", "Fade in (seconds)", `0 to ${String(ambientFadeMax)}.`)}
+          {number(
+            "fadeIn",
+            "Fade in (seconds)",
+            `0 to ${String(ambientFadeMax)}.`,
+            "project.ambient.fade-in",
+          )}
           {number(
             "tail",
             "Tail after the narration (seconds)",
             `0 to ${String(ambientTailMax)}, fading out.`,
+            "project.ambient.tail",
           )}
         </div>
       ) : null}

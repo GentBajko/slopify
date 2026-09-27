@@ -14,7 +14,7 @@ import {
 } from "@app/slices/images/scale.js";
 import type { PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import { type ReactElement, useId } from "react";
-import { InfoTip } from "@/components/kit/info-tip";
+import { helpScope } from "@/components/kit/info-tip";
 import { Segmented, Switch } from "@/components/kit/switch";
 import { Input } from "@/components/ui/input";
 
@@ -22,9 +22,6 @@ type Every = "minutes" | "hour";
 
 // Where it starts when switched on: an image every two minutes of narration.
 const firstScale = { every: "minutes" as const, value: "2" };
-
-const help =
-  "Adds images as the narration gets longer, planned from the expected length when the run starts. Each ticked prompt keeps its own Number; the extra images are shared among them in order. A long video pans and zooms by turns so it stays watchable.";
 
 // Images → More images for long videos, on Play. It edits the draft document itself, so what
 // was typed survives a reload; the run gets it as images per hour (`images/scale.ts`).
@@ -64,21 +61,18 @@ export function ImageScaleControl({
   };
   return (
     <div className="flex basis-full flex-col items-start gap-2">
-      <span className="flex items-center gap-2">
-        <Switch
-          checked={scale !== undefined}
-          label="More images for long videos"
-          describedBy={`${id}-line`}
-          onChange={(on) => edit(on ? firstScale : undefined)}
-        />
-        <InfoTip label="more images for long videos">
-          <p>{help}</p>
-        </InfoTip>
-      </span>
+      <Switch
+        checked={scale !== undefined}
+        label="More images for long videos"
+        tip="play.image-scale"
+        describedBy={`${id}-line`}
+        onChange={(on) => edit(on ? firstScale : undefined)}
+      />
       {scale === undefined ? null : (
-        <span className="flex flex-wrap items-center gap-2 text-small">
+        <span className="flex flex-wrap items-center gap-2 text-small" {...helpScope}>
           <Segmented<Every>
             label="How the rate is given"
+            tip="play.image-scale.rate"
             value={scale.every}
             options={[
               { value: "minutes", label: "Every N minutes" },

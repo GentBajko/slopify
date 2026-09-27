@@ -1,5 +1,5 @@
 import { type ReactElement, useId } from "react";
-import { InfoTip } from "@/components/kit/info-tip";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { usePlaySession } from "./draft-context";
 import type { PlayFormState } from "./state";
 
@@ -43,15 +43,11 @@ export function CheckpointControls({
       aria-invalid={problem("checkpoints") !== undefined}
       disabled={review.starting || review.uncertain}
       className="min-w-0 rounded-panel border border-line px-3 pt-1 pb-2"
+      {...helpScope}
     >
       <legend className="flex items-center gap-1 px-1 font-semibold">
         Review checkpoints
-        <InfoTip label="review checkpoints">
-          <p>
-            Hold a step so you can review and edit before it runs. Independent steps continue.
-            Approve each checkpoint on the project page when you are ready.
-          </p>
-        </InfoTip>
+        <InfoTip id="play.checkpoints" />
       </legend>
       <div className="flex flex-wrap gap-x-6">
         {checkpointOptions.map(({ stage, label }) => {

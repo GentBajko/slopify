@@ -10,6 +10,7 @@ import { KeywordList } from "@/components/keyword-list";
 import { Button } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
 import { Field, Input, Select } from "@/components/kit/field";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Chip } from "@/components/kit/status";
 import { instantiateProjectTemplate, templatesQuery } from "@/templates/api";
 import { usePlaySession } from "./draft-context";
@@ -97,9 +98,9 @@ export function TemplateField({
           .join(" · ")
       : templates.data?.length === 0
         ? "No templates yet. Set this video up, then Save as template."
-        : "A saved setup: prompts, voice, images, style and outputs.";
+        : undefined;
   return (
-    <Field label="Template" help={help}>
+    <Field label="Template" tip="play.template" help={help}>
       <Select
         data-play-field="template"
         value={current?.id ?? ""}
@@ -135,11 +136,7 @@ export function TopicFields({
   };
   if (topics.length === 0)
     return (
-      <Field
-        label="Title"
-        help="The video's name. Use {{Topic}} in it to queue more videos from this setup."
-        error={problem("title")}
-      >
+      <Field label="Title" tip="play.title" error={problem("title")}>
         <Input
           data-play-field="title"
           className="!h-11 text-[17px]"
@@ -158,6 +155,7 @@ export function TopicFields({
         <Field
           key={name}
           label={name}
+          tip="play.topic"
           help={
             index === topics.length - 1 ? (
               <>
@@ -241,8 +239,11 @@ export function MoreVideos({
   const opened = variants.findIndex((variant) => variant.id === open);
   const variant = opened === -1 ? undefined : variants[opened];
   return (
-    <section aria-label="More videos from the same setup" className="min-w-0">
-      <div className="sl-kicker mb-2">More videos from the same setup</div>
+    <section aria-label="More videos from the same setup" className="min-w-0" {...helpScope}>
+      <div className="mb-2 flex items-center gap-1">
+        <span className="sl-kicker">More videos from the same setup</span>
+        <InfoTip id="play.more-videos" className="-my-1" />
+      </div>
       <div className="sl-btn-row flex-wrap">
         {variants.map((one, index) => {
           const name = labelOf(one) || `Video ${String(index + 2)}`;
@@ -337,7 +338,11 @@ export function MoreVideos({
             <p className="m-0 text-small text-ink-2">
               Everything else comes from the setup of the first video.
             </p>
-            <Field label="Title" error={problem(`items.${String(opened + 1)}.title`)}>
+            <Field
+              label="Title"
+              tip="play.title"
+              error={problem(`items.${String(opened + 1)}.title`)}
+            >
               <Input
                 data-play-field={`items.${variant.id}.title`}
                 value={variant.title}

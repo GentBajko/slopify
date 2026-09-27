@@ -2,6 +2,7 @@ import type { ImagePromptChoice } from "@app/slices/admission/model.js";
 import { imagesPerRunMax, numberPerPromptMax } from "@app/slices/admission/rules.js";
 import type { Prompt } from "@app/slices/library/model.js";
 import { useId } from "react";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -46,9 +47,12 @@ export function ImagePrompts({
   }
 
   return (
-    <div className="flex basis-full flex-col items-start gap-[6px]">
-      <span id={listId} className="engraved text-ink3">
-        Image prompts
+    <div className="flex basis-full flex-col items-start gap-[6px]" {...helpScope}>
+      <span className="flex items-center gap-1">
+        <span id={listId} className="engraved text-ink3">
+          Image prompts
+        </span>
+        <InfoTip id="play.image-prompts" className="-my-1" />
       </span>
       <ul aria-labelledby={listId} className="flex flex-wrap justify-start gap-x-4 gap-y-2">
         {options.map((prompt) => {

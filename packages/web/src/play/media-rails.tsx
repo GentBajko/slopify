@@ -72,6 +72,7 @@ export function AudioRail({
             <ProviderPicker
               field="audio.provider"
               label="TTS"
+              tip="play.tts.provider"
               family="tts"
               providers={providers}
               value={form.audio.provider}
@@ -85,6 +86,7 @@ export function AudioRail({
             <ModelPicker
               field="audio.model"
               label="TTS model"
+              tip="play.tts.model"
               provider={form.audio.provider}
               value={form.audio.model}
               problem={problem("audio.model")}
@@ -93,6 +95,7 @@ export function AudioRail({
             <OptionPicker
               field="audio.voice"
               label="Voice"
+              tip="play.voice"
               value={form.audio.voice}
               placeholder={mine.length === 0 ? "No voices. Add one in Settings." : "Pick a voice"}
               options={mine.map((voice) => ({ value: voice.voiceId, label: voice.name }))}
@@ -299,6 +302,7 @@ export function ImageProviderControls({
       <ProviderPicker
         field="images.provider"
         label="Provider"
+        tip="play.images.provider"
         family="image"
         providers={providers}
         value={form.images.provider}
@@ -308,6 +312,7 @@ export function ImageProviderControls({
       <ModelPicker
         field="images.model"
         label="Model"
+        tip="play.images.model"
         provider={form.images.provider}
         value={form.images.model}
         problem={problem("images.model")}
@@ -316,6 +321,7 @@ export function ImageProviderControls({
       <ThinkingPicker
         field="images.thinking"
         label="Effort"
+        tip="play.images.effort"
         choice={form.images}
         problem={problem("images.thinking")}
         onChange={(images) => update({ images })}

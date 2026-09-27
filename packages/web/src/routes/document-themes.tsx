@@ -88,7 +88,12 @@ export function DocumentThemesRoute() {
           list={
             <div className="flex flex-col gap-8">
               <section className="flex flex-col gap-2">
-                <SectionHead title="Your themes" as="h3" className="pb-0" />
+                <SectionHead
+                  title="Your themes"
+                  as="h3"
+                  className="pb-0"
+                  info="library.themes.yours"
+                />
                 {data.themes.length === 0 ? (
                   <p className="m-0 text-small text-ink-2">
                     No themes of your own yet. Copy a built-in below to start one.
@@ -139,7 +144,12 @@ export function DocumentThemesRoute() {
               </section>
 
               <section className="flex flex-col gap-2">
-                <SectionHead title="Built in" as="h3" className="pb-0" />
+                <SectionHead
+                  title="Built in"
+                  as="h3"
+                  className="pb-0"
+                  info="library.themes.built-in"
+                />
                 <List label="Built-in themes">
                   {data.builtIns.map((theme) => (
                     <ListRow

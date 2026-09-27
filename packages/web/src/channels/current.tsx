@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { useApp } from "@/app-context";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { cn } from "@/lib/utils";
 import { type ChannelSummary, channelsQuery } from "./api.js";
 
@@ -91,10 +92,13 @@ export function ChannelPicker({ className }: { readonly className?: string }): R
   const current = useCurrentChannel();
   const id = useId();
   return (
-    <div className={cn("flex flex-col gap-1", className)}>
-      <label htmlFor={id} className="sl-kicker px-2">
-        Channel
-      </label>
+    <div className={cn("flex flex-col gap-1", className)} {...helpScope}>
+      <span className="flex items-center gap-1 px-2">
+        <label htmlFor={id} className="sl-kicker">
+          Channel
+        </label>
+        <InfoTip id="planning.channel.current" className="-my-1" />
+      </span>
       <select
         id={id}
         className="sl-select"

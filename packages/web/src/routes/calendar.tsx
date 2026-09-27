@@ -23,6 +23,7 @@ import { StatusSlot } from "@/components/kit/action-bar";
 import { Board, BoardColumn } from "@/components/kit/board";
 import { Button, IconButton } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
@@ -219,6 +220,7 @@ export function CalendarRoute(): ReactElement {
           <>
             <Segmented
               label="Calendar view"
+              tip="planning.calendar.view"
               value={view}
               onChange={chooseView}
               options={[
@@ -506,7 +508,11 @@ function ListView({
     (one) => one.deletedAt === null && (one.status === "active" || one.status === "paused"),
   );
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6" {...helpScope}>
+      <p className="m-0 flex items-center gap-1 text-small text-ink-2">
+        Move a topic earlier, later or to another schedule from its row.
+        <InfoTip id="planning.calendar.move" className="-my-1" />
+      </p>
       {ordered.map((day) => (
         <section key={day.key} aria-label={fullDay.format(day.date)}>
           <SectionHead title={fullDay.format(day.date)} as="h3" />

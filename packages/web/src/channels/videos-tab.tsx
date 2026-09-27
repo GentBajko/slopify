@@ -6,6 +6,7 @@ import { Button } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Field, Input, Textarea } from "@/components/kit/field";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import {
@@ -88,10 +89,7 @@ export function VideosTab({ channelId }: { readonly channelId: string }): ReactE
       <p className="mb-3 text-small text-ink-2">
         Topic suggestions and duplicate checks skip these titles, as they skip the videos made here.
       </p>
-      <Field
-        label="Paste titles"
-        help="One title per line. Titles already listed are skipped, whatever their case."
-      >
+      <Field label="Paste titles" tip="planning.channel.videos-paste" help="One title per line.">
         <Textarea rows={5} value={text} onChange={(event) => setText(event.target.value)} />
       </Field>
       <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -113,6 +111,7 @@ export function VideosTab({ channelId }: { readonly channelId: string }): ReactE
         >
           Import a YouTube Studio CSV…
         </Button>
+        <InfoTip id="planning.channel.videos-csv" />
         <input
           ref={file}
           type="file"
@@ -234,10 +233,11 @@ function CsvPreview({
   const id = useId();
   const count = preview.ticked.filter(Boolean).length;
   return (
-    <section aria-label="Titles in the CSV" className="mt-4">
+    <section aria-label="Titles in the CSV" className="mt-4" {...helpScope}>
       <SectionHead
         as="h3"
         title="Titles in the CSV"
+        info="planning.channel.videos-ticks"
         meta={`${count.toLocaleString("en")} of ${plural(preview.titles.length, "title", "titles")} ticked`}
       >
         <Button variant="primary" disabled={busy || count === 0} onClick={onSave}>
@@ -249,7 +249,8 @@ function CsvPreview({
       </SectionHead>
       <Field
         label="Keep only titles containing…"
-        help='For example "D&D" or "Lore To Sleep To", in any case. Remembered for this channel.'
+        tip="planning.channel.videos-filter"
+        tipLabel="Keep only titles containing"
       >
         <Input value={filter} maxLength={200} onChange={(event) => onFilter(event.target.value)} />
       </Field>

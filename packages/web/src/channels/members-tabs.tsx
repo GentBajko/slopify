@@ -5,6 +5,7 @@ import { useApp } from "@/app-context";
 import { StatusSlot } from "@/components/kit/action-bar";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Select } from "@/components/kit/field";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { Status, type Tone } from "@/components/kit/status";
 import { schedulesQuery } from "@/schedules/api";
@@ -37,13 +38,14 @@ export function TemplatesTab({ channelId }: { readonly channelId: string }): Rea
     (template) => channelOfTemplate(template) === channelId,
   );
   return (
-    <div>
+    <div {...helpScope}>
       <p className="m-0 mb-4 max-w-[68ch] text-small text-ink-2">
         Runs from these templates use this channel's brand kit and cast. Save new ones from Play in{" "}
         <Link to="/templates" className="underline">
           Library → Templates
         </Link>
-        .
+        . Move to sends a template and its schedules to another channel.{" "}
+        <InfoTip id="planning.channel.template-move" className="-my-1 align-middle" />
       </p>
       <StatusSlot tone={move.error || templates.error ? "error" : "info"} className="mb-2">
         {move.error?.message ?? templates.error?.message}

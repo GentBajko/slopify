@@ -13,11 +13,13 @@ import { EditorSkeleton } from "@/components/editor-states";
 import { Button } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Field, Input } from "@/components/kit/field";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { Switch } from "@/components/kit/switch";
 import { LabelledSwitch } from "@/components/labelled-switch";
 import { useLeaveWhenSaved } from "@/components/saved-tick";
 import { SlotBody } from "@/components/slot-body";
+import type { HelpId } from "@/help/catalog";
 import {
   bodyProblems,
   draftProblems,
@@ -176,6 +178,7 @@ export function PromptEditorRoute({
             <div data-tour="prompt-name" className="min-w-[min(100%,240px)] flex-1">
               <Field
                 label="Name"
+                tip="library.prompt.name"
                 {...(named.length === 0
                   ? {}
                   : { error: named.map((problem) => problem.message).join(" ") })}
@@ -194,32 +197,43 @@ export function PromptEditorRoute({
               label="Kind"
               value={draft.kind}
               options={kindOptions}
+              tip="library.prompt.kind"
               onPick={(next) => {
                 edit({ ...draft, kind: next }, "name");
               }}
             />
           </div>
 
-          <div data-tour="prompt-body">
+          <div data-tour="prompt-body" {...helpScope}>
             {/* The starter sits on the label's own row, so switching Kind never moves the
                 body up or down. */}
             <div className="mb-[5px] flex min-h-8 items-end justify-between gap-3">
-              <label htmlFor={bodyId} className="sl-field__label">
-                Body
-              </label>
+              <span className="flex items-center gap-1">
+                <label htmlFor={bodyId} className="sl-field__label">
+                  Body
+                </label>
+                <InfoTip
+                  id={bodyTips[draft.kind]}
+                  label={`${kindLabel(draft.kind)} prompt body`}
+                  className="-my-1"
+                />
+              </span>
               {starterOf(draft.kind) ? (
-                <Button
-                  variant="quiet"
-                  size="small"
-                  onClick={() => {
-                    const starter = starterOf(draft.kind);
-                    if (starter === undefined) return;
-                    if (draft.body.trim() !== "") setReplacingBody(true);
-                    else edit({ ...draft, body: starter.body }, "body");
-                  }}
-                >
-                  {starterOf(draft.kind)?.label}
-                </Button>
+                <span className="flex items-center gap-1">
+                  <Button
+                    variant="quiet"
+                    size="small"
+                    onClick={() => {
+                      const starter = starterOf(draft.kind);
+                      if (starter === undefined) return;
+                      if (draft.body.trim() !== "") setReplacingBody(true);
+                      else edit({ ...draft, body: starter.body }, "body");
+                    }}
+                  >
+                    {starterOf(draft.kind)?.label}
+                  </Button>
+                  <InfoTip id="library.prompt.starter" label={starterOf(draft.kind)?.label} />
+                </span>
               ) : null}
             </div>
             <SlotBody
@@ -245,18 +259,15 @@ export function PromptEditorRoute({
                   disabled={photorealistic.isPending}
                   onChange={(on) => photorealistic.mutate({ id: promptId, on })}
                   label="Draws photorealistic pictures"
+                  tip="library.prompt.photorealistic"
                 />
               ) : (
-                <span className="text-small text-ink-2">
+                <span className="flex items-center gap-1 text-small text-ink-2">
                   Save this Image prompt first, then choose whether it draws photorealistic
                   pictures.
+                  <InfoTip id="library.prompt.photorealistic" />
                 </span>
               )}
-              <span className="text-small text-ink-2">
-                Turn on for a style that looks like real photos or film. Prepare upload then answers
-                Yes to YouTube&apos;s AI use (a realistic-looking scene that didn&apos;t happen).
-                Painterly, illustrated or other stylised pictures stay off.
-              </span>
               {photorealistic.error === null ? null : (
                 <span role="alert" className="text-small text-danger">
                   {`Couldn't change Draws photorealistic pictures: ${photorealistic.error.message} Press the switch again.`}
@@ -337,6 +348,18 @@ export function PromptEditorRoute({
     </div>
   );
 }
+
+// What the body of each kind is for: the info button beside Body.
+const bodyTips = {
+  article: "library.prompt.body.article",
+  image: "library.prompt.body.image",
+  thumbnail: "library.prompt.body.thumbnail",
+  narration: "library.prompt.body.narration",
+  description: "library.prompt.body.description",
+  shorts: "library.prompt.body.shorts",
+  review: "library.prompt.body.review",
+  script: "library.prompt.body.script",
+} as const satisfies Record<PromptKind, HelpId>;
 
 // The kinds with a starting text: the documentary delivery cues, and the wording the YouTube
 // description and the shorts use when a project picks no prompt.

@@ -138,31 +138,27 @@ it("shows the video timing settings only where the export uses them", async () =
   );
   const seconds = screen.getByRole<HTMLInputElement>("spinbutton", { name: "Seconds per image" });
   expect(seconds.value).toBe("15");
+  // What each timing setting does is behind its info button, from the help catalogue.
   expect(
-    document.getElementById((seconds.getAttribute("aria-describedby") ?? "").split(" ")[0] ?? "")
-      ?.textContent,
-  ).toBe(
-    "Each image stays on screen this long, then the next one; after the last image they start again.",
-  );
+    screen.getByRole("button", { name: "About Seconds per image" }).getAttribute("data-help-id"),
+  ).toBe("play.image-seconds");
   expect(screen.getByText("Enter a whole number of seconds between 1 and 600.")).toBeDefined();
   await user.clear(seconds);
   await user.type(seconds, "20");
   expect(latest.config.imageSeconds).toBe(20);
   const zoom = screen.getByRole<HTMLInputElement>("spinbutton", { name: "Zoom (%)" });
   expect(zoom.value).toBe("22.5");
-  expect(
-    document.getElementById((zoom.getAttribute("aria-describedby") ?? "").split(" ")[0] ?? "")
-      ?.textContent,
-  ).toBe("How far each image zooms in or out over its time on screen. 0 keeps images still.");
+  expect(screen.getByRole("button", { name: "About Zoom (%)" }).getAttribute("data-help-id")).toBe(
+    "play.zoom",
+  );
   await user.clear(zoom);
   await user.type(zoom, "0");
   expect(latest.config.zoomPercent).toBe(0);
   const motion = screen.getByRole<HTMLSelectElement>("combobox", { name: "Motion" });
   expect(motion.value).toBe("zoom");
-  expect(
-    document.getElementById((motion.getAttribute("aria-describedby") ?? "").split(" ")[0] ?? "")
-      ?.textContent,
-  ).toBe("How each image moves while it's on screen.");
+  expect(screen.getByRole("button", { name: "About Motion" }).getAttribute("data-help-id")).toBe(
+    "play.motion",
+  );
   expect([...motion.options].map((option) => option.text)).toEqual([
     "Zoom in and out",
     "Pan across",

@@ -7,6 +7,7 @@ import {
 } from "@app/kernel/ports/languages.js";
 import type { ReactElement } from "react";
 import { Field, Select } from "@/components/kit/field";
+import type { HelpId } from "@/help/catalog";
 
 // The project language control, the same in Play, Edit project and a channel's brand kit. It
 // says under itself what the language changes: what gets written in it and how the captions
@@ -20,7 +21,10 @@ export function LanguageSelect({
   label = "Language",
   error,
   disabled = false,
+  tip = "play.language",
 }: {
+  // The info button; a screen where the language means something else passes its own.
+  readonly tip?: HelpId;
   readonly value: string | undefined;
   readonly onChange: (language: LanguageCode | undefined) => void;
   // What "not chosen here" resolves to, named in its option ("Channel's language (German)").
@@ -32,7 +36,7 @@ export function LanguageSelect({
 }): ReactElement {
   const effective = value ?? inherited?.language;
   return (
-    <Field label={label} help={languageHelp(effective)} error={error}>
+    <Field label={label} tip={tip} help={languageHelp(effective)} error={error}>
       <Select
         data-play-field="language"
         value={value ?? (inherited === undefined ? "en" : "")}

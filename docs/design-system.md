@@ -43,8 +43,9 @@ Play key). New code imports from `components/kit`.
 
 `kit/button` (Button: primary, secondary, quiet, destructive, icon; small; `disabledReason`;
 IconButton; PlayKey; ButtonRow) · `kit/field` (Field wires label, help and error into its
-control's `id`, `aria-describedby` and `aria-invalid`; Input, Select, Textarea, Code) ·
-`kit/switch` (Switch, Segmented) · `kit/tabs` (roving focus: arrows, Home, End) ·
+control's `id`, `aria-describedby` and `aria-invalid`, and `tip` puts the info button beside
+the label; Input, Select, Textarea, Code) · `kit/switch` (Switch, Segmented, both with `tip`) ·
+`kit/info-tip` (InfoTip, reading the help catalogue; `helpScope`) · `kit/tabs` (roving focus: arrows, Home, End) ·
 `kit/section-head` (kicker, title, meta, info, actions) · `kit/status` (Lamp, Status, Badge,
 Chip) · `kit/media` (MediaFrame with aspect, caption, badge, hover and focus actions and a
 generating state; MediaGrid; Lightbox with arrow paging and Esc) · `kit/player` (a real
@@ -145,6 +146,28 @@ Continue the run, Prepare upload, Edit project settings, Choose what to remake, 
 outdated … and Remake everything outdated, Save as template, Cancel the run, Make my own copy,
 Open the project folder, Copy description, Copy tags, Regenerate image N and Regenerate
 thumbnail N.
+
+### Every control explains itself
+
+Nobody should have to guess what a control does. Every setting, option, toggle, select, number
+field and non-obvious action has an info button (`InfoTip`) beside it, and its words come from
+one help catalogue, `packages/web/src/help/catalog.ts` (split into `help/entries/<area>.ts` so
+the list stays readable). An entry is `id → { title, body }`; the body says, in about 60 words
+at most, what the control does, when to change it, the default, and what it costs or slows (API
+calls, money, time, disk), in the Voice below. One thing has one id, reused wherever it shows.
+
+- Wire it through the kit: `Field tip="…"`, `Switch tip="…"`, `Segmented tip="…"`,
+  `LabelledSwitch tip="…"`, `SectionHead info="…"`, or `<InfoTip id="…" />` inside an element
+  that spreads `helpScope` for a hand-laid-out row. Write ids as literals, never built from
+  pieces.
+- The button is a real button named "About {thing}", in the tab order; a press, Enter or Space
+  opens it (never hover alone, so touch gets it too) and Esc closes it.
+- Keep a short `help` line under a field only where it helps scanning; never repeat the tip.
+- Tests hold the rule: `help/catalog.test.ts` fails on an id used but missing, an entry used
+  nowhere, or a body that is too long or too short; `help/walk/*.test.tsx` render the main
+  screens with fixture data, open every section, and fail on any labelled control whose
+  nearest `data-help-scope` has no info button. Self-explanatory controls (search boxes, row
+  checkboxes) go in an explicit allowlist with a reason.
 
 ## Rules in short
 

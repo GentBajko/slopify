@@ -87,6 +87,7 @@ export function EntriesRoute({
           value={category}
           options={categoryOptions.map((option) => ({ ...option, label: `${option.label}s` }))}
           onChange={onCategory}
+          tip="library.entry.category"
         />
       </LibraryToolbar>
 

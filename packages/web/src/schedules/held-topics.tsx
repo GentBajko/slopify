@@ -5,6 +5,7 @@ import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { Input } from "@/components/kit/field";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Rule } from "@/components/kit/layout";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
@@ -82,6 +83,7 @@ export function TopicGenerationPanel({
           schedule.topicGeneration.mode === "hold" ? "queued or waiting" : "queued"
         }.`}
       >
+        <InfoTip id="planning.schedule.generate-now" />
         <Button
           disabled={busy || topics.generatingSince !== null}
           disabledReason="Topics are being generated now"
@@ -101,8 +103,12 @@ export function TopicGenerationPanel({
         </Callout>
       ) : null}
       {schedule.topicGeneration.mode === "hold" ? (
-        <div className="mt-4">
-          <SectionHead as="h3" title={`Topics waiting · ${String(rows.length)}`}>
+        <div className="mt-4" {...helpScope}>
+          <SectionHead
+            as="h3"
+            title={`Topics waiting · ${String(rows.length)}`}
+            info="planning.schedule.held"
+          >
             <Button
               variant="primary"
               disabled={busy || rows.length === 0}
