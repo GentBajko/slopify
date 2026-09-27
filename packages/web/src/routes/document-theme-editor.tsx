@@ -8,16 +8,14 @@ import { type ReactNode, useCallback, useEffect, useId, useMemo, useState } from
 import type { FieldError } from "@/api";
 import { previewDocumentTheme, removeDocumentTheme, saveDocumentTheme } from "@/api";
 import { useApp } from "@/app-context";
-import { ConfirmDialog } from "@/components/confirm";
 import { EditorActions } from "@/components/editor-actions";
-import { backLink, EditorNotice, EditorSkeleton, sheet } from "@/components/editor-states";
-import { PageBar } from "@/components/kit/page-bar";
+import { EditorSkeleton } from "@/components/editor-states";
+import { Button } from "@/components/kit/button";
+import { ConfirmDialog } from "@/components/kit/dialog";
+import { Field, Input, Select, Textarea } from "@/components/kit/field";
+import { PageHeader } from "@/components/kit/layout";
 import { PdfPages } from "@/components/pdf-pages";
 import { useLeaveWhenSaved } from "@/components/saved-tick";
-import { Button } from "@/components/ui/button";
-import { Input, Textarea } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Picker } from "@/components/ui/picker";
 import {
   type FieldPath,
   faceFamilies,
@@ -29,6 +27,7 @@ import {
   valueAt,
   withValue,
 } from "@/lib/document-theme-fields";
+import { EditorCrumb, EditorProblem, editorAside, editorSurface } from "@/library/editor-frame";
 import { documentThemesQuery } from "@/queries";
 
 interface Draft {
@@ -53,8 +52,6 @@ export function DocumentThemeEditorRoute({
   const { api } = useApp();
   const queryClient = useQueryClient();
   const listing = useQuery(documentThemesQuery(api));
-  const nameId = useId();
-  const nameErrorId = useId();
   const hintId = useId();
 
   const [edited, setEdited] = useState<Draft | undefined>(undefined);
@@ -142,46 +139,45 @@ export function DocumentThemeEditorRoute({
 
   return (
     <div>
-      <PageBar
-        back={{ to: "/document-themes", label: "Documents" }}
+      <PageHeader
+        crumb={
+          <EditorCrumb>
+            <Link to="/document-themes">Documents</Link>
+          </EditorCrumb>
+        }
         title={themeId === undefined ? "New document theme" : "Edit document theme"}
+        meta="How a project's PDF looks"
       />
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,440px)]">
-        <div className={`${sheet} flex min-w-0 flex-col gap-[14px]`}>
-          <div>
-            <Label htmlFor={nameId} className="mb-[5px]">
-              Name
-            </Label>
+        <div className={`${editorSurface} flex min-w-0 flex-col gap-[14px]`}>
+          <Field
+            label="Name"
+            {...(named.length === 0
+              ? {}
+              : { error: named.map((problem) => problem.message).join(" ") })}
+          >
             <Input
-              id={nameId}
               value={draft.name}
-              aria-invalid={named.length > 0}
-              aria-describedby={named.length === 0 ? undefined : nameErrorId}
               onChange={(event) => {
                 edit({ ...draft, name: event.target.value }, "name");
               }}
             />
-            {named.length === 0 ? null : (
-              <p id={nameErrorId} className="mt-1 text-label text-red">
-                {named.map((problem) => problem.message).join(" ")}
-              </p>
-            )}
-          </div>
+          </Field>
 
           {themeGroups.map((group, index) => (
             <details
               key={group.title}
               open={index < 2 || group.fields.some((field) => problemFor(problems, field.path))}
-              className="group rounded-control border border-line"
+              className="group border-t border-line"
             >
-              <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-[10px] font-semibold">
+              <summary className="flex cursor-pointer list-none items-center gap-2 py-3 text-title-3 font-semibold">
                 <ChevronRightIcon
                   aria-hidden="true"
-                  className="size-[14px] text-ink2 transition-transform group-open:rotate-90 motion-reduce:transition-none"
+                  className="size-[14px] text-ink-2 transition-transform group-open:rotate-90 motion-reduce:transition-none"
                 />
                 {group.title}
               </summary>
-              <div className="grid grid-cols-[minmax(0,1fr)] gap-x-5 gap-y-3 border-t border-line px-3 py-3 sm:grid-cols-2">
+              <div className="grid grid-cols-[minmax(0,1fr)] gap-x-5 gap-y-4 pb-4 sm:grid-cols-2">
                 {group.fields.map((field) => (
                   <Setting
                     key={field.path.join(".")}
@@ -210,7 +206,7 @@ export function DocumentThemeEditorRoute({
             pending={save.isPending}
             saved={saved}
             cancel={
-              <Button asChild>
+              <Button asChild variant="secondary">
                 <Link to="/document-themes">Cancel</Link>
               </Button>
             }
@@ -230,7 +226,7 @@ export function DocumentThemeEditorRoute({
         open={deleting}
         title={`Delete "${draft.name}"?`}
         consequence="Projects that used it keep their own copy of its settings."
-        verb="Delete"
+        confirmLabel="Delete theme"
         pending={remove.isPending}
         onConfirm={() => {
           if (themeId !== undefined) remove.mutate(themeId);
@@ -312,21 +308,21 @@ function Preview({ values }: { readonly values: DocumentTheme | undefined }) {
           : "A sample article with this theme. Your projects use their own text and thumbnail.";
 
   return (
-    <div className={`${sheet} flex flex-col gap-3 lg:sticky lg:top-16`}>
+    <div className={editorAside}>
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="font-semibold">Preview</h2>
+        <h2 className="m-0 text-title-3 font-semibold">Preview</h2>
         {pdf === undefined ? null : (
           <a
             href={pdf.url}
             target="_blank"
             rel="noreferrer"
-            className="text-small text-run-text underline"
+            className="text-small text-accent-ink underline"
           >
             Open full size
           </a>
         )}
       </div>
-      <div className="max-h-[calc(100vh-220px)] min-h-[320px] overflow-y-auto rounded-control border border-line bg-panel2 p-3">
+      <div className="max-h-[calc(100vh-220px)] min-h-[320px] overflow-y-auto rounded-media border border-line bg-sunken p-3">
         <PdfPages
           data={pdf?.bytes}
           label="The sample article laid out with this theme"
@@ -335,7 +331,7 @@ function Preview({ values }: { readonly values: DocumentTheme | undefined }) {
       </div>
       <p
         role="status"
-        className={state === "failed" ? "text-small text-red" : "text-small text-ink2"}
+        className={state === "failed" ? "m-0 text-small text-danger" : "m-0 text-small text-ink-2"}
       >
         {status}
       </p>
@@ -368,12 +364,12 @@ function Setting({
   const notes = (
     <>
       {field.help === undefined ? null : (
-        <p id={`${id}-help`} className="text-label text-ink2">
+        <p id={`${id}-help`} className="sl-field__help m-0">
           {field.help}
         </p>
       )}
       {problem === undefined ? null : (
-        <p id={`${id}-error`} className="text-label text-red">
+        <p id={`${id}-error`} className="sl-field__error m-0">
           {problem}
         </p>
       )}
@@ -422,7 +418,7 @@ function Setting({
                 set(event.target.value === "" ? Number.NaN : Number(event.target.value));
               }}
             />
-            <span className="text-small text-ink2">{field.unit}</span>
+            <span className="text-small text-ink-2">{field.unit}</span>
           </span>
         </Labelled>
       );
@@ -441,7 +437,7 @@ function Setting({
               type="color"
               aria-label={`${field.label} colour`}
               value={full}
-              className="h-8 w-10 cursor-pointer rounded-control border border-line2 bg-panel2 p-[2px]"
+              className="h-8 w-10 cursor-pointer rounded-control border border-line-strong bg-sunken p-[2px]"
               onChange={(event) => {
                 set(event.target.value);
               }}
@@ -486,7 +482,7 @@ function Setting({
       const index = field.options.findIndex((option) => option.value === value);
       return (
         <Labelled id={id} label={field.label} notes={notes}>
-          <Picker
+          <Select
             {...common}
             value={String(index)}
             onChange={(event) => {
@@ -499,7 +495,7 @@ function Setting({
                 {option.label}
               </option>
             ))}
-          </Picker>
+          </Select>
         </Labelled>
       );
     }
@@ -509,7 +505,7 @@ function Setting({
       return (
         <Labelled id={id} label={field.label} notes={notes}>
           <span className="flex flex-wrap items-center gap-2">
-            <Picker
+            <Select
               {...common}
               aria-label={`${field.label} font`}
               value={face.family}
@@ -525,8 +521,8 @@ function Setting({
                   {family.label}
                 </option>
               ))}
-            </Picker>
-            <Picker
+            </Select>
+            <Select
               aria-label={`${field.label} style`}
               value={face.style}
               onChange={(event) => {
@@ -538,7 +534,7 @@ function Setting({
                   {style.label}
                 </option>
               ))}
-            </Picker>
+            </Select>
             <Input
               type="number"
               aria-label={`${field.label} letter spacing in millimetres`}
@@ -561,7 +557,9 @@ function Setting({
     case "lines":
       return (
         <div className="flex flex-col gap-1 sm:col-span-2">
-          <Label htmlFor={id}>{field.label}</Label>
+          <label htmlFor={id} className="sl-field__label">
+            {field.label}
+          </label>
           <Textarea
             {...common}
             rows={8}
@@ -629,7 +627,9 @@ function Labelled({
 }) {
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <Label htmlFor={id}>{label}</Label>
+      <label htmlFor={id} className="sl-field__label">
+        {label}
+      </label>
       {children}
       {notes}
     </div>
@@ -638,14 +638,8 @@ function Labelled({
 
 function Notice({ children }: { readonly children: string }) {
   return (
-    <EditorNotice
-      back={
-        <Link to="/document-themes" className={backLink}>
-          Back to Documents
-        </Link>
-      }
-    >
+    <EditorProblem back={<Link to="/document-themes">Back to Documents</Link>}>
       {children}
-    </EditorNotice>
+    </EditorProblem>
   );
 }

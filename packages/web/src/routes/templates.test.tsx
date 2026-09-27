@@ -1,7 +1,8 @@
-import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StrictMode, useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
+import { CommandPaletteProvider, CommandRegistry } from "@/components/kit/command-palette";
 import { PlayDraftProvider, usePlaySession } from "@/play/draft-context";
 import { freshDraftDocument } from "@/play/draft-state";
 import { jsonAnswer, renderRouted, testDeps } from "@/test-app";
@@ -70,7 +71,8 @@ it("lists templates and saves a named setup from an existing draft without start
     <TemplatesRoute onApplied={applied} />,
     testDeps({ ...routes, "POST /api/project-templates": save }),
   );
-  expect(await screen.findByRole("heading", { name: template.name })).not.toBeNull();
+  const list = await screen.findByRole("list", { name: "Project templates" });
+  expect(within(list).getByText(template.name)).not.toBeNull();
   await user.click(screen.getByRole("button", { name: "Save a setup" }));
   await user.selectOptions(await screen.findByLabelText("Saved Play draft"), sourceId);
   await user.type(screen.getByLabelText("Template name"), "New template");
@@ -222,7 +224,9 @@ it("confirms deletion and keeps the template visible when the server refuses", a
   await user.click(within(dialog).getByRole("button", { name: "Delete template" }));
   await screen.findByText("Template changed elsewhere.");
   await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
-  expect(screen.getByRole("heading", { name: template.name })).not.toBeNull();
+  expect(
+    within(screen.getByRole("list", { name: "Project templates" })).getByText(template.name),
+  ).not.toBeNull();
   expect(remove).toHaveBeenCalledOnce();
 });
 
@@ -299,6 +303,29 @@ it("deletes the selected version and refreshes the list", async () => {
   await user.click(
     within(await screen.findByRole("dialog")).getByRole("button", { name: "Delete template" }),
   );
-  await screen.findByText("No templates yet. Use Save a setup to keep a Play draft for reuse.");
+  await screen.findByRole("heading", { name: "No templates yet" });
+  expect(screen.getByText("Use Save a setup to keep a Play draft for reuse.")).not.toBeNull();
   expect(remove).toHaveBeenCalledOnce();
+});
+
+it("shows Apply and Delete on the row itself and offers Save a setup in the command palette", async () => {
+  const registry = new CommandRegistry();
+  renderRouted(
+    <CommandPaletteProvider registry={registry}>
+      <TemplatesRoute onApplied={vi.fn()} />
+    </CommandPaletteProvider>,
+    testDeps(routes),
+  );
+  const actions = await screen.findByRole("group", { name: `Actions for ${template.name}` });
+  expect(
+    [...actions.querySelectorAll("button")].map((one) => one.getAttribute("aria-label")),
+  ).toEqual([`Apply ${template.name}`, `Delete ${template.name}`]);
+
+  const save = registry.list().find((command) => command.title === "Save a setup as a template");
+  expect(save?.group).toBe("Library");
+  expect(screen.queryByRole("form", { name: "Save a setup" })).toBeNull();
+  await act(async () => {
+    await save?.run();
+  });
+  expect(await screen.findByRole("form", { name: "Save a setup" })).not.toBeNull();
 });

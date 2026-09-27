@@ -20,7 +20,7 @@ export function DiffColumns({
   const counts = diffCounts(parts);
   return (
     <div className="flex min-w-0 flex-col gap-2">
-      <p className="text-small text-ink2">
+      <p className="m-0 text-small text-ink-2">
         {counts.added === 0 && counts.removed === 0
           ? "The two texts are the same."
           : `${String(counts.added)} ${counts.added === 1 ? "word" : "words"} added, ${String(counts.removed)} removed.`}
@@ -42,15 +42,15 @@ function DiffSide({
 }): ReactElement {
   return (
     <section aria-label={label} className="flex min-w-0 flex-col gap-1">
-      <h4 className="engraved text-ink3">{label}</h4>
+      <h4 className="sl-kicker m-0">{label}</h4>
       <div className="min-w-0 whitespace-pre-wrap break-words border-l-2 border-line pl-3 text-small leading-relaxed text-ink">
         {keyed(parts).map(({ key, part }) =>
           part.op === "removed" ? (
-            <del key={key} className="rounded-[2px] bg-red/15 text-ink line-through decoration-red">
+            <del key={key} className="rounded-[2px] bg-danger-tint text-danger line-through">
               {part.text}
             </del>
           ) : part.op === "added" ? (
-            <ins key={key} className="rounded-[2px] bg-done/20 text-ink no-underline">
+            <ins key={key} className="rounded-[2px] bg-accent-tint text-accent-ink no-underline">
               {part.text}
             </ins>
           ) : (

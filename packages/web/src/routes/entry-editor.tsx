@@ -5,17 +5,16 @@ import { useId, useState } from "react";
 import type { FieldError } from "@/api";
 import { removeEntry, saveEntry } from "@/api";
 import { useApp } from "@/app-context";
-import { ConfirmDialog } from "@/components/confirm";
 import { DetectedSlots } from "@/components/detected-slots";
 import { EditorActions } from "@/components/editor-actions";
-import { backLink, EditorNotice, EditorSkeleton, sheet } from "@/components/editor-states";
-import { PageBar } from "@/components/kit/page-bar";
+import { EditorSkeleton } from "@/components/editor-states";
+import { Button } from "@/components/kit/button";
+import { ConfirmDialog } from "@/components/kit/dialog";
+import { Field, Input } from "@/components/kit/field";
+import { PageHeader } from "@/components/kit/layout";
 import { LabelledSwitch } from "@/components/labelled-switch";
 import { useLeaveWhenSaved } from "@/components/saved-tick";
 import { SlotBody } from "@/components/slot-body";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   bodyProblems,
   draftProblems,
@@ -23,7 +22,14 @@ import {
   nameProblems,
   slotNames,
 } from "@/lib/draft-lint";
-import { categoryOptions, modeHint, modeOptions, noSlotsHint } from "@/lib/entry-options";
+import {
+  categoryLabel,
+  categoryOptions,
+  modeHint,
+  modeOptions,
+  noSlotsHint,
+} from "@/lib/entry-options";
+import { EditorCrumb, EditorProblem, editorAside, editorSurface } from "@/library/editor-frame";
 import { entriesQuery } from "@/queries";
 
 // One intro or outro: a name, a category, a mode and a body whose `{{slots}}` are shown as they
@@ -45,8 +51,6 @@ export function EntryEditorRoute({
   const { api } = useApp();
   const queryClient = useQueryClient();
   const entries = useQuery(entriesQuery(api));
-  const nameId = useId();
-  const nameErrorId = useId();
   const modeHintId = useId();
   const bodyId = useId();
   const lintId = useId();
@@ -127,32 +131,35 @@ export function EntryEditorRoute({
 
   return (
     <div>
-      <PageBar
-        back={{ to: "/entries", label: "Intros & Outros", search: { category: draft.category } }}
+      <PageHeader
+        crumb={
+          <EditorCrumb>
+            <Link to="/entries" search={{ category: draft.category }}>
+              Intros &amp; Outros
+            </Link>
+          </EditorCrumb>
+        }
         title={entryId === undefined ? "New entry" : "Edit entry"}
+        meta={categoryLabel(draft.category)}
       />
 
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className={`${sheet} flex min-w-0 flex-col gap-[14px]`}>
+        <div className={`${editorSurface} flex min-w-0 flex-col gap-[14px]`}>
           <div className="flex flex-wrap items-end gap-[14px]">
             <div className="min-w-[200px] flex-1">
-              <Label htmlFor={nameId} className="mb-[5px]">
-                Name
-              </Label>
-              <Input
-                id={nameId}
-                value={draft.name}
-                aria-invalid={named.length > 0}
-                aria-describedby={named.length === 0 ? undefined : nameErrorId}
-                onChange={(event) => {
-                  edit({ ...draft, name: event.target.value }, "name");
-                }}
-              />
-              {named.length === 0 ? null : (
-                <p id={nameErrorId} className="mt-1 text-label text-red">
-                  {named.map((problem) => problem.message).join(" ")}
-                </p>
-              )}
+              <Field
+                label="Name"
+                {...(named.length === 0
+                  ? {}
+                  : { error: named.map((problem) => problem.message).join(" ") })}
+              >
+                <Input
+                  value={draft.name}
+                  onChange={(event) => {
+                    edit({ ...draft, name: event.target.value }, "name");
+                  }}
+                />
+              </Field>
             </div>
             {/* The category may change after creation, and a name is only taken
                 within its own category, so a collision under the old one is moot. */}
@@ -177,14 +184,14 @@ export function EntryEditorRoute({
           {/* The hint belongs under the Mode switch, which sits at the right end of the
               row, so the sentence is set flush right rather than under the Name field it
               says nothing about. */}
-          <p id={modeHintId} className="-mt-[6px] text-right text-small text-ink2">
+          <p id={modeHintId} className="-mt-[6px] text-right text-small text-ink-2">
             {modeHint(draft.mode)}
           </p>
 
           <div>
-            <Label htmlFor={bodyId} className="mb-[5px]">
+            <label htmlFor={bodyId} className="sl-field__label mb-[5px] block">
               Body
-            </Label>
+            </label>
             <SlotBody
               id={bodyId}
               value={draft.body}
@@ -209,7 +216,7 @@ export function EntryEditorRoute({
             pending={save.isPending}
             saved={saved}
             cancel={
-              <Button asChild>
+              <Button asChild variant="secondary">
                 <Link to="/entries" search={{ category: draft.category }}>
                   Cancel
                 </Link>
@@ -224,7 +231,7 @@ export function EntryEditorRoute({
           />
         </div>
 
-        <div className={`${sheet} flex flex-col gap-3 lg:sticky lg:top-16`}>
+        <div className={editorAside}>
           <DetectedSlots
             slots={slots}
             body={draft.body}
@@ -239,7 +246,7 @@ export function EntryEditorRoute({
         open={deleting}
         title={`Delete "${draft.name}"?`}
         consequence="Projects that used it keep their text."
-        verb="Delete"
+        confirmLabel={`Delete ${draft.category}`}
         pending={remove.isPending}
         onConfirm={() => {
           if (entryId !== undefined) {
@@ -262,14 +269,14 @@ function Notice({
   readonly children: string;
 }) {
   return (
-    <EditorNotice
+    <EditorProblem
       back={
-        <Link to="/entries" search={{ category }} className={backLink}>
+        <Link to="/entries" search={{ category }}>
           Back to Intros &amp; Outros
         </Link>
       }
     >
       {children}
-    </EditorNotice>
+    </EditorProblem>
   );
 }

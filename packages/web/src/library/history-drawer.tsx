@@ -1,20 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { type ReactElement, useId, useState } from "react";
+import { type ReactElement, useState } from "react";
 import {
   type LibraryItemKind,
   type LibraryVersion,
   readLibraryHistory,
   readLibraryUsedBy,
   restoreLibraryVersion,
-  type UsedBy,
 } from "@/api";
 import { useApp } from "@/app-context";
 import { StatusSlot } from "@/components/kit/action-bar";
+import { Button } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Picker } from "@/components/ui/picker";
+import { Field, Select } from "@/components/kit/field";
+import { List, ListRow } from "@/components/kit/list-row";
+import { SectionHead } from "@/components/kit/section-head";
 import { keys } from "@/queries";
 import { DiffColumns } from "./diff-view";
 
@@ -23,9 +22,27 @@ export const historyKeys = {
   usedBy: (item: LibraryItemKind, id: string) => ["library-used-by", item, id] as const,
 };
 
-// Library → History: every saved version of one prompt or intro/outro, two of them side by side
-// with the changed words marked, Restore for an older one, and what uses it now. A drawer, so
-// the list it was opened from stays in view.
+// The saved versions of one prompt or intro/outro, newest first. The Library detail and the
+// History drawer share the one query, so opening the drawer never refetches.
+export function useLibraryHistory(item: LibraryItemKind, id: string) {
+  const { api } = useApp();
+  return useQuery({
+    queryKey: historyKeys.versions(item, id),
+    queryFn: () => readLibraryHistory(api, item, id),
+  });
+}
+
+export function useLibraryUsedBy(item: LibraryItemKind, id: string) {
+  const { api } = useApp();
+  return useQuery({
+    queryKey: historyKeys.usedBy(item, id),
+    queryFn: () => readLibraryUsedBy(api, item, id),
+  });
+}
+
+// Library → History: every saved version of one prompt or intro/outro, any two of them side by
+// side with the changed words marked, and Restore for an older one. A drawer, so the list it
+// was opened from stays in view; what uses the item is in the detail beside the list.
 export function HistoryDrawer({
   item,
   id,
@@ -39,14 +56,7 @@ export function HistoryDrawer({
 }): ReactElement {
   const { api } = useApp();
   const queryClient = useQueryClient();
-  const history = useQuery({
-    queryKey: historyKeys.versions(item, id),
-    queryFn: () => readLibraryHistory(api, item, id),
-  });
-  const usedBy = useQuery({
-    queryKey: historyKeys.usedBy(item, id),
-    queryFn: () => readLibraryUsedBy(api, item, id),
-  });
+  const history = useLibraryHistory(item, id);
   const versions = history.data?.versions ?? [];
   const [picked, setPicked] = useState<{ before?: number; after?: number }>({});
   const after = picked.after ?? versions[0]?.version;
@@ -68,8 +78,6 @@ export function HistoryDrawer({
     },
     onError: () => setStatus(undefined),
   });
-  const beforeId = useId();
-  const afterId = useId();
   const latest = versions[0]?.version;
 
   return (
@@ -79,19 +87,17 @@ export function HistoryDrawer({
       onClose={onClose}
       className="sm:w-[min(1080px,100vw)]"
     >
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-8">
         {history.error === null ? null : (
-          <p className="text-body text-red">{history.error.message}</p>
+          <p className="m-0 text-body text-danger">
+            {`The history couldn't be read: ${history.error.message}`}
+          </p>
         )}
-        <section aria-labelledby={`${beforeId}-compare`} className="flex flex-col gap-3">
-          <h3 id={`${beforeId}-compare`} className="text-row font-semibold">
-            Compare
-          </h3>
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="flex flex-col gap-1">
-              <Label htmlFor={beforeId}>Older</Label>
-              <Picker
-                id={beforeId}
+        <section className="flex flex-col gap-3">
+          <SectionHead title="Compare" as="h3" />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Older">
+              <Select
                 value={before === undefined ? "" : String(before)}
                 disabled={versions.length === 0}
                 onChange={(event) =>
@@ -103,12 +109,10 @@ export function HistoryDrawer({
                     {versionLabel(one, latest)}
                   </option>
                 ))}
-              </Picker>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label htmlFor={afterId}>Newer</Label>
-              <Picker
-                id={afterId}
+              </Select>
+            </Field>
+            <Field label="Newer">
+              <Select
                 value={after === undefined ? "" : String(after)}
                 disabled={versions.length === 0}
                 onChange={(event) =>
@@ -120,17 +124,17 @@ export function HistoryDrawer({
                     {versionLabel(one, latest)}
                   </option>
                 ))}
-              </Picker>
-            </div>
+              </Select>
+            </Field>
           </div>
           {older === undefined || newer === undefined ? (
-            <p className="text-small text-ink2">
+            <p className="m-0 text-small text-ink-2">
               {history.isPending ? "Loading the versions…" : "No versions to compare."}
             </p>
           ) : (
             <>
               {older.name === newer.name ? null : (
-                <p className="text-small text-ink2">{`Renamed from "${older.name}" to "${newer.name}".`}</p>
+                <p className="m-0 text-small text-ink-2">{`Renamed from "${older.name}" to "${newer.name}".`}</p>
               )}
               <DiffColumns
                 before={older.body}
@@ -142,132 +146,55 @@ export function HistoryDrawer({
           )}
         </section>
 
-        <section aria-labelledby={`${beforeId}-versions`} className="flex flex-col gap-2">
-          <h3 id={`${beforeId}-versions`} className="text-row font-semibold">
-            Versions
-          </h3>
-          <ol className="flex flex-col">
+        <section className="flex flex-col gap-2">
+          <SectionHead title="Versions" as="h3" />
+          <List label={`Versions of ${name}`}>
             {versions.map((one) => (
-              <li
+              <ListRow
                 key={one.version}
-                className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line py-2 last:border-b-0"
-              >
-                <span className="min-w-0 flex-1 text-small">
-                  <span className="font-semibold text-ink">{`Version ${String(one.version)}`}</span>
-                  <span className="text-ink2">
-                    {` · ${one.author} · ${when(one.createdAt)}`}
-                    {one.restoredFrom === null
-                      ? ""
-                      : ` · restored from version ${String(one.restoredFrom)}`}
-                  </span>
-                </span>
-                {one.version === latest ? (
-                  <span className="text-small text-ink2">Current</span>
-                ) : (
-                  <Button
-                    type="button"
-                    aria-label={`Restore version ${String(one.version)}`}
-                    disabled={restore.isPending}
-                    onClick={() => {
-                      setStatus(undefined);
-                      restore.mutate(one.version);
-                    }}
-                  >
-                    Restore
-                  </Button>
-                )}
-              </li>
+                title={`Version ${String(one.version)}`}
+                meta={versionMeta(one)}
+                actions={
+                  one.version === latest ? (
+                    <span className="text-small text-ink-2">Current</span>
+                  ) : (
+                    <Button
+                      size="small"
+                      aria-label={`Restore version ${String(one.version)}`}
+                      disabled={restore.isPending}
+                      disabledReason="Restoring a version"
+                      onClick={() => {
+                        setStatus(undefined);
+                        restore.mutate(one.version);
+                      }}
+                    >
+                      Restore
+                    </Button>
+                  )
+                }
+              />
             ))}
-          </ol>
+          </List>
           <StatusSlot tone={restore.error === null ? "success" : "error"}>
             {restore.error?.message ?? status}
           </StatusSlot>
         </section>
-
-        <UsedBySection usedBy={usedBy.data} error={usedBy.error} />
       </div>
     </Drawer>
   );
 }
 
-function UsedBySection({
-  usedBy,
-  error,
-}: {
-  readonly usedBy: UsedBy | undefined;
-  readonly error: Error | null;
-}): ReactElement {
-  const id = useId();
-  const counts =
-    usedBy === undefined
-      ? undefined
-      : [
-          plural(usedBy.templates.length, "template"),
-          plural(usedBy.schedules.length, "schedule"),
-          plural(usedBy.projects.length, "project"),
-        ].join(", ");
-  return (
-    <section aria-labelledby={id} className="flex flex-col gap-2">
-      <h3 id={id} className="text-row font-semibold">
-        {counts === undefined ? "Used by" : `Used by ${counts}`}
-      </h3>
-      {error === null ? null : <p className="text-body text-red">{error.message}</p>}
-      {usedBy === undefined ? null : usedBy.templates.length +
-          usedBy.schedules.length +
-          usedBy.projects.length ===
-        0 ? (
-        <p className="text-small text-ink2">Nothing uses it yet.</p>
-      ) : (
-        <ul className="flex flex-col gap-1 text-small">
-          {usedBy.templates.map((one) => (
-            <li key={`t-${one.id}`}>
-              <span className="text-ink2">Template </span>
-              <Link to="/templates" className="text-run-text underline underline-offset-[3px]">
-                {one.name}
-              </Link>
-            </li>
-          ))}
-          {usedBy.schedules.map((one) => (
-            <li key={`s-${one.id}`}>
-              <span className="text-ink2">Schedule </span>
-              <Link to="/schedules" className="text-run-text underline underline-offset-[3px]">
-                {one.name}
-              </Link>
-              <span className="text-ink2">{one.status === "paused" ? " (paused)" : ""}</span>
-            </li>
-          ))}
-          {usedBy.projects.map((one) => (
-            <li key={`p-${one.id}`}>
-              <span className="text-ink2">Project </span>
-              <Link
-                to="/projects/$projectId"
-                params={{ projectId: one.id }}
-                className="text-run-text underline underline-offset-[3px]"
-              >
-                {one.title}
-              </Link>
-              <span className="text-ink2">
-                {one.totalRevisions === 0
-                  ? ""
-                  : ` · ${String(one.revisions)} of ${String(one.totalRevisions)} ${one.totalRevisions === 1 ? "revision" : "revisions"}${one.current ? ", including the current one" : ", not the current one"}`}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
-function plural(count: number, noun: string): string {
-  return `${String(count)} ${noun}${count === 1 ? "" : "s"}`;
+export function versionMeta(version: LibraryVersion): string {
+  return `${version.author} · ${when(version.createdAt)}${
+    version.restoredFrom === null ? "" : ` · restored from version ${String(version.restoredFrom)}`
+  }`;
 }
 
 function versionLabel(version: LibraryVersion, latest: number | undefined): string {
   return `Version ${String(version.version)}${version.version === latest ? " (current)" : ""} · ${when(version.createdAt)}`;
 }
 
-function when(iso: string): string {
+export function when(iso: string): string {
   const date = new Date(iso);
   return Number.isNaN(date.getTime())
     ? iso
