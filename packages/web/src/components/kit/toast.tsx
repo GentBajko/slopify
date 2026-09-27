@@ -1,4 +1,4 @@
-import { XIcon } from "lucide-react";
+import { AlertTriangleIcon, CheckIcon, InfoIcon, XIcon } from "lucide-react";
 import {
   createContext,
   type ReactElement,
@@ -12,7 +12,8 @@ import {
 } from "react";
 import { cn } from "@/lib/utils";
 
-// Acknowledgements ("Template saved.", "Resumed.") are toasts, not paragraphs inserted into the
+// The 3.0 toast (kit.css `.sl-toast`): raised, shadow-pop, bottom right, with an icon for its
+// tone. Acknowledgements ("Template saved.", "Resumed.") are toasts, not paragraphs inserted into the
 // page: they appear over the corner and leave on their own, and nothing on the page moves.
 // Errors that the reader must act on stay where the action was taken.
 
@@ -70,31 +71,33 @@ export function ToastProvider({ children }: { readonly children: ReactNode }): R
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <section
-        aria-label="Notifications"
-        className="pointer-events-none fixed top-14 right-4 z-[60] flex w-[min(360px,calc(100vw-32px))] flex-col gap-2"
-      >
+      <section aria-label="Notifications" className="sl-toasts">
         {toasts.map((toast) => (
           <div
             key={toast.id}
             role={toast.tone === "error" ? "alert" : "status"}
+            data-tone={toast.tone}
             className={cn(
-              "pointer-events-auto flex animate-tick-in items-start gap-3 rounded-panel border bg-panel px-3 py-2 text-small shadow-[0_8px_24px_var(--color-shadow)] motion-reduce:animate-none",
-              toast.tone === "error"
-                ? "border-red text-ink"
-                : toast.tone === "success"
-                  ? "border-done text-ink"
-                  : "border-line2 text-ink",
+              "sl-toast sl-enter",
+              toast.tone === "error" && "sl-toast--failed",
+              toast.tone === "success" && "sl-toast--done",
             )}
           >
-            <p className="min-w-0 flex-1 break-words">{toast.message}</p>
+            {toast.tone === "error" ? (
+              <AlertTriangleIcon aria-hidden="true" strokeWidth={1.75} />
+            ) : toast.tone === "success" ? (
+              <CheckIcon aria-hidden="true" strokeWidth={1.75} />
+            ) : (
+              <InfoIcon aria-hidden="true" strokeWidth={1.75} className="text-ink-2" />
+            )}
+            <p className="sl-toast__text m-0 min-w-0 break-words">{toast.message}</p>
             <button
               type="button"
               aria-label="Dismiss notification"
               onClick={() => dismiss(toast.id)}
-              className="-mr-1 inline-flex size-6 shrink-0 items-center justify-center rounded-control text-ink3 hover:bg-panel2 hover:text-ink"
+              className="sl-btn sl-btn--icon sl-btn--small -mr-1 w-[30px]"
             >
-              <XIcon aria-hidden="true" className="size-[14px]" />
+              <XIcon aria-hidden="true" strokeWidth={1.75} />
             </button>
           </div>
         ))}
