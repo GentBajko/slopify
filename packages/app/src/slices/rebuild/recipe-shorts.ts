@@ -11,6 +11,7 @@ import {
 import type { ShortPick } from "../shorts/pick.js";
 import { imagePromptMessages } from "../shorts/prompts.js";
 import { castFor } from "./recipe-cast.js";
+import { type MasterPlan, noMaster } from "./recipe-loudness.js";
 import {
   type RecipeContext,
   type ResolvedWorkRecipe,
@@ -40,6 +41,8 @@ export function shortsRecipes(
   exports: readonly ResolvedWorkRecipe[],
   // The establishing image the shorts' images are drawn from, when it is on.
   reference?: ImageReference,
+  // Level the volume: the levelled narration and the master (`recipe-loudness.ts`).
+  master: MasterPlan = noMaster,
 ): readonly ResolvedWorkRecipe[] {
   const { config } = context;
   const shorts = config.shorts;
@@ -181,9 +184,11 @@ export function shortsRecipes(
             // Only when one of the later settings is in use, so a short rendered before
             // they existed keeps its fingerprint.
             ...(extras === undefined ? [] : [extras]),
+            // Only while the volume is levelled, so every short without it keeps its fingerprint.
+            ...master.values,
           ],
         },
-        [pick.key, ...stills.map((still) => still.key)],
+        [pick.key, ...stills.map((still) => still.key), ...master.keys],
         { token },
       ),
     );

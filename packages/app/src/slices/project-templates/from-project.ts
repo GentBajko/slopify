@@ -236,6 +236,17 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
       ...(config.ambientBed === undefined
         ? {}
         : { ambientBed: ambientBedFormOf(config.ambientBed) }),
+      // Level the volume at the project's targets while it is on; off leaves it to Settings'
+      // default, which is how a template made before the setting starts a run.
+      ...(config.loudness === undefined
+        ? {}
+        : {
+            loudness: {
+              enabled: true,
+              videoLufs: config.loudness.videoLufs,
+              audioFilesLufs: config.loudness.audioFilesLufs,
+            },
+          }),
       imagePrompts,
       ...(config.imageScale === undefined ? {} : { imageScale: imageScaleForm(config.imageScale) }),
       thumbnailPrompt: config.thumbnailPrompt ?? "",

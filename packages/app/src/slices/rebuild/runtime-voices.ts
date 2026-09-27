@@ -3,9 +3,13 @@ import { join } from "node:path";
 import { z } from "zod";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
+import { masterFile } from "../loudness/loudnorm.js";
+import { type MasterReport, masterGoal } from "../loudness/model.js";
 import type { PreparedOutput } from "../revisions/publication-model.js";
 import { allocateAsset, discardPreparedAssets, sealAsset } from "../storage/assets.js";
 import { outputPath, projectDir } from "../storage/layout.js";
+import { audioExportArgs } from "../video/audio-export-args.js";
+import type { AudioSegment } from "../video/edit-list.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import { audioChapters, audioFileArgs, ffmetadata } from "../voices/audio-files.js";
 import { turnStarts } from "../voices/timing.js";
@@ -77,12 +81,36 @@ export async function executeVoicesRecipe(
   try {
     const metadata = join(directory, "chapters.txt");
     writeFileSync(metadata, ffmetadata(view.revision.config.title, chapters), { mode: 0o600 });
+    // Level the volume: the sound is mixed once and mastered to the audio files' target, and both
+    // files are encoded from that (`loudness/model.ts`).
+    const goal = masterGoal(view.revision.config, "audioFiles");
+    let sound: readonly Pick<AudioSegment, "path" | "seconds">[] = audio;
+    let master: MasterReport | undefined;
+    if (goal !== undefined) {
+      const mixed = join(directory, "mix.wav");
+      await runFfmpeg({
+        bin: deps.ffmpeg,
+        args: audioExportArgs(audio, mixed),
+        signal: context.signal,
+        log: deps.log,
+        onProgress: (): void => {},
+      });
+      const mastered = join(directory, "master.wav");
+      master = await masterFile(
+        { bin: deps.ffmpeg, log: deps.log, signal: context.signal },
+        mixed,
+        mastered,
+        goal,
+        { sampleRate: 44100, channels: 2 },
+      );
+      sound = [{ path: mastered, seconds: totalSeconds }];
+    }
     for (const [at, kind] of (["mp3", "m4b"] as const).entries()) {
       const target = pending[at];
       if (target === undefined) continue;
       await runFfmpeg({
         bin: deps.ffmpeg,
-        args: audioFileArgs(audio, metadata, target.absolutePath, kind),
+        args: audioFileArgs(sound, metadata, target.absolutePath, kind),
         signal: context.signal,
         log: deps.log,
         onProgress: (): void => {},
@@ -96,6 +124,7 @@ export async function executeVoicesRecipe(
           kind === "mp3" ? "audio_mp3" : "audio_m4b",
           sealAsset(deps, target),
           Math.round(totalSeconds * 1000),
+          master === undefined ? {} : { master },
         ),
       );
     }

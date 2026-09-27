@@ -2,6 +2,7 @@
 
 import type { HostCliId } from "../../kernel/ports/host-cli.js";
 import type { ProviderFamily, Readiness } from "../../kernel/ports/model.js";
+import { defaultLoudness, type LoudnessDefault } from "../loudness/model.js";
 
 export type { ProviderFamily } from "../../kernel/ports/model.js";
 // The three families are the three ports, so the set is named beside them.
@@ -148,6 +149,13 @@ export interface AppSettings {
   // The silence beside a segment that exists, default 3 s.
   readonly silenceGapSeconds: number;
   readonly appearance: Appearance;
+  // Level the volume for new runs: on at the recommended targets unless changed here
+  // (`loudness/model.ts`). A project keeps what it was started with.
+  readonly loudness: LoudnessDefault;
 }
 
-export const defaultSettings: AppSettings = { silenceGapSeconds: 3, appearance: "system" };
+export const defaultSettings: AppSettings = {
+  silenceGapSeconds: 3,
+  appearance: "system",
+  loudness: defaultLoudness,
+};

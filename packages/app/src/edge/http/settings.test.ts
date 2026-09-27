@@ -9,6 +9,7 @@ import { migrate } from "../../kernel/db/migrate.js";
 import type { Ids } from "../../kernel/ids.js";
 import type { Log } from "../../kernel/log.js";
 import { ensureDirs, layout } from "../../kernel/paths.js";
+import { defaultLoudness } from "../../slices/loudness/model.js";
 import { createHub } from "../events/hub.js";
 import { createApp } from "./app.js";
 
@@ -73,7 +74,11 @@ describe("GET /api/settings", () => {
     const response = await app.request("/api/settings");
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ silenceGapSeconds: 3, appearance: "system" });
+    expect(await response.json()).toEqual({
+      silenceGapSeconds: 3,
+      appearance: "system",
+      loudness: defaultLoudness,
+    });
   });
 });
 
@@ -87,10 +92,15 @@ describe("PUT /api/settings", () => {
     });
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ silenceGapSeconds: 5, appearance: "dark" });
+    expect(await response.json()).toEqual({
+      silenceGapSeconds: 5,
+      appearance: "dark",
+      loudness: defaultLoudness,
+    });
     expect(await (await app.request("/api/settings")).json()).toEqual({
       silenceGapSeconds: 5,
       appearance: "dark",
+      loudness: defaultLoudness,
     });
   });
 

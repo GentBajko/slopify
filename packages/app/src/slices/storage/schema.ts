@@ -16,6 +16,16 @@ export const metaSchema = z.object({
   provider: z.string().optional(),
   model: z.string().optional(),
   voice: z.string().optional(),
+  loudness: z
+    .object({
+      pieces: z.number(),
+      skipped: z.number(),
+      spreadBefore: z.number(),
+      spreadAfter: z.number(),
+      target: z.number(),
+    })
+    .optional(),
+  master: z.object({ target: z.number(), integrated: z.number(), truePeak: z.number() }).optional(),
 });
 
 export const outputSchema = z.object({

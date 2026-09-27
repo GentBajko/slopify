@@ -5,6 +5,7 @@ import { openDb } from "../../kernel/db/index.js";
 import { migrate } from "../../kernel/db/migrate.js";
 import type { Log, LogFields, LogLevel } from "../../kernel/log.js";
 import { silenceGapSecondsMax } from "../admission/rules.js";
+import { defaultLoudness } from "../loudness/model.js";
 import type { PlaybackDeps } from "./playback.js";
 import { readSettings, saveSettings } from "./playback.js";
 import { writeSetting } from "./repo.js";
@@ -31,14 +32,22 @@ function harness(): Harness {
 describe("readSettings", () => {
   // Three seconds of silence, and the System theme.
   it("answers with the defaults on a fresh install", () => {
-    expect(readSettings(harness().deps)).toEqual({ silenceGapSeconds: 3, appearance: "system" });
+    expect(readSettings(harness().deps)).toEqual({
+      silenceGapSeconds: 3,
+      appearance: "system",
+      loudness: defaultLoudness,
+    });
   });
 
   it("answers with what was saved", () => {
     const { deps } = harness();
-    saveSettings(deps, { silenceGapSeconds: 0, appearance: "dark" });
+    saveSettings(deps, { silenceGapSeconds: 0, appearance: "dark", loudness: defaultLoudness });
 
-    expect(readSettings(deps)).toEqual({ silenceGapSeconds: 0, appearance: "dark" });
+    expect(readSettings(deps)).toEqual({
+      silenceGapSeconds: 0,
+      appearance: "dark",
+      loudness: defaultLoudness,
+    });
   });
 
   // Only a hand-edited database can hold these. The settings page keeps working.
@@ -69,10 +78,14 @@ describe("readSettings", () => {
   // One row per setting, so a broken gap costs the gap and not the theme.
   it("keeps the other setting when one row is unreadable", () => {
     const { deps } = harness();
-    saveSettings(deps, { silenceGapSeconds: 5, appearance: "light" });
+    saveSettings(deps, { silenceGapSeconds: 5, appearance: "light", loudness: defaultLoudness });
     writeSetting(deps.db, "appearance", "{");
 
-    expect(readSettings(deps)).toEqual({ silenceGapSeconds: 5, appearance: "system" });
+    expect(readSettings(deps)).toEqual({
+      silenceGapSeconds: 5,
+      appearance: "system",
+      loudness: defaultLoudness,
+    });
   });
 });
 
@@ -80,25 +93,35 @@ describe("saveSettings", () => {
   it("stores both values and hands back what it stored", () => {
     const { deps } = harness();
 
-    expect(saveSettings(deps, { silenceGapSeconds: 7, appearance: "light" })).toEqual({
+    expect(
+      saveSettings(deps, { silenceGapSeconds: 7, appearance: "light", loudness: defaultLoudness }),
+    ).toEqual({
       ok: true,
-      settings: { silenceGapSeconds: 7, appearance: "light" },
+      settings: { silenceGapSeconds: 7, appearance: "light", loudness: defaultLoudness },
     });
   });
 
   it("overwrites a previous save", () => {
     const { deps } = harness();
-    saveSettings(deps, { silenceGapSeconds: 7, appearance: "light" });
-    saveSettings(deps, { silenceGapSeconds: 1, appearance: "dark" });
+    saveSettings(deps, { silenceGapSeconds: 7, appearance: "light", loudness: defaultLoudness });
+    saveSettings(deps, { silenceGapSeconds: 1, appearance: "dark", loudness: defaultLoudness });
 
-    expect(readSettings(deps)).toEqual({ silenceGapSeconds: 1, appearance: "dark" });
-    expect(deps.db.prepare("SELECT count(*) AS n FROM settings").get()).toEqual({ n: 2 });
+    expect(readSettings(deps)).toEqual({
+      silenceGapSeconds: 1,
+      appearance: "dark",
+      loudness: defaultLoudness,
+    });
+    expect(deps.db.prepare("SELECT count(*) AS n FROM settings").get()).toEqual({ n: 3 });
   });
 
   it("refuses a negative gap", () => {
     const { deps } = harness();
 
-    const result = saveSettings(deps, { silenceGapSeconds: -1, appearance: "system" });
+    const result = saveSettings(deps, {
+      silenceGapSeconds: -1,
+      appearance: "system",
+      loudness: defaultLoudness,
+    });
 
     expect(result).toEqual({
       ok: false,
@@ -110,14 +133,24 @@ describe("saveSettings", () => {
     const { deps } = harness();
 
     expect(
-      saveSettings(deps, { silenceGapSeconds: silenceGapSecondsMax + 1, appearance: "system" }).ok,
+      saveSettings(deps, {
+        silenceGapSeconds: silenceGapSecondsMax + 1,
+        appearance: "system",
+        loudness: defaultLoudness,
+      }).ok,
     ).toBe(false);
   });
 
   it("refuses a fractional gap", () => {
     const { deps } = harness();
 
-    expect(saveSettings(deps, { silenceGapSeconds: 2.5, appearance: "system" }).ok).toBe(false);
+    expect(
+      saveSettings(deps, {
+        silenceGapSeconds: 2.5,
+        appearance: "system",
+        loudness: defaultLoudness,
+      }).ok,
+    ).toBe(false);
   });
 
   it("refuses an appearance this build does not have", () => {
@@ -127,6 +160,7 @@ describe("saveSettings", () => {
       silenceGapSeconds: 3,
       // @ts-expect-error the route's schema stops this; the rule is the second gate.
       appearance: "sepia",
+      loudness: defaultLoudness,
     });
 
     expect(result).toEqual({
@@ -142,6 +176,7 @@ describe("saveSettings", () => {
       silenceGapSeconds: -1,
       // @ts-expect-error as above: both fields are wrong, both are reported.
       appearance: "sepia",
+      loudness: defaultLoudness,
     });
 
     expect(result.ok ? [] : result.fields.map((field) => field.field)).toEqual([
@@ -153,9 +188,13 @@ describe("saveSettings", () => {
   it("writes nothing when a field is refused", () => {
     const { deps } = harness();
 
-    saveSettings(deps, { silenceGapSeconds: -1, appearance: "dark" });
+    saveSettings(deps, { silenceGapSeconds: -1, appearance: "dark", loudness: defaultLoudness });
 
-    expect(readSettings(deps)).toEqual({ silenceGapSeconds: 3, appearance: "system" });
+    expect(readSettings(deps)).toEqual({
+      silenceGapSeconds: 3,
+      appearance: "system",
+      loudness: defaultLoudness,
+    });
   });
 });
 

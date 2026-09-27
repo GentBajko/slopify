@@ -3,6 +3,7 @@ import { languageInfo } from "../../kernel/ports/languages.js";
 import { type RunConfig, sourceOf } from "../admission/model.js";
 import { motionStyleLabels } from "../admission/rules.js";
 import { documentThemeLabel } from "../document/model.js";
+import { type LoudnessSettings, loudnessLabel } from "../loudness/model.js";
 import {
   reviewModeLabels,
   reviewModeOf,
@@ -128,6 +129,10 @@ export function previewDetails(
   return { inputChanges: parent === undefined ? [] : inputChanges(parent, view), requests };
 }
 
+function loudnessSummary(value: LoudnessSettings): string {
+  return `Video ${loudnessLabel(value.videoLufs, "video")}; audio files ${loudnessLabel(value.audioFilesLufs, "audioFiles")}`;
+}
+
 function narrationIdentity(
   row: ResolvedWorkRecipe,
 ): { logicalKey: string; segment: string } | undefined {
@@ -184,6 +189,11 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
     "Narration aliases",
     before.audio?.useNarrationAliases === true ? aliasLines(before.narrationAliases) : "Off",
     after.audio?.useNarrationAliases === true ? aliasLines(after.narrationAliases) : "Off",
+  );
+  add(
+    "Level the volume",
+    before.loudness === undefined ? "Off" : loudnessSummary(before.loudness),
+    after.loudness === undefined ? "Off" : loudnessSummary(after.loudness),
   );
   add(
     "YouTube description",

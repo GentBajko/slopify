@@ -233,6 +233,10 @@ export interface RunDraft {
   // voice (`video/ambient-bed.ts`), from the template or the channel's brand kit. Absent is
   // none, which is what every project saved before it was.
   readonly ambientBed?: import("../video/ambient-bed.js").AmbientBedSettings | undefined;
+  // Level the volume: every narration piece brought to one loudness before the join, and the
+  // finished files mastered to these targets (`loudness/model.ts`). Absent is off, which is what
+  // every project saved before it was; a new run gets Settings → General's default.
+  readonly loudness?: import("../loudness/model.js").LoudnessSettings | undefined;
   // The language the project is made in (`kernel/ports/languages.ts`). Absent is English, which is
   // what every project saved before it was; English is never stored.
   readonly language?: import("../../kernel/ports/languages.js").LanguageCode | undefined;

@@ -1,9 +1,12 @@
 import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { extname, join } from "node:path";
 import type { Log } from "../../kernel/log.js";
+import { type LoudnessGoal, masterFile } from "../loudness/loudnorm.js";
+import type { MasterReport } from "../loudness/model.js";
 import { cardsAss } from "./cards.js";
 import type { EditList } from "./edit-list.js";
 import {
+  audioMixArgs,
   concatList,
   joinArgs,
   type PortraitOverlay,
@@ -30,6 +33,8 @@ export interface SlideshowRun {
   readonly signal: AbortSignal;
   readonly onProgress: (elapsedMs: number) => void;
   readonly log: Log;
+  // Level the volume: the target the sound is mastered to (`loudness/model.ts`).
+  readonly master?: LoudnessGoal | undefined;
 }
 
 // estimate: a zoompan frame from a 4x still costs several plain encoded frames, and a
@@ -37,7 +42,11 @@ export interface SlideshowRun {
 const clipWeight = 4;
 const copyWeight = 0.05;
 
-export async function renderSlideshow(run: SlideshowRun): Promise<void> {
+// The sound the join plays, as the join itself brings every segment to it.
+const masterFormat = { sampleRate: 44100, channels: 2 } as const;
+
+// What the master measured, when the run asked for one.
+export async function renderSlideshow(run: SlideshowRun): Promise<MasterReport | undefined> {
   const { edit } = run;
   const { clips, order } = slideshowClips(edit);
   const msOf = (frames: number): number => (frames / edit.fps) * 1000;
@@ -94,15 +103,43 @@ export async function renderSlideshow(run: SlideshowRun): Promise<void> {
     }
     const list = join(workspace, "slides.ffconcat");
     writeFileSync(list, concatList(order), { mode: 0o600 });
+    // Level the volume: the sound, with its bed, is mixed alone and mastered first, and the join
+    // plays that one file.
+    let joined: EditList = edit;
+    let master: MasterReport | undefined;
+    if (run.master !== undefined && edit.audio.length > 0) {
+      const mixed = join(workspace, "mix.wav");
+      await runFfmpeg({
+        bin: run.bin,
+        args: audioMixArgs(edit, mixed),
+        signal: run.signal,
+        log: run.log,
+        onProgress: (): void => {},
+      });
+      const mastered = join(workspace, "master.wav");
+      master = await masterFile(run, mixed, mastered, run.master, masterFormat);
+      joined = {
+        ...edit,
+        audio: [
+          {
+            kind: "body",
+            path: mastered,
+            seconds: edit.audio.reduce((sum, segment) => sum + segment.seconds, 0),
+          },
+        ],
+        bed: undefined,
+      };
+    }
     await runFfmpeg({
       bin: run.bin,
       cwd: run.cwd,
-      args: joinArgs(edit, run.output, list, run.burnSubtitles, run.portraits),
+      args: joinArgs(joined, run.output, list, run.burnSubtitles, run.portraits),
       signal: run.signal,
       log: run.log,
       onProgress: (elapsedMs) =>
         report(rendered + elapsedMs * (run.burnSubtitles ? 1 : copyWeight)),
     });
+    return master;
   } finally {
     rmSync(workspace, { recursive: true, force: true });
   }

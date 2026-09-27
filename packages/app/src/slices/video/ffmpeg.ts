@@ -308,17 +308,16 @@ export interface PortraitOverlay {
   readonly size: number;
 }
 
-export function joinArgs(
-  edit: Pick<EditList, "audio"> & Partial<Pick<EditList, "look" | "bed">>,
-  output: string,
-  list: string,
-  burnSubtitles = false,
-  portraits: readonly PortraitOverlay[] = [],
-): string[] {
-  const inputs: string[] = ["-f", "concat", "-i", list];
+// The video's sound: the narration's segments and silences joined, with the ambient bed under
+// them when there is one, as the inputs from `first` on and the chains ending in `[a]`.
+function audioMix(
+  edit: Pick<EditList, "audio"> & Partial<Pick<EditList, "bed">>,
+  first: number,
+): { readonly inputs: string[]; readonly chains: string[] } {
+  const inputs: string[] = [];
   const audioAt: number[] = [];
   for (const segment of edit.audio) {
-    audioAt.push(1 + audioAt.length);
+    audioAt.push(first + audioAt.length);
     if (segment.path === null) {
       inputs.push(
         "-f",
@@ -333,8 +332,6 @@ export function joinArgs(
     inputs.push("-i", segment.path);
   }
   const chains: string[] = [];
-  const overlaid = burnSubtitles && portraits.length > 0;
-  if (burnSubtitles && !overlaid) chains.push("[0:v]ass=filename=subtitles.ass:fontsdir=fonts[v]");
   audioAt.forEach((input, at) => {
     // The segments come from different files and the silence from lavfi, so they are
     // brought to one format before concat, which refuses to join mismatched streams.
@@ -352,12 +349,11 @@ export function joinArgs(
   }
   if (bed !== undefined) {
     const total = edit.audio.reduce((sum, segment) => sum + segment.seconds, 0);
-    const first = 1 + audioAt.length;
     inputs.push(...bedInputs(bed, total, sampleRate));
     chains.push(
       ...bedChains(
         bed,
-        first,
+        first + audioAt.length,
         total,
         `aformat=sample_fmts=fltp:sample_rates=${sampleRate}:channel_layouts=${channelLayout}`,
         "[narration]",
@@ -365,6 +361,44 @@ export function joinArgs(
       ),
     );
   }
+  return { inputs, chains };
+}
+
+// The video's sound alone, as a WAV: what Level the volume masters before the join plays it
+// (`slideshow.ts`).
+export function audioMixArgs(
+  edit: Pick<EditList, "audio"> & Partial<Pick<EditList, "bed">>,
+  output: string,
+): string[] {
+  const mix = audioMix(edit, 0);
+  return [
+    ...progressArgs,
+    ...mix.inputs,
+    "-filter_complex",
+    mix.chains.join(";"),
+    "-map",
+    "[a]",
+    "-c:a",
+    "pcm_s16le",
+    "-f",
+    "wav",
+    output,
+  ];
+}
+
+export function joinArgs(
+  edit: Pick<EditList, "audio"> & Partial<Pick<EditList, "look" | "bed">>,
+  output: string,
+  list: string,
+  burnSubtitles = false,
+  portraits: readonly PortraitOverlay[] = [],
+): string[] {
+  const mix = audioMix(edit, 1);
+  const inputs: string[] = ["-f", "concat", "-i", list, ...mix.inputs];
+  const chains: string[] = [];
+  const overlaid = burnSubtitles && portraits.length > 0;
+  if (burnSubtitles && !overlaid) chains.push("[0:v]ass=filename=subtitles.ass:fontsdir=fonts[v]");
+  chains.push(...mix.chains);
   // The portraits go in after every other input and under the captions, so the panel's lit
   // outline is drawn over them; a video without any is joined exactly as before. A still
   // image is one frame, which overlay holds to the end (`eof_action=repeat`).
@@ -482,6 +516,9 @@ export interface RenderRun {
   readonly signal: AbortSignal;
   readonly onProgress: (elapsedMs: number) => void;
   readonly log: Log;
+  // Everything written to stderr, as it arrives, for a caller that reads what a filter printed
+  // there (the loudness measurement's JSON, `loudness/loudnorm.ts`).
+  readonly onStderr?: ((text: string) => void) | undefined;
 }
 
 // ceiling: the last 20 lines of stderr are kept. The renderer's error is shown verbatim,
@@ -541,6 +578,7 @@ export function runFfmpeg(run: RenderRun): Promise<void> {
     child.stderr.setEncoding("utf8");
     child.stderr.on("data", (chunk: string) => {
       guarded("video.stderr.read", () => {
+        run.onStderr?.(chunk);
         for (const line of chunk.split("\n")) {
           if (line.trim() !== "") {
             errors.push(line.trim());

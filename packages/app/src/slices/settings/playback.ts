@@ -5,6 +5,7 @@ import type { Log } from "../../kernel/log.js";
 // validated against the same number the settings page saves: one source, no drift.
 import type { FieldError } from "../admission/rules.js";
 import { silenceGapSecondsMax } from "../admission/rules.js";
+import { loudnessFields } from "../loudness/model.js";
 import type { AppSettings } from "./model.js";
 import { appearances, defaultSettings } from "./model.js";
 import { readSetting, writeSetting } from "./repo.js";
@@ -22,9 +23,15 @@ export type SaveSettingsResult =
 // does not understand costs only that one setting.
 const silenceGapKey = "silenceGapSeconds";
 const appearanceKey = "appearance";
+const loudnessKey = "loudness";
 
 const silenceGapValue = z.number().int().min(0).max(silenceGapSecondsMax);
 const appearanceValue = z.enum(appearances);
+const loudnessValue = z.object({
+  enabled: z.boolean(),
+  videoLufs: z.number(),
+  audioFilesLufs: z.number(),
+});
 
 export function readSettings(deps: PlaybackDeps): AppSettings {
   return {
@@ -35,6 +42,7 @@ export function readSettings(deps: PlaybackDeps): AppSettings {
       defaultSettings.silenceGapSeconds,
     ),
     appearance: parsed(deps, appearanceKey, appearanceValue, defaultSettings.appearance),
+    loudness: parsed(deps, loudnessKey, loudnessValue, defaultSettings.loudness),
   };
 }
 
@@ -49,11 +57,17 @@ export function saveSettings(deps: PlaybackDeps, settings: AppSettings): SaveSet
   if (!appearanceValue.safeParse(settings.appearance).success) {
     fields.push({ field: "appearance", message: "Choose System, Light or Dark." });
   }
+  if (!loudnessValue.safeParse(settings.loudness).success) {
+    fields.push({ field: "loudness", message: "Choose whether new runs level the volume." });
+  } else {
+    fields.push(...loudnessFields(settings.loudness));
+  }
   if (fields.length > 0) {
     return { ok: false, fields };
   }
   writeSetting(deps.db, silenceGapKey, JSON.stringify(settings.silenceGapSeconds));
   writeSetting(deps.db, appearanceKey, JSON.stringify(settings.appearance));
+  writeSetting(deps.db, loudnessKey, JSON.stringify(settings.loudness));
   return { ok: true, settings };
 }
 

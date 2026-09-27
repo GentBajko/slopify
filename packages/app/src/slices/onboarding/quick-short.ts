@@ -1,6 +1,7 @@
 import type { ModelInfo, ProviderFamily } from "../../kernel/ports/model.js";
 import type { ProviderChoice, RunDraft, VoiceChoice } from "../admission/model.js";
 import { titleMax } from "../admission/rules.js";
+import type { LoudnessSettings } from "../loudness/model.js";
 import type { ProviderStatus, Voice } from "../settings/model.js";
 import type { PackPromptKey, StarterPack } from "./packs.js";
 
@@ -135,6 +136,8 @@ export function shortDraft(input: {
   readonly pack: StarterPack;
   readonly names: Readonly<Partial<Record<PackPromptKey, string>>>;
   readonly providers: ShortProviders;
+  // Settings → General's Level the volume, as a new run gets it.
+  readonly loudness?: LoudnessSettings | undefined;
 }): RunDraft {
   const topic = input.topic.trim().replace(/\s+/g, " ");
   const title = `${topic.charAt(0).toUpperCase()}${topic.slice(1)}`.slice(0, titleMax);
@@ -164,6 +167,7 @@ export function shortDraft(input: {
     zoomPercent: style.zoomPercent,
     motionStyle: style.motionStyle,
     edgeSilenceSeconds: 0.5,
+    ...(input.loudness === undefined ? {} : { loudness: input.loudness }),
     subtitles: {
       mode: "off",
       language: "en",

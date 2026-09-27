@@ -6,6 +6,7 @@ import type { RevisionContent } from "../revisions/model.js";
 import { usesAmbientBed } from "../video/ambient-bed.js";
 import { castFor } from "./recipe-cast.js";
 import type { EditPlan } from "./recipe-edit.js";
+import { type MasterPlan, noMaster } from "./recipe-loudness.js";
 import {
   type RecipeContext,
   type ResolvedWorkRecipe,
@@ -26,6 +27,8 @@ export function visualRecipes(
   reference?: ImageReference,
   // The word timing's identity, which a short's captions are drawn from.
   timing: FingerprintValue = null,
+  // Level the volume: the levelled narration and the master (`recipe-loudness.ts`).
+  master: MasterPlan = noMaster,
 ): readonly ResolvedWorkRecipe[] {
   const recipes: ResolvedWorkRecipe[] = [];
   const imageKeys = config.sources.images === "off" ? [] : content.imageOrder;
@@ -119,11 +122,14 @@ export function visualRecipes(
             // Only while the video has an ambient bed, so every video without one keeps the
             // fingerprint it always had.
             ...(bed === undefined ? [] : [bed]),
+            // Only while the volume is levelled, so every video without it keeps its fingerprint.
+            ...master.values,
           ],
         },
         [
           ...recipes.map((value) => value.key),
           ...audioKeys,
+          ...master.keys,
           ...(config.subtitles?.mode === "burn-in" ? ["subtitles:files"] : []),
           ...(short ? ["subtitles:timing"] : []),
           ...edited.dependsOn,

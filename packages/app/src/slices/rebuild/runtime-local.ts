@@ -1,4 +1,4 @@
-import { statSync } from "node:fs";
+import { rmSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { z } from "zod";
 import type { Log } from "../../kernel/log.js";
@@ -7,6 +7,7 @@ import type { StageRunResult } from "../../kernel/runner/work.js";
 import { referenceKey } from "../admission/model.js";
 import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
+import { levelPieces } from "../loudness/level-pieces.js";
 import { joinNarration } from "../narration/concat.js";
 import type { PreparedAsset } from "../storage/assets.js";
 import { allocateAsset, discardPreparedAssets, sealAsset } from "../storage/assets.js";
@@ -14,6 +15,7 @@ import { outputPath } from "../storage/layout.js";
 import type { OutputRole } from "../storage/model.js";
 import { probeDurationMs, runFfmpeg } from "../video/ffmpeg.js";
 import { turnJoinArgs } from "../voices/join.js";
+import { levelOperation } from "./recipe-loudness.js";
 import { publishNarrationText } from "./runtime-narration-text.js";
 import { executionPlan, executionView, savedCatalogue } from "./runtime-plan.js";
 import type { ProviderExecutionDeps } from "./runtime-provider.js";
@@ -89,7 +91,11 @@ export async function executeLocalRecipe(
     await publishNarrationText(deps, context, piece);
     return "done";
   }
-  if (input.operation === "concat-narration" || input.operation === "concat-turns-v1") {
+  if (
+    input.operation === "concat-narration" ||
+    input.operation === "concat-turns-v1" ||
+    input.operation === levelOperation
+  ) {
     await concatenate(deps, context, piece);
     return "done";
   }
@@ -172,33 +178,53 @@ async function concatenate(
       .get(input.assetId, context.work.projectId);
     return outputPath(deps.paths, context.work.projectId, z.string().parse(asset?.path));
   });
+  // Level the volume repeats the join its recipe names, from the same pieces, each levelled
+  // first (`recipe-loudness.ts`).
+  const level = recipe.input.kind === "local" && recipe.input.operation === levelOperation;
+  const [operation, values] =
+    recipe.input.kind !== "local"
+      ? ["", undefined]
+      : level
+        ? z.tuple([z.string(), z.unknown(), z.unknown()]).parse(recipe.input.values)
+        : [recipe.input.operation, recipe.input.values];
   const pending = allocateAsset(deps, context.work.projectId, "narration.mp3");
+  const piecesDirectory = join(dirname(pending.absolutePath), "levelled");
   try {
+    const run = { bin: deps.ffmpeg, log: deps.log, signal: context.signal };
+    const levelled = level ? await levelPieces(run, files, piecesDirectory) : undefined;
+    const joined = levelled?.files ?? files;
     const durationMs =
-      recipe.input.kind === "local" && recipe.input.operation === "concat-turns-v1"
-        ? await joinTurns(
-            { bin: deps.ffmpeg, log: deps.log, signal: context.signal },
-            files,
-            recipe.input.values,
-            pending.absolutePath,
-          )
+      operation === "concat-turns-v1"
+        ? await joinTurns(run, joined, values, pending.absolutePath)
         : await joinNarration(
             { bin: deps.ffmpeg, log: deps.log },
             {
-              files,
+              files: joined,
               output: pending.absolutePath,
               listPath: join(dirname(pending.absolutePath), "parts.txt"),
               signal: context.signal,
+              reencode: level,
             },
           );
+    rmSync(piecesDirectory, { recursive: true, force: true });
     context.signal.throwIfAborted();
     const asset = sealAsset(deps, pending);
-    const role =
-      piece.key === "audio:intro"
+    const segment = /^(?:audio|level):(intro|outro)$/.exec(piece.key)?.[1] ?? "body";
+    const role: OutputRole = level
+      ? "audio_levelled"
+      : piece.key === "audio:intro"
         ? "audio_intro"
         : piece.key === "audio:outro"
           ? "audio_outro"
           : "audio_body";
+    const voice =
+      view.revision.config.audio === undefined
+        ? {}
+        : {
+            provider: view.revision.config.audio.provider,
+            model: view.revision.config.audio.model,
+            voice: view.revision.config.audio.voice,
+          };
     await publishResult(
       deps,
       context,
@@ -211,18 +237,19 @@ async function concatenate(
           role,
           asset,
           durationMs,
-          view.revision.config.audio === undefined
-            ? {}
+          levelled === undefined
+            ? voice
             : {
-                provider: view.revision.config.audio.provider,
-                model: view.revision.config.audio.model,
-                voice: view.revision.config.audio.voice,
+                ...voice,
+                segment: segment as "intro" | "body" | "outro",
+                loudness: levelled.report,
               },
         ),
       ],
       { durationMs },
       asset,
     );
+    if (level) return;
     for (const key of recipe.dependsOn) {
       const retained = view.pieces.find(
         (candidate) => candidate.key === key && candidate.selected && candidate.available,
@@ -235,6 +262,7 @@ async function concatenate(
         deps.audioPreviews?.clear(context.work.projectId, owner.work_id);
     }
   } finally {
+    rmSync(piecesDirectory, { recursive: true, force: true });
     discardPreparedAssets(deps, [pending]);
   }
 }

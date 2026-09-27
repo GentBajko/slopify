@@ -2,6 +2,7 @@ import type { StageKind } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
 import type { NarrationAlias } from "../../kernel/ports/narration-aliases.js";
 import { imageScaleProblem } from "../images/scale.js";
+import { loudnessFields } from "../loudness/model.js";
 import { reviewFields } from "../reviews/rules.js";
 import { shortsSettingsProblems } from "../shorts/model.js";
 import type { StagedFile } from "../storage/model.js";
@@ -173,6 +174,7 @@ export function admit(input: AdmissionInput): AdmissionResult {
   fields.push(...shortModeFields(draft));
   fields.push(...videoEditFields(draft));
   fields.push(...ambientBedFields(draft, input.staged));
+  fields.push(...loudnessFields(draft.loudness));
   fields.push(...referenceFields(draft));
   fields.push(...reviewFields(draft));
   if (usesReference(draft) && draft.reference?.source === "provide")

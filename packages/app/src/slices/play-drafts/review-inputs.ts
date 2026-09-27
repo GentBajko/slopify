@@ -91,6 +91,7 @@ export function resolveReviewInputs(
     attachments: fresh.value.attachments,
     entries,
     silenceGapSeconds: readSettings(deps).silenceGapSeconds,
+    loudness: readSettings(deps).loudness,
   });
   const converted = branded.ok
     ? ({

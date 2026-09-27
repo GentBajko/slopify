@@ -11,6 +11,7 @@ import {
   pronunciationFutureValues,
   voiceValues,
 } from "./recipe-audio-parts.js";
+import { levelRecipe } from "./recipe-loudness.js";
 import {
   type RecipeContext,
   type ResolvedWorkRecipe,
@@ -30,6 +31,9 @@ export interface AudioRecipes {
   readonly keys: readonly string[];
   // A multi-voice run's script sections, once the script is known: the audio files' chapters.
   readonly sections?: readonly ScriptSection[] | undefined;
+  // Level the volume: the levelled joins, intro, body and outro in order (`recipe-loudness.ts`).
+  // Empty while the setting is off, and for an uploaded narration, which is never re-levelled.
+  readonly levels: readonly ResolvedWorkRecipe[];
 }
 export function bodyNarrationGroups(
   context: RecipeContext,
@@ -49,7 +53,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
   const { config, content } = context;
   const recipes: ResolvedWorkRecipe[] = [];
   if (config.sources.audio === "off")
-    return { recipes, mediaFingerprint: null, timeline: [], keys: [] };
+    return { recipes, mediaFingerprint: null, timeline: [], keys: [], levels: [] };
   const prepare = usesNarrationPreparation(config);
   const pronounce = usesPronunciationGlossary(config);
   const narrationFiles = prepare || pronounce;
@@ -164,9 +168,19 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
     recipes.push(body);
   }
   const ordered: { value: ResolvedWorkRecipe; transcript: FingerprintValue }[] = [];
+  const levels: ResolvedWorkRecipe[] = [];
+  const level = (join: ResolvedWorkRecipe, segment: "intro" | "body" | "outro"): void => {
+    // An uploaded narration is the user's own file: only the exports' master reaches it.
+    const levelled =
+      config.sources.audio === "generate" ? levelRecipe(context, join, segment) : undefined;
+    if (levelled === undefined) return;
+    recipes.push(levelled);
+    levels.push(levelled);
+  };
   for (const category of ["intro", "body", "outro"] as const) {
     if (category === "body") {
       ordered.push({ value: body, transcript: bodyTranscript });
+      level(body, "body");
       continue;
     }
     const entry = text.entries[category];
@@ -242,6 +256,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
       parts.map((part) => part.key),
     );
     recipes.push(audio);
+    level(audio, category);
     if (narrationFiles) recipes.push(narrationFileRecipe(context, category, parts));
     ordered.push({
       value: audio,
@@ -273,6 +288,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
     ]),
     timeline,
     keys: ordered.map(({ value }) => value.key),
+    levels,
     ...(sections === undefined ? {} : { sections }),
   };
 }

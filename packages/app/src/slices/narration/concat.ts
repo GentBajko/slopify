@@ -23,6 +23,8 @@ export interface JoinInput {
   readonly listPath: string;
   readonly output: string;
   readonly signal: AbortSignal;
+  // Encode even one file: the levelled pieces are WAVs, never the MP3 the output is named.
+  readonly reencode?: boolean | undefined;
 }
 
 // The concat demuxer's script format. A path is single-quoted, and the one character that
@@ -78,7 +80,7 @@ export async function joinNarration(deps: JoinDeps, input: JoinInput): Promise<n
   }
   mkdirSync(dirname(input.output), { recursive: true, mode: 0o700 });
 
-  if (input.files.length === 1) {
+  if (input.files.length === 1 && input.reencode !== true) {
     // Whole-text mode, and any run whose article is one paragraph: there is nothing to
     // join, and re-encoding the only chunk would lose quality for no reason.
     input.signal.throwIfAborted();

@@ -9,6 +9,7 @@ import { editNeedsTiming } from "../video/edit-settings.js";
 import { usesVoices, type VoicesSettings } from "../voices/model.js";
 import { portraitValues } from "../voices/portraits.js";
 import type { AudioRecipes } from "./recipe-audio.js";
+import { masterPlan } from "./recipe-loudness.js";
 import {
   type RecipeContext,
   type ResolvedWorkRecipe,
@@ -23,6 +24,8 @@ export function exportRecipes(
   const { config, content } = context;
   if (audio.mediaFingerprint === null) return [];
   const recipes: ResolvedWorkRecipe[] = [];
+  // Level the volume: the listening files are mastered to the audio files' target.
+  const master = masterPlan(context, audio.levels, "audioFiles");
   if (config.sources.video === "off")
     recipes.push(
       recipe(
@@ -36,9 +39,10 @@ export function exportRecipes(
           values: [
             audio.mediaFingerprint,
             audioExportArgs([{ kind: "body", path: "$body", seconds: 0 }], "$output"),
+            ...master.values,
           ],
         },
-        audio.keys,
+        [...audio.keys, ...master.keys],
       ),
     );
   const captions = config.subtitles !== undefined && config.subtitles.mode !== "off";
@@ -93,9 +97,10 @@ export function exportRecipes(
             resourceIdentity(context, timing),
             (audio.sections ?? []).map((section) => [section.title, section.firstTurn]),
             config.title,
+            ...master.values,
           ],
         },
-        [...audio.keys, timing.key],
+        [...audio.keys, timing.key, ...master.keys],
         { unresolved: audio.sections === undefined },
       ),
     );

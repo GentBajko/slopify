@@ -3,6 +3,7 @@ import { audioRecipes } from "./recipe-audio.js";
 import { documentRecipes } from "./recipe-document.js";
 import { editPlan } from "./recipe-edit.js";
 import { exportRecipes } from "./recipe-exports.js";
+import { masterPlan } from "./recipe-loudness.js";
 import { type RecipeContext, type ResolvedWorkRecipe, resourceIdentity } from "./recipe-model.js";
 import { imageReference, referenceRecipe } from "./recipe-reference.js";
 import { withReviews } from "./recipe-reviews.js";
@@ -32,7 +33,7 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
     ...exports,
     ...youtube,
     ...(reference === undefined ? [] : [reference]),
-    ...shortsRecipes(context, exports, drawnFrom),
+    ...shortsRecipes(context, exports, drawnFrom, masterPlan(context, audio.levels, "video")),
     ...thumbnail,
     ...documentRecipes(context, text, thumbnail),
     ...visualAssets(
@@ -45,6 +46,7 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
         (images) => editPlan(context, exports, youtube, images),
         drawnFrom,
         timing === undefined ? null : resourceIdentity(context, timing),
+        masterPlan(context, audio.levels, "video"),
       ),
     ),
   ]);

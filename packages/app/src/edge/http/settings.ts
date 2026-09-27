@@ -60,6 +60,10 @@ export const channelLinksBody = z.object({
 const playbackBody = z.object({
   silenceGapSeconds: z.number(),
   appearance: z.enum(appearances),
+  // Absent keeps what is saved, so a client from before the setting still saves the others.
+  loudness: z
+    .object({ enabled: z.boolean(), videoLufs: z.number(), audioFilesLufs: z.number() })
+    .optional(),
 });
 
 // The return type is inferred so Hono keeps the route types the SPA's client is
@@ -73,7 +77,11 @@ export function settingsRoutes(deps: AppDeps) {
     new Hono()
       .get("/", (c) => c.json(readSettings(playback)))
       .put("/", zValidator("json", playbackBody, onInvalid), (c) => {
-        const result = saveSettings(playback, c.req.valid("json"));
+        const body = c.req.valid("json");
+        const result = saveSettings(playback, {
+          ...body,
+          loudness: body.loudness ?? readSettings(playback).loudness,
+        });
         if (!result.ok) {
           return problem(c, {
             status: 400,

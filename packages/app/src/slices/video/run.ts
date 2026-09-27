@@ -78,8 +78,8 @@ export async function renderVideo(deps: VideoDeps, context: StageContext): Promi
     totalSeconds: plan.totalSeconds,
     record: { ...recorded(plan, dir), subtitles: project.config.subtitles ?? null },
     subtitles,
-    render: (part, onProgress) =>
-      renderSlideshow({
+    render: async (part, onProgress) => {
+      await renderSlideshow({
         bin: deps.ffmpeg,
         edit: plan.editList,
         output: part,
@@ -89,7 +89,8 @@ export async function renderVideo(deps: VideoDeps, context: StageContext): Promi
         signal: context.signal,
         log: deps.log,
         onProgress,
-      }),
+      });
+    },
   });
   deps.count("stage.completed", { stage: "video" });
 }

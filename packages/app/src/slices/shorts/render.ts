@@ -3,6 +3,8 @@ import { join } from "node:path";
 import type { Log } from "../../kernel/log.js";
 import type { TimedWord } from "../../kernel/ports/subtitles.js";
 import type { MotionStyle } from "../admission/model.js";
+import type { LoudnessGoal } from "../loudness/loudnorm.js";
+import type { MasterReport } from "../loudness/model.js";
 import { type AudioSegment, type EditList, editListVersion } from "../video/edit-list.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import { motionFor } from "../video/motion.js";
@@ -180,9 +182,12 @@ export interface ShortRender {
   readonly signal: AbortSignal;
   readonly log: Log;
   readonly onProgress: (elapsedMs: number) => void;
+  // Level the volume: the target the clip's sound, music and all, is mastered to.
+  readonly master?: LoudnessGoal | undefined;
 }
 
-export async function renderShort(run: ShortRender): Promise<void> {
+// What the master measured, when the run asked for one.
+export async function renderShort(run: ShortRender): Promise<MasterReport | undefined> {
   const speed = run.speed ?? 1;
   // The images keep their share of what is said, so at a higher speed each is on screen
   // for less time and the count stays the one the prompts were written for.
@@ -212,8 +217,9 @@ export async function renderShort(run: ShortRender): Promise<void> {
     );
     mkdirSync(join(workspace, "fonts"), { mode: 0o700 });
     copyFileSync(run.font.path, join(workspace, "fonts", `selected${run.font.extension}`));
-    await renderSlideshow({
+    return await renderSlideshow({
       bin: run.bin,
+      master: run.master,
       edit: shortEditList({
         audioPath: audio,
         seconds,

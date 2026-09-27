@@ -200,6 +200,8 @@ export const runDraftSchema = z.object({
   // The rules are `slices/voices/model.ts`'s, checked by admission, not the schema's.
   voices: voicesSettingsSchema.optional(),
   ambientBed: ambientBedSchema.optional(),
+  // Level the volume (`loudness/model.ts`); the range is checked by admission.
+  loudness: z.object({ videoLufs: z.number(), audioFilesLufs: z.number() }).strict().optional(),
   // Absent is English (`kernel/ports/languages.ts`).
   language: languageSchema.optional(),
 });

@@ -12,6 +12,7 @@ import {
 } from "../admission/rules.js";
 import { detectSlots, render } from "../admission/substitute.js";
 import { imagesPerVideoMax } from "../images/scale.js";
+import { loudnessFields } from "../loudness/model.js";
 import { reviewFields } from "../reviews/rules.js";
 import type { RevisionContent } from "../revisions/model.js";
 import { usesAnimation } from "../video/edit-settings.js";
@@ -26,6 +27,7 @@ export function validateRecipeInputs(
     ...shortsFields(config),
     ...videoEditFields(config),
     ...reviewFields(config),
+    ...loudnessFields(config.loudness),
   ];
   const llm =
     (config.sources.research === "generate" && config.sources.article !== "provide") ||

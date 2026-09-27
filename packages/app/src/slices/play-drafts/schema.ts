@@ -73,6 +73,18 @@ export const playDraftFormSchema = z
     narrationPrompt: text.optional(),
     // Absent on drafts and templates saved before three thumbnails: one.
     thumbnailCount: z.union([z.literal(1), z.literal(3)]).optional(),
+    // Level the volume (`loudness/model.ts`). Absent on drafts and templates nobody changed it
+    // in: Settings → General's default, which is on for a new run. The targets are LUFS; absent
+    // is Settings' own.
+    loudness: z
+      .object({
+        enabled: z.boolean(),
+        videoLufs: z.number().optional(),
+        audioFilesLufs: z.number().optional(),
+      })
+      .strict()
+      .readonly()
+      .optional(),
     // Absent on drafts and templates saved before the YouTube description: off, built-in prompt.
     youtubeDescription: z.boolean().optional(),
     descriptionPrompt: text.optional(),

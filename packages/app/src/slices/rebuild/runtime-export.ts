@@ -4,6 +4,8 @@ import type { SubtitleAligner } from "../../kernel/ports/subtitles.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
 import { usesShortMode } from "../admission/short-mode.js";
+import { masterFile } from "../loudness/loudnorm.js";
+import { type MasterReport, masterGoal } from "../loudness/model.js";
 import type { PreparedOutput } from "../revisions/publication-model.js";
 import { allocateAsset, discardPreparedAssets, sealAsset } from "../storage/assets.js";
 import { outputPath, projectDir } from "../storage/layout.js";
@@ -143,16 +145,33 @@ export async function executeExportRecipe(
         current: Math.min(100, Math.round(elapsedMs / (totalSeconds * 10))),
         total: 100,
       });
-    if (plan === undefined)
-      await runFfmpeg({
-        bin: deps.ffmpeg,
-        args: audioExportArgs(audio, pending.absolutePath),
-        signal: context.signal,
-        log: deps.log,
-        onProgress,
-      });
-    else
-      await renderSlideshow({
+    // Level the volume: the audio-only file is mastered to the audio files' target, the video to
+    // the video's (`loudness/model.ts`).
+    const goal = masterGoal(config, plan === undefined ? "audioFiles" : "video");
+    let master: MasterReport | undefined;
+    if (plan === undefined) {
+      const mixed = goal === undefined ? pending.absolutePath : `${pending.absolutePath}.mix.wav`;
+      try {
+        await runFfmpeg({
+          bin: deps.ffmpeg,
+          args: audioExportArgs(audio, mixed),
+          signal: context.signal,
+          log: deps.log,
+          onProgress,
+        });
+        if (goal !== undefined)
+          master = await masterFile(
+            { bin: deps.ffmpeg, log: deps.log, signal: context.signal },
+            mixed,
+            pending.absolutePath,
+            goal,
+            { sampleRate: 48000, channels: 2 },
+          );
+      } finally {
+        if (goal !== undefined) rmSync(mixed, { force: true });
+      }
+    } else
+      master = await renderSlideshow({
         bin: deps.ffmpeg,
         edit: plan.editList,
         output: plan.output,
@@ -163,6 +182,7 @@ export async function executeExportRecipe(
         signal: context.signal,
         log: deps.log,
         onProgress,
+        ...(goal === undefined ? {} : { master: goal }),
       });
     context.signal.throwIfAborted();
     const asset = sealAsset(deps, pending);
@@ -179,6 +199,7 @@ export async function executeExportRecipe(
           ...(edited === undefined || edited.warnings.length === 0
             ? {}
             : { warnings: edited.warnings }),
+          ...(master === undefined ? {} : { master }),
         },
       ),
     );

@@ -46,6 +46,9 @@ export const outputRoles = [
   "script_md",
   "audio_mp3",
   "audio_m4b",
+  // Level the volume: a narration segment joined again from its pieces, each brought to one
+  // loudness first (`meta.segment` says which). The exports play it in place of the plain join.
+  "audio_levelled",
 ] as const;
 export type OutputRole = (typeof outputRoles)[number];
 
@@ -75,6 +78,10 @@ export interface OutputMeta {
   readonly provider?: string | undefined;
   readonly model?: string | undefined;
   readonly voice?: string | undefined;
+  // Level the volume: what the levelling measured (`loudness/model.ts`), on a levelled
+  // narration; and what a mastered export measured once finished.
+  readonly loudness?: import("../loudness/model.js").LoudnessReport | undefined;
+  readonly master?: import("../loudness/model.js").MasterReport | undefined;
 }
 
 export interface Output {

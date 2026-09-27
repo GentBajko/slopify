@@ -49,6 +49,8 @@ export function legacyOutputWorkKey(output: Output, config?: Pick<RunConfig, "so
     case "audio_mp3":
     case "audio_m4b":
       return "voices:files";
+    case "audio_levelled":
+      return `level:${output.meta.segment ?? "body"}`;
     case "reference":
       return referenceKey;
     case "notes":

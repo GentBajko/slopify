@@ -108,6 +108,8 @@ export function outputFileName(
       return "narration.mp3";
     case "audio_m4b":
       return "audiobook.m4b";
+    case "audio_levelled":
+      return `audio-levelled${extension}`;
     case "reference":
       return `reference${extension}`;
     case "image":

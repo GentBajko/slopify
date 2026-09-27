@@ -8,6 +8,7 @@ import type { StageRunResult } from "../../kernel/runner/work.js";
 import { usesShorts } from "../admission/rules.js";
 import { captionBoldFont } from "../fonts/coverage.js";
 import { resolveBoldFont } from "../fonts/index.js";
+import { masterGoal } from "../loudness/model.js";
 import type { RevisionView } from "../revisions/model.js";
 import type { PreparedOutput } from "../revisions/publication-model.js";
 import { clipWords } from "../shorts/captions.js";
@@ -317,8 +318,9 @@ async function render(
   const prepared: PreparedOutput[] = [];
   const seconds = (clip.end - clip.start) / speed;
   try {
-    await renderShort({
+    const master = await renderShort({
       bin: deps.ffmpeg,
+      master: masterGoal(config, "video"),
       timeline,
       start: clip.start,
       end: clip.end,
@@ -357,6 +359,7 @@ async function render(
       preparedResult(deps, context, piece, "short_video", asset, durationMs, {
         short: clip.number,
         sentences: [clip.first, clip.last],
+        ...(master === undefined ? {} : { master }),
       }),
     );
     await publishResult(

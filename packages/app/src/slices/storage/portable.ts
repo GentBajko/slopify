@@ -449,6 +449,10 @@ const slotsColumn = z.array(z.string());
 const storedCliPath = z.string().max(cliPathMaxLength).nullable();
 const storedSilenceGap = z.number().int().min(0).max(silenceGapSecondsMax);
 const storedAppearance = z.enum(appearances);
+// Settings → General's Level the volume for new runs.
+const storedLoudness = z
+  .object({ enabled: z.boolean(), videoLufs: z.number(), audioFilesLufs: z.number() })
+  .strict();
 const storedPlaylist = z.string().max(studioPlaylistMax);
 // Settings → Channel links, and the providers a fresh Play form starts with.
 // The AI use marks: ticked voices, Image prompts and projects, by id.
@@ -478,6 +482,7 @@ function portableSettings(settings: Readonly<Record<string, string>>): Record<st
     const parsed = storedJson(value);
     if (key === "silenceGapSeconds") storedSilenceGap.parse(parsed);
     else if (key === "appearance") storedAppearance.parse(parsed);
+    else if (key === "loudness") storedLoudness.parse(parsed);
     else if (key === studioPlaylistKey) storedPlaylist.parse(parsed);
     else if (key === channelLinksKey) storedChannelLinks.parse(parsed);
     else if (

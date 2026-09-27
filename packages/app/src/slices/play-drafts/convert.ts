@@ -24,6 +24,12 @@ import {
   wordCount,
 } from "../images/scale.js";
 import type { Entry } from "../library/model.js";
+import {
+  defaultLoudness,
+  type LoudnessDefault,
+  type LoudnessSettings,
+  loudnessOfForm,
+} from "../loudness/model.js";
 import { reviewSettingsFromForm } from "../reviews/model.js";
 import { stageMakesItems } from "../reviews/rules.js";
 import {
@@ -60,6 +66,8 @@ export function toAdmissionDraft(input: {
   readonly attachments: readonly DraftAttachment[];
   readonly entries: readonly Entry[];
   readonly silenceGapSeconds: number;
+  // Settings → General's Level the volume, for a draft that did not change it.
+  readonly loudness?: LoudnessDefault | undefined;
 }):
   | { readonly ok: true; readonly draft: RunDraft }
   | { readonly ok: false; readonly fields: readonly FieldError[] } {
@@ -346,6 +354,11 @@ export function toAdmissionDraft(input: {
     // Under the long video's narration only; a number already refused above leaves it out
     // rather than saved as NaN.
     ...(bed !== undefined && bedRefused === 0 ? { ambientBed: bed } : {}),
+    // Only while on, and only with a narration to level, so the run is otherwise the one it was.
+    ...pickLoudness(
+      sources.audio,
+      loudnessOfForm(form.loudness, input.loudness ?? defaultLoudness),
+    ),
     edgeSilenceSeconds: measure(
       "edgeSilenceSeconds",
       sources.audio !== "off",
@@ -365,6 +378,13 @@ export function toAdmissionDraft(input: {
   return fields.length || !parsed.success
     ? { ok: false, fields }
     : { ok: true, draft: parsed.data };
+}
+
+function pickLoudness(
+  audio: string,
+  loudness: LoudnessSettings | undefined,
+): { readonly loudness?: LoudnessSettings } {
+  return audio === "off" || loudness === undefined ? {} : { loudness };
 }
 
 // More images for long videos, from what Play's control holds: the rate as images per hour,

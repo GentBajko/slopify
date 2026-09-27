@@ -8,6 +8,7 @@ import {
 } from "../admission/rules.js";
 import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
+import { usesLoudness } from "../loudness/model.js";
 import type { RevisionDeps, RevisionView } from "../revisions/model.js";
 import type { PreparedOutput } from "../revisions/publication-model.js";
 import { outputPath } from "../storage/layout.js";
@@ -15,6 +16,7 @@ import { probeDurationMs } from "../video/ffmpeg.js";
 import { type AudioSegment, audioTimeline } from "../video/plan.js";
 import { usesVoices } from "../voices/model.js";
 import type { SpokenTurn } from "../voices/timing.js";
+import { levelKey } from "./recipe-loudness.js";
 import type { RevisionWorkPlan } from "./recipe-work.js";
 import type { ExportExecutionDeps } from "./runtime-export.js";
 import { joinedNarration, narrationTextParts } from "./runtime-narration-text.js";
@@ -55,10 +57,24 @@ export async function revisionAudio(
 ): Promise<readonly AudioSegment[]> {
   const config = view.revision.config;
   if (config.sources.audio === "off") return [];
+  // Level the volume: the exports play the levelled joins (`recipe-loudness.ts`), never the plain
+  // ones, which the word timing reads. An uploaded narration has none: only the master reaches it.
+  const levelled = usesLoudness(config) && config.sources.audio === "generate";
   const input = async (role: "audio_body" | "audio_intro" | "audio_outro") => {
+    const segment = role === "audio_body" ? "body" : role === "audio_intro" ? "intro" : "outro";
     const row = view.outputs.find(
-      (one) => one.selected && one.available && one.state === "ready" && one.output.role === role,
+      (one) =>
+        one.selected &&
+        one.available &&
+        one.state === "ready" &&
+        (levelled
+          ? one.output.role === "audio_levelled" && one.workKey === levelKey(segment)
+          : one.output.role === role),
     );
+    if (row === undefined && levelled)
+      throw new Error(
+        `The levelled ${segment === "body" ? "narration" : segment} isn't finished yet, so the sound can't be exported at an even volume. Let the Narration stage finish (Resume, or Try again on it), then retry this stage; or turn off Level the volume in Edit project → Narration.`,
+      );
     if (row === undefined) return undefined;
     const path = outputPath(deps.paths, context.work.projectId, row.output.path);
     const duration =

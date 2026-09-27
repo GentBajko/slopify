@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
+import { loudnessOfDefault } from "../../slices/loudness/model.js";
 import { firstRunView } from "../../slices/onboarding/first-run.js";
 import { installPack } from "../../slices/onboarding/install.js";
 import { quickShortInputSchema, sampleCopyInputSchema } from "../../slices/onboarding/model.js";
@@ -18,6 +19,7 @@ import {
   recordShortRequest,
   shortRequestProject,
 } from "../../slices/onboarding/state.js";
+import { readSettings } from "../../slices/settings/playback.js";
 import { providerStatuses } from "../../slices/settings/readiness.js";
 import { listVoices } from "../../slices/settings/repo.js";
 import { projectTitle } from "../../slices/storage/repo.js";
@@ -112,6 +114,7 @@ export function onboardingRoutes(deps: AppDeps) {
           pack,
           names: installed.value.prompts,
           providers: plan.providers,
+          loudness: loudnessOfDefault(readSettings({ db: deps.db, log: deps.log }).loudness),
         }),
       );
       if (!created.ok)

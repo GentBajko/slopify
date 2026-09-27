@@ -2,6 +2,7 @@ import { relative, sep } from "node:path";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
 import { resolveBoldFont } from "../fonts/index.js";
+import { masterGoal } from "../loudness/model.js";
 import type { PreparedOutput } from "../revisions/publication-model.js";
 import { renderShort, shortFrame } from "../shorts/render.js";
 import { allocateAsset, discardPreparedAssets, sealAsset } from "../storage/assets.js";
@@ -41,8 +42,9 @@ export async function executeShortExport(
   const directory = projectDir(deps.paths, context.work.projectId);
   const relativePath = (path: string): string => relative(directory, path).split(sep).join("/");
   try {
-    await renderShort({
+    const master = await renderShort({
       bin: deps.ffmpeg,
+      master: masterGoal(config, "video"),
       timeline,
       start: 0,
       end: seconds,
@@ -75,7 +77,10 @@ export async function executeShortExport(
     );
     const asset = sealAsset(deps, pending);
     prepared.push(
-      preparedResult(deps, context, piece, "video", asset, durationMs, { subtitlesMode: "off" }),
+      preparedResult(deps, context, piece, "video", asset, durationMs, {
+        subtitlesMode: "off",
+        ...(master === undefined ? {} : { master }),
+      }),
     );
     prepared.push(
       preparedText(
