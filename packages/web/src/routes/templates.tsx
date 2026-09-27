@@ -16,12 +16,14 @@ import { Field, Input, Select } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { useToast } from "@/components/kit/toast";
+import { InlineName } from "@/library/inline-name";
 import { ListSkeleton } from "@/library/list-states";
 import { PacksDrawer } from "@/onboarding/packs-drawer";
 import { listPlayDrafts, readPlayDraft } from "@/play/draft-api";
 import {
   deleteProjectTemplate,
   instantiateProjectTemplate,
+  renameProjectTemplate,
   saveProjectTemplate,
   type TemplateSummary,
   templatesKey,
@@ -279,7 +281,17 @@ export function TemplatesRoute({
             <Fragment key={template.id}>
               <ListRow
                 className="max-md:grid-cols-1"
-                title={template.name}
+                title={
+                  <InlineName
+                    name={template.name}
+                    maxLength={120}
+                    onRename={async (next) => {
+                      const refused = await renameProjectTemplate(api, template.id, next);
+                      await client.invalidateQueries({ queryKey: templatesKey });
+                      return refused;
+                    }}
+                  />
+                }
                 meta={
                   <>
                     {channelName(template) === undefined ? "" : `${channelName(template)} · `}

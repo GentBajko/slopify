@@ -2,7 +2,7 @@ import type { Prompt, PromptKind } from "@app/slices/library/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { removePrompt } from "@/api";
+import { removePrompt, savePrompt } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
@@ -14,6 +14,7 @@ import { ListDetail } from "@/components/kit/layout";
 import { List, ListRow } from "@/components/kit/list-row";
 import { kindLabel, kindOptions } from "@/lib/prompt-kinds";
 import { HistoryDrawer } from "@/library/history-drawer";
+import { InlineName, refusedName } from "@/library/inline-name";
 import { LibraryItemDetail, plural, updatedOn } from "@/library/item-detail";
 import { ListSkeleton, LoadError, libraryListDetail, libraryRow } from "@/library/list-states";
 import { LibraryRowActions } from "@/library/row-actions";
@@ -50,6 +51,13 @@ export function PromptsRoute({
       await queryClient.invalidateQueries({ queryKey: keys.prompts });
     },
   });
+
+  // A rename from the list: the same save as the editor's, with the text as it is.
+  const rename = async (prompt: Prompt, name: string): Promise<string | null> => {
+    const reply = await savePrompt(api, { kind: prompt.kind, name, body: prompt.body }, prompt.id);
+    await queryClient.invalidateQueries({ queryKey: keys.prompts });
+    return reply.ok ? null : refusedName(reply.fields);
+  };
 
   const ofKind = prompts.data?.prompts.filter((prompt) => prompt.kind === kind);
   const needle = query.trim().toLowerCase();
@@ -117,10 +125,15 @@ export function PromptsRoute({
                   <ListRow
                     key={prompt.id}
                     className={libraryRow}
-                    title={prompt.name}
+                    title={
+                      <InlineName
+                        name={prompt.name}
+                        onSelect={() => setSelectedId(prompt.id)}
+                        onRename={(name) => rename(prompt, name)}
+                      />
+                    }
                     meta={promptMeta(prompt)}
                     selected={prompt.id === selected?.id}
-                    onSelect={() => setSelectedId(prompt.id)}
                     actions={
                       <LibraryRowActions
                         name={prompt.name}

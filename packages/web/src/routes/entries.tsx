@@ -2,7 +2,7 @@ import type { Entry, EntryCategory } from "@app/slices/library/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { removeEntry } from "@/api";
+import { removeEntry, saveEntry } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
@@ -14,6 +14,7 @@ import { List, ListRow } from "@/components/kit/list-row";
 import { Segmented } from "@/components/kit/switch";
 import { categoryLabel, categoryOptions, modeLabel } from "@/lib/entry-options";
 import { HistoryDrawer } from "@/library/history-drawer";
+import { InlineName, refusedName } from "@/library/inline-name";
 import { LibraryItemDetail, plural, updatedOn } from "@/library/item-detail";
 import { ListSkeleton, LoadError, libraryListDetail, libraryRow } from "@/library/list-states";
 import { LibraryRowActions } from "@/library/row-actions";
@@ -51,6 +52,17 @@ export function EntriesRoute({
       await queryClient.invalidateQueries({ queryKey: keys.entries });
     },
   });
+
+  // A rename from the list: the same save as the editor's, with the text as it is.
+  const rename = async (entry: Entry, name: string): Promise<string | null> => {
+    const reply = await saveEntry(
+      api,
+      { category: entry.category, mode: entry.mode, name, body: entry.body },
+      entry.id,
+    );
+    await queryClient.invalidateQueries({ queryKey: keys.entries });
+    return reply.ok ? null : refusedName(reply.fields);
+  };
 
   const ofCategory = entries.data?.entries.filter((entry) => entry.category === category);
   const needle = query.trim().toLowerCase();
@@ -117,10 +129,15 @@ export function EntriesRoute({
                   <ListRow
                     key={entry.id}
                     className={libraryRow}
-                    title={entry.name}
+                    title={
+                      <InlineName
+                        name={entry.name}
+                        onSelect={() => setSelectedId(entry.id)}
+                        onRename={(name) => rename(entry, name)}
+                      />
+                    }
                     meta={entryMeta(entry)}
                     selected={entry.id === selected?.id}
-                    onSelect={() => setSelectedId(entry.id)}
                     actions={
                       <LibraryRowActions
                         name={entry.name}
