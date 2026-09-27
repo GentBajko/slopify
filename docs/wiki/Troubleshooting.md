@@ -32,13 +32,14 @@ Keys and how to get them: [Providers and Keys](Providers-and-Keys).
 
 | Message (or part of it) | Fix |
 | --- | --- |
-| "The *CLI* is not signed in, or its sign-in has expired." | Open a terminal on the computer running the CLI, run the command it names (`claude auth login`, `codex login`, or `gemini`), sign in, then press **Try ... again**. |
-| "Your Codex plan's usage limit is used up ... Slopify waits for it to reset and then carries on by itself." (also Claude and Gemini) | Nothing to do. The project shows **Waiting for limits** with the reset time. See [Recovery and Retries](Recovery-and-Retries#waiting-for-cli-plan-limits). |
+| "The *CLI* is not signed in, or its sign-in has expired." | Press **Copy sign-in command** on the project (or on Home's Needs you), run it in a terminal on the computer running Slopify (`claude auth login`, `codex login`, or `gemini`), sign in, then press **Check again**: once the CLI answers that it is signed in, the step runs again by itself. See [Recovery and Retries](Recovery-and-Retries#sign-a-cli-in-again). |
+| "Your Codex plan's usage limit is used up ... Slopify waits for it to reset and then carries on by itself." (also Claude and Gemini) | Nothing to do: the run waits instead of failing. The project, Home, Projects and the Calendar say "Waiting for Codex limits (resets at 14:00)". See [Recovery and Retries](Recovery-and-Retries#waiting-for-cli-plan-limits). |
 | "The *CLI* stopped without answering" | Run the CLI in a terminal to check it works and is signed in, then try again. |
 | "Slopify could not hand the whole prompt to the CLI, so it cannot tell what the CLI worked on (it may already have used your quota)." | Use **Try again**. This is not retried automatically, so you choose whether to spend the quota again. |
 | "No Codex model is chosen for images." | Choose a model (or Codex default) for images in **Edit project → Providers**, then try again. |
 | "Slopify could not get the model list from the *CLI* CLI." | Check the CLI is installed and signed in (Settings → Providers), refresh the list, or type an exact model ID. |
-| A CLI shows as not installed in Settings | Install the CLI so it is on your `PATH`, or, in Docker, rerun the Docker install after installing or moving a CLI so the host helper finds it. |
+| A CLI shows as not installed in Settings | Install the CLI so it is on your `PATH`, or, in Docker, rerun the Docker install after installing or moving a CLI so the host helper finds it. Then press **Check again** on its row under **Health check**. |
+| Gemini CLI shows "Slopify could not tell from the Gemini CLI's files (~/.gemini/settings.json) whether it is signed in." | Run `gemini` in a terminal once and sign in (Login with Google), or set `GEMINI_API_KEY`, then press **Check again**. |
 
 See [AI CLIs](AI-CLIs).
 
@@ -90,7 +91,7 @@ See [Install](Install) for the command-line options.
 
 | Message | Fix |
 | --- | --- |
-| "Slopify isn't responding. If you're running it in Docker, check the container is running, then reload this page." | Slopify stopped, is restarting or is being updated. Start it again (or check the container), then reload. |
+| "Slopify isn't responding. …" | Slopify stopped, is restarting or is being updated. The message names the fix for your install: for a normal install, wait a moment or start it again with `npx @gentbajko/slopify`; in Docker, check that its container is running (Docker Desktop, or `docker ps`) and start it. Then reload. |
 | "Slopify hit an unexpected error (*code*). Reload the page and try again." | Reload. If it keeps happening, download diagnostics and report it. |
 | "The project could not be loaded." | Reload, or go back to Projects. |
 | "The upload stopped before the file finished copying. Choose the file again." | Pick the file again and wait for "Waiting for uploads to finish…" to clear before saving. |
@@ -100,7 +101,8 @@ See [Install](Install) for the command-line options.
 
 | Symptom | Fix |
 | --- | --- |
-| A step fails with "The disk is full, so ... stopped." | Press **Free space**; Settings → **Storage** shows each project's size. Delete projects you do not need (they go to the [Trash](Trash); **Delete now** frees the space at once), or use **Keep outputs only** on finished projects. Then try again. |
+| A step fails with "The disk is full, so ... stopped." | Press **Free space**; Settings → **Backup & storage** shows each project's size. Delete projects you do not need (they go to the [Trash](Trash); **Delete now** frees the space at once), or use **Keep outputs only** on finished projects. Then try again. |
+| You want space back from a finished project | On its page, **Free space** → **Free …: keep the outputs, drop the working files**. See [Project Page](Project-Page#free-space). |
 | History shows "Retained file missing" or "File missing" | That output's file was removed from disk (for example by **Keep outputs only**, or by hand). Remake the output to get it back. |
 
 See [Where Your Files Live](Where-Your-Files-Live).
@@ -110,11 +112,11 @@ See [Where Your Files Live](Where-Your-Files-Live).
 | Topic | Native install | Docker |
 | --- | --- | --- |
 | Where it runs | Any system with Node 26 or newer | The installer is Linux only; Docker Desktop and remote Docker daemons are refused, and the installer must not be run with sudo |
-| Project files | `Documents/Slopify` for new installs (Settings → **Your files**); the database, settings and keys stay in the hidden data folder (`~/.slopify` by default, `--data-dir`) | `~/Slopify/Projects` on the host; the database and keys stay in the `slopify-data` volume |
+| Project files | `Documents/Slopify` for new installs (Settings → **Your files**); the database, settings and keys stay in the hidden data folder (`~/.slopify` by default, `--data-dir`) | `<Documents>/Slopify/Projects` on the host for new installs (`~/Slopify/Projects` on one from before 3.0); the database and keys stay in the `slopify-data` volume |
 | AI CLIs | Run directly with your logins | Run on the host through a small helper, `slopify-cli-bridge.service`, with your existing logins. Check it with `systemctl --user status slopify-cli-bridge.service`. Without it, Settings shows the CLIs as unavailable. |
 | **Open folder** | Opens your file manager | Opens it through the host helper; without the helper you get the path to copy, and "run the Docker launcher again ... so it sets up the host helper" |
-| Start at login | Settings → General → **Start Slopify when you log in** | Slopify starts whenever Docker does; Settings only shows Docker's own setting |
-| Updating | **Update** in Settings, or `npx @gentbajko/slopify@latest update` | `npx @gentbajko/slopify@latest update` from the terminal. It keeps a recovery copy of your data in a Docker volume and puts the previous version back if the new one does not start. |
+| Start at login | Settings → General → **Start Slopify when I log in** | Slopify starts whenever Docker does; Settings only shows Docker's own setting (with Docker Desktop, its **Start Docker Desktop when you sign in**) |
+| Updating | The updates button at the foot of the sidebar, or `npx @gentbajko/slopify@latest update` while Slopify is running | `npx @gentbajko/slopify@latest update` from the terminal. It keeps a recovery copy of your data in a Docker volume and puts the previous version back if the new one does not start. |
 
 If an install or update fails, the message names what failed and, in Docker, the volume that holds the recovery copy of your data. Do not delete that volume; fix the problem and run the same command again. See [Docker](Docker) and [Updating and Patch Notes](Updating-and-Patch-Notes).
 
@@ -122,10 +124,11 @@ If an install or update fails, the message names what failed and, in Docker, the
 
 | What you see | What it means |
 | --- | --- |
-| **Queued** | Other videos in the batch queue go first. |
-| **Waiting for limits** | A CLI plan is used up; it carries on after the reset time shown. |
+| **Queued** | Other videos in the batch queue go first. The Calendar's **Batch queue** shows the order. |
+| **Waiting for limits** / "Waiting for Codex limits (resets at 14:00)" | A CLI plan is used up; the run waits and carries on after the reset time shown. |
 | **Waiting to try again** | A rate limit or timeout; it retries at the time shown. |
 | **Waiting for you** | A checkpoint is holding the run. Press **Approve ...**. |
+| A step says **taking longer than usual** | It has run longer than the same step usually takes in your finished runs. It is still going; open **Live** to see whether text or images are still arriving. |
 | **Paused** | Press **Continue the run**. |
 | **Stopped** | The run was interrupted (for example by a restart). Press **Continue the run**. |
 | A step is failed with "interrupted" | Slopify stopped while it ran. Press **Try ... again**. |

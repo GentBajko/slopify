@@ -2,7 +2,7 @@
 
 Slopify does no AI work itself: it calls providers you set up, on your own accounts. This page lists every provider, where to get each key, how to save and test it, how **Check all** checks everything at once, and how to add voices in **Settings → Voices**.
 
-**Where to find it:** Settings → Providers (keys and command-line tools), Settings → Voices (voice IDs).
+**Where to find it:** Settings → Providers (keys, command-line tools and the system voice), Settings → Voices (voice IDs).
 
 ## How providers are organised
 
@@ -11,7 +11,7 @@ Settings → Providers shows three lists, one per kind of work. Each row says wh
 | List | What it makes | Providers |
 |---|---|---|
 | **Text** | Research, script, article, titles, descriptions, reviews | OpenRouter (API key), Claude Code CLI, Codex CLI, Gemini CLI (command line) |
-| **Speech** | Narration | ElevenLabs, OpenAI, Cartesia, Inworld (all API key) |
+| **Speech** | Narration | ElevenLabs, OpenAI, Cartesia, Inworld, Google Gemini (API key), System voice (built in, no key) |
 | **Images** | Images, thumbnails, animated clips | fal.ai, Replicate, OpenAI, Google (API key), Codex CLI (command line) |
 
 Row states:
@@ -22,11 +22,13 @@ Row states:
 | **No key** | No key yet; the provider is not selectable on Play. |
 | **Ready** | A command-line tool was found and is usable. |
 | **Needs attention** | The tool was found but something is wrong, for example Codex CLI is older than 0.149.1. |
-| **Not found** | The tool is not on this computer (or not at the saved path). |
+| **Not found** | The tool is not on this computer (or not at the saved path). For the System voice: no speech program was found. |
+
+Each row also says what kind it is: **Command line**, **Built in, no key** or **API key**.
 
 The command-line tools (Claude Code, Codex, Gemini) need no key: they use the sign-in you already have. They are covered on [AI CLIs](AI-CLIs).
 
-On a fresh install with no key saved, the page says **Paste a key to make its provider selectable on Play.** On the first launch Slopify also looks for the command-line tools. If it finds one it says "You can make a video now, no API keys needed" and picks it on Play; choose **Got it** to hide that message. Narration still needs a voice key, or Audio set to off or your own upload.
+On a fresh install with no key saved, the page says **Paste a key to make its provider selectable on Play.** On the first launch Slopify also looks for the command-line tools. If it finds one it says so, names what it found and picks it on Play; choose **Got it** to hide that message. Narration needs no key either: without a voice key, the [System voice](#the-system-voice) reads it with your computer's own speech.
 
 ## Where your keys are kept
 
@@ -41,8 +43,9 @@ On a fresh install with no key saved, the page says **Paste a key to make its pr
 1. Open **Settings → Providers**.
 2. Pick the provider in its list (for example **ElevenLabs** under **Speech**).
 3. Follow the numbered steps shown beside it. They link to the provider's sign-up page, the page that makes the key and, where there is one, its billing page. Once a key is saved, the steps fold under **Where to get a key**.
-4. Paste the key in **<Provider> API key** and choose **Save**. A tick shows beside Save for a moment.
-5. Choose **Test** to check the key works.
+4. Paste the key in **<Provider> API key**.
+5. Optional: choose **Test** to check the pasted key before you keep it. See [Test a key](#test-a-key).
+6. Choose **Save**. A tick shows beside Save for a moment.
 
 To replace a key, paste the new one and choose **Save**. To remove it, choose **Remove**, then **Remove key**. Projects that used that provider cannot retry until a key is saved again.
 
@@ -50,7 +53,12 @@ The info button beside each provider's name says what it does and how it bills.
 
 ## Test a key
 
-**Test** asks the provider whether the saved key works, with the cheapest harmless call it allows (such as listing its models). Nothing is generated or billed. It uses the saved key; save first. The answer waits up to 15 seconds.
+**Test** asks the provider whether a key works, with the cheapest harmless call it allows (such as listing its models). Nothing is generated or billed. The answer waits up to 15 seconds.
+
+- **Before saving:** with a key pasted in the field, Test checks that pasted key. It is sent only to its own provider, never stored and never logged. When it passes, the answer adds "It is not saved yet: choose Save to keep it."
+- **After saving:** with the field empty, Test checks the saved key.
+
+With neither, Test is greyed out: "Paste a key first."
 
 | Answer | What it means | What to do |
 |---|---|---|
@@ -135,6 +143,27 @@ How long text is handled:
 
 Some features need Inworld: Narration Preparation and pronunciations need an Inworld TTS-2 model. See [Play-Narration](Play-Narration) and [Narration-Aliases-and-Glossary](Narration-Aliases-and-Glossary).
 
+### Google Gemini (speech)
+
+Narrates with Gemini's 30 prebuilt voices, billed per text and audio token on your Gemini API key. It uses the key saved for [Google images](#google): with one saved there, nothing is needed here. You can also save a key of its own under **Google Gemini** in the **Speech** list.
+
+Pick a Gemini voice in Settings → **Voices** (see [Add a voice](#add-a-voice)). With two speakers on Gemini voices (a podcast or interview, see [Multiple Voices](Multiple-Voices)), their consecutive turns go in one two-speaker request; a third voice starts a new request.
+
+### The system voice
+
+The **System voice** narrates with your computer's own speech program: free, no key, and no account. It sounds robotic, so it is best for trying Slopify out; add a keyed voice when you want a better one. A first 60-second short uses it when no voice key is saved (see [Your First Short](Your-First-Short)).
+
+Slopify looks for a speech program each time and uses the best one it finds:
+
+| System | Speech program |
+|---|---|
+| macOS | macOS voices (the built-in `say`) |
+| Windows | Windows voices (System.Speech, through PowerShell). Add voices in Windows Settings → Time & language → Speech. |
+| Linux | Piper, SVOX Pico, eSpeak NG or eSpeak, best first. Install one, for example `sudo apt install espeak-ng`, `sudo pacman -S espeak-ng` or `sudo dnf install espeak-ng`. Piper needs its voice models listed in `SLOPIFY_PIPER_VOICES`. |
+| Docker | The image includes eSpeak NG. If it is missing, update the image. |
+
+Pick **System voice** in the **Speech** list to see what was found: "Found *engine*. Narration with it is free; a keyed voice (ElevenLabs, OpenAI) sounds better.", each program with its number of voices, and **Add a system voice**, which opens Settings → **Voices**. When nothing is found, it says what to install on your system. On Play it is offered as a TTS provider like the others, greyed out as **Speech Program Missing** when nothing is found.
+
 ## Image providers
 
 ### fal.ai
@@ -174,6 +203,8 @@ Draws images and thumbnails with Google's Gemini image models, charged per image
 
 Use a key made in AI Studio. An older Google Cloud key must be set to **Restrict to Gemini API only**, or Google rejects it.
 
+Google Gemini voices use this same key (see [Google Gemini (speech)](#google-gemini-speech)).
+
 ### Codex CLI (images)
 
 Draws images with your ChatGPT sign-in instead of a key. See [AI CLIs](AI-CLIs#codex-images).
@@ -199,9 +230,13 @@ The keyed providers' numbers come from the model catalogue.
 
 For each provider it checks:
 
-- **Installed** and **Signed in** for a command-line tool. Gemini CLI has no sign-in check Slopify can ask, so it tells you to run `gemini` once to confirm.
+- **Installed** and **Signed in** for a command-line tool. Gemini CLI's sign-in is read from its own files in `~/.gemini` (the sign-in method in `settings.json`, the Google sign-in in `oauth_creds.json`, or `GEMINI_API_KEY`), without starting it. When the files don't say, it tells you to run `gemini` once to confirm.
+- **Speech program found** for the System voice, with the program it speaks with.
 - **Key saved** and **Key valid** for a keyed provider, using the same call as **Test**. Nothing is generated or billed.
+- **Model reachable** for a keyed provider: Slopify asks the provider, with the saved key, about each model you chose (its model page, or the model list for OpenRouter and ElevenLabs), without generating anything. It reads, for example, "OpenRouter answered for … with this key." A provider with no such check says so.
 - **Chosen models**: that the models your templates, schedules, drafts and unfinished projects use are still offered. A retired one points you to **Switch** in Settings → Models (see [Models](Models#switch-away-from-a-retired-model)).
+
+Each provider's row has **Check again**, which checks that provider alone; its result replaces the row until the next **Check all**. It is the quick way to confirm a fix, such as signing a CLI in again.
 
 | Result | Meaning |
 |---|---|
@@ -225,7 +260,7 @@ Narration needs a voice ID from your speech provider. Slopify does not check the
 |---|---|---|
 | **Voice name** | The name you pick the voice by on Play and in Edit project. Only you see it. | Required, up to 200 characters. Names can repeat. |
 | **Provider** | The text-to-speech service the ID belongs to. | Speech providers only. |
-| **Voice ID** | The provider's own ID for the voice. For Inworld, use an ID such as `Dennis`, or one from your workspace. | Required, up to 200 characters, unique per provider. |
+| **Voice ID** | The provider's own ID for the voice. For Inworld, use an ID such as `Dennis`, or one from your workspace. For **System voice** it is a list of the voices found on this computer, grouped by speech program (**Pick a voice**); for **Google Gemini**, a list of Gemini's voices (**Pick a Gemini voice**). Picking one fills in the name too. | Required, up to 200 characters, unique per provider. |
 | **Languages** | The languages the voice speaks, as codes such as `es, de`. Play lists the voice only for projects in these languages. | 2 or 3 letter codes. Blank asks the provider when it can say; a voice with unknown languages shows as **Any (not known)** and is offered for every language. |
 
 ## Manage your voices
@@ -240,7 +275,7 @@ For projects with more than one narrator, see [Multiple-Voices](Multiple-Voices)
 
 ## Tips
 
-- The cheapest way to start: sign in to a command-line tool for text and images, and use Cartesia's free plan for narration.
+- The cheapest way to start: sign in to a command-line tool for text and images, and use the System voice (free) or Cartesia's free plan for narration.
 - A Test that passes does not prove the account has credit (except on OpenRouter). The first real generation does.
 - If you share a machine, keep Slopify bound to `127.0.0.1`: anyone who reaches its port can use your keys.
 

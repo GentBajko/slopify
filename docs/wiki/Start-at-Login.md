@@ -28,9 +28,10 @@ You are asked once, in whichever place comes first:
 | Place | Question | Answers |
 | --- | --- | --- |
 | The terminal, the first time `npx @gentbajko/slopify` starts on an interactive terminal | `Start Slopify when you log in? (Y/n)` | Enter or `y` means yes; `n` means no. It is asked after Slopify is already running, so it never holds it up. |
-| The first-run screen | **Start Slopify when I log in** | **Start when I log in** or **No thanks** |
+| The first-run screen (step 3) | **Start Slopify when I log in** | **Start when I log in** or **No thanks** |
+| After an update, when neither of those asked (an update started from the app has no terminal, and the first-run screen is only for new installs) | A one-time dialog, **Start Slopify when you log in?** | **Start when I log in** or **No thanks**. Closing it counts as No thanks. |
 
-Answering in either place, or using the switch in Settings, ends the question for good.
+Answering in any of these places, or using the switch in Settings, ends the question for good.
 
 ### In scripts
 
@@ -95,10 +96,10 @@ Output from login starts is added to `<data folder>/logs/autostart.log`. Look th
 In Docker the switch isn't used. The container restarts with Docker (`restart: unless-stopped`), so Slopify starts at login exactly when Docker does. Slopify never changes Docker's own settings.
 
 1. The `--docker` installer asks `Start Slopify when you log in? (Y/n)` once (or takes `--autostart` / `--no-autostart`).
-2. It reads, without changing, whether Docker starts by itself: `systemctl is-enabled docker.service` for the system Docker, `systemctl --user is-enabled docker.service` for rootless Docker.
-3. If Docker doesn't start by itself, it prints how to turn that on: `sudo systemctl enable docker`, or `systemctl --user enable docker` for rootless Docker.
+2. It reads, without changing, whether Docker starts by itself. With Docker Desktop (always on macOS and Windows, and on Linux when its settings file is there), that is Docker Desktop's own setting **Start Docker Desktop when you sign in**, read from its settings file. Otherwise it asks `systemctl is-enabled docker.service` for the system Docker, or `systemctl --user is-enabled docker.service` for rootless Docker.
+3. If Docker doesn't start by itself, it prints how to turn that on: with Docker Desktop, "Turn on Docker Desktop → Settings → General → Start Docker Desktop when you sign in to your computer."; with Docker Engine, `sudo systemctl enable docker`, or `systemctl --user enable docker` for rootless Docker.
 
-Settings → **General** then shows:
+Settings → **General** and the first-run screen then show (the first-run screen only informs; there is nothing to switch):
 
 | Line | Meaning |
 | --- | --- |

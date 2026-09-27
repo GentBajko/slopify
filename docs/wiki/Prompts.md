@@ -35,7 +35,7 @@ See [Title and article](Play-Title-and-Article), [Images](Play-Images), [Narrati
 
 5. Watch **Detected slots** (the keyword list) fill in as you type.
 6. For an Image prompt that draws photo-like pictures, see [Mark an image prompt as photorealistic](#mark-an-image-prompt-as-photorealistic).
-7. Press **Save**. A tick shows when it is saved.
+7. Press **Save** (or `Ctrl+S`). A tick shows when it is saved.
 
 If **Save** won't go, the sentence beside it names the first problem, such as "Enter a name." or a keyword that is never closed.
 
@@ -84,7 +84,11 @@ Each prompt's row has, in order:
 | **History** | Opens the prompt's history (below). |
 | **Delete** | Asks first, then moves the prompt to **Settings → Trash** for 30 days, where **Restore** brings it back. |
 
-Use **Search prompts** to find one by name.
+Use **Search prompts** (`/`) to find one by name. A press anywhere on a row picks it.
+
+### Rename a prompt
+
+Press the pencil (**Rename <name>**) beside the name, type the new name and press **Save name** or Enter. `Esc` or **Cancel** keeps the old one. The text stays as it is, the rename is one version in **History**, and the notice ("Renamed “A” to “B”.") has **Undo**.
 
 ## What happens when you edit a prompt
 

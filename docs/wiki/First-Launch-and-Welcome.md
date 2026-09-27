@@ -1,18 +1,20 @@
 # First Launch and Welcome
 
-The first time you open Slopify it shows you what it found on your computer, lets you make a 60-second short from a topic, and gives you three finished sample projects to explore without spending anything.
+The first time you open Slopify it walks you through three steps: what your computer already has, a style, and your first 60-second short. The short is being made by the time you finish, and three finished sample projects are there to explore while you wait, without spending anything.
 
 **Where to find it:** it opens by itself on a fresh install. Its address is `http://127.0.0.1:6969/welcome`.
 
 ## What happens the first time
 
 1. **Anonymous usage stats.** A notice lists exactly what is counted and what never is. Press **Got it** to continue. It shows once per machine. See [Install](Install#anonymous-usage-stats).
-2. **Welcome to Slopify.** Home sends you to the first-run screen once. It has five parts, described below.
-3. **Start at login.** The welcome screen offers **Start when I log in** once, unless you already answered in the terminal.
+2. **Welcome to Slopify.** Home sends you to the first-run screen once. It has three steps, shown as tabs: **1 · What you have**, **2 · Pick a style** and **3 · Make your first short**. **Next** and **Back** at the bottom move between them, and you can click a tab directly.
+3. **Start at login.** The last step offers **Start when I log in** once, unless you already answered in the terminal.
 
-The first-run screen stops appearing for good when you press **Skip**, or when your first real project exists (anything except the samples), even if you delete that project later.
+The first-run screen stops appearing for good when you press **Skip** (it reads **Done** once your short is on its way), or when your first real project exists (anything except the samples), even if you delete that project later.
 
-## Found on this computer
+## Step 1: What you have
+
+### Found on this computer
 
 Slopify looks for Claude Code, Codex and Gemini CLI and shows one row for each:
 
@@ -23,24 +25,41 @@ Slopify looks for Claude Code, Codex and Gemini CLI and shows one row for each:
 | **Installed, not usable yet** or a reason | Found, but something is missing, such as a sign-in. The reason is shown. |
 | **Not found** | Not installed, or not on the `PATH` Slopify sees. |
 
-When at least one is ready, the screen says you can make a video now without API keys for the text (and the images, with Codex).
+When at least one is ready, the step says which parts need no API key, for example "You can make a video now: no API keys are needed for the text, the images or the narration." When none is ready, it says "Nothing on this computer can write the script yet." with **Open Settings → Providers**: install and sign in to a CLI, or add an OpenRouter key.
 
-Command-line tools can't speak, so the narration always needs a voice key: OpenAI, ElevenLabs, Cartesia or Inworld, in Settings → **Providers**. See [AI CLIs](AI-CLIs) and [Providers and Keys](Providers-and-Keys).
+### Narration voice
 
-## Make a 60-second short
+The second part says who will read the script aloud:
+
+| It says | Meaning |
+| --- | --- |
+| "Narration uses your *provider* voice key." | A voice key (OpenAI, ElevenLabs, Cartesia or Inworld) is saved, so that provider narrates. |
+| "Narration uses your computer's built-in voice (*engine*); add an ElevenLabs or OpenAI key later for a better one." | No voice key, so the computer's own speech narrates, for free. See [the system voice](Providers-and-Keys#the-system-voice). |
+| "No voice can narrate the short yet." | Neither a key nor a speech program was found. Press **Add a voice key**, or install a speech program (on Linux, `espeak-ng`) and press **Check again**. |
+
+**Add a voice key** opens Settings → **Providers**. See [AI CLIs](AI-CLIs) and [Providers and Keys](Providers-and-Keys).
+
+## Step 2: Pick a style
+
+Each row is a style for the short. **General** is a neutral explainer style; the others are the starter packs (Sleep lore, True crime, History, Science explainers). Press **Use this style** on a row; it then reads **Picked**.
+
+Making the short with a pack adds that pack's script and scene prompts to your Library and its suggested voice to Settings → **Voices**. **Add to library** on a pack's row also adds its Play template, for later long videos; it then reads **In your library**. See [Starter packs](#starter-packs).
+
+## Step 3: Make a 60-second short
 
 A topic in, a captioned vertical short out, usually in about five minutes with the command-line tools. It has its own page: [Your First Short](Your-First-Short).
+
+The step repeats the style and the voice line from step 1. If no voice can narrate yet, it shows the same **Add a voice key** and **Check again** buttons.
 
 | Field | What it does | Limits |
 | --- | --- | --- |
 | **Topic** | What the short is about, in a few words or a question. A specific topic gives a sharper short than a broad one. | Up to 200 characters |
-| **Style** | The starter pack whose prompts, voice and art direction the short uses. **General** is a neutral explainer style. | General, Sleep lore, True crime, History, Science explainers |
 
-Press **Make a 60-second short**. Slopify opens the new project's page and starts it.
+Press **Make a 60-second short**. The status line says **Starting your short…**, then the step says "Your short is being made." with **Watch it being made**, which opens the project's page and its live view. While it runs, the samples and the start-at-login offer are right below.
 
 ## Explore the samples
 
-Three finished projects come with Slopify, marked **Sample** in Projects. They are read-only, so nothing you do on them reaches a paid provider.
+Three finished projects come with Slopify, marked **Sample** in Projects. Step 3 of the first-run screen lists them under **While you wait: the samples**. They are read-only, so nothing you do on them reaches a paid provider.
 
 | Sample | What it shows | Button |
 | --- | --- | --- |
@@ -82,25 +101,33 @@ Then you pick the template on Play, type a topic and start. See [Templates](Temp
 | **History** | Narrative history of people, places and events, told like a documentary. | OpenAI `fable` |
 | **Science explainers** | Clear, friendly explanations of how the world works, one idea at a time. | OpenAI `nova` |
 
-Press **Add pack** on a row. It then says **Added**.
+On the first-run screen, **Add to library** on a pack's row adds all of this; it then reads **In your library**. Making a short with a pack adds its prompts and voice only, not the template.
 
 - Adding a pack twice changes nothing.
 - It never replaces a prompt or template of yours with the same name: the pack's copy comes in as `<name> (2)`.
 - An item the pack added before and you edited is kept as you left it. One you deleted comes back.
 
-You can add packs later too, from Library → **Templates** → **Add a starter pack**.
+You can add packs later too, from Library → **Templates** → **Add pack**.
 
 ## Start when I log in
 
-The welcome screen asks once: **Start when I log in** or **No thanks**. Either answer, here, in Settings → **General** or in the terminal, ends the question. See [Start at Login](Start-at-Login).
+Step 3 of the first-run screen asks once: **Start when I log in** or **No thanks**. Either answer, here, in Settings → **General** or in the terminal, ends the question. See [Start at Login](Start-at-Login).
 
 ## Set up a long video instead
 
-At the bottom, **Set up a long video instead** takes you to Play, where you choose prompts, keywords and outputs yourself. See [Play Overview](Play-Overview).
+At the bottom of every step, **Set up a long video instead** takes you to Play, where you choose prompts, keywords and outputs yourself. See [Play Overview](Play-Overview).
 
 ## The interactive tutorial
 
-The question-mark button in the top bar (**Start interactive tutorial**) walks you through a first project: provider keys and a voice in Settings, an article prompt and an image prompt in the Library, each part of Play, then the project page. Each step highlights the real control you will use and opens its screen for you. Your place is saved, so it survives a page reload.
+The question-mark button at the foot of the sidebar (**Start interactive tutorial**) walks you through a first project in 25 steps ("3 of 25 · First project"):
+
+1. **Settings:** connect a text, a voice and an image provider, and add a narration voice.
+2. **Library:** write and save an article prompt with keywords, then an image prompt.
+3. **Play:** name the project, choose the article, keywords, narration, images, video and subtitles, then review and start the run.
+4. **The project:** follow and control the run, download the results, see what the run cost and prepare the YouTube upload.
+5. **The rest of the app:** check Home each day, set up a channel, and plan uploads on the calendar.
+
+Each step highlights the real control you will use and opens its screen for you. Your place is saved, so it survives a page reload. On the review-and-start step, **Skip generating** leaves the run unstarted and goes on to Home, Channels and the Calendar instead of ending the tutorial. Other steps have **Skip this step** (or **Skip without saving**).
 
 When Projects has no projects at all, it also shows **Make your first video** with **Start tutorial**.
 

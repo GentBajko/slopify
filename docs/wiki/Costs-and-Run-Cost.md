@@ -45,12 +45,16 @@ On a running project, the side panel shows **Cost so far**:
 - **same work via API**: the API equivalent of the CLI calls.
 - One meter per plan window a CLI reported, such as "Codex: 14% of your weekly limit". The meter turns amber once the plan is at 80% or more.
 
-When a CLI's plan is used up, the status reads **Waiting for limits** with the reset time. The run carries on by itself when the plan resets.
+When a CLI's plan is used up, the run waits instead of failing: the status reads **Waiting for limits**, for example "Waiting for Codex limits (resets at 14:00)". The run carries on by itself when the plan resets.
+
+## After a run: the run cost line
+
+When a run has ended, one line at the top of its project page, under the title, sums it up: for example `This run cost $0.42 · ~$3.10 via API · 12 min end to end`. A failed or cancelled run says **Spent so far**, and calls without a known price add "plus unpriced calls". **See cost by stage** opens the full breakdown below. The line doesn't show while the run is going, or when it spent nothing.
 
 ## After a run: the Run cost tab
 
 1. Open the project from **Projects** or **Home**.
-2. Choose the **Run cost** tab.
+2. Choose **Cost** in the section rail (or **See cost by stage** on the run cost line).
 
 If nothing has been spent yet, it says "Nothing has been spent yet. The cost of each provider call appears here as the run makes it."
 

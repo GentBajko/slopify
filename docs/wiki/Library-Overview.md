@@ -2,7 +2,7 @@
 
 The Library holds the reusable pieces your videos are made from: prompts, intros and outros, templates, PDF document themes and narration aliases. Write a piece once and pick it on Play for every video that needs it.
 
-**Where to find it:** **Library** in the left rail. It opens on **Prompts**; the tabs across the top switch sections.
+**Where to find it:** **Library** in the sidebar. It opens on **Prompts**; the tabs across the top switch sections.
 
 ## The five tabs
 
@@ -16,25 +16,34 @@ The Library holds the reusable pieces your videos are made from: prompts, intros
 
 ## What every Library list has
 
-Prompts and Intros & Outros share the same row actions, in the same order:
+Prompts, Intros & Outros and Templates share the same row actions, in the same order:
 
 | Action | What it does |
 |---|---|
-| **Edit** | Opens the item in its editor. |
-| **Duplicate** | Opens the editor with a copy, for you to rename and save. |
+| **Edit** | Opens the item in its editor. (A template has no editor: Edit picks it and shows its keywords beside the list.) |
+| **Duplicate** | Opens the editor with a copy, for you to rename and save. (A template is copied as `<name> copy` at once.) |
 | **Use in Play** | Picks the item in your open Play draft and opens Play on the field that shows it. An article prompt switches the article to Generate, an image prompt is ticked with one image, a thumbnail prompt switches the thumbnail to From prompt, and a Description or Shorts prompt turns that step on. The rest of the draft stays as it was. The button is off while Play is starting a run. |
 | **History** | Opens the item's versions, a side-by-side compare, and what uses it. See [Prompts](Prompts#history-and-versions). |
 | **Delete** | Asks first, then moves the item to **Settings → Trash** for 30 days. See [Trash](Trash). |
 
 Your document themes have Edit, Duplicate and Delete, but no Use in Play or History. Built-in themes can only be copied.
 
-Beside each list, the selected item shows its text, its **Keywords**, what it is **Used by**, and its latest change.
+A press anywhere on a row picks it; the row's own buttons still do their own thing. Beside each list, the selected item shows its text, its **Keywords**, what it is **Used by**, and its latest change.
+
+### Rename in the row
+
+In Prompts, Intros & Outros and Templates, the pencil beside a name (**Rename <name>**) turns the name into a field. Type the new name and press **Save name** or Enter; `Esc` or **Cancel** keeps the old one. Only the name changes, and the notice ("Renamed “A” to “B”.") has **Undo**. A prompt's or entry's rename is one History version; a template's is a new template version.
+
+### Save with Ctrl+S
+
+In the prompt, intro and outro and document theme editors, `Ctrl+S` (`Cmd+S`) saves, even while you are typing in a field.
 
 ## Search and filter
 
 - **Prompts** has a **Prompt kind** picker (Article, Image, Thumbnail, Narration Preparation, YouTube Description, Shorts, Review, Script (speakers)) and **Search prompts**.
 - **Intros & Outros** has **Search intros and outros**.
 - **Templates** has **Show templates of** to filter by channel.
+- Press `/` on Prompts or Intros & Outros to jump to the search box.
 
 ## Command palette shortcuts
 

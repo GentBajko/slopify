@@ -108,7 +108,7 @@ After an import, enter your provider keys again in Settings → **Providers**. F
 
 ### Disk space
 
-**Disk space** shows what Slopify stores on this computer: the total, project files (outputs plus the working files they were made from), staged uploads, and deleted projects still in the trash. Below it, every project is listed by size with its outputs and working files.
+**Disk space** shows what Slopify stores on this computer: the total, project files (outputs plus the working files they were made from), staged uploads, and deleted projects still in the trash, for example "· 2.1 GB in the trash (3 deleted projects), freed when removed for good". Below it, every project is listed by size with its outputs and working files.
 
 Deleted projects free their space when the trash removes them after 30 days, or when you choose **Delete now** in Settings → **Trash**. See [Trash](Trash).
 
@@ -121,6 +121,8 @@ On a finished project, **Keep outputs only** deletes the working files it was ma
 3. Read the confirmation and press **Keep outputs only** again.
 
 If you change that project later (edit an image, a caption style or the narration, or re-render), Slopify has to make those files again first, which takes time and provider credits. The button is disabled until the project has finished, or when nothing is left to remove.
+
+A finished project's own page offers the same in its right rail: **Free space** with **Free 1.2 GB: keep the outputs, drop the working files** (see [Project Page](Project-Page#free-space)).
 
 ### Clean orphan files
 

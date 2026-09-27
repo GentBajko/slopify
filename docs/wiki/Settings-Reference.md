@@ -2,20 +2,20 @@
 
 Every section of Settings, what each control does and its default. Sections with a page of their own are summarised here and linked for the details.
 
-**Where to find it:** the **Settings** link in the left navigation, or press `Ctrl+K` and run **Open settings**. Settings opens on **Providers**. Pick a section in the rail on the left; on a phone the rail is a row of tabs you can scroll sideways.
+**Where to find it:** **Settings** in the sidebar, or press `Ctrl+K` and run **Open settings**. Settings opens on **Providers**. Pick a section in the rail on the left; on a phone the rail is a row of tabs you can scroll sideways.
 
 ## Sections at a glance
 
 | Section | What it holds | Details |
 |---|---|---|
 | [General](#general) | Starting Slopify when you log in | [Start-at-Login](Start-at-Login) |
-| [Providers](#providers) | API keys, command-line tools, health check | [Providers-and-Keys](Providers-and-Keys), [AI-CLIs](AI-CLIs) |
+| [Providers](#providers) | API keys, command-line tools, the system voice, health check | [Providers-and-Keys](Providers-and-Keys), [AI-CLIs](AI-CLIs) |
 | [Voices](#voices) | Voice IDs for narration | [Providers-and-Keys](Providers-and-Keys#add-a-voice) |
 | [Models](#models) | Model catalogue, retired models | [Models](Models) |
 | [Playback & appearance](#playback--appearance) | Silence gap, light or dark, volume levelling | This page |
 | [Notifications](#notifications) | Browser and phone notifications | [Notifications](Notifications) |
-| [Channel links](#channel-links) | Links for `{{Name}}` placeholders in descriptions | [YouTube-Description](YouTube-Description) |
-| [YouTube Studio](#youtube-studio) | Playlist and extension pairing | [Studio-Extension](Studio-Extension) |
+| [Channel links](#channel-links) | A pointer to each channel's own links | [Channels](Channels#channel-links) |
+| [YouTube Studio](#youtube-studio) | Playlist per channel, the Studio extension's download and pairing | [Studio-Extension](Studio-Extension) |
 | [Backup & storage](#backup--storage) | Your files folder, export and import, disk space, samples | [Where-Your-Files-Live](Where-Your-Files-Live) |
 | [Backups](#backups) | The daily automatic backup | [Backups](Backups) |
 | [Trash](#trash) | Deleted items, kept 30 days | [Trash](Trash) |
@@ -41,7 +41,7 @@ You can also press `Ctrl+K` and run **Download diagnostics** from anywhere in Se
 |---|---|---|
 | **Start Slopify when I log in** | Slopify starts in the background when you log in, without opening a browser tab; open it from your bookmark. It uses your account's own start-up list, so no administrator password is needed, and turning it off removes exactly what it added. | Off |
 
-In Docker, this section only shows whether Docker starts at login ("Starts with Docker: yes / no / unknown") and where to change that; Slopify starts whenever Docker does and never changes Docker's own settings. See [Start-at-Login](Start-at-Login).
+In Docker, this section only shows whether Docker starts at login ("Starts with Docker: yes / no / unknown"), when the installer checked, and where to change that. With Docker Desktop it names Docker Desktop's own setting: Docker Desktop → Settings → General → **Start Docker Desktop when you sign in to your computer**. Slopify starts whenever Docker does and never changes Docker's own settings. See [Start-at-Login](Start-at-Login).
 
 ## Providers
 
@@ -49,13 +49,15 @@ In Docker, this section only shows whether Docker starts at login ("Starts with 
 
 | Control | What it does |
 |---|---|
-| Provider lists (**Text**, **Speech**, **Images**) | Every supported provider with its state. Pick one to open its setup. |
+| Provider lists (**Text**, **Speech**, **Images**) | Every supported provider with its state and kind (**Command line**, **Built in, no key** or **API key**). Pick one to open its setup. |
 | **<Provider> API key** and **Save** | Stores a key on this computer only. Never in backups or exports. |
-| **Test** | Checks the saved key with the cheapest harmless call. Nothing is billed. |
+| **Test** | Checks a pasted key before you save it (without storing it), or the saved key when the field is empty, with the cheapest harmless call. Nothing is billed. |
+| **System voice** | Shows the speech program found on this computer and its voices, or what to install, with **Add a system voice**. See [the system voice](Providers-and-Keys#the-system-voice). |
 | **Remove** | Deletes the saved key after you confirm with **Remove key**. |
 | **Where to get a key** | The provider's own sign-up, key and billing pages, with the permissions a key needs. |
 | **Change path** / **Executable path** / **Save path** | Where a command-line tool is. Blank finds it on PATH. Shows **Managed on host** in Docker. |
-| **Check all** | Checks every tool's sign-in, every saved key and every chosen model. Results show under **Health check**. |
+| **Check all** | Checks every tool's sign-in, the system voice, every saved key, whether each chosen model is still offered and reachable with your key (**Model reachable**). Results show under **Health check**. |
+| **Check again** | On one provider's health row: checks that provider alone. |
 
 On a first launch you may also see the welcome message about command-line tools that were found, with **Got it** to hide it. Full details: [Providers-and-Keys](Providers-and-Keys) and [AI-CLIs](AI-CLIs).
 
@@ -67,7 +69,7 @@ On a first launch you may also see the welcome message about command-line tools 
 |---|---|---|
 | **Voice name** | The name you pick the voice by on Play and in Edit project. | Required, up to 200 characters. |
 | **Provider** | The speech provider the ID belongs to. | Speech providers only. |
-| **Voice ID** | The provider's own ID for the voice. | Required, up to 200 characters, unique per provider. |
+| **Voice ID** | The provider's own ID for the voice. For **System voice** and **Google Gemini** it is a list to pick from. | Required, up to 200 characters, unique per provider. |
 | **Languages** | Codes such as `es, de`. Play lists the voice only for projects in these languages. | Blank: asked from the provider when it can say; otherwise offered for every language. |
 | **Add voice** | Adds the voice to the table. | |
 | **Edit** (Languages cell) | Changes a voice's languages; **Save** or **Cancel**. | |
@@ -88,7 +90,7 @@ See [Providers-and-Keys](Providers-and-Keys#add-a-voice).
 | **Switch to <model>** | Replaces one retired model choice with the suggestion shown. |
 | **Switch all** | Replaces every retired choice that has a suggestion. |
 
-See [Models](Models).
+Templates and schedules that pick a retired model are also flagged on their own rows, with the same **Switch to <model>**. See [Models](Models).
 
 ## Playback & appearance
 
@@ -134,13 +136,7 @@ Messages hold the project title and what happened, never your keys. See [Notific
 
 "The links a YouTube description's {{Name}} placeholders fill from."
 
-| Control | What it does |
-|---|---|
-| **Named links** | A list of name and address pairs, such as `Patreon` and its URL. Write `{{Patreon}}` in a YouTube description, or ask for it in a Description prompt, and it becomes that link when the description is shown or copied. A name with no link stays as typed. |
-| **Add link** / **Remove** | Adds or removes a row. |
-| **Save** | Saves the list. |
-
-A project's own **Previous video** link wins over one set here. With no links yet, the section says "No channel links yet. Add one, then write its name in braces in a description." See [YouTube-Description](YouTube-Description).
+Each channel now keeps its own links, on its **Brand** tab under **Channel links**. This section only says so, with **Open the default channel's links**. Links saved here in an earlier version still fill the default channel's descriptions until you save its Brand tab. See [Channels](Channels#channel-links) and [YouTube-Description](YouTube-Description).
 
 ## YouTube Studio
 
@@ -149,9 +145,10 @@ A project's own **Previous video** link wins over one set here. With no links ye
 | Control | What it does | Default / limit |
 |---|---|---|
 | **Upload pack and extension** | Explains that Slopify never uploads or publishes: **Prepare upload** on a finished project lists everything Studio asks for, and the optional extension fills Studio's upload dialog from it. | |
-| **Playlist** | The YouTube playlist every upload pack names, typed exactly as it is called in Studio. **Save** stores it. Empty means no playlist. | Empty; up to 150 characters |
+| **Playlist** | The YouTube playlist upload packs name, typed exactly as it is called in Studio. Pick **Every channel (default)** or one channel first: the default is used by every channel without its own. **Save** stores it. Empty means no playlist (or, for a channel, the default). | Empty; up to 150 characters |
 | **Extension pairing token** | A secret the Slopify Studio extension needs before it may read your upload packs. **Copy** it into the extension's options and press Pair there. | |
-| **New pairing token** | Makes a fresh token and unpairs the extension until you paste the new one. | |
+| **New pairing token** | Makes a fresh token, unpairs the extension until you paste the new one, and clears the uploads waiting for Studio. | |
+| **Install the Studio extension** | **Chrome, Edge, Brave** or **Firefox**, then **Download for Chrome** or **Download for Firefox**, with the three install steps. | |
 
 See [Studio-Extension](Studio-Extension) and [Publishing-to-YouTube](Publishing-to-YouTube).
 
@@ -184,7 +181,7 @@ After importing, enter your keys again in Settings → Providers. You can also r
 | Control | What it does |
 |---|---|
 | **Disk space** | What Slopify stores: the total, project files, staged uploads, and deleted projects still in the trash (freed when the trash removes them after 30 days, or with **Delete now**). |
-| Storage by project | Each project's size, split into outputs and working files, largest first. |
+| Storage by project | Each project's size, split into outputs and working files, largest first. A finished project's page offers the same on its own (**Free space**, see [Project Page](Project-Page#free-space)). |
 | **Keep outputs only** | On a finished project, deletes the working files (images, narration parts, subtitle timing, render settings) and keeps the video, shorts, thumbnail, article, description, document and your uploads. You confirm first. Changing the project later makes those files again, which takes time and provider credits. |
 
 ### Sample projects
@@ -243,7 +240,7 @@ The notes ship with the app, so they work offline. After an update, the new vers
 
 | Control | What it does |
 |---|---|
-| **Updates** | Points to the circular-arrows button at the top of every page, which checks for a newer Slopify and installs it. A dot on it means an update is ready. If a video is being made, the update waits until it finishes, and you can cancel it meanwhile. Slopify restarts itself and the page reconnects. |
+| **Updates** | Points to the circular-arrows button (at the foot of the sidebar), which checks for a newer Slopify and installs it. A dot on it means an update is ready. If a video is being made, the update waits until it finishes, and you can cancel it meanwhile. Slopify restarts itself and the page reconnects. |
 | **What's new in this version** | Opens the patch notes for the version you are running. When this version has no notes of its own, it opens the newest ones. |
 | Links | GitHub (code, issues, releases), Patreon, Buy Me a Coffee, and "How I run a channel with it". |
 

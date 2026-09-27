@@ -9,7 +9,7 @@ Two tools control how the narrator says words without changing what is written. 
 ### Add aliases
 
 1. Open **Library → Aliases**.
-2. Press **Add alias**. A new row appears.
+2. Press **Add alias**. A new row appears in the list, titled **Alias N**, with its fields under it.
 3. Fill in the row:
 
 | Column | What it does | Default / limit |
@@ -32,7 +32,7 @@ Examples:
 | `vs.` | versus |
 | `NASA` | nasa |
 
-To remove one, press its remove button and then **Save aliases**.
+Each row's title line sums it up, for example "Says Dr. as Doctor · whole word", or "Not filled in yet". To remove one, press its bin button (**Remove alias N**) and then **Save aliases**. On a wide screen, how aliases are used is explained beside the list.
 
 ### Rules
 

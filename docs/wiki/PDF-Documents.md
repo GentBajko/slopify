@@ -11,7 +11,7 @@ Slopify can lay out your article as a styled PDF: a title page with the thumbnai
 3. Pick a **Theme**: the built-in **Plain**, or one of your own themes from Library → Documents.
 4. Start the run.
 
-The Document stage runs after the article (and the thumbnail, if there is one) is ready. It needs an article with some text; an empty article stops the stage with a message pointing you to Edit project → Article.
+The Document stage runs after the article (and the thumbnail, if there is one) is ready. A thumbnail that failed or was cancelled doesn't hold it back: the PDF is then laid out without a cover. It needs an article with some text; an empty article stops the stage with a message pointing you to Edit project → Article.
 
 ## Options
 
@@ -51,7 +51,7 @@ The title page uses the project's thumbnail as its cover when:
 - the thumbnail is a PNG, JPEG or WebP image, and
 - the theme's cover setting is on (it is in Plain).
 
-Otherwise the title page has no cover and the details sit in the theme's usual place. If the thumbnail file can't be read, the Document stage stops and asks you to regenerate or upload the thumbnail again, then use **Try again** on Document.
+Otherwise the title page has no cover and the details sit in the theme's usual place. That includes a thumbnail step that failed or was cancelled: the PDF is made anyway, without a cover. If you make the thumbnail later, the PDF is marked outdated, so you can remake it with the cover. If the thumbnail file can't be read, the Document stage stops and asks you to regenerate or upload the thumbnail again, then use **Try again** on Document.
 
 ### Sources
 

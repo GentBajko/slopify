@@ -105,7 +105,9 @@ Rows that cannot be switched here say why and what to do:
 
 When nothing is affected, the section says **Nothing uses a retired model.**
 
-**Check all** in Settings → Providers also reports retired models under **Chosen models**. See [Providers-and-Keys](Providers-and-Keys#check-all-providers).
+You don't have to come here to see it: a template or schedule that picks a retired model is flagged on its own row in **Library → Templates** and **Calendar → Edit schedules**, with the same **Switch to <model>** button. See [Templates](Templates#retired-models) and [Schedules](Schedules#manage-a-schedule).
+
+**Check all** in Settings → Providers also reports retired models under **Chosen models**, and **Model reachable** asks each keyed provider whether it still answers for the models you chose. See [Providers-and-Keys](Providers-and-Keys#check-all-providers).
 
 ## When a run reaches a model that is gone
 

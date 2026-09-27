@@ -2,7 +2,7 @@
 
 Shorts turns the best moments of your long video into vertical clips for YouTube Shorts, TikTok and Reels, with no editing on your part. After the narration is timed, the text model picks self-contained moments; each becomes a 1080×1920 (9:16) clip with new images, big word-by-word captions and its own title, description and hashtags.
 
-**Where to find it:** Play → **Outputs** row → **Shorts**. On a finished project: the Video section's shorts grid, and Edit project → **Shorts**.
+**Where to find it:** Play → **Outputs** row → **Shorts**. On a finished project: the **Shorts** section, and Edit project → **Shorts**.
 
 ## What you get
 
@@ -22,7 +22,7 @@ Shorts are made in the Video stage, beside the long video's render. They need na
 2. Tick **Shorts**. It is greyed out, with "Needs narration", when the Narration row is off.
 3. Set **How many** and **Length**.
 4. Optionally pick a **Shorts prompt** and an **Image style** from your Library.
-5. Open **More shorts options** to set the title, speed, music and full video link. The disclosure's summary names what differs from the defaults, such as "Title on screen · 1.10× · Full video linked".
+5. Open **More shorts options** to set the title, speed, music and full video link. The disclosure's summary names what differs from the defaults, such as "Title on screen · 1.10× · Full video linked". The [Shorts preview](#shorts-preview) shows the result as you change them.
 6. Check the estimate in the right rail and start the run.
 
 ## Options
@@ -42,6 +42,10 @@ Shorts are made in the Video stage, beside the long video's render. They need na
 
 Write your own Shorts prompts and Image prompts in **Library → Prompts** ([Prompts](Prompts)). To match the long video's look, pick one of your own Image prompts as the Image style.
 
+## Shorts preview
+
+While **More shorts options** is open (on Play, or in Edit project → **Shorts**), **Shorts preview** ("A few seconds of the sample as a short, rendered with your settings") renders a few seconds of the bundled sample project as a 9:16 short, through the same renderer real shorts use: the big word-by-word captions in your caption font, the title on screen when **Title on screen** is on (the sample's title, "The Library of Alexandria"), and your **Speed**. The line under it reads, for example, "Title on screen · 1.10×". It renders on your computer at no cost; **Render again** forces a fresh one.
+
 ## What it costs
 
 - **Picking:** one text-model call picks the moments, then one call per short writes its image prompts.
@@ -53,13 +57,11 @@ With the establishing image on, the shorts' images are drawn with it as a refere
 
 ## See, copy and download your shorts
 
-When the run finishes, the project page's Video section shows a grid headed with the count, for example **3 shorts · 9:16**. Each short has:
+When the run finishes, the project page's **Shorts** section shows a grid headed with the count, for example **3 shorts · 9:16**. Above the grid, one lime **Download** holds every short's MP4 in a menu (**Download the short** when there is one), with **Open folder** and **Pick different moments** beside it. Each short has:
 
-- A vertical player, its title and length.
+- A vertical player (Slopify's own, showing the short's first picture until it plays), its title and length.
 - Its description, the full video line and its hashtags.
-- **Copy**, which puts the title, description (with the full video line) and hashtags on the clipboard in one go.
-- **Download**, for the MP4.
-- **Make this short again**.
+- One row of icon buttons whose names show when you point at them: **Download** (the short's MP4; left out when there is only one short, since the section's Download already fetches it), **Copy title, description and hashtags**, which puts all three on the clipboard in one go, and **More**, which holds **Make short N again**.
 
 While the stage runs, a short not rendered yet says how far it got, such as "Making images · 2 of 5" or "Rendering". A short that failed says so and points you to Error details in the Video section.
 
@@ -67,7 +69,7 @@ To upload them, open **Prepare upload**: each short is listed on its own, with i
 
 ## Change the picked moments
 
-1. Open the project and press **Edit project**, then open **Shorts**. (**Make this short again** on the project page opens the same place with the change made.)
+1. Open the project and press **Edit settings**, then open **Shorts**. (**Make short N again** on the project page opens the same place with the change made.)
 2. Under **Picked clips**, each clip is shown by its first and last sentence.
 3. Move a clip with **Earlier start**, **Later start**, **Earlier end** and **Later end**, one sentence at a time.
 4. Or press **Use my own range** and pick the **Start sentence** and **End sentence** from the lists. **Back to the AI's choice** restores the model's pick.
@@ -80,7 +82,7 @@ A clip must stay between the shortest and longest length you set and must not ov
 | Action | What happens when you save and continue the run | Cost |
 |---|---|---|
 | **Pick different moments** | The text model picks new moments. Ranges you set by hand are dropped. A new clip on the same sentences as an old one keeps its images; any other clip gets new images and is rendered again. **Keep the current moments** cancels it. | One text call, plus one image call per new image |
-| **Make this short again** | This one short's image prompts are written again, its images drawn again and the short rendered again. Its moment, title and the other shorts stay as they are. | One image call per image |
+| **Make short N again** | This one short's image prompts are written again, its images drawn again and the short rendered again. Its moment, title and the other shorts stay as they are. | One image call per image |
 | Change **How many**, **Length** or **Shorts prompt** | The moments are picked again, as with Pick different moments. | As above |
 
 ## Add background music

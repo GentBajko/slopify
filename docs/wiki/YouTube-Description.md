@@ -2,7 +2,7 @@
 
 Slopify can write your video's YouTube description for you: a short summary, chapters at the narration's real times, hashtags, and a separate list of search tags. Each part has a Copy button and can be edited in place, and your edits survive when the description is written again.
 
-**Where to find it:** Play → **Outputs** row → **YouTube description**. On a finished project: the Video section's YouTube part (Description and Tags), and Edit project → **Prompts**.
+**Where to find it:** Play → **Outputs** row → **YouTube description**. On a finished project: the **YouTube** section (Description and Tags), and Edit project → **Prompts**.
 
 ## What you get
 
@@ -42,20 +42,20 @@ To change the tone or add your own links, write a prompt of the kind **YouTube D
 
 ## Read and copy it
 
-When the step has run, the project page's Video section shows two parts:
+When the step has run, the project page's **YouTube** section shows two parts. A finished project with a written description opens on this section, so copying it is one press:
 
 - **Description**, with the Summary, Chapters and Hashtags, a character count such as `1,240 / 5000 characters`, and **Copy**.
 - **Tags**, shown as chips, with a count against YouTube's 500-character limit and **Copy**.
 
 **Copy** on Description copies the whole description, placeholders filled in. **Copy** on Tags copies them comma-separated, ready to paste. A count over YouTube's limit turns red and says "over YouTube's limit".
 
-You can also run **Copy description** and **Copy tags** from the command palette (`Ctrl+K`) while the project is open. See [Keyboard-Shortcuts-and-Command-Palette](Keyboard-Shortcuts-and-Command-Palette).
+You can also run **Copy description** (`Shift+D`) and **Copy tags** from the command palette (`Ctrl+K`) while the project is open. The **YouTube description (.txt)** and **YouTube tags (.txt)** downloads are the text exactly as the page shows it: your edits, the fitted chapters and the filled links. See [Keyboard-Shortcuts-and-Command-Palette](Keyboard-Shortcuts-and-Command-Palette).
 
 While the stage is running the parts say "Written after the subtitle timing."; before it starts they say "Not written yet. It is made with the video."
 
 ## Edit a part
 
-1. In the project's YouTube part, press **Edit** beside Summary, Chapters, Hashtags or Tags.
+1. In the project's YouTube section, press **Edit** beside Summary, Chapters, Hashtags or Tags.
 2. Change the text and save.
 
 Your text is now marked **Your edit**. It is kept as yours:
@@ -81,21 +81,25 @@ When anything was changed, a note under the chapters starts with "Chapters adjus
 
 Write a name in double braces, such as `{{Patreon}}` or `{{Discord}}`, in a description, a hand edit, or in your Description prompt (asking the model to include it). When the description is shown or copied, it becomes the link of that name.
 
-1. Open **Settings → Channel links**.
-2. Under **Named links**, press **Add link**, type the name (for example `Patreon`) and the address, and press **Save**.
+Each channel has its own links:
 
-Names match without regard to case or extra spaces. A placeholder with no saved link stays as typed, is marked, and the YouTube part says "No link is saved for {{Name}}, so it stays as typed."
+1. Open **Channels** → the project's channel → **Brand**.
+2. Under **Channel links**, press **Add link**, type the name (for example `Patreon`) and the address, and press **Save channel**.
+
+A description takes the links of its project's channel. Names match without regard to case or extra spaces. A placeholder with no saved link stays as typed, is marked, and the YouTube section says "No link is saved for {{Name}}, so it stays as typed. Add it under Channel links on the channel's Brand tab."
+
+Links saved in **Settings → Channel links** before each channel had its own still fill the default channel's descriptions until you save that channel's Brand tab. See [Channels](Channels#channel-links).
 
 ### Previous video
 
 `{{Previous video}}` is special: each project can have its own.
 
-1. In the project's YouTube part, paste the link under **Previous video for this project**.
+1. In the project's YouTube section, paste the link under **Previous video for this project**.
 2. Press **Save links**.
 
-The project's link wins over a **Previous video** link saved in Settings → Channel links. It changes only what is shown and copied, with no text-model call.
+The project's link wins over a **Previous video** link in the channel's links. It changes only what is shown and copied, with no text-model call.
 
-Because placeholders are filled when shown or copied, changing a link in Settings changes every description at once.
+Because placeholders are filled when shown or copied, changing a channel's link changes every description of that channel at once.
 
 ## Write it again, or turn it on later
 

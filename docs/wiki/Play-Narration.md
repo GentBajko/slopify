@@ -25,7 +25,7 @@ With **Provide**, the file is used as is: "Uploaded narration is used as-is; inc
 
 | Option | What it does | Default |
 | --- | --- | --- |
-| **TTS** | The text-to-speech service, charged per character of text. Changing it clears the model and voice. | Your Settings default |
+| **TTS** | The text-to-speech service, charged per character of text: ElevenLabs, OpenAI, Cartesia, Inworld, Google Gemini, or **System voice**, your computer's own speech, which is free (greyed as **Speech Program Missing** when none is found; see [the system voice](Providers-and-Keys#the-system-voice)). Changing it clears the model and voice. | Your Settings default |
 | **TTS model** | The provider's speech model. Models differ in quality, languages, speed and price per character. Narration Preparation needs Inworld TTS-2. The refresh button asks the provider for its current list; **Custom ID** lets you type one. | Your Settings default |
 | **Voice** | Who reads the narration: the voices you added under Settings → Voices for this provider, filtered to the project's language. With several speakers, this voice reads the intro and outro. | None |
 | **Show all voices** | The voice list hides voices listed for other languages than the project's. Tick this to pick one anyway, for example a multilingual voice whose languages are listed wrong. The label says how many are hidden. A voice with unknown languages is always shown. | Off |
@@ -61,7 +61,7 @@ Has the text model add delivery directions and sounds, such as a sigh or a laugh
 | --- | --- | --- |
 | **Narration Preparation** | Pick a narration prompt from the Library, or **Off**. One text-model call per narration chunk and per intro or outro entry. | Off |
 
-It needs the Inworld TTS-2 model. With another model, the field says "Choose Inworld TTS-2 or turn preparation Off." With several speakers, at least one speaker must use Inworld TTS-2. When preparation is on, the row offers **Choose text generation under Article** to jump to the text model.
+It needs the Inworld TTS-2 model. With another model, the field says "Choose Inworld TTS-2 or turn preparation Off." With several speakers it works per speaker: each turn of a speaker on Inworld TTS-2 is prepared on its own, with the speaker's name and role, so every voice gets its own cues. At least one speaker must use TTS-2; turns of speakers on other voices are spoken as written. See [Multiple Voices](Multiple-Voices). When preparation is on, the row offers **Choose text generation under Article** to jump to the text model.
 
 ### Pronunciation Glossary
 
@@ -152,7 +152,7 @@ Folded, the Narration row shows the provider and voice (or the speakers format a
 ## Tips
 
 - If a provider refuses long requests, switch **Chunking** to **Paragraph** or **Every 500 words**. The characters charged stay the same.
-- Listen to the narration on the project page before publishing. Fix a single chunk there instead of re-running everything. See [Editing a Project](Editing-a-Project).
+- Listen to the narration on the project page before publishing, in Slopify's own player (see [Project Page](Project-Page#the-players)). Fix a single chunk there instead of re-running everything. See [Editing a Project](Editing-a-Project).
 - An automatic review can check the narration for missing or garbled passages. See [Reviews and Checkpoints](Reviews-and-Checkpoints).
 
 ## Related pages

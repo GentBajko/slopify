@@ -2,7 +2,7 @@
 
 A schedule starts a new project from a saved template at a set local time: every day, on chosen weekdays, or once. Give it a list of topics and each run takes the next one. Turn on topic generation and it asks your text model for new topics before the list runs dry.
 
-**Where to find it:** **Calendar → Edit schedules** (the `/schedules` page sits under the Calendar item in the left rail). A channel's **Schedules** tab lists the schedules that run its templates.
+**Where to find it:** **Calendar → Edit schedules** (the `/schedules` page sits under the Calendar item in the sidebar). A channel's **Schedules** tab lists the schedules that run its templates.
 
 ## Before you start
 
@@ -20,7 +20,7 @@ A schedule starts a new project from a saved template at a set local time: every
 6. Optional: set up **Topic generation**, a **Spend ceiling** and what happens to a **Missed run**.
 7. Press **Save schedule**.
 
-The schedule appears under **Saved schedules** with its status, next run and the title that run will get.
+The schedule appears under **Saved schedules** with its status, next run and the title that run will get. A press anywhere on a schedule's row opens it.
 
 ## When it runs
 
@@ -44,7 +44,7 @@ Each run takes the first topic, starts one project with it and removes it from t
 
 **Each topic fills** is the template keyword a topic replaces, such as `{{Topic}}`. By default it is the keyword the template's project title uses, or else the first one. If the title doesn't use this keyword, every project gets the same title.
 
-Every other keyword of the template has an **Every-run value**: the value it gets on every run, such as a word count. The default is the template's own value. A topic can set its own value for any keyword, which wins for that one run.
+Every other keyword of the template has an every-run value: the value it gets on every run, such as a word count. The fields are labelled `<keyword> (every run)` and use the same keyword list as Play, Edit project and templates: the line under each says which prompts it feeds ("Feeds …"), or "Not used by any picked prompt". The default is the template's own value. A topic can set its own value for any keyword, which wins for that one run; the field then notes "Unless a topic sets its own."
 
 ### Three ways to write the list
 
@@ -72,6 +72,17 @@ A JSON array of the same shape works too. Values are read as the text written, s
 
 The schedule saves only once the list reads. **Copy as YAML** and **Export as YAML** give you the queue in this shape.
 
+### Edit the queued topics in place
+
+Pick a schedule in the list to see its **Queued topics · N**. You can change the queue there without opening the form:
+
+- **Add topic**: type in **New topic** and press **Add topic** (or Enter). It goes to the end of the queue.
+- **Rename**: each topic is a field (**Topic 1**, **Topic 2**, …). Change the words and press Enter or click away to save; `Esc` puts the old words back.
+- **Move up** / **Move down**: the arrow buttons beside a topic.
+- **Remove**: the remove button beside a topic.
+
+Each change saves at once and says so, for example "Renamed to “Hypatia of Alexandria”.", with **Undo** on the notice. Only the queue changes; the next run and the other settings stay as they are. If the schedule changed in another tab meanwhile, the change is refused with the reason; reload and try again.
+
 ## Topics that find themselves
 
 Under **Topic generation**, a schedule can ask an LLM for its next topics so it never runs dry.
@@ -87,8 +98,8 @@ Under **Topic generation**, a schedule can ask an LLM for its next topics so it 
 
 1. When the queue (plus held topics) drops below your number, Slopify starts one generation in the background. It checks about every 15 seconds.
 2. It makes one LLM call for what is missing plus 5 spare, at most 50 topics.
-3. The call carries the series brief and every title already known: this schedule's queued, held, rejected and used topics, every project's title, and the channel's **Existing videos** (see [Channels](Channels)).
-4. Suggestions come back ranked most view-worthy first. Slopify drops near-duplicates of titles it already knows, for example "Hypatia" and "Hypatia's Library" count as one video, while "Ptolemaic Egypt" and "Roman Egypt" are two.
+3. The call carries the series brief and every title already known: this schedule's queued, held, rejected and used topics, the titles of the projects in the schedule's own channel, and that channel's **Existing videos** (see [Channels](Channels)). Another channel's videos don't count: two channels may cover the same subject.
+4. Suggestions come back ranked most view-worthy first. Slopify drops near-duplicates of titles it already knows, for example "Hypatia" and "Hypatia's Library" count as one video, while "Ptolemaic Egypt" and "Roman Egypt" are two. A topic of one or two words only counts as made when a part of a title (split at `:`, `|`, brackets, `?` and similar) holds exactly those words, leaving aside words like "who", "what" or "explained": "Cleopatra" matches "Who was Cleopatra? The Last Pharaoh", but "Egypt" does not match "The Gods of Ancient Egypt".
 5. The rest join the queue, or wait for you under **Topics waiting**.
 
 Only one generation per schedule runs at a time. A failed try shows its reason on the schedule and is tried again 5 minutes later, not in a loop. A schedule with generation on keeps going when its queue empties; a run that finds no topic is skipped with the reason, instead of running the template without one.
@@ -102,7 +113,7 @@ Press **Generate topics now** to ask for new topics at once: at least 5, even wh
 When **New topics** is **Generate and hold for approval**, suggestions wait under **Topics waiting** on the schedule (and under **Suggested topics** on the [Calendar](Calendar)):
 
 - **Approve** adds one to the end of the queue.
-- **Edit** changes its words first.
+- **Edit** changes its words first, and can set the template's other keywords for that topic's run: one field per keyword, showing the every-run value (or the template's) as its placeholder. Press **Save**. The values are checked like the queue's and go with the topic into the queue when you approve it. A held row shows the values it sets, for example `Min. Word Count: 12000`.
 - **Reject** drops it for good; it is never suggested again.
 - **Approve all** queues every one in order.
 
@@ -119,6 +130,7 @@ Pick a schedule in the list to see its detail: **When**, **Timezone**, **Next ru
 | **Cancel schedule** | Stops future runs for good. Existing projects and run history are kept. |
 | **Delete schedule** | Moves the schedule to **Settings → Trash** for 30 days. Its run history is kept. Restore brings it back paused. |
 | **Filter schedules by channel** | Shows only one channel's schedules. |
+| **Switch to <model>** | Shown under a schedule whose template picks a retired model, with "<model> is retired." Switches that model to its replacement in one press, as in Settings → **Models**. See [Models](Models). |
 
 **Run history** lists each run with its status (running, done, failed, skipped and so on), the time it was due, and either the project it made or the reason it didn't run. Deleted schedules are listed under **Deleted schedules** at the bottom; pick one to see its history.
 

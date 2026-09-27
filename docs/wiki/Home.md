@@ -2,14 +2,16 @@
 
 Slopify turns a prompt and a few keywords into a narrated, captioned video. It writes the article, narrates it, makes the images and cuts the video, and can also give you shorts, a PDF of the article and a ready-to-paste YouTube description. It runs as a local web app on your own machine, with your own provider keys or the Claude Code, Codex or Gemini CLI you already use. It is free.
 
-These pages cover Slopify 3.0.0: every screen, every setting and every workflow, step by step.
+These pages cover Slopify 3.0: every screen, every setting and every workflow, step by step.
+
+**Read them inside Slopify too:** the same pages are under **Help → Tutorials** in the app (the address is `/help/tutorials/<Page>`, for example `/help/tutorials/Install`), with a search box over all of them. From the command palette (`Ctrl+K`), **Open tutorial: <page>** jumps straight to one. See [Keyboard and Ctrl+K](Keyboard-Shortcuts-and-Command-Palette#open-a-tutorial-page).
 
 ## Start here
 
 1. [Install](Install) Slopify (Node 26 or newer) or run it in [Docker](Docker).
 2. Open it at `http://127.0.0.1:6969` and follow [First launch and welcome](First-Launch-and-Welcome).
-3. Make [your first 60-second short](Your-First-Short).
-4. Add the keys you want in [Providers and keys](Providers-and-Keys), or sign in to an [AI CLI](AI-CLIs).
+3. Make [your first 60-second short](Your-First-Short). With a signed-in CLI and your computer's own voice it needs no keys at all.
+4. Add the keys you want in [Providers and keys](Providers-and-Keys) (press **Test** to check a key before you save it), or sign in to an [AI CLI](AI-CLIs).
 5. Make a full video from [Play](Play-Overview).
 
 ## How a video gets made
@@ -27,9 +29,9 @@ These pages cover Slopify 3.0.0: every screen, every setting and every workflow,
 |---|---|
 | [Install](Install) | Installing with npx or npm, command-line options, ffmpeg, telemetry |
 | [Docker](Docker) | Running Slopify in Docker with the compose file and the CLI helper |
-| [First launch and welcome](First-Launch-and-Welcome) | The welcome screen, the three samples, Make my own copy, starter packs |
+| [First launch and welcome](First-Launch-and-Welcome) | The three-step first run, the three samples, Make my own copy, starter packs |
 | [Your first short](Your-First-Short) | A 60-second short from topic to finished video |
-| [Home and Projects](Home-and-Projects) | The Home dashboard, the navigation and the Projects list |
+| [Home and Projects](Home-and-Projects) | The sidebar, the Home dashboard and the Projects list |
 | [Where your files live](Where-Your-Files-Live) | Documents/Slopify, the data folder and moving your files |
 | [Start at login](Start-at-Login) | Starting Slopify when you log in |
 | [Updating and patch notes](Updating-and-Patch-Notes) | Updating, going back, and reading patch notes |
@@ -38,10 +40,10 @@ These pages cover Slopify 3.0.0: every screen, every setting and every workflow,
 ### Providers
 | Page | What it covers |
 |---|---|
-| [Providers and keys](Providers-and-Keys) | Every API provider, adding and checking keys, Settings → Voices |
+| [Providers and keys](Providers-and-Keys) | Every API provider, testing and saving keys, the system voice, Settings → Voices |
 | [AI CLIs](AI-CLIs) | Claude Code, Codex and Gemini CLI: sign-in, use and plan limits |
 | [Models](Models) | The model catalogue, retired models and switching |
-| [Costs and run cost](Costs-and-Run-Cost) | Cost estimates, the Run cost tab and usage |
+| [Costs and run cost](Costs-and-Run-Cost) | Cost estimates, the run cost line, the Run cost tab and usage |
 
 ### Making a video
 | Page | What it covers |
@@ -66,10 +68,10 @@ These pages cover Slopify 3.0.0: every screen, every setting and every workflow,
 ### The project page
 | Page | What it covers |
 |---|---|
-| [Project page](Project-Page) | The next action, the tabs, Live, downloads, pause and resume |
+| [Project page](Project-Page) | The next action, the run cost line, time left, downloads, the players, freeing space |
 | [Editing a project](Editing-a-Project) | Edit project, remaking outdated work, the rebuild review, history |
 | [Video editing](Video-Editing) | Video, caption, subtitle and ambient sound controls on a project |
-| [Recovery and retries](Recovery-and-Retries) | Fix-it buttons, retries and waiting out plan limits |
+| [Recovery and retries](Recovery-and-Retries) | Fix-it buttons, retries and waiting for plan limits |
 | [Trash](Trash) | Deleted projects and how to get them back |
 
 ### Publishing
@@ -83,7 +85,7 @@ These pages cover Slopify 3.0.0: every screen, every setting and every workflow,
 |---|---|
 | [Templates](Templates) | Saving and reusing a setup |
 | [Schedules](Schedules) | Videos on a cadence, topic lists and self-filling topics |
-| [Calendar](Calendar) | What is coming up, and moving it |
+| [Calendar](Calendar) | What needs you, what is coming up, the video queue |
 | [Notifications](Notifications) | Browser and phone (ntfy) notifications |
 | [Backups](Backups) | Automatic backups, export and import |
 
@@ -112,4 +114,6 @@ These pages cover Slopify 3.0.0: every screen, every setting and every workflow,
 
 ## Getting help inside the app
 
-Every setting in Slopify has an info button beside it that explains what it does. If something goes wrong, the project page shows a button that names the fix. See [Troubleshooting](Troubleshooting) for the rest.
+Every setting in Slopify has an info button beside it that explains what it does. If something goes wrong, the project page shows a button that names the fix. The question-mark button at the foot of the sidebar starts the interactive tutorial.
+
+These pages ship inside Slopify too, so they work offline and match the version you run: the book button beside the question mark opens **Help → Tutorials**, with the same groups as this wiki's sidebar and a search across every page. Many info buttons end in **Learn more**, which opens the matching section there, and `Ctrl+K` → **Open tutorial: <page>** opens any page. See [Troubleshooting](Troubleshooting) for the rest.

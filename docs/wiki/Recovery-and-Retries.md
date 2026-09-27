@@ -1,6 +1,6 @@
 # Recovery and Retries
 
-Provider calls fail now and then: a rate limit, a timeout, a dropped connection, a refused prompt. Slopify retries what time can fix by itself, waits out used-up CLI plans, and for everything else puts one button on the project page that fixes the cause or walks you through it. Work already made is never thrown away.
+Provider calls fail now and then: a rate limit, a timeout, a dropped connection, a refused prompt. Slopify retries what time can fix by itself, waits for used-up CLI plans instead of failing, and for everything else puts one button on the project page that fixes the cause or walks you through it. Work already made is never thrown away.
 
 **Where to find it:** a project → the next action panel in the right rail, and the failed step's own section.
 
@@ -47,9 +47,11 @@ The wait is saved in the database, so quitting or restarting Slopify keeps it: t
 
 ## Waiting for CLI plan limits
 
-When Claude Code, Codex or Gemini says your plan allowance is used up, the call does not fail. Slopify stores the reset time for that CLI, and every call to it, from any project, waits until two minutes after the reset. Without a stated reset time it checks again every 30 minutes.
+When Claude Code, Codex or Gemini says your plan allowance is used up, the call does not fail: it waits. Slopify stores the reset time for that CLI, and every call to it, from any project, waits until two minutes after the reset. Without a stated reset time it checks again every 30 minutes.
 
-The next action panel shows **Waiting for limits**, for example "Waiting for your Codex limits. They reset at 14:00. The run carries on by itself; work that does not need Codex keeps going." There is nothing to press.
+The next action panel shows **Waiting for limits**, for example "Waiting for Codex limits (resets at 14:00)." with "Nothing to do: the run carries on by itself when they reset, and work that does not need Codex keeps going." There is nothing to press. A reset on another day shows the weekday (`Tue 14:00`); with no reset time, it says "(checking again at 14:30)"; with two plans, "Waiting for Codex and Claude limits".
+
+The same words appear everywhere the project shows up: on Home under Running now, on its row in Projects and on the Calendar, so you can tell a waiting run from a stuck one without opening it.
 
 - Other providers are not held up, and a waiting call holds no place in the provider queue.
 - The wait survives a restart: a stage that was waiting when Slopify stopped waits on the stored reset again at the next start.
@@ -63,15 +65,28 @@ A failed step's fix becomes the project's next action, shown in the right rail a
 
 | Failure | What the panel says | Button | What to do |
 | --- | --- | --- | --- |
-| A CLI is signed out or its sign-in expired | "Codex is signed out, so images stopped." | **Try images again** (named for the step) | Run the sign-in command in a terminal on the computer running the CLI, then press the button: `claude auth login` (Claude Code), `codex login` (Codex) or `gemini` (Gemini). |
+| A CLI is signed out or its sign-in expired | "Codex is signed out, so images stopped." | **Copy sign-in command**, then **Check again** | See [Sign a CLI in again](#sign-a-cli-in-again) below. |
 | A content filter refused an image or thumbnail prompt | "A content filter refused a prompt, so images stopped." | **Soften and retry** | See below. |
 | A content filter refused any other prompt | "A content filter refused a prompt, so the article stopped." | **Edit the prompt** | Opens Edit project so you can reword it, then try again. |
 | The model was retired | "The model for images is no longer offered." | **Switch model** | Opens Edit project; pick another model in **Providers**, save, and try again. |
 | A key was rejected, or none is saved | "The provider did not accept its key, so narration stopped." | **Open Settings → Providers → *provider*** | Paste a current key, save, then come back and try again. |
-| The disk is full | "The disk is full, so the video stopped." | **Free space** | Opens Settings → Storage, which shows what can go. Then try again. |
+| The disk is full | "The disk is full, so the video stopped." | **Free space** | Opens Settings → Backup & storage, which shows what uses the space and offers **Keep outputs only** per finished project. Then try again. |
 | Anything else | "Images stopped with an error." | **Try images again** | Trying again keeps everything already made. |
 
 **Error details** under the message shows the step's own words, for example which key or which model.
+
+The same fix-it buttons appear elsewhere too: Home's **Needs you** offers **Copy sign-in command** for a run stopped by a signed-out CLI, and a schedule whose topic generation failed, or a cast picture that failed, gets the same sign-in fix.
+
+### Sign a CLI in again
+
+1. Press **Copy sign-in command**. It copies `claude auth login` (Claude Code), `codex login` (Codex) or `gemini` (Gemini), and says so.
+2. Paste it in a terminal on the computer running Slopify and sign in.
+3. Press **Check again**. Slopify asks that CLI alone whether it is signed in now.
+   - Signed in: "Codex is signed in. Trying again." and the failed step runs again by itself.
+   - Still signed out: it says so and repeats the command; sign in, then press **Check again** once more.
+   - Can't tell (Gemini sometimes can't say): try the step again with **Try … again**.
+
+If the browser blocks the clipboard, type the command yourself; the notice names it.
 
 ### Soften and retry
 

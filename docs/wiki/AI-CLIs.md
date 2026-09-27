@@ -28,7 +28,7 @@ Codex CLI must be version 0.149.1 or newer. An older Codex shows **Needs attenti
 4. Pick the tool in the **Text** or **Images** list. Its row should say **Ready**, and its setup shows **Installed, version …** and the **Command** Slopify runs.
 5. Choose **Check all** to confirm it is signed in.
 
-On the very first launch, before any key is saved, Slopify looks for all three tools. If it finds any, it says "You can make a video now, no API keys needed" and picks one for text on new Play drafts, preferring Claude Code, then Codex, then Gemini, and Codex for images when found. Narration still needs a voice key, or Audio turned off or your own upload. See [First-Launch-and-Welcome](First-Launch-and-Welcome).
+On the very first launch, before any key is saved, Slopify looks for all three tools. If it finds any, it says so and picks one for text on new Play drafts, preferring Claude Code, then Codex, then Gemini, and Codex for images when found. The CLIs can't speak, but the narration needs no key either: without a voice key, the [System voice](Providers-and-Keys#the-system-voice) reads it with your computer's own speech. See [First-Launch-and-Welcome](First-Launch-and-Welcome).
 
 ## Row states
 
@@ -57,10 +57,12 @@ Slopify finds each tool on PATH, the list of folders your terminal searches. Set
 **Check all** (Settings → Providers) asks each tool:
 
 - **Installed**: found, with its version.
-- **Signed in**: Slopify asks Claude Code and Codex directly. If one is signed out, the line tells you the command to run (`claude auth login` or `codex login`). Gemini CLI has no sign-in check Slopify can ask, so it says to run `gemini` in a terminal once to confirm.
+- **Signed in**: Slopify asks Claude Code and Codex directly. If one is signed out, the line tells you the command to run (`claude auth login` or `codex login`). For Gemini CLI, Slopify reads the sign-in from its own files in `~/.gemini`, without starting it: the method saved in `settings.json`, then a Google sign-in in `oauth_creds.json` or a `GEMINI_API_KEY`. When the files don't say, it asks you to run `gemini` in a terminal once to confirm.
 - **Chosen models**: every model your templates, schedules, drafts and unfinished projects pick is still offered by the tool.
 
-If a run fails because a tool's sign-in expired, the error names the command. Run it in a terminal on the computer running the tool, then use **Try again** on the project.
+Each tool's row has **Check again**, to check that tool alone after you fix something.
+
+If a run fails because a tool's sign-in expired, the project offers **Copy sign-in command** and **Check again**: run the copied command in a terminal on the computer running the tool and sign in, then press **Check again**. Once the tool answers that it is signed in, the step runs again by itself. See [Recovery and Retries](Recovery-and-Retries#sign-a-cli-in-again).
 
 ## Pick a model and thinking level
 
@@ -97,7 +99,7 @@ When a tool says its allowance is used up, the run does not fail:
 
 1. Slopify stores the reset time the tool gave (per tool, not per project).
 2. Every call to that tool, from any project, waits until 2 minutes after the reset. Without a stated time, it checks again every 30 minutes.
-3. The project's status reads **Waiting for limits**, with a line such as "Waiting for Codex limits (resets at 14:00). The run carries on by itself; work that does not need Codex keeps going."
+3. The project's status reads **Waiting for limits**, with a line such as "Waiting for Codex limits (resets at 14:00)." The same words show on Home's Running now, the Projects row and the Calendar.
 4. When the reset passes, the run continues by itself.
 
 Other providers are not held up: a project whose narration uses a key carries on while its Codex images wait. The wait survives a restart; a project that was waiting when Slopify stopped resumes on the next start and waits again. A project you paused or cancelled meanwhile is left alone.

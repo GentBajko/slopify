@@ -21,9 +21,9 @@ The form has its own section list on the left. Some sections appear only when th
 | **Inputs** | **Project title**, **Channel** and brand kit, **Stages** (the source of each stage: Research, Article, Audio, Images, Thumbnail, Video, Document), **Document theme**, **Timing** (silence, seconds per image, zoom, motion), **Cuts and look**, **Ambient sound**, **Pauses and volume**, **Intro and outro**, **Research notes**. |
 | **Article** | The **Article text** itself. Shows an "edited" badge once you have changed it. |
 | **Providers** | Language, text, narration and image providers, models, voice, speakers, Pronunciation Glossary, narration aliases, **Describe tables and figures**, chunking and Narration Preparation. |
-| **Prompts** | The YouTube description prompt, every prompt the project uses, and the keywords. |
+| **Prompts** | The **YouTube description** switch (turn it on for a project that has no description yet) and its **Description prompt**, every prompt the project uses, and the keywords. |
 | **Reviews** | Automatic reviews. See [Reviews and Checkpoints](Reviews-and-Checkpoints). |
-| **Shorts** | Shorts settings and picked clips. See [Shorts](Shorts). |
+| **Shorts** | Shorts settings, the Shorts preview and picked clips. See [Shorts](Shorts). |
 | **Subtitles** | Caption mode, font, size, position and the style preview. See [Video Editing](Video-Editing#subtitles). |
 | **Images** | **Image prompts**, **More images for long videos**, the establishing image, thumbnail count, replacing provided files, and the image list. The badge shows how many images there are. |
 | **Narration** | The narration chunks (only when narration is generated). |
@@ -178,8 +178,9 @@ When the editor is closed, the **Settings** view shows **Saved revision** with e
 
 1. Open **History** in the section rail.
 2. Pick a revision from **Project history** (the current one is marked **Current**).
-3. Each output is listed with its state and **Download**, **Open folder**, and **Preview retained output**. Earlier results are marked **Earlier result**. **Download all images** zips that revision's images. Retained narration and text parts can be opened too.
-4. Press **Restore this revision** to make it current again.
+3. At the top, one row of buttons: **Restore this revision** (the main action), **Download all images** (a zip of that revision's images) and one **Open folder** for the revision.
+4. Below, each output is listed with its state, **Download** and **Preview retained output**. Earlier results are marked **Earlier result**. Retained narration parts play in Slopify's own audio player, and text parts can be opened too.
+5. Press **Restore this revision** to make it current again.
 
 Restoring adds a new revision with the old settings and outputs, so nothing after it is lost. A restored revision takes its channel back.
 

@@ -2,7 +2,7 @@
 
 Play is the screen where you set up a new video and start it. You pick a template (or none), type what the video is about, check the setup rows, and press the Play key. You get a project that writes the article, records the narration, draws the images and renders the video, plus any extra outputs you switched on.
 
-**Where to find it:** **New video** at the bottom of the left sidebar, **New video** on Projects, or `Ctrl+K` → **New video**. The page header reads **What's the video about?**
+**Where to find it:** **New video** in the sidebar, **New video** on Home or Projects, `Ctrl+K` → **New video**, or press `C` anywhere. The page header reads **What's the video about?**
 
 ## How Play is laid out
 
@@ -24,7 +24,7 @@ Nothing starts until you press the Play key. Every change is saved to the curren
 5. Check the estimate in the right rail.
 6. Press **Start run** (or **Queue N videos** if you added more topics).
 
-Slopify opens the new project page as soon as the run is created. When the Play key cannot start, the reason is written right under it. Press the reason to jump to the field that needs fixing.
+Slopify opens the new project page as soon as the run is created. When the Play key cannot start, the reason is written right under it, with **Go to the field** beside it to jump to the field that needs fixing.
 
 ## Template
 
@@ -47,6 +47,15 @@ Write a keyword in double braces and the title becomes a pattern. For example, `
 
 A title without braces is typed as is.
 
+### Already made on this channel
+
+As you type, a quiet line under the topic fields says when the picked channel already has a video on it, using the same near-duplicate rule as [schedules](Schedules#how-generation-works):
+
+- `This channel already has a video on this: "<title>" (in Projects). Start anyway if you want another take.`
+- `This channel already uploaded "<title>" (Channel → Existing videos). Start anyway if you want another take.`
+
+It never stops you; it is there so you don't make the same video twice by accident.
+
 ## Keywords
 
 A keyword is a value that a picked prompt or the title asks for with `{{name}}`. You type it once, and it fills every place that names it. The line under each keyword lists where it is used.
@@ -63,20 +72,20 @@ Keywords live in the **Title and keywords** row. Topic keywords (the ones the ti
 
 1. Press **Add topic** under the topic fields.
 2. Type the new topic (or the new title, if the title has no keywords) and press **Add**. Add as many as you like, then press **Done** or `Esc`.
-3. Each extra video shows as a chip. Press a chip to open a side panel where you can change that video's **Title** and keywords. Everything else comes from the setup of the first video.
+3. Each extra video shows as a chip. Its name is a button with a pencil (**Change the keywords of …**): press it to open a side panel where you can change that video's **Title** and keywords. Everything else comes from the setup of the first video.
 4. Press the **x** on a chip to remove that video.
 
 One Start queues at most 50 videos: this setup and 49 more. The Play key reads **Queue N videos**, and the videos run one at a time, in order.
 
 ### The video queue
 
-Videos started together wait in the **Video queue**, shown on Projects and in the project page's top bar. Pausing a project holds the queue. When one fails or is cancelled, the next one starts.
+Videos started together wait in the queue, shown on the Calendar under **Batch queue** (see [Calendar](Calendar#the-batch-queue)) and behind the **Queue · N** button in a project page's right rail. Projects has a **Queued** filter for them. Pausing a project holds the queue. When one fails or is cancelled, the next one starts.
 
 ## Drafts
 
 Play saves every change to the current draft on its own. The status beside **Drafts** in the page header says **Unsaved**, **Saving…**, **Saved**, **Couldn't save** or **Changed elsewhere**.
 
-- **Drafts** lists your saved setups with their last edit time. Press one to open it, or **Discard** to delete it (it asks you to confirm, and this cannot be undone).
+- **Drafts** lists your saved setups with their last edit time. Press anywhere on a draft's row to open it, or **Discard** to delete it (it asks you to confirm, and this cannot be undone).
 - **New draft** starts an empty draft and keeps the current one in the list.
 - If saving fails, press **Retry**.
 - A draft the app cannot read is marked "Unsupported or corrupt draft". Try opening it to recover it, or discard it.
@@ -119,7 +128,7 @@ The row has an **Edit** link to the channel's page. For the language, voices and
 
 ### Style preview
 
-When the video is generated from images, the rail shows a six-second clip rendered by the real renderer with your captions, Look and motion. See [Play Video and Style](Play-Video-and-Style#style-preview).
+When the video is generated from images, the rail shows **Style preview**: six seconds of the bundled sample project, its real narration over three of its pictures, rendered by the real renderer with your captions, Look and motion, and the captions timed to the narration. See [Play Video and Style](Play-Video-and-Style#style-preview).
 
 ### Estimated cost
 
@@ -161,7 +170,7 @@ Opens the **Review** side panel: every setting of the run in words, any setup er
 **Save as template** in the right rail keeps this setup's prompts, voice, images, style, outputs and reviews so you can start the next video from it.
 
 1. Press **Save as template**.
-2. Type a **Template name**. This is the name the template is listed under on Play and Templates.
+2. Type a **Template name** (up to 120 characters). This is the name the template is listed under on Play and Templates.
 3. Read the list of what is left out, then press **Save template**.
 
 What a template keeps and leaves out:
@@ -171,7 +180,7 @@ What a template keeps and leaves out:
 - The other videos you queued with **Add topic** are not saved.
 - The template belongs to the draft's channel.
 
-You can also save a template from Templates → **Save a setup**, which picks a saved Play draft (**Saved Play draft**), a **Template name** of up to 120 characters and a **Template channel**. The same keyword rule applies there, and queued extra videos and uploaded fonts are left out. See [Templates](Templates).
+You can also save a template from Templates → **Save a setup**, which picks a saved Play draft (**Saved Play draft**), a **Template name** of up to 120 characters and a **Channel**. The same keyword rule applies there, and queued extra videos and uploaded fonts are left out. See [Templates](Templates).
 
 ## Command palette
 
@@ -188,6 +197,7 @@ Every Play action is in the command palette (`Ctrl+K`):
 
 ## Tips
 
+- A long video on the same topic as a finished short is one press away: **Make the full video on this topic** on the short's project page opens Play set up for it. See [Your First Short](Your-First-Short#make-the-full-video-next).
 - Start with a template and only change the rows you need. The row summaries tell you what each one will do without opening it.
 - Use a title pattern and **Add topic** to queue a series in one go.
 - If a template refers to a prompt you have since deleted, the Article or Images row shows **Needs setup**. Pick another prompt.

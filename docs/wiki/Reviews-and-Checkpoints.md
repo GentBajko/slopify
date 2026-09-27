@@ -108,12 +108,14 @@ The prompt next to each mode is **Built-in** or a **Review** prompt from the Lib
 
 ### Reviews on the project page
 
-Beside the article, the narration, the thumbnail and each short, and on each image tile, the verdict shows as **Review passed**, **Flagged by review**, **Being made again** or **Accepted by you**, with the reasons. For a failed item nobody has acted on:
+Beside the article, the narration, the thumbnail and each short, and on each image tile, the verdict shows as **Review passed**, **Flagged by review**, **Waiting to be made again**, **Being made again**, **Redone after review** or **Accepted by you**, with the reasons. For a failed item nobody has acted on:
 
 - **Overrule** accepts it as it is.
 - **Redo** makes it again (a new version of the project, then the item and what depends on it are rebuilt), and it is reviewed again.
 
-Both buttons wait while other work on the project is running. Everything that uses a reviewed item waits for its review, in the same way a checkpoint holds work. Reviewing the same output with the same reviewer and prompt again reuses the earlier verdict.
+Both buttons wait while other work on the project is running, with one exception: while a **Flag and redo** review's automatic redo is still waiting to start (**Waiting to be made again**), **Overrule** stays available and calls the redo off. The item is accepted as it is, the badge turns to **Accepted by you**, and the work waiting on it goes ahead. Once the redo has started, Overrule is greyed: "Slopify is already making this item again; wait for the new version".
+
+When an automatic review flags an item and keeps it (its redos ran out, or the stage is on **Flag only**), Slopify sends a **Review needs a decision** notification (see [Notifications](Notifications)), and the project shows in the Calendar's **Needs you** with **Open to review** (see [Calendar](Calendar#needs-you)). Everything that uses a reviewed item waits for its review, in the same way a checkpoint holds work. Reviewing the same output with the same reviewer and prompt again reuses the earlier verdict.
 
 ## Checkpoints or reviews?
 

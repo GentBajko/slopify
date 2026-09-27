@@ -2,11 +2,11 @@
 
 Slopify checks for new versions by itself and updates with one click or one command. An update waits for running work, keeps a copy to go back to, and puts the previous version back if the new one doesn't start. After an update, the new version's patch notes open once.
 
-**Where to find it:** the circular-arrows button at the top of every page. Patch notes are in Settings → **Patch notes**; Settings → **About** has **What's new in this version**.
+**Where to find it:** the circular-arrows button at the foot of the sidebar. Patch notes are in Settings → **Patch notes**; Settings → **About** has **What's new in this version**.
 
 ## The updates button
 
-The circular-arrows button in the top bar shows the update state. Hover it (or read it with a screen reader) to see `Your version: … · Newest: …` and what a click does.
+The circular-arrows button at the foot of the sidebar (in the top bar on a phone) shows the update state. Hover it (or read it with a screen reader) to see `Your version: … · Newest: …` and what a click does. The version you are running is also shown beside the Slopify logo at the top of the sidebar.
 
 | What you see | Meaning | Click does |
 | --- | --- | --- |
@@ -92,7 +92,7 @@ After an update to a new major version (for example 2.x to 3.0), the first launc
 - The last step has **Read the full patch notes**.
 - Closing the tour also counts as having seen that version's patch notes.
 
-The 3.0 tour covers Home, Play's one path, Automatic reviews, Channels and cast, The calendar, What a run cost, YouTube Studio prep, Multiple voices and Other languages. A fresh install never sees it.
+The 3.0 tour covers Home, Play's one path, Automatic reviews, Channels and cast, Episodes that remember (episode memory and your existing videos), The calendar, What a run cost, YouTube Studio prep, Multiple voices, Long videos stay watchable (more images per hour and ambient sound), Other languages and A trash bin. A fresh install never sees it.
 
 ## Read the patch notes
 

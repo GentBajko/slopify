@@ -1,6 +1,6 @@
 # Play Video and Style
 
-The **Video and style** row decides how your images become a video: how long each stays on screen, how they move and cut, the Look over the picture, an optional ambient sound bed, the frame shape and the captions. The video is rendered on this computer, so none of this costs provider money except **Animate images**. A six-second style preview in the right rail shows your choices as you make them.
+The **Video and style** row decides how your images become a video: how long each stays on screen, how they move and cut, the Look over the picture, an optional ambient sound bed, the frame shape and the captions. The video is rendered on this computer, so none of this costs provider money except **Animate images**. A six-second style preview in the right rail shows and plays your choices as you make them.
 
 **Where to find it:** Play → **Video and style** row → **Change**. After the run, the same controls are in the project's **Edit project**; see [Video Editing](Video-Editing).
 
@@ -90,7 +90,7 @@ Captions are timed from your narration on this computer, with no paid API. The f
 | --- | --- | --- |
 | **Subtitles** | **Off** makes none. **Subtitle files (.srt + .vtt)** gives you files to upload beside the video. **Burn into video + files** draws the captions into the picture and also makes the files; it needs the video on. | Off |
 | **Subtitle font** | The typeface of burned-in captions and chapter cards. Pick **Default font · bundled** or a font you uploaded. | Default font |
-| **Upload font (.ttf or .otf)** | Adds your own font. Uploaded fonts stay available to every project. | |
+| **Upload font (.ttf or .otf)** | Adds your own font, right here in the caption font picker (there is no separate font screen in Settings). Uploaded fonts stay available to every project and to a channel's brand kit. | |
 | **Subtitle font size** | How big burned-in captions are. Larger is easier to read on phones but covers more of the picture. Type it or use the slider. | 48; 16 to 120, whole numbers |
 | **Subtitle position** | Where burned-in captions sit: **Top**, **Upper-middle**, **Center**, **Lower-middle** or **Bottom**. Move them up when the pictures have important detail near the bottom. | Bottom |
 
@@ -110,13 +110,17 @@ After the run, you can fix a misheard word or nudge a caption's timing on the pr
 
 ## Style preview
 
-The **Style preview** in the right rail is six seconds rendered on this computer by the real video renderer, with your captions, Look and motion. It is drawn on your uploaded establishing image, or else a picture of the cast member the title names (or the first cast member with a picture), or else sample stills. It renders again by itself a moment after you change a setting, costs no API calls, and **Render again** forces a fresh one. The preview is silent.
+The **Style preview** at the top of the right rail ("6 seconds of the sample, rendered with your settings") is rendered on this computer by the real video renderer, with your captions, Look and motion. It plays six seconds of the bundled sample project's real narration over three of its pictures, two seconds each, so a transition and a chapter card both show, and the captions are timed to the narration's words, as in a real video. It plays in Slopify's own player, with sound.
+
+The pictures are the sample's (landscape or portrait, following **Frame format**), unless there is something closer to your video: your uploaded establishing image, or else a picture of the cast member the title names (or the first cast member with a picture). The line under it names the caption settings, and "Drawn on …" when it uses one of your pictures. It renders again by itself a moment after you change a setting, costs no API calls, and **Render again** forces a fresh one.
 
 It shows while the video is generated from images. If the caption settings are invalid, it says "Fix the caption settings to render the preview."
 
 | Option | What it does | Default |
 | --- | --- | --- |
-| **Preview text** | The sample sentence the preview shows in your caption font, size and position. It is only for the preview and never reaches the video; real captions come from the narration. | A sample sentence |
+| **Preview text** | The words the preview's captions show, in your caption font, size and position. Left at the sample sentence (or empty), the captions are the sample narration's own words; any other text is spread over the stretches where the narration speaks. It is only for the preview and never reaches the video; real captions come from your narration. | "Every story begins with a word." |
+
+The same preview is in Edit project while its **Subtitles** section is open. Shorts have their own [Shorts preview](Shorts#shorts-preview).
 
 ## What the row summary says
 

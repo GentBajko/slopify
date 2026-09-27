@@ -11,6 +11,7 @@ Runs can take a while, so Slopify can tell you when one needs you: in the browse
 | A run **finishes** | "Video ready", or "Run finished" for a run that makes audio only |
 | A run **fails** | The project title and the first line of the reason |
 | A run **stops to wait for you** | A review checkpoint is holding the next step, or the work left is waiting for Resume |
+| An automatic review **needs a decision** | "Review needs a decision: <title>", when an automatic review flags an item and keeps it (its redos ran out, or the stage only flags). It says what was flagged and to press **Overrule** or **Redo** on the project. Sent once per verdict. |
 | A schedule has **new topics waiting** for approval | For example "5 new topics are waiting for you" |
 
 Pausing or cancelling a run yourself sends nothing, and neither does a project that was already finished when the page loaded. A message holds the project title and what happened, never your keys, prompts or files.
@@ -43,12 +44,15 @@ Some browsers only allow notifications from installed apps. If the test says so,
 
 ## Get notifications on your phone (Notification URL)
 
-A Notification URL works with no Slopify tab open. When a run finishes, fails or waits, Slopify sends that address one `POST` with a short plain-text body, for example:
+A Notification URL works with no Slopify tab open. When a run finishes, fails or waits, or a review needs a decision, Slopify sends that address one `POST` with a short plain-text body. Its last line is the project's link, so you can open it straight from the message, for example:
 
 ```
 Video ready: Black holes explained
 Open the project to watch it.
+http://localhost:6969/projects/…
 ```
+
+The link uses the address and port Slopify runs on (`localhost` when it listens on all addresses or on 127.0.0.1), so it opens on the computer running Slopify or one that can reach it. Messages about new topics have no link.
 
 ### Set it up with ntfy
 

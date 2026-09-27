@@ -1,19 +1,37 @@
 # Calendar
 
-The calendar shows the coming four weeks on one screen: every scheduled run with the topic and title it will use, the projects running or finished on their day, and the batch queue. You can drag a topic to another day, move it to another schedule, add topics, and accept or reject topics Slopify suggested.
+The calendar shows the coming four weeks on one screen: what needs you, every scheduled run with the topic and title it will use, the projects running or finished on their day, and the batch queue. You can drag a topic to another day, move it to another schedule, add topics, and accept or reject topics Slopify suggested.
 
-**Where to find it:** **Calendar** in the left rail. **Edit schedules** on the calendar opens the schedules page, which sits under the same rail item.
+**Where to find it:** **Calendar** in the sidebar. **Edit schedules** on the calendar opens the schedules page, which sits under the same sidebar item.
 
 ## What the calendar shows
 
 The calendar starts on this week's Monday and shows four weeks, Monday to Sunday.
 
 - **Scheduled runs**, each with the project title it will make. A run shows **Queued** when a topic is lined up, **Needs a topic** when its topic is still waiting for your approval or for generation, and **Paused** when its schedule is paused.
-- **Projects** running or finished on their day, with their state: **Running**, **Waiting**, **Failed**, **Done with problems**, **Done** or **Canceled**.
-- **Batch queue**: projects waiting to start, such as extra videos queued from Play, each marked **Running now** or **Waiting its turn**.
+- **Needs you**, above the weeks: every project that is waiting on you or ready to upload (see below).
+- **Projects** running or finished on their day, with their state: **Running**, **Paused**, **Waiting**, **Failed**, **Done with problems**, **Done** or **Canceled**. A project waiting for a CLI plan says so, for example **Waiting for Codex limits (resets at 14:00)**.
+- **Batch queue**: projects waiting to start (see below).
 - **Suggested topics**, beside the weeks, for schedules that hold generated topics for approval.
 
-The calendar follows the channel picked in the left rail, or shows every channel. See [Channels](Channels).
+The calendar follows the channel picked in the sidebar, or shows every channel. See [Channels](Channels).
+
+## Needs you
+
+Above the weeks, **Needs you** lists what cannot move on without you, then what is ready to upload. Its heading counts them, for example "2 waiting for you · 1 ready to upload". It is hidden when there is nothing.
+
+| Item | Status | Button |
+| --- | --- | --- |
+| A failed project | **Failed** | **Open to fix** |
+| A project you paused | **Paused** | **Open to continue** |
+| A project held at a review checkpoint, or with an automatic review that flagged an item and waits for **Overrule** or **Redo** | **Waiting for your review** | **Open to review** |
+| A finished video not marked uploaded | **Ready to upload** | **Prepare upload** |
+
+The bundled samples never show here. A press anywhere on an entry opens its project. See [Reviews and Checkpoints](Reviews-and-Checkpoints) and [Publishing to YouTube](Publishing-to-YouTube).
+
+## The batch queue
+
+Videos started together, such as extra videos queued from Play, run one at a time. **Batch queue** lists them in the order they run, numbered (**1 in line**, **2 in line**, …), each marked **Running now**, **Waiting its turn** or **Paused**. Its heading says how many are waiting to start. Pausing a queued project holds the whole queue; when one fails or is cancelled, the next one starts. The batch queue is only shown on the calendar; Projects links here and has a **Queued** filter. It is hidden when nothing is queued.
 
 ## Switch between weeks and a list
 
@@ -69,6 +87,8 @@ Editing a suggestion's words before approving it is done under **Topics waiting*
 
 - Use the list view if dragging is fiddly, for example on a touch screen or a narrow window.
 - A browser notification for new suggestions opens the calendar's **Suggested topics** when you click it. See [Notifications](Notifications).
+- `Ctrl+K` → **Add to calendar** works from any screen: it opens the calendar with the form. `G` then `C` goes to the calendar.
+- To change a schedule's queued topics one by one (rename, reorder, remove), use **Edit schedules**. See [Schedules](Schedules#edit-the-queued-topics-in-place).
 - To start one video right now instead of waiting for a run, use [Play](Play-Overview).
 
 ## Related pages

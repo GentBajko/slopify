@@ -25,7 +25,7 @@ Either way the intro or outro is narrated as its own audio file with the run's v
    - **Category**: **Intro** (read before the body) or **Outro** (read after it). You can change it later.
    - **Mode**: **Text** or **LLM**.
    - **Body**: in Text mode, the words the narrator says; in LLM mode, the instruction whose answer is said. Each `{{keyword}}` becomes a field on Play, just like in prompts.
-5. Press **Save**.
+5. Press **Save** (or `Ctrl+S`).
 
 ### Examples
 
@@ -68,7 +68,7 @@ Entries have the same row actions as prompts:
 | **History** | Versions, compare and **Used by**, exactly as for prompts. See [Prompts](Prompts#history-and-versions). |
 | **Delete** | Asks first, then moves it to **Settings → Trash** for 30 days. |
 
-Use **Search intros and outros** to find one by name.
+Use **Search intros and outros** (`/`) to find one by name. The pencil beside a name renames the entry in its row, with **Undo** on the notice; see [Rename in the row](Library-Overview#rename-in-the-row).
 
 A project keeps its own copy of the intro and outro it started with, so editing an entry here changes only runs started later. Templates keep their own copies too.
 

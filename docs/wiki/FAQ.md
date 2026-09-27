@@ -18,6 +18,14 @@ It depends on the providers, models, length and number of images. Play shows an 
 
 Yes, through the command-line tools you are already signed in to: Claude Code, Codex or Gemini CLI. Calls through them cost $0 on your plan; Slopify shows what the same work would cost through the API, for comparison only. When a plan's limit is used up, the run waits for the reset and carries on by itself. See [AI CLIs](AI-CLIs).
 
+### Can I make a video without any API key?
+
+Yes. Sign in to Claude Code, Codex or Gemini CLI for the text (Codex also draws the images), and the narration can use your computer's own voice, the **System voice**, for free. That is what the first 60-second short uses when no voice key is saved. It sounds robotic, so add a voice key when you want a better one. See [Your First Short](Your-First-Short) and [Providers and Keys](Providers-and-Keys#the-system-voice).
+
+### How do I know a key works before I save it?
+
+Paste it in Settings → **Providers** and press **Test**. Slopify checks the pasted key with the provider without storing it; press **Save** to keep it. See [Providers and Keys](Providers-and-Keys#test-a-key).
+
 ### Do I need an account or a login for Slopify?
 
 No. There is no Slopify account and no login. That is also why Slopify listens only on `127.0.0.1` by default: anyone who can reach its port controls the app and its keys. Keep it that way.
@@ -30,7 +38,7 @@ On your computer, in Slopify's hidden data folder (`~/.slopify` by default; in D
 
 ### Where are my projects?
 
-In your files folder, `Documents/Slopify` for new installs (Settings → **Your files**), or `~/Slopify/Projects` with Docker. See [Where Your Files Live](Where-Your-Files-Live).
+In your files folder, `Documents/Slopify` for new installs, Docker included (Settings → **Backup & storage** → **Your files** shows it). An install from before 3.0 keeps its files where they were until you move them. See [Where Your Files Live](Where-Your-Files-Live).
 
 ### Does Slopify send anything about me?
 
@@ -40,7 +48,7 @@ What you write is sent only to the AI providers you pick, because they make the 
 
 ### Does it work offline?
 
-Partly. The AI steps (article, research, narration, images, thumbnails, descriptions) call providers over the internet, or CLIs that do. Rendering the video, levelling the volume, captions and the style preview run on your computer. Captions need a speech model of about 95 MB that is downloaded once, on first use. Patch notes ship with the app and open offline.
+Partly. The AI steps (article, research, narration, images, thumbnails, descriptions) call providers over the internet, or CLIs that do. Rendering the video, levelling the volume, captions, the style preview and the System voice run on your computer. Captions need a speech model of about 95 MB that is downloaded once, on first use. Patch notes ship with the app and open offline.
 
 ## Making and editing videos
 
@@ -51,6 +59,10 @@ Yes. Open the project, press **Edit settings**, change what you want and press *
 ### Can I fix one image or one sentence without redoing everything?
 
 Yes. In **Edit project → Images** you can edit one image's prompt, replace it with your own file or regenerate it; in **Edit project → Narration** you can edit or respeak one chunk. Only that piece and the video are made again.
+
+### Where do I see what a run cost?
+
+At the top of a finished project's page, one line sums it up ("This run cost …"), with **See cost by stage**. See [Costs and Run Cost](Costs-and-Run-Cost).
 
 ### Can I go back to an earlier version?
 
@@ -106,7 +118,7 @@ Slopify is meant to be used on the computer it runs on. You can change the addre
 
 ### How do I update?
 
-Press **Update** in Settings, or run `npx @gentbajko/slopify@latest update`. It waits for running work, keeps a copy to go back to, and puts the previous version back if the new one does not start. See [Updating and Patch Notes](Updating-and-Patch-Notes).
+Press the circular-arrows button at the foot of the sidebar, or run `npx @gentbajko/slopify@latest update` while Slopify is running. It waits for running work, keeps a copy to go back to, and puts the previous version back if the new one does not start. See [Updating and Patch Notes](Updating-and-Patch-Notes).
 
 ### Something is broken. What should I send?
 

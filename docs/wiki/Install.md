@@ -12,7 +12,7 @@ Slopify is a local web app you start from a terminal. It runs on your own comput
 | Operating system | Windows, macOS or Linux for the normal install. The managed Docker install is Linux only (see [Docker](Docker)). |
 | ffmpeg | Nothing to install: Slopify brings its own copy. See [ffmpeg](#ffmpeg) below. |
 | Disk space | Enough for your videos. Every project keeps its video, images, narration and working files. The caption model is a 95 MB download. |
-| Keys or CLIs | At least a voice provider key to narrate (command-line tools can't speak). Text and images can come from Claude Code, Codex or Gemini CLI, or from API keys. See [Providers and Keys](Providers-and-Keys) and [AI CLIs](AI-CLIs). |
+| Keys or CLIs | Text and images can come from Claude Code, Codex or Gemini CLI, or from API keys. Narration can use a voice provider key, or your computer's own speech for free (the System voice; on Linux, install `espeak-ng`). See [Providers and Keys](Providers-and-Keys) and [AI CLIs](AI-CLIs). |
 
 ## Choose how to run it
 
@@ -51,7 +51,7 @@ In-app updates work for both npx and a global install: the new version is instal
 | Command | What it does |
 | --- | --- |
 | `npx @gentbajko/slopify@latest` | Starts Slopify. |
-| `npx @gentbajko/slopify@latest update` | Updates a running Slopify to the newest version, the same way the in-app update button does. If you have a Docker install, it updates that one instead. |
+| `npx @gentbajko/slopify@latest update` | Updates a running Slopify to the newest version, the same way the in-app update button does. It only works while Slopify is running. If you have a Docker install, it updates that one instead. |
 | `npx @gentbajko/slopify@latest --docker` | Installs Slopify in Docker, or re-applies changed Docker settings. Same as `install --docker`. |
 | `npx @gentbajko/slopify@latest update --docker` | Updates the Docker install. |
 

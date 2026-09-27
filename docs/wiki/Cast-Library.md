@@ -20,7 +20,7 @@ To change a member later, press **Edit** on it, change what you need and press *
 |---|---|---|
 | **Kind** | Character, creature, place or object. A generated reference picture of a character or creature is portrait (9:16), of a place or object landscape (16:9), and its starting prompt asks for the whole figure, place or object in view. It doesn't change how the member is matched. | |
 | **Name** | The name matched against video titles and image briefs, as whole words, ignoring case. | Up to 200 characters |
-| **Aliases** | Other names that count as this member, such as plurals and titles ("the Dragon Queen"). Type one and press `Enter` to add it. | Up to 20 |
+| **Aliases** | Other names that count as this member, such as plurals and titles ("the Queen of the Nile"). Type one and press `Enter` to add it. | Up to 20 |
 | **Description for the image model** | What the member looks like, in a sentence. It goes to the image model with the member's pictures for every image that names it, and starts the prompt of a generated picture. | Up to 2,000 characters |
 | **Reference pictures** | Pictures sent with every image whose brief, or the video's title, names this member. | Up to 4, PNG or JPEG up to 10 MB each |
 | **Cast voice** | How this member speaks in multi-voice runs (see below). | |
@@ -78,6 +78,18 @@ In multi-voice formats (audiobook, podcast, radio drama, interview) a cast membe
 
 Leave the provider empty for no voice. A run keeps the voice it started with. See [Multiple voices](Multiple-Voices).
 
+### Make a member one of the channel's hosts
+
+A channel's regular presenters can join every new podcast or interview on their own.
+
+1. In the member's editor, give it a voice (above).
+2. Turn on **One of the channel's hosts**. Without a voice it warns: "A host joins new podcasts and interviews only with a voice. Pick one under Voice above."
+3. Press **Save**. The cast list shows **Host** beside the member.
+
+When you pick **Podcast** or **Interview** on Play for a draft of this channel with no speakers yet, the speakers start with the channel's hosts that have a voice. You can still add or remove speakers on the draft. Projects already made are not changed.
+
+A picture that fails to generate because a CLI is signed out shows the same **Copy sign-in command** and **Check again** buttons as a project. See [Recovery and Retries](Recovery-and-Retries#sign-a-cli-in-again).
+
 ## What happens to finished videos
 
 A run keeps the cast as it was when it started. Editing the cast later never makes a finished video outdated. Only images that actually mention a member change their fingerprint, so only they would be remade if you remake the project's images.
@@ -90,7 +102,7 @@ Cast members and their pictures travel in a backup made with **Export everything
 
 - Upload or generate a picture with the whole figure on a plain background. Busy backgrounds leak into every image.
 - Keep the description short and visual: colours, shape, clothing, one distinctive feature.
-- Add the plural and possessive-free forms as aliases ("dragons", "the Queen"). Matching is whole-word only.
+- Add the plural and possessive-free forms as aliases ("pharaohs", "the Queen"). Matching is whole-word only.
 
 ## Related pages
 

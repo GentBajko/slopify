@@ -2,11 +2,15 @@
 
 A channel is one series: its brand kit, series brief, cast, templates and schedules. Every template belongs to one channel, and every run from it uses that channel's look, cast and language. Use channels when you make more than one kind of video, so each series keeps its own look and its own topic ideas.
 
-**Where to find it:** **Channels** in the left rail. On Play, the **Channel** picker sits under the title. The channel picker in the left rail filters what Home, Projects and the Calendar show.
+**Where to find it:** **Channels** in the sidebar. On Play, the **Channel** picker sits under the title. The channel picker in the sidebar filters what Home, Projects and the Calendar show.
 
 ## The default channel
 
 Every install has one default channel, **My channel**. Everything made before channels existed (templates, schedules, projects) belongs to it, unchanged. The default channel can't be deleted.
+
+## The Channels page
+
+The list shows each channel with **Open**, **Rename** and **Delete** (not on the default channel), and a line such as "Default · 3 templates · 5 in the cast". A press anywhere on a row picks it. Beside the list, on a wide screen, **About <channel>** sums up the picked channel: its templates and cast counts, its series brief (or "No series brief yet. Open the channel to say what it covers.") and its brand kit's intro, outro, document theme and end screen text, with **Open channel**.
 
 ## Create a channel
 
@@ -25,7 +29,7 @@ To rename a channel, press **Rename** on it, change the name and press **Rename 
 
 ## Show one channel's work
 
-The channel picker in the left rail (**Current channel**) makes Home, Projects and the Calendar show only that channel's work. **All channels** shows everything. It only filters what you see; projects and schedules of other channels keep running. This browser remembers your choice.
+The channel picker in the sidebar (**Current channel**) makes Home, Projects and the Calendar show only that channel's work. **All channels** shows everything. It only filters what you see; projects and schedules of other channels keep running. This browser remembers your choice.
 
 ## The channel's tabs
 
@@ -57,9 +61,11 @@ Mark voices in **Settings → Voices** and Image prompts in **Library → Prompt
 | **Title font** | The font of chapter cards and the end screen, for videos whose template sets no title style. |
 | **Title colour** | The text colour of chapter cards and the end screen, such as `#FFD700`. |
 | **End screen text** | A line shown centred over the last 5 seconds of every video, such as "Subscribe for more". Up to 200 characters. Blank shows none. |
-| **Intro** / **Outro** | An entry from **Library → Intros & Outros**, narrated before or after the body of every video whose template has none. See [Intros and outros](Intros-and-Outros). |
+| **Intro** / **Outro** | An entry from **Library → Intros & Outros**, narrated before or after the body of every video whose template has none. Each is narrated with the video's voice, so each costs one voice request per video (plus a text call for an LLM entry), and it shows in the estimate. See [Intros and outros](Intros-and-Outros). |
 | **Document theme** | The look of the PDF for videos whose template picks no theme. A saved theme that was deleted is skipped. |
 | **Ambient sound** | Rain, Fireplace or Wind under the long video's narration, with its level (−40 to −6 dB, default −18), fade-in (0 to 30 s, default 3) and tail (0 to 30 s, default 6). Used when the template leaves its own ambient sound on "The channel's". A channel can't hold your own audio file. |
+
+**Channel links.** This channel's named links, such as `Patreon` or `Discord`, that a YouTube description fills when it names them in braces (`{{Patreon}}`). See [Channel links](#channel-links).
 
 Press **Save channel** when you are done.
 
@@ -67,7 +73,7 @@ To keep one video exactly as its template was saved, untick **Use the channel's 
 
 ### Cast
 
-Recurring characters, creatures, places and objects, each with reference pictures that go with every image that names them. See [Cast library](Cast-Library).
+Recurring characters, creatures, places and objects, each with reference pictures that go with every image that names them. A cast member with a voice can also be one of the channel's hosts: a new podcast or interview on Play then starts with them as its speakers. See [Cast library](Cast-Library).
 
 ### Templates
 
@@ -116,7 +122,15 @@ The filter text is remembered for this channel's next import. **Remove** deletes
 
 ## Channel links
 
-Named links such as `{{Patreon}}` or `{{Discord}}` that fill a YouTube description are set once for all channels under **Settings → Channel links**. See [YouTube description](YouTube-Description) and [Publishing to YouTube](Publishing-to-YouTube).
+Each channel keeps its own named links, under **Channel links** on its **Brand** tab. Write a link's name in braces in a description prompt or a description, such as `{{Patreon}}`, and it is filled with this channel's link when the description is shown, copied or downloaded.
+
+1. Open **Channels** → the channel → **Brand**.
+2. Under **Channel links**, press **Add link**, type the **name** (for example `Patreon`) and the URL (`https://…`). **Remove** takes one off.
+3. Press **Save channel**.
+
+Names match whatever their case or spacing. `{{Previous video}}` works the same way, but a project can set its own on its **YouTube** section (**Previous video for this project**, then **Save links**), which wins over the channel's. A placeholder with no link stays as typed, and the YouTube section says "No link is saved for {{…}}, so it stays as typed." with where to add it.
+
+Links saved in **Settings → Channel links** before channels had their own still fill the default channel's descriptions until you save its Brand tab; that Settings section now only points here (**Open the default channel's links**). Channel links travel in backups with their channel. See [YouTube description](YouTube-Description) and [Publishing to YouTube](Publishing-to-YouTube).
 
 ## Tips
 

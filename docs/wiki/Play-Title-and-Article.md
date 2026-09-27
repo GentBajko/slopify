@@ -114,7 +114,7 @@ The channel's brand kit can fill the intro and outro when you leave them at thei
 
 ## What the row summary says
 
-Folded, the Article row shows the prompt, the provider and model, and the research source, for example `Lore article · Claude Code · sonnet · research off`, or **Your article** when you pasted one. A row that is missing something shows **Needs setup** and the reason, such as "Pick an article prompt." or "Paste the article."
+Folded, the Article row shows the prompt, the provider and model, and the research source, for example `History article · Claude Code · sonnet · research off`, or **Your article** when you pasted one. A row that is missing something shows **Needs setup** and the reason, such as "Pick an article prompt." or "Paste the article."
 
 ## Tips
 

@@ -33,7 +33,7 @@ Running the same command again with nothing changed does nothing, apart from sta
 
 | Part | What it is |
 | --- | --- |
-| Image | `ghcr.io/gentbajko/slopify:<version>`, pinned to the version of the installer you ran. It runs as a non-root user and already contains ffmpeg and the caption model. A healthcheck asks the app whether it is up. |
+| Image | `ghcr.io/gentbajko/slopify:<version>`, pinned to the version of the installer you ran. It runs as a non-root user and already contains ffmpeg, the caption model and eSpeak NG, so the [System voice](Providers-and-Keys#the-system-voice) can narrate with no key. A healthcheck asks the app whether it is up. |
 | Compose file | Copied to `~/.local/share/slopify/docker/slopify/` with a private `.env` beside it. One service, `slopify`, with `restart: unless-stopped`. |
 | Port | `127.0.0.1:6969` on the host, localhost only. |
 | Data volume | `slopify-data`, mounted at `/data`. It holds the database, provider keys, settings, logs and staging. It is declared external, so `docker compose down` (even with `-v`) never deletes it. |
@@ -134,8 +134,8 @@ Without the installer (any OS with Docker Compose), with API keys only, from a f
 
 ```sh
 docker volume create slopify-data
-mkdir -p ~/Slopify/Projects
-SLOPIFY_PROJECTS_DIR=~/Slopify/Projects SLOPIFY_USER="$(id -u):$(id -g)" \
+mkdir -p ~/Documents/Slopify/Projects
+SLOPIFY_PROJECTS_DIR=~/Documents/Slopify/Projects SLOPIFY_USER="$(id -u):$(id -g)" \
   docker compose -f compose.yaml up -d
 ```
 
