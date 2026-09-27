@@ -51,7 +51,7 @@ export function PdfPages({
       ref={holder}
       role="img"
       aria-label={label}
-      className="flex flex-col gap-3 [&>canvas]:w-full [&>canvas]:shadow-[0_1px_4px_var(--color-shadow)]"
+      className="flex flex-col gap-3 [&>canvas]:w-full [&>canvas]:shadow-[var(--shadow-pop)]"
     />
   );
 }

@@ -3,7 +3,7 @@ import { StatusSlot } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { SavedTick } from "@/components/saved-tick";
 
-// The bar under an editor's sheet, pinned to the bottom of the viewport: Delete at the left
+// The bar under an editor's form, pinned to the bottom of the viewport: Delete at the left
 // (its place kept even before there is a row to delete), then one status slot for the error,
 // the Saved tick or the reason Save is holding, then Cancel and Save. Both editors draw it - prompts and intros/outros - so the
 // refusal affordance is written once and cannot drift between them.
@@ -36,7 +36,7 @@ export function EditorActions({
   return (
     <div
       data-slot="editor-actions"
-      className="sticky bottom-0 z-10 -mx-[18px] -mb-[18px] flex flex-wrap items-center gap-[10px] rounded-b-media border-t border-line bg-surface px-[18px] py-3 shadow-[0_-6px_14px_-10px_var(--color-shadow)]"
+      className="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border-t border-line bg-ground py-3"
     >
       <Button
         variant="destructive"

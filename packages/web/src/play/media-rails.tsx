@@ -115,7 +115,7 @@ export function AudioRail({
               />
             )}
             <details className="col-span-full rounded-control border border-line px-3">
-              <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink2">
+              <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink-2">
                 Speakers ·{" "}
                 {form.voices === undefined
                   ? "Narration, one voice"
@@ -133,14 +133,14 @@ export function AudioRail({
                   onChange={(next) => update({ voices: next })}
                 />
                 {form.voices === undefined ? null : (
-                  <p className="mt-3 text-small text-ink2">
+                  <p className="mt-3 text-small text-ink-2">
                     The TTS voice above reads the intro and outro.
                   </p>
                 )}
               </div>
             </details>
             <details className="col-span-full rounded-control border border-line px-3">
-              <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink2">
+              <summary className="flex min-h-9 cursor-pointer items-center text-small text-ink-2">
                 Audio Advanced · {advancedSummary}
               </summary>
               <div className="grid grid-cols-1 gap-4 pt-2 pb-3 min-[700px]:grid-cols-2">
@@ -212,7 +212,7 @@ export function AudioRail({
               onRemoveFile("audio", key);
             }}
           />
-          <p className="mt-2 text-small text-ink2">
+          <p className="mt-2 text-small text-ink-2">
             Uploaded narration is used as-is; include any intro and outro in that file.
           </p>
         </div>

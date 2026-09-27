@@ -504,7 +504,7 @@ function Filled({
           <mark
             key={key}
             title={`No link named ${part.name}`}
-            className="rounded-[2px] bg-waiting/25 px-[2px] text-ink"
+            className="rounded-[2px] bg-waiting/25 px-0.5 text-ink"
           >
             {part.raw}
           </mark>
@@ -539,12 +539,12 @@ function TagChips({
   readonly links: readonly ChannelLink[];
 }): ReactElement {
   return (
-    <ul className="flex flex-wrap gap-[6px] whitespace-normal">
+    <ul className="flex flex-wrap gap-2 whitespace-normal">
       {splitTags(text).map((tag, index) => (
         <li
           // biome-ignore lint/suspicious/noArrayIndexKey: a tag can repeat, and the list never reorders
           key={index}
-          className="rounded-full border border-line bg-raised px-[9px] py-[2px] text-small text-ink"
+          className="rounded-full border border-line bg-raised px-2 py-0.5 text-small text-ink"
         >
           <Filled text={tag} links={links} />
         </li>
