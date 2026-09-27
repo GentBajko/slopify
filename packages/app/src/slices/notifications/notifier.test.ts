@@ -162,7 +162,7 @@ describe("createRunNotifier", () => {
       verdictId: "v1",
       stage: "images",
       itemKey: "image:3",
-      reason: "The dragon has five legs.\nAnd a second reason.",
+      reason: "The scroll shows a printed barcode.\nAnd a second reason.",
     };
     notifier.observe(flagged);
     notifier.observe(flagged);
@@ -170,7 +170,7 @@ describe("createRunNotifier", () => {
     expect(posted).toEqual([
       {
         url: "https://ntfy.example/topic",
-        body: "Review needs a decision: Black holes — The dragon has five legs.\nThe automatic review flagged an image and kept it. Open the project and press Overrule to keep it or Redo to make it again.\nhttp://localhost:6969/projects/p1\n",
+        body: "Review needs a decision: Black holes — The scroll shows a printed barcode.\nThe automatic review flagged an image and kept it. Open the project and press Overrule to keep it or Redo to make it again.\nhttp://localhost:6969/projects/p1\n",
       },
     ]);
   });

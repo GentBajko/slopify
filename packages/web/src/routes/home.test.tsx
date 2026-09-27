@@ -242,13 +242,16 @@ describe("home", () => {
     renderRouted(
       <HomeRoute />,
       deps({
-        "GET /api/projects/p-run": jsonAnswer({
+        "GET /api/projects": jsonAnswer({
+          projects: [listing("p-hyp", "Hypatia", "running", { progress: 0.2 })],
+        }),
+        "GET /api/projects/p-hyp": jsonAnswer({
           ...going,
-          project: { ...going.project, id: "p-run" },
+          project: { ...going.project, id: "p-hyp" },
         }),
       }),
     );
-    const steps = await screen.findByRole("list", { name: "Steps of Demogorgon" });
+    const steps = await screen.findByRole("list", { name: "Steps of Hypatia" });
     expect(await within(steps).findByText("2 of 8 · about 12 min left")).not.toBeNull();
   });
 
@@ -372,9 +375,9 @@ describe("home", () => {
         "GET /api/projects": jsonAnswer({
           projects: [
             ...ids.map((id) => listing(id, `Run ${id}`, "running", { progress: 0.2 })),
-            listing("q1", "Bahamut", "pending"),
-            listing("q2", "Tiamat", "pending"),
-            listing("q3", "Lolth", "pending"),
+            listing("q1", "Hypatia", "pending"),
+            listing("q2", "Cleopatra", "pending"),
+            listing("q3", "Nefertiti", "pending"),
           ],
         }),
         ...Object.fromEntries(
@@ -388,7 +391,7 @@ describe("home", () => {
     const region = await screen.findByRole("region", { name: "Running now" });
     const all = await within(region).findByRole("link", { name: "See all 4 running" });
     expect(all.getAttribute("href")).toBe("/projects?show=running");
-    expect(within(region).getByText("Bahamut, Tiamat and 1 more")).not.toBeNull();
+    expect(within(region).getByText("Hypatia, Cleopatra and 1 more")).not.toBeNull();
     expect(within(region).getByRole("link", { name: "See queued" }).getAttribute("href")).toBe(
       "/projects?show=queued",
     );
@@ -398,11 +401,11 @@ describe("home", () => {
     renderRouted(
       <HomeRoute />,
       deps({
-        "GET /api/projects": jsonAnswer({ projects: [listing("q1", "Bahamut", "pending")] }),
+        "GET /api/projects": jsonAnswer({ projects: [listing("q1", "Hypatia", "pending")] }),
       }),
     );
     const region = await screen.findByRole("region", { name: "Running now" });
-    expect(await within(region).findByText("Bahamut")).not.toBeNull();
+    expect(await within(region).findByText("Hypatia")).not.toBeNull();
     expect(within(region).queryByText("Start the next video")).toBeNull();
     expect(within(region).queryByRole("link", { name: /See all/ })).toBeNull();
   });

@@ -178,7 +178,7 @@ describe("review notices", () => {
     const watcher = createRunWatcher({
       enabled: () => enabled,
       seed: () => Promise.resolve([]),
-      subject: () => Promise.resolve({ title: "Dragons", makesVideo: true }),
+      subject: () => Promise.resolve({ title: "Hypatia", makesVideo: true }),
       claim: (key) => {
         claimed.push(key);
         return Promise.resolve(!claimed.slice(0, -1).includes(key));
@@ -203,7 +203,7 @@ describe("review notices", () => {
       {
         projectId: "p1",
         text: {
-          headline: "Review needs a decision: Dragons — Blurry.",
+          headline: "Review needs a decision: Hypatia — Blurry.",
           detail:
             "The automatic review flagged the thumbnail and kept it. Open the project and press Overrule to keep it or Redo to make it again.",
         },

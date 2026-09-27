@@ -5,7 +5,7 @@ Runs can take hours, so Slopify can tell you when one needs you. It notifies whe
 first line of the reason) or **stops to wait for you** (a review checkpoint is holding the
 next step, or the work left is waiting for Resume). It also says when a **review needs a
 decision**: an automatic review flagged an item and kept it, because its redos ran out or the
-stage only flags ("Review needs a decision: Black holes — The dragon has five legs.", then
+stage only flags ("Review needs a decision: Black holes — The scroll shows a printed barcode.", then
 which item and "press Overrule to keep it or Redo to make it again"). That one is sent once per
 verdict, while the run carries on. Pausing or cancelling a run yourself
 sends nothing, and neither does a project that was already finished when the page loaded.
