@@ -3,10 +3,25 @@ import { z } from "zod";
 // The first five minutes' wire shapes. Browser-safe: the first-run screen, the Library's
 // packs and the sample's page read these too.
 
+// The bundled samples: "The Library of Alexandria" (narrated video, shorts, article, PDF) and
+// two multi-voice demos, an audiobook and a podcast.
+export const sampleIds = ["library", "audiobook", "podcast"] as const;
+export type SampleId = (typeof sampleIds)[number];
+
+// Each sample's project, or null while it is not in Projects.
+export const sampleProjectsSchema = z.object({
+  library: z.string().nullable(),
+  audiobook: z.string().nullable(),
+  podcast: z.string().nullable(),
+});
+export type SampleProjects = z.infer<typeof sampleProjectsSchema>;
+
 export const firstRunViewSchema = z
   .object({
     show: z.boolean(),
+    // The Library of Alexandria's project, as before the demos; `samples` has all three.
     sampleProjectId: z.string().nullable(),
+    samples: sampleProjectsSchema,
     clis: z.array(
       z.object({
         id: z.enum(["claude-code", "codex", "gemini"]),
@@ -55,4 +70,11 @@ export const installedPackSchema = z.object({
 });
 
 export const sampleCopySchema = z.object({ projectId: z.string() });
-export const sampleStateSchema = z.object({ projectId: z.string().nullable() });
+export const sampleStateSchema = z.object({
+  projectId: z.string().nullable(),
+  samples: sampleProjectsSchema,
+});
+// Make my own copy of one sample; without a project, the Library of Alexandria.
+export const sampleCopyInputSchema = z
+  .object({ projectId: z.string().max(60).optional() })
+  .strict();

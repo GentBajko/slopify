@@ -39,18 +39,20 @@ any case) is skipped. A prompt's history comes with the prompt when the prompt i
 | Back up automatically | Off | Off for new and existing installs: an archive holds every video and can be many gigabytes, so filling a disk with copies is left for the user to turn on. |
 | Time of day | 03:00 | Local time in the browser's time zone when you press Save (the same way schedules store their zone). |
 | Keep last | 5 | 1 to 30. After each successful backup the oldest of Slopify's own backups beyond this number are deleted. |
-| Folder | empty | Empty means the `Backups` folder inside the projects folder. |
+| Folder | empty | Empty means the default `Backups` folder (see below). |
 
 The screen shows the last backup's time and size, the last attempt's result with the reason it
 failed, when the next one runs, and **Back up now**.
 
 ## Where backups go
 
-The default folder is `Backups` inside the projects folder, because that is the one folder a
-Docker install shares with your computer: with the managed Linux launcher it is
-`~/Slopify/Projects/Backups`. A native install uses `<data dir>/projects/Backups`. Storage
-cleanup (Clean orphan files, and the sweep at start) leaves this folder alone, and it is not
-counted as project files on Backup & storage.
+The default folder is `Backups` beside `Projects` in your files folder: `<Documents>/Slopify/Backups`
+on a new install (native or Docker, see [storage.md](storage.md)). Installs from before 3.0 keep
+it inside the projects folder, because that was the one folder a Docker install shared with your
+computer: `~/Slopify/Projects/Backups` with the managed Linux launcher, `<data dir>/projects/Backups`
+natively. Moving your files (Settings → Backup & storage → Move to Documents/Slopify) takes the
+archives along to the new `Backups`. Storage cleanup (Clean orphan files, and the sweep at start)
+leaves this folder alone, and it is not counted as project files on Backup & storage.
 
 A folder you choose must be a full path. It may not be inside the projects folder (other than
 its `Backups` folder) or Slopify's staging, logs or model folders, since Slopify cleans those

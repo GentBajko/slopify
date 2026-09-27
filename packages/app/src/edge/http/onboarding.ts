@@ -4,14 +4,14 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { firstRunView } from "../../slices/onboarding/first-run.js";
 import { installPack } from "../../slices/onboarding/install.js";
-import { quickShortInputSchema } from "../../slices/onboarding/model.js";
+import { quickShortInputSchema, sampleCopyInputSchema } from "../../slices/onboarding/model.js";
 import { packById, starterSet } from "../../slices/onboarding/packs.js";
 import { planShortProviders, shortDraft } from "../../slices/onboarding/quick-short.js";
 import {
   copySample,
-  restoreSample,
+  restoreSamples,
   type SampleDeps,
-  sampleProjectId,
+  sampleProjectIds,
 } from "../../slices/onboarding/sample.js";
 import {
   dismissFirstRun,
@@ -28,7 +28,7 @@ import { createProject } from "./project-create.js";
 const packParam = z.object({ id: z.string().min(1).max(40) });
 
 // The first five minutes: the first-run screen's state, starter packs, "Make a 60-second
-// short" and the bundled sample's Restore and Make my own copy.
+// short" and the bundled samples' Restore and Make my own copy.
 export function onboardingRoutes(deps: AppDeps) {
   const statuses = () =>
     providerStatuses({ db: deps.db, probe: deps.probe, hostCliStatus: deps.hostCliStatus });
@@ -41,7 +41,7 @@ export function onboardingRoutes(deps: AppDeps) {
     log: deps.log,
     appVersion: deps.version,
     hasInflight: deps.runner.hasInflight,
-    ...(deps.sampleArchive === undefined ? {} : { archive: deps.sampleArchive }),
+    ...(deps.sampleArchives === undefined ? {} : { archives: deps.sampleArchives }),
   };
   return new Hono()
     .get("/", async (c) => {
@@ -125,26 +125,38 @@ export function onboardingRoutes(deps: AppDeps) {
       recordShortRequest(deps.db, input.requestId, created.project.id);
       return c.json({ projectId: created.project.id, replayed: false }, 201);
     })
-    .get("/sample", (c) => c.json({ projectId: sampleProjectId(deps.db) ?? null }))
+    .get("/sample", (c) => {
+      const samples = sampleProjectIds(deps.db);
+      return c.json({ projectId: samples.library, samples });
+    })
     .post("/sample/restore", async (c) => {
-      const restored = await restoreSample(sample);
+      const restored = await restoreSamples(sample);
       if (!restored.ok)
         return problem(c, {
           status: restored.status,
           title: titleOf(restored.status),
           detail: restored.detail,
         });
-      return c.json({ projectId: restored.projectId });
+      return c.json({ projectId: restored.samples.library, samples: restored.samples });
     })
-    .post("/sample/copy", (c) => {
+    .post("/sample/copy", async (c) => {
+      // Which sample to copy is in the body; without one, the Library of Alexandria.
+      const body: unknown = await c.req.json().catch(() => ({}));
+      const input = sampleCopyInputSchema.safeParse(body ?? {});
+      if (!input.success)
+        return problem(c, {
+          status: 400,
+          title: titleOf(400),
+          detail: "Slopify couldn't tell which sample to copy. Reload the page and try again.",
+        });
       const catalogue = deps.catalogue;
-      const id = sampleProjectId(deps.db);
+      const id = input.data.projectId ?? sampleProjectIds(deps.db).library ?? undefined;
       if (catalogue === undefined || id === undefined)
         return problem(c, {
           status: 404,
           title: titleOf(404),
           detail:
-            "The sample project isn't here. Bring it back with Settings → Backup & storage → Restore sample, then press Make my own copy.",
+            "The sample project isn't here. Bring it back with Settings → Backup & storage → Restore samples, then press Make my own copy.",
         });
       const copied = copySample({ ...sample, catalogue: catalogue.read() }, id);
       if (!copied.ok)

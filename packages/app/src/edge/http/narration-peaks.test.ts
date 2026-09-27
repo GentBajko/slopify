@@ -8,7 +8,7 @@ import { migrate } from "../../kernel/db/migrate.js";
 import { ulidIds } from "../../kernel/ids.js";
 import { ensureDirs, layout } from "../../kernel/paths.js";
 import { narrationAudio, peaksOf } from "../../slices/narration/peaks.js";
-import { seedSample } from "../../slices/onboarding/sample.js";
+import { seedSamples } from "../../slices/onboarding/sample.js";
 import type { RevisionView } from "../../slices/revisions/model.js";
 import { createHub } from "../events/hub.js";
 import { createApp } from "./app.js";
@@ -30,7 +30,7 @@ describe("GET /api/projects/:id/narration/peaks", () => {
       rmSync(paths.dataDir, { recursive: true, force: true });
     });
     const log = { write: () => undefined };
-    await seedSample({ db, paths, clock, ids: ulidIds, log, appVersion: "3.0.0" });
+    await seedSamples({ db, paths, clock, ids: ulidIds, log, appVersion: "3.0.0" });
     const decoded: string[] = [];
     const app = createApp({
       db,

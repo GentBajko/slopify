@@ -2,25 +2,28 @@ import type { DatabaseSync } from "node:sqlite";
 import type { ProviderStatus } from "../settings/model.js";
 import type { FirstRunView } from "./model.js";
 import { starterPacks } from "./packs.js";
-import { sampleProjectId } from "./sample.js";
+import { sampleProjectIds } from "./sample.js";
 import { dismissFirstRun, firstRunDismissed, readPackRecords } from "./state.js";
 
 // The first-run screen shows on a fresh install and never again once it is skipped or a real
-// project (anything but the sample) exists. A real project also dismisses it for good, so
+// project (anything but the samples) exists. A real project also dismisses it for good, so
 // deleting every project later does not bring it back.
 export function firstRunView(
   db: DatabaseSync,
   statuses: readonly ProviderStatus[],
   at: string,
 ): FirstRunView {
-  const sample = sampleProjectId(db) ?? null;
+  const samples = sampleProjectIds(db);
   const real =
-    db.prepare("SELECT 1 FROM projects WHERE id IS NOT ? LIMIT 1").get(sample) !== undefined;
+    db
+      .prepare("SELECT 1 FROM projects WHERE id IS NOT ? AND id IS NOT ? AND id IS NOT ? LIMIT 1")
+      .get(samples.library, samples.audiobook, samples.podcast) !== undefined;
   if (real) dismissFirstRun(db, at);
   const packs = readPackRecords(db);
   return {
     show: !real && !firstRunDismissed(db),
-    sampleProjectId: sample,
+    sampleProjectId: samples.library,
+    samples,
     clis: detectedClis(statuses),
     packs: starterPacks.map((pack) => ({
       id: pack.id,

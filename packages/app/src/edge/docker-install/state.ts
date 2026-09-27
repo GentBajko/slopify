@@ -41,6 +41,9 @@ export const installSchema = z
     port: z.number().int().min(0).max(65535),
     projects: absolute,
     projectsIdentity: identity,
+    // The Backups folder shared beside Projects (installs from 3.0 on). Absent: backups stay in
+    // the Projects folder's own Backups folder, as older installs keep them.
+    backups: absolute.optional(),
     hostCli: z.boolean(),
     token,
     recovery: z.string().nullable(),

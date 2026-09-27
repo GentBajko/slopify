@@ -77,6 +77,40 @@ describe("narration preparation admission", () => {
     expect(fields({ ...flash, narrationPrompt: "" })).toEqual([]);
     expect(usesNarrationPreparation({ ...flash, sources: sources({ audio: "off" }) })).toBe(false);
   });
+  it("takes a multi-voice run when a speaker is on Inworld TTS-2", () => {
+    const speaker = (id: string, model: string) => ({
+      id,
+      name: id,
+      role: "host" as const,
+      voice: { provider: "inworld", model, voice: "Ashley" },
+    });
+    const podcast = (model: string): RunDraft => ({
+      ...draft(),
+      voices: {
+        format: "podcast",
+        source: "script",
+        speakers: [speaker("Nell", "inworld-tts-2"), speaker("Theo", model)],
+        turnGapSeconds: 0.35,
+        nameTags: true,
+        nativeDialogue: true,
+        audioFiles: true,
+      },
+    });
+    expect(fields(podcast("inworld-tts-2-flash"))).toEqual([]);
+    const none = podcast("inworld-tts-2-flash");
+    expect(
+      fields({
+        ...none,
+        voices: {
+          ...(none.voices as NonNullable<RunDraft["voices"]>),
+          speakers: [
+            speaker("Nell", "inworld-tts-2-flash"),
+            speaker("Theo", "inworld-tts-2-flash"),
+          ],
+        },
+      }),
+    ).toContain("narrationPrompt");
+  });
 });
 
 describe("establishing image admission", () => {

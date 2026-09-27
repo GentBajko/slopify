@@ -10,6 +10,7 @@ afterEach(cleanup);
 const view: FirstRunView = {
   show: true,
   sampleProjectId: "sample-1",
+  samples: { library: "sample-1", audiobook: "sample-2", podcast: null },
   clis: [
     {
       id: "claude-code",
@@ -68,6 +69,12 @@ describe("the first-run screen", () => {
     expect(screen.getByRole("link", { name: "Explore the sample" }).getAttribute("href")).toBe(
       "/projects/sample-1",
     );
+    expect(screen.getByRole("link", { name: "See an audiobook" }).getAttribute("href")).toBe(
+      "/projects/sample-2",
+    );
+    // A sample that was deleted points to where it comes back.
+    expect(screen.queryByRole("link", { name: "Hear a podcast" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Restore samples in Settings" })).not.toBeNull();
     expect(screen.getByRole("button", { name: "Added" }).hasAttribute("disabled")).toBe(true);
   });
 

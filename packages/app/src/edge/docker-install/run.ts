@@ -5,6 +5,7 @@ import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
 import { nodeHostSetupRunner } from "../../host-cli/install.js";
 import { readVersion } from "../../kernel/version.js";
+import { documentsDir, nodeDocumentsHost } from "../../slices/storage/documents.js";
 import { recordLoginStart } from "../autostart/docker-record.js";
 import { nodeAutostartExec } from "../autostart/native.js";
 import { askTerminal } from "../autostart/prompt.js";
@@ -47,9 +48,14 @@ export async function runDockerCommand(command: DockerCommand): Promise<void> {
     throw new Error(
       "SLOPIFY_DOCKER_NAME and SLOPIFY_DOCKER_VOLUME may only use letters, digits, dots, dashes and underscores, and must start with a letter or digit. Fix them and try again.",
     );
-  const projects = projectsText
-    ? resolve(projectsText.startsWith("~/") ? join(home, projectsText.slice(2)) : projectsText)
-    : null;
+  // New installs keep their files in this computer's Documents folder; `--projects-dir
+  // documents` moves an existing one there.
+  const documents = await documentsDir(nodeDocumentsHost());
+  const projects = !projectsText
+    ? null
+    : projectsText === "documents"
+      ? documentsProjects(documents, name.success ? name.data : "slopify")
+      : resolve(projectsText.startsWith("~/") ? join(home, projectsText.slice(2)) : projectsText);
   if (projects !== null && !absolute.safeParse(projects).success)
     throw new Error(
       `The project folder ${JSON.stringify(projectsText)} can't be used: give a full path without commas, for example --projects-dir ~/Slopify/Projects.`,
@@ -94,6 +100,7 @@ export async function runDockerCommand(command: DockerCommand): Promise<void> {
         version,
         port: portText === undefined ? null : portText === "" ? 0 : Number(portText),
         projects,
+        documents,
         mode: command.mode,
         composeFile: await composeFile(),
         hostCli,
@@ -107,6 +114,7 @@ export async function runDockerCommand(command: DockerCommand): Promise<void> {
         : `Slopify ${version} is already installed and running at ${result.url}`,
     );
     console.log(`Project files on this machine: ${result.projects}`);
+    if (result.backups !== null) console.log(`Backups on this machine: ${result.backups}`);
     console.log(
       hostCli.enabled
         ? "Host CLI bridge ready: Claude Code, Codex and Gemini run on this machine with their existing logins."
@@ -169,4 +177,11 @@ export async function hasDockerInstall(env: Readonly<NodeJS.ProcessEnv>): Promis
     }
   }
   return false;
+}
+
+/** `<Documents>/Slopify/Projects`, or `<Documents>/Slopify/<name>/Projects` for a second install. */
+export function documentsProjects(documents: string, name: string): string {
+  return name === "slopify"
+    ? join(documents, "Slopify", "Projects")
+    : join(documents, "Slopify", name, "Projects");
 }

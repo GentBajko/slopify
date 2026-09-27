@@ -1,12 +1,12 @@
 import type { NarrationPeaks } from "@app/slices/narration/peaks-model.js";
-import type { FirstRunView } from "@app/slices/onboarding/model.js";
+import type { FirstRunView, SampleProjects } from "@app/slices/onboarding/model.js";
 import type { Api } from "@/api";
 import { read } from "@/http";
 
 // The first five minutes' endpoints (`edge/http/onboarding.ts`). Every refusal is the
 // server's own sentence, which names the screen that fixes it.
 
-export type { FirstRunView };
+export type { FirstRunView, SampleProjects };
 
 export const onboardingKey = ["onboarding"] as const;
 export const sampleKey = ["onboarding", "sample"] as const;
@@ -46,16 +46,40 @@ export async function makeShort(
   return read<{ projectId: string }>(await post(api, "/short", input));
 }
 
-export async function readSample(api: Api): Promise<{ readonly projectId: string | null }> {
-  return read<{ projectId: string | null }>(await api.fetch(`${api.origin}/api/onboarding/sample`));
+export interface SampleState {
+  // The Library of Alexandria's project; `samples` has all three.
+  readonly projectId: string | null;
+  readonly samples: SampleProjects;
 }
 
-export async function restoreSample(api: Api): Promise<{ readonly projectId: string }> {
-  return read<{ projectId: string }>(await post(api, "/sample/restore"));
+export async function readSample(api: Api): Promise<SampleState> {
+  return read<SampleState>(await api.fetch(`${api.origin}/api/onboarding/sample`));
 }
 
-export async function copySample(api: Api): Promise<{ readonly projectId: string }> {
-  return read<{ projectId: string }>(await post(api, "/sample/copy"));
+// Whether a project is one of the bundled samples.
+export function isSample(state: SampleState | undefined, projectId: string): boolean {
+  return state !== undefined && Object.values(state.samples).includes(projectId);
+}
+
+export async function restoreSample(api: Api): Promise<SampleState> {
+  return read<SampleState>(await post(api, "/sample/restore"));
+}
+
+// Make my own copy of one sample. Without a project it copies the sample whose page is open
+// (the project in the address), else the Library of Alexandria.
+export async function copySample(
+  api: Api,
+  projectId: string | undefined = openProject(),
+): Promise<{ readonly projectId: string }> {
+  return read<{ projectId: string }>(
+    await post(api, "/sample/copy", projectId === undefined ? undefined : { projectId }),
+  );
+}
+
+function openProject(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  const match = /\/projects\/([^/?#]+)/.exec(window.location.pathname);
+  return match?.[1] === undefined ? undefined : decodeURIComponent(match[1]);
 }
 
 export async function readPeaks(

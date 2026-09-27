@@ -147,7 +147,22 @@ function settingsDeps(extra: Readonly<Record<string, Answer>> = {}) {
         },
       ],
     }),
-    "GET /api/onboarding/sample": jsonAnswer({ projectId: null }),
+    "GET /api/onboarding/sample": jsonAnswer({
+      projectId: "sample-1",
+      samples: { library: "sample-1", audiobook: null, podcast: null },
+    }),
+    "GET /api/storage/files": jsonAnswer({
+      docker: false,
+      folder: "/home/you/.slopify/projects",
+      projects: "/home/you/.slopify/projects",
+      backups: "/home/you/.slopify/projects/Backups",
+      exports: null,
+      inDataDir: true,
+      documentsRoot: "/home/you/Documents/Slopify",
+      inDocuments: false,
+      move: null,
+      dockerCommand: null,
+    }),
     "GET /api/backups": jsonAnswer(backups),
     "GET /api/trash": jsonAnswer({ items: [trashed] }),
     "GET /api/usage": jsonAnswer(usage),
@@ -244,6 +259,7 @@ describe("Home", () => {
         "GET /api/onboarding": jsonAnswer({
           show: false,
           sampleProjectId: null,
+          samples: { library: null, audiobook: null, podcast: null },
           clis: [],
           packs: [],
         }),
@@ -260,6 +276,7 @@ describe("Home", () => {
 const firstRun: FirstRunView = {
   show: true,
   sampleProjectId: "sample-1",
+  samples: { library: "sample-1", audiobook: null, podcast: null },
   clis: [
     {
       id: "codex",
@@ -281,6 +298,17 @@ const firstRun: FirstRunView = {
     },
   ],
 };
+
+describe("Your files", () => {
+  it("explains where your files are and the folder to move them to", async () => {
+    const user = userEvent.setup();
+    renderRouted(<SettingsRoute section="storage" />, settingsDeps());
+    await user.click(await screen.findByRole("button", { name: "Choose another folder" }));
+    expect(screen.getByLabelText("New folder")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "About Your files" })).not.toBeNull();
+    expectExplained();
+  });
+});
 
 describe("Welcome", () => {
   it("explains the short's topic and style, the packs and starting at login", async () => {

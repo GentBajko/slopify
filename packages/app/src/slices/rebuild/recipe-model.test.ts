@@ -43,3 +43,21 @@ it("rejects unsupported persisted local and deferred operations", () => {
       .success,
   ).toBe(false);
 });
+
+it("stores a text step that writes or splits a multi-voice script", () => {
+  const input = {
+    kind: "llm",
+    version: 1,
+    provider: "text",
+    model: "m",
+    thinking: null,
+    thinkingConfig: null,
+    messages: [{ role: "user", content: "Split it." }],
+    webSearch: false,
+    script: { speakers: [{ id: "narrator", name: "Narrator" }], attribute: true },
+  };
+  expect(recipeInputSchema.safeParse(input).success).toBe(true);
+  expect(recipeInputSchema.safeParse({ ...input, script: { attribute: true } }).success).toBe(
+    false,
+  );
+});

@@ -12,6 +12,8 @@ describe("layout", () => {
       dataDir: "/data/slopify",
       db: "/data/slopify/slopify.db",
       projects: "/data/slopify/projects",
+      backups: "/data/slopify/projects/Backups",
+      exports: null,
       staging: "/data/slopify/staging",
       logs: "/data/slopify/logs",
       lock: "/data/slopify/.lock",

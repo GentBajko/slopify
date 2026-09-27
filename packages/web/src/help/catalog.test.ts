@@ -23,7 +23,8 @@ const files = sources(src).map((path) => ({
 // A help id is written as a literal where it is used: `tip="play.voice"`, `info="…"`,
 // `<InfoTip id="…"`, or `tip: "…"` in a table of rows. Ids built from pieces would hide from
 // this test, so there are none.
-const usePattern = /(?:\btip|\binfo|<InfoTip[^>]*?\bid)\s*[=:]\s*\{?\s*"([a-z][\w-]*(?:\.[\w-]+)+)"/g;
+const usePattern =
+  /(?:\btip|\binfo|<InfoTip[^>]*?\bid)\s*[=:]\s*\{?\s*"([a-z][\w-]*(?:\.[\w-]+)+)"/g;
 
 function usedIds(): Map<string, string[]> {
   const used = new Map<string, string[]>();

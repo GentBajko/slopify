@@ -1,7 +1,8 @@
-import { applyAliases } from "../../kernel/ports/narration-aliases.js";
+import { aliasMatches, applyAliases } from "../../kernel/ports/narration-aliases.js";
 import { splitText } from "../../kernel/ports/text.js";
 import type { FingerprintValue } from "../../kernel/runner/work.js";
-import { narrationAliasesOf } from "../admission/rules.js";
+import type { RunConfig } from "../admission/model.js";
+import { narrationAliasesOf, usesNarrationPreparation } from "../admission/rules.js";
 import { aliasSpans, withAliasSpans } from "../narration/aliases.js";
 import { normalizeNarrationText } from "../narration/plan.js";
 import {
@@ -21,6 +22,11 @@ import {
   recipe,
   resourceIdentity,
 } from "./recipe-model.js";
+import {
+  preparationForGroup,
+  preparationFuture,
+  preparationTemplate,
+} from "./recipe-preparation.js";
 import type { ScriptText } from "./recipe-text.js";
 
 // The body narration of a multi-voice run: the script's turns, each in its speaker's voice.
@@ -28,8 +34,15 @@ import type { ScriptText } from "./recipe-text.js";
 // multi-speaker model speaks in one request, so changing one speaker's voice changes only the
 // requests that speaker is in and every other turn keeps its audio. The join adds the gap
 // between turns and each speaker's pace, which cost nothing to change.
+//
+// With a Narration Preparation prompt, each turn of a speaker on Inworld TTS-2 is prepared on
+// its own first: the text model gets the turn's sentences and who says them, and answers
+// delivery cues that become Inworld's bracketed tags in that turn's request. The turn's clean
+// words stay its transcript, so the captions and the word timing never see a tag.
 
 export interface VoiceBody {
+  // The turns' preparation steps, which the parts that use them wait on.
+  readonly preparations: readonly ResolvedWorkRecipe[];
   readonly parts: readonly ResolvedWorkRecipe[];
   readonly body: ResolvedWorkRecipe;
   readonly transcript: FingerprintValue;
@@ -43,24 +56,39 @@ export function voiceBodyRecipes(
   glossary: GlossaryResult | null,
 ): VoiceBody {
   const parts: ResolvedWorkRecipe[] = [];
+  const preparations: ResolvedWorkRecipe[] = [];
   const layout: [number, number][] = [];
   let transcript: FingerprintValue = script.fingerprint ?? script.text ?? null;
   const parsed = script.text === null ? undefined : parseScript(script.text, voices.speakers);
-  if (script.text === null) {
-    parts.push(
-      recipe(
-        context,
-        "audio:body:future",
-        "audio",
-        {
-          kind: "deferred",
-          version: 1,
-          operation: "body-narration",
-          template: [script.fingerprint ?? null, speakerValues(voices)],
-        },
-        script.dependsOn,
-      ),
+  const prepare = voices.speakers.some((speaker) => preparesTurns(context.config, speaker));
+  // The narration still to be worked out: the whole script's while it is being written, or
+  // every turn's while a turn's delivery cues are (as a single voice waits for all of its own).
+  const future = (): ResolvedWorkRecipe =>
+    recipe(
+      context,
+      "audio:body:future",
+      "audio",
+      {
+        kind: "deferred",
+        version: 1,
+        operation: "body-narration",
+        template: [
+          script.fingerprint ?? script.text ?? null,
+          speakerValues(voices),
+          ...(prepare ? [preparationTemplate(context)] : []),
+        ],
+      },
+      [...new Set([...script.dependsOn, ...preparations.map((row) => row.key)])],
     );
+  let pending = false;
+  if (script.text === null) {
+    // Turns not yet known are prepared behind one future step, as a single voice's text is.
+    const from = script.dependsOn[0];
+    if (prepare && from !== undefined)
+      preparations.push(
+        preparationFuture(context, "body", { key: from, fingerprint: script.fingerprint ?? from }),
+      );
+    parts.push(future());
   } else if (parsed !== undefined && !parsed.ok) {
     parts.push(
       refused(
@@ -93,7 +121,9 @@ export function voiceBodyRecipes(
         speaker,
         glossary,
         script,
+        preparations,
       );
+      if (made.length === 0) pending = true;
       made.forEach((part, index) => {
         parts.push(part);
         layout.push([speakerPace(speaker), index === made.length - 1 ? voices.turnGapSeconds : 0]);
@@ -102,6 +132,11 @@ export function voiceBodyRecipes(
     // No gap after the last turn: the timeline's own gap follows it.
     const last = layout.at(-1);
     if (last !== undefined) last[1] = 0;
+    if (pending) {
+      parts.length = 0;
+      layout.length = 0;
+      parts.push(future());
+    }
   }
   const body = recipe(
     context,
@@ -114,9 +149,10 @@ export function voiceBodyRecipes(
       values: [parts.map((part) => resourceIdentity(context, part)), layout],
     },
     parts.map((part) => part.key),
-    { unresolved: parsed?.ok !== true },
+    { unresolved: parsed?.ok !== true || pending },
   );
   return {
+    preparations,
     parts,
     body,
     transcript,
@@ -132,6 +168,7 @@ function groupParts(
   speaker: Speaker,
   glossary: GlossaryResult | null,
   script: ScriptText,
+  preparations: ResolvedWorkRecipe[],
 ): readonly ResolvedWorkRecipe[] {
   const first = turns[0];
   if (first === undefined) return [];
@@ -209,6 +246,46 @@ function groupParts(
     pronunciationSpans(logicalText, entries.entries),
     aliasSpans(logicalText, narrationAliasesOf(context.config)),
   );
+  if (preparesTurns(context.config, speaker)) {
+    const prepared = preparationForGroup(
+      context,
+      logicalKey,
+      logicalText,
+      "body",
+      script.dependsOn,
+      maxCharacters,
+      spans,
+      aliasMatches(logicalText, narrationAliasesOf(context.config)),
+      { name: speaker.name.trim(), role: speaker.role },
+    );
+    preparations.push(prepared.preparation);
+    if (prepared.refusal !== null)
+      return [refused(context, logicalKey, [prepared.preparation.key], prepared.refusal)];
+    return (prepared.requests ?? []).map((request, index) =>
+      recipe(
+        context,
+        `${logicalKey}:${String(index + 1)}`,
+        "audio",
+        {
+          kind: "tts",
+          version: 1,
+          provider: speaker.voice.provider,
+          model: speaker.voice.model,
+          voice: speaker.voice.voice,
+          text: request.text,
+          spokenText: request.spokenText,
+          logicalKey,
+          logicalText,
+          segment: "body",
+          pronunciation: null,
+          speaker: speaker.id,
+          turn: first.index,
+        },
+        [prepared.preparation.key],
+        { tokenKey: logicalKey, unresolved: logicalText.length === 0 },
+      ),
+    );
+  }
   let requests: readonly { readonly text: string; readonly spokenText?: string }[];
   if (spans.length > 0) {
     const prepared = prepareRequests(logicalText, [], maxCharacters, spans);
@@ -262,6 +339,19 @@ function speakerGlossary(
       ? glossary.entries
       : [];
   return { ok: true, entries: withSharedGlossary(own.entries, run) };
+}
+
+// A turn is prepared when the run has a Narration Preparation prompt and its speaker's voice
+// takes Inworld TTS-2's delivery tags; every other speaker's turns are spoken as written.
+export function preparesTurns(
+  config: Pick<RunConfig, "sources" | "narrationPrompt">,
+  speaker: Speaker,
+): boolean {
+  return (
+    usesNarrationPreparation(config) &&
+    speaker.voice.provider === "inworld" &&
+    speaker.voice.model === "inworld-tts-2"
+  );
 }
 
 export function readsIpa(speaker: Speaker): boolean {

@@ -38,6 +38,7 @@ import { TrashSettings } from "@/trash/trash-settings";
 import { ChannelLinksSettings } from "@/youtube/channel-links";
 import { AboutSettings } from "./settings-about";
 import { BackupSettings, useBackUpNow } from "./settings-backups";
+import { FilesFolder } from "./settings-files";
 import { formatBytes, ProjectStorageList } from "./settings-storage";
 import { UsageBoard } from "./usage";
 
@@ -284,6 +285,7 @@ export function SettingsRoute({
           {section === "notifications" ? <NotificationSettings /> : null}
           {section === "channel-links" ? <ChannelLinksSettings /> : null}
           {section === "studio" ? <StudioSettings /> : null}
+          {section === "storage" ? <FilesFolder usageQueryKey={storageQueryKey} /> : null}
           {section === "storage" ? <StorageTools /> : null}
           {section === "storage" ? <SampleSettings /> : null}
           {section === "backups" ? <BackupSettings /> : null}

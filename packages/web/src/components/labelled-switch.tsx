@@ -1,8 +1,8 @@
 import { useId } from "react";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Label } from "@/components/ui/label";
-import type { HelpId } from "@/help/catalog";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import type { HelpId } from "@/help/catalog";
 
 // A segmented switch with its engraved label above it: the prompt editor's Kind, and the
 // entry editor's Category and Mode. Every input in this app carries a label above it.

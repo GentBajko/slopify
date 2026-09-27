@@ -33,9 +33,7 @@ export function SectionHead({
           <Heading className={cn("sl-section-head__title", Heading === "h3" && "text-title-3")}>
             {title}
           </Heading>
-          {info === undefined ? null : (
-            <InfoTip id={info} label={title} />
-          )}
+          {info === undefined ? null : <InfoTip id={info} label={title} />}
         </div>
         {meta === undefined ? null : <p className="sl-section-head__meta">{meta}</p>}
       </div>

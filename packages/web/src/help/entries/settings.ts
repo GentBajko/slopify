@@ -158,10 +158,22 @@ export const settingsHelp = {
     body: "On a finished project, deletes the working files it was made from (images, narration parts, subtitle timing, render settings) and keeps the video, shorts, thumbnail, article, description, document and your uploads. Changing the project later makes those files again first, which takes time and provider credits.",
   },
   "settings.sample.restore": {
-    title: "Sample project",
-    body: "The finished example that comes with Slopify: a video, shorts, article, document and images you can look through without spending anything. Restore sample adds it back if it was deleted, or replaces it with the original. Your own copies of it are not touched.",
+    title: "Sample projects",
+    body: "The finished examples that come with Slopify: a narrated video, an audiobook and a podcast, which you can look through without spending anything. Restore samples adds back any that were deleted and replaces the others with the originals. Your own copies of them are not touched.",
   },
 
+  "settings.files": {
+    title: "Your files",
+    body: "Your projects, automatic backups and exports live here; new installs use Documents/Slopify. The database, settings, keys and logs stay in Slopify's hidden data folder. Moving copies every file, checks each copy by size and checksum, then switches, and keeps the old folder until you delete it. It takes as long as copying your projects and cannot start while a project is being made.",
+  },
+  "settings.files.docker": {
+    title: "Your files",
+    body: "Your projects and backups are in the folders Docker shares with this computer. The container cannot move its own folders, so run the command shown on the computer running Docker: the installer waits for running work, copies your projects, checks the copy and remounts the new folder.",
+  },
+  "settings.files.new-folder": {
+    title: "New folder",
+    body: "The full path of the folder your files move to, on another disk or a synced folder for example. Slopify makes Projects and Backups inside it. It must be empty or not exist yet. The move needs as much free space there as your projects take now.",
+  },
   // Backups
   "settings.backups": {
     title: "Daily backup",
@@ -181,7 +193,7 @@ export const settingsHelp = {
   },
   "settings.backups.folder": {
     title: "Backup folder",
-    body: "Where backups are written. Leave it empty to use the Backups folder inside your projects folder, which moves with it. Point it at another disk or a synced folder to keep copies away from this disk. Slopify only ever deletes its own backup files there.",
+    body: "Where backups are written. Leave it empty to use the Backups folder beside your projects (Documents/Slopify/Backups on a new install), which moves with them. Point it at another disk or a synced folder to keep copies away from this disk. Slopify only ever deletes its own backup files there.",
   },
 
   // Trash
@@ -223,6 +235,10 @@ export const settingsHelp = {
   },
 
   // First run
+  "welcome.samples": {
+    title: "Samples",
+    body: "Finished projects that come with Slopify: a narrated video, an audiobook and a podcast. They are read-only, so nothing you try on them costs anything; Make my own copy on a sample's page gives you one to edit.",
+  },
   "welcome.found": {
     title: "Found on this computer",
     body: "Claude Code, Codex and Gemini CLI write the text with your own sign-in, so no API key is needed for it, and Codex also draws the images. The narration needs a voice key (OpenAI, ElevenLabs, Cartesia or Inworld) in Settings → Providers.",

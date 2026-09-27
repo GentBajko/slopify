@@ -9,8 +9,18 @@ npx @gentbajko/slopify@latest update       # update to the newest release
 ```
 
 Slopify then runs in the background at `http://127.0.0.1:6969` and restarts with
-Docker. Project files go to `~/Slopify/Projects`; the database, keys, logs and
-staging stay private in the `slopify-data` volume.
+Docker. A new install puts project files in `<Documents>/Slopify/Projects` and
+scheduled backups in `<Documents>/Slopify/Backups`, where `<Documents>` is what
+`xdg-user-dir DOCUMENTS` says (then `XDG_DOCUMENTS_DIR` in
+`~/.config/user-dirs.dirs`, then `~/Documents`). Installs from before 3.0 keep
+`~/Slopify/Projects` (with backups in its `Backups` folder). The database, keys,
+logs and staging stay private in the `slopify-data` volume.
+
+To move an existing install's projects into Documents, run
+`npx @gentbajko/slopify@latest update --docker --projects-dir documents`
+(Settings → Backup & storage shows this command). The container can't move its own
+mount, so the installer does it: it waits for running work, copies and verifies the
+folder, and leaves the old one as it was. Backups stay in `Projects/Backups`.
 
 ## What gets installed
 
@@ -23,7 +33,9 @@ One image, one compose file, one host helper:
 - **[compose.yaml](../compose.yaml)** (shipped in the package) is copied to
   `~/.local/share/slopify/docker/slopify/` with a private `.env` beside it. One
   service `slopify`, `restart: unless-stopped`, port bound to `127.0.0.1` only, the
-  `slopify-data` volume at `/data`, your Projects folder at `/data/projects`. The
+  `slopify-data` volume at `/data`, your Projects folder at `/data/projects` and, on
+new installs, your Backups folder at `/data/backups` (`SLOPIFY_BACKUPS_DIR`; without
+it an empty `backups-off` folder is mounted and nothing reads it). The
   volume is declared `external`, so `docker compose down` (even with `-v`) never
   deletes it.
 - **The host CLI bridge** (optional, see below).
@@ -145,6 +157,7 @@ SLOPIFY_PROJECTS_DIR=~/Slopify/Projects SLOPIFY_USER="$(id -u):$(id -g)" \
 
 Variables: `SLOPIFY_IMAGE`, `SLOPIFY_PORT` (default 6969), `SLOPIFY_USER`,
 `SLOPIFY_VOLUME` (default `slopify-data`), `SLOPIFY_PROJECTS_DIR` (required),
+`SLOPIFY_BACKUPS_DIR` (optional, the default folder for scheduled backups),
 `SLOPIFY_HOST_CLI_SHARE`, `SLOPIFY_NAME`. Update by changing `SLOPIFY_IMAGE` and
 running `up -d` again; that path has no automatic snapshot or rollback.
 

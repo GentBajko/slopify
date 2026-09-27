@@ -245,7 +245,7 @@ function nextLine(view: BackupView): string {
 function whereLine(view: BackupView): string {
   const kept = `${view.files.length} backup${view.files.length === 1 ? "" : "s"} here (${formatBytes(view.files.reduce((sum, file) => sum + file.bytes, 0))}).`;
   if (view.hostFolder === null)
-    return `Inside Slopify's Docker volume, not on your computer. Leave Folder empty to save backups in your projects folder on your computer. ${kept}`;
+    return `Inside Slopify's Docker volume, not on your computer. Leave Folder empty to save backups in the Backups folder on your computer. ${kept}`;
   const empty = view.config.folder === null ? "Empty uses the default: " : "On your computer: ";
   return `${empty}${view.hostFolder}. ${kept}`;
 }

@@ -3,6 +3,7 @@ import type { AliasMatch } from "../../kernel/ports/narration-aliases.js";
 import type { FingerprintValue } from "../../kernel/runner/work.js";
 import {
   type NarrationSegment,
+  type PreparationSpeaker,
   preparationMessages,
   validatePreparation,
 } from "../narration/preparation.js";
@@ -38,7 +39,7 @@ export function preparationTemplate(context: RecipeContext): FingerprintValue {
 export function preparationFuture(
   context: RecipeContext,
   segment: NarrationSegment,
-  dependency: ResolvedWorkRecipe,
+  dependency: Pick<ResolvedWorkRecipe, "key" | "fingerprint">,
   additionalDependencies: readonly ResolvedWorkRecipe[] = [],
 ): ResolvedWorkRecipe {
   return recipe(
@@ -69,6 +70,7 @@ export function preparationForGroup(
   maxCharacters: number,
   spans: ReturnType<typeof pronunciationSpans> = [],
   aliases: readonly AliasMatch[] = [],
+  speaker?: PreparationSpeaker | undefined,
 ): PreparedGroup {
   const preparation = recipe(
     context,
@@ -82,6 +84,7 @@ export function preparationForGroup(
           source,
           aliases,
           context.config.language,
+          speaker,
         ),
       ),
       preparation: { format: "inworld-tts-2", version: 1, source, logicalKey, segment },

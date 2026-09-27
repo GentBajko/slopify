@@ -9,7 +9,7 @@ it("rejects unsupported managed hosts before helper or storage mutation", () => 
   expect(() => assertManagedDockerHost("linux", 1000, 1000)).not.toThrow();
 });
 
-it("ships one compose file: localhost port, external data volume, bridge and handshake mounts", async () => {
+it("ships one compose file: localhost port, external data volume, backups, bridge and handshake mounts", async () => {
   const compose = parse(await readFile(new URL("../../../compose.yaml", import.meta.url), "utf8"));
   const service = compose.services.slopify;
   expect(Object.keys(compose.services)).toEqual(["slopify"]);
@@ -21,6 +21,7 @@ it("ships one compose file: localhost port, external data volume, bridge and han
   expect(service.volumes.map((v: { target: string }) => v.target)).toEqual([
     "/data",
     "/data/projects",
+    "/data/backups",
     "/opt/slopify-host",
     "/opt/slopify-install",
   ]);

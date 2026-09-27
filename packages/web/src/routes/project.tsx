@@ -11,7 +11,7 @@ import { Workspace } from "@/components/kit/layout";
 import { Rail, RailButton } from "@/components/kit/rail";
 import { Lamp, type Tone } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
-import { readSample, sampleKey } from "@/onboarding/api";
+import { isSample as isBundledSample, readSample, sampleKey } from "@/onboarding/api";
 import { StageBodyFor } from "@/project/bodies";
 import { ShortsBlock } from "@/project/body-shorts";
 import { YoutubeBlock } from "@/project/body-youtube";
@@ -113,7 +113,8 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
 
   useLiveProject(projectId, revisionId);
   const sample = useQuery({ queryKey: sampleKey, queryFn: () => readSample(api) });
-  const isSample = sample.data?.projectId === projectId;
+  // Any of the bundled samples: the Library of Alexandria, the audiobook or the podcast.
+  const isSample = isBundledSample(sample.data, projectId);
   const gates = useQuery({
     queryKey: checkpointRevisionKey(projectId, revisionId ?? ""),
     queryFn: () => checkpointStatus(api, projectId),

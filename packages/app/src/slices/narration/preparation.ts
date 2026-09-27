@@ -12,6 +12,11 @@ export interface PreparationSource {
   readonly logicalKey: string;
   readonly segment: NarrationSegment;
 }
+// Who says the prepared text, in a multi-voice run: the speaker's name and role.
+export interface PreparationSpeaker {
+  readonly name: string;
+  readonly role: string;
+}
 export interface SourceSentence {
   readonly sentence: number;
   readonly text: string;
@@ -92,12 +97,14 @@ const contract = [
 // they will be said. Without any, the request is exactly what it always was. A narration in
 // another `language`: its directions still steer the voice in English, but the model has to
 // know the sentences are not English and must stay as they are. English gets the contract
-// alone, as it always did.
+// alone, as it always did. A turn of a multi-voice script names its `speaker` too, so the
+// directions suit a narrator, a host or the character saying the line; one voice names none.
 export function preparationMessages(
   prompt: string,
   source: string,
   aliases: readonly AliasMatch[] = [],
   language?: string | undefined,
+  speaker?: PreparationSpeaker | undefined,
 ): readonly Message[] {
   const name = language === undefined || language === "en" ? undefined : languageInfo(language);
   return [
@@ -112,6 +119,7 @@ export function preparationMessages(
       role: "user",
       content: JSON.stringify({
         direction: prompt,
+        ...(speaker === undefined ? {} : { speaker: `${speaker.name} (${speaker.role})` }),
         sentences: aliasedSentences(sourceSentences(source), aliases),
       }),
     },

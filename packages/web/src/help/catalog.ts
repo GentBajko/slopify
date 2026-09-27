@@ -1,9 +1,9 @@
-import type { HelpEntry } from "./entry.js";
 import { libraryHelp } from "./entries/library.js";
 import { planningHelp } from "./entries/planning.js";
 import { playHelp } from "./entries/play.js";
 import { projectHelp } from "./entries/project.js";
 import { settingsHelp } from "./entries/settings.js";
+import type { HelpEntry } from "./entry.js";
 
 export type { HelpEntry } from "./entry.js";
 

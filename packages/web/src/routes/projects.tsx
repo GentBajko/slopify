@@ -86,9 +86,11 @@ export function ProjectsRoute(): ReactElement {
   const projects = useQuery(projectsQuery(api));
   const [deleting, setDeleting] = useState<ProjectListing | undefined>(undefined);
   const [filter, setFilter] = useState<Filter>("all");
-  // The bundled sample project carries a Sample badge.
+  // The bundled sample projects carry a Sample badge.
   const firstRun = useQuery({ queryKey: onboardingKey, queryFn: () => readFirstRun(api) });
-  const sample = firstRun.data?.sampleProjectId ?? null;
+  const samples = new Set(
+    Object.values(firstRun.data?.samples ?? {}).filter((id): id is string => id !== null),
+  );
   const [search, setSearch] = useState("");
 
   const remove = useMutation({
@@ -222,7 +224,7 @@ export function ProjectsRoute(): ReactElement {
                 <ProjectRow
                   key={project.id}
                   project={project}
-                  sample={project.id === sample}
+                  sample={samples.has(project.id)}
                   onDelete={() => setDeleting(project)}
                   onUploaded={(next) => uploaded.mutate({ project, uploaded: next })}
                   busy={uploaded.isPending}
