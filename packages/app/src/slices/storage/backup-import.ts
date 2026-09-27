@@ -744,7 +744,10 @@ function commit(
         insertRow(
           db,
           "schedules",
-          active ? { ...schedule, status: "paused", updated_at: now } : schedule,
+          // A generation the other install was running does not carry over.
+          active
+            ? { ...schedule, status: "paused", updated_at: now, topics_generating_at: null }
+            : { ...schedule, topics_generating_at: null },
         );
         if (active) schedules.paused += 1;
         for (const run of rowsOf(
@@ -754,6 +757,13 @@ function commit(
         ))
           if (!has("SELECT 1 FROM schedule_runs WHERE id=?", String(run.id)))
             insertRow(db, "schedule_runs", run);
+        for (const topic of rowsOf(
+          scratch,
+          "SELECT * FROM schedule_topics WHERE schedule_id=? ORDER BY rowid",
+          String(schedule.id),
+        ))
+          if (!has("SELECT 1 FROM schedule_topics WHERE id=?", String(topic.id)))
+            insertRow(db, "schedule_topics", topic);
         schedules.added += 1;
       }
 

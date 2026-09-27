@@ -148,4 +148,19 @@ describe("createRunNotifier", () => {
     await notifier.settled();
     expect(posted[0]?.body.split("\n")[0]).toBe("Run finished: Black holes");
   });
+
+  it("says how many generated topics wait for approval", async () => {
+    const { notifier, posted } = harness();
+    notifier.observeTopics({
+      type: "schedule.topics",
+      scheduleId: "s1",
+      scheduleName: "D&D lore",
+      added: 5,
+      waiting: 7,
+    });
+    await notifier.settled();
+    expect(posted[0]?.body).toBe(
+      "5 new topics are waiting for you\nOpen Schedules → D&D lore → Topics waiting to approve, edit or reject them. 7 are waiting in all.\n",
+    );
+  });
 });

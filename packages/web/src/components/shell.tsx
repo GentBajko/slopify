@@ -28,7 +28,7 @@ const sections = [
   {
     to: "/prompts",
     label: "Library",
-    match: ["/library", "/prompts", "/entries", "/templates", "/schedules"],
+    match: ["/library", "/prompts", "/entries", "/templates", "/schedules", "/calendar"],
   },
   { to: "/settings", label: "Settings", match: ["/settings", "/usage"] },
 ] as const;
@@ -81,6 +81,11 @@ function ShellContent() {
     const unsubscribe = subscribeGlobal(openEvents, eventsUrl(api, "global"), {
       tally: setRunning,
       projectState: runs.observe,
+      scheduleTopics: () => {
+        void queryClient.invalidateQueries({ queryKey: ["schedules"] });
+        void queryClient.invalidateQueries({ queryKey: ["schedule"] });
+        void queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      },
       stagingChanged: () => {
         void queryClient.invalidateQueries({ queryKey: keys.staging });
       },

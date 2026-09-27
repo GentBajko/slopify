@@ -67,6 +67,7 @@ export const libraryTables = [
   "project_template_revisions",
   "schedules",
   "schedule_runs",
+  "schedule_topics",
   "staged_files",
   "play_drafts",
   "play_draft_attachments",

@@ -77,6 +77,7 @@ describe("migrate", () => {
       "revision_work_pieces",
       "revision_work_reservations",
       "schedule_runs",
+      "schedule_topics",
       "schedules",
       "schema_migrations",
       "settings",
@@ -110,6 +111,7 @@ describe("migrate", () => {
       "revision_work_revision_identity",
       "revision_work_stage",
       "schedule_runs_schedule",
+      "schedule_topics_schedule",
       "schedules_due",
       "stages_project_identity",
     ]);
@@ -142,6 +144,7 @@ describe("migrate", () => {
       { version: 19, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 22, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 24, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 26, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 27, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
@@ -152,7 +155,7 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 22 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 23 });
   });
 
   it("refuses a database newer than the app knows", () => {
