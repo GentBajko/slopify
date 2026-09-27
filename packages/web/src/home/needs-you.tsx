@@ -11,8 +11,10 @@ import { useApp } from "@/app-context";
 import { Button, ButtonRow } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
 import { ButtonLink } from "@/components/kit/link";
+import { hitArea, hitTarget } from "@/components/kit/list-row";
 import { Status } from "@/components/kit/status";
 import { useToast } from "@/components/kit/toast";
+import { cn } from "@/lib/utils";
 import {
   type ApprovalIdentity,
   approveCheckpoint,
@@ -58,7 +60,7 @@ function Item({
   readonly action: ReactNode;
 }): ReactElement {
   return (
-    <li className="sl-home-item">
+    <li className={cn("sl-home-item", hitArea)}>
       {lead}
       <div className="flex min-w-0 flex-col gap-1">
         {status}
@@ -220,7 +222,11 @@ export function HeldTopicsItem({
       title={schedule.name}
       detail={`Slopify suggested ${count === 1 ? "a topic" : `${String(count)} topics`} for this schedule. Queue the ones you want and reject the rest.`}
       action={
-        <ButtonLink to="/calendar" variant={primary ? "primary" : "secondary"}>
+        <ButtonLink
+          to="/calendar"
+          variant={primary ? "primary" : "secondary"}
+          className={hitTarget}
+        >
           Review topics
         </ButtonLink>
       }

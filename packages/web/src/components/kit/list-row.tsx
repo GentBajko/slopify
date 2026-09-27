@@ -1,6 +1,13 @@
 import type { ReactElement, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
+// A row or card made by hand that is one target - a Home item, a calendar entry: `hitArea` on
+// the row and `hitTarget` on its one link or button, which then covers the whole row while
+// the row's other controls keep working (shell.css). A ListRow does this itself for its
+// `onSelect` or its title link.
+export const hitArea = "sl-hit";
+export const hitTarget = "sl-hit__target";
+
 // A list of rows separated by hairlines, never boxed. Row actions (Edit, Duplicate, Use in
 // Play, History, Delete) are visible on the row, not hidden in a menu.
 export function List({
@@ -29,7 +36,7 @@ export function ListRow({
   className,
   children,
 }: {
-  // Plain text, or a router Link when the row opens a page.
+  // Plain text, or a router Link when the row opens a page: then the whole row opens it.
   readonly title: ReactNode;
   readonly meta?: ReactNode;
   // A thumbnail, lamp or icon before the text.
@@ -37,7 +44,8 @@ export function ListRow({
   readonly actions?: ReactNode;
   // The row shown in the detail column of a list-and-detail page.
   readonly selected?: boolean;
-  // Makes the title a button that selects the row (list and detail).
+  // Makes the title a button that selects the row (list and detail); a press anywhere on the
+  // row selects it.
   readonly onSelect?: () => void;
   readonly className?: string;
   // What opens under the row across its full width: an inline editor, the row's details.
@@ -47,7 +55,7 @@ export function ListRow({
     <li
       data-selected={selected ? "true" : undefined}
       aria-current={selected ? "true" : undefined}
-      className={cn("sl-row", className)}
+      className={cn("sl-row", hitArea, className)}
     >
       <div className="sl-row__lead">
         {lead}
@@ -58,7 +66,10 @@ export function ListRow({
             <button
               type="button"
               onClick={onSelect}
-              className="sl-row__title border-0 bg-transparent p-0 text-left text-ink"
+              className={cn(
+                "sl-row__title border-0 bg-transparent p-0 text-left text-ink",
+                hitTarget,
+              )}
             >
               {title}
             </button>

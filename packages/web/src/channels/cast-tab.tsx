@@ -85,6 +85,9 @@ export function CastTab({
                   )}
                   {...(first ? { src: pictureUrl(api, first) } : {})}
                   alt={one.name}
+                  // The whole tile picks it for editing, like its Edit button.
+                  onOpen={() => select(one.id)}
+                  openLabel={`Pick ${one.name}`}
                   title={one.name}
                   meta={`${castKindLabels[one.kind]} · ${String(ready.length)} ${
                     ready.length === 1 ? "picture" : "pictures"

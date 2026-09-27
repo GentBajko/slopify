@@ -5,6 +5,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { fileUrl } from "@/api";
 import { useApp } from "@/app-context";
+import { hitArea } from "@/components/kit/list-row";
 import { MediaFrame } from "@/components/kit/media";
 import { Status } from "@/components/kit/status";
 import { type Step, Steps } from "@/components/kit/steps";
@@ -85,7 +86,7 @@ export function RunningProject({
         : undefined,
   }));
   return (
-    <li className="sl-home-run">
+    <li className={`sl-home-run ${hitArea}`}>
       <div className="flex min-w-0 flex-col gap-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div className="sl-row__title text-[17px]">

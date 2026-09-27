@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
@@ -5,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button } from "./button.js";
 import { ConfirmDialog } from "./dialog.js";
 import { Field, Input, Select, Textarea } from "./field.js";
+import { hitArea, hitTarget, List, ListRow } from "./list-row.js";
 import { Lightbox, type LightboxItem, MediaFrame } from "./media.js";
 import { ReadingView, splitSections } from "./reading-view.js";
 import { Segmented, Switch } from "./switch.js";
@@ -225,6 +228,62 @@ describe("media", () => {
     expect(within(box).getByRole("img", { name: "Bahamut" })).not.toBeNull();
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+});
+
+describe("rows and tiles are one target", () => {
+  const css = readFileSync(join(import.meta.dirname, "..", "..", "styles", "shell.css"), "utf8");
+
+  it("stretches a row's select button over the whole row and keeps its actions on their own", async () => {
+    const user = userEvent.setup();
+    const picked = vi.fn();
+    const removed = vi.fn();
+    render(
+      <List label="Themes">
+        <ListRow
+          title="D&D Parchment"
+          meta="Serif · warm paper"
+          onSelect={picked}
+          actions={<Button onClick={removed}>Delete</Button>}
+        />
+      </List>,
+    );
+    const row = screen.getByRole("listitem");
+    const target = within(row).getByRole("button", { name: "D&D Parchment" });
+    expect(row.classList.contains(hitArea)).toBe(true);
+    expect(target.classList.contains(hitTarget)).toBe(true);
+    // One tab stop for the row, then its own actions.
+    await user.tab();
+    expect(document.activeElement).toBe(target);
+    await user.tab();
+    expect(document.activeElement).toBe(within(row).getByRole("button", { name: "Delete" }));
+    await user.click(within(row).getByRole("button", { name: "Delete" }));
+    expect(removed).toHaveBeenCalledOnce();
+    expect(picked).not.toHaveBeenCalled();
+    await user.click(target);
+    expect(picked).toHaveBeenCalledOnce();
+  });
+
+  it("covers the row from its target and lifts every other control above it (shell.css)", () => {
+    // The stretch: the target's ::after fills the row, which is its containing block.
+    expect(css).toMatch(/\.sl-hit \{\s*position: relative;/);
+    expect(css).toMatch(
+      /\.sl-hit :is\(\.sl-hit__target, \.sl-row__title a\)::after \{\s*content: "";\s*position: absolute;\s*inset: 0;/,
+    );
+    // The row's other controls sit above the stretch, and the target keeps the focus ring.
+    expect(css).toMatch(
+      /:not\(\s*\.sl-hit__target,\s*\.sl-row__title a\s*\) \{\s*position: relative;\s*z-index: 1;/,
+    );
+    expect(css).toMatch(/\.sl-hit:has\(:is\(\.sl-hit__target, \.sl-row__title a\):focus-visible\)/);
+  });
+
+  it("makes the whole media figure, caption included, the open button", () => {
+    render(
+      <MediaFrame src="/a.png" alt="Tiamat" title="Tiamat" meta="Image 1" onOpen={() => {}} />,
+    );
+    const open = screen.getByRole("button", { name: "Open Tiamat full size" });
+    expect(open.parentElement?.tagName).toBe("FIGURE");
+    expect(css).toMatch(/\.sl-media \{\s*position: relative;/);
   });
 });
 

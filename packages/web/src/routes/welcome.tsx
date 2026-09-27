@@ -11,7 +11,7 @@ import { Callout } from "@/components/kit/callout";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { ButtonLink, TextLink } from "@/components/kit/link";
-import { List, ListRow } from "@/components/kit/list-row";
+import { hitTarget, List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { Input } from "@/components/ui/input";
 import { Picker } from "@/components/ui/picker";
@@ -195,7 +195,11 @@ export function WelcomeRoute(): ReactElement {
                           Restore samples in Settings
                         </TextLink>
                       ) : (
-                        <ButtonLink to="/projects/$projectId" params={{ projectId }}>
+                        <ButtonLink
+                          to="/projects/$projectId"
+                          params={{ projectId }}
+                          className={hitTarget}
+                        >
                           {one.action}
                         </ButtonLink>
                       )

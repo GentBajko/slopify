@@ -26,7 +26,7 @@ import { useCommand } from "@/components/kit/command-palette";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { TextLink } from "@/components/kit/link";
-import { List, ListRow } from "@/components/kit/list-row";
+import { hitArea, hitTarget, List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { Status, type Tone } from "@/components/kit/status";
 import { Segmented } from "@/components/kit/switch";
@@ -402,11 +402,11 @@ function DayCell({
       {(day?.projects ?? []).map((project) => {
         const state = projectTone[project.state];
         return (
-          <div key={project.id} className="sl-cal-item sl-cal-item--project">
+          <div key={project.id} className={`sl-cal-item sl-cal-item--project ${hitArea}`}>
             <Link
               to="/projects/$projectId"
               params={{ projectId: project.id }}
-              className="text-small font-semibold"
+              className={`text-small font-semibold ${hitTarget}`}
             >
               {project.title}
             </Link>

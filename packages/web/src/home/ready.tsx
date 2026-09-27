@@ -5,6 +5,7 @@ import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
 import { Button, ButtonRow } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
+import { hitArea } from "@/components/kit/list-row";
 import { useToast } from "@/components/kit/toast";
 import { startedAt } from "@/lib/utils";
 import { keys } from "@/queries";
@@ -55,7 +56,7 @@ export function ReadyItem({ project }: { readonly project: ProjectListing }): Re
     run: () => mark.mutate(true),
   });
   return (
-    <li className="sl-home-ready">
+    <li className={`sl-home-ready ${hitArea}`}>
       <ProjectThumb projectId={project.id} />
       <div className="flex min-w-0 flex-col gap-2">
         <div className="sl-row__title">
