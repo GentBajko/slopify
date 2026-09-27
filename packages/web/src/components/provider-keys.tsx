@@ -15,6 +15,7 @@ import { Status } from "@/components/kit/status";
 import { CliProviderDetail, cliState, providerTips } from "@/components/provider-cli";
 import { testKey } from "@/components/provider-upkeep-api";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
+import { localState, SystemVoiceDetail } from "@/components/system-voices";
 import { cn } from "@/lib/utils";
 import { keys, providersQuery } from "@/queries";
 
@@ -32,9 +33,7 @@ const familyTitles: Readonly<Record<ProviderFamily, string>> = {
 const keyMask = "••••••••••••";
 
 function ready(provider: ProviderStatus): boolean {
-  return provider.readiness.kind === "cli"
-    ? readinessIsUsable(provider.readiness)
-    : provider.readiness.hasKey;
+  return readinessIsUsable(provider.readiness);
 }
 
 function stateOf(provider: ProviderStatus): {
@@ -42,6 +41,7 @@ function stateOf(provider: ProviderStatus): {
   readonly word: string;
 } {
   if (provider.readiness.kind === "cli") return cliState(provider.readiness);
+  if (provider.readiness.kind === "local") return localState(provider.readiness);
   return provider.readiness.hasKey
     ? { tone: "done", word: "Key saved" }
     : { tone: "off", word: "No key" };
@@ -125,7 +125,13 @@ export function ProviderKeys() {
                     <ListRow
                       key={provider.id}
                       title={provider.displayName}
-                      meta={provider.readiness.kind === "cli" ? "Command line" : "API key"}
+                      meta={
+                        provider.readiness.kind === "cli"
+                          ? "Command line"
+                          : provider.readiness.kind === "local"
+                            ? "Built in, no key"
+                            : "API key"
+                      }
                       selected={provider.id === selected?.id}
                       onSelect={() => pick(provider.id)}
                       actions={<Status tone={state.tone}>{state.word}</Status>}
@@ -142,6 +148,12 @@ export function ProviderKeys() {
                   provider={selected}
                   readiness={selected.readiness}
                   kind={familyTitles[selected.family]}
+                />
+              ) : selected.readiness.kind === "local" ? (
+                <SystemVoiceDetail
+                  key={selected.id}
+                  provider={selected}
+                  readiness={selected.readiness}
                 />
               ) : (
                 <KeyDetail

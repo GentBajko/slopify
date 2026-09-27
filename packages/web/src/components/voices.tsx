@@ -15,6 +15,7 @@ import { Field, Input, Select } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { Switch } from "@/components/kit/switch";
+import { SystemVoicePicker } from "@/components/system-voices";
 import { languagesOfText, VoiceLanguagesCell } from "@/language/voice-languages-cell";
 import { keys, providersQuery, voicesQuery } from "@/queries";
 
@@ -271,7 +272,21 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
             ? { help: "Use an Inworld voice ID, such as Dennis, or one from your workspace." }
             : {})}
         >
-          {provider === "google-tts" ? (
+          {provider === "system-voice" ? (
+            // The computer's own voices are listed, not typed; picking one names it too.
+            <SystemVoicePicker
+              value={voiceId}
+              onPick={(voice) => {
+                edit("voiceId", () => {
+                  setVoiceId(voice.id);
+                });
+                if (name.trim() === "") setName(voice.name);
+                const language = /^([a-z]{2,3})(?:[-_]|$)/i.exec(voice.language ?? "")?.[1];
+                if (languages.trim() === "" && language !== undefined)
+                  setLanguages(language.toLowerCase());
+              }}
+            />
+          ) : provider === "google-tts" ? (
             // Gemini speaks only its prebuilt voices, so they are picked rather than typed.
             <Select
               value={voiceId}

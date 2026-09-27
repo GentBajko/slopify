@@ -13,6 +13,7 @@ export function diagnosticsRoutes(deps: AppDeps) {
       db: deps.db,
       probe: deps.probe,
       hostCliStatus: deps.hostCliStatus,
+      host: deps.speechHost,
     });
     const projectCount = deps.db.prepare("SELECT count(*) AS count FROM projects").get();
     const schema = deps.db.prepare("SELECT max(version) AS version FROM schema_migrations").get();

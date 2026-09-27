@@ -142,6 +142,9 @@ export interface AppDeps {
   // Runs a local agent CLI to learn whether it is installed. Handed in so a test can answer for
   // both branches without depending on this machine's PATH.
   readonly probe: CliProbe;
+  // Where the system voice is looked for (platform and environment); this process when
+  // absent, so a test can pick the platform.
+  readonly speechHost?: import("../../kernel/ports/system-speech.js").SpeechHost | undefined;
   // Asks the telemetry flusher for a delivery attempt. It returns at once and never
   // throws: nothing a route does may wait on the collector.
   readonly flushSoon: () => void;

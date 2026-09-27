@@ -1,15 +1,17 @@
 import type { ModelInfo, ProviderFamily } from "../../kernel/ports/model.js";
+import { readinessIsUsable } from "../../kernel/ports/model.js";
 import type { ProviderChoice, RunDraft, VoiceChoice } from "../admission/model.js";
 import { titleMax } from "../admission/rules.js";
 import type { LoudnessSettings } from "../loudness/model.js";
 import { defaultSentencePauseSeconds } from "../narration/pauses-model.js";
-import type { ProviderStatus, Voice } from "../settings/model.js";
+import { type ProviderStatus, systemVoiceProvider, type Voice } from "../settings/model.js";
 import type { PackPromptKey, StarterPack } from "./packs.js";
 
 // "Make a 60-second short": a topic in, a short-mode project out (`admission/short-mode.ts`),
 // with the providers picked for the user from what this machine has: an installed CLI for the
 // text and, with Codex, the images, so no key is needed for those; a keyed voice for the
-// narration, since no CLI speaks. What is missing is said with the screen that fixes it.
+// narration when one is set up, else the computer's built-in voice. What is missing is said
+// with the screen that fixes it.
 
 export interface ShortProviders {
   readonly llm: ProviderChoice;
@@ -23,7 +25,12 @@ export interface ShortGap {
 }
 
 export type ShortPlan =
-  | { readonly ok: true; readonly providers: ShortProviders }
+  | {
+      readonly ok: true;
+      readonly providers: ShortProviders;
+      // The narration is the computer's own voice, found rather than saved.
+      readonly systemVoice: boolean;
+    }
   | { readonly ok: false; readonly gaps: readonly ShortGap[] };
 
 export type ModelsFor = (provider: string, family: ProviderFamily) => Promise<readonly ModelInfo[]>;
@@ -39,11 +46,15 @@ const preferred: Readonly<Record<string, RegExp>> = {
 };
 
 function ready(status: ProviderStatus | undefined): boolean {
-  if (status === undefined) return false;
-  const readiness = status.readiness;
-  return readiness.kind === "cli"
-    ? readiness.installed && readiness.issue === undefined
-    : readiness.hasKey;
+  return status !== undefined && readinessIsUsable(status.readiness);
+}
+
+// The computer's own voice a first short falls back to: the best speech program found and its
+// English voice (`kernel/system-speech.ts`), named as Settings → Voices will list it.
+export interface SystemVoicePick {
+  readonly model: string;
+  readonly voiceId: string;
+  readonly name: string;
 }
 
 async function firstModel(
@@ -71,6 +82,8 @@ export async function planShortProviders(input: {
   // The voice the pack (or the starter set) suggests, used with an OpenAI key when no voice
   // of a keyed provider is saved.
   readonly suggested: StarterPack["voice"];
+  // The built-in voice found on this computer, used when no keyed voice is ready.
+  readonly systemVoice?: SystemVoicePick | undefined;
 }): Promise<ShortPlan> {
   const status = (id: string) => input.statuses.find((row) => row.id === id);
   const gaps: ShortGap[] = [];
@@ -107,8 +120,13 @@ export async function planShortProviders(input: {
         "No image model is ready. Install Codex CLI and sign in to it, or add an OpenAI, Google, fal.ai or Replicate key in Settings → Providers.",
     });
 
+  // A keyed voice first (a saved one, else the pack's suggestion), then the computer's own: a
+  // saved system voice, else the one found. Keys are the better voice, never a requirement.
   let audio: VoiceChoice | undefined;
-  const saved = input.voices.find((voice) => ready(status(voice.provider)));
+  const keyed = (provider: string) => provider !== systemVoiceProvider;
+  const saved = input.voices.find(
+    (voice) => keyed(voice.provider) && ready(status(voice.provider)),
+  );
   const provider =
     saved?.provider ??
     (ready(status(input.suggested.provider)) ? input.suggested.provider : undefined);
@@ -117,17 +135,33 @@ export async function planShortProviders(input: {
     if (model !== undefined)
       audio = { provider, model, voice: saved?.voiceId ?? input.suggested.voiceId };
   }
-  if (audio === undefined)
+  let systemVoice = false;
+  const system = status(systemVoiceProvider);
+  if (audio === undefined && ready(system) && input.systemVoice !== undefined) {
+    const savedSystem = input.voices.find((voice) => voice.provider === systemVoiceProvider);
+    audio = {
+      provider: systemVoiceProvider,
+      model: input.systemVoice.model,
+      voice: savedSystem?.voiceId ?? input.systemVoice.voiceId,
+    };
+    systemVoice = true;
+  }
+  if (audio === undefined) {
+    const systemIssue =
+      system?.readiness.kind === "local" && system.readiness.issue !== undefined
+        ? ` ${system.readiness.issue}`
+        : "";
     gaps.push({
       need: "voice",
       message: keyedVoices.some((id) => ready(status(id)))
         ? "Your voice provider has no saved voice yet. Add one in Settings → Voices, then try again."
-        : "No voice is ready to narrate the short: command-line tools can't speak. Add an OpenAI, ElevenLabs, Cartesia or Inworld key in Settings → Providers (with ElevenLabs, Cartesia or Inworld, also save a voice in Settings → Voices).",
+        : `No voice is ready to narrate the short: no voice key is saved and this computer's built-in voice can't be used.${systemIssue || " Install espeak-ng, or add an OpenAI, ElevenLabs, Cartesia or Inworld key in Settings → Providers (with ElevenLabs, Cartesia or Inworld, also save a voice in Settings → Voices)."}`,
     });
+  }
 
   return llm === undefined || images === undefined || audio === undefined
     ? { ok: false, gaps }
-    : { ok: true, providers: { llm, audio, images } };
+    : { ok: true, providers: { llm, audio, images }, systemVoice };
 }
 
 // The short-mode draft for a topic, using the pack's (or starter set's) script and scene

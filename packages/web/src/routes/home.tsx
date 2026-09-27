@@ -15,7 +15,7 @@ import { FailedItem, HeldTopicsItem, isWaiting, PausedItem, WaitingItem } from "
 import { isReadyToUpload, ReadyItem } from "@/home/ready";
 import { RunningProject } from "@/home/running-now";
 import { ThisWeek } from "@/home/week";
-import { onboardingKey, readFirstRun } from "@/onboarding/api";
+import { dismissFirstRun, onboardingKey, readFirstRun } from "@/onboarding/api";
 import { projectsQuery } from "@/queries";
 import { calendarQuery, schedulesQuery } from "@/schedules/api";
 import { templatesQuery } from "@/templates/api";
@@ -31,6 +31,8 @@ const shownPerSection = 4;
 
 // Set once the first-run screen was opened in this tab, so coming back to Home stays here.
 let welcomed = false;
+// The settle is sent once per visit.
+let settled = false;
 
 // Home: what needs the person, what is running, what is coming up on the calendar, what is
 // ready to upload and what this week cost, for the channel picked in the rail (or all).
@@ -60,6 +62,16 @@ export function HomeRoute(): ReactElement {
       void navigate({ to: "/welcome" });
     }
   }, [firstRun.data?.show, navigate]);
+  // A real project made before the first-run screen was done with: record it, so deleting every
+  // project later does not bring the screen back. Reading the screen's state writes nothing.
+  useEffect(() => {
+    if (firstRun.data?.settle === true && !settled) {
+      settled = true;
+      void dismissFirstRun(api).catch(() => {
+        settled = false;
+      });
+    }
+  }, [firstRun.data?.settle, api]);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);

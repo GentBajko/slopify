@@ -73,7 +73,7 @@ export async function checkDraftReadiness(
       fields.push({
         field: c.field,
         message:
-          provider?.readiness.kind === "cli" && provider.readiness.issue
+          provider !== undefined && provider.readiness.kind !== "keyed" && provider.readiness.issue
             ? provider.readiness.issue
             : "Set up this provider in Settings → Providers before starting.",
       });

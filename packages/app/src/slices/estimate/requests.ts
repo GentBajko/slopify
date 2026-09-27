@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Catalogue } from "../../catalog/schema.js";
 import { apiEquivalentOf, tokenCost } from "../run-cost/pricing.js";
-import { isLocalCliProvider } from "../settings/model.js";
+import { isLocalCliProvider, systemVoiceProvider } from "../settings/model.js";
 import type { CostEstimate, CostRow } from "./index.js";
 
 const quantity = z.number().finite().nonnegative();
@@ -148,6 +148,16 @@ function price(request: PricedRequest, catalogue: Catalogue): CostRow {
     };
   if ((request.kind === "llm" || request.kind === "image") && isLocalCliProvider(request.provider))
     return onPlan(request, catalogue);
+  if (
+    (request.kind === "tts" || request.kind === "tts-estimate") &&
+    request.provider === systemVoiceProvider
+  )
+    return {
+      stage: request.stage,
+      low: 0,
+      high: 0,
+      detail: "Spoken by your computer's built-in voice, so it costs nothing.",
+    };
   const family = request.kind === "tts-estimate" ? "tts" : request.kind;
   const model = catalogue[family].find(
     (entry) =>
