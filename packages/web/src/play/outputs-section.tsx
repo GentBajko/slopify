@@ -1,6 +1,7 @@
 import type { Entry } from "@app/slices/library/model.js";
 import type { ReactElement } from "react";
 import { Button } from "@/components/ui/button";
+import { useDraftLanguage } from "@/language/play-language";
 import { useDraftCast } from "./channel-picker";
 import { usePlaySession } from "./draft-context";
 import { AudioRail, ImagesRail } from "./media-rails";
@@ -18,12 +19,14 @@ export function OutputsSection(
   const session = usePlaySession();
   const document = session.document;
   const cast = useDraftCast();
+  const language = useDraftLanguage();
   const { form, entries, problem, update } = props;
   return (
     <>
       <AudioRail
         {...props}
         cast={cast}
+        language={language}
         rawCounts={{
           ...document.form.chunking,
           onChange: (mode, amount) =>

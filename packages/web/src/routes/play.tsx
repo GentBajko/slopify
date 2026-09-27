@@ -7,6 +7,7 @@ import { Drawer } from "@/components/kit/drawer";
 import { PageBar } from "@/components/kit/page-bar";
 import { Button } from "@/components/ui/button";
 import { Welcome } from "@/components/welcome";
+import { PlayLanguage } from "@/language/play-language";
 import { usePlayDraft } from "@/lib/form-drafts";
 import { admission } from "@/play/admission";
 import { ChannelPicker } from "@/play/channel-picker";
@@ -293,7 +294,12 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
               {...controls}
               fields={fields}
               entries={choices.entries}
-              channel={<ChannelPicker />}
+              channel={
+                <>
+                  <ChannelPicker />
+                  <PlayLanguage />
+                </>
+              }
               onLibrary={(to) => {
                 void library(to);
               }}

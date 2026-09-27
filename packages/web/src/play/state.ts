@@ -75,6 +75,8 @@ export interface LegacyPlayFormState {
   // The Video stage's YouTube description step and its Description prompt ("" is built-in).
   readonly youtubeDescription?: boolean | undefined;
   readonly descriptionPrompt?: string | undefined;
+  // The project language as picked on Play; absent is the channel's, else English.
+  readonly language?: PlayDraftForm["language"];
   // The Video stage's Shorts step, as the draft holds it: the numbers as typed, and the two
   // prompts' names ("" is built-in). Absent until Shorts is first touched: off.
   readonly shorts?: ShortsForm | undefined;
@@ -243,6 +245,8 @@ export function draftOf(input: DraftInput): RunDraft {
       : {}),
     articlePrompt: form.articlePrompt,
     ...(form.narrationPrompt === undefined ? {} : { narrationPrompt: form.narrationPrompt }),
+    // As `slices/play-drafts/convert.ts` sends it: English is never stored.
+    ...(form.language === undefined || form.language === "en" ? {} : { language: form.language }),
     // As `slices/play-drafts/convert.ts` sends it: timed from the narration, so nothing with
     // narration Off.
     ...(form.sources.audio !== "off" && form.youtubeDescription === true

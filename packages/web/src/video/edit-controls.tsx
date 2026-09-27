@@ -1,3 +1,4 @@
+import { wordTimingUnavailable } from "@app/kernel/ports/languages.js";
 import {
   type AnimateMode,
   type Atmosphere,
@@ -37,7 +38,7 @@ import { cn } from "@/lib/utils";
 // changed, so an untouched old project saves exactly what it had.
 
 const help = {
-  cuts: "Every N seconds holds each image for Seconds per image. Follow the narration cuts in the pause after a sentence, as near to that length as the sentences allow (never under 40% of it), and starts a new image at every chapter. Following the narration times the words first, as captions do; it works for English narration.",
+  cuts: "Every N seconds holds each image for Seconds per image. Follow the narration cuts in the pause after a sentence, as near to that length as the sentences allow (never under 40% of it), and starts a new image at every chapter. Following the narration times the words first, as captions do; it works in English and the languages with word timing (see Language).",
   transition:
     "How one image hands over to the next. The change is centred on the cut and takes the time chosen, so the video stays exactly as long as its narration.",
   vignette: "Darkens the corners to draw the eye to the middle.",
@@ -58,7 +59,10 @@ export function useVideoEditControls({
   problem,
   onChange,
   fieldPrefix = "videoEdit",
+  language,
 }: {
+  // The project language: one without word timing cuts every N seconds, whatever is picked.
+  readonly language?: string | undefined;
   readonly value: VideoEditSettings | undefined;
   readonly narrated: boolean;
   readonly imageProvider: string;
@@ -97,13 +101,16 @@ export function useVideoEditControls({
   const savedModel =
     edit.animateModel !== "" && !offered.some((one) => one.id === edit.animateModel);
 
+  const noWordTiming = wordTimingUnavailable(language);
   const cuts = (
     <Row id={`${id}-cuts`} label="Cuts" help={help.cuts}>
       <Picker
         id={`${id}-cuts`}
         data-play-field={`${fieldPrefix}.cuts`}
         className="w-auto min-w-[160px]"
-        value={edit.cuts}
+        value={noWordTiming === undefined ? edit.cuts : "interval"}
+        disabled={noWordTiming !== undefined}
+        aria-describedby={noWordTiming === undefined ? undefined : `${id}-cuts-note`}
         onChange={(event) => set({ cuts: event.target.value as CutMode })}
       >
         {cutModes.map((mode) => (
@@ -112,6 +119,11 @@ export function useVideoEditControls({
           </option>
         ))}
       </Picker>
+      {noWordTiming === undefined ? null : (
+        <p id={`${id}-cuts-note`} className="m-0 basis-full text-small text-ink3">
+          {noWordTiming}
+        </p>
+      )}
     </Row>
   );
 

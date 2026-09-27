@@ -195,6 +195,7 @@ export function VideoRail({
     narrated: form.sources.audio !== "off",
     imageProvider: form.images.provider,
     problem,
+    language: form.language,
     onChange: (videoEdit) => update({ videoEdit }),
   });
 

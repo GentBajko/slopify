@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { languagesOfText, VoiceLanguagesCell } from "@/language/voice-languages-cell";
 import { cn } from "@/lib/utils";
 import { keys, providersQuery, voicesQuery } from "@/queries";
 
@@ -62,9 +63,10 @@ export function Voices() {
       <table className="w-full table-fixed border-collapse text-small">
         <thead>
           <tr className="border-b border-line">
-            <th className={cn(cell, "engraved w-[26%] py-3 text-left text-ink3")}>Name</th>
-            <th className={cn(cell, "engraved w-[26%] py-3 text-left text-ink3")}>Provider</th>
+            <th className={cn(cell, "engraved w-[22%] py-3 text-left text-ink3")}>Name</th>
+            <th className={cn(cell, "engraved w-[18%] py-3 text-left text-ink3")}>Provider</th>
             <th className={cn(cell, "engraved py-3 text-left text-ink3")}>Voice ID</th>
+            <th className={cn(cell, "engraved w-[24%] py-3 text-left text-ink3")}>Languages</th>
             <th className={cn(cell, "w-[104px] py-3")}>
               <span className="sr-only">Remove</span>
             </th>
@@ -73,14 +75,14 @@ export function Voices() {
         <tbody>
           {listed === undefined ? (
             <tr className="border-b border-line">
-              <td colSpan={4} className={cn(cell, "py-4")}>
+              <td colSpan={5} className={cn(cell, "py-4")}>
                 <span className="block h-4 w-64 rounded-control bg-panel2" />
               </td>
             </tr>
           ) : listed.length === 0 ? (
             // An empty list teaches rather than showing a bare box.
             <tr className="border-b border-line">
-              <td colSpan={4} className={cn(cell, "py-4 text-ink2")}>
+              <td colSpan={5} className={cn(cell, "py-4 text-ink2")}>
                 Add a voice ID from your text-to-speech provider. Audio needs one to narrate.
               </td>
             </tr>
@@ -90,6 +92,9 @@ export function Voices() {
                 <td className={cn(cell, "py-3 font-semibold")}>{voice.name}</td>
                 <td className={cn(cell, "py-3 text-ink2")}>{nameOf(tts, voice.provider)}</td>
                 <td className={cn(cell, "py-3 text-ink2 tabular-nums")}>{voice.voiceId}</td>
+                <td className={cn(cell, "py-3")}>
+                  <VoiceLanguagesCell voice={voice} />
+                </td>
                 <td className={cn(cell, "py-3 text-right")}>
                   <Button
                     className="bg-transparent"
@@ -144,14 +149,20 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
 
   const [name, setName] = useState("");
   const [voiceId, setVoiceId] = useState("");
+  const [languages, setLanguages] = useState("");
+  const languagesId = useId();
   const [picked, setPicked] = useState<ProviderId | undefined>(undefined);
   const [refusal, setRefusal] = useState<VoiceRefusal | undefined>(undefined);
 
   const provider = picked ?? tts[0]?.id;
 
   const add = useMutation({
-    mutationFn: (draft: { provider: ProviderId; name: string; voiceId: string }) =>
-      addVoice(api, draft),
+    mutationFn: (draft: {
+      provider: ProviderId;
+      name: string;
+      voiceId: string;
+      languages?: readonly string[];
+    }) => addVoice(api, draft),
     onSuccess: async (result) => {
       if (!result.ok) {
         setRefusal(result.refusal);
@@ -159,6 +170,7 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
       }
       setName("");
       setVoiceId("");
+      setLanguages("");
       setRefusal(undefined);
       await queryClient.invalidateQueries({ queryKey: keys.voices });
     },
@@ -253,13 +265,42 @@ function AddVoiceRow({ tts }: { readonly tts: readonly ProviderStatus[] }) {
         )}
       </td>
 
+      <td className={cn(cell, "py-[14px]")}>
+        <Label htmlFor={languagesId} className="mb-[5px]">
+          Languages
+        </Label>
+        <Input
+          id={languagesId}
+          value={languages}
+          placeholder="es, de"
+          aria-invalid={problem("languages") !== undefined}
+          aria-describedby={`${refusalId}-languages-help`}
+          onChange={(event) => {
+            const next = event.target.value;
+            edit("languages", () => {
+              setLanguages(next);
+            });
+          }}
+        />
+        <FieldError id={`${refusalId}-languages`} message={problem("languages")} />
+        <p id={`${refusalId}-languages-help`} className="mt-1 text-label text-ink3">
+          Blank asks the provider when it can say.
+        </p>
+      </td>
+
       <td className={cn(cell, "py-[14px] text-right")}>
         <Button
           className="mt-[22px]"
           disabled={provider === undefined || refusal !== undefined || add.isPending}
           onClick={() => {
             if (provider !== undefined) {
-              add.mutate({ provider, name, voiceId });
+              const codes = languagesOfText(languages);
+              add.mutate({
+                provider,
+                name,
+                voiceId,
+                ...(codes.length === 0 ? {} : { languages: codes }),
+              });
             }
           }}
         >
