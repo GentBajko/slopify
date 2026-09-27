@@ -1,5 +1,5 @@
 import type { WhatsNewView } from "@app/slices/settings/whats-new.js";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { type ReactElement, useState } from "react";
 import type { Api } from "@/api";
@@ -7,6 +7,7 @@ import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Drawer } from "@/components/kit/drawer";
 import { read } from "@/http";
+import { type PatchNotesView, patchNotesKey, patchNotesQuery } from "@/patch-notes/api";
 import { noticeQuery } from "@/queries";
 import { useTutorial } from "@/tutorial/context";
 
@@ -103,6 +104,15 @@ async function readWhatsNew(api: Api): Promise<WhatsNewView> {
   return read<WhatsNewView>(await api.client["whats-new"].$get());
 }
 
+// Shared with the patch notes popup, which waits for the tour.
+export function whatsNewQuery(api: Api) {
+  return queryOptions({
+    queryKey: whatsNewKey,
+    queryFn: () => readWhatsNew(api),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
 async function markWhatsNewSeen(api: Api): Promise<WhatsNewView> {
   return read<WhatsNewView>(await api.client["whats-new"].seen.$post());
 }
@@ -113,22 +123,29 @@ export function WhatsNewTour(): ReactElement | null {
   const tutorial = useTutorial();
   const notice = useQuery(noticeQuery(api));
   // Asked only once the first-run notice is out of the way, so the two never stack.
-  const status = useQuery({
-    queryKey: whatsNewKey,
-    queryFn: () => readWhatsNew(api),
-    enabled: notice.data?.seen === true,
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  const status = useQuery({ ...whatsNewQuery(api), enabled: notice.data?.seen === true });
   const [at, setAt] = useState(0);
   const dismiss = useMutation({
     mutationFn: () => markWhatsNewSeen(api),
     onSuccess: (body) => {
       queryClient.setQueryData(whatsNewKey, body);
+      // The server recorded this version's patch notes as seen too; a list read earlier
+      // (Settings → Patch notes) must not open them now.
+      queryClient.setQueryData<PatchNotesView>(patchNotesKey, (old) =>
+        old === undefined ? old : { ...old, due: null },
+      );
     },
   });
 
   const major = status.data?.major;
   const steps = major === undefined || major === null ? undefined : whatsNewTours[major];
+  const lastStep = steps !== undefined && at >= steps.length - 1;
+  // The last step links to this version's full patch notes.
+  const notes = useQuery({
+    ...patchNotesQuery(api),
+    enabled: status.data?.show === true && lastStep,
+  });
+  const currentNote = notes.data?.current ?? undefined;
   // The interactive tutorial has the screen while it runs; the tour waits for it.
   if (status.data?.show !== true || steps === undefined || tutorial?.active === true) return null;
   const step = steps[Math.min(at, steps.length - 1)];
@@ -177,12 +194,26 @@ export function WhatsNewTour(): ReactElement | null {
         <p className="m-0 text-label text-ink-3">{`${String(index + 1)} of ${String(steps.length)}`}</p>
         <h3 className="m-0 text-title-3">{step.title}</h3>
         <p className="m-0 text-ink-2">{step.body}</p>
-        <div>
+        <div className="flex flex-wrap gap-2">
           <Button asChild>
             <Link to={step.to} {...(step.search === undefined ? {} : { search: step.search })}>
               {`Open ${step.place}`}
             </Link>
           </Button>
+          {last ? (
+            <Button asChild variant="quiet">
+              <Link
+                to="/settings"
+                search={{
+                  section: "patch-notes",
+                  ...(currentNote === undefined ? {} : { note: currentNote }),
+                }}
+                onClick={close}
+              >
+                Read the full patch notes
+              </Link>
+            </Button>
+          ) : null}
         </div>
         {dismiss.error === null ? null : (
           <p role="alert" className="m-0 text-small text-danger">

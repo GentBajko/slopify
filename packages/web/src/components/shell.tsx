@@ -30,6 +30,7 @@ import { subscribeGlobal } from "@/events";
 import { FormDraftsProvider } from "@/lib/form-drafts";
 import { cn } from "@/lib/utils";
 import { useRunNotifications } from "@/notifications/use-run-notifications";
+import { PatchNotesCommand, PatchNotesPopup } from "@/patch-notes/popup";
 import { PlayDraftProvider } from "@/play/draft-context";
 import { coalesce } from "@/project/live";
 import { keys } from "@/queries";
@@ -283,6 +284,7 @@ function ShellContent() {
   return (
     <div className="sl-app">
       <NavigationCommands />
+      <PatchNotesCommand />
       <ChannelCommands />
       <aside className="sl-app__rail" aria-label="App">
         <Link to="/" className="sl-wordmark">
@@ -397,6 +399,7 @@ function ShellContent() {
       <AppearanceSkin />
       <FirstRunNotice />
       <WhatsNewTour />
+      <PatchNotesPopup />
       <VersionPrompt
         reload={() => {
           window.location.reload();

@@ -267,13 +267,28 @@ const documentThemeRoute = createRoute({
 
 interface SettingsSearch {
   readonly section?: SettingsSection;
+  // Settings → Patch notes: the note open in the reading view.
+  readonly note?: string;
+}
+
+function settingsSearchOf(search: Record<string, unknown>): SettingsSearch {
+  const section = search.section === undefined ? undefined : settingsSectionOf(search.section);
+  const note =
+    section === "patch-notes" &&
+    typeof search.note === "string" &&
+    /^[0-9A-Za-z][0-9A-Za-z.-]{0,63}$/.test(search.note)
+      ? search.note
+      : undefined;
+  return {
+    ...(section === undefined ? {} : { section }),
+    ...(note === undefined ? {} : { note }),
+  };
 }
 
 const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "settings",
-  validateSearch: (search: Record<string, unknown>): SettingsSearch =>
-    search.section === undefined ? {} : { section: settingsSectionOf(search.section) },
+  validateSearch: settingsSearchOf,
   component: SettingsPage,
 });
 
@@ -287,13 +302,21 @@ const usageRoute = createRoute({
 });
 
 function SettingsPage() {
-  const { section } = settingsRoute.useSearch();
+  const { section, note } = settingsRoute.useSearch();
   const navigate = useNavigate();
   return (
     <SettingsRoute
       section={section ?? "providers"}
+      note={note}
       onSection={(next) => {
         void navigate({ to: "/settings", search: { section: next }, replace: true });
+      }}
+      onNote={(next) => {
+        // Opening a note is a step a reader goes Back from.
+        void navigate({
+          to: "/settings",
+          search: { section: "patch-notes", ...(next === undefined ? {} : { note: next }) },
+        });
       }}
     />
   );

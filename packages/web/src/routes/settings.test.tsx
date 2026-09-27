@@ -135,6 +135,7 @@ describe("the settings screen", () => {
       "Backups",
       "Trash",
       "Usage",
+      "Patch notes",
       "About",
     ]);
     expect(

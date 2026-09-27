@@ -166,6 +166,16 @@ function settingsDeps(extra: Readonly<Record<string, Answer>> = {}) {
     "GET /api/backups": jsonAnswer(backups),
     "GET /api/trash": jsonAnswer({ items: [trashed] }),
     "GET /api/usage": jsonAnswer(usage),
+    "GET /api/patch-notes": jsonAnswer({
+      version: "3.0.0",
+      current: "3.0.0",
+      due: null,
+      notes: [{ id: "3.0.0", title: "Slopify 3.0.0", version: "3.0.0", date: "2026-09-27" }],
+    }),
+    "GET /api/patch-notes/3.0.0": () =>
+      new Response("# Slopify 3.0.0\n\n## Highlights\n\n- Faster videos.\n", {
+        headers: { "content-type": "text/markdown" },
+      }),
     ...extra,
   });
 }
@@ -184,6 +194,7 @@ const loaded: Readonly<Record<SettingsSection, () => Promise<unknown>>> = {
   backups: () => screen.findByLabelText("Keep last"),
   trash: () => screen.findByText("Tiamat"),
   usage: () => screen.findByRole("heading", { level: 1, name: "Usage" }),
+  "patch-notes": () => screen.findByRole("heading", { name: "Highlights" }),
   about: () => screen.findByRole("list", { name: "Links" }),
 };
 

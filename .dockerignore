@@ -6,6 +6,8 @@ node_modules
 **/node_modules
 **/dist
 docs
+# The patch notes ship inside the app (packages/app/scripts/copy-assets.mjs).
+!docs/patch-notes
 .slopify*
 *.log
 *.tgz

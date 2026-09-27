@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { SupportGlyph, type SupportGlyphName } from "@/components/glyph";
+import { Button } from "@/components/kit/button";
 import { InfoTip } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
 import { coffeeUrl, donationHref, donationUrl, patreonUrl, sourceUrl } from "@/lib/support-links";
@@ -42,8 +43,11 @@ export function aboutLinks(donation: string = donationUrl): readonly SupportLink
 
 export function AboutSettings({
   donation = donationUrl,
+  onWhatsNew,
 }: {
   readonly donation?: string;
+  // Opens this version's patch notes; the button is left out without it.
+  readonly onWhatsNew?: () => void;
 }): ReactElement {
   return (
     <div className="max-w-prose">
@@ -56,6 +60,12 @@ export function AboutSettings({
         Updates: the circular-arrows button at the top of every page.
         <InfoTip id="settings.updates" />
       </p>
+      {onWhatsNew === undefined ? null : (
+        <p className="m-0 mb-3 flex items-center gap-1">
+          <Button onClick={onWhatsNew}>What's new in this version</Button>
+          <InfoTip id="settings.whats-new" />
+        </p>
+      )}
       <p className="m-0 mb-4 text-small text-ink-2">
         Made by Gent Bajko. Apache License 2.0: anyone who redistributes Slopify or builds on it
         keeps this credit.
