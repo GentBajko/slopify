@@ -87,7 +87,7 @@ Theme switching: `prefers-color-scheme` by default, overridden by the Settings c
 - 4 px base grid; rail padding 14 px 16 px; sheet padding 18 px; gap between rails 0 (they share borders), between sheet fields 14 px.
 - Frame: a sticky 48 px header, a content column centred at max 1200 px with 16 px (24 px from 640 px) side gutters, and the footer. Page bars are at least 48 px tall; status slots reserve 32 px; action bars are at least 56 px.
 - Radius lock: 4 px on controls and inputs, 6 px on rails, sheets, dialogs, popovers, toasts and the Play key; nothing else. No pill shapes.
-- Rails are bordered rows sharing edges, not cards. Elevation, always tinted `--color-shadow` (24% alpha dark / 12% light): dialogs, popovers and toasts use 0 8px 24px; the drawer uses a left shadow (-12px 0 28px -12px) along its border; sticky action bars cast a short upward shadow (0 -6px 14px -10px) over the content they cover.
+- Lists are kit List/ListRow rows divided by hairlines, never a card inside a card. Elevation uses the one `--shadow-pop` token: dialogs, popovers, toasts and the drawer; sticky action bars sit on the page background without a shadow.
 - Sticky layers: header at the top (z 40), action bars at the viewport bottom (z 20, safe-area padded), the drawer fixed under the header on the right (z 30), toasts top-right under the header (z 60).
 - More space above a section header (24 px) than below it (10 px).
 
