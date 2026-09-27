@@ -6,8 +6,15 @@ import { documentThemes } from "../document/model.js";
 import type { Entry } from "../library/model.js";
 import type { PlayDraftDocument, PlayDraftForm } from "../play-drafts/schema.js";
 import { ambientBedFormOf } from "../video/ambient-bed.js";
+import { withCastVoices } from "../voices/cast.js";
 import type { BrandKit, CastSnapshot, Channel } from "./model.js";
-import { castOfChannel, channelById, resolveChannelId, templateChannelId } from "./repo.js";
+import {
+  castMemberById,
+  castOfChannel,
+  channelById,
+  resolveChannelId,
+  templateChannelId,
+} from "./repo.js";
 
 // The channel a Play draft runs in: the one picked on Play, else its template's, else the
 // default channel.
@@ -133,4 +140,17 @@ export function castSnapshot(db: DatabaseSync, channelId: string): readonly Cast
           },
         ];
   });
+}
+
+// Speakers picked from the cast speak with the cast's voices (and show its portraits) as they
+// are when the run starts. Every door a run starts through - Play, a schedule, a batch, the
+// API - passes its draft through here once; a member is found by id, whichever channel it is
+// on, and a draft without cast speakers comes back unchanged.
+export function castVoicedRun<D extends Pick<RunDraft, "voices">>(db: DatabaseSync, draft: D): D {
+  if (draft.voices === undefined) return draft;
+  const ids = new Set(draft.voices.speakers.flatMap((one) => one.castId ?? []));
+  if (ids.size === 0) return draft;
+  const members = [...ids].flatMap((id) => castMemberById(db, id) ?? []);
+  const voices = withCastVoices(draft.voices, members);
+  return voices === draft.voices ? draft : { ...draft, voices };
 }
