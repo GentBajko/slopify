@@ -103,6 +103,61 @@ describe("GET /api/home/week", () => {
     expect(fallback).toMatchObject({ videos: 1, calls: 2, cost: 1.5, apiEquivalent: 2.25 });
   });
 
+  it("counts calls made for a schedule or channel, under the channel they were made for", async () => {
+    const { app, db } = harness();
+    const standalone = (
+      id: string,
+      owner: string,
+      channel: string,
+      onPlan: number,
+      cost: string,
+      api: string,
+      reading: string | null,
+    ) =>
+      db
+        .prepare(
+          `INSERT INTO standalone_usage (id, owner_kind, owner_id, channel_id, purpose, kind, provider, model, wall_ms, on_plan, cost, api_cost, account, reading_json, created_at)
+           VALUES (?,?,?,?,'topics','llm','codex','gpt',1,?,${cost},${api},?,?,'2026-09-24T10:00:00.000Z')`,
+        )
+        .run(
+          id,
+          owner.split(":")[0] ?? "",
+          owner.split(":")[1] ?? "",
+          channel,
+          onPlan,
+          reading === null ? null : "codex",
+          reading,
+        );
+    standalone(
+      "s1",
+      "schedule:sch1",
+      other,
+      1,
+      "0",
+      "0.75",
+      '{"after":[{"kind":"weekly","usedPercent":55,"resetsAt":null}]}',
+    );
+    standalone("s2", "channel:gone", "a-deleted-channel", 0, "0.5", "NULL", null);
+    const since = encodeURIComponent("2026-09-21T00:00:00.000Z");
+    const all = await (await app.request(`/api/home/week?since=${since}`)).json();
+    expect(all).toMatchObject({
+      calls: 5,
+      cost: 2,
+      unpriced: 1,
+      apiEquivalent: 3,
+      plans: [{ account: "codex", weeklyPercent: 55, readAt: "2026-09-24T10:00:00.000Z" }],
+    });
+    const mine = await (
+      await app.request(`/api/home/week?since=${since}&channelId=${other}`)
+    ).json();
+    expect(mine).toMatchObject({ videos: 1, calls: 2, cost: 0, unpriced: 1, apiEquivalent: 0.75 });
+    // A deleted channel's calls count under the default channel, as its projects do.
+    const fallback = await (
+      await app.request(`/api/home/week?since=${since}&channelId=${defaultChannelId}`)
+    ).json();
+    expect(fallback).toMatchObject({ videos: 1, calls: 3, cost: 2, apiEquivalent: 2.25 });
+  });
+
   it("refuses a request without a start", async () => {
     const { app } = harness();
     expect((await app.request("/api/home/week")).status).toBe(400);

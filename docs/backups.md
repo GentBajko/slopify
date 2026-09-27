@@ -11,7 +11,8 @@ with **Import a backup** on Backup & storage.
 Since 3.0 it also carries: prompt and intro/outro history, channels (brand kit, series brief,
 Episode memory and AI disclosure settings) with their cast, cast pictures and end screen
 images, episode memories, each channel's existing videos, a project's channel, automatic
-review verdicts, run cost (provider usage and plan readings), channel links and the provider
+review verdicts, run cost (provider usage and plan readings, and what topic generation,
+episode summaries and cast pictures cost), channel links and the provider
 defaults a new Play form starts with, and the trash (a trashed project, prompt, intro/outro,
 template or schedule comes back still in the trash, with its original date). Pictures kept in
 the database travel as files named by their SHA-256 (`files/images/…`) and are checked against

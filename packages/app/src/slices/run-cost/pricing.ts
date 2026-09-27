@@ -1,5 +1,5 @@
 import type { Catalogue } from "../../catalog/schema.js";
-import type { MeteredCall } from "../../kernel/runner/meter.js";
+import type { ProviderUse } from "../../kernel/runner/meter.js";
 import { isLocalCliProvider } from "../settings/model.js";
 
 // One price source for the estimate before Start and the cost after: the model catalogue
@@ -74,7 +74,7 @@ export function apiEquivalentOf(
   return undefined;
 }
 
-export function priceCall(call: MeteredCall, catalogue: Catalogue): CallPrice {
+export function priceCall(call: ProviderUse, catalogue: Catalogue): CallPrice {
   const date = catalogue.updatedAt;
   if (isLocalCliProvider(call.provider)) {
     // Only text is priced through the API: what a Codex image would cost there depends on

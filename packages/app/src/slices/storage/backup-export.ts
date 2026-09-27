@@ -365,6 +365,7 @@ function librarySnapshot(deps: BackupDeps): {
   put("cast_images", rowsOf(db, "SELECT * FROM cast_images ORDER BY rowid"));
   put("episode_memories", rowsOf(db, "SELECT * FROM episode_memories ORDER BY rowid"));
   put("channel_videos", rowsOf(db, "SELECT * FROM channel_videos ORDER BY rowid"));
+  put("standalone_usage", rowsOf(db, "SELECT * FROM standalone_usage ORDER BY rowid"));
   // Every picture, not only the cast's: a project's config names the pictures it was started
   // with by hash, and a Rebuild reads them from here.
   const images = db

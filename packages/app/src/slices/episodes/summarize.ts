@@ -5,9 +5,12 @@ import type { Clock } from "../../kernel/clock.js";
 import type { ProjectEvent } from "../../kernel/events.js";
 import type { Log } from "../../kernel/log.js";
 import type { Paths } from "../../kernel/paths.js";
-import type { Message, Usage } from "../../kernel/ports/llm.js";
-import type { PlanLimitReading } from "../../kernel/ports/plan-limits.js";
-import type { UsageMeter } from "../../kernel/runner/meter.js";
+import type { Message } from "../../kernel/ports/llm.js";
+import type {
+  StandaloneLlm,
+  StandaloneLlmAnswer,
+  StandaloneLlmCall,
+} from "../../kernel/runner/standalone.js";
 import type { ProviderChoice, RunConfig } from "../admission/model.js";
 import { projectById } from "../admission/repo.js";
 import { castMentions } from "../channels/cast-match.js";
@@ -28,17 +31,10 @@ const promptVersion = 1;
 const articleCharsMax = 24_000;
 const timeoutMs = 3 * 60_000;
 
-export interface EpisodeLlmCall {
-  readonly provider: string;
-  readonly model: string;
-  readonly messages: readonly Message[];
-  readonly signal: AbortSignal;
-}
-export interface EpisodeLlmAnswer {
-  readonly text: string;
-  readonly usage: Usage | null;
-  readonly limits?: PlanLimitReading | undefined;
-}
+// Asked through `kernel/runner/standalone.ts`: the stage calls' retries, and the call lands on
+// Home's run cost against the channel, since the project is already done.
+export type EpisodeLlmCall = StandaloneLlmCall;
+export type EpisodeLlmAnswer = StandaloneLlmAnswer;
 
 export interface EpisodeSummaryDeps {
   readonly db: DatabaseSync;
@@ -46,9 +42,7 @@ export interface EpisodeSummaryDeps {
   readonly clock: Clock;
   readonly log: Log;
   readonly uuid: () => string;
-  readonly llm: (call: EpisodeLlmCall) => Promise<EpisodeLlmAnswer>;
-  // Records the call on the project's Run cost, like every stage's calls.
-  readonly meter?: UsageMeter | undefined;
+  readonly llm: StandaloneLlm;
 }
 
 export type SummaryOutcome =
@@ -132,8 +126,9 @@ async function summarize(
     });
     return "no-llm";
   }
-  const started = performance.now();
   const answer = await deps.llm({
+    owner: { kind: "channel", id: channelId },
+    purpose: "episode-summary",
     provider: choice.provider,
     model: choice.model,
     messages: summaryMessages(project.title, article),
@@ -141,24 +136,6 @@ async function summarize(
       AbortSignal.timeout(timeoutMs),
       ...(signal === undefined ? [] : [signal]),
     ]),
-  });
-  deps.meter?.record({
-    projectId,
-    stage: "article",
-    kind: "llm",
-    provider: choice.provider,
-    model: answer.usage?.model ?? choice.model,
-    ...(answer.usage === null
-      ? {}
-      : {
-          tokensIn: answer.usage.inputTokens,
-          tokensOut: answer.usage.outputTokens,
-          ...(answer.usage.cachedInputTokens === undefined
-            ? {}
-            : { cachedTokens: answer.usage.cachedInputTokens }),
-        }),
-    wallMs: performance.now() - started,
-    ...(answer.limits === undefined ? {} : { limits: answer.limits }),
   });
   const summary = clampSummary(answer.text);
   if (summary === "") throw new Error(`${choice.provider} (${choice.model}) answered with nothing`);

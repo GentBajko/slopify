@@ -42,8 +42,6 @@ import { openLog } from "./kernel/log.js";
 import type { Paths } from "./kernel/paths.js";
 import { ensureDirs, layout, subtitleModelDir } from "./kernel/paths.js";
 import { stageKinds } from "./kernel/pipeline.js";
-import type { Usage } from "./kernel/ports/llm.js";
-import type { PlanLimitReading } from "./kernel/ports/plan-limits.js";
 import type { Registry } from "./kernel/ports/registry.js";
 import type { SubtitleAligner } from "./kernel/ports/subtitles.js";
 import { sqliteAttempts } from "./kernel/runner/attempt-repo.js";
@@ -57,7 +55,7 @@ import { createRunner } from "./kernel/runner/index.js";
 import type { ProviderDeps } from "./kernel/runner/providers.js";
 import { stageProviders } from "./kernel/runner/providers.js";
 import { createProviderQueue } from "./kernel/runner/queue.js";
-import { standaloneImage } from "./kernel/runner/standalone.js";
+import { type StandaloneDeps, standaloneImage, standaloneLlm } from "./kernel/runner/standalone.js";
 import type { WorkRef } from "./kernel/runner/work.js";
 import { readVersion } from "./kernel/version.js";
 import { modelSources } from "./model-catalog.js";
@@ -99,7 +97,7 @@ import {
 import type { RebuildDeps } from "./slices/rebuild/service.js";
 import { currentRevisionId } from "./slices/revisions/repo.js";
 import { createLimitGate, resumeAfterRestart } from "./slices/run-cost/limits.js";
-import { createUsageMeter } from "./slices/run-cost/meter.js";
+import { createStandaloneMeter, createUsageMeter } from "./slices/run-cost/meter.js";
 import type { ScheduleDeps } from "./slices/schedules/model.js";
 import { settleTerminalScheduleRuns } from "./slices/schedules/repo.js";
 import { createScheduleRunner } from "./slices/schedules/scheduler.js";
@@ -299,33 +297,21 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       }),
       catalogue,
     );
-    // The summary call belongs to the finished project: it is recorded on its Run cost, but it
-    // is no stage attempt, so it asks the provider directly, like topic generation.
-    const episodeMeter = createUsageMeter({ db, ids, clock, catalogue: () => catalogue.read() });
+    // Calls that belong to no project (topic generation, episode summaries, cast pictures)
+    // still go through the attempt wrapper, and are metered against their schedule or channel.
+    const standalone: StandaloneDeps = {
+      registry,
+      clock,
+      log,
+      meter: createStandaloneMeter({ db, ids, clock, catalogue: () => catalogue.read() }),
+    };
     episodes = createEpisodeMemoryWatcher({
       db,
       paths,
       clock,
       log,
       uuid: randomUUID,
-      meter: episodeMeter,
-      llm: async (call) => {
-        let text = "";
-        let usage: Usage | null = null;
-        let limits: PlanLimitReading | undefined;
-        for await (const event of registry.llm(call.provider).complete({
-          model: call.model,
-          messages: call.messages,
-          signal: call.signal,
-        })) {
-          if (event.type === "delta") text += event.text;
-          else if (event.type === "done") {
-            usage = event.usage;
-            limits = event.limits;
-          }
-        }
-        return { text, usage, ...(limits === undefined ? {} : { limits }) };
-      },
+      llm: (call) => standaloneLlm(standalone, call),
     });
     const audioPreviews = createAudioPreviewStore();
     const reviewRedos = createReviewRedos();
@@ -498,19 +484,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     const scheduleRunnerDeps: ScheduleDeps = {
       ...draftDeps,
       template: (id, templateVersion) => templateById(runtimeDb, id, templateVersion),
-      // Topic generation asks the provider directly: it belongs to no project, so there is
-      // no stage attempt to record it under.
-      topicLlm: async (call) => {
-        let text = "";
-        for await (const event of registry.llm(call.provider).complete({
-          model: call.model,
-          messages: call.messages,
-          ...(call.thinking === undefined ? {} : { thinking: call.thinking }),
-          signal: call.signal,
-        }))
-          if (event.type === "delta") text += event.text;
-        return text;
-      },
+      topicLlm: (call) => standaloneLlm(standalone, call),
       topicsWaiting: (event) => {
         hub.emitGlobal(event);
         notifier.observeTopics(event);
@@ -596,7 +570,12 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       flushSoon: flusher.soon,
       probe: nodeCliProbe,
       hostCliStatus: hostCli?.status,
-      generateCastImage: (call) => standaloneImage({ registry, clock, log }, call, "channel-cast"),
+      generateCastImage: ({ channelId, ...call }) =>
+        standaloneImage(standalone, {
+          ...call,
+          owner: { kind: "channel", id: channelId },
+          purpose: "cast-image",
+        }),
       fetch: globalThis.fetch,
       ...(hostCli === undefined ? { cliLogin: readHostLogin } : {}),
     });
