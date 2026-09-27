@@ -81,6 +81,42 @@
     --btn-soft: transparent;
     --btn-soft-hover: var(--color-raised);
   }
+  /* The kit's tooltip: an icon button's name, shown at once on hover and keyboard focus. */
+  .sl-btn[data-tip] {
+    position: relative;
+  }
+  .sl-btn[data-tip]::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 6px);
+    transform: translateX(-50%);
+    z-index: 5;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: var(--color-ink);
+    color: var(--color-surface);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.3;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 100ms;
+  }
+  /* In a row the tips open inwards from the button's edge, so they stay inside the card. */
+  .sl-btn-row > .sl-btn[data-tip]::after {
+    left: 0;
+    transform: none;
+  }
+  .sl-btn-row > .sl-btn[data-tip]:last-child:not(:first-child)::after {
+    left: auto;
+    right: 0;
+  }
+  .sl-btn[data-tip]:hover::after,
+  .sl-btn[data-tip]:focus-visible::after {
+    opacity: 1;
+  }
   .sl-btn--small {
     height: 30px;
     padding: 0 10px;

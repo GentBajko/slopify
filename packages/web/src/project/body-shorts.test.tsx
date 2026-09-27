@@ -52,6 +52,11 @@ const first = output("short_video", "video", {
   durationMs: 60_750,
   meta: { short: 1 },
 });
+const second = output("short_video", "video", {
+  id: "o-short-2",
+  durationMs: 90_000,
+  meta: { short: 2 },
+});
 const images = [1, 2, 3].map((index) =>
   output("short_image", "video", { id: `o-short-2-${String(index)}`, meta: { short: 2, index } }),
 );
@@ -131,19 +136,15 @@ it("shows each short as a small vertical player with its title, length, Copy and
   expect(player.closest(".sl-player--portrait")).not.toBeNull();
   expect(within(one).getByText("01:01")).not.toBeNull();
   expect(within(one).getByText("#Rope #Knots #Friction")).not.toBeNull();
-  expect(within(one).getByRole("link", { name: "Download short 1" }).getAttribute("href")).toBe(
-    `${testOrigin}/files/p1/revisions/r1/o-short-1`,
-  );
+  // The only short rendered: the section's Download the short fetches it, so the card has none.
+  expect(within(one).queryByRole("link", { name: "Download short 1" })).toBeNull();
   // With no full-video link saved, the card marks it as needed rather than showing the raw
   // placeholder Copy leaves for pasting over.
   expect(within(one).getByText("Link needed")).not.toBeNull();
   expect(within(one).queryByText(/PASTE THE FULL VIDEO LINK/)).toBeNull();
-  // The section's own Download is the main action; the card's is a secondary button.
+  // The section's own Download is the main action.
   expect(within(block).getByRole("link", { name: "Download the short" }).className).toContain(
     "sl-btn--primary",
-  );
-  expect(within(one).getByRole("link", { name: "Download short 1" }).className).toContain(
-    "sl-btn--secondary",
   );
   // Not rendered yet, and the stage is not running: it says so where the player will be.
   expect(within(two).getByText("Not made yet. It is made with the video.")).not.toBeNull();
@@ -158,6 +159,26 @@ it("shows each short as a small vertical player with its title, length, Copy and
     "The knot sailors trust\n\nOne knot, every boat.\nWatch the full video: [PASTE THE FULL VIDEO LINK HERE]\n\n#Sailing #Bowline #Knots",
   );
   await waitFor(() => expect(screen.getByRole("status").textContent).toBe("Copied short 2."));
+});
+
+it("gives each card its own Download as an icon with a tooltip once there are several", async () => {
+  mount([pick, first, second]);
+  const block = screen.getByRole("region", { name: "Shorts" });
+  const cards = await within(block).findAllByRole("listitem");
+  const [one, two] = cards;
+  if (one === undefined || two === undefined) throw new Error("Expected two shorts");
+  expect(within(block).getByRole("button", { name: "Download" })).not.toBeNull();
+  const download = within(one).getByRole("link", { name: "Download short 1" });
+  expect(download.getAttribute("href")).toBe(`${testOrigin}/files/p1/revisions/r1/o-short-1`);
+  expect(download.className).toContain("sl-btn--icon");
+  expect(download.getAttribute("data-tip")).toBe("Download");
+  expect(within(two).getByRole("link", { name: "Download short 2" })).not.toBeNull();
+  // Download, Copy and More share one row.
+  const copy = within(one).getByRole("button", {
+    name: "Copy short 1's title, description and hashtags",
+  });
+  expect(copy.getAttribute("data-tip")).toBe("Copy title, description and hashtags");
+  expect(copy.parentElement).toBe(download.parentElement);
 });
 
 it("says how far each short got while the stage runs, and which one failed", async () => {
@@ -222,9 +243,11 @@ it("opens Edit project to make one short again, or to pick different moments", a
   const requests: EditRequest[] = [];
   mount([pick, first], "done", undefined, { requestEdit: (request) => requests.push(request) });
   const cards = await screen.findAllByRole("listitem");
+  // Make again is the rare one, under the card's More menu.
   await userEvent.click(
-    within(cards[1] as HTMLElement).getByRole("button", { name: "Make short 2 again" }),
+    within(cards[1] as HTMLElement).getByRole("button", { name: "More for short 2" }),
   );
+  await userEvent.click(await screen.findByRole("menuitem", { name: "Make short 2 again" }));
   await userEvent.click(screen.getByRole("button", { name: "Pick different moments" }));
   const view = revisionView();
   const edit = {

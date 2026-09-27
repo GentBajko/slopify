@@ -10,7 +10,7 @@ import { type ButtonSize, buttonClass } from "./button.js";
 //   - one of a row of actions it sits in (a Library row's Edit and Duplicate, an editor's
 //     Cancel beside Save).
 // Any other navigation - Open, Calendar, See all patch notes - is a TextLink.
-type LinkLook = "primary" | "secondary" | "quiet";
+type LinkLook = "primary" | "secondary" | "quiet" | "icon";
 
 function ButtonAnchor({
   variant = "secondary",
@@ -51,4 +51,29 @@ export function FileLink({
   readonly size?: ButtonSize;
 }): ReactElement {
   return <ButtonAnchor href={href} {...props} />;
+}
+
+// A file link that is only an icon, among icon buttons: named by `label`, which shows at once
+// on hover and focus as the kit's tooltip.
+export function IconFileLink({
+  href,
+  label,
+  tip,
+  ...props
+}: Omit<ComponentProps<"a">, "aria-label"> & {
+  readonly href: string;
+  readonly label: string;
+  // Shorter words for the tooltip than the label, when the label names its item.
+  readonly tip?: string;
+  readonly size?: ButtonSize;
+}): ReactElement {
+  return (
+    <ButtonAnchor
+      href={href}
+      variant="icon"
+      aria-label={label}
+      data-tip={tip ?? label}
+      {...props}
+    />
+  );
 }

@@ -48,16 +48,28 @@ export function Button({
 }
 
 // An icon-only button. The label is required: it is the accessible name and the tooltip.
+// `tip` shows the label (or the shorter words given) at once on hover and focus, drawn by the
+// kit (`data-tip`), for icon buttons standing in for words that did not fit; otherwise the
+// label is the browser's title.
 export function IconButton({
   label,
+  tip,
+  title,
   children,
   ...props
 }: Omit<ButtonProps, "variant" | "aria-label"> & {
   readonly label: string;
+  readonly tip?: boolean | string;
   readonly children: ReactNode;
 }): ReactElement {
+  const shown = tip === undefined || tip === false ? undefined : tip === true ? label : tip;
   return (
-    <Button variant="icon" aria-label={label} title={props.title ?? label} {...props}>
+    <Button
+      variant="icon"
+      aria-label={label}
+      {...(shown === undefined ? { title: title ?? label } : { "data-tip": shown })}
+      {...props}
+    >
       {children}
     </Button>
   );

@@ -1,13 +1,14 @@
 import { shortImageCount, shortUploadText } from "@app/slices/shorts/model.js";
 import type { Output } from "@app/slices/storage/model.js";
-import { CopyIcon, DownloadIcon, LinkIcon, RefreshCwIcon } from "lucide-react";
+import { CopyIcon, DownloadIcon, EllipsisIcon, LinkIcon, RefreshCwIcon } from "lucide-react";
 import { use, useId, useState } from "react";
 import { z } from "zod";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
-import { Button, ButtonRow } from "@/components/kit/button";
+import { Button, ButtonRow, IconButton } from "@/components/kit/button";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
-import { FileLink } from "@/components/kit/link";
+import { IconFileLink } from "@/components/kit/link";
 import { MediaFrame, MediaGrid } from "@/components/kit/media";
+import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/kit/menu";
 import { Player } from "@/components/kit/player";
 import { Badge } from "@/components/kit/status";
 import type { BodyProps } from "./body.js";
@@ -38,9 +39,10 @@ const listSchema = z.object({
 type Clip = z.infer<typeof listSchema>["shorts"][number];
 
 // The Video stage's Shorts part, below the YouTube one and set off the same way: a rule and a
-// heading, no box of its own. The clips sit in a grid of small vertical players, three across
-// on a wide screen, each with its title, length, a Copy for what goes with the upload, and its
-// download. While the stage runs, a clip not rendered yet says how far it got. "Make this
+// heading, no box of its own. The clips sit in a grid of vertical players 240 to 280 pixels
+// wide, two to four across as the page allows, each with its title, length, a Copy for what
+// goes with the upload, and its download (unless it is the only short rendered, which the
+// section's Download the short already fetches). While the stage runs, a clip not rendered yet says how far it got. "Make this
 // short again" and "Pick different moments" open Edit project → Shorts with the change made,
 // to review and save like any other edit.
 export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "actions" | "busy">) {
@@ -117,6 +119,7 @@ export function ShortsBlock({ stage, project, outputs }: Omit<BodyProps, "action
               wanted={shortImageCount(clip.end - clip.start, project.config.imageSeconds)}
               state={stage.state}
               failed={failedHere(stage.failureReason, clip.number)}
+              ownDownload={videos.length > 1}
               onCopy={() => copy(clip)}
               {...(editable
                 ? {
@@ -146,6 +149,7 @@ function ShortCard({
   state,
   failed,
   link,
+  ownDownload,
   onCopy,
   onRemake,
 }: {
@@ -160,6 +164,9 @@ function ShortCard({
   readonly state: BodyProps["stage"]["state"];
   readonly failed: boolean;
   readonly link: string | undefined;
+  // False when this is the only short rendered: the section's primary Download the short
+  // already fetches it.
+  readonly ownDownload: boolean;
   readonly onCopy: () => void;
   readonly onRemake?: (() => void) | undefined;
 }) {
@@ -205,37 +212,43 @@ function ShortCard({
       <FullVideoLine link={link} />
       <p className="m-0 break-words text-small text-ink-2">{clip.hashtags.join(" ")}</p>
       <ReviewVerdict review={review} projectId={projectId} busy={state === "running"} />
-      {/* Its own row under the text. The section's Download is the lime one, so these are
-          secondary; the folder is the stage's one Open folder, above. */}
-      <ButtonRow className="mt-1">
-        {video !== undefined && media !== undefined ? (
-          <FileLink
+      {/* One row under the text. A card is too narrow for three worded buttons, so these are
+          icons with the kit's tooltip, and Make again, the rare one, waits under More. The
+          section's Download is the lime one; the folder is the stage's one Open folder. */}
+      <ButtonRow className="mt-1 flex-nowrap gap-1">
+        {ownDownload && video !== undefined && media !== undefined ? (
+          <IconFileLink
             href={media.url}
             download
             size="small"
-            aria-label={`Download short ${String(clip.number)}`}
+            label={`Download short ${String(clip.number)}`}
+            tip="Download"
           >
             <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
-            Download
-          </FileLink>
+          </IconFileLink>
         ) : null}
-        <Button
+        <IconButton
           size="small"
-          aria-label={`Copy short ${String(clip.number)}'s title, description and hashtags`}
+          tip="Copy title, description and hashtags"
+          label={`Copy short ${String(clip.number)}'s title, description and hashtags`}
           onClick={onCopy}
         >
           <CopyIcon aria-hidden="true" strokeWidth={1.75} />
-          Copy
-        </Button>
+        </IconButton>
         {onRemake === undefined ? null : (
-          <Button
-            size="small"
-            aria-label={`Make short ${String(clip.number)} again`}
-            onClick={onRemake}
-          >
-            <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} />
-            Make again
-          </Button>
+          <Menu>
+            <MenuTrigger asChild>
+              <IconButton size="small" tip="More" label={`More for short ${String(clip.number)}`}>
+                <EllipsisIcon aria-hidden="true" strokeWidth={1.75} />
+              </IconButton>
+            </MenuTrigger>
+            <MenuContent align="start">
+              <MenuItem onSelect={onRemake}>
+                <RefreshCwIcon aria-hidden="true" strokeWidth={1.75} className="size-4" />
+                Make short {String(clip.number)} again
+              </MenuItem>
+            </MenuContent>
+          </Menu>
         )}
       </ButtonRow>
     </li>
