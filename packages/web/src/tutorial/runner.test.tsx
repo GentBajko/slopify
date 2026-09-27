@@ -196,20 +196,22 @@ describe("the tutorial in the real app", () => {
     expect(router.state.location.pathname).toBe("/projects/actual-created-project");
     expect(
       screen
-        .getByRole("navigation", { name: "Project stages" })
+        .getByRole("button", { name: "Edit settings" })
         .closest('[data-tour="project-controls"]'),
     ).not.toBeNull();
-    expect(screen.getByRole("tab", { name: "Edit" })).not.toBeNull();
+    const sections = screen.getByRole("navigation", { name: "Project sections" });
+    expect(within(sections).getByRole("button", { name: "Settings" })).not.toBeNull();
     expect(screen.queryByRole("button", { name: /^Run settings/ })).toBeNull();
     expect(
       requests.filter((request) => /^POST \/api\/drafts\/[^/]+\/start$/.test(request)),
     ).toHaveLength(1);
     await next(user, "download");
-    await screen.findByRole("region", { name: "Video workspace" });
-    expect(
-      screen.getByRole("button", { name: "Video, pending" }).getAttribute("aria-current"),
-    ).toBe("step");
-    expect(screen.queryByRole("region", { name: "Article workspace" })).toBeNull();
+    await screen.findByRole("region", { name: "Video" });
+    const rail = screen.getByRole("navigation", { name: "Project sections" });
+    expect(within(rail).getByRole("button", { name: "Video" }).getAttribute("aria-current")).toBe(
+      "true",
+    );
+    expect(screen.queryByRole("region", { name: "Article" })).toBeNull();
     await user.click(guide().getByRole("button", { name: "Finish tutorial" }));
     expect(screen.queryByRole("region", { name: "Interactive getting started guide" })).toBeNull();
     expect(
@@ -278,7 +280,7 @@ describe("the tutorial in the real app", () => {
       await at("project");
       await next(user, "download");
       const workspace = await screen.findByRole("region", {
-        name: final === "audio" ? "Audio export workspace" : "Article workspace",
+        name: final === "audio" ? "Audio export" : "Article",
       });
       expect(workspace.hasAttribute("hidden")).toBe(false);
       if (final === "audio") {

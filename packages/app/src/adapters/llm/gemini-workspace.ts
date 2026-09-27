@@ -48,7 +48,7 @@ export function geminiWorkspace(
         throw providerError({
           kind: "unavailable",
           message:
-            "Slopify could not read the Gemini CLI's settings file (settings.json in the .gemini folder of your home directory), which says how it signs in. Fix or remove that file, run gemini in a terminal to sign in again, then use Retry stage.",
+            "Slopify could not read the Gemini CLI's settings file (settings.json in the .gemini folder of your home directory), which says how it signs in. Fix or remove that file, run gemini in a terminal to sign in again, then use Try again.",
         });
       }
     const oauth = join(originalState, "oauth_creds.json");

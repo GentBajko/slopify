@@ -29,7 +29,7 @@ export function readDocumentAssets(): DocumentAssets {
     return { cinzel, parchment: new Uint8Array(readFileSync(new URL("background.jpg", assets))) };
   } catch (error) {
     throw new Error(
-      `Slopify couldn't read the fonts and page texture it makes documents with (${error instanceof Error ? error.message : String(error)}). Its installation is incomplete: reinstall or update Slopify, then use Retry stage on Document.`,
+      `Slopify couldn't read the fonts and page texture it makes documents with (${error instanceof Error ? error.message : String(error)}). Its installation is incomplete: reinstall or update Slopify, then use Try again on Document.`,
       { cause: error },
     );
   }

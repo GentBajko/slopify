@@ -8,7 +8,7 @@
 const detailMax = 300;
 
 export function missingKey(provider: string): string {
-  return `No ${provider} API key is saved. Add one in Settings → Providers, then use Retry stage.`;
+  return `No ${provider} API key is saved. Add one in Settings → Providers, then use Try again.`;
 }
 
 export interface HttpFailure {
@@ -25,19 +25,19 @@ export interface HttpFailure {
   // Replaces "error 401" when the status was translated from another scheme (gRPC codes).
   readonly label?: string | undefined;
   // The last step, for failures outside a stage: loading a model or voice list in Settings
-  // says `refreshList` instead of "use Retry stage".
+  // says `refreshList` instead of "use Try again".
   readonly next?: string | undefined;
 }
 
 export const refreshList = "refresh the list";
 
 export const checkChoice =
-  "Check the provider and model chosen in the Providers section of Edit project, then use Retry stage.";
+  "Check the provider and model chosen in the Providers section of Edit project, then use Try again.";
 
 export function httpFailure(failure: HttpFailure): string {
   const { provider, status } = failure;
   const said = quoted(failure.label ?? `error ${String(status)}`, failure.detail);
-  const next = failure.next ?? "use Retry stage";
+  const next = failure.next ?? "use Try again";
   if (status === 401) {
     return `${provider} did not accept the API key${said}. The key may be wrong, expired or revoked: paste a current key in Settings → Providers, then ${next}.`;
   }
@@ -56,7 +56,7 @@ export function httpFailure(failure: HttpFailure): string {
   if (status >= 500) {
     return `${provider} had a problem on its side${said}. This is usually temporary: wait a few minutes, then ${next}.`;
   }
-  return `${provider} answered with an unexpected error${said}. ${failure.next === undefined ? "Use Retry stage" : "Try again"}; if it keeps failing, use Download diagnostics in Settings and report it.`;
+  return `${provider} answered with an unexpected error${said}. ${failure.next === undefined ? "Use Try again" : "Try again"}; if it keeps failing, use Download diagnostics in Settings and report it.`;
 }
 
 // A failure the provider reported inside an otherwise successful answer, with no status.
@@ -65,19 +65,19 @@ export function providerSaid(provider: string, what: string, detail: string, nex
 }
 
 export function unreadable(provider: string): string {
-  return `${provider} sent back an answer Slopify could not read. This is usually temporary: use Retry stage; if it keeps happening, use Download diagnostics in Settings and report it.`;
+  return `${provider} sent back an answer Slopify could not read. This is usually temporary: use Try again; if it keeps happening, use Download diagnostics in Settings and report it.`;
 }
 
 export function droppedStream(provider: string): string {
-  return `The connection to ${provider} dropped before the answer was complete. Check your internet connection, then use Retry stage.`;
+  return `The connection to ${provider} dropped before the answer was complete. Check your internet connection, then use Try again.`;
 }
 
 export function noAudio(provider: string): string {
-  return `${provider} finished without sending any audio. Use Retry stage; if it keeps happening, check the voice in Settings → Voices.`;
+  return `${provider} finished without sending any audio. Use Try again; if it keeps happening, check the voice in Settings → Voices.`;
 }
 
 export function noImage(provider: string): string {
-  return `${provider} finished without sending an image. Use Retry stage; if it keeps happening, reword the image prompt in the Images section of Edit project or choose another image model in its Providers section.`;
+  return `${provider} finished without sending an image. Use Try again; if it keeps happening, reword the image prompt in the Images section of Edit project or choose another image model in its Providers section.`;
 }
 
 export function refusedImage(provider: string, detail: string): string {
@@ -87,11 +87,11 @@ export function refusedImage(provider: string, detail: string): string {
 // A narration request the provider turned down is most often a voice that no longer exists
 // or a part longer than the model takes.
 export function voiceFix(voiceId: string): string {
-  return `Check that voice "${voiceId}" still exists in Settings → Voices and that each narration part fits the model's length limit (Chunking, in the Providers section of Edit project), then use Retry stage.`;
+  return `Check that voice "${voiceId}" still exists in Settings → Voices and that each narration part fits the model's length limit (Chunking, in the Providers section of Edit project), then use Try again.`;
 }
 
 export function internalError(what: string): string {
-  return `Slopify hit an internal error (${what}). Use Retry stage; if it happens again, use Download diagnostics in Settings and report it.`;
+  return `Slopify hit an internal error (${what}). Use Try again; if it happens again, use Download diagnostics in Settings and report it.`;
 }
 
 const cliNames: Readonly<Record<string, string>> = {
@@ -118,7 +118,7 @@ export function cliReported(binary: string, detail: string, next: string): strin
 }
 
 export function cliCheck(binary: string): string {
-  return `Use Retry stage; if it keeps failing, run ${commandOf(binary)} in a terminal to check it works and is signed in, or choose another model in the Providers section of Edit project.`;
+  return `Use Try again; if it keeps failing, run ${commandOf(binary)} in a terminal to check it works and is signed in, or choose another model in the Providers section of Edit project.`;
 }
 
 // ` (error 401: "Unauthorized")`, ` (error 401)`, ` ("Unauthorized")`, or nothing.

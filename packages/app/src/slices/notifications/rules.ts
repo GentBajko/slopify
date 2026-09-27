@@ -81,7 +81,7 @@ export function noticeText(kind: RunNotice, subject: NoticeSubject): NoticeText 
     case "waiting":
       return {
         headline: `Waiting for you: ${title}`,
-        detail: "Open the project to review the held step or press Resume.",
+        detail: "Open the project to review the held step or press Continue the run.",
       };
   }
 }

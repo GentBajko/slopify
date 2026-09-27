@@ -30,7 +30,7 @@ export function NarrationDownloads({
           </div>
         );
       })}
-      <p className="text-small text-ink3">
+      <p className="text-small text-ink-3">
         Clean Narration is the spoken text used for captions. TTS Script includes delivery cues;
         blank lines separate requests. Uploaded audio has no TTS request.
       </p>

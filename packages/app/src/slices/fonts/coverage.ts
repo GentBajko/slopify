@@ -57,7 +57,7 @@ export async function captionFont(
   }
   for (const font of await deps.system()) if (await covers(font, letters)) return font;
   throw new Error(
-    `The caption font ${chosen.name} has no ${info.name} letters, and Slopify doesn't ship a font for ${info.name} (they are 10-20 MB). Upload a font that has them in Settings → Fonts (for example Noto Sans ${info.code === "ja" ? "JP" : info.code === "ko" ? "KR" : "SC"} from fonts.google.com), choose it in Edit project → Subtitles, then Retry stage.`,
+    `The caption font ${chosen.name} has no ${info.name} letters, and Slopify doesn't ship a font for ${info.name} (they are 10-20 MB). Upload a font that has them in Settings → Fonts (for example Noto Sans ${info.code === "ja" ? "JP" : info.code === "ko" ? "KR" : "SC"} from fonts.google.com), choose it in Edit project → Subtitles, then Try again.`,
   );
 }
 

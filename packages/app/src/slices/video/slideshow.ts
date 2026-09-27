@@ -60,7 +60,7 @@ export async function renderSlideshow(run: SlideshowRun): Promise<void> {
     if (cards.length > 0) {
       if (font === undefined)
         throw new Error(
-          "Slopify hit an internal error (the chapter cards have no font). Use Re-run section on Video; if it happens again, use Download diagnostics in Settings and report it.",
+          "Slopify hit an internal error (the chapter cards have no font). Use More → Render the video again in the Video section; if it happens again, use Download diagnostics in Settings and report it.",
         );
       mkdirSync(join(workspace, "fonts"), { mode: 0o700 });
       copyFileSync(font.path, join(workspace, "fonts", `card${extname(font.path)}`));

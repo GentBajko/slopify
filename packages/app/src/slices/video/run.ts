@@ -43,7 +43,7 @@ export async function renderVideo(deps: VideoDeps, context: StageContext): Promi
   if (project.config.sources.video === "off") {
     if (project.config.sources.audio === "off")
       throw new Error(
-        "There is nothing to export because both video and narration are turned off for this project. Turn one on in Edit project, then Retry stage.",
+        "There is nothing to export because both video and narration are turned off for this project. Turn one on in Edit project, then Try again.",
       );
     await exportAudioWav(
       deps,

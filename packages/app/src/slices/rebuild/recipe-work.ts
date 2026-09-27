@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Catalogue } from "../../catalog/schema.js";
+import type { RunConfig } from "../admission/model.js";
 import type { CostEstimate, PricedRequest } from "../estimate/index.js";
 import { estimateRequests } from "../estimate/index.js";
 import {
@@ -8,6 +9,7 @@ import {
   skippedSpeakerPronunciationsNotice,
 } from "../narration/pronunciation.js";
 import type { ManifestPiece, ProjectRevision, RevisionManifest } from "../revisions/model.js";
+import { isLocalCliProvider } from "../settings/model.js";
 import { defaultShortsPrompt, shortsImageUpperBound } from "../shorts/model.js";
 import { usesVoices } from "../voices/model.js";
 import { planDependencies, type RetainedWork, type WorkRecipe } from "./dependencies.js";
@@ -21,6 +23,7 @@ import {
   type ResolvedWorkRecipe,
   selectedReference,
 } from "./recipe-model.js";
+import { recipeProviderChoice } from "./recipe-provider-choice.js";
 import { narrationGlossary } from "./recipe-text.js";
 import { readsIpa } from "./recipe-voices.js";
 
@@ -128,6 +131,7 @@ export function planRevisionWork(
     priceRecipes(
       row,
       recipes.find((one) => one.key === row.key),
+      revision.config,
     ),
   );
   return {
@@ -296,6 +300,8 @@ const shortsTranscriptEstimate = 24000;
 export function priceRecipes(
   work: RebuildWork,
   value: ResolvedWorkRecipe | undefined,
+  // The revision's settings, which name the provider of a request built only when it runs.
+  config?: RunConfig,
 ): readonly PricedRequest[] {
   const input = value?.input;
   const unfolds = value?.unfoldsImages;
@@ -303,7 +309,7 @@ export function priceRecipes(
   // as many as the clip's length asks for.
   if (work.disposition === "generate" && unfolds !== undefined)
     return [
-      priceRecipe(work, value),
+      priceRecipe(work, value, config),
       ...Array.from(
         { length: unfolds.count },
         (): PricedRequest => ({
@@ -342,7 +348,7 @@ export function priceRecipes(
     input.operation !== "shorts" ||
     !Array.isArray(input.template)
   )
-    return [priceRecipe(work, value)];
+    return [priceRecipe(work, value, config)];
   const [, style, provider, model, imageSeconds, count, maxSeconds, llmProvider, llmModel] =
     input.template;
   const clips = typeof count === "number" ? count : 0;
@@ -380,6 +386,7 @@ export function priceRecipes(
 export function priceRecipe(
   work: RebuildWork,
   value: ResolvedWorkRecipe | undefined,
+  config?: RunConfig,
 ): PricedRequest {
   if (value === undefined || work.disposition !== "generate")
     return {
@@ -391,6 +398,8 @@ export function priceRecipe(
           : "Local, provided, or blocked work; no admitted generation charge.",
     };
   const input = value.input;
+  const onPlan = config === undefined ? undefined : cliRequest(work, value, config);
+  if (onPlan !== undefined) return onPlan;
   if (input.kind === "deferred" && input.operation === "narration-preparation")
     return {
       kind: "unknown",
@@ -474,5 +483,35 @@ export function priceRecipe(
     characters: 9000,
     detail:
       "Future generated input is unknown. This group materializes under the same admitted revision; its final request count and charge are unknown.",
+  };
+}
+
+// A request built only when its step runs, on a command-line provider: it runs on the user's
+// plan, so it is known at $0, as Play's review prices the same step. Its size is estimated
+// for the API figure beside it; Narration Preparation's number of calls is not known yet, so
+// it has none.
+function cliRequest(
+  work: RebuildWork,
+  value: ResolvedWorkRecipe,
+  config: RunConfig,
+): PricedRequest | undefined {
+  if (value.input.kind !== "deferred") return undefined;
+  const choice = recipeProviderChoice(value, config);
+  if (choice === undefined || !isLocalCliProvider(choice.provider)) return undefined;
+  if (choice.family === "image")
+    return { kind: "image", stage: work.key, provider: choice.provider, model: choice.model };
+  if (choice.family !== "llm") return undefined;
+  const preparation = value.input.operation === "narration-preparation";
+  return {
+    kind: "llm",
+    stage: work.key,
+    provider: choice.provider,
+    model: choice.model,
+    inputCharacters: 6000,
+    outputCharacters: work.key === "article:body" ? 9000 : 2400,
+    ...(preparation ? { apiUnknown: true as const } : {}),
+    detail: preparation
+      ? "Runs on your CLI plan, so it adds no charge. Narration Preparation makes one call per logical chunk or entry; how many is known when the step runs, so no API figure is given."
+      : "Runs on your CLI plan, so it adds no charge. The request is built when the step runs, so its API figure uses an estimated length.",
   };
 }

@@ -217,7 +217,7 @@ export function multilingualWords(
     observed,
     aliases,
     (raw) => wordForms(raw, language, alphabet, speller),
-    `Local subtitles need a ${languageInfo(language).name} transcript with spoken words. Check the article text, then Retry stage.`,
+    `Local subtitles need a ${languageInfo(language).name} transcript with spoken words. Check the article text, then Try again.`,
   );
 }
 
@@ -271,7 +271,7 @@ function spell(text: string, alphabet: string, raw: string, language: string): s
     const folded = fold(character);
     if (folded === undefined)
       throw new Error(
-        `Word timing for ${languageInfo(language).name} reads Latin letters only, and "${raw}" has letters from another alphabet. Write that word in Latin letters in the article (open the project, Edit project → Article), then Retry stage.`,
+        `Word timing for ${languageInfo(language).name} reads Latin letters only, and "${raw}" has letters from another alphabet. Write that word in Latin letters in the article (open the project, Edit project → Article), then Try again.`,
       );
     result += folded;
   }

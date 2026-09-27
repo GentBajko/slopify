@@ -31,7 +31,7 @@ import {
 } from "./transport.js";
 
 const tooBigForHost =
-  "Slopify could not send this request to the host helper because it is larger than, or shaped differently from, what the helper accepts. Make the inputs shorter in Edit project, then use Retry stage; if it happens again, use Download diagnostics in Settings and report it.";
+  "Slopify could not send this request to the host helper because it is larger than, or shaped differently from, what the helper accepts. Make the inputs shorter in Edit project, then use Try again; if it happens again, use Download diagnostics in Settings and report it.";
 
 export function createHostCliClient(options: {
   readonly directory: string | undefined;

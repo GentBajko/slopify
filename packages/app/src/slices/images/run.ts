@@ -68,7 +68,7 @@ export async function runImages(
     // Admission refuses a run whose images are Generate without a provider and a model, so
     // reaching here is a bug in admission rather than the user's.
     throw new Error(
-      "No image model is set for this project. Choose one in Edit project → Providers, then Retry stage.",
+      "No image model is set for this project. Choose one in Edit project → Providers, then Try again.",
     );
   }
 
@@ -77,7 +77,7 @@ export async function runImages(
     // Admission makes an image source mandatory and puts the Number at one or more, so an
     // empty plan is a bug upstream rather than a run with no pictures.
     throw new Error(
-      "Slopify hit an internal error (no image prompt was selected). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (no image prompt was selected). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   }
   // The run's own frame. The adapter turns it into whatever its provider spells the
@@ -126,7 +126,7 @@ function plan(deps: ImagesDeps, context: StageContext, config: RunConfig): reado
     const prompt = config.rendered[`imagePrompts.${String(at)}`];
     if (prompt === undefined) {
       throw new Error(
-        `Slopify hit an internal error (the image prompt ${picked.name} was never filled in). Retry stage; if it happens again, use Download diagnostics in Settings and report it.`,
+        `Slopify hit an internal error (the image prompt ${picked.name} was never filled in). Try again; if it happens again, use Download diagnostics in Settings and report it.`,
       );
     }
     for (let send = 1; send <= (counts[at] ?? picked.number); send += 1) {
@@ -308,7 +308,7 @@ function report(deps: ImagesDeps, context: StageContext, done: number, total: nu
 function payloadOf(piece: StagePiece): ImagePayload {
   if (piece.payload === null) {
     throw new Error(
-      "Slopify hit an internal error (a saved image step is empty). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (a saved image step is empty). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   }
   return imagePayload.parse(JSON.parse(piece.payload));

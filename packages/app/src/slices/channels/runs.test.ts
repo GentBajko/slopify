@@ -105,9 +105,11 @@ describe("brand kit defaults", () => {
     });
   });
 
-  it("adds only the channel and cast with the kit off, and nothing for an empty kit", () => {
+  it("adds only the channel, the cast and the switch with the kit off, and nothing for an empty kit", () => {
     const off = brandedRun(draft, channel, cast, false);
-    expect(off).toEqual({ ...draft, channelId: defaultChannelId, cast });
+    // The switch is saved so Edit project shows it off; only when off, so a run with the kit
+    // on saves the config it always did.
+    expect(off).toEqual({ ...draft, channelId: defaultChannelId, useBrandKit: false, cast });
     expect(brandedRun(draft, { ...channel, brand: {} }, [], true)).toEqual({
       ...draft,
       channelId: defaultChannelId,

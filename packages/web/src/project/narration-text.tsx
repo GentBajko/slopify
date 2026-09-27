@@ -46,7 +46,7 @@ export function NarrationText({
       : present.map(([name, text]) => `## ${name}\n\n${(text ?? "").trim()}`).join("\n\n");
   return (
     <section aria-labelledby={`${id}-title`} className="flex min-w-0 flex-col gap-2">
-      <h3 id={`${id}-title`} className="engraved text-ink3">
+      <h3 id={`${id}-title`} className="sl-kicker text-ink-3">
         Narration text
       </h3>
       <ReadingView
@@ -57,7 +57,7 @@ export function NarrationText({
         what="narration text"
         onCopy={copy}
       >
-        <span className="block h-4 w-[40ch] max-w-full rounded-control bg-panel2" />
+        <span className="block h-4 w-[40ch] max-w-full rounded-control bg-raised" />
       </ReadingView>
       <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
     </section>

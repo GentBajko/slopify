@@ -3,9 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Picker } from "@/components/ui/picker";
+import { Button } from "@/components/kit/button";
+import { Input, Select } from "@/components/kit/field";
 import { customModelFallback, listProviderModels, modelsKey, modelsQuery } from "@/lib/models";
 import { providerUnavailableLabel } from "@/lib/provider-status";
 import { cn } from "@/lib/utils";
@@ -48,7 +47,7 @@ export function LabelledField({
       className={cn(
         inline
           ? "flex min-w-0 max-w-full flex-wrap items-center gap-x-[10px] gap-y-1"
-          : "sl-field [&>span]:w-full",
+          : "sl-field [&>span]:w-full [&>select]:w-full",
       )}
     >
       {/* The kit's field label and error, as Field draws them. */}
@@ -89,7 +88,7 @@ export function OptionPicker({
   return (
     <LabelledField field={field} label={label} problem={problem} inline={inline}>
       {({ id, describedBy }) => (
-        <Picker
+        <Select
           id={id}
           data-play-field={field}
           value={value}
@@ -110,7 +109,7 @@ export function OptionPicker({
               {option.label}
             </option>
           ))}
-        </Picker>
+        </Select>
       )}
     </LabelledField>
   );
@@ -217,7 +216,12 @@ function ProviderModelPicker({
               .filter(Boolean)
               .join(" ") || undefined;
           return (
-            <div className={cn("min-w-0 [&>span]:w-full", inline ? "max-w-[260px]" : "w-full")}>
+            <div
+              className={cn(
+                "min-w-0 [&>span]:w-full [&>select]:w-full",
+                inline ? "max-w-[260px]" : "w-full",
+              )}
+            >
               {typing ? (
                 <Input
                   id={id}
@@ -231,7 +235,7 @@ function ProviderModelPicker({
                   onChange={(event) => onPick(event.target.value)}
                 />
               ) : (
-                <Picker
+                <Select
                   id={id}
                   data-play-field={field}
                   value={value}
@@ -267,7 +271,7 @@ function ProviderModelPicker({
                         ))}
                     </optgroup>
                   ))}
-                </Picker>
+                </Select>
               )}
             </div>
           );
@@ -277,7 +281,7 @@ function ProviderModelPicker({
         <div className="mt-1 flex flex-wrap items-center gap-1">
           <Button
             type="button"
-            variant="ghost"
+            variant="quiet"
             className="px-2 text-label"
             aria-label={`Refresh ${label} list`}
             title="Refresh models"
@@ -293,7 +297,7 @@ function ProviderModelPicker({
           {allowsCustom ? (
             <Button
               type="button"
-              variant="ghost"
+              variant="quiet"
               className="px-2 text-label"
               aria-label={typing ? `Choose ${label} from list` : `Enter ${label} ID`}
               onClick={() => setCustom(!typing)}
@@ -304,12 +308,12 @@ function ProviderModelPicker({
         </div>
       ) : null}
       {catalogue.data?.notice ? (
-        <p id={noticeId} className="mt-1 max-w-[360px] text-label text-ink3">
+        <p id={noticeId} className="mt-1 max-w-[360px] text-label text-ink-3">
           {catalogue.data.notice}
         </p>
       ) : null}
       {warning ? (
-        <p id={noteId} className="mt-1 max-w-[360px] text-label text-ink3" role="status">
+        <p id={noteId} className="mt-1 max-w-[360px] text-label text-ink-3" role="status">
           {warning}
         </p>
       ) : null}

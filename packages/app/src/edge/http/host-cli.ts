@@ -90,7 +90,7 @@ type HostEnv = {
   Variables: { job: HostJob & { readonly holdStream: () => void } };
 };
 const unavailable =
-  "The AI command-line tool on your computer stopped before it finished, so this result is uncertain. Check the section's outputs on the project page, then use Retry stage.";
+  "The AI command-line tool on your computer stopped before it finished, so this result is uncertain. Check the section's outputs on the project page, then use Try again.";
 function fault(error: unknown, token: string): z.infer<typeof hostFaultSchema> {
   return {
     type: "error",
@@ -142,7 +142,7 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
           type: "error",
           kind: "unavailable",
           message:
-            "The Slopify helper on your computer is busy or restarting. Wait a moment, then use Retry stage.",
+            "The Slopify helper on your computer is busy or restarting. Wait a moment, then use Try again.",
         },
         503,
       );

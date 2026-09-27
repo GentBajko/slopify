@@ -53,7 +53,7 @@ export type CheckedImagePrompts =
   | { readonly ok: true; readonly prompts: readonly string[] }
   | { readonly ok: false; readonly reason: string };
 
-const fix = "Retry stage, or choose another model in Edit project → Providers.";
+const fix = "Try again, or choose another model in Edit project → Providers.";
 
 // The reason is the sentence the stage shows; the provider wrapper's `check` asks the model
 // again while attempts remain.

@@ -132,7 +132,7 @@ function truncated(answer: LlmAnswer): boolean {
 // Empty response → failed attempt.
 function written(answer: LlmAnswer): string | undefined {
   return answer.text.trim() === ""
-    ? "The AI model returned an empty article. Retry stage; if it keeps happening, choose a different model in Edit project → Providers."
+    ? "The AI model returned an empty article. Try again; if it keeps happening, choose a different model in Edit project → Providers."
     : undefined;
 }
 
@@ -142,6 +142,6 @@ function finished(answer: LlmAnswer): string | undefined {
     return empty;
   }
   return truncated(answer)
-    ? `The article was still unfinished after ${String(continuationLimit)} continuations because the AI model kept stopping at its length limit. Ask for a shorter article in Edit project → Prompts, or choose a model with a larger output limit in Edit project → Providers, then Retry stage.`
+    ? `The article was still unfinished after ${String(continuationLimit)} continuations because the AI model kept stopping at its length limit. Ask for a shorter article in Edit project → Prompts, or choose a model with a larger output limit in Edit project → Providers, then Try again.`
     : undefined;
 }

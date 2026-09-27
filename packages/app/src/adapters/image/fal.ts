@@ -216,7 +216,7 @@ export function falImage(deps: FalImageDeps): ImagePort {
               "fal.ai",
               "could not make the video clip",
               redact(current.error),
-              "Use Retry stage; if it keeps happening, choose another image-to-video model under Animate images in Edit project → Inputs → Look.",
+              "Use Try again; if it keeps happening, choose another image-to-video model under Animate images in Edit project → Inputs → Look.",
             ),
           });
         if (current.status === "COMPLETED") break;

@@ -4,13 +4,13 @@ import { fixFor, stageProvider } from "./rules.js";
 // The sentences the adapters write (adapters/explain.ts, adapters/llm/cli-login-error.ts); a
 // slice may not import an adapter, so they are quoted.
 const signedOutCodex =
-  'The Codex CLI is not signed in, or its sign-in has expired. Open a terminal on the computer running the CLI, run "codex login" and sign in, then use Retry stage.';
+  'The Codex CLI is not signed in, or its sign-in has expired. Open a terminal on the computer running the CLI, run "codex login" and sign in, then use Try again.';
 const signedOutClaude =
-  'The Claude Code CLI is not signed in, or its sign-in has expired. Open a terminal on the computer running the CLI, run "claude auth login" and sign in, then use Retry stage.';
+  'The Claude Code CLI is not signed in, or its sign-in has expired. Open a terminal on the computer running the CLI, run "claude auth login" and sign in, then use Try again.';
 const rejectedKey =
-  "ElevenLabs did not accept the API key (error 401). The key may be wrong, expired or revoked: paste a current key in Settings → Providers, then use Retry stage.";
+  "ElevenLabs did not accept the API key (error 401). The key may be wrong, expired or revoked: paste a current key in Settings → Providers, then use Try again.";
 const noKey =
-  "No OpenRouter API key is saved. Add one in Settings → Providers, then use Retry stage.";
+  "No OpenRouter API key is saved. Add one in Settings → Providers, then use Try again.";
 const refused = (provider: string): string =>
   `${provider} refused to make this image under its content rules. Reword the image prompt in the Images section of Edit project, or choose another image provider in its Providers section.`;
 

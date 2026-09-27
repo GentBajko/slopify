@@ -234,7 +234,7 @@ export function codexImage(deps: {
         throw providerError({
           kind: "unsupported",
           message:
-            "No Codex model is chosen for images. Choose one (or Codex default) for images in the Providers section of Edit project, then use Retry stage.",
+            "No Codex model is chosen for images. Choose one (or Codex default) for images in the Providers section of Edit project, then use Try again.",
         });
       req.signal.throwIfAborted();
       const directory = mkdtempSync(join(tmpdir(), "slopify-codex-image-"));
@@ -274,7 +274,7 @@ export function codexImage(deps: {
           throw providerError({
             kind: "unsupported",
             message:
-              "The Codex CLI could not be started. Check it is installed and set up in Settings → Providers, then use Retry stage.",
+              "The Codex CLI could not be started. Check it is installed and set up in Settings → Providers, then use Try again.",
           });
         }
         let completed = false;
@@ -291,7 +291,7 @@ export function codexImage(deps: {
               throw providerError({
                 kind: "unavailable",
                 message:
-                  "The Codex CLI started more than one image job for one image, so Slopify cannot tell which result is right (both may have used your quota). Use Retry stage to make the image again.",
+                  "The Codex CLI started more than one image job for one image, so Slopify cannot tell which result is right (both may have used your quota). Use Try again to make the image again.",
               });
             threadId = cliShaped(
               binary,
@@ -353,7 +353,7 @@ export function codexImage(deps: {
           throw providerError({
             kind: "unsupported",
             message:
-              "The Codex CLI could not be started. Check it is installed and set up in Settings → Providers, then use Retry stage.",
+              "The Codex CLI could not be started. Check it is installed and set up in Settings → Providers, then use Try again.",
           });
         const stderrLimit = codexPlanLimit(run.stderr(), new Date());
         if ((ended.code !== 0 || !completed) && stderrLimit !== undefined)
@@ -403,14 +403,14 @@ async function* bounded(
       throw providerError({
         kind: "other",
         message:
-          "The Codex CLI sent far more output than an image job should, so Slopify stopped it. Use Retry stage; if it keeps happening, update the Codex CLI to the latest version.",
+          "The Codex CLI sent far more output than an image job should, so Slopify stopped it. Use Try again; if it keeps happening, update the Codex CLI to the latest version.",
       });
     yield chunk;
   }
 }
 
 const imageNext =
-  "Use Retry stage; if it keeps failing, run codex in a terminal to check it works and is signed in, or choose another image provider in the Providers section of Edit project.";
+  "Use Try again; if it keeps failing, run codex in a terminal to check it works and is signed in, or choose another image provider in the Providers section of Edit project.";
 const cannotDraw =
   "Update the Codex CLI and check your ChatGPT plan includes image generation, or choose another image provider in the Providers section of Edit project.";
 

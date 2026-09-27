@@ -81,7 +81,7 @@ function unavailable(c: Context, reason: string): Response {
     title: titleOf(404),
     detail:
       reason === "missing-file"
-        ? "This file was deleted or moved from the project folder. In the Edit tab, use Rebuild affected outputs to make it again."
+        ? "This file was deleted or moved from the project folder. In the Edit tab, use Choose what to remake (in the project's More menu) to make it again."
         : "This file is no longer part of the project. Reload the page to see its current files.",
     extensions: { reason },
   });

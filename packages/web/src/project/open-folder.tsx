@@ -1,8 +1,10 @@
 import { type FolderReply, folderReplySchema } from "@app/edge/http/folder-location-schema.js";
 import { FolderOpen } from "lucide-react";
 import { type ReactElement, useState } from "react";
+import type { Api } from "@/api";
 import { useApp } from "@/app-context";
-import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+import { Button } from "@/components/kit/button";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/kit/popover";
 import { errorOf, problemOf } from "@/http";
 
 import { openRevisionFolder } from "./revision-api.js";
@@ -12,6 +14,25 @@ interface Props {
   readonly asset: string;
   readonly folder?: { readonly revisionId: string; readonly recordId: string } | null;
 }
+
+// Asks the machine running Slopify to open the folder a saved output is in. When it can't
+// (Slopify in Docker without the host helper) the reply carries the path to copy instead.
+export async function openFolder(
+  api: Api,
+  { projectId, asset, folder = null }: Props,
+): Promise<FolderReply> {
+  if (folder) return openRevisionFolder(api, projectId, folder.revisionId, folder.recordId);
+  const response = await api.client.projects[":id"]["open-folder"].$post({
+    param: { id: projectId },
+    json: { asset },
+  });
+  if (!response.ok) throw errorOf(response, await problemOf(response));
+  return folderReplySchema.parse(await response.json());
+}
+
+export const dockerFolderHelp =
+  "Slopify runs in Docker, which can't open windows on your desktop. Copy this path into your file manager. To have Open folder open it directly, run the Docker launcher again (npx @gentbajko/slopify@latest --docker) so it sets up the host helper.";
+
 export function OpenFolder(props: Props): ReactElement {
   return (
     <FolderAction
@@ -25,7 +46,7 @@ export function OpenFolder(props: Props): ReactElement {
     />
   );
 }
-function FolderAction({ projectId, asset, folder = null }: Props) {
+function FolderAction(props: Props) {
   const { api } = useApp();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
@@ -35,21 +56,13 @@ function FolderAction({ projectId, asset, folder = null }: Props) {
     setError(undefined);
     setPath(undefined);
     try {
-      let result: FolderReply;
-      if (folder) {
-        result = await openRevisionFolder(api, projectId, folder.revisionId, folder.recordId);
-      } else {
-        const response = await api.client.projects[":id"]["open-folder"].$post({
-          param: { id: projectId },
-          json: { asset },
-        });
-        if (!response.ok) throw errorOf(response, await problemOf(response));
-        result = folderReplySchema.parse(await response.json());
-      }
+      const result = await openFolder(api, props);
       if (!result.opened) setPath(result.path);
     } catch (cause) {
       setError(
-        cause instanceof Error ? cause.message : "The folder couldn't be opened. Try again.",
+        cause instanceof Error
+          ? cause.message
+          : "The folder couldn't be opened. Press Open folder to try again.",
       );
     } finally {
       setPending(false);
@@ -67,36 +80,32 @@ function FolderAction({ projectId, asset, folder = null }: Props) {
       }}
     >
       <PopoverAnchor asChild>
-        <button
-          type="button"
+        <Button
+          variant="quiet"
+          size="small"
           disabled={pending}
           onClick={() => void open()}
           title="Locate the saved output folder on the machine running Slopify"
-          className="inline-flex items-center gap-[5px] rounded-control text-small text-ink2 hover:text-ink disabled:opacity-50"
         >
-          <FolderOpen aria-hidden="true" className="size-[14px] shrink-0" />
+          <FolderOpen aria-hidden="true" strokeWidth={1.75} />
           {pending ? "Locating…" : path ? "Locate folder" : "Open folder"}
-        </button>
+        </Button>
       </PopoverAnchor>
-      <PopoverContent className="space-y-2">
+      <PopoverContent className="flex flex-col gap-2">
         {path !== undefined ? (
-          <div role="status" className="min-w-0 space-y-2 text-small text-ink2">
-            <p>
-              Slopify runs in Docker, which can't open windows on your desktop. Copy this path into
-              your file manager. To have Open folder open it directly, run the Docker launcher again
-              (npx @gentbajko/slopify@latest --docker) so it sets up the host helper.
-            </p>
+          <div role="status" className="flex min-w-0 flex-col gap-2 text-small text-ink-2">
+            <p className="m-0">{dockerFolderHelp}</p>
             <input
               aria-label="Saved folder path"
               readOnly
               value={path}
               onFocus={(event) => event.currentTarget.select()}
-              className="w-full min-w-0 rounded-control border border-line2 bg-transparent p-2 font-mono text-small text-ink"
+              className="sl-input w-full min-w-0 font-mono text-small"
             />
           </div>
         ) : null}
         {error !== undefined ? (
-          <p role="alert" className="text-small text-red">
+          <p role="alert" className="m-0 text-small text-danger">
             {error}
           </p>
         ) : null}

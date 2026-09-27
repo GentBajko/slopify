@@ -168,8 +168,8 @@ function classify(
       kind: "timeout",
       message:
         opts.streaming === true
-          ? `The ${callee[opts.kind]} sent nothing for ${seconds} seconds, so Slopify stopped waiting. It may be overloaded: wait a few minutes, then use Retry stage.`
-          : `The ${callee[opts.kind]} did not answer within ${seconds} seconds. It may be overloaded: wait a few minutes, then use Retry stage, or choose another model in the Providers section of Edit project.`,
+          ? `The ${callee[opts.kind]} sent nothing for ${seconds} seconds, so Slopify stopped waiting. It may be overloaded: wait a few minutes, then use Try again.`
+          : `The ${callee[opts.kind]} did not answer within ${seconds} seconds. It may be overloaded: wait a few minutes, then use Try again, or choose another model in the Providers section of Edit project.`,
     });
   }
   if (isProviderError(error)) {
@@ -187,7 +187,7 @@ function classify(
     const code = causeCode(error);
     return providerError({
       kind: "dropped",
-      message: `Slopify could not reach the ${callee[opts.kind]} over the internet${code === undefined ? "" : ` (${code})`}. Check your internet connection, firewall or VPN, then use Retry stage.`,
+      message: `Slopify could not reach the ${callee[opts.kind]} over the internet${code === undefined ? "" : ` (${code})`}. Check your internet connection, firewall or VPN, then use Try again.`,
     });
   }
   return providerError({

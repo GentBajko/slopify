@@ -30,12 +30,12 @@ it("keeps Article required and pairs Images Off with Video Off", async () => {
       "GET /api/entries": jsonAnswer({ entries: [] }),
     }),
   );
-  const article = screen.getByRole("combobox", { name: "article source" });
+  const article = screen.getByRole("combobox", { name: "Article source" });
   expect(within(article).queryByRole("option", { name: "Off" })).toBeNull();
-  await user.selectOptions(screen.getByRole("combobox", { name: "images source" }), "generate");
-  await user.selectOptions(screen.getByRole("combobox", { name: "video source" }), "generate");
-  await user.selectOptions(screen.getByRole("combobox", { name: "images source" }), "off");
-  const video = screen.getByRole("combobox", { name: "video source" });
+  await user.selectOptions(screen.getByRole("combobox", { name: "Images source" }), "generate");
+  await user.selectOptions(screen.getByRole("combobox", { name: "Video source" }), "generate");
+  await user.selectOptions(screen.getByRole("combobox", { name: "Images source" }), "off");
+  const video = screen.getByRole("combobox", { name: "Video source" });
   if (!(video instanceof HTMLSelectElement)) throw new Error("Expected video source select.");
   expect(video.value).toBe("off");
   expect(within(video).getByRole<HTMLOptionElement>("option", { name: "Generate" }).disabled).toBe(
@@ -69,7 +69,7 @@ it("reads an absent Document source as Off and writes the source and theme", asy
       "GET /api/entries": jsonAnswer({ entries: [] }),
     }),
   );
-  const source = screen.getByRole<HTMLSelectElement>("combobox", { name: "document source" });
+  const source = screen.getByRole<HTMLSelectElement>("combobox", { name: "Document source" });
   expect(source.value).toBe("off");
   const theme = screen.getByRole<HTMLSelectElement>("combobox", { name: "Document theme" });
   // A project saved with no theme was drawn with DiceMaster, and still is; the retired built-in
@@ -138,7 +138,10 @@ it("shows the video timing settings only where the export uses them", async () =
   );
   const seconds = screen.getByRole<HTMLInputElement>("spinbutton", { name: "Seconds per image" });
   expect(seconds.value).toBe("15");
-  expect(document.getElementById(seconds.getAttribute("aria-describedby") ?? "")?.textContent).toBe(
+  expect(
+    document.getElementById((seconds.getAttribute("aria-describedby") ?? "").split(" ")[0] ?? "")
+      ?.textContent,
+  ).toBe(
     "Each image stays on screen this long, then the next one; after the last image they start again.",
   );
   expect(screen.getByText("Enter a whole number of seconds between 1 and 600.")).toBeDefined();
@@ -147,17 +150,19 @@ it("shows the video timing settings only where the export uses them", async () =
   expect(latest.config.imageSeconds).toBe(20);
   const zoom = screen.getByRole<HTMLInputElement>("spinbutton", { name: "Zoom (%)" });
   expect(zoom.value).toBe("22.5");
-  expect(document.getElementById(zoom.getAttribute("aria-describedby") ?? "")?.textContent).toBe(
-    "How far each image zooms in or out over its time on screen. 0 keeps images still.",
-  );
+  expect(
+    document.getElementById((zoom.getAttribute("aria-describedby") ?? "").split(" ")[0] ?? "")
+      ?.textContent,
+  ).toBe("How far each image zooms in or out over its time on screen. 0 keeps images still.");
   await user.clear(zoom);
   await user.type(zoom, "0");
   expect(latest.config.zoomPercent).toBe(0);
   const motion = screen.getByRole<HTMLSelectElement>("combobox", { name: "Motion" });
   expect(motion.value).toBe("zoom");
-  expect(document.getElementById(motion.getAttribute("aria-describedby") ?? "")?.textContent).toBe(
-    "How each image moves while it's on screen.",
-  );
+  expect(
+    document.getElementById((motion.getAttribute("aria-describedby") ?? "").split(" ")[0] ?? "")
+      ?.textContent,
+  ).toBe("How each image moves while it's on screen.");
   expect([...motion.options].map((option) => option.text)).toEqual([
     "Zoom in and out",
     "Pan across",
@@ -174,11 +179,11 @@ it("shows the video timing settings only where the export uses them", async () =
   await user.type(edge, "1.5");
   expect(latest.config.edgeSilenceSeconds).toBe(1.5);
 
-  await user.selectOptions(screen.getByRole("combobox", { name: "images source" }), "off");
+  await user.selectOptions(screen.getByRole("combobox", { name: "Images source" }), "off");
   expect(screen.queryByRole("spinbutton", { name: "Seconds per image" })).toBeNull();
   expect(screen.queryByRole("spinbutton", { name: "Zoom (%)" })).toBeNull();
   expect(screen.queryByRole("combobox", { name: "Motion" })).toBeNull();
-  await user.selectOptions(screen.getByRole("combobox", { name: "audio source" }), "off");
+  await user.selectOptions(screen.getByRole("combobox", { name: "Audio source" }), "off");
   expect(
     screen.queryByRole("spinbutton", { name: "Silence at start and end (seconds)" }),
   ).toBeNull();
@@ -249,7 +254,7 @@ it("preserves saved unavailable choices, content references and frozen templates
   expect((screen.getByLabelText("Narration voice") as HTMLSelectElement).value).toBe(
     "missing-voice",
   );
-  expect((screen.getByLabelText("intro") as HTMLSelectElement).value).toBe("Deleted intro");
+  expect((screen.getByLabelText("Intro") as HTMLSelectElement).value).toBe("Deleted intro");
   await user.type(screen.getByLabelText("Project title"), " updated");
   await user.clear(screen.getByLabelText("topic"));
   await user.type(screen.getByLabelText("topic"), "new");
@@ -316,7 +321,7 @@ it("copies an explicitly selected entry and ignores subsequent library changes",
     }),
   );
   await screen.findByRole("option", { name: "Greeting" });
-  await user.selectOptions(screen.getByLabelText("intro"), "Greeting");
+  await user.selectOptions(screen.getByLabelText("Intro"), "Greeting");
   await user.type(screen.getByLabelText("topic"), "world");
   expect(latest.config.intro).toEqual({ name: "Greeting", mode: "text" });
   expect(latest.config.rendered.intro).toBe("Hello world");
@@ -715,8 +720,8 @@ it("shows an old project's video as it was, and writes edit settings only once o
       "GET /api/entries": jsonAnswer({ entries: [] }),
     }),
   );
-  await user.selectOptions(screen.getByRole("combobox", { name: "images source" }), "generate");
-  await user.selectOptions(screen.getByRole("combobox", { name: "video source" }), "generate");
+  await user.selectOptions(screen.getByRole("combobox", { name: "Images source" }), "generate");
+  await user.selectOptions(screen.getByRole("combobox", { name: "Video source" }), "generate");
   // Saved before the settings: cuts every N seconds, a plain Look, and nothing written.
   expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "Cuts" }).value).toBe("interval");
   expect(screen.getByText("Plain cuts, no effects")).not.toBeNull();

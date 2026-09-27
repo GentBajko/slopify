@@ -1,7 +1,7 @@
 import type { ManualCue } from "@app/slices/revisions/model.js";
 import { useEffect, useId, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input, Textarea } from "@/components/ui/input";
+import { Button } from "@/components/kit/button";
+import { Input, Textarea } from "@/components/kit/field";
 
 export function CaptionEditor({
   cues,
@@ -60,7 +60,14 @@ export function CaptionEditor({
         setError(`Caption ${index + 1}: enter caption text.`);
         return;
       }
-      parsed.push({ id: cue.id, text: cue.text, start, end });
+      // The speaker is kept: editing a caption's text or timing doesn't change who says it.
+      parsed.push({
+        id: cue.id,
+        text: cue.text,
+        start,
+        end,
+        ...(cue.speaker === undefined ? {} : { speaker: cue.speaker }),
+      });
       previous = end;
     }
     onChange(parsed);
@@ -71,7 +78,7 @@ export function CaptionEditor({
     <section aria-label="Edit caption cues" className="space-y-3">
       <h3>Caption text and timing</h3>
       {draft.map((cue, index) => (
-        <fieldset key={cue.id} className="space-y-2 rounded-control border border-line2 p-3">
+        <fieldset key={cue.id} className="space-y-2 rounded-control border border-line-strong p-3">
           <legend>Caption {index + 1}</legend>
           <label htmlFor={`${editorId}-${cue.id}-text`} className="block text-small">
             Text for caption {index + 1}
@@ -113,7 +120,7 @@ export function CaptionEditor({
         </fieldset>
       ))}
       {error === undefined ? null : (
-        <p role="alert" className="text-red">
+        <p role="alert" className="text-danger">
           {error}
         </p>
       )}

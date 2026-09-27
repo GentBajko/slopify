@@ -73,7 +73,7 @@ export function summaryOf(
     case "skipped":
       return "Not part of this run";
     case "pending":
-      if (project.status === "paused" || resumable) return "Waiting for Resume";
+      if (project.status === "paused" || resumable) return "Waits until you continue the run";
       if (stage.retryAt !== undefined) return `Trying again at ${clockTime(stage.retryAt)}`;
       if (stage.kind === "images" || (stage.kind === "thumbnail" && stage.source === "from_prompt"))
         return "Ready to run";

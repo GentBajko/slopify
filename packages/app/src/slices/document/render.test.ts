@@ -160,7 +160,7 @@ describe("renderDocument", () => {
   it("refuses an article with nothing to print", () => {
     expect(() =>
       renderDocument(input({ articleMarkdown: "# The Tarrasque\n\n## Sources Consulted\n\n- x" })),
-    ).toThrow(/Edit project → Article.*Retry stage on Document/);
+    ).toThrow(/Edit project → Article.*Try again on Document/);
   });
 
   it("gives a long article as many contents pages as its headings need", () => {

@@ -58,9 +58,9 @@ export function endsWithSources(text: string): boolean {
 // but cannot be used is a failed attempt, so the wrapper retries it.
 export function sourcedAnswer(who: string, text: string): string | undefined {
   if (text.trim() === "") {
-    return `The AI model returned an empty answer for ${who}. Retry stage; if it keeps happening, choose a different model in Edit project → Providers.`;
+    return `The AI model returned an empty answer for ${who}. Try again; if it keeps happening, choose a different model in Edit project → Providers.`;
   }
   return endsWithSources(text)
     ? undefined
-    : `The AI model's answer for ${who} had no sources. Research needs web sources: Retry stage, or choose a model with web search in Edit project → Providers.`;
+    : `The AI model's answer for ${who} had no sources. Research needs web sources: Try again, or choose a model with web search in Edit project → Providers.`;
 }

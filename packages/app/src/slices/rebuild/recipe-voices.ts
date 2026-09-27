@@ -67,7 +67,7 @@ export function voiceBodyRecipes(
         context,
         "audio:body:turn:1",
         script.dependsOn,
-        `The script can't be narrated: ${parsed.reason} Fix it in Edit project → Article, then Retry stage.`,
+        `The script can't be narrated: ${parsed.reason} Fix it in Edit project → Article, then Try again.`,
       ),
     );
   } else if (parsed !== undefined) {

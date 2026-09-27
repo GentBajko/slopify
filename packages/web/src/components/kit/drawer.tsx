@@ -77,7 +77,7 @@ export function Drawer({
           ref={heading}
           id={titleId}
           tabIndex={-1}
-          className="min-w-0 flex-1 truncate text-row font-semibold focus-visible:outline-offset-[-2px]"
+          className="min-w-0 flex-1 truncate text-title-3 font-semibold focus-visible:outline-offset-[-2px]"
         >
           {title}
         </h2>
@@ -85,7 +85,7 @@ export function Drawer({
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="inline-flex size-8 items-center justify-center rounded-control text-ink2 hover:bg-panel2 hover:text-ink"
+          className="inline-flex size-8 items-center justify-center rounded-control text-ink-2 hover:bg-raised hover:text-ink"
         >
           <XIcon aria-hidden="true" className="size-4" />
         </button>

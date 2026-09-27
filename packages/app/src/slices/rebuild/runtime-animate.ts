@@ -39,7 +39,7 @@ export async function executeAnimateRecipe(
   const input = piece.input;
   if (input.kind !== "image" || input.animate === undefined)
     throw new Error(
-      "Slopify hit an internal error (an animated image was set up wrongly). Use Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (an animated image was set up wrongly). Use Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   const imageKey = piece.key.slice("animate:".length);
   const view = executionView(deps, context.work.projectId, context.work.revisionId);
@@ -57,12 +57,12 @@ export async function executeAnimateRecipe(
   };
   if (still === undefined)
     return fallback(
-      "its image wasn't ready to animate. Use Re-run section on Video after the image is made.",
+      "its image wasn't ready to animate. Use More → Render the video again in the Video section after the image is made.",
     );
   const animate = providers.forPiece(piece.id).animate;
   if (animate === undefined)
     throw new Error(
-      "Slopify hit an internal error (animating images isn't wired up in this build). Use Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (animating images isn't wired up in this build). Use Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   if (!context.maySubmit(piece.id)) return "held";
   let made: Awaited<ReturnType<typeof animate>>;
@@ -82,7 +82,7 @@ export async function executeAnimateRecipe(
   } catch (error) {
     if (context.signal.aborted) throw error;
     return fallback(
-      `${error instanceof Error ? error.message : String(error)} To try again, use Re-run section on Video.`,
+      `${error instanceof Error ? error.message : String(error)} To try again, use More → Render the video again in the Video section.`,
     );
   }
   if (!made.ok) return "held";

@@ -265,7 +265,7 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
           throw providerError({
             kind: "unavailable",
             message:
-              "Slopify could not hand the whole prompt to the Claude Code CLI, so it cannot tell what the CLI worked on (it may already have used your quota). Use Retry stage to run it again.",
+              "Slopify could not hand the whole prompt to the Claude Code CLI, so it cannot tell what the CLI worked on (it may already have used your quota). Use Try again to run it again.",
           });
         }
         if (result.is_error === true || result.subtype !== "success") {
@@ -325,7 +325,7 @@ export function claudeCodeLlm(deps: ClaudeCodeDeps): LlmPort {
     // The stream ended with no result event at all.
     if (!run)
       throw new Error(
-        "The Claude Code CLI could not be started. Check it is installed and set up in Settings → Providers, then use Retry stage.",
+        "The Claude Code CLI could not be started. Check it is installed and set up in Settings → Providers, then use Try again.",
       );
     const login = cliLoginError("claude-code", run.stderr());
     if (login) throw login;
@@ -361,11 +361,11 @@ function kindOf(status: number | null): ProviderErrorKind {
 // What most often fixes the upstream status the CLI passed on.
 function nextStep(binary: string, status: number | null): string {
   if (status === 401 || status === 403)
-    return `Run "${commandOf(binary)} auth login" in a terminal to sign in again, then use Retry stage.`;
+    return `Run "${commandOf(binary)} auth login" in a terminal to sign in again, then use Try again.`;
   if (status === 429)
-    return "Your Claude usage limit may be used up: wait until it resets, then use Retry stage.";
+    return "Your Claude usage limit may be used up: wait until it resets, then use Try again.";
   if (status === 404)
-    return "The chosen model may not exist or not be available to your account: choose another in the Providers section of Edit project, then use Retry stage.";
+    return "The chosen model may not exist or not be available to your account: choose another in the Providers section of Edit project, then use Try again.";
   return cliCheck(binary);
 }
 

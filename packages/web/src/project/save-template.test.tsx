@@ -1,9 +1,29 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { freshDraftDocument } from "@/play/draft-state";
 import { renderApp, testDeps } from "@/test-app";
 import { SaveProjectTemplate } from "./save-template";
+
+// The project page opens the dialog from its More menu; here a plain button stands in.
+function Opener({ projectId, revisionId }: { projectId: string; revisionId: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)}>
+        Save as template
+      </button>
+      <SaveProjectTemplate
+        projectId={projectId}
+        revisionId={revisionId}
+        title="Film"
+        open={open}
+        onClose={() => setOpen(false)}
+      />
+    </>
+  );
+}
 
 afterEach(cleanup);
 const projectId = "11111111-1111-4111-8111-111111111111";
@@ -23,7 +43,7 @@ it("saves a named current revision without invoking project work", async () => {
     });
   });
   renderApp(
-    <SaveProjectTemplate projectId={projectId} revisionId={revisionId} title="Film" />,
+    <Opener projectId={projectId} revisionId={revisionId} />,
     testDeps({ [`POST /api/project-templates/from-project/${projectId}`]: save }),
   );
   const button = screen.getByRole("button", { name: "Save as template" });
@@ -42,7 +62,7 @@ it("keeps the named revision and request identity when a response is lost", asyn
   const user = userEvent.setup();
   const bodies: unknown[] = [];
   renderApp(
-    <SaveProjectTemplate projectId={projectId} revisionId={revisionId} title="Film" />,
+    <Opener projectId={projectId} revisionId={revisionId} />,
     testDeps({
       [`POST /api/project-templates/from-project/${projectId}`]: async (request) => {
         bodies.push(await request.json());

@@ -70,7 +70,7 @@ describe("sourcedAnswer", () => {
   // An empty response counts as a failed attempt.
   it("names an empty answer", () => {
     const empty =
-      "The AI model returned an empty answer for the research summary. Retry stage; if it keeps happening, choose a different model in Edit project → Providers.";
+      "The AI model returned an empty answer for the research summary. Try again; if it keeps happening, choose a different model in Edit project → Providers.";
     expect(sourcedAnswer("the research summary", "")).toBe(empty);
     expect(sourcedAnswer("the research summary", "  \n ")).toBe(empty);
   });
@@ -78,7 +78,7 @@ describe("sourcedAnswer", () => {
   // Output lacking a Sources list counts as a failed attempt.
   it("names an answer with no Sources list", () => {
     expect(sourcedAnswer("the research summary", "Notes and nothing else.")).toBe(
-      "The AI model's answer for the research summary had no sources. Research needs web sources: Retry stage, or choose a model with web search in Edit project → Providers.",
+      "The AI model's answer for the research summary had no sources. Research needs web sources: Try again, or choose a model with web search in Edit project → Providers.",
     );
   });
 

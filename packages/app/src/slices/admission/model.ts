@@ -210,6 +210,9 @@ export interface RunDraft {
   // The channel the run was started in (`slices/channels`). Absent on everything saved before
   // channels, which reads as the default channel.
   readonly channelId?: string | undefined;
+  // "Use the channel's brand kit" (Play's Channel row, Edit project's Channel). Saved only when
+  // off; absent reads as on, which is what every project saved before it was.
+  readonly useBrandKit?: false | undefined;
   // The channel's cast as the run was started with it: an image whose brief mentions a member
   // is drawn with that member's pictures as references (`recipe-cast.ts`). Absent is none.
   readonly cast?: readonly import("../channels/model.js").CastSnapshot[] | undefined;

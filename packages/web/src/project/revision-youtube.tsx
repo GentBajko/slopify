@@ -1,7 +1,7 @@
 import type { Prompt } from "@app/slices/library/model.js";
 import type { RevisionEdit, RevisionView } from "@app/slices/revisions/model.js";
 import type { ReactElement } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/kit/button";
 import { YoutubeDescription } from "@/play/youtube-description";
 import { editOfForm, setPrompt } from "./revision-form-state";
 
@@ -75,11 +75,11 @@ export function RevisionYoutube({
       />
       {written && edit.config.youtubeDescription === true ? (
         again ? (
-          <p className="flex flex-wrap items-center gap-2 text-small text-done">
+          <p className="flex flex-wrap items-center gap-2 text-small text-accent-ink">
             The YouTube description will be written again when you save and Resume.
             <Button
               type="button"
-              variant="ghost"
+              variant="quiet"
               onClick={() => {
                 onChange({
                   ...edit,

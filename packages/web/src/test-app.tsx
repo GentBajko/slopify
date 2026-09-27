@@ -198,16 +198,26 @@ export async function openEditSection(name: string): Promise<void> {
   await userEvent.click(within(nav).getByRole("button", { name: new RegExp(`^${name}`) }));
 }
 
-// The project page opens on its Output tab; a view that is not showing is one press away.
-export async function openProjectTab(name: "Output" | "Edit" | "History" | "Checkpoints") {
-  const tab = await screen.findByRole("tab", { name: new RegExp(`^${name}`) });
-  if (tab.getAttribute("aria-selected") !== "true") await userEvent.click(tab);
+// The project page's section rail (routes/project.tsx): a section or view that is not showing
+// is one press away. "Edit" is the Settings view.
+export async function openProjectSection(name: string): Promise<void> {
+  const rail = await screen.findByRole("navigation", { name: "Project sections" });
+  const item = within(rail).getByRole("button", { name: new RegExp(`^${name}`) });
+  if (item.getAttribute("aria-current") !== "true") await userEvent.click(item);
 }
 
-// Edit project lives on the Edit tab, beside Rebuild affected outputs.
+export async function openProjectTab(name: "Edit" | "History" | "Checkpoints" | "Cost" | "Live") {
+  await openProjectSection(name === "Edit" ? "Settings" : name);
+}
+
+// Edit project is the Settings view: it opens straight into the editor.
+// After a save the view shows the saved revision, with Edit project to open a new draft.
 export async function openProjectEditor(): Promise<void> {
   await openProjectTab("Edit");
-  await userEvent.click(await screen.findByRole("button", { name: "Edit project" }));
+  const again = screen.queryByRole("button", { name: "Edit project" });
+  if (again !== null && screen.queryByRole("form", { name: "Edit project" }) === null)
+    await userEvent.click(again);
+  await screen.findByRole("form", { name: "Edit project" });
 }
 
 // One file from a stage's Download menu (project/parts.tsx), opening the menu when it is shut.

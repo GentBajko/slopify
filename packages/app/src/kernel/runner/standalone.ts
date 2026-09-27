@@ -168,17 +168,17 @@ async function wrapped<T>(
   }
 }
 
-// The wrapper's own advice points at a stage's buttons ("use Retry stage"); a standalone call
+// The wrapper's own advice points at a stage's buttons ("use Try again"); a standalone call
 // has none, and each caller says itself where to go next, so that advice is dropped.
 function standaloneError(error: unknown): unknown {
   if (!isProviderError(error)) return error;
   const kept = error.message
     .replace(
-      /,? then use Retry stage(?:, or choose another model in the Providers section of Edit project)?/g,
+      /,? then use (?:Retry stage|Try again)(?:, or choose another model in the Providers section of Edit project)?/g,
       "",
     )
     .split(/(?<=\.)\s+/)
-    .filter((sentence) => !/Retry stage|Edit project/.test(sentence))
+    .filter((sentence) => !/Retry stage|Try again|Edit project/.test(sentence))
     .join(" ")
     .trim();
   if (kept === error.message || kept === "") return error;

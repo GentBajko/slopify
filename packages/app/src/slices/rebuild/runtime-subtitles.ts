@@ -81,7 +81,7 @@ export async function executeSubtitleRecipe(
   if (piece.key === "subtitles:cues") return cues(deps, context, piece, snapshot);
   if (piece.key === "subtitles:files") return files(deps, context, piece, snapshot);
   throw new Error(
-    "Slopify hit an internal error (unknown kind of caption step). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    "Slopify hit an internal error (unknown kind of caption step). Try again; if it happens again, use Download diagnostics in Settings and report it.",
   );
 }
 async function timing(
@@ -93,12 +93,12 @@ async function timing(
   const audio = await revisionAudio(deps, context, snapshot.view);
   if (audio.length === 0)
     throw new Error(
-      "Captions and the YouTube description need narration audio, but this project has none. Turn captions and the YouTube description off in Edit project, or turn narration on, then Retry stage.",
+      "Captions and the YouTube description need narration audio, but this project has none. Turn captions and the YouTube description off in Edit project, or turn narration on, then Try again.",
     );
   const alignSubtitles = deps.alignSubtitles;
   if (alignSubtitles === undefined)
     throw new Error(
-      "Slopify hit an internal error (the caption timing tool is missing from this build). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (the caption timing tool is missing from this build). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   if (!context.maySubmit(piece.id)) return "held";
   const words: SpeakerWord[] = [];
@@ -138,7 +138,7 @@ async function timing(
         : aligned) {
         if (word.end > segment.seconds + 0.1)
           throw new Error(
-            "Caption timing came out longer than the narration audio. Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+            "Caption timing came out longer than the narration audio. Try again; if it happens again, use Download diagnostics in Settings and report it.",
           );
         words.push({
           ...word,
@@ -151,7 +151,7 @@ async function timing(
   }
   if (captionCues(words).length === 0)
     throw new Error(
-      "None of the narration could be matched to the article text, so captions can't be timed. The narration must be in the project language set in Edit project → Language; if you uploaded your own audio, make sure it reads the article text, then Retry stage.",
+      "None of the narration could be matched to the article text, so captions can't be timed. The narration must be in the project language set in Edit project → Language; if you uploaded your own audio, make sure it reads the article text, then Try again.",
     );
   context.signal.throwIfAborted();
   const output = preparedText(
@@ -177,7 +177,7 @@ async function cues(
   if (manual !== undefined) {
     if (plan.work.find((one) => one.key === piece.key)?.disposition === "review")
       throw new Error(
-        "Your edited captions were written for an older version of the narration. Review them in Edit project → Captions and save, then Retry stage.",
+        "Your edited captions were written for an older version of the narration. Review them in Edit project → Captions and save, then Try again.",
       );
     const audio = await revisionAudio(deps, context, view);
     const errors = validateCues(
@@ -195,7 +195,9 @@ async function cues(
         one.workKey === "subtitles:timing",
     );
     if (output === undefined)
-      throw new Error("Caption timing is missing. Use Re-run section on Video, then Retry stage.");
+      throw new Error(
+        "Caption timing is missing. Use More → Render the video again in the Video section, then Try again.",
+      );
     const timed = wordsSchema.parse(
       JSON.parse(
         readFileSync(outputPath(deps.paths, context.work.projectId, output.output.path), "utf8"),
@@ -223,7 +225,7 @@ async function files(
   const config = view.revision.config.subtitles;
   if (config === undefined || config.mode === "off")
     throw new Error(
-      "Slopify hit an internal error (captions are off for this version of the project). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (captions are off for this version of the project). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   const row = view.pieces.find(
     (one) =>
@@ -231,7 +233,7 @@ async function files(
   );
   if (row?.piece.payload === null || row?.piece.payload === undefined)
     throw new Error(
-      "The captions haven't been prepared yet. Use Re-run section on Video, then Retry stage.",
+      "The captions haven't been prepared yet. Use More → Render the video again in the Video section, then Try again.",
     );
   const value = cuesSchema.parse(JSON.parse(row.piece.payload));
   const previous = view.outputs.find(
@@ -412,8 +414,8 @@ export function describeMismatch(
   const heard = mismatch.heard === "" ? "no more speech" : `"${mismatch.heard.toLowerCase()}…"`;
   const fix =
     chunk === undefined
-      ? "Check that part of the narration, regenerate it in Edit project → Narration, then Resume."
-      : `In Edit project → Narration, regenerate narration chunk ${String(at + 1)}, then Resume.`;
+      ? "Check that part of the narration, regenerate it in Edit project → Narration, then Continue the run."
+      : `In Edit project → Narration, regenerate narration chunk ${String(at + 1)}, then Continue the run.`;
   return `Subtitles stopped matching the audio at ${where}. The text expected ${expected} but the audio has ${heard} The recording there probably skips or changes words. ${fix}`;
 }
 

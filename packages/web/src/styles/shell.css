@@ -382,17 +382,28 @@
     }
   }
 
-  /* The app shell: a 232px rail and a fluid main column, centred beyond content-max. */
+  /* The app shell: a 232px rail and a fluid main column, centred beyond content-max. The
+     rail's surface and hairline are also painted on the shell itself, the full height of the
+     page, so however far a long page scrolls (and wherever a webview gives up on sticky) the
+     rail's column never ends at the first screen. */
   .sl-app {
     display: grid;
     grid-template-columns: 232px minmax(0, 1fr);
-    min-height: 100vh;
-    background: var(--color-ground);
+    min-height: 100dvh;
+    background:
+      linear-gradient(
+        to right,
+        var(--color-surface) 0 231px,
+        var(--color-line) 231px 232px,
+        transparent 232px
+      ),
+      var(--color-ground);
   }
   .sl-app__rail {
     position: sticky;
     top: 0;
-    height: 100vh;
+    align-self: start;
+    height: 100dvh;
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -752,6 +763,7 @@
     .sl-app {
       grid-template-columns: minmax(0, 1fr);
       padding-bottom: 72px;
+      background: var(--color-ground);
     }
     .sl-app__rail {
       display: none;
@@ -807,6 +819,10 @@
     }
     .sl-workspace__sections .sl-rail__item {
       flex: none;
+      width: auto;
+    }
+    .sl-workspace__sections .sl-rule {
+      display: none;
     }
     .sl-workspace__aside {
       position: static;

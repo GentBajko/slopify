@@ -1,17 +1,17 @@
 import { stageKinds } from "@app/kernel/pipeline.js";
+import type { ProjectSummary } from "@app/slices/admission/model.js";
 import type { RevisionView } from "@app/slices/revisions/model.js";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { body, stage } from "@/routes/project-fixtures";
-import { jsonAnswer, renderApp, renderRouted, testDeps } from "@/test-app";
-import { ConfirmedButton, canRerunSection } from "./controls.js";
-import { ProjectHeader } from "./header.js";
+import { jsonAnswer, renderApp, testDeps } from "@/test-app";
+import { canRerunSection } from "./controls.js";
 import { RevisionControlContext } from "./revision-action-context.js";
 import { revisionView } from "./revision-fixture.js";
 import { RevisionMedia } from "./revision-media.js";
-import { StageRow } from "./stage-row.js";
+import { SectionMore } from "./stage-section.js";
 import type { Action, ProjectActions } from "./use-actions.js";
 
 afterEach(cleanup);
@@ -98,152 +98,81 @@ it("offers every generated section but no provided/off conversion or edited-arti
   ).toBe(false);
 });
 
-it("confirms rerun by keyboard, cancels safely, retains History and disables duplicate clicks", async () => {
+it("makes a whole stage again only from the section's More, confirmed, by keyboard", async () => {
   const user = userEvent.setup();
-  const run = vi.fn();
+  const run = vi.fn((_action: Action) => undefined);
   const view = generated();
   const deps = testDeps({ "GET /api/projects/p1/revisions/r1": jsonAnswer({ view }) });
+  const project = body({ status: "done", stages: [], outputs: [] })
+    .project as unknown as ProjectSummary;
   function Control() {
     const [pending, setPending] = useState(false);
+    const actions: ProjectActions = {
+      run: (action) => {
+        run(action);
+        setPending(true);
+      },
+      pending,
+      refusal: undefined,
+      dismissRefusal: () => undefined,
+    };
     return (
       <RevisionMedia projectId="p1" revisionId="r1">
         <RevisionControlContext value={true}>
-          <ConfirmedButton
-            action={{ kind: "rerun", stage: "images" }}
-            run={() => {
-              run();
-              setPending(true);
-            }}
-            pending={pending}
-          >
-            Re-run images
-          </ConfirmedButton>
+          <SectionMore stages={[stage("images", "done")]} project={project} actions={actions} />
         </RevisionControlContext>
       </RevisionMedia>
     );
   }
   renderApp(<Control />, deps);
-  const button = await screen.findByRole("button", { name: "Re-run images" });
-  button.focus();
-  await user.keyboard("{Enter}");
+  const more = await screen.findByRole("button", { name: "More actions for Images" });
+  await user.click(more);
+  await user.click(await screen.findByRole("menuitem", { name: "Make all images again" }));
   const dialog = await screen.findByRole("dialog");
   expect(dialog.textContent).toMatch(/generated images.*video.*History/i);
   expect(within(dialog).queryByRole("checkbox")).toBeNull();
   await user.keyboard("{Escape}");
   expect(run).not.toHaveBeenCalled();
-  await user.click(button);
-  const confirm = within(await screen.findByRole("dialog")).getByRole("button", { name: "Re-run" });
+  await user.click(more);
+  await user.click(await screen.findByRole("menuitem", { name: "Make all images again" }));
+  const confirm = within(await screen.findByRole("dialog")).getByRole("button", {
+    name: "Make all images again",
+  });
   confirm.focus();
   await user.keyboard("{Enter}");
-  expect(run).toHaveBeenCalledTimes(1);
-  await waitFor(() =>
-    expect(screen.getByRole("button", { name: "Re-run images" }).hasAttribute("disabled")).toBe(
-      true,
-    ),
+  expect(run).toHaveBeenCalledWith({ kind: "rerun", stage: "images" });
+  await user.click(more);
+  await waitFor(async () =>
+    expect(
+      (await screen.findByRole("menuitem", { name: "Make all images again" })).getAttribute(
+        "aria-disabled",
+      ),
+    ).toBe("true"),
   );
 });
 
-it("allows canceled Resume and paused Retry without approving a checkpoint or opening cost review", async () => {
-  const user = userEvent.setup();
-  const run = vi.fn((_action: Action) => undefined);
+it("offers no whole-stage remake for provided or edited work", async () => {
+  const view = revisionView();
+  const deps = testDeps({ "GET /api/projects/p1/revisions/r1": jsonAnswer({ view }) });
   const actions: ProjectActions = {
-    run,
+    run: () => undefined,
     pending: false,
     refusal: undefined,
     dismissRefusal: () => undefined,
   };
-  const summary = body({ status: "canceled", stages: [], outputs: [] }).project;
-  const project = { ...summary, format: "16:9" as const, config: generated().revision.config };
-  renderRouted(
-    <RevisionControlContext value={true}>
-      <ProjectHeader
-        project={project}
-        prompts={undefined}
-        actions={actions}
-        inFlight={false}
-        resumable={false}
-        primaryOutput={undefined}
-      />
-      <StageRow
-        section={{ kind: "audio", stage: stage("audio", "failed") }}
-        project={{ ...project, status: "paused" }}
-        outputs={[]}
-        providers={[]}
-        actions={actions}
-      >
-        {null}
-      </StageRow>
-    </RevisionControlContext>,
-    testDeps({}),
-  );
-  const resume = await screen.findByRole("button", { name: "Resume" });
-  resume.focus();
-  await user.keyboard("{Enter}");
-  const retry = screen.getByRole("button", { name: "Retry stage" });
-  expect(retry.hasAttribute("disabled")).toBe(false);
-  retry.focus();
-  await user.keyboard("{Enter}");
-  expect(run.mock.calls.map(([action]) => action)).toEqual([
-    { kind: "resume" },
-    { kind: "retry", stage: "audio" },
-  ]);
-  expect(screen.queryByRole("dialog")).toBeNull();
-  await user.click(screen.getByRole("button", { name: /^About recovering/ }));
-  expect(await screen.findByText(/Resume recovers unfinished work/)).not.toBeNull();
-});
-
-it.each([
-  [{ kind: "resume" }, "Resuming…", ["Retry stage", "Retry stage"]],
-  [{ kind: "retry", stage: "images" }, "Resume", ["Retry stage", "Retrying…"]],
-] as const)(
-  "labels only the in-flight control while every control waits: %j",
-  async (performing, resume, retries) => {
-    const actions: ProjectActions = {
-      run: () => undefined,
-      pending: true,
-      performing,
-      refusal: undefined,
-      dismissRefusal: () => undefined,
-    };
-    const summary = body({ status: "failed", stages: [], outputs: [] }).project;
-    const project = { ...summary, format: "16:9" as const, config: generated().revision.config };
-    renderRouted(
+  renderApp(
+    <RevisionMedia projectId="p1" revisionId="r1">
       <RevisionControlContext value={true}>
-        <ProjectHeader
-          project={project}
-          prompts={undefined}
+        <SectionMore
+          stages={[stage("video", "done")]}
+          project={
+            body({ status: "done", stages: [], outputs: [] }).project as unknown as ProjectSummary
+          }
           actions={actions}
-          inFlight={false}
-          resumable={false}
-          primaryOutput={undefined}
         />
-        {(["audio", "images"] as const).map((kind) => (
-          <StageRow
-            key={kind}
-            section={{ kind, stage: stage(kind, "failed") }}
-            project={project}
-            outputs={[]}
-            providers={[]}
-            actions={actions}
-          >
-            {null}
-          </StageRow>
-        ))}
-      </RevisionControlContext>,
-      testDeps({}),
-    );
-    expect((await screen.findByRole("button", { name: resume })).hasAttribute("disabled")).toBe(
-      true,
-    );
-    const labels = within(
-      screen.getByRole("region", { name: /Audio workspace|Narration workspace/ }),
-    )
-      .getAllByRole("button")
-      .concat(
-        within(screen.getByRole("region", { name: /Images workspace/ })).getAllByRole("button"),
-      )
-      .filter((button) => /^Retry/.test(button.textContent ?? ""));
-    expect(labels.map((button) => button.textContent)).toEqual(retries);
-    expect(labels.every((button) => button.hasAttribute("disabled"))).toBe(true);
-  },
-);
+      </RevisionControlContext>
+    </RevisionMedia>,
+    deps,
+  );
+  await waitFor(() => expect(screen.queryByRole("button", { name: /More actions/ })).toBeNull());
+});

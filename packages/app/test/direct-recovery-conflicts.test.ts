@@ -196,7 +196,7 @@ it("refuses to rerun over an accepted provider job until Retry retrieves it", as
         {
           field: "stage",
           message:
-            "An accepted provider job for this section is waiting to be collected. Use Retry stage or Resume, then rerun.",
+            "An accepted provider job for this section is waiting to be collected. Use Try again or Continue the run, then rerun.",
         },
       ],
     });

@@ -36,7 +36,7 @@ export function exportSnapshot(
     .get(context.work.workId);
   if (view === undefined || row === undefined)
     throw new Error(
-      "Slopify hit an internal error (the project version being exported is missing). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (the project version being exported is missing). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   const plan = executionPlan(deps, view, savedCatalogue(row.recipe_context));
   const recipe = plan.recipes.find(
@@ -44,7 +44,7 @@ export function exportSnapshot(
   );
   if (recipe === undefined || recipe.deferred || recipe.unresolved)
     throw new Error(
-      "Slopify hit an internal error (the export no longer matches the project's saved inputs). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (the export no longer matches the project's saved inputs). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   return { view, plan };
 }
@@ -67,14 +67,14 @@ export async function revisionAudio(
         probeDurationMs(deps.ffmpeg, path, context.signal, deps.log)));
     if (!Number.isFinite(duration) || duration <= 0)
       throw new Error(
-        "Slopify couldn't read the length of the narration audio, so the file may be damaged or empty. Regenerate the narration (or upload your audio file again in Edit project → Narration), then Retry stage.",
+        "Slopify couldn't read the length of the narration audio, so the file may be damaged or empty. Regenerate the narration (or upload your audio file again in Edit project → Narration), then Try again.",
       );
     return { path, seconds: duration / 1000 };
   };
   const body = await input("audio_body");
   if (body === undefined)
     throw new Error(
-      "The narration audio isn't finished yet. Let the Narration stage finish (Resume, or Retry stage on it), then retry this stage.",
+      "The narration audio isn't finished yet. Let the Narration stage finish (Resume, or Try again on it), then retry this stage.",
     );
   return audioTimeline(
     {
@@ -129,7 +129,7 @@ export function revisionTranscript(
       )
         return recipe.input.semantic[0];
       throw new Error(
-        "Some narration chunks aren't finished, so the full narration text isn't available. Let the Narration stage finish (Resume, or Retry stage on it), or regenerate the missing chunk in Edit project → Narration.",
+        "Some narration chunks aren't finished, so the full narration text isn't available. Let the Narration stage finish (Resume, or Try again on it), or regenerate the missing chunk in Edit project → Narration.",
       );
     });
     if (texts.length > 0) return texts.join("\n");
@@ -144,7 +144,7 @@ export function revisionTranscript(
     if (view.articleMarkdown !== null) return plainText(splitEndMatter(view.articleMarkdown).body);
   }
   throw new Error(
-    `The saved text of the ${kind === "body" ? "article" : kind} is missing, so it can't be matched to the narration. Use Re-run section on Article, then Retry stage.`,
+    `The saved text of the ${kind === "body" ? "article" : kind} is missing, so it can't be matched to the narration. Use More → Write the article again in the Article section, then Try again.`,
   );
 }
 export function retainedOutput(

@@ -20,7 +20,7 @@ const maxOutputBytes = 32 * 1024 * 1024;
 function unavailable(detail: string): Error {
   return providerError({
     kind: "unavailable",
-    message: `The Codex CLI finished, but Slopify could not collect the image: ${detail}. Use Retry stage to make it again (this uses your Codex quota again).`,
+    message: `The Codex CLI finished, but Slopify could not collect the image: ${detail}. Use Try again to make it again (this uses your Codex quota again).`,
   });
 }
 

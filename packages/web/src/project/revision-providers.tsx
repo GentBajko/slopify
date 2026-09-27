@@ -4,6 +4,7 @@ import {
 } from "@app/slices/admission/rules.js";
 import type { RevisionEdit } from "@app/slices/revisions/model.js";
 import { usesVoices } from "@app/slices/voices/model.js";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   type ProviderStatus,
@@ -12,7 +13,8 @@ import {
   type Voice,
 } from "@/api";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/ui/button";
+import { channelQuery, defaultChannelId } from "@/channels/api";
+import { Button } from "@/components/kit/button";
 import { ChunkingControl } from "@/play/chunking";
 import { NarrationAliasesToggle } from "@/play/narration-aliases";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
@@ -61,7 +63,7 @@ function useSharedGlossary(
   const count = config.sharedGlossary?.length ?? 0;
   const note =
     audio?.shareGlossary === true ? (
-      <p className="flex flex-wrap items-center gap-2 text-label text-ink2">
+      <p className="flex flex-wrap items-center gap-2 text-label text-ink-2">
         {state.error !== undefined
           ? `Couldn't read your other projects' pronunciations: ${state.error}`
           : count === 0
@@ -71,7 +73,7 @@ function useSharedGlossary(
                   ? "your other projects"
                   : `${String(state.projects)} other ${state.projects === 1 ? "project" : "projects"}`
               }.`}
-        <Button type="button" variant="ghost" disabled={state.busy} onClick={() => void copy()}>
+        <Button type="button" variant="quiet" disabled={state.busy} onClick={() => void copy()}>
           {state.busy ? "Copying…" : "Update from other projects"}
         </Button>
       </p>
@@ -126,13 +128,13 @@ function useAliases(edit: RevisionEdit, onChange: (edit: RevisionEdit) => void) 
     },
     note:
       audio?.useNarrationAliases === true ? (
-        <p className="flex flex-wrap items-center gap-2 text-label text-ink2">
+        <p className="flex flex-wrap items-center gap-2 text-label text-ink-2">
           {state.error !== undefined
             ? `Couldn't read Library → Aliases: ${state.error} Try Update from Library again.`
             : count === 0
               ? "No aliases are copied yet. Add some in Library → Aliases."
               : `${String(count)} ${count === 1 ? "alias" : "aliases"} copied from Library → Aliases.`}
-          <Button type="button" variant="ghost" disabled={state.busy} onClick={() => void copy()}>
+          <Button type="button" variant="quiet" disabled={state.busy} onClick={() => void copy()}>
             {state.busy ? "Copying…" : "Update from Library"}
           </Button>
         </p>
@@ -158,6 +160,8 @@ export function RevisionProviders({
   const audio = config.audio ?? { provider: "", model: "", voice: "" };
   const shared = useSharedGlossary(projectId, edit, onChange);
   const aliases = useAliases(edit, onChange);
+  const { api } = useApp();
+  const cast = useQuery(channelQuery(api, config.channelId ?? defaultChannelId));
   const images = config.images ?? { provider: "", model: "" };
   const textNeeded =
     usesNarrationPreparation(config) ||
@@ -262,6 +266,10 @@ export function RevisionProviders({
             <h3 className="mb-2 text-small font-semibold">Speakers</h3>
             <SpeakersEditor
               value={config.voices}
+              // The project's channel's cast, for "Add from the cast", and its language, which
+              // filters each speaker's voices.
+              cast={cast.data?.cast ?? []}
+              language={config.language}
               providers={providers}
               voices={voices}
               script={edit.content.articleMarkdown ?? undefined}

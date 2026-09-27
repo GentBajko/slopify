@@ -85,3 +85,28 @@ it("emits finite typed cues only after Apply, and releases dirty state on apply 
   mounted.unmount();
   expect(pending).toHaveBeenLastCalledWith(false);
 });
+
+it("keeps each caption's speaker when its text or timing is edited", async () => {
+  const user = userEvent.setup();
+  const changed = vi.fn();
+  renderApp(
+    <CaptionEditor
+      cues={[
+        { id: "c1", text: "Hello", start: 0, end: 1, speaker: "host" },
+        { id: "c2", text: "Hi", start: 1, end: 2 },
+      ]}
+      duration={3}
+      onChange={changed}
+      onPending={() => {}}
+    />,
+    testDeps({}),
+  );
+  const text = screen.getByRole("textbox", { name: "Text for caption 1" });
+  await user.clear(text);
+  await user.type(text, "Hello there");
+  await user.click(screen.getByRole("button", { name: "Apply caption edits to draft" }));
+  expect(changed).toHaveBeenCalledWith([
+    { id: "c1", text: "Hello there", start: 0, end: 1, speaker: "host" },
+    { id: "c2", text: "Hi", start: 1, end: 2 },
+  ]);
+});

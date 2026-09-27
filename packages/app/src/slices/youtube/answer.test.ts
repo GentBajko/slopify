@@ -69,7 +69,7 @@ describe("checkDescriptionAnswer", () => {
 
   it("refuses fewer than three chapters", () => {
     expect(reason({ ...good, chapters: good.chapters.slice(0, 2) })).toBe(
-      "The AI model's chapters broke YouTube's rules (there must be at least 3 chapters, and it wrote 2). Retry stage, or choose another model in Edit project → Providers.",
+      "The AI model's chapters broke YouTube's rules (there must be at least 3 chapters, and it wrote 2). Try again, or choose another model in Edit project → Providers.",
     );
   });
 
@@ -77,7 +77,7 @@ describe("checkDescriptionAnswer", () => {
     expect(
       reason({ ...good, chapters: [{ start: "0:02", title: "Intro" }, ...good.chapters.slice(1)] }),
     ).toBe(
-      "The AI model's chapters broke YouTube's rules (the first chapter must start at 0:00). Retry stage, or choose another model in Edit project → Providers.",
+      "The AI model's chapters broke YouTube's rules (the first chapter must start at 0:00). Try again, or choose another model in Edit project → Providers.",
     );
   });
 

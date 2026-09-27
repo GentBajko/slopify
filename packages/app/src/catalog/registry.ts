@@ -17,7 +17,7 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
     if (!model)
       throw providerError({
         kind: "unsupported",
-        message: `The chosen ${provider} model is no longer in Slopify's model list. In the Edit tab, choose Edit project and change it under Providers, then use Resume.`,
+        message: `The chosen ${provider} model is no longer in Slopify's model list. In the Edit tab, choose Edit project and change it under Providers, then use Continue the run.`,
       });
     return model;
   };
@@ -34,7 +34,7 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
               throw providerError({
                 kind: "unsupported",
                 message:
-                  "No model is chosen for this step. In the Edit tab, choose Edit project and change it under Providers, then use Resume.",
+                  "No model is chosen for this step. In the Edit tab, choose Edit project and change it under Providers, then use Continue the run.",
               });
             let models: Awaited<ReturnType<typeof port.models>> | undefined;
             try {
@@ -48,7 +48,7 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
               throw providerError({
                 kind: "unsupported",
                 message:
-                  "The chosen model is not available in the AI command-line tool on your computer. Update the tool, or pick another model: in the Edit tab, choose Edit project and change it under Providers, then use Resume.",
+                  "The chosen model is not available in the AI command-line tool on your computer. Update the tool, or pick another model: in the Edit tab, choose Edit project and change it under Providers, then use Continue the run.",
               });
             if (
               request.thinking !== undefined &&
@@ -58,13 +58,13 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
               throw providerError({
                 kind: "unsupported",
                 message:
-                  "The chosen model does not support this thinking setting. In the Edit tab, choose Edit project and change it under Providers, then use Resume.",
+                  "The chosen model does not support this thinking setting. In the Edit tab, choose Edit project and change it under Providers, then use Continue the run.",
               });
             if (request.webSearch && !port.capabilities.webSearch)
               throw providerError({
                 kind: "unsupported",
                 message:
-                  "This command-line tool cannot search the web for research. Choose another text provider or turn Research off in the Edit tab under Edit project, then use Resume.",
+                  "This command-line tool cannot search the web for research. Choose another text provider or turn Research off in the Edit tab under Edit project, then use Continue the run.",
               });
             const thinkingConfig =
               id === "codex" && request.thinking !== undefined
@@ -98,7 +98,7 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
             throw providerError({
               kind: "unsupported",
               message:
-                "The chosen model cannot search the web for research. Choose another model or turn Research off in the Edit tab under Edit project, then use Resume.",
+                "The chosen model cannot search the web for research. Choose another model or turn Research off in the Edit tab under Edit project, then use Continue the run.",
             });
           const thinkingConfig =
             request.thinking === undefined ? undefined : model.llm.thinking?.[request.thinking];
@@ -106,7 +106,7 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
             throw providerError({
               kind: "unsupported",
               message:
-                "The chosen model does not support this thinking setting. In the Edit tab, choose Edit project and change it under Providers, then use Resume.",
+                "The chosen model does not support this thinking setting. In the Edit tab, choose Edit project and change it under Providers, then use Continue the run.",
             });
           yield* port.complete({
             ...request,
@@ -128,8 +128,8 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
                 kind: "unsupported",
                 message:
                   request.model === "codex-imagegen"
-                    ? "Image generation is not available in the Codex CLI on your computer. Update Codex CLI, or choose another image provider in the Edit tab under Edit project, then use Resume."
-                    : "The chosen Codex model for images is not in the Codex CLI's model list on your computer. Update Codex CLI, or pick another model for images: in the Edit tab, choose Edit project and change it under Providers, then use Resume.",
+                    ? "Image generation is not available in the Codex CLI on your computer. Update Codex CLI, or choose another image provider in the Edit tab under Edit project, then use Continue the run."
+                    : "The chosen Codex model for images is not in the Codex CLI's model list on your computer. Update Codex CLI, or pick another model for images: in the Edit tab, choose Edit project and change it under Providers, then use Continue the run.",
               });
             if (
               request.thinking !== undefined &&
@@ -138,7 +138,7 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
               throw providerError({
                 kind: "unsupported",
                 message:
-                  "The chosen Codex model does not support this effort for images. In the Edit tab, choose Edit project and change the images' Effort under Providers, then use Resume.",
+                  "The chosen Codex model does not support this effort for images. In the Edit tab, choose Edit project and change the images' Effort under Providers, then use Continue the run.",
               });
             return port.generate(request);
           },
@@ -153,13 +153,13 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
             throw providerError({
               kind: "unsupported",
               message:
-                "The chosen image model cannot make images in this video's shape. In the Edit tab, choose Edit project and change it under Providers, then use Resume.",
+                "The chosen image model cannot make images in this video's shape. In the Edit tab, choose Edit project and change it under Providers, then use Continue the run.",
             });
           if (request.thinking !== undefined)
             throw providerError({
               kind: "unsupported",
               message:
-                "The chosen image model has no effort setting. In the Edit tab, choose Edit project and set the images' Effort back to Model default under Providers, then use Resume.",
+                "The chosen image model has no effort setting. In the Edit tab, choose Edit project and set the images' Effort back to Model default under Providers, then use Continue the run.",
             });
           if (request.reference !== undefined && !takesReferenceImage(model))
             throw providerError({
@@ -183,7 +183,7 @@ export function curateRegistry(registry: Registry, catalogue: CatalogueStore): R
           if (request.text.length > model.tts.maxCharacters)
             throw providerError({
               kind: "unsupported",
-              message: `A piece of narration is longer than this voice model's ${model.tts.maxCharacters}-character limit. Use Re-run section on Audio so Slopify splits it into shorter pieces.`,
+              message: `A piece of narration is longer than this voice model's ${model.tts.maxCharacters}-character limit. Use More → make it again in its section on Audio so Slopify splits it into shorter pieces.`,
             });
           return port.synthesize({ ...request, model: model.id });
         },

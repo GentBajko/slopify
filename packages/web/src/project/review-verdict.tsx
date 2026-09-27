@@ -3,9 +3,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useState } from "react";
 import type { ProjectBody } from "@/api";
 import { useApp } from "@/app-context";
+import { Button } from "@/components/kit/button";
 import { InfoTip } from "@/components/kit/info-tip";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Badge, type BadgeTone } from "@/components/kit/status";
 import { keys } from "@/queries";
 import { actOnReview, listReviews, type Review, reviewsKey } from "./review-api.js";
 
@@ -33,53 +33,48 @@ export function reviewFor(
 
 function statusOf(review: Review): {
   readonly label: string;
-  readonly tone: "ok" | "bad" | "wait";
+  readonly tone: BadgeTone;
 } {
-  if (review.passed) return { label: "Review passed", tone: "ok" };
-  if (review.action === "overruled") return { label: "Accepted by you", tone: "ok" };
-  if (review.action === "redone") return { label: "Being made again", tone: "wait" };
+  if (review.passed)
+    return review.attempt > 1
+      ? { label: "Redone after review", tone: "info" }
+      : { label: "Review passed", tone: "neutral" };
+  if (review.action === "overruled") return { label: "Accepted by you", tone: "neutral" };
+  if (review.action === "redone") return { label: "Being made again", tone: "running" };
   if (review.redoState === "pending" || review.redoState === "started")
-    return { label: "Being made again", tone: "wait" };
-  return { label: "Flagged by review", tone: "bad" };
+    return { label: "Being made again", tone: "running" };
+  return { label: "Flagged by review", tone: "info" };
+}
+
+// The verdict as a status badge: "Flagged by review", "Redone after review".
+export function ReviewBadge({ review }: { readonly review: Review }): ReactElement {
+  const status = statusOf(review);
+  return <Badge tone={status.tone}>{status.label}</Badge>;
 }
 
 function Chip({ review }: { readonly review: Review }): ReactElement {
-  const status = statusOf(review);
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-control px-1.5 text-label font-semibold",
-        status.tone === "ok"
-          ? "bg-panel2 text-done"
-          : status.tone === "bad"
-            ? "bg-red-tint text-red"
-            : "bg-panel2 text-amber",
-      )}
-    >
-      {status.label}
-    </span>
-  );
+  return <ReviewBadge review={review} />;
 }
 
 function Reasons({ review }: { readonly review: Review }): ReactElement {
   return (
     <>
       {review.reasons.length === 0 ? (
-        <p>The reviewer found nothing to fix.</p>
+        <p className="m-0">The reviewer found nothing to fix.</p>
       ) : (
-        <ul className="list-disc space-y-1 pl-4">
+        <ul className="m-0 flex list-disc flex-col gap-1 pl-4">
           {review.reasons.map((reason) => (
             <li key={reason}>{reason}</li>
           ))}
         </ul>
       )}
-      <p className="text-ink3">
+      <p className="m-0 text-ink-3">
         {review.outcome === "flagged" && !review.passed && review.attempt > 1
           ? `Kept after ${String(review.attempt)} tries: the redo limit was reached.`
           : `Try ${String(review.attempt)}.`}
       </p>
       {review.redoState === "failed" && review.redoError ? (
-        <p className="text-red">{review.redoError}</p>
+        <p className="m-0 text-danger">{review.redoError}</p>
       ) : null}
     </>
   );
@@ -124,23 +119,25 @@ export function ReviewActions({
   return (
     <span className="inline-flex flex-wrap items-center gap-1">
       <Button
-        type="button"
-        variant="ghost"
+        variant="quiet"
+        size="small"
         disabled={busy || moving || act.isPending}
+        disabledReason="Wait until the work on this project is done"
         onClick={() => act.mutate("overrule")}
       >
         Overrule
       </Button>
       <Button
-        type="button"
-        variant="ghost"
+        variant="quiet"
+        size="small"
         disabled={busy || moving || act.isPending}
+        disabledReason="Wait until the work on this project is done"
         onClick={() => act.mutate("redo")}
       >
         Redo
       </Button>
       {message ? (
-        <span role="alert" className="basis-full text-small text-red">
+        <span role="alert" className="basis-full text-small text-danger">
           {message}
         </span>
       ) : null}
@@ -169,22 +166,24 @@ export function ReviewVerdict({
         <Chip review={review} />
         <ReviewActions review={review} projectId={projectId} busy={busy} />
       </div>
-      <div className="space-y-1 text-ink2">
+      <div className="flex flex-col gap-1 text-ink-2">
         <Reasons review={review} />
       </div>
     </section>
   );
 }
 
-// On an image tile: the status, with the reasons behind a press so the grid stays a grid.
+// On a media frame's corner: the status, with the reasons behind a press so the grid stays a
+// grid. Overrule and Redo sit with the frame's other actions.
 export function ReviewChip({
   review,
 }: {
   readonly review: Review | undefined;
 }): ReactElement | null {
   if (review === undefined) return null;
+  if (review.passed && review.attempt <= 1) return null;
   return (
-    <span className="absolute top-1 left-1 inline-flex items-center gap-0.5 rounded-control bg-panel/90">
+    <span className="inline-flex items-center gap-0.5">
       <Chip review={review} />
       <InfoTip label="this review">
         <Reasons review={review} />

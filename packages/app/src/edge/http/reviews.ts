@@ -21,7 +21,7 @@ const verdictParam = projectParam.extend({ verdictId: id });
 
 // The project page's review column: each reviewed item's latest verdict with its reasons,
 // Overrule to accept a failed item as it is, and Redo to have it made again through the
-// same path as Re-run section.
+// same path as More → make it again in its section.
 export function reviewRoutes(deps: AppDeps) {
   const gone = (c: Context) =>
     problem(c, {

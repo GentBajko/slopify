@@ -65,7 +65,7 @@ export async function executeReviewRecipe(
       : undefined;
   if (values === undefined || !values.success)
     throw new Error(
-      "Slopify hit an internal error (a review step was set up wrongly). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (a review step was set up wrongly). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   const [stage, itemKey, , provider, model, thinking, prompt, mode, retries] = values.data;
   const { view, plan } = exportSnapshot(deps, context, piece);
@@ -162,7 +162,7 @@ function reviewMaterial(
   const text = (row: RevisionOutputView) => clip(readFileSync(path(row), "utf8"));
   const missing = (what: string, fix: string) =>
     new Error(
-      `The ${what} this review looks at is missing, so it could not be reviewed. ${fix}, then use Retry stage.`,
+      `The ${what} this review looks at is missing, so it could not be reviewed. ${fix}, then use Try again.`,
     );
   const request = (
     sections: ReviewMaterial["sections"],
@@ -176,7 +176,8 @@ function reviewMaterial(
   switch (stage) {
     case "article": {
       const article = output(itemKey, "article_md");
-      if (article === undefined) throw missing("article", "Use Re-run section on Article");
+      if (article === undefined)
+        throw missing("article", "Use More → Write the article again in the Article section");
       const notes = output("research:notes", "notes");
       const research =
         notes !== undefined ? text(notes) : clip(config.provided.research?.trim() ?? "");
@@ -199,7 +200,9 @@ function reviewMaterial(
       if (image === undefined)
         throw missing(
           stage === "images" ? "image" : "thumbnail",
-          stage === "images" ? "Use Re-run section on Images" : "Use Re-run section on Thumbnail",
+          stage === "images"
+            ? "Use More → make it again in its section on Images"
+            : "Use More → make it again in its section on Thumbnail",
         );
       const recipe = recipes.find((one) => one.key === itemKey);
       const brief = recipe?.input.kind === "image" ? recipe.input.prompt : "";
@@ -230,7 +233,10 @@ function reviewMaterial(
     case "narration": {
       const timing = output("subtitles:timing", "subtitle_words");
       if (timing === undefined || itemKey !== narrationItemKey)
-        throw missing("narration's word timing", "Use Re-run section on Video");
+        throw missing(
+          "narration's word timing",
+          "Use More → Render the video again in the Video section",
+        );
       const { words, omissions } = wordsSchema.parse(
         JSON.parse(readFileSync(path(timing), "utf8")),
       );

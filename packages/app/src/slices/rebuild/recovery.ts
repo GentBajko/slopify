@@ -239,12 +239,12 @@ export async function recoverProject(
               ? {
                   field: "video",
                   message:
-                    "Source media is incomplete. Use Resume to recover it before rerunning the export.",
+                    "Source media is incomplete. Use Continue the run to recover it before rerunning the export.",
                 }
               : {
                   field: "document",
                   message:
-                    "The article or thumbnail the document is made from isn't finished. Use Resume to finish it, then Re-run section on Document.",
+                    "The article or thumbnail the document is made from isn't finished. Use Continue the run to finish it, then More → make it again in its section on Document.",
                 },
           ],
         });
