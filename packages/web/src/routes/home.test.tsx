@@ -282,6 +282,50 @@ describe("home", () => {
     expect(within(running).getByText("Nothing is running")).not.toBeNull();
   });
 
+  it("links to every running run past the first three and names the queued ones", async () => {
+    const running = body({ status: "running", stages: [], outputs: [] });
+    const ids = ["r1", "r2", "r3", "r4"];
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects": jsonAnswer({
+          projects: [
+            ...ids.map((id) => listing(id, `Run ${id}`, "running", { progress: 0.2 })),
+            listing("q1", "Bahamut", "pending"),
+            listing("q2", "Tiamat", "pending"),
+            listing("q3", "Lolth", "pending"),
+          ],
+        }),
+        ...Object.fromEntries(
+          ids.map((id) => [
+            `GET /api/projects/${id}`,
+            jsonAnswer({ ...running, project: { ...running.project, id } }),
+          ]),
+        ),
+      }),
+    );
+    const region = await screen.findByRole("region", { name: "Running now" });
+    const all = await within(region).findByRole("link", { name: "See all 4 running" });
+    expect(all.getAttribute("href")).toBe("/projects?show=running");
+    expect(within(region).getByText("Bahamut, Tiamat and 1 more")).not.toBeNull();
+    expect(within(region).getByRole("link", { name: "See queued" }).getAttribute("href")).toBe(
+      "/projects?show=queued",
+    );
+  });
+
+  it("shows queued runs instead of the empty state when nothing runs yet", async () => {
+    renderRouted(
+      <HomeRoute />,
+      deps({
+        "GET /api/projects": jsonAnswer({ projects: [listing("q1", "Bahamut", "pending")] }),
+      }),
+    );
+    const region = await screen.findByRole("region", { name: "Running now" });
+    expect(await within(region).findByText("Bahamut")).not.toBeNull();
+    expect(within(region).queryByText("Start the next video")).toBeNull();
+    expect(within(region).queryByRole("link", { name: /See all/ })).toBeNull();
+  });
+
   it("marks a finished video uploaded", async () => {
     const user = userEvent.setup();
     const put = vi.fn(jsonAnswer({ uploadedAt: "2026-09-27T10:00:00.000Z" }));

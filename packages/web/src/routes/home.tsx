@@ -13,6 +13,7 @@ import { SectionHead } from "@/components/kit/section-head";
 import { ComingUp } from "@/home/coming-up";
 import { FailedItem, HeldTopicsItem, isWaiting, PausedItem, WaitingItem } from "@/home/needs-you";
 import { isReadyToUpload, ReadyItem } from "@/home/ready";
+import { isQueued, RunningMore } from "@/home/running-more";
 import { RunningProject } from "@/home/running-now";
 import { ThisWeek } from "@/home/week";
 import { onboardingKey, readFirstRun } from "@/onboarding/api";
@@ -73,6 +74,8 @@ export function HomeRoute(): ReactElement {
   const mine = (projects.data?.projects ?? []).filter((one) => current.includes(one.channelId));
   // Paused runs wait for the person, so they sit under Needs you, not Running now.
   const running = mine.filter((one) => one.status === "running");
+  // Started and waiting their turn: they show as one line under Running now.
+  const queued = mine.filter(isQueued);
   const paused = mine.filter((one) => one.status === "paused");
   const waiting = mine.filter(isWaiting);
   const failed = mine.filter((one) => one.status === "failed");
@@ -189,7 +192,7 @@ export function HomeRoute(): ReactElement {
               }
             />
             {running.length === 0 ? (
-              loading ? null : (
+              loading || queued.length > 0 ? null : (
                 <EmptyState title="Start the next video">
                   Pick a template and a topic on Play, or let a schedule start one.
                 </EmptyState>
@@ -201,6 +204,7 @@ export function HomeRoute(): ReactElement {
                 ))}
               </ul>
             )}
+            <RunningMore running={running.length} queued={queued} />
           </section>
         </BoardColumn>
         <BoardColumn>

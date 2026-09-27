@@ -24,7 +24,7 @@ import { LibraryLayout } from "@/routes/library";
 import { NarrationAliasesRoute } from "@/routes/narration-aliases";
 import { PlayRoute } from "@/routes/play";
 import { ProjectRoute } from "@/routes/project";
-import { ProjectsRoute } from "@/routes/projects";
+import { type ProjectFilter, ProjectsRoute, projectFilterOf } from "@/routes/projects";
 import { PromptEditorRoute } from "@/routes/prompt-editor";
 import { PromptsRoute } from "@/routes/prompts";
 import { SchedulesRoute } from "@/routes/schedules";
@@ -67,8 +67,18 @@ const homeRoute = createRoute({
 const projectsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "projects",
-  component: ProjectsRoute,
+  validateSearch: (search: Record<string, unknown>): { show?: ProjectFilter } => {
+    const show = projectFilterOf(search.show);
+    return show === undefined ? {} : { show };
+  },
+  component: ProjectsPage,
 });
+
+function ProjectsPage() {
+  const { show } = projectsRoute.useSearch();
+  // Keyed so a link to another filter while on Projects starts from it.
+  return <ProjectsRoute key={show ?? "all"} initialFilter={show ?? "all"} />;
+}
 
 // The first-run screen; Projects sends a fresh install here once (`routes/projects.tsx`).
 const welcomeRoute = createRoute({

@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { startedAt } from "@/lib/utils";
 import type { Answer } from "@/test-app";
 import { emptyAnswer, jsonAnswer, problemAnswer, renderRouted, testDeps } from "@/test-app";
-import { ProjectsRoute } from "./projects.js";
+import { ProjectsRoute, projectFilterOf } from "./projects.js";
 
 afterEach(cleanup);
 
@@ -152,6 +152,22 @@ describe("the projects list", () => {
     await user.type(screen.getByRole("searchbox", { name: "Search projects" }), "sail");
     expect(screen.getByRole("link", { name: "Sailing" })).not.toBeNull();
     expect(screen.queryByRole("link", { name: "Knots" })).toBeNull();
+  });
+
+  it("opens on the filter Home linked to, and shows queued runs apart from waiting ones", async () => {
+    renderRouted(
+      <ProjectsRoute initialFilter="queued" />,
+      deps([
+        listing("p1", "Queued one", "pending"),
+        listing("p2", "Held one", "pending", { progress: 0.4 }),
+        listing("p3", "Going", "running"),
+      ]),
+    );
+    expect(await screen.findByRole("link", { name: "Queued one" })).not.toBeNull();
+    expect(screen.queryByRole("link", { name: "Held one" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Going" })).toBeNull();
+    expect(projectFilterOf("running")).toBe("running");
+    expect(projectFilterOf("nonsense")).toBeUndefined();
   });
 });
 
