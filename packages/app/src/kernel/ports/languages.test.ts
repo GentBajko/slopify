@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   languageInfo,
   languageInstruction,
-  wordTimingUnavailable,
   withLanguage,
+  wordTimingUnavailable,
   writingSystemOf,
 } from "./languages.js";
 

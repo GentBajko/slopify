@@ -111,16 +111,19 @@ export const alphabets: Readonly<Record<string, string>> = {
   cs: "áčďéěíňóřšťúůýž",
 };
 
-// Provisional: the English values loosened slightly for a 315 M-parameter model over 9,913
-// labels and a 4-bit quantisation. Not yet measured on real narration; run
-// scripts/validate-multilingual-alignment.mjs and tune these before relying on them.
+// The English values. Measured on 2026-09-27 with scripts/validate-multilingual-alignment.mjs
+// on LibriVox narration (Spanish 64 s / 193 words, German 48 s / 102 words; English 57 s /
+// 147 words on its own model as the baseline): folded to one language's letters, the q4
+// model's word posteriors averaged 0.95-0.97, as the English model's do (0.96), no word fell
+// below 0.2, and the audio of another language was refused at its first window. So the same
+// gates hold, and loosening them would only let wrong audio through.
 export const multilingualGates: AlignmentGates = {
-  meanPosterior: 0.4,
-  poorScore: 0.15,
-  poorShare: 0.35,
-  maximumError: 0.5,
+  meanPosterior: 0.48,
+  poorScore: 0.2,
+  poorShare: 0.3,
+  maximumError: 0.42,
   anchorLetters: 20,
-  anchorConfidence: 0.7,
+  anchorConfidence: 0.75,
 };
 
 export function multilingualLanguages(): readonly string[] {
