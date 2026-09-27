@@ -10,3 +10,10 @@ cpSync(
   new URL("../../../compose.yaml", import.meta.url),
   new URL("../dist/compose.yaml", import.meta.url),
 );
+
+// The patch notes Settings → Patch notes lists and GET /api/patch-notes serves.
+cpSync(
+  new URL("../../../docs/patch-notes/", import.meta.url),
+  new URL("../dist/patch-notes/", import.meta.url),
+  { recursive: true },
+);

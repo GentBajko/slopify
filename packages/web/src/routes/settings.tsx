@@ -30,6 +30,8 @@ import { Welcome } from "@/components/welcome";
 import { cn } from "@/lib/utils";
 import { NotificationSettings } from "@/notifications/settings-panel";
 import { SampleSettings } from "@/onboarding/sample-settings";
+import { patchNotesQuery } from "@/patch-notes/api";
+import { PatchNotesSettings } from "@/patch-notes/settings-panel";
 import { keys, settingsQuery } from "@/queries";
 import { schedulesKey } from "@/schedules/api";
 import { StudioSettings } from "@/studio/settings-panel";
@@ -155,6 +157,11 @@ export const settingsSections = [
     meta: "This machine only. The same counters, anonymised, feed slopify.stream.",
   },
   {
+    id: "patch-notes",
+    label: "Patch notes",
+    meta: "What changed in each version of Slopify.",
+  },
+  {
     id: "about",
     label: "About",
     meta: "Free and open source, running on your machine with your own keys.",
@@ -182,12 +189,19 @@ function downloadDiagnostics(origin: string): void {
 // sideways on its own. Explanations sit behind the info buttons beside what they explain.
 export function SettingsRoute({
   section = "providers",
+  note,
   onSection = () => {},
+  onNote = () => {},
 }: {
   readonly section?: SettingsSection;
+  // Settings → Patch notes: the note open in the reading view.
+  readonly note?: string | undefined;
   readonly onSection?: (section: SettingsSection) => void;
+  // Opens Settings → Patch notes at this note, or at its list.
+  readonly onNote?: (note: string | undefined) => void;
 }) {
   const { api } = useApp();
+  const queryClient = useQueryClient();
   const notify = useToast();
   const health = useProviderHealth();
   const backUp = useBackUpNow();
@@ -293,7 +307,22 @@ export function SettingsRoute({
           {section === "backups" ? <BackupSettings /> : null}
           {section === "trash" ? <TrashSettings /> : null}
           {section === "usage" ? <UsageBoard /> : null}
-          {section === "about" ? <AboutSettings /> : null}
+          {section === "patch-notes" ? <PatchNotesSettings note={note} onNote={onNote} /> : null}
+          {section === "about" ? (
+            <AboutSettings
+              onWhatsNew={() => {
+                queryClient.fetchQuery(patchNotesQuery(api)).then(
+                  (notes) => onNote(notes.current ?? undefined),
+                  (error: unknown) => {
+                    notify(
+                      `The patch notes did not open: ${error instanceof Error ? error.message : String(error)} Open Settings → Patch notes to try again.`,
+                      "error",
+                    );
+                  },
+                );
+              }}
+            />
+          ) : null}
         </section>
       </Workspace>
     </div>

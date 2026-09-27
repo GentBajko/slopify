@@ -31,6 +31,7 @@ import { entryCategories, entryModes, promptKinds } from "../library/model.js";
 import { photorealisticPromptsKey } from "../library/photorealistic.js";
 import { listEntries, listPrompts } from "../library/repo.js";
 import { notificationUrlKey } from "../notifications/settings.js";
+import { patchNotesSeenKey } from "../patch-notes/seen.js";
 import { projectTemplateSchema } from "../project-templates/schema.js";
 import { cliPathMaxLength } from "../settings/cli-paths.js";
 import { providerDefaultsKey, providerDefaultsSchema } from "../settings/first-run.js";
@@ -469,14 +470,16 @@ function portableSettings(settings: Readonly<Record<string, string>>): Record<st
   for (const [key, value] of Object.entries(settings)) {
     // The Notification URL stays on this machine: an ntfy topic in it is as good as a password.
     // So does the Studio extension's pairing: its token reads every project's upload pack.
-    // Which "What's new" tour this install has closed is about this install, not the data.
+    // Which "What's new" tour and which patch notes this install has closed are about this
+    // install, not the data.
     if (
       key === "tutorial.session" ||
       // Whether this install showed its first-run welcome belongs to this install.
       key === "first-run.done" ||
       key === notificationUrlKey ||
       key === studioPairingKey ||
-      key === whatsNewSeenKey
+      key === whatsNewSeenKey ||
+      key === patchNotesSeenKey
     )
       continue;
     const parsed = storedJson(value);

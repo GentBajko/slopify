@@ -39,6 +39,7 @@ import type { MutationLifecycle } from "./mutations.js";
 import { type DecodePeaks, narrationPeakRoutes } from "./narration-peaks.js";
 import { onboardingRoutes } from "./onboarding.js";
 import { openFolderRoutes } from "./open-folder.js";
+import { patchNotesRoutes } from "./patch-notes.js";
 import { planningRoutes } from "./planning.js";
 import { problem, problemFromError, titleOf } from "./problem.js";
 import { projectTemplateRoutes } from "./project-templates.js";
@@ -132,6 +133,8 @@ export interface AppDeps {
   readonly ids: Ids;
   readonly log: Log;
   readonly version: string;
+  // Where the bundled patch notes are (index.json and <id>.md); the build's own copy when left out.
+  readonly patchNotesDir?: string;
   readonly webDist: string;
   // Runs a local agent CLI to learn whether it is installed. Handed in so a test can answer for
   // both branches without depending on this machine's PATH.
@@ -203,6 +206,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/style-preview", stylePreviewRoutes(deps))
       .route("/tutorial", tutorialRoutes(deps))
       .route("/whats-new", whatsNewRoutes(deps))
+      .route("/patch-notes", patchNotesRoutes(deps))
       .route("/providers", providerRoutes(deps))
       .route("/onboarding", onboardingRoutes(deps))
   );
