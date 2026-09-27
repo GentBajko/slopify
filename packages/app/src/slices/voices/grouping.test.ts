@@ -70,6 +70,17 @@ describe("groupTurns", () => {
     ]);
   });
 
+  it("measures the limit on the text the voice gets, after narration aliases", () => {
+    const speakers = [eleven("a", "va"), eleven("b", "vb")];
+    const turns = [turn(1, "a", "x".repeat(900)), turn(2, "b", "x".repeat(900))];
+    expect(shape(groupTurns(turns, speakers, true))).toEqual([[true, [1, 2]]]);
+    // An alias that doubles the text pushes the pair past the 2,000-character request.
+    expect(shape(groupTurns(turns, speakers, true, (text) => text.length * 2))).toEqual([
+      [false, [1]],
+      [false, [2]],
+    ]);
+  });
+
   it("keeps a turn longer than one request on its own", () => {
     const speakers = [eleven("a", "va")];
     const groups = groupTurns([turn(1, "a", "y".repeat(2500)), turn(2, "a")], speakers, true);
