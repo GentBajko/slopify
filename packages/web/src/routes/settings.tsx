@@ -22,6 +22,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Voices } from "@/components/voices";
 import { cn } from "@/lib/utils";
 import { NotificationSettings } from "@/notifications/settings-panel";
+import { SampleSettings } from "@/onboarding/sample-settings";
 import { keys, settingsQuery } from "@/queries";
 import { schedulesKey } from "@/schedules/api";
 import { fontsKey } from "@/subtitles/api";
@@ -159,6 +160,7 @@ export function SettingsRoute({
           {section === "playback" ? <Playback /> : null}
           {section === "notifications" ? <NotificationSettings /> : null}
           {section === "storage" ? <StorageTools /> : null}
+          {section === "storage" ? <SampleSettings /> : null}
           {section === "backups" ? <BackupSettings /> : null}
           {section === "usage" ? (
             <SectionHead

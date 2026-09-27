@@ -93,6 +93,18 @@ describe("the project event stream", () => {
     expect(sink.patch).not.toHaveBeenCalled();
   });
 
+  it("grows the waveform on a landed narration piece, without refetching the project", () => {
+    const source = fakeSource();
+    const sink = { ...projectSink(), narrationPiece: vi.fn() };
+    subscribeProject(() => source, "/api/events/projects/p1", sink);
+
+    source.emit({ type: "narration.piece", projectId: "p1", key: "audio:body:1", durationMs: 900 });
+
+    expect(sink.narrationPiece).toHaveBeenCalledTimes(1);
+    expect(sink.refetch).not.toHaveBeenCalled();
+    expect(sink.patch).not.toHaveBeenCalled();
+  });
+
   it("does not refetch when the stream first opens", () => {
     const source = fakeSource();
     const sink = projectSink();

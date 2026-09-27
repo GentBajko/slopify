@@ -1,13 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { BatchQueueCount } from "@/components/batch-queue";
 import { StatusSlot } from "@/components/kit/action-bar";
 import { Button } from "@/components/ui/button";
+import { copySample, readSample, sampleKey } from "@/onboarding/api";
 import { StageBodyFor } from "@/project/bodies";
 import { checkpointRevisionKey, checkpointStatus } from "@/project/checkpoint-api";
 import { CheckpointPanel } from "@/project/checkpoint-panel";
 import { ProjectHeader } from "@/project/header";
+import { LiveBuild } from "@/project/live-build";
 import { RundownStrip } from "@/project/navigation";
 import { RevisionControlContext } from "@/project/revision-action-context";
 import { RevisionContentEditors } from "@/project/revision-content";
@@ -21,7 +24,7 @@ import { finalOutput } from "@/project/summary";
 import { useProjectActions } from "@/project/use-actions";
 import { useLiveProject } from "@/project/use-live";
 import { suggestedStage } from "@/project/workspace";
-import { projectQuery, promptsQuery, providersQuery } from "@/queries";
+import { keys, projectQuery, promptsQuery, providersQuery } from "@/queries";
 import { useTutorialProjectStep } from "@/tutorial/context";
 
 // Keep stage bodies mounted when navigating: editors and players retain their local state.
@@ -58,6 +61,17 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
   }, [tutorialStep, projectId, project.data]);
 
   useLiveProject(projectId, project.data?.revisionId ?? null);
+  const sample = useQuery({ queryKey: sampleKey, queryFn: () => readSample(api) });
+  const isSample = sample.data?.projectId === projectId;
+  const client = useQueryClient();
+  const navigate = useNavigate();
+  const copy = useMutation({
+    mutationFn: () => copySample(api),
+    onSuccess: async ({ projectId: copied }) => {
+      await client.invalidateQueries({ queryKey: keys.projects });
+      await navigate({ to: "/projects/$projectId", params: { projectId: copied } });
+    },
+  });
   // The same query the Checkpoints tab reads, so a held gate is counted on the tab itself.
   const revisionId = project.data?.revisionId ?? null;
   const gates = useQuery({
@@ -109,18 +123,31 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
               resumable={project.data.resumable}
               primaryOutput={primaryOutput}
             >
-              <SaveProjectTemplate
-                projectId={projectId}
-                revisionId={project.data.revisionId}
-                title={summary.title}
-              />
+              {isSample ? (
+                <Button variant="accent" disabled={copy.isPending} onClick={() => copy.mutate()}>
+                  {copy.isPending ? "Copying…" : "Make my own copy"}
+                </Button>
+              ) : (
+                <SaveProjectTemplate
+                  projectId={projectId}
+                  revisionId={project.data.revisionId}
+                  title={summary.title}
+                />
+              )}
             </ProjectHeader>
             {/* One reserved line for what the last action said: a refusal from any stage,
                 or the server's guidance after an accepted one. It is always here, so a
                 message arriving never pushes the rundown down. */}
             <div className="mb-2 flex min-h-8 items-center gap-2">
-              {refusal === undefined ? (
-                <StatusSlot tone="info">{actions.notice}</StatusSlot>
+              {copy.error ? (
+                <StatusSlot tone="error">{copy.error.message}</StatusSlot>
+              ) : refusal === undefined ? (
+                <StatusSlot tone="info">
+                  {actions.notice ??
+                    (isSample
+                      ? "Sample project: play and explore it for free. It is read-only; press Make my own copy to edit and rebuild."
+                      : undefined)}
+                </StatusSlot>
               ) : (
                 <>
                   <StatusSlot tone="error">{refusal.message}</StatusSlot>
@@ -149,6 +176,14 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
             onTab={setTab}
             trailing={<BatchQueueCount />}
             {...(held === 0 ? {} : { checkpointBadge: `· ${String(held)} held` })}
+            live={
+              <LiveBuild
+                project={summary}
+                revisionId={project.data.revisionId}
+                stages={stages}
+                outputs={outputs}
+              />
+            }
             renderEditor={(props) => (
               <RevisionForm
                 {...props}

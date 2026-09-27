@@ -1,5 +1,8 @@
 import { execFile } from "node:child_process";
 import type { RevisionView } from "../revisions/model.js";
+import type { NarrationPeaks } from "./peaks-model.js";
+
+export type { NarrationPeaks };
 
 // The live view's narration waveform: each finished narration piece as a row of peaks, in the
 // order it is spoken, growing as pieces land. Once the whole narration is joined (or was
@@ -16,17 +19,6 @@ const decodeMaxBytes = 3 * 3600 * decodeRate * 2;
 export interface NarrationAudioPiece {
   readonly key: string;
   readonly assetId: string;
-}
-
-export interface NarrationPeaks {
-  readonly revisionId: string;
-  // True once the joined or uploaded narration is what `pieces` holds.
-  readonly complete: boolean;
-  readonly pieces: readonly {
-    readonly key: string;
-    readonly seconds: number;
-    readonly peaks: readonly number[];
-  }[];
 }
 
 // The saved narration audio of a revision, in spoken order: the joined narration when it is

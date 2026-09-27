@@ -25,6 +25,8 @@ export interface ProjectSink {
   // the server for the whole project per token would be absurd.
   readonly appendArticle: (text: string) => void;
   readonly previewWriting?: (event: LlmPreviewEvent) => void;
+  // A narration piece landed: the live view's waveform asks for its peaks.
+  readonly narrationPiece?: () => void;
   // The three events that carry their whole change. Patching them puts the lamp, the state word
   // and the meter on the page in the frame the event arrived in, which is the signature
   // interaction, and it is what keeps a meter ticking from asking the server sixty times.
@@ -45,6 +47,7 @@ const projectEventNames = [
   "article.delta",
   "llm.preview",
   "image.landed",
+  "narration.piece",
   "project.state",
   "project.updated",
 ] as const;
@@ -62,6 +65,10 @@ export function subscribeProject(open: OpenEvents, url: string, sink: ProjectSin
     if (sink.accept?.(event) === false) return;
     if (event.type === "llm.preview") {
       sink.previewWriting?.(event);
+      return;
+    }
+    if (event.type === "narration.piece") {
+      sink.narrationPiece?.();
       return;
     }
     if (event.type === "article.delta") {

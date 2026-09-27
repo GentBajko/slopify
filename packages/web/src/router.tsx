@@ -23,6 +23,7 @@ import { PromptsRoute } from "@/routes/prompts";
 import { SchedulesRoute } from "@/routes/schedules";
 import { SettingsRoute, type SettingsSection, settingsSectionOf } from "@/routes/settings";
 import { TemplatesRoute } from "@/routes/templates";
+import { WelcomeRoute } from "@/routes/welcome";
 
 // A code-based route tree: a handful of screens need no file convention, and the
 // generated tree a plugin would write would be one more artefact to keep honest.
@@ -52,6 +53,13 @@ const projectsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   component: ProjectsRoute,
+});
+
+// The first-run screen; Projects sends a fresh install here once (`routes/projects.tsx`).
+const welcomeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "welcome",
+  component: WelcomeRoute,
 });
 
 const playRoute = createRoute({
@@ -339,6 +347,7 @@ function useLeaveEntries(): (category: EntryCategory) => void {
 
 const routeTree = rootRoute.addChildren({
   projectsRoute,
+  welcomeRoute,
   playRoute,
   libraryRoute: libraryRoute.addChildren({
     promptsRoute,

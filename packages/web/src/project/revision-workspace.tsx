@@ -49,7 +49,7 @@ export interface EditorProps {
   readonly focus?: { readonly section: EditSection } | undefined;
 }
 
-export type ProjectTab = "output" | "edit" | "history" | "checkpoints";
+export type ProjectTab = "output" | "live" | "edit" | "history" | "checkpoints";
 
 // The project page's secondary surfaces are tabs under the rundown, never blocks inserted
 // above the output: Edit, History and Checkpoints each replace the Output panel while open,
@@ -61,6 +61,7 @@ export function RevisionWorkspace({
   tab: controlledTab,
   onTab,
   output,
+  live,
   checkpoints,
   checkpointBadge,
   trailing,
@@ -73,6 +74,9 @@ export function RevisionWorkspace({
   // The stage output panel. Without it (a unit test of the workspace alone) there is no
   // Output tab and Edit opens first.
   readonly output?: ReactNode;
+  // The live build view: the article as it is written, images as they land, the narration's
+  // waveform growing.
+  readonly live?: ReactNode;
   readonly checkpoints?: ReactNode;
   readonly checkpointBadge?: string;
   readonly trailing?: ReactNode;
@@ -278,6 +282,7 @@ export function RevisionWorkspace({
   );
   const tabs: TabItem<ProjectTab>[] = [
     ...(output === undefined ? [] : [{ id: "output" as const, label: "Output" }]),
+    ...(live === undefined ? [] : [{ id: "live" as const, label: "Live" }]),
     {
       id: "edit",
       label: "Edit",
@@ -452,6 +457,12 @@ export function RevisionWorkspace({
           />
         ) : null}
       </TabPanel>
+      {live === undefined ? null : (
+        <TabPanel idPrefix="project" id="live" active={tab === "live"}>
+          {/* Mounted only while open: it reads the waveform and repeats the stage names. */}
+          {tab === "live" ? live : null}
+        </TabPanel>
+      )}
       {checkpoints === undefined ? null : (
         <TabPanel idPrefix="project" id="checkpoints" active={tab === "checkpoints"}>
           {checkpoints}

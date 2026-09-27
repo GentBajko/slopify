@@ -10,6 +10,7 @@ import { useToast } from "@/components/kit/toast";
 import { RailGroup } from "@/components/rail";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PacksDrawer } from "@/onboarding/packs-drawer";
 import { listPlayDrafts, readPlayDraft } from "@/play/draft-api";
 import {
   deleteProjectTemplate,
@@ -49,6 +50,7 @@ export function TemplatesRoute({
   const [error, setError] = useState<string | null>(null);
   const notify = useToast();
   const [saving, setSaving] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState<TemplateSummary | null>(null);
   const active = useRef(false);
   const saveIdentity = useRef<{ readonly key: string; readonly id: string } | null>(null);
@@ -162,12 +164,24 @@ export function TemplatesRoute({
             : undefined;
   return (
     <div>
+      <PacksDrawer
+        open={adding}
+        onClose={() => setAdding(false)}
+        onInstalled={() =>
+          void client.invalidateQueries({ queryKey: templatesQuery(api).queryKey })
+        }
+      />
       <LibraryToolbar
         action={
-          <Button type="button" onClick={() => setSaving(true)} aria-expanded={saving}>
-            <PlusIcon aria-hidden="true" className="size-[14px]" />
-            Save a setup
-          </Button>
+          <>
+            <Button type="button" onClick={() => setAdding(true)} aria-expanded={adding}>
+              Add pack
+            </Button>
+            <Button type="button" onClick={() => setSaving(true)} aria-expanded={saving}>
+              <PlusIcon aria-hidden="true" className="size-[14px]" />
+              Save a setup
+            </Button>
+          </>
         }
       >
         <p className="text-small text-ink2">
