@@ -45,7 +45,7 @@ export function ChannelPicker({ disabled = false }: { readonly disabled?: boolea
   };
   return (
     <div className="grid grid-cols-1 items-end gap-3 min-[700px]:grid-cols-[minmax(0,1fr)_auto]">
-      <Field label="Channel">
+      <Field label="Channel" tip="play.channel">
         <Select
           data-play-field="channelId"
           value={current}
@@ -63,6 +63,7 @@ export function ChannelPicker({ disabled = false }: { readonly disabled?: boolea
       </Field>
       <Switch
         label="Use the channel's brand kit"
+        tip="play.brand-kit"
         checked={useKit}
         disabled={disabled}
         className="min-h-[38px]"

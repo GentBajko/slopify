@@ -4,7 +4,6 @@ import {
   defaultShorts,
   defaultShortsPromptName,
   fullVideoLinkMax,
-  fullVideoPlaceholder,
   shortsCountMax,
   shortsCountMin,
   shortsSecondsMax,
@@ -14,13 +13,11 @@ import {
   shortsSpeedStep,
 } from "@app/slices/shorts/model.js";
 import { type ReactElement, type ReactNode, useId, useState } from "react";
-import { InfoTip } from "@/components/kit/info-tip";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Input } from "@/components/ui/input";
 import { Picker } from "@/components/ui/picker";
+import type { HelpId } from "@/help/catalog";
 import type { ShortsForm } from "@/play/state";
-
-const help =
-  "After subtitle timing, the text model picks the best self-contained moments of the narration. Each becomes a vertical 1080×1920 clip with new images, big word-by-word captions, and its own title, description and hashtags. It runs beside the render; the images are charged like any other.";
 
 // The Shorts settings as a form edits them: the draft's own shape, numbers as typed. A new
 // form starts with the title on screen.
@@ -113,40 +110,45 @@ export function Shorts({
     .join(" · ");
   return (
     <div className="col-span-full flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
-      <label
-        htmlFor={`${id}-switch`}
-        className="flex min-h-10 items-center gap-3 text-small font-semibold max-[1099px]:min-h-11"
-      >
-        <input
-          id={`${id}-switch`}
-          type="checkbox"
-          data-play-field="shorts.enabled"
-          checked={on}
-          disabled={!narrated && !on}
-          aria-describedby={`${id}-help${issue ? ` ${id}-error` : ""}`}
-          className="size-4 accent-accent"
-          onChange={(event) => onChange({ ...value, enabled: event.currentTarget.checked })}
-        />
-        Shorts
-        <InfoTip label="Shorts">
-          <p>{help}</p>
-        </InfoTip>
-      </label>
-      <label htmlFor={`${id}-count`} className="flex items-center gap-2 text-small">
-        How many
-        {number("count", "How many shorts", shortsCountMin, shortsCountMax)}
-      </label>
-      <span className="flex items-center gap-2 text-small">
+      <span className="flex items-center gap-1" {...helpScope}>
+        <label
+          htmlFor={`${id}-switch`}
+          className="flex min-h-10 items-center gap-3 text-small font-semibold max-[1099px]:min-h-11"
+        >
+          <input
+            id={`${id}-switch`}
+            type="checkbox"
+            data-play-field="shorts.enabled"
+            checked={on}
+            disabled={!narrated && !on}
+            aria-describedby={issue ? `${id}-error` : undefined}
+            className="size-4 accent-accent"
+            onChange={(event) => onChange({ ...value, enabled: event.currentTarget.checked })}
+          />
+          Shorts
+        </label>
+        <InfoTip id="play.shorts" />
+      </span>
+      <span className="flex items-center gap-1" {...helpScope}>
+        <label htmlFor={`${id}-count`} className="flex items-center gap-2 text-small">
+          How many
+          {number("count", "How many shorts", shortsCountMin, shortsCountMax)}
+        </label>
+        <InfoTip id="play.shorts.count" />
+      </span>
+      <span className="flex items-center gap-2 text-small" {...helpScope}>
         <label htmlFor={`${id}-minSeconds`}>Length</label>
         {number("minSeconds", "Shortest short, in seconds", shortsSecondsMin, shortsSecondsMax)}
         <span aria-hidden="true">to</span>
         {number("maxSeconds", "Longest short, in seconds", shortsSecondsMin, shortsSecondsMax)}
         <span className="text-ink3">seconds</span>
+        <InfoTip id="play.shorts.length" className="-ml-1" />
       </span>
       <PromptPicker
         id={`${id}-prompt`}
         field="shorts.prompt"
         label="Shorts prompt"
+        tip="play.shorts.prompt"
         kind="shorts"
         value={value.prompt}
         prompts={prompts}
@@ -157,15 +159,13 @@ export function Shorts({
         id={`${id}-image`}
         field="shorts.imagePrompt"
         label="Image style"
+        tip="play.shorts.image-style"
         kind="image"
         value={value.imagePrompt}
         prompts={prompts}
         disabled={!on}
         onChange={(imagePrompt) => onChange({ ...value, imagePrompt })}
       />
-      <p id={`${id}-help`} className="sr-only">
-        {help}
-      </p>
       {issue ? (
         <p id={`${id}-error`} className="basis-full text-small text-red">
           {issue}
@@ -182,82 +182,87 @@ export function Shorts({
           More shorts options · {summary}
         </summary>
         <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-3 pt-2 pb-3">
-          <label htmlFor={`${id}-title`} className="flex min-h-9 items-center gap-2 text-small">
-            <input
-              id={`${id}-title`}
-              type="checkbox"
-              data-play-field="shorts.titleOnScreen"
-              checked={value.titleOnScreen === true}
-              disabled={!on}
-              className="size-4 accent-accent"
-              onChange={(event) =>
-                onChange({ ...value, titleOnScreen: event.currentTarget.checked })
-              }
-            />
-            Title on screen
-            <InfoTip label="Title on screen">
-              <p>
-                The short's title stays at the top for the whole clip, large and bold in the caption
-                font, below where the apps draw their own buttons.
-              </p>
-            </InfoTip>
-          </label>
-          <label htmlFor={`${id}-speed`} className="flex items-center gap-2 text-small">
-            Speed
-            <Picker
-              id={`${id}-speed`}
-              data-play-field="shorts.speed"
-              className="w-auto min-w-[88px]"
-              value={speeds.includes(speed ?? "") ? speed : ""}
-              aria-invalid={problem?.("shorts.speed") !== undefined}
-              disabled={!on}
-              onChange={(event) => onChange({ ...value, speed: event.target.value })}
+          <span className="flex items-center gap-1" {...helpScope}>
+            <label htmlFor={`${id}-title`} className="flex min-h-9 items-center gap-2 text-small">
+              <input
+                id={`${id}-title`}
+                type="checkbox"
+                data-play-field="shorts.titleOnScreen"
+                checked={value.titleOnScreen === true}
+                disabled={!on}
+                className="size-4 accent-accent"
+                onChange={(event) =>
+                  onChange({ ...value, titleOnScreen: event.currentTarget.checked })
+                }
+              />
+              Title on screen
+            </label>
+            <InfoTip id="play.shorts.title-on-screen" />
+          </span>
+          <span className="flex items-center gap-1" {...helpScope}>
+            <label htmlFor={`${id}-speed`} className="flex items-center gap-2 text-small">
+              Speed
+              <Picker
+                id={`${id}-speed`}
+                data-play-field="shorts.speed"
+                className="w-auto min-w-[88px]"
+                value={speeds.includes(speed ?? "") ? speed : ""}
+                aria-invalid={problem?.("shorts.speed") !== undefined}
+                disabled={!on}
+                onChange={(event) => onChange({ ...value, speed: event.target.value })}
+              >
+                {speeds.includes(speed ?? "") ? null : <option value="">Choose a speed</option>}
+                {speeds.map((one) => (
+                  <option key={one} value={one}>
+                    {one === speeds[0] ? "1.00× (normal)" : `${one}×`}
+                  </option>
+                ))}
+              </Picker>
+            </label>
+            <InfoTip id="play.shorts.speed" />
+          </span>
+          <span className="flex items-center gap-1" {...helpScope}>
+            <label htmlFor={`${id}-volume`} className="flex items-center gap-2 text-small">
+              Music volume
+              <Input
+                id={`${id}-volume`}
+                data-play-field="shorts.musicVolume"
+                type="text"
+                inputMode="numeric"
+                title="0-100"
+                placeholder={String(defaultMusicVolume)}
+                aria-invalid={problem?.("shorts.musicVolume") !== undefined}
+                className="w-[64px] tabular-nums"
+                disabled={!on}
+                value={volume}
+                onChange={(event) => onChange({ ...value, musicVolume: event.target.value })}
+              />
+              <span className="text-ink3">%</span>
+            </label>
+            <InfoTip id="play.shorts.music-volume" />
+          </span>
+          <span className="flex min-w-0 grow items-center gap-1" {...helpScope}>
+            <label
+              htmlFor={`${id}-link`}
+              className="flex min-w-0 grow items-center gap-2 text-small"
             >
-              {speeds.includes(speed ?? "") ? null : <option value="">Choose a speed</option>}
-              {speeds.map((one) => (
-                <option key={one} value={one}>
-                  {one === speeds[0] ? "1.00× (normal)" : `${one}×`}
-                </option>
-              ))}
-            </Picker>
-          </label>
-          <label htmlFor={`${id}-volume`} className="flex items-center gap-2 text-small">
-            Music volume
-            <Input
-              id={`${id}-volume`}
-              data-play-field="shorts.musicVolume"
-              type="text"
-              inputMode="numeric"
-              title="0-100"
-              placeholder={String(defaultMusicVolume)}
-              aria-invalid={problem?.("shorts.musicVolume") !== undefined}
-              className="w-[64px] tabular-nums"
-              disabled={!on}
-              value={volume}
-              onChange={(event) => onChange({ ...value, musicVolume: event.target.value })}
-            />
-            <span className="text-ink3">%</span>
-          </label>
-          <label htmlFor={`${id}-link`} className="flex min-w-0 grow items-center gap-2 text-small">
-            Full video link
-            <Input
-              id={`${id}-link`}
-              data-play-field="shorts.fullVideoLink"
-              type="url"
-              inputMode="url"
-              maxLength={fullVideoLinkMax}
-              placeholder="https://youtu.be/…"
-              aria-invalid={problem?.("shorts.fullVideoLink") !== undefined}
-              className="min-w-[200px] flex-1"
-              disabled={!on}
-              value={value.fullVideoLink ?? ""}
-              onChange={(event) => onChange({ ...value, fullVideoLink: event.target.value })}
-            />
-          </label>
-          <p className="basis-full text-label text-ink3">
-            Each short's description ends with a line to the full video; without a link it says{" "}
-            {fullVideoPlaceholder} for you to fill in.
-          </p>
+              Full video link
+              <Input
+                id={`${id}-link`}
+                data-play-field="shorts.fullVideoLink"
+                type="url"
+                inputMode="url"
+                maxLength={fullVideoLinkMax}
+                placeholder="https://youtu.be/…"
+                aria-invalid={problem?.("shorts.fullVideoLink") !== undefined}
+                className="min-w-[200px] flex-1"
+                disabled={!on}
+                value={value.fullVideoLink ?? ""}
+                onChange={(event) => onChange({ ...value, fullVideoLink: event.target.value })}
+              />
+            </label>
+            <InfoTip id="play.shorts.full-video-link" />
+          </span>
           {music}
           {moreIssue ? (
             <p role="alert" className="basis-full text-small text-red">
@@ -276,6 +281,7 @@ function PromptPicker({
   id,
   field,
   label,
+  tip,
   kind,
   value,
   prompts,
@@ -285,6 +291,7 @@ function PromptPicker({
   readonly id: string;
   readonly field: string;
   readonly label: string;
+  readonly tip: HelpId;
   readonly kind: PromptKind;
   readonly value: string;
   readonly prompts: readonly Prompt[];
@@ -294,24 +301,27 @@ function PromptPicker({
   const choices = prompts.filter((one) => one.kind === kind);
   const saved = value !== "" && !choices.some((one) => one.name === value);
   return (
-    <label htmlFor={id} className="flex items-center gap-2 text-small">
-      {label}
-      <Picker
-        id={id}
-        data-play-field={field}
-        className="w-auto min-w-[120px]"
-        value={value}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        <option value="">{defaultShortsPromptName}</option>
-        {saved ? <option value={value}>{value} (saved choice)</option> : null}
-        {choices.map((one) => (
-          <option key={one.id} value={one.name}>
-            {one.name}
-          </option>
-        ))}
-      </Picker>
-    </label>
+    <span className="flex items-center gap-1" {...helpScope}>
+      <label htmlFor={id} className="flex items-center gap-2 text-small">
+        {label}
+        <Picker
+          id={id}
+          data-play-field={field}
+          className="w-auto min-w-[120px]"
+          value={value}
+          disabled={disabled}
+          onChange={(event) => onChange(event.target.value)}
+        >
+          <option value="">{defaultShortsPromptName}</option>
+          {saved ? <option value={value}>{value} (saved choice)</option> : null}
+          {choices.map((one) => (
+            <option key={one.id} value={one.name}>
+              {one.name}
+            </option>
+          ))}
+        </Picker>
+      </label>
+      <InfoTip id={tip} label={label} />
+    </span>
   );
 }

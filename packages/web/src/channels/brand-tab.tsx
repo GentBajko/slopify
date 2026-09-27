@@ -6,6 +6,7 @@ import { Button } from "@/components/kit/button";
 import { Field, Input, Select, Textarea } from "@/components/kit/field";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
+import type { HelpId } from "@/help/catalog";
 import { LanguageSelect } from "@/language/language-select";
 import { documentThemesQuery, entriesQuery } from "@/queries";
 import { fontsKey, listFonts } from "@/subtitles/api";
@@ -90,7 +91,7 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
       }}
     >
       <div className="grid max-w-3xl grid-cols-1 gap-5">
-        <Field label="Channel name">
+        <Field label="Channel name" tip="planning.channel.name">
           <Input
             value={name}
             maxLength={200}
@@ -100,7 +101,8 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
         </Field>
         <Field
           label="Series brief"
-          help="What the channel covers, its style and what makes a topic worth a video."
+          tip="planning.channel.brief"
+          help="Topic generation reads it for this channel's schedules."
         >
           <Textarea
             rows={4}
@@ -112,12 +114,14 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
         <SectionHead
           title="Brand kit"
           meta="Fills what a template leaves at its default. Blank fields add nothing."
+          info="planning.channel.brand-kit"
           className="mt-2 border-t border-line pt-6"
         />
         <section aria-label="Language" className="max-w-md">
           {/* The channel's language applies with the brand kit off too: it is not styling. */}
           <LanguageSelect
             label="Language of new projects"
+            tip="planning.channel.language"
             value={kit.language === "" ? undefined : kit.language}
             inherited={{ label: "Not set", language: undefined }}
             onChange={(language) => set("language")(language ?? "")}
@@ -126,13 +130,20 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
         <section aria-label="Captions" className="grid grid-cols-1 gap-4 min-[700px]:grid-cols-3">
           <Choice
             label="Caption font"
+            tip="planning.channel.brand.caption-font"
             value={kit.captionFontId}
             options={fontOptions}
             onPick={set("captionFontId")}
           />
-          <Colour label="Caption colour" value={kit.captionColor} onChange={set("captionColor")} />
+          <Colour
+            label="Caption colour"
+            tip="planning.channel.brand.caption-colour"
+            value={kit.captionColor}
+            onChange={set("captionColor")}
+          />
           <Colour
             label="Caption outline"
+            tip="planning.channel.brand.caption-outline"
             value={kit.captionOutlineColor}
             onChange={set("captionOutlineColor")}
           />
@@ -143,12 +154,22 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
         >
           <Choice
             label="Title font"
+            tip="planning.channel.brand.font"
             value={kit.titleFontId}
             options={fontOptions}
             onPick={set("titleFontId")}
           />
-          <Colour label="Title colour" value={kit.titleColor} onChange={set("titleColor")} />
-          <Field label="End screen text" help="Shown over the last 5 seconds.">
+          <Colour
+            label="Title colour"
+            tip="planning.channel.brand.title-colour"
+            value={kit.titleColor}
+            onChange={set("titleColor")}
+          />
+          <Field
+            label="End screen text"
+            tip="planning.channel.brand.end-screen"
+            help="Shown over the last 5 seconds."
+          >
             <Input
               value={kit.endScreenText}
               maxLength={200}
@@ -163,18 +184,21 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
         >
           <Choice
             label="Intro"
+            tip="planning.channel.brand.intro"
             value={kit.intro}
             options={entryOptions("intro")}
             onPick={set("intro")}
           />
           <Choice
             label="Outro"
+            tip="planning.channel.brand.outro"
             value={kit.outro}
             options={entryOptions("outro")}
             onPick={set("outro")}
           />
           <Choice
             label="Document theme"
+            tip="planning.channel.brand.document-theme"
             value={kit.documentTheme}
             options={themeOptions}
             onPick={set("documentTheme")}
@@ -206,17 +230,19 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
 
 function Choice({
   label,
+  tip,
   value,
   options,
   onPick,
 }: {
   readonly label: string;
+  readonly tip: HelpId;
   readonly value: string;
   readonly options: readonly { readonly value: string; readonly label: string }[];
   readonly onPick: (value: string) => void;
 }): ReactElement {
   return (
-    <Field label={label}>
+    <Field label={label} tip={tip}>
       <Select value={value} onChange={(event) => onPick(event.target.value)}>
         <option value="">Not set</option>
         {value !== "" && !options.some((option) => option.value === value) ? (
@@ -235,10 +261,12 @@ function Choice({
 // A #RRGGBB field with a swatch; blank is "not set", which a colour input cannot say.
 function Colour({
   label,
+  tip,
   value,
   onChange,
 }: {
   readonly label: string;
+  readonly tip: HelpId;
   readonly value: string;
   readonly onChange: (value: string) => void;
 }): ReactElement {
@@ -246,6 +274,7 @@ function Colour({
   return (
     <Field
       label={label}
+      tip={tip}
       {...(value !== "" && !valid ? { error: "Write the colour as # and six hex digits." } : {})}
     >
       <span className="flex items-center gap-2">

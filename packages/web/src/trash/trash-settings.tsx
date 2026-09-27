@@ -92,10 +92,7 @@ export function TrashSettings(): ReactElement {
   const items = trash.data ?? [];
   return (
     <div>
-      <SectionHead
-        title="Trash"
-        info="Deleted projects, prompts, intros and outros, templates and schedules stay here for 30 days, then are removed for good along with a project's files."
-      />
+      <SectionHead title="Trash" info="settings.trash" />
       {trash.isPending ? (
         <p className="text-small text-ink-3">Loading the trash…</p>
       ) : trash.error ? (

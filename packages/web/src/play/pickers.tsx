@@ -5,6 +5,8 @@ import { type ReactNode, useId, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Input, Select } from "@/components/kit/field";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import type { HelpId } from "@/help/catalog";
 import { customModelFallback, listProviderModels, modelsKey, modelsQuery } from "@/lib/models";
 import { providerUnavailableLabel } from "@/lib/provider-status";
 import { cn } from "@/lib/utils";
@@ -19,6 +21,8 @@ export interface FieldProps {
   readonly value: string;
   readonly problem: string | undefined;
   readonly inline?: boolean | undefined;
+  // The info button beside the label, from the help catalogue.
+  readonly tip?: HelpId | undefined;
   readonly onPick: (next: string) => void;
 }
 
@@ -27,12 +31,14 @@ export function LabelledField({
   field,
   problem,
   inline = false,
+  tip,
   children,
 }: {
   readonly field?: string | undefined;
   readonly label: string;
   readonly problem: string | undefined;
   readonly inline?: boolean | undefined;
+  readonly tip?: HelpId | undefined;
   readonly children: (props: {
     readonly id: string;
     readonly describedBy: string | undefined;
@@ -42,6 +48,11 @@ export function LabelledField({
   const fieldId = useId();
   const noteId = useId();
 
+  const labelled = (
+    <label htmlFor={fieldId} className={cn("sl-field__label", inline && "shrink-0")}>
+      {label}
+    </label>
+  );
   return (
     <div
       className={cn(
@@ -49,11 +60,17 @@ export function LabelledField({
           ? "flex min-w-0 max-w-full flex-wrap items-center gap-x-[10px] gap-y-1"
           : "sl-field [&>span]:w-full [&>select]:w-full",
       )}
+      {...(tip === undefined ? {} : helpScope)}
     >
       {/* The kit's field label and error, as Field draws them. */}
-      <label htmlFor={fieldId} className={cn("sl-field__label", inline && "shrink-0")}>
-        {label}
-      </label>
+      {tip === undefined ? (
+        labelled
+      ) : (
+        <span className={cn("flex min-w-0 items-center gap-1", inline && "shrink-0")}>
+          {labelled}
+          <InfoTip id={tip} label={label} className="-my-1" />
+        </span>
+      )}
       {children({ field, id: fieldId, describedBy: problem === undefined ? undefined : noteId })}
       {problem === undefined ? null : (
         <p id={noteId} className={cn("sl-field__error m-0", inline && "basis-full")}>
@@ -79,6 +96,7 @@ export function OptionPicker({
   placeholder,
   options,
   disabled = false,
+  tip,
   onPick,
 }: FieldProps & {
   readonly placeholder: string;
@@ -86,7 +104,7 @@ export function OptionPicker({
   readonly disabled?: boolean | undefined;
 }) {
   return (
-    <LabelledField field={field} label={label} problem={problem} inline={inline}>
+    <LabelledField field={field} label={label} problem={problem} inline={inline} tip={tip}>
       {({ id, describedBy }) => (
         <Select
           id={id}
@@ -148,6 +166,7 @@ export function ProviderPicker({
   value,
   problem,
   inline,
+  tip,
   onPick,
 }: FieldProps & {
   readonly family: ProviderFamily;
@@ -160,6 +179,7 @@ export function ProviderPicker({
       value={value}
       problem={problem}
       inline={inline}
+      tip={tip}
       placeholder="Pick a provider"
       options={[
         ...(value !== "" && !providers.some((one) => one.id === value && one.family === family)
@@ -183,6 +203,7 @@ function ProviderModelPicker({
   value,
   problem,
   inline,
+  tip,
   onPick,
 }: FieldProps & { readonly provider: string }) {
   const { api } = useApp();
@@ -205,7 +226,7 @@ function ProviderModelPicker({
 
   return (
     <div className="min-w-0 max-w-full">
-      <LabelledField field={field} label={label} problem={problem} inline={inline}>
+      <LabelledField field={field} label={label} problem={problem} inline={inline} tip={tip}>
         {({ id, describedBy }) => {
           const described =
             [

@@ -21,6 +21,7 @@ import {
   useCommand,
   useCommandPalette,
 } from "@/components/kit/command-palette";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Lamp } from "@/components/kit/status";
 import { FirstRunNotice } from "@/components/notice";
 import { AppearanceSkin } from "@/components/theme";
@@ -310,7 +311,10 @@ function ShellContent() {
           ))}
         </nav>
         <div className="sl-app__foot">
-          <ChannelPicker />
+          <div className="flex items-end gap-1" {...helpScope}>
+            <ChannelPicker className="min-w-0 flex-1" />
+            <InfoTip id="home.channel" className="mb-[5px]" />
+          </div>
           <PlayKey asChild className="h-12 text-[16px]">
             <Link to="/play">
               <PlusIcon {...iconProps} />

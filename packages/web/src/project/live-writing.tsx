@@ -3,6 +3,7 @@ import type { StageKind } from "@app/kernel/pipeline.js";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Select } from "@/components/kit/field";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { cn } from "@/lib/utils";
 import { useProjectRevision } from "./live-revision.js";
 
@@ -67,8 +68,14 @@ export function LiveWriting({
   if (calls.length === 0 && stage !== "research" && stage !== "article") return null;
   return (
     <div className={cn("rounded-control border border-line-strong bg-raised", className)}>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
-        <span className="text-small font-semibold text-accent-ink">Live writing</span>
+      <div
+        className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3"
+        {...helpScope}
+      >
+        <span className="inline-flex items-center gap-1">
+          <span className="text-small font-semibold text-accent-ink">Live writing</span>
+          <InfoTip id="project.live.writing" />
+        </span>
         {calls.length > 1 ? (
           <Select
             aria-label="Live writing task"

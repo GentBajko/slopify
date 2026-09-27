@@ -1,6 +1,8 @@
 import { useId } from "react";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import type { HelpId } from "@/help/catalog";
 import { cn } from "@/lib/utils";
 
 // The segmented switch as the rails wear it: the label on the same line as the strip
@@ -16,9 +18,12 @@ export function InlineSwitch<T extends string>({
   value,
   options,
   className,
+  tip,
   onPick,
 }: {
   readonly label: string;
+  // The info button after the strip, from the help catalogue.
+  readonly tip?: HelpId | undefined;
   readonly field?: string | undefined;
   // The stage rails name the stage in the row already, so repeating it beside the strip
   // would say it twice; the label stays in the accessibility tree either way.
@@ -36,7 +41,10 @@ export function InlineSwitch<T extends string>({
   const labelId = useId();
 
   return (
-    <span className={cn("inline-flex items-center gap-[10px]", className)}>
+    <span
+      className={cn("inline-flex items-center gap-[10px]", className)}
+      {...(tip === undefined ? {} : helpScope)}
+    >
       <Label id={labelId} className={hideLabel ? "sr-only" : "shrink-0"}>
         {label}
       </Label>
@@ -62,6 +70,7 @@ export function InlineSwitch<T extends string>({
           </ToggleGroupItem>
         ))}
       </ToggleGroup>
+      {tip === undefined ? null : <InfoTip id={tip} label={label} className="-ml-1" />}
     </span>
   );
 }

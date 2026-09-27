@@ -7,6 +7,7 @@ import { ChannelPicker, useCurrentChannel } from "@/channels/current";
 import { Board, BoardColumn } from "@/components/kit/board";
 import { Button } from "@/components/kit/button";
 import { EmptyState } from "@/components/kit/empty-state";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { SectionHead } from "@/components/kit/section-head";
 import { ComingUp } from "@/home/coming-up";
@@ -115,7 +116,10 @@ export function HomeRoute(): ReactElement {
           </>
         }
       />
-      <ChannelPicker className="mb-5 md:hidden" />
+      <div className="mb-5 flex items-end gap-1 md:hidden" {...helpScope}>
+        <ChannelPicker className="min-w-0 flex-1" />
+        <InfoTip id="home.channel" className="mb-[5px]" />
+      </div>
       {projects.error === null ? null : (
         <p role="alert" className="m-0 mb-5 text-danger">
           {`Your projects didn't load: ${projects.error.message} Check that Slopify is still running, then reload the page.`}
@@ -126,6 +130,7 @@ export function HomeRoute(): ReactElement {
           <section aria-label="Needs you">
             <SectionHead
               title="Needs you"
+              info="home.needs-you"
               meta={
                 loading
                   ? "Loading…"
@@ -163,6 +168,7 @@ export function HomeRoute(): ReactElement {
           <section id="running" aria-label="Running now">
             <SectionHead
               title="Running now"
+              info="home.running"
               meta={
                 running.length === 0
                   ? "Nothing is running"
@@ -186,7 +192,7 @@ export function HomeRoute(): ReactElement {
         </BoardColumn>
         <BoardColumn>
           <section aria-label="Coming up">
-            <SectionHead title="Coming up" meta="Next 7 days">
+            <SectionHead title="Coming up" info="home.coming-up" meta="Next 7 days">
               <Button asChild variant="quiet" size="small">
                 <Link to="/calendar">Calendar</Link>
               </Button>
@@ -208,6 +214,7 @@ export function HomeRoute(): ReactElement {
           <section aria-label="Ready to upload">
             <SectionHead
               title="Ready to upload"
+              info="home.ready"
               meta={
                 ready.length === 0
                   ? "Finished videos you haven't marked uploaded show here"
@@ -223,7 +230,7 @@ export function HomeRoute(): ReactElement {
             )}
           </section>
           <section aria-label="This week">
-            <SectionHead title="This week" meta="Since Monday" />
+            <SectionHead title="This week" info="home.this-week" meta="Since Monday" />
             <ThisWeek channelId={current.channelId} />
           </section>
         </BoardColumn>

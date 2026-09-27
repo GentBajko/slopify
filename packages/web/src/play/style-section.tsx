@@ -55,11 +55,7 @@ export function StyleSection({
           problem={problem}
         />
       </div>
-      <Field
-        label="Preview text"
-        help="Just a sample. Your actual captions come from the narration."
-        className="border-t border-line pt-4"
-      >
+      <Field label="Preview text" tip="play.preview-text" className="border-t border-line pt-4">
         <Input
           value={document.previewText}
           onChange={(event) => session.edit({ ...document, previewText: event.target.value })}

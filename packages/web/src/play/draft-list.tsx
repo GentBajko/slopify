@@ -4,6 +4,7 @@ import { ChevronDownIcon } from "lucide-react";
 import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
 import { ConfirmDialog } from "@/components/confirm";
+import { InfoTip } from "@/components/kit/info-tip";
 import { useToast } from "@/components/kit/toast";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -96,6 +97,7 @@ export function DraftList(): ReactElement {
           <Button variant="ghost" onClick={() => void session.saveAsNew()}>
             Save as a new draft
           </Button>
+          <InfoTip id="play.draft-conflict" />
         </>
       ) : null}
       <Popover>
@@ -164,6 +166,7 @@ export function DraftList(): ReactElement {
         </PopoverContent>
       </Popover>
       <Button onClick={() => void session.newDraft()}>New draft</Button>
+      <InfoTip id="play.drafts" />
       <ConfirmDialog
         open={confirm !== null}
         title="Discard draft"

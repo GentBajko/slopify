@@ -1,11 +1,8 @@
 import type { ReferenceSource } from "@app/slices/admission/model.js";
 import type { Prompt } from "@app/slices/library/model.js";
 import { type ReactElement, type ReactNode, useId } from "react";
-import { InfoTip } from "@/components/kit/info-tip";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { OptionPicker } from "@/play/pickers";
-
-export const referenceHelp =
-  "The establishing image is made first and is never shown in the video. Every other image - the video's, the shorts' and, if ticked, the thumbnail - is drawn with it as a reference, so the characters, style and palette stay the same. Changing it or making it again marks those images outdated.";
 
 // The setting as both editors hold it: Off, From a prompt (an image prompt from the library,
 // its keywords filled like the others) or Upload, and whether the thumbnail is drawn from it.
@@ -46,24 +43,22 @@ export function ReferenceImage({
     .map((one) => ({ value: one.name, label: one.name }));
   return (
     <div className="col-span-full grid min-w-0 grid-cols-1 gap-4 min-[700px]:grid-cols-2">
-      <div className="flex min-w-0 items-end gap-2">
-        <div className="min-w-0 flex-1">
-          <OptionPicker
-            field="reference.source"
-            label="Establishing image"
-            value={off ? "" : value.source}
-            placeholder="Off"
-            options={sources}
-            problem={problem?.("reference.source")}
-            onPick={(source) =>
-              onChange({
-                ...value,
-                source: source === "prompt" || source === "provide" ? source : "off",
-              })
-            }
-          />
-        </div>
-        <InfoTip label="the establishing image">{referenceHelp}</InfoTip>
+      <div className="min-w-0">
+        <OptionPicker
+          field="reference.source"
+          label="Establishing image"
+          tip="play.reference"
+          value={off ? "" : value.source}
+          placeholder="Off"
+          options={sources}
+          problem={problem?.("reference.source")}
+          onPick={(source) =>
+            onChange({
+              ...value,
+              source: source === "prompt" || source === "provide" ? source : "off",
+            })
+          }
+        />
       </div>
       {value.source === "provide" ? (
         <div className="min-w-0">{upload}</div>
@@ -72,6 +67,7 @@ export function ReferenceImage({
           <OptionPicker
             field="reference.prompt"
             label="Establishing prompt"
+            tip="play.reference.prompt"
             value={value.prompt}
             placeholder={off ? "Off" : "Pick an image prompt"}
             options={names}
@@ -81,20 +77,23 @@ export function ReferenceImage({
           />
         ))
       )}
-      <label
-        htmlFor={thumbnailId}
-        className="col-span-full flex min-h-9 cursor-pointer items-center gap-2 text-small text-ink2"
-      >
-        <input
-          id={thumbnailId}
-          type="checkbox"
-          data-play-field="reference.thumbnail"
-          checked={value.thumbnail}
-          disabled={off}
-          onChange={(event) => onChange({ ...value, thumbnail: event.target.checked })}
-        />
-        Draw the thumbnail from it too
-      </label>
+      <div className="col-span-full flex min-h-9 items-center gap-1" {...helpScope}>
+        <label
+          htmlFor={thumbnailId}
+          className="flex cursor-pointer items-center gap-2 text-small text-ink2"
+        >
+          <input
+            id={thumbnailId}
+            type="checkbox"
+            data-play-field="reference.thumbnail"
+            checked={value.thumbnail}
+            disabled={off}
+            onChange={(event) => onChange({ ...value, thumbnail: event.target.checked })}
+          />
+          Draw the thumbnail from it too
+        </label>
+        <InfoTip id="play.reference.thumbnail" />
+      </div>
     </div>
   );
 }

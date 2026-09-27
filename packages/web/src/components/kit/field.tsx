@@ -6,7 +6,9 @@ import {
   useContext,
   useId,
 } from "react";
+import type { HelpId } from "@/help/catalog";
 import { cn } from "@/lib/utils";
+import { helpScope, InfoTip } from "./info-tip.js";
 
 // A label above its control, one short help line, and the error in words under it. The
 // control inside picks up its id, `aria-describedby` and `aria-invalid` from the field, so a
@@ -27,12 +29,19 @@ export function Field({
   label,
   help,
   error,
+  tip,
+  tipLabel,
   id,
   className,
   children,
 }: {
   readonly label: ReactNode;
+  // One short line under the control, for scanning. The full answer goes in `tip`.
   readonly help?: ReactNode;
+  // The info button beside the label: what the field does, the default, what it costs.
+  readonly tip?: HelpId;
+  // "About {tipLabel}" when the label is not plain text.
+  readonly tipLabel?: string;
   // Say what failed, why, and what fixes it.
   readonly error?: ReactNode;
   readonly id?: string;
@@ -46,10 +55,23 @@ export function Field({
   const describedBy = [helpId, errorId].filter(Boolean).join(" ") || undefined;
   return (
     <FieldContext.Provider value={{ id: controlId, describedBy, invalid: errorId !== undefined }}>
-      <div className={cn("sl-field", className)} data-slot="field">
-        <label className="sl-field__label" htmlFor={controlId}>
-          {label}
-        </label>
+      <div className={cn("sl-field", className)} data-slot="field" {...helpScope}>
+        {tip === undefined ? (
+          <label className="sl-field__label" htmlFor={controlId}>
+            {label}
+          </label>
+        ) : (
+          <div className="flex min-w-0 items-center gap-1">
+            <label className="sl-field__label" htmlFor={controlId}>
+              {label}
+            </label>
+            <InfoTip
+              id={tip}
+              label={tipLabel ?? (typeof label === "string" ? label : undefined)}
+              className="-my-1"
+            />
+          </div>
+        )}
         {children}
         {helpId === undefined ? null : (
           <p id={helpId} className="sl-field__help m-0">

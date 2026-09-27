@@ -48,11 +48,11 @@ export function EpisodesTab({ channelId }: { readonly channelId: string }): Reac
         disabled={read.data === undefined || toggle.isPending}
         onChange={(next) => toggle.mutate(next)}
         label="Episode memory"
+        tip="planning.channel.episode-memory"
         describedBy={`${channelId}-memory-help`}
       />
       <p id={`${channelId}-memory-help`} className="mt-1 mb-3 text-small text-ink-2">
-        Each finished episode leaves a short summary here, and new episodes about the same cast or
-        topic are written knowing them. Videos already made are never changed.
+        Finished episodes leave a short summary that new related episodes are written with.
       </p>
       <StatusSlot tone={read.error || toggle.error || remove.error ? "error" : "info"}>
         {read.error?.message ??
@@ -177,7 +177,7 @@ function SummaryDialog({
         </>
       }
     >
-      <Field label="Summary" error={save.error?.message}>
+      <Field label="Summary" error={save.error?.message} tip="planning.channel.episode-summary">
         <Textarea rows={8} value={text} onChange={(event) => setText(event.target.value)} />
       </Field>
     </Dialog>

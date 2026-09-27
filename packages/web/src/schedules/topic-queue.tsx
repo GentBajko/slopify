@@ -13,7 +13,7 @@ import { type ReactElement, useState } from "react";
 import { Button, IconButton } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { Field, Input, Select, Textarea } from "@/components/kit/field";
-import { InfoTip } from "@/components/kit/info-tip";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Segmented } from "@/components/kit/switch";
 
 // A schedule's topic queue, written three ways that convert into each other without losing
@@ -200,22 +200,12 @@ export function TopicFields({
     <fieldset className="m-0 flex min-w-0 flex-col gap-3 border-0 border-t border-line p-0 pt-5 min-[700px]:col-span-2">
       <legend className="float-left mb-1 flex w-full items-center gap-1 text-title-3 font-semibold">
         Topics (optional)
-        <InfoTip label="Topics">
-          <p>
-            Each run starts one project with the first topic and removes it from the list; the
-            schedule completes when the list is empty, unless topic generation below is on. With no
-            topics and generation off, every run uses the template as saved.
-          </p>
-          <p>
-            A topic fills the keyword under Each topic fills. In Table or YAML / JSON a topic can
-            also set any other keyword for its own run, such as its word count; the rest use their
-            every-run value.
-          </p>
-        </InfoTip>
+        <InfoTip id="planning.schedule.topics" />
       </legend>
       <div className="flex flex-wrap items-center gap-2">
         <Segmented
           label="How to write the topics"
+          tip="planning.schedule.topic-format"
           value={queue.mode}
           options={(Object.keys(modeLabels) as TopicMode[]).map((mode) => ({
             value: mode,
@@ -256,6 +246,8 @@ export function TopicFields({
       {queue.mode === "lines" ? (
         <Field
           id="schedule-topics"
+          tip="planning.schedule.topic-lines"
+          tipLabel="Topics, one per line"
           label={
             rows.length === 0
               ? "One per line"
@@ -279,7 +271,7 @@ export function TopicFields({
         <Field
           id="schedule-topics-yaml"
           label="Topics as YAML or JSON"
-          help={`A list: "- Tiamat", or a map per topic such as "- ${keyword ?? "Topic"}: Tiamat" with one line per keyword it sets. A JSON array works too.`}
+          tip="planning.schedule.topic-yaml"
         >
           <Textarea
             rows={10}
@@ -333,7 +325,11 @@ export function TopicFields({
         </p>
       ) : (
         <div className="grid gap-4 min-[700px]:grid-cols-2">
-          <Field label="Each topic fills" id="schedule-topic-keyword">
+          <Field
+            label="Each topic fills"
+            id="schedule-topic-keyword"
+            tip="planning.schedule.topic-keyword"
+          >
             <Select value={keyword ?? ""} onChange={(event) => onKeyword(event.target.value)}>
               {keywords.map((name) => (
                 <option key={name} value={name}>
@@ -348,6 +344,7 @@ export function TopicFields({
               <Field
                 key={name}
                 label={`${name} (every run)`}
+                tip="planning.schedule.every-run"
                 {...(queue.columns.includes(name) ? { help: "Unless a topic sets its own." } : {})}
               >
                 <Input
@@ -393,13 +390,18 @@ function TopicTable({
 }): ReactElement {
   const topicName = keyword === null ? "Title" : `{{${keyword}}}`;
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3" {...helpScope}>
       <div className="overflow-x-auto">
         <table className="sl-table" aria-label="Topics">
           <thead>
             <tr>
               <th scope="col">#</th>
-              <th scope="col">{topicName}</th>
+              <th scope="col">
+                <span className="inline-flex items-center gap-1">
+                  {topicName}
+                  <InfoTip id="planning.schedule.topic-table" className="-my-1" />
+                </span>
+              </th>
               {queue.columns.map((column) => (
                 <th key={column} scope="col">
                   <span className="inline-flex items-center gap-1">

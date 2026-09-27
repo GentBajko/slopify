@@ -2,6 +2,7 @@ import type { Prompt } from "@app/slices/library/model.js";
 import type { RevisionEdit, RevisionView } from "@app/slices/revisions/model.js";
 import type { ReactElement } from "react";
 import { Button } from "@/components/kit/button";
+import { InfoTip } from "@/components/kit/info-tip";
 import { YoutubeDescription } from "@/play/youtube-description";
 import { editOfForm, setPrompt } from "./revision-form-state";
 
@@ -91,17 +92,20 @@ export function RevisionYoutube({
             </Button>
           </p>
         ) : (
-          <Button
-            type="button"
-            onClick={() => {
-              onChange({
-                ...edit,
-                regenerate: [...new Set([...(edit.regenerate ?? []), descriptionKey])],
-              });
-            }}
-          >
-            Write the description again after review
-          </Button>
+          <span className="inline-flex items-center gap-1">
+            <Button
+              type="button"
+              onClick={() => {
+                onChange({
+                  ...edit,
+                  regenerate: [...new Set([...(edit.regenerate ?? []), descriptionKey])],
+                });
+              }}
+            >
+              Write the description again after review
+            </Button>
+            <InfoTip id="project.edit.rewrite-description" />
+          </span>
         )
       ) : null}
     </div>

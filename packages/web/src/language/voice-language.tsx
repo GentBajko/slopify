@@ -2,6 +2,7 @@ import { languageInfo } from "@app/kernel/ports/languages.js";
 import type { Voice } from "@app/slices/settings/model.js";
 import { voiceLanguageWarning, voicesForLanguage } from "@app/slices/voices/languages.js";
 import { type ReactElement, useId, useState } from "react";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 
 // The voice picker's list for a project language, and the "Show all voices" escape beside it.
 // Voices whose languages are unknown are always listed (`slices/voices/languages.ts`).
@@ -41,18 +42,21 @@ export function VoiceLanguageNote({
   return (
     <div className="col-span-full grid gap-1">
       {hidden > 0 || showAll ? (
-        <label htmlFor={id} className="flex min-h-8 items-center gap-2 text-small">
-          <input
-            id={id}
-            type="checkbox"
-            checked={showAll}
-            onChange={(event) => onShowAll(event.target.checked)}
-          />
-          Show all voices
-          {showAll
-            ? ""
-            : ` (${String(hidden)} listed for other languages than ${languageInfo(language).name})`}
-        </label>
+        <span className="flex min-h-8 items-center gap-1" {...helpScope}>
+          <label htmlFor={id} className="flex items-center gap-2 text-small">
+            <input
+              id={id}
+              type="checkbox"
+              checked={showAll}
+              onChange={(event) => onShowAll(event.target.checked)}
+            />
+            Show all voices
+            {showAll
+              ? ""
+              : ` (${String(hidden)} listed for other languages than ${languageInfo(language).name})`}
+          </label>
+          <InfoTip id="play.show-all-voices" />
+        </span>
       ) : null}
       {warning === undefined ? null : (
         <p role="status" className="m-0 text-small text-ink2">

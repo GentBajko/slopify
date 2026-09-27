@@ -1,10 +1,11 @@
 import { reviewStageLabels } from "@app/slices/reviews/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { InfoIcon } from "lucide-react";
 import { type ReactElement, useState } from "react";
 import type { ProjectBody } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
-import { InfoTip } from "@/components/kit/info-tip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/kit/popover";
 import { Badge, type BadgeTone } from "@/components/kit/status";
 import { keys } from "@/queries";
 import { actOnReview, listReviews, type Review, reviewsKey } from "./review-api.js";
@@ -185,9 +186,19 @@ export function ReviewChip({
   return (
     <span className="inline-flex items-center gap-0.5">
       <Chip review={review} />
-      <InfoTip label="this review">
-        <Reasons review={review} />
-      </InfoTip>
+      {/* The reviewer's own reasons, so not a catalogue tip: the same press opens them. */}
+      <Popover>
+        <PopoverTrigger
+          type="button"
+          aria-label="About this review"
+          className="inline-flex size-6 shrink-0 items-center justify-center rounded-full text-ink-3 hover:bg-raised hover:text-ink"
+        >
+          <InfoIcon aria-hidden="true" className="size-[15px]" />
+        </PopoverTrigger>
+        <PopoverContent className="space-y-2 leading-[1.45]">
+          <Reasons review={review} />
+        </PopoverContent>
+      </Popover>
     </span>
   );
 }

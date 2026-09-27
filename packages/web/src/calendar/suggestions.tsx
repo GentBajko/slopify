@@ -7,6 +7,7 @@ import { useApp } from "@/app-context";
 import { Button, IconButton } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { useCommand } from "@/components/kit/command-palette";
+import { InfoTip } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
@@ -112,21 +113,25 @@ function ScheduleSuggestions({
         title={first ? "Suggested topics" : schedule.name}
         kicker={first ? schedule.name : undefined}
         meta="From the series brief · not made or queued before"
+        info="planning.schedule.held"
       >
         {topics.length > 0 ? (
           <Button size="small" variant="secondary" disabled={act.isPending} onClick={approveAll}>
             {`Queue all ${String(topics.length)}`}
           </Button>
         ) : (
-          <Button
-            size="small"
-            variant="quiet"
-            disabled={act.isPending || generating}
-            disabledReason={generating ? "Slopify is suggesting topics now." : "Working…"}
-            onClick={() => act.mutate(() => generateTopicsNow(api, schedule.id))}
-          >
-            {generating ? "Suggesting…" : "Suggest topics now"}
-          </Button>
+          <>
+            <InfoTip id="planning.schedule.generate-now" label="Suggest topics now" />
+            <Button
+              size="small"
+              variant="quiet"
+              disabled={act.isPending || generating}
+              disabledReason={generating ? "Slopify is suggesting topics now." : "Working…"}
+              onClick={() => act.mutate(() => generateTopicsNow(api, schedule.id))}
+            >
+              {generating ? "Suggesting…" : "Suggest topics now"}
+            </Button>
+          </>
         )}
       </SectionHead>
       {schedule.topics.error === null ? null : (

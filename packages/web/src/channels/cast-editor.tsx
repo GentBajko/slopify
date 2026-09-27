@@ -6,6 +6,7 @@ import { useApp } from "@/app-context";
 import { StatusSlot } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
 import { Field, Input, Select, Textarea } from "@/components/kit/field";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Rule } from "@/components/kit/layout";
 import { MediaFrame } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
@@ -118,7 +119,7 @@ export function CastEditor({
         }}
       >
         <div className="grid grid-cols-1 gap-4 min-[600px]:grid-cols-[160px_minmax(0,1fr)]">
-          <Field label="Kind">
+          <Field label="Kind" tip="planning.cast.kind">
             <Select
               value={kind}
               onChange={(event) =>
@@ -127,7 +128,7 @@ export function CastEditor({
               options={castKinds.map((one) => ({ value: one, label: castKindLabels[one] }))}
             />
           </Field>
-          <Field label="Name">
+          <Field label="Name" tip="planning.cast.name">
             <Input
               value={name}
               maxLength={200}
@@ -136,10 +137,7 @@ export function CastEditor({
             />
           </Field>
         </div>
-        <Field
-          label="Aliases"
-          help="Matched as whole words, ignoring case: “Tiamat” is found in “Tiamat's lair” but not in “Tiamatic”. Add plurals as aliases."
-        >
+        <Field label="Aliases" tip="planning.cast.aliases" help="Press Enter to add each one.">
           <div className="flex gap-2">
             <Input
               value={alias}
@@ -173,7 +171,7 @@ export function CastEditor({
             ))}
           </ul>
         ) : null}
-        <Field label="Description for the image model">
+        <Field label="Description for the image model" tip="planning.cast.description">
           <Textarea
             rows={3}
             value={description}
@@ -244,6 +242,7 @@ function Pictures({
         as="h3"
         title="Reference pictures"
         meta={`Sent with every image whose brief, or the video's title, names ${member.name}.`}
+        info="planning.cast.pictures"
       />
       {member.images.length > 0 ? (
         <ul
@@ -305,27 +304,33 @@ function Pictures({
         <span className="text-small text-ink-3">PNG or JPEG, up to 10 MB.</span>
       </div>
       <div className="mt-4 flex flex-col gap-4">
-        <div className="grid grid-cols-1 gap-4 min-[600px]:grid-cols-2">
-          <ProviderPicker
-            label="Image provider"
-            family="image"
-            providers={providers.data?.providers ?? []}
-            value={provider}
-            problem={undefined}
-            onPick={(next) => {
-              setProvider(next);
-              setModel("");
-            }}
-          />
-          <ModelPicker
-            label="Image model"
-            provider={provider}
-            value={model}
-            problem={undefined}
-            onPick={setModel}
-          />
+        <div className="flex flex-col gap-2" {...helpScope}>
+          <p className="sl-kicker m-0 flex items-center gap-1">
+            Make a picture
+            <InfoTip id="planning.cast.generate" className="-my-1" />
+          </p>
+          <div className="grid grid-cols-1 gap-4 min-[600px]:grid-cols-2">
+            <ProviderPicker
+              label="Image provider"
+              family="image"
+              providers={providers.data?.providers ?? []}
+              value={provider}
+              problem={undefined}
+              onPick={(next) => {
+                setProvider(next);
+                setModel("");
+              }}
+            />
+            <ModelPicker
+              label="Image model"
+              provider={provider}
+              value={model}
+              problem={undefined}
+              onPick={setModel}
+            />
+          </div>
         </div>
-        <Field label="Picture to make">
+        <Field label="Picture to make" tip="planning.cast.picture-prompt">
           <Textarea
             rows={3}
             value={prompt}
@@ -378,11 +383,16 @@ function CastVoiceFields({
   const byLanguage = useVoicesForLanguage(ofProvider, language, voice.voice || undefined);
   const mine = byLanguage.listed;
   return (
-    <fieldset className="m-0 flex flex-col gap-3 border-0 border-t border-line p-0 pt-4">
-      <legend className="sl-kicker">Voice</legend>
+    <fieldset
+      className="m-0 flex flex-col gap-3 border-0 border-t border-line p-0 pt-4"
+      {...helpScope}
+    >
+      <legend className="sl-kicker flex items-center gap-1">
+        Voice
+        <InfoTip id="planning.cast.voice" label="Cast voice" className="-my-1" />
+      </legend>
       <p className="text-small text-ink-2">
-        For multi-voice runs: pick this member under Speakers on Play and they read with this voice
-        in every episode.
+        For multi-voice runs: pick this member under Speakers on Play.
       </p>
       <div className="grid grid-cols-1 gap-3 min-[600px]:grid-cols-2">
         <ProviderPicker

@@ -167,7 +167,7 @@ it("shows costs and resolved text from one receipt without treating unknown char
   expect(screen.getByText("Unknown")).not.toBeNull();
   expect(screen.getByText(/Plus 1 stage charge/)).not.toBeNull();
   expect(screen.getByText(/Catalogue verified 2026-09-13/)).not.toBeNull();
-  await userEvent.click(screen.getByRole("button", { name: "About the estimate" }));
+  await userEvent.click(screen.getByRole("button", { name: "About Estimated cost" }));
   expect(await screen.findByText(/does not cap spending/)).not.toBeNull();
   expect(screen.queryByText("Keep dormant")).toBeNull();
   await userEvent.click(screen.getByText("Read the supplied article and resolved prompts"));

@@ -44,7 +44,7 @@ describe("the establishing image control", () => {
     const thumbnail = screen.getByLabelText("Draw the thumbnail from it too") as HTMLInputElement;
     expect(thumbnail.disabled).toBe(true);
     expect(thumbnail.checked).toBe(true);
-    expect(screen.getByRole("button", { name: "About the establishing image" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "About Establishing image" })).not.toBeNull();
   });
 
   it("offers only image prompts, then an upload slot for Upload", async () => {

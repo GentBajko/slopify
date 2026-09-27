@@ -4,6 +4,7 @@ import { keepOutputsOnly, type StorageUsage } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
+import { InfoTip } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { useToast } from "@/components/kit/toast";
 
@@ -41,6 +42,10 @@ export function ProjectStorageList({
   const sorted = projects.toSorted((a, b) => b.bytes - a.bytes);
   return (
     <>
+      <p className="m-0 mb-2 flex items-center gap-1 text-small text-ink-2">
+        Keep outputs only frees a finished project's working files.
+        <InfoTip id="settings.storage.keep-outputs" />
+      </p>
       <List label="Storage by project">
         {sorted.map((project) => (
           <ListRow

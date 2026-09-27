@@ -1,5 +1,5 @@
 import { type ReactElement, useId } from "react";
-import { InfoTip } from "@/components/kit/info-tip";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
@@ -17,7 +17,7 @@ export function ThumbnailCountPicker({
 }): ReactElement {
   const id = useId();
   return (
-    <div className="flex min-w-0 items-center gap-[10px]">
+    <div className="flex min-w-0 items-center gap-[10px]" {...helpScope}>
       <Label id={id} className="shrink-0">
         Thumbnails
       </Label>
@@ -34,10 +34,7 @@ export function ThumbnailCountPicker({
         <ToggleGroupItem value="1">1</ToggleGroupItem>
         <ToggleGroupItem value="3">3</ToggleGroupItem>
       </ToggleGroup>
-      <InfoTip label="three thumbnails">
-        Three makes two more from the same prompt with a different composition, for YouTube's Test
-        &amp; compare. Each costs one more image.
-      </InfoTip>
+      <InfoTip id="play.thumbnail-count" />
     </div>
   );
 }

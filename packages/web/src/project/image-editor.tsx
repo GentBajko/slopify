@@ -4,6 +4,7 @@ import { useId, useRef, useState } from "react";
 import type { StagedFile } from "@/api";
 import { Button } from "@/components/kit/button";
 import { Textarea } from "@/components/kit/field";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { ImagePreview } from "./image-preview.js";
 import { setPrompt } from "./revision-form-state.js";
 import { RevisionUpload } from "./revision-upload.js";
@@ -126,7 +127,10 @@ export function ImageEditor({
   }
   return (
     <section aria-label="Edit images" className="space-y-3">
-      <h3>Images</h3>
+      <div className="flex items-center gap-1">
+        <h3>Images</h3>
+        <InfoTip id="project.images.editor" />
+      </div>
       {content.imageOrder.map((key, index) => {
         const image = content.imageDefinitions[key];
         if (image === undefined)
@@ -140,8 +144,14 @@ export function ImageEditor({
             <legend>Image {index + 1}</legend>
             <ImagePreview edit={edit} view={view} imageKey={key} index={index} />
             {image.source !== "generate" ? null : (
-              <label htmlFor={`${editorId}-${key}-prompt`}>
-                Prompt for image {index + 1}
+              <div {...helpScope}>
+                <div className="flex items-center gap-1">
+                  <label htmlFor={`${editorId}-${key}-prompt`}>Prompt for image {index + 1}</label>
+                  <InfoTip
+                    id="project.images.prompt"
+                    label={`prompt for image ${String(index + 1)}`}
+                  />
+                </div>
                 <Textarea
                   id={`${editorId}-${key}-prompt`}
                   value={
@@ -151,7 +161,7 @@ export function ImageEditor({
                   }
                   onChange={(event) => changePrompt(key, event.target.value)}
                 />
-              </label>
+              </div>
             )}
             {image.source === "generate" && image.templateKey == null ? (
               <Button type="button" onClick={() => changePrompt(key, image.prompt ?? "")}>
@@ -248,17 +258,20 @@ export function ImageEditor({
               {content.imageOrder.length === 1 ? " and turn Images and Video Off" : ""}
             </Button>
             {image.source === "generate" ? (
-              <Button
-                type="button"
-                onClick={() =>
-                  emit({
-                    ...edit,
-                    regenerate: [...new Set([...(edit.regenerate ?? []), `image:${key}`])],
-                  })
-                }
-              >
-                Regenerate image {index + 1} after review
-              </Button>
+              <span className="inline-flex items-center gap-1">
+                <Button
+                  type="button"
+                  onClick={() =>
+                    emit({
+                      ...edit,
+                      regenerate: [...new Set([...(edit.regenerate ?? []), `image:${key}`])],
+                    })
+                  }
+                >
+                  Regenerate image {index + 1} after review
+                </Button>
+                <InfoTip id="project.images.regenerate" />
+              </span>
             ) : null}
           </fieldset>
         );

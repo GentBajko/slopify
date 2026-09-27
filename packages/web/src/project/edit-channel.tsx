@@ -38,6 +38,7 @@ export function EditChannel({
     <div className="grid gap-4 md:grid-cols-2">
       <Field
         label="Channel"
+        tip="play.channel"
         error={problem("channelId")}
         help={
           channel === undefined ? undefined : (
@@ -70,6 +71,7 @@ export function EditChannel({
         <Switch
           checked={useKit}
           label="Use the channel's brand kit"
+          tip="play.brand-kit"
           onChange={(on) => {
             const { useBrandKit: _kit, ...rest } = config;
             onChange({ ...edit, config: on ? rest : { ...rest, useBrandKit: false } });

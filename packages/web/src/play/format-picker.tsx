@@ -1,5 +1,6 @@
 import type { Format } from "@app/kernel/pipeline.js";
 import { type ReactElement, useId } from "react";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
@@ -12,10 +13,11 @@ export function FormatPicker({
 }): ReactElement {
   const id = useId();
   return (
-    <div className="w-full">
-      <Label id={id} className="mb-2">
-        Frame format
-      </Label>
+    <div className="w-full" {...helpScope}>
+      <span className="mb-2 flex items-center gap-1">
+        <Label id={id}>Frame format</Label>
+        <InfoTip id="play.format" className="-my-1" />
+      </span>
       <ToggleGroup
         type="single"
         value={value}

@@ -27,8 +27,9 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { type ReactElement, type ReactNode, useId } from "react";
 import { useApp } from "@/app-context";
-import { InfoTip } from "@/components/kit/info-tip";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Picker } from "@/components/ui/picker";
+import type { HelpId } from "@/help/catalog";
 import { videoModelsQuery } from "@/lib/models";
 import { cn } from "@/lib/utils";
 
@@ -36,21 +37,6 @@ import { cn } from "@/lib/utils";
 // picker beside Motion, and one "Look" row that opens to the rest. A project without the
 // settings shows today's slideshow (`legacyVideoEdit`) and only gets settings once one is
 // changed, so an untouched old project saves exactly what it had.
-
-const help = {
-  cuts: "Every N seconds holds each image for Seconds per image. Follow the narration cuts in the pause after a sentence, as near to that length as the sentences allow (never under 40% of it), and starts a new image at every chapter. Following the narration times the words first, as captions do; it works in English and the languages with word timing (see Language).",
-  transition:
-    "How one image hands over to the next. The change is centred on the cut and takes the time chosen, so the video stays exactly as long as its narration.",
-  vignette: "Darkens the corners to draw the eye to the middle.",
-  grain: "Adds moving film grain over the whole picture.",
-  grade: "A colour treatment for the whole video.",
-  atmosphere:
-    "An overlay drawn by Slopify itself: rising embers, drifting dust, or low fog along the bottom of the frame.",
-  cards:
-    "Shows each chapter's title in the middle of the picture for 2.5 seconds as it starts, in the caption font. The chapters are the YouTube description's when that step runs, otherwise the article's headings.",
-  animate:
-    "Turns some images into short moving clips with an image-to-video model on your image provider (fal.ai or Replicate). Each clip is paid, and the estimate shows the cost. An image that can't be animated is shown still, and the project page says which.",
-} as const;
 
 export function useVideoEditControls({
   value,
@@ -103,7 +89,7 @@ export function useVideoEditControls({
 
   const noWordTiming = wordTimingUnavailable(language);
   const cuts = (
-    <Row id={`${id}-cuts`} label="Cuts" help={help.cuts}>
+    <Row id={`${id}-cuts`} label="Cuts" tip="project.video.cuts">
       <Picker
         id={`${id}-cuts`}
         data-play-field={`${fieldPrefix}.cuts`}
@@ -136,7 +122,7 @@ export function useVideoEditControls({
         </span>
       </summary>
       <div className="grid min-w-0 grid-cols-1 gap-x-6 gap-y-3 border-line2 border-t p-3 min-[700px]:grid-cols-2">
-        <Row id={`${id}-transition`} label="Transition" help={help.transition}>
+        <Row id={`${id}-transition`} label="Transition" tip="project.video.transition">
           <Picker
             id={`${id}-transition`}
             data-play-field={`${fieldPrefix}.transition`}
@@ -166,7 +152,7 @@ export function useVideoEditControls({
             ))}
           </Picker>
         </Row>
-        <Row id={`${id}-grade`} label="Colour grade" help={help.grade}>
+        <Row id={`${id}-grade`} label="Colour grade" tip="project.video.grade">
           <Choice
             id={`${id}-grade`}
             field={`${fieldPrefix}.grade`}
@@ -176,7 +162,7 @@ export function useVideoEditControls({
             onChange={(grade: ColorGrade) => set({ grade })}
           />
         </Row>
-        <Row id={`${id}-vignette`} label="Vignette" help={help.vignette}>
+        <Row id={`${id}-vignette`} label="Vignette" tip="project.video.vignette">
           <Choice
             id={`${id}-vignette`}
             field={`${fieldPrefix}.vignette`}
@@ -186,7 +172,7 @@ export function useVideoEditControls({
             onChange={(vignette: LookLevel) => set({ vignette })}
           />
         </Row>
-        <Row id={`${id}-grain`} label="Film grain" help={help.grain}>
+        <Row id={`${id}-grain`} label="Film grain" tip="project.video.grain">
           <Choice
             id={`${id}-grain`}
             field={`${fieldPrefix}.grain`}
@@ -196,7 +182,7 @@ export function useVideoEditControls({
             onChange={(grain: LookLevel) => set({ grain })}
           />
         </Row>
-        <Row id={`${id}-atmosphere`} label="Atmosphere" help={help.atmosphere}>
+        <Row id={`${id}-atmosphere`} label="Atmosphere" tip="project.video.atmosphere">
           <Choice
             id={`${id}-atmosphere`}
             field={`${fieldPrefix}.atmosphere`}
@@ -206,7 +192,7 @@ export function useVideoEditControls({
             onChange={(atmosphere: Atmosphere) => set({ atmosphere })}
           />
         </Row>
-        <Row id={`${id}-cards`} label="Chapter cards" help={help.cards}>
+        <Row id={`${id}-cards`} label="Chapter cards" tip="project.video.chapter-cards">
           <input
             id={`${id}-cards`}
             type="checkbox"
@@ -217,7 +203,7 @@ export function useVideoEditControls({
             onChange={(event) => set({ chapterCards: event.currentTarget.checked })}
           />
         </Row>
-        <Row id={`${id}-animate`} label="Animate images" help={help.animate} wide>
+        <Row id={`${id}-animate`} label="Animate images" tip="project.video.animate" wide>
           <Picker
             id={`${id}-animate`}
             data-play-field={`${fieldPrefix}.animate`}
@@ -287,13 +273,13 @@ export function useVideoEditControls({
 function Row({
   id,
   label,
-  help,
+  tip,
   wide = false,
   children,
 }: {
   readonly id: string;
   readonly label: string;
-  readonly help: string;
+  readonly tip: HelpId;
   readonly wide?: boolean;
   readonly children: ReactNode;
 }): ReactElement {
@@ -303,14 +289,13 @@ function Row({
         "flex min-w-0 flex-wrap items-center gap-2 text-small",
         wide && "min-[700px]:col-span-2",
       )}
+      {...helpScope}
     >
       <label htmlFor={id} className="min-w-[96px]">
         {label}
       </label>
       {children}
-      <InfoTip label={label.toLowerCase()}>
-        <p>{help}</p>
-      </InfoTip>
+      <InfoTip id={tip} label={label.toLowerCase()} />
     </div>
   );
 }

@@ -17,7 +17,9 @@ import { channelQuery, defaultChannelId } from "@/channels/api";
 import { DocumentThemePicker } from "@/components/document-theme-picker";
 import { Button } from "@/components/kit/button";
 import { Field, Input, Select, Textarea } from "@/components/kit/field";
+import { InfoTip } from "@/components/kit/info-tip";
 import { Rule } from "@/components/kit/layout";
+import type { HelpId } from "@/help/catalog";
 import { RevisionLanguage } from "@/language/revision-language";
 import { cn } from "@/lib/utils";
 import { FormatPicker } from "@/play/format-picker";
@@ -48,6 +50,16 @@ const stageLabels: Readonly<Record<(typeof stageKinds)[number], string>> = {
   video: "Video source",
   document: "Document source",
 };
+
+const sourceTips = {
+  research: "play.source.research",
+  article: "play.source.article",
+  audio: "play.source.audio",
+  images: "play.source.images",
+  thumbnail: "play.source.thumbnail",
+  video: "play.source.video",
+  document: "play.source.document",
+} as const satisfies Readonly<Record<(typeof stageKinds)[number], HelpId>>;
 
 // A group of settings inside a section: a sub-head, then its fields two to a row on desktop.
 function Group({
@@ -238,7 +250,12 @@ export function RevisionForm(
           <Rule />
           <Group title="Stages">
             {stageKinds.map((kind) => (
-              <Field key={kind} label={stageLabels[kind]} error={problem(`sources.${kind}`)}>
+              <Field
+                key={kind}
+                label={stageLabels[kind]}
+                tip={sourceTips[kind]}
+                error={problem(`sources.${kind}`)}
+              >
                 <Select
                   value={sourceOf(config.sources, kind)}
                   onChange={(event) => {
@@ -283,7 +300,7 @@ export function RevisionForm(
                 Images are Off. Video is also Off in these changes.
               </p>
             ) : null}
-            <Field label="Document theme" id={`${formId}-document-theme`}>
+            <Field label="Document theme" id={`${formId}-document-theme`} tip="play.document-theme">
               <DocumentThemePicker
                 id={`${formId}-document-theme`}
                 disabled={sourceOf(config.sources, "document") === "off"}
@@ -296,7 +313,11 @@ export function RevisionForm(
           </Group>
           <Rule />
           <Group title="Timing">
-            <Field label="Silence gap (seconds)" error={problem("silenceGapSeconds")}>
+            <Field
+              label="Silence gap (seconds)"
+              tip="play.silence-gap"
+              error={problem("silenceGapSeconds")}
+            >
               <Input
                 type="number"
                 min={0}
@@ -314,7 +335,7 @@ export function RevisionForm(
             {config.sources.audio === "off" ? null : (
               <Field
                 label="Silence at start and end (seconds)"
-                help="Quiet time before the narration starts and after it ends."
+                tip="play.edge-silence"
                 error={problem("edgeSilenceSeconds")}
               >
                 <Input
@@ -335,7 +356,7 @@ export function RevisionForm(
             {video ? (
               <Field
                 label="Seconds per image"
-                help="Each image stays on screen this long, then the next one; after the last image they start again."
+                tip="play.image-seconds"
                 error={problem("imageSeconds")}
               >
                 <Input
@@ -354,11 +375,7 @@ export function RevisionForm(
               </Field>
             ) : null}
             {video ? (
-              <Field
-                label="Zoom (%)"
-                help="How far each image zooms in or out over its time on screen. 0 keeps images still."
-                error={problem("zoomPercent")}
-              >
+              <Field label="Zoom (%)" tip="play.zoom" error={problem("zoomPercent")}>
                 <Input
                   type="number"
                   min={0}
@@ -375,7 +392,7 @@ export function RevisionForm(
               </Field>
             ) : null}
             {video ? (
-              <Field label="Motion" help="How each image moves while it's on screen.">
+              <Field label="Motion" tip="play.motion">
                 <Select
                   value={config.motionStyle}
                   onChange={(event) =>
@@ -414,7 +431,11 @@ export function RevisionForm(
           <Rule />
           <Group title="Intro and outro">
             {(["intro", "outro"] as const).map((category) => (
-              <Field key={category} label={category === "intro" ? "Intro" : "Outro"}>
+              <Field
+                key={category}
+                label={category === "intro" ? "Intro" : "Outro"}
+                tip={category === "intro" ? "play.intro" : "play.outro"}
+              >
                 <Select
                   value={config[category]?.name ?? ""}
                   onChange={(event) => {
@@ -466,7 +487,11 @@ export function RevisionForm(
             <>
               <Rule />
               <Group title="Research" columns={false}>
-                <Field label="Research notes" error={problem("provided.research")}>
+                <Field
+                  label="Research notes"
+                  tip="play.provided.research"
+                  error={problem("provided.research")}
+                >
                   <Textarea
                     rows={6}
                     value={config.provided.research ?? ""}
@@ -488,6 +513,7 @@ export function RevisionForm(
         <section aria-label="Article" hidden={current !== "article"} className={panel("article")}>
           <Field
             label="Article text"
+            tip="project.edit.article-text"
             error={problem("content.articleMarkdown") ?? problem("provided.article")}
             help={
               edit.content.articleEdited
@@ -519,16 +545,19 @@ export function RevisionForm(
             />
           </Field>
           {config.sources.article === "generate" ? (
-            <Button
-              onClick={() =>
-                onChange({
-                  ...edit,
-                  regenerate: [...new Set([...(edit.regenerate ?? []), "article:body"])],
-                })
-              }
-            >
-              Regenerate article after review
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                onClick={() =>
+                  onChange({
+                    ...edit,
+                    regenerate: [...new Set([...(edit.regenerate ?? []), "article:body"])],
+                  })
+                }
+              >
+                Regenerate article after review
+              </Button>
+              <InfoTip id="project.edit.regenerate-article" />
+            </div>
           ) : null}
         </section>
         <section

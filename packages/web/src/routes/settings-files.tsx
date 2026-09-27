@@ -76,7 +76,7 @@ export function FilesFolder({
         <SectionHead
           title="Your files"
           meta={view.folder ?? "The Docker project folder isn't set up."}
-          info="Projects are in the folder Docker shares with this computer. The container can't move its own folder, so moving it is done by the Slopify installer on the computer running Docker; it waits for running work, copies your projects and checks the copy."
+          info="settings.files.docker"
         >
           <Button disabled={view.folder === null || open.isPending} onClick={() => open.mutate()}>
             Open folder
@@ -120,11 +120,7 @@ export function FilesFolder({
   const resumable = phase === "failed" || phase === "interrupted";
   return (
     <div>
-      <SectionHead
-        title="Your files"
-        meta={view.folder}
-        info="Your projects, automatic backups and exports live here. Slopify's database, settings, models and logs stay in its own hidden data folder. Moving copies every file, checks each copy against the original, then switches; the old folder is kept until you delete it. It can't start while a project is being made."
-      >
+      <SectionHead title="Your files" meta={view.folder} info="settings.files">
         {view.inDocuments || view.documentsRoot === null ? null : (
           <Button
             variant="primary"
@@ -160,7 +156,8 @@ export function FilesFolder({
           >
             <Field
               label="New folder"
-              help="The full path. Slopify makes Projects and Backups inside it; it must be empty or new."
+              tip="settings.files.new-folder"
+              help="The full path; it must be empty or new."
               error={error}
               className="min-w-0 flex-1 basis-80"
             >

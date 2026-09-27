@@ -5,6 +5,7 @@ import { z } from "zod";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Textarea } from "@/components/kit/field";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { type NarrationChunkOrder, narrationChunkOrderOf } from "./revision-api.js";
 import { RevisionUpload } from "./revision-upload.js";
 
@@ -107,7 +108,10 @@ export function NarrationEditor({
   }
   return (
     <section aria-label="Edit narration" className="space-y-3">
-      <h3>Narration</h3>
+      <div className="flex items-center gap-1">
+        <h3>Narration</h3>
+        <InfoTip id="project.narration.editor" />
+      </div>
       {edit.config.chunking?.mode === "whole" || edit.config.chunking === undefined ? (
         <p>
           This narration uses one whole request. Editing its text rebuilds the whole narration
@@ -131,8 +135,16 @@ export function NarrationEditor({
             <p>
               {chunk.parts} audio {chunk.parts === 1 ? "part" : "parts"} in this narration chunk.
             </p>
-            <label htmlFor={`${editorId}-${chunk.key}-text`} className="block text-small">
-              Text for narration chunk {index + 1}
+            <div className="text-small" {...helpScope}>
+              <div className="flex items-center gap-1">
+                <label htmlFor={`${editorId}-${chunk.key}-text`}>
+                  Text for narration chunk {index + 1}
+                </label>
+                <InfoTip
+                  id="project.narration.chunk-text"
+                  label={`text for narration chunk ${String(index + 1)}`}
+                />
+              </div>
               <Textarea
                 id={`${editorId}-${chunk.key}-text`}
                 value={override?.kind === "text" ? override.text : chunk.text}
@@ -162,7 +174,7 @@ export function NarrationEditor({
                   });
                 }}
               />
-            </label>
+            </div>
             <RevisionUpload
               key={`${chunk.key}:${uploadResets[chunk.key] ?? 0}`}
               label={`Replace narration chunk ${index + 1}`}
@@ -201,30 +213,33 @@ export function NarrationEditor({
                 </Button>
               </p>
             ) : (
-              <Button
-                type="button"
-                onClick={() => {
-                  const current = getEdit?.() ?? latest.current;
-                  const narrationOverrides = { ...current.content.narrationOverrides };
-                  if (narrationOverrides[chunk.key]?.kind === "asset")
-                    delete narrationOverrides[chunk.key];
-                  setUploadResets((resets) => ({
-                    ...resets,
-                    [chunk.key]: (resets[chunk.key] ?? 0) + 1,
-                  }));
-                  emit({
-                    ...current,
-                    content: { ...current.content, narrationOverrides },
-                    uploads: current.uploads?.filter(
-                      (one) =>
-                        one.destination.kind !== "narration" || one.destination.key !== chunk.key,
-                    ),
-                    regenerate: [...new Set([...(current.regenerate ?? []), chunk.key])],
-                  });
-                }}
-              >
-                Regenerate narration chunk {index + 1} after review
-              </Button>
+              <span className="inline-flex items-center gap-1">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    const current = getEdit?.() ?? latest.current;
+                    const narrationOverrides = { ...current.content.narrationOverrides };
+                    if (narrationOverrides[chunk.key]?.kind === "asset")
+                      delete narrationOverrides[chunk.key];
+                    setUploadResets((resets) => ({
+                      ...resets,
+                      [chunk.key]: (resets[chunk.key] ?? 0) + 1,
+                    }));
+                    emit({
+                      ...current,
+                      content: { ...current.content, narrationOverrides },
+                      uploads: current.uploads?.filter(
+                        (one) =>
+                          one.destination.kind !== "narration" || one.destination.key !== chunk.key,
+                      ),
+                      regenerate: [...new Set([...(current.regenerate ?? []), chunk.key])],
+                    });
+                  }}
+                >
+                  Regenerate narration chunk {index + 1} after review
+                </Button>
+                <InfoTip id="project.narration.regenerate" />
+              </span>
             )}
           </fieldset>
         );

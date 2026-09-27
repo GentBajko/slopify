@@ -15,6 +15,7 @@ import {
 import { useApp } from "@/app-context";
 import { channelQuery, defaultChannelId } from "@/channels/api";
 import { Button } from "@/components/kit/button";
+import { InfoTip } from "@/components/kit/info-tip";
 import { ChunkingControl } from "@/play/chunking";
 import { NarrationAliasesToggle } from "@/play/narration-aliases";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
@@ -76,6 +77,7 @@ function useSharedGlossary(
         <Button type="button" variant="quiet" disabled={state.busy} onClick={() => void copy()}>
           {state.busy ? "Copying…" : "Update from other projects"}
         </Button>
+        <InfoTip id="project.edit.update-glossary" />
       </p>
     ) : undefined;
   return {
@@ -137,6 +139,7 @@ function useAliases(edit: RevisionEdit, onChange: (edit: RevisionEdit) => void) 
           <Button type="button" variant="quiet" disabled={state.busy} onClick={() => void copy()}>
             {state.busy ? "Copying…" : "Update from Library"}
           </Button>
+          <InfoTip id="project.edit.update-aliases" />
         </p>
       ) : undefined,
   };
@@ -184,6 +187,7 @@ export function RevisionProviders({
         <>
           <ProviderPicker
             label="Text provider"
+            tip="play.llm.provider"
             family="llm"
             providers={providers}
             value={llm.provider}
@@ -194,6 +198,7 @@ export function RevisionProviders({
           />
           <ModelPicker
             label="Text model"
+            tip="play.llm.model"
             provider={llm.provider}
             value={llm.model}
             problem={undefined}
@@ -209,6 +214,7 @@ export function RevisionProviders({
         <>
           <ProviderPicker
             label="Narration provider"
+            tip="play.tts.provider"
             family="tts"
             providers={providers}
             value={audio.provider}
@@ -222,6 +228,7 @@ export function RevisionProviders({
           />
           <ModelPicker
             label="Narration model"
+            tip="play.tts.model"
             provider={audio.provider}
             value={audio.model}
             problem={undefined}
@@ -231,6 +238,7 @@ export function RevisionProviders({
           />
           <OptionPicker
             label="Narration voice"
+            tip="play.voice"
             value={audio.voice}
             problem={undefined}
             placeholder="Choose a saved voice"
@@ -288,6 +296,7 @@ export function RevisionProviders({
         <>
           <ProviderPicker
             label="Image provider"
+            tip="play.images.provider"
             family="image"
             providers={providers}
             value={images.provider}
@@ -298,6 +307,7 @@ export function RevisionProviders({
           />
           <ModelPicker
             label="Image model"
+            tip="play.images.model"
             provider={images.provider}
             value={images.model}
             problem={undefined}
@@ -308,6 +318,7 @@ export function RevisionProviders({
           <ThinkingPicker
             field="images.thinking"
             label="Effort"
+            tip="play.images.effort"
             choice={images}
             onChange={(choice) => onChange({ ...edit, config: { ...config, images: choice } })}
           />

@@ -2,6 +2,7 @@ import type { RebuildPreview } from "@app/slices/rebuild/model.js";
 import { type ReactNode, useId, useState } from "react";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { outputSlotLabel } from "./output-label.js";
 export interface RebuildConsent {
   readonly acknowledgeUnknownCosts: boolean;
@@ -194,34 +195,40 @@ export function RebuildReview({
         {preview.providedReuseRequired.length === 0 && preview.costs.unknown === 0 ? null : (
           <div className="flex flex-col gap-2 text-small">
             {preview.providedReuseRequired.map((key) => (
-              <label key={key} className="flex items-start gap-2">
-                <input
-                  type="checkbox"
-                  className="mt-[3px]"
-                  disabled={pending}
-                  checked={confirmed.includes(key)}
-                  onChange={(event) =>
-                    setConfirmed(
-                      event.target.checked
-                        ? [...confirmed, key]
-                        : confirmed.filter((one) => one !== key),
-                    )
-                  }
-                />
-                <span>Keep the provided content for {label(key)}</span>
-              </label>
+              <div key={key} className="flex items-start gap-1" {...helpScope}>
+                <label className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    className="mt-[3px]"
+                    disabled={pending}
+                    checked={confirmed.includes(key)}
+                    onChange={(event) =>
+                      setConfirmed(
+                        event.target.checked
+                          ? [...confirmed, key]
+                          : confirmed.filter((one) => one !== key),
+                      )
+                    }
+                  />
+                  <span>Keep the provided content for {label(key)}</span>
+                </label>
+                <InfoTip id="project.rebuild.keep-provided" className="-my-1" />
+              </div>
             ))}
             {preview.costs.unknown === 0 ? null : (
-              <label className="flex items-start gap-2">
-                <input
-                  type="checkbox"
-                  className="mt-[3px]"
-                  disabled={pending}
-                  checked={unknown}
-                  onChange={(event) => setUnknown(event.target.checked)}
-                />
-                <span>I understand that {preview.costs.unknown} cost estimates are unknown.</span>
-              </label>
+              <div className="flex items-start gap-1" {...helpScope}>
+                <label className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    className="mt-[3px]"
+                    disabled={pending}
+                    checked={unknown}
+                    onChange={(event) => setUnknown(event.target.checked)}
+                  />
+                  <span>I understand that {preview.costs.unknown} cost estimates are unknown.</span>
+                </label>
+                <InfoTip id="project.rebuild.unknown-costs" className="-my-1" />
+              </div>
             )}
           </div>
         )}

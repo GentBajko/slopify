@@ -21,7 +21,7 @@ import {
 } from "@app/slices/video/ambient-bed.js";
 import { type ReactElement, useId, useState } from "react";
 import { Input } from "@/components/kit/field";
-import { InfoTip } from "@/components/kit/info-tip";
+import { helpScope } from "@/components/kit/info-tip";
 import { Segmented, Switch } from "@/components/kit/switch";
 import { AmbientBedControls } from "@/video/ambient-bed-controls";
 
@@ -75,9 +75,6 @@ function ambientBedProblemsOf(
 }
 
 type Every = "minutes" | "hour";
-
-const help =
-  "Adds images as the narration gets longer. Each ticked prompt keeps its own Number; the extra images are shared among them in order. Saving plans the new images and keeps every image the project already has.";
 
 // More images for long videos. The rate is typed as on Play; the length it is planned for is
 // the one the project was planned with, or the article's own when it had none.
@@ -142,18 +139,14 @@ export function EditImageScale({
           };
   const shown = problem("imageScale") ?? undefined;
   return (
-    <div className="flex flex-col items-start gap-2">
-      <span className="flex items-center gap-2">
-        <Switch
-          checked={form !== undefined}
-          label="More images for long videos"
-          describedBy={`${id}-line`}
-          onChange={(on) => set(on ? { every: "minutes", value: "2" } : undefined)}
-        />
-        <InfoTip label="more images for long videos">
-          <p>{help}</p>
-        </InfoTip>
-      </span>
+    <div className="flex flex-col items-start gap-2" {...helpScope}>
+      <Switch
+        checked={form !== undefined}
+        label="More images for long videos"
+        describedBy={`${id}-line`}
+        tip="play.image-scale"
+        onChange={(on) => set(on ? { every: "minutes", value: "2" } : undefined)}
+      />
       {form === undefined ? null : (
         <span className="flex flex-wrap items-center gap-2 text-small">
           <Segmented<Every>

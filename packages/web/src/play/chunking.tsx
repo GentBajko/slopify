@@ -27,6 +27,7 @@ export function ChunkingControl({
       <InlineSwitch<ChunkMode>
         field="chunking.mode"
         label="Chunking"
+        tip="play.chunking"
         className="min-w-0 max-w-full flex-wrap [&_[data-slot=toggle-group]]:max-w-full [&_[data-slot=toggle-group]]:flex-wrap"
         value={value.mode}
         options={[
@@ -56,7 +57,12 @@ export function ChunkingControl({
         }}
       />
       {counted ? (
-        <LabelledField label={characterMode ? "Characters" : "Words"} problem={undefined} inline>
+        <LabelledField
+          label={characterMode ? "Characters" : "Words"}
+          tip="play.chunking.count"
+          problem={undefined}
+          inline
+        >
           {({ id }) => (
             <Input
               id={id}
@@ -95,12 +101,6 @@ export function ChunkingControl({
             />
           )}
         </LabelledField>
-      ) : null}
-      {characterMode ? (
-        <p className="basis-full text-small text-ink3">
-          Ends at the last complete sentence within the character count, including spaces. A longer
-          sentence stays whole; provider request limits still apply.
-        </p>
       ) : null}
     </>
   );

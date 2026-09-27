@@ -32,10 +32,7 @@ export function SampleSettings(): ReactElement {
   const samples = restore.data?.samples ?? sample.data?.samples;
   return (
     <div className="mt-8">
-      <SectionHead
-        title="Sample projects"
-        info="The finished examples that come with Slopify: a narrated video, an audiobook and a podcast. Restore samples adds back any that were deleted and replaces the others with the originals. Your own copies of them are not touched."
-      />
+      <SectionHead title="Sample projects" info="settings.sample.restore" />
       <RailGroup>
         {(Object.keys(names) as (keyof SampleProjects)[]).map((id) => {
           const projectId = samples?.[id] ?? null;

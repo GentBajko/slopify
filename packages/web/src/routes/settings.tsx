@@ -14,6 +14,7 @@ import { CatalogueSettings } from "@/components/catalogue";
 import { Button, buttonClass } from "@/components/kit/button";
 import { useCommand } from "@/components/kit/command-palette";
 import { Field, Input } from "@/components/kit/field";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader, Workspace } from "@/components/kit/layout";
 import { Rail, RailButton } from "@/components/kit/rail";
 import { SectionHead } from "@/components/kit/section-head";
@@ -240,13 +241,16 @@ export function SettingsRoute({
                 {health.isPending ? "Checking…" : "Check all"}
               </Button>
             ) : null}
-            <a
-              className={buttonClass({ variant: "quiet" })}
-              href={`${api.origin}/api/diagnostics`}
-              download="slopify-diagnostics.json"
-            >
-              Download diagnostics
-            </a>
+            <span className="inline-flex items-center gap-1">
+              <a
+                className={buttonClass({ variant: "quiet" })}
+                href={`${api.origin}/api/diagnostics`}
+                download="slopify-diagnostics.json"
+              >
+                Download diagnostics
+              </a>
+              <InfoTip id="settings.diagnostics" />
+            </span>
           </>
         }
       />
@@ -446,10 +450,7 @@ function StorageTools() {
   return (
     <>
       <div>
-        <SectionHead
-          title="Export and import"
-          info="Export everything saves every project with its files and history, your prompts, intros and outros, document themes, templates, schedules, Play drafts, uploaded fonts, settings and usage history in one .tar file. Importing adds to this install and never replaces anything: projects already here are skipped, items whose name is taken arrive as “(imported)”, and schedules arrive paused. Projects that are being made must finish or be paused before exporting."
-        >
+        <SectionHead title="Export and import" info="settings.storage.export">
           <Button disabled={working} onClick={() => void exportEverything()}>
             Export everything
           </Button>
@@ -473,9 +474,12 @@ function StorageTools() {
               }}
             />
           </label>
-          <Button variant="quiet" disabled={working} onClick={() => void cleanup()}>
-            Clean orphan files
-          </Button>
+          <span className="inline-flex items-center gap-1">
+            <Button variant="quiet" disabled={working} onClick={() => void cleanup()}>
+              Clean orphan files
+            </Button>
+            <InfoTip id="settings.storage.clean" />
+          </span>
         </SectionHead>
         <div className="flex flex-col gap-2 text-small text-ink-2">
           <p className="m-0">
@@ -527,6 +531,7 @@ function StorageTools() {
       <div>
         <SectionHead
           title="Disk space"
+          info="settings.storage.disk"
           meta={
             usage.data ? (
               <>
@@ -700,6 +705,7 @@ function Playback() {
     <div className="grid items-start gap-6 md:grid-cols-2">
       <Field
         label="Silence between segments"
+        tip="settings.playback.silence-gap"
         help="Seconds of quiet between narrated segments."
         error={problem ?? save.error?.message}
       >
@@ -740,8 +746,11 @@ function Playback() {
         </div>
       </Field>
 
-      <div className="sl-field">
-        <span className="sl-field__label">Appearance</span>
+      <div className="sl-field" {...helpScope}>
+        <div className="flex min-w-0 items-center gap-1">
+          <span className="sl-field__label">Appearance</span>
+          <InfoTip id="settings.appearance" className="-my-1" />
+        </div>
         <Segmented
           label="Appearance"
           value={current.appearance}

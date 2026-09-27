@@ -109,7 +109,7 @@ it("offers seconds per image only for a video and the edge silence only with nar
   expect(screen.queryByLabelText("Motion")).toBeNull();
   expect(screen.getByLabelText("Silence at start and end (seconds)")).toBeDefined();
   expect(
-    screen.getByRole("button", { name: "About silence at start and end (seconds)" }),
+    screen.getByRole("button", { name: "About Silence at start and end (seconds)" }),
   ).toBeDefined();
 });
 
@@ -126,7 +126,7 @@ it("offers the motion beside the zoom and keeps the pick through save/reload", a
     "Mix of both",
     "Still",
   ]);
-  expect(screen.getByRole("button", { name: "About motion" })).toBeDefined();
+  expect(screen.getByRole("button", { name: "About Motion" })).toBeDefined();
   fireEvent.change(motion, { target: { value: "pan" } });
   await waitFor(() => expect(h.session().document.form.motionStyle).toBe("pan"));
   await act(async () => {

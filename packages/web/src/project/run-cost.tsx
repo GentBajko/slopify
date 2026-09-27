@@ -117,7 +117,7 @@ function Panel({ cost }: { readonly cost: RunCost }): ReactElement {
       </section>
 
       <section aria-label="By stage">
-        <SectionHead title="By stage" className="mb-3" />
+        <SectionHead title="By stage" info="project.cost.by-stage" className="mb-3" />
         <div className="overflow-x-auto">
           <DataTable
             caption="Run cost by stage"
@@ -129,7 +129,7 @@ function Panel({ cost }: { readonly cost: RunCost }): ReactElement {
       </section>
 
       <section aria-label="By model">
-        <SectionHead title="By model" className="mb-3" />
+        <SectionHead title="By model" info="project.cost.by-model" className="mb-3" />
         <div className="overflow-x-auto">
           <DataTable
             caption="Run cost by model"

@@ -59,6 +59,7 @@ export function NarrationSection(
               key={kind}
               field={kind}
               label={kind === "intro" ? "Intro" : "Outro"}
+              tip={kind === "intro" ? "play.intro" : "play.outro"}
               value={form[kind]}
               placeholder="Off"
               options={entries
@@ -137,7 +138,8 @@ export function VideoSection(
           <NumberField
             field="silenceGapSeconds"
             label="Silence between segments (seconds)"
-            help={`The pause between narrated parts in this video. Leave it empty to use the ${String(props.silenceGapSeconds)} s set in Settings.`}
+            tip="play.silence-gap"
+            placeholder={String(props.silenceGapSeconds)}
             step={0.1}
             problem={props.problem("silenceGapSeconds")}
             value={document.form.silenceGapSeconds ?? ""}

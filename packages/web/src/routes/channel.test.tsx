@@ -203,9 +203,11 @@ describe("Channels", () => {
     );
     const picker = await screen.findByRole("combobox", { name: "YouTube AI disclosure" });
     expect((picker as HTMLSelectElement).value).toBe("auto");
+    await user.click(screen.getByRole("button", { name: "About YouTube AI disclosure" }));
     expect(
-      screen.getByText(/Automatic says Yes only for one of YouTube.s three cases/),
+      await screen.findByText(/Automatic says Yes only for YouTube.s three cases/),
     ).not.toBeNull();
+    await user.keyboard("{Escape}");
     await user.selectOptions(picker, "no");
     await waitFor(() => expect(seen).toEqual([{ aiDisclosure: "no" }]));
     await waitFor(() => expect((picker as HTMLSelectElement).value).toBe("no"));
@@ -279,7 +281,7 @@ describe("Channels", () => {
         .getAllByRole("option")
         .map((option) => option.textContent);
     await waitFor(() => expect(names()).toEqual(["Pick a voice", "Echo"]));
-    await user.click(screen.getByLabelText(/Show all voices/));
+    await user.click(screen.getByRole("checkbox", { name: /Show all voices/ }));
     expect(names()).toEqual(["Pick a voice", "Alloy", "Echo"]);
   });
 });

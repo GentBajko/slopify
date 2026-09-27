@@ -2,6 +2,7 @@ import type { Stage } from "@app/slices/admission/model.js";
 import { type ReactElement, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { sentence } from "@/http";
 import {
   type CheckpointChange,
@@ -122,12 +123,10 @@ export function CheckpointChoices({
   }
   return (
     <div className="space-y-2">
-      <fieldset ref={group} tabIndex={-1} className="space-y-2">
-        <legend>Checkpoint choices</legend>
-        <p>
-          Change checkpoints before a step starts. Removing one lets its already-admitted work
-          continue when ready; project pause still applies.
-        </p>
+      <fieldset ref={group} tabIndex={-1} className="space-y-2" {...helpScope}>
+        <legend className="float-left mr-1">Checkpoint choices</legend>
+        <InfoTip id="project.checkpoints.choices" className="-my-1" />
+        <div className="clear-both" />
         {choices.map(({ stage, name }) => {
           const current = stages.find((one) => one.kind === stage);
           const enabled =

@@ -13,6 +13,7 @@ import { ConfirmDialog } from "@/components/kit/dialog";
 import { Drawer } from "@/components/kit/drawer";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Field, Input, Select } from "@/components/kit/field";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { useToast } from "@/components/kit/toast";
 import { ListSkeleton } from "@/library/list-states";
@@ -211,30 +212,40 @@ export function TemplatesRoute({
       <LibraryToolbar
         action={
           <>
-            <Button variant="secondary" onClick={() => setAdding(true)} aria-expanded={adding}>
-              Add pack
-            </Button>
-            <Button variant="primary" onClick={() => setSaving(true)} aria-expanded={saving}>
-              Save a setup
-            </Button>
+            <span className="flex items-center gap-1">
+              <Button variant="secondary" onClick={() => setAdding(true)} aria-expanded={adding}>
+                Add pack
+              </Button>
+              <InfoTip id="welcome.packs" label="Add pack" />
+            </span>
+            <span className="flex items-center gap-1">
+              <Button variant="primary" onClick={() => setSaving(true)} aria-expanded={saving}>
+                Save a setup
+              </Button>
+              <InfoTip id="templates.save" label="Save a setup" />
+            </span>
           </>
         }
       >
-        <Select
-          aria-label="Show templates of"
-          value={channelFilter}
-          className="w-full sm:w-56"
-          onChange={(event) => setChannelFilter(event.target.value)}
-        >
-          <option value="">All channels</option>
-          {(channels.data ?? []).map((channel) => (
-            <option key={channel.id} value={channel.id}>
-              {channel.name}
-            </option>
-          ))}
-        </Select>
-        <p className="m-0 text-small text-ink-2">
+        <span className="flex w-full items-center gap-1 sm:w-auto" {...helpScope}>
+          <Select
+            aria-label="Show templates of"
+            value={channelFilter}
+            className="w-full sm:w-56"
+            onChange={(event) => setChannelFilter(event.target.value)}
+          >
+            <option value="">All channels</option>
+            {(channels.data ?? []).map((channel) => (
+              <option key={channel.id} value={channel.id}>
+                {channel.name}
+              </option>
+            ))}
+          </Select>
+          <InfoTip id="templates.show-channel" />
+        </span>
+        <p className="m-0 flex items-center gap-1 text-small text-ink-2">
           Reuse a Play setup and its checkpoint choices. Apply creates a fresh draft to review.
+          <InfoTip id="templates.apply" label="Apply to Play" />
         </p>
       </LibraryToolbar>
       <div className="mb-2 flex min-h-8 flex-wrap items-center gap-3">
@@ -355,8 +366,7 @@ export function TemplatesRoute({
           to prepare one.
         </p>
         <p className="mb-4 text-small text-ink2">
-          A template keeps the settings, not one video&apos;s topic: keywords the project title
-          names, like {"{{Topic}}"}, are saved empty, and other keywords keep their values.
+          A template keeps the settings, not one video&apos;s topic.
         </p>
         <form
           id="save-template-form"
@@ -369,6 +379,7 @@ export function TemplatesRoute({
         >
           <Field
             label="Saved Play draft"
+            tip="templates.save.draft"
             help={
               drafts.isPending
                 ? "Loading saved drafts…"
@@ -406,7 +417,7 @@ export function TemplatesRoute({
               {drafts.error.message}
             </Callout>
           ) : null}
-          <Field label="Template name" id="template-name">
+          <Field label="Template name" id="template-name" tip="templates.save.name">
             <Input
               value={name}
               required
@@ -415,7 +426,7 @@ export function TemplatesRoute({
               onChange={(event) => setName(event.target.value)}
             />
           </Field>
-          <Field label="Channel" id="template-channel">
+          <Field label="Channel" id="template-channel" tip="templates.save.channel">
             <Select
               value={saveChannel}
               disabled={pending}

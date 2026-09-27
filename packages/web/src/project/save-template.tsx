@@ -89,7 +89,7 @@ export function SaveProjectTemplate({
           void save();
         }}
       >
-        <Field label="Template name">
+        <Field label="Template name" tip="play.template-name">
           <Input
             autoFocus
             required

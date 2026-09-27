@@ -2,6 +2,7 @@ import type { Format } from "@app/kernel/pipeline.js";
 import type { SubtitleConfig } from "@app/slices/subtitles/model.js";
 import { subtitlePositions } from "@app/slices/subtitles/model.js";
 import { type ReactElement, useId, useState } from "react";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,10 +61,11 @@ export function SubtitleControls({
         className="flex min-w-0 flex-col gap-3 disabled:opacity-60"
       >
         <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-0 flex-1">
-            <Label htmlFor={id} className="mb-1">
-              Subtitles
-            </Label>
+          <div className="min-w-0 flex-1" {...helpScope}>
+            <div className="mb-1 flex items-center gap-1">
+              <Label htmlFor={id}>Subtitles</Label>
+              <InfoTip id="project.subtitles.mode" className="-my-1" />
+            </div>
             <select
               id={id}
               data-play-field="subtitles.mode"
@@ -107,10 +109,11 @@ export function SubtitleControls({
                     onUploading?.(pending);
                   }}
                 />
-                <div className={illustratedPositions ? "w-full" : "max-w-[180px]"}>
-                  <Label htmlFor={sizeId} className="mb-1">
-                    Subtitle font size
-                  </Label>
+                <div className={illustratedPositions ? "w-full" : "max-w-[180px]"} {...helpScope}>
+                  <div className="mb-1 flex items-center gap-1">
+                    <Label htmlFor={sizeId}>Subtitle font size</Label>
+                    <InfoTip id="project.subtitles.size" className="-my-1" />
+                  </div>
                   <div className="flex items-center gap-5">
                     {illustratedPositions ? (
                       <input
@@ -154,14 +157,16 @@ export function SubtitleControls({
                     </p>
                   ) : null}
                 </div>
-                <div>
-                  <Label
-                    htmlFor={illustratedPositions ? undefined : positionId}
-                    id={`${positionId}-label`}
-                    className="mb-1"
-                  >
-                    Subtitle position
-                  </Label>
+                <div {...helpScope}>
+                  <div className="mb-1 flex items-center gap-1">
+                    <Label
+                      htmlFor={illustratedPositions ? undefined : positionId}
+                      id={`${positionId}-label`}
+                    >
+                      Subtitle position
+                    </Label>
+                    <InfoTip id="project.subtitles.position" className="-my-1" />
+                  </div>
                   {illustratedPositions ? (
                     <ToggleGroup
                       type="single"

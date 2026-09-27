@@ -45,7 +45,8 @@ export function AiDisclosureSettingField({ channel }: { readonly channel: Channe
     >
       <Field
         label="YouTube AI disclosure"
-        help="Studio's “AI use” answer for this channel's videos and Shorts. Automatic says Yes only for one of YouTube's three cases: a voice marked as imitating a real person (Settings → Voices), real footage altered, or AI pictures from an Image prompt marked photorealistic (Library → Prompts)."
+        tip="planning.channel.ai-disclosure"
+        help="Mark voices in Settings → Voices and Image prompts in Library → Prompts."
       >
         <Select
           value={save.isPending ? save.variables : channel.aiDisclosure}

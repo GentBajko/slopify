@@ -16,7 +16,7 @@ import type { ProviderStatus } from "@app/slices/settings/model.js";
 import { useQuery } from "@tanstack/react-query";
 import { type ReactElement, useId } from "react";
 import { useApp } from "@/app-context";
-import { InfoTip } from "@/components/kit/info-tip";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Input } from "@/components/ui/input";
 import { Picker } from "@/components/ui/picker";
 import { ModelPicker, ProviderPicker } from "@/play/pickers";
@@ -64,9 +64,6 @@ export const emptyReviews: ReviewSettingsForm = {
   stages: {},
 };
 
-const help =
-  "A reviewer model checks each finished item before the run moves on and saves its verdict with the reasons beside the item on the project page. Flag only marks a failed item; Flag and redo makes it again, up to the redos per item, then keeps and flags it. Each review is a text-model call, counted in usage.";
-
 // Automatic reviews, on Play's Review step and in Edit project → Reviews. Every control stays
 // mounted: a stage that makes nothing has its row disabled, and so is a prompt while its
 // review is Off.
@@ -102,17 +99,17 @@ export function ReviewSettings({
       tabIndex={-1}
       disabled={disabled}
       className="min-w-0 rounded-panel border border-line px-3 pt-1 pb-3"
+      {...helpScope}
     >
       <legend className="flex items-center gap-1 px-1 font-semibold">
         Automatic reviews
-        <InfoTip label="automatic reviews">
-          <p>{help}</p>
-        </InfoTip>
+        <InfoTip id="play.reviews" />
       </legend>
       <div className="grid grid-cols-1 gap-4 min-[700px]:grid-cols-3">
         <ProviderPicker
           field="reviews.provider"
           label="Reviewer"
+          tip="play.reviews.provider"
           family="llm"
           providers={providers}
           value={value.provider}
@@ -122,13 +119,17 @@ export function ReviewSettings({
         <ModelPicker
           field="reviews.model"
           label="Reviewer model"
+          tip="play.reviews.model"
           provider={value.provider}
           value={value.model}
           problem={problem("reviews.model")}
           onPick={(model) => onChange({ ...value, model })}
         />
-        <label htmlFor={`${id}-retries`} className="block space-y-1 text-small">
-          <span>Redos per item</span>
+        <div className="block space-y-1 text-small" {...helpScope}>
+          <span className="flex items-center gap-1">
+            <label htmlFor={`${id}-retries`}>Redos per item</label>
+            <InfoTip id="play.reviews.retries" className="-my-1" />
+          </span>
           <Input
             id={`${id}-retries`}
             data-play-field="reviews.retries"
@@ -141,7 +142,7 @@ export function ReviewSettings({
           {problem("reviews.retries") ? (
             <span className="block text-red">{problem("reviews.retries")}</span>
           ) : null}
-        </label>
+        </div>
       </div>
       {blind ? (
         <p className="mt-2 text-small text-red">

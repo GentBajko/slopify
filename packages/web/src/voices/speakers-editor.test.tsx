@@ -302,6 +302,6 @@ it("lists each speaker only the voices that speak the project language, with Sho
       .getAllByRole("option")
       .map((option) => option.textContent);
   expect(names()).toEqual(["Pick a voice", "Echo", "Fable"]);
-  await user.click(within(row).getByLabelText(/Show all voices/));
+  await user.click(within(row).getByRole("checkbox", { name: /Show all voices/ }));
   expect(names()).toEqual(["Pick a voice", "Alloy", "Echo", "Fable"]);
 });

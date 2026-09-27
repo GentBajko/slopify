@@ -93,10 +93,7 @@ export function BackupSettings() {
 
   return (
     <div>
-      <SectionHead
-        title="Daily backup"
-        info="Once a day Slopify writes the same file Export everything downloads (every project with its files, your library, templates, schedules, settings and usage; never provider keys) into the backup folder, and deletes its own oldest backups beyond the number you keep. Nothing else in the folder is touched. A backup waits while projects are being made, because their files are still being written. If Slopify was off at the backup time, it backs up a couple of minutes after it starts again."
-      >
+      <SectionHead title="Daily backup" info="settings.backups">
         <Button
           variant="primary"
           disabled={view === undefined || view.running || run.isPending}
@@ -139,13 +136,18 @@ export function BackupSettings() {
         <div className="flex flex-col gap-6">
           <Switch
             label="Back up automatically"
+            tip="settings.backups.auto"
             checked={current?.enabled === true}
             disabled={current === undefined}
             className="self-start"
             onChange={(next) => edit({ enabled: next })}
           />
           <div className="grid items-start gap-6 md:grid-cols-2">
-            <Field label="Time of day" help={`${browserTimeZone()} time`}>
+            <Field
+              label="Time of day"
+              tip="settings.backups.time"
+              help={`${browserTimeZone()} time`}
+            >
               <Input
                 type="time"
                 className="w-[140px] tabular-nums"
@@ -154,7 +156,12 @@ export function BackupSettings() {
                 onChange={(event) => edit({ time: event.target.value })}
               />
             </Field>
-            <Field label="Keep last" help="Backups kept in the folder." error={keepError}>
+            <Field
+              label="Keep last"
+              tip="settings.backups.keep"
+              help="Backups kept in the folder."
+              error={keepError}
+            >
               <Input
                 type="number"
                 inputMode="numeric"
@@ -169,6 +176,7 @@ export function BackupSettings() {
             </Field>
             <Field
               label="Folder"
+              tip="settings.backups.folder"
               className="md:col-span-2"
               {...(view === undefined ? {} : { help: whereLine(view) })}
             >

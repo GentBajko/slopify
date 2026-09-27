@@ -53,8 +53,8 @@ describe("CLI executable settings", () => {
       expect(await screen.findByText("/host/bin/codex")).not.toBeNull();
       expect(screen.getByText("Managed on host")).not.toBeNull();
       expect(screen.queryByRole("button", { name: "Change path" })).toBeNull();
-      await userEvent.click(screen.getByRole("button", { name: "About Codex CLI sign-in" }));
-      expect(await screen.findByText(/Runs on your host/)).not.toBeNull();
+      await userEvent.click(screen.getByRole("button", { name: "About Managed on host" }));
+      expect(await screen.findByText(/run the Docker launcher again/)).not.toBeNull();
       expect(screen.queryByRole("textbox")).toBeNull();
       expect(screen.queryByRole("button", { name: /Save.*path/ })).toBeNull();
       if (kind !== "ready") expect(screen.getByText(`Host ${kind} guidance`)).not.toBeNull();
@@ -90,8 +90,8 @@ describe("CLI executable settings", () => {
       expect(field.getAttribute("placeholder")).toBe(command);
       expect(screen.getByRole("button", { name: `Save ${name} path` })).not.toBeNull();
       expect(screen.getByText(/Leave blank to find/).textContent).toContain("PATH");
-      await userEvent.click(screen.getByRole("button", { name: `About ${name} sign-in` }));
-      expect((await screen.findByText(/Sign in through/)).textContent).toContain(name);
+      await userEvent.click(screen.getByRole("button", { name: `About ${name}` }));
+      expect(await screen.findByText(/sign-in/)).not.toBeNull();
       expect(screen.queryByLabelText(`${name} API key`)).toBeNull();
     },
   );

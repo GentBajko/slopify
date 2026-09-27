@@ -1,6 +1,8 @@
 import { useId } from "react";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import type { HelpId } from "@/help/catalog";
 
 // A segmented switch with its engraved label above it: the prompt editor's Kind, and the
 // entry editor's Category and Mode. Every input in this app carries a label above it.
@@ -13,21 +15,24 @@ export function LabelledSwitch<T extends string>({
   value,
   options,
   describedBy,
+  tip,
   onPick,
 }: {
   readonly label: string;
   readonly value: T;
   readonly options: readonly { readonly value: T; readonly label: string }[];
   readonly describedBy?: string;
+  readonly tip?: HelpId;
   readonly onPick: (next: T) => void;
 }) {
   const labelId = useId();
 
   return (
-    <div>
-      <Label id={labelId} className="mb-[5px]">
-        {label}
-      </Label>
+    <div {...helpScope}>
+      <div className="mb-[5px] flex items-center gap-1">
+        <Label id={labelId}>{label}</Label>
+        {tip === undefined ? null : <InfoTip id={tip} label={label} className="-my-1" />}
+      </div>
       <ToggleGroup
         type="single"
         value={value}

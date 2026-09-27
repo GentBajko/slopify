@@ -17,6 +17,7 @@ import { useCommand } from "@/components/kit/command-palette";
 import { ConfirmDialog, Dialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Field, Input } from "@/components/kit/field";
+import { InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { List, ListRow } from "@/components/kit/list-row";
 
@@ -77,7 +78,12 @@ export function ChannelsRoute(): ReactElement {
     <div>
       <PageHeader
         title="Channels"
-        meta="A channel keeps its brand kit, cast, series brief, templates and schedules together."
+        meta={
+          <span className="inline-flex items-center gap-1">
+            A channel keeps its brand kit, cast, series brief, templates and schedules together.
+            <InfoTip id="planning.channels" />
+          </span>
+        }
         actions={
           <Button variant="primary" aria-expanded={naming === "new"} onClick={startNew}>
             <PlusIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />
@@ -193,7 +199,7 @@ export function ChannelsRoute(): ReactElement {
             submit();
           }}
         >
-          <Field label="Channel name">
+          <Field label="Channel name" tip="planning.channel.name">
             <Input
               value={name}
               maxLength={200}

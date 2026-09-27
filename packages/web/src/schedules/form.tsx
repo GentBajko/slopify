@@ -17,7 +17,7 @@ import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { Field, Input, Select, Textarea } from "@/components/kit/field";
-import { InfoTip } from "@/components/kit/info-tip";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { ModelPicker, ProviderPicker } from "@/play/pickers";
 import { providersQuery } from "@/queries";
 import { readProjectTemplate } from "@/templates/api";
@@ -251,7 +251,7 @@ export function ScheduleForm({
           disabled={saving || uncertain || pending}
           className="m-0 grid min-w-0 gap-4 border-0 p-0 min-[700px]:grid-cols-2"
         >
-          <Field label="Name" id="schedule-name">
+          <Field label="Name" id="schedule-name" tip="planning.schedule.name">
             <Input
               required
               value={name}
@@ -259,7 +259,7 @@ export function ScheduleForm({
               placeholder="Monday morning stories"
             />
           </Field>
-          <Field label="Template" id="schedule-template">
+          <Field label="Template" id="schedule-template" tip="planning.schedule.template">
             <Select
               required
               value={templateId}
@@ -274,7 +274,7 @@ export function ScheduleForm({
               ))}
             </Select>
           </Field>
-          <Field label="Cadence" id="schedule-cadence">
+          <Field label="Cadence" id="schedule-cadence" tip="planning.schedule.cadence">
             <Select
               value={kind}
               onChange={(event) =>
@@ -293,7 +293,7 @@ export function ScheduleForm({
             </Select>
           </Field>
           {kind === "once" ? (
-            <Field label="Run at" id="schedule-once">
+            <Field label="Run at" id="schedule-once" tip="planning.schedule.once-at">
               <Input
                 required
                 type="datetime-local"
@@ -302,7 +302,7 @@ export function ScheduleForm({
               />
             </Field>
           ) : (
-            <Field label="Local time" id="schedule-time">
+            <Field label="Local time" id="schedule-time" tip="planning.schedule.time">
               <Input
                 required
                 type="time"
@@ -312,8 +312,11 @@ export function ScheduleForm({
             </Field>
           )}
           {kind === "weekly" ? (
-            <fieldset className="m-0 min-w-0 border-0 p-0">
-              <legend className="sl-field__label mb-2">Weekdays</legend>
+            <fieldset className="m-0 min-w-0 border-0 p-0" {...helpScope}>
+              <legend className="sl-field__label mb-2 flex items-center gap-1">
+                Weekdays
+                <InfoTip id="planning.schedule.weekdays" className="-my-1" />
+              </legend>
               <div className="flex flex-wrap gap-3">
                 {dayOptions.map(([value, label]) => (
                   <label key={value} className="inline-flex items-center gap-1 text-small">
@@ -336,27 +339,18 @@ export function ScheduleForm({
           ) : (
             <div />
           )}
-          <div className="sl-field">
-            <span className="flex items-center gap-1">
-              <label className="sl-field__label" htmlFor="schedule-timezone">
-                Timezone
-              </label>
-              <InfoTip label="Timezone">
-                <p>
-                  {kind === "once"
-                    ? "IANA zone; the one-off instant is calculated here. Repeated clock times use the earlier occurrence; nonexistent spring-forward times are refused."
-                    : "IANA zone; next run is calculated here. Repeated clock times use the earlier occurrence; nonexistent spring-forward times move forward by the gap."}
-                </p>
-              </InfoTip>
-            </span>
+          <Field
+            label="Timezone"
+            id="schedule-timezone"
+            tip={kind === "once" ? "planning.schedule.timezone-once" : "planning.schedule.timezone"}
+          >
             <Input
-              id="schedule-timezone"
               value={timezone}
               onChange={(event) => setTimezone(event.target.value)}
               placeholder="Europe/Tirane"
             />
-          </div>
-          <Field label="Missed run" id="schedule-missed">
+          </Field>
+          <Field label="Missed run" id="schedule-missed" tip="planning.schedule.missed">
             <Select
               value={missedPolicy}
               onChange={(event) =>
@@ -367,7 +361,12 @@ export function ScheduleForm({
               <option value="run-once">Run once when Slopify reopens</option>
             </Select>
           </Field>
-          <Field label="Spend ceiling (cents, optional)" id="schedule-spend">
+          <Field
+            label="Spend ceiling (cents, optional)"
+            id="schedule-spend"
+            tip="planning.schedule.spend"
+            tipLabel="Spend ceiling"
+          >
             <Input
               inputMode="numeric"
               value={spendLimit}
@@ -436,16 +435,14 @@ function GenerationFields({
     <fieldset className="m-0 flex min-w-0 flex-col gap-3 border-0 border-t border-line p-0 pt-5 min-[700px]:col-span-2">
       <legend className="float-left mb-1 flex w-full items-center gap-1 text-title-3 font-semibold">
         Topic generation
-        <InfoTip label="Topic generation">
-          <p>
-            When the queue holds fewer topics than you ask for, Slopify asks an LLM for more. It
-            sends the series brief and every title this schedule and your projects already have, and
-            drops any suggestion close to one of them. Queue directly adds them to the end of the
-            list; Hold for approval waits for you under Topics waiting.
-          </p>
-        </InfoTip>
+        <InfoTip id="planning.schedule.generation" />
       </legend>
-      <Field label="Series brief (optional)" id="schedule-brief">
+      <Field
+        label="Series brief (optional)"
+        id="schedule-brief"
+        tip="planning.schedule.brief"
+        tipLabel="Series brief"
+      >
         <Textarea
           rows={3}
           maxLength={briefMax}
@@ -455,7 +452,7 @@ function GenerationFields({
         />
       </Field>
       <div className="grid gap-4 min-[700px]:grid-cols-2">
-        <Field label="New topics" id="schedule-generation">
+        <Field label="New topics" id="schedule-generation" tip="planning.schedule.new-topics">
           <Select
             value={generation.mode}
             onChange={(event) => {
@@ -466,13 +463,17 @@ function GenerationFields({
               });
             }}
           >
-            <option value="off">Off: I add topics myself</option>
+            <option value="off">Off: add topics yourself</option>
             <option value="queue">Generate and queue directly</option>
             <option value="hold">Generate and hold for approval</option>
           </Select>
         </Field>
         {generation.mode === "off" ? null : (
-          <Field label="Keep at least this many queued" id="schedule-keep">
+          <Field
+            label="Keep at least this many queued"
+            id="schedule-keep"
+            tip="planning.schedule.keep-count"
+          >
             <Input
               type="number"
               min={1}
@@ -490,28 +491,31 @@ function GenerationFields({
         )}
       </div>
       {generation.mode === "off" ? null : (
-        <div className="flex flex-col gap-3">
-          <label className="inline-flex items-center gap-2 text-small">
-            <input
-              type="checkbox"
-              checked={own === null}
-              onChange={(event) =>
-                onGeneration({
-                  ...generation,
-                  llm: event.target.checked
-                    ? null
-                    : {
-                        provider: templateLlm?.provider ?? "",
-                        model: templateLlm?.model ?? "",
-                      },
-                })
-              }
-            />
-            Use the template's LLM
-            {own === null && templateLlm !== undefined && templateLlm.provider !== ""
-              ? ` (${templateLlm.provider} · ${templateLlm.model})`
-              : ""}
-          </label>
+        <div className="flex flex-col gap-3" {...helpScope}>
+          <div className="flex items-center gap-1">
+            <label className="inline-flex items-center gap-2 text-small">
+              <input
+                type="checkbox"
+                checked={own === null}
+                onChange={(event) =>
+                  onGeneration({
+                    ...generation,
+                    llm: event.target.checked
+                      ? null
+                      : {
+                          provider: templateLlm?.provider ?? "",
+                          model: templateLlm?.model ?? "",
+                        },
+                  })
+                }
+              />
+              Use the template's LLM
+              {own === null && templateLlm !== undefined && templateLlm.provider !== ""
+                ? ` (${templateLlm.provider} · ${templateLlm.model})`
+                : ""}
+            </label>
+            <InfoTip id="planning.schedule.generation-llm" className="-my-1" />
+          </div>
           {own === null ? null : (
             <div className="grid gap-4 min-[700px]:grid-cols-2">
               <ProviderPicker

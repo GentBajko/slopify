@@ -14,6 +14,7 @@ import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button, buttonClass } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
 import { Drawer } from "@/components/kit/drawer";
+import { InfoTip } from "@/components/kit/info-tip";
 import { List, ListRow } from "@/components/kit/list-row";
 import { MediaFrame, MediaGrid } from "@/components/kit/media";
 import { SectionHead } from "@/components/kit/section-head";
@@ -136,6 +137,7 @@ export function PrepareUploadDrawer({
           >
             Fill in YouTube Studio
           </Button>
+          <InfoTip id="project.upload.fill-studio" />
         </>
       }
     >
@@ -151,6 +153,7 @@ export function PrepareUploadDrawer({
               label="What to upload"
               value={item === undefined ? "" : itemKey(item)}
               onChange={setChosen}
+              tip="project.upload.item"
               options={items.map((one) => ({
                 value: itemKey(one),
                 label: one.kind === "video" ? "Video" : `Short ${String(one.short)}`,
@@ -178,6 +181,7 @@ export function PrepareUploadDrawer({
                     checked={footage.isPending ? footage.variables : pack.data.footage.real}
                     disabled={footage.isPending}
                     onChange={(next) => footage.mutate(next)}
+                    tip="project.upload.real-footage"
                     label={`The ${pack.data.footage.clips === 1 ? "uploaded clip is" : `${String(pack.data.footage.clips)} uploaded clips are`} real footage (filmed, not made by AI)`}
                   />
                 ) : undefined
@@ -338,7 +342,10 @@ function Steps({
   return (
     <div className="flex flex-col gap-5">
       <section aria-label="In the order Studio asks">
-        <div className="sl-kicker mb-2">In the order Studio asks</div>
+        <div className="mb-2 flex items-center gap-1">
+          <div className="sl-kicker">In the order Studio asks</div>
+          <InfoTip id="project.upload.steps" className="-my-1" />
+        </div>
         <List label="Upload steps" className="[&_.sl-row__actions]:flex-wrap">
           {steps.map((step) => {
             const { value, actions } = contentOf(step);

@@ -11,6 +11,7 @@ import { EditorSkeleton } from "@/components/editor-states";
 import { Button } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Field, Input } from "@/components/kit/field";
+import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { PageHeader } from "@/components/kit/layout";
 import { LabelledSwitch } from "@/components/labelled-switch";
 import { useLeaveWhenSaved } from "@/components/saved-tick";
@@ -149,6 +150,7 @@ export function EntryEditorRoute({
             <div className="min-w-[200px] flex-1">
               <Field
                 label="Name"
+                tip="library.entry.name"
                 {...(named.length === 0
                   ? {}
                   : { error: named.map((problem) => problem.message).join(" ") })}
@@ -167,6 +169,7 @@ export function EntryEditorRoute({
               label="Category"
               value={draft.category}
               options={categoryOptions}
+              tip="library.entry.category"
               onPick={(next) => {
                 edit({ ...draft, category: next }, "name");
               }}
@@ -176,6 +179,7 @@ export function EntryEditorRoute({
               value={draft.mode}
               options={modeOptions}
               describedBy={modeHintId}
+              tip="library.entry.mode"
               onPick={(next) => {
                 edit({ ...draft, mode: next }, "mode");
               }}
@@ -188,10 +192,13 @@ export function EntryEditorRoute({
             {modeHint(draft.mode)}
           </p>
 
-          <div>
-            <label htmlFor={bodyId} className="sl-field__label mb-[5px] block">
-              Body
-            </label>
+          <div {...helpScope}>
+            <div className="mb-[5px] flex items-center gap-1">
+              <label htmlFor={bodyId} className="sl-field__label">
+                Body
+              </label>
+              <InfoTip id="library.entry.body" label="Body" className="-my-1" />
+            </div>
             <SlotBody
               id={bodyId}
               value={draft.body}

@@ -1,5 +1,7 @@
 import { type KeyboardEvent, type ReactElement, type ReactNode, useRef } from "react";
+import type { HelpId } from "@/help/catalog";
 import { cn } from "@/lib/utils";
+import { helpScope, InfoTip } from "./info-tip.js";
 
 // An on/off setting that applies at once. The label is part of the button, so the whole row
 // toggles and the name is read with the state.
@@ -10,6 +12,8 @@ export function Switch({
   disabled,
   className,
   describedBy,
+  tip,
+  tipLabel,
 }: {
   readonly checked: boolean;
   readonly onChange: (next: boolean) => void;
@@ -17,8 +21,11 @@ export function Switch({
   readonly disabled?: boolean;
   readonly className?: string;
   readonly describedBy?: string;
+  // The info button after the switch; `tipLabel` names it when `label` is not plain text.
+  readonly tip?: HelpId;
+  readonly tipLabel?: string;
 }): ReactElement {
-  return (
+  const button = (
     <button
       type="button"
       role="switch"
@@ -31,6 +38,13 @@ export function Switch({
       <span className="sl-switch__track" aria-hidden="true" />
       <span>{label}</span>
     </button>
+  );
+  if (tip === undefined) return button;
+  return (
+    <span className="inline-flex max-w-full items-center gap-1" {...helpScope}>
+      {button}
+      <InfoTip id={tip} label={tipLabel ?? (typeof label === "string" ? label : undefined)} />
+    </span>
   );
 }
 
@@ -47,6 +61,7 @@ export function Segmented<T extends string>({
   onChange,
   label,
   className,
+  tip,
 }: {
   readonly value: T;
   readonly options: readonly SegmentedOption<T>[];
@@ -54,6 +69,8 @@ export function Segmented<T extends string>({
   // The group's accessible name.
   readonly label: string;
   readonly className?: string;
+  // The info button after the group.
+  readonly tip?: HelpId;
 }): ReactElement {
   const group = useRef<HTMLDivElement>(null);
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -67,7 +84,7 @@ export function Segmented<T extends string>({
     onChange(next.value);
     group.current?.querySelector<HTMLElement>(`[data-value="${CSS.escape(next.value)}"]`)?.focus();
   };
-  return (
+  const segmented = (
     // biome-ignore lint/a11y/useSemanticElements: an inline row of toggle buttons; a fieldset's legend and box would fight the segmented look.
     <div
       ref={group}
@@ -91,5 +108,12 @@ export function Segmented<T extends string>({
         </button>
       ))}
     </div>
+  );
+  if (tip === undefined) return segmented;
+  return (
+    <span className="inline-flex max-w-full items-center gap-1" {...helpScope}>
+      {segmented}
+      <InfoTip id={tip} label={label} />
+    </span>
   );
 }
