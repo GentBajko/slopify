@@ -43,9 +43,11 @@ describe("migrate", () => {
       "batches",
       "cast_images",
       "cast_members",
+      "channel_videos",
       "channels",
       "document_themes",
       "entries",
+      "episode_memories",
       "image_blobs",
       "library_versions",
       "machine",
@@ -68,6 +70,7 @@ describe("migrate", () => {
       "project_template_instantiations",
       "project_template_revisions",
       "project_templates",
+      "project_trash",
       "projects",
       "prompt_softening",
       "prompts",
@@ -100,9 +103,12 @@ describe("migrate", () => {
     expect(names(db, "index")).toEqual([
       "cast_images_member",
       "cast_members_channel",
+      "channel_videos_title",
       "channels_one_default",
       "document_themes_name",
       "entries_name",
+      "episode_memories_channel",
+      "episode_memories_project",
       "outputs_project",
       "plan_limit_readings_project",
       "play_draft_attachment_file",
@@ -168,6 +174,7 @@ describe("migrate", () => {
       { version: 32, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 34, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 35, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 39, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -177,7 +184,7 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 29 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 30 });
   });
 
   it("refuses a database newer than the app knows", () => {
@@ -186,7 +193,7 @@ describe("migrate", () => {
     db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(42, clock.now().toISOString());
 
     expect(() => migrate(db, clock)).toThrow(
-      "database schema 42 is newer than this app knows (35)",
+      "database schema 42 is newer than this app knows (39)",
     );
   });
 
@@ -222,7 +229,7 @@ describe("migrate", () => {
         );
       }
       for (const kind of ["article", "image", "thumbnail"])
-        db.prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)").run(
+        db.prepare("INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES (?,?,?,?,?,?)").run(
           kind,
           kind,
           "Saved",
@@ -230,10 +237,10 @@ describe("migrate", () => {
           '["Delivery Style"]',
           "original-date",
         );
-      const before = db.prepare("SELECT * FROM prompts ORDER BY id").all();
+      const before = db.prepare("SELECT id,kind,name,body,slots,updated_at FROM prompts ORDER BY id").all();
       migrate(db, clock);
-      expect(db.prepare("SELECT * FROM prompts ORDER BY id").all()).toEqual(before);
-      db.prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)").run(
+      expect(db.prepare("SELECT id,kind,name,body,slots,updated_at FROM prompts ORDER BY id").all()).toEqual(before);
+      db.prepare("INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES (?,?,?,?,?,?)").run(
         "n",
         "narration",
         "Saved",
@@ -243,7 +250,7 @@ describe("migrate", () => {
       );
       expect(() =>
         db
-          .prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)")
+          .prepare("INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES (?,?,?,?,?,?)")
           .run("n2", "narration", "SAVED", "Other", "[]", "today"),
       ).toThrow();
       migrate(db, clock);
@@ -344,7 +351,7 @@ describe("migrate", () => {
         );
       }
       for (const kind of ["article", "image", "thumbnail", "narration"])
-        db.prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)").run(
+        db.prepare("INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES (?,?,?,?,?,?)").run(
           kind,
           kind,
           "Saved",
@@ -354,13 +361,13 @@ describe("migrate", () => {
         );
       expect(() =>
         db
-          .prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)")
+          .prepare("INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES (?,?,?,?,?,?)")
           .run("d0", "description", "D", "B", "[]", "x"),
       ).toThrow();
-      const before = db.prepare("SELECT * FROM prompts ORDER BY id").all();
+      const before = db.prepare("SELECT id,kind,name,body,slots,updated_at FROM prompts ORDER BY id").all();
       migrate(db, clock);
-      expect(db.prepare("SELECT * FROM prompts ORDER BY id").all()).toEqual(before);
-      db.prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)").run(
+      expect(db.prepare("SELECT id,kind,name,body,slots,updated_at FROM prompts ORDER BY id").all()).toEqual(before);
+      db.prepare("INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES (?,?,?,?,?,?)").run(
         "d1",
         "description",
         "Saved",
@@ -370,7 +377,7 @@ describe("migrate", () => {
       );
       expect(() =>
         db
-          .prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)")
+          .prepare("INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES (?,?,?,?,?,?)")
           .run("d2", "description", "SAVED", "Other", "[]", "today"),
       ).toThrow();
     } finally {
@@ -392,7 +399,7 @@ describe("migrate", () => {
         );
       }
       for (const kind of ["article", "image", "thumbnail", "narration", "description"])
-        db.prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)").run(
+        db.prepare("INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES (?,?,?,?,?,?)").run(
           kind,
           kind,
           "Saved",
@@ -402,13 +409,13 @@ describe("migrate", () => {
         );
       expect(() =>
         db
-          .prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)")
+          .prepare("INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES (?,?,?,?,?,?)")
           .run("s0", "shorts", "S", "B", "[]", "x"),
       ).toThrow();
-      const before = db.prepare("SELECT * FROM prompts ORDER BY id").all();
+      const before = db.prepare("SELECT id,kind,name,body,slots,updated_at FROM prompts ORDER BY id").all();
       migrate(db, clock);
-      expect(db.prepare("SELECT * FROM prompts ORDER BY id").all()).toEqual(before);
-      db.prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)").run(
+      expect(db.prepare("SELECT id,kind,name,body,slots,updated_at FROM prompts ORDER BY id").all()).toEqual(before);
+      db.prepare("INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES (?,?,?,?,?,?)").run(
         "s1",
         "shorts",
         "Saved",
@@ -418,7 +425,7 @@ describe("migrate", () => {
       );
       expect(() =>
         db
-          .prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)")
+          .prepare("INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES (?,?,?,?,?,?)")
           .run("s2", "shorts", "SAVED", "Other", "[]", "today"),
       ).toThrow();
     } finally {
@@ -440,7 +447,7 @@ describe("migrate", () => {
         );
       }
       for (const kind of ["article", "image", "thumbnail", "narration", "description", "shorts"])
-        db.prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)").run(
+        db.prepare("INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES (?,?,?,?,?,?)").run(
           kind,
           kind,
           "Saved",
@@ -450,13 +457,13 @@ describe("migrate", () => {
         );
       expect(() =>
         db
-          .prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)")
+          .prepare("INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES (?,?,?,?,?,?)")
           .run("r0", "review", "R", "B", "[]", "x"),
       ).toThrow();
-      const before = db.prepare("SELECT * FROM prompts ORDER BY id").all();
+      const before = db.prepare("SELECT id,kind,name,body,slots,updated_at FROM prompts ORDER BY id").all();
       migrate(db, clock);
-      expect(db.prepare("SELECT * FROM prompts ORDER BY id").all()).toEqual(before);
-      db.prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)").run(
+      expect(db.prepare("SELECT id,kind,name,body,slots,updated_at FROM prompts ORDER BY id").all()).toEqual(before);
+      db.prepare("INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES (?,?,?,?,?,?)").run(
         "r1",
         "review",
         "Saved",
@@ -466,7 +473,7 @@ describe("migrate", () => {
       );
       expect(() =>
         db
-          .prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)")
+          .prepare("INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES (?,?,?,?,?,?)")
           .run("r2", "review", "SAVED", "Other", "[]", "today"),
       ).toThrow();
     } finally {

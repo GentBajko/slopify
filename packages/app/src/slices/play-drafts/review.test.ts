@@ -56,7 +56,7 @@ it("renders base and additional variants once with merged accepted values", asyn
   try {
     h.deps.db
       .prepare(
-        "INSERT INTO prompts VALUES (?, 'article', 'Story', 'About {{topic}} in {{place}}', ?, ?)",
+        "INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES (?, 'article', 'Story', 'About {{topic}} in {{place}}', ?, ?)",
       )
       .run("prompt", JSON.stringify(["topic", "place"]), "same");
     const model = h.deps.catalogue.read().llm[0];
@@ -141,11 +141,11 @@ it("requires the thumbnail-only image provider and generated-entry text provider
   const h = reviewFixture();
   try {
     h.deps.db
-      .prepare("INSERT INTO prompts VALUES ('p', 'thumbnail', 'Cover', 'Cover art', '[]', 'same')")
+      .prepare("INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES ('p', 'thumbnail', 'Cover', 'Cover art', '[]', 'same')")
       .run();
     h.deps.db
       .prepare(
-        "INSERT INTO entries VALUES ('e', 'intro', 'llm', 'Opening', 'Say hello', '[]', 'same')",
+        "INSERT INTO entries (id,category,mode,name,body,slots,updated_at) VALUES ('e', 'intro', 'llm', 'Opening', 'Say hello', '[]', 'same')",
       )
       .run();
     const id = randomUUID();

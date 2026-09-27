@@ -15,7 +15,7 @@ it("uses installed CLI discovery for Review and Start without rewriting the save
   const h = startFixture();
   try {
     h.deps.db
-      .prepare("INSERT INTO prompts VALUES (?, 'article', 'Story', 'About {{topic}}', ?, ?)")
+      .prepare("INSERT INTO prompts (id,kind,name,body,slots,updated_at) VALUES (?, 'article', 'Story', 'About {{topic}}', ?, ?)")
       .run("prompt", JSON.stringify(["topic"]), "same");
     const id = randomUUID();
     must(
@@ -170,7 +170,7 @@ it.each(["font", "draft", "catalogue", "entry"] as const)(
       const document = { ...narrated(h), form: { ...narrated(h).form, intro: "Opening" } };
       h.deps.db
         .prepare(
-          "INSERT INTO entries VALUES ('e', 'intro', 'text', 'Opening', 'Hello', '[]', 'same')",
+          "INSERT INTO entries (id,category,mode,name,body,slots,updated_at) VALUES ('e', 'intro', 'text', 'Opening', 'Hello', '[]', 'same')",
         )
         .run();
       const id = randomUUID();
@@ -278,7 +278,7 @@ it("detects changed entry mode and deleted selected templates", async () => {
     };
     h.deps.db
       .prepare(
-        "INSERT INTO entries VALUES ('e', 'intro', 'text', 'Opening', 'Hello', '[]', 'same')",
+        "INSERT INTO entries (id,category,mode,name,body,slots,updated_at) VALUES ('e', 'intro', 'text', 'Opening', 'Hello', '[]', 'same')",
       )
       .run();
     must(createDraft(h.deps, { id, document }));
