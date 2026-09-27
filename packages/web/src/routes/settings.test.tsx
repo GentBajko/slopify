@@ -119,6 +119,7 @@ describe("the settings screen", () => {
       "Models",
       "Playback & appearance",
       "Notifications",
+      "Channel links",
       "Backup & storage",
       "Backups",
       "Usage",

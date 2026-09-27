@@ -1,0 +1,110 @@
+import {
+  type ChannelLink,
+  channelLinksProblem,
+  previousVideoLink,
+} from "@app/slices/youtube/placeholders.js";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { PlusIcon, Trash2Icon } from "lucide-react";
+import { type ReactElement, useState } from "react";
+import { readChannelLinks, saveChannelLinks } from "@/api";
+import { useApp } from "@/app-context";
+import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
+import { SectionHead } from "@/components/kit/section-head";
+import { RailGroup } from "@/components/rail";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { keys } from "@/queries";
+
+// Settings → Channel links: the named links a YouTube description's `{{Name}}` placeholders
+// fill from when it is shown or copied, such as {{Patreon}} or {{Discord}}. A project can set
+// its own Previous video on its page, which wins over the one here.
+export function ChannelLinksSettings(): ReactElement {
+  const { api } = useApp();
+  const queryClient = useQueryClient();
+  const saved = useQuery({ queryKey: keys.channelLinks, queryFn: () => readChannelLinks(api) });
+  const [draft, setDraft] = useState<readonly ChannelLink[] | undefined>();
+  const [status, setStatus] = useState<{ text: string; tone: StatusTone } | undefined>();
+  const rows = draft ?? saved.data ?? [];
+  const save = useMutation({
+    mutationFn: (links: readonly ChannelLink[]) => saveChannelLinks(api, links),
+    onSuccess: (links) => {
+      queryClient.setQueryData(keys.channelLinks, links);
+      setDraft(undefined);
+      setStatus({ text: "Saved the channel links.", tone: "success" });
+    },
+    onError: (error) => setStatus({ text: error.message, tone: "error" }),
+  });
+  const change = (index: number, next: Partial<ChannelLink>) =>
+    setDraft(rows.map((row, at) => (at === index ? { ...row, ...next } : row)));
+
+  return (
+    <div>
+      <SectionHead
+        title="Channel links"
+        info={`Write {{Name}} in a YouTube description, or ask for it in a Description prompt, and it is replaced by the link of that name when the description is shown or copied. For example {{Patreon}}, {{Discord}} or {{${previousVideoLink}}}. A placeholder with no link here stays as typed and is marked on the project page.`}
+      >
+        <Button
+          type="button"
+          variant="primary"
+          disabled={draft === undefined || save.isPending}
+          onClick={() => {
+            const problem = channelLinksProblem(rows);
+            if (problem !== undefined) {
+              setStatus({ text: `The channel links weren't saved: ${problem}`, tone: "error" });
+              return;
+            }
+            save.mutate(rows);
+          }}
+        >
+          Save
+        </Button>
+      </SectionHead>
+      {saved.error === null ? null : <p className="text-body text-red">{saved.error.message}</p>}
+      <RailGroup>
+        {rows.length === 0 ? (
+          <p className="px-4 py-4 text-ink2">
+            No channel links yet. Add one, then write its name in braces in a description.
+          </p>
+        ) : (
+          rows.map((row, index) => (
+            <div
+              // biome-ignore lint/suspicious/noArrayIndexKey: rows are edited in place and never reorder
+              key={index}
+              className="grid grid-cols-[minmax(0,1fr)] items-center gap-2 border-b border-line px-4 py-[10px] last:border-b-0 md:grid-cols-[220px_minmax(0,1fr)_auto]"
+            >
+              <Input
+                aria-label={`Name of link ${String(index + 1)}`}
+                placeholder="Patreon"
+                value={row.name}
+                onChange={(event) => change(index, { name: event.currentTarget.value })}
+              />
+              <Input
+                aria-label={`Address of link ${String(index + 1)}`}
+                type="url"
+                placeholder="https://"
+                value={row.url}
+                onChange={(event) => change(index, { url: event.currentTarget.value })}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                aria-label={`Remove link ${String(index + 1)}`}
+                onClick={() => setDraft(rows.filter((_row, at) => at !== index))}
+              >
+                <Trash2Icon aria-hidden="true" className="size-[14px]" />
+                Remove
+              </Button>
+            </div>
+          ))
+        )}
+      </RailGroup>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <Button type="button" onClick={() => setDraft([...rows, { name: "", url: "" }])}>
+          <PlusIcon aria-hidden="true" className="size-[14px]" />
+          Add link
+        </Button>
+        <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
+      </div>
+    </div>
+  );
+}

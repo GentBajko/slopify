@@ -42,6 +42,9 @@ export const keys = {
   entries: ["entries"] as const,
   documentThemes: ["document-themes"] as const,
   settings: ["settings"] as const,
+  // The project page's hand edits to the YouTube description, and Settings → Channel links.
+  youtubeEdits: (projectId: string) => ["project", projectId, "youtube-edits"] as const,
+  channelLinks: ["channel-links"] as const,
 };
 
 export function projectsQuery(api: Api) {

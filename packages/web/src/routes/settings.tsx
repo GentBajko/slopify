@@ -26,6 +26,7 @@ import { keys, settingsQuery } from "@/queries";
 import { schedulesKey } from "@/schedules/api";
 import { fontsKey } from "@/subtitles/api";
 import { templatesKey } from "@/templates/api";
+import { ChannelLinksSettings } from "@/youtube/channel-links";
 import { BackupSettings } from "./settings-backups";
 import { UsageBoard } from "./usage";
 
@@ -83,6 +84,7 @@ export const settingsSections = [
   { id: "models", label: "Models" },
   { id: "playback", label: "Playback & appearance" },
   { id: "notifications", label: "Notifications" },
+  { id: "channel-links", label: "Channel links" },
   { id: "storage", label: "Backup & storage" },
   { id: "backups", label: "Backups" },
   { id: "usage", label: "Usage" },
@@ -158,6 +160,7 @@ export function SettingsRoute({
           {section === "playback" ? <SectionHead title="Playback & appearance" /> : null}
           {section === "playback" ? <Playback /> : null}
           {section === "notifications" ? <NotificationSettings /> : null}
+          {section === "channel-links" ? <ChannelLinksSettings /> : null}
           {section === "storage" ? <StorageTools /> : null}
           {section === "backups" ? <BackupSettings /> : null}
           {section === "usage" ? (
