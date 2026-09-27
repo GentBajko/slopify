@@ -1,8 +1,10 @@
 import type { CostEstimate } from "@app/slices/estimate/index.js";
-import { cleanup, render, screen } from "@testing-library/react";
+import type { RunCost } from "@app/slices/run-cost/panel.js";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { RunReview } from "@/play/run-review";
-import { limitWaitMessage, planLine, planUse, usage } from "./run-cost";
+import { jsonAnswer, renderApp, testDeps } from "@/test-app";
+import { limitWaitMessage, planLine, planUse, RunCostPanel, usage } from "./run-cost";
 
 afterEach(cleanup);
 
@@ -72,6 +74,75 @@ describe("the Run cost summary", () => {
         seconds: 10,
       }),
     ).toBe("25K in / 1,200 out tokens (12K cached) · 900 characters · 1 image · 10 s of video");
+  });
+});
+
+describe("the Run cost tab", () => {
+  const line = {
+    calls: 2,
+    cost: 0,
+    unpriced: 0,
+    apiEquivalent: 1.5,
+    apiUnpriced: 0,
+    tokensIn: 25_000,
+    tokensOut: 1200,
+    cachedTokens: 0,
+    characters: 0,
+    images: 0,
+    seconds: 0,
+  };
+  const cost: RunCost = {
+    ...line,
+    cost: 3.37,
+    currency: "USD",
+    totals: { ...line, wallMs: 540_000 },
+    byStage: [{ ...line, stage: "article", wallMs: 360_000 }],
+    byModel: [
+      {
+        ...line,
+        provider: "codex",
+        model: "gpt-5",
+        kind: "llm",
+        onPlan: true,
+        apiModel: null,
+      },
+    ],
+    plans: [
+      {
+        account: "codex",
+        name: "Codex",
+        calls: 2,
+        reported: true,
+        windows: [{ kind: "weekly", usedPercent: 18, nowPercent: 40, resetsAt: null }],
+      },
+    ],
+    waits: [],
+    catalogueDate: "2026-09-27",
+  };
+
+  it("leads with paid, via API, the plan meter and the end-to-end time, then the tables", async () => {
+    renderApp(
+      <RunCostPanel projectId="p1" />,
+      testDeps({ "GET /api/projects/p1/run-cost": jsonAnswer(cost) }),
+    );
+    const summary = await screen.findByRole("region", { name: "Run cost summary" });
+    const stats = within(summary)
+      .getAllByRole("definition")
+      .map((value) => value.textContent);
+    expect(stats).toContain("$3.37");
+    expect(stats).toContain("~$1.50");
+    expect(stats).toContain("18%");
+    expect(stats).toContain("9 min 0 s");
+    const meter = within(summary).getByRole("meter", {
+      name: "Share of the weekly Codex limit this run used",
+    });
+    expect(meter.getAttribute("aria-valuenow")).toBe("18");
+    const byStage = screen.getByRole("table", { name: "Run cost by stage" });
+    expect(within(byStage).getByText("~$1.50")).toBeTruthy();
+    expect(within(byStage).getByText("6 min 0 s")).toBeTruthy();
+    const byModel = screen.getByRole("table", { name: "Run cost by model" });
+    expect(within(byModel).getByText("codex · gpt-5")).toBeTruthy();
+    expect(within(byModel).getByText("$0 on plan")).toBeTruthy();
   });
 });
 

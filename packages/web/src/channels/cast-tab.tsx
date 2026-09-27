@@ -1,11 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { PlusIcon } from "lucide-react";
 import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
-import { ConfirmDialog } from "@/components/confirm";
 import { StatusSlot } from "@/components/kit/action-bar";
-import { RailGroup } from "@/components/rail";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/kit/button";
+import { ConfirmDialog } from "@/components/kit/dialog";
+import { EmptyState } from "@/components/kit/empty-state";
+import { MediaFrame, MediaGrid } from "@/components/kit/media";
+import { Badge } from "@/components/kit/status";
+import { cn } from "@/lib/utils";
 import {
   type CastMember,
   castKindLabels,
@@ -17,117 +19,129 @@ import {
 import { CastEditor } from "./cast-editor";
 
 // The Cast tab: every character, creature, place and object the channel draws the same way,
-// with its pictures, aliases and the actions to edit or remove it.
+// as a gallery of their first pictures, with the picked member's editor beside it (under it
+// on phones). The page header's Add to cast opens the editor empty.
 export function CastTab({
   channelId,
   cast,
+  selected: controlled,
+  onSelect: onControlled,
 }: {
   readonly channelId: string;
   readonly cast: readonly CastMember[];
+  // The member in the editor, "new" while adding one; kept by the caller when it offers its
+  // own Add to cast, here otherwise.
+  readonly selected?: string | null;
+  readonly onSelect?: (id: string | null) => void;
 }): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
-  // "new" while adding; a member's id while editing it.
-  const [editing, setEditing] = useState<string | null>(null);
+  const [own, setOwn] = useState<string | null>(null);
+  const selected = controlled === undefined ? own : controlled;
+  const select = onControlled ?? setOwn;
   const [deleting, setDeleting] = useState<CastMember | null>(null);
   const remove = useMutation({
     mutationFn: (id: string) => deleteCastMember(api, id),
-    onSuccess: async () => {
+    onSuccess: async (_, id) => {
       setDeleting(null);
+      if (selected === id) select(null);
       await Promise.all([
         client.invalidateQueries({ queryKey: channelKey(channelId) }),
         client.invalidateQueries({ queryKey: channelsKey }),
       ]);
     },
   });
-  const member = cast.find((one) => one.id === editing);
+  const member = cast.find((one) => one.id === selected);
+  const editing = selected === "new" || member !== undefined;
   return (
-    <div>
-      <div className="mb-3 flex min-h-8 flex-wrap items-center gap-3">
-        <p className="flex-1 text-small text-ink2">
+    <div className="grid grid-cols-1 items-start gap-8 min-[1024px]:grid-cols-[minmax(0,1fr)_440px]">
+      <div className="min-w-0">
+        <p className="m-0 mb-4 max-w-[68ch] text-small text-ink-2">
           When a video's title or an image's brief names a member, its pictures go with that image
           as references, so it looks the same in every video.
         </p>
-        <Button type="button" onClick={() => setEditing("new")}>
-          <PlusIcon aria-hidden="true" className="size-[14px]" />
-          Add to the cast
-        </Button>
+        {cast.length === 0 ? (
+          <EmptyState
+            title="No cast yet"
+            actions={
+              <Button variant="primary" onClick={() => select("new")}>
+                Add to cast
+              </Button>
+            }
+          >
+            Add the characters, creatures, places and objects this channel keeps coming back to.
+          </EmptyState>
+        ) : (
+          <MediaGrid label="Cast">
+            {cast.map((one) => {
+              const ready = one.images.filter((image) => image.state === "ready");
+              const first = ready[0]?.sha256;
+              return (
+                <MediaFrame
+                  key={one.id}
+                  className={cn(
+                    one.id === selected &&
+                      "rounded-media outline-2 outline-accent outline-offset-4 outline-solid",
+                  )}
+                  {...(first ? { src: pictureUrl(api, first) } : {})}
+                  alt={one.name}
+                  title={one.name}
+                  meta={`${castKindLabels[one.kind]} · ${String(ready.length)} ${
+                    ready.length === 1 ? "picture" : "pictures"
+                  }`}
+                  {...(ready.length === 0
+                    ? { badge: <Badge tone="waiting">No picture</Badge> }
+                    : {})}
+                  actionsShown
+                  actions={
+                    <>
+                      <Button
+                        variant="secondary"
+                        size="small"
+                        aria-label={`Edit ${one.name}`}
+                        aria-pressed={one.id === selected}
+                        onClick={() => select(one.id)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="small"
+                        aria-label={`Delete ${one.name}`}
+                        onClick={() => {
+                          remove.reset();
+                          setDeleting(one);
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    </>
+                  }
+                />
+              );
+            })}
+          </MediaGrid>
+        )}
+        <StatusSlot tone="error" className="mt-2">
+          {deleting ? undefined : remove.error?.message}
+        </StatusSlot>
       </div>
-      {cast.length === 0 ? (
-        <RailGroup>
-          <p className="px-4 py-6 text-ink2">
-            No cast yet. Add the characters, creatures, places and objects this channel keeps coming
-            back to.
+      <aside aria-label="Cast member editor" className="min-w-0">
+        {editing ? (
+          <CastEditor
+            key={selected ?? "closed"}
+            channelId={channelId}
+            member={member}
+            open
+            onClose={() => select(null)}
+            onCreated={(id) => select(id)}
+          />
+        ) : cast.length === 0 ? null : (
+          <p className="m-0 text-small text-ink-2">
+            Pick a member's Edit to change its names, description and pictures here.
           </p>
-        </RailGroup>
-      ) : (
-        <ul className="overflow-hidden rounded-panel border border-line bg-panel" aria-label="Cast">
-          {cast.map((one) => {
-            const ready = one.images.filter((image) => image.state === "ready");
-            const first = ready[0]?.sha256;
-            return (
-              <li
-                key={one.id}
-                className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-4 py-[10px] last:border-b-0"
-              >
-                {first ? (
-                  <img
-                    src={pictureUrl(api, first)}
-                    alt=""
-                    className="size-12 shrink-0 rounded-control border border-line object-cover"
-                  />
-                ) : (
-                  <span className="size-12 shrink-0 rounded-control border border-dashed border-line2" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <h3 className="break-words font-semibold">{one.name}</h3>
-                  <p className="text-small text-ink3">
-                    {castKindLabels[one.kind]} · {ready.length}{" "}
-                    {ready.length === 1 ? "picture" : "pictures"}
-                    {one.aliases.length > 0 ? ` · also ${one.aliases.join(", ")}` : ""}
-                  </p>
-                  {ready.length === 0 ? (
-                    <p className="text-small text-amber">
-                      No picture yet, so it is not sent with any image.
-                    </p>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    aria-label={`Edit ${one.name}`}
-                    onClick={() => setEditing(one.id)}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    aria-label={`Delete ${one.name}`}
-                    onClick={() => {
-                      remove.reset();
-                      setDeleting(one);
-                    }}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-      <StatusSlot tone="error" className="mt-2">
-        {deleting ? undefined : remove.error?.message}
-      </StatusSlot>
-      <CastEditor
-        key={editing ?? "closed"}
-        channelId={channelId}
-        member={member}
-        open={editing !== null}
-        onClose={() => setEditing(null)}
-        onCreated={(id) => setEditing(id)}
-      />
+        )}
+      </aside>
       <ConfirmDialog
         open={deleting !== null}
         title={`Delete ${deleting?.name ?? "this cast member"}?`}
@@ -135,7 +149,8 @@ export function CastTab({
           remove.error?.message ??
           "New videos stop using its pictures. Videos already made keep the pictures they were started with."
         }
-        verb="Delete"
+        confirmLabel="Delete from cast"
+        cancelLabel="Keep it"
         pending={remove.isPending}
         onConfirm={() => {
           if (deleting) remove.mutate(deleting.id);
