@@ -3,7 +3,7 @@ import { SupportGlyph, type SupportGlyphName } from "@/components/glyph";
 import { Button } from "@/components/kit/button";
 import { InfoTip } from "@/components/kit/info-tip";
 import { SectionHead } from "@/components/kit/section-head";
-import { coffeeUrl, donationHref, donationUrl, patreonUrl, sourceUrl } from "@/lib/support-links";
+import { coffeeUrl, patreonUrl, sourceUrl } from "@/lib/support-links";
 
 interface SupportLink {
   readonly href: string;
@@ -12,10 +12,8 @@ interface SupportLink {
   readonly glyph?: SupportGlyphName;
 }
 
-// The rows Settings → About lists. The donation row is left out while its address is the
-// placeholder (lib/support-links.ts), so the app never links to a page that isn't there.
-export function aboutLinks(donation: string = donationUrl): readonly SupportLink[] {
-  const donate = donationHref(donation);
+// The rows Settings → About lists.
+export function aboutLinks(): readonly SupportLink[] {
   return [
     { href: sourceUrl, label: "GitHub", detail: "The code, issues and releases.", glyph: "github" },
     {
@@ -30,9 +28,6 @@ export function aboutLinks(donation: string = donationUrl): readonly SupportLink
       detail: "A one-off thank you.",
       glyph: "coffee",
     },
-    ...(donate === undefined
-      ? []
-      : [{ href: donate, label: "Donate", detail: "Support the project directly." }]),
     {
       href: "https://slopify.stream/channel.html",
       label: "How I run a channel with it",
@@ -42,10 +37,8 @@ export function aboutLinks(donation: string = donationUrl): readonly SupportLink
 }
 
 export function AboutSettings({
-  donation = donationUrl,
   onWhatsNew,
 }: {
-  readonly donation?: string;
   // Opens this version's patch notes; the button is left out without it.
   readonly onWhatsNew?: () => void;
 }): ReactElement {
@@ -71,7 +64,7 @@ export function AboutSettings({
         keeps this credit.
       </p>
       <ul aria-label="Links" className="sl-list m-0 list-none p-0">
-        {aboutLinks(donation).map((link) => (
+        {aboutLinks().map((link) => (
           <li key={link.label} className="sl-row">
             <div className="sl-row__lead">
               {link.glyph === undefined ? (

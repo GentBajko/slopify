@@ -96,6 +96,7 @@ export function RailButton({
   onClick,
   className,
   children,
+  "data-tour": tour,
 }: {
   readonly icon?: ReactNode;
   readonly meta?: ReactNode;
@@ -103,10 +104,13 @@ export function RailButton({
   readonly onClick: () => void;
   readonly className?: string;
   readonly children: ReactNode;
+  // The interactive tutorial's target name.
+  readonly "data-tour"?: string;
 }): ReactElement {
   return (
     <button
       type="button"
+      data-tour={tour}
       aria-current={current ? "true" : undefined}
       onClick={onClick}
       className={cn(

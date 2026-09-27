@@ -126,13 +126,6 @@ Slopify is free and open source. If it saves you time, you can support it on
 [coffee](https://buymeacoffee.com/gentbajko). [How I run a channel with it](https://slopify.stream/channel.html)
 shows a lore channel run on Slopify from topic to upload.
 
-<!-- Donation page: not known yet, so nothing links to it. When it is, put the address in
-     `donationUrl` in packages/site/public/main.js and packages/web/src/lib/support-links.ts
-     (both hold the placeholder https://example.com/donate and show no link while they do),
-     update their "ships with the placeholder" tests, and uncomment this line with it:
-- [Donate](https://example.com/donate)
--->
-
 ## Licence
 
 Apache License 2.0, see [LICENSE](./LICENSE) and [NOTICE](./NOTICE). Anyone who redistributes Slopify

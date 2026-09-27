@@ -26,11 +26,14 @@ describe("the what's new tour", () => {
       "play",
       "reviews",
       "channels",
+      "memory",
       "calendar",
       "run-cost",
       "studio",
       "voices",
+      "long-videos",
       "languages",
+      "trash",
     ]);
     for (const [index, step] of steps.entries()) {
       expect(screen.getByRole("heading", { name: step.title })).not.toBeNull();
@@ -42,7 +45,7 @@ describe("the what's new tour", () => {
         await userEvent.click(screen.getByRole("button", { name: "Next" }));
     }
     await userEvent.click(screen.getByRole("button", { name: "Back" }));
-    expect(screen.getByRole("heading", { name: "Multiple voices" })).not.toBeNull();
+    expect(screen.getByRole("heading", { name: "Other languages" })).not.toBeNull();
   });
 
   it("records closing it on the server and does not come back", async () => {

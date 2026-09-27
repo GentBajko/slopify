@@ -9,7 +9,8 @@
 //   node packages/site/scripts/record-walkthrough.mjs [--out <dir>] [--publish] [--keep]
 //
 // --out      where the three files go (default: a new temp folder, printed at the end)
-// --publish  also copy them over packages/site/public/assets/play-run.*
+// --publish  also copy them over packages/site/public/assets/play-run.* (only a cut with
+//            every step in it: the published captions must match walkthrough/steps.mjs)
 // --keep     keep the temp data directory and the raw recording for a look afterwards
 //
 // Nothing here calls a paid provider or signs in to a CLI: the app runs with a temp HOME,
@@ -33,6 +34,7 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import ffmpegStatic from "ffmpeg-static";
 import { chromium } from "playwright";
+import { seedApp } from "./walkthrough/seed-app.mjs";
 import { seedDemo } from "./walkthrough/seed-demo.mjs";
 import { steps } from "./walkthrough/steps.mjs";
 
@@ -196,11 +198,22 @@ async function main() {
       });
       if (!response.ok) log(`  (the ${prompt.kind} prompt was not saved: ${response.status})`);
     }
+    // The samples, a template and a schedule, so Run cost, the voices and the calendar have
+    // something to show.
+    const { samples } = await seedApp(origin);
+    log("Seeded the samples, a template and a schedule");
 
     // A warm-up visit outside the recording: the first read adopts the seeded project, and
     // the one-time usage-stats notice is answered here instead of on camera.
     const warm = await browser.newPage({ viewport: { width, height }, colorScheme: "dark" });
     await warm.goto(`${origin}/projects/demo-lighthouse`);
+    await warm
+      .getByRole("button", { name: /got it/i })
+      .click({ timeout: 8_000 })
+      .catch(() => {});
+    await warm.waitForTimeout(1_000);
+    // Play's note about the CLIs it found names this machine's versions; answered here too.
+    await warm.goto(`${origin}/play`);
     await warm
       .getByRole("button", { name: /got it/i })
       .click({ timeout: 8_000 })
@@ -223,6 +236,7 @@ async function main() {
       let start;
       const ctx = {
         page,
+        samples,
         go: async (path) => {
           await page.goto(`${origin}${path}`, { waitUntil: "networkidle" });
         },
@@ -315,6 +329,11 @@ async function main() {
     );
     log(`Files: ${out}`);
     if (flags.publish) {
+      const missing = steps.filter((step) => !segments.some((one) => one.id === step.id));
+      if (missing.length > 0)
+        throw new Error(
+          `Not published: ${missing.map((step) => step.id).join(", ")} did not record, so the captions would not match walkthrough/steps.mjs. The files are in ${out}.`,
+        );
       for (const file of [video, poster, captions]) {
         copyFileSync(file, join(assets, file.slice(out.length + 1)));
       }
