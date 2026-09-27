@@ -43,7 +43,7 @@ narration cuts and Shorts.
 
 | Model | Licence | ONNX available | Size (download) | Coverage | Verdict |
 |---|---|---|---|---|---|
-| MMS_FA / `MahmoudAshraf/mms-300m-1130-forced-aligner` (and its ONNX ports, for example `onnx-community/mms-300m-1130-forced-aligner-ONNX`) | **CC-BY-NC-4.0** (torchaudio: "published … under CC-BY-NC 4.0"; HF card agrees) | yes: q4 241 MB, int8 317 MB, fp32 1.26 GB | 241 MB+ | 1,130 languages via uroman romanisation | **Ruled out:** non-commercial licence; Slopify is MIT and its output goes to monetisable YouTube channels |
+| MMS_FA / `MahmoudAshraf/mms-300m-1130-forced-aligner` (and its ONNX ports, for example `onnx-community/mms-300m-1130-forced-aligner-ONNX`) | **CC-BY-NC-4.0** (torchaudio: "published … under CC-BY-NC 4.0"; HF card agrees) | yes: q4 241 MB, int8 317 MB, fp32 1.26 GB | 241 MB+ | 1,130 languages via uroman romanisation | **Ruled out:** non-commercial licence; Slopify is Apache-2.0 and its output goes to monetisable YouTube channels |
 | `facebook/mms-1b-all`, `mms-300m` | CC-BY-NC-4.0 | – | – | 1,100+ | Ruled out, same reason |
 | torchaudio `VOXPOPULI_ASR_BASE_10K_{DE,FR,ES,IT}` | CC-BY-NC-4.0 | no | – | 4 | Ruled out |
 | `voidful/wav2vec2-xlsr-multilingual-56`, ONNX port `NewComer00/wav2vec2-xlsr-multilingual-56-ONNX` @ `2d48b01` | Apache-2.0 (base `facebook/wav2vec2-large-xlsr-53` Apache-2.0; Common Voice CC0) | yes, but a community conversion (24 downloads) | q4 247,576,761 B; q4f16 202 MB; fp16 652 MB; fp32 1.30 GB | 56 Common Voice languages, a single model | **Best permissive fit**, not validated (see below) |

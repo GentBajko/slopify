@@ -1,9 +1,17 @@
+import { randomUUID } from "node:crypto";
 import { zValidator } from "@hono/zod-validator";
 import type { Context } from "hono";
 import { Hono } from "hono";
 import { z } from "zod";
+import { keyProbes } from "../../adapters/key-probes.js";
 import { videoModelsOf } from "../../catalog/schema.js";
+import { switchAllRetired, switchRetiredModel } from "../../slices/model-upkeep/switch.js";
+import { retiredModelUsage, usageKinds, usageSlots } from "../../slices/model-upkeep/usage.js";
 import { cliPathMaxLength, saveCliPath } from "../../slices/settings/cli-paths.js";
+import { dismissFirstRun, firstRunStatus } from "../../slices/settings/first-run.js";
+import { checkProviderHealth } from "../../slices/settings/health.js";
+import { keyGuides } from "../../slices/settings/key-guides.js";
+import { testProviderKey } from "../../slices/settings/key-test.js";
 import type { KeysDeps } from "../../slices/settings/keys.js";
 import { keyStatus, removeProviderKey, saveProviderKey } from "../../slices/settings/keys.js";
 import type { ProviderId } from "../../slices/settings/model.js";
@@ -20,6 +28,18 @@ const providerParam = z.object({ id: z.enum(providerIds) });
 // ever issues something longer.
 const pathBody = z.object({ path: z.string().max(cliPathMaxLength) });
 const keyBody = z.object({ key: z.string().min(1).max(4096) });
+const modelId = z.string().min(1).max(200);
+const switchBody = z
+  .object({
+    kind: z.enum(usageKinds),
+    id: z.string().min(1).max(64),
+    slot: z.enum(usageSlots),
+    from: z.object({ provider: z.string().min(1).max(64), model: modelId }).strict(),
+    to: modelId,
+  })
+  .strict();
+const noFetch =
+  "Slopify cannot reach the internet from here yet because it is still starting. Wait a moment, reload the page and try again.";
 
 // The return type is inferred so Hono keeps the route types the SPA's client is
 // generated from; see stagingRoutes.
@@ -38,8 +58,80 @@ export function providerRoutes(deps: AppDeps) {
       deps.log.write("warn", "model-catalog", { detail: `Could not load models for ${provider}` }),
   });
 
+  const upkeep = () => ({ ...deps, uuid: deps.drafts?.uuid ?? randomUUID });
+
   return (
     new Hono()
+      // The step lists Settings → Providers shows beside each key field.
+      .get("/key-guides", (c) => c.json({ guides: keyGuides }))
+      // What the first launch found, and the providers Play picks by default.
+      .get("/first-run", async (c) => {
+        c.header("Cache-Control", "no-store");
+        return c.json(
+          await firstRunStatus(
+            { db: deps.db, ...(deps.modelsFor === undefined ? {} : { modelsFor: deps.modelsFor }) },
+            await providerStatuses(readiness),
+          ),
+        );
+      })
+      .post("/first-run/dismiss", (c) => {
+        dismissFirstRun(deps.db);
+        return c.body(null, 204);
+      })
+      // "Check all": every CLI signed in, every key valid, every chosen model still offered.
+      .post("/health", async (c) => {
+        if (deps.fetch === undefined)
+          return problem(c, { status: 503, title: titleOf(503), detail: noFetch });
+        const catalogue = deps.catalogue;
+        return c.json(
+          await checkProviderHealth({
+            ...readiness,
+            clock: deps.clock,
+            fetch: deps.fetch,
+            probes: keyProbes,
+            ...(catalogue === undefined ? {} : { catalogue: () => catalogue.read() }),
+            ...(deps.modelsFor === undefined ? {} : { modelsFor: deps.modelsFor }),
+            ...(deps.cliLogin === undefined ? {} : { login: deps.cliLogin }),
+          }),
+        );
+      })
+      // Checks for new, repriced and retired models now instead of waiting for the daily check.
+      .post("/catalogue/check", async (c) => {
+        if (!deps.catalogue?.sync)
+          return problem(c, {
+            status: 503,
+            title: titleOf(503),
+            detail:
+              "The model list (models.yaml) is not loaded yet. Wait a moment and reload the page; if it stays like this, restart Slopify.",
+          });
+        await deps.catalogue.sync();
+        return c.json(deps.catalogue.status());
+      })
+      // Every template, schedule, draft and unfinished project still using a retired model.
+      .get("/catalogue/retired", (c) => {
+        c.header("Cache-Control", "no-store");
+        return c.json({
+          usages:
+            deps.catalogue === undefined ? [] : retiredModelUsage(deps.db, deps.catalogue.read()),
+        });
+      })
+      .post("/catalogue/retired/switch", zValidator("json", switchBody, onInvalid), async (c) => {
+        if (deps.catalogue === undefined)
+          return problem(c, { status: 503, title: titleOf(503), detail: noFetch });
+        const result = await switchRetiredModel(
+          upkeep(),
+          deps.catalogue.read(),
+          c.req.valid("json"),
+        );
+        if (!result.ok)
+          return problem(c, { status: 409, title: titleOf(409), detail: result.message });
+        return c.json(result);
+      })
+      .post("/catalogue/retired/switch-all", async (c) => {
+        if (deps.catalogue === undefined)
+          return problem(c, { status: 503, title: titleOf(503), detail: noFetch });
+        return c.json(await switchAllRetired(upkeep(), deps.catalogue.read()));
+      })
       .get("/catalogue", (c) =>
         c.json(
           deps.catalogue?.status() ?? {
@@ -137,6 +229,19 @@ export function providerRoutes(deps: AppDeps) {
           return c.json(keyStatus(keys, id));
         },
       )
+      // The Test button: the cheapest read the provider offers, answered in plain words.
+      .post("/:id/key/test", zValidator("param", providerParam, onInvalid), async (c) => {
+        const { id } = c.req.valid("param");
+        if (providerById(id).auth === "cli") return refusal(c, id, "cli-provider");
+        if (deps.fetch === undefined)
+          return problem(c, { status: 503, title: titleOf(503), detail: noFetch });
+        return c.json(
+          await testProviderKey(
+            { db: deps.db, clock: deps.clock, fetch: deps.fetch, probes: keyProbes },
+            id,
+          ),
+        );
+      })
       .delete("/:id/key", zValidator("param", providerParam, onInvalid), (c) => {
         const { id } = c.req.valid("param");
         const result = removeProviderKey(keys, id);

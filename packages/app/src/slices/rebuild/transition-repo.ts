@@ -196,13 +196,18 @@ function existingWork(
     : { workId: z.string().parse(row.work_id), pieceId: z.string().parse(row.piece_id) };
 }
 function stageForKey(key: string): StageKind {
+  // A review runs in its item's stage; the narration's review in Audio.
+  if (key === "review:narration") return "audio";
+  if (key.startsWith("review:shorts:")) return "video";
+  if (key.startsWith("review:")) return stageForKey(key.slice("review:".length));
   const prefix = key.split(":")[0];
   if (prefix === "research") return "research";
-  if (prefix === "article" || prefix === "entry") return "article";
+  if (prefix === "article" || prefix === "entry" || prefix === "script") return "article";
   if (prefix === "audio" || prefix === "narration") return "audio";
   if (prefix === "image" || prefix === "reference") return "images";
   if (prefix === "thumbnail") return "thumbnail";
-  if (prefix === "export" || prefix === "subtitles" || prefix === "video") return "video";
+  if (prefix === "export" || prefix === "subtitles" || prefix === "video" || prefix === "voices")
+    return "video";
   if (prefix === "document") return "document";
   throw new Error(
     "Slopify hit an internal error (unknown kind of step). Try again; if it happens again, use Download diagnostics in Settings and report it.",

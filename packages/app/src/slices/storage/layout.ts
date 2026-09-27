@@ -102,6 +102,12 @@ export function outputFileName(
       return `audio-outro${extension}`;
     case "thumbnail":
       return `thumbnail${extension}`;
+    case "script_md":
+      return "script.md";
+    case "audio_mp3":
+      return "narration.mp3";
+    case "audio_m4b":
+      return "audiobook.m4b";
     case "reference":
       return `reference${extension}`;
     case "image":

@@ -116,6 +116,8 @@ export async function prepareSubtitles(
         fontSize: config.fontSize,
         fontName: font.assName,
         position: config.position,
+        color: config.color,
+        outlineColor: config.outlineColor,
       }),
       { mode: 0o600 },
     );

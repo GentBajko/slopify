@@ -3,14 +3,16 @@ import type { Clock } from "../clock.js";
 import type { Log } from "../log.js";
 import type { Format } from "../pipeline.js";
 import type { GeneratedImage, GeneratedVideo } from "../ports/image.js";
-import type { LlmEvent, Message, ThinkingConfig, Usage } from "../ports/llm.js";
+import type { LlmEvent, LlmImage, Message, ThinkingConfig, Usage } from "../ports/llm.js";
 import type { LlmDocument } from "../ports/llm-documents.js";
-import { providerError } from "../ports/model.js";
+import { isProviderError, providerError } from "../ports/model.js";
+import { type PlanLimitReading, planAccountOf } from "../ports/plan-limits.js";
 import type { Registry } from "../ports/registry.js";
 import type { AttemptContext } from "./attempt.js";
 import { attempt } from "./attempt.js";
 import type { AttemptStore } from "./attempt-repo.js";
 import type { StageContext } from "./index.js";
+import type { LimitGate, MeteredCall, UsageMeter } from "./meter.js";
 import type { ProviderQueue } from "./queue.js";
 import type { AttemptResult } from "./work.js";
 
@@ -33,6 +35,7 @@ export interface LlmCall {
   readonly messages: readonly Message[];
   readonly previewLabel?: string | undefined;
   readonly webSearch?: boolean | undefined;
+  readonly images?: readonly LlmImage[] | undefined;
   // An answer that arrived but is unusable counts as a failed attempt, so the check runs inside
   // the wrapper. It returns the sentence the stage would show rather than throwing, so a slice
   // never names a failure.
@@ -44,6 +47,7 @@ export interface TtsCall {
   readonly provider: string;
   readonly voiceId: string;
   readonly text: string;
+  readonly dialogue?: readonly import("../ports/tts.js").DialogueLine[] | undefined;
 }
 
 export type TtsStreamEvent =
@@ -64,6 +68,8 @@ export interface ImageCall {
   readonly thinking?: import("../ports/llm.js").ThinkingMode | undefined;
   // The establishing image the picture is drawn with as its visual reference.
   readonly reference?: GeneratedImage | undefined;
+  // The cast members the brief mentions, with their pictures.
+  readonly cast?: readonly import("../ports/image.js").CastReference[] | undefined;
   // What the live panel calls this image while a long job reports its progress.
   readonly previewLabel?: string | undefined;
 }
@@ -100,6 +106,11 @@ export interface ProviderDeps {
   readonly attempts: AttemptStore;
   readonly clock: Clock;
   readonly log: Log;
+  // Records what each successful call used; absent, nothing is recorded.
+  readonly meter?: UsageMeter | undefined;
+  // Holds a CLI's calls while its plan allowance is used up; absent, a used-up plan fails
+  // the call like any other terminal error.
+  readonly limits?: LimitGate | undefined;
 }
 
 export function stageProviders(
@@ -121,8 +132,40 @@ export function stageProviders(
     signal: context.signal,
   };
 
-  const schedule = <T>(provider: string, work: () => Promise<T>): Promise<T> =>
+  const queued = <T>(provider: string, work: () => Promise<T>): Promise<T> =>
     deps.queue ? deps.queue.run(provider, context.signal, work) : work();
+  const waiter = { projectId: context.stage.projectId, stage: context.stage.kind };
+  // A CLI whose plan allowance is used up is waited for here, outside the queue, so the wait
+  // holds no provider slot; the call is then made afresh with a full set of attempts.
+  const schedule = async <T>(provider: string, work: () => Promise<T>): Promise<T> => {
+    const account = planAccountOf(provider);
+    const gate = deps.limits;
+    if (account === undefined || gate === undefined) return queued(provider, work);
+    for (;;) {
+      await gate.ready(account, waiter, context.signal);
+      try {
+        return await queued(provider, work);
+      } catch (error) {
+        const hit = isProviderError(error) ? error.fault.planLimit : undefined;
+        if (hit === undefined || context.signal.aborted) throw error;
+        gate.exhausted(hit);
+      }
+    }
+  };
+  // Metering never fails a call: the answer is already paid for.
+  const meter = (call: Omit<MeteredCall, "projectId" | "stage">): void => {
+    if (deps.meter === undefined) return;
+    try {
+      deps.meter.record({ ...call, projectId: context.stage.projectId, stage: context.stage.kind });
+    } catch (error) {
+      deps.log.write("warn", "usage.record", {
+        projectId: context.stage.projectId,
+        stage: context.stage.kind,
+        detail: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+  const since = (started: number): number => Math.max(0, deps.clock.now().getTime() - started);
   return {
     llm: (
       call: LlmCall,
@@ -143,7 +186,9 @@ export function stageProviders(
           text,
           ...(reset === undefined ? {} : { reset }),
         });
-      return schedule(call.provider, () =>
+      const started = deps.clock.now().getTime();
+      let limits: PlanLimitReading | undefined;
+      const answered = schedule(call.provider, () =>
         attempt(
           ctx,
           async (signal: AbortSignal, progress: () => void): Promise<LlmAnswer> => {
@@ -154,6 +199,7 @@ export function stageProviders(
             let typed = false;
             let usage: Usage | null = null;
             let finishReason: string | null = null;
+            limits = undefined;
             for await (const event of port.complete({
               model: call.model,
               ...(call.thinkingConfig === undefined ? {} : { thinkingConfig: call.thinkingConfig }),
@@ -161,6 +207,7 @@ export function stageProviders(
               messages: call.messages,
               ...(call.documents === undefined ? {} : { documents: call.documents }),
               ...(call.webSearch === undefined ? {} : { webSearch: call.webSearch }),
+              ...(call.images === undefined ? {} : { images: call.images }),
               signal,
             })) {
               signal.throwIfAborted();
@@ -177,6 +224,7 @@ export function stageProviders(
               } else if (event.type === "done") {
                 usage = event.usage;
                 finishReason = event.finishReason;
+                limits = event.limits;
               }
               if (event.type === "delta" || event.type === "done") onEvent?.(event);
             }
@@ -191,6 +239,28 @@ export function stageProviders(
           { kind: "llm", streaming: port.capabilities.streams },
         ),
       );
+      return answered.then((result) => {
+        if (result.ok) {
+          const usage = result.value.usage;
+          meter({
+            kind: "llm",
+            provider: call.provider,
+            model: usage?.model ?? call.model,
+            ...(usage === null
+              ? {}
+              : {
+                  tokensIn: usage.inputTokens,
+                  tokensOut: usage.outputTokens,
+                  ...(usage.cachedInputTokens === undefined
+                    ? {}
+                    : { cachedTokens: usage.cachedInputTokens }),
+                }),
+            wallMs: since(started),
+            ...(limits === undefined ? {} : { limits }),
+          });
+        }
+        return result;
+      });
     },
 
     tts: (call: TtsCall, observe?: ObserveTts): Promise<AttemptResult<NarratedAudio>> => {
@@ -219,17 +289,24 @@ export function stageProviders(
           });
         }
       };
-      return schedule(call.provider, () =>
+      const started = deps.clock.now().getTime();
+      const spoken = schedule(call.provider, () =>
         attempt(
           { ...ctx, continuation },
           async (signal: AbortSignal, progress: () => void): Promise<NarratedAudio> => {
             notify({ type: "start" });
             try {
+              if (call.dialogue !== undefined && port.capabilities.dialogue !== true)
+                throw providerError({
+                  kind: "unsupported",
+                  message: `${call.provider} can't speak several voices in one request. Turn off Native multi-speaker under Speakers (Play → Audio, or Edit project → Providers), then Retry stage.`,
+                });
               const spoken = await port.synthesize({
                 model: call.model,
 
                 voiceId: call.voiceId,
                 text: call.text,
+                ...(call.dialogue === undefined ? {} : { dialogue: call.dialogue }),
                 signal,
                 onActivity: progress,
                 continuation,
@@ -266,6 +343,18 @@ export function stageProviders(
           { kind: "tts", streaming: port.capabilities.streams },
         ),
       );
+      return spoken.then((result) => {
+        // Narration is billed by the characters sent, which is the text of this call.
+        if (result.ok)
+          meter({
+            kind: "tts",
+            provider: call.provider,
+            model: call.model ?? "",
+            characters: call.text.length,
+            wallMs: since(started),
+          });
+        return result;
+      });
     },
 
     image: (call: ImageCall): Promise<AttemptResult<GeneratedImage>> => {
@@ -284,7 +373,8 @@ export function stageProviders(
           text,
           reset: true,
         });
-      return schedule(call.provider, () =>
+      const started = deps.clock.now().getTime();
+      const drawn = schedule(call.provider, () =>
         attempt(
           ctx,
           (signal: AbortSignal): Promise<GeneratedImage> =>
@@ -294,6 +384,7 @@ export function stageProviders(
               aspect: call.aspect,
               ...(call.thinking === undefined ? {} : { thinking: call.thinking }),
               ...(call.reference === undefined ? {} : { reference: call.reference }),
+              ...(call.cast === undefined ? {} : { cast: call.cast }),
               onProgress,
               signal,
             }),
@@ -305,6 +396,31 @@ export function stageProviders(
           },
         ),
       );
+      return drawn.then((result) => {
+        if (result.ok) {
+          const { usage, limits } = result.value;
+          meter({
+            kind: "image",
+            provider: call.provider,
+            model: call.model,
+            images: 1,
+            size: call.aspect,
+            ...(call.thinking === undefined ? {} : { quality: call.thinking }),
+            ...(usage === undefined
+              ? {}
+              : {
+                  tokensIn: usage.inputTokens,
+                  tokensOut: usage.outputTokens,
+                  ...(usage.cachedInputTokens === undefined
+                    ? {}
+                    : { cachedTokens: usage.cachedInputTokens }),
+                }),
+            wallMs: since(started),
+            ...(limits === undefined ? {} : { limits }),
+          });
+        }
+        return result;
+      });
     },
 
     animate: (call: AnimateCall): Promise<AttemptResult<GeneratedVideo>> => {
@@ -317,7 +433,8 @@ export function stageProviders(
             message: `${call.provider} can't turn images into video clips. Choose fal.ai or Replicate as the image provider in Edit project → Providers, or turn Animate images off in Edit project → Inputs → Look.`,
           }),
         );
-      return schedule(call.provider, () =>
+      const started = deps.clock.now().getTime();
+      const animated = schedule(call.provider, () =>
         attempt(
           ctx,
           (signal: AbortSignal): Promise<GeneratedVideo> =>
@@ -333,6 +450,18 @@ export function stageProviders(
           { kind: "video" },
         ),
       );
+      return animated.then((result) => {
+        if (result.ok)
+          meter({
+            kind: "video",
+            provider: call.provider,
+            model: call.model,
+            seconds: call.seconds,
+            size: call.aspect,
+            wallMs: since(started),
+          });
+        return result;
+      });
     },
 
     forPiece: (piece: string): StageProviders => stageProviders(deps, context, piece),

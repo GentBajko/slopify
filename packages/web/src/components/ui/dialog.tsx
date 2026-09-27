@@ -2,9 +2,9 @@ import { Dialog as DialogPrimitive } from "radix-ui";
 import type * as React from "react";
 import { cn } from "@/lib/utils";
 
-// shadcn/ui's dialog, restyled to this app's system and cut to what its dialogs are:
-// --panel at radius 6 with the one tinted shadow elevation allowed, portal-rendered so
-// overlays escape their containers. There is no close icon, because every dialog here
+// shadcn/ui's dialog, re-pointed at the 3.0 kit (`.sl-dialog`): raised, radius-media,
+// shadow-dialog over the scrim, portal-rendered so overlays escape their containers. New code
+// uses components/kit/dialog, which builds on these parts. There is no close icon, because every dialog here
 // carries its own action row and offers no secondary options.
 const Dialog = DialogPrimitive.Root;
 const DialogTrigger = DialogPrimitive.Trigger;
@@ -35,8 +35,7 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-[480px] -translate-x-1/2 -translate-y-1/2 flex-col gap-4",
-          "rounded-panel border border-line bg-panel p-[18px] shadow-[0_8px_24px_var(--color-shadow)]",
+          "sl-dialog fixed top-1/2 left-1/2 z-50 max-h-[calc(100vh-2rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto",
           "data-[state=open]:animate-dialog-in motion-reduce:animate-none",
           className,
         )}
@@ -52,7 +51,7 @@ function DialogTitle({ className, ...props }: React.ComponentProps<typeof Dialog
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("text-title font-bold tracking-[-0.01em] text-ink", className)}
+      className={cn("sl-dialog__title text-ink", className)}
       {...props}
     />
   );
@@ -65,7 +64,7 @@ function DialogDescription({
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
-      className={cn("text-body text-ink2", className)}
+      className={cn("m-0 text-body text-ink-2", className)}
       {...props}
     />
   );

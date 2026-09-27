@@ -246,10 +246,25 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
             signal.throwIfAborted();
             clearTimeout(timer);
             timer = setTimeout(() => controller.abort(), 120_000);
-            // Typed-ahead text stays on this computer: the bridge protocol carries the
-            // committed answer, and the app's live panel updates per message instead.
+            // The bridge frame keeps its shape across versions: the cached-token count, the
+            // answering model and the plan windows stay on this side of it. Typed-ahead text
+            // stays here too: the bridge carries the committed answer only.
             const parsed = hostFrameSchema.parse(
-              event.type === "partial" ? { type: "activity" } : event,
+              event.type === "done"
+                ? {
+                    type: "done",
+                    usage:
+                      event.usage === null
+                        ? null
+                        : {
+                            inputTokens: event.usage.inputTokens,
+                            outputTokens: event.usage.outputTokens,
+                          },
+                    finishReason: event.finishReason,
+                  }
+                : event.type === "partial"
+                  ? { type: "activity" }
+                  : event,
             );
             if (done || parsed.type === "error")
               throw new Error(
@@ -292,7 +307,21 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
     const signal = AbortSignal.any([job.signal, controller.signal]);
     const timer = setTimeout(() => controller.abort(), agentImageTimeoutMs);
     try {
-      const { reference, thinking, ...rest } = body.data;
+      const { reference, thinking, cast: bridgedCast, ...rest } = body.data;
+      const cast = bridgedCast?.map((member) => ({
+        name: member.name,
+        description: member.description,
+        images: member.images.map((picture) => ({
+          bytes: new Uint8Array(Buffer.from(picture.base64, "base64")),
+          mime: picture.mime,
+        })),
+      }));
+      if (
+        cast?.some((member) =>
+          member.images.some((picture) => sniffImage(picture.bytes) !== picture.mime),
+        )
+      )
+        return invalid(c);
       const image =
         reference === undefined
           ? undefined
@@ -305,6 +334,7 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
         ...rest,
         ...(thinking === undefined ? {} : { thinking }),
         ...(image === undefined ? {} : { reference: image }),
+        ...(cast === undefined ? {} : { cast }),
         signal,
       });
       if (signal.aborted) throw providerError({ kind: "unavailable", message: unavailable });

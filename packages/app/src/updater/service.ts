@@ -15,10 +15,16 @@ interface UpdateDeps {
   readonly latest: () => Promise<string>;
   readonly now: () => number;
   readonly busy: () => boolean;
+  // The title of a project whose work is running, for "installs when 'Title' finishes".
+  readonly busyWith?: () => string | undefined;
+  // How often a waiting update looks again; returns the stop. Injected so a test can drive it.
+  readonly every?: (callback: () => void, ms: number) => () => void;
   readonly unsupported: () => string | undefined;
   readonly install: (version: string, restarting: () => void) => Promise<void>;
   readonly report: (message: string) => void;
 }
+
+const waitCheckMs = 5_000;
 
 export function createUpdater(deps: UpdateDeps): AppUpdater {
   let latestVersion: string | null = null;
@@ -32,18 +38,32 @@ export function createUpdater(deps: UpdateDeps): AppUpdater {
   let checking: Promise<void> | undefined;
   let settling: Promise<void> | undefined;
   let mutations = 0;
+  // The version a `waiting` update will install, and the stop of the timer watching for idle.
+  let pending: string | undefined;
+  let stopWatching: (() => void) | undefined;
+  const every =
+    deps.every ??
+    ((callback: () => void, ms: number): (() => void) => {
+      const timer = setInterval(callback, ms);
+      timer.unref();
+      return () => clearInterval(timer);
+    });
   const busyNow = () => deps.busy() || mutations > 0;
   const locked = () => status === "installing" || status === "restarting";
+  // A function, not a comparison, because an await in between may have changed it.
+  const waiting = (): boolean => status === "waiting";
   function info(): UpdateInfo {
     const busy = busyNow();
     const available = latestVersion !== null && newerVersion(latestVersion, deps.currentVersion);
+    // Running work no longer blocks an update: it waits for the work (`waiting`).
     const blockedReason =
       deps.unsupported() ??
-      (busy
-        ? "Pause running projects and wait for their active work to stop before updating."
-        : locked()
-          ? "An update is already in progress."
+      (locked()
+        ? "An update is already in progress."
+        : status === "waiting"
+          ? "An update is already waiting for running work to finish."
           : undefined);
+    const waitingFor = busy ? deps.busyWith?.() : undefined;
     return {
       currentVersion: deps.currentVersion,
       latestVersion,
@@ -53,10 +73,42 @@ export function createUpdater(deps: UpdateDeps): AppUpdater {
       status,
       ...(error === undefined ? {} : { error }),
       ...(blockedReason === undefined ? {} : { blockedReason }),
+      ...(status === "waiting" && pending !== undefined ? { pendingVersion: pending } : {}),
+      ...(waitingFor === undefined ? {} : { waitingFor }),
     };
   }
+  function install(version: string): void {
+    status = "installing";
+    error = undefined;
+    void Promise.resolve()
+      .then(() =>
+        deps.install(version, () => {
+          status = "restarting";
+        }),
+      )
+      .catch(() => {
+        status = "error";
+        error =
+          "The update could not be installed, so Slopify kept your current version. Check your internet connection and try again; the reason is in logs/updates.log inside your Slopify data folder.";
+        installError = error;
+        deps.report(error);
+      });
+  }
+  // Looks again every few seconds and installs the moment no work is running.
+  function wait(version: string): void {
+    pending = version;
+    status = "waiting";
+    error = undefined;
+    stopWatching = every(() => {
+      if (status !== "waiting" || busyNow()) return;
+      stopWatching?.();
+      stopWatching = undefined;
+      pending = undefined;
+      install(version);
+    }, waitCheckMs);
+  }
   async function check(refresh = false): Promise<UpdateInfo> {
-    if (locked()) return info();
+    if (locked() || status === "waiting") return info();
     if (checking !== undefined) {
       await checking;
       return info();
@@ -130,34 +182,29 @@ export function createUpdater(deps: UpdateDeps): AppUpdater {
       };
     },
     start: async () => {
-      if (locked() || busyNow()) return { ok: false, code: 409, info: info() };
+      if (locked() || waiting()) return { ok: false, code: 409, info: info() };
       installError = undefined;
       await check(true);
       const current = info();
       if (!current.canUpdate || latestVersion === null || current.status === "error") {
         return {
           ok: false,
-          code: current.busy || locked() ? 409 : current.status === "error" ? 503 : 400,
+          code: locked() || waiting() ? 409 : current.status === "error" ? 503 : 400,
           info: current,
         };
       }
-      status = "installing";
-      error = undefined;
-      const version = latestVersion;
-      void Promise.resolve()
-        .then(() =>
-          deps.install(version, () => {
-            status = "restarting";
-          }),
-        )
-        .catch(() => {
-          status = "error";
-          error =
-            "The update could not be installed, so Slopify kept your current version. Check your internet connection and try again; the reason is in logs/updates.log inside your Slopify data folder.";
-          installError = error;
-          deps.report(error);
-        });
+      // Rechecked after the registry await: a project may have started meanwhile.
+      if (busyNow()) wait(latestVersion);
+      else install(latestVersion);
       return { ok: true, info: info() };
+    },
+    cancelWaiting: () => {
+      if (status !== "waiting") return false;
+      stopWatching?.();
+      stopWatching = undefined;
+      pending = undefined;
+      status = "idle";
+      return true;
     },
   };
 }

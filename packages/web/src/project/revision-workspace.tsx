@@ -30,6 +30,7 @@ export type EditSection =
   | "article"
   | "providers"
   | "prompts"
+  | "reviews"
   | "shorts"
   | "subtitles"
   | "images"
@@ -49,7 +50,7 @@ export interface EditorProps {
   readonly focus?: { readonly section: EditSection } | undefined;
 }
 
-export type ProjectTab = "output" | "live" | "edit" | "history" | "checkpoints";
+export type ProjectTab = "output" | "live" | "edit" | "history" | "checkpoints" | "cost";
 
 // The project page's secondary surfaces are tabs under the rundown, never blocks inserted
 // above the output: Edit, History and Checkpoints each replace the Output panel while open,
@@ -64,6 +65,7 @@ export function RevisionWorkspace({
   live,
   checkpoints,
   checkpointBadge,
+  cost,
   trailing,
 }: {
   readonly projectId: string;
@@ -79,6 +81,8 @@ export function RevisionWorkspace({
   readonly live?: ReactNode;
   readonly checkpoints?: ReactNode;
   readonly checkpointBadge?: string;
+  // What the run's provider calls used and cost; the Run cost tab shows it.
+  readonly cost?: ReactNode;
   readonly trailing?: ReactNode;
 }): import("react").ReactElement {
   const [ownTab, setOwnTab] = useState<ProjectTab>(output === undefined ? "edit" : "output");
@@ -298,6 +302,7 @@ export function RevisionWorkspace({
             ...(checkpointBadge === undefined ? {} : { badge: checkpointBadge }),
           },
         ]),
+    ...(cost === undefined ? [] : [{ id: "cost" as const, label: "Run cost" }]),
   ];
   return (
     <section aria-label="Project revisions">
@@ -466,6 +471,11 @@ export function RevisionWorkspace({
       {checkpoints === undefined ? null : (
         <TabPanel idPrefix="project" id="checkpoints" active={tab === "checkpoints"}>
           {checkpoints}
+        </TabPanel>
+      )}
+      {cost === undefined ? null : (
+        <TabPanel idPrefix="project" id="cost" active={tab === "cost"}>
+          {cost}
         </TabPanel>
       )}
       <Drawer

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { transact } from "../../kernel/db/tx.js";
@@ -30,14 +31,28 @@ const rowSchema = z.object({
   created_at: z.string(),
   updated_at: z.string(),
   deleted_at: z.string().nullable(),
+  brief: z.string().nullable(),
+  topic_mode: z.string(),
+  topic_min: z.number(),
+  topic_llm_json: z.string().nullable(),
+  topics_generating_at: z.string().nullable(),
+  topics_generated_at: z.string().nullable(),
+  topics_failed_at: z.string().nullable(),
+  topics_error: z.string().nullable(),
+  held_topics: z.number(),
 });
+
+const scheduleColumns = `id,name,template_id,template_version,cadence_json,timezone,missed_policy,
+  overlap_policy,spend_limit_cents,items_json,topic_keyword,values_json,status,version,next_run_at,
+  created_at,updated_at,deleted_at,brief,topic_mode,topic_min,topic_llm_json,topics_generating_at,
+  topics_generated_at,topics_failed_at,topics_error,
+  (SELECT count(*) FROM schedule_topics AS held
+   WHERE held.schedule_id=schedules.id AND held.state='held') AS held_topics`;
 
 export function scheduleById(db: DatabaseSync, id: string): ScheduleSummary | undefined {
   const row = db
     .prepare(
-      `SELECT id,name,template_id,template_version,cadence_json,timezone,missed_policy,
-       overlap_policy,spend_limit_cents,items_json,topic_keyword,values_json,status,version,next_run_at,created_at,updated_at,
-       deleted_at
+      `SELECT ${scheduleColumns}
        FROM schedules WHERE id=?`,
     )
     .get(id);
@@ -47,9 +62,7 @@ export function scheduleById(db: DatabaseSync, id: string): ScheduleSummary | un
 export function scheduleRows(db: DatabaseSync): readonly ScheduleSummary[] {
   return db
     .prepare(
-      `SELECT id,name,template_id,template_version,cadence_json,timezone,missed_policy,
-       overlap_policy,spend_limit_cents,items_json,topic_keyword,values_json,status,version,next_run_at,created_at,updated_at,
-       deleted_at
+      `SELECT ${scheduleColumns}
        FROM schedules ORDER BY created_at DESC,id`,
     )
     .all()
@@ -59,9 +72,7 @@ export function scheduleRows(db: DatabaseSync): readonly ScheduleSummary[] {
 export function dueSchedules(db: DatabaseSync, now: string): readonly ScheduleSummary[] {
   return db
     .prepare(
-      `SELECT id,name,template_id,template_version,cadence_json,timezone,missed_policy,
-       overlap_policy,spend_limit_cents,items_json,topic_keyword,values_json,status,version,next_run_at,created_at,updated_at,
-       deleted_at
+      `SELECT ${scheduleColumns}
        FROM schedules WHERE deleted_at IS NULL AND status='active' AND next_run_at IS NOT NULL
        AND next_run_at <= ?
        ORDER BY next_run_at,id`,
@@ -79,8 +90,8 @@ export function insertSchedule(
     `INSERT INTO schedules
       (id,name,template_id,template_version,cadence_json,timezone,missed_policy,overlap_policy,
        spend_limit_cents,items_json,topic_keyword,values_json,status,version,creation_hash,
-       next_run_at,created_at,updated_at,deleted_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       next_run_at,created_at,updated_at,deleted_at,brief,topic_mode,topic_min,topic_llm_json)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
   ).run(
     schedule.id,
     schedule.name,
@@ -101,7 +112,20 @@ export function insertSchedule(
     schedule.createdAt,
     schedule.updatedAt,
     schedule.deletedAt,
+    ...generationColumns(schedule),
   );
+}
+
+function generationColumns(
+  schedule: ScheduleSummary,
+): readonly [string | null, string, number, string | null] {
+  const generation = schedule.topicGeneration;
+  return [
+    schedule.brief,
+    generation.mode,
+    generation.keepAtLeast,
+    generation.llm === null ? null : JSON.stringify(generation.llm),
+  ];
 }
 
 export function updateScheduleRow(
@@ -116,7 +140,8 @@ export function updateScheduleRow(
       `UPDATE schedules SET name=?,template_id=?,template_version=?,cadence_json=?,timezone=?,
        missed_policy=?,overlap_policy=?,spend_limit_cents=?,items_json=?,topic_keyword=?,
        values_json=?,status=?,version=?,
-       next_run_at=?,updated_at=?,mutation_id=?,mutation_hash=?
+       next_run_at=?,updated_at=?,mutation_id=?,mutation_hash=?,
+       brief=?,topic_mode=?,topic_min=?,topic_llm_json=?,topics_failed_at=NULL,topics_error=NULL
        WHERE id=? AND version=? AND deleted_at IS NULL`,
     )
     .run(
@@ -137,6 +162,7 @@ export function updateScheduleRow(
       schedule.updatedAt,
       mutationId,
       mutationHash,
+      ...generationColumns(schedule),
       schedule.id,
       baseVersion,
     );
@@ -268,7 +294,16 @@ function consumeTopic(
   const at = schedule.items.findIndex((item) => JSON.stringify(item) === key);
   if (at === -1) return;
   const items = schedule.items.filter((_item, index) => index !== at);
-  const done = items.length === 0 && (schedule.status === "active" || schedule.status === "paused");
+  // A schedule that finds its own topics keeps going when its queue empties.
+  const done =
+    items.length === 0 &&
+    schedule.topicGeneration.mode === "off" &&
+    (schedule.status === "active" || schedule.status === "paused");
+  // Remembered so topic generation never suggests it again.
+  db.prepare(
+    `INSERT INTO schedule_topics (id,schedule_id,title,state,rank,created_at,decided_at)
+     VALUES (?,?,?,'used',0,?,?)`,
+  ).run(randomUUID(), scheduleId, used.title, updatedAt, updatedAt);
   db.prepare(
     `UPDATE schedules SET items_json=?,status=?,next_run_at=?,version=version+1,updated_at=?
      WHERE id=? AND deleted_at IS NULL`,
@@ -379,7 +414,7 @@ export function settleTerminalScheduleRuns(db: DatabaseSync, settledAt: string):
 function projectIsActive(db: DatabaseSync, projectId: string): boolean {
   if (db.prepare("SELECT 1 FROM projects WHERE id=?").get(projectId) === undefined) return false;
   const state = derive(stagesOf(db, projectId), projectPaused(db, projectId));
-  return state !== "done" && state !== "failed" && state !== "canceled";
+  return state !== "done" && state !== "partial" && state !== "failed" && state !== "canceled";
 }
 
 export function recoverRunningRuns(
@@ -436,6 +471,19 @@ function parseSchedule(row: unknown): ScheduleSummary {
     items: JSON.parse(value.items_json),
     topicKeyword: value.topic_keyword,
     values: JSON.parse(value.values_json),
+    brief: value.brief,
+    topicGeneration: {
+      mode: value.topic_mode,
+      keepAtLeast: value.topic_min,
+      llm: value.topic_llm_json === null ? null : JSON.parse(value.topic_llm_json),
+    },
+    topics: {
+      held: value.held_topics,
+      generatingSince: value.topics_generating_at,
+      generatedAt: value.topics_generated_at,
+      failedAt: value.topics_failed_at,
+      error: value.topics_error,
+    },
     status: value.status,
     version: value.version,
     nextRunAt: value.next_run_at,

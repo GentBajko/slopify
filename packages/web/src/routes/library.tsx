@@ -11,7 +11,9 @@ export const libraryTabs = [
   { to: "/entries", label: "Intros & Outros" },
   { to: "/templates", label: "Templates" },
   { to: "/document-themes", label: "Documents" },
+  { to: "/narration-aliases", label: "Aliases" },
   { to: "/schedules", label: "Schedules" },
+  { to: "/calendar", label: "Calendar" },
 ] as const;
 
 export function LibraryLayout(): ReactElement {

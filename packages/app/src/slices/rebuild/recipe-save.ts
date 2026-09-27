@@ -7,6 +7,7 @@ import {
   imageSecondsProblem,
   normaliseDraft,
   silenceGapSecondsMax,
+  voicesFields,
   zoomPercentProblem,
 } from "../admission/rules.js";
 import { shortModeFields } from "../admission/short-mode.js";
@@ -307,6 +308,7 @@ export function validateRevisionEdit(
     config.subtitles.mode !== "off"
   )
     fields.push({ field: "subtitles.mode", message: "Subtitles need narration audio." });
+  fields.push(...voicesFields(config));
   return fields;
 }
 

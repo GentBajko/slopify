@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>How I run a channel with Slopify</title>
+    <meta
+      name="description"
+      content="Running a sleep-lore YouTube channel with Slopify: one template, a schedule, checkpoints, and what is still done by hand."
+    />
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+    <link rel="canonical" href="https://slopify.stream/channel.html" />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="Slopify" />
+    <meta property="og:url" content="https://slopify.stream/channel.html" />
+    <meta property="og:title" content="How I run a channel with Slopify" />
+    <meta property="og:image" content="https://slopify.stream/assets/og.png" />
+    <link rel="preload" href="/assets/fonts/barlow-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/styles.css" />
+    <script type="module" src="/main.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <div class="page">
+      <header class="masthead">
+        <a class="wordmark" href="/">
+          <span class="mark mark-inline" aria-hidden="true"></span>
+          <span>Slopify</span>
+        </a>
+        <nav class="masthead-links" aria-label="Project and support">
+          <a href="https://github.com/GentBajko/slopify">GitHub</a>
+          <a href="https://www.patreon.com/cw/GentBajko">
+            <span class="glyph glyph-patreon" aria-hidden="true"></span>
+            Patreon
+          </a>
+          <a href="https://buymeacoffee.com/gentbajko">
+            <span class="glyph glyph-coffee" aria-hidden="true"></span>
+            Buy Me a Coffee
+          </a>
+          <span data-donate hidden></span>
+          <a href="/channel.html" aria-current="page">How I run a channel</a>
+        </nav>
+      </header>
+
+      <main id="main">
+        <article class="reading">
+          <h1>How I run a channel with it</h1>
+          <p class="lede">
+            Slopify was built to run one channel: slow, narrated lore for people falling
+            asleep. This is how a lore channel runs on it, including the parts that are still
+            done by hand.
+          </p>
+
+          <nav class="reading-toc" aria-labelledby="toc-title">
+            <span class="engraved" id="toc-title">On this page</span>
+            <ol>
+              <li><a href="#template">One template</a></li>
+              <li><a href="#schedule">A schedule</a></li>
+              <li><a href="#checks">Checking the work</a></li>
+              <li><a href="#upload">Uploading</a></li>
+              <li><a href="#cost">What it costs</a></li>
+              <li><a href="#by-hand">Still by hand</a></li>
+            </ol>
+          </nav>
+
+          <h2 id="template">One template for every video</h2>
+          <p>
+            A lore channel works when every video sounds and looks like the last one, so the
+            whole setup lives in one template, saved from Play once it is right:
+          </p>
+          <ul>
+            <li>
+              An article prompt with one keyword, <code>&#123;&#123;Topic&#125;&#125;</code>: a calm documentary,
+              chapters of similar length, no invented sources.
+            </li>
+            <li>One narration voice and one image style, so video 1 and video 30 match.</li>
+            <li>
+              The video settings: slow zoom, cuts that follow the narration, chapter cards,
+              captions.
+            </li>
+            <li>The YouTube description with chapter timestamps, and shorts cut from the video.</li>
+          </ul>
+          <p>
+            The title is a pattern too, for example <code>Lore to sleep to: &#123;&#123;Topic&#125;&#125;</code>, so
+            each new topic is the only thing that changes.
+          </p>
+
+          <h2 id="schedule">A schedule that works through topics</h2>
+          <p>
+            The schedule runs the template on a list of topics, one per run, at a set time. The
+            topic list is written in one go and the schedule works through it. A run that
+            fails stops with the reason on the step, and is retried from there instead of
+            starting over.
+          </p>
+          <template data-release="3.0">
+            <p>
+              From 3.0 the schedule also has a series brief: what the channel covers and which
+              topics are worth a video first. When the queue runs low, it asks for the next
+              topics itself, never repeats a title it has made or queued, and can hold them for
+              approval.
+            </p>
+          </template>
+
+          <h2 id="checks">Checking the work</h2>
+          <p>
+            Checkpoints stop the run before narration, before the images and before the video,
+            so a bad article never costs a narration. A new template runs with all three on;
+            once its videos come out right, the one before the video is enough.
+          </p>
+          <template data-release="3.0">
+            <p>
+              From 3.0 a reviewer model looks first: it checks the article against the prompt's
+              rules, each image for stray text and malformed hands, and the narration against the
+              article, and sends the work back with its reasons. After 2 retries (the default) the
+              item is kept and flagged for a person to decide.
+            </p>
+            <p>
+              Characters and places come from the channel's cast: a reference image each, used
+              whenever a topic names them, so a character looks the same in video 1 and video 40.
+            </p>
+          </template>
+
+          <h2 id="upload">Uploading</h2>
+          <p>
+            Slopify never publishes. When a video is done, download it with its thumbnail, copy
+            the description and tags from the project page, and upload in YouTube Studio.
+            The shorts go up the same way, one at a time, each with its own title and hashtags.
+          </p>
+          <template data-release="3.0">
+            <p>
+              From 3.0, Prepare upload does the typing: it opens Studio's upload page and, once
+              the video is dropped in, fills the title, description with chapters, tags,
+              thumbnail, audience and playlist. You check it and press Publish.
+            </p>
+          </template>
+
+          <h2 id="cost">What it costs</h2>
+          <p>
+            The review before Start shows the estimate for the run. Articles written with the
+            Claude Code, Codex or Gemini CLI cost nothing extra on a subscription; narration and
+            images are paid per use with your own keys. Settings → Usage counts the tokens,
+            narration seconds and images every run used.
+          </p>
+
+          <h2 id="by-hand">What is still by hand</h2>
+          <ul>
+            <li>Picking the topics, and reading the article before it is narrated.</li>
+            <li>Watching the finished video once before it goes up.</li>
+            <li>Pressing Publish in YouTube Studio. That stays with the person on purpose.</li>
+          </ul>
+          <p class="reading-note">
+            The walkthrough on the <a href="/">home page</a> shows these screens with a demo
+            project. The code is on <a href="https://github.com/GentBajko/slopify">GitHub</a>.
+          </p>
+        </article>
+      </main>
+
+      <footer class="free">
+        <div class="free-text">
+          <p class="free-line">Free. Runs on your machine with your own keys.</p>
+        </div>
+        <p class="free-support">Support the project</p>
+        <a class="donate" href="https://www.patreon.com/cw/GentBajko">
+          <span class="glyph glyph-patreon" aria-hidden="true"></span>
+          Patreon
+        </a>
+        <a class="donate" href="https://buymeacoffee.com/gentbajko">
+          <span class="glyph glyph-coffee" aria-hidden="true"></span>
+          Buy Me a Coffee
+        </a>
+        <span data-donate="donate" hidden></span>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,6 +1,11 @@
 import { type ReactElement, type ReactNode, useId } from "react";
 import { InfoTip } from "@/components/kit/info-tip";
 
+// What to ask the article prompt for, so the model writes a glossary narration can use: the
+// parser skips entries in other alphabets or notations, one by one.
+export const glossaryPromptTip =
+  "In your article prompt, ask for a Pronunciation Glossary in slash-delimited standard-English IPA (Term: /IPA/), one IPA word per written word, and an English approximation for foreign names; an entry with sounds English doesn’t use is skipped and read as ordinary text.";
+
 export function PronunciationGlossary({
   value,
   supported,
@@ -39,17 +44,19 @@ export function PronunciationGlossary({
         <InfoTip label="the Pronunciation Glossary">
           <p>
             Uses IPA supplied in the article’s Pronunciation Glossary, for example{" "}
-            <code>Arda: /ˈɑɹdə/</code>. Works independently of Narration Preparation with no extra
-            LLM call. Supports generated Inworld TTS-2 and TTS-2 Flash audio. Readable text stays
-            unchanged; no glossary means ordinary narration.
+            <code>Arda: /ˈɑɹdə/</code> or a <code>| Term | IPA |</code> table. Works independently
+            of Narration Preparation with no extra LLM call. Supports generated Inworld TTS-2 and
+            TTS-2 Flash audio. Readable text stays unchanged; no glossary means ordinary narration.
           </p>
+          <p>{glossaryPromptTip}</p>
         </InfoTip>
       </label>
       <p id={`${id}-help`} className="sr-only">
         Uses IPA supplied in the article’s Pronunciation Glossary, for example{" "}
-        <code>Arda: /ˈɑɹdə/</code>. Works independently of Narration Preparation with no extra LLM
-        call. Supports generated Inworld TTS-2 and TTS-2 Flash audio. Readable text stays unchanged;
-        no glossary means ordinary narration.
+        <code>Arda: /ˈɑɹdə/</code> or a <code>| Term | IPA |</code> table. Works independently of
+        Narration Preparation with no extra LLM call. Supports generated Inworld TTS-2 and TTS-2
+        Flash audio. Readable text stays unchanged; no glossary means ordinary narration.{" "}
+        {glossaryPromptTip}
       </p>
       {shared === undefined ? null : (
         <div className="space-y-1 pl-7">

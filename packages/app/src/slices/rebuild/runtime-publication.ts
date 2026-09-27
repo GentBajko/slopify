@@ -29,7 +29,9 @@ export function preparedResult(
       role === "image" ||
       role === "short_image" ||
       role === "short_video" ||
-      role === "animated_image"
+      role === "animated_image" ||
+      // The second and third thumbnails; the first keeps the slot it always had.
+      (role === "thumbnail" && piece.key !== "thumbnail:image")
         ? piece.key
         : `${context.work.kind}:${role}`,
     workKey: piece.key,
@@ -185,6 +187,7 @@ function pieceIndex(deps: RevisionDeps, context: StageContext, piece: WorkPiece)
     "narration:files:body",
     "narration:files:intro",
     "narration:files:outro",
+    "voices:files",
   ];
   const localIndex = localOrder.indexOf(piece.key);
   if (localIndex >= 0) return localIndex + 1;

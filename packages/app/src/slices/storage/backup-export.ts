@@ -335,6 +335,7 @@ function librarySnapshot(deps: BackupDeps): { readonly part: LibraryPart } {
   put("entries", rowsOf(db, "SELECT * FROM entries ORDER BY rowid"));
   put("voices", rowsOf(db, "SELECT * FROM voices ORDER BY rowid"));
   put("document_themes", rowsOf(db, "SELECT * FROM document_themes ORDER BY rowid"));
+  put("narration_aliases", rowsOf(db, "SELECT * FROM narration_aliases ORDER BY position,rowid"));
   put("project_templates", rowsOf(db, "SELECT * FROM project_templates ORDER BY rowid"));
   put(
     "project_template_revisions",
@@ -342,6 +343,7 @@ function librarySnapshot(deps: BackupDeps): { readonly part: LibraryPart } {
   );
   put("schedules", rowsOf(db, "SELECT * FROM schedules ORDER BY rowid"));
   put("schedule_runs", rowsOf(db, "SELECT * FROM schedule_runs ORDER BY rowid"));
+  put("schedule_topics", rowsOf(db, "SELECT * FROM schedule_topics ORDER BY rowid"));
 
   // Play drafts are work the user typed and has not started yet, so they travel. A draft
   // that already became projects is not: its projects carry it. Its uploads travel with it

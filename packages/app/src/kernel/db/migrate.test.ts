@@ -41,14 +41,24 @@ describe("migrate", () => {
       "attempts",
       "backup_imports",
       "batches",
+      "cast_images",
+      "cast_members",
+      "channels",
       "document_themes",
       "entries",
+      "image_blobs",
+      "library_versions",
       "machine",
+      "narration_aliases",
       "outputs",
+      "plan_limit_readings",
+      "plan_limit_waiters",
+      "plan_limit_waits",
       "play_draft_attachments",
       "play_drafts",
       "play_start_receipts",
       "project_assets",
+      "project_channels",
       "project_control_receipts",
       "project_controls",
       "project_heads",
@@ -59,12 +69,15 @@ describe("migrate", () => {
       "project_template_revisions",
       "project_templates",
       "projects",
+      "prompt_softening",
       "prompts",
       "provider_keys",
+      "provider_usage",
       "rebuild_admissions",
       "rebuild_previews",
       "review_checkpoint_approvals",
       "review_checkpoints",
+      "review_verdicts",
       "revision_mutations",
       "revision_outputs",
       "revision_pieces",
@@ -73,6 +86,7 @@ describe("migrate", () => {
       "revision_work_pieces",
       "revision_work_reservations",
       "schedule_runs",
+      "schedule_topics",
       "schedules",
       "schema_migrations",
       "settings",
@@ -81,18 +95,26 @@ describe("migrate", () => {
       "stages",
       "telemetry_events",
       "voices",
+      "youtube_description_edits",
     ]);
     expect(names(db, "index")).toEqual([
+      "cast_images_member",
+      "cast_members_channel",
+      "channels_one_default",
       "document_themes_name",
       "entries_name",
       "outputs_project",
+      "plan_limit_readings_project",
       "play_draft_attachment_file",
       "play_draft_attachment_owner",
       "play_start_receipt_draft",
       "project_queue_state",
       "project_revisions_project",
       "prompts_name",
+      "provider_usage_project",
       "review_checkpoint_work",
+      "review_verdicts_item",
+      "review_verdicts_redo",
       "revision_outputs_publication",
       "revision_outputs_revision",
       "revision_outputs_selected",
@@ -101,9 +123,11 @@ describe("migrate", () => {
       "revision_pieces_revision",
       "revision_pieces_selected",
       "revision_work_dispatch",
+      "revision_work_retry",
       "revision_work_revision_identity",
       "revision_work_stage",
       "schedule_runs_schedule",
+      "schedule_topics_schedule",
       "schedules_due",
       "stages_project_identity",
     ]);
@@ -136,6 +160,14 @@ describe("migrate", () => {
       { version: 19, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 22, applied_at: "2026-09-02T10:00:00.000Z" },
       { version: 24, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 25, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 26, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 27, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 30, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 31, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 32, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 34, applied_at: "2026-09-02T10:00:00.000Z" },
+      { version: 35, applied_at: "2026-09-02T10:00:00.000Z" },
     ]);
   });
 
@@ -145,7 +177,7 @@ describe("migrate", () => {
     migrate(db, clock);
     migrate(db, clock);
 
-    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 21 });
+    expect(db.prepare("SELECT count(*) AS n FROM schema_migrations").get()).toEqual({ n: 29 });
   });
 
   it("refuses a database newer than the app knows", () => {
@@ -154,7 +186,7 @@ describe("migrate", () => {
     db.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(42, clock.now().toISOString());
 
     expect(() => migrate(db, clock)).toThrow(
-      "database schema 42 is newer than this app knows (24)",
+      "database schema 42 is newer than this app knows (35)",
     );
   });
 
@@ -259,7 +291,8 @@ describe("migrate", () => {
           db
             .prepare(`SELECT * FROM ${table}`)
             .all()
-            .filter((row) => row.kind !== "document"),
+            .filter((row) => row.kind !== "document")
+            .map(withoutRetryColumns),
         ),
       ).toEqual(before);
       expect(
@@ -393,6 +426,54 @@ describe("migrate", () => {
     }
   });
 
+  it("keeps every saved prompt when adding the review kind to a version 24 library", () => {
+    const db = openDb(":memory:");
+    try {
+      const directory = new URL("./migrations/", import.meta.url);
+      for (const file of readdirSync(directory)
+        .filter((name) => name.endsWith(".sql") && Number(name.slice(0, 4)) <= 24)
+        .sort()) {
+        db.exec(readFileSync(new URL(file, directory), "utf8"));
+        db.prepare("INSERT INTO schema_migrations VALUES (?,?)").run(
+          Number(file.slice(0, 4)),
+          clock.now().toISOString(),
+        );
+      }
+      for (const kind of ["article", "image", "thumbnail", "narration", "description", "shorts"])
+        db.prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)").run(
+          kind,
+          kind,
+          "Saved",
+          "Body {{Topic}}.",
+          '["Topic"]',
+          "original-date",
+        );
+      expect(() =>
+        db
+          .prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)")
+          .run("r0", "review", "R", "B", "[]", "x"),
+      ).toThrow();
+      const before = db.prepare("SELECT * FROM prompts ORDER BY id").all();
+      migrate(db, clock);
+      expect(db.prepare("SELECT * FROM prompts ORDER BY id").all()).toEqual(before);
+      db.prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)").run(
+        "r1",
+        "review",
+        "Saved",
+        "Strict",
+        "[]",
+        "today",
+      );
+      expect(() =>
+        db
+          .prepare("INSERT INTO prompts VALUES (?,?,?,?,?,?)")
+          .run("r2", "review", "SAVED", "Other", "[]", "today"),
+      ).toThrow();
+    } finally {
+      db.close();
+    }
+  });
+
   it("upgrades version 9 schedules to FK-free tombstones with retained occurrences", () => {
     const db = openDb(":memory:");
     try {
@@ -470,7 +551,8 @@ describe("migrate", () => {
         db
           .prepare(`SELECT * FROM ${table}`)
           .all()
-          .filter((row) => row.kind !== "document"),
+          .filter((row) => row.kind !== "document")
+          .map(withoutRetryColumns),
       ),
     ).toEqual(before);
     for (const table of [
@@ -504,3 +586,12 @@ describe("migrate", () => {
     expect(db.prepare("SELECT count(*) AS n FROM stages").get()).toEqual({ n: 0 });
   });
 });
+
+// Version 30 adds the automatic retry's columns to every stage and step row, empty.
+function withoutRetryColumns(row: Record<string, unknown>): Record<string, unknown> {
+  const { failure_kind: kind, retry_at: at, auto_retries: count, ...rest } = row;
+  if ((kind !== undefined && kind !== null) || (at !== undefined && at !== null))
+    throw new Error("an existing row gained a retry");
+  if (count !== undefined && count !== 0) throw new Error("an existing row gained a retry");
+  return rest;
+}

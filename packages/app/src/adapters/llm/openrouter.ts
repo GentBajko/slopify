@@ -13,6 +13,7 @@ import {
   unreadable,
 } from "../explain.js";
 import { retryAfter } from "../retry-after.js";
+import { noImages } from "./image-workspace.js";
 import { sseData } from "./sse-lines.js";
 
 // The HTTP gateway adapter: the platform's own `fetch` plus the line reader beside this
@@ -67,6 +68,9 @@ const streamChunk = z.object({
 
 export function openRouterLlm(deps: OpenRouterDeps): LlmPort {
   async function* complete(req: LlmCompletion): AsyncGenerator<LlmEvent> {
+    // ceiling: text only. The catalogue does not yet say which models take images, and an older
+    // Slopify parses the fetched catalogue strictly, so a new key there would break it.
+    if (req.images?.length) throw noImages("OpenRouter models");
     const response = await deps.fetch(`${openRouterBase}/chat/completions`, {
       method: "POST",
       signal: req.signal,
@@ -91,7 +95,7 @@ export function openRouterLlm(deps: OpenRouterDeps): LlmPort {
       throw await failure(response);
     }
     if (response.body === null) {
-      throw providerError({ kind: "other", message: droppedStream("OpenRouter") });
+      throw providerError({ kind: "dropped", message: droppedStream("OpenRouter") });
     }
 
     let usage: Usage | null = null;
@@ -137,7 +141,7 @@ export function openRouterLlm(deps: OpenRouterDeps): LlmPort {
       // Neither `[DONE]` nor the usage frame arrived, so the connection dropped part-way.
       // Saying so is what stops a truncated answer being stored as a whole one.
       throw providerError({
-        kind: "other",
+        kind: "dropped",
         message: droppedStream("OpenRouter"),
       });
     }
@@ -194,6 +198,8 @@ function kindOf(status: number): ProviderErrorKind {
   // ceiling: everything else is `other` and is retried, so a 400 or a 402 fails the same
   // way four times over. A terminal "this will never work" kind has to reach the port's
   // error contract first, which is not this adapter's to widen.
+  // The provider's own server failed; the same request may well succeed later.
+  if (status >= 500) return "dropped";
   return "other";
 }
 

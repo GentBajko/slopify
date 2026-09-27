@@ -78,6 +78,13 @@ export const recipeInputSchema: z.ZodType<RecipeInput> = z.discriminatedUnion("k
         .object({ fingerprint: z.string(), assetId: z.string().nullable() })
         .strict()
         .optional(),
+      cast: z
+        .array(
+          z
+            .object({ name: z.string(), description: z.string(), images: z.array(z.string()) })
+            .strict(),
+        )
+        .optional(),
     })
     .strict(),
   z

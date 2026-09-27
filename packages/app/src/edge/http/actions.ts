@@ -16,6 +16,7 @@ import {
 import { recoverProject } from "../../slices/rebuild/recovery.js";
 import { type RecoveryRequest, recoveryResultSchema } from "../../slices/rebuild/recovery-model.js";
 import { resumable } from "../../slices/rebuild/recovery-repo.js";
+import { clearSoftening, refusedKeys, requestSoftening } from "../../slices/rebuild/soften.js";
 import type { RerunDeps } from "../../slices/reruns/index.js";
 import { adoptBaseline } from "../../slices/revisions/adopt.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
@@ -225,56 +226,85 @@ export function actionRoutes(deps: AppDeps) {
       : controlled(c, id, { ok: false, reason: "revision-required" });
   };
 
-  return new Hono()
-    .post("/:id/pause", zValidator("param", idParam, onInvalid), async (c) => {
-      const { id } = c.req.valid("param");
-      const input = await controlInput(c, id);
-      return input instanceof Response
-        ? input
-        : controlled(c, id, await pauseProject(control, id, input));
-    })
-    .post(
-      "/:id/resume",
-      zValidator("param", idParam, onInvalid),
-      zValidator("json", revisionControlSchema, onInvalid),
-      (c) => recovery(c, c.req.valid("param").id, c.req.valid("json"), { kind: "resume" }),
-    )
-    .patch("/:id/providers", zValidator("param", idParam, onInvalid), revisionRequired)
-    .post("/:id/cancel", zValidator("param", idParam, onInvalid), async (c) => {
-      const { id } = c.req.valid("param");
-      const input = await controlInput(c, id);
-      if (input instanceof Response) return input;
-      const result = await cancelProject(cancel, id, input);
-      if (!result.ok) return controlled(c, id, result);
-      return c.json({ ...view(id), canceled: result.canceled });
-    })
-    .post(
-      "/:id/stages/:kind/retry",
-      zValidator("param", stageParam, onInvalid),
-      zValidator("json", revisionControlSchema, onInvalid),
-      (c) =>
-        recovery(c, c.req.valid("param").id, c.req.valid("json"), {
-          kind: "retry",
-          stage: c.req.valid("param").kind,
-        }),
-    )
-    .post(
-      "/:id/stages/:kind/rerun",
-      zValidator("param", stageParam, onInvalid),
-      zValidator("json", revisionControlSchema, onInvalid),
-      (c) =>
-        recovery(c, c.req.valid("param").id, c.req.valid("json"), {
-          kind: "rerun",
-          stage: c.req.valid("param").kind,
-        }),
-    )
-    .put("/:id/article", zValidator("param", idParam, onInvalid), revisionRequired)
-    .delete("/:id/images/:outputId", zValidator("param", imageParam, onInvalid), revisionRequired)
-    .post(
-      "/:id/images/:outputId/regenerate",
-      zValidator("param", imageParam, onInvalid),
-      revisionRequired,
-    );
+  return (
+    new Hono()
+      .post("/:id/pause", zValidator("param", idParam, onInvalid), async (c) => {
+        const { id } = c.req.valid("param");
+        const input = await controlInput(c, id);
+        return input instanceof Response
+          ? input
+          : controlled(c, id, await pauseProject(control, id, input));
+      })
+      .post(
+        "/:id/resume",
+        zValidator("param", idParam, onInvalid),
+        zValidator("json", revisionControlSchema, onInvalid),
+        (c) => recovery(c, c.req.valid("param").id, c.req.valid("json"), { kind: "resume" }),
+      )
+      .patch("/:id/providers", zValidator("param", idParam, onInvalid), revisionRequired)
+      .post("/:id/cancel", zValidator("param", idParam, onInvalid), async (c) => {
+        const { id } = c.req.valid("param");
+        const input = await controlInput(c, id);
+        if (input instanceof Response) return input;
+        const result = await cancelProject(cancel, id, input);
+        if (!result.ok) return controlled(c, id, result);
+        return c.json({ ...view(id), canceled: result.canceled });
+      })
+      .post(
+        "/:id/stages/:kind/retry",
+        zValidator("param", stageParam, onInvalid),
+        zValidator("json", revisionControlSchema, onInvalid),
+        (c) =>
+          recovery(c, c.req.valid("param").id, c.req.valid("json"), {
+            kind: "retry",
+            stage: c.req.valid("param").kind,
+          }),
+      )
+      // Soften and retry: the refused image prompts of this stage are reworded by the project's
+      // AI model when the retry draws them again (`slices/rebuild/soften.ts`).
+      .post(
+        "/:id/stages/:kind/soften",
+        zValidator("param", stageParam, onInvalid),
+        zValidator("json", revisionControlSchema, onInvalid),
+        async (c) => {
+          const { id, kind } = c.req.valid("param");
+          const keys =
+            kind === "images" || kind === "thumbnail" ? refusedKeys(deps.db, id, kind) : [];
+          if (keys.length === 0)
+            return problem(c, {
+              status: 409,
+              title: titleOf(409),
+              detail:
+                "Nothing in this section was refused by a content filter, so there is no prompt to soften. Reload the page; if the section still shows an error, use Retry stage.",
+              extensions: { reason: "nothing-refused" },
+            });
+          requestSoftening(deps.db, id, keys, deps.clock.now().toISOString());
+          const response = await recovery(c, id, c.req.valid("json"), {
+            kind: "retry",
+            stage: kind,
+          });
+          if (response.status !== 202) clearSoftening(deps.db, id, keys);
+          return response;
+        },
+      )
+      .post(
+        "/:id/stages/:kind/rerun",
+        zValidator("param", stageParam, onInvalid),
+        zValidator("json", revisionControlSchema, onInvalid),
+        (c) =>
+          recovery(c, c.req.valid("param").id, c.req.valid("json"), {
+            kind: "rerun",
+            stage: c.req.valid("param").kind,
+          }),
+      )
+      .put("/:id/article", zValidator("param", idParam, onInvalid), revisionRequired)
+      .delete("/:id/images/:outputId", zValidator("param", imageParam, onInvalid), revisionRequired)
+      .post(
+        "/:id/images/:outputId/regenerate",
+        zValidator("param", imageParam, onInvalid),
+        revisionRequired,
+      )
+  );
 }
 
 function revisionRequired(c: Context): Response {

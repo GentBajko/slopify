@@ -1,8 +1,9 @@
 import type { FingerprintValue } from "../../kernel/runner/work.js";
-import type { RunConfig } from "../admission/model.js";
+import { type RunConfig, thumbnailCountOf, thumbnailKey } from "../admission/model.js";
 import { usesShortMode } from "../admission/short-mode.js";
 import { render } from "../admission/substitute.js";
 import type { RevisionContent } from "../revisions/model.js";
+import { castFor } from "./recipe-cast.js";
 import type { EditPlan } from "./recipe-edit.js";
 import {
   type RecipeContext,
@@ -10,7 +11,7 @@ import {
   recipe,
   resourceIdentity,
 } from "./recipe-model.js";
-import { type ImageReference, imageChoice } from "./recipe-reference.js";
+import { castField, type ImageReference, imageChoice } from "./recipe-reference.js";
 import { matchingText, renderedPrompt } from "./recipe-text.js";
 
 export function visualRecipes(
@@ -52,6 +53,7 @@ export function visualRecipes(
               aspect: config.format,
               prompt: prompt ?? "",
               ...(reference === undefined ? {} : { reference: reference.input }),
+              ...castField(castFor(config, prompt)),
             },
         image.source === "provide" || reference === undefined ? [] : [reference.key],
         { unresolved: image.source === "provide" ? image.assetId === null : !prompt?.trim() },
@@ -157,10 +159,11 @@ export function thumbnailRecipes(
     config.sources.thumbnail === "prompt_by_llm" && promptRecipe !== undefined
       ? matchingText(context, promptRecipe, "prompt")
       : renderedPrompt(context, "thumbnailPrompt");
-  return [
+  const variants = Array.from({ length: thumbnailCountOf(config) }, (_, index) => index + 1);
+  return variants.map((variant) =>
     recipe(
       context,
-      "thumbnail:image",
+      thumbnailKey(variant),
       "thumbnail",
       prompt === null
         ? {
@@ -176,6 +179,7 @@ export function thumbnailRecipes(
               // fingerprint.
               ...(config.images?.thinking === undefined ? [] : [config.images.thinking]),
               ...(reference === undefined ? [] : [reference.input.fingerprint]),
+              ...(variant === 1 ? [] : [["thumbnail-variant", variant]]),
             ],
           }
         : {
@@ -183,15 +187,30 @@ export function thumbnailRecipes(
             version: 1,
             ...imageChoice(config),
             aspect: config.format,
-            prompt,
+            prompt: thumbnailVariantPrompt(prompt, variant),
             ...(reference === undefined ? {} : { reference: reference.input }),
+            // The thumbnail stands for the whole video, like the establishing image.
+            ...castField(castFor(config, config.title, prompt)),
           },
       [
         ...(promptRecipe === undefined ? [] : [promptRecipe.key]),
         ...(reference === undefined ? [] : [reference.key]),
       ],
     ),
-  ];
+  );
+}
+
+// The second and third thumbnails are the same prompt asked for another composition, so the
+// three test one idea against itself rather than three ideas. The first is the prompt as it
+// is, which keeps the thumbnail every project already has.
+const variantFraming: Readonly<Record<number, string>> = {
+  2: "a tight close-up where the main subject fills most of the frame, seen from a different angle",
+  3: "a wider shot that shows the main subject in its setting, placed off-centre with room around it",
+};
+export function thumbnailVariantPrompt(prompt: string, variant: number): string {
+  const framing = variantFraming[variant];
+  if (framing === undefined) return prompt;
+  return `${prompt}\n\nThis is thumbnail ${String(variant)} of 3 for a YouTube thumbnail test. Keep the subject, style, colours and any text asked for above, but use a clearly different composition: ${framing}.`;
 }
 export function visualAssets(
   context: RecipeContext,

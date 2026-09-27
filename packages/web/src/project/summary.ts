@@ -74,6 +74,7 @@ export function summaryOf(
       return "Not part of this run";
     case "pending":
       if (project.status === "paused" || resumable) return "Waiting for Resume";
+      if (stage.retryAt !== undefined) return `Trying again at ${clockTime(stage.retryAt)}`;
       if (stage.kind === "images" || (stage.kind === "thumbnail" && stage.source === "from_prompt"))
         return "Ready to run";
       return "Waits for the stages above";
@@ -96,6 +97,11 @@ export function summaryOf(
     case "done":
       return done(stage.kind, mine, project);
   }
+}
+
+// "14:05": when a step waiting out a rate limit or a timeout runs again by itself.
+export function clockTime(at: string): string {
+  return new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 export function attempts(stage: Stage): string {

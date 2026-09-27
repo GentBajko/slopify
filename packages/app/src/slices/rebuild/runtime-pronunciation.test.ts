@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import { outputPath } from "../storage/layout.js";
+import { planPreview } from "./preview-plan.js";
 import { revisionTranscript } from "./runtime-export-inputs.js";
 import { narrationFixture, preparationCatalogue } from "./runtime-narration.fake.js";
 import { executionPlan } from "./runtime-plan.js";
@@ -108,7 +109,7 @@ it("counts encoded IPA plus cues, carries delivery and never repeats a one-shot 
 });
 
 it.each([false, true])(
-  "refuses invalid unused glossary before any new cue or TTS call (prep=%s)",
+  "narrates with the usable rows when an unused glossary row is skipped (prep=%s)",
   async (prepare) => {
     const h = await narrationFixture(`${markdown}\nUnused: not IPA`, {
       config: {
@@ -126,12 +127,23 @@ it.each([false, true])(
     });
     try {
       await h.pump();
-      expect(h.calls).toEqual([]);
+      // One malformed row used to refuse the whole narration; now only that row is left out.
+      const spoken = h.calls.filter((call) => call.kind === "tts").map((call) => call.text);
+      expect(spoken.join("").replace(/\[[^\]]+\] /gu, "")).toBe("/dʒɑn/ reads.");
       const plan = executionPlan(h.deps, h.view(), preparationCatalogue);
-      expect(plan.recipes.some((row) => row.refusal && row.unresolved)).toBe(true);
-      expect(plan.work.some((row) => row.stage === "audio" && row.disposition === "blocked")).toBe(
-        true,
+      expect(plan.recipes.some((row) => row.refusal !== undefined)).toBe(false);
+      expect(plan.work.some((row) => row.disposition === "blocked")).toBe(false);
+      expect(plan.glossaryNotice).toContain("entry 2:");
+      const preview = planPreview(
+        h.deps,
+        h.view(),
+        preparationCatalogue,
+        { kind: "allAffected" },
+        "preview",
       );
+      if (!preview.ok) throw new Error(preview.reason);
+      expect(preview.value.preview.warnings).toEqual([plan.glossaryNotice]);
+      expect(preview.value.preview.warnings.join("")).not.toContain("Unused");
     } finally {
       h.close();
     }

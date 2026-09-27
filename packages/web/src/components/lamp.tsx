@@ -11,6 +11,7 @@ const lit: Readonly<Record<StageState | ProjectState, string>> = {
     "bg-lamp-run shadow-[0_0_0_3px_var(--color-lamp-halo)] animate-lamp-pulse motion-reduce:animate-none",
   done: "bg-done",
   failed: "bg-red",
+  partial: "bg-amber",
   canceled: "bg-amber",
   paused: "bg-amber",
   provided: "bg-lamp-off shadow-[inset_0_0_0_1px_var(--color-lamp-ring)]",

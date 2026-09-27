@@ -4,7 +4,13 @@ import { defaultChunking } from "../narration/chunk.js";
 import { concatArgs } from "../narration/concat.js";
 import { normalizeNarrationText } from "../narration/plan.js";
 import { pronunciationChunks } from "../narration/pronunciation-chunks.js";
-import { narrationParts, pronunciationFutureValues, voiceValues } from "./recipe-audio-parts.js";
+import type { ScriptSection } from "../voices/script.js";
+import {
+  aliasFutureValues,
+  narrationParts,
+  pronunciationFutureValues,
+  voiceValues,
+} from "./recipe-audio-parts.js";
 import {
   type RecipeContext,
   type ResolvedWorkRecipe,
@@ -15,12 +21,15 @@ import {
 import { narrationFileRecipe } from "./recipe-narration-text.js";
 import { preparationFuture, preparationTemplate } from "./recipe-preparation.js";
 import type { TextRecipes } from "./recipe-text.js";
+import { voiceBodyRecipes } from "./recipe-voices.js";
 
 export interface AudioRecipes {
   readonly recipes: readonly ResolvedWorkRecipe[];
   readonly mediaFingerprint: string | null;
   readonly timeline: FingerprintValue;
   readonly keys: readonly string[];
+  // A multi-voice run's script sections, once the script is known: the audio files' chapters.
+  readonly sections?: readonly ScriptSection[] | undefined;
 }
 export function bodyNarrationGroups(
   context: RecipeContext,
@@ -46,6 +55,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
   const narrationFiles = prepare || pronounce;
   let body: ResolvedWorkRecipe;
   let bodyTranscript: FingerprintValue = text.articleText ?? text.article.fingerprint;
+  let sections: readonly ScriptSection[] | undefined;
   if (config.sources.audio === "provide") {
     body = recipe(
       context,
@@ -61,6 +71,14 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
       { unresolved: content.provided.audio === undefined },
     );
     recipes.push(body);
+  } else if (text.script !== undefined && config.voices !== undefined) {
+    const voiced = voiceBodyRecipes(context, config.voices, text.script, text.glossary);
+    recipes.push(...voiced.parts);
+    if (narrationFiles) recipes.push(narrationFileRecipe(context, "body", voiced.parts));
+    recipes.push(voiced.body);
+    body = voiced.body;
+    bodyTranscript = voiced.transcript;
+    sections = voiced.sections;
   } else {
     const groups = bodyNarrationGroups(context, text);
     const parts: ResolvedWorkRecipe[] = [];
@@ -74,6 +92,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
       });
       futurePronunciation.push(
         ...pronunciationFutureValues(context, text.glossary, text.article, logicalKey, logicalText),
+        ...aliasFutureValues(context, logicalKey, logicalText),
       );
       const group = narrationParts(
         context,
@@ -98,6 +117,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
           "audio:body:future",
           null,
         ),
+        ...aliasFutureValues(context, "audio:body:future", null),
       );
       if (prepare) recipes.push(preparationFuture(context, "body", text.article));
     }
@@ -198,6 +218,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
                 logicalKey,
                 entry.text,
               ),
+              ...aliasFutureValues(context, logicalKey, entry.text),
             ],
           },
           [...dependencies, ...preparationKeys(recipes, category)],
@@ -252,6 +273,7 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
     ]),
     timeline,
     keys: ordered.map(({ value }) => value.key),
+    ...(sections === undefined ? {} : { sections }),
   };
 }
 function effectiveText(context: RecipeContext, key: string, original: string): string {

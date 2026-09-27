@@ -20,6 +20,9 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
   const vtt = roleOf(subtitleOutputs, "subtitles_vtt");
   const description = roleOf(subtitleOutputs, "youtube_description");
   const tags = roleOf(subtitleOutputs, "youtube_tags");
+  // A multi-voice run's listening files, with chapter markers.
+  const mp3 = roleOf(subtitleOutputs, "audio_mp3");
+  const m4b = roleOf(subtitleOutputs, "audio_m4b");
   const clips = useShortClips(subtitleOutputs);
   const shorts = currentShorts(subtitleOutputs, "short_video", clips).toSorted(
     (left, right) => (left.meta.short ?? 0) - (right.meta.short ?? 0),
@@ -127,6 +130,8 @@ export function VideoBody({ stage, project, outputs, actions, busy, subtitleCont
             { output: vtt, label: "Subtitles (.vtt)" },
             { output: description, label: "YouTube description (.txt)" },
             { output: tags, label: "YouTube tags (.txt)" },
+            { output: mp3, label: "Audio with chapters (.mp3)" },
+            { output: m4b, label: "Audiobook with chapters (.m4b)" },
             ...shorts.map((output) => ({
               output,
               label: `Short ${String(output.meta.short ?? "")} (.mp4)`,

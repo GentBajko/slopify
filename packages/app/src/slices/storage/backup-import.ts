@@ -113,6 +113,7 @@ export interface BackupImportSummary {
   readonly prompts: ItemCounts;
   readonly entries: ItemCounts;
   readonly documentThemes: ItemCounts;
+  readonly narrationAliases: ItemCounts;
   readonly templates: ItemCounts;
   readonly schedules: ItemCounts & { readonly paused: number };
   readonly voices: ItemCounts;
@@ -691,6 +692,34 @@ function commit(
         }
       }
 
+      // Library → Aliases: an alias for a written form this install already has is kept as
+      // it is here; the others are added after this install's own, in the backup's order.
+      const narrationAliases = { added: 0, renamed: 0, skipped: 0 };
+      let position = Number(
+        db.prepare("SELECT coalesce(max(position),-1) AS n FROM narration_aliases").get()?.n ?? -1,
+      );
+      for (const row of rowsOf(
+        scratch,
+        "SELECT * FROM narration_aliases ORDER BY position,rowid",
+      )) {
+        const caseSensitive = row.case_sensitive === 1;
+        if (
+          has("SELECT 1 FROM narration_aliases WHERE id=?", String(row.id)) ||
+          has(
+            caseSensitive
+              ? "SELECT 1 FROM narration_aliases WHERE case_sensitive=1 AND written=?"
+              : "SELECT 1 FROM narration_aliases WHERE case_sensitive=0 AND lower(written)=lower(?)",
+            String(row.written),
+          )
+        )
+          narrationAliases.skipped += 1;
+        else {
+          position += 1;
+          insertRow(db, "narration_aliases", { ...row, position });
+          narrationAliases.added += 1;
+        }
+      }
+
       const templates = { added: 0, renamed: 0, skipped: 0 };
       for (const template of rowsOf(scratch, "SELECT * FROM project_templates ORDER BY rowid")) {
         const id = String(template.id);
@@ -744,7 +773,10 @@ function commit(
         insertRow(
           db,
           "schedules",
-          active ? { ...schedule, status: "paused", updated_at: now } : schedule,
+          // A generation the other install was running does not carry over.
+          active
+            ? { ...schedule, status: "paused", updated_at: now, topics_generating_at: null }
+            : { ...schedule, topics_generating_at: null },
         );
         if (active) schedules.paused += 1;
         for (const run of rowsOf(
@@ -754,6 +786,13 @@ function commit(
         ))
           if (!has("SELECT 1 FROM schedule_runs WHERE id=?", String(run.id)))
             insertRow(db, "schedule_runs", run);
+        for (const topic of rowsOf(
+          scratch,
+          "SELECT * FROM schedule_topics WHERE schedule_id=? ORDER BY rowid",
+          String(schedule.id),
+        ))
+          if (!has("SELECT 1 FROM schedule_topics WHERE id=?", String(topic.id)))
+            insertRow(db, "schedule_topics", topic);
         schedules.added += 1;
       }
 
@@ -849,6 +888,7 @@ function commit(
         prompts,
         entries,
         documentThemes,
+        narrationAliases,
         templates,
         schedules,
         voices: { added: voicesAdded, renamed: 0, skipped: voicesSkipped },

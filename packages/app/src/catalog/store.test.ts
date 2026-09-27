@@ -2,7 +2,12 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { createCatalogueStore, parseCatalogue } from "./store.js";
+import {
+  catalogueSource,
+  createCatalogueStore,
+  openRouterModelsSource,
+  parseCatalogue,
+} from "./store.js";
 
 const bundled = readFileSync(new URL("../assets/models.yaml", import.meta.url), "utf8");
 describe("model catalogue", () => {
@@ -64,5 +69,75 @@ tts: []
     await store.refresh();
     expect(store.models("inworld", "tts")[0]?.name).toBe("Updated TTS-2");
     expect(readFileSync(`${store.status().path}.previous`, "utf8")).toBe(bundled);
+  });
+  it("checks automatically by merging: retired models stay flagged, new ones appear, prices follow OpenRouter", async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), "slopify-models-sync-"));
+    const published = bundled
+      .replace("id: google/gemini-3.1-pro-preview", "id: google/gemini-3.2-pro")
+      .replace("updatedAt: 2026-09-26", "updatedAt: 2026-09-30");
+    const requested: string[] = [];
+    const store = createCatalogueStore({
+      dataDir,
+      bundled,
+      now: () => new Date("2026-10-01T00:00:00.000Z"),
+      fetch: async (input) => {
+        const url = String(input);
+        requested.push(url);
+        if (url === openRouterModelsSource)
+          return Response.json({
+            data: parseCatalogue(published)
+              .llm.filter((row) => row.provider === "openrouter")
+              .map((row) => ({
+                id: row.id,
+                pricing:
+                  row.id === "google/gemini-3.8-flash"
+                    ? { prompt: "0.000001", completion: "0.000005" }
+                    : {
+                        prompt: String((row.pricing.inputPerMillionTokens ?? 0) / 1e6),
+                        completion: String((row.pricing.outputPerMillionTokens ?? 0) / 1e6),
+                      },
+              })),
+          });
+        return new Response(published);
+      },
+    });
+    expect(store.syncDue?.(Date.parse("2026-10-01T00:00:00.000Z"))).toBe(true);
+    const status = await store.sync?.();
+    expect(requested).toEqual([catalogueSource, openRouterModelsSource]);
+    expect(status?.warning).toBeNull();
+    expect(status?.changes.added.map((row) => row.id)).toEqual(["google/gemini-3.2-pro"]);
+    expect(status?.changes.retired.map((row) => row.id)).toEqual(["google/gemini-3.1-pro-preview"]);
+    expect(status?.changes.priced.map((row) => row.id)).toEqual(["google/gemini-3.8-flash"]);
+    const read = store.read();
+    expect(read.llm.find((row) => row.id === "google/gemini-3.1-pro-preview")?.deprecated).toBe(
+      true,
+    );
+    expect(read.llm.find((row) => row.id === "google/gemini-3.8-flash")?.pricing).toMatchObject({
+      inputPerMillionTokens: 1,
+      outputPerMillionTokens: 5,
+    });
+    // Pickers hide the retired model; the file keeps it so its uses can be listed.
+    expect(store.models("openrouter", "llm").map((row) => row.id)).not.toContain(
+      "google/gemini-3.1-pro-preview",
+    );
+    expect(readFileSync(`${store.status().path}.previous`, "utf8")).toBe(bundled);
+    expect(store.status().sync?.checkedAt).toBe("2026-10-01T00:00:00.000Z");
+    expect(store.syncDue?.(Date.parse("2026-10-01T12:00:00.000Z"))).toBe(false);
+    expect(store.syncDue?.(Date.parse("2026-10-02T00:00:00.000Z"))).toBe(true);
+  });
+  it("keeps the current list and says why when the check cannot download or the local file is broken", async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), "slopify-models-sync-fail-"));
+    const store = createCatalogueStore({
+      dataDir,
+      bundled,
+      fetch: async () => new Response("nope", { status: 503 }),
+    });
+    const status = await store.sync?.();
+    expect(status?.warning).toMatch(/Check now in Settings → Models/);
+    expect(status?.checkedAt).toBeNull();
+    expect(readFileSync(store.status().path, "utf8")).toBe(bundled);
+    writeFileSync(store.status().path, "llm: [broken");
+    expect((await store.sync?.())?.warning).toMatch(/models.yaml file is missing or has a mistake/);
+    expect(readFileSync(store.status().path, "utf8")).toBe("llm: [broken");
   });
 });

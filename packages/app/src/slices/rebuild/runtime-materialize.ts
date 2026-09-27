@@ -186,6 +186,9 @@ function futureKey(recipe: ResolvedWorkRecipe): string {
   // A short's images and render unfold from its image prompts, admitted with them: under the
   // pick on a first run, or on their own when one short is made again and the pick is kept.
   // The prompts unfold from the pick's answer.
+  // A short's review unfolds with the short it reviews.
+  const reviewed = /^review:(shorts:\d+)$/.exec(recipe.key);
+  if (reviewed?.[1] !== undefined) return `${reviewed[1]}:prompts`;
   const clip = /^(shorts:\d+):(?:image:\d+|render)$/.exec(recipe.key);
   if (clip?.[1] !== undefined) return `${clip[1]}:prompts`;
   if (recipe.key.startsWith("shorts:")) return "shorts:pick";

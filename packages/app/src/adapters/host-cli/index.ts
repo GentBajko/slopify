@@ -17,8 +17,10 @@ import {
 } from "../../kernel/ports/host-cli.js";
 import { agentImageTimeoutMs } from "../../kernel/ports/image.js";
 import type { LlmDone, LlmEvent } from "../../kernel/ports/llm.js";
-import { isProviderError, providerError } from "../../kernel/ports/model.js";
+import { isProviderError, type ProviderError, providerError } from "../../kernel/ports/model.js";
 import { sniffImage } from "../image/bytes.js";
+import { claudePlanLimit } from "../llm/claude-code.js";
+import { codexPlanLimit } from "../llm/codex-limits.js";
 import {
   type HostRequestOptions,
   hostRequest,
@@ -153,13 +155,15 @@ export function createHostCliClient(options: {
           kind: "llm",
           body: Buffer.from(JSON.stringify(parsed.data)),
           signal: req.signal,
+        }).catch((error: unknown) => {
+          throw isProviderError(error) ? withPlanLimit(error, id) : error;
         });
         try {
           if (response.headers["content-type"]?.split(";")[0] !== "application/x-ndjson")
             throw hostUnavailable(true);
           yield* readEvents(response);
         } catch (error) {
-          if (isProviderError(error)) throw error;
+          if (isProviderError(error)) throw withPlanLimit(error, id);
           throw hostUnavailable(true);
         } finally {
           response.destroy();
@@ -184,6 +188,18 @@ export function createHostCliClient(options: {
                   base64: Buffer.from(req.reference.bytes).toString("base64"),
                 },
               }),
+          ...(req.cast === undefined
+            ? {}
+            : {
+                cast: req.cast.map((member) => ({
+                  name: member.name,
+                  description: member.description,
+                  images: member.images.map((image) => ({
+                    mime: image.mime,
+                    base64: Buffer.from(image.bytes).toString("base64"),
+                  })),
+                })),
+              }),
         });
         if (!parsed.success)
           throw providerError({
@@ -197,6 +213,8 @@ export function createHostCliClient(options: {
           kind: "image",
           body: Buffer.from(JSON.stringify(parsed.data)),
           signal: req.signal,
+        }).catch((error: unknown) => {
+          throw isProviderError(error) ? withPlanLimit(error, "codex-image") : error;
         });
         try {
           const mime = response.headers["content-type"];
@@ -205,7 +223,7 @@ export function createHostCliClient(options: {
           if (sniffImage(bytes) !== mime) throw hostUnavailable(true);
           return { bytes, mime };
         } catch (error) {
-          if (isProviderError(error)) throw error;
+          if (isProviderError(error)) throw withPlanLimit(error, "codex-image");
           throw hostUnavailable(true);
         } finally {
           response.destroy();
@@ -214,6 +232,24 @@ export function createHostCliClient(options: {
     },
   };
 }
+// A used-up plan crosses the bridge as a rate-limit fault carrying the CLI's own words, which
+// the host-side adapter already quoted; they are read again here so a Docker run waits for the
+// reset like a local one instead of failing.
+export function withPlanLimit(error: ProviderError, id: HostCliId): ProviderError {
+  if (error.fault.kind !== "rate_limit" || error.fault.planLimit !== undefined) return error;
+  const planLimit =
+    id === "claude-code"
+      ? claudePlanLimit(error.message, 429, undefined)
+      : id === "gemini"
+        ? /daily quota/i.test(error.message)
+          ? { account: "gemini" as const, resetsAt: null }
+          : undefined
+        : codexPlanLimit(error.message, new Date());
+  return planLimit === undefined
+    ? error
+    : providerError({ kind: "rate_limit", message: error.message, planLimit });
+}
+
 async function* readEvents(response: IncomingMessage): AsyncGenerator<LlmEvent> {
   const decoder = new TextDecoder("utf-8", { fatal: true });
   let pending = "";

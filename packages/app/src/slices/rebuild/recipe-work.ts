@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Catalogue } from "../../catalog/schema.js";
 import type { CostEstimate, PricedRequest } from "../estimate/index.js";
 import { estimateRequests } from "../estimate/index.js";
+import { skippedGlossaryNotice } from "../narration/pronunciation.js";
 import type { ManifestPiece, ProjectRevision, RevisionManifest } from "../revisions/model.js";
 import { defaultShortsPrompt, shortsImageUpperBound } from "../shorts/model.js";
 import { planDependencies, type RetainedWork, type WorkRecipe } from "./dependencies.js";
@@ -15,6 +16,7 @@ import {
   type ResolvedWorkRecipe,
   selectedReference,
 } from "./recipe-model.js";
+import { narrationGlossary } from "./recipe-text.js";
 
 export interface RevisionWorkPlan {
   readonly recipes: readonly ResolvedWorkRecipe[];
@@ -22,6 +24,8 @@ export interface RevisionWorkPlan {
   readonly changedInputs: RebuildPreview["changedInputs"];
   readonly providedReuseRequired: readonly string[];
   readonly wholeRequestNotice: string | null;
+  // Pronunciation Glossary rows the narration skips, for the rebuild review to show.
+  readonly glossaryNotice?: string | null;
   readonly costs: CostEstimate;
 }
 export function planRevisionWork(
@@ -58,6 +62,7 @@ export function planRevisionWork(
     resolved: { ...resolved, articleMarkdown: usableArticle ? resolved.articleMarkdown : null },
   };
   const logical = buildRecipes(logicalContext);
+  const glossary = narrationGlossary(logicalContext);
   const context = { ...logicalContext, catalogue };
   const recipes = buildRecipes(context).map((row) => ({
     ...row,
@@ -126,6 +131,10 @@ export function planRevisionWork(
       revision.config.sources.audio === "generate" &&
       (revision.config.chunking?.mode ?? "whole") === "whole"
         ? "Whole-text narration is one logical request. Editing its text rebuilds every provider part of that request."
+        : null,
+    glossaryNotice:
+      glossary?.ok === true && glossary.skipped !== undefined
+        ? skippedGlossaryNotice(glossary.skipped)
         : null,
     costs: estimateRequests(priced, catalogue),
   };
@@ -407,6 +416,23 @@ export function priceRecipe(
       outputCharacters: 400 * (typeof count === "number" ? count : 1),
       detail:
         "The numbered transcript is built when the step runs; its length is estimated. One more call is made when the first answer breaks the rules. Retries are excluded.",
+    };
+  }
+  // A review: the stage's prompt and the item (the article's text, or a short brief beside an
+  // image, which the provider prices as it does).
+  if (input.kind === "local" && input.operation === "review-v1") {
+    const [stage, , , provider, model, , prompt] = Array.isArray(input.values) ? input.values : [];
+    return {
+      kind: "llm",
+      stage: work.key,
+      provider: typeof provider === "string" ? provider : "",
+      model: typeof model === "string" ? model : "",
+      inputCharacters:
+        (typeof prompt === "string" && prompt !== "" ? prompt.length : 600) +
+        (stage === "article" || stage === "narration" ? 20000 : 1500),
+      outputCharacters: 400,
+      detail:
+        "The item is read when the step runs; its length is estimated. A failed item made again is reviewed again, which is not in this estimate.",
     };
   }
   if (input.kind === "local" && input.operation === "youtube-description-v1") {

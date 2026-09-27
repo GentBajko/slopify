@@ -14,13 +14,27 @@ export interface ImageRequest {
   // The project's establishing image: drawn with it as a visual reference for characters,
   // style and palette. Only a model that takes an input image is ever sent one.
   readonly reference?: GeneratedImage | undefined;
+  // Cast members the brief mentions, each with its pictures, sent as references after the
+  // establishing image. A provider that takes one input image sends only the first and names
+  // the rest in the prompt (`adapters/image/reference.ts`).
+  readonly cast?: readonly CastReference[] | undefined;
   // A line saying how far a long image job has got, for the stage's live panel.
   readonly onProgress?: ((text: string) => void) | undefined;
+}
+
+export interface CastReference {
+  readonly name: string;
+  readonly description: string;
+  readonly images: readonly GeneratedImage[];
 }
 
 export interface GeneratedImage {
   readonly bytes: Uint8Array;
   readonly mime: "image/png" | "image/jpeg";
+  // What an agent-driven provider (the Codex CLI) reported spending on the image: its tokens
+  // and its plan windows. Absent for providers that report neither.
+  readonly usage?: import("./llm.js").Usage | undefined;
+  readonly limits?: import("./plan-limits.js").PlanLimitReading | undefined;
 }
 
 // A still brought to life: an image-to-video model animates `image` for about `seconds`,

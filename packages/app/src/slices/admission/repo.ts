@@ -38,6 +38,8 @@ const stageRow = z.object({
   progress_total: z.number().nullable(),
   started_at: z.string().nullable(),
   finished_at: z.string().nullable(),
+  failure_kind: z.string().nullable().optional(),
+  retry_at: z.string().nullable().optional(),
 });
 
 export function insertProject(db: DatabaseSync, project: Project): void {
@@ -133,19 +135,16 @@ export function finishStage(
   failureReason: string | null,
   at: string,
 ): void {
-  db.prepare("UPDATE stages SET state = ?, failure_reason = ?, finished_at = ? WHERE id = ?").run(
-    state,
-    failureReason,
-    state === "pending" ? null : at,
-    stageId,
-  );
+  db.prepare(
+    "UPDATE stages SET state = ?, failure_reason = ?, retry_at = NULL, finished_at = ? WHERE id = ?",
+  ).run(state, failureReason, state === "pending" ? null : at, stageId);
 }
 
 // A stage put back to `pending` by a re-run, a cascade or a retry starts again from a clean row
 // - no error text, no progress from the run before it, and a fresh attempt budget.
 export function resetStage(db: DatabaseSync, stageId: string): void {
   db.prepare(
-    "UPDATE stages SET state = 'pending', failure_reason = NULL, attempt_count = 0, progress_current = NULL, progress_total = NULL, started_at = NULL, finished_at = NULL WHERE id = ?",
+    "UPDATE stages SET state = 'pending', failure_reason = NULL, failure_kind = NULL, retry_at = NULL, attempt_count = 0, progress_current = NULL, progress_total = NULL, started_at = NULL, finished_at = NULL WHERE id = ?",
   ).run(stageId);
 }
 
@@ -230,5 +229,9 @@ function toStage(row: z.infer<typeof stageRow>): Stage {
     progressTotal: row.progress_total,
     startedAt: row.started_at,
     finishedAt: row.finished_at,
+    ...(row.failure_kind === null || row.failure_kind === undefined
+      ? {}
+      : { failureKind: row.failure_kind }),
+    ...(row.retry_at === null || row.retry_at === undefined ? {} : { retryAt: row.retry_at }),
   };
 }

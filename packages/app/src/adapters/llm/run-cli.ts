@@ -235,6 +235,12 @@ export function endedWithout(binary: string, ended: CliEnded, stderr: string): s
   return `The ${cliName(binary)} stopped without answering${quoted(how, said)}. Run ${commandOf(binary)} in a terminal to check it works and is signed in, then use Retry stage.`;
 }
 
+// A CLI the system killed mid-answer (out of memory, a sleep, a closed session) dropped the
+// call; one that exited with an error of its own said something about the request.
+export function endedKind(ended: CliEnded | undefined): "dropped" | "other" {
+  return ended !== undefined && ended.error === null && ended.code === null ? "dropped" : "other";
+}
+
 // The run outlived both the polite and the forced stop.
 export function stuckCli(binary: string): string {
   return `The ${cliName(binary)} stopped responding and could not be shut down. Close any leftover ${commandOf(binary)} processes or restart your computer, then use Retry stage.`;

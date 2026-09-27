@@ -21,7 +21,9 @@ export function sectionRoots(
       if (stage === "video")
         return (
           row.input.kind === "local" &&
-          (row.key.startsWith("export:") || row.key === "subtitles:files")
+          (row.key.startsWith("export:") ||
+            row.key === "subtitles:files" ||
+            row.key === "voices:files")
         );
       if (stage === "audio")
         return (
@@ -29,11 +31,41 @@ export function sectionRoots(
           (row.input.kind === "deferred" &&
             ["body-narration", "intro-narration", "outro-narration"].includes(row.input.operation))
         );
-      if (stage === "article") return row.key === "article:body" && row.kind === "provider";
+      if (stage === "article")
+        return (
+          (row.key === "article:body" || row.key === "script:attribute") && row.kind === "provider"
+        );
       if (stage === "document") return row.key === "document:pdf";
       return row.kind === "provider";
     })
     .map((row) => row.key);
+}
+
+// What making one reviewed item again regenerates and where its rebuild starts. The article
+// and the narration are redone like Re-run section on their stage; an image or the thumbnail
+// by its own token, like Regenerate; a short by "Make this short again"'s token.
+export function redoTarget(
+  view: RevisionView,
+  plan: RevisionWorkPlan,
+  item: string,
+): { readonly roots: readonly string[]; readonly edit: RevisionEdit } | undefined {
+  const section = (stage: StageKind) => {
+    const edit = regenerationEdit(view, plan, stage);
+    return edit === undefined ? undefined : { roots: sectionRoots(view, plan, stage), edit };
+  };
+  if (item === "narration") return section("audio");
+  if (item === "article:body") return section("article");
+  const own = (roots: readonly string[]) => ({
+    roots,
+    edit: { config: view.revision.config, content: view.revision.content, regenerate: [item] },
+  });
+  if (/^shorts:\d+$/.test(item))
+    return plan.recipes.some((row) => row.key === `${item}:prompts`)
+      ? own([`${item}:prompts`])
+      : undefined;
+  return plan.recipes.some((row) => row.key === item && row.kind === "provider")
+    ? own([item])
+    : undefined;
 }
 
 export function dependentClosure(

@@ -1,5 +1,11 @@
+import { aliasMatches } from "../../kernel/ports/narration-aliases.js";
 import type { FingerprintValue } from "../../kernel/runner/work.js";
-import { usesNarrationPreparation, usesPronunciationGlossary } from "../admission/rules.js";
+import {
+  narrationAliasesOf,
+  usesNarrationPreparation,
+  usesPronunciationGlossary,
+} from "../admission/rules.js";
+import { aliasSpans, withAliasSpans } from "../narration/aliases.js";
 import {
   narrationRegenerationToken,
   normalizeNarrationText,
@@ -41,15 +47,19 @@ export function narrationParts(
   const logicalText = normalizeNarrationText(
     override?.kind === "text" ? override.text : originalText,
   );
-  const spans = pronunciationSpans(logicalText, glossary.entries);
+  // Aliases first: where one applies, the glossary does not.
+  const aliases = narrationAliasesOf(context.config);
+  const matches = aliasMatches(logicalText, aliases);
+  const spans = withAliasSpans(
+    pronunciationSpans(logicalText, glossary.entries),
+    aliasSpans(logicalText, aliases),
+  );
   const wholeRequest = segment !== "body" || (context.config.chunking?.mode ?? "whole") === "whole";
   const choice = context.config.audio;
+  // A retired model's character limit is still its limit: the automatic catalogue check marks
+  // models deprecated, and that alone must not re-split narration and outdate a project.
   const model = context.catalogue?.tts.find(
-    (row) =>
-      row.provider === choice?.provider &&
-      row.id === choice.model &&
-      row.enabled &&
-      !row.deprecated,
+    (row) => row.provider === choice?.provider && row.id === choice.model && row.enabled,
   );
   const logicalLimit = Math.max(
     2,
@@ -66,6 +76,7 @@ export function narrationParts(
       dependsOn,
       maxCharacters,
       spans,
+      matches,
     );
     preparations.push(prepared.preparation);
     if (prepared.refusal !== null)
@@ -214,6 +225,38 @@ export function pronunciationFutureValues(
           "pronunciation-glossary-v1",
           logicalKey,
           spans.map((span) => [span.start, span.end, span.text]),
+        ],
+      ];
+}
+
+// What aliases add to a narration recipe that can't be worked out yet. With none copied into
+// the project (every project from before aliases), nothing: its fingerprints stay as they were.
+export function aliasFutureValues(
+  context: RecipeContext,
+  logicalKey: string,
+  source: string | null,
+): FingerprintValue[] {
+  const aliases = narrationAliasesOf(context.config);
+  if (aliases.length === 0) return [];
+  const override = context.content.narrationOverrides[logicalKey];
+  if (override?.kind === "asset") return [];
+  // Unknown generated text may contain any alias.
+  if (source === null)
+    return [
+      [
+        "narration-aliases-v1",
+        aliases.map((alias) => [alias.written, alias.spoken, alias.wholeWord, alias.caseSensitive]),
+      ],
+    ];
+  const clean = normalizeNarrationText(override?.kind === "text" ? override.text : source);
+  const matches = aliasMatches(clean, aliases);
+  return matches.length === 0
+    ? []
+    : [
+        [
+          "narration-aliases-v1",
+          logicalKey,
+          matches.map((match) => [match.start, match.end, match.spoken]),
         ],
       ];
 }

@@ -14,6 +14,9 @@ import { researchDocuments } from "../research/documents.js";
 import { plannerMessages, subAgentMessages } from "../research/planner.js";
 import { synthesisMessages } from "../research/synthesis.js";
 import { thumbnailMessages } from "../thumbnail/by-llm.js";
+import { attributionMessages } from "../voices/attribution.js";
+import { usesVoices } from "../voices/model.js";
+import { scriptMessages } from "../voices/script.js";
 import {
   type RecipeContext,
   type RecipeInput,
@@ -64,7 +67,8 @@ export function selectedText(
     (row) =>
       row.key === key &&
       selectedReference(row) &&
-      row.stageKind === (key.startsWith("entry:") ? "article" : "thumbnail") &&
+      row.stageKind ===
+        (key.startsWith("entry:") || key.startsWith("script:") ? "article" : "thumbnail") &&
       row.piece.state === "done",
   );
   if (piece?.piece.payload === null || piece === undefined) return null;
@@ -73,6 +77,11 @@ export function selectedText(
     .parse(JSON.parse(piece.piece.payload));
   return parsed[field]?.trim() ?? null;
 }
+export interface ScriptText {
+  readonly text: string | null;
+  readonly dependsOn: readonly string[];
+  readonly fingerprint?: string | undefined;
+}
 type TextRecipe = { readonly recipe: ResolvedWorkRecipe; readonly text: string | null };
 export interface TextRecipes {
   readonly recipes: readonly ResolvedWorkRecipe[];
@@ -80,6 +89,9 @@ export interface TextRecipes {
   readonly glossary: GlossaryResult | null;
   readonly article: ResolvedWorkRecipe;
   readonly entries: Readonly<Partial<Record<"intro" | "outro", TextRecipe>>>;
+  // A multi-voice run's script: the article itself, or the speaker split of it. Null text while
+  // the step that makes it has not answered.
+  readonly script?: ScriptText | undefined;
 }
 export function textRecipes(context: RecipeContext): TextRecipes {
   const { config, content, resolved } = context;
@@ -141,10 +153,7 @@ export function textRecipes(context: RecipeContext): TextRecipes {
     });
     recipes.push(research);
   }
-  const articleMarkdown =
-    config.sources.article === "provide" || content.articleEdited === true
-      ? (content.articleMarkdown ?? config.provided.article ?? "")
-      : resolved.articleMarkdown;
+  const articleMarkdown = articleMarkdownOf(context);
   const notes =
     config.sources.research === "off"
       ? null
@@ -158,10 +167,24 @@ export function textRecipes(context: RecipeContext): TextRecipes {
           { id: "editorial-notes", title: "Editorial notes", content: notes },
         ]
       : [];
-  const messages = articleMessages({
-    articlePrompt: brief.articlePrompt,
-    ...(documents.length ? { notes: documentIndex(documents) } : notes === null ? {} : { notes }),
-  });
+  const voices = usesVoices(config) ? config.voices : undefined;
+  const writesScript = voices?.source === "script";
+  const articleNotes = documents.length ? documentIndex(documents) : (notes ?? undefined);
+  // A script run writes speaker turns in place of the article, from the same prompt and notes.
+  const messages =
+    voices !== undefined && writesScript
+      ? scriptMessages(voices.format, voices.speakers, brief.articlePrompt, articleNotes)
+      : articleMessages({
+          articlePrompt: brief.articlePrompt,
+          ...(articleNotes === undefined ? {} : { notes: articleNotes }),
+        });
+  const scriptCheck =
+    voices === undefined
+      ? undefined
+      : {
+          speakers: voices.speakers.map((speaker) => ({ id: speaker.id, name: speaker.name })),
+          attribute: !writesScript,
+        };
   const article =
     config.sources.article === "provide" || content.articleEdited === true
       ? recipe(context, "article:body", "article", {
@@ -181,7 +204,10 @@ export function textRecipes(context: RecipeContext): TextRecipes {
                 operation: "article",
                 template: [llmInputFingerprint(context, messages), research?.fingerprint ?? null],
               }
-            : llmInput(context, messages, false, documents),
+            : {
+                ...llmInput(context, messages, false, documents),
+                ...(writesScript && scriptCheck !== undefined ? { script: scriptCheck } : {}),
+              },
           research === undefined ? [] : [research.key],
         );
   recipes.push(article);
@@ -206,11 +232,40 @@ export function textRecipes(context: RecipeContext): TextRecipes {
     );
   const endMatter = articleMarkdown === null ? null : splitEndMatter(articleMarkdown);
   const articleText = endMatter === null ? null : plainText(endMatter.body);
-  const glossary: GlossaryResult | null = !usesPronunciationGlossary(config)
-    ? { ok: true, entries: [] }
-    : endMatter === null
-      ? null
-      : withShared(parsePronunciationGlossary(endMatter.glossary), config);
+  let script: ScriptText | undefined;
+  if (voices !== undefined && scriptCheck !== undefined) {
+    if (writesScript) script = { text: endMatter?.body ?? null, dependsOn: [article.key] };
+    else {
+      // An audiobook from a text: the text model hands the article's passages to speakers.
+      const attribute = recipe(
+        context,
+        "script:attribute",
+        "article",
+        endMatter === null
+          ? {
+              kind: "deferred",
+              version: 1,
+              operation: "script-attribution",
+              template: [
+                article.fingerprint,
+                llmInputFingerprint(context, attributionMessages("", voices.speakers)),
+              ],
+            }
+          : {
+              ...llmInput(context, attributionMessages(endMatter.body, voices.speakers)),
+              script: scriptCheck,
+            },
+        [article.key],
+      );
+      recipes.push(attribute);
+      script = {
+        text: endMatter === null ? null : matchingText(context, attribute, "text"),
+        dependsOn: [attribute.key],
+        fingerprint: attribute.fingerprint,
+      };
+    }
+  }
+  const glossary = glossaryOf(context, endMatter);
   const entries: Partial<Record<"intro" | "outro", TextRecipe>> = {};
   for (const category of ["intro", "outro"] as const) {
     const choice = config[category];
@@ -270,7 +325,14 @@ export function textRecipes(context: RecipeContext): TextRecipes {
       ),
     );
   }
-  return { recipes, articleText, glossary, article, entries };
+  return {
+    recipes,
+    articleText,
+    glossary,
+    article,
+    entries,
+    ...(script === undefined ? {} : { script }),
+  };
 }
 function llmInputFingerprint(context: RecipeContext, messages: readonly Message[]): string {
   return fingerprint(JSON.parse(JSON.stringify(llmInput(context, messages))) as FingerprintValue);
@@ -302,9 +364,29 @@ export function matchingText(
   return selectedText(context, value.key, field);
 }
 
+function articleMarkdownOf(context: RecipeContext): string | null {
+  const { config, content, resolved } = context;
+  return config.sources.article === "provide" || content.articleEdited === true
+    ? (content.articleMarkdown ?? config.provided.article ?? "")
+    : resolved.articleMarkdown;
+}
+function glossaryOf(
+  context: RecipeContext,
+  endMatter: { readonly glossary: string } | null,
+): GlossaryResult | null {
+  if (!usesPronunciationGlossary(context.config)) return { ok: true, entries: [] };
+  if (endMatter === null) return null;
+  return withShared(parsePronunciationGlossary(endMatter.glossary), context.config);
+}
+// The narration glossary this revision uses, or null while its article is still unwritten.
+export function narrationGlossary(context: RecipeContext): GlossaryResult | null {
+  const markdown = articleMarkdownOf(context);
+  return glossaryOf(context, markdown === null ? null : splitEndMatter(markdown));
+}
+
 // The project's own glossary, then the other projects' pronunciations it copied, when it
-// shares them. An own glossary that doesn't parse still refuses, as before.
+// shares them. Rows the own glossary had to skip are still reported.
 function withShared(own: GlossaryResult, config: RecipeContext["config"]): GlossaryResult {
   if (!own.ok || config.audio?.shareGlossary !== true) return own;
-  return { ok: true, entries: withSharedGlossary(own.entries, config.sharedGlossary) };
+  return { ...own, entries: withSharedGlossary(own.entries, config.sharedGlossary) };
 }

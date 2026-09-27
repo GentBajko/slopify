@@ -41,6 +41,11 @@ export const outputRoles = [
   // The Images stage's establishing image: made or uploaded first, drawn from by the other
   // images, never shown in the video.
   "reference",
+  // Multiple voices: the speaker split of an audiobook's text, and the listening files with
+  // chapter markers made beside the video.
+  "script_md",
+  "audio_mp3",
+  "audio_m4b",
 ] as const;
 export type OutputRole = (typeof outputRoles)[number];
 

@@ -53,6 +53,7 @@ export function RundownStrip({
             className={cn(
               "h-full origin-left bg-lamp-run transition-transform duration-200 motion-reduce:transition-none",
               project.status === "failed" && "bg-red",
+              project.status === "partial" && "bg-amber",
             )}
             style={{ transform: `scaleX(${progress.percent / 100})` }}
           />

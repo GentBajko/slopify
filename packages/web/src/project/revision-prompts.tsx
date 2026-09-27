@@ -7,6 +7,7 @@ import {
 } from "@app/slices/admission/rules.js";
 import { detectSlots } from "@app/slices/admission/substitute.js";
 import type { RevisionEdit } from "@app/slices/revisions/model.js";
+import { usesScriptPrompt } from "@app/slices/voices/model.js";
 import { useId } from "react";
 import type { Entry, Prompt } from "@/api";
 import { Button } from "@/components/ui/button";
@@ -66,7 +67,9 @@ export function RevisionPrompts({
                 (prompt) =>
                   prompt.kind ===
                   (key === "article"
-                    ? "article"
+                    ? usesScriptPrompt(edit.config)
+                      ? "script"
+                      : "article"
                     : key === "narration"
                       ? "narration"
                       : key === "description"

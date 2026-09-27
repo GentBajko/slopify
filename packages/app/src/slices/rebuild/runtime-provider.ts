@@ -2,7 +2,7 @@ import type { AudioPreviewStore } from "../../kernel/audio-preview.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { LlmAnswer, StageProviders } from "../../kernel/runner/providers.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
-import { referenceKey } from "../admission/model.js";
+import { referenceKey, thumbnailVariant } from "../admission/model.js";
 import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
 import { observeNarration } from "../narration/live.js";
@@ -15,11 +15,14 @@ import { discardPreparedAssets, writeAsset } from "../storage/assets.js";
 import { outputPath } from "../storage/layout.js";
 import type { RecordEvent } from "../telemetry/model.js";
 import { probeDurationMs } from "../video/ffmpeg.js";
+import { parseAttribution } from "../voices/attribution.js";
+import { parseScript } from "../voices/script.js";
 import { executeArticleRequests } from "./runtime-article.js";
 import { imageCall } from "./runtime-image.js";
 import { frozenInstructions } from "./runtime-instructions.js";
 import { executionPlan, executionView, savedCatalogue } from "./runtime-plan.js";
 import { preparedResult, preparedTexts, publishResult } from "./runtime-publication.js";
+import { clearSoftening, softenedPrompt, softeningRequested, softenMessages } from "./soften.js";
 import type { WorkPiece } from "./work-records.js";
 
 export interface ProviderExecutionDeps extends RevisionDeps {
@@ -78,7 +81,17 @@ export async function executeProviderRecipe(
   }
   if (input.kind === "tts") {
     const spoken = await wrapped.tts(
-      { provider: input.provider, model: input.model, voiceId: input.voice, text: input.text },
+      {
+        provider: input.provider,
+        model: input.model,
+        voiceId: input.voice,
+        text: input.text,
+        ...(input.dialogue === undefined
+          ? {}
+          : {
+              dialogue: input.dialogue.map((line) => ({ voiceId: line.voice, text: line.text })),
+            }),
+      },
       observeNarration(
         deps.audioPreviews,
         context.work.projectId,
@@ -150,19 +163,23 @@ export async function executeProviderRecipe(
     const index = piece.key.startsWith("image:")
       ? (view?.revision.content.imageOrder.indexOf(piece.key.slice(6)) ?? 0) + 1
       : undefined;
-    const image = await wrapped.image(
-      imageCall(
-        deps,
-        context.work.projectId,
-        input,
-        piece.key === "thumbnail:image"
+    // Which thumbnail this is (1-3), or undefined for any other image.
+    const variant = thumbnailVariant(piece.key);
+    const label =
+      variant !== undefined
+        ? variant === 1
           ? "Thumbnail"
-          : piece.key === referenceKey
-            ? "Establishing image"
-            : index === undefined
-              ? "Image"
-              : `Image ${String(index)}`,
-      ),
+          : `Thumbnail ${String(variant)}`
+        : piece.key === referenceKey
+          ? "Establishing image"
+          : index === undefined
+            ? "Image"
+            : `Image ${String(index)}`;
+    const softened = await softenIfAsked(deps, context, wrapped, piece, input.prompt, label);
+    if (softened === "held") return "held";
+    const prompt = softened ?? input.prompt;
+    const image = await wrapped.image(
+      imageCall(deps, context.work.projectId, { ...input, prompt }, label),
     );
     if (!image.ok) return "held";
     const asset = writeAsset(
@@ -175,32 +192,60 @@ export async function executeProviderRecipe(
       deps,
       context,
       piece,
-      piece.key === "thumbnail:image"
-        ? "thumbnail"
-        : piece.key === referenceKey
-          ? "reference"
-          : "image",
+      variant !== undefined ? "thumbnail" : piece.key === referenceKey ? "reference" : "image",
       asset,
       null,
       {
-        prompt: input.prompt,
+        prompt,
         provider: input.provider,
         model: input.model,
         ...(index === undefined ? {} : { index }),
+        // The second and third thumbnails carry their number; the first keeps the meta a
+        // thumbnail always had.
+        ...(variant === undefined || variant === 1 ? {} : { index: variant }),
       },
     );
-    await publishResult(deps, context, piece, [output], { prompt: input.prompt }, asset);
+    await publishResult(deps, context, piece, [output], { prompt }, asset);
+    if (softened !== undefined) clearSoftening(deps.db, context.work.projectId, [piece.key]);
     deps.count?.("stage.completed", {
       stage: context.work.kind,
       provider: input.provider,
       model: input.model,
-      ...(piece.key === "thumbnail:image" ? { thumbnails: 1 } : { images: 1 }),
+      ...(variant !== undefined ? { thumbnails: 1 } : { images: 1 }),
     });
     return "done";
   }
   throw new Error(
     "Slopify hit an internal error (this step has no provider request to run). Use Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
   );
+}
+
+// Soften and retry (`soften.ts`): the project's AI model rewords a refused image prompt
+// before the image is drawn again. Undefined when nobody asked, or the project has no model.
+async function softenIfAsked(
+  deps: ProviderExecutionDeps,
+  context: StageContext,
+  providers: StageProviders,
+  piece: WorkPiece,
+  prompt: string,
+  label: string,
+): Promise<string | "held" | undefined> {
+  if (!softeningRequested(deps.db, context.work.projectId, piece.key)) return undefined;
+  const llm = executionView(deps, context.work.projectId, context.work.revisionId)?.revision.config
+    .llm;
+  if (llm === undefined) return undefined;
+  const answer = await providers.llm({
+    provider: llm.provider,
+    model: llm.model,
+    ...(llm.thinking === undefined ? {} : { thinking: llm.thinking }),
+    messages: softenMessages(prompt),
+    previewLabel: `${label}: softened prompt`,
+    check: (value) =>
+      softenedPrompt(value.text) === ""
+        ? "The AI model sent back an empty prompt while softening it. Use Soften and retry again, or reword the prompt yourself in Edit project → Images."
+        : undefined,
+  });
+  return answer.ok ? softenedPrompt(answer.value.text) : "held";
 }
 
 function checkAnswer(piece: WorkPiece, answer: LlmAnswer): string | undefined {
@@ -212,7 +257,19 @@ function checkAnswer(piece: WorkPiece, answer: LlmAnswer): string | undefined {
       : undefined;
   if (piece.key === "research:notes" || piece.key.startsWith("research:chapter:"))
     return sourcedAnswer(piece.key, answer.text);
+  // A speaker split that loses or adds words is asked for again rather than narrated.
+  if (piece.input.kind === "llm" && piece.input.script?.attribute === true) {
+    const checked = parseAttribution(
+      answer.text,
+      attributionSource(piece.input.messages),
+      piece.input.script.speakers,
+    );
+    return checked.ok ? undefined : checked.reason;
+  }
   return undefined;
+}
+function attributionSource(messages: readonly { readonly content: string }[]): string {
+  return messages.at(-1)?.content ?? "";
 }
 async function publishText(
   deps: RevisionDeps,
@@ -233,6 +290,15 @@ async function publishText(
   }
   if (piece.key === "article:body") {
     const parts = splitEndMatter(answer.text);
+    // A script is read before it is kept: one the narration could not speak fails here, with
+    // the line to fix, rather than at the narration.
+    if (piece.input.kind === "llm" && piece.input.script !== undefined) {
+      const checked = parseScript(parts.body, piece.input.script.speakers);
+      if (!checked.ok)
+        throw new Error(
+          `The text model's script can't be read: ${checked.reason} Retry stage to have it written again, or fix it in Edit project → Article.`,
+        );
+    }
     await publishResult(
       deps,
       context,
@@ -244,6 +310,16 @@ async function publishText(
         ...(parts.sources ? [["sources", "sources.md", parts.sources] as const] : []),
         ...(parts.glossary ? [["glossary", "glossary.md", parts.glossary] as const] : []),
       ]),
+      { text: answer.text },
+    );
+    return;
+  }
+  if (piece.key === "script:attribute") {
+    await publishResult(
+      deps,
+      context,
+      piece,
+      preparedTexts(deps, context, piece, [["script_md", "script.md", answer.text]]),
       { text: answer.text },
     );
     return;

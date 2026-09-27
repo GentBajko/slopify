@@ -1,7 +1,7 @@
 import type { Entry, EntryCategory, EntryMode } from "@app/slices/library/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { EllipsisIcon, PlusIcon } from "lucide-react";
+import { CopyIcon, PencilIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { removeEntry } from "@/api";
 import { useApp } from "@/app-context";
@@ -9,23 +9,21 @@ import { ConfirmDialog } from "@/components/confirm";
 import { RailGroup } from "@/components/rail";
 import { SlotChip } from "@/components/slot-chip";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { categoryOptions, modeLabel } from "@/lib/entry-options";
+import { HistoryDrawer } from "@/library/history-drawer";
+import { LibraryRowActions } from "@/library/row-actions";
 import { entriesQuery, keys } from "@/queries";
 import { LibraryToolbar } from "@/routes/library";
 
 // One row of the rundown, and the same shape for a skeleton. Mode sits in its own 70 px
 // column beside the name; the Slots column collapses under both below 768 px.
 const row =
-  "grid grid-cols-[minmax(0,1fr)_auto_32px] items-center gap-x-[14px] gap-y-[6px] border-b border-line px-4 py-[10px] last:border-b-0 md:grid-cols-[260px_70px_minmax(0,1fr)_32px]";
+  "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-[14px] gap-y-[6px] border-b border-line px-4 py-[10px] last:border-b-0 md:grid-cols-[220px_70px_minmax(0,1fr)_auto]";
 const slotsCell =
-  "col-span-3 col-start-1 row-start-2 flex flex-wrap gap-[6px] md:col-span-1 md:col-start-3 md:row-start-1";
+  "col-span-2 col-start-1 row-start-2 flex flex-wrap gap-[6px] md:col-span-1 md:col-start-3 md:row-start-1";
+const actionsCell =
+  "col-span-2 col-start-1 row-start-3 md:col-span-1 md:col-start-4 md:row-start-1";
 
 // Every saved entry of one category, sorted by name by the list endpoint. The tab switch has to
 // rewrite the URL it is already on, so it is handed up to router.tsx rather than reaching for a
@@ -33,14 +31,20 @@ const slotsCell =
 export function EntriesRoute({
   category,
   onCategory,
+  onUseInPlay,
+  playBlocked,
 }: {
   readonly category: EntryCategory;
   readonly onCategory: (next: EntryCategory) => void;
+  // Opens Play with the entry picked (router.tsx wires the Play draft in).
+  readonly onUseInPlay?: ((entry: Entry) => void) | undefined;
+  readonly playBlocked?: string | undefined;
 }) {
   const { api } = useApp();
   const queryClient = useQueryClient();
   const entries = useQuery(entriesQuery(api));
   const [deleting, setDeleting] = useState<Entry | undefined>(undefined);
+  const [history, setHistory] = useState<Entry | undefined>(undefined);
 
   const remove = useMutation({
     mutationFn: (id: string) => removeEntry(api, id),
@@ -112,8 +116,40 @@ export function EntriesRoute({
                   <SlotChip key={slot} name={slot} />
                 ))}
               </span>
-              <RowOverflow
-                entry={entry}
+              <LibraryRowActions
+                className={actionsCell}
+                name={entry.name}
+                edit={
+                  <Button asChild variant="ghost">
+                    <Link
+                      to="/entries/$entryId"
+                      params={{ entryId: entry.id }}
+                      aria-label={`Edit ${entry.name}`}
+                    >
+                      <PencilIcon aria-hidden="true" className="size-[14px]" />
+                      Edit
+                    </Link>
+                  </Button>
+                }
+                // The copy is named "<name> copy" and opened for editing, so a name that is
+                // already taken is renamed before it is ever saved.
+                duplicate={
+                  <Button asChild variant="ghost">
+                    <Link
+                      to="/entries/new"
+                      search={{ category: entry.category, from: entry.id }}
+                      aria-label={`Duplicate ${entry.name}`}
+                    >
+                      <CopyIcon aria-hidden="true" className="size-[14px]" />
+                      Duplicate
+                    </Link>
+                  </Button>
+                }
+                onUseInPlay={onUseInPlay === undefined ? undefined : () => onUseInPlay(entry)}
+                playBlocked={playBlocked}
+                onHistory={() => {
+                  setHistory(entry);
+                }}
                 onDelete={() => {
                   setDeleting(entry);
                 }}
@@ -125,6 +161,18 @@ export function EntriesRoute({
 
       {remove.error === null ? null : (
         <p className="mt-[10px] text-label text-red">{remove.error.message}</p>
+      )}
+
+      {history === undefined ? null : (
+        <HistoryDrawer
+          key={history.id}
+          item="entry"
+          id={history.id}
+          name={history.name}
+          onClose={() => {
+            setHistory(undefined);
+          }}
+        />
       )}
 
       <ConfirmDialog
@@ -174,43 +222,6 @@ function EmptyCategory({ category }: { readonly category: EntryCategory }) {
   );
 }
 
-function RowOverflow({
-  entry,
-  onDelete,
-}: {
-  readonly entry: Entry;
-  readonly onDelete: () => void;
-}) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          aria-label={`More for ${entry.name}`}
-          className="col-start-3 row-start-1 size-8 p-0 md:col-start-4"
-        >
-          <EllipsisIcon aria-hidden="true" className="size-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent>
-        <DropdownMenuItem asChild>
-          <Link to="/entries/$entryId" params={{ entryId: entry.id }}>
-            Edit
-          </Link>
-        </DropdownMenuItem>
-        {/* The copy is named "<name> copy" and opened for editing, so a name that
-            is already taken is renamed before it is ever saved. */}
-        <DropdownMenuItem asChild>
-          <Link to="/entries/new" search={{ category: entry.category, from: entry.id }}>
-            Duplicate
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onDelete}>Delete</DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
 function SkeletonRows() {
   return (
     <RailGroup>
@@ -221,7 +232,7 @@ function SkeletonRows() {
           <span className={slotsCell}>
             <span className="h-[18px] w-14 rounded-control bg-panel2" />
           </span>
-          <span className="col-start-3 row-start-1 h-7 w-12 rounded-control bg-panel2 md:col-start-4" />
+          <span className={`${actionsCell} h-7 w-48 rounded-control bg-panel2`} />
         </div>
       ))}
     </RailGroup>

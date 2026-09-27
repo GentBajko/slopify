@@ -13,7 +13,9 @@ import { checkpointRowSchema, checkpointStageSchema } from "../checkpoints/schem
 import { documentSettingsSchema } from "../document/theme-schema.js";
 import { librarySnapshotSchema } from "../library/snapshot.js";
 import { chunkModes } from "../narration/chunk.js";
+import { reviewModes, reviewStages } from "../reviews/model.js";
 import { subtitleModes, subtitlePositions } from "../subtitles/model.js";
+import { voicesSettingsSchema } from "../voices/model.js";
 
 const id = z.uuid();
 const text = z.string();
@@ -50,6 +52,7 @@ export const playDraftFormSchema = z
         voice: text,
         usePronunciationGlossary: z.boolean().optional(),
         shareGlossary: z.boolean().optional(),
+        useNarrationAliases: z.boolean().optional(),
       })
       .readonly(),
     images: provider.readonly(),
@@ -66,6 +69,8 @@ export const playDraftFormSchema = z
       .optional(),
     articlePrompt: text,
     narrationPrompt: text.optional(),
+    // Absent on drafts and templates saved before three thumbnails: one.
+    thumbnailCount: z.union([z.literal(1), z.literal(3)]).optional(),
     // Absent on drafts and templates saved before the YouTube description: off, built-in prompt.
     youtubeDescription: z.boolean().optional(),
     descriptionPrompt: text.optional(),
@@ -85,6 +90,28 @@ export const playDraftFormSchema = z
         fullVideoLink: text.optional(),
         musicVolume: text.optional(),
         speed: text.optional(),
+      })
+      .strict()
+      .readonly()
+      .optional(),
+    // Absent on drafts and templates saved before automatic reviews: every review Off. The
+    // retries are raw text like every other number on Play; a stage's prompt is a Review
+    // prompt's name, "" being the built-in one.
+    reviews: z
+      .object({
+        provider: text,
+        model: text,
+        thinking: z.enum(thinkingModes).optional(),
+        retries: text,
+        stages: z
+          .partialRecord(
+            z.enum(reviewStages),
+            z
+              .object({ mode: z.enum(reviewModes), prompt: text })
+              .strict()
+              .readonly(),
+          )
+          .readonly(),
       })
       .strict()
       .readonly()
@@ -116,6 +143,12 @@ export const playDraftFormSchema = z
     // Absent on drafts and templates saved before the edit settings: today's slideshow. Every
     // field is a pick from a list, so it is kept as the settings themselves.
     videoEdit: videoEditSchema.strict().readonly().optional(),
+    // Whether the channel's brand kit fills what this setup leaves at its default
+    // (`slices/channels/runs.ts`). Absent is on.
+    useBrandKit: z.boolean().optional(),
+    // Absent on drafts and templates saved before multiple voices: the Narration format. Every
+    // number is a pick from a list, so it is kept as the settings themselves.
+    voices: voicesSettingsSchema.strict().readonly().optional(),
     values,
     provided: z
       .object({
@@ -144,6 +177,8 @@ export const playDraftDocumentSchema = z
       .strict()
       .readonly()
       .optional(),
+    // The channel picked on Play. Absent runs in the template's channel, or the default one.
+    channelId: id.optional(),
     form: playDraftFormSchema,
     section: z.enum(["content", "outputs", "style", "review"]),
     variants: z.array(z.object({ id, title: text, values }).strict().readonly()).readonly(),
@@ -232,6 +267,9 @@ const costEstimateSchema = z
             low: z.number().nullable(),
             high: z.number().nullable(),
             detail: text,
+            onPlan: z.boolean().optional(),
+            apiLow: z.number().nullable().optional(),
+            apiHigh: z.number().nullable().optional(),
           })
           .strict()
           .readonly(),
@@ -240,6 +278,9 @@ const costEstimateSchema = z
     low: z.number(),
     high: z.number(),
     unknown: z.number(),
+    apiLow: z.number().optional(),
+    apiHigh: z.number().optional(),
+    apiUnknown: z.number().optional(),
     expectedWords: z.number(),
     catalogueDate: text.nullable(),
     assumptions: z.array(text).readonly(),

@@ -1,0 +1,103 @@
+<!doctype html>
+<!--
+  A HAND-MADE copy of YouTube Studio's upload dialog, Details step, after a video file is in.
+  It is NOT saved from the live page: it was written from knowledge of Studio's markup
+  (Polymer custom elements, ids like #textbox, #file-loader, #tags-container) and holds only
+  what the filler touches. It is the contract src/selectors.ts is tested against. When Studio's
+  live page disagrees, save the live dialog's markup over the matching parts here and fix
+  src/selectors.ts until test/fill.test.ts passes again. See docs/studio-extension.md.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Channel content - YouTube Studio</title>
+  </head>
+  <body>
+    <ytcp-uploads-dialog>
+      <tp-yt-paper-dialog id="dialog">
+        <h1 id="dialog-title">my-video-file</h1>
+        <ytcp-video-metadata-editor>
+          <div id="basics">
+            <ytcp-video-title>
+              <ytcp-social-suggestions-textbox id="title-textarea">
+                <div
+                  id="textbox"
+                  contenteditable="true"
+                  role="textbox"
+                  aria-label="Add a title that describes your video (type @ to mention a channel)"
+                >my-video-file</div>
+              </ytcp-social-suggestions-textbox>
+            </ytcp-video-title>
+            <ytcp-video-description>
+              <ytcp-social-suggestions-textbox id="description-textarea">
+                <div
+                  id="textbox"
+                  contenteditable="true"
+                  role="textbox"
+                  aria-label="Tell viewers about your video (type @ to mention a channel)"
+                ></div>
+              </ytcp-social-suggestions-textbox>
+            </ytcp-video-description>
+            <div id="still-picker">
+              <ytcp-thumbnails-compact-editor-uploader>
+                <button id="select-button" aria-label="Upload file">Upload file</button>
+                <input id="file-loader" type="file" accept="image/jpeg,image/png" hidden />
+              </ytcp-thumbnails-compact-editor-uploader>
+              <ytcp-button id="test-and-compare-button" aria-label="Test & compare"
+                >Test &amp; compare</ytcp-button
+              >
+            </div>
+            <ytcp-video-metadata-playlists>
+              <ytcp-text-dropdown-trigger>
+                <ytcp-dropdown-trigger aria-label="Select playlists">Select</ytcp-dropdown-trigger>
+              </ytcp-text-dropdown-trigger>
+            </ytcp-video-metadata-playlists>
+            <div id="audience">
+              <tp-yt-paper-radio-button
+                name="VIDEO_MADE_FOR_KIDS_MFK"
+                role="radio"
+                aria-checked="false"
+                >Yes, it's made for kids</tp-yt-paper-radio-button
+              >
+              <tp-yt-paper-radio-button
+                name="VIDEO_MADE_FOR_KIDS_NOT_MFK"
+                role="radio"
+                aria-checked="false"
+                >No, it's not made for kids</tp-yt-paper-radio-button
+              >
+            </div>
+            <ytcp-button id="toggle-button" aria-label="Show more">Show more</ytcp-button>
+          </div>
+          <div id="advanced" hidden>
+            <ytcp-form-input-container id="tags-container">
+              <input id="text-input" type="text" aria-label="Tags" />
+            </ytcp-form-input-container>
+          </div>
+        </ytcp-video-metadata-editor>
+        <div id="footer">
+          <ytcp-button id="back-button">Back</ytcp-button>
+          <ytcp-button id="next-button">Next</ytcp-button>
+          <ytcp-button id="done-button">Publish</ytcp-button>
+        </div>
+      </tp-yt-paper-dialog>
+    </ytcp-uploads-dialog>
+    <ytcp-playlist-dialog hidden>
+      <div id="items">
+        <ytcp-checkbox-group>
+          <ytcp-checkbox-lit role="checkbox" aria-checked="false"></ytcp-checkbox-lit>
+          <span class="checkbox-label">Cooking</span>
+        </ytcp-checkbox-group>
+        <ytcp-checkbox-group>
+          <ytcp-checkbox-lit role="checkbox" aria-checked="false"></ytcp-checkbox-lit>
+          <span class="checkbox-label">Fox tales</span>
+        </ytcp-checkbox-group>
+      </div>
+      <ytcp-button class="done-button" label="Done">Done</ytcp-button>
+    </ytcp-playlist-dialog>
+    <ytcp-thumbnails-test-and-compare-dialog hidden>
+      <input type="file" accept="image/jpeg,image/png" />
+      <input type="file" accept="image/jpeg,image/png" />
+      <input type="file" accept="image/jpeg,image/png" />
+    </ytcp-thumbnails-test-and-compare-dialog>
+  </body>
+</html>

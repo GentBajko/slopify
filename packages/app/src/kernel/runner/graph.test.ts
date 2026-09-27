@@ -23,7 +23,7 @@ describe("deps", () => {
       audio: ["article"],
       images: [],
       thumbnail: ["article"],
-      video: ["article", "audio", "images", "thumbnail"],
+      video: ["article", "audio", "images"],
       document: ["article", "thumbnail"],
     });
   });
@@ -68,7 +68,40 @@ describe("derive", () => {
   });
 
   it("reads failed when a stage failed and none was canceled", () => {
-    expect(derive(stages({ audio: "failed", video: "done" }))).toBe("failed");
+    expect(derive(stages({ audio: "failed", video: "pending" }))).toBe("failed");
+  });
+
+  it("reads done with problems when the video was made and another step failed", () => {
+    expect(derive(stages({ thumbnail: "failed", video: "done" }))).toBe("partial");
+    // A document blocked behind the failed thumbnail does not undo the finished video.
+    expect(derive(stages({ thumbnail: "failed", document: "pending", video: "done" }))).toBe(
+      "partial",
+    );
+  });
+
+  it("falls back to narration, then the article, as the run's main output", () => {
+    expect(derive(stages({ video: "skipped", audio: "done", thumbnail: "failed" }))).toBe(
+      "partial",
+    );
+    expect(
+      derive(stages({ video: "skipped", audio: "skipped", article: "done", document: "failed" })),
+    ).toBe("partial");
+    // Supplied narration is not something the run made.
+    expect(derive(stages({ video: "skipped", audio: "provided", images: "failed" }))).toBe(
+      "failed",
+    );
+  });
+
+  it("reads running while a stage waits to try again by itself", () => {
+    expect(
+      derive([
+        { kind: "images", state: "pending", retryAt: "2026-09-27T10:02:00.000Z" },
+        { kind: "video", state: "pending" },
+      ]),
+    ).toBe("running");
+    expect(
+      derive([{ kind: "images", state: "pending", retryAt: "2026-09-27T10:02:00.000Z" }], true),
+    ).toBe("paused");
   });
 
   it("reads done when every requested stage is satisfied", () => {

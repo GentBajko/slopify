@@ -42,6 +42,10 @@ export const localOperations = [
   "youtube-description-v1",
   "shorts-pick-v1",
   "short-render-v1",
+  "review-v1",
+  "concat-turns-v1",
+  "voice-captions-v1",
+  "audio-files-v1",
 ] as const;
 export const deferredOperations = [
   "narration-preparation",
@@ -57,7 +61,18 @@ export const deferredOperations = [
   "resolve-revision-recipe",
   "shorts",
   "animate",
+  "script-attribution",
 ] as const;
+export interface DialogueLine {
+  readonly speaker: string;
+  readonly turn: number;
+  readonly voice: string;
+  readonly text: string;
+}
+export interface ScriptCheck {
+  readonly speakers: readonly { readonly id: string; readonly name: string }[];
+  readonly attribute: boolean;
+}
 export type RecipeInput =
   | {
       readonly kind: "llm";
@@ -70,6 +85,9 @@ export type RecipeInput =
       readonly documents?: readonly LlmDocument[] | undefined;
       readonly webSearch: boolean;
       readonly preparation?: PreparationSource | undefined;
+      // A multi-voice script answer, checked against the speakers before it is accepted; with
+      // `attribute`, the source text in the last message must keep its words.
+      readonly script?: ScriptCheck | undefined;
     }
   | {
       readonly kind: "tts";
@@ -84,6 +102,12 @@ export type RecipeInput =
       readonly segment: "body" | "intro" | "outro";
       readonly pronunciation: null;
       readonly wholeRequest?: boolean | undefined;
+      // Multiple voices: the speaker and script turn this request speaks, or, for a native
+      // multi-speaker request, every turn with its own voice. Present only on a multi-voice
+      // run, so every other request keeps its fingerprint.
+      readonly speaker?: string | undefined;
+      readonly turn?: number | undefined;
+      readonly dialogue?: readonly DialogueLine[] | undefined;
     }
   | {
       readonly kind: "image";
@@ -105,6 +129,9 @@ export type RecipeInput =
       readonly reference?:
         | { readonly fingerprint: string; readonly assetId: string | null }
         | undefined;
+      // The channel's cast members the brief mentions, their pictures sent as references too
+      // (`recipe-cast.ts`). Present only when one is mentioned, for the same reason.
+      readonly cast?: readonly import("./recipe-cast.js").CastInput[] | undefined;
     }
   | {
       readonly kind: "provided";
@@ -160,18 +187,27 @@ export function recipe(
   } = {},
 ): ResolvedWorkRecipe {
   const requestFingerprint =
-    input.kind === "tts"
-      ? narrationRequestFingerprint({
-          ...input,
-          wholeText: input.wholeRequest === true ? input.logicalText : null,
-        })
-      : fingerprint(
-          JSON.parse(
-            JSON.stringify(input, (_key: string, value: unknown): unknown =>
-              typeof value === "number" ? z.number().finite().parse(value) : value,
-            ),
-          ) as FingerprintValue,
-        );
+    input.kind === "tts" && input.dialogue !== undefined
+      ? // One request, several voices: every line's voice and words are what was sent.
+        fingerprint([
+          "narration-dialogue-v1",
+          input.provider,
+          input.model,
+          input.dialogue.map((line) => [line.voice, line.text]),
+          input.segment,
+        ])
+      : input.kind === "tts"
+        ? narrationRequestFingerprint({
+            ...input,
+            wholeText: input.wholeRequest === true ? input.logicalText : null,
+          })
+        : fingerprint(
+            JSON.parse(
+              JSON.stringify(input, (_key: string, value: unknown): unknown =>
+                typeof value === "number" ? z.number().finite().parse(value) : value,
+              ),
+            ) as FingerprintValue,
+          );
   const token =
     input.kind === "tts"
       ? narrationRegenerationToken(

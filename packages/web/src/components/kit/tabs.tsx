@@ -10,15 +10,12 @@ export interface TabItem<Id extends string> {
   readonly disabled?: boolean;
 }
 
-const tabClass = (active: boolean) =>
-  cn(
-    "relative -mb-px inline-flex min-h-10 shrink-0 items-center gap-2 border-b-2 px-3 text-body font-semibold whitespace-nowrap",
-    "transition-colors duration-150 ease-out motion-reduce:transition-none focus-visible:outline-offset-[-3px]",
-    active ? "border-lamp-run text-ink" : "border-transparent text-ink2 hover:text-ink",
-  );
+// The 3.0 tab: ink-2 until selected, then ink with the accent underline (kit.css `.sl-tab`).
+const tabClass = "sl-tab inline-flex items-center gap-[6px]";
 
 // Secondary surfaces are tabs under the page bar, never blocks inserted above the primary one.
-// Arrow keys move between tabs; the panel belongs to the caller, so a tab can keep its panel
+// Arrow keys, Home and End move between tabs and select them (roving focus: only the
+// selected tab is in the tab order); the panel belongs to the caller, so a tab can keep its panel
 // mounted while hidden.
 export function Tabs<Id extends string>({
   items,
@@ -40,11 +37,18 @@ export function Tabs<Id extends string>({
 }): ReactElement {
   const list = useRef<HTMLDivElement>(null);
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
     const enabled = items.filter((item) => !item.disabled);
     const at = enabled.findIndex((item) => item.id === value);
-    const step = event.key === "ArrowRight" ? 1 : -1;
-    const next = enabled[(at + step + enabled.length) % enabled.length];
+    const next =
+      event.key === "ArrowRight"
+        ? enabled[(at + 1) % enabled.length]
+        : event.key === "ArrowLeft"
+          ? enabled[(at - 1 + enabled.length) % enabled.length]
+          : event.key === "Home"
+            ? enabled[0]
+            : event.key === "End"
+              ? enabled[enabled.length - 1]
+              : undefined;
     if (!next) return;
     event.preventDefault();
     onChange(next.id);
@@ -60,7 +64,7 @@ export function Tabs<Id extends string>({
         role="tablist"
         aria-label={label}
         onKeyDown={onKeyDown}
-        className="flex min-w-0 flex-1 items-end overflow-x-auto [scrollbar-width:none]"
+        className="sl-tabs min-w-0 flex-1 border-b-0"
       >
         {items.map((item) => (
           <button
@@ -73,11 +77,11 @@ export function Tabs<Id extends string>({
             tabIndex={item.id === value ? 0 : -1}
             disabled={item.disabled}
             onClick={() => onChange(item.id)}
-            className={tabClass(item.id === value)}
+            className={tabClass}
           >
             {item.label}
             {item.badge === undefined ? null : (
-              <span className="text-small font-normal text-ink3">{item.badge}</span>
+              <span className="sl-tab__count ml-0">{item.badge}</span>
             )}
           </button>
         ))}
@@ -102,24 +106,15 @@ export function TabLinks({
   readonly className?: string;
 }): ReactElement {
   return (
-    <nav
-      aria-label={label}
-      className={cn(
-        "flex min-w-0 items-end overflow-x-auto border-b border-line [scrollbar-width:none]",
-        className,
-      )}
-    >
+    <nav aria-label={label} className={cn("sl-tabs min-w-0", className)}>
       {items.map((item) => (
         <Link
           key={item.to}
           to={item.to}
           {...(item.search ? { search: item.search } : {})}
           activeOptions={{ exact: false, includeSearch: false }}
-          className={tabClass(false)}
-          activeProps={{
-            className: "!border-lamp-run !text-ink",
-            "aria-current": "page",
-          }}
+          className={tabClass}
+          activeProps={{ "aria-current": "page" }}
         >
           {item.label}
         </Link>

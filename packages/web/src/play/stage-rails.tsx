@@ -1,5 +1,6 @@
 import { type MotionStyle, motionStyles } from "@app/slices/admission/model.js";
 import { motionStyleLabels } from "@app/slices/admission/rules.js";
+import { usesScriptPrompt } from "@app/slices/voices/model.js";
 import { Link } from "@tanstack/react-router";
 import { DocumentThemePicker } from "@/components/document-theme-picker";
 import { InfoTip } from "@/components/kit/info-tip";
@@ -14,6 +15,8 @@ import { freshShorts, Shorts } from "@/play/shorts";
 import { shortsOn } from "@/play/state";
 import { YoutubeDescription } from "@/play/youtube-description";
 import { useVideoEditControls } from "@/video/edit-controls";
+import { articleKind } from "./article-kind";
+import { ThumbnailCountPicker } from "./thumbnail-count.js";
 
 export function ResearchRail({ form, problem, update }: RailProps) {
   return (
@@ -50,10 +53,10 @@ export function ArticleRail({ form, prompts, problem, update }: RailProps) {
         {form.sources.article === "generate" ? (
           <OptionPicker
             field="articlePrompt"
-            label="Article prompt"
+            label={usesScriptPrompt(form) ? "Script prompt" : "Article prompt"}
             value={form.articlePrompt}
             placeholder="Pick a prompt"
-            options={promptNames(prompts, "article")}
+            options={promptNames(prompts, articleKind(form))}
             problem={problem("articlePrompt")}
             onPick={(articlePrompt) => {
               update({ articlePrompt });
@@ -114,6 +117,14 @@ export function ThumbnailRail({
             problem={problem("thumbnailPrompt")}
             onPick={(thumbnailPrompt) => {
               update({ thumbnailPrompt });
+            }}
+          />
+        ) : null}
+        {generating ? (
+          <ThumbnailCountPicker
+            value={form.thumbnailCount === 3 ? 3 : 1}
+            onPick={(thumbnailCount) => {
+              update({ thumbnailCount });
             }}
           />
         ) : null}

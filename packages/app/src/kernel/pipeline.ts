@@ -31,12 +31,15 @@ export const stageStates = [
 export type StageState = (typeof stageStates)[number];
 
 // A persisted pause overrides the stage-derived status. A completed run need not
-// include a video: all selected stages being satisfied is enough.
+// include a video: all selected stages being satisfied is enough. `partial` is a run whose
+// main output was made while another step failed (the video is there, its thumbnail is
+// not): done with problems, not failed.
 export const projectStates = [
   "running",
   "paused",
   "canceled",
   "failed",
+  "partial",
   "done",
   "pending",
 ] as const;

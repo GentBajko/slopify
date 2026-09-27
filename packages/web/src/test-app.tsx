@@ -141,6 +141,16 @@ function testRouter(ui: ReactNode) {
         path: "entries/$entryId",
         component: nowhere,
       }),
+      channels: createRoute({
+        getParentRoute: () => rootRoute,
+        path: "channels",
+        component: nowhere,
+      }),
+      channel: createRoute({
+        getParentRoute: () => rootRoute,
+        path: "channels/$channelId",
+        component: nowhere,
+      }),
     }),
     history: createMemoryHistory({ initialEntries: ["/"] }),
   });

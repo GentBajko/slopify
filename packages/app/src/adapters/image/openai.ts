@@ -7,7 +7,7 @@ import { httpFailure, missingKey, noImage, refusedImage, unreadable } from "../e
 import { retryAfter } from "../retry-after.js";
 import { describeBytes, sniffImage } from "./bytes.js";
 import { discoverOpenAiImages } from "./models.js";
-import { withReferenceNote } from "./reference.js";
+import { type ReferencePicture, referencePictures, withReferences } from "./reference.js";
 
 // The HTTP gateway adapter for OpenAI's images endpoint: the platform's own `fetch` and
 // nothing else, because the whole call is one request. Unlike fal and Replicate this one
@@ -72,8 +72,9 @@ export function openAiImage(deps: OpenAiImageDeps): ImagePort {
     id: "openai-image",
     models: () => discoverOpenAiImages(deps),
     generate: async (req: ImageRequest): Promise<GeneratedImage> => {
+      const pictures = referencePictures(req);
       const response =
-        req.reference === undefined
+        pictures.length === 0
           ? await deps.fetch(`${openAiImagesBase}/images/generations`, {
               method: "POST",
               signal: req.signal,
@@ -98,7 +99,7 @@ export function openAiImage(deps: OpenAiImageDeps): ImagePort {
               method: "POST",
               signal: req.signal,
               headers: { Authorization: `Bearer ${keyOf(deps)}` },
-              body: editForm(req, req.reference),
+              body: editForm(req, pictures),
             });
       if (!response.ok) {
         throw await failure(response);
@@ -112,17 +113,20 @@ export function openAiImage(deps: OpenAiImageDeps): ImagePort {
   };
 }
 
-function editForm(req: ImageRequest, reference: GeneratedImage): FormData {
+// The edits endpoint takes several input images as repeated `image[]` parts: the establishing
+// image first, then the cast pictures.
+function editForm(req: ImageRequest, pictures: readonly ReferencePicture[]): FormData {
   const form = new FormData();
   form.set("model", req.model);
-  form.set("prompt", withReferenceNote(req.prompt, reference));
+  form.set("prompt", withReferences(req.prompt, req));
   form.set("n", "1");
   form.set("size", sizeFor(req.model, req.aspect));
-  form.append(
-    "image[]",
-    new Blob([Uint8Array.from(reference.bytes)], { type: reference.mime }),
-    reference.mime === "image/jpeg" ? "reference.jpg" : "reference.png",
-  );
+  for (const [index, { image }] of pictures.entries())
+    form.append(
+      "image[]",
+      new Blob([Uint8Array.from(image.bytes)], { type: image.mime }),
+      `${index === 0 ? "reference" : `reference-${String(index + 1)}`}${image.mime === "image/jpeg" ? ".jpg" : ".png"}`,
+    );
   return form;
 }
 
@@ -164,6 +168,8 @@ function kindOf(status: number, code: string | null | undefined): ProviderErrorK
   // ceiling: everything else is `other` and is retried, so a prompt past the model's length
   // limit fails the same way four times over. A terminal "this will never work" kind has to
   // reach the port's error contract first, which is not this adapter's to widen.
+  // The provider's own server failed; the same request may well succeed later.
+  if (status >= 500) return "dropped";
   return "other";
 }
 

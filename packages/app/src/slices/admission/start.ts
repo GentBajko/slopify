@@ -2,7 +2,9 @@ import { transact } from "../../kernel/db/tx.js";
 import type { StageKind, StageState } from "../../kernel/pipeline.js";
 import { stageKinds } from "../../kernel/pipeline.js";
 import { storeArticleText } from "../article/store.js";
+import { resolveChannelId, setProjectChannel } from "../channels/repo.js";
 import { defaultDocumentTheme } from "../document/model.js";
+import { listNarrationAliases } from "../narration/aliases-library.js";
 import { collectSharedGlossary } from "../narration/shared-glossary.js";
 import { admitInitialRevision } from "../rebuild/runtime-admission.js";
 import { adoptBaseline } from "../revisions/adopt.js";
@@ -53,6 +55,11 @@ export function startRun(
     usesPronunciationGlossary(draft) && draft.audio?.shareGlossary === true
       ? collectSharedGlossary(deps).entries
       : [];
+  // Library → Aliases as they are now: later edits there never change this project.
+  const aliases =
+    draft.sources.audio === "generate" && draft.audio?.useNarrationAliases === true
+      ? listNarrationAliases(deps.db)
+      : [];
   // The title may name keywords too ("D&D Lore: {{Topic}}"), filled like a prompt's, so a
   // template or Play keeps the pattern and each project gets its own title.
   const title = render(draft.title, draft.values).trim() || draft.title;
@@ -66,6 +73,7 @@ export function startRun(
       : {}),
     rendered,
     ...(shared.length === 0 ? {} : { sharedGlossary: shared }),
+    ...(aliases.length === 0 ? {} : { narrationAliases: aliases }),
   };
   const project: Project = {
     id,
@@ -100,6 +108,7 @@ export function startRun(
   try {
     transact(deps.db, () => {
       insertProject(deps.db, project);
+      setProjectChannel(deps.db, id, resolveChannelId(deps.db, draft.channelId));
       for (const stage of stages) {
         insertStage(deps.db, stage);
       }

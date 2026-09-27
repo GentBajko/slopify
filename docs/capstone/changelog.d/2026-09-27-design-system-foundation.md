@@ -1,0 +1,7 @@
+## 2026-09-27 - implement: 3.0 design system foundation
+key: implement/design-system-foundation@2026-09-27
+- Tokens: `styles/index.css` carries the 3.0 palette (ground, surface, raised, sunken, screen, line, line-strong, ink 1-3, accent family, waiting, danger, info with tints, scrim), type scale, radii, per-theme shadows and the 8px grid; dark default, light via prefers-color-scheme or the Appearance setting. 2.x names stay as deprecated aliases; `text-accent-ink` uses moved to `text-on-accent`. JetBrains Mono added through @fontsource.
+- Components: `styles/kit.css` ports the design system's bundle.css; `components/kit` gains Button/IconButton/PlayKey, Field/Input/Select/Textarea, Switch, Segmented, Status/Lamp/Badge/Chip, MediaFrame/MediaGrid/Lightbox, Player, Rail, Steps, NextAction, Callout, List/ListRow, Stats/Meter/DataTable, CommandPalette (`useCommand`, Ctrl+K), Dialog/ConfirmDialog, EmptyState, ReadingView and layout primitives (PageHeader, Workspace, ListDetail). Tabs, SectionHead and Toast restyled in place; the shadcn Button and Dialog render the kit classes, so every screen picks up the new look.
+- Shell: 232px left rail with the palette button, six destinations, a channel picker slot and the New video key; thin top bar; full width to 1680px; bottom bar of five on phones. Home and Channels point at existing screens until their routes land.
+- Dev-only `/design` gallery shows every component in every state with a theme switch; it is left out of production builds.
+- Docs: `docs/design-system.md`.

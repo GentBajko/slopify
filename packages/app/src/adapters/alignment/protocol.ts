@@ -4,6 +4,17 @@ export const workerInput = z.object({
   modelPath: z.string(),
   pcmPath: z.string(),
   text: z.string(),
+  // Narration aliases the audio was read with; see speechWords.
+  aliases: z
+    .array(
+      z.object({
+        written: z.string(),
+        spoken: z.string(),
+        wholeWord: z.boolean(),
+        caseSensitive: z.boolean(),
+      }),
+    )
+    .optional(),
 });
 export type WorkerInput = z.infer<typeof workerInput>;
 export const omissionSchema = z.object({

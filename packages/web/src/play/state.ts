@@ -81,6 +81,8 @@ export interface LegacyPlayFormState {
   // The ticked image prompts, in tick order, each with its Number.
   readonly imagePrompts: readonly ImagePromptChoice[];
   readonly thumbnailPrompt: string;
+  // One or three generated thumbnails; absent is one.
+  readonly thumbnailCount?: 1 | 3 | undefined;
   // The picked entry's name, or "" for Off.
   readonly intro: string;
   readonly outro: string;
@@ -94,6 +96,8 @@ export interface LegacyPlayFormState {
   // The Video stage's edit settings (cuts, transitions, the Look, animated images). Absent on
   // drafts saved before them, which then render today's slideshow.
   readonly videoEdit?: VideoEditSettings | undefined;
+  // Multiple voices, as the draft holds them; absent is the Narration format.
+  readonly voices?: PlayDraftForm["voices"];
   // Read with the saved draft's absent Document fields filled in: Off and the default theme.
   readonly document: DocumentSettings;
   // Every value the user has typed, including one for a slot no prompt asks for any more:
@@ -252,6 +256,11 @@ export function draftOf(input: DraftInput): RunDraft {
       : {}),
     imagePrompts: form.imagePrompts,
     thumbnailPrompt: form.thumbnailPrompt,
+    // As `slices/play-drafts/convert.ts` sends it: three only for a drawn thumbnail.
+    ...(form.thumbnailCount === 3 &&
+    (form.sources.thumbnail === "from_prompt" || form.sources.thumbnail === "prompt_by_llm")
+      ? { thumbnailCount: 3 as const }
+      : {}),
     ...pick(entryChoice(input, "intro"), (intro) => ({ intro })),
     ...pick(entryChoice(input, "outro"), (outro) => ({ outro })),
     values: valuesFor(form.values, input.slots),
@@ -282,6 +291,9 @@ export function draftOf(input: DraftInput): RunDraft {
     zoomPercent: form.zoomPercent,
     motionStyle: form.motionStyle,
     ...(form.videoEdit === undefined ? {} : { videoEdit: form.videoEdit }),
+    ...(form.voices !== undefined && form.sources.audio === "generate"
+      ? { voices: form.voices }
+      : {}),
     ...(form.sources.document === "generate" ? { document: form.document } : {}),
   };
 }

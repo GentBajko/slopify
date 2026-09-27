@@ -33,15 +33,17 @@ export function readinessIsUsable(readiness: Readiness): boolean {
 }
 
 export const providerErrorKinds = [
+  // A key the provider rejected. Like an absent one it fails at once: no wait fixes it.
   "auth",
-  // Distinct from `auth`, a key the provider rejected: a bad key runs the whole retry
-  // policy, an absent one fails immediately.
   "missing_key",
   "unavailable",
   "rate_limit",
   "refusal",
   "unsupported",
   "timeout",
+  // The connection, the provider's server or the CLI process went away before an answer:
+  // nothing says the request itself was wrong, so it is worth sending again later.
+  "dropped",
   "other",
 ] as const;
 export type ProviderErrorKind = (typeof providerErrorKinds)[number];
@@ -50,6 +52,8 @@ export interface ProviderFault {
   readonly kind: ProviderErrorKind;
   // A 429 carrying Retry-After replaces the fixed backoff for that wait.
   readonly retryAfterMs?: number | undefined;
+  // A CLI's plan allowance is used up: the call waits for it to return instead of failing.
+  readonly planLimit?: import("./plan-limits.js").PlanLimitHit | undefined;
 }
 
 // An Error, so a stack survives and every existing catch still works, carrying the one
@@ -62,6 +66,7 @@ export interface ProviderErrorInit {
   // The provider's own words, verbatim - this is what the stage shows.
   readonly message: string;
   readonly retryAfterMs?: number | undefined;
+  readonly planLimit?: import("./plan-limits.js").PlanLimitHit | undefined;
 }
 
 export function providerError(init: ProviderErrorInit): ProviderError {
@@ -69,6 +74,7 @@ export function providerError(init: ProviderErrorInit): ProviderError {
     fault: {
       kind: init.kind,
       ...(init.retryAfterMs === undefined ? {} : { retryAfterMs: init.retryAfterMs }),
+      ...(init.planLimit === undefined ? {} : { planLimit: init.planLimit }),
     },
   });
 }

@@ -10,6 +10,7 @@ import {
 } from "../shorts/model.js";
 import type { ShortPick } from "../shorts/pick.js";
 import { imagePromptMessages } from "../shorts/prompts.js";
+import { castFor } from "./recipe-cast.js";
 import {
   type RecipeContext,
   type ResolvedWorkRecipe,
@@ -17,7 +18,7 @@ import {
   resourceIdentity,
   selectedReference,
 } from "./recipe-model.js";
-import { type ImageReference, imageChoice } from "./recipe-reference.js";
+import { castField, type ImageReference, imageChoice } from "./recipe-reference.js";
 import { llmInput, renderedPrompt } from "./recipe-text.js";
 
 // The Shorts step unfolds as its answers land, the way research's chapters unfold from the
@@ -148,6 +149,7 @@ export function shortsRecipes(
           prompt,
           aspect: "9:16",
           ...(reference === undefined ? {} : { reference: reference.input }),
+          ...castField(castFor(config, prompt)),
         },
         [prompts.key, ...(reference === undefined ? [] : [reference.key])],
         { token },

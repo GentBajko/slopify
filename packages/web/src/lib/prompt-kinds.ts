@@ -18,6 +18,10 @@ export function kindLabel(kind: PromptKind): string {
       return "YouTube Description";
     case "shorts":
       return "Shorts";
+    case "review":
+      return "Review";
+    case "script":
+      return "Script (speakers)";
   }
 }
 

@@ -65,6 +65,15 @@ export const hostLlmSchema = z
     webSearch: z.boolean().optional(),
   })
   .strict();
+const bridgedImage = z
+  .object({
+    mime: z.enum(["image/png", "image/jpeg"]),
+    base64: z
+      .string()
+      .max(Math.ceil(bridgeLimits.reference / 3) * 4)
+      .regex(/^[A-Za-z0-9+/]*={0,2}$/),
+  })
+  .strict();
 export const hostImageSchema = z
   .object({
     // "codex-imagegen" is the Codex default; any other is one of the Codex CLI's models.
@@ -82,6 +91,20 @@ export const hostImageSchema = z
           .regex(/^[A-Za-z0-9+/]*={0,2}$/),
       })
       .strict()
+      .optional(),
+    // The cast members the brief mentions, with their pictures (`ImageRequest.cast`); the
+    // whole request still has to fit `bridgeLimits.request`.
+    cast: z
+      .array(
+        z
+          .object({
+            name: z.string().min(1).max(200),
+            description: z.string().max(2000),
+            images: z.array(bridgedImage).min(1).max(4),
+          })
+          .strict(),
+      )
+      .max(4)
       .optional(),
   })
   .strict();

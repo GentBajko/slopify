@@ -13,6 +13,8 @@ import {
 import { runDraftSchema } from "../admission/schema.js";
 import { draftDocumentThemeOf } from "../document/model.js";
 import type { Entry } from "../library/model.js";
+import { reviewSettingsFromForm } from "../reviews/model.js";
+import { stageMakesItems } from "../reviews/rules.js";
 import {
   defaultShorts,
   type ShortsSettings,
@@ -148,7 +150,19 @@ export function toAdmissionDraft(input: {
         : defaultShorts.maxSeconds,
     };
   };
+  // Only the reviews of stages that make something; none left is no reviews at all, which is
+  // what every draft saved before them was.
+  const reviewed =
+    form.reviews === undefined
+      ? undefined
+      : reviewSettingsFromForm(form.reviews, (stage) =>
+          stageMakesItems({ sources, shorts: shortsOn ? { enabled: true } : undefined }, stage),
+        );
+  if (reviewed?.retriesProblem !== undefined)
+    fields.push({ field: "reviews.retries", message: reviewed.retriesProblem });
+  const reviews = reviewed?.settings;
   const draft: RunDraft = {
+    ...(reviews === undefined ? {} : { reviews }),
     ...(form.checkpoints === undefined ? {} : { checkpoints: form.checkpoints }),
     title: form.title,
     format: form.format,
@@ -183,6 +197,12 @@ export function toAdmissionDraft(input: {
             thumbnail: form.reference.thumbnail,
           },
         }
+      : {}),
+    // Three only for a thumbnail the image provider draws; one leaves it out, which is what
+    // every draft saved before it was.
+    ...(form.thumbnailCount === 3 &&
+    (sources.thumbnail === "from_prompt" || sources.thumbnail === "prompt_by_llm")
+      ? { thumbnailCount: 3 as const }
       : {}),
     articlePrompt: sources.article === "generate" ? form.articlePrompt : undefined,
     ...(sources.audio === "generate" && form.narrationPrompt?.trim()
@@ -274,6 +294,8 @@ export function toAdmissionDraft(input: {
     motionStyle: form.motionStyle,
     // Kept the same way; admission checks it only while the video renders.
     ...(form.videoEdit === undefined ? {} : { videoEdit: form.videoEdit }),
+    // Spoken by the speakers only while narration is generated.
+    ...(form.voices !== undefined && sources.audio === "generate" ? { voices: form.voices } : {}),
     edgeSilenceSeconds: measure(
       "edgeSilenceSeconds",
       sources.audio !== "off",

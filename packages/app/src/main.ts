@@ -17,13 +17,14 @@ import { type CatalogueStore, createCatalogueStore } from "./catalog/store.js";
 import {
   dockerActivationCommitted,
   dockerFolderConfiguration,
-} from "./edge/docker-projects/activation.js";
+} from "./edge/docker-install/activation.js";
 import { createHub, observedHub } from "./edge/events/hub.js";
 import { currentProjectEvent } from "./edge/events/visibility.js";
 import { createApp } from "./edge/http/app.js";
 import { createMutationLifecycle, drainMutationsWithDeadline } from "./edge/http/mutations.js";
 import { limitRequestTimes } from "./edge/http/timeouts.js";
 import { openFolder } from "./edge/open-folder.js";
+import { readHostLogin } from "./host-cli/status.js";
 import type { AudioPreviewStore } from "./kernel/audio-preview.js";
 import { createAudioPreviewStore } from "./kernel/audio-preview.js";
 import type { Clock } from "./kernel/clock.js";
@@ -44,6 +45,7 @@ import { stageKinds } from "./kernel/pipeline.js";
 import type { Registry } from "./kernel/ports/registry.js";
 import type { SubtitleAligner } from "./kernel/ports/subtitles.js";
 import { sqliteAttempts } from "./kernel/runner/attempt-repo.js";
+import { auditionVoice } from "./kernel/runner/audition.js";
 import {
   type CheckpointAuthority,
   createCheckpointAuthority,
@@ -53,11 +55,14 @@ import { createRunner } from "./kernel/runner/index.js";
 import type { ProviderDeps } from "./kernel/runner/providers.js";
 import { stageProviders } from "./kernel/runner/providers.js";
 import { createProviderQueue } from "./kernel/runner/queue.js";
+import { standaloneImage } from "./kernel/runner/standalone.js";
+import type { WorkRef } from "./kernel/runner/work.js";
 import { readVersion } from "./kernel/version.js";
 import { modelSources } from "./model-catalog.js";
 import { projectById, projectPaused } from "./slices/admission/repo.js";
 import { createBackupService } from "./slices/backups/service.js";
 import { pumpQueue, queueWaiting } from "./slices/batch/index.js";
+import { settleInterruptedCastImages } from "./slices/channels/cast-images.js";
 import { approveCheckpoint, type CheckpointRow } from "./slices/checkpoints/index.js";
 import {
   checkpointDecisionForWork,
@@ -72,7 +77,10 @@ import { readNotificationUrl } from "./slices/notifications/settings.js";
 import { seedSample } from "./slices/onboarding/sample.js";
 import type { DraftStartDeps } from "./slices/play-drafts/model.js";
 import { templateById } from "./slices/project-templates/repo.js";
+import { recoverProject } from "./slices/rebuild/recovery.js";
 import { claimWork, finishWork, maySubmit } from "./slices/rebuild/repo.js";
+import { waitToRetry, wakeRetries } from "./slices/rebuild/retry.js";
+import { createReviewRedos, reviewHold } from "./slices/rebuild/review-redo.js";
 import { materializeAdmittedWork } from "./slices/rebuild/runtime-materialize.js";
 import { runRevisionInvocation } from "./slices/rebuild/runtime-run.js";
 import {
@@ -83,6 +91,9 @@ import {
   recordWorkProgress,
 } from "./slices/rebuild/runtime-store.js";
 import type { RebuildDeps } from "./slices/rebuild/service.js";
+import { currentRevisionId } from "./slices/revisions/repo.js";
+import { createLimitGate, resumeAfterRestart } from "./slices/run-cost/limits.js";
+import { createUsageMeter } from "./slices/run-cost/meter.js";
 import type { ScheduleDeps } from "./slices/schedules/model.js";
 import { settleTerminalScheduleRuns } from "./slices/schedules/repo.js";
 import { createScheduleRunner } from "./slices/schedules/scheduler.js";
@@ -126,6 +137,9 @@ export interface BootOptions {
   // Import the bundled sample project on the first launch. The CLI turns it on; tests boot
   // without it so each starts with no projects.
   readonly seedSample?: boolean;
+  // Check the published model catalogue and OpenRouter's live list at start and once a day.
+  // The CLI turns it on; tests boot without it so they never reach the network.
+  readonly refreshModels?: boolean;
 }
 
 export interface ScheduleTickLifecycle {
@@ -189,7 +203,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       dockerState !== "/opt/slopify-install/activation.json")
   )
     throw new Error(
-      "This container was started with Slopify's Docker settings in the wrong place (SLOPIFY_DOCKER_INSTALL_STATE). Start it with the launcher instead: npx @gentbajko/slopify --docker",
+      "This container was started with Slopify's Docker settings in the wrong place (SLOPIFY_DOCKER_INSTALL_STATE must be /opt/slopify-install/activation.json). Start it with Slopify's compose.yaml, or install it with npx @gentbajko/slopify --docker",
     );
   const candidateToken = process.env.SLOPIFY_UPDATE_TOKEN ?? "";
   const pendingActivation =
@@ -210,6 +224,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     const interrupted = markInterruptedStages(db, clock);
     recoverCheckpointWork(db);
     const settledSchedules = settleTerminalScheduleRuns(db, clock.now().toISOString());
+    settleInterruptedCastImages({ db });
     // The updater can restore the database after a failed candidate boot, but it cannot
     // restore files deleted by reconciliation. Leave the filesystem untouched until the
     // candidate's committed activation pointer has been verified.
@@ -270,7 +285,9 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       catalogue,
     );
     const audioPreviews = createAudioPreviewStore();
+    const reviewRedos = createReviewRedos();
     const runner = wireRunner({
+      onFinished: (work) => reviewRedos.kick(work.projectId),
       db,
       paths,
       clock,
@@ -335,7 +352,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
           : publishedVersion(globalThis.fetch),
       unsupported: () =>
         process.env.SLOPIFY_DISABLE_UPDATES === "1"
-          ? "This container is updated by pulling a new image and recreating it."
+          ? "Slopify in Docker is updated from the terminal: npx @gentbajko/slopify@latest update. It waits for running work, keeps a recovery copy of your data and puts the previous version back if the new one doesn't start."
           : !existsSync(oldEntry) || !existsSync(workerEntry)
             ? "Run Slopify from its installed package to use in-app updates."
             : npm === undefined
@@ -348,6 +365,19 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
           .prepare("SELECT id FROM projects")
           .all()
           .some((row) => typeof row.id === "string" && runner.hasInflight?.(row.id) === true),
+      busyWith: () => {
+        const running = updateDb
+          .prepare(
+            "SELECT p.title FROM stages s JOIN projects p ON p.id=s.project_id WHERE s.state='running' LIMIT 1",
+          )
+          .get();
+        if (typeof running?.title === "string") return running.title;
+        const inflight = updateDb
+          .prepare("SELECT id,title FROM projects")
+          .all()
+          .find((row) => typeof row.id === "string" && runner.hasInflight?.(row.id) === true);
+        return typeof inflight?.title === "string" ? inflight.title : undefined;
+      },
       report: (message) => log.write("warn", "update", { detail: message }),
       install: async (next, restarting) => {
         if (npm === undefined) throw new Error("npm is unavailable.");
@@ -386,6 +416,24 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       modelsFor: modelSources(registry).modelsFor,
       emit: (projectId, event) => hub.emit(projectId, event),
     };
+    // Redos a review asked for before the last shutdown start now.
+    reviewRedos.bind(rebuild);
+    reviewRedos.kick();
+    // A stage that was waiting for a CLI's plan limits when the app stopped carries on waiting.
+    void resumeAfterRestart(
+      db,
+      async (projectId) => {
+        const baseRevisionId = currentRevisionId(runtimeDb, projectId);
+        if (baseRevisionId === undefined) return false;
+        const result = await recoverProject(rebuild, projectId, {
+          baseRevisionId,
+          idempotencyKey: randomUUID(),
+          action: { kind: "resume" },
+        });
+        return result.ok;
+      },
+      log,
+    );
     const draftDeps: DraftStartDeps = {
       db,
       paths,
@@ -404,11 +452,32 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         flusher.soon();
       },
     };
-    const scheduleDeps: ScheduleDeps = {
+    const scheduleRunnerDeps: ScheduleDeps = {
       ...draftDeps,
       template: (id, templateVersion) => templateById(runtimeDb, id, templateVersion),
+      // Topic generation asks the provider directly: it belongs to no project, so there is
+      // no stage attempt to record it under.
+      topicLlm: async (call) => {
+        let text = "";
+        for await (const event of registry.llm(call.provider).complete({
+          model: call.model,
+          messages: call.messages,
+          ...(call.thinking === undefined ? {} : { thinking: call.thinking }),
+          signal: call.signal,
+        }))
+          if (event.type === "delta") text += event.text;
+        return text;
+      },
+      topicsWaiting: (event) => {
+        hub.emitGlobal(event);
+        notifier.observeTopics(event);
+      },
     };
-    const scheduleRunner = createScheduleRunner(scheduleDeps);
+    const scheduleRunner = createScheduleRunner(scheduleRunnerDeps);
+    const scheduleDeps: ScheduleDeps = {
+      ...scheduleRunnerDeps,
+      requestTopics: scheduleRunner.requestTopics,
+    };
     scheduleRunner.recover(clock.now());
     const scheduleTicks = createScheduleTickLifecycle({
       beginMutation: updater.beginMutation,
@@ -462,6 +531,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       sendNotification,
       audioPreviews,
       ...modelSources(registry),
+      audition: (call, signal) => auditionVoice({ registry, clock, log }, call, signal),
       catalogue,
       clock,
       ids,
@@ -471,6 +541,9 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       flushSoon: flusher.soon,
       probe: nodeCliProbe,
       hostCliStatus: hostCli?.status,
+      generateCastImage: (call) => standaloneImage({ registry, clock, log }, call, "channel-cast"),
+      fetch: globalThis.fetch,
+      ...(hostCli === undefined ? { cliLogin: readHostLogin } : {}),
     });
     const server = await listen(app, config, log);
     const queueTimer = setInterval(() => {
@@ -487,9 +560,38 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     const scheduleTimer = setInterval(() => {
       void scheduleTicks.tick();
     }, 15_000);
+    // A step waiting out a rate limit or a timeout runs again once its wait is over; the wait
+    // is in the database, so this also picks up the ones a restart left waiting.
+    const retryTimer = setInterval(() => {
+      const release = updater.beginMutation();
+      if (!release) return;
+      try {
+        wakeRetries(updateDb, clock, runner);
+      } catch (error) {
+        log.write("error", "stage.retry", { detail: causedBy(error) });
+      } finally {
+        release();
+      }
+    }, 5_000);
     void scheduleTicks.tick();
     // Once a minute is plenty for a daily slot; the decision itself (slices/backups/schedule)
     // holds the first run back for a couple of minutes after a start.
+    // The model catalogue keeps itself current: once at start, then whenever a day has passed
+    // since the last check (looked at hourly, so a laptop that slept catches up).
+    const syncModels = (): void => {
+      if (!options.refreshModels || !catalogue.sync) return;
+      catalogue.sync().then(
+        (status) => {
+          if (status.warning !== null)
+            log.write("warn", "model-catalog.sync", { detail: status.warning });
+        },
+        (error: unknown) => log.write("warn", "model-catalog.sync", { detail: causedBy(error) }),
+      );
+    };
+    syncModels();
+    const modelTimer = setInterval(() => {
+      if (catalogue.syncDue?.(Date.now()) === true) syncModels();
+    }, 60 * 60_000);
     const backupTimer = setInterval(() => {
       backups.tick().catch((error: unknown) => {
         log.write("error", "backups.tick", { detail: causedBy(error) });
@@ -522,9 +624,12 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         notifier.close();
         clearInterval(queueTimer);
         clearInterval(scheduleTimer);
+        clearInterval(retryTimer);
         clearInterval(backupTimer);
+        clearInterval(modelTimer);
         const mutationDrain = mutations.stop();
         const scheduleDrain = scheduleTicks.stop();
+        const topicDrain = scheduleRunner.stop();
         // A backup being written is stopped and its partial file removed, not waited for.
         const backupDrain = backups.stop();
         const serverClose = beginServerClose(server);
@@ -540,6 +645,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
             mutationDrainTimeoutMs,
           );
           await scheduleDrain;
+          await topicDrain;
           await backupDrain;
           await runner.abortAll();
         } finally {
@@ -590,9 +696,12 @@ interface Wiring {
   readonly catalogue: CatalogueStore;
   // The bundled sample's build paces the words itself instead of listening for them.
   readonly alignSubtitles?: SubtitleAligner | undefined;
+  // Told after a step's row is written: a review that sent its item back starts the redo.
+  readonly onFinished?: ((work: WorkRef) => void) | undefined;
 }
 
 export function wireRunner({
+  onFinished,
   audioPreviews,
   db,
   paths,
@@ -632,6 +741,13 @@ export function wireRunner({
     attempts: sqliteAttempts(db, ids),
     clock,
     log,
+    meter: createUsageMeter({ db, ids, clock, catalogue: () => catalogue.read() }),
+    limits: createLimitGate({
+      db,
+      clock,
+      log,
+      changed: (projectId) => hub.emit(projectId, { type: "project.updated", projectId }),
+    }),
     queue: createProviderQueue((provider) =>
       isLocalCliProvider(provider)
         ? localCliConcurrency(provider)
@@ -639,7 +755,11 @@ export function wireRunner({
     ),
   };
   const checkpoints = createCheckpointAuthority<CheckpointRow>({
-    decide: (work) => checkpointDecisionForWork(execution, work),
+    // A review waiting to send its item back holds the item's dependents like a checkpoint.
+    decide: (work) => {
+      const review = reviewHold(execution, work);
+      return review.kind === "held" ? review : checkpointDecisionForWork(execution, work);
+    },
     approve: (projectId, checkpointId, identity) =>
       approveCheckpoint(db, {
         ...identity,
@@ -668,13 +788,20 @@ export function wireRunner({
         return claimed;
       },
       maySubmit: (work, pieceId) => maySubmit(db, work, pieceId),
-      finish: (work, state, reason) => {
+      waitToRetry: (work, fault, reason) =>
         transact(db, () => {
-          finishWork(db, work, state, reason);
+          const at = waitToRetry(execution, work, fault, reason, Math.random);
+          if (at !== undefined) projectStandings(execution, work.projectId);
+          return at;
+        }),
+      finish: (work, state, reason, kind) => {
+        transact(db, () => {
+          finishWork(db, work, state, reason, kind ?? null);
           materializeAdmittedWork(execution, work.projectId);
           projectStandings(execution, work.projectId);
           settleReleasedCheckpoints(execution, work.projectId);
         });
+        onFinished?.(work);
       },
     },
     runs: Object.fromEntries(

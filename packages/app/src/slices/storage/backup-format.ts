@@ -54,6 +54,7 @@ export const projectTables = [
   "review_checkpoints",
   "review_checkpoint_approvals",
   "project_recovery_requests",
+  "youtube_description_edits",
 ] as const;
 export type ProjectTable = (typeof projectTables)[number];
 
@@ -63,10 +64,12 @@ export const libraryTables = [
   "entries",
   "voices",
   "document_themes",
+  "narration_aliases",
   "project_templates",
   "project_template_revisions",
   "schedules",
   "schedule_runs",
+  "schedule_topics",
   "staged_files",
   "play_drafts",
   "play_draft_attachments",

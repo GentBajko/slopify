@@ -9,6 +9,7 @@ import { migrate } from "../../kernel/db/migrate.js";
 import { ensureDirs, layout, type Paths } from "../../kernel/paths.js";
 import { insertProject } from "../admission/repo.js";
 import { insertPrompt, listPrompts } from "../library/repo.js";
+import { listNarrationAliases } from "../narration/aliases-library.js";
 import { upsertKey, writeSetting } from "../settings/repo.js";
 import { insertTelemetryEvent } from "../telemetry/repo.js";
 import { type BackupDeps, busySentence, planBackup, streamBackup } from "./backup-export.js";
@@ -307,7 +308,12 @@ describe("import validation", () => {
         ...part,
         tables: {
           ...part.tables,
-          stages: part.tables.stages.filter((row: { kind: string }) => row.kind !== "document"),
+          stages: part.tables.stages
+            .filter((row: { kind: string }) => row.kind !== "document")
+            .map(beforeRetries),
+          ...(part.tables.revision_work === undefined
+            ? {}
+            : { revision_work: part.tables.revision_work.map(beforeRetries) }),
         },
       }),
     );
@@ -333,6 +339,14 @@ describe("import merge rules", () => {
     prompt(source, "pr-clash", "Clash", "Their words.");
     writeSetting(source.db, "appearance", JSON.stringify("dark"));
     writeSetting(source.db, "silenceGapSeconds", JSON.stringify(4));
+    const alias = (db: typeof source.db, id: string, position: number, written: string) =>
+      db
+        .prepare(
+          "INSERT INTO narration_aliases(id,position,written,spoken,whole_word,case_sensitive,updated_at) VALUES (?,?,?,?,1,0,'t')",
+        )
+        .run(id, position, written, `${written} said`);
+    alias(source.db, "a1", 0, "Dr.");
+    alias(source.db, "a2", 1, "Ms.");
     source.db
       .prepare(
         "INSERT INTO telemetry_events(id,type,payload,created_at,delivered_at) VALUES ('e1','project.created',?,'t',NULL)",
@@ -346,8 +360,13 @@ describe("import merge rules", () => {
     prompt(target, "pr-other-twin", "Twin", "Same words.");
     prompt(target, "pr-other-clash", "Clash", "Our words.");
     writeSetting(target.db, "appearance", JSON.stringify("light"));
+    alias(target.db, "b1", 0, "dr.");
 
     const summary = await importBackup(target, once(archive));
+    // Library → Aliases: this install's alias for the same written form stays; the new one
+    // comes after it.
+    expect(summary.narrationAliases).toEqual({ added: 1, renamed: 0, skipped: 1 });
+    expect(listNarrationAliases(target.db).map((one) => one.written)).toEqual(["dr.", "Ms."]);
     expect(summary.projects).toEqual({
       imported: [{ id: "p2", title: "New" }],
       skipped: [{ id: "p1", title: "Shared", reason: "It is already in this install." }],
@@ -379,3 +398,9 @@ describe("import merge rules", () => {
     expect(importedName("x".repeat(200), 200, () => false)).toHaveLength(200);
   });
 });
+
+// The columns version 30 added for automatic retries, which a 2.1 backup does not have.
+function beforeRetries(row: Record<string, unknown>): Record<string, unknown> {
+  const { retry_at: _at, failure_kind: _kind, auto_retries: _count, ...rest } = row;
+  return rest;
+}

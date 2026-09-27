@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Catalogue } from "../../catalog/schema.js";
 import type { CatalogueStore } from "../../catalog/store.js";
-import { type RunDraft, sourceOf } from "../admission/model.js";
+import { type RunDraft, sourceOf, thumbnailCountOf } from "../admission/model.js";
 import {
   imageSecondsProblem,
   usesNarrationPreparation,
@@ -14,6 +14,9 @@ import { splitEndMatter } from "../article/split.js";
 import { chunkNarration, defaultChunking } from "../narration/chunk.js";
 import { normalizeNarrationText } from "../narration/plan.js";
 import { preparationMessages } from "../narration/preparation.js";
+import { defaultReviewPrompts, reviewPromptKey, reviewRetriesOf } from "../reviews/model.js";
+import { activeReviewStages } from "../reviews/rules.js";
+import { isLocalCliProvider } from "../settings/model.js";
 import {
   defaultShortsImagePrompt,
   defaultShortsPrompt,
@@ -26,6 +29,7 @@ import {
   usesAnimation,
   videoEditProblems,
 } from "../video/edit-settings.js";
+import { usesVoices } from "../voices/model.js";
 import { defaultDescriptionPrompt } from "../youtube/model.js";
 
 // ceiling: the most chapters "Chapter openers" is charged for before the article exists, the
@@ -41,6 +45,11 @@ export interface CostRow {
   readonly low: number | null;
   readonly high: number | null;
   readonly detail: string;
+  // A CLI charge: $0 on the user's plan, and what the same work would cost through the API
+  // (null when the catalogue has no API price for it). Absent for keyed providers.
+  readonly onPlan?: boolean | undefined;
+  readonly apiLow?: number | null | undefined;
+  readonly apiHigh?: number | null | undefined;
 }
 export interface CostEstimate {
   readonly currency: "USD";
@@ -48,6 +57,11 @@ export interface CostEstimate {
   readonly low: number;
   readonly high: number;
   readonly unknown: number;
+  // The API-equivalent range of the rows on a plan, and how many of them have no API price.
+  // Absent when no row runs on a plan.
+  readonly apiLow?: number | undefined;
+  readonly apiHigh?: number | undefined;
+  readonly apiUnknown?: number | undefined;
   readonly expectedWords: number;
   readonly catalogueDate: string | null;
   readonly assumptions: readonly string[];
@@ -71,29 +85,35 @@ export function estimateRun(
   const llm = draft.llm ?? { provider: "", model: "" };
   const tts = draft.audio ?? { provider: "", model: "" };
   const image = draft.images ?? { provider: "", model: "" };
-  const textNote =
-    data.llm.find(
-      (model) =>
-        model.provider === llm.provider &&
-        model.id === llm.model &&
-        model.enabled &&
-        !model.deprecated,
-    )?.pricing.note ??
-    "CLI subscription or model pricing is unavailable; usage may be billed by your account.";
-  const imageNote =
-    data.image.find(
-      (model) =>
-        model.provider === image.provider &&
-        model.id === image.model &&
-        model.enabled &&
-        !model.deprecated,
-    )?.pricing.note ?? "Model or account pricing is unknown.";
+  const textNote = isLocalCliProvider(llm.provider)
+    ? "Runs on your CLI plan, so it adds no charge; the API figure is what the same tokens would cost through the API."
+    : (data.llm.find(
+        (model) =>
+          model.provider === llm.provider &&
+          model.id === llm.model &&
+          model.enabled &&
+          !model.deprecated,
+      )?.pricing.note ??
+      "CLI subscription or model pricing is unavailable; usage may be billed by your account.");
+  const imageNote = isLocalCliProvider(image.provider)
+    ? "Runs on your Codex plan, so it adds no charge; no API price is given for agent-drawn images."
+    : (data.image.find(
+        (model) =>
+          model.provider === image.provider &&
+          model.id === image.model &&
+          model.enabled &&
+          !model.deprecated,
+      )?.pricing.note ?? "Model or account pricing is unknown.");
   const generatedArticle = draft.sources.article === "generate";
   const articleChars = generatedArticle ? expectedWords * 6 : (draft.provided.article?.length ?? 0);
   const promptChars = Object.entries(rendered).reduce(
     (sum, [key, value]) =>
       sum +
-      (key === "narration" || key === "description" || key === "shorts" || key === "shortsImage"
+      (key === "narration" ||
+      key === "description" ||
+      key === "shorts" ||
+      key === "shortsImage" ||
+      key.startsWith("review.")
         ? 0
         : value.length),
     0,
@@ -179,15 +199,39 @@ export function estimateRun(
     const llmExtras =
       (draft.intro?.mode === "llm" ? 1200 : 0) + (draft.outro?.mode === "llm" ? 1200 : 0);
     const choice = { stage: "Narration", provider: tts.provider, model: tts.model };
-    requests.push(
-      generatedArticle || llmExtras > 0
-        ? { ...choice, kind: "tts-estimate", characters: articleChars + extras + llmExtras }
-        : {
-            ...choice,
-            kind: "tts",
-            text: (draft.provided.article ?? "") + (rendered.intro ?? "") + (rendered.outro ?? ""),
-          },
-    );
+    const speakers = usesVoices(draft) ? (draft.voices?.speakers ?? []) : [];
+    if (speakers.length > 0) {
+      // Each speaker's voice is priced on an equal share of the script; the intro and outro
+      // keep the narration voice.
+      for (const speaker of speakers)
+        requests.push({
+          kind: "tts-estimate",
+          stage: "Narration",
+          provider: speaker.voice.provider,
+          model: speaker.voice.model,
+          characters: Math.round(articleChars / speakers.length),
+          detail: `${speaker.name.trim() || "A speaker"}: assumes every speaker says about the same.`,
+        });
+      if (extras + llmExtras > 0)
+        requests.push({ ...choice, kind: "tts-estimate", characters: extras + llmExtras });
+      if (draft.voices?.source === "attribute")
+        text(
+          "Speaker split",
+          articleChars + 1500,
+          Math.round(articleChars * 1.1),
+          "One LLM call hands the text's passages to the speakers.",
+        );
+    } else
+      requests.push(
+        generatedArticle || llmExtras > 0
+          ? { ...choice, kind: "tts-estimate", characters: articleChars + extras + llmExtras }
+          : {
+              ...choice,
+              kind: "tts",
+              text:
+                (draft.provided.article ?? "") + (rendered.intro ?? "") + (rendered.outro ?? ""),
+            },
+      );
   } else local("Narration", "Provided or off; no generation charge.");
   const images =
     draft.sources.images === "generate"
@@ -212,12 +256,13 @@ export function estimateRun(
       model: image.model,
     });
   if (["from_prompt", "prompt_by_llm"].includes(draft.sources.thumbnail))
-    requests.push({
-      kind: "image",
-      stage: "Thumbnail",
-      provider: image.provider,
-      model: image.model,
-    });
+    for (let variant = 1; variant <= thumbnailCountOf(draft); variant++)
+      requests.push({
+        kind: "image",
+        stage: "Thumbnail",
+        provider: image.provider,
+        model: image.model,
+      });
   else local("Thumbnail", "Provided or off.");
   if (draft.sources.thumbnail === "prompt_by_llm")
     text("Thumbnail prompt", promptChars + articleChars, 1200);
@@ -294,6 +339,32 @@ export function estimateRun(
             : `Up to ${String(clips)} clips of ${String(animatedClipSeconds)} seconds, one per chapter opening. ${note}`,
       });
   }
+  // Automatic reviews: one call per reviewed item, on the reviewer's model. A failed item
+  // made again is reviewed again, at most the retries allowed, which is not priced here.
+  const reviews = draft.reviews;
+  if (reviews !== undefined)
+    for (const stage of activeReviewStages(draft)) {
+      const picked = rendered[reviewPromptKey(stage)]?.trim() ?? "";
+      const prompt = picked === "" ? defaultReviewPrompts[stage].length : picked.length;
+      const items =
+        stage === "images" ? images : stage === "shorts" ? (draft.shorts?.count ?? 0) : 1;
+      const material =
+        stage === "article"
+          ? articleChars + promptChars
+          : stage === "narration"
+            ? Math.round(articleChars * 2.1)
+            : 1500;
+      for (let index = 0; index < items; index++)
+        requests.push({
+          kind: "llm",
+          stage: "Reviews",
+          provider: reviews.provider,
+          model: reviews.model,
+          inputCharacters: prompt + material + 800,
+          outputCharacters: 400,
+          detail: `One review per item. A failed item made again is reviewed again, up to ${String(reviewRetriesOf(reviews))} times; those remakes are not in this estimate. ${textNote}`,
+        });
+    }
   if (sourceOf(draft.sources, "document") === "generate")
     local("Document", "Laid out locally from the article; no API fee.");
   return {

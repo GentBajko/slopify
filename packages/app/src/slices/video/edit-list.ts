@@ -123,6 +123,8 @@ export interface EditList {
   // In timeline order; drawn with `cardFont`, which is present whenever cards are.
   readonly cards?: readonly Card[] | undefined;
   readonly cardFont?: CardFont | undefined;
+  // The cards' text colour, #RRGGBB; absent is white.
+  readonly cardColor?: string | undefined;
 }
 
 // The same list with every file path passed through `map`: render.json records paths
@@ -205,6 +207,10 @@ const editListSchema = z
     cardFont: z
       .object({ path: z.string().min(1), name: z.string().min(1) })
       .strict()
+      .optional(),
+    cardColor: z
+      .string()
+      .regex(/^#[0-9A-Fa-f]{6}$/)
       .optional(),
   })
   .strict();

@@ -3,7 +3,11 @@ import { readFileSync, statSync } from "node:fs";
 import { z } from "zod";
 import type { CatalogueStore } from "../../catalog/store.js";
 import { modelFields } from "../../catalog/validate.js";
+import type { RunDraft } from "../admission/model.js";
 import { admit, type FieldError } from "../admission/rules.js";
+import type { CastMember } from "../channels/model.js";
+import { castOfChannel } from "../channels/repo.js";
+import { brandedForm, brandedRun, castSnapshot, draftChannel } from "../channels/runs.js";
 import { estimateRun } from "../estimate/index.js";
 import type { ResolvedFont } from "../fonts/model.js";
 import { listEntries } from "../library/repo.js";
@@ -11,6 +15,7 @@ import { pickTemplates, renderPicked } from "../library/slots.js";
 import { reviewCheckpointSet } from "../rebuild/recipe-checkpoints.js";
 import { readSettings } from "../settings/playback.js";
 import { stagedFiles } from "../storage/repo.js";
+import { withCastVoices } from "../voices/cast.js";
 import { toAdmissionDraft } from "./convert.js";
 import type {
   DraftResult,
@@ -71,12 +76,29 @@ export function resolveReviewInputs(
       message:
         "You can review at most 50 videos at once, counting the first one. Remove some variations.",
     });
-  const converted = toAdmissionDraft({
-    document,
+  const entries = [...(document.librarySnapshot?.entries ?? []), ...listEntries(deps.db)];
+  // The channel's brand kit fills what the setup leaves at its default, and its cast rides
+  // along for the images (`slices/channels/runs.ts`).
+  const channel = draftChannel(deps.db, document);
+  const useBrandKit = document.form.useBrandKit !== false;
+  const branded = toAdmissionDraft({
+    document: {
+      ...document,
+      form: brandedForm(deps.db, document.form, channel.brand, entries),
+    },
     attachments: fresh.value.attachments,
-    entries: [...(document.librarySnapshot?.entries ?? []), ...listEntries(deps.db)],
+    entries,
     silenceGapSeconds: readSettings(deps).silenceGapSeconds,
   });
+  const converted = branded.ok
+    ? ({
+        ok: true,
+        draft: castVoiced(
+          brandedRun(branded.draft, channel, castSnapshot(deps.db, channel.id), useBrandKit),
+          castOfChannel(deps.db, channel.id),
+        ),
+      } as const)
+    : branded;
   if (!converted.ok) fields.push(...converted.fields);
   if (!converted.ok || !words.success || fields.length) return reviewRefusal(view, fields);
   const catalogue = deps.catalogue.read();
@@ -182,4 +204,11 @@ export function resolveReviewInputs(
     ...(checkpointSet.length ? { checkpointSet } : {}),
   };
   return { ok: true, value: { ...resolved, fingerprint: requestHash({ ...resolved, fontHash }) } };
+}
+
+// Speakers picked from the cast speak with the cast's voices as they are when the run starts.
+function castVoiced(draft: RunDraft, members: readonly CastMember[]): RunDraft {
+  return draft.voices === undefined
+    ? draft
+    : { ...draft, voices: withCastVoices(draft.voices, members) };
 }

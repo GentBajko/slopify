@@ -271,8 +271,8 @@ describe("attempt", () => {
     expect(h.clock.now().toISOString()).toBe("2026-09-02T10:00:00.000Z");
   });
 
-  // A bad key fails the call and the retry policy runs like any other.
-  it("retries an auth failure like any other", async () => {
+  // A key the provider rejected needs the user in Settings; asking again changes nothing.
+  it("fails an auth failure at once", async () => {
     const h = harness();
     let calls = 0;
     const call: ProviderCall<string> = () => {
@@ -282,7 +282,24 @@ describe("attempt", () => {
 
     await expect(h.clock.settle(attempt(h.context, call, { kind: "llm" }))).rejects.toThrow("401");
 
-    expect(calls).toBe(4);
+    expect(calls).toBe(1);
+  });
+
+  // A daily quota is not slept through with the stage holding its provider slot: the
+  // runner's persisted wait takes over.
+  it("stops at once when the provider asks to wait longer than a minute", async () => {
+    const h = harness();
+    let calls = 0;
+    const call: ProviderCall<string> = () => {
+      calls += 1;
+      return Promise.reject(
+        providerError({ kind: "rate_limit", message: "429", retryAfterMs: 5 * 60_000 }),
+      );
+    };
+
+    await expect(h.clock.settle(attempt(h.context, call, { kind: "llm" }))).rejects.toThrow("429");
+
+    expect(calls).toBe(1);
   });
 
   describe("timeouts", () => {
@@ -419,7 +436,7 @@ describe("attempt", () => {
     expect(shown).toContain("[redacted]");
   });
 
-  it("hands anything that is not a provider error through as `other`", async () => {
+  it("names a request that never reached the server `dropped`, anything else `other`", async () => {
     const h = harness();
 
     await expect(
@@ -428,11 +445,17 @@ describe("attempt", () => {
       ),
     ).rejects.toThrow("Slopify could not reach the AI model over the internet");
 
-    expect(h.attempts.rows.map((row) => row.outcome)).toEqual(["other", "other", "other", "other"]);
+    expect(h.attempts.rows.map((row) => row.outcome)).toEqual([
+      "dropped",
+      "dropped",
+      "dropped",
+      "dropped",
+    ]);
     const thrown = await h.clock
       .settle(attempt(h.context, alwaysFails("just a string"), { kind: "llm" }))
       .catch((error: unknown) => error);
     expect(isProviderError(thrown)).toBe(true);
+    expect(isProviderError(thrown) && thrown.fault.kind).toBe("other");
   });
 
   it("names the piece an attempt belongs to", async () => {

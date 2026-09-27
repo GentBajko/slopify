@@ -1,5 +1,6 @@
 import type { RebuildPreview } from "@app/slices/rebuild/model.js";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
+import { Callout } from "@/components/kit/callout";
 import { Button } from "@/components/ui/button";
 import { outputSlotLabel } from "./output-label.js";
 export interface RebuildConsent {
@@ -22,6 +23,7 @@ export function RebuildReview({
   const label = workLabels(preview);
   const [confirmed, setConfirmed] = useState<readonly string[]>([]);
   const [unknown, setUnknown] = useState(false);
+  const holdId = useId();
   const money = (value: number | null) =>
     value === null
       ? "Unknown"
@@ -30,10 +32,27 @@ export function RebuildReview({
           currency: "USD",
           maximumFractionDigits: 4,
         }).format(value);
-  const allowed =
-    !preview.work.some((work) => work.disposition === "blocked") &&
-    preview.providedReuseRequired.every((key) => confirmed.includes(key)) &&
-    (preview.costs.unknown === 0 || unknown);
+  const blocked = preview.work.filter((work) => work.disposition === "blocked");
+  const unconfirmed = preview.providedReuseRequired.filter((key) => !confirmed.includes(key));
+  // Each thing still holding Start back, said next to the button so it is never a mystery.
+  const holds = [
+    ...(blocked.length === 0
+      ? []
+      : [
+          `${blocked.length === 1 ? "1 item is" : `${blocked.length} items are`} unavailable (reasons above)`,
+        ]),
+    ...unconfirmed.map((key) => `tick “Keep the provided content for ${label(key)}”`),
+    ...(preview.costs.unknown === 0 || unknown
+      ? []
+      : [`tick “I understand that ${preview.costs.unknown} cost estimates are unknown”`]),
+  ];
+  const allowed = holds.length === 0;
+  const counts = dispositionOrder
+    .map((disposition) => ({
+      disposition,
+      count: preview.work.filter((work) => work.disposition === disposition).length,
+    }))
+    .filter((row) => row.count > 0);
   return (
     <section aria-label="Review affected rebuild" className="space-y-3">
       {preview.review?.inputChanges.length ? (
@@ -74,31 +93,38 @@ export function RebuildReview({
           </li>
         ))}
       </ul>
-      <ul>
-        {preview.work.map((work) => (
-          <li key={work.key}>
-            {label(work.key)}: {dispositions[work.disposition]}. {work.reason}
-            {work.inflight ? " An already submitted request may still be billed." : ""}
-            {preview.review?.requests
-              .filter((request) => request.key === work.key)
-              .map((request) => (
-                <div key={request.key}>
-                  {request.settings === null ? null : (
-                    <p className="text-small text-ink2">{request.settings}</p>
-                  )}
-                  {request.text === null ? null : (
-                    <details>
-                      <summary>View request text</summary>
-                      <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words text-small">
-                        {request.text}
-                      </pre>
-                    </details>
-                  )}
-                </div>
-              ))}
-          </li>
-        ))}
-      </ul>
+      <details>
+        <summary>
+          Work items ({preview.work.length}):{" "}
+          {counts.map((row) => `${row.count} ${dispositions[row.disposition]}`).join(", ") ||
+            "none"}
+        </summary>
+        <ul>
+          {preview.work.map((work) => (
+            <li key={work.key}>
+              {label(work.key)}: {dispositions[work.disposition]}. {work.reason}
+              {work.inflight ? " An already submitted request may still be billed." : ""}
+              {preview.review?.requests
+                .filter((request) => request.key === work.key)
+                .map((request) => (
+                  <div key={request.key}>
+                    {request.settings === null ? null : (
+                      <p className="text-small text-ink2">{request.settings}</p>
+                    )}
+                    {request.text === null ? null : (
+                      <details>
+                        <summary>View request text</summary>
+                        <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words text-small">
+                          {request.text}
+                        </pre>
+                      </details>
+                    )}
+                  </div>
+                ))}
+            </li>
+          ))}
+        </ul>
+      </details>
       <p>
         Retained outputs:{" "}
         {preview.retained.map((output) => outputSlotLabel(output.slot)).join(", ") || "None"}
@@ -143,12 +169,27 @@ export function RebuildReview({
           I understand that {preview.costs.unknown} cost estimates are unknown.
         </label>
       )}
+      {blocked.length === 0 ? null : (
+        <Callout
+          tone="danger"
+          title={`${blocked.length === 1 ? "1 item can’t" : `${blocked.length} items can’t`} run, so this rebuild can’t start`}
+        >
+          <ul className="space-y-1">
+            {blockedReasons(blocked, label).map((row) => (
+              <li key={row.reason}>
+                <span className="font-semibold">{row.what}:</span> {row.reason}
+              </li>
+            ))}
+          </ul>
+        </Callout>
+      )}
       {feedback}
-      <div className="sticky bottom-[-16px] -mx-4 flex flex-wrap gap-3 border-t border-line bg-panel px-4 py-3">
+      <div className="sticky bottom-[-16px] -mx-4 flex flex-wrap items-center gap-3 border-t border-line bg-panel px-4 py-3">
         <Button
           variant="primary"
           type="button"
           disabled={pending || !allowed}
+          aria-describedby={allowed ? undefined : holdId}
           onClick={() =>
             onStart({
               acknowledgeUnknownCosts: unknown,
@@ -161,11 +202,39 @@ export function RebuildReview({
         <Button type="button" disabled={pending} onClick={onCancel}>
           Cancel rebuild
         </Button>
+        {allowed || pending ? null : (
+          <p id={holdId} className="min-w-0 text-small text-ink2">
+            Start rebuild is off until: {holds.join("; ")}.
+          </p>
+        )}
       </div>
     </section>
   );
 }
 
+const dispositionOrder = ["generate", "local", "review", "reuse", "blocked"] as const;
+// Blocked work grouped by its reason: 24 narration requests refused for one cause read as one
+// line, not 24.
+function blockedReasons(
+  blocked: readonly RebuildPreview["work"][number][],
+  label: (key: string) => string,
+): readonly { readonly what: string; readonly reason: string }[] {
+  const groups = new Map<string, string[]>();
+  for (const work of blocked) {
+    const reason = work.reason.trim() || "No reason was given.";
+    groups.set(reason, [...(groups.get(reason) ?? []), work.key]);
+  }
+  return [...groups].map(([reason, keys]) => ({
+    reason,
+    what:
+      keys.length === 1
+        ? label(keys[0] ?? "")
+        : `${keys.length} ${new Set(keys.map(workName)).size === 1 ? plural(workName(keys[0] ?? "")) : "items"}`,
+  }));
+}
+function plural(name: string): string {
+  return /s$/u.test(name) ? name : `${name.charAt(0).toLowerCase()}${name.slice(1)}s`;
+}
 const dispositions = {
   reuse: "Reuse",
   generate: "Generate",

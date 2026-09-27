@@ -16,7 +16,10 @@ export function bindNarrationReuse(
   recipe: ResolvedWorkRecipe,
   ordinal: number,
 ): void {
-  if (recipe.input.kind === "local" && recipe.input.operation === "concat-narration") {
+  if (
+    recipe.input.kind === "local" &&
+    (recipe.input.operation === "concat-narration" || recipe.input.operation === "concat-turns-v1")
+  ) {
     const completed = view.pieces.find(
       (one) =>
         one.available &&

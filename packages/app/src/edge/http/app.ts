@@ -22,7 +22,9 @@ import type { AppUpdater } from "../../updater/model.js";
 import type { Hub } from "../events/hub.js";
 import { actionRoutes } from "./actions.js";
 import { audioPreviewRoutes } from "./audio-preview.js";
+import { type Audition, auditionRoutes } from "./auditions.js";
 import { backupRoutes } from "./backups.js";
+import { channelRoutes } from "./channels.js";
 import { checkpointRoutes } from "./checkpoints.js";
 import { diagnosticsRoutes } from "./diagnostics.js";
 import { documentThemeRoutes } from "./document-themes.js";
@@ -41,23 +43,31 @@ import { projectRoutes } from "./projects.js";
 import { promptRoutes } from "./prompts.js";
 import { pronunciationRoutes } from "./pronunciations.js";
 import { providerRoutes } from "./providers.js";
+import { reviewRoutes } from "./reviews.js";
 import { revisionFileRoutes, revisionFolderRoutes } from "./revision-files.js";
 import { revisionRoutes } from "./revisions.js";
-import { scheduleRoutes } from "./schedules.js";
+import { runCostRoutes } from "./run-cost.js";
+import { calendarRoutes, scheduleRoutes } from "./schedules.js";
 import { settingsRoutes } from "./settings.js";
 import { stagingRoutes } from "./staging.js";
 import { storageRoutes } from "./storage.js";
+import { studioRoutes } from "./studio.js";
 import { subtitleRoutes } from "./subtitles.js";
 import { telemetryRoutes } from "./telemetry.js";
 import { tutorialRoutes } from "./tutorial.js";
 import { updateRoutes } from "./update.js";
 import { usageRoutes } from "./usage.js";
+import { youtubeEditRoutes } from "./youtube-edits.js";
 
 export interface AppDeps {
   readonly hostCliStatus?:
     | import("../../kernel/ports/host-cli.js").HostCliPorts["status"]
     | undefined;
   readonly drafts?: DraftStartDeps;
+  // Channels → Cast's Generate button; absent answers that no provider is set up.
+  readonly generateCastImage?:
+    | import("../../slices/channels/cast-images.js").CastImageGenerator
+    | undefined;
   readonly schedules?: ScheduleDeps;
   readonly backups?: BackupService;
   readonly rebuild?: RebuildDeps;
@@ -75,6 +85,13 @@ export interface AppDeps {
     readonly openOnHost?: (path: string, signal: AbortSignal) => Promise<boolean>;
   };
   readonly catalogue?: CatalogueStore;
+  // The network for Settings → Providers' Test and Check all. Handed in so a test never
+  // reaches a real provider.
+  readonly fetch?: typeof globalThis.fetch;
+  // Asks a CLI on this computer whether it is signed in, for the health check.
+  readonly cliLogin?: import("../../slices/settings/health.js").LoginReader;
+  // Speaks one voice audition through the attempt wrapper (`kernel/runner/audition.ts`).
+  readonly audition?: Audition | undefined;
   readonly updater?: AppUpdater;
   readonly mutations?: Pick<MutationLifecycle, "begin">;
   readonly audioPreviews?: AudioPreviewStore;
@@ -124,27 +141,34 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/diagnostics", diagnosticsRoutes(deps))
       .route("/project-templates", projectTemplateRoutes(deps.drafts))
       .route("/schedules", scheduleRoutes(deps.schedules))
+      .route("/channels", channelRoutes(deps))
+      .route("/calendar", calendarRoutes(deps.schedules))
       .route("/projects", planningRoutes(deps))
       .route("/projects", projectRoutes(deps))
       .route("/projects", checkpointRoutes(deps))
+      .route("/projects", reviewRoutes(deps))
       .route("/projects", revisionRoutes(deps))
       .route("/projects", revisionFolderRoutes(deps))
       .route("/projects", openFolderRoutes(deps))
       .route("/projects", audioPreviewRoutes(deps))
       .route("/projects", narrationPeakRoutes(deps))
+      .route("/projects", runCostRoutes(deps))
       .route("/update", updateRoutes(deps))
       // The re-run and cancel actions sit on the same prefix as the project itself; they
       // are their own router because they are their own concern.
       .route("/projects", actionRoutes(deps))
       .route("/projects", subtitleRoutes(deps))
+      .route("/projects", youtubeEditRoutes(deps))
       .route("/fonts", fontsRoutes(deps))
       .route("/prompts", promptRoutes(deps))
       .route("/entries", entryRoutes(deps))
       .route("/document-themes", documentThemeRoutes(deps))
       .route("/pronunciations", pronunciationRoutes(deps))
+      .route("/auditions", auditionRoutes(deps))
       .route("/telemetry", telemetryRoutes(deps))
       .route("/usage", usageRoutes(deps))
       .route("/settings", settingsRoutes(deps))
+      .route("/studio", studioRoutes(deps))
       .route("/tutorial", tutorialRoutes(deps))
       .route("/providers", providerRoutes(deps))
       .route("/onboarding", onboardingRoutes(deps))

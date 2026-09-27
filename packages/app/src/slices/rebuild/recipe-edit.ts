@@ -69,6 +69,12 @@ export function editPlan(
   )
     values.push(["look-v1", edit.vignette, edit.grain, edit.grade, edit.atmosphere]);
   if (usesChapterCards(config)) values.push(["cards-v1", config.subtitles?.fontId ?? "default"]);
+  // The brand kit's end screen and title style; nothing when unset, so a project without them
+  // keeps its export fingerprint.
+  const endScreen = config.endScreen?.text.trim() ?? "";
+  if (endScreen !== "") values.push(["end-screen-v1", endScreen]);
+  if (config.titleStyle !== undefined && (usesChapterCards(config) || endScreen !== ""))
+    values.push(["title-style", config.titleStyle.fontId ?? null, config.titleStyle.color ?? null]);
   if (timing !== undefined) {
     values.push(["timing", resourceIdentity(context, timing)]);
     dependsOn.push(timing.key);

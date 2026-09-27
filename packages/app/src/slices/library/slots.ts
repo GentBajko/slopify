@@ -14,6 +14,9 @@ import {
   usesYoutubeDescription,
 } from "../admission/rules.js";
 import { collectFields, render } from "../admission/substitute.js";
+import { reviewPromptKey } from "../reviews/model.js";
+import { activeReviewStages } from "../reviews/rules.js";
+import { usesScriptPrompt } from "../voices/model.js";
 import type { Entry, EntryCategory, PromptKind } from "./model.js";
 import { type LibrarySnapshot, snapshotEntry, snapshotPrompt } from "./snapshot.js";
 
@@ -51,7 +54,16 @@ export function pickTemplates(
   const image: PickedBody[] = [];
 
   if (sources.article === "generate") {
-    body(db, "article", draft.articlePrompt, "articlePrompt", missing, text, "article", snapshot);
+    body(
+      db,
+      usesScriptPrompt(draft) ? "script" : "article",
+      draft.articlePrompt,
+      "articlePrompt",
+      missing,
+      text,
+      "article",
+      snapshot,
+    );
   }
 
   const intro = pickEntry(db, "intro", draft.intro, missing, snapshot);
@@ -96,6 +108,19 @@ export function pickTemplates(
       snapshot,
     );
   }
+
+  // Each reviewed stage's Review prompt; none picked is the stage's built-in one.
+  for (const stage of activeReviewStages(draft))
+    body(
+      db,
+      "review",
+      draft.reviews?.stages[stage]?.prompt,
+      `reviews.stages.${stage}.prompt`,
+      missing,
+      text,
+      reviewPromptKey(stage),
+      snapshot,
+    );
 
   // The establishing image's prompt: an image prompt like the others, its keywords filled the
   // same way.

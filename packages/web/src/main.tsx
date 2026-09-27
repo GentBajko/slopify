@@ -5,6 +5,7 @@ import "@fontsource/barlow/700.css";
 import "@fontsource/barlow/800.css";
 import "@fontsource/barlow-condensed/600.css";
 import "@fontsource/barlow-condensed/700.css";
+import "@fontsource/jetbrains-mono/400.css";
 import "@/styles/index.css";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

@@ -14,50 +14,75 @@ export function updateRoutes(deps: AppDeps) {
     blockedReason:
       "This copy of Slopify cannot update itself from the app. Update it the way you installed it, for example by running the launcher again.",
   };
-  return new Hono()
-    .get("/ready", (c) => {
-      c.header("Cache-Control", "no-store");
-      if (!deps.updater?.ready(c.req.header("X-Slopify-Update-Token") ?? ""))
-        return problem(c, { status: 403, title: titleOf(403) });
-      return c.json({ status: "ok", version: deps.version });
-    })
-    .post("/activate", async (c) => {
-      c.header("Cache-Control", "no-store");
-      const token = c.req.header("X-Slopify-Update-Token") ?? "";
-      if (!deps.updater?.ready(token)) return problem(c, { status: 403, title: titleOf(403) });
-      if (!(await deps.updater.activate(token)))
-        return problem(c, { status: 409, title: titleOf(409) });
-      return c.json({ status: "ok", version: deps.version });
-    })
-    .get("/", async (c) => {
-      c.header("Cache-Control", "no-store");
-      return c.json(
-        deps.updater === undefined
-          ? unavailable
-          : await deps.updater.check(c.req.query("refresh") === "1"),
-      );
-    })
-    .post("/", async (c) => {
-      const origin = c.req.header("Origin");
-      if (origin !== undefined && origin !== new URL(c.req.url).origin)
+  return (
+    new Hono()
+      .get("/ready", (c) => {
+        c.header("Cache-Control", "no-store");
+        if (!deps.updater?.ready(c.req.header("X-Slopify-Update-Token") ?? ""))
+          return problem(c, { status: 403, title: titleOf(403) });
+        return c.json({ status: "ok", version: deps.version });
+      })
+      .post("/activate", async (c) => {
+        c.header("Cache-Control", "no-store");
+        const token = c.req.header("X-Slopify-Update-Token") ?? "";
+        if (!deps.updater?.ready(token)) return problem(c, { status: 403, title: titleOf(403) });
+        if (!(await deps.updater.activate(token)))
+          return problem(c, { status: 409, title: titleOf(409) });
+        return c.json({ status: "ok", version: deps.version });
+      })
+      .get("/", async (c) => {
+        c.header("Cache-Control", "no-store");
+        return c.json(
+          deps.updater === undefined
+            ? unavailable
+            : await deps.updater.check(c.req.query("refresh") === "1"),
+        );
+      })
+      // Drops an update that is waiting for running work to finish.
+      .delete("/", async (c) => {
+        const origin = c.req.header("Origin");
+        if (origin !== undefined && origin !== new URL(c.req.url).origin)
+          return problem(c, {
+            status: 403,
+            title: titleOf(403),
+            detail:
+              "For your safety, updates can only be changed from the Slopify page itself. Open Slopify and try again there.",
+          });
+        if (deps.updater?.cancelWaiting() !== true)
+          return problem(c, {
+            status: 409,
+            title: titleOf(409),
+            detail:
+              "No update is waiting to install. Reload the page to see the current update status.",
+          });
+        return c.json(await deps.updater.check());
+      })
+      .post("/", async (c) => {
+        const origin = c.req.header("Origin");
+        if (origin !== undefined && origin !== new URL(c.req.url).origin)
+          return problem(c, {
+            status: 403,
+            title: titleOf(403),
+            detail:
+              "For your safety, updates can only be started from the Slopify page itself. Open Slopify and try again there.",
+          });
+        if (deps.updater === undefined)
+          return problem(c, {
+            status: 409,
+            title: titleOf(409),
+            detail: unavailable.blockedReason,
+          });
+        const result = await deps.updater.start();
+        if (result.ok) return c.json(result.info, 202);
+        const status = result.code ?? 409;
         return problem(c, {
-          status: 403,
-          title: titleOf(403),
+          status,
+          title: titleOf(status),
           detail:
-            "For your safety, updates can only be started from the Slopify page itself. Open Slopify and try again there.",
+            result.info.blockedReason ??
+            result.info.error ??
+            "You already have the latest version of Slopify.",
         });
-      if (deps.updater === undefined)
-        return problem(c, { status: 409, title: titleOf(409), detail: unavailable.blockedReason });
-      const result = await deps.updater.start();
-      if (result.ok) return c.json(result.info, 202);
-      const status = result.code ?? 409;
-      return problem(c, {
-        status,
-        title: titleOf(status),
-        detail:
-          result.info.blockedReason ??
-          result.info.error ??
-          "You already have the latest version of Slopify.",
-      });
-    });
+      })
+  );
 }
