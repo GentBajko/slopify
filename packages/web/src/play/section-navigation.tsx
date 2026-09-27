@@ -39,7 +39,7 @@ export function SectionNavigation({
               aria-hidden="true"
               className={cn(
                 "inline-flex size-5 items-center justify-center rounded-full border text-label",
-                marked ? "border-accent bg-accent text-accent-ink" : "border-line2 text-ink3",
+                marked ? "border-accent bg-accent text-on-accent" : "border-line2 text-ink3",
               )}
             >
               {index + 1}

@@ -1,7 +1,7 @@
 import type { Prompt, PromptKind } from "@app/slices/library/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { EllipsisIcon, PlusIcon } from "lucide-react";
+import { CopyIcon, PencilIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { removePrompt } from "@/api";
 import { useApp } from "@/app-context";
@@ -9,24 +9,21 @@ import { ConfirmDialog } from "@/components/confirm";
 import { RailGroup } from "@/components/rail";
 import { SlotChip } from "@/components/slot-chip";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { kindOptions } from "@/lib/prompt-kinds";
 import { cn } from "@/lib/utils";
+import { HistoryDrawer } from "@/library/history-drawer";
+import { LibraryRowActions } from "@/library/row-actions";
 import { keys, promptsQuery } from "@/queries";
 import { LibraryToolbar } from "@/routes/library";
 
-// One row of the rundown, and the same shape for a skeleton. The Slots column collapses
-// under the name below 768 px.
+// One row of the rundown, and the same shape for a skeleton. Below 768 px the Slots and the
+// row's actions stack under the name; from there up they sit beside it.
 const row =
-  "grid grid-cols-[minmax(0,1fr)_32px] items-center gap-x-[14px] gap-y-[6px] border-b border-line px-4 py-[10px] last:border-b-0 md:grid-cols-[260px_minmax(0,1fr)_32px]";
-const slotsCell = "col-span-2 col-start-1 row-start-2 flex flex-wrap gap-[6px] md:col-span-1";
+  "grid grid-cols-[minmax(0,1fr)] items-center gap-x-[14px] gap-y-[6px] border-b border-line px-4 py-[10px] last:border-b-0 md:grid-cols-[220px_minmax(0,1fr)_auto]";
+const slotsCell = "col-start-1 row-start-2 flex flex-wrap gap-[6px]";
 const slotsWide = "md:col-start-2 md:row-start-1";
+const actionsCell = "col-start-1 row-start-3 md:col-start-3 md:row-start-1";
 
 // Every saved prompt of one kind, sorted by name by the list endpoint. Navigation that only
 // follows a link is a `Link`; the tab switch has to rewrite the URL it is already on, so it is
@@ -34,14 +31,20 @@ const slotsWide = "md:col-start-2 md:row-start-1";
 export function PromptsRoute({
   kind,
   onKind,
+  onUseInPlay,
+  playBlocked,
 }: {
   readonly kind: PromptKind;
   readonly onKind: (next: PromptKind) => void;
+  // Opens Play with the prompt picked (router.tsx wires the Play draft in).
+  readonly onUseInPlay?: ((prompt: Prompt) => void) | undefined;
+  readonly playBlocked?: string | undefined;
 }) {
   const { api } = useApp();
   const queryClient = useQueryClient();
   const prompts = useQuery(promptsQuery(api));
   const [deleting, setDeleting] = useState<Prompt | undefined>(undefined);
+  const [history, setHistory] = useState<Prompt | undefined>(undefined);
 
   const remove = useMutation({
     mutationFn: (id: string) => removePrompt(api, id),
@@ -104,8 +107,40 @@ export function PromptsRoute({
                   <SlotChip key={slot} name={slot} />
                 ))}
               </span>
-              <RowOverflow
-                prompt={prompt}
+              <LibraryRowActions
+                className={actionsCell}
+                name={prompt.name}
+                edit={
+                  <Button asChild variant="ghost">
+                    <Link
+                      to="/prompts/$promptId"
+                      params={{ promptId: prompt.id }}
+                      aria-label={`Edit ${prompt.name}`}
+                    >
+                      <PencilIcon aria-hidden="true" className="size-[14px]" />
+                      Edit
+                    </Link>
+                  </Button>
+                }
+                // The copy is named "<name> copy" and opened for editing, so a name that is
+                // already taken is renamed before it is ever saved.
+                duplicate={
+                  <Button asChild variant="ghost">
+                    <Link
+                      to="/prompts/new"
+                      search={{ kind: prompt.kind, from: prompt.id }}
+                      aria-label={`Duplicate ${prompt.name}`}
+                    >
+                      <CopyIcon aria-hidden="true" className="size-[14px]" />
+                      Duplicate
+                    </Link>
+                  </Button>
+                }
+                onUseInPlay={onUseInPlay === undefined ? undefined : () => onUseInPlay(prompt)}
+                playBlocked={playBlocked}
+                onHistory={() => {
+                  setHistory(prompt);
+                }}
                 onDelete={() => {
                   setDeleting(prompt);
                 }}
@@ -117,6 +152,18 @@ export function PromptsRoute({
 
       {remove.error === null ? null : (
         <p className="mt-[10px] text-label text-red">{remove.error.message}</p>
+      )}
+
+      {history === undefined ? null : (
+        <HistoryDrawer
+          key={history.id}
+          item="prompt"
+          id={history.id}
+          name={history.name}
+          onClose={() => {
+            setHistory(undefined);
+          }}
+        />
       )}
 
       <ConfirmDialog
@@ -159,43 +206,6 @@ function EmptyKind({ kind }: { readonly kind: PromptKind }) {
         {`No ${kind} prompts yet. A prompt is text with {{keywords}}; each keyword becomes a field on Play.`}
       </p>
     </RailGroup>
-  );
-}
-
-function RowOverflow({
-  prompt,
-  onDelete,
-}: {
-  readonly prompt: Prompt;
-  readonly onDelete: () => void;
-}) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          aria-label={`More for ${prompt.name}`}
-          className="col-start-2 row-start-1 size-8 p-0 md:col-start-3"
-        >
-          <EllipsisIcon aria-hidden="true" className="size-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent>
-        <DropdownMenuItem asChild>
-          <Link to="/prompts/$promptId" params={{ promptId: prompt.id }}>
-            Edit
-          </Link>
-        </DropdownMenuItem>
-        {/* The copy is named "<name> copy" and opened for editing, so a name that
-            is already taken is renamed before it is ever saved. */}
-        <DropdownMenuItem asChild>
-          <Link to="/prompts/new" search={{ kind: prompt.kind, from: prompt.id }}>
-            Duplicate
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onDelete}>Delete</DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }
 

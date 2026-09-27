@@ -7,6 +7,7 @@ import type { RunnerStage } from "../../kernel/runner/index.js";
 import type { WorkRef } from "../../kernel/runner/work.js";
 import { sourceOf } from "../admission/model.js";
 import { usesShorts, usesYoutubeDescription } from "../admission/rules.js";
+import { reviewsNarration } from "../reviews/rules.js";
 import type { RevisionDeps } from "../revisions/model.js";
 import { currentRevisionId } from "../revisions/repo.js";
 import { getRevisionView } from "../revisions/view.js";
@@ -51,7 +52,8 @@ export function executionStages(deps: RevisionDeps, projectId: string): readonly
           view?.revision.content.subtitleCues !== undefined &&
           !usesYoutubeDescription(view.revision.config) &&
           !usesShorts(view.revision.config) &&
-          !editNeedsTiming(view.revision.config)
+          !editNeedsTiming(view.revision.config) &&
+          !reviewsNarration(view.revision.config)
         )
           return false;
         if (piece.input.kind === "deferred" && piece.key.endsWith(":future")) {

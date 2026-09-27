@@ -2,7 +2,7 @@ import type { AudioPreviewStore } from "../../kernel/audio-preview.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { LlmAnswer, StageProviders } from "../../kernel/runner/providers.js";
 import type { StageRunResult } from "../../kernel/runner/work.js";
-import { referenceKey } from "../admission/model.js";
+import { referenceKey, thumbnailVariant } from "../admission/model.js";
 import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
 import { observeNarration } from "../narration/live.js";
@@ -142,9 +142,13 @@ export async function executeProviderRecipe(
     const index = piece.key.startsWith("image:")
       ? (view?.revision.content.imageOrder.indexOf(piece.key.slice(6)) ?? 0) + 1
       : undefined;
+    // Which thumbnail this is (1-3), or undefined for any other image.
+    const variant = thumbnailVariant(piece.key);
     const label =
-      piece.key === "thumbnail:image"
-        ? "Thumbnail"
+      variant !== undefined
+        ? variant === 1
+          ? "Thumbnail"
+          : `Thumbnail ${String(variant)}`
         : piece.key === referenceKey
           ? "Establishing image"
           : index === undefined
@@ -167,11 +171,7 @@ export async function executeProviderRecipe(
       deps,
       context,
       piece,
-      piece.key === "thumbnail:image"
-        ? "thumbnail"
-        : piece.key === referenceKey
-          ? "reference"
-          : "image",
+      variant !== undefined ? "thumbnail" : piece.key === referenceKey ? "reference" : "image",
       asset,
       null,
       {
@@ -179,6 +179,9 @@ export async function executeProviderRecipe(
         provider: input.provider,
         model: input.model,
         ...(index === undefined ? {} : { index }),
+        // The second and third thumbnails carry their number; the first keeps the meta a
+        // thumbnail always had.
+        ...(variant === undefined || variant === 1 ? {} : { index: variant }),
       },
     );
     await publishResult(deps, context, piece, [output], { prompt }, asset);
@@ -187,7 +190,7 @@ export async function executeProviderRecipe(
       stage: context.work.kind,
       provider: input.provider,
       model: input.model,
-      ...(piece.key === "thumbnail:image" ? { thumbnails: 1 } : { images: 1 }),
+      ...(variant !== undefined ? { thumbnails: 1 } : { images: 1 }),
     });
     return "done";
   }

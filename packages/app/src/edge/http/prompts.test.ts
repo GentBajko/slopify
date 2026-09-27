@@ -268,3 +268,48 @@ describe("DELETE /api/prompts/:id", () => {
     expect((await send(app, "DELETE", "/api/prompts/nope")).status).toBe(404);
   });
 });
+
+describe("prompt history routes", () => {
+  it("lists the versions, restores one as a new version and says what uses the prompt", async () => {
+    const { app, db } = harness();
+    await send(app, "POST", "/api/prompts", { kind: "article", name: "Dossier", body: "one" });
+    await send(app, "PUT", "/api/prompts/id1", { kind: "article", name: "Dossier", body: "two" });
+    db.prepare(
+      "INSERT INTO project_templates (id,head_version,creation_hash,created_at) VALUES ('t1',1,'h','2026-09-02')",
+    ).run();
+    db.prepare(
+      "INSERT INTO project_template_revisions (template_id,version,name,document_json,created_at) VALUES ('t1',1,'Weekly',?,'2026-09-02')",
+    ).run(JSON.stringify({ form: { articlePrompt: "dossier" } }));
+
+    const history = await send(app, "GET", "/api/prompts/id1/history");
+    expect(history.status).toBe(200);
+    const listed = (await history.json()) as { versions: { version: number; body: string }[] };
+    expect(listed.versions.map((one) => [one.version, one.body])).toEqual([
+      [2, "two"],
+      [1, "one"],
+    ]);
+
+    const restored = await send(app, "POST", "/api/prompts/id1/history/1/restore");
+    expect(restored.status).toBe(200);
+    expect(await restored.json()).toMatchObject({ id: "id1", body: "one" });
+    const after = (await (await send(app, "GET", "/api/prompts/id1/history")).json()) as {
+      versions: { version: number; restoredFrom: number | null }[];
+    };
+    expect(after.versions[0]).toMatchObject({ version: 3, restoredFrom: 1 });
+
+    expect(await (await send(app, "GET", "/api/prompts/id1/used-by")).json()).toEqual({
+      templates: [{ id: "t1", name: "Weekly" }],
+      schedules: [],
+      projects: [],
+    });
+  });
+
+  it("answers 404 for a prompt or a version that is not there", async () => {
+    const { app } = harness();
+    await send(app, "POST", "/api/prompts", { kind: "article", name: "Dossier", body: "one" });
+    expect((await send(app, "GET", "/api/prompts/nope/history")).status).toBe(404);
+    expect((await send(app, "GET", "/api/prompts/nope/used-by")).status).toBe(404);
+    expect((await send(app, "POST", "/api/prompts/id1/history/7/restore")).status).toBe(404);
+    expect((await send(app, "POST", "/api/prompts/id1/history/x/restore")).status).toBe(400);
+  });
+});

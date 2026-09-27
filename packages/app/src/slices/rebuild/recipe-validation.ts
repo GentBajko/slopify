@@ -11,6 +11,7 @@ import {
   youtubeDescriptionFields,
 } from "../admission/rules.js";
 import { detectSlots, render } from "../admission/substitute.js";
+import { reviewFields } from "../reviews/rules.js";
 import type { RevisionContent } from "../revisions/model.js";
 import { usesAnimation } from "../video/edit-settings.js";
 
@@ -23,6 +24,7 @@ export function validateRecipeInputs(
     ...youtubeDescriptionFields(config),
     ...shortsFields(config),
     ...videoEditFields(config),
+    ...reviewFields(config),
   ];
   const llm =
     (config.sources.research === "generate" && config.sources.article !== "provide") ||

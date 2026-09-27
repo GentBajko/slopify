@@ -1,5 +1,7 @@
 import { z } from "zod";
 import type { Catalogue } from "../../catalog/schema.js";
+import { apiEquivalentOf, tokenCost } from "../run-cost/pricing.js";
+import { isLocalCliProvider } from "../settings/model.js";
 import type { CostEstimate, CostRow } from "./index.js";
 
 const quantity = z.number().finite().nonnegative();
@@ -34,6 +36,7 @@ export function estimateRequests(
     low: rows.reduce((total, row) => total + (row.low ?? 0), 0),
     high: rows.reduce((total, row) => total + (row.high ?? 0), 0),
     unknown: rows.filter((row) => row.low === null).length,
+    ...apiTotals(rows),
     expectedWords: parsed.reduce((total, request) => total + (request.expectedWords ?? 0), 0),
     catalogueDate: catalogue.updatedAt,
     assumptions: [
@@ -48,6 +51,11 @@ export function groupEstimateRows(estimate: CostEstimate): CostEstimate {
   const grouped = new Map<string, CostRow>();
   for (const row of estimate.rows) {
     const previous = grouped.get(row.stage);
+    const plan = previous?.onPlan === true || row.onPlan === true;
+    const sum = (
+      left: number | null | undefined,
+      right: number | null | undefined,
+    ): number | null => (left === null || right === null ? null : (left ?? 0) + (right ?? 0));
     grouped.set(
       row.stage,
       previous === undefined
@@ -56,11 +64,66 @@ export function groupEstimateRows(estimate: CostEstimate): CostEstimate {
             ...previous,
             low: previous.low === null || row.low === null ? null : previous.low + row.low,
             high: previous.high === null || row.high === null ? null : previous.high + row.high,
+            ...(plan
+              ? {
+                  onPlan: true,
+                  apiLow: sum(previous.apiLow, row.apiLow),
+                  apiHigh: sum(previous.apiHigh, row.apiHigh),
+                }
+              : {}),
           },
     );
   }
   const rows = [...grouped.values()];
-  return { ...estimate, rows, unknown: rows.filter((row) => row.low === null).length };
+  return {
+    ...estimate,
+    rows,
+    unknown: rows.filter((row) => row.low === null).length,
+    ...apiTotals(rows),
+  };
+}
+
+function apiTotals(
+  rows: readonly CostRow[],
+): Pick<CostEstimate, "apiLow" | "apiHigh" | "apiUnknown"> {
+  const plan = rows.filter((row) => row.onPlan === true);
+  if (plan.length === 0) return {};
+  return {
+    apiLow: plan.reduce((total, row) => total + (row.apiLow ?? 0), 0),
+    apiHigh: plan.reduce((total, row) => total + (row.apiHigh ?? 0), 0),
+    apiUnknown: plan.filter((row) => row.apiLow === null || row.apiLow === undefined).length,
+  };
+}
+
+// A CLI call adds nothing to the bill - it runs on the user's plan - so it is known at $0,
+// with what the same tokens would cost through the API beside it, priced by the same
+// catalogue and the same token assumptions as a keyed model. A Codex image has no API
+// figure: how many drafts the agent draws is not known in advance.
+function onPlan(
+  request: Extract<PricedRequest, { kind: "llm" | "image" }>,
+  catalogue: Catalogue,
+): CostRow {
+  const api =
+    request.kind === "llm"
+      ? apiEquivalentOf(request.provider, request.model, catalogue)
+      : undefined;
+  const amount =
+    api === undefined || request.kind !== "llm"
+      ? null
+      : tokenCost(api.pricing, request.inputCharacters / 4, request.outputCharacters / 4);
+  return {
+    stage: request.stage,
+    low: 0,
+    high: 0,
+    detail:
+      request.detail ??
+      (amount === null
+        ? "Runs on your CLI plan, so it adds no charge; no API price is listed for this model."
+        : `Runs on your CLI plan, so it adds no charge; priced as ${api?.name ?? "the API model"} through the API.`),
+    onPlan: true,
+    apiLow: amount === null ? null : amount * 0.5,
+    apiHigh: amount === null ? null : amount * 1.5,
+  };
 }
 
 function price(request: PricedRequest, catalogue: Catalogue): CostRow {
@@ -78,6 +141,8 @@ function price(request: PricedRequest, catalogue: Catalogue): CostRow {
       high: 0,
       detail: request.detail ?? "Local processing or retained output; no API fee.",
     };
+  if ((request.kind === "llm" || request.kind === "image") && isLocalCliProvider(request.provider))
+    return onPlan(request, catalogue);
   const family = request.kind === "tts-estimate" ? "tts" : request.kind;
   const model = catalogue[family].find(
     (entry) =>

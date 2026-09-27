@@ -1,7 +1,7 @@
 import type { DraftView, PlayDraftDocument } from "@app/slices/play-drafts/model.js";
 import { playDraftDocumentSchema } from "@app/slices/play-drafts/schema.js";
 import type { DraftSaveStatus, RevealRequest } from "./draft-context";
-import { freshDraftDocument, serializeDraftDocument } from "./draft-state";
+import { freshDraftDocument, serializeDraftDocument, withProviderDefaults } from "./draft-state";
 
 export interface SaveClock {
   readonly edited: number;
@@ -55,7 +55,7 @@ export interface DraftSessionState {
 }
 export function emptySession(): DraftSessionState {
   return {
-    document: freshDraftDocument,
+    document: withProviderDefaults(freshDraftDocument),
     view: null,
     clock: { edited: 0, acknowledged: 0, version: 0 },
     id: null,

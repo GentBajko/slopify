@@ -1,3 +1,5 @@
+import { type KeyGuide, keyGuides } from "@app/slices/settings/key-guides.js";
+import type { KeyTestOutcome } from "@app/slices/settings/key-test.js";
 import type { ProviderFamily, ProviderStatus } from "@app/slices/settings/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
@@ -7,6 +9,7 @@ import { ConfirmDialog } from "@/components/confirm";
 import { InfoTip } from "@/components/kit/info-tip";
 import { Lamp } from "@/components/lamp";
 import { CliProviderRow, providerRow } from "@/components/provider-cli";
+import { testKey } from "@/components/provider-upkeep-api";
 import { Rail, RailGroup } from "@/components/rail";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
 import { Button } from "@/components/ui/button";
@@ -111,6 +114,23 @@ function KeyRow({
   const [saved, setSaved] = useState(false);
   const [failure, setFailure] = useState<string | undefined>(undefined);
   const [asking, setAsking] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [tested, setTested] = useState<KeyTestOutcome | undefined>(undefined);
+  const testId = useId();
+  const guide = keyGuides[provider.id];
+
+  // The provider is asked with the stored key; nothing typed here is sent.
+  const test = async (): Promise<void> => {
+    setTesting(true);
+    setTested(undefined);
+    try {
+      setTested(await testKey(api, provider.id));
+    } catch (cause) {
+      setFailure(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setTesting(false);
+    }
+  };
 
   // The one control in the app that handles a key, and the one that does its own request rather
   // than going through `useMutation`: a mutation keeps what it was called with in
@@ -124,6 +144,7 @@ function KeyRow({
       await saveProviderKey(api, provider.id, draft);
       setDraft("");
       setSaved(true);
+      setTested(undefined);
       await queryClient.invalidateQueries({ queryKey: keys.providers });
     } catch (cause) {
       setFailure(cause instanceof Error ? cause.message : String(cause));
@@ -158,7 +179,11 @@ function KeyRow({
     };
   }, [saved]);
 
-  const described = [hasKey ? storedId : undefined, failure === undefined ? undefined : errorId]
+  const described = [
+    hasKey ? storedId : undefined,
+    failure === undefined ? undefined : errorId,
+    tested === undefined ? undefined : testId,
+  ]
     .filter((id) => id !== undefined)
     .join(" ");
 
@@ -168,11 +193,11 @@ function KeyRow({
         <span id={nameId} className="font-semibold">
           {provider.displayName}
         </span>
-        {provider.id === "inworld" ? (
-          <InfoTip label="Inworld keys">
-            <p>Paste the Base64 credentials from Inworld Settings → API Keys.</p>
+        {guide === undefined ? null : (
+          <InfoTip label={`${provider.displayName} keys`}>
+            <GuideSteps guide={guide} />
           </InfoTip>
-        ) : null}
+        )}
       </span>
       <span className="flex items-center gap-2">
         <Lamp state={hasKey ? "done" : "pending"} />
@@ -211,6 +236,15 @@ function KeyRow({
             {failure}
           </p>
         )}
+        {tested === undefined ? null : (
+          <p
+            id={testId}
+            role={tested.ok ? "status" : "alert"}
+            className={cn("mt-1 text-label", tested.ok ? "text-done" : "text-red")}
+          >
+            {tested.message}
+          </p>
+        )}
       </div>
 
       <div className="flex min-h-8 items-center gap-2">
@@ -224,6 +258,16 @@ function KeyRow({
           Save
         </Button>
         <span className="inline-flex w-[52px]">{saved ? <SavedTick /> : null}</span>
+        <Button
+          variant="ghost"
+          aria-label={`Test ${provider.displayName} key`}
+          disabled={!hasKey || testing}
+          onClick={() => {
+            void test();
+          }}
+        >
+          {testing ? "Testing…" : "Test"}
+        </Button>
         <Button
           variant="ghost"
           aria-label={`Remove ${provider.displayName} key`}
@@ -250,6 +294,35 @@ function KeyRow({
         }}
       />
     </div>
+  );
+}
+
+// Where to sign up, which page makes the key, what it needs: the provider's own pages only.
+function GuideSteps({ guide }: { readonly guide: KeyGuide }) {
+  const link = (href: string, label: string) => (
+    <a href={href} target="_blank" rel="noreferrer" className="underline">
+      {label}
+    </a>
+  );
+  return (
+    <>
+      <ol className="list-decimal space-y-1 pl-4">
+        {guide.steps.map((step) => (
+          <li key={step}>{step}</li>
+        ))}
+      </ol>
+      <p>
+        Sign up: {link(guide.signUp.url, guide.signUp.label)}. Make the key:{" "}
+        {link(guide.keyPage.url, guide.keyPage.label)}.
+        {guide.billing === undefined ? null : (
+          <> Credit: {link(guide.billing.url, guide.billing.label)}.</>
+        )}
+      </p>
+      <p>{guide.permissions}</p>
+      <p>
+        More in the provider's {link(guide.docs.url, guide.docs.label)}. After saving, choose Test.
+      </p>
+    </>
   );
 }
 

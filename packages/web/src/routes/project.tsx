@@ -15,6 +15,7 @@ import { RevisionContentEditors } from "@/project/revision-content";
 import { RevisionForm } from "@/project/revision-form";
 import { RevisionMedia } from "@/project/revision-media";
 import { type ProjectTab, RevisionWorkspace } from "@/project/revision-workspace";
+import { limitWaitMessage, RunCostPanel } from "@/project/run-cost";
 import { SaveProjectTemplate } from "@/project/save-template";
 import { type SectionKind, sectionKinds, sectionOf, sectionsOf } from "@/project/sections";
 import { StageRow } from "@/project/stage-row";
@@ -22,7 +23,8 @@ import { finalOutput } from "@/project/summary";
 import { useProjectActions } from "@/project/use-actions";
 import { useLiveProject } from "@/project/use-live";
 import { suggestedStage } from "@/project/workspace";
-import { projectQuery, promptsQuery, providersQuery } from "@/queries";
+import { projectQuery, promptsQuery, providersQuery, runCostQuery } from "@/queries";
+import { PrepareUpload } from "@/studio/prepare-upload";
 import { useTutorialProjectStep } from "@/tutorial/context";
 
 // Keep stage bodies mounted when navigating: editors and players retain their local state.
@@ -36,6 +38,8 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
   const project = useQuery(projectQuery(api, projectId));
   const providers = useQuery(providersQuery(api));
   const prompts = useQuery(promptsQuery(api));
+  // Also read for the status line: a stage waiting for a CLI's plan limits says so there.
+  const runCost = useQuery(runCostQuery(api, projectId));
   const actions = useProjectActions(projectId);
   const [selection, setSelection] = useState<
     { readonly projectId: string; readonly stage: SectionKind } | undefined
@@ -111,6 +115,10 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
                 resumable={project.data.resumable}
                 primaryOutput={primaryOutput}
               >
+                <PrepareUpload
+                  projectId={projectId}
+                  ready={outputs.some((output) => output.role === "video")}
+                />
                 <SaveProjectTemplate
                   projectId={projectId}
                   revisionId={project.data.revisionId}
@@ -122,7 +130,9 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
                 message arriving never pushes the rundown down. */}
               <div className="mb-2 flex min-h-8 items-center gap-2">
                 {refusal === undefined ? (
-                  <StatusSlot tone="info">{actions.notice}</StatusSlot>
+                  <StatusSlot tone="info">
+                    {actions.notice ?? limitWaitMessage(runCost.data?.waits ?? [])}
+                  </StatusSlot>
                 ) : (
                   <>
                     <StatusSlot tone="error">{refusal.message}</StatusSlot>
@@ -151,6 +161,7 @@ function ProjectWorkspace({ projectId }: { readonly projectId: string }) {
               onTab={setTab}
               trailing={<BatchQueueCount />}
               {...(held === 0 ? {} : { checkpointBadge: `· ${String(held)} held` })}
+              cost={<RunCostPanel projectId={projectId} />}
               renderEditor={(props) => (
                 <RevisionForm
                   {...props}

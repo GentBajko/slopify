@@ -42,6 +42,7 @@ export const localOperations = [
   "youtube-description-v1",
   "shorts-pick-v1",
   "short-render-v1",
+  "review-v1",
 ] as const;
 export const deferredOperations = [
   "narration-preparation",

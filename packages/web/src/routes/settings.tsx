@@ -13,6 +13,7 @@ import { CatalogueSettings } from "@/components/catalogue";
 import { PageBar } from "@/components/kit/page-bar";
 import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
+import { ProviderHealthCheck } from "@/components/provider-health";
 import { ProviderKeys } from "@/components/provider-keys";
 import { Rail, RailGroup, RailMeter } from "@/components/rail";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
@@ -20,12 +21,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Voices } from "@/components/voices";
+import { Welcome } from "@/components/welcome";
 import { cn } from "@/lib/utils";
 import { NotificationSettings } from "@/notifications/settings-panel";
 import { keys, settingsQuery } from "@/queries";
 import { schedulesKey } from "@/schedules/api";
+import { StudioSettings } from "@/studio/settings-panel";
 import { fontsKey } from "@/subtitles/api";
 import { templatesKey } from "@/templates/api";
+import { ChannelLinksSettings } from "@/youtube/channel-links";
 import { BackupSettings } from "./settings-backups";
 import { formatBytes, ProjectStorageList } from "./settings-storage";
 import { UsageBoard } from "./usage";
@@ -84,6 +88,8 @@ export const settingsSections = [
   { id: "models", label: "Models" },
   { id: "playback", label: "Playback & appearance" },
   { id: "notifications", label: "Notifications" },
+  { id: "channel-links", label: "Channel links" },
+  { id: "studio", label: "YouTube Studio" },
   { id: "storage", label: "Backup & storage" },
   { id: "backups", label: "Backups" },
   { id: "usage", label: "Usage" },
@@ -147,7 +153,9 @@ export function SettingsRoute({
               info="Provider readiness is checked again before each run. Keys stay on this machine and go only to the provider they belong to."
             />
           ) : null}
+          {section === "providers" ? <Welcome /> : null}
           {section === "providers" ? <ProviderKeys /> : null}
+          {section === "providers" ? <ProviderHealthCheck /> : null}
           {section === "voices" ? (
             <SectionHead
               title="Voices"
@@ -159,6 +167,8 @@ export function SettingsRoute({
           {section === "playback" ? <SectionHead title="Playback & appearance" /> : null}
           {section === "playback" ? <Playback /> : null}
           {section === "notifications" ? <NotificationSettings /> : null}
+          {section === "channel-links" ? <ChannelLinksSettings /> : null}
+          {section === "studio" ? <StudioSettings /> : null}
           {section === "storage" ? <StorageTools /> : null}
           {section === "backups" ? <BackupSettings /> : null}
           {section === "usage" ? (

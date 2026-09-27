@@ -6,6 +6,7 @@ import { cliCheck, cliName, cliReported } from "../explain.js";
 import { documentWorkspace } from "./document-workspace.js";
 import { nodeGeminiModels } from "./gemini-models.js";
 import { geminiWorkspace } from "./gemini-workspace.js";
+import { noImages } from "./image-workspace.js";
 import type { CliEnded, RunCli } from "./run-cli.js";
 import {
   cliEvent,
@@ -62,6 +63,8 @@ export function geminiLlm(deps: GeminiDeps): LlmPort {
   const binary = deps.binary ?? geminiBinary;
   async function* complete(req: LlmCompletion): AsyncGenerator<LlmEvent> {
     req.signal.throwIfAborted();
+    // Its CLI has no image flag, and `@file` inclusion would need a file tool this adapter keeps off.
+    if (req.images?.length) throw noImages("the Gemini CLI");
     const documents = documentWorkspace(req.documents);
     let workspace: ReturnType<typeof geminiWorkspace> | undefined;
     let run: ReturnType<RunCli> | undefined;
@@ -146,6 +149,15 @@ function failure(binary: string, message: string, sentence?: string): Error {
       kind: "unsupported",
       message:
         "Google refused the Gemini CLI because the signed-in account has no licence for it (#3501). Update the Gemini CLI, run gemini in a terminal to sign in again, then use Retry stage; for a work or school account, ask your administrator for a Gemini licence.",
+    });
+  }
+  // The daily allowance of a signed-in Gemini plan. The CLI names no reset time, so the wait
+  // checks again later; a per-minute quota is an ordinary rate limit and is retried as one.
+  if (/(?:daily|per.day).{0,40}quota|quota.{0,40}(?:daily|per.day)/i.test(message)) {
+    return providerError({
+      kind: "rate_limit",
+      message: `Your Gemini plan's daily quota is used up (the Gemini CLI said: ${redact(message)}). Slopify waits and tries again later by itself.`,
+      planLimit: { account: "gemini", resetsAt: null },
     });
   }
   return authRequired(message)

@@ -2,6 +2,12 @@ import { stageKinds } from "../../kernel/pipeline.js";
 import { type RunConfig, sourceOf } from "../admission/model.js";
 import { motionStyleLabels } from "../admission/rules.js";
 import { documentThemeLabel } from "../document/model.js";
+import {
+  reviewModeLabels,
+  reviewModeOf,
+  reviewStageLabels,
+  reviewStages,
+} from "../reviews/model.js";
 import type { RevisionDeps, RevisionView } from "../revisions/model.js";
 import { getRevisionView } from "../revisions/view.js";
 import { musicVolumeOf, shortsSpeedOf } from "../shorts/model.js";
@@ -67,9 +73,11 @@ export function previewDetails(
           label:
             row.key === "reference:image"
               ? "Establishing image"
-              : index < 0
-                ? "Thumbnail image"
-                : `Image ${index + 1}`,
+              : row.key.startsWith("thumbnail:image:")
+                ? `Thumbnail image ${row.key.slice("thumbnail:image:".length)}`
+                : index < 0
+                  ? "Thumbnail image"
+                  : `Image ${index + 1}`,
           text: input.prompt,
           settings: [
             input.provider,
@@ -190,8 +198,28 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
       ? undefined
       : `${String(after.shorts.minSeconds)}-${String(after.shorts.maxSeconds)}`,
   );
+  add(
+    "Thumbnails",
+    before.thumbnailCount === 3 ? "3" : "1",
+    after.thumbnailCount === 3 ? "3" : "1",
+  );
   add("Shorts prompt", before.shorts?.prompt, after.shorts?.prompt);
   add("Shorts image prompt", before.shorts?.imagePrompt, after.shorts?.imagePrompt);
+  add("Reviewer provider", before.reviews?.provider, after.reviews?.provider);
+  add("Reviewer model", before.reviews?.model, after.reviews?.model);
+  add("Reviewer redos", before.reviews?.retries, after.reviews?.retries);
+  for (const stage of reviewStages) {
+    add(
+      `${reviewStageLabels[stage]} review`,
+      reviewModeLabels[reviewModeOf(before.reviews, stage)],
+      reviewModeLabels[reviewModeOf(after.reviews, stage)],
+    );
+    add(
+      `${reviewStageLabels[stage]} review prompt`,
+      before.reviews?.stages[stage]?.prompt,
+      after.reviews?.stages[stage]?.prompt,
+    );
+  }
   add("Establishing image", referenceLabel(before), referenceLabel(after));
   add(
     "Thumbnail drawn from the establishing image",
