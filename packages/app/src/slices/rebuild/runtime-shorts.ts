@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
+import { withLanguage } from "../../kernel/ports/languages.js";
 import type { TimedWord } from "../../kernel/ports/subtitles.js";
 import type { StageContext } from "../../kernel/runner/index.js";
 import type { LlmCall, StageProviders } from "../../kernel/runner/providers.js";
@@ -129,7 +130,9 @@ async function pick(
     const checked = checkPicks(text, sentences, limits);
     return checked.ok ? undefined : checked.reason;
   });
-  const first = await providers.forPiece(piece.id).llm(ask(pickMessages(brief)));
+  const first = await providers
+    .forPiece(piece.id)
+    .llm(ask(withLanguage(pickMessages(brief), config.language)));
   if (!first.ok) return "held";
   let checked = checkPicks(first.value.text, sentences, limits);
   if (!checked.ok) throw new Error(checked.reason);
@@ -139,7 +142,14 @@ async function pick(
     if (!context.maySubmit(piece.id)) return "held";
     const second = await providers
       .forPiece(piece.id)
-      .llm(ask(pickRetryMessages(brief, first.value.text, checked.problems)));
+      .llm(
+        ask(
+          withLanguage(
+            pickRetryMessages(brief, first.value.text, checked.problems),
+            config.language,
+          ),
+        ),
+      );
     if (!second.ok) return "held";
     const again = checkPicks(second.value.text, sentences, limits);
     if (again.ok && again.picks.length >= checked.picks.length) checked = again;

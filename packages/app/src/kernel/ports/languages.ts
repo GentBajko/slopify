@@ -97,6 +97,34 @@ export function isEnglish(config: { readonly language?: string | undefined }): b
   return projectLanguage(config) === defaultLanguage;
 }
 
+// The line added to every prompt that writes for the audience, when the project is not in
+// English. It is the app's own sentence, added after the user's prompt rather than written
+// into it, so the prompt library stays as the user wrote it; an English project gets nothing,
+// and its requests (and their fingerprints) stay exactly as they were.
+export function languageInstruction(language: string | undefined): string | undefined {
+  if (language === undefined || language === defaultLanguage) return undefined;
+  const { name, native } = languageInfo(language);
+  return `Language: write everything meant for the audience (article, narration, titles, descriptions, chapter names, hashtags and tags) in ${name} (${native}), even where the instructions above are written in English. Keep JSON keys, markup and any heading or label the instructions say to use exactly as given.`;
+}
+
+// The messages with the language line added: to the system message when there is one, since
+// the last user message is sometimes the source text itself; otherwise to the end of the last
+// user message. English returns the very same messages.
+export function withLanguage<T extends { readonly role: string; readonly content: string }>(
+  messages: readonly T[],
+  language: string | undefined,
+): readonly T[] {
+  const instruction = languageInstruction(language);
+  if (instruction === undefined) return messages;
+  const system = messages.findIndex((message) => message.role === "system");
+  const target =
+    system !== -1 ? system : messages.findLastIndex((message) => message.role === "user");
+  if (target === -1) return messages;
+  return messages.map((message, index) =>
+    index === target ? { ...message, content: `${message.content}\n\n${instruction}` } : message,
+  );
+}
+
 // Why word-by-word features are off in a language timed by sentences, or undefined when they
 // are available. The same sentence is shown beside every control it turns off.
 export function wordTimingUnavailable(code: string | undefined): string | undefined {

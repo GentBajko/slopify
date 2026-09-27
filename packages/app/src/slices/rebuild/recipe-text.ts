@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { withLanguage } from "../../kernel/ports/languages.js";
 import type { Message } from "../../kernel/ports/llm.js";
 import { documentIndex, type LlmDocument } from "../../kernel/ports/llm-documents.js";
 import { type FingerprintValue, fingerprint } from "../../kernel/runner/work.js";
@@ -174,13 +175,16 @@ export function textRecipes(context: RecipeContext): TextRecipes {
   const writesScript = voices?.source === "script";
   const articleNotes = documents.length ? documentIndex(documents) : (notes ?? undefined);
   // A script run writes speaker turns in place of the article, from the same prompt and notes.
-  const messages =
+  // Either is written in the project's language (`withLanguage`; English adds nothing).
+  const messages = withLanguage(
     voices !== undefined && writesScript
       ? scriptMessages(voices.format, voices.speakers, brief.articlePrompt, articleNotes)
       : articleMessages({
           articlePrompt: brief.articlePrompt,
           ...(articleNotes === undefined ? {} : { notes: articleNotes }),
-        });
+        }),
+    config.language,
+  );
   const scriptCheck =
     voices === undefined
       ? undefined
@@ -251,11 +255,17 @@ export function textRecipes(context: RecipeContext): TextRecipes {
               operation: "script-attribution",
               template: [
                 article.fingerprint,
-                llmInputFingerprint(context, attributionMessages("", voices.speakers)),
+                llmInputFingerprint(
+                  context,
+                  withLanguage(attributionMessages("", voices.speakers), config.language),
+                ),
               ],
             }
           : {
-              ...llmInput(context, attributionMessages(endMatter.body, voices.speakers)),
+              ...llmInput(
+                context,
+                withLanguage(attributionMessages(endMatter.body, voices.speakers), config.language),
+              ),
               script: scriptCheck,
             },
         [article.key],
@@ -288,11 +298,17 @@ export function textRecipes(context: RecipeContext): TextRecipes {
               version: 1,
               operation: key,
               template: [
-                llmInputFingerprint(context, segmentMessages(prompt, config, "")),
+                llmInputFingerprint(
+                  context,
+                  withLanguage(segmentMessages(prompt, config, ""), config.language),
+                ),
                 article.fingerprint,
               ],
             }
-          : llmInput(context, segmentMessages(prompt, config, articleText));
+          : llmInput(
+              context,
+              withLanguage(segmentMessages(prompt, config, articleText), config.language),
+            );
     const value = recipe(
       context,
       key,

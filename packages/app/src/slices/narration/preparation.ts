@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { languageInfo } from "../../kernel/ports/languages.js";
 import type { Message } from "../../kernel/ports/llm.js";
 
 export type NarrationSegment = "body" | "intro" | "outro";
@@ -85,9 +86,23 @@ const contract = [
   "Never return or rewrite narration. Do not translate, correct, abbreviate or add dialogue.",
   "Use cues sparingly; an empty cues array is valid. Combine simultaneous directions.",
 ].join("\n");
-export function preparationMessages(prompt: string, source: string): readonly Message[] {
+// A narration in another language: its directions still steer the voice in English, but the
+// model has to know the sentences are not English and must stay as they are. English gets
+// the contract alone, as it always did.
+export function preparationMessages(
+  prompt: string,
+  source: string,
+  language?: string | undefined,
+): readonly Message[] {
+  const name = language === undefined || language === "en" ? undefined : languageInfo(language);
   return [
-    { role: "system", content: contract },
+    {
+      role: "system",
+      content:
+        name === undefined
+          ? contract
+          : `${contract}\nThe narration is in ${name.name}; keep it in ${name.name}. Directions stay in English.`,
+    },
     {
       role: "user",
       content: JSON.stringify({ direction: prompt, sentences: sourceSentences(source) }),

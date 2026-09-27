@@ -37,9 +37,18 @@ export function chunkNarration(text: string, chunking: Chunking): readonly strin
 }
 
 // What "N words" counts: runs of non-space. Exported because it is half of the rule -
-// a test that asserts a chunk fits in N has to count the same way the cut did.
+// a test that asserts a chunk fits in N has to count the same way the cut did. Chinese,
+// Japanese, Thai and the other scripts written without spaces are counted by the platform's
+// own word breaker instead, or a whole paragraph would be one "word"; text without them
+// (every English narration) is counted exactly as before.
+const unspaced =
+  /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}\p{Script=Myanmar}]/u;
 export function wordsIn(text: string): number {
-  return text.split(/\s+/).filter((word) => word !== "").length;
+  if (!unspaced.test(text)) return text.split(/\s+/).filter((word) => word !== "").length;
+  const segmenter = new Intl.Segmenter("en", { granularity: "word" });
+  let count = 0;
+  for (const part of segmenter.segment(text)) if (part.isWordLike === true) count += 1;
+  return count;
 }
 
 export function sameChunking(left: Chunking | undefined, right: Chunking | undefined): boolean {
@@ -74,10 +83,11 @@ function sentenceRuns(
   return nonEmpty(chunks);
 }
 
-// ceiling: segmented as English. `Intl.Segmenter` is the platform's own sentence breaker
-// (ICU ships with Node), so no dependency and no regex full of abbreviations; the locale
-// is fixed because a run carries no language and the default one varies by machine. The
-// upgrade is a language on the run configuration, passed through to here.
+// `Intl.Segmenter` is the platform's own sentence breaker (ICU ships with Node), so no
+// dependency and no regex full of abbreviations. Its sentence rules are Unicode's (UAX #29)
+// for every language: "。", "！", "।", "؟" and "¿…?" end or open sentences whatever the
+// locale, so the project language needs no locale here, and "en" keeps it the same on every
+// machine (the default locale varies).
 function* sentences(text: string): Generator<string> {
   // Built per call rather than held at module scope: the standards forbid a module-level
   // singleton, and constructing one costs microseconds against a call that just read an

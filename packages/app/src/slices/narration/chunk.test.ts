@@ -182,3 +182,25 @@ describe("character chunks", () => {
     expect(chunkNarration(" \n ", { mode: "characters" })).toEqual([]);
   });
 });
+
+describe("other languages", () => {
+  it("splits sentences at the language's own punctuation", () => {
+    expect(
+      chunkNarration("今日は晴れです。明日は雨です！", { mode: "characters", characters: 8 }),
+    ).toEqual(["今日は晴れです。", "明日は雨です！"]);
+    expect(chunkNarration("¿Qué tal? Bien. नमस्ते। ठीक है।", { mode: "words", words: 1 })).toEqual([
+      "¿Qué tal?",
+      "Bien.",
+      "नमस्ते।",
+      "ठीक है।",
+    ]);
+  });
+  it("counts words in scripts written without spaces", () => {
+    expect(wordsIn("今日は晴れです。")).toBe(4);
+    expect(wordsIn("Hello there, world")).toBe(3);
+    expect(chunkNarration("今日は晴れです。明日は雨です。", { mode: "words", words: 4 })).toEqual([
+      "今日は晴れです。",
+      "明日は雨です。",
+    ]);
+  });
+});
