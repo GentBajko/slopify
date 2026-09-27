@@ -139,7 +139,7 @@ function decode(b64: string): GeneratedImage {
   if (mime === undefined) {
     throw providerError({
       kind: "other",
-      message: `OpenAI sent back something that is not a PNG or JPEG image (${describeBytes(bytes)}). Use Retry stage; if it keeps happening, choose another image model in the Providers section of Edit project.`,
+      message: `OpenAI sent back something that is not a PNG or JPEG image (${describeBytes(bytes)}). Use Try again; if it keeps happening, choose another image model in the Providers section of Edit project.`,
     });
   }
   return { bytes, mime };

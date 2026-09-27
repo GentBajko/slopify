@@ -30,7 +30,7 @@ const pack: UploadPack = {
       tags: ["fox", "cliff"],
       thumbnails: [file("thumbnail", "the-fox-thumbnail.png"), file("thumbnail-2", "t2.png")],
       audience: "not_made_for_kids",
-      alteredContent: { altered: true, why: "Yes because an AI voice narrates it." },
+      alteredContent: { altered: true, why: "Yes because its images are photorealistic." },
       playlist: "Fox tales",
       chapterNotice: 'Chapters adjusted for YouTube: moved the first, "Intro", from 0:04 to 0:00.',
     },
@@ -77,12 +77,12 @@ describe("Prepare upload", () => {
       "Thumbnail done",
       "Playlist done",
       "Audience done",
-      "Altered or synthetic content done",
+      "AI use (under Show more) done",
       "Tags (under Show more) done",
     ]);
     expect(within(drawer).getByText("Fox tales")).not.toBeNull();
     expect(within(drawer).getByText("Yes")).not.toBeNull();
-    expect(within(drawer).getByText("Yes because an AI voice narrates it.")).not.toBeNull();
+    expect(within(drawer).getByText("Yes because its images are photorealistic.")).not.toBeNull();
     expect(within(drawer).getByText(/moved the first, "Intro", from 0:04 to 0:00/)).not.toBeNull();
     // Each row carries its own small action: Copy for text, Download for files.
     expect(within(drawer).getByRole("button", { name: "Copy title" })).not.toBeNull();
@@ -113,6 +113,44 @@ describe("Prepare upload", () => {
     expect(opened).toHaveBeenCalledWith("https://www.youtube.com/upload", "_blank", "noopener");
     await within(drawer).findByText(/Drop the video file/);
     expect(chosen).toEqual([{ short: 1 }]);
+  });
+
+  it("marks the uploaded clips as real footage from the AI use step", async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    const withClips: UploadPack = { ...pack, footage: { clips: 2, real: false } };
+    const marked: UploadPack = {
+      ...pack,
+      footage: { clips: 2, real: true },
+      items: pack.items.map((one, index) =>
+        index === 0
+          ? { ...one, alteredContent: { altered: true, why: "Yes because the fog alters them." } }
+          : one,
+      ),
+    };
+    renderApp(
+      <PrepareUpload projectId="p1" ready />,
+      testDeps({
+        "GET /api/studio/packs/p1": jsonAnswer(withClips),
+        "PUT /api/studio/packs/p1/real-footage": async (request) => {
+          sent.push(await request.json());
+          return jsonAnswer(marked)(request);
+        },
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Prepare upload" }));
+    const drawer = await screen.findByRole("dialog", { name: "Prepare upload" });
+    const toggle = await within(drawer).findByRole("switch", {
+      name: "The 2 uploaded clips are real footage (filmed, not made by AI)",
+    });
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    await user.click(toggle);
+    await within(drawer).findByText("Yes because the fog alters them.");
+    expect(sent).toEqual([{ realFootage: true }]);
+    expect(toggle.getAttribute("aria-checked")).toBe("true");
+    // A short shows new pictures, so it has no such switch.
+    await user.click(within(drawer).getByRole("button", { name: "Short 1" }));
+    expect(within(drawer).queryByRole("switch")).toBeNull();
   });
 
   it("is disabled until the video is made", () => {

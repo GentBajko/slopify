@@ -119,7 +119,7 @@ export function actionRoutes(deps: AppDeps) {
       "idempotency-conflict":
         "This action was already sent with different details. Reload the page, then try again.",
       "rebuild-required":
-        "This change needs some outputs to be made again. In the Edit tab, use Rebuild affected outputs to see what will be regenerated and what it costs.",
+        "This change needs some outputs to be made again. In the Edit tab, use Choose what to remake (in the project's More menu) to see what will be regenerated and what it costs.",
     };
     return problem(c, {
       status: codes[result.reason],
@@ -161,21 +161,21 @@ export function actionRoutes(deps: AppDeps) {
       "no-revision":
         "The project's saved settings changed since the page loaded. Reload the page, then try again.",
       conflict:
-        "This project changed since the page loaded. Reload the page to see the latest, then use Resume again.",
+        "This project changed since the page loaded. Reload the page to see the latest, then use Continue the run again.",
       "idempotency-conflict":
         "This action was already sent with different details. Reload the page, then try again.",
       "invalid-edit":
         "This section has settings that need fixing first. Open the Edit tab, choose Edit project and correct this section, then try again.",
       "stale-preview":
-        "What needs to be made changed since the page loaded. Reload the page, then use Resume again.",
+        "What needs to be made changed since the page loaded. Reload the page, then use Continue the run again.",
       "invalid-selection":
         "This section has nothing generated to re-run because its content was supplied by you. To change it, open the Edit tab and choose Edit project.",
       "review-required":
-        "Content you supplied or captions you edited by hand would be replaced. Change them in the Edit tab with Edit project, or use Rebuild affected outputs to confirm the replacement.",
+        "Content you supplied or captions you edited by hand would be replaced. Change them in the Edit tab with Edit project, or use Choose what to remake (in the project's More menu) to confirm the replacement.",
       "cost-ack-required":
-        "This re-run needs you to review its cost first. In the Edit tab, use Rebuild affected outputs.",
+        "This re-run needs you to review its cost first. In the Edit tab, use Choose what to remake (in the project's More menu).",
       readiness:
-        "Slopify cannot run this yet. Check the provider, model, voice and any files you supplied, then use Resume.",
+        "Slopify cannot run this yet. Check the provider, model, voice and any files you supplied, then use Continue the run.",
       running:
         "This section is still running. Wait for it to finish, or Pause the project, before re-running it.",
       "accepted-job":
@@ -189,7 +189,7 @@ export function actionRoutes(deps: AppDeps) {
       ...(result.intentRevisionId === undefined
         ? []
         : [
-            "Your re-run request was saved. Use Resume to continue it instead of re-running again.",
+            "Your re-run request was saved. Use Continue the run to continue it instead of re-running again.",
           ]),
     ].join(" ");
     return problem(c, {
@@ -275,7 +275,7 @@ export function actionRoutes(deps: AppDeps) {
               status: 409,
               title: titleOf(409),
               detail:
-                "Nothing in this section was refused by a content filter, so there is no prompt to soften. Reload the page; if the section still shows an error, use Retry stage.",
+                "Nothing in this section was refused by a content filter, so there is no prompt to soften. Reload the page; if the section still shows an error, use Try again.",
               extensions: { reason: "nothing-refused" },
             });
           requestSoftening(deps.db, id, keys, deps.clock.now().toISOString());
@@ -312,7 +312,7 @@ function revisionRequired(c: Context): Response {
     status: 409,
     title: titleOf(409),
     detail:
-      "This change is now made from the Edit tab. Choose Edit project, save your change, then use Rebuild affected outputs.",
+      "This change is now made from the Edit tab. Choose Edit project, save your change, then use Choose what to remake (in the project's More menu).",
     extensions: { reason: "revision-required" },
   });
 }

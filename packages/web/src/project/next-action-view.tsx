@@ -1,0 +1,334 @@
+import type { ProjectSummary, Stage } from "@app/slices/admission/model.js";
+import type { LimitWait } from "@app/slices/run-cost/panel.js";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { type ReactElement, type ReactNode, useRef, useState } from "react";
+import { useApp } from "@/app-context";
+import { Button, buttonClass } from "@/components/kit/button";
+import { Callout, type CalloutTone } from "@/components/kit/callout";
+import { ConfirmDialog } from "@/components/kit/dialog";
+import { NextAction as NextActionCard } from "@/components/kit/next-action";
+import { sentence } from "@/http";
+import { copySample } from "@/onboarding/api";
+import { keys } from "@/queries";
+import { approveCheckpoint, type CheckpointGate, checkpointKey } from "./checkpoint-api.js";
+import { fixOf } from "./fix-it.js";
+import {
+  type HeldGate,
+  type NextAction,
+  type NextIntent,
+  nextActionFor,
+  type OutdatedOutput,
+  type SectionId,
+} from "./next-action.js";
+import type { RevisionController } from "./revision-workspace.js";
+import { clockTime } from "./summary.js";
+import type { ProjectActions } from "./use-actions.js";
+
+// Where the next action is carried out: the right rail's card, and the same action beside the
+// thing it affects (a callout at the top of that section). `nextActionFor` decides; this only
+// gathers its inputs from the page's queries and runs the intent it names.
+
+export interface NextActionState {
+  readonly next: NextAction | undefined;
+  readonly run: (intent: NextIntent) => void;
+  readonly pending: boolean;
+  // What the last press said, when it did not work.
+  readonly message: string | undefined;
+}
+
+export function useNextAction({
+  project,
+  stages,
+  resumable,
+  sample,
+  gates,
+  outdated,
+  waits,
+  uploadReady,
+  actions,
+  controller,
+  openSection,
+  openUpload,
+}: {
+  readonly project: ProjectSummary;
+  readonly stages: readonly Stage[];
+  readonly resumable: boolean;
+  readonly sample: boolean;
+  readonly gates: readonly CheckpointGate[];
+  readonly outdated: readonly OutdatedOutput[];
+  readonly waits: readonly LimitWait[];
+  readonly uploadReady: boolean;
+  readonly actions: ProjectActions;
+  readonly controller: RevisionController;
+  readonly openSection: (section: SectionId) => void;
+  readonly openUpload: () => void;
+}): NextActionState {
+  const { api } = useApp();
+  const client = useQueryClient();
+  const navigate = useNavigate();
+  const [message, setMessage] = useState<string | undefined>();
+  // One approval identity per gate and fingerprint, so a retried press after a lost answer
+  // is the same request.
+  const approval = useRef(new Map<string, string>());
+  const held: HeldGate[] = gates
+    // A gate waits for the person once its stage is done: held (work behind it is waiting)
+    // or pending review. A configured gate has nothing to look at yet.
+    .filter(
+      (gate) =>
+        (gate.state === "held" || gate.state === "pending-review") &&
+        gate.fingerprint === gate.currentFingerprint,
+    )
+    .map((gate) => ({
+      checkpointId: gate.checkpointId,
+      stage: gate.stage,
+      dependents: gate.dependents,
+    }));
+  const next = nextActionFor({
+    project,
+    stages,
+    resumable,
+    sample,
+    held,
+    outdated,
+    waits,
+    uploadReady,
+    fixOf: (stage) => fixOf(stage, project),
+    clock: clockTime,
+  });
+  const copy = useMutation({
+    mutationFn: () => copySample(api),
+    onSuccess: async ({ projectId: copied }) => {
+      await client.invalidateQueries({ queryKey: keys.projects });
+      await navigate({ to: "/projects/$projectId", params: { projectId: copied } });
+    },
+    onError: (error) =>
+      setMessage(
+        `${sentence(error.message)} The copy was not made. Press Make my own copy to try again.`,
+      ),
+  });
+  const approve = useMutation({
+    mutationFn: async (gate: HeldGate) => {
+      const full = gates.find((one) => one.checkpointId === gate.checkpointId);
+      if (full === undefined)
+        throw new Error("The review changed before it was approved. Reload the page.");
+      const key = `${full.checkpointId}:${full.fingerprint}`;
+      const idempotencyKey = approval.current.get(key) ?? crypto.randomUUID();
+      approval.current.set(key, idempotencyKey);
+      const result = await approveCheckpoint(api, project.id, full.checkpointId, {
+        revisionId: full.revisionId,
+        fingerprint: full.fingerprint,
+        idempotencyKey,
+      });
+      approval.current.delete(key);
+      if (!result.ok) throw new Error(result.message);
+    },
+    onSettled: async () => {
+      await client.invalidateQueries({ queryKey: checkpointKey(project.id) });
+      await client.invalidateQueries({ queryKey: keys.project(project.id) });
+      void client.invalidateQueries({ queryKey: keys.projects });
+    },
+    onError: (error) =>
+      setMessage(
+        `${sentence(error.message)} Press the approve button again to check whether it went through.`,
+      ),
+  });
+
+  const run = (intent: NextIntent): void => {
+    setMessage(undefined);
+    switch (intent.kind) {
+      case "copy-sample":
+        copy.mutate();
+        return;
+      case "resume":
+      case "pause":
+        actions.run({ kind: intent.kind });
+        return;
+      case "retry":
+      case "soften":
+        actions.run({ kind: intent.kind, stage: intent.stage });
+        return;
+      case "approve":
+        approve.mutate(intent.gate);
+        return;
+      case "remake":
+        controller.review({ kind: "selected", workKeys: intent.workKeys }, { autoStart: true });
+        return;
+      case "edit":
+        openSection("settings");
+        return;
+      case "open-settings":
+        void navigate({ to: "/settings", search: { section: intent.section } });
+        return;
+      case "prepare-upload":
+        openUpload();
+        return;
+    }
+  };
+  const pending = copy.isPending || approve.isPending || actions.pending || controller.pending;
+  return { next, run, pending, message };
+}
+
+// "Continuing…": the button's label while its own press is under way.
+function busyLabel(intent: NextIntent): string | undefined {
+  switch (intent.kind) {
+    case "copy-sample":
+      return "Copying…";
+    case "resume":
+      return "Continuing…";
+    case "pause":
+      return "Pausing…";
+    case "approve":
+      return "Approving…";
+    case "remake":
+      return "Starting the remake…";
+    case "retry":
+      return "Trying again…";
+    case "soften":
+      return "Softening…";
+    default:
+      return undefined;
+  }
+}
+
+function ActionButton({
+  state,
+  variant,
+  className,
+}: {
+  readonly state: NextActionState;
+  readonly variant: "primary" | "secondary";
+  readonly className?: string;
+}): ReactElement | null {
+  const [softening, setSoftening] = useState(false);
+  const action = state.next?.action;
+  if (action === undefined) return null;
+  const intent = action.intent;
+  if (intent.kind === "open-settings")
+    return (
+      <Link
+        to="/settings"
+        search={{ section: intent.section }}
+        className={`${buttonClass({ variant })} ${className ?? ""}`}
+      >
+        {action.label}
+      </Link>
+    );
+  const label = state.pending ? (busyLabel(intent) ?? action.label) : action.label;
+  return (
+    <>
+      <Button
+        variant={variant}
+        className={className}
+        disabled={state.pending}
+        disabledReason="Working on the last press"
+        onClick={() => (intent.kind === "soften" ? setSoftening(true) : state.run(intent))}
+      >
+        {label}
+      </Button>
+      {intent.kind === "soften" ? (
+        <ConfirmDialog
+          open={softening}
+          tone="primary"
+          title="Soften the refused prompt and try again?"
+          consequence="Your project's AI model rewrites each refused prompt without what a content filter could flag, keeping the scene and style. The image is then drawn again from the new wording, which it keeps as its prompt. The AI call and the new image are charged like any other."
+          confirmLabel="Soften and retry"
+          cancelLabel="Keep the prompt"
+          pending={state.pending}
+          onConfirm={() => {
+            setSoftening(false);
+            state.run(intent);
+          }}
+          onCancel={() => setSoftening(false)}
+        />
+      ) : null}
+    </>
+  );
+}
+
+// The right rail's card: the state, what is ready, what the action does, and the action.
+export function NextActionPanel({
+  state,
+  feedback,
+}: {
+  readonly state: NextActionState;
+  // A refused press from elsewhere on the page that belongs to the whole project.
+  readonly feedback?: ReactNode;
+}): ReactElement | null {
+  const next = state.next;
+  if (next === undefined && feedback === undefined && state.message === undefined) return null;
+  return (
+    <div className="flex flex-col gap-3">
+      {next === undefined ? null : (
+        <NextActionCard
+          tone={next.tone}
+          status={next.status}
+          title={next.title}
+          {...(next.why === undefined ? {} : { why: next.why })}
+          {...(next.action === undefined
+            ? {}
+            : { action: <ActionButton state={state} variant="primary" /> })}
+        />
+      )}
+      {state.message === undefined ? null : (
+        <p role="alert" className="m-0 text-small text-danger">
+          {state.message}
+        </p>
+      )}
+      {feedback}
+    </div>
+  );
+}
+
+const calloutTone: Readonly<Record<NextAction["situation"], CalloutTone | undefined>> = {
+  sample: undefined,
+  paused: undefined,
+  stopped: undefined,
+  queued: undefined,
+  running: undefined,
+  failed: "danger",
+  held: "waiting",
+  waiting: "waiting",
+  outdated: "info",
+  done: "info",
+};
+
+// The same action beside the thing it affects: at the top of the section it concerns, with
+// the failed step's own words behind Error details.
+export function NextActionBeside({
+  state,
+  section,
+}: {
+  readonly state: NextActionState;
+  readonly section: SectionId;
+}): ReactElement | null {
+  const next = state.next;
+  if (next === undefined || next.section !== section) return null;
+  const tone = calloutTone[next.situation];
+  if (tone === undefined) return null;
+  return (
+    // Below 1180px the right rail's card sits above the sections, so it is the one shown.
+    <Callout
+      className="max-[1180px]:hidden"
+      tone={tone}
+      title={next.title}
+      {...(next.action === undefined
+        ? {}
+        : { actions: <ActionButton state={state} variant="secondary" /> })}
+    >
+      {next.why === undefined && next.detail === undefined ? undefined : (
+        <>
+          {next.why === undefined ? null : <span className="block">{next.why}</span>}
+          {next.detail === undefined ? null : (
+            <details className="mt-1">
+              <summary className="cursor-pointer">Error details</summary>
+              <pre className="m-0 mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-words font-mono text-small">
+                {next.detail}
+              </pre>
+            </details>
+          )}
+        </>
+      )}
+    </Callout>
+  );
+}

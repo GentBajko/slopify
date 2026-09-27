@@ -58,7 +58,7 @@ export function LiveBuild({
         <Waveform projectId={project.id} revisionId={revisionId} />
         <SectionHead title="Images" />
         {images.length === 0 ? (
-          <p className="text-small text-ink2">The images appear here as each one is drawn.</p>
+          <p className="text-small text-ink-2">The images appear here as each one is drawn.</p>
         ) : (
           <ul
             aria-label="Images so far"
@@ -84,7 +84,7 @@ function LiveImage({
   const media = useOutputMedia(output);
   if (media === undefined) return null;
   return (
-    <li className="overflow-hidden rounded-control border border-line bg-panel2">
+    <li className="overflow-hidden rounded-control border border-line bg-raised">
       <img
         src={media.url}
         alt=""
@@ -125,18 +125,18 @@ function Waveform({
             ? "No narration yet"
             : `Narration so far: ${String(Math.round(seconds))} seconds`
         }
-        className="flex h-16 items-center gap-px overflow-hidden rounded-control border border-line bg-panel2 px-2"
+        className="flex h-16 items-center gap-px overflow-hidden rounded-control border border-line bg-raised px-2"
       >
         {folded.map((value, index) => (
           <span
             // biome-ignore lint/suspicious/noArrayIndexKey: bars are positional and never reorder.
             key={index}
-            className="w-[3px] shrink-0 rounded-full bg-lamp-run"
+            className="w-[3px] shrink-0 rounded-full bg-accent"
             style={{ height: `${String(Math.max(4, Math.round(value * 100)))}%` }}
           />
         ))}
       </div>
-      <p className="mt-1 text-label text-ink3">
+      <p className="mt-1 text-label text-ink-3">
         {peaks.error
           ? peaks.error.message
           : folded.length === 0

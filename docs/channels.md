@@ -87,5 +87,11 @@ made here. Paste titles one per line, or **Import a YouTube Studio CSV**: in Stu
 **Analytics → Content → Advanced mode** and export the table as comma-separated values. The
 title column is found by its header ("Video title", else "Title", else "Content"), or failing
 that the first column of words; quoted titles with commas or line breaks, a byte-order mark,
-and Studio's "Total" row are handled. A title already listed (in any case) is skipped, and the
-import says how many were added and skipped. **Remove** one title, or **Remove all**.
+and Studio's "Total" row are handled. The CSV is not saved at once: its titles are listed with a
+tick each, all ticked, so videos of other channels in the same Studio export (another game,
+another series) can be left out. Type in **Keep only titles containing…** (for example "D&D" or
+"Lore To Sleep To", any case) to tick the titles holding that text and untick the rest; **Tick
+all** and **Untick all** reset the ticks, and each title can be ticked by hand. **Add N ticked
+titles** saves only those. The filter is remembered per channel and applied to the next CSV.
+A title already listed (in any case) is skipped, and the import says how many were added and
+skipped. **Remove** one title, or **Remove all**.

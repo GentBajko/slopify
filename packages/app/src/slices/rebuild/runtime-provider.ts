@@ -216,7 +216,7 @@ export async function executeProviderRecipe(
     return "done";
   }
   throw new Error(
-    "Slopify hit an internal error (this step has no provider request to run). Use Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    "Slopify hit an internal error (this step has no provider request to run). Use Try again; if it happens again, use Download diagnostics in Settings and report it.",
   );
 }
 
@@ -250,10 +250,10 @@ async function softenIfAsked(
 
 function checkAnswer(piece: WorkPiece, answer: LlmAnswer): string | undefined {
   if (answer.text.trim() === "")
-    return "The AI model sent back an empty answer. Use Retry stage; if it keeps happening, choose another model in the Providers section of Edit project.";
+    return "The AI model sent back an empty answer. Use Try again; if it keeps happening, choose another model in the Providers section of Edit project.";
   if (piece.key === "research:planner")
     return chaptersFrom(answer.text).length === 0
-      ? "The AI model's research plan listed no chapters, so research could not go on. Use Retry stage; if it keeps happening, choose another model in the Providers section of Edit project."
+      ? "The AI model's research plan listed no chapters, so research could not go on. Use Try again; if it keeps happening, choose another model in the Providers section of Edit project."
       : undefined;
   if (piece.key === "research:notes" || piece.key.startsWith("research:chapter:"))
     return sourcedAnswer(piece.key, answer.text);
@@ -296,7 +296,7 @@ async function publishText(
       const checked = parseScript(parts.body, piece.input.script.speakers);
       if (!checked.ok)
         throw new Error(
-          `The text model's script can't be read: ${checked.reason} Retry stage to have it written again, or fix it in Edit project → Article.`,
+          `The text model's script can't be read: ${checked.reason} Try again to have it written again, or fix it in Edit project → Article.`,
         );
     }
     await publishResult(
@@ -355,7 +355,7 @@ async function publishText(
     const title: unknown = titles[Number(piece.key.split(":").at(-1)) - 1];
     if (typeof title !== "string")
       throw new Error(
-        "Slopify hit an internal error (a research chapter has no title in the research plan). Use Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+        "Slopify hit an internal error (a research chapter has no title in the research plan). Use Try again; if it happens again, use Download diagnostics in Settings and report it.",
       );
     const asset = writeAsset(
       deps,

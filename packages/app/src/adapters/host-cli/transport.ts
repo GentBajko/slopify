@@ -10,8 +10,8 @@ export function hostUnavailable(submitted = false): ProviderError {
   return providerError({
     kind: "unavailable",
     message: submitted
-      ? "The connection to the host helper dropped before the CLI's answer arrived, so Slopify cannot tell whether it finished (it may already have used your quota). Check the host helper is still running, then use Retry stage."
-      : "Slopify cannot reach its host helper, which runs the Claude Code, Codex and Gemini CLIs outside Docker. On the host computer, run npx @gentbajko/slopify@latest --docker to set it up or restart it, then use Retry stage.",
+      ? "The connection to the host helper dropped before the CLI's answer arrived, so Slopify cannot tell whether it finished (it may already have used your quota). Check the host helper is still running, then use Try again."
+      : "Slopify cannot reach its host helper, which runs the Claude Code, Codex and Gemini CLIs outside Docker. On the host computer, run npx @gentbajko/slopify@latest --docker to set it up or restart it, then use Try again.",
   });
 }
 export interface HostRequestOptions {
@@ -41,7 +41,7 @@ export async function hostRequest(options: HostRequestOptions): Promise<Incoming
     throw providerError({
       kind: "unsupported",
       message:
-        "This request is larger than the host helper accepts (16 MB), so nothing was sent. Make the inputs shorter in Edit project, or choose an API provider such as OpenRouter in its Providers section, then use Retry stage.",
+        "This request is larger than the host helper accepts (16 MB), so nothing was sent. Make the inputs shorter in Edit project, or choose an API provider such as OpenRouter in its Providers section, then use Try again.",
     });
   let token: string;
   try {
@@ -139,7 +139,7 @@ export async function readHostBytes(response: IncomingMessage, maximum: number):
         throw providerError({
           kind: "unavailable",
           message:
-            "The host helper sent back more data than Slopify accepts, so the answer was dropped. Use Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+            "The host helper sent back more data than Slopify accepts, so the answer was dropped. Use Try again; if it happens again, use Download diagnostics in Settings and report it.",
         });
       chunks.push(value);
     }

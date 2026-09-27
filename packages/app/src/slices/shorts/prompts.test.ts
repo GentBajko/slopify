@@ -26,12 +26,12 @@ it("accepts exactly the number of prompts asked for, and says what was wrong oth
   expect(checkImagePrompts('["A harbor"]', 2)).toEqual({
     ok: false,
     reason:
-      "The AI model wrote 1 image prompts for a short that needs exactly 2. Retry stage, or choose another model in Edit project → Providers.",
+      "The AI model wrote 1 image prompts for a short that needs exactly 2. Try again, or choose another model in Edit project → Providers.",
   });
   expect(checkImagePrompts('["A harbor", ""]', 2)).toMatchObject({ ok: false });
   expect(checkImagePrompts("Here are some ideas.", 2)).toEqual({
     ok: false,
     reason:
-      "The AI model's image prompts for a short didn't come back in the expected format (a JSON list of prompts). Retry stage, or choose another model in Edit project → Providers.",
+      "The AI model's image prompts for a short didn't come back in the expected format (a JSON list of prompts). Try again, or choose another model in Edit project → Providers.",
   });
 });

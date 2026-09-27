@@ -2,8 +2,8 @@ import { useEffect, useId, useRef, useState } from "react";
 import type { StagedFile, UploadKind } from "@/api";
 import { discardStaged, listStaged, uploadStaged } from "@/api";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/kit/button";
+import { Field, Input } from "@/components/kit/field";
 
 function waitForCopy(signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -107,8 +107,7 @@ export function RevisionUpload({
   }
   return (
     <div className="space-y-2">
-      <label htmlFor={inputId} className="block space-y-1 text-small">
-        {label}
+      <Field label={label} id={inputId}>
         <Input
           id={inputId}
           type="file"
@@ -120,10 +119,10 @@ export function RevisionUpload({
             if (file !== undefined) void choose(file);
           }}
         />
-      </label>
+      </Field>
       {busy ? (
         <div className="flex items-center gap-3">
-          <p role="status" className="text-small text-ink2">
+          <p role="status" className="text-small text-ink-2">
             Copying upload…
           </p>
           <Button type="button" onClick={() => controller.current?.abort()}>
@@ -132,7 +131,7 @@ export function RevisionUpload({
         </div>
       ) : null}
       {error === undefined ? null : (
-        <p role="alert" className="text-small text-red">
+        <p role="alert" className="text-small text-danger">
           {error}
         </p>
       )}

@@ -31,7 +31,7 @@ export async function executeVoicesRecipe(
   if (!context.maySubmit(piece.id)) return "held";
   if (piece.key !== "voices:files" || piece.input.kind !== "local")
     throw new Error(
-      "Slopify hit an internal error (unknown kind of listening-file step). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (unknown kind of listening-file step). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   context.signal.throwIfAborted();
   const { view } = exportSnapshot(deps, context, piece);
@@ -49,7 +49,7 @@ export async function executeVoicesRecipe(
   );
   if (timing === undefined)
     throw new Error(
-      "The narration's word timing, which the chapter markers come from, is missing. Use Re-run section on Video, then Retry stage.",
+      "The narration's word timing, which the chapter markers come from, is missing. Use More → Render the video again in the Video section, then Try again.",
     );
   const { words } = wordsSchema.parse(
     JSON.parse(
@@ -59,7 +59,7 @@ export async function executeVoicesRecipe(
   const audio = await revisionAudio(deps, context, view);
   if (audio.length === 0)
     throw new Error(
-      "The MP3 and M4B files need narration audio, but this project has none. Turn narration on in Edit project, or turn Audio files off under Speakers (Play → Audio, or Edit project → Providers), then Retry stage.",
+      "The MP3 and M4B files need narration audio, but this project has none. Turn narration on in Edit project, or turn Audio files off under Speakers (Play → Audio, or Edit project → Providers), then Try again.",
     );
   const totalSeconds = audio.reduce((sum, segment) => sum + segment.seconds, 0);
   const chapters = audioChapters({

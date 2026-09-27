@@ -43,6 +43,35 @@ export function saveStudioPlaylist(db: DatabaseSync, raw: string): string | null
   return value;
 }
 
+// The projects whose uploaded clips are real footage (filmed, not generated): ticked in the
+// project's Prepare upload, under AI use. One row holding their ids; YouTube's second AI use
+// case is footage of a real event or place altered by AI (`disclosure.ts`).
+export const studioRealFootageKey = "studio.realFootage";
+
+function realFootageIds(db: DatabaseSync): readonly string[] {
+  const stored = readSetting(db, studioRealFootageKey);
+  if (stored === undefined) return [];
+  try {
+    const value: unknown = JSON.parse(stored);
+    return Array.isArray(value)
+      ? value.filter((one): one is string => typeof one === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+export function readRealFootage(db: DatabaseSync, projectId: string): boolean {
+  return realFootageIds(db).includes(projectId);
+}
+
+export function saveRealFootage(db: DatabaseSync, projectId: string, on: boolean): void {
+  const others = realFootageIds(db).filter((one) => one !== projectId);
+  const next = on ? [...others, projectId].sort() : others;
+  if (next.length === 0) db.prepare("DELETE FROM settings WHERE key = ?").run(studioRealFootageKey);
+  else writeSetting(db, studioRealFootageKey, JSON.stringify(next));
+}
+
 // The pairing token, made on first read. One per install: a new one (Settings → YouTube
 // Studio → New pairing token) forgets the extension that used the old one.
 export function studioPairing(db: DatabaseSync): StudioPairingView {

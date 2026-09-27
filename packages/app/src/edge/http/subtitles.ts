@@ -24,7 +24,7 @@ function revisionRequired(c: Context): Response {
     status: 409,
     title: titleOf(409),
     detail:
-      "This change is now made from the Edit tab. Choose Edit project, save your change, then use Rebuild affected outputs.",
+      "This change is now made from the Edit tab. Choose Edit project, save your change, then use Choose what to remake (in the project's More menu).",
     extensions: { reason: "revision-required" },
   });
 }

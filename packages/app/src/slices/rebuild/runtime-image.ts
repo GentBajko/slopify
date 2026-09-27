@@ -37,7 +37,7 @@ function referenceImage(
   if (input.reference === undefined) return undefined;
   // The step waits for the establishing image, so a missing one went away since.
   const missing =
-    "The establishing image this image is drawn from is missing. Use Regenerate on the establishing image in the Images section (or upload it again in Edit project → Images), then use Retry stage.";
+    "The establishing image this image is drawn from is missing. Use Regenerate on the establishing image in the Images section (or upload it again in Edit project → Images), then use Try again.";
   if (input.reference.assetId === null) throw new Error(missing);
   const row = z
     .object({ path: z.string() })
@@ -57,7 +57,7 @@ function referenceImage(
   const mime = imageMime(bytes);
   if (mime === undefined)
     throw new Error(
-      "The establishing image is not a PNG or JPEG file, so it can't be sent as a reference. Upload a PNG or JPEG in Edit project → Images → Establishing image, then use Retry stage.",
+      "The establishing image is not a PNG or JPEG file, so it can't be sent as a reference. Upload a PNG or JPEG in Edit project → Images → Establishing image, then use Try again.",
     );
   return { bytes, mime };
 }

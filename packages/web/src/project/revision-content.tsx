@@ -4,10 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/kit/button";
 import { ThumbnailCountPicker } from "@/play/thumbnail-count";
 import { promptsQuery } from "@/queries";
 import { CaptionEditor } from "./caption-editor.js";
+import { EditImagePrompts } from "./edit-image-prompts.js";
+import { EditImageScale } from "./edit-sound-and-scale.js";
 import { ImageEditor } from "./image-editor.js";
 import { NarrationEditor } from "./narration-editor.js";
 import { revisionFileUrl } from "./revision-api.js";
@@ -24,6 +26,8 @@ const timing = z.object({
         start: z.number().finite().nonnegative(),
         end: z.number().finite().positive(),
         confidence: z.number().optional(),
+        // Who says the word on a multi-voice run; the cue made from it keeps it.
+        speaker: z.string().min(1).optional(),
       }),
     )
     .min(1),
@@ -149,14 +153,14 @@ export function RevisionContentEditors({
       );
       if (!response.ok)
         throw new Error(
-          "The subtitle timing file couldn't be read. Reload the page and try again; if it still fails, use Re-run section on Audio.",
+          "The subtitle timing file couldn't be read. Reload the page and try again; if it still fails, use More → make it again in its section on Audio.",
         );
       const saved = timing.parse(await response.json());
       let previous = 0;
       for (const word of saved.words) {
         if (word.start < previous || word.end <= word.start || word.end > duration)
           throw new Error(
-            "The saved subtitle timing doesn't match the current narration. Use Re-run section on Audio to rebuild it.",
+            "The saved subtitle timing doesn't match the current narration. Use More → make it again in its section on Audio to rebuild it.",
           );
         previous = word.end;
       }
@@ -186,7 +190,23 @@ export function RevisionContentEditors({
   const shows = (part: EditSection) => section === undefined || section === part;
   return (
     <div className="space-y-5">
-      <section aria-label="Images" hidden={!shows("images")} className="space-y-5">
+      <section aria-label="Images" hidden={!shows("images")} className="space-y-6">
+        <EditImagePrompts
+          edit={edit}
+          saved={view.revision.config.imagePrompts}
+          prompts={prompts}
+          problem={(field) =>
+            fields.find((one) => one.field === field || one.field === `config.${field}`)?.message
+          }
+          onChange={emit}
+        />
+        <EditImageScale
+          edit={edit}
+          problem={(field) =>
+            fields.find((one) => one.field === field || one.field === `config.${field}`)?.message
+          }
+          onChange={emit}
+        />
         <RevisionReference
           edit={edit}
           prompts={prompts}
@@ -255,7 +275,7 @@ export function RevisionContentEditors({
         ) : null}
       </section>
       {error === undefined ? null : (
-        <p role="alert" className="text-red">
+        <p role="alert" className="text-danger">
           {error}
         </p>
       )}

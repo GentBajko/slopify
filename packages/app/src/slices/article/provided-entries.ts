@@ -31,13 +31,13 @@ export async function prepareProvidedArticleSegments(
   const article = stagesOf(deps.db, projectId).find((stage) => stage.kind === "article");
   if (!article)
     throw new Error(
-      "Slopify hit an internal error (the project has no article stage). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (the project has no article stage). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   const outputs = outputsOf(deps.db, projectId);
   const plain = outputs.find((output) => output.role === "article_txt");
   if (!plain)
     throw new Error(
-      "The article text you provided is missing, so the intro and outro can't be written from it. Paste the article again in Edit project → Article, then Retry stage.",
+      "The article text you provided is missing, so the intro and outro can't be written from it. Paste the article again in Edit project → Article, then Try again.",
     );
   const narration = readFileSync(outputPath(deps.paths, projectId, plain.path), "utf8");
   const saved = outputs.find(

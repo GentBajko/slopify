@@ -72,7 +72,7 @@ export async function runThumbnail(
     // Off is `skipped` and Provide is `provided` at project creation,
     // so the runner never starts this stage for either.
     throw new Error(
-      `Slopify hit an internal error (the thumbnail stage cannot run with its source set to ${source}). Retry stage; if it happens again, use Download diagnostics in Settings and report it.`,
+      `Slopify hit an internal error (the thumbnail stage cannot run with its source set to ${source}). Try again; if it happens again, use Download diagnostics in Settings and report it.`,
     );
   }
   const choice = project.config.images;
@@ -80,7 +80,7 @@ export async function runThumbnail(
     // Admission requires the image provider whenever the thumbnail is generated, so reaching
     // here is a bug in admission rather than the user's.
     throw new Error(
-      "No image model is set for the thumbnail. Choose one in Edit project → Providers, then Retry stage.",
+      "No image model is set for the thumbnail. Choose one in Edit project → Providers, then Try again.",
     );
   }
 
@@ -116,7 +116,7 @@ function fromTemplate(project: Project): string {
   const rendered = project.config.rendered.thumbnailPrompt;
   if (rendered === undefined) {
     throw new Error(
-      "Slopify hit an internal error (the thumbnail prompt was never filled in). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (the thumbnail prompt was never filled in). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   }
   return rendered;
@@ -147,7 +147,7 @@ async function byLlm(
   if (llm === undefined) {
     // Admission requires the LLM row when the thumbnail source is Prompt by LLM.
     throw new Error(
-      "No AI model is set for writing the thumbnail prompt. Choose one in Edit project → Providers, then Retry stage.",
+      "No AI model is set for writing the thumbnail prompt. Choose one in Edit project → Providers, then Try again.",
     );
   }
   const messages = thumbnailMessages(brief(deps, project));
@@ -184,7 +184,7 @@ function brief(deps: ThumbnailDeps, project: Project): ThumbnailBrief {
   const instruction = project.config.rendered.thumbnailPrompt;
   if (instruction === undefined) {
     throw new Error(
-      "Slopify hit an internal error (the thumbnail prompt was never filled in). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (the thumbnail prompt was never filled in). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   }
   return {
@@ -203,7 +203,7 @@ function articleText(deps: ThumbnailDeps, projectId: string): string {
   const article = outputsOf(deps.db, projectId).find((output) => output.role === "article_txt");
   if (article === undefined) {
     throw new Error(
-      "The thumbnail prompt is written from the article, but the article isn't ready. Let the Article stage finish, then Retry stage.",
+      "The thumbnail prompt is written from the article, but the article isn't ready. Let the Article stage finish, then Try again.",
     );
   }
   return readFileSync(outputPath(deps.paths, projectId, article.path), "utf8");
@@ -306,7 +306,7 @@ function instructionsText(messages: readonly Message[]): string {
 function payloadOf(piece: StagePiece): z.infer<typeof writtenPayload> {
   if (piece.payload === null) {
     throw new Error(
-      "Slopify hit an internal error (the saved thumbnail prompt is empty). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (the saved thumbnail prompt is empty). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   }
   return writtenPayload.parse(JSON.parse(piece.payload));

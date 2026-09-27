@@ -1,131 +1,116 @@
 import type { ProjectSummary } from "@app/slices/admission/model.js";
 import type { Prompt } from "@app/slices/library/model.js";
-import type { Output } from "@app/slices/storage/model.js";
-import { EllipsisIcon } from "lucide-react";
-import { type ReactNode, useState } from "react";
-import { ConfirmDialog } from "@/components/confirm";
-import { PageBar } from "@/components/kit/page-bar";
-import { Lamp } from "@/components/lamp";
-import { StateWord } from "@/components/state-word";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Link } from "@tanstack/react-router";
+import { ChevronLeftIcon, EllipsisIcon } from "lucide-react";
+import type { ReactElement } from "react";
+import { Button, IconButton } from "@/components/kit/button";
+import { PageHeader } from "@/components/kit/layout";
+import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/kit/menu";
+import { Status, type Tone } from "@/components/kit/status";
 import { startedAt } from "@/lib/utils";
-import { confirmationFor } from "./confirmations.js";
-import { OutputDownload } from "./parts.js";
-import type { ProjectActions } from "./use-actions.js";
+
+// The project's title row: the way back to Projects, the title, one meta line, and the
+// page's quiet actions. The one action the project needs next is not here: it is in the
+// right rail (`next-action-view.tsx`). Rare actions sit behind More.
+export interface MoreAction {
+  readonly id: string;
+  readonly label: string;
+  readonly run: () => void;
+  readonly disabled?: boolean;
+  // A line above it in the menu: destructive actions sit apart.
+  readonly apart?: boolean;
+}
 
 export function ProjectHeader({
   project,
   prompts,
-  actions,
-  inFlight,
-  resumable,
-  primaryOutput,
-  children,
+  editing,
+  onEdit,
+  more,
 }: {
   readonly project: ProjectSummary;
   // Undefined until the library has arrived: a prompt cannot be called deleted just
   // because the list naming it has not loaded yet.
   readonly prompts: readonly Prompt[] | undefined;
-  readonly actions: ProjectActions;
-  readonly inFlight: boolean;
-  // A pending revision can hold work nothing will start; only Resume admits it.
-  readonly resumable: boolean;
-  readonly primaryOutput: Output | undefined;
-  readonly children?: ReactNode;
-}) {
-  const running = project.status === "running";
-  const [cancelling, setCancelling] = useState(false);
-  // One toggle, always mounted: it reads Pause while there is work to hold and Resume when
-  // there is work to continue, and is disabled when neither applies.
-  const canPause = running || (project.status === "pending" && !resumable);
-  const canResume =
-    resumable ||
-    project.status === "paused" ||
-    project.status === "failed" ||
-    project.status === "partial" ||
-    project.status === "canceled";
-  const cancelCopy = confirmationFor({ kind: "cancel" });
+  // The settings view is open.
+  readonly editing: boolean;
+  readonly onEdit: () => void;
+  readonly more: readonly MoreAction[];
+}): ReactElement {
+  const state = statusOf(project.status);
   return (
-    <PageBar
-      back={{ to: "/projects", label: "Projects" }}
-      lead={<Lamp state={project.status} />}
+    <PageHeader
+      crumb={
+        <Link to="/projects" className="inline-flex items-center gap-1 text-ink-3 hover:text-ink">
+          <ChevronLeftIcon aria-hidden="true" strokeWidth={1.75} />
+          Projects
+        </Link>
+      }
       title={project.title}
-      status={<StateWord state={project.status} announce="Project" />}
       meta={subtitle(project, prompts)}
       actions={
         <>
-          {children}
-          {canPause ? (
-            <Button disabled={actions.pending} onClick={() => actions.run({ kind: "pause" })}>
-              Pause
-            </Button>
-          ) : (
-            <Button
-              disabled={!canResume || actions.pending || inFlight}
-              onClick={() => actions.run({ kind: "resume" })}
-            >
-              {actions.performing?.kind === "resume" ? "Resuming…" : "Resume"}
-            </Button>
-          )}
-          {primaryOutput ? (
-            <span className="inline-flex h-8 items-center rounded-control border border-accent bg-accent px-3 [&_a]:font-semibold [&_a]:text-on-accent [&_button]:text-on-accent">
-              <OutputDownload
-                output={primaryOutput}
-                label={
-                  primaryOutput.role === "video"
-                    ? "Download video"
-                    : primaryOutput.role === "audio_export"
-                      ? "Download audio"
-                      : "Download article"
-                }
-              />
+          <Status tone={state.tone}>
+            {state.word}
+            <span className="sr-only" role="status" aria-live="polite">
+              {`Project: ${state.word}`}
             </span>
-          ) : (
-            <Button disabled title="Available once the final output has been made">
-              Download
-            </Button>
-          )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" aria-label="More project actions" className="size-8 p-0">
-                <EllipsisIcon aria-hidden="true" className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem
-                disabled={!running || actions.pending}
-                onSelect={() => setCancelling(true)}
-              >
-                Cancel run
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <ConfirmDialog
-            open={cancelling}
-            title={cancelCopy.title}
-            consequence={cancelCopy.consequence}
-            verb={cancelCopy.verb}
-            dismiss={cancelCopy.dismiss}
-            pending={actions.pending}
-            onConfirm={() => {
-              setCancelling(false);
-              actions.run({ kind: "cancel" });
-            }}
-            onCancel={() => setCancelling(false)}
-          />
+          </Status>
+          <Button variant="quiet" aria-pressed={editing} onClick={onEdit}>
+            Edit settings
+          </Button>
+          <Menu modal={false}>
+            <MenuTrigger asChild>
+              <IconButton label="More project actions">
+                <EllipsisIcon aria-hidden="true" strokeWidth={1.75} />
+              </IconButton>
+            </MenuTrigger>
+            <MenuContent>
+              {more.map((item) => (
+                <MenuItemWithApart key={item.id} item={item} />
+              ))}
+            </MenuContent>
+          </Menu>
         </>
       }
     />
   );
 }
 
-// "Documentary dossier · 9:16 · started 21:14". The name is the run's own copy of it, so a
+function MenuItemWithApart({ item }: { readonly item: MoreAction }): ReactElement {
+  return (
+    <>
+      {item.apart ? <MenuSeparator /> : null}
+      <MenuItem {...(item.disabled ? { disabled: true } : {})} onSelect={() => item.run()}>
+        {item.label}
+      </MenuItem>
+    </>
+  );
+}
+
+function statusOf(status: ProjectSummary["status"]): {
+  readonly tone: Tone;
+  readonly word: string;
+} {
+  switch (status) {
+    case "running":
+      return { tone: "running", word: "Running" };
+    case "paused":
+      return { tone: "waiting", word: "Paused" };
+    case "failed":
+      return { tone: "failed", word: "Failed" };
+    case "partial":
+      return { tone: "waiting", word: "Done with problems" };
+    case "done":
+      return { tone: "done", word: "Done" };
+    case "canceled":
+      return { tone: "off", word: "Canceled" };
+    case "pending":
+      return { tone: "off", word: "Queued" };
+  }
+}
+
+// "Documentary dossier · 16:9 · started 21:14". The name is the run's own copy of it, so a
 // template deleted since the run is still named, marked as gone.
 function subtitle(project: ProjectSummary, prompts: readonly Prompt[] | undefined): string {
   const name = project.config.articlePrompt;

@@ -47,6 +47,11 @@ export interface ApplyOptions {
   readonly port: number | null;
   /** Requested project folder, or null to keep the remembered one. */
   readonly projects: string | null;
+  /**
+   * This computer's Documents folder. A new install puts Projects and Backups in
+   * `<documents>/Slopify`; without it, a new install uses `~/Slopify/Projects` as before 3.0.
+   */
+  readonly documents?: string | undefined;
   /** `update` refuses to run when nothing is installed yet. */
   readonly mode: "install" | "update";
   /** The compose.yaml this package ships. */
@@ -64,6 +69,8 @@ export interface ApplyOptions {
 export interface ApplyResult {
   readonly url: string;
   readonly projects: string;
+  /** The Backups folder shared beside Projects, or null when backups stay inside Projects. */
+  readonly backups: string | null;
   readonly changed: boolean;
   readonly recovery: string | null;
   readonly removed: readonly string[];
@@ -135,13 +142,31 @@ async function locked(o: ApplyOptions, e: Engine, directory: string): Promise<Ap
   }
 
   const source = install?.projects ?? legacy?.projects ?? null;
-  const projects =
-    o.projects ??
-    source ??
-    (o.name === "slopify"
-      ? join(o.home, "Slopify/Projects")
-      : join(o.home, "Slopify", o.name, "Projects"));
+  const fallback =
+    o.documents === undefined
+      ? o.name === "slopify"
+        ? join(o.home, "Slopify/Projects")
+        : join(o.home, "Slopify", o.name, "Projects")
+      : o.name === "slopify"
+        ? join(o.documents, "Slopify", "Projects")
+        : join(o.documents, "Slopify", o.name, "Projects");
+  const projects = o.projects ?? source ?? fallback;
+  // Only a brand-new install that takes the Documents default gets a Backups folder of its own
+  // beside Projects; everything else keeps backups where they were (inside Projects).
+  const backups =
+    install !== null
+      ? (install.backups ?? null)
+      : source === null && o.projects === null && o.documents !== undefined
+        ? join(dirname(projects), "Backups")
+        : null;
   await safePath(projects, o.home, o.root, true);
+  if (backups !== null) {
+    await safePath(backups, o.home, o.root, true);
+    if (contains(projects, backups) || contains(backups, projects))
+      throw new Error(
+        `The Backups folder ${backups} and the project folder ${projects} are inside each other. Choose a separate project folder with --projects-dir <folder>.`,
+      );
+  }
   if (
     source !== null &&
     source !== projects &&
@@ -169,6 +194,7 @@ async function locked(o: ApplyOptions, e: Engine, directory: string): Promise<Ap
     install.appVersion === o.version &&
     install.user === context.user &&
     install.projects === projects &&
+    (install.backups ?? null) === backups &&
     (o.port === null || install.port === o.port) &&
     install.hostCli === o.hostCli.enabled
   ) {
@@ -178,6 +204,7 @@ async function locked(o: ApplyOptions, e: Engine, directory: string): Promise<Ap
     return {
       url: `http://127.0.0.1:${current.port ?? install.port}`,
       projects,
+      backups,
       changed: false,
       recovery: install.recovery,
       removed: [],
@@ -245,6 +272,7 @@ async function locked(o: ApplyOptions, e: Engine, directory: string): Promise<Ap
       await publishProjects(o, e, source, projects, id, current);
       await save({ published: { path: projects, identity: await identity(projects) } });
     }
+    if (backups !== null) await mkdir(backups, { recursive: true, mode: 0o700 });
     const previousUser = install?.user ?? current?.user ?? null;
     if (fresh || previousUser !== context.user) await e.own(o.image, o.volume, context.user);
 
@@ -265,6 +293,7 @@ async function locked(o: ApplyOptions, e: Engine, directory: string): Promise<Ap
         SLOPIFY_PORT: port === 0 ? "" : String(port),
         SLOPIFY_VOLUME: o.volume,
         SLOPIFY_PROJECTS_DIR: projects,
+        ...(backups === null ? {} : { SLOPIFY_BACKUPS_DIR: backups }),
         SLOPIFY_HOST_CLI_SHARE: share ?? paths.off,
         SLOPIFY_ACTIVATION_DIR: paths.activation,
         SLOPIFY_UPDATE_TOKEN: token,
@@ -289,6 +318,7 @@ async function locked(o: ApplyOptions, e: Engine, directory: string): Promise<Ap
       port,
       projects,
       projectsIdentity: await identity(projects),
+      ...(backups === null ? {} : { backups }),
       hostCli: share !== null,
       token,
       recovery: u.backup,
@@ -304,6 +334,7 @@ async function locked(o: ApplyOptions, e: Engine, directory: string): Promise<Ap
     return {
       url: `http://127.0.0.1:${candidate.port ?? port}`,
       projects,
+      backups,
       changed: true,
       recovery: u.backup,
       ...tidy,

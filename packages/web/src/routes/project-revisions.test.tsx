@@ -52,7 +52,7 @@ it("mounts revision editing and immutable media instead of direct legacy mutatio
     `${testOrigin}/files/p1/revisions/r1/record-o-subtitles_vtt-0`,
   );
   expect(screen.queryByRole("button", { name: "Re-render" })).toBeNull();
-  const exportPanel = screen.getByRole("region", { name: "Video workspace" });
+  const exportPanel = screen.getByRole("region", { name: "Video" });
   await user.click(
     within(exportPanel).getAllByRole("button", { name: "Open folder" })[0] ??
       (() => {

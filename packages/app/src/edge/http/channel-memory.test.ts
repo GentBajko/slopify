@@ -119,4 +119,37 @@ describe("existing video routes", () => {
     const cleared = await send(app, "DELETE", `${base}/videos`);
     expect(await cleared.json()).toEqual({ deleted: 2 });
   });
+
+  it("preview a CSV without saving, save the ticked titles and remember the filter per channel", async () => {
+    const { app } = harness();
+    const csv = "Content,Video title\nabcdefghijk,D&D Lore: Vecna\nbcdefghijkl,New World Guide\n";
+    const first = await send(app, "POST", `${base}/videos/preview`, { format: "csv", text: csv });
+    expect(first.status).toBe(200);
+    expect(await first.json()).toEqual({
+      titles: ["D&D Lore: Vecna", "New World Guide"],
+      filter: "",
+    });
+    const listed = await send(app, "GET", `${base}/videos`);
+    expect(await listed.json()).toEqual({ videos: [] });
+    const saved = await send(app, "POST", `${base}/videos`, {
+      format: "lines",
+      text: "D&D Lore: Vecna",
+      filter: " d&d ",
+    });
+    expect(await saved.json()).toEqual({ added: 1, skipped: 0 });
+    const again = await send(app, "POST", `${base}/videos/preview`, { format: "csv", text: csv });
+    expect(await again.json()).toMatchObject({ filter: "d&d" });
+    const long = await send(app, "POST", `${base}/videos`, {
+      format: "lines",
+      text: "Vecna",
+      filter: "x".repeat(201),
+    });
+    expect(((await long.json()) as { detail: string }).detail).toContain(
+      'Shorten "Keep only titles containing…"',
+    );
+    const empty = await send(app, "POST", `${base}/videos/preview`, { format: "csv", text: "1\n" });
+    expect(empty.status).toBe(400);
+    const missing = `/api/channels/${randomUUID()}/videos/preview`;
+    expect((await send(app, "POST", missing, { format: "csv", text: csv })).status).toBe(404);
+  });
 });

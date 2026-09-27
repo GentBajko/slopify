@@ -65,13 +65,21 @@ export async function restoreSample(api: Api): Promise<SampleState> {
   return read<SampleState>(await post(api, "/sample/restore"));
 }
 
+// Make my own copy of one sample. Without a project it copies the sample whose page is open
+// (the project in the address), else the Library of Alexandria.
 export async function copySample(
   api: Api,
-  projectId?: string,
+  projectId: string | undefined = openProject(),
 ): Promise<{ readonly projectId: string }> {
   return read<{ projectId: string }>(
     await post(api, "/sample/copy", projectId === undefined ? undefined : { projectId }),
   );
+}
+
+function openProject(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  const match = /\/projects\/([^/?#]+)/.exec(window.location.pathname);
+  return match?.[1] === undefined ? undefined : decodeURIComponent(match[1]);
 }
 
 export async function readPeaks(

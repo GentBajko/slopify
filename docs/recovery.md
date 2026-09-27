@@ -29,7 +29,8 @@ fix-it button.
 
 ## Fix-it buttons
 
-A failed step shows the action that fixes it beside Retry stage. The mapping lives in one
+A failed step's fix is the project's next action (docs/design-system.md), in the right rail and
+beside the step, in place of a plain Try … again. The mapping lives in one
 place, `packages/app/src/slices/fixes/rules.ts`:
 
 | Failure | Button |

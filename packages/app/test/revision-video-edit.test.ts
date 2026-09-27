@@ -180,7 +180,7 @@ it("cuts on sentences, crossfades, draws chapter cards and animates every other 
   const warnings = video?.output.meta.warnings ?? [];
   expect(warnings).toEqual([
     expect.stringMatching(
-      /^Image [13] is shown as a still: The model declined this image\. To try again, use Re-run section on Video\.$/,
+      /^Image [13] is shown as a still: The model declined this image\. To try again, use More → Render the video again in the Video section\.$/,
     ),
   ]);
   const refused = warnings[0]?.startsWith("Image 1") === true ? 1 : 3;

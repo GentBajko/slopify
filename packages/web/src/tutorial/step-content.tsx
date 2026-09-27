@@ -261,22 +261,23 @@ export function StepContent({
       return (
         <>
           <p>
-            The <strong>Output</strong> tab lists every stage with its progress. Select a stage to
-            see its results or live writing. Press <strong>Pause</strong> to stop active requests
-            safely and keep finished work.
+            The rail on the left lists the project's sections: Article, Narration, Images, Video and
+            the rest. The right rail says where the run stands and offers the one thing to do next,
+            named for its result: <strong>Pause</strong> while it runs,{" "}
+            <strong>Continue the run</strong> when it is paused, <strong>Try images again</strong>{" "}
+            when a step fails.
           </p>
           <p>
-            Open the <strong>Edit</strong> tab and press <strong>Edit project</strong> to change
-            providers, models, voice, prompts or optional steps.
-            <strong> Save changes</strong> keeps a new revision without starting generation.
-            <strong> Rebuild affected outputs</strong>, beside it, reviews the required work and
-            cost before starting. Finished outputs remain available in the <strong>History</strong>{" "}
-            tab.
+            Press <strong>Edit settings</strong> to change providers, models, voice, prompts or
+            optional steps. <strong>Save changes</strong> keeps a new revision without starting
+            generation; what the change made outdated is then offered as the next action, such as{" "}
+            <strong>Remake 3 outdated images</strong>. Earlier revisions stay in{" "}
+            <strong>History</strong>.
           </p>
           <p>
-            Select a failed stage and open <strong>Error details</strong> to read the provider’s
-            message. <strong>Retry stage</strong> keeps completed outputs; its menu offers a full
-            re-run of that section.
+            A failed step says why beside it; open <strong>Error details</strong> for the provider's
+            own message. Rare actions, such as making a whole stage again, sit behind each section's{" "}
+            <strong>More</strong> button and in the command palette (Ctrl+K).
           </p>
         </>
       );

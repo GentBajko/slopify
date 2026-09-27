@@ -2,12 +2,13 @@ import type { ProviderId, ProviderStatus, Voice } from "@app/slices/settings/mod
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { VoiceField, VoiceRefusal } from "@/api";
-import { addVoice, removeVoice } from "@/api";
+import { addVoice, removeVoice, setVoiceImitatesRealPerson } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { Field, Input, Select } from "@/components/kit/field";
 import { SectionHead } from "@/components/kit/section-head";
+import { Switch } from "@/components/kit/switch";
 import { languagesOfText, VoiceLanguagesCell } from "@/language/voice-languages-cell";
 import { keys, providersQuery, voicesQuery } from "@/queries";
 
@@ -26,6 +27,16 @@ export function Voices() {
     mutationFn: (id: string) => removeVoice(api, id),
     onSettled: async () => {
       setRemoving(undefined);
+      await queryClient.invalidateQueries({ queryKey: keys.voices });
+    },
+  });
+
+  // A voice cloned from, or made to sound like, a real person: its narration answers Yes to
+  // YouTube's AI use ("makes a real person appear to say or do something they didn't").
+  const realPerson = useMutation({
+    mutationFn: ({ id, on }: { id: string; on: boolean }) =>
+      setVoiceImitatesRealPerson(api, id, on),
+    onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: keys.voices });
     },
   });
@@ -58,8 +69,11 @@ export function Voices() {
               <th scope="col" className="pr-4">
                 Voice ID
               </th>
-              <th scope="col" className="w-[26%] pr-4">
+              <th scope="col" className="w-[22%] pr-4">
                 Languages
+              </th>
+              <th scope="col" className="w-[20%] pr-4">
+                Real person
               </th>
               <th scope="col" className="w-[96px]">
                 <span className="sr-only">Remove</span>
@@ -69,14 +83,14 @@ export function Voices() {
           <tbody>
             {listed === undefined ? (
               <tr>
-                <td colSpan={5}>
+                <td colSpan={6}>
                   <span className="block h-4 w-64 rounded-control bg-raised" />
                 </td>
               </tr>
             ) : listed.length === 0 ? (
               // An empty list teaches rather than showing a bare box.
               <tr>
-                <td colSpan={5} className="text-ink-2">
+                <td colSpan={6} className="text-ink-2">
                   Add a voice ID from your text-to-speech provider. Audio needs one to narrate.
                 </td>
               </tr>
@@ -88,6 +102,21 @@ export function Voices() {
                   <td className="truncate pr-4 text-ink-2">{voice.voiceId}</td>
                   <td className="pr-4">
                     <VoiceLanguagesCell voice={voice} />
+                  </td>
+                  <td className="pr-4">
+                    <Switch
+                      checked={
+                        realPerson.isPending && realPerson.variables.id === voice.id
+                          ? realPerson.variables.on
+                          : voice.imitatesRealPerson === true
+                      }
+                      disabled={realPerson.isPending}
+                      onChange={(on) => realPerson.mutate({ id: voice.id, on })}
+                      label={
+                        <span className="sr-only">{`${voice.name} imitates a real person`}</span>
+                      }
+                      className="text-small"
+                    />
                   </td>
                   <td className="text-right">
                     <Button
@@ -106,6 +135,16 @@ export function Voices() {
             )}
           </tbody>
         </table>
+        <p className="m-0 mt-2 text-small text-ink-2">
+          Turn on Real person for a voice cloned from, or made to sound like, a real person. Prepare
+          upload then answers Yes to YouTube's AI use for videos it narrates. An AI voice that
+          doesn't imitate anyone stays off.
+        </p>
+        {realPerson.error === null ? null : (
+          <p role="alert" className="m-0 mt-2 text-small text-danger">
+            {`Couldn't change Real person: ${realPerson.error.message} Press the switch again.`}
+          </p>
+        )}
         {remove.error === null ? null : (
           <p role="alert" className="m-0 mt-2 text-small text-danger">
             {remove.error.message}

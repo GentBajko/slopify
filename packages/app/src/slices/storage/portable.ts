@@ -13,7 +13,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { isAbsolute, join, relative, sep } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { crc32 } from "node:zlib";
 import { strFromU8, strToU8, Unzip, UnzipInflate, zipSync } from "fflate";
@@ -28,6 +28,7 @@ import { fontMaxBytes } from "../fonts/model.js";
 import { readFontMetadata } from "../fonts/sfnt.js";
 import { lintEntry, lintPrompt } from "../library/lint.js";
 import { entryCategories, entryModes, promptKinds } from "../library/model.js";
+import { photorealisticPromptsKey } from "../library/photorealistic.js";
 import { listEntries, listPrompts } from "../library/repo.js";
 import { notificationUrlKey } from "../notifications/settings.js";
 import { projectTemplateSchema } from "../project-templates/schema.js";
@@ -35,10 +36,10 @@ import { cliPathMaxLength } from "../settings/cli-paths.js";
 import { providerDefaultsKey, providerDefaultsSchema } from "../settings/first-run.js";
 import { appearances, providerById, providerIds } from "../settings/model.js";
 import { listVoices } from "../settings/repo.js";
-import { voiceIdMax, voiceNameMax } from "../settings/voices.js";
+import { realPersonVoicesKey, voiceIdMax, voiceNameMax } from "../settings/voices.js";
 import { whatsNewSeenKey } from "../settings/whats-new.js";
 import { studioPlaylistMax } from "../studio/model.js";
-import { studioPairingKey, studioPlaylistKey } from "../studio/settings.js";
+import { studioPairingKey, studioPlaylistKey, studioRealFootageKey } from "../studio/settings.js";
 import { channelLinksKey } from "../youtube/edits-repo.js";
 import { defaultBackupsDir, projectDir, stagingPath } from "./layout.js";
 import { type StagedFile, stageKinds } from "./model.js";
@@ -450,6 +451,11 @@ const storedSilenceGap = z.number().int().min(0).max(silenceGapSecondsMax);
 const storedAppearance = z.enum(appearances);
 const storedPlaylist = z.string().max(studioPlaylistMax);
 // Settings → Channel links, and the providers a fresh Play form starts with.
+// The AI use marks: ticked voices, Image prompts and projects, by id.
+const storedIds = z.array(z.string().max(200)).max(100_000);
+// The channel page's "Keep only titles containing…" text, one per channel.
+const importFilterPrefix = "channels.importFilter.";
+const storedImportFilter = z.string().max(200);
 const storedChannelLinks = z
   .array(z.object({ name: z.string().max(200), url: z.string().max(2000) }).strict())
   .max(200);
@@ -474,6 +480,13 @@ function portableSettings(settings: Readonly<Record<string, string>>): Record<st
     else if (key === "appearance") storedAppearance.parse(parsed);
     else if (key === studioPlaylistKey) storedPlaylist.parse(parsed);
     else if (key === channelLinksKey) storedChannelLinks.parse(parsed);
+    else if (
+      key === realPersonVoicesKey ||
+      key === photorealisticPromptsKey ||
+      key === studioRealFootageKey
+    )
+      storedIds.parse(parsed);
+    else if (key.startsWith(importFilterPrefix)) storedImportFilter.parse(parsed);
     else if (key === providerDefaultsKey) providerDefaultsSchema.parse(parsed);
     else if (key.startsWith("cli.path.")) {
       const provider = providerById(z.enum(providerIds).parse(key.slice("cli.path.".length)));
@@ -1107,15 +1120,26 @@ function planStagedImport(
   });
 }
 
+function inside(root: string, path: string): boolean {
+  const r = relative(root, path);
+  return r === "" || (r !== ".." && !r.startsWith(`..${sep}`) && !isAbsolute(r));
+}
+
 export function storageBytes(paths: Paths): {
   readonly data: number;
   readonly projects: number;
   readonly staging: number;
 } {
-  // Scheduled backups default to a folder inside the projects root; they are not project files.
-  const projects = directoryBytes(paths.projects) - directoryBytes(defaultBackupsDir(paths));
+  // Scheduled backups default to a folder inside the projects root on installs from before
+  // 3.0; they are not project files. Newer installs keep projects outside the data dir.
+  const backups = defaultBackupsDir(paths);
+  const projects =
+    directoryBytes(paths.projects) -
+    (inside(paths.projects, backups) ? directoryBytes(backups) : 0);
   const staging = directoryBytes(paths.staging);
-  return { data: directoryBytes(paths.dataDir), projects, staging };
+  const data =
+    directoryBytes(paths.dataDir) + (inside(paths.dataDir, paths.projects) ? 0 : projects);
+  return { data, projects, staging };
 }
 
 export function storageUsage(

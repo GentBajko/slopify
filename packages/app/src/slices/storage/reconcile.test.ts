@@ -312,3 +312,35 @@ it("marks an unallocated attachment Reattach after restart", () => {
     h.close();
   }
 });
+
+describe("reconcileStorage in a Projects folder outside the data dir", () => {
+  it("keeps the user's loose files, hidden entries and Backups; drops only unknown project folders", () => {
+    const root = mkdtempSync(join(tmpdir(), "slopify-reconcile-root-"));
+    const paths = layout(join(root, "data"), {
+      projects: join(root, "Documents", "Slopify", "Projects"),
+      backups: join(root, "Documents", "Slopify", "Backups"),
+      exports: join(root, "Documents", "Slopify", "Exports"),
+    });
+    ensureDirs(paths, { mode: 0o700 });
+    mkdirSync(join(root, "Documents", "Slopify", "Exports"), { recursive: true });
+    writeFileSync(join(root, "Documents", "Slopify", "Exports", "mine.mp4"), "user");
+    const db = migrated();
+    try {
+      writeFileSync(join(paths.projects, "notes.txt"), "user");
+      writeFileSync(join(paths.projects, ".DS_Store"), "os");
+      writeFileSync(join(paths.projects, "desktop.ini"), "os");
+      mkdirSync(join(paths.projects, "Backups"));
+      writeFileSync(join(paths.projects, "Backups", "old.tar"), "archive");
+      mkdirSync(join(paths.projects, "gone"));
+      writeFileSync(join(paths.projects, "gone", "video.mp4"), "orphan");
+      expect(reconcileStorage(db, paths)).toEqual({ orphanFiles: 1, stagedFiles: 0 });
+      for (const kept of ["notes.txt", ".DS_Store", "desktop.ini", "Backups/old.tar"])
+        expect(existsSync(join(paths.projects, kept))).toBe(true);
+      expect(existsSync(join(paths.projects, "gone"))).toBe(false);
+      expect(existsSync(join(root, "Documents", "Slopify", "Exports", "mine.mp4"))).toBe(true);
+    } finally {
+      db.close();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});

@@ -204,7 +204,7 @@ describe("Channels", () => {
     const picker = await screen.findByRole("combobox", { name: "YouTube AI disclosure" });
     expect((picker as HTMLSelectElement).value).toBe("auto");
     expect(
-      screen.getByText(/Automatic says Yes when an AI voice or AI images are used/),
+      screen.getByText(/Automatic says Yes only for one of YouTube.s three cases/),
     ).not.toBeNull();
     await user.selectOptions(picker, "no");
     await waitFor(() => expect(seen).toEqual([{ aiDisclosure: "no" }]));

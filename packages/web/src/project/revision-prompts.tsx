@@ -1,3 +1,4 @@
+import type { ImagePromptChoice } from "@app/slices/admission/model.js";
 import {
   usesNarrationPreparation,
   usesReference,
@@ -10,17 +11,22 @@ import { usesScriptPrompt } from "@app/slices/voices/model.js";
 import { useId } from "react";
 import type { Entry, Prompt } from "@/api";
 import { KeywordList } from "@/components/keyword-list";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/input";
-import { Picker } from "@/components/ui/picker";
+import { Button } from "@/components/kit/button";
+import { Callout } from "@/components/kit/callout";
+import { Field, Select, Textarea } from "@/components/kit/field";
 import { editOfForm, setPrompt } from "./revision-form-state.js";
 export function RevisionPrompts({
   edit,
+  saved = edit.config.imagePrompts,
   prompts,
   entries,
   onChange,
 }: {
   readonly edit: RevisionEdit;
+  // The image prompts the project was saved with. Until saving, the image prompts' wording is
+  // kept under their saved numbering (`imagePrompts.N`), whatever Images → Image prompts has
+  // ticked since (`slices/revisions/image-plan.ts`).
+  readonly saved?: readonly ImagePromptChoice[];
   readonly prompts: readonly Prompt[];
   readonly entries: readonly Entry[];
   readonly onChange: (edit: RevisionEdit) => void;
@@ -46,7 +52,17 @@ export function RevisionPrompts({
       ...(edit.config.intro === undefined ? [] : ["intro"]),
       ...(edit.config.outro === undefined ? [] : ["outro"]),
     ]),
-  ];
+  ].filter((key) => {
+    // An image prompt unticked under Images goes when the change is saved.
+    const index = imageIndex(key);
+    if (index === undefined) return true;
+    const name = saved[index]?.name;
+    return name === undefined || edit.config.imagePrompts.some((one) => one.name === name);
+  });
+  const added = edit.config.imagePrompts.filter(
+    (one) => !saved.some((prompt) => prompt.name === one.name),
+  );
+  const label = (key: string) => promptLabel(key, saved);
   const slots = [
     ...new Set([
       ...Object.keys(edit.config.values),
@@ -60,14 +76,14 @@ export function RevisionPrompts({
   const feeds = (name: string): readonly string[] => [
     ...(detectSlots(edit.config.title).names.includes(name) ? ["Project title"] : []),
     ...Object.entries(edit.content.promptTemplates).flatMap(([key, raw]) =>
-      raw !== null && detectSlots(raw).names.includes(name) ? [promptLabel(key)] : [],
+      raw !== null && detectSlots(raw).names.includes(name) ? [label(key)] : [],
     ),
   ];
   const topics = detectSlots(edit.config.title).names;
   return (
-    <section aria-label="Prompt snapshots" className="space-y-3">
+    <section aria-label="Prompt snapshots" className="space-y-6">
       {keys.map((key) => {
-        const label = promptLabel(key);
+        const name = label(key);
         const raw = edit.content.promptTemplates[key] ?? null;
         const options =
           key === "intro" || key === "outro"
@@ -90,36 +106,35 @@ export function RevisionPrompts({
                             : "image"),
               );
         return (
-          <fieldset key={key} className="min-w-0 space-y-3 rounded-control border border-line p-3">
-            <legend className="px-1 text-small font-semibold">{label}</legend>
+          <div
+            key={key}
+            className="min-w-0 space-y-4 border-t border-line pt-6 first:border-t-0 first:pt-0"
+          >
+            <h3 className="m-0 text-title-3">{name}</h3>
             {raw === null ? (
-              <div className="space-y-2">
-                <p>
-                  Original template unavailable. The saved rendered prompt stays frozen until you
-                  choose or write a template.
-                </p>
-                <Button
-                  type="button"
-                  aria-label={`Use saved wording as template for ${label}`}
-                  onClick={() => onChange(setPrompt(edit, key, edit.config.rendered[key] ?? ""))}
-                >
-                  Use saved wording as template
-                </Button>
-              </div>
+              <Callout
+                tone="info"
+                title="Original template unavailable"
+                actions={
+                  <Button
+                    aria-label={`Use saved wording as template for ${name}`}
+                    onClick={() => onChange(setPrompt(edit, key, edit.config.rendered[key] ?? ""))}
+                  >
+                    Use saved wording as template
+                  </Button>
+                }
+              >
+                The saved prompt below stays as it is until you choose or write a template.
+              </Callout>
             ) : null}
             <LibraryChanged
-              label={label}
+              label={name}
               raw={raw}
-              library={libraryPrompt(edit, key, options)}
+              library={libraryPrompt(edit, key, options, saved)}
               onUse={(body) => onChange(setPrompt(edit, key, body))}
             />
-            <label
-              htmlFor={`${formId}-library-${key}`}
-              className="flex min-w-0 flex-col gap-1 text-small"
-            >
-              Use saved template for {label}
-              <Picker
-                id={`${formId}-library-${key}`}
+            <Field label={`Use saved template for ${name}`} id={`${formId}-library-${key}`}>
+              <Select
                 value=""
                 onChange={(event) => {
                   const picked = options.find((option) => option.id === event.target.value);
@@ -157,32 +172,37 @@ export function RevisionPrompts({
                   onChange({ ...next, config });
                 }}
               >
-                <option value="">Choose explicitly</option>
+                <option value="">Choose a saved template</option>
                 {options.map((option) => (
                   <option key={option.id} value={option.id}>
                     {option.name}
                   </option>
                 ))}
-              </Picker>
-            </label>
-            <label htmlFor={`${formId}-raw-${key}`} className="block space-y-1 text-small">
-              Raw prompt for {label}
+              </Select>
+            </Field>
+            <Field label={`Raw prompt for ${name}`} id={`${formId}-raw-${key}`}>
               <Textarea
-                id={`${formId}-raw-${key}`}
                 rows={4}
                 value={raw ?? ""}
                 onChange={(event) => onChange(setPrompt(edit, key, event.target.value))}
               />
-            </label>
+            </Field>
             <details>
-              <summary>Saved rendered prompt</summary>
-              <pre className="whitespace-pre-wrap break-words">
+              <summary className="text-small text-ink-2">Saved rendered prompt</summary>
+              <pre className="m-0 mt-2 whitespace-pre-wrap break-words text-small">
                 {edit.config.rendered[key] ?? ""}
               </pre>
             </details>
-          </fieldset>
+          </div>
         );
       })}
+      {added.length === 0 ? null : (
+        <p className="m-0 text-small text-ink-2">
+          {added.map((one) => `"${one.name}"`).join(", ")}{" "}
+          {added.length === 1 ? "uses its" : "use their"} Library wording. Save, then change it
+          here.
+        </p>
+      )}
       {slots.length ? (
         <section aria-label="Keywords" className="space-y-3 pt-3">
           <h3 className="m-0 text-title-3">Keywords</h3>
@@ -214,9 +234,10 @@ function libraryPrompt(
   edit: RevisionEdit,
   key: string,
   options: readonly (Prompt | Entry)[],
+  saved: readonly ImagePromptChoice[],
 ): Prompt | undefined {
   const { config } = edit;
-  const image = /^imagePrompts\.(\d+)$/.exec(key);
+  const image = imageIndex(key);
   const name =
     key === "article"
       ? config.articlePrompt
@@ -232,8 +253,8 @@ function libraryPrompt(
                 ? config.thumbnailPrompt
                 : key === "referencePrompt"
                   ? config.reference?.prompt
-                  : image?.[1] !== undefined
-                    ? config.imagePrompts[Number(image[1])]?.name
+                  : image !== undefined
+                    ? saved[image]?.name
                     : undefined;
   if (name === undefined || name === "") return undefined;
   return options.find(
@@ -256,25 +277,31 @@ function LibraryChanged({
 }) {
   if (library === undefined || raw === null || library.body === raw) return null;
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-control border border-line bg-panel2 px-3 py-2 text-small">
-      <span className="min-w-0 flex-1">
-        The Library's &ldquo;{library.name}&rdquo; has changed since this project copied it. The
-        project still uses its own copy below.
-      </span>
-      <Button
-        type="button"
-        aria-label={`Use the Library version for ${label}`}
-        onClick={() => {
-          onUse(library.body);
-        }}
-      >
-        Use the Library version
-      </Button>
-    </div>
+    <Callout
+      tone="info"
+      title={`The Library's "${library.name}" has changed since this project copied it`}
+      actions={
+        <Button
+          aria-label={`Use the Library version for ${label}`}
+          onClick={() => {
+            onUse(library.body);
+          }}
+        >
+          Use the Library version
+        </Button>
+      }
+    >
+      The project still uses its own copy below.
+    </Callout>
   );
 }
 
-function promptLabel(key: string): string {
+function imageIndex(key: string): number | undefined {
+  const image = /^imagePrompts\.(\d+)$/.exec(key);
+  return image?.[1] === undefined ? undefined : Number(image[1]);
+}
+
+function promptLabel(key: string, saved: readonly ImagePromptChoice[]): string {
   if (key === "article") return "Article";
   if (key === "narration") return "Narration Preparation";
   if (key === "description") return "YouTube description";
@@ -284,7 +311,12 @@ function promptLabel(key: string): string {
   if (key === "referencePrompt") return "Establishing image";
   if (key === "intro") return "Intro";
   if (key === "outro") return "Outro";
-  const image = /^imagePrompts\.(\d+)$/.exec(key);
-  if (image?.[1] !== undefined) return `Image prompt ${Number(image[1]) + 1}`;
+  const image = imageIndex(key);
+  if (image !== undefined) {
+    const name = saved[image]?.name;
+    return name === undefined || name === ""
+      ? `Image prompt ${String(image + 1)}`
+      : `Image prompt "${name}"`;
+  }
   return key.replace(/[._-]/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2");
 }

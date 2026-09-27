@@ -49,7 +49,7 @@ export function renderDocument(input: DocumentInput): RenderedDocument {
   const blocks = withoutTitle(text.blocks, input.title);
   if (blocks.length === 0)
     throw new Error(
-      "The article has no text to put in the document. Write or regenerate the article (Edit project → Article), then use Retry stage on Document.",
+      "The article has no text to put in the document. Write or regenerate the article (Edit project → Article), then use Try again on Document.",
     );
   const words = blocks
     .map((block) =>

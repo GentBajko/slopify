@@ -95,6 +95,10 @@ try {
     ),
     subtitleModelSeed: process.env.SLOPIFY_SUBTITLE_MODEL_SEED?.trim() || undefined,
     seedSample: true,
+    // A data dir chosen with --data-dir or SLOPIFY_DATA_DIR keeps a new install's files inside
+    // it, so a second or throwaway install never shares a Documents folder with the main one.
+    filesInDocuments:
+      values["data-dir"] === undefined && (process.env.SLOPIFY_DATA_DIR ?? "") === "",
     refreshModels: ["", "0", "false"].includes(
       (process.env.SLOPIFY_NO_MODEL_REFRESH ?? "").trim().toLowerCase(),
     ),
@@ -102,6 +106,7 @@ try {
   const { paths, url, stop } = booted;
   console.log(`Slopify is running at ${url}`);
   console.log(`Slopify data directory: ${paths.dataDir}`);
+  console.log(`Projects: ${paths.projects}`);
   console.log(`Database: ${paths.db}`);
   console.log(`Logs: ${paths.logs}`);
   if (config.host !== "127.0.0.1") {

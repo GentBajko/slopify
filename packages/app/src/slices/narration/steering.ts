@@ -26,7 +26,7 @@ function atoms(
     if (span !== undefined) {
       if (span.end > to || span.end <= at)
         throw new Error(
-          "Slopify hit an internal error (a pronunciation fix spans more than one word). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+          "Slopify hit an internal error (a pronunciation fix spans more than one word). Try again; if it happens again, use Download diagnostics in Settings and report it.",
         );
       result.push({ text: span.text, spokenText: source.slice(at, span.end) });
       at = span.end;
@@ -34,7 +34,7 @@ function atoms(
       const point = source.codePointAt(at);
       if (point === undefined)
         throw new Error(
-          "Slopify hit an internal error (a narration position is outside the article text). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+          "Slopify hit an internal error (a narration position is outside the article text). Try again; if it happens again, use Download diagnostics in Settings and report it.",
         );
       const text = String.fromCodePoint(point);
       // An empty span is a later word of a multi-word alias (its spoken form sits on the first
@@ -69,7 +69,7 @@ function checkedSpans(source: string, pronunciation: readonly PronunciationSpan[
       !/^[^\s\uD800-\uDFFF]+$/u.test(source.slice(span.start, span.end))
     )
       throw new Error(
-        "Slopify hit an internal error (pronunciation fixes overlap or split a word). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+        "Slopify hit an internal error (pronunciation fixes overlap or split a word). Try again; if it happens again, use Download diagnostics in Settings and report it.",
       );
     spans.set(span.start, span);
     end = span.end;

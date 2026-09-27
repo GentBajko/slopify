@@ -1,7 +1,9 @@
 import { timingSafeEqual } from "node:crypto";
 import { lstat, readFile } from "node:fs/promises";
-import { isAbsolute, resolve } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import { z } from "zod";
+import type { FilesLayout } from "../../kernel/paths.js";
+import { backupsFolderName } from "../../slices/storage/layout.js";
 import { readState } from "./state.js";
 
 const activationSchema = z
@@ -20,24 +22,46 @@ export async function dockerActivationCommitted(path: string, token: string): Pr
   );
 }
 
+// Where a container keeps the user-visible files. The installer decides them on the host (the
+// Projects bind, and from 3.0 a Backups bind beside it), so they are never stored in settings.
+export function dockerFilesLayout(env: Readonly<NodeJS.ProcessEnv>, dataDir: string): FilesLayout {
+  const projects = join(dataDir, "projects");
+  return {
+    projects,
+    backups: env.SLOPIFY_DOCKER_BACKUPS_DIR
+      ? join(dataDir, "backups")
+      : join(projects, backupsFolderName),
+    exports: null,
+  };
+}
+
 export async function dockerFolderConfiguration(
   env: Readonly<NodeJS.ProcessEnv>,
   projectsRoot: string,
-): Promise<{ container: boolean; hostProjects: string | null }> {
-  if (env.SLOPIFY_CONTAINER !== "1") return { container: false, hostProjects: null };
+): Promise<{ container: boolean; hostProjects: string | null; hostBackups: string | null }> {
+  if (env.SLOPIFY_CONTAINER !== "1")
+    return { container: false, hostProjects: null, hostBackups: null };
   const host = env.SLOPIFY_DOCKER_PROJECTS_DIR;
   if (!host || env.SLOPIFY_DOCKER_INSTALL_STATE !== "/opt/slopify-install/activation.json")
-    return { container: true, hostProjects: null };
-  if (!isAbsolute(host) || resolve(host) !== host || /[\p{Cc},]/u.test(host))
-    throw new Error("Invalid Docker host project path.");
+    return { container: true, hostProjects: null, hostBackups: null };
+  const backups = env.SLOPIFY_DOCKER_BACKUPS_DIR || null;
+  for (const path of [host, backups])
+    if (path !== null && (!isAbsolute(path) || resolve(path) !== path || /[\p{Cc},]/u.test(path)))
+      throw new Error("Invalid Docker host project path.");
   const root = await lstat(projectsRoot);
-  const mounts = await readFile("/proc/self/mountinfo", "utf8");
+  const mounts = (await readFile("/proc/self/mountinfo", "utf8"))
+    .split("\n")
+    .map((line) => line.split(" ")[4]);
   if (
     projectsRoot !== "/data/projects" ||
     !root.isDirectory() ||
     root.isSymbolicLink() ||
-    !mounts.split("\n").some((line) => line.split(" ")[4] === "/data/projects")
+    !mounts.includes("/data/projects")
   )
     throw new Error("Managed Docker project bind is missing.");
-  return { container: true, hostProjects: host };
+  return {
+    container: true,
+    hostProjects: host,
+    hostBackups: backups !== null && mounts.includes("/data/backups") ? backups : null,
+  };
 }

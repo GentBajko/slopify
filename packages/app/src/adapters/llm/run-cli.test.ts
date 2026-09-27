@@ -233,13 +233,13 @@ describe("promptOf", () => {
 describe("endedWithout", () => {
   it("says what the CLI put on stderr", () => {
     expect(endedWithout("codex", { code: 1, error: null }, " not signed in \n")).toBe(
-      'The Codex CLI stopped without answering (exit code 1: "not signed in"). Run codex in a terminal to check it works and is signed in, then use Retry stage.',
+      'The Codex CLI stopped without answering (exit code 1: "not signed in"). Run codex in a terminal to check it works and is signed in, then use Try again.',
     );
   });
 
   it("says so plainly when stderr was empty", () => {
     expect(endedWithout("claude", { code: 2, error: null }, "")).toBe(
-      "The Claude Code CLI stopped without answering (exit code 2). Run claude in a terminal to check it works and is signed in, then use Retry stage.",
+      "The Claude Code CLI stopped without answering (exit code 2). Run claude in a terminal to check it works and is signed in, then use Try again.",
     );
   });
 
@@ -284,7 +284,7 @@ describe("cliEvent and cliShaped", () => {
     })();
     expect(isProviderError(error) && error.fault.kind).toBe("other");
     expect(String(error)).toBe(
-      "Error: The Codex CLI sent output Slopify could not read. Update it to the latest version, then use Retry stage.",
+      "Error: The Codex CLI sent output Slopify could not read. Update it to the latest version, then use Try again.",
     );
   });
 

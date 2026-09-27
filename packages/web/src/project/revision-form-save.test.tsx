@@ -96,7 +96,7 @@ it.each([false, true])(
       await user.clear(article);
       await user.type(article, "My unsaved article.");
     }
-    await user.selectOptions(screen.getByLabelText("article source"), "provide");
+    await user.selectOptions(screen.getByLabelText("Article source"), "provide");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(saves).toHaveLength(1));
     expect(saves[0]?.config.sources.article).toBe("provide");
@@ -139,7 +139,10 @@ it.each([
       },
     });
     await user.click(screen.getByRole("button", { name: "Edit project" }));
-    await user.selectOptions(await screen.findByLabelText(`${source} source`), "off");
+    await user.selectOptions(
+      await screen.findByLabelText(`${source.charAt(0).toUpperCase()}${source.slice(1)} source`),
+      "off",
+    );
     await openEditSection("Subtitles");
     expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "Subtitles" }).value).toBe(
       after,

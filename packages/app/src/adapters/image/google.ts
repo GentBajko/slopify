@@ -140,7 +140,7 @@ function decode(part: z.infer<typeof content>): GeneratedImage {
     const claimed = part.mime_type ?? "nothing";
     throw providerError({
       kind: "other",
-      message: `Google sent back something that is not a PNG or JPEG image (labelled ${claimed}, but ${describeBytes(bytes)}). Use Retry stage; if it keeps happening, choose another image model in the Providers section of Edit project.`,
+      message: `Google sent back something that is not a PNG or JPEG image (labelled ${claimed}, but ${describeBytes(bytes)}). Use Try again; if it keeps happening, choose another image model in the Providers section of Edit project.`,
     });
   }
   return { bytes, mime };

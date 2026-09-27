@@ -421,6 +421,50 @@ it.skipIf(process.platform !== "linux")("finishes the undo of a run that was cut
   expect(h.reports[0]).toContain("cut off");
 });
 
+it.skipIf(process.platform !== "linux")(
+  "mounts <Documents>/Slopify/Projects and Backups for a new install",
+  async () => {
+    const h = await setup();
+    const documents = join(h.home, "Dokumente");
+    const result = await applyDocker(h.options({ documents }), h.fake.e);
+    const projects = join(documents, "Slopify", "Projects");
+    const backups = join(documents, "Slopify", "Backups");
+    expect(result).toMatchObject({ projects, backups, changed: true });
+    const dir = join(h.root, "slopify");
+    const env = await readFile(join(dir, ".env"), "utf8");
+    expect(env).toContain(`SLOPIFY_PROJECTS_DIR='${projects}'`);
+    expect(env).toContain(`SLOPIFY_BACKUPS_DIR='${backups}'`);
+    expect(JSON.parse(await readFile(join(dir, "install.json"), "utf8"))).toMatchObject({
+      projects,
+      backups,
+    });
+    // Same settings again: nothing is recreated.
+    expect((await applyDocker(h.options({ documents }), h.fake.e)).changed).toBe(false);
+  },
+);
+
+it.skipIf(process.platform !== "linux")(
+  "keeps an existing install's Projects folder and its Backups inside it",
+  async () => {
+    const h = await setup();
+    await applyDocker(h.options(), h.fake.e);
+    const documents = join(h.home, "Documents");
+    const result = await applyDocker(
+      h.options({
+        mode: "update",
+        documents,
+        image: "ghcr.io/gentbajko/slopify:3.0.1",
+        version: "3.0.1",
+      }),
+      h.fake.e,
+    );
+    expect(result).toMatchObject({ projects: h.projects, backups: null, changed: true });
+    const env = await readFile(join(h.root, "slopify", ".env"), "utf8");
+    expect(env).toContain(`SLOPIFY_PROJECTS_DIR='${h.projects}'`);
+    expect(env).not.toContain("SLOPIFY_BACKUPS_DIR");
+  },
+);
+
 it("writes literal values and refuses quotes", () => {
   expect(composeEnv({ A: "/home/me/Project files", B: "" })).toBe(
     "A='/home/me/Project files'\nB=''\n",

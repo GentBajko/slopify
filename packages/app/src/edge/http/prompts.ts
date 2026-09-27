@@ -4,6 +4,10 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { versionsOrCurrent } from "../../slices/library/history.js";
 import { promptKinds } from "../../slices/library/model.js";
+import {
+  setPromptPhotorealistic,
+  withPhotorealistic,
+} from "../../slices/library/photorealistic.js";
 import { listPrompts, promptById } from "../../slices/library/repo.js";
 import type { LibraryDeps, SaveFailure } from "../../slices/library/save.js";
 import {
@@ -44,7 +48,7 @@ export function promptRoutes(deps: AppDeps) {
     new Hono()
       // Every kind in one list: 04 Prompts filters by tab, and Duplicate needs the body it
       // is copying.
-      .get("/", (c) => c.json({ prompts: listPrompts(deps.db) }))
+      .get("/", (c) => c.json({ prompts: withPhotorealistic(deps.db, listPrompts(deps.db)) }))
       .post("/", zValidator("json", promptBody, onInvalid), (c) => {
         const result = createPrompt(library, c.req.valid("json"));
         return result.ok ? c.json(result.value, 201) : refused(c, result, "prompt");
@@ -56,6 +60,28 @@ export function promptRoutes(deps: AppDeps) {
         (c) => {
           const result = updatePrompt(library, c.req.valid("param").id, c.req.valid("json"));
           return result.ok ? c.json(result.value) : refused(c, result, "prompt");
+        },
+      )
+      // An Image prompt's "Draws photorealistic pictures" tick (`slices/library/photorealistic.ts`).
+      .put(
+        "/:id/photorealistic",
+        zValidator("param", idParam, onInvalid),
+        zValidator("json", z.object({ photorealistic: z.boolean() }), onInvalid),
+        (c) => {
+          const result = setPromptPhotorealistic(
+            deps.db,
+            c.req.valid("param").id,
+            c.req.valid("json").photorealistic,
+          );
+          if (result.ok) return c.body(null, 204);
+          return result.reason === "not-found"
+            ? refused(c, { ok: false, reason: "not-found" }, "prompt")
+            : problem(c, {
+                status: 400,
+                title: titleOf(400),
+                detail:
+                  "Only an Image prompt can be marked photorealistic. Open the prompt from the Image tab in Library → Prompts.",
+              });
         },
       )
       // Every saved version, newest first (`slices/library/history.ts`).

@@ -42,7 +42,7 @@ export function sectionRoots(
 }
 
 // What making one reviewed item again regenerates and where its rebuild starts. The article
-// and the narration are redone like Re-run section on their stage; an image or the thumbnail
+// and the narration are redone like More → make it again in its section on their stage; an image or the thumbnail
 // by its own token, like Regenerate; a short by "Make this short again"'s token.
 export function redoTarget(
   view: RevisionView,

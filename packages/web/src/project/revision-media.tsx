@@ -59,6 +59,28 @@ export function useCurrentRevisionView(): RevisionView | undefined {
 export function useOutputMedia(output: Output | undefined): RevisionMediaFile | undefined {
   const state = useContext(MediaContext);
   const { api } = useApp();
+  return mediaFor(api, state, output);
+}
+
+// Many outputs' files at once, for a gallery's lightbox: one hook, however many images.
+export function useOutputMediaList(
+  outputs: readonly Output[],
+): ReadonlyMap<string, RevisionMediaFile> {
+  const state = useContext(MediaContext);
+  const { api } = useApp();
+  const files = new Map<string, RevisionMediaFile>();
+  for (const output of outputs) {
+    const file = mediaFor(api, state, output);
+    if (file !== undefined) files.set(output.id, file);
+  }
+  return files;
+}
+
+function mediaFor(
+  api: Api,
+  state: MediaView | null,
+  output: Output | undefined,
+): RevisionMediaFile | undefined {
   if (output === undefined || (state !== null && state.projectId !== output.projectId))
     return undefined;
   if (state === null || state.revisionId === null)

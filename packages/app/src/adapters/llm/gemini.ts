@@ -125,7 +125,7 @@ export function geminiLlm(deps: GeminiDeps): LlmPort {
       throw failure(
         binary,
         "",
-        `The ${cliName(binary)} could not be started. Check it is installed and set up in Settings → Providers, then use Retry stage.`,
+        `The ${cliName(binary)} could not be started. Check it is installed and set up in Settings → Providers, then use Try again.`,
       );
     if (authRequired(run.stderr())) throw authFailure();
     throw failure(
@@ -148,7 +148,7 @@ function failure(binary: string, message: string, sentence?: string): Error {
     return providerError({
       kind: "unsupported",
       message:
-        "Google refused the Gemini CLI because the signed-in account has no licence for it (#3501). Update the Gemini CLI, run gemini in a terminal to sign in again, then use Retry stage; for a work or school account, ask your administrator for a Gemini licence.",
+        "Google refused the Gemini CLI because the signed-in account has no licence for it (#3501). Update the Gemini CLI, run gemini in a terminal to sign in again, then use Try again; for a work or school account, ask your administrator for a Gemini licence.",
     });
   }
   // The daily allowance of a signed-in Gemini plan. The CLI names no reset time, so the wait
@@ -176,7 +176,7 @@ function authFailure(): Error {
   return providerError({
     kind: "missing_key",
     message:
-      'The Gemini CLI is not signed in, or its sign-in has expired. Open a terminal on the computer running the CLI, run "gemini" and sign in, then use Retry stage.',
+      'The Gemini CLI is not signed in, or its sign-in has expired. Open a terminal on the computer running the CLI, run "gemini" and sign in, then use Try again.',
   });
 }
 async function* authChecked(source: AsyncIterable<Uint8Array>): AsyncGenerator<Uint8Array> {

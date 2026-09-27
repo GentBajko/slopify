@@ -76,12 +76,31 @@ export function videosQuery(api: Api, channelId: string) {
   });
 }
 
+// `filter` is the preview's "Keep only titles containing…" text, remembered for the channel.
 export async function importVideos(
   api: Api,
   channelId: string,
-  body: { readonly format: "lines" | "csv"; readonly text: string },
+  body: {
+    readonly format: "lines" | "csv";
+    readonly text: string;
+    readonly filter?: string;
+  },
 ): Promise<{ readonly added: number; readonly skipped: number }> {
   return read(await api.fetch(`${root(api, channelId)}/videos`, json("POST", body)));
+}
+
+// The titles in a Studio CSV, to tick before saving; nothing is saved yet.
+export async function previewVideos(
+  api: Api,
+  channelId: string,
+  text: string,
+): Promise<{ readonly titles: readonly string[]; readonly filter: string }> {
+  return read(
+    await api.fetch(
+      `${root(api, channelId)}/videos/preview`,
+      json("POST", { format: "csv", text }),
+    ),
+  );
 }
 
 export async function deleteVideo(api: Api, channelId: string, videoId: string): Promise<void> {

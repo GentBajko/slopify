@@ -1,5 +1,7 @@
 import type { PackItem } from "./pack.js";
 import {
+  abTestButton,
+  abTestInputs,
   alteredNo,
   alteredYes,
   description,
@@ -15,9 +17,8 @@ import {
   playlistItems,
   playlistTrigger,
   showMore,
+  tagChips,
   tags,
-  testAndCompareButton,
-  testAndCompareInputs,
   thumbnailInput,
   title,
 } from "./selectors.js";
@@ -55,6 +56,8 @@ export interface FillOptions {
 
 export class RefusedClick extends Error {}
 
+type WaitFor = (field: FieldSelectors, within?: ParentNode) => Promise<Element | null>;
+
 export async function fillStudio(
   root: Document,
   item: PackItem,
@@ -63,7 +66,7 @@ export async function fillStudio(
 ): Promise<readonly FieldResult[]> {
   const sleep = options.sleep ?? ((ms: number) => new Promise((done) => setTimeout(done, ms)));
   const timeoutMs = options.timeoutMs ?? 4000;
-  const waitFor = async (field: FieldSelectors, within: ParentNode = root) => {
+  const waitFor: WaitFor = async (field, within = root) => {
     for (let waited = 0; ; waited += 100) {
       const found = findField(within, field);
       if (found !== null && visible(found)) return found;
@@ -131,18 +134,17 @@ export async function fillStudio(
         "Couldn't find the audience question — choose \"No, it's not made for kids\" under Audience by hand.",
     },
   );
-  // Show more is a toggle: it is pressed at most once, and only while a field it reveals is
-  // not showing, so a second field never closes what the first opened.
+  // Show more is a toggle: it is pressed at most once, only while its label still offers to
+  // show the advanced settings and the field it reveals isn't showing, so a second field never
+  // closes what the first opened.
   let expanded = false;
   const revealed = async (field: FieldSelectors): Promise<Element | null> => {
     const found = findField(root, field);
     if (found !== null && visible(found)) return found;
     if (!expanded) {
+      expanded = true;
       const more = findField(root, showMore);
-      if (more !== null) {
-        click(more);
-        expanded = true;
-      }
+      if (more !== null && collapsed(more)) click(more);
     }
     return waitFor(field);
   };
@@ -158,13 +160,13 @@ export async function fillStudio(
         return {
           field: "altered",
           ok: true,
-          message: `Altered content set to "${answer}". ${altered.why}`,
+          message: `AI use set to "${answer}". ${altered.why}`,
         };
       },
       {
         field: "altered",
         ok: false,
-        message: `Couldn't find the altered or synthetic content question — choose "${answer}" under Altered content (or AI use) by hand. ${altered.why}`,
+        message: `Couldn't find the AI use question — press Show more under the description and choose "${answer}" under AI use by hand. ${altered.why}`,
       },
     );
   }
@@ -174,8 +176,7 @@ export async function fillStudio(
       async () => {
         const input = await revealed(tags);
         if (!(input instanceof viewOf(root).HTMLInputElement)) throw new Error("missing");
-        setInputValue(input, `${line},`);
-        return { field: "tags", ok: true, message: `Tags filled (${String(item.tags.length)}).` };
+        return typeTags(root, input, item.tags);
       },
       missingText("tags", "the Tags field", line),
     );
@@ -214,64 +215,77 @@ function textField(
 async function fillThumbnails(
   root: Document,
   files: readonly File[],
-  waitFor: (field: FieldSelectors, within?: ParentNode) => Promise<Element | null>,
+  waitFor: WaitFor,
 ): Promise<FieldResult> {
   const HTMLInput = viewOf(root).HTMLInputElement;
-  // Three for Test & Compare, when Studio offers it; otherwise the first in the one slot.
+  const input = findField(root, thumbnailInput);
+  const first = files[0];
+  if (first === undefined) throw new Error("no files");
+  // Two or three for A/B Testing, when Studio offers it; otherwise the first in the one slot.
+  let abOpened = false;
   if (files.length > 1) {
-    const button = findField(root, testAndCompareButton);
+    const button = findField(root, abTestButton);
     if (button !== null && visible(button)) {
       click(button);
-      await waitFor(testAndCompareInputs);
-      const inputs = findAll(root, testAndCompareInputs).filter(
-        (input): input is HTMLInputElement => input instanceof HTMLInput,
+      abOpened = true;
+      await waitFor(abTestInputs);
+      const inputs = findAll(root, abTestInputs).filter(
+        (candidate): candidate is HTMLInputElement =>
+          candidate instanceof HTMLInput && candidate !== input,
       );
       if (inputs.length >= files.length) {
         files.forEach((file, index) => {
-          const input = inputs[index];
-          if (input !== undefined) setFiles(input, [file]);
+          const slot = inputs[index];
+          if (slot !== undefined) setFiles(slot, [file]);
         });
         return {
           field: "thumbnails",
           ok: true,
-          message: `All ${String(files.length)} thumbnails are in Test & compare. Check them and press its Done.`,
+          message: `All ${String(files.length)} thumbnails are in A/B Testing. Check them there and confirm the test in Studio yourself.`,
         };
       }
     }
   }
-  const input = findField(root, thumbnailInput);
   if (!(input instanceof HTMLInput)) throw new Error("missing");
-  const first = files[0];
-  if (first === undefined) throw new Error("no files");
   setFiles(input, [first]);
-  return files.length > 1
-    ? {
-        field: "thumbnails",
-        ok: true,
-        message: `Thumbnail 1 is set. Studio's Test & compare wasn't found, so add thumbnails 2 and 3 by hand: press Test & compare under Thumbnail and pick them from the project folder.`,
-      }
-    : { field: "thumbnails", ok: true, message: "Thumbnail set." };
+  if (files.length === 1) return { field: "thumbnails", ok: true, message: "Thumbnail set." };
+  const others = files.length === 2 ? "thumbnail 2" : "thumbnails 2 and 3";
+  return {
+    field: "thumbnails",
+    ok: true,
+    message: abOpened
+      ? `Thumbnail 1 is set. Studio's A/B Testing opened, but Slopify couldn't find where it takes the pictures, so add ${others} there by hand from the project folder (Slopify → Prepare upload → Open folder).`
+      : `Thumbnail 1 is set. Studio's A/B Testing button wasn't found, so add ${others} by hand: press A/B Testing beside the title (it may only appear after the upload is saved) and pick them from the project folder.`,
+  };
 }
 
-async function fillPlaylist(
-  root: Document,
-  name: string,
-  waitFor: (field: FieldSelectors, within?: ParentNode) => Promise<Element | null>,
-): Promise<FieldResult> {
+// Opens the Playlists list, ticks the one row named `name` (leaving the others as they are)
+// and closes the list with its own Done.
+async function fillPlaylist(root: Document, name: string, waitFor: WaitFor): Promise<FieldResult> {
   const trigger = findField(root, playlistTrigger);
   if (trigger === null) throw new Error("missing");
   click(trigger);
   const dialog = await waitFor(playlistDialog);
-  if (dialog === null) throw new Error("no dialog");
-  const wanted = name.trim().toLowerCase();
-  const row = findAll(dialog, playlistItems).find(
-    (candidate) =>
-      (findField(candidate, playlistItemName)?.textContent ?? "").trim().toLowerCase() === wanted,
-  );
   const close = () => {
-    const done = findField(root, playlistDone);
+    const done = dialog === null ? null : findField(dialog, playlistDone);
     if (done !== null) click(done);
+    else
+      (dialog ?? trigger).dispatchEvent(
+        new (viewOf(root).KeyboardEvent)("keydown", { bubbles: true, key: "Escape" }),
+      );
   };
+  if (dialog === null)
+    return {
+      field: "playlist",
+      ok: false,
+      message: `Couldn't open the playlist list — the playlist name "${name}" is copied, press Select under Playlists and pick it by hand.`,
+      copy: name,
+    };
+  const wanted = name.trim().toLowerCase();
+  const rows = findAll(dialog, playlistItems);
+  const nameOf = (row: Element) =>
+    (findField(row, playlistItemName)?.textContent ?? row.textContent ?? "").trim().toLowerCase();
+  const row = rows.find((candidate) => nameOf(candidate) === wanted);
   if (row === undefined) {
     close();
     return {
@@ -281,11 +295,50 @@ async function fillPlaylist(
       copy: name,
     };
   }
-  const box = findField(row, playlistItemCheckbox);
-  if (box === null) throw new Error("no checkbox");
+  const box = findField(row, playlistItemCheckbox) ?? row;
   if (!checked(box)) click(box);
+  const ticked = checked(box);
   close();
-  return { field: "playlist", ok: true, message: `Added to the playlist "${name}".` };
+  return ticked
+    ? { field: "playlist", ok: true, message: `Added to the playlist "${name}".` }
+    : {
+        field: "playlist",
+        ok: false,
+        message: `Couldn't tick the playlist "${name}" — the name is copied, press Select under Playlists and tick it by hand.`,
+        copy: name,
+      };
+}
+
+// Types each tag into the chip bar's input and ends it with Enter, then a comma if Studio
+// kept the text, so each becomes a chip. Tags already showing as chips are skipped.
+function typeTags(root: Document, input: HTMLInputElement, wanted: readonly string[]): FieldResult {
+  const existing = new Set(
+    findAll(root, tagChips).map((chip) => (chip.textContent ?? "").trim().toLowerCase()),
+  );
+  const left: string[] = [];
+  for (const tag of wanted) {
+    if (existing.has(tag.toLowerCase())) continue;
+    setInputValue(input, tag);
+    pressKey(input, "Enter");
+    if (input.value.trim() !== "") {
+      setInputValue(input, `${tag},`);
+      pressKey(input, ",");
+    }
+    if (input.value.trim() !== "") {
+      left.push(tag);
+      setInputValue(input, "");
+    }
+    existing.add(tag.toLowerCase());
+  }
+  input.blur();
+  if (left.length > 0)
+    return {
+      field: "tags",
+      ok: false,
+      message: `Couldn't add ${String(left.length)} of the tags — Studio didn't turn them into tags. The text is copied, paste it into Tags by hand.`,
+      copy: left.join(", "),
+    };
+  return { field: "tags", ok: true, message: `Tags filled (${String(wanted.length)}).` };
 }
 
 // Presses a control, never one of the upload's own Next/Save/Publish buttons.
@@ -298,10 +351,15 @@ export function click(element: Element): void {
   (element as HTMLElement).click();
 }
 
-// Studio's text boxes are contenteditable divs listening for input events. Typing through the
-// editor keeps its own state right; setting the text directly is the fallback.
+// Studio's title and description are contenteditable divs whose Polymer bindings listen for
+// input events. The text goes in as if typed: focus, select everything, then the editor's own
+// insertText, line by line with insertLineBreak between, so each "\n" becomes a real line
+// break. Where the page refuses that (or the result differs), the text is set as text nodes and
+// <br>s and an input event says so.
 export function setEditableText(element: HTMLElement, text: string): void {
   const doc = element.ownerDocument;
+  const view = doc.defaultView;
+  const lines = text.split(/\r?\n/);
   element.focus();
   let inserted = false;
   try {
@@ -310,7 +368,13 @@ export function setEditableText(element: HTMLElement, text: string): void {
     const selection = doc.getSelection();
     selection?.removeAllRanges();
     selection?.addRange(range);
-    inserted = typeof doc.execCommand === "function" && doc.execCommand("insertText", false, text);
+    if (typeof doc.execCommand === "function") {
+      inserted = text === "" ? doc.execCommand("delete", false) : true;
+      lines.forEach((line, index) => {
+        if (index > 0) inserted &&= doc.execCommand("insertLineBreak", false);
+        if (line !== "") inserted &&= doc.execCommand("insertText", false, line);
+      });
+    }
   } catch {
     inserted = false;
   }
@@ -318,21 +382,26 @@ export function setEditableText(element: HTMLElement, text: string): void {
     !inserted ||
     normalized(element.innerText ?? element.textContent ?? "") !== normalized(text)
   ) {
-    element.textContent = text;
+    element.replaceChildren();
+    lines.forEach((line, index) => {
+      if (index > 0) element.append(doc.createElement("br"));
+      if (line !== "") element.append(doc.createTextNode(line));
+    });
     element.dispatchEvent(
-      new (doc.defaultView?.InputEvent ?? InputEvent)("input", {
+      new (view?.InputEvent ?? InputEvent)("input", {
         bubbles: true,
+        composed: true,
         inputType: "insertText",
         data: text,
       }),
     );
   }
-  element.dispatchEvent(new (doc.defaultView?.Event ?? Event)("change", { bubbles: true }));
+  element.dispatchEvent(new (view?.Event ?? Event)("change", { bubbles: true }));
   element.blur();
 }
 
 // A plain input's value, through the prototype's setter so a framework watching the property
-// sees the change.
+// sees the change, then an input event as typing would send.
 export function setInputValue(input: HTMLInputElement, value: string): void {
   const view = input.ownerDocument.defaultView;
   const setter = Object.getOwnPropertyDescriptor(
@@ -342,17 +411,30 @@ export function setInputValue(input: HTMLInputElement, value: string): void {
   input.focus();
   if (setter === undefined) input.value = value;
   else setter.call(input, value);
-  input.dispatchEvent(new (view?.Event ?? Event)("input", { bubbles: true }));
-  input.dispatchEvent(new (view?.Event ?? Event)("change", { bubbles: true }));
-  // Studio turns the typed text into tags on Enter.
   input.dispatchEvent(
-    new (view?.KeyboardEvent ?? KeyboardEvent)("keydown", {
+    new (view?.InputEvent ?? InputEvent)("input", {
       bubbles: true,
-      key: "Enter",
-      code: "Enter",
+      composed: true,
+      inputType: "insertText",
+      data: value,
     }),
   );
-  input.blur();
+}
+
+function pressKey(input: HTMLInputElement, key: string): void {
+  const view = input.ownerDocument.defaultView;
+  const code = key === "Enter" ? "Enter" : "Comma";
+  for (const type of ["keydown", "keypress", "keyup"])
+    input.dispatchEvent(
+      new (view?.KeyboardEvent ?? KeyboardEvent)(type, {
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+        key,
+        code,
+        ...(key === "Enter" ? { keyCode: 13, which: 13 } : { keyCode: 188, which: 188 }),
+      }),
+    );
 }
 
 export function setFiles(input: HTMLInputElement, files: readonly File[]): void {
@@ -371,22 +453,34 @@ function viewOf(doc: Document): Window & typeof globalThis {
   return view;
 }
 
+// Studio marks the chosen radio with the class `iron-selected` and the `checked` attribute;
+// checkboxes use aria-checked.
 function checked(element: Element): boolean {
   return (
+    element.classList.contains("iron-selected") ||
     element.getAttribute("aria-checked") === "true" ||
     element.hasAttribute("checked") ||
     (element as HTMLInputElement).checked === true
   );
 }
 
+// Show more offers to show ("Show advanced settings", "Show more") while the settings are
+// hidden; an unlabelled toggle is assumed collapsed, since it is only pressed when the field
+// it reveals isn't showing.
+function collapsed(toggle: Element): boolean {
+  const label = (toggle.getAttribute("aria-label") ?? toggle.textContent ?? "").trim();
+  return label === "" || /^show/i.test(label);
+}
+
 function visible(element: Element): boolean {
   return element.closest("[hidden]") === null;
 }
 
-// Line breaks come back as <br>, <div> or "\n" depending on how the editor took the text, so
-// the check compares the words, not the whitespace between them.
+// Line breaks come back as <br>, <div> or "\n" depending on how the editor took the text (and
+// a <br> leaves no character in textContent), so the check compares the text without any
+// whitespace.
 function normalized(text: string): string {
-  return text.replace(/[\s ]+/g, " ").trim();
+  return text.replace(/[\s\u00a0]+/g, "");
 }
 
 function capitalized(text: string): string {

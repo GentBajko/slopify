@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { z } from "zod";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/kit/button";
+import { SectionHead } from "@/components/kit/section-head";
 import { keys } from "@/queries";
 import { OpenFolder } from "./open-folder.js";
 import { outputLabel } from "./output-label.js";
@@ -74,11 +75,8 @@ export function RevisionHistory({
       (output.output.role === "image" || output.output.role === "thumbnail"),
   );
   return (
-    <section
-      aria-label="Project history"
-      className="space-y-3 rounded-panel border border-line bg-panel p-4"
-    >
-      <h2>Project history</h2>
+    <section aria-label="Project history" className="space-y-3">
+      <SectionHead title="Project history" />
       {history.error === null ? null : <p role="alert">{history.error.message}</p>}
       <ol className="space-y-2">
         {history.data?.map((revision) => (
@@ -93,7 +91,7 @@ export function RevisionHistory({
       {view.error === null ? null : <p role="alert">{view.error.message}</p>}
       {selectedView === undefined ? null : (
         <div className="space-y-3">
-          <h3>{selectedView.revision.config.title}</h3>
+          <h3 className="text-title-3">{selectedView.revision.config.title}</h3>
           {zipImage === undefined ? null : (
             <span className="inline-flex gap-3">
               <a href={revisionImagesUrl(api, projectId, selectedView.revision.id)} download>
@@ -106,11 +104,11 @@ export function RevisionHistory({
               />
             </span>
           )}
-          <ul className="space-y-3">
+          <ul className="m-0 list-none space-y-3 p-0">
             {selectedView.outputs.map((output) => (
               <li
                 key={output.recordId}
-                className="space-y-2 rounded-control border border-line p-3"
+                className="space-y-2 border-t border-line pt-3 first:border-t-0 first:pt-0"
               >
                 {outputLabel(output.output)} · {output.state}
                 {output.selected ? "" : " · Earlier result"}:{" "}

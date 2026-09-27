@@ -19,7 +19,7 @@ export function imageWorkspace(input: readonly LlmImage[] | undefined) {
     throw providerError({
       kind: "unsupported",
       message:
-        "Slopify could not hand these pictures to the reviewer (too many, or not PNG, JPEG or WebP files), so nothing was sent. Use Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+        "Slopify could not hand these pictures to the reviewer (too many, or not PNG, JPEG or WebP files), so nothing was sent. Use Try again; if it happens again, use Download diagnostics in Settings and report it.",
     });
   const directory = mkdtempSync(join(tmpdir(), "slopify-images-"));
   const remove = () => rmSync(directory, { recursive: true, force: true, maxRetries: 3 });
@@ -55,13 +55,13 @@ export function unseenImages(): Error {
   return providerError({
     kind: "unavailable",
     message:
-      "The reviewer answered without opening every picture it was given, so its verdict was not used (the attempt may still have used your quota). Use Retry stage; if it keeps happening, choose Codex as the reviewer in Edit project → Reviews.",
+      "The reviewer answered without opening every picture it was given, so its verdict was not used (the attempt may still have used your quota). Use Try again; if it keeps happening, choose Codex as the reviewer in Edit project → Reviews.",
   });
 }
 
 export function noImages(provider: string): Error {
   return providerError({
     kind: "unsupported",
-    message: `Slopify can't show pictures to ${provider}, so a review that needs them was not sent. In Edit project → Reviews, choose Claude Code or Codex as the reviewer, or set the picture reviews to Off, then use Retry stage.`,
+    message: `Slopify can't show pictures to ${provider}, so a review that needs them was not sent. In Edit project → Reviews, choose Claude Code or Codex as the reviewer, or set the picture reviews to Off, then use Try again.`,
   });
 }

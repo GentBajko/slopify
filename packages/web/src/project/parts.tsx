@@ -8,24 +8,19 @@ import type { Components } from "react-markdown";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useApp } from "@/app-context";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/kit/button";
+import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/kit/menu";
 import { readText } from "@/http";
 import { cn } from "@/lib/utils";
 import { keys } from "@/queries";
 import { OpenFolder } from "./open-folder.js";
 import { useAssetMedia, useOutputMedia } from "./revision-media.js";
 
-// The furniture every stage body is made of: the indented frame under a rundown row, the 75 ch
-// prose measure, a download link, and the "Show instructions" toggle each stage carries. It
-// sits apart from the bodies so none of the six has to redraw it.
+// The furniture every stage body is made of: the column a body stacks in, the prose measure,
+// a download link, and the "Show instructions" toggle each stage carries. It sits apart from
+// the bodies so none of them has to redraw it.
 
-// The reference sheet's body inset: flush with the row's name column, not its lamp.
+// A body's column: sections of the page, not a box of its own.
 export function StageBody({
   children,
   className,
@@ -33,15 +28,15 @@ export function StageBody({
   readonly children: ReactNode;
   readonly className?: string;
 }) {
-  return <div className={cn("flex min-w-0 flex-col gap-4 p-5", className)}>{children}</div>;
+  return <div className={cn("flex min-w-0 flex-col gap-5", className)}>{children}</div>;
 }
 
 export function ActionRow({ children }: { readonly children: ReactNode }) {
-  return <div className="flex flex-wrap items-center gap-4 text-small">{children}</div>;
+  return <div className="flex flex-wrap items-center gap-3 text-small">{children}</div>;
 }
 
 export function EngravedLabel({ children }: { readonly children: ReactNode }) {
-  return <span className="engraved text-ink3">{children}</span>;
+  return <span className="sl-kicker">{children}</span>;
 }
 
 // The article is stored as markdown and shown here as prose. The parser is react-markdown;
@@ -53,12 +48,12 @@ export function EngravedLabel({ children }: { readonly children: ReactNode }) {
 // them renders as an `h3`: this sits inside a stage row, under the page's own `h1` and
 // the project title, so an article that opens with `#` may not claim to be the page.
 const article: Components = {
-  h1: ({ children }) => <Heading size="text-title">{children}</Heading>,
-  h2: ({ children }) => <Heading size="text-row">{children}</Heading>,
-  h3: ({ children }) => <Heading size="text-row">{children}</Heading>,
-  h4: ({ children }) => <Heading size="text-row">{children}</Heading>,
-  h5: ({ children }) => <Heading size="text-row">{children}</Heading>,
-  h6: ({ children }) => <Heading size="text-row">{children}</Heading>,
+  h1: ({ children }) => <Heading size="text-title-2">{children}</Heading>,
+  h2: ({ children }) => <Heading size="text-title-3">{children}</Heading>,
+  h3: ({ children }) => <Heading size="text-title-3">{children}</Heading>,
+  h4: ({ children }) => <Heading size="text-title-3">{children}</Heading>,
+  h5: ({ children }) => <Heading size="text-title-3">{children}</Heading>,
+  h6: ({ children }) => <Heading size="text-title-3">{children}</Heading>,
   p: ({ children }) => <p className="m-0">{children}</p>,
   strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
   ul: ({ children }) => <ul className="m-0 flex list-disc flex-col gap-1 pl-5">{children}</ul>,
@@ -67,7 +62,7 @@ const article: Components = {
   a: ({ children, href }) => (
     <a
       href={href}
-      className="rounded-control text-run-text underline underline-offset-[3px]"
+      className="rounded-control text-accent-ink underline underline-offset-[3px]"
       // An article's links point off this machine, and this page is not their referrer.
       target="_blank"
       rel="noreferrer"
@@ -76,17 +71,17 @@ const article: Components = {
     </a>
   ),
   code: ({ children }) => (
-    <code className="rounded-control bg-panel2 px-[4px] py-[1px] font-sans text-small">
+    <code className="rounded-control bg-sunken px-[4px] py-[1px] font-mono text-small">
       {children}
     </code>
   ),
   pre: ({ children }) => (
-    <pre className="m-0 overflow-x-auto rounded-control bg-panel2 p-[10px] font-sans text-small">
+    <pre className="m-0 overflow-x-auto rounded-control bg-sunken p-[10px] font-mono text-small">
       {children}
     </pre>
   ),
   blockquote: ({ children }) => (
-    <blockquote className="m-0 flex flex-col gap-2 border-l-2 border-line2 pl-3 text-ink2">
+    <blockquote className="m-0 flex flex-col gap-2 border-l-2 border-line-strong pl-3 text-ink-2">
       {children}
     </blockquote>
   ),
@@ -95,7 +90,7 @@ const article: Components = {
     <table className="w-full border-collapse text-left text-small">{children}</table>
   ),
   th: ({ children }) => (
-    <th className="engraved border-b border-line py-[6px] pr-4 text-left text-ink3">{children}</th>
+    <th className="sl-kicker border-b border-line py-[6px] pr-4 text-left">{children}</th>
   ),
   td: ({ children }) => (
     <td className="border-b border-line py-[6px] pr-4 align-top">{children}</td>
@@ -117,7 +112,7 @@ function Heading({ size, children }: { readonly size: string; readonly children:
 // 65-75 ch, the measure this app locks for prose.
 export function Prose({ markdown }: { readonly markdown: string }) {
   return (
-    <div className="flex max-w-[75ch] flex-col gap-2 text-pretty text-body text-ink">
+    <div className="flex max-w-[68ch] flex-col gap-2 text-pretty text-body text-ink">
       <Markdown remarkPlugins={[remarkGfm]} components={article}>
         {markdown}
       </Markdown>
@@ -166,17 +161,13 @@ export function RefusalLine({
   readonly onDismiss: () => void;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-control bg-red-tint px-[10px] py-[6px] text-small text-red">
+    <div className="flex items-center gap-3 rounded-control bg-danger-tint px-[10px] py-[6px] text-small text-danger">
       <span role="alert" className="min-w-0 break-words">
         {message}
       </span>
-      <button
-        type="button"
-        onClick={onDismiss}
-        className="ml-auto shrink-0 rounded-control px-2 text-ink2 hover:text-ink"
-      >
+      <Button variant="quiet" size="small" className="ml-auto shrink-0" onClick={onDismiss}>
         Dismiss
-      </button>
+      </Button>
     </div>
   );
 }
@@ -194,13 +185,9 @@ export function DownloadLink({
   const media = useAssetMedia(projectId, asset);
   if (media === undefined) return null;
   return (
-    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
-      <a
-        href={media.url}
-        download
-        className="inline-flex items-center gap-[5px] rounded-control text-small text-ink2 hover:text-ink"
-      >
-        <DownloadIcon aria-hidden="true" className="size-[14px] shrink-0" />
+    <span className="inline-flex flex-wrap items-center gap-x-1 gap-y-1">
+      <a href={media.url} download className="sl-btn sl-btn--quiet sl-btn--small">
+        <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
         {label}
       </a>
       <OpenFolder projectId={projectId} asset={asset} folder={media.folder} />
@@ -218,13 +205,9 @@ export function OutputDownload({
   const media = useOutputMedia(output);
   if (media === undefined) return null;
   return (
-    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
-      <a
-        href={media.url}
-        download
-        className="inline-flex items-center gap-[5px] rounded-control text-small text-ink2 hover:text-ink"
-      >
-        <DownloadIcon aria-hidden="true" className="size-[14px] shrink-0" />
+    <span className="inline-flex flex-wrap items-center gap-x-1 gap-y-1">
+      <a href={media.url} download className="sl-btn sl-btn--quiet sl-btn--small">
+        <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
         {label ?? "Download"}
       </a>
       <OpenFolder projectId={output.projectId} asset={assetOf(output)} folder={media.folder} />
@@ -248,20 +231,20 @@ export function DownloadMenu({
   if (present.length === 0) return null;
   return (
     // Not modal: an open menu leaves the rest of the page readable and clickable.
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <Button type="button">
-          <DownloadIcon aria-hidden="true" className="size-[14px] shrink-0" />
+    <Menu modal={false}>
+      <MenuTrigger asChild>
+        <Button>
+          <DownloadIcon aria-hidden="true" strokeWidth={1.75} />
           {label}
-          <ChevronDownIcon aria-hidden="true" className="size-[14px] shrink-0 text-ink2" />
+          <ChevronDownIcon aria-hidden="true" strokeWidth={1.75} className="text-ink-2" />
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent>
+      </MenuTrigger>
+      <MenuContent>
         {present.map((file) => (
           <DownloadItem key={file.output.id} output={file.output} label={file.label} />
         ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </MenuContent>
+    </Menu>
   );
 }
 
@@ -269,11 +252,11 @@ function DownloadItem({ output, label }: { readonly output: Output; readonly lab
   const media = useOutputMedia(output);
   if (media === undefined) return null;
   return (
-    <DropdownMenuItem asChild>
+    <MenuItem asChild>
       <a href={media.url} download>
         {label}
       </a>
-    </DropdownMenuItem>
+    </MenuItem>
   );
 }
 
@@ -308,15 +291,15 @@ export function OutputText({
 }) {
   const text = useOutputText(output);
   if (text.error !== null) {
-    return <p className="text-body text-red">{text.error.message}</p>;
+    return <p className="m-0 text-body text-danger">{text.error.message}</p>;
   }
   if (text.data === undefined) {
-    return <span className="h-4 w-[40ch] max-w-full rounded-control bg-panel2" />;
+    return <span className="h-4 w-[40ch] max-w-full rounded-control bg-sunken" />;
   }
   return as === "prose" ? (
     <Prose markdown={text.data} />
   ) : (
-    <pre className="max-w-[75ch] overflow-x-auto whitespace-pre-wrap font-sans text-small text-ink2">
+    <pre className="m-0 max-w-[68ch] overflow-x-auto whitespace-pre-wrap font-sans text-small text-ink-2">
       {text.data}
     </pre>
   );
@@ -330,16 +313,16 @@ export function Instructions({ output }: { readonly output: Output | undefined }
   }
   return (
     <>
-      <button
-        type="button"
+      <Button
+        variant="quiet"
+        size="small"
         aria-expanded={shown}
         onClick={() => {
           setShown(!shown);
         }}
-        className="rounded-control text-small text-ink2 underline underline-offset-[3px] hover:text-ink"
       >
         {shown ? "Hide instructions" : "Show instructions"}
-      </button>
+      </Button>
       {shown ? <OutputText output={output} as="plain" /> : null}
     </>
   );

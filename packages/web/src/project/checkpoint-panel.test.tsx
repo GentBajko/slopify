@@ -360,7 +360,7 @@ it("keeps project pause authoritative and rejects another revision's status", as
       "disabled",
     ),
   ).toBe(true);
-  expect(screen.getByText(/Project is paused/)).not.toBeNull();
+  expect(screen.getByText(/The project is paused. Continue the run/)).not.toBeNull();
   mounted.unmount();
   renderApp(<CheckpointPanel projectId="p1" revisionId="r2" paused={false} stages={[]} />, deps);
   expect(await screen.findByText(/edited after these checkpoints loaded/)).not.toBeNull();

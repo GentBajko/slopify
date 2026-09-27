@@ -87,7 +87,7 @@ export async function prepareSubtitles(
   context.emit({ type: "stage.progress", projectId, stage: "video", current: 0, total: 100 });
   if (audio.length === 0)
     throw new Error(
-      "Captions need narration audio, but this project has none. Turn captions off in Edit project → Subtitles, or turn narration on, then Retry stage.",
+      "Captions need narration audio, but this project has none. Turn captions off in Edit project → Subtitles, or turn narration on, then Try again.",
     );
   const outputs = outputsOf(deps.db, projectId);
   const segments = audio.map((segment) => ({
@@ -118,7 +118,7 @@ export async function prepareSubtitles(
     const cues = captionCues(words);
     if (cues.length === 0)
       throw new Error(
-        "None of the narration could be matched to the article text, so captions can't be timed. The narration must be in the project language set in Edit project → Language; if you uploaded your own audio, make sure it reads the article text, then Retry stage.",
+        "None of the narration could be matched to the article text, so captions can't be timed. The narration must be in the project language set in Edit project → Language; if you uploaded your own audio, make sure it reads the article text, then Try again.",
       );
     writeFileSync(join(directory, "subtitles.srt"), serializeSrt(cues), { mode: 0o600 });
     writeFileSync(join(directory, "subtitles.vtt"), serializeVtt(cues), { mode: 0o600 });
@@ -195,7 +195,7 @@ async function alignSegments(
 ): Promise<readonly TimedWord[]> {
   if (deps.alignSubtitles === undefined)
     throw new Error(
-      "Slopify hit an internal error (the caption timing tool is missing from this build). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (the caption timing tool is missing from this build). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   const words: TimedWord[] = [];
   const total = segments.reduce((sum, segment) => sum + segment.seconds, 0);
@@ -228,7 +228,7 @@ async function alignSegments(
       for (const word of aligned) {
         if (word.end > segment.seconds + 0.1)
           throw new Error(
-            "Caption timing came out longer than the narration audio. Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+            "Caption timing came out longer than the narration audio. Try again; if it happens again, use Download diagnostics in Settings and report it.",
           );
         words.push({
           ...word,

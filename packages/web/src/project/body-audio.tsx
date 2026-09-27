@@ -6,7 +6,6 @@ import { useApp } from "@/app-context";
 import { voicesQuery } from "@/queries";
 import type { BodyProps } from "./body.js";
 import { outputsOf, roleOf } from "./body.js";
-import { ConfirmedButton } from "./controls.js";
 import { LiveAudio } from "./live-audio.js";
 import { NarrationDownloads } from "./narration-downloads.js";
 import { NarrationText } from "./narration-text.js";
@@ -23,7 +22,7 @@ const players: readonly { readonly role: OutputRole; readonly name: string }[] =
   { role: "audio_outro", name: "Outro" },
 ];
 
-export function AudioBody({ stage, project, outputs, actions, busy }: BodyProps) {
+export function AudioBody({ stage, project, outputs, busy }: BodyProps) {
   const { api } = useApp();
   const voices = useQuery(voicesQuery(api));
   const reviews = useReviews(project.id);
@@ -43,7 +42,7 @@ export function AudioBody({ stage, project, outputs, actions, busy }: BodyProps)
     <StageBody>
       {stage.state === "running" ? <LiveAudio projectId={project.id} /> : null}
       {landed.length === 0 ? (
-        <p className="text-small text-ink2">No narration has landed yet.</p>
+        <p className="m-0 text-small text-ink-2">No narration has landed yet.</p>
       ) : (
         landed.map((player) => (
           <Player key={player.role} name={player.name} output={player.output} />
@@ -58,23 +57,13 @@ export function AudioBody({ stage, project, outputs, actions, busy }: BodyProps)
       <NarrationText outputs={mine} />
       <NarrationDownloads outputs={mine} />
       <ActionRow>
-        <ConfirmedButton
-          action={{ kind: "rerun", stage: stage.kind }}
-          run={() => {
-            actions.run({ kind: "rerun", stage: stage.kind });
-          }}
-          disabled={busy}
-          pending={actions.pending}
-        >
-          Re-run
-        </ConfirmedButton>
         {voice === undefined ? null : (
           <>
             <EngravedLabel>Voice</EngravedLabel>
             <span className="text-small text-ink">{voice}</span>
           </>
         )}
-        <span className="text-small text-ink2">{`Chunking: ${chunkingOf(project.config.chunking)}`}</span>
+        <span className="text-small text-ink-2">{`Chunking: ${chunkingOf(project.config.chunking)}`}</span>
       </ActionRow>
     </StageBody>
   );
@@ -84,7 +73,7 @@ function Player({ name, output }: { readonly name: string; readonly output: Outp
   const media = useOutputMedia(output);
   const length = duration(output.durationMs ?? undefined);
   return (
-    <div className="grid grid-cols-[60px_minmax(0,1fr)_auto] items-center gap-3 text-small">
+    <div className="grid grid-cols-[64px_minmax(0,1fr)] items-center gap-3 text-small sm:grid-cols-[64px_minmax(0,1fr)_auto]">
       <EngravedLabel>{name}</EngravedLabel>
       {/* biome-ignore lint/a11y/useMediaCaption: this is the user's own narration of their
           own article, and no caption track exists for it anywhere in the pipeline. */}
@@ -93,10 +82,10 @@ function Player({ name, output }: { readonly name: string; readonly output: Outp
         preload="metadata"
         aria-label={`${name} narration`}
         src={media?.url}
-        className="h-8 w-full max-w-[520px]"
+        className="h-10 w-full max-w-[640px]"
       />
-      <span className="flex items-center gap-4">
-        {length === undefined ? null : <span className="text-ink2 tabular-nums">{length}</span>}
+      <span className="col-span-2 flex items-center gap-3 sm:col-span-1">
+        {length === undefined ? null : <span className="text-ink-2 tabular-nums">{length}</span>}
         <OutputDownload output={output} />
       </span>
     </div>

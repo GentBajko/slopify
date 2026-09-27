@@ -1,3 +1,4 @@
+import { AlertTriangleIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { RevisionRefusal } from "./revision-api.js";
 
@@ -26,9 +27,11 @@ export function RevisionFeedback({
       ref={alert}
       role="alert"
       tabIndex={-1}
-      className="space-y-2 rounded-control border border-red p-3 text-red"
+      data-tone="danger"
+      className="sl-callout sl-callout--danger outline-none"
     >
-      <p>
+      <AlertTriangleIcon aria-hidden="true" strokeWidth={1.75} />
+      <p className="sl-callout__title m-0">
         {error ??
           (refusal?.reason === "readiness"
             ? refusal.fields.length > 0
@@ -37,7 +40,7 @@ export function RevisionFeedback({
             : refusal?.message)}
       </p>
       {refusal?.fields.length ? (
-        <ul className="list-disc pl-5">
+        <ul className="sl-callout__body m-0 list-disc pl-5">
           {refusal.fields.map(({ field, message }) => (
             <li key={`${field}:${message}`}>
               {labels[field.split(".")[0] ?? ""] ?? "Project"}: {message}

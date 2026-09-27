@@ -46,12 +46,12 @@ export function parseAttribution(
   if (expected.length > 0 && kept / expected.length < 0.9)
     return {
       ok: false,
-      reason: `The speaker split left out ${String(expected.length - kept)} of the text's ${String(expected.length)} words. The text model must hand every word to a speaker; Retry stage, or choose another model in Edit project → Providers.`,
+      reason: `The speaker split left out ${String(expected.length - kept)} of the text's ${String(expected.length)} words. The text model must hand every word to a speaker; Try again, or choose another model in Edit project → Providers.`,
     };
   if (got.length - kept > Math.max(3, expected.length * 0.1))
     return {
       ok: false,
-      reason: `The speaker split added ${String(got.length - kept)} words that are not in the text. The text model must not write anything of its own; Retry stage, or choose another model in Edit project → Providers.`,
+      reason: `The speaker split added ${String(got.length - kept)} words that are not in the text. The text model must not write anything of its own; Try again, or choose another model in Edit project → Providers.`,
     };
   return parsed;
 }

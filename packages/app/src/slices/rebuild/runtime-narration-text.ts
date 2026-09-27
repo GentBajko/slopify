@@ -32,7 +32,7 @@ export function narrationTextParts(
   );
   if (concat === undefined)
     throw new Error(
-      `Slopify hit an internal error (the ${segment} narration is missing from the project plan). Retry stage; if it happens again, use Download diagnostics in Settings and report it.`,
+      `Slopify hit an internal error (the ${segment} narration is missing from the project plan). Try again; if it happens again, use Download diagnostics in Settings and report it.`,
     );
   return concat.dependsOn.map((key) => {
     const recipe = plan.recipes.find((row) => row.key === key);
@@ -46,7 +46,7 @@ export function narrationTextParts(
     );
     if (selected === undefined || recipe === undefined)
       throw new Error(
-        "Some narration chunks aren't finished, so the full narration text isn't available. Let the Narration stage finish (Resume, or Retry stage on it), or regenerate the missing chunk in Edit project → Narration.",
+        "Some narration chunks aren't finished, so the full narration text isn't available. Let the Narration stage finish (Resume, or Try again on it), or regenerate the missing chunk in Edit project → Narration.",
       );
     const input = recipe.input;
     if (
@@ -61,7 +61,7 @@ export function narrationTextParts(
       };
     if (input.kind !== "tts")
       throw new Error(
-        "Slopify hit an internal error (a narration chunk's text was never worked out). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+        "Slopify hit an internal error (a narration chunk's text was never worked out). Try again; if it happens again, use Download diagnostics in Settings and report it.",
       );
     const payload = z
       .object({ text: z.string().optional(), spokenText: z.string().optional() })
@@ -71,7 +71,7 @@ export function narrationTextParts(
       (payload.spokenText !== input.spokenText || payload.text !== input.text)
     )
       throw new Error(
-        "A narration chunk's audio no longer matches its prepared text. Regenerate that chunk in Edit project → Narration, then Retry stage.",
+        "A narration chunk's audio no longer matches its prepared text. Regenerate that chunk in Edit project → Narration, then Try again.",
       );
     return {
       logicalKey: input.logicalKey,
@@ -89,7 +89,7 @@ export async function publishNarrationText(
 ): Promise<void> {
   if (piece.input.kind !== "local")
     throw new Error(
-      "Slopify hit an internal error (the narration text file step was set up wrongly). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (the narration text file step was set up wrongly). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   const { segment } = z
     .object({ segment: z.enum(["body", "intro", "outro"]) })
@@ -100,7 +100,7 @@ export async function publishNarrationText(
     .get(context.work.workId);
   if (view === undefined)
     throw new Error(
-      "Slopify hit an internal error (the project version being narrated is missing). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (the project version being narrated is missing). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   const plan = executionPlan(deps, view, savedCatalogue(row?.recipe_context));
   if (
@@ -109,7 +109,7 @@ export async function publishNarrationText(
     )
   )
     throw new Error(
-      "Slopify hit an internal error (the narration text no longer matches the project's saved inputs). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (the narration text no longer matches the project's saved inputs). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   const parts = narrationTextParts(view, plan, segment);
   const outputs = preparedTexts(deps, context, piece, [

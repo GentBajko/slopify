@@ -2,7 +2,7 @@ import type { LlmPreviewEvent } from "@app/kernel/events.js";
 import type { StageKind } from "@app/kernel/pipeline.js";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { Picker } from "@/components/ui/picker";
+import { Select } from "@/components/kit/field";
 import { cn } from "@/lib/utils";
 import { useProjectRevision } from "./live-revision.js";
 
@@ -66,11 +66,11 @@ export function LiveWriting({
   }, [follow, selected?.text]);
   if (calls.length === 0 && stage !== "research" && stage !== "article") return null;
   return (
-    <div className={cn("rounded-control border border-line2 bg-panel2", className)}>
+    <div className={cn("rounded-control border border-line-strong bg-raised", className)}>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
-        <span className="text-small font-semibold text-run-text">Live writing</span>
+        <span className="text-small font-semibold text-accent-ink">Live writing</span>
         {calls.length > 1 ? (
-          <Picker
+          <Select
             aria-label="Live writing task"
             value={selected?.callId ?? ""}
             onChange={(event) => setPicked(event.target.value)}
@@ -81,9 +81,9 @@ export function LiveWriting({
                 {call.label ?? "Writing"} · {index + 1}
               </option>
             ))}
-          </Picker>
+          </Select>
         ) : null}
-        <label className="flex cursor-pointer items-center gap-2 text-label text-ink2">
+        <label className="flex cursor-pointer items-center gap-2 text-label text-ink-2">
           <input
             type="checkbox"
             checked={follow}
@@ -97,11 +97,11 @@ export function LiveWriting({
         aria-label="Live writing preview"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users need to scroll this reading region.
         tabIndex={0}
-        className="max-h-[360px] min-h-32 overflow-auto whitespace-pre-wrap break-words p-4 font-sans text-small leading-relaxed text-ink2"
+        className="max-h-[360px] min-h-32 overflow-auto whitespace-pre-wrap break-words p-4 font-sans text-small leading-relaxed text-ink-2"
       >
         {selected?.text || "Waiting for the provider's first text…"}
       </section>
-      <p className="border-t border-line px-4 py-2 text-label text-ink3">
+      <p className="border-t border-line px-4 py-2 text-label text-ink-3">
         Live preview. The complete output is saved when this stage finishes.
       </p>
     </div>

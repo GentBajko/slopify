@@ -414,6 +414,38 @@ describe("an existing prompt", () => {
     expect(onLeave).toHaveBeenCalledWith("article");
   });
 
+  it("marks a saved Image prompt photorealistic at once, and offers it on Image prompts only", async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    const painting = { ...dossier, id: "img1", kind: "image" as const, name: "Oil painting" };
+    let listed: readonly Prompt[] = [painting];
+    renderRouted(
+      <PromptEditorRoute promptId="img1" kind="image" from={undefined} onLeave={vi.fn()} />,
+      testDeps({
+        "GET /api/prompts": (request) => jsonAnswer({ prompts: listed })(request),
+        "PUT /api/prompts/img1/photorealistic": async (request) => {
+          sent.push(await request.json());
+          listed = [{ ...painting, photorealistic: true } as Prompt];
+          return emptyAnswer()(request);
+        },
+      }),
+    );
+    const toggle = await screen.findByRole("switch", { name: "Draws photorealistic pictures" });
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    await user.click(toggle);
+    await waitFor(() => {
+      expect(toggle.getAttribute("aria-checked")).toBe("true");
+    });
+    expect(sent).toEqual([{ photorealistic: true }]);
+    cleanup();
+    renderRouted(
+      <PromptEditorRoute promptId="p1" kind="article" from={undefined} onLeave={vi.fn()} />,
+      deps([dossier]),
+    );
+    await screen.findByLabelText("Name");
+    expect(screen.queryByRole("switch", { name: "Draws photorealistic pictures" })).toBeNull();
+  });
+
   it("says so when the prompt is no longer there", async () => {
     renderRouted(
       <PromptEditorRoute promptId="gone" kind="article" from={undefined} onLeave={vi.fn()} />,

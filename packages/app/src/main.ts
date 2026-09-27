@@ -18,6 +18,7 @@ import { createAutostart } from "./edge/autostart/index.js";
 import type { AutostartService } from "./edge/autostart/service.js";
 import {
   dockerActivationCommitted,
+  dockerFilesLayout,
   dockerFolderConfiguration,
 } from "./edge/docker-install/activation.js";
 import { createHub, observedHub } from "./edge/events/hub.js";
@@ -42,7 +43,7 @@ import { acquireInstanceLock } from "./kernel/lock.js";
 import type { Log } from "./kernel/log.js";
 import { openLog } from "./kernel/log.js";
 import type { Paths } from "./kernel/paths.js";
-import { ensureDirs, layout, subtitleModelDir } from "./kernel/paths.js";
+import { ensureDataDirs, ensureDirs, layout, repoint, subtitleModelDir } from "./kernel/paths.js";
 import { stageKinds } from "./kernel/pipeline.js";
 import type { Registry } from "./kernel/ports/registry.js";
 import type { SubtitleAligner } from "./kernel/ports/subtitles.js";
@@ -106,6 +107,14 @@ import { createScheduleRunner } from "./slices/schedules/scheduler.js";
 import { nodeCliProbe } from "./slices/settings/cli-status.js";
 import { isLocalCliProvider, localCliConcurrency } from "./slices/settings/model.js";
 import { providerStatuses } from "./slices/settings/readiness.js";
+import { busyProjects } from "./slices/storage/backup-export.js";
+import { documentsDir, nodeDocumentsHost } from "./slices/storage/documents.js";
+import {
+  createFilesService,
+  ensureFilesFolders,
+  filesLayoutOf,
+  settleFilesLocation,
+} from "./slices/storage/files-location.js";
 import { reconcileStorage } from "./slices/storage/reconcile.js";
 import { previewPictures } from "./slices/style-preview/images.js";
 import { ffmpegStylePreview } from "./slices/style-preview/render.js";
@@ -155,6 +164,9 @@ export interface BootOptions {
   // Check the published model catalogue and OpenRouter's live list at start and once a day.
   // The CLI turns it on; tests boot without it so they never reach the network.
   readonly refreshModels?: boolean;
+  // A new install keeps its projects, backups and exports in <Documents>/Slopify. The CLI turns
+  // it on unless a data dir was chosen; tests boot without it so they never touch Documents.
+  readonly filesInDocuments?: boolean;
 }
 
 export interface ScheduleTickLifecycle {
@@ -223,8 +235,9 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
   const candidateToken = process.env.SLOPIFY_UPDATE_TOKEN ?? "";
   const pendingActivation =
     isUpdateToken(candidateToken) && process.env.SLOPIFY_UPDATE_PENDING === "1";
-  ensureDirs(paths, { mode: 0o700 });
+  ensureDataDirs(paths, { mode: 0o700 });
   const lock = acquireInstanceLock(paths.lock);
+  const freshInstall = !existsSync(paths.db);
   let db: DatabaseSync | undefined;
   try {
     const ffmpeg = await prepareFfmpeg({
@@ -235,6 +248,26 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     });
     db = openDb(paths.db);
     migrate(db, clock);
+    // Where the projects, backups and exports live. A container's are the installer's mounts;
+    // a native install decides once and remembers (slices/storage/files-location.ts).
+    const container = process.env.SLOPIFY_CONTAINER === "1";
+    const files = container
+      ? dockerFilesLayout(process.env, paths.dataDir)
+      : filesLayoutOf(
+          await settleFilesLocation({
+            db,
+            dataDir: paths.dataDir,
+            fresh: freshInstall,
+            documents:
+              options.filesInDocuments === true
+                ? () => documentsDir(nodeDocumentsHost())
+                : undefined,
+          }),
+          paths.dataDir,
+        );
+    repoint(paths, files);
+    if (files.exports === null) ensureDirs(paths, { mode: 0o700 });
+    else await ensureFilesFolders(files);
     const runtimeDb = db;
     const interrupted = markInterruptedStages(db, clock);
     recoverCheckpointWork(db);
@@ -514,6 +547,23 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
     });
     const mutations = createMutationLifecycle();
     const folderConfiguration = await dockerFolderConfiguration(process.env, paths.projects);
+    const filesService = createFilesService({
+      db,
+      paths,
+      documents: () => documentsDir(nodeDocumentsHost()),
+      busy: () => busyProjects({ db: runtimeDb, hasInflight: runner.hasInflight }),
+      openFolder,
+      beginMutation: updater.beginMutation,
+      ...(container
+        ? {
+            docker: {
+              hostProjects: folderConfiguration.hostProjects,
+              hostBackups: folderConfiguration.hostBackups,
+              ...(hostCli === undefined ? {} : { openOnHost: hostCli.openFolder }),
+            },
+          }
+        : {}),
+    });
     const backups = createBackupService({
       db,
       paths,
@@ -553,6 +603,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
       drafts: draftDeps,
       schedules: scheduleDeps,
       backups,
+      files: filesService,
       ...(rebuild.measureAudio === undefined ? {} : { measureAudio: rebuild.measureAudio }),
       decodePeaks: (path, signal) => decodePeaks(ffmpeg, path, signal),
       openFolder,

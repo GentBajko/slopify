@@ -44,7 +44,7 @@ export async function* inworldAsync(
     throw providerError({
       kind: "unsupported",
       message:
-        "This narration part is longer than the 100,000 characters Inworld takes at once (10,000 on On-Demand accounts). Set Chunking to Paragraph in the Providers section of Edit project, then use Retry stage.",
+        "This narration part is longer than the 100,000 characters Inworld takes at once (10,000 on On-Demand accounts). Set Chunking to Paragraph in the Providers section of Edit project, then use Try again.",
     });
   }
   const headers = { Authorization: `Basic ${key}`, "Content-Type": "application/json" };
@@ -184,7 +184,7 @@ function clean(message: string, key: string): string {
 function downloadFailed(status: string): Error {
   return providerError({
     kind: "other",
-    message: `Inworld made the narration, but Slopify could not download it${status}. Check your internet connection, then use Retry stage.`,
+    message: `Inworld made the narration, but Slopify could not download it${status}. Check your internet connection, then use Try again.`,
   });
 }
 function unreadableAnswer(): Error {
@@ -203,6 +203,6 @@ export function streamFailure(code: number | undefined, detail: string, voiceId:
     "Inworld",
     "stopped before the narration was finished",
     detail,
-    "This is usually temporary: wait a few minutes, then use Retry stage.",
+    "This is usually temporary: wait a few minutes, then use Try again.",
   );
 }

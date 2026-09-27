@@ -44,7 +44,7 @@ const details: Readonly<Record<keyof typeof statuses, string>> = {
     "This change was already sent with different details. Reload the page, then try again.",
   "invalid-edit": "Some of your changes are not valid. Fix the highlighted fields and save again.",
   "stale-preview":
-    "What needs rebuilding changed since you opened this review. Cancel it and open Rebuild affected outputs again to see the latest.",
+    "What needs rebuilding changed since you opened this review. Cancel it and open Choose what to remake (in the project's More menu) again to see the latest.",
   "invalid-selection":
     "Some of the outputs you picked can no longer be rebuilt. Reload the page and choose again.",
   "review-required":

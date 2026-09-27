@@ -73,7 +73,7 @@ export function shortAudioArgs(
   }
   if (count === 0 || first === undefined)
     throw new Error(
-      "A short's clip falls outside the narration, so it has no sound to cut. Use Pick different moments in Edit project → Shorts, then Retry stage.",
+      "A short's clip falls outside the narration, so it has no sound to cut. Use Pick different moments in Edit project → Shorts, then Try again.",
     );
   const joined = Array.from({ length: count }, (_value, at) => `[a${String(at)}]`).join("");
   chains.push(`${joined}concat=n=${String(count)}:v=0:a=1[joined]`);
@@ -127,7 +127,7 @@ export function shortEditList(input: {
 }): EditList {
   if (input.images.length === 0)
     throw new Error(
-      "A short has no images to show. Use Make this short again in Edit project → Shorts, then Retry stage.",
+      "A short has no images to show. Use Make this short again in Edit project → Shorts, then Try again.",
     );
   const total = Math.max(1, Math.round(input.seconds * fps));
   const each = Math.max(1, Math.round(input.imageSeconds * fps));

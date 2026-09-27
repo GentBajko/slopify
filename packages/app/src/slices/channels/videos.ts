@@ -2,12 +2,15 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import type { Clock } from "../../kernel/clock.js";
 import { transact } from "../../kernel/db/tx.js";
+import { readSetting, writeSetting } from "../settings/repo.js";
 import { channelById } from "./repo.js";
 import { titlesFromCsv, titlesFromLines } from "./studio-csv.js";
 
 // Channel page → Existing videos: the titles of videos the channel made before (or outside)
 // Slopify, pasted or imported from a YouTube Studio CSV, so topic suggestions and duplicate
-// checks skip them too (`slices/schedules/topics.ts`).
+// checks skip them too (`slices/schedules/topics.ts`). A CSV is previewed first so videos of
+// other channels in the same Studio export can be unticked; the ticked titles are then saved
+// as lines, and the preview's "Keep only titles containing…" text is remembered per channel.
 
 export interface ChannelVideo {
   readonly id: string;
@@ -33,12 +36,22 @@ export const videoTitleMax = 500;
 // ceiling: a channel with more uploads than this imports the first ones; the topic prompt
 // only lists 5,000 titles anyway.
 export const importMax = 10_000;
+export const importFilterMax = 200;
+const filterKey = (channelId: string): string => `channels.importFilter.${channelId}`;
 
 const importSchema = z
   .object({
     // "lines": one title per line; "csv": a CSV export, the title column found by its header.
     format: z.enum(["lines", "csv"]),
     text: z.string().max(20_000_000, "This file is too large. Import at most 20 MB at a time."),
+    // The preview's "Keep only titles containing…" text, remembered for the next import.
+    filter: z
+      .string()
+      .max(
+        importFilterMax,
+        `The filter is too long to remember. Shorten "Keep only titles containing…" on the channel's Existing videos tab to at most ${importFilterMax} characters.`,
+      )
+      .optional(),
   })
   .strict();
 
@@ -68,12 +81,59 @@ export function listChannelVideos(
   return { ok: true, value: channelVideos(deps.db, channelId) };
 }
 
+// The titles an import would add and the channel's last "Keep only titles containing…" text
+// ("" when none); nothing is saved.
+export function previewChannelVideos(
+  deps: Pick<ChannelVideoDeps, "db">,
+  channelId: string,
+  input: unknown,
+): VideoResult<{ readonly titles: readonly string[]; readonly filter: string }> {
+  if (channelById(deps.db, channelId) === undefined) return { ok: false, reason: "not-found" };
+  const read = importOf(input);
+  if (!read.ok) return read;
+  const filter = storedFilter(readSetting(deps.db, filterKey(channelId)));
+  return { ok: true, value: { titles: read.value.titles, filter } };
+}
+
 // Titles already on the channel (any case) and repeats within the import are skipped.
 export function importChannelVideos(
   deps: ChannelVideoDeps,
   channelId: string,
   input: unknown,
 ): VideoResult<{ readonly added: number; readonly skipped: number }> {
+  const read = importOf(input);
+  if (!read.ok) return read;
+  const { titles, filter } = read.value;
+  return transact(deps.db, () => {
+    if (channelById(deps.db, channelId) === undefined)
+      return { ok: false, reason: "not-found" } as const;
+    const at = deps.clock.now().toISOString();
+    const insert = deps.db.prepare(
+      "INSERT INTO channel_videos(id,channel_id,title,created_at) VALUES (?,?,?,?) ON CONFLICT DO NOTHING",
+    );
+    let added = 0;
+    for (const title of titles)
+      added += Number(insert.run(deps.uuid(), channelId, title, at).changes);
+    if (filter !== undefined)
+      writeSetting(deps.db, filterKey(channelId), JSON.stringify(filter.trim()));
+    return { ok: true, value: { added, skipped: titles.length - added } } as const;
+  });
+}
+
+// Stored as JSON, like every row of the `settings` table a backup carries.
+function storedFilter(stored: string | undefined): string {
+  if (stored === undefined) return "";
+  try {
+    const value: unknown = JSON.parse(stored);
+    return typeof value === "string" ? value : "";
+  } catch {
+    return "";
+  }
+}
+
+function importOf(
+  input: unknown,
+): VideoResult<{ readonly titles: readonly string[]; readonly filter: string | undefined }> {
   const parsed = importSchema.safeParse(input);
   if (!parsed.success)
     return { ok: false, reason: "invalid-input", message: parsed.error.issues[0]?.message };
@@ -97,18 +157,7 @@ export function importChannelVideos(
       reason: "invalid-input",
       message: `This holds ${titles.length.toLocaleString("en")} titles; import at most ${importMax.toLocaleString("en")} at a time.`,
     };
-  return transact(deps.db, () => {
-    if (channelById(deps.db, channelId) === undefined)
-      return { ok: false, reason: "not-found" } as const;
-    const at = deps.clock.now().toISOString();
-    const insert = deps.db.prepare(
-      "INSERT INTO channel_videos(id,channel_id,title,created_at) VALUES (?,?,?,?) ON CONFLICT DO NOTHING",
-    );
-    let added = 0;
-    for (const title of titles)
-      added += Number(insert.run(deps.uuid(), channelId, title, at).changes);
-    return { ok: true, value: { added, skipped: titles.length - added } } as const;
-  });
+  return { ok: true, value: { titles, filter: parsed.data.filter } };
 }
 
 export function deleteChannelVideo(

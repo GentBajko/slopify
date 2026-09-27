@@ -46,7 +46,7 @@ import type { WorkPiece } from "./work-records.js";
 
 // The Shorts step's four kinds of work (`recipe-shorts.ts`): the pick, each clip's image
 // prompts, each image, and each clip's render. Each is one piece of its own, so a failure
-// names the clip it belongs to and Retry stage redoes only what did not finish.
+// names the clip it belongs to and Try again redoes only what did not finish.
 export async function executeShortsRecipe(
   deps: ExportExecutionDeps,
   context: StageContext,
@@ -70,7 +70,7 @@ export async function executeShortsRecipe(
   const clip = savedClips(snapshot).find((one) => one.number === number);
   if (clip === undefined)
     throw new Error(
-      "The clip this short was cut from is no longer among the picked shorts. Use Pick different moments in Edit project → Shorts, then Retry stage.",
+      "The clip this short was cut from is no longer among the picked shorts. Use Pick different moments in Edit project → Shorts, then Try again.",
     );
   if (matched[2] === "prompts") return prompts(deps, context, providers, piece, snapshot, clip);
   if (matched[2] === "render") return render(deps, context, piece, snapshot, clip);
@@ -93,12 +93,12 @@ async function pick(
   const llm = config.llm;
   if (llm === undefined || llm.provider.trim() === "" || llm.model.trim() === "")
     throw new Error(
-      "Shorts need an AI text model to pick the clips, and none is chosen. Choose one in Edit project → Providers, then Retry stage.",
+      "Shorts need an AI text model to pick the clips, and none is chosen. Choose one in Edit project → Providers, then Try again.",
     );
   const sentences = transcriptSentences(timingWords(deps, context, view));
   if (sentences.length === 0)
     throw new Error(
-      "The narration's word timing holds no words, so there is nothing to cut shorts from. Use Re-run section on Video, then Retry stage.",
+      "The narration's word timing holds no words, so there is nothing to cut shorts from. Use More → Render the video again in the Video section, then Try again.",
     );
   const audio = await revisionAudio(deps, context, view);
   const durationSeconds = audio.reduce((sum, segment) => sum + segment.seconds, 0);
@@ -296,7 +296,7 @@ async function render(
       );
       if (row === undefined)
         throw new Error(
-          `Short ${String(clip.number)} is missing one of its images. Retry stage to make it again; if it keeps happening, use Make this short again in Edit project → Shorts.`,
+          `Short ${String(clip.number)} is missing one of its images. Try again to make it again; if it keeps happening, use Make this short again in Edit project → Shorts.`,
         );
       return outputPath(deps.paths, context.work.projectId, row.output.path);
     });
@@ -409,7 +409,7 @@ async function backgroundMusic(
   const shorts = view.revision.config.shorts;
   if (assetId === undefined || shorts === undefined) return undefined;
   const fix =
-    "Choose another file under Background music in Edit project → Shorts, or remove the music, then Retry stage.";
+    "Choose another file under Background music in Edit project → Shorts, or remove the music, then Try again.";
   const row = z
     .object({ path: z.string() })
     .safeParse(
@@ -448,7 +448,7 @@ export function timingWords(
   );
   if (timing === undefined)
     throw new Error(
-      "The narration's word timing, which the shorts are cut and captioned from, is missing. Use Re-run section on Video, then Retry stage.",
+      "The narration's word timing, which the shorts are cut and captioned from, is missing. Use More → Render the video again in the Video section, then Try again.",
     );
   return wordsSchema.parse(
     JSON.parse(
@@ -491,6 +491,6 @@ function imageIndex(key: string): number {
 
 function setupError(): Error {
   return new Error(
-    "Slopify hit an internal error (a Shorts step was set up wrongly). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+    "Slopify hit an internal error (a Shorts step was set up wrongly). Try again; if it happens again, use Download diagnostics in Settings and report it.",
   );
 }

@@ -167,6 +167,7 @@ export const runDraftSchema = z.object({
   // The ranges are `slices/video/edit-settings.ts`'s, checked by admission, not the schema's.
   videoEdit: videoEditSchema.optional(),
   channelId: z.string().optional(),
+  useBrandKit: z.literal(false).optional(),
   cast: castSnapshotSchema.optional(),
   earlierEpisodes: z
     .array(z.object({ title: z.string(), summary: z.string() }))

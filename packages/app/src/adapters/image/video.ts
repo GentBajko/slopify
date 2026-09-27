@@ -28,13 +28,13 @@ export async function downloadVideo(download: VideoDownload): Promise<GeneratedV
     // The link is not quoted back: a delivery link carries its own signature.
     throw providerError({
       kind: "other",
-      message: `${download.provider} made the video clip, but Slopify could not download it (error ${String(response.status)}). Check your internet connection, then use Retry stage.`,
+      message: `${download.provider} made the video clip, but Slopify could not download it (error ${String(response.status)}). Check your internet connection, then use Try again.`,
     });
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (!sniffVideo(bytes))
     throw providerError({
       kind: "other",
-      message: `${download.provider} sent back something that is not an MP4 video clip (${describeBytes(bytes)}). Use Retry stage; if it keeps happening, choose another image-to-video model under Animate images in Edit project → Inputs → Look.`,
+      message: `${download.provider} sent back something that is not an MP4 video clip (${describeBytes(bytes)}). Use Try again; if it keeps happening, choose another image-to-video model under Animate images in Edit project → Inputs → Look.`,
     });
   return { bytes, mime: "video/mp4" };
 }

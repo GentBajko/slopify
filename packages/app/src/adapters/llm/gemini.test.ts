@@ -214,7 +214,7 @@ it("makes Gemini's license denial terminal with actionable guidance", async () =
   await expect(drain(one.run)).rejects.toMatchObject({
     fault: { kind: "unsupported" },
     message:
-      "Google refused the Gemini CLI because the signed-in account has no licence for it (#3501). Update the Gemini CLI, run gemini in a terminal to sign in again, then use Retry stage; for a work or school account, ask your administrator for a Gemini licence.",
+      "Google refused the Gemini CLI because the signed-in account has no licence for it (#3501). Update the Gemini CLI, run gemini in a terminal to sign in again, then use Try again; for a work or school account, ask your administrator for a Gemini licence.",
   });
   expect(one.killed()).toBe(1);
   expect(existsSync(one.options()?.cwd ?? "")).toBe(false);

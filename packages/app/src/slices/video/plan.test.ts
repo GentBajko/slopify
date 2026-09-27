@@ -300,7 +300,7 @@ describe("the edit list", () => {
   it("refuses a list from another version, saying what to do", () => {
     const list = { ...planRender(input()).editList, version: 2 };
     expect(() => readEditList(list)).toThrow(
-      "This video's edit list is version 2, and this Slopify reads version 1. Update Slopify, or use Re-run section on Video to plan it again.",
+      "This video's edit list is version 2, and this Slopify reads version 1. Update Slopify, or use More → Render the video again in the Video section to plan it again.",
     );
     expect(() => readEditList(null)).toThrow(/version undefined/);
   });

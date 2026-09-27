@@ -255,12 +255,12 @@ export function readEditList(value: unknown): EditList {
     typeof value === "object" && value !== null && "version" in value ? value.version : undefined;
   if (version !== editListVersion)
     throw new Error(
-      `This video's edit list is version ${String(version)}, and this Slopify reads version ${editListVersion}. Update Slopify, or use Re-run section on Video to plan it again.`,
+      `This video's edit list is version ${String(version)}, and this Slopify reads version ${editListVersion}. Update Slopify, or use More → Render the video again in the Video section to plan it again.`,
     );
   const parsed = editListSchema.safeParse(value);
   if (!parsed.success)
     throw new Error(
-      `This video's edit list is damaged (${parsed.error.issues[0]?.path.join(".") || "the list"}: ${parsed.error.issues[0]?.message ?? "not readable"}). Use Re-run section on Video to plan it again.`,
+      `This video's edit list is damaged (${parsed.error.issues[0]?.path.join(".") || "the list"}: ${parsed.error.issues[0]?.message ?? "not readable"}). Use More → Render the video again in the Video section to plan it again.`,
     );
   return parsed.data;
 }

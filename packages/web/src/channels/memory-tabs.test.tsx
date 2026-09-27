@@ -83,4 +83,55 @@ describe("Existing videos tab", () => {
     await waitFor(() => expect(sent).toEqual([{ format: "lines", text: "Tiamat\nvecna" }]));
     expect(await screen.findByText("Added 1 title; skipped 1 already listed.")).not.toBeNull();
   });
+
+  it("previews a CSV, applies the remembered filter, and saves only the ticked titles", async () => {
+    const user = userEvent.setup();
+    const previewed: unknown[] = [];
+    const sent: unknown[] = [];
+    renderRouted(
+      <VideosTab channelId={id} />,
+      testDeps({
+        [`GET /api/channels/${id}/videos`]: jsonAnswer({ videos: [] }),
+        [`POST /api/channels/${id}/videos/preview`]: recording(
+          jsonAnswer({
+            titles: ["D&D Lore: Vecna", "New World Guide", "The Finals Tips", "d&d: Tiamat"],
+            filter: "d&d",
+          }),
+          previewed,
+        ),
+        [`POST /api/channels/${id}/videos`]: recording(
+          jsonAnswer({ added: 2, skipped: 0 }, 201),
+          sent,
+        ),
+      }),
+    );
+    await screen.findByText("No existing videos listed");
+    const csv = new File(["Video title\nD&D Lore: Vecna\n"], "studio.csv", { type: "text/csv" });
+    await user.upload(screen.getByLabelText("YouTube Studio CSV file"), csv);
+    await waitFor(() =>
+      expect(previewed).toEqual([{ format: "csv", text: "Video title\nD&D Lore: Vecna\n" }]),
+    );
+    const tick = (name: string) => screen.getByRole<HTMLInputElement>("checkbox", { name });
+    expect((await screen.findByLabelText<HTMLInputElement>("D&D Lore: Vecna")).checked).toBe(true);
+    expect(tick("New World Guide").checked).toBe(false);
+    expect(tick("d&d: Tiamat").checked).toBe(true);
+    await user.click(screen.getByRole("button", { name: "Tick all" }));
+    expect(tick("The Finals Tips").checked).toBe(true);
+    await user.click(screen.getByRole("button", { name: "Untick all" }));
+    expect(tick("D&D Lore: Vecna").checked).toBe(false);
+    const filter = screen.getByLabelText("Keep only titles containing…");
+    await user.clear(filter);
+    await user.type(filter, "LORE");
+    expect(tick("D&D Lore: Vecna").checked).toBe(true);
+    expect(tick("d&d: Tiamat").checked).toBe(false);
+    await user.click(tick("New World Guide"));
+    await user.click(screen.getByRole("button", { name: "Add 2 ticked titles" }));
+    await waitFor(() =>
+      expect(sent).toEqual([
+        { format: "lines", text: "D&D Lore: Vecna\nNew World Guide", filter: "LORE" },
+      ]),
+    );
+    expect(await screen.findByText("Added 2 titles.")).not.toBeNull();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
 });

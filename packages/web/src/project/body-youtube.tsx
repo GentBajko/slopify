@@ -20,7 +20,7 @@ import {
 } from "@app/slices/youtube/placeholders.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CopyIcon, PencilIcon } from "lucide-react";
-import { type ReactElement, type ReactNode, useId, useState } from "react";
+import { type ReactElement, type ReactNode, useId, useRef, useState } from "react";
 import {
   type ProjectDescriptionEdits,
   readChannelLinks,
@@ -30,9 +30,10 @@ import {
 } from "@/api";
 import { useApp } from "@/app-context";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
-import { Button } from "@/components/ui/button";
-import { Input, Textarea } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/kit/button";
+import { useCommand } from "@/components/kit/command-palette";
+import { Input, Textarea } from "@/components/kit/field";
+import { useToast } from "@/components/kit/toast";
 import { cn } from "@/lib/utils";
 import { DiffColumns } from "@/library/diff-view";
 import { keys } from "@/queries";
@@ -73,6 +74,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
     queryFn: () => readChannelLinks(api),
   });
   const [status, setStatus] = useState<{ text: string; tone: StatusTone } | undefined>();
+  const notify = useToast();
   const saved = (next: ProjectDescriptionEdits) =>
     queryClient.setQueryData(keys.youtubeEdits(project.id), next);
   const save = useMutation({
@@ -90,6 +92,31 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
         text: `Couldn't save the change: ${error.message}`,
         tone: "error",
       }),
+  });
+  // Copy description and Copy tags are palette commands too; they copy what is shown here,
+  // placeholders filled, so they read the latest text when run.
+  const copyLatest = useRef<{ description?: () => void; tags?: () => void }>({});
+  useCommand({
+    id: "project.copy-description",
+    title: "Copy description",
+    group: "This project",
+    context: project.title,
+    keywords: ["youtube", "description", "chapters", "clipboard"],
+    run: () =>
+      copyLatest.current.description === undefined
+        ? notify("The description has not been written yet.", "info")
+        : copyLatest.current.description(),
+  });
+  useCommand({
+    id: "project.copy-tags",
+    title: "Copy tags",
+    group: "This project",
+    context: project.title,
+    keywords: ["youtube", "tags", "clipboard"],
+    run: () =>
+      copyLatest.current.tags === undefined
+        ? notify("The tags have not been written yet.", "info")
+        : copyLatest.current.tags(),
   });
   if (project.config.youtubeDescription !== true && description === undefined) return null;
 
@@ -119,19 +146,29 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
   const written = generated !== undefined;
 
   const copy = (text: string, what: string) => {
+    const failed = `Couldn't copy the ${what}. Select the text in the YouTube section and copy it.`;
     if (!navigator.clipboard) {
-      setStatus({ text: `Couldn't copy the ${what}. Select the text and copy it.`, tone: "error" });
+      setStatus({ text: failed, tone: "error" });
+      notify(failed, "error");
       return;
     }
     void navigator.clipboard.writeText(text).then(
-      () => setStatus({ text: `Copied the ${what}.`, tone: "success" }),
-      () =>
-        setStatus({
-          text: `Couldn't copy the ${what}. Select the text and copy it.`,
-          tone: "error",
-        }),
+      () => {
+        setStatus({ text: `Copied the ${what}.`, tone: "success" });
+        notify(`Copied the ${what}.`, "success");
+      },
+      () => {
+        setStatus({ text: failed, tone: "error" });
+        notify(failed, "error");
+      },
     );
   };
+  copyLatest.current = written
+    ? {
+        description: () => copy(filledDescription.text, "description"),
+        tags: () => copy(filledTags.text, "tags"),
+      }
+    : {};
   const waiting =
     stage.state === "running"
       ? "Written after the subtitle timing."
@@ -171,11 +208,8 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
   );
 
   return (
-    <section
-      aria-labelledby={`${id}-title`}
-      className="flex min-w-0 flex-col gap-3 border-t border-line pt-4"
-    >
-      <h3 id={`${id}-title`} className="engraved text-ink-3">
+    <section aria-labelledby={`${id}-title`} className="flex min-w-0 flex-col gap-4">
+      <h3 id={`${id}-title`} className="sr-only">
         YouTube
       </h3>
       {/* The description reads best at a paragraph's width; the tags take the room beside
@@ -267,7 +301,7 @@ function PartHead({
       <span className="flex-1" />
       <Button
         type="button"
-        variant="ghost"
+        variant="quiet"
         disabled={copy === undefined}
         aria-label={`Copy ${label.toLowerCase()}`}
         onClick={copy}
@@ -313,7 +347,7 @@ function EditableField({
   return (
     <div className="flex min-w-0 flex-col gap-1">
       <div className="flex min-h-8 flex-wrap items-center gap-2">
-        <h5 id={`${id}-label`} className="engraved text-ink-3">
+        <h5 id={`${id}-label`} className="sl-kicker text-ink-3">
           {label}
         </h5>
         {value.edited ? <span className="text-small text-ink-2">Your edit</span> : null}
@@ -321,7 +355,7 @@ function EditableField({
         {value.edited && !editing ? (
           <Button
             type="button"
-            variant="ghost"
+            variant="quiet"
             disabled={disabled}
             aria-label={`Use the generated ${lower}`}
             onClick={onUseGenerated}
@@ -331,7 +365,7 @@ function EditableField({
         ) : null}
         <Button
           type="button"
-          variant="ghost"
+          variant="quiet"
           disabled={disabled || editing}
           aria-label={`Edit ${lower}`}
           onClick={() => setDraft(value.text)}
@@ -362,7 +396,7 @@ function EditableField({
             </Button>
             <Button
               type="button"
-              variant="ghost"
+              variant="quiet"
               aria-expanded={diff}
               aria-label={`${diff ? "Hide" : "View"} the ${lower} diff`}
               onClick={() => setDiff((now) => !now)}
@@ -382,9 +416,9 @@ function EditableField({
       )}
       {editing ? (
         <div className="flex flex-col gap-2">
-          <Label htmlFor={`${id}-edit`} className="sr-only">
+          <label htmlFor={`${id}-edit`} className="sr-only">
             {label}
-          </Label>
+          </label>
           {multiline ? (
             <Textarea
               id={`${id}-edit`}
@@ -411,7 +445,7 @@ function EditableField({
             >
               Save {lower}
             </Button>
-            <Button type="button" variant="ghost" onClick={() => setDraft(undefined)}>
+            <Button type="button" variant="quiet" onClick={() => setDraft(undefined)}>
               Cancel
             </Button>
           </div>
@@ -545,7 +579,9 @@ function PreviousVideo({
   return (
     <div className="flex flex-wrap items-end gap-2">
       <div className="flex min-w-[260px] flex-1 flex-col gap-1 sm:max-w-[520px]">
-        <Label htmlFor={id}>Previous video for this project</Label>
+        <label className="sl-field__label" htmlFor={id}>
+          Previous video for this project
+        </label>
         <Input
           id={id}
           type="url"

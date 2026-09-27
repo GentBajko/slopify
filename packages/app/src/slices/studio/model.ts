@@ -40,7 +40,7 @@ export interface PackItem {
   // Up to three; Studio's Test & Compare takes all three, its thumbnail field the first.
   readonly thumbnails: readonly PackFile[];
   readonly audience: typeof studioAudience;
-  // Studio's "Altered or synthetic content" answer and why (`disclosure.ts`).
+  // Studio's "AI use" answer (it was "Altered or synthetic content") and why (`disclosure.ts`).
   readonly alteredContent: AiDisclosure;
   readonly playlist: string | null;
   // What was changed in the description's chapters to meet YouTube's rules
@@ -54,6 +54,9 @@ export interface UploadPack {
   readonly items: readonly PackItem[];
   // What the pack is still missing, as plain sentences with the fix; empty when complete.
   readonly missing: readonly string[];
+  // The video's uploaded clips and whether they are marked as real footage (the AI use step's
+  // tick). Absent when the project has none.
+  readonly footage?: { readonly clips: number; readonly real: boolean } | undefined;
 }
 
 // The pack as the extension asks for it: which item the person chose in Slopify.

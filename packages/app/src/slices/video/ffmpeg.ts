@@ -89,7 +89,7 @@ export function slideshowClips(
       const shot = edit.shots[segment.kind === "shot" ? segment.shot : segment.to];
       if (shot === undefined)
         throw new Error(
-          "Slopify hit an internal error (the video's edit list lost a shot). Use Re-run section on Video; if it happens again, use Download diagnostics in Settings and report it.",
+          "Slopify hit an internal error (the video's edit list lost a shot). Use More → Render the video again in the Video section; if it happens again, use Download diagnostics in Settings and report it.",
         );
       clips.push({ name, segment, shot, frames: segment.count });
     }
@@ -165,7 +165,7 @@ export function segmentArgs(
   const picture = (shot: Shot | undefined, from: number, label: string): void => {
     if (shot === undefined)
       throw new Error(
-        "Slopify hit an internal error (the video's edit list lost a shot). Use Re-run section on Video; if it happens again, use Download diagnostics in Settings and report it.",
+        "Slopify hit an internal error (the video's edit list lost a shot). Use More → Render the video again in the Video section; if it happens again, use Download diagnostics in Settings and report it.",
       );
     const at = inputs.filter((one) => one === "-i").length;
     const built = pictureChain(edit, shot, from, segment.count, at, label, gradeFilter(edit.look));
@@ -637,5 +637,5 @@ function failure(
     errors.length === 0
       ? `ffmpeg ${ended} and wrote nothing to its error stream`
       : `ffmpeg ${ended}: ${errors.join(" / ")}`;
-  return `The audio/video export failed (${said}). Retry stage; if it fails again, make sure your disk has free space (see Settings → Backup & storage), then use Download diagnostics in Settings and report it.`;
+  return `The audio/video export failed (${said}). Try again; if it fails again, make sure your disk has free space (see Settings → Backup & storage), then use Download diagnostics in Settings and report it.`;
 }

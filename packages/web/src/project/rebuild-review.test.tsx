@@ -45,7 +45,7 @@ it("requires all confirmations and starts only on explicit approval", async () =
   const user = userEvent.setup();
   const start = vi.fn();
   render(<RebuildReview preview={preview} pending={false} onStart={start} onCancel={() => {}} />);
-  const button = screen.getByRole("button", { name: "Start rebuild" });
+  const button = screen.getByRole("button", { name: "Remake 1 output" });
   expect(button.hasAttribute("disabled")).toBe(true);
   await user.click(screen.getByRole("checkbox", { name: /Keep the provided/ }));
   expect(button.hasAttribute("disabled")).toBe(true);
@@ -63,9 +63,9 @@ it("blocks unavailable work and locks consent while starting", () => {
     work: preview.work.map((work) => ({ ...work, disposition: "blocked" as const })),
   };
   render(<RebuildReview preview={blocked} pending onStart={() => {}} onCancel={() => {}} />);
-  expect(screen.getByRole("button", { name: "Starting rebuild…" }).hasAttribute("disabled")).toBe(
-    true,
-  );
+  expect(
+    screen.getByRole("button", { name: "Starting the remake…" }).hasAttribute("disabled"),
+  ).toBe(true);
   for (const input of screen.getAllByRole("checkbox"))
     expect(input.hasAttribute("disabled")).toBe(true);
 });
@@ -144,7 +144,7 @@ it("shows actual changed inputs and stable request identity with its text", asyn
   expect(screen.getByText("Narration voice")).toBeTruthy();
   expect(screen.getByText("Old voice")).toBeTruthy();
   expect(screen.getByText("New voice")).toBeTruthy();
-  expect(screen.getByText(/Body narration chunk 5 · request 1: Review required/)).toBeTruthy();
+  expect(screen.getByText(/Body narration chunk 5 · request 1: to confirm/)).toBeTruthy();
   await user.click(screen.getByText("View request text"));
   expect(screen.getByText("The fifth paragraph.")).toBeTruthy();
 });
@@ -183,16 +183,93 @@ it("says why Start is off: each blocked reason once, and the unticked boxes", as
   expect(alert.textContent).toContain(`3 narration requests: ${reason}`);
   expect(alert.textContent?.split(reason)).toHaveLength(2);
   // The per-item list is folded away behind its counts.
-  expect(screen.getByText("Work items (4): 1 Build locally, 3 Unavailable")).toBeTruthy();
-  const button = screen.getByRole("button", { name: "Start rebuild" });
+  expect(screen.getByText("Work items (4): 1 built on this computer, 3 can't run")).toBeTruthy();
+  const button = screen.getByRole("button", { name: "Remake 1 output" });
   expect(button.hasAttribute("disabled")).toBe(true);
   const why = document.getElementById(button.getAttribute("aria-describedby") ?? "");
   expect(why?.textContent).toBe(
-    "Start rebuild is off until: 3 items are unavailable (reasons above); tick “I understand that 1 cost estimates are unknown”.",
+    "Remake 1 output is off until: 3 items are unavailable (reasons above); tick “I understand that 1 cost estimates are unknown”.",
   );
   await user.click(screen.getByRole("checkbox", { name: /I understand/ }));
   expect(why?.textContent).toBe(
-    "Start rebuild is off until: 3 items are unavailable (reasons above).",
+    "Remake 1 output is off until: 3 items are unavailable (reasons above).",
   );
   expect(button.hasAttribute("disabled")).toBe(true);
+});
+
+it("counts each disposition and prices CLI work as $0 on plan, not unknown", () => {
+  const first = preview.work[0];
+  if (first === undefined) throw new Error("Missing fixture work");
+  render(
+    <RebuildReview
+      preview={{
+        ...preview,
+        providedReuseRequired: [],
+        work: [
+          { ...first, key: "image:a", kind: "provider", disposition: "generate" },
+          { ...first, key: "image:b", kind: "provider", disposition: "generate" },
+          { ...first, key: "export:video", kind: "local", disposition: "local" },
+          { ...first, key: "article:body", kind: "provider", disposition: "reuse" },
+        ],
+        costs: {
+          ...preview.costs,
+          unknown: 0,
+          apiLow: 0.2,
+          apiHigh: 0.4,
+          rows: [
+            {
+              stage: "images",
+              low: 0,
+              high: 0,
+              detail: "2 images on Codex",
+              onPlan: true,
+              apiLow: 0.2,
+              apiHigh: 0.4,
+            },
+          ],
+        },
+      }}
+      pending={false}
+      onStart={() => undefined}
+      onCancel={() => undefined}
+    />,
+  );
+  const review = screen.getByRole("region", { name: "Review affected rebuild" });
+  expect(review.textContent).toContain(
+    "Work items (4): 2 to make, 1 built on this computer, 1 kept as they are",
+  );
+  expect(review.textContent).toContain("to make2built on this computer1kept as they are1cost$0");
+  expect(review.textContent).toContain("CLI work: $0 on your plan · ~$0.20–$0.40 via API.");
+  expect(review.textContent).toContain("$0 on plan · ~$0.20–$0.40 via API. 2 images on Codex");
+  expect(review.textContent).not.toContain("Unknown");
+  expect(screen.queryByRole("checkbox", { name: /I understand/ })).toBeNull();
+  const start = screen.getByRole("button", { name: "Remake 3 outputs" });
+  expect(start.hasAttribute("disabled")).toBe(false);
+});
+
+it("puts every requirement beside Start and lifts each as it is met", async () => {
+  const user = userEvent.setup();
+  render(
+    <RebuildReview
+      preview={preview}
+      pending={false}
+      onStart={() => undefined}
+      onCancel={() => undefined}
+    />,
+  );
+  const start = screen.getByRole("button", { name: "Remake 1 output" });
+  const note = () => document.getElementById(start.getAttribute("aria-describedby") ?? "");
+  expect(note()?.textContent).toBe(
+    "Remake 1 output is off until: tick “Keep the provided content for Provided narration”; tick “I understand that 1 cost estimates are unknown”.",
+  );
+  // The boxes sit in the same bar as the button.
+  const bar = start.closest("div.sticky");
+  expect(bar?.contains(screen.getByRole("checkbox", { name: /I understand/ }))).toBe(true);
+  await user.click(screen.getByRole("checkbox", { name: /Keep the provided/ }));
+  expect(note()?.textContent).toBe(
+    "Remake 1 output is off until: tick “I understand that 1 cost estimates are unknown”.",
+  );
+  await user.click(screen.getByRole("checkbox", { name: /I understand/ }));
+  expect(start.hasAttribute("disabled")).toBe(false);
+  expect(start.getAttribute("aria-describedby")).toBeNull();
 });

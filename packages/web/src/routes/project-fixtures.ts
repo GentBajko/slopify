@@ -177,8 +177,18 @@ function textAnswer(text: string): Answer {
     });
 }
 
+// A section from the project's section rail, and the section it shows. The 2.x stage names
+// still work: Audio is the Narration section, Document the PDF, the thumbnail sits in Images.
+const sectionNames: Readonly<Record<string, string>> = {
+  Audio: "Narration",
+  Document: "PDF",
+  Thumbnail: "Images",
+};
+
 export async function selectProjectStage(name: string): Promise<HTMLElement> {
-  const navigation = await screen.findByRole("navigation", { name: "Project stages" });
-  await userEvent.click(within(navigation).getByRole("button", { name: new RegExp(`^${name},`) }));
-  return screen.getByRole("region", { name: `${name} workspace` });
+  const section = sectionNames[name] ?? name;
+  const navigation = await screen.findByRole("navigation", { name: "Project sections" });
+  const item = within(navigation).getByRole("button", { name: new RegExp(`^${section}`) });
+  if (item.getAttribute("aria-current") !== "true") await userEvent.click(item);
+  return screen.getByRole("region", { name: section });
 }

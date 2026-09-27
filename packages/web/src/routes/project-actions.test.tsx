@@ -28,7 +28,7 @@ describe("the destructive actions", () => {
     );
 
     await selectProjectStage("Images");
-    await userEvent.click(screen.getAllByRole("button", { name: "Delete" })[0] as HTMLElement);
+    await userEvent.click(screen.getByRole("button", { name: "Delete image 1" }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Delete this image?")).not.toBeNull();
     expect(
@@ -36,7 +36,7 @@ describe("the destructive actions", () => {
     ).not.toBeNull();
     expect(deleted).not.toHaveBeenCalled();
 
-    await userEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Delete the image" }));
     await waitFor(() => {
       expect(deleted).toHaveBeenCalledTimes(1);
     });
@@ -50,18 +50,17 @@ describe("the destructive actions", () => {
     );
 
     await selectProjectStage("Images");
-    await userEvent.click(screen.getAllByRole("button", { name: "Delete" })[0] as HTMLElement);
+    await userEvent.click(screen.getByRole("button", { name: "Delete image 1" }));
     await userEvent.click(
-      within(await screen.findByRole("dialog")).getByRole("button", { name: "Delete" }),
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Delete the image" }),
     );
 
-    const said = await screen.findByRole("alert");
-    expect(said.textContent).toBe(refusal);
-    // Said where the press happened: inside the Images stage's own block, not at the top
-    // of a page the user has scrolled away from.
-    const block = screen.getByRole("region", { name: "Images workspace" });
+    const said = await screen.findByText(refusal);
+    // Said where the press happened: inside the Images section, not at the top of a page the
+    // user has scrolled away from.
+    const block = screen.getByRole("region", { name: "Images" });
     expect(block.contains(said)).toBe(true);
-    expect(within(block).getByRole("heading", { name: "Image library" })).not.toBeNull();
+    expect(said.closest('[role="alert"]')).not.toBeNull();
   });
 
   it("confirms before regenerating an image", async () => {
@@ -77,17 +76,17 @@ describe("the destructive actions", () => {
     );
 
     await selectProjectStage("Images");
-    await userEvent.click(screen.getAllByRole("button", { name: "Regenerate" })[0] as HTMLElement);
+    await userEvent.click(screen.getByRole("button", { name: "Regenerate image 1" }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Regenerate this image?")).not.toBeNull();
     expect(made).not.toHaveBeenCalled();
-    await userEvent.click(within(dialog).getByRole("button", { name: "Regenerate" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Regenerate the image" }));
     await waitFor(() => {
       expect(made).toHaveBeenCalledTimes(1);
     });
   });
 
-  it("confirms before re-running a stage", async () => {
+  it("confirms before making a whole stage again, from the section's More", async () => {
     const rerun = vi.fn();
     renderRouted(
       <ProjectRoute projectId="p1" />,
@@ -99,8 +98,9 @@ describe("the destructive actions", () => {
       }),
     );
 
-    await screen.findByText("Video");
-    await userEvent.click(screen.getByRole("button", { name: "Re-render" }));
+    const video = await screen.findByRole("region", { name: "Video" });
+    await userEvent.click(within(video).getByRole("button", { name: "More actions for Video" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Render the video again" }));
     const dialog = await screen.findByRole("dialog");
     expect(
       within(dialog).getByText(
@@ -108,7 +108,7 @@ describe("the destructive actions", () => {
       ),
     ).not.toBeNull();
     expect(rerun).not.toHaveBeenCalled();
-    await userEvent.click(within(dialog).getByRole("button", { name: "Re-run" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Render the video again" }));
     await waitFor(() => {
       expect(rerun).toHaveBeenCalledTimes(1);
     });
@@ -156,8 +156,11 @@ describe("editing the article", () => {
     await userEvent.type(editor, "My unfinished changes.");
     await selectProjectStage("Audio");
     await selectProjectStage("Article");
-    // The stage rundown opens the Output tab; the draft waits on the Edit tab.
-    expect(screen.getByRole("tab", { name: /^Edit/ }).textContent).toContain("unsaved");
+    // The draft waits in the Settings view, which the rail marks unsaved.
+    const rail = screen.getByRole("navigation", { name: "Project sections" });
+    expect(within(rail).getByRole("button", { name: /^Settings/ }).textContent).toContain(
+      "unsaved",
+    );
     await openProjectTab("Edit");
     expect((screen.getByLabelText("Article text") as HTMLTextAreaElement).value).toBe(
       "My unfinished changes.",

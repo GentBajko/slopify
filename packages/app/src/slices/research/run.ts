@@ -41,7 +41,7 @@ export interface ResearchDeps {
 // A model that cannot ground on the web fails the stage immediately, with no fallback to
 // what the model already knows.
 export const webResearchUnsupported =
-  "The chosen AI model can't search the web, which research needs. Choose a model with web search in Edit project → Providers, or turn research off, then Retry stage.";
+  "The chosen AI model can't search the web, which research needs. Choose a model with web search in Edit project → Providers, or turn research off, then Try again.";
 
 // What a chapter piece carries between runs: its title, and its notes once a sub-agent
 // has answered. That is the whole of the resume.
@@ -65,7 +65,7 @@ export async function runResearch(
     // Admission refuses a run whose research is Generate without both, so
     // reaching here is a bug in admission rather than something the user did.
     throw new Error(
-      "No AI model or article prompt is set for research. Choose a model in Edit project → Providers and check Edit project → Prompts, then Retry stage.",
+      "No AI model or article prompt is set for research. Choose a model in Edit project → Providers and check Edit project → Prompts, then Try again.",
     );
   }
   const brief: ResearchBrief = { articlePrompt, values: project.config.values };
@@ -176,7 +176,7 @@ async function plan(
     // An empty answer, or one with no chapter in it, is a failed attempt.
     check: (given: LlmAnswer): string | undefined =>
       chaptersFrom(given.text).length === 0
-        ? "The AI model didn't return any research topics. Retry stage; if it keeps happening, choose a different model in Edit project → Providers."
+        ? "The AI model didn't return any research topics. Try again; if it keeps happening, choose a different model in Edit project → Providers."
         : undefined,
   });
   if (!answer.ok) return answer;
@@ -303,7 +303,7 @@ function section(label: string, messages: readonly Message[]): string {
 function payloadOf(piece: StagePiece): z.infer<typeof chapterPayload> {
   if (piece.payload === null) {
     throw new Error(
-      "Slopify hit an internal error (a saved research topic is empty). Retry stage; if it happens again, use Download diagnostics in Settings and report it.",
+      "Slopify hit an internal error (a saved research topic is empty). Try again; if it happens again, use Download diagnostics in Settings and report it.",
     );
   }
   return chapterPayload.parse(JSON.parse(piece.payload));

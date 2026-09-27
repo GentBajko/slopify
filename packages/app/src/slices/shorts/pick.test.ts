@@ -105,7 +105,7 @@ describe("checkPicks", () => {
       expect(checkPicks(text, sentences, limits)).toEqual({
         ok: false,
         reason:
-          "The AI model's choice of shorts didn't come back in the expected format (a JSON list of clips, each with first and last sentence numbers, a title, a description and hashtags). Retry stage, or choose another model in Edit project → Providers.",
+          "The AI model's choice of shorts didn't come back in the expected format (a JSON list of clips, each with first and last sentence numbers, a title, a description and hashtags). Try again, or choose another model in Edit project → Providers.",
       });
   });
 });
@@ -145,10 +145,10 @@ describe("the pick's messages", () => {
 
   it("says what to change when nothing usable came back", () => {
     expect(noPicksMessage(["Clip 1 is too short."], limits)).toBe(
-      "The AI model didn't pick any clip Slopify could use as a short, twice (Clip 1 is too short.). Retry stage; if it keeps happening, widen the length range in Edit project → Shorts, or choose another model in Edit project → Providers.",
+      "The AI model didn't pick any clip Slopify could use as a short, twice (Clip 1 is too short.). Try again; if it keeps happening, widen the length range in Edit project → Shorts, or choose another model in Edit project → Providers.",
     );
     expect(noPicksMessage([], { ...limits, durationSeconds: 12 })).toBe(
-      "The narration is 12 seconds long, shorter than the 20-second minimum for a short, so there is nothing to cut. Lower the shortest length in Edit project → Shorts, then Retry stage.",
+      "The narration is 12 seconds long, shorter than the 20-second minimum for a short, so there is nothing to cut. Lower the shortest length in Edit project → Shorts, then Try again.",
     );
   });
 });

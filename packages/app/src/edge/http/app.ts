@@ -54,6 +54,7 @@ import { calendarRoutes, scheduleRoutes } from "./schedules.js";
 import { settingsRoutes } from "./settings.js";
 import { stagingRoutes } from "./staging.js";
 import { storageRoutes } from "./storage.js";
+import { filesRoutes } from "./storage-files.js";
 import { studioRoutes } from "./studio.js";
 import { stylePreviewRoutes } from "./style-preview.js";
 import { subtitleRoutes } from "./subtitles.js";
@@ -78,6 +79,8 @@ export interface AppDeps {
     | undefined;
   readonly schedules?: ScheduleDeps;
   readonly backups?: BackupService;
+  // Settings → Backup & storage's files folder: where it is, Open folder, and moving it.
+  readonly files?: import("../../slices/storage/files-location.js").FilesService;
   readonly rebuild?: RebuildDeps;
   readonly measureAudio?: ((path: string, signal?: AbortSignal) => Promise<number>) | undefined;
   // The bundled samples' archives; the ones shipped in assets unless a test hands in others.
@@ -91,6 +94,7 @@ export interface AppDeps {
   readonly folderLocation?: {
     readonly container: boolean;
     readonly hostProjects: string | null;
+    readonly hostBackups?: string | null;
     /** Asks the host helper to open a host folder; false means show the path instead. */
     readonly openOnHost?: (path: string, signal: AbortSignal) => Promise<boolean>;
   };
@@ -156,6 +160,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
         }),
       )
       .route("/staging", stagingRoutes(deps))
+      .route("/storage/files", filesRoutes(deps))
       .route("/storage", storageRoutes(deps))
       .route("/backups", backupRoutes(deps.backups))
       .route("/trash", trashRoutes(deps))

@@ -215,7 +215,7 @@ function declined(current: z.infer<typeof prediction>): Error {
           "Replicate",
           "could not make the image",
           message,
-          "Use Retry stage; if it keeps happening, reword the image prompt in the Images section of Edit project or choose another image model in its Providers section.",
+          "Use Try again; if it keeps happening, reword the image prompt in the Images section of Edit project or choose another image model in its Providers section.",
         ),
   });
 }

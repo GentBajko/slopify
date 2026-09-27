@@ -50,19 +50,19 @@ const extraProviders = [
 import { revisionRouteFixture } from "./project-revision.fake.js";
 
 describe("project pause and provider changes", () => {
-  it("offers Resume for a failed revisioned project", async () => {
+  it("offers Continue the run for a failed revisioned project", async () => {
     const current = paused();
     const fixture = revisionRouteFixture({
       ...current,
       project: { ...current.project, status: "failed" },
     });
     renderRouted(<ProjectRoute projectId="p1" />, deps(fixture.routes));
-    expect((await screen.findByRole("button", { name: "Resume" })).hasAttribute("disabled")).toBe(
-      false,
-    );
+    expect(
+      (await screen.findByRole("button", { name: "Continue the run" })).hasAttribute("disabled"),
+    ).toBe(false);
   });
 
-  it("offers Resume for a pending revision whose unfinished work nothing admitted", async () => {
+  it("offers Continue the run for a pending revision whose unfinished work nothing admitted", async () => {
     const user = userEvent.setup();
     const current = paused();
     const fixture = revisionRouteFixture({
@@ -75,12 +75,12 @@ describe("project pause and provider changes", () => {
       <ProjectRoute projectId="p1" />,
       deps({ ...fixture.routes, "POST /api/projects/p1/resume": resume }),
     );
-    await user.click(await screen.findByRole("button", { name: "Resume" }));
+    await user.click(await screen.findByRole("button", { name: "Continue the run" }));
     await waitFor(() => expect(resume).toHaveBeenCalledTimes(1));
     expect(screen.queryByRole("button", { name: "Pause" })).toBeNull();
   });
 
-  it("resumes a revisioned checkpoint project by keyboard only after the server accepts", async () => {
+  it("continues a paused checkpoint project by keyboard, then offers the approval", async () => {
     const user = userEvent.setup();
     const fixture = revisionRouteFixture(paused());
     let resumed = false;
@@ -127,24 +127,31 @@ describe("project pause and provider changes", () => {
         "POST /api/projects/p1/checkpoints/audio-gate/approve": approve,
       }),
     );
+    const rail = await screen.findByRole("navigation", { name: "Project sections" });
     await waitFor(() =>
-      expect(screen.getByRole("tab", { name: /^Checkpoints/ }).textContent).toContain("1 held"),
+      expect(within(rail).getByRole("button", { name: /^Checkpoints/ }).textContent).toContain(
+        "1 held",
+      ),
     );
     await openProjectTab("Checkpoints");
+    // Paused: continuing comes first, and the held review cannot be approved yet.
     const approval = await screen.findByRole("button", { name: "Approve Audio checkpoint" });
     expect(approval.hasAttribute("disabled")).toBe(true);
-    const button = await screen.findByRole("button", { name: "Resume" });
+    const next = screen.getByRole("region", { name: "Next action" });
+    const button = within(next).getByRole("button", { name: "Continue the run" });
     button.focus();
     await user.keyboard("{Enter}");
     await screen.findByText("The project is still paused.");
-    expect(approval.hasAttribute("disabled")).toBe(true);
     await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
     button.focus();
     await user.keyboard("{Enter}");
-    await waitFor(() => expect(approval.hasAttribute("disabled")).toBe(false));
-    expect(screen.getByRole("button", { name: "Pause" })).not.toBeNull();
+    // Once it runs, the review it waits on is the next action, and only there.
+    expect(
+      await within(next).findByRole("button", { name: "Approve and render the video" }),
+    ).not.toBeNull();
+    expect(screen.queryByRole("button", { name: "Approve Audio checkpoint" })).toBeNull();
     await openProjectTab("Edit");
-    expect(screen.getByRole("button", { name: "Edit project" })).not.toBeNull();
+    expect(await screen.findByRole("form", { name: "Edit project" })).not.toBeNull();
     expect(resume).toHaveBeenCalledTimes(2);
     expect(approve).not.toHaveBeenCalled();
     expect(fixture.start).not.toHaveBeenCalled();
@@ -190,7 +197,7 @@ describe("project pause and provider changes", () => {
       chunking: { mode: "characters", characters: 1800 },
     });
     expect(fixture.start).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Resume" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Continue the run" })).not.toBeNull();
   });
 
   it("keeps a pending action bound to its original project after the page switches IDs", async () => {
@@ -242,9 +249,9 @@ describe("project pause and provider changes", () => {
       release?.(await jsonAnswer(first)(new Request(testOrigin)));
     });
     await waitFor(() =>
-      expect((screen.getByRole("button", { name: "Resume" }) as HTMLButtonElement).disabled).toBe(
-        false,
-      ),
+      expect(
+        (screen.getByRole("button", { name: "Continue the run" }) as HTMLButtonElement).disabled,
+      ).toBe(false),
     );
     expect(screen.getByRole("heading", { name: "Second project" })).not.toBeNull();
     expect(screen.queryByRole("heading", { name: "Rope Tricks" })).toBeNull();
@@ -330,9 +337,10 @@ describe("audio-only final export", () => {
     );
     const download = await downloadItem("Audio (.wav)");
     expect(download.getAttribute("href")).toBe(`${testOrigin}/files/p1/audio-export`);
-    expect(screen.getByText("Audio export")).not.toBeNull();
-    expect(screen.getByLabelText("Combined narration").tagName).toBe("AUDIO");
+    const section = screen.getByRole("region", { name: "Audio export" });
+    expect(within(section).getByLabelText("Combined narration").tagName).toBe("AUDIO");
     expect(screen.queryByRole("menuitem", { name: "Video (.mp4)" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Re-export" })).not.toBeNull();
+    await userEvent.click(within(section).getByRole("button", { name: "More actions for Video" }));
+    expect(await screen.findByRole("menuitem", { name: "Export the audio again" })).not.toBeNull();
   });
 });

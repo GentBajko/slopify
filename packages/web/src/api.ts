@@ -35,6 +35,7 @@ import type {
 } from "@app/slices/settings/model.js";
 import type { VoiceDraft } from "@app/slices/settings/voices.js";
 import type { BackupImportSummary } from "@app/slices/storage/backup-import.js";
+import type { FilesView } from "@app/slices/storage/files-location.js";
 import type { Output, StagedFile } from "@app/slices/storage/model.js";
 import type { StudioPairingView, UploadPack } from "@app/slices/studio/model.js";
 import type { Usage } from "@app/slices/telemetry/usage.js";
@@ -136,9 +137,10 @@ export interface VoiceListBody {
   readonly voices: readonly Voice[];
 }
 // Every kind in one answer: 04 Prompts filters by tab and Duplicate needs the body it is
-// copying, so `edge/http/prompts.ts` lists them all.
+// copying, so `edge/http/prompts.ts` lists them all. An Image prompt marked photorealistic
+// says so (`slices/library/photorealistic.ts`).
 export interface PromptListBody {
-  readonly prompts: readonly Prompt[];
+  readonly prompts: readonly (Prompt & { readonly photorealistic?: true | undefined })[];
 }
 // Both categories in one answer, for the same reason: 09 filters by tab and Duplicate
 // needs the body it is copying (`edge/http/entries.ts`).
@@ -308,6 +310,33 @@ export async function readStorageUsage(api: Api): Promise<StorageUsage> {
   return read<StorageUsage>(await api.fetch(`${api.origin}/api/storage`));
 }
 
+export type { FilesView };
+
+// Settings → Backup & storage → Your files (`edge/http/storage-files.ts`).
+export async function readFiles(api: Api): Promise<FilesView> {
+  return read<FilesView>(await api.fetch(`${api.origin}/api/storage/files`));
+}
+
+// Starts copying the files to "documents" (<Documents>/Slopify) or a full folder path; answers
+// at once and the screen polls readFiles for the progress.
+export async function moveFiles(api: Api, target: string): Promise<FilesView> {
+  return read<FilesView>(
+    await api.fetch(`${api.origin}/api/storage/files/move`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ target }),
+    }),
+  );
+}
+
+export async function openFilesFolder(
+  api: Api,
+): Promise<{ readonly opened: boolean; readonly path: string }> {
+  return read<{ readonly opened: boolean; readonly path: string }>(
+    await api.fetch(`${api.origin}/api/storage/files/open`, { method: "POST" }),
+  );
+}
+
 // Keep outputs only: a finished project drops the working files it was made from.
 export async function keepOutputsOnly(
   api: Api,
@@ -451,6 +480,21 @@ export async function readUploadPack(api: Api, projectId: string): Promise<Uploa
   );
 }
 
+// Prepare upload's AI use tick: the project's uploaded clips are real footage. Answers the pack
+// as it now reads.
+export async function saveRealFootage(
+  api: Api,
+  projectId: string,
+  realFootage: boolean,
+): Promise<UploadPack> {
+  return detailed<UploadPack>(
+    await api.client.studio.packs[":projectId"]["real-footage"].$put({
+      param: { projectId },
+      json: { realFootage },
+    }),
+  );
+}
+
 // Makes this pack item the one the Studio extension fills in next.
 export async function chooseUploadPack(
   api: Api,
@@ -521,6 +565,20 @@ export async function setVoiceLanguages(
   throw errorOf(response, problem);
 }
 
+// Settings → Voices' "Imitates a real person" switch, which makes the voice's narration answer
+// Yes to YouTube's AI use.
+export async function setVoiceImitatesRealPerson(
+  api: Api,
+  id: string,
+  imitatesRealPerson: boolean,
+): Promise<void> {
+  const response = await api.client.settings.voices[":id"]["real-person"].$put({
+    param: { id },
+    json: { imitatesRealPerson },
+  });
+  if (!response.ok) throw await failure(response);
+}
+
 export async function removeVoice(api: Api, id: string): Promise<void> {
   const response = await api.client.settings.voices[":id"].$delete({ param: { id } });
   if (!response.ok) {
@@ -563,6 +621,19 @@ export async function savePrompt(
       ? await api.client.prompts.$post({ json })
       : await api.client.prompts[":id"].$put({ param: { id }, json }),
   );
+}
+
+// An Image prompt's "Draws photorealistic pictures" switch, which applies at once.
+export async function setPromptPhotorealistic(
+  api: Api,
+  id: string,
+  photorealistic: boolean,
+): Promise<void> {
+  const response = await api.client.prompts[":id"].photorealistic.$put({
+    param: { id },
+    json: { photorealistic },
+  });
+  if (!response.ok) throw await failure(response);
 }
 
 export async function removePrompt(api: Api, id: string): Promise<void> {
