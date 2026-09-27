@@ -1,7 +1,7 @@
 import { topicKeywords } from "@app/slices/project-templates/one-off.js";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { type KeyboardEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { channelsQuery, defaultChannelId } from "@/channels/api";
 import { channelOfTemplate } from "@/channels/members-tabs";
@@ -13,6 +13,7 @@ import { PageHeader, Workspace } from "@/components/kit/layout";
 import { Welcome } from "@/components/welcome";
 import { PlayLanguage } from "@/language/play-language";
 import { usePlayDraft } from "@/lib/form-drafts";
+import { shortcuts } from "@/lib/shortcuts";
 import { admission, keywordOrigins } from "@/play/admission";
 import { ChannelPicker, useDraftCast } from "@/play/channel-picker";
 import { checkpointTarget } from "@/play/checkpoints";
@@ -280,12 +281,6 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   const openReview = (): void => {
     void session.navigate("review");
   };
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-      event.preventDefault();
-      openReview();
-    }
-  };
 
   const onPickFiles = (kind: UploadSlot, files: readonly File[]): void => {
     session.invalidateReview(true);
@@ -473,7 +468,8 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
     title: "Review the whole setup",
     group: "Play",
     keywords: ["summary", "checkpoints", "prompt"],
-    shortcut: ["Ctrl", "Enter"],
+    // Bound by the palette's provider, from a field too: the label and the key are one.
+    shortcut: shortcuts.reviewSetup,
     run: openReview,
   });
   useCommand({
@@ -506,10 +502,8 @@ export function PlayForm({ onCreated }: { readonly onCreated: (projectId: string
   ) : null;
 
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: form-wide keyboard shortcut opens the whole setup without starting a run.
     <div
       ref={root}
-      onKeyDown={onKeyDown}
       onBlurCapture={(event) => {
         const field = (event.target as HTMLElement).dataset.playField;
         if (field) setTouched((current) => new Set([...current, field]));

@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { CommandPaletteProvider } from "@/components/kit/command-palette";
 import type { Answer } from "@/test-app";
 import { emptyAnswer, jsonAnswer, renderRouted, testDeps, testVersion } from "@/test-app";
 import { EntryEditorRoute } from "./entry-editor.js";
@@ -96,6 +97,27 @@ describe("the entry editor's two switches", () => {
       },
       { timeout: 4000 },
     );
+  });
+
+  it("saves on Ctrl+S from inside a field, as the Save button does", async () => {
+    const user = userEvent.setup();
+    const spy = saveSpy([]);
+    renderRouted(
+      <CommandPaletteProvider>
+        <EntryEditorRoute entryId={undefined} category="intro" from={undefined} onLeave={vi.fn()} />
+      </CommandPaletteProvider>,
+      deps([], { "POST /api/entries": spy.answer }),
+    );
+    await screen.findByLabelText("Name");
+    expect(screen.getByRole("button", { name: "Save" }).getAttribute("aria-keyshortcuts")).toBe(
+      "Control+S Meta+S",
+    );
+    await user.type(screen.getByLabelText("Name"), "Sign-off");
+    await fill(user, "Body", "Thanks for watching.");
+    await user.keyboard("{Control>}s{/Control}");
+    await waitFor(() => {
+      expect(spy.sent).toHaveLength(1);
+    });
   });
 
   it("opens on the category the tab was on, and on Text", async () => {

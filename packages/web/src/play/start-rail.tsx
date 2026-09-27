@@ -3,8 +3,10 @@ import { PlayIcon } from "lucide-react";
 import { type ReactElement, type ReactNode, useEffect } from "react";
 import { Button, ButtonRow, PlayKey } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
+import { ariaKeyShortcuts } from "@/components/kit/command-palette";
 import { Field, Input } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
+import { shortcuts } from "@/lib/shortcuts";
 import type { Blocker } from "./admission";
 import { usePlaySession } from "./draft-context";
 import { pageVideos, pendingReviewUpload, startLabel } from "./review-state";
@@ -182,7 +184,12 @@ export function StartRail({
             </Button>
             <InfoTip id="play.refresh-review" />
           </span>
-          <Button variant="quiet" size="small" onClick={onWholeSetup}>
+          <Button
+            variant="quiet"
+            size="small"
+            aria-keyshortcuts={ariaKeyShortcuts(shortcuts.reviewSetup)}
+            onClick={onWholeSetup}
+          >
             Review the whole setup
           </Button>
           <Button variant="quiet" size="small" onClick={onSaveTemplate}>

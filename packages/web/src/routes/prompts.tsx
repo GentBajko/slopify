@@ -1,11 +1,12 @@
 import type { Prompt, PromptKind } from "@app/slices/library/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { removePrompt } from "@/api";
 import { useApp } from "@/app-context";
 import { Button } from "@/components/kit/button";
 import { Callout } from "@/components/kit/callout";
+import { ariaKeyShortcuts, useSearchShortcut } from "@/components/kit/command-palette";
 import { ConfirmDialog } from "@/components/kit/dialog";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Input, Select } from "@/components/kit/field";
@@ -39,6 +40,8 @@ export function PromptsRoute({
   const queryClient = useQueryClient();
   const prompts = useQuery(promptsQuery(api));
   const [query, setQuery] = useState("");
+  const search = useRef<HTMLInputElement>(null);
+  const searchKeys = useSearchShortcut(search, "prompts");
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const [deleting, setDeleting] = useState<Prompt | undefined>(undefined);
   const [history, setHistory] = useState<Prompt | undefined>(undefined);
@@ -68,7 +71,9 @@ export function PromptsRoute({
       <LibraryToolbar action={<NewPromptButton kind={kind} />}>
         <Input
           type="search"
+          ref={search}
           aria-label="Search prompts"
+          aria-keyshortcuts={ariaKeyShortcuts(searchKeys)}
           placeholder="Search prompts"
           value={query}
           className="w-full min-w-0 sm:w-64"

@@ -31,11 +31,12 @@ import {
 import { useApp } from "@/app-context";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
 import { Button } from "@/components/kit/button";
-import { useCommand } from "@/components/kit/command-palette";
+import { ariaKeyShortcuts, useCommand } from "@/components/kit/command-palette";
 import { Input, Textarea } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
 import { useToast } from "@/components/kit/toast";
 import type { HelpId } from "@/help/catalog";
+import { shortcuts } from "@/lib/shortcuts";
 import { cn } from "@/lib/utils";
 import { DiffColumns } from "@/library/diff-view";
 import { keys } from "@/queries";
@@ -111,6 +112,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
     group: "This project",
     context: project.title,
     keywords: ["youtube", "description", "chapters", "clipboard"],
+    shortcut: shortcuts.copyDescription,
     run: () =>
       copyLatest.current.description === undefined
         ? notify("The description has not been written yet.", "info")
@@ -229,6 +231,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
             id={`${id}-description`}
             label="Description"
             copy={written ? () => copy(filledDescription.text, "description") : undefined}
+            keyshortcuts={ariaKeyShortcuts(shortcuts.copyDescription)}
             count={
               written
                 ? `${String(filledDescription.text.length)} / ${String(descriptionMaxCharacters)} characters`
@@ -289,9 +292,12 @@ function PartHead({
   copy,
   count,
   over,
+  keyshortcuts,
 }: {
   readonly id: string;
   readonly label: string;
+  // The Copy button's key, as `aria-keyshortcuts`.
+  readonly keyshortcuts?: string | undefined;
   // Undefined until there is text to copy.
   readonly copy: (() => void) | undefined;
   readonly count: string | undefined;
@@ -313,6 +319,7 @@ function PartHead({
         variant="quiet"
         disabled={copy === undefined}
         aria-label={`Copy ${label.toLowerCase()}`}
+        aria-keyshortcuts={keyshortcuts}
         onClick={copy}
       >
         <CopyIcon aria-hidden="true" className="size-[14px] shrink-0" />
