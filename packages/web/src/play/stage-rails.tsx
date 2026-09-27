@@ -176,8 +176,12 @@ export function VideoRail({
   onReattachFile,
   rawTiming,
   extras = true,
+  language,
 }: RailProps & {
   readonly rawTiming?: RawTiming;
+  // The language the run is narrated in, the channel's when the draft picked none; a
+  // language without word timing always cuts every N seconds.
+  readonly language?: string | undefined;
   // Whether the YouTube description and Shorts are drawn here too; Play draws them under
   // Outputs instead.
   readonly extras?: boolean;
@@ -202,7 +206,7 @@ export function VideoRail({
     narrated: form.sources.audio !== "off",
     imageProvider: form.images.provider,
     problem,
-    language: form.language,
+    language: language ?? form.language,
     onChange: (videoEdit) => update({ videoEdit }),
   });
 

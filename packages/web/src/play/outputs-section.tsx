@@ -114,11 +114,13 @@ export function VideoSection(
 ): ReactElement {
   const session = usePlaySession();
   const document = session.document;
+  const language = useDraftLanguage();
   return (
     <>
       <VideoRail
         {...props}
         extras={false}
+        language={language}
         rawTiming={{
           imageSeconds: document.form.imageSeconds,
           zoomPercent: document.form.zoomPercent,

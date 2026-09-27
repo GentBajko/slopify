@@ -1,7 +1,9 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
-import { mountPlay, openSection } from "./play-test-fixture";
+import { defaultChannelId } from "@/channels/api";
+import { jsonAnswer } from "@/test-app";
+import { mountPlay, openRow, openSection } from "./play-test-fixture";
 
 afterEach(cleanup);
 
@@ -97,6 +99,29 @@ it("sets transitions, the Look, chapter cards and animated images, and saves the
       },
     }),
   );
+});
+
+it("cuts every N seconds when the channel's language has no word timing and the draft picked none", async () => {
+  const channel = {
+    id: defaultChannelId,
+    name: "Romanian channel",
+    isDefault: true,
+    brand: { language: "ro" },
+    seriesBrief: "",
+    aiDisclosure: "auto",
+    version: 1,
+    createdAt: "a",
+    updatedAt: "a",
+  };
+  await mountPlay({
+    "GET /api/channels": jsonAnswer({ channels: [{ ...channel, templates: 0, cast: 0 }] }),
+    [`GET /api/channels/${defaultChannelId}`]: jsonAnswer({ channel, cast: [] }),
+  });
+  await openRow("Video and style");
+  const cuts = screen.getByRole<HTMLSelectElement>("combobox", { name: "Cuts" });
+  await waitFor(() => expect(cuts.disabled).toBe(true));
+  expect(cuts.value).toBe("interval");
+  expect(screen.getByText(/Word timing isn't available for Romanian yet/)).not.toBeNull();
 });
 
 it("keeps the transition length off while the transition is a cut", async () => {
