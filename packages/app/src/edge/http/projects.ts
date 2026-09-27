@@ -1,7 +1,6 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
-import { modelFields } from "../../catalog/validate.js";
 import { derive, progressOf } from "../../kernel/runner/graph.js";
 import type { Project, ProjectListing, ProjectSummary } from "../../slices/admission/model.js";
 import {
@@ -12,22 +11,19 @@ import {
   stageStandingsByProject,
   stagesOf,
 } from "../../slices/admission/repo.js";
-import { admit } from "../../slices/admission/rules.js";
-import { startRun } from "../../slices/admission/start.js";
+import { defaultChannelId } from "../../slices/channels/model.js";
+import { projectChannels } from "../../slices/channels/repo.js";
 import { withProjectControl } from "../../slices/control/lock.js";
-import { resolveFont } from "../../slices/fonts/index.js";
-import { pickTemplates, renderPicked } from "../../slices/library/slots.js";
 import { resumable } from "../../slices/rebuild/recovery-repo.js";
 import { adoptBaseline } from "../../slices/revisions/adopt.js";
 import { currentRevisionId } from "../../slices/revisions/repo.js";
-import { outputsOf, stagedFiles } from "../../slices/storage/repo.js";
-import type { StorageDeps } from "../../slices/storage/staging.js";
-import type { TelemetryDeps } from "../../slices/telemetry/record.js";
-import { record } from "../../slices/telemetry/record.js";
+import { outputsOf } from "../../slices/storage/repo.js";
 import type { TrashDeps } from "../../slices/trash/model.js";
 import { trashProject } from "../../slices/trash/service.js";
+import { uploadedProjects } from "../../slices/uploads/repo.js";
 import type { AppDeps } from "./app.js";
 import { onInvalid, problem, titleOf } from "./problem.js";
+import { createProject } from "./project-create.js";
 
 const idParam = z.object({
   id: z
@@ -40,24 +36,6 @@ const idParam = z.object({
 // The return type is inferred so Hono keeps the route types the SPA's client is
 // generated from; see stagingRoutes.
 export function projectRoutes(deps: AppDeps) {
-  const storage: StorageDeps = {
-    catalogue: deps.catalogue,
-    db: deps.db,
-    paths: deps.paths,
-    ids: deps.ids,
-    clock: deps.clock,
-    log: deps.log,
-    emit: (event) => {
-      deps.hub.emitGlobal(event);
-    },
-  };
-  const telemetry: TelemetryDeps = {
-    db: deps.db,
-    ids: deps.ids,
-    clock: deps.clock,
-    log: deps.log,
-    appVersion: deps.version,
-  };
   const storageForTrash: TrashDeps = {
     db: deps.db,
     paths: deps.paths,
@@ -73,85 +51,36 @@ export function projectRoutes(deps: AppDeps) {
   return (
     new Hono()
       .post("/", zValidator("json", runDraftSchema, onInvalid), async (c) => {
-        if (c.req.valid("json").checkpoints?.length)
+        const created = await createProject(deps, c.req.valid("json"));
+        if (!created.ok)
           return problem(c, {
-            status: 409,
-            title: titleOf(409),
-            detail:
-              "This project has checkpoints turned on, so it must be started from Play with Review and start.",
+            status: created.status,
+            title: titleOf(created.status),
+            detail: created.detail,
+            ...(created.fields.length === 0 ? {} : { extensions: { fields: created.fields } }),
           });
-        const requestedSubtitles = c.req.valid("json").subtitles;
-        if (requestedSubtitles !== undefined && requestedSubtitles.mode !== "off") {
-          try {
-            await resolveFont(deps.paths, requestedSubtitles.fontId);
-          } catch {
-            return problem(c, {
-              status: 400,
-              title: titleOf(400),
-              detail:
-                "The subtitle font you picked is no longer available. Choose another font before starting.",
-              extensions: {
-                fields: [
-                  {
-                    field: "subtitles.fontId",
-                    message:
-                      "This font is no longer available. Choose another or upload it again in Settings.",
-                  },
-                ],
-              },
-            });
-          }
-        }
-        // The bodies are read here, at the click, so an edit made since the
-        // prompt was selected is the one that runs.
-        const picked = pickTemplates(deps.db, c.req.valid("json"));
-        const admitted = admit({
-          draft: picked.draft,
-          staged: stagedFiles(deps.db),
-          requiredSlots: picked.requiredSlots,
-        });
-        const modelErrors = modelFields(picked.draft, deps.catalogue);
-        if (!admitted.ok || picked.missing.length > 0 || modelErrors.length > 0) {
-          return problem(c, {
-            status: 400,
-            title: titleOf(400),
-            detail: "This video cannot start yet. Fix the highlighted fields, then try again.",
-            extensions: {
-              fields: [...picked.missing, ...modelErrors, ...(admitted.ok ? [] : admitted.fields)],
-            },
-          });
-        }
-
-        // Rendered from the values admit() has trimmed, so the stored text carries no
-        // padding the user did not intend.
-        const { project } = startRun(
-          storage,
-          admitted.draft,
-          renderPicked(picked, admitted.draft.values),
-          false,
-          Object.fromEntries(picked.bodies.map(({ key, body }) => [key, body])),
-        );
-        // One event per project created. record() swallows its own
-        // failures, so a broken telemetry write cannot cost the user the run.
-        record(telemetry, "project.created", {});
-        deps.flushSoon();
-        // The run starts only once the project is committed.
-        deps.runner.tick(project.id);
         // Read back after the tick, not from the rows startRun built: the runner has
         // already claimed every eligible stage, and a body that paired status "running"
         // with "video: pending" would contradict itself.
-        return c.json({ project: summarise(project), stages: stagesOf(deps.db, project.id) }, 201);
+        return c.json(
+          { project: summarise(created.project), stages: stagesOf(deps.db, created.project.id) },
+          201,
+        );
       })
       // One statement for every project's stage standings, not one per row: the list needs
       // a status word and a meter, and both come out of the same five columns.
       .get("/", (c) => {
         const standings = stageStandingsByProject(deps.db);
+        const channels = projectChannels(deps.db);
+        const uploads = uploadedProjects(deps.db);
         const projects: ProjectListing[] = listProjects(deps.db).map((project) => {
           const stages = standings.get(project.id) ?? [];
           return {
             ...project,
             status: derive(stages, project.paused),
             progress: progressOf(stages),
+            channelId: channels.get(project.id) ?? defaultChannelId,
+            uploadedAt: uploads.get(project.id) ?? null,
           };
         });
         return c.json({ projects });

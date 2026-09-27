@@ -133,8 +133,15 @@ export interface ReferenceSettings {
   readonly thumbnail?: boolean | undefined;
 }
 
+// What a run makes: the long video (absent, which is what every project saved before the
+// mode existed was) or one vertical short of about a minute, made by the same stages with
+// the Shorts renderer's word-by-word captions (`admission/short-mode.ts`).
+export const runModes = ["video", "short"] as const;
+export type RunMode = (typeof runModes)[number];
+
 // What Play posts. Everything a run is configured with, before any rule has looked at it.
 export interface RunDraft {
+  readonly mode?: RunMode | undefined;
   // The other projects' pronunciations as copied when this one started or was last refreshed
   // in Edit project; used only while `audio.shareGlossary` is on.
   readonly sharedGlossary?: readonly SharedPronunciation[] | undefined;
@@ -277,4 +284,10 @@ export interface ProjectSummary extends Project {
 export interface ProjectListing extends ProjectSummary {
   // 0 to 1, averaged over the stages the run asked for (`kernel/runner/graph.ts`).
   readonly progress: number;
+  // The channel the project belongs to (`project_channels`), the default one when unset, so
+  // Home, the calendar and this list can show one channel at a time.
+  readonly channelId: string;
+  // When the person marked the finished video as uploaded (Home, Ready to upload); null
+  // while it is not.
+  readonly uploadedAt: string | null;
 }

@@ -5,6 +5,7 @@ import {
   noticeOf,
   noticeText,
   type RunNotice,
+  topicsNoticeText,
 } from "@app/slices/notifications/rules.js";
 
 // Turns the global event stream's `project.state` frames into at most one browser notification
@@ -18,6 +19,19 @@ export interface ShownNotice {
   readonly text: NoticeText;
 }
 
+// "5 new topics are waiting for you": a schedule held the topics it suggested.
+export interface ShownTopicsNotice {
+  readonly scheduleId: string;
+  readonly text: NoticeText;
+}
+
+export interface TopicsEvent {
+  readonly scheduleId: string;
+  readonly scheduleName: string;
+  readonly added: number;
+  readonly waiting: number;
+}
+
 export interface RunWatcherDeps {
   // The toggle is on and the browser has granted permission.
   readonly enabled: () => boolean;
@@ -28,11 +42,14 @@ export interface RunWatcherDeps {
   // One tab of many wins each transition.
   readonly claim: (key: string) => Promise<boolean>;
   readonly show: (notice: ShownNotice) => void;
+  readonly showTopics?: (notice: ShownTopicsNotice) => void;
   readonly report: (error: unknown) => void;
 }
 
 export interface RunWatcher {
   readonly observe: (event: { readonly projectId: string; readonly state: ProjectState }) => void;
+  // A schedule held new suggested topics. Every tab hears it; one shows it.
+  readonly observeTopics: (event: TopicsEvent) => void;
   // Fills in the projects no event has named yet; never overwrites one an event has.
   readonly seed: () => Promise<void>;
   // Resolves once every notification started so far is shown or dropped. Tests.
@@ -69,6 +86,16 @@ export function createRunWatcher(deps: RunWatcherDeps): RunWatcher {
       const kind = noticeOf(previous, event.state);
       if (kind === undefined || !deps.enabled()) return;
       track(announce(event.projectId, event.state, kind));
+    },
+    observeTopics: (event) => {
+      if (event.added <= 0 || !deps.enabled() || deps.showTopics === undefined) return;
+      const show = deps.showTopics;
+      track(
+        (async () => {
+          if (!(await deps.claim(`topics:${event.scheduleId}:${String(event.waiting)}`))) return;
+          show({ scheduleId: event.scheduleId, text: topicsNoticeText(event) });
+        })(),
+      );
     },
     seed: async () => {
       try {

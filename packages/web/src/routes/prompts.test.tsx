@@ -47,21 +47,30 @@ function Screen({ start = "article" as PromptKind }) {
   return <PromptsRoute kind={kind} onKind={setKind} />;
 }
 
+// A row is found by its title, which is the button that shows it in the detail column.
+async function findRow(name: string): Promise<HTMLElement> {
+  const title = await screen.findByRole("button", { name });
+  const row = title.closest("li");
+  if (row === null) throw new Error(`${name} is not in a list row`);
+  return row;
+}
+
 describe("the prompts list", () => {
-  it("offers the three kinds and shows only the one that is on", async () => {
+  it("offers every kind and shows only the one that is on", async () => {
     const user = userEvent.setup();
     renderRouted(<Screen />, deps([dossier, oil, card]));
 
-    expect(await screen.findByText("Documentary dossier")).not.toBeNull();
+    expect(await findRow("Documentary dossier")).not.toBeNull();
     expect(screen.queryByText("Oil painting scenes")).toBeNull();
     expect(screen.queryByText("Bold title card")).toBeNull();
 
-    await user.click(screen.getByRole("radio", { name: "Image" }));
-    expect(await screen.findByText("Oil painting scenes")).not.toBeNull();
+    const kinds = screen.getByRole("combobox", { name: "Prompt kind" });
+    await user.selectOptions(kinds, "Image");
+    expect(await findRow("Oil painting scenes")).not.toBeNull();
     expect(screen.queryByText("Documentary dossier")).toBeNull();
 
-    await user.click(screen.getByRole("radio", { name: "Thumbnail" }));
-    expect(await screen.findByText("Bold title card")).not.toBeNull();
+    await user.selectOptions(kinds, "Thumbnail");
+    expect(await findRow("Bold title card")).not.toBeNull();
     expect(screen.queryByText("Oil painting scenes")).toBeNull();
   });
 
@@ -76,45 +85,91 @@ describe("the prompts list", () => {
       updatedAt: "2026-09-01T10:00:00.000Z",
     };
     renderRouted(<Screen />, deps([dossier, hook]));
-    expect(await screen.findByText("Documentary dossier")).not.toBeNull();
+    await findRow("Documentary dossier");
     expect(screen.queryByText("Hooky chapters")).toBeNull();
-    await user.click(screen.getByRole("radio", { name: "YouTube Description" }));
-    expect(await screen.findByText("Hooky chapters")).not.toBeNull();
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Prompt kind" }),
+      "YouTube Description",
+    );
+    expect(await findRow("Hooky chapters")).not.toBeNull();
     expect(screen.queryByText("Documentary dossier")).toBeNull();
   });
 
-  it("shows every detected slot of a row as a chip", async () => {
+  it("says each row's kind and keyword count on its meta line", async () => {
     renderRouted(<Screen />, deps([dossier]));
 
-    await screen.findByText("Documentary dossier");
-    expect(screen.getByText("minWords").getAttribute("data-slot-chip")).toBe("minWords");
-    expect(screen.getByText("topic").getAttribute("data-slot-chip")).toBe("topic");
+    const row = await findRow("Documentary dossier");
+    expect(within(row).getByText(/^Article · 2 keywords · updated /u)).not.toBeNull();
+  });
+
+  it("shows the selected prompt's text and keywords beside the list", async () => {
+    const user = userEvent.setup();
+    const second: Prompt = {
+      ...dossier,
+      id: "p5",
+      name: "Short dossier",
+      body: "Brief {{era}}.",
+      slots: ["era"],
+    };
+    renderRouted(<Screen />, deps([dossier, second]));
+
+    // The first row is shown until another is picked.
+    const first = await findRow("Documentary dossier");
+    expect(first.getAttribute("aria-current")).toBe("true");
+    const detail = screen.getByRole("region", { name: "Documentary dossier details" });
+    expect(within(detail).getByText(dossier.body)).not.toBeNull();
+    expect(within(detail).getByText("{{minWords}}")).not.toBeNull();
+    expect(within(detail).getByText("{{topic}}")).not.toBeNull();
+    expect(within(detail).getByRole("link", { name: "Edit prompt" }).getAttribute("href")).toBe(
+      "/prompts/p1",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Short dossier" }));
+    const next = await screen.findByRole("region", { name: "Short dossier details" });
+    expect(within(next).getByText("Brief {{era}}.")).not.toBeNull();
+    expect((await findRow("Short dossier")).getAttribute("aria-current")).toBe("true");
+    expect(first.getAttribute("aria-current")).toBeNull();
+  });
+
+  it("narrows the list to the prompts whose name or text matches the search", async () => {
+    const user = userEvent.setup();
+    const second: Prompt = { ...dossier, id: "p5", name: "Short dossier", body: "Brief {{era}}." };
+    renderRouted(<Screen />, deps([dossier, second]));
+
+    await findRow("Documentary dossier");
+    const search = screen.getByRole("searchbox", { name: "Search prompts" });
+    await user.type(search, "brief");
+    expect(screen.queryByRole("button", { name: "Documentary dossier" })).toBeNull();
+    expect(await findRow("Short dossier")).not.toBeNull();
+
+    await user.clear(search);
+    await user.type(search, "nothing like it");
+    expect(await screen.findByText('No article prompts match "nothing like it".')).not.toBeNull();
   });
 
   it("teaches what a prompt is when the kind is empty, with the one action in the toolbar", async () => {
     renderRouted(<Screen start="image" />, deps([dossier]));
 
+    expect(await screen.findByRole("heading", { name: "No image prompts yet" })).not.toBeNull();
     expect(
-      await screen.findByText(
-        "No image prompts yet. A prompt is text with {{keywords}}; each keyword becomes a field on Play.",
-      ),
+      screen.getByText("A prompt is text with {{keywords}}; each keyword becomes a field on Play."),
     ).not.toBeNull();
     expect(screen.getAllByRole("link", { name: "New prompt" })).toHaveLength(1);
   });
 
-  it("points New prompt and the row itself at the editor, carrying the tab that is on", async () => {
+  it("points New prompt and Edit at the editor, carrying the tab that is on", async () => {
     renderRouted(<Screen />, deps([dossier]));
 
-    await screen.findByText("Documentary dossier");
+    await findRow("Documentary dossier");
     expect(screen.getByRole("link", { name: "New prompt" }).getAttribute("href")).toBe(
       "/prompts/new?kind=article",
     );
-    expect(screen.getByRole("link", { name: "Documentary dossier" }).getAttribute("href")).toBe(
-      "/prompts/p1",
-    );
+    expect(
+      screen.getByRole("link", { name: "Edit Documentary dossier" }).getAttribute("href"),
+    ).toBe("/prompts/p1");
   });
 
-  it("shows every row action, Duplicate as a copy opened for editing, and Delete behind a confirmation", async () => {
+  it("shows every row action on the row, Duplicate as a copy opened for editing, and Delete behind a confirmation", async () => {
     const user = userEvent.setup();
     let deleted: string | undefined;
     renderRouted(
@@ -127,14 +182,17 @@ describe("the prompts list", () => {
       }),
     );
 
-    await screen.findByText("Documentary dossier");
+    await findRow("Documentary dossier");
     const actions = screen.getByRole("group", { name: "Actions for Documentary dossier" });
-    expect([...actions.querySelectorAll("a, button")].map((one) => one.textContent)).toEqual([
-      "Edit",
-      "Duplicate",
-      "Use in Play",
-      "History",
-      "Delete",
+    // All visible on the row, no menu; History and Delete are icon buttons.
+    expect(
+      [...actions.querySelectorAll("a, button")].map((one) => one.getAttribute("aria-label")),
+    ).toEqual([
+      "Edit Documentary dossier",
+      "Duplicate Documentary dossier",
+      "Use Documentary dossier in Play",
+      "History of Documentary dossier",
+      "Delete Documentary dossier",
     ]);
     expect(
       within(actions).getByRole("link", { name: "Edit Documentary dossier" }).getAttribute("href"),
@@ -156,7 +214,7 @@ describe("the prompts list", () => {
       ),
     ).not.toBeNull();
 
-    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+    await user.click(within(dialog).getByRole("button", { name: "Delete prompt" }));
     await waitFor(() => {
       expect(deleted).toBe("/api/prompts/p1");
     });
@@ -189,7 +247,7 @@ describe("the prompts list", () => {
     expect(blocked.getAttribute("title")).toBe("Play is starting a run from its draft.");
   });
 
-  it("opens History with a word diff, restores a version and lists what uses the prompt", async () => {
+  it("shows what uses the prompt and its latest change beside the list, and every version in History", async () => {
     const user = userEvent.setup();
     let restored: string | undefined;
     const version = (n: number, body: string, restoredFrom: number | null = null) => ({
@@ -220,27 +278,42 @@ describe("the prompts list", () => {
       }),
     );
 
-    await user.click(await screen.findByRole("button", { name: "History of Documentary dossier" }));
+    await findRow("Documentary dossier");
+    const detail = screen.getByRole("region", { name: "Documentary dossier details" });
+    expect(await within(detail).findByText("1 template, 1 schedule, 1 project")).not.toBeNull();
+    expect(within(detail).getByRole("link", { name: "Cats" }).getAttribute("href")).toBe(
+      "/projects/x1",
+    );
+    expect(within(detail).getByText(/2 of 3 revisions, including the current one/u)).not.toBeNull();
+    expect(within(detail).getByText("Schedule · paused")).not.toBeNull();
+    // The latest change, in place.
+    expect((await within(detail).findByText("short")).tagName).toBe("DEL");
+    expect(within(detail).getByText("long").tagName).toBe("INS");
+
+    await user.click(screen.getByRole("button", { name: "History of Documentary dossier" }));
     const drawer = await screen.findByRole("dialog", { name: "History of Documentary dossier" });
-    expect(await within(drawer).findByText("short")).not.toBeNull();
     expect(within(drawer).getByText("short").tagName).toBe("DEL");
     expect(within(drawer).getByText("long").tagName).toBe("INS");
     expect(within(drawer).getByText("1 word added, 1 removed.")).not.toBeNull();
-    expect(
-      await within(drawer).findByRole("heading", {
-        name: "Used by 1 template, 1 schedule, 1 project",
-      }),
-    ).not.toBeNull();
-    expect(within(drawer).getByRole("link", { name: "Cats" }).getAttribute("href")).toBe(
-      "/projects/x1",
-    );
-    expect(within(drawer).getByText(/2 of 3 revisions, including the current one/u)).not.toBeNull();
 
     await user.click(within(drawer).getByRole("button", { name: "Restore version 1" }));
     await waitFor(() => {
       expect(restored).toBe("/api/prompts/p1/history/1/restore");
     });
     expect(await within(drawer).findByText("Restored version 1 as a new version.")).not.toBeNull();
+  });
+
+  it("opens the same History from Compare versions in the detail", async () => {
+    const user = userEvent.setup();
+    renderRouted(<Screen />, deps([dossier]));
+
+    await findRow("Documentary dossier");
+    await user.click(
+      screen.getByRole("button", { name: "Compare versions of Documentary dossier" }),
+    );
+    expect(
+      await screen.findByRole("dialog", { name: "History of Documentary dossier" }),
+    ).not.toBeNull();
   });
 
   it("says what went wrong when the list cannot be read", async () => {
@@ -250,5 +323,6 @@ describe("the prompts list", () => {
     );
 
     expect(await screen.findByText("The disk is full.")).not.toBeNull();
+    expect(screen.getByText("The prompts couldn't be loaded.")).not.toBeNull();
   });
 });

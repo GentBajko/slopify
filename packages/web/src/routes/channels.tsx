@@ -1,142 +1,224 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { PlusIcon } from "lucide-react";
-import { type ReactElement, useId, useState } from "react";
+import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
-import { channelsKey, channelsQuery, createChannel } from "@/channels/api";
+import {
+  type ChannelSummary,
+  channelsKey,
+  channelsQuery,
+  createChannel,
+  deleteChannel,
+  saveChannel,
+} from "@/channels/api";
 import { StatusSlot } from "@/components/kit/action-bar";
-import { Drawer } from "@/components/kit/drawer";
-import { PageBar } from "@/components/kit/page-bar";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { LibraryToolbar } from "./library.js";
+import { Button, buttonClass } from "@/components/kit/button";
+import { useCommand } from "@/components/kit/command-palette";
+import { ConfirmDialog, Dialog } from "@/components/kit/dialog";
+import { EmptyState } from "@/components/kit/empty-state";
+import { Field, Input } from "@/components/kit/field";
+import { PageHeader } from "@/components/kit/layout";
+import { List, ListRow } from "@/components/kit/list-row";
 
 // Channels: one row per channel, each opening its page (brand kit, cast, templates,
-// schedules). New channels start empty; the default one holds everything made before channels.
+// schedules), with Rename and Delete on the row. New channels start empty; the default one
+// holds everything made before channels and cannot be deleted.
 export function ChannelsRoute(): ReactElement {
   const { api } = useApp();
   const client = useQueryClient();
   const navigate = useNavigate();
   const channels = useQuery(channelsQuery(api));
-  const [creating, setCreating] = useState(false);
+  // The name dialog: a new channel, or renaming one.
+  const [naming, setNaming] = useState<"new" | ChannelSummary | null>(null);
+  const [deleting, setDeleting] = useState<ChannelSummary | null>(null);
   const [name, setName] = useState("");
-  const nameId = useId();
   const create = useMutation({
     mutationFn: () => createChannel(api, crypto.randomUUID(), name.trim()),
     onSuccess: async (channel) => {
       await client.invalidateQueries({ queryKey: channelsKey });
-      setCreating(false);
+      setNaming(null);
       setName("");
       await navigate({ to: "/channels/$channelId", params: { channelId: channel.id } });
     },
   });
+  const rename = useMutation({
+    mutationFn: (channel: ChannelSummary) =>
+      saveChannel(api, channel.id, {
+        name: name.trim(),
+        brand: channel.brand,
+        seriesBrief: channel.seriesBrief,
+        baseVersion: channel.version,
+      }),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: channelsKey });
+      setNaming(null);
+    },
+  });
+  const remove = useMutation({
+    mutationFn: (channel: ChannelSummary) => deleteChannel(api, channel.id),
+    onSuccess: async () => {
+      setDeleting(null);
+      await client.invalidateQueries({ queryKey: channelsKey });
+    },
+  });
+  const startNew = () => {
+    create.reset();
+    setName("");
+    setNaming("new");
+  };
+  useCommand({ id: "channels.new", title: "New channel", group: "Channels", run: startNew });
+  const saving = naming === "new" ? create : rename;
+  const submit = () => {
+    if (name.trim() === "" || naming === null) return;
+    if (naming === "new") create.mutate();
+    else rename.mutate(naming);
+  };
   return (
     <div>
-      <PageBar title="Channels" />
-      <LibraryToolbar
-        action={
-          <Button
-            type="button"
-            aria-expanded={creating}
-            onClick={() => {
-              create.reset();
-              setCreating(true);
-            }}
-          >
-            <PlusIcon aria-hidden="true" className="size-[14px]" />
+      <PageHeader
+        title="Channels"
+        meta="A channel keeps its brand kit, cast, series brief, templates and schedules together."
+        actions={
+          <Button variant="primary" aria-expanded={naming === "new"} onClick={startNew}>
+            <PlusIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />
             New channel
           </Button>
         }
-      >
-        <p className="text-small text-ink2">
-          A channel keeps its brand kit, cast, series brief, templates and schedules together.
-        </p>
-      </LibraryToolbar>
-      <StatusSlot tone={channels.error ? "error" : "info"} className="mb-2">
-        {channels.error?.message ?? (channels.isPending ? "Loading channels…" : undefined)}
+      />
+      <StatusSlot tone={channels.error || remove.error ? "error" : "info"} className="mb-2">
+        {channels.error
+          ? `The channels couldn't be loaded: ${channels.error.message} Reload the page to try again.`
+          : deleting === null && remove.error
+            ? remove.error.message
+            : channels.isPending
+              ? "Loading channels…"
+              : undefined}
       </StatusSlot>
-      {channels.data?.length ? (
-        <ul
-          className="overflow-hidden rounded-panel border border-line bg-panel"
-          aria-label="Channels"
+      {channels.data?.length === 0 ? (
+        <EmptyState
+          title="No channels yet"
+          actions={
+            <Button variant="primary" onClick={startNew}>
+              New channel
+            </Button>
+          }
         >
+          Make one for each series you run; it keeps that series' look and cast.
+        </EmptyState>
+      ) : null}
+      {channels.data?.length ? (
+        <List label="Channels" className="[&_.sl-row__actions]:flex-wrap">
           {channels.data.map((channel) => (
-            <li
+            <ListRow
               key={channel.id}
-              className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-line px-4 py-[10px] last:border-b-0"
-            >
-              <div className="flex min-w-0 flex-wrap items-baseline gap-x-3">
-                <h2 className="break-words font-semibold">
+              title={
+                <Link to="/channels/$channelId" params={{ channelId: channel.id }}>
+                  {channel.name}
+                </Link>
+              }
+              meta={`${channel.isDefault ? "Default · " : ""}${String(channel.templates)} ${
+                channel.templates === 1 ? "template" : "templates"
+              } · ${String(channel.cast)} in the cast`}
+              actions={
+                <>
                   <Link
                     to="/channels/$channelId"
                     params={{ channelId: channel.id }}
-                    className="hover:underline"
+                    aria-label={`Open ${channel.name}`}
+                    className={buttonClass({ variant: "quiet", size: "small" })}
                   >
-                    {channel.name}
+                    Open
                   </Link>
-                </h2>
-                <p className="text-small text-ink3">
-                  {channel.isDefault ? "Default · " : ""}
-                  {channel.templates} {channel.templates === 1 ? "template" : "templates"} ·{" "}
-                  {channel.cast} in the cast
-                </p>
-              </div>
-              <Button
-                type="button"
-                aria-label={`Open ${channel.name}`}
-                onClick={() =>
-                  void navigate({ to: "/channels/$channelId", params: { channelId: channel.id } })
-                }
-              >
-                Open
-              </Button>
-            </li>
+                  <Button
+                    variant="quiet"
+                    size="small"
+                    aria-label={`Rename ${channel.name}`}
+                    onClick={() => {
+                      rename.reset();
+                      setName(channel.name);
+                      setNaming(channel);
+                    }}
+                  >
+                    Rename
+                  </Button>
+                  {channel.isDefault ? null : (
+                    <Button
+                      variant="quiet"
+                      size="small"
+                      aria-label={`Delete ${channel.name}`}
+                      onClick={() => {
+                        remove.reset();
+                        setDeleting(channel);
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  )}
+                </>
+              }
+            />
           ))}
-        </ul>
+        </List>
       ) : null}
-      <Drawer
-        open={creating}
-        title="New channel"
-        width="narrow"
-        onClose={() => setCreating(false)}
+      <Dialog
+        open={naming !== null}
+        onOpenChange={(open) => {
+          if (!open && !saving.isPending) setNaming(null);
+        }}
+        title={naming === "new" || naming === null ? "New channel" : `Rename ${naming.name}`}
         footer={
           <>
-            <StatusSlot tone={create.error ? "error" : "info"}>
-              {create.error?.message ?? (create.isPending ? "Creating…" : undefined)}
+            <StatusSlot tone={saving.error ? "error" : "info"}>
+              {saving.error?.message ?? (saving.isPending ? "Saving…" : undefined)}
             </StatusSlot>
+            <Button disabled={saving.isPending} onClick={() => setNaming(null)}>
+              Cancel
+            </Button>
             <Button
               type="submit"
-              form="new-channel-form"
+              form="channel-name-form"
               variant="primary"
-              disabled={create.isPending || name.trim() === ""}
+              disabled={saving.isPending || name.trim() === ""}
             >
-              Create channel
+              {naming === "new" ? "Create channel" : "Rename channel"}
             </Button>
           </>
         }
       >
         <form
-          id="new-channel-form"
-          aria-label="New channel"
+          id="channel-name-form"
+          aria-label={naming === "new" ? "New channel" : "Rename channel"}
           onSubmit={(event) => {
             event.preventDefault();
-            if (name.trim() !== "") create.mutate();
+            submit();
           }}
         >
-          <Label htmlFor={nameId} className="mb-2">
-            Channel name
-          </Label>
-          <Input
-            id={nameId}
-            value={name}
-            maxLength={200}
-            required
-            disabled={create.isPending}
-            onChange={(event) => setName(event.target.value)}
-          />
+          <Field label="Channel name">
+            <Input
+              value={name}
+              maxLength={200}
+              required
+              disabled={saving.isPending}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </Field>
         </form>
-      </Drawer>
+      </Dialog>
+      <ConfirmDialog
+        open={deleting !== null}
+        title={`Delete ${deleting?.name ?? "this channel"}?`}
+        consequence={
+          remove.error?.message ??
+          "Its cast goes with it. Its videos move to the default channel and keep what they were made with."
+        }
+        confirmLabel="Delete channel"
+        cancelLabel="Keep it"
+        pending={remove.isPending}
+        onConfirm={() => {
+          if (deleting) remove.mutate(deleting);
+        }}
+        onCancel={() => setDeleting(null)}
+      />
     </div>
   );
 }

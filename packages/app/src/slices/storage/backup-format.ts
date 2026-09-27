@@ -59,6 +59,7 @@ export const projectTables = [
   "review_checkpoint_approvals",
   "project_recovery_requests",
   "youtube_description_edits",
+  "project_uploads",
   // Since 2.5.0. Left out on purpose: plan_limit_waits and plan_limit_waiters (an account's
   // current wait, a lease of this install) and prompt_softening (a pending one-off request).
   "review_verdicts",

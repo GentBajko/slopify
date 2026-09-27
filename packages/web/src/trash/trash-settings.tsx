@@ -97,9 +97,9 @@ export function TrashSettings(): ReactElement {
         info="Deleted projects, prompts, intros and outros, templates and schedules stay here for 30 days, then are removed for good along with a project's files."
       />
       {trash.isPending ? (
-        <p className="text-small text-ink3">Loading the trash…</p>
+        <p className="text-small text-ink-3">Loading the trash…</p>
       ) : trash.error ? (
-        <p role="alert" className="text-small text-red">
+        <p role="alert" className="text-small text-danger">
           {trash.error.message}
         </p>
       ) : items.length === 0 ? (

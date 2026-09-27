@@ -28,12 +28,11 @@ it("restores Style on reload then reveals Outputs before measuring Back", async 
   });
   await at("play-subtitles");
   expect(router.state.location.pathname).toBe("/play");
-  expect(screen.getByRole("button", { name: "Style" }).getAttribute("aria-current")).toBe("step");
-  expect(document.querySelector('[data-tour="play-video"]')).toBeNull();
+  // The guide opens the row that holds its target: Video and style for the captions.
+  expect(document.querySelector('[data-tour="play-subtitles"]')).not.toBeNull();
   await user.click(guide().getByRole("button", { name: "Back" }));
   await at("play-video");
-  expect(screen.getByRole("button", { name: "Outputs" }).getAttribute("aria-current")).toBe("step");
-  expect(document.querySelector('[data-tour="play-subtitles"]')).toBeNull();
+  expect(document.querySelector('[data-tour="play-video"]')).not.toBeNull();
   await user.click(guide().getByRole("button", { name: /^Skip/ }));
   await at("play-subtitles");
   await user.click(guide().getByRole("button", { name: /^Skip/ }));

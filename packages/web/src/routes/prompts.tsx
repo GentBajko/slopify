@@ -1,33 +1,27 @@
 import type { Prompt, PromptKind } from "@app/slices/library/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { CopyIcon, PencilIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { removePrompt } from "@/api";
 import { useApp } from "@/app-context";
-import { ConfirmDialog } from "@/components/confirm";
-import { RailGroup } from "@/components/rail";
-import { SlotChip } from "@/components/slot-chip";
-import { Button } from "@/components/ui/button";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { kindOptions } from "@/lib/prompt-kinds";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/kit/button";
+import { Callout } from "@/components/kit/callout";
+import { ConfirmDialog } from "@/components/kit/dialog";
+import { EmptyState } from "@/components/kit/empty-state";
+import { Input, Select } from "@/components/kit/field";
+import { ListDetail } from "@/components/kit/layout";
+import { List, ListRow } from "@/components/kit/list-row";
+import { kindLabel, kindOptions } from "@/lib/prompt-kinds";
 import { HistoryDrawer } from "@/library/history-drawer";
+import { LibraryItemDetail, plural, updatedOn } from "@/library/item-detail";
+import { ListSkeleton, LoadError, libraryListDetail, libraryRow } from "@/library/list-states";
 import { LibraryRowActions } from "@/library/row-actions";
 import { keys, promptsQuery } from "@/queries";
 import { LibraryToolbar } from "@/routes/library";
 
-// One row of the rundown, and the same shape for a skeleton. Below 768 px the Slots and the
-// row's actions stack under the name; from there up they sit beside it.
-const row =
-  "grid grid-cols-[minmax(0,1fr)] items-center gap-x-[14px] gap-y-[6px] border-b border-line px-4 py-[10px] last:border-b-0 md:grid-cols-[220px_minmax(0,1fr)_auto]";
-const slotsCell = "col-start-1 row-start-2 flex flex-wrap gap-[6px]";
-const slotsWide = "md:col-start-2 md:row-start-1";
-const actionsCell = "col-start-1 row-start-3 md:col-start-3 md:row-start-1";
-
-// Every saved prompt of one kind, sorted by name by the list endpoint. Navigation that only
-// follows a link is a `Link`; the tab switch has to rewrite the URL it is already on, so it is
-// handed up to router.tsx instead of reaching for a router here.
+// Every saved prompt of one kind, sorted by name by the list endpoint, beside the selected
+// one's text, what uses it and its latest change. The kind lives in the URL, so switching it
+// is handed up to router.tsx instead of reaching for a router here.
 export function PromptsRoute({
   kind,
   onKind,
@@ -43,6 +37,8 @@ export function PromptsRoute({
   const { api } = useApp();
   const queryClient = useQueryClient();
   const prompts = useQuery(promptsQuery(api));
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const [deleting, setDeleting] = useState<Prompt | undefined>(undefined);
   const [history, setHistory] = useState<Prompt | undefined>(undefined);
 
@@ -54,104 +50,142 @@ export function PromptsRoute({
     },
   });
 
-  const listed = prompts.data?.prompts.filter((prompt) => prompt.kind === kind);
+  const ofKind = prompts.data?.prompts.filter((prompt) => prompt.kind === kind);
+  const needle = query.trim().toLowerCase();
+  const listed =
+    needle === ""
+      ? ofKind
+      : ofKind?.filter(
+          (prompt) =>
+            prompt.name.toLowerCase().includes(needle) ||
+            prompt.body.toLowerCase().includes(needle),
+        );
+  const selected = listed?.find((prompt) => prompt.id === selectedId) ?? listed?.[0];
 
   return (
     <div>
       <LibraryToolbar action={<NewPromptButton kind={kind} />}>
-        <ToggleGroup
-          type="single"
-          value={kind}
+        <Input
+          type="search"
+          aria-label="Search prompts"
+          placeholder="Search prompts"
+          value={query}
+          className="w-full min-w-0 sm:w-64"
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        <Select
           aria-label="Prompt kind"
-          className="flex-wrap"
-          onValueChange={(next) => {
-            const picked = kindOptions.find((option) => option.value === next);
-            if (picked !== undefined) {
-              onKind(picked.value);
-            }
+          value={kind}
+          className="w-full sm:w-56"
+          options={kindOptions}
+          onChange={(event) => {
+            const picked = kindOptions.find((option) => option.value === event.target.value);
+            if (picked !== undefined) onKind(picked.value);
           }}
-        >
-          {kindOptions.map((option) => (
-            <ToggleGroupItem key={option.value} value={option.value}>
-              {option.label}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+        />
       </LibraryToolbar>
 
       {prompts.error === null ? null : (
-        <RailGroup>
-          <p className="px-4 py-[14px] text-body text-red">{prompts.error.message}</p>
-        </RailGroup>
+        <LoadError
+          what="prompts"
+          message={prompts.error.message}
+          onRetry={() => void prompts.refetch()}
+        />
       )}
 
-      {listed === undefined ? (
+      {listed === undefined || ofKind === undefined ? (
         prompts.error === null ? (
-          <SkeletonRows />
+          <ListSkeleton label="Prompts" />
         ) : null
-      ) : listed.length === 0 ? (
-        <EmptyKind kind={kind} />
+      ) : ofKind.length === 0 ? (
+        <EmptyState title={`No ${kindLabel(kind).toLowerCase()} prompts yet`}>
+          A prompt is text with {"{{keywords}}"}; each keyword becomes a field on Play.
+        </EmptyState>
       ) : (
-        <RailGroup>
-          {listed.map((prompt) => (
-            <div key={prompt.id} className={row}>
-              <Link
-                to="/prompts/$promptId"
-                params={{ promptId: prompt.id }}
-                className="col-start-1 row-start-1 min-w-0 truncate font-semibold hover:underline"
-              >
-                {prompt.name}
-              </Link>
-              <span className={cn(slotsCell, slotsWide)}>
-                {prompt.slots.map((slot) => (
-                  <SlotChip key={slot} name={slot} />
+        <ListDetail
+          className={libraryListDetail}
+          list={
+            listed.length === 0 ? (
+              <p className="m-0 py-3 text-small text-ink-2">{`No ${kindLabel(kind).toLowerCase()} prompts match "${query.trim()}".`}</p>
+            ) : (
+              <List label="Prompts">
+                {listed.map((prompt) => (
+                  <ListRow
+                    key={prompt.id}
+                    className={libraryRow}
+                    title={prompt.name}
+                    meta={promptMeta(prompt)}
+                    selected={prompt.id === selected?.id}
+                    onSelect={() => setSelectedId(prompt.id)}
+                    actions={
+                      <LibraryRowActions
+                        name={prompt.name}
+                        edit={
+                          <Button asChild variant="quiet" size="small">
+                            <Link
+                              to="/prompts/$promptId"
+                              params={{ promptId: prompt.id }}
+                              aria-label={`Edit ${prompt.name}`}
+                            >
+                              Edit
+                            </Link>
+                          </Button>
+                        }
+                        // The copy is named "<name> copy" and opened for editing, so a name
+                        // that is already taken is renamed before it is ever saved.
+                        duplicate={
+                          <Button asChild variant="quiet" size="small">
+                            <Link
+                              to="/prompts/new"
+                              search={{ kind: prompt.kind, from: prompt.id }}
+                              aria-label={`Duplicate ${prompt.name}`}
+                            >
+                              Duplicate
+                            </Link>
+                          </Button>
+                        }
+                        play={{
+                          run: onUseInPlay === undefined ? undefined : () => onUseInPlay(prompt),
+                          blocked: playBlocked,
+                        }}
+                        onHistory={() => setHistory(prompt)}
+                        onDelete={() => setDeleting(prompt)}
+                      />
+                    }
+                  />
                 ))}
-              </span>
-              <LibraryRowActions
-                className={actionsCell}
-                name={prompt.name}
-                edit={
-                  <Button asChild variant="ghost">
-                    <Link
-                      to="/prompts/$promptId"
-                      params={{ promptId: prompt.id }}
-                      aria-label={`Edit ${prompt.name}`}
-                    >
-                      <PencilIcon aria-hidden="true" className="size-[14px]" />
-                      Edit
+              </List>
+            )
+          }
+          detail={
+            selected === undefined ? null : (
+              <LibraryItemDetail
+                key={selected.id}
+                item="prompt"
+                id={selected.id}
+                name={selected.name}
+                kicker={`${kindLabel(selected.kind)} prompt`}
+                meta={`Updated ${updatedOn(selected.updatedAt)}`}
+                body={selected.body}
+                slots={selected.slots}
+                actions={
+                  <Button asChild size="small">
+                    <Link to="/prompts/$promptId" params={{ promptId: selected.id }}>
+                      Edit prompt
                     </Link>
                   </Button>
                 }
-                // The copy is named "<name> copy" and opened for editing, so a name that is
-                // already taken is renamed before it is ever saved.
-                duplicate={
-                  <Button asChild variant="ghost">
-                    <Link
-                      to="/prompts/new"
-                      search={{ kind: prompt.kind, from: prompt.id }}
-                      aria-label={`Duplicate ${prompt.name}`}
-                    >
-                      <CopyIcon aria-hidden="true" className="size-[14px]" />
-                      Duplicate
-                    </Link>
-                  </Button>
-                }
-                onUseInPlay={onUseInPlay === undefined ? undefined : () => onUseInPlay(prompt)}
-                playBlocked={playBlocked}
-                onHistory={() => {
-                  setHistory(prompt);
-                }}
-                onDelete={() => {
-                  setDeleting(prompt);
-                }}
+                onOpenHistory={() => setHistory(selected)}
               />
-            </div>
-          ))}
-        </RailGroup>
+            )
+          }
+        />
       )}
 
       {remove.error === null ? null : (
-        <p className="mt-[10px] text-label text-red">{remove.error.message}</p>
+        <Callout tone="danger" title="The prompt wasn't deleted." className="mt-4">
+          {remove.error.message}
+        </Callout>
       )}
 
       {history === undefined ? null : (
@@ -160,67 +194,37 @@ export function PromptsRoute({
           item="prompt"
           id={history.id}
           name={history.name}
-          onClose={() => {
-            setHistory(undefined);
-          }}
+          onClose={() => setHistory(undefined)}
         />
       )}
 
       <ConfirmDialog
         open={deleting !== undefined}
         title={deleting === undefined ? "" : `Delete "${deleting.name}"?`}
-        // A project holds its own rendered text, so nothing it made is
-        // touched. It goes on showing the name it was run with, marked "(deleted)".
+        // A project holds its own rendered text, so nothing it made is touched. It goes on
+        // showing the name it was run with, marked "(deleted)".
         consequence="Moves it to the trash for 30 days (Settings → Trash). Projects that used it keep their text."
-        verb="Delete"
+        confirmLabel="Delete prompt"
         pending={remove.isPending}
         onConfirm={() => {
-          if (deleting !== undefined) {
-            remove.mutate(deleting.id);
-          }
+          if (deleting !== undefined) remove.mutate(deleting.id);
         }}
-        onCancel={() => {
-          setDeleting(undefined);
-        }}
+        onCancel={() => setDeleting(undefined)}
       />
     </div>
   );
 }
 
+function promptMeta(prompt: Prompt): string {
+  return `${kindLabel(prompt.kind)} · ${plural(prompt.slots.length, "keyword")} · updated ${updatedOn(prompt.updatedAt)}`;
+}
+
 function NewPromptButton({ kind }: { readonly kind: PromptKind }) {
   return (
-    <Button asChild>
+    <Button asChild variant="primary">
       <Link to="/prompts/new" search={{ kind }}>
-        <PlusIcon aria-hidden="true" className="size-[14px]" />
         New prompt
       </Link>
     </Button>
-  );
-}
-
-// An empty kind teaches what a prompt is; the one action is already in the toolbar above.
-function EmptyKind({ kind }: { readonly kind: PromptKind }) {
-  return (
-    <RailGroup>
-      <p className="max-w-[75ch] px-4 py-6 text-ink2">
-        {`No ${kind} prompts yet. A prompt is text with {{keywords}}; each keyword becomes a field on Play.`}
-      </p>
-    </RailGroup>
-  );
-}
-
-function SkeletonRows() {
-  return (
-    <RailGroup>
-      {[0, 1, 2].map((index) => (
-        <div key={index} className={row}>
-          <span className="col-start-1 row-start-1 h-3 w-40 rounded-control bg-panel2" />
-          <span className={cn(slotsCell, slotsWide)}>
-            <span className="h-[18px] w-14 rounded-control bg-panel2" />
-            <span className="h-[18px] w-[72px] rounded-control bg-panel2" />
-          </span>
-        </div>
-      ))}
-    </RailGroup>
   );
 }

@@ -1,14 +1,15 @@
 import { paceSteps } from "@app/slices/voices/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PlusIcon, XIcon } from "lucide-react";
-import { type ReactElement, useId, useRef, useState } from "react";
+import { PlusIcon } from "lucide-react";
+import { type ReactElement, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { StatusSlot } from "@/components/kit/action-bar";
-import { Drawer } from "@/components/kit/drawer";
-import { Button } from "@/components/ui/button";
-import { Input, Textarea } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Picker } from "@/components/ui/picker";
+import { Button } from "@/components/kit/button";
+import { Field, Input, Select, Textarea } from "@/components/kit/field";
+import { Rule } from "@/components/kit/layout";
+import { MediaFrame } from "@/components/kit/media";
+import { SectionHead } from "@/components/kit/section-head";
+import { Badge, Chip } from "@/components/kit/status";
 import { ModelPicker, OptionPicker, ProviderPicker } from "@/play/pickers";
 import { providersQuery, voicesQuery } from "@/queries";
 import {
@@ -27,8 +28,8 @@ import {
   uploadCastImage,
 } from "./api";
 
-// The drawer that adds or edits one cast member: its kind, name, aliases and description, and
-// once it is saved, its reference pictures - uploaded, or made from a prompt.
+// The editor beside the cast that adds or edits one member: its kind, name, aliases and
+// description, and once it is saved, its reference pictures - uploaded, or made from a prompt.
 export function CastEditor({
   channelId,
   member,
@@ -42,7 +43,7 @@ export function CastEditor({
   readonly open: boolean;
   readonly onClose: () => void;
   readonly onCreated: (id: string) => void;
-}): ReactElement {
+}): ReactElement | null {
   const { api } = useApp();
   const client = useQueryClient();
   const [kind, setKind] = useState<CastKind>(member?.kind ?? "character");
@@ -51,7 +52,6 @@ export function CastEditor({
   const [alias, setAlias] = useState("");
   const [description, setDescription] = useState(member?.description ?? "");
   const [voice, setVoice] = useState<CastVoice | undefined>(member?.voice);
-  const ids = { kind: useId(), name: useId(), alias: useId(), description: useId() };
   const refresh = () =>
     Promise.all([
       client.invalidateQueries({ queryKey: channelKey(channelId) }),
@@ -85,76 +85,61 @@ export function CastEditor({
     setAliases([...aliases, value]);
     setAlias("");
   };
+  if (!open) return null;
   return (
-    <Drawer
-      open={open}
-      title={member === undefined ? "Add to the cast" : `Edit ${member.name}`}
-      onClose={onClose}
-      footer={
-        <>
-          <StatusSlot tone={save.error ? "error" : "info"}>
-            {save.error?.message ??
-              (save.isPending ? "Saving…" : save.isSuccess ? "Saved." : undefined)}
-          </StatusSlot>
-          <Button
-            type="submit"
-            form="cast-member-form"
-            variant="primary"
-            disabled={save.isPending || name.trim() === ""}
-          >
-            {member === undefined ? "Add to the cast" : "Save"}
-          </Button>
-        </>
-      }
-    >
+    <section aria-label={member === undefined ? "Add to cast" : `Edit ${member.name}`}>
+      <SectionHead
+        kicker={member === undefined ? "New cast member" : castKindLabels[member.kind]}
+        title={member === undefined ? "Add to cast" : member.name}
+        meta={
+          member === undefined
+            ? "Name it first, then give it reference pictures."
+            : "Used whenever a title or an image brief names it or one of its aliases."
+        }
+      >
+        <Button variant="quiet" size="small" onClick={onClose}>
+          Close
+        </Button>
+      </SectionHead>
+      {member !== undefined && !member.images.some((image) => image.state === "ready") ? (
+        <p className="m-0 mt-2 text-small text-waiting">
+          No picture yet, so it is not sent with any image. Upload or generate one below.
+        </p>
+      ) : null}
       <form
         id="cast-member-form"
         aria-label="Cast member"
-        className="space-y-4"
+        className="mt-4 flex flex-col gap-4"
         onSubmit={(event) => {
           event.preventDefault();
           if (name.trim() !== "") save.mutate();
         }}
       >
-        <div className="grid grid-cols-1 gap-4 min-[600px]:grid-cols-[160px_1fr]">
-          <div className="[&>span]:w-full">
-            <Label htmlFor={ids.kind} className="mb-[5px]">
-              Kind
-            </Label>
-            <Picker
-              id={ids.kind}
+        <div className="grid grid-cols-1 gap-4 min-[600px]:grid-cols-[160px_minmax(0,1fr)]">
+          <Field label="Kind">
+            <Select
               value={kind}
               onChange={(event) =>
                 setKind(castKinds.find((one) => one === event.target.value) ?? "character")
               }
-            >
-              {castKinds.map((one) => (
-                <option key={one} value={one}>
-                  {castKindLabels[one]}
-                </option>
-              ))}
-            </Picker>
-          </div>
-          <div>
-            <Label htmlFor={ids.name} className="mb-[5px]">
-              Name
-            </Label>
+              options={castKinds.map((one) => ({ value: one, label: castKindLabels[one] }))}
+            />
+          </Field>
+          <Field label="Name">
             <Input
-              id={ids.name}
               value={name}
               maxLength={200}
               required
               onChange={(event) => setName(event.target.value)}
             />
-          </div>
+          </Field>
         </div>
-        <div>
-          <Label htmlFor={ids.alias} className="mb-[5px]">
-            Aliases
-          </Label>
+        <Field
+          label="Aliases"
+          help="Matched as whole words, ignoring case: “Tiamat” is found in “Tiamat's lair” but not in “Tiamatic”. Add plurals as aliases."
+        >
           <div className="flex gap-2">
             <Input
-              id={ids.alias}
               value={alias}
               maxLength={200}
               placeholder="Another name, such as the Dragon Queen"
@@ -166,60 +151,53 @@ export function CastEditor({
                 }
               }}
             />
-            <Button type="button" onClick={addAlias} disabled={alias.trim() === ""}>
-              <PlusIcon aria-hidden="true" className="size-[14px]" />
+            <Button onClick={addAlias} disabled={alias.trim() === ""}>
+              <PlusIcon aria-hidden="true" className="size-4" strokeWidth={1.75} />
               Add alias
             </Button>
           </div>
-          <p className="mt-1 text-small text-ink3">
-            Matched as whole words, ignoring case: “Tiamat” is found in “Tiamat's lair” but not in
-            “Tiamatic”. Add plurals as aliases.
-          </p>
-          {aliases.length > 0 ? (
-            <ul aria-label="Aliases" className="mt-2 flex flex-wrap gap-2">
-              {aliases.map((one) => (
-                <li
-                  key={one}
-                  className="flex items-center gap-1 rounded-control border border-line2 bg-panel2 py-[2px] pr-1 pl-2 text-small"
+        </Field>
+        {aliases.length > 0 ? (
+          <ul aria-label="Aliases added" className="m-0 flex list-none flex-wrap gap-2 p-0">
+            {aliases.map((one) => (
+              <li key={one}>
+                <Chip
+                  removeLabel={`Remove alias ${one}`}
+                  onRemove={() => setAliases(aliases.filter((value) => value !== one))}
                 >
                   {one}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="h-6 px-1"
-                    aria-label={`Remove alias ${one}`}
-                    onClick={() => setAliases(aliases.filter((value) => value !== one))}
-                  >
-                    <XIcon aria-hidden="true" className="size-[12px]" />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-        <div>
-          <Label htmlFor={ids.description} className="mb-[5px]">
-            Description
-          </Label>
+                </Chip>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <Field label="Description for the image model">
           <Textarea
-            id={ids.description}
             rows={3}
             value={description}
             maxLength={2000}
             placeholder="What they look like, in a sentence."
             onChange={(event) => setDescription(event.target.value)}
           />
-        </div>
+        </Field>
         <CastVoiceFields value={voice} onChange={setVoice} />
+        <div className="flex flex-wrap items-center gap-3">
+          <StatusSlot tone={save.error ? "error" : "info"}>
+            {save.error?.message ??
+              (save.isPending ? "Saving…" : save.isSuccess ? "Saved." : undefined)}
+          </StatusSlot>
+          <Button
+            type="submit"
+            form="cast-member-form"
+            variant={member === undefined ? "primary" : "secondary"}
+            disabled={save.isPending || name.trim() === ""}
+          >
+            {member === undefined ? "Add to cast" : "Save"}
+          </Button>
+        </div>
       </form>
-      {member === undefined ? (
-        <p className="mt-6 text-small text-ink2">
-          Add the member first, then give it reference pictures.
-        </p>
-      ) : (
-        <Pictures channelId={channelId} member={member} />
-      )}
-    </Drawer>
+      {member === undefined ? null : <Pictures channelId={channelId} member={member} />}
+    </section>
   );
 }
 
@@ -234,7 +212,6 @@ function Pictures({
   const client = useQueryClient();
   const providers = useQuery(providersQuery(api));
   const file = useRef<HTMLInputElement>(null);
-  const promptId = useId();
   const [provider, setProvider] = useState("");
   const [model, setModel] = useState("");
   const [prompt, setPrompt] = useState(
@@ -259,45 +236,54 @@ function Pictures({
   });
   const error = upload.error ?? generate.error ?? remove.error;
   return (
-    <section aria-label="Reference pictures" className="mt-6 border-t border-line pt-4">
-      <h3 className="text-row font-semibold">Reference pictures</h3>
-      <p className="mt-1 text-small text-ink2">
-        Sent with every image whose brief, or the video's title, names {member.name}.
-      </p>
+    <section aria-label="Reference pictures" className="mt-6">
+      <Rule className="mb-6" />
+      <SectionHead
+        as="h3"
+        title="Reference pictures"
+        meta={`Sent with every image whose brief, or the video's title, names ${member.name}.`}
+      />
       {member.images.length > 0 ? (
-        <ul aria-label={`Pictures of ${member.name}`} className="mt-3 flex flex-wrap gap-3">
+        <ul
+          aria-label={`Pictures of ${member.name}`}
+          className="m-0 mt-3 grid list-none grid-cols-2 gap-3 p-0 min-[600px]:grid-cols-3"
+        >
           {member.images.map((image, index) => (
-            <li key={image.id} className="flex w-[140px] flex-col gap-1">
-              {image.state === "ready" && image.sha256 !== null ? (
-                <img
-                  src={pictureUrl(api, image.sha256)}
-                  alt={`${member.name}, reference ${String(index + 1)}`}
-                  className="h-[140px] w-[140px] rounded-control border border-line object-cover"
-                />
-              ) : (
-                <div className="flex h-[140px] w-[140px] items-center justify-center rounded-control border border-line p-2 text-center text-small text-ink2">
-                  {image.state === "generating" ? "Making the picture…" : "Not made"}
-                </div>
-              )}
+            <li key={image.id} className="min-w-0">
+              <MediaFrame
+                aspect="square"
+                alt={`${member.name}, reference ${String(index + 1)}`}
+                {...(image.state === "ready" && image.sha256 !== null
+                  ? { src: pictureUrl(api, image.sha256) }
+                  : {})}
+                {...(image.state === "generating" ? { generating: "Making the picture…" } : {})}
+                {...(image.state === "failed"
+                  ? { badge: <Badge tone="failed">Failed</Badge> }
+                  : {})}
+                actionsShown
+                actions={
+                  <Button
+                    variant="secondary"
+                    size="small"
+                    aria-label={`Delete picture ${String(index + 1)} of ${member.name}`}
+                    disabled={remove.isPending || image.state === "generating"}
+                    disabledReason="Wait until the picture is made"
+                    onClick={() => remove.mutate(image.id)}
+                  >
+                    Delete
+                  </Button>
+                }
+              />
               {image.state === "failed" && image.error ? (
-                <p className="text-label text-red">{image.error}</p>
+                <p className="m-0 mt-1 text-small text-danger">{image.error}</p>
               ) : null}
-              <Button
-                type="button"
-                variant="ghost"
-                aria-label={`Delete picture ${String(index + 1)} of ${member.name}`}
-                disabled={remove.isPending || image.state === "generating"}
-                onClick={() => remove.mutate(image.id)}
-              >
-                Delete
-              </Button>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-3 text-small text-ink3">No pictures yet.</p>
+        <p className="m-0 mt-3 text-small text-ink-3">No pictures yet.</p>
       )}
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-3">
         <input
           ref={file}
           type="file"
@@ -311,13 +297,13 @@ function Pictures({
             if (picked) upload.mutate(picked);
           }}
         />
-        <Button type="button" disabled={upload.isPending} onClick={() => file.current?.click()}>
+        <Button disabled={upload.isPending} onClick={() => file.current?.click()}>
           Upload a picture
         </Button>
-        <span className="text-small text-ink3">PNG or JPEG, up to 10 MB.</span>
+        <span className="text-small text-ink-3">PNG or JPEG, up to 10 MB.</span>
       </div>
-      <div className="mt-4 space-y-3">
-        <div className="grid grid-cols-1 gap-3 min-[600px]:grid-cols-2">
+      <div className="mt-4 flex flex-col gap-4">
+        <div className="grid grid-cols-1 gap-4 min-[600px]:grid-cols-2">
           <ProviderPicker
             label="Image provider"
             family="image"
@@ -337,25 +323,23 @@ function Pictures({
             onPick={setModel}
           />
         </div>
-        <div>
-          <Label htmlFor={promptId} className="mb-[5px]">
-            Picture to make
-          </Label>
+        <Field label="Picture to make">
           <Textarea
-            id={promptId}
             rows={3}
             value={prompt}
             maxLength={4000}
             onChange={(event) => setPrompt(event.target.value)}
           />
+        </Field>
+        <div>
+          <Button
+            disabled={generate.isPending || provider === "" || model === "" || prompt.trim() === ""}
+            disabledReason="Pick an image provider and model, and describe the picture"
+            onClick={() => generate.mutate()}
+          >
+            Generate a picture
+          </Button>
         </div>
-        <Button
-          type="button"
-          disabled={generate.isPending || provider === "" || model === "" || prompt.trim() === ""}
-          onClick={() => generate.mutate()}
-        >
-          Generate a picture
-        </Button>
       </div>
       <StatusSlot tone={error ? "error" : "info"} className="mt-2">
         {error?.message ??
@@ -384,8 +368,8 @@ function CastVoiceFields({
   const voice = value ?? { provider: "", model: "", voice: "" };
   const mine = (voices.data?.voices ?? []).filter((one) => one.provider === voice.provider);
   return (
-    <fieldset className="space-y-3 border-t border-line pt-4">
-      <legend className="text-small font-semibold">Voice</legend>
+    <fieldset className="m-0 flex flex-col gap-3 border-0 border-t border-line p-0 pt-4">
+      <legend className="sl-kicker">Voice</legend>
       <p className="text-small text-ink-2">
         For multi-voice runs: pick this member under Speakers on Play and they read with this voice
         in every episode.
@@ -432,7 +416,7 @@ function CastVoiceFields({
         />
       </div>
       {value === undefined ? null : (
-        <Button type="button" variant="ghost" onClick={() => onChange(undefined)}>
+        <Button variant="quiet" onClick={() => onChange(undefined)}>
           Remove the voice
         </Button>
       )}

@@ -53,13 +53,16 @@ export const defaultAmbientBed: Omit<AmbientBedSettings, "source"> = {
 export type AmbientBedField = "source" | "level" | "fadeIn" | "tail";
 
 // Whether the run's long video gets the bed: it is set, the video renders and there is a
-// narration to lie under.
+// narration to lie under. A short-only run (`admission/short-mode.ts`) renders through the
+// Shorts renderer and has no bed.
 export function usesAmbientBed(config: {
   readonly sources: { readonly video: string; readonly audio: string };
   readonly ambientBed?: AmbientBedSettings | undefined;
+  readonly mode?: string | undefined;
 }): boolean {
   return (
     config.ambientBed !== undefined &&
+    config.mode !== "short" &&
     config.sources.video === "generate" &&
     config.sources.audio !== "off"
   );

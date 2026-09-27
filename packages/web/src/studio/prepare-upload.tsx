@@ -7,17 +7,22 @@ import {
 } from "@app/slices/studio/model.js";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { CopyIcon, DownloadIcon } from "lucide-react";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useState } from "react";
 import { chooseUploadPack, readUploadPack } from "@/api";
 import { useApp } from "@/app-context";
 import { StatusSlot, type StatusTone } from "@/components/kit/action-bar";
+import { Button, buttonClass } from "@/components/kit/button";
+import { Callout } from "@/components/kit/callout";
 import { Drawer } from "@/components/kit/drawer";
-import { Button } from "@/components/ui/button";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { List, ListRow } from "@/components/kit/list-row";
+import { MediaFrame, MediaGrid } from "@/components/kit/media";
+import { SectionHead } from "@/components/kit/section-head";
+import { Segmented } from "@/components/kit/switch";
 import { OpenFolder } from "@/project/open-folder";
 
 // Prepare upload: everything YouTube Studio asks for, in the order it asks, for the video and
-// each short, with a Copy and a done tick per step. Fill in YouTube Studio hands the chosen
+// each short: one row per step with a done tick and a small quiet action (Copy, Open folder,
+// Download), the thumbnails under the list. Fill in YouTube Studio hands the chosen
 // item to the Slopify Studio extension and opens Studio's upload page; without the extension
 // the list is the whole flow. Slopify never uploads or publishes.
 export function PrepareUpload({
@@ -32,9 +37,9 @@ export function PrepareUpload({
   return (
     <>
       <Button
-        variant="ghost"
+        variant="quiet"
         disabled={!ready}
-        title={ready ? undefined : "Available once the video has been made"}
+        disabledReason="Available once the video has been made"
         onClick={() => setOpen(true)}
       >
         Prepare upload
@@ -106,8 +111,11 @@ function UploadDrawer({
       onClose={onClose}
       footer={
         <>
+          <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
           <Button
+            variant="primary"
             disabled={item === undefined || fill.isPending}
+            disabledReason="Wait for the upload pack to load"
             onClick={() => {
               if (item === undefined) return;
               // Opened now, inside the click, so the browser doesn't block the new tab.
@@ -117,44 +125,36 @@ function UploadDrawer({
           >
             Fill in YouTube Studio
           </Button>
-          <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
         </>
       }
     >
       {pack.error === null ? null : (
-        <p role="alert" className="text-small text-red">
-          The upload pack couldn't be read: {pack.error.message}
-        </p>
+        <Callout tone="danger" title="The upload pack couldn't be read.">
+          {`${pack.error.message} Close Prepare upload and open it again.`}
+        </Callout>
       )}
       {pack.data === undefined ? null : (
-        <div className="flex flex-col gap-4">
-          <p className="text-small text-ink2">
-            In Studio's order. Slopify never publishes: you press Publish in Studio. The Fill in
-            button needs the Slopify Studio extension (Settings → YouTube Studio).
-          </p>
+        <div className="flex flex-col gap-5">
           {items.length > 1 ? (
-            <ToggleGroup
-              type="single"
-              aria-label="What to upload"
+            <Segmented
+              label="What to upload"
               value={item === undefined ? "" : itemKey(item)}
-              onValueChange={(next) => {
-                if (next !== "") setChosen(next);
-              }}
-              className="flex-wrap"
-            >
-              {items.map((one) => (
-                <ToggleGroupItem key={itemKey(one)} value={itemKey(one)}>
-                  {one.kind === "video" ? "Video" : `Short ${String(one.short)}`}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
+              onChange={setChosen}
+              options={items.map((one) => ({
+                value: itemKey(one),
+                label: one.kind === "video" ? "Video" : `Short ${String(one.short)}`,
+              }))}
+              className="self-start"
+            />
           ) : null}
           {pack.data.missing.length === 0 ? null : (
-            <ul className="flex flex-col gap-1 text-small text-ink2">
-              {pack.data.missing.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
+            <Callout tone="waiting" title="Some of it isn't made yet.">
+              <ul className="m-0 flex list-none flex-col gap-1 p-0">
+                {pack.data.missing.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            </Callout>
           )}
           {item === undefined ? null : (
             <Steps
@@ -165,6 +165,10 @@ function UploadDrawer({
               doneKey={`slopify.upload.${projectId}.${itemKey(item)}`}
             />
           )}
+          <Callout title="Slopify never publishes.">
+            Fill in YouTube Studio hands this to the Slopify Studio extension (Settings → YouTube
+            Studio) after you drop the video in. You check it and press Publish.
+          </Callout>
         </div>
       )}
     </Drawer>
@@ -178,6 +182,21 @@ function readDone(key: string): readonly string[] {
   } catch {
     return [];
   }
+}
+
+// A download that looks like the row's other small quiet actions.
+function Download({ href, filename }: { readonly href: string; readonly filename: string }) {
+  return (
+    <a
+      href={href}
+      download={filename}
+      aria-label={`Download ${filename}`}
+      className={buttonClass({ variant: "quiet", size: "small" })}
+    >
+      <DownloadIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.75} />
+      Download
+    </a>
+  );
 }
 
 function Steps({
@@ -205,89 +224,148 @@ function Steps({
   };
   // Shorts have no thumbnail step: Studio picks a frame of a short.
   const steps = studioSteps.filter((step) => step !== "thumbnails" || item.kind === "video");
-  return (
-    <ol className="flex flex-col">
-      {steps.map((step) => (
-        <Step
-          key={step}
-          label={stepLabels[step]}
-          done={done.includes(step)}
-          onDone={(on) => tick(step, on)}
-          copyText={copyTextOf(item, step)}
-          onCopy={(text) => copy(text, stepLabels[step].toLowerCase())}
-        >
-          {step === "video" ? (
-            item.video === null ? (
-              <span className="text-ink3">Not made yet.</span>
-            ) : (
-              <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
-                <a
-                  href={`${api.origin}${item.video.url}`}
-                  download={item.video.filename}
-                  className="inline-flex items-center gap-[5px] text-small text-ink2 hover:text-ink"
-                >
-                  <DownloadIcon aria-hidden="true" className="size-[14px] shrink-0" />
-                  {item.video.filename}
-                </a>
-                <OpenFolder projectId={projectId} asset={item.video.asset} />
-              </span>
-            )
-          ) : step === "thumbnails" ? (
-            item.thumbnails.length === 0 ? (
-              <span className="text-ink3">None made.</span>
-            ) : (
-              <span className="flex flex-col gap-1">
-                {item.thumbnails.length > 1 ? (
-                  <span className="text-ink2">
-                    The first under Thumbnail; all {String(item.thumbnails.length)} under Test &
-                    compare.
-                  </span>
-                ) : null}
-                <span className="flex flex-wrap gap-x-3 gap-y-1">
-                  {item.thumbnails.map((file) => (
-                    <a
-                      key={file.asset}
-                      href={`${api.origin}${file.url}`}
-                      download={file.filename}
-                      className="inline-flex items-center gap-[5px] text-small text-ink2 hover:text-ink"
-                    >
-                      <DownloadIcon aria-hidden="true" className="size-[14px] shrink-0" />
-                      {file.filename}
-                    </a>
-                  ))}
-                  <OpenFolder
-                    projectId={projectId}
-                    asset={item.thumbnails[0]?.asset ?? "thumbnail"}
+  const copyAction = (step: StudioStep) => {
+    const text = copyTextOf(item, step);
+    return (
+      <Button
+        variant="quiet"
+        size="small"
+        disabled={text === ""}
+        disabledReason="Nothing to copy yet"
+        aria-label={`Copy ${stepLabels[step].toLowerCase()}`}
+        onClick={() => copy(text, stepLabels[step].toLowerCase())}
+      >
+        <CopyIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.75} />
+        Copy
+      </Button>
+    );
+  };
+  const contentOf = (step: StudioStep): { value: ReactNode; actions?: ReactNode } => {
+    switch (step) {
+      case "video":
+        return item.video === null
+          ? { value: <span className="text-ink-3">Not made yet.</span> }
+          : {
+              value: item.video.filename,
+              actions: (
+                <>
+                  <OpenFolder projectId={projectId} asset={item.video.asset} />
+                  <Download
+                    href={`${api.origin}${item.video.url}`}
+                    filename={item.video.filename}
                   />
-                </span>
-              </span>
-            )
-          ) : step === "audience" ? (
-            "No, it's not made for kids"
-          ) : step === "altered" ? (
+                </>
+              ),
+            };
+      case "thumbnails":
+        return item.thumbnails.length === 0
+          ? { value: <span className="text-ink-3">None made.</span> }
+          : {
+              value:
+                item.thumbnails.length > 1
+                  ? `The first under Thumbnail; all ${String(item.thumbnails.length)} under Test & compare.`
+                  : (item.thumbnails[0]?.filename ?? ""),
+              actions: (
+                <OpenFolder
+                  projectId={projectId}
+                  asset={item.thumbnails[0]?.asset ?? "thumbnail"}
+                />
+              ),
+            };
+      case "audience":
+        return { value: "No, it's not made for kids" };
+      case "altered":
+        return {
+          value: (
             <span className="flex flex-col gap-1">
               <span className="font-semibold">{item.alteredContent.altered ? "Yes" : "No"}</span>
-              <span className="text-ink2">{item.alteredContent.why}</span>
+              <span className="text-ink-2">{item.alteredContent.why}</span>
             </span>
-          ) : step === "description" && item.chapterNotice !== undefined ? (
-            <span className="flex flex-col gap-1">
-              <span className="line-clamp-4 whitespace-pre-wrap break-words">
-                {item.description}
+          ),
+        };
+      case "description":
+        return {
+          value:
+            item.chapterNotice === undefined ? (
+              copyTextOf(item, step) || <span className="text-ink-3">Not written yet.</span>
+            ) : (
+              <span className="flex flex-col gap-1">
+                <span>{item.description}</span>
+                <span className="text-waiting">{item.chapterNotice}</span>
               </span>
-              <span className="text-amber">{item.chapterNotice}</span>
-            </span>
-          ) : step === "playlist" ? (
-            (item.playlist ?? (
-              <span className="text-ink3">None set (Settings → YouTube Studio).</span>
-            ))
-          ) : (
-            <span className="line-clamp-4 whitespace-pre-wrap break-words">
-              {copyTextOf(item, step) || <span className="text-ink3">Not written yet.</span>}
-            </span>
-          )}
-        </Step>
-      ))}
-    </ol>
+            ),
+          actions: copyAction(step),
+        };
+      case "playlist":
+        return {
+          value: item.playlist ?? (
+            <span className="text-ink-3">None set (Settings → YouTube Studio).</span>
+          ),
+          actions: copyAction(step),
+        };
+      default:
+        return {
+          value: copyTextOf(item, step) || <span className="text-ink-3">Not written yet.</span>,
+          actions: copyAction(step),
+        };
+    }
+  };
+  return (
+    <div className="flex flex-col gap-5">
+      <section aria-label="In the order Studio asks">
+        <div className="sl-kicker mb-2">In the order Studio asks</div>
+        <List label="Upload steps" className="[&_.sl-row__actions]:flex-wrap">
+          {steps.map((step) => {
+            const { value, actions } = contentOf(step);
+            return (
+              <ListRow
+                key={step}
+                className="items-start"
+                lead={
+                  <input
+                    type="checkbox"
+                    checked={done.includes(step)}
+                    onChange={(event) => tick(step, event.currentTarget.checked)}
+                    className="mt-1 size-4 shrink-0 self-start accent-[var(--color-accent)]"
+                    aria-label={`${stepLabels[step]} done`}
+                  />
+                }
+                title={stepLabels[step]}
+                meta={
+                  <span className="line-clamp-4 whitespace-pre-wrap break-words text-ink">
+                    {value}
+                  </span>
+                }
+                actions={actions}
+              />
+            );
+          })}
+        </List>
+      </section>
+      {item.thumbnails.length === 0 ? null : (
+        <section aria-label="Thumbnails">
+          <SectionHead
+            as="h3"
+            kicker="Thumbnails · Test & compare"
+            title={`${String(item.thumbnails.length)} ${item.thumbnails.length === 1 ? "thumbnail" : "thumbnails"}`}
+            className="mb-3"
+          />
+          <MediaGrid label="Thumbnails to upload" className="grid-cols-2">
+            {item.thumbnails.map((file, index) => (
+              <MediaFrame
+                key={file.asset}
+                src={`${api.origin}${file.url}`}
+                alt={`Thumbnail ${String.fromCharCode(65 + index)}`}
+                title={String.fromCharCode(65 + index)}
+                meta={file.filename}
+                actionsShown
+                actions={<Download href={`${api.origin}${file.url}`} filename={file.filename} />}
+              />
+            ))}
+          </MediaGrid>
+        </section>
+      )}
+    </div>
   );
 }
 
@@ -304,50 +382,4 @@ function copyTextOf(item: PackItem, step: StudioStep): string {
     default:
       return "";
   }
-}
-
-function Step({
-  label,
-  done,
-  onDone,
-  copyText,
-  onCopy,
-  children,
-}: {
-  readonly label: string;
-  readonly done: boolean;
-  readonly onDone: (on: boolean) => void;
-  readonly copyText: string;
-  readonly onCopy: (text: string) => void;
-  readonly children: ReactNode;
-}) {
-  const id = useId();
-  return (
-    <li className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 border-b border-line py-3">
-      <input
-        id={id}
-        type="checkbox"
-        checked={done}
-        onChange={(event) => onDone(event.currentTarget.checked)}
-        className="mt-1 size-4"
-        aria-label={`${label} done`}
-      />
-      <div className="flex min-w-0 flex-col gap-1">
-        <label htmlFor={id} className="text-small font-semibold text-ink2">
-          {label}
-        </label>
-        <div className="text-small text-ink">{children}</div>
-      </div>
-      <Button
-        type="button"
-        variant="ghost"
-        disabled={copyText === ""}
-        aria-label={`Copy ${label.toLowerCase()}`}
-        onClick={() => onCopy(copyText)}
-      >
-        <CopyIcon aria-hidden="true" className="size-[14px] shrink-0" />
-        Copy
-      </Button>
-    </li>
-  );
 }

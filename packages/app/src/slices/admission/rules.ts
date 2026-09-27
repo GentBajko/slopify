@@ -10,6 +10,7 @@ import { usesAnimation, videoEditProblems } from "../video/edit-settings.js";
 import { usesVoices, voicesProblems } from "../voices/model.js";
 import type { MotionStyle, ProviderChoice, RunDraft, StageSource } from "./model.js";
 import { sourceOf } from "./model.js";
+import { shortModeFields } from "./short-mode.js";
 
 export interface FieldError {
   // Dotted path of the control on Play, so the form marks it in place.
@@ -169,6 +170,7 @@ export function admit(input: AdmissionInput): AdmissionResult {
   }
   fields.push(...youtubeDescriptionFields(draft));
   fields.push(...shortsFields(draft));
+  fields.push(...shortModeFields(draft));
   fields.push(...videoEditFields(draft));
   fields.push(...ambientBedFields(draft, input.staged));
   fields.push(...referenceFields(draft));

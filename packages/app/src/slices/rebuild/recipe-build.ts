@@ -3,7 +3,7 @@ import { audioRecipes } from "./recipe-audio.js";
 import { documentRecipes } from "./recipe-document.js";
 import { editPlan } from "./recipe-edit.js";
 import { exportRecipes } from "./recipe-exports.js";
-import type { RecipeContext, ResolvedWorkRecipe } from "./recipe-model.js";
+import { type RecipeContext, type ResolvedWorkRecipe, resourceIdentity } from "./recipe-model.js";
 import { imageReference, referenceRecipe } from "./recipe-reference.js";
 import { withReviews } from "./recipe-reviews.js";
 import { shortsRecipes } from "./recipe-shorts.js";
@@ -16,6 +16,7 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
   const audio = audioRecipes(context, text);
   const exports = exportRecipes(context, audio);
   const captions = exports.find((value) => value.key === "subtitles:files");
+  const timing = exports.find((value) => value.key === "subtitles:timing");
   // The establishing image, when it is on: every other image is drawn from it.
   const reference = referenceRecipe(context);
   const drawnFrom = imageReference(context, reference);
@@ -43,6 +44,7 @@ export function buildRecipes(context: RecipeContext): readonly ResolvedWorkRecip
         captions?.fingerprint ?? null,
         (images) => editPlan(context, exports, youtube, images),
         drawnFrom,
+        timing === undefined ? null : resourceIdentity(context, timing),
       ),
     ),
   ]);

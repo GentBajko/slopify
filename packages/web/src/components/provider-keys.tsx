@@ -1,20 +1,20 @@
+import { readinessIsUsable } from "@app/kernel/ports/model.js";
 import { type KeyGuide, keyGuides } from "@app/slices/settings/key-guides.js";
 import type { KeyTestOutcome } from "@app/slices/settings/key-test.js";
-import type { ProviderFamily, ProviderStatus } from "@app/slices/settings/model.js";
+import type { ProviderFamily, ProviderId, ProviderStatus } from "@app/slices/settings/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { removeProviderKey, saveProviderKey } from "@/api";
 import { useApp } from "@/app-context";
-import { ConfirmDialog } from "@/components/confirm";
+import { Button } from "@/components/kit/button";
+import { ConfirmDialog } from "@/components/kit/dialog";
+import { Field, Input } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
-import { Lamp } from "@/components/lamp";
-import { CliProviderRow, providerRow } from "@/components/provider-cli";
+import { List, ListRow } from "@/components/kit/list-row";
+import { Status } from "@/components/kit/status";
+import { CliProviderDetail, cliState } from "@/components/provider-cli";
 import { testKey } from "@/components/provider-upkeep-api";
-import { Rail, RailGroup } from "@/components/rail";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { keys, providersQuery } from "@/queries";
 
@@ -31,70 +31,134 @@ const familyTitles: Readonly<Record<ProviderFamily, string>> = {
 // `GET /api/providers` reports only whether a key is stored, never the mask.
 const keyMask = "••••••••••••";
 
-const header = "engraved px-1 pb-2 text-ink3";
+function ready(provider: ProviderStatus): boolean {
+  return provider.readiness.kind === "cli"
+    ? readinessIsUsable(provider.readiness)
+    : provider.readiness.hasKey;
+}
+
+function stateOf(provider: ProviderStatus): {
+  readonly tone: "done" | "waiting" | "off";
+  readonly word: string;
+} {
+  if (provider.readiness.kind === "cli") return cliState(provider.readiness);
+  return provider.readiness.hasKey
+    ? { tone: "done", word: "Key saved" }
+    : { tone: "off", word: "No key" };
+}
 
 // Every supported provider, keyed or not, found or not, so the user can see that a
-// provider exists and why it is unavailable.
+// provider exists and why it is unavailable. The list sits beside the picked provider's
+// setup: its steps, its key or its command, and the actions on it.
 export function ProviderKeys() {
   const { api } = useApp();
   const providers = useQuery(providersQuery(api));
+  const [picked, setPicked] = useState<ProviderId | undefined>(undefined);
+  const detail = useRef<HTMLDivElement>(null);
+  const scrollToDetail = useRef(false);
+
+  // On one column the setup sits under its family's list, so a picked row brings it into view.
+  useEffect(() => {
+    if (picked === undefined || !scrollToDetail.current) return;
+    scrollToDetail.current = false;
+    if (typeof window.matchMedia === "function" && window.matchMedia("(max-width: 1023px)").matches)
+      detail.current?.scrollIntoView?.({ block: "start", behavior: "smooth" });
+  }, [picked]);
+
+  const listed = familyOrder.flatMap((family) =>
+    (providers.data?.providers ?? []).filter((provider) => provider.family === family),
+  );
+  // The first provider still to set up is open when the page arrives, and stays open after
+  // it is set up rather than jumping to the next one.
+  const opening = listed.find((provider) => !ready(provider)) ?? listed[0];
+  if (picked === undefined && opening !== undefined) setPicked(opening.id);
 
   if (providers.error !== null) {
     return (
-      <RailGroup>
-        <Rail>
-          <p className="text-body text-red">{providers.error.message}</p>
-        </Rail>
-      </RailGroup>
+      <p role="alert" className="m-0 text-body text-danger">
+        {providers.error.message}
+      </p>
     );
   }
   if (providers.data === undefined) {
     return <SkeletonKeys />;
   }
 
-  const listed = providers.data.providers;
+  const selected = listed.find((provider) => provider.id === picked) ?? opening;
   // On a fresh install nothing is selectable on Play yet, and the hint
-  // under the LLM group is what says so.
+  // above the lists is what says so.
   const fresh = listed.every(
     (provider) => provider.readiness.kind !== "keyed" || !provider.readiness.hasKey,
   );
 
+  const pick = (id: ProviderId): void => {
+    scrollToDetail.current = true;
+    setPicked(id);
+  };
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex min-w-0 flex-col gap-8">
       {fresh ? (
-        <p className="text-small text-ink2">Paste a key to make its provider selectable on Play.</p>
+        <p className="m-0 text-small text-ink-2">
+          Paste a key to make its provider selectable on Play.
+        </p>
       ) : null}
       {familyOrder.map((family) => (
-        <section key={family} data-tour={`keys-${family}`} aria-labelledby={`keys-${family}-title`}>
-          <h2 id={`keys-${family}-title`} className={header}>
-            {familyTitles[family]}
-          </h2>
-          <RailGroup>
-            {listed
-              .filter((provider) => provider.family === family)
-              .map((provider) =>
-                provider.readiness.kind === "cli" ? (
-                  <CliProviderRow
-                    key={provider.id}
-                    provider={provider}
-                    readiness={provider.readiness}
-                  />
-                ) : (
-                  <KeyRow
-                    key={provider.id}
-                    provider={provider}
-                    hasKey={provider.readiness.hasKey}
-                  />
-                ),
+        // The picked provider's setup sits beside its own family's list, inside the same
+        // section, so the tutorial's spotlight on a family holds both the list and the setup.
+        <section
+          key={family}
+          data-tour={`keys-${family}`}
+          aria-labelledby={`keys-${family}-title`}
+          className="grid items-start gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
+        >
+          <div className="min-w-0">
+            <h2 id={`keys-${family}-title`} className="sl-kicker m-0 mb-2">
+              {familyTitles[family]}
+            </h2>
+            <List label={`${familyTitles[family]} providers`}>
+              {listed
+                .filter((provider) => provider.family === family)
+                .map((provider) => {
+                  const state = stateOf(provider);
+                  return (
+                    <ListRow
+                      key={provider.id}
+                      title={provider.displayName}
+                      meta={provider.readiness.kind === "cli" ? "Command line" : "API key"}
+                      selected={provider.id === selected?.id}
+                      onSelect={() => pick(provider.id)}
+                      actions={<Status tone={state.tone}>{state.word}</Status>}
+                    />
+                  );
+                })}
+            </List>
+          </div>
+          {selected === undefined || selected.family !== family ? null : (
+            <div ref={detail} className="min-w-0 scroll-mt-4">
+              {selected.readiness.kind === "cli" ? (
+                <CliProviderDetail
+                  key={selected.id}
+                  provider={selected}
+                  readiness={selected.readiness}
+                  kind={familyTitles[selected.family]}
+                />
+              ) : (
+                <KeyDetail
+                  key={selected.id}
+                  provider={selected}
+                  hasKey={selected.readiness.hasKey}
+                />
               )}
-          </RailGroup>
+            </div>
+          )}
         </section>
       ))}
     </div>
   );
 }
 
-function KeyRow({
+function KeyDetail({
   provider,
   hasKey,
 }: {
@@ -103,11 +167,8 @@ function KeyRow({
 }) {
   const { api } = useApp();
   const queryClient = useQueryClient();
-  const fieldId = useId();
-  const labelId = useId();
-  const nameId = useId();
+  const headingId = useId();
   const storedId = useId();
-  const errorId = useId();
 
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
@@ -179,89 +240,88 @@ function KeyRow({
     };
   }, [saved]);
 
-  const described = [
-    hasKey ? storedId : undefined,
-    failure === undefined ? undefined : errorId,
-    tested === undefined ? undefined : testId,
-  ]
+  const described = [hasKey ? storedId : undefined, tested === undefined ? undefined : testId]
     .filter((id) => id !== undefined)
     .join(" ");
 
   return (
-    <div data-ready={hasKey} className={providerRow}>
-      <span className="flex min-w-0 items-center gap-1">
-        <span id={nameId} className="font-semibold">
-          {provider.displayName}
-        </span>
-        {guide === undefined ? null : (
-          <InfoTip label={`${provider.displayName} keys`}>
-            <GuideSteps guide={guide} />
-          </InfoTip>
-        )}
-      </span>
-      <span className="flex items-center gap-2">
-        <Lamp state={hasKey ? "done" : "pending"} />
-        <span className={cn("engraved", hasKey ? "text-done" : "text-ink3")}>
-          {hasKey ? "Key saved" : "No key"}
-        </span>
-      </span>
-
-      <div className="min-w-0">
-        <Label htmlFor={fieldId} id={labelId} className="sr-only">
-          API key
-        </Label>
-        <Input
-          id={fieldId}
-          type="password"
-          autoComplete="off"
-          spellCheck={false}
-          // The label is visually hidden on every row, so the accessible name carries the
-          // provider's name with it.
-          aria-labelledby={`${nameId} ${labelId}`}
-          aria-invalid={failure !== undefined}
-          aria-describedby={described === "" ? undefined : described}
-          placeholder={hasKey ? keyMask : "Paste API key"}
-          value={draft}
-          onChange={(event) => {
-            setDraft(event.target.value);
-          }}
-        />
-        {hasKey ? (
-          <span id={storedId} className="sr-only">
-            A key is stored for this provider.
-          </span>
-        ) : null}
-        {failure === undefined ? null : (
-          <p id={errorId} className="mt-1 text-label text-red">
-            {failure}
-          </p>
-        )}
-        {tested === undefined ? null : (
-          <p
-            id={testId}
-            role={tested.ok ? "status" : "alert"}
-            className={cn("mt-1 text-label", tested.ok ? "text-done" : "text-red")}
-          >
-            {tested.message}
-          </p>
-        )}
+    <section
+      aria-labelledby={headingId}
+      data-ready={hasKey}
+      className="flex min-w-0 flex-col gap-5"
+    >
+      <div>
+        <div className="flex items-center gap-2">
+          <h3 id={headingId} className="sl-section-head__title">
+            {hasKey ? provider.displayName : `Set up ${provider.displayName}`}
+          </h3>
+          {hasKey && guide !== undefined ? (
+            <InfoTip label={`${provider.displayName} keys`}>
+              <GuideSteps guide={guide} />
+            </InfoTip>
+          ) : null}
+        </div>
+        <p className="sl-section-head__meta">
+          {familyTitles[provider.family]} · {hasKey ? "a key is saved" : "needs an API key"}
+        </p>
       </div>
 
-      <div className="flex min-h-8 items-center gap-2">
-        <Button
-          aria-label={`Save ${provider.displayName} key`}
-          disabled={draft.trim() === "" || saving}
-          onClick={() => {
-            void save();
-          }}
+      {!hasKey && guide !== undefined ? (
+        <div className="flex flex-col gap-2 text-small text-ink-2">
+          <GuideSteps guide={guide} />
+        </div>
+      ) : null}
+
+      <Field
+        label={`${provider.displayName} API key`}
+        help="Stored on this computer only. Never in backups or exports."
+        error={failure}
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            type="password"
+            autoComplete="off"
+            spellCheck={false}
+            className="min-w-0 flex-1 basis-[200px]"
+            aria-describedby={described === "" ? undefined : described}
+            placeholder={hasKey ? keyMask : "Paste API key"}
+            value={draft}
+            onChange={(event) => {
+              setDraft(event.target.value);
+            }}
+          />
+          <Button
+            variant="primary"
+            aria-label={`Save ${provider.displayName} key`}
+            disabled={draft.trim() === "" || saving}
+            onClick={() => {
+              void save();
+            }}
+          >
+            Save
+          </Button>
+        </div>
+      </Field>
+      {hasKey ? (
+        <span id={storedId} className="sr-only">
+          A key is stored for this provider.
+        </span>
+      ) : null}
+      {tested === undefined ? null : (
+        <p
+          id={testId}
+          role={tested.ok ? "status" : "alert"}
+          className={cn("m-0 text-small", tested.ok ? "text-accent-ink" : "text-danger")}
         >
-          Save
-        </Button>
-        <span className="inline-flex w-[52px]">{saved ? <SavedTick /> : null}</span>
+          {tested.message}
+        </p>
+      )}
+
+      <div className="sl-btn-row">
         <Button
-          variant="ghost"
           aria-label={`Test ${provider.displayName} key`}
           disabled={!hasKey || testing}
+          disabledReason="Save a key first."
           onClick={() => {
             void test();
           }}
@@ -269,7 +329,7 @@ function KeyRow({
           {testing ? "Testing…" : "Test"}
         </Button>
         <Button
-          variant="ghost"
+          variant="quiet"
           aria-label={`Remove ${provider.displayName} key`}
           disabled={!hasKey}
           onClick={() => {
@@ -278,13 +338,14 @@ function KeyRow({
         >
           Remove
         </Button>
+        <span className="inline-flex w-[52px]">{saved ? <SavedTick /> : null}</span>
       </div>
 
       <ConfirmDialog
         open={asking}
         title={`Remove the ${provider.displayName} key?`}
         consequence="Projects that used this provider cannot retry until a key is saved."
-        verb="Remove"
+        confirmLabel="Remove key"
         pending={remove.isPending}
         onConfirm={() => {
           remove.mutate();
@@ -293,7 +354,7 @@ function KeyRow({
           setAsking(false);
         }}
       />
-    </div>
+    </section>
   );
 }
 
@@ -306,20 +367,20 @@ function GuideSteps({ guide }: { readonly guide: KeyGuide }) {
   );
   return (
     <>
-      <ol className="list-decimal space-y-1 pl-4">
+      <ol className="m-0 list-decimal space-y-1 pl-5">
         {guide.steps.map((step) => (
           <li key={step}>{step}</li>
         ))}
       </ol>
-      <p>
+      <p className="m-0">
         Sign up: {link(guide.signUp.url, guide.signUp.label)}. Make the key:{" "}
         {link(guide.keyPage.url, guide.keyPage.label)}.
         {guide.billing === undefined ? null : (
           <> Credit: {link(guide.billing.url, guide.billing.label)}.</>
         )}
       </p>
-      <p>{guide.permissions}</p>
-      <p>
+      <p className="m-0">{guide.permissions}</p>
+      <p className="m-0">
         More in the provider's {link(guide.docs.url, guide.docs.label)}. After saving, choose Test.
       </p>
     </>
@@ -328,26 +389,36 @@ function GuideSteps({ guide }: { readonly guide: KeyGuide }) {
 
 function SkeletonKeys() {
   return (
-    <div className="flex flex-col gap-6" role="status" aria-label="Loading providers">
-      {(
-        [
-          ["llm", 4],
-          ["tts", 5],
-          ["image", 5],
-        ] as const
-      ).map(([family, count]) => (
-        <div key={family}>
-          <span className="mb-2 block h-3 w-16 rounded-control bg-panel2" />
-          <RailGroup>
-            {Array.from({ length: count }, (_, line) => `${family}-${line}`).map((row) => (
-              <Rail key={row} className="py-[10px]">
-                <span className="h-4 w-28 rounded-control bg-panel2" />
-                <span className="h-8 flex-1 rounded-control bg-panel2" />
-              </Rail>
-            ))}
-          </RailGroup>
-        </div>
-      ))}
+    <div
+      className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
+      role="status"
+      aria-label="Loading providers"
+    >
+      <div className="flex flex-col gap-6">
+        {(
+          [
+            ["llm", 4],
+            ["tts", 5],
+            ["image", 5],
+          ] as const
+        ).map(([family, count]) => (
+          <div key={family}>
+            <span className="mb-2 block h-3 w-16 rounded-control bg-raised" />
+            <div className="sl-list">
+              {Array.from({ length: count }, (_, line) => `${family}-${line}`).map((row) => (
+                <div key={row} className="sl-row">
+                  <span className="h-4 w-32 rounded-control bg-raised" />
+                  <span className="h-4 w-20 rounded-control bg-raised" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-col gap-4">
+        <span className="h-6 w-48 rounded-control bg-raised" />
+        <span className="h-10 rounded-control bg-raised" />
+      </div>
     </div>
   );
 }

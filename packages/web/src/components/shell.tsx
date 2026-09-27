@@ -10,10 +10,10 @@ import {
   SettingsIcon,
   UsersIcon,
 } from "lucide-react";
-import { type ReactElement, type ReactNode, useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { type ReactElement, useEffect, useState } from "react";
 import { eventsUrl } from "@/api";
 import { useApp } from "@/app-context";
+import { ChannelPicker, CurrentChannelProvider, useCurrentChannel } from "@/channels/current";
 import { SupportGlyph } from "@/components/glyph";
 import { PlayKey } from "@/components/kit/button";
 import {
@@ -42,10 +42,7 @@ import { WhatsNewTour } from "@/whats-new/tour";
 // thin top bar for the running tally, updates and help; the page below, full width up to
 // content-max. On phones the rail becomes a bottom bar of five.
 //
-// `match` lists the paths a destination stays lit for.
-// Calendar and Schedules live under Library's tabs too, but they light Calendar here.
-// TODO(3.0 screens): Home has no route yet. Until it lands it goes to "/" (the projects list),
-// lit on nothing of its own; point `to` and `match` at "/home" when that route exists.
+// `match` lists the paths a destination stays lit for. Schedules belong to the calendar.
 interface Destination {
   readonly id: string;
   readonly to: string;
@@ -64,15 +61,15 @@ const destinations: readonly Destination[] = [
     to: "/",
     label: "Home",
     icon: <HouseIcon {...iconProps} />,
-    match: [],
+    match: ["/"],
     phone: true,
   },
   {
     id: "projects",
-    to: "/",
+    to: "/projects",
     label: "Projects",
     icon: <FilmIcon {...iconProps} />,
-    match: ["/", "/projects"],
+    match: ["/projects"],
     phone: true,
   },
   {
@@ -96,7 +93,14 @@ const destinations: readonly Destination[] = [
     to: "/prompts",
     label: "Library",
     icon: <BookIcon {...iconProps} />,
-    match: ["/library", "/prompts", "/entries", "/templates", "/document-themes"],
+    match: [
+      "/library",
+      "/prompts",
+      "/entries",
+      "/templates",
+      "/document-themes",
+      "/narration-aliases",
+    ],
     phone: true,
   },
   {
@@ -131,25 +135,15 @@ const support = [
   },
 ] as const;
 
-const channelSlotId = "sl-channel-slot";
-
-// The channel picker's place in the rail. The channels screen renders its picker through
-// this, so the shell does not need to know how channels are loaded.
-export function ChannelPickerSlot({ children }: { readonly children: ReactNode }) {
-  const [target, setTarget] = useState<HTMLElement | null>(null);
-  useEffect(() => {
-    setTarget(document.getElementById(channelSlotId));
-  }, []);
-  return target === null ? null : createPortal(children, target);
-}
-
 export function Shell() {
   return (
     <FormDraftsProvider>
       <PlayDraftProvider>
         <TutorialProvider>
           <CommandPaletteProvider>
-            <ShellContent />
+            <CurrentChannelProvider>
+              <ShellContent />
+            </CurrentChannelProvider>
           </CommandPaletteProvider>
         </TutorialProvider>
       </PlayDraftProvider>
@@ -157,12 +151,36 @@ export function Shell() {
   );
 }
 
-// Every destination and the New video key are commands too.
+// Every destination, the New video key and the channel picker are commands too.
 function NavigationCommands() {
   const navigate = useNavigate();
+  const current = useCurrentChannel();
   const go = (to: string) => () => {
     void navigate({ to });
   };
+  useCommand({ id: "nav.home", title: "Open home", group: "Go to", run: go("/") });
+  useCommand({
+    id: "nav.channels",
+    title: "Open channels",
+    group: "Go to",
+    run: go("/channels"),
+    keywords: ["cast", "brand"],
+  });
+  useCommand({
+    id: "nav.schedules",
+    title: "Open schedules",
+    group: "Go to",
+    run: go("/schedules"),
+    keywords: ["calendar", "topics"],
+  });
+  useCommand({
+    id: "channel.all",
+    title: "Show all channels",
+    group: "Channel",
+    run: () => current.setChannelId(null),
+    keywords: ["switch", "filter"],
+  });
+
   useCommand({
     id: "create.video",
     title: "New video",
@@ -170,7 +188,7 @@ function NavigationCommands() {
     run: go("/play"),
     keywords: ["play", "make", "start"],
   });
-  useCommand({ id: "nav.projects", title: "Open projects", group: "Go to", run: go("/") });
+  useCommand({ id: "nav.projects", title: "Open projects", group: "Go to", run: go("/projects") });
   useCommand({
     id: "nav.calendar",
     title: "Open calendar",
@@ -204,6 +222,26 @@ function NavigationCommands() {
   return null;
 }
 
+// One command per channel, as a component so the list can grow and shrink.
+function ChannelCommand({ id, name }: { readonly id: string; readonly name: string }) {
+  const current = useCurrentChannel();
+  useCommand({
+    id: `channel.${id}`,
+    title: `Switch to ${name}`,
+    group: "Channel",
+    run: () => current.setChannelId(id),
+    keywords: ["channel", "switch", "filter"],
+  });
+  return null;
+}
+
+function ChannelCommands() {
+  const current = useCurrentChannel();
+  return current.channels.map((channel) => (
+    <ChannelCommand key={channel.id} id={channel.id} name={channel.name} />
+  ));
+}
+
 function ShellContent() {
   const { api, openEvents } = useApp();
   const queryClient = useQueryClient();
@@ -219,7 +257,8 @@ function ShellContent() {
     const unsubscribe = subscribeGlobal(openEvents, eventsUrl(api, "global"), {
       tally: setRunning,
       projectState: runs.observe,
-      scheduleTopics: () => {
+      scheduleTopics: (event) => {
+        runs.observeTopics(event);
         void queryClient.invalidateQueries({ queryKey: ["schedules"] });
         void queryClient.invalidateQueries({ queryKey: ["schedule"] });
         void queryClient.invalidateQueries({ queryKey: ["calendar"] });
@@ -243,6 +282,7 @@ function ShellContent() {
   return (
     <div className="sl-app">
       <NavigationCommands />
+      <ChannelCommands />
       <aside className="sl-app__rail" aria-label="App">
         <Link to="/" className="sl-wordmark">
           <span className="sl-wordmark__dot" aria-hidden="true" />
@@ -270,7 +310,7 @@ function ShellContent() {
           ))}
         </nav>
         <div className="sl-app__foot">
-          <div id={channelSlotId} className="flex flex-col gap-[10px] empty:hidden" />
+          <ChannelPicker />
           <PlayKey asChild className="h-12 text-[16px]">
             <Link to="/play">
               <PlusIcon {...iconProps} />
@@ -299,6 +339,7 @@ function ShellContent() {
             {running === 0 ? null : (
               <Link
                 to="/"
+                hash="running"
                 aria-label={`${String(running)} running`}
                 title={`${String(running)} running`}
                 className="sl-status sl-status--running no-underline hover:text-ink"

@@ -1,18 +1,22 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { PlusIcon } from "lucide-react";
-import { type ReactElement, useEffect, useRef, useState } from "react";
+import { Trash2Icon } from "lucide-react";
+import { Fragment, type ReactElement, useEffect, useRef, useState } from "react";
 import { useApp } from "@/app-context";
 import { channelsQuery } from "@/channels/api";
 import { channelOfTemplate } from "@/channels/members-tabs";
-import { ConfirmDialog } from "@/components/confirm";
 import { StatusSlot } from "@/components/kit/action-bar";
+import { Button, IconButton } from "@/components/kit/button";
+import { Callout } from "@/components/kit/callout";
+import { useCommand } from "@/components/kit/command-palette";
+import { ConfirmDialog } from "@/components/kit/dialog";
 import { Drawer } from "@/components/kit/drawer";
+import { EmptyState } from "@/components/kit/empty-state";
+import { Field, Input, Select } from "@/components/kit/field";
+import { List, ListRow } from "@/components/kit/list-row";
 import { useToast } from "@/components/kit/toast";
-import { RailGroup } from "@/components/rail";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Picker } from "@/components/ui/picker";
+import { ListSkeleton } from "@/library/list-states";
+import { PacksDrawer } from "@/onboarding/packs-drawer";
 import { listPlayDrafts, readPlayDraft } from "@/play/draft-api";
 import {
   deleteProjectTemplate,
@@ -22,8 +26,12 @@ import {
   templatesKey,
   templatesQuery,
 } from "@/templates/api";
+import { TemplateKeywords } from "@/templates/keywords";
 import { LibraryToolbar } from "./library.js";
 
+// Library → Templates: saved Play setups, each applied as a fresh draft to review. The rows
+// carry their actions (Apply to Play, Delete) in view; Save a setup opens a drawer beside the
+// list.
 export function TemplatesRoute({
   onApplied,
   beforeApply,
@@ -62,7 +70,10 @@ export function TemplatesRoute({
   const [error, setError] = useState<string | null>(null);
   const notify = useToast();
   const [saving, setSaving] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState<TemplateSummary | null>(null);
+  // The template whose keywords are shown under its row.
+  const [keywordsOf, setKeywordsOf] = useState<string | null>(null);
   const active = useRef(false);
   const saveIdentity = useRef<{ readonly key: string; readonly id: string } | null>(null);
   const applications = useRef(new Map<string, string>());
@@ -168,6 +179,13 @@ export function TemplatesRoute({
     );
     await client.invalidateQueries({ queryKey: templatesKey });
   }
+  useCommand({
+    id: "library.save-template",
+    title: "Save a setup as a template",
+    group: "Library",
+    keywords: ["template", "new template", "play draft"],
+    run: () => setSaving(true),
+  });
   const status =
     error && !deleting
       ? ({ tone: "error", text: error } as const)
@@ -183,18 +201,29 @@ export function TemplatesRoute({
             : undefined;
   return (
     <div>
+      <PacksDrawer
+        open={adding}
+        onClose={() => setAdding(false)}
+        onInstalled={() =>
+          void client.invalidateQueries({ queryKey: templatesQuery(api).queryKey })
+        }
+      />
       <LibraryToolbar
         action={
-          <Button type="button" onClick={() => setSaving(true)} aria-expanded={saving}>
-            <PlusIcon aria-hidden="true" className="size-[14px]" />
-            Save a setup
-          </Button>
+          <>
+            <Button variant="secondary" onClick={() => setAdding(true)} aria-expanded={adding}>
+              Add pack
+            </Button>
+            <Button variant="primary" onClick={() => setSaving(true)} aria-expanded={saving}>
+              Save a setup
+            </Button>
+          </>
         }
       >
-        <Picker
+        <Select
           aria-label="Show templates of"
           value={channelFilter}
-          className="w-auto min-w-[160px]"
+          className="w-full sm:w-56"
           onChange={(event) => setChannelFilter(event.target.value)}
         >
           <option value="">All channels</option>
@@ -203,21 +232,21 @@ export function TemplatesRoute({
               {channel.name}
             </option>
           ))}
-        </Picker>
-        <p className="text-small text-ink2">
+        </Select>
+        <p className="m-0 text-small text-ink-2">
           Reuse a Play setup and its checkpoint choices. Apply creates a fresh draft to review.
         </p>
       </LibraryToolbar>
-      <div className="mb-2 flex min-h-8 items-center gap-3">
+      <div className="mb-2 flex min-h-8 flex-wrap items-center gap-3">
         <StatusSlot tone={status?.tone ?? "info"}>{status?.text}</StatusSlot>
         {templates.error ? (
-          <Button type="button" onClick={() => void templates.refetch()}>
+          <Button size="small" onClick={() => void templates.refetch()}>
             Reload templates
           </Button>
         ) : null}
         <Button
-          type="button"
-          variant="ghost"
+          variant="quiet"
+          size="small"
           disabled={pending || templates.isFetching}
           onClick={() => void templates.refetch()}
         >
@@ -225,60 +254,77 @@ export function TemplatesRoute({
         </Button>
       </div>
       {templates.data?.length === 0 ? (
-        <RailGroup>
-          <p className="px-4 py-6 text-ink2">
-            No templates yet. Use Save a setup to keep a Play draft for reuse.
-          </p>
-        </RailGroup>
+        <EmptyState title="No templates yet">
+          Use Save a setup to keep a Play draft for reuse.
+        </EmptyState>
       ) : null}
       {templates.data?.length && shown?.length === 0 ? (
-        <RailGroup>
-          <p className="px-4 py-6 text-ink2">No templates in this channel.</p>
-        </RailGroup>
+        <p className="m-0 py-3 text-small text-ink-2">No templates in this channel.</p>
       ) : null}
+      {templates.isPending && !templates.error ? <ListSkeleton label="Project templates" /> : null}
       {shown?.length ? (
-        <ul
-          className="overflow-hidden rounded-panel border border-line bg-panel"
-          aria-label="Project templates"
-        >
+        <List label="Project templates">
           {shown.map((template) => (
-            <li
-              key={template.id}
-              className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-line px-4 py-[10px] last:border-b-0"
-            >
-              <div className="flex min-w-0 flex-wrap items-baseline gap-x-3">
-                <h2 className="break-words font-semibold">{template.name}</h2>
-                <p className="text-small text-ink3">
-                  {channelName(template) === undefined ? "" : `${channelName(template)} · `}
-                  Version {template.version} · Updated{" "}
-                  <time dateTime={template.updatedAt}>{template.updatedAt.slice(0, 10)}</time>
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  aria-label={`Apply ${template.name}`}
-                  disabled={pending || blocked}
-                  onClick={() => void execute(() => apply(template))}
-                >
-                  Apply to Play
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  aria-label={`Delete ${template.name}`}
-                  disabled={pending}
-                  onClick={() => {
-                    setDeleting(template);
-                    setError(null);
-                  }}
-                >
-                  Delete
-                </Button>
-              </div>
-            </li>
+            <Fragment key={template.id}>
+              <ListRow
+                className="max-md:grid-cols-1"
+                title={template.name}
+                meta={
+                  <>
+                    {channelName(template) === undefined ? "" : `${channelName(template)} · `}
+                    Version {template.version} · updated{" "}
+                    <time dateTime={template.updatedAt}>{template.updatedAt.slice(0, 10)}</time>
+                  </>
+                }
+                actions={
+                  // biome-ignore lint/a11y/useSemanticElements: a group of buttons, not a fieldset of inputs.
+                  <div
+                    role="group"
+                    aria-label={`Actions for ${template.name}`}
+                    className="flex flex-wrap items-center gap-[2px]"
+                  >
+                    <Button
+                      variant="quiet"
+                      size="small"
+                      aria-label={`Apply ${template.name}`}
+                      disabled={pending || blocked}
+                      onClick={() => void execute(() => apply(template))}
+                    >
+                      Apply to Play
+                    </Button>
+                    <Button
+                      variant="quiet"
+                      size="small"
+                      aria-expanded={keywordsOf === template.id}
+                      aria-label={`Keywords of ${template.name}`}
+                      onClick={() =>
+                        setKeywordsOf((current) => (current === template.id ? null : template.id))
+                      }
+                    >
+                      Keywords
+                    </Button>
+                    <IconButton
+                      size="small"
+                      label={`Delete ${template.name}`}
+                      disabled={pending}
+                      onClick={() => {
+                        setDeleting(template);
+                        setError(null);
+                      }}
+                    >
+                      <Trash2Icon aria-hidden="true" />
+                    </IconButton>
+                  </div>
+                }
+              />
+              {keywordsOf === template.id ? (
+                <li className="px-3 pb-3">
+                  <TemplateKeywords template={template} />
+                </li>
+              ) : null}
+            </Fragment>
           ))}
-        </ul>
+        </List>
       ) : null}
       <Drawer
         open={saving}
@@ -301,26 +347,37 @@ export function TemplatesRoute({
           </>
         }
       >
-        <p className="mb-4 text-small text-ink2">
+        <p className="m-0 mb-4 text-small text-ink-2">
           Choose a saved Play draft, or{" "}
-          <Link to="/play" className="underline">
+          <Link to="/play" className="text-accent-ink underline">
             open Play
           </Link>{" "}
           to prepare one.
         </p>
+        <p className="mb-4 text-small text-ink2">
+          A template keeps the settings, not one video&apos;s topic: keywords the project title
+          names, like {"{{Topic}}"}, are saved empty, and other keywords keep their values.
+        </p>
         <form
           id="save-template-form"
           aria-label="Save a setup"
-          className="space-y-4"
+          className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault();
             if (draftId && name.trim()) void execute(save);
           }}
         >
-          <label className="block space-y-1">
-            <span className="engraved text-ink3">Saved Play draft</span>
-            <select
-              className="h-8 w-full rounded-control border border-line2 bg-panel2 px-2"
+          <Field
+            label="Saved Play draft"
+            help={
+              drafts.isPending
+                ? "Loading saved drafts…"
+                : drafts.data?.length === 0
+                  ? "No saved drafts yet."
+                  : undefined
+            }
+          >
+            <Select
               value={draftId}
               required
               disabled={pending}
@@ -334,39 +391,32 @@ export function TemplatesRoute({
                     {draft.title || "Untitled draft"}
                   </option>
                 ))}
-            </select>
-          </label>
-          {drafts.isPending ? (
-            <p role="status" className="text-small text-ink2">
-              Loading saved drafts…
-            </p>
-          ) : null}
-          {drafts.data?.length === 0 ? (
-            <p className="text-small text-ink2">No saved drafts yet.</p>
-          ) : null}
+            </Select>
+          </Field>
           {drafts.error ? (
-            <p role="alert" className="text-small text-red">
-              {drafts.error.message}{" "}
-              <Button type="button" onClick={() => void drafts.refetch()}>
-                Reload drafts
-              </Button>
-            </p>
+            <Callout
+              tone="danger"
+              title="The saved drafts couldn't be loaded."
+              actions={
+                <Button size="small" onClick={() => void drafts.refetch()}>
+                  Reload drafts
+                </Button>
+              }
+            >
+              {drafts.error.message}
+            </Callout>
           ) : null}
-          <label className="block space-y-1" htmlFor="template-name">
-            <span className="engraved text-ink3">Template name</span>
+          <Field label="Template name" id="template-name">
             <Input
-              id="template-name"
               value={name}
               required
               maxLength={120}
               disabled={pending}
               onChange={(event) => setName(event.target.value)}
             />
-          </label>
-          <label className="block space-y-1" htmlFor="template-channel">
-            <span className="engraved text-ink3">Channel</span>
-            <Picker
-              id="template-channel"
+          </Field>
+          <Field label="Channel" id="template-channel">
+            <Select
               value={saveChannel}
               disabled={pending}
               onChange={(event) => setSaveChannel(event.target.value)}
@@ -377,8 +427,8 @@ export function TemplatesRoute({
                   {channel.name}
                 </option>
               ))}
-            </Picker>
-          </label>
+            </Select>
+          </Field>
         </form>
       </Drawer>
       <ConfirmDialog
@@ -388,7 +438,7 @@ export function TemplatesRoute({
           error ??
           "Moves it to the trash for 30 days (Settings → Trash). Existing projects and drafts keep their setup."
         }
-        verb="Delete template"
+        confirmLabel="Delete template"
         pending={pending}
         onConfirm={() => void execute(remove)}
         onCancel={() => {

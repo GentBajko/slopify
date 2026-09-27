@@ -244,7 +244,8 @@ describe("a name another entry already has", () => {
 
     // The refusal stands until the field it names changes.
     await user.type(name, " two");
-    expect(name.getAttribute("aria-invalid")).toBe("false");
+    // A valid field carries no aria-invalid at all (the kit Field sets it only with an error).
+    expect(name.getAttribute("aria-invalid")).toBeNull();
   });
 
   it("takes the same name as an outro, because the categories are counted apart", async () => {
@@ -296,7 +297,7 @@ describe("an existing entry", () => {
         "Moves it to the trash for 30 days (Settings → Trash). Projects that used it keep their text.",
       ),
     ).not.toBeNull();
-    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+    await user.click(within(dialog).getByRole("button", { name: "Delete intro" }));
 
     await waitFor(() => {
       expect(sent).toEqual(["/api/entries/e1"]);

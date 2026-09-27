@@ -40,7 +40,9 @@ export function SectionHead({
         {meta === undefined ? null : <p className="sl-section-head__meta">{meta}</p>}
       </div>
       {children === undefined ? null : (
-        <div className="sl-btn-row shrink-0 justify-end">{children}</div>
+        <div className="sl-btn-row min-w-0 shrink-0 justify-end max-md:shrink max-md:justify-start">
+          {children}
+        </div>
       )}
     </div>
   );

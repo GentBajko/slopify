@@ -1,5 +1,6 @@
 import type { FingerprintValue } from "../../kernel/runner/work.js";
 import { type RunConfig, thumbnailCountOf, thumbnailKey } from "../admission/model.js";
+import { usesShortMode } from "../admission/short-mode.js";
 import { render } from "../admission/substitute.js";
 import type { RevisionContent } from "../revisions/model.js";
 import { usesAmbientBed } from "../video/ambient-bed.js";
@@ -23,6 +24,8 @@ export function visualRecipes(
   edit?: (images: readonly ResolvedWorkRecipe[]) => EditPlan,
   // The establishing image the generated images are drawn from, when it is on.
   reference?: ImageReference,
+  // The word timing's identity, which a short's captions are drawn from.
+  timing: FingerprintValue = null,
 ): readonly ResolvedWorkRecipe[] {
   const recipes: ResolvedWorkRecipe[] = [];
   const imageKeys = config.sources.images === "off" ? [] : content.imageOrder;
@@ -59,8 +62,15 @@ export function visualRecipes(
     );
   }
   if (config.sources.video !== "off") {
-    const edited = edit?.([...recipes]) ?? { recipes: [], values: [], dependsOn: [] };
-    const bed = ambientBedValues(config, content);
+    const short = usesShortMode(config);
+    // A short is rendered by the Shorts renderer, which has no cuts, transitions or Look.
+    const edited = (short ? undefined : edit?.([...recipes])) ?? {
+      recipes: [],
+      values: [],
+      dependsOn: [],
+    };
+    // A short (rendered by the Shorts renderer) never has the bed.
+    const bed = short ? undefined : ambientBedValues(config, content);
     const audioKeys =
       config.sources.audio === "off"
         ? []
@@ -101,6 +111,11 @@ export function visualRecipes(
             // Only what the edit settings change; nothing at all for today's slideshow, so
             // its fingerprint is the one it always had.
             ...(edited.values.length === 0 ? [] : [["video-edit", ...edited.values]]),
+            // Only for a short, so every long video keeps its fingerprint: the word-by-word
+            // captions are drawn from the word timing in the caption font, under the title.
+            ...(short
+              ? [["short-v1", config.subtitles?.fontId ?? "default", config.title, timing]]
+              : []),
             // Only while the video has an ambient bed, so every video without one keeps the
             // fingerprint it always had.
             ...(bed === undefined ? [] : [bed]),
@@ -110,6 +125,7 @@ export function visualRecipes(
           ...recipes.map((value) => value.key),
           ...audioKeys,
           ...(config.subtitles?.mode === "burn-in" ? ["subtitles:files"] : []),
+          ...(short ? ["subtitles:timing"] : []),
           ...edited.dependsOn,
         ],
         {

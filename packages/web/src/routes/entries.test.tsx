@@ -40,60 +40,104 @@ function Screen({ start = "intro" as EntryCategory }) {
   return <EntriesRoute category={category} onCategory={setCategory} />;
 }
 
+// A row is found by its title, which is the button that shows it in the detail column.
+async function findRow(name: string): Promise<HTMLElement> {
+  const title = await screen.findByRole("button", { name });
+  const row = title.closest("li");
+  if (row === null) throw new Error(`${name} is not in a list row`);
+  return row;
+}
+
 describe("the intros and outros list", () => {
   it("offers both categories and shows only the one that is on", async () => {
     const user = userEvent.setup();
     renderRouted(<Screen />, deps([coldOpen, written]));
 
-    expect(await screen.findByText("Cold open")).not.toBeNull();
+    expect(await findRow("Cold open")).not.toBeNull();
     expect(screen.queryByText("Written sign-off")).toBeNull();
 
-    await user.click(screen.getByRole("radio", { name: "Outro" }));
-    expect(await screen.findByText("Written sign-off")).not.toBeNull();
+    const categories = screen.getByRole("group", { name: "Entry category" });
+    await user.click(within(categories).getByRole("button", { name: "Outros" }));
+    expect(await findRow("Written sign-off")).not.toBeNull();
     expect(screen.queryByText("Cold open")).toBeNull();
   });
 
-  it("marks each row with its mode and its detected slots", async () => {
+  it("says each row's mode and keyword count on its meta line", async () => {
     renderRouted(<Screen />, deps([coldOpen]));
 
-    await screen.findByText("Cold open");
-    expect(screen.getByText("Text").getAttribute("data-entry-mode")).toBe("text");
-    expect(screen.getByText("topic").getAttribute("data-slot-chip")).toBe("topic");
+    const row = await findRow("Cold open");
+    expect(within(row).getByText(/^Text · 1 keyword · updated /u)).not.toBeNull();
+  });
+
+  it("shows the first row's text and keywords beside the list, and another row's once it is picked", async () => {
+    const user = userEvent.setup();
+    const second: Entry = {
+      ...coldOpen,
+      id: "e3",
+      name: "Warm open",
+      body: "Hello {{channel}}.",
+      slots: ["channel"],
+    };
+    renderRouted(<Screen />, deps([coldOpen, second]));
+
+    const first = await findRow("Cold open");
+    expect(first.getAttribute("aria-current")).toBe("true");
+    const detail = screen.getByRole("region", { name: "Cold open details" });
+    expect(within(detail).getByText("Today on the channel: {{topic}}.")).not.toBeNull();
+    expect(within(detail).getByText("{{topic}}")).not.toBeNull();
+    expect(within(detail).getByRole("link", { name: "Edit intro" }).getAttribute("href")).toBe(
+      "/entries/e1",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Warm open" }));
+    const next = await screen.findByRole("region", { name: "Warm open details" });
+    expect(within(next).getByText("{{channel}}")).not.toBeNull();
+    expect((await findRow("Warm open")).getAttribute("aria-current")).toBe("true");
+    expect(first.getAttribute("aria-current")).toBeNull();
+  });
+
+  it("narrows the list to the rows whose name or text matches the search", async () => {
+    const user = userEvent.setup();
+    const second: Entry = { ...coldOpen, id: "e3", name: "Warm open", body: "Hello friends." };
+    renderRouted(<Screen />, deps([coldOpen, second]));
+
+    await findRow("Cold open");
+    await user.type(screen.getByRole("searchbox", { name: "Search intros and outros" }), "friends");
+    expect(screen.queryByRole("button", { name: "Cold open" })).toBeNull();
+    expect(await findRow("Warm open")).not.toBeNull();
   });
 
   it("teaches what an intro is when the category is empty", async () => {
     renderRouted(<Screen />, deps([written]));
 
+    expect(await screen.findByRole("heading", { name: "No intros yet" })).not.toBeNull();
     expect(
-      await screen.findByText(
-        "No intros yet. An intro is narrated before the body in the run's voice.",
-      ),
+      screen.getByText("An intro is narrated before the body in the run's voice."),
     ).not.toBeNull();
   });
 
   it("teaches what an outro is with the same row, saying where it lands", async () => {
     renderRouted(<Screen start="outro" />, deps([coldOpen]));
 
+    expect(await screen.findByRole("heading", { name: "No outros yet" })).not.toBeNull();
     expect(
-      await screen.findByText(
-        "No outros yet. An outro is narrated after the body in the run's voice.",
-      ),
+      screen.getByText("An outro is narrated after the body in the run's voice."),
     ).not.toBeNull();
   });
 
-  it("points New entry and the row itself at the editor, carrying the tab that is on", async () => {
+  it("points New intro or outro and Edit at the editor, carrying the tab that is on", async () => {
     renderRouted(<Screen />, deps([coldOpen]));
 
-    await screen.findByText("Cold open");
-    expect(screen.getByRole("link", { name: "New entry" }).getAttribute("href")).toBe(
+    await findRow("Cold open");
+    expect(screen.getByRole("link", { name: "New intro or outro" }).getAttribute("href")).toBe(
       "/entries/new?category=intro",
     );
-    expect(screen.getByRole("link", { name: "Cold open" }).getAttribute("href")).toBe(
+    expect(screen.getByRole("link", { name: "Edit Cold open" }).getAttribute("href")).toBe(
       "/entries/e1",
     );
   });
 
-  it("offers Duplicate as a copy opened for editing, and Delete behind a confirmation", async () => {
+  it("shows every row action on the row, Duplicate as a copy opened for editing, and Delete behind a confirmation", async () => {
     const user = userEvent.setup();
     let deleted: string | undefined;
     renderRouted(
@@ -106,14 +150,17 @@ describe("the intros and outros list", () => {
       }),
     );
 
-    await screen.findByText("Cold open");
+    await findRow("Cold open");
     const actions = screen.getByRole("group", { name: "Actions for Cold open" });
-    expect([...actions.querySelectorAll("a, button")].map((one) => one.textContent)).toEqual([
-      "Edit",
-      "Duplicate",
-      "Use in Play",
-      "History",
-      "Delete",
+    // All visible on the row, in the Library's order; History and Delete are icon buttons.
+    expect(
+      [...actions.querySelectorAll("a, button")].map((one) => one.getAttribute("aria-label")),
+    ).toEqual([
+      "Edit Cold open",
+      "Duplicate Cold open",
+      "Use Cold open in Play",
+      "History of Cold open",
+      "Delete Cold open",
     ]);
     expect(
       within(actions).getByRole("link", { name: "Duplicate Cold open" }).getAttribute("href"),
@@ -130,7 +177,7 @@ describe("the intros and outros list", () => {
       ),
     ).not.toBeNull();
 
-    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+    await user.click(within(dialog).getByRole("button", { name: "Delete intro" }));
     await waitFor(() => {
       expect(deleted).toBe("/api/entries/e1");
     });
@@ -143,5 +190,6 @@ describe("the intros and outros list", () => {
     );
 
     expect(await screen.findByText("The disk is full.")).not.toBeNull();
+    expect(screen.getByText("The intros and outros couldn't be loaded.")).not.toBeNull();
   });
 });

@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
+import { CommandPaletteProvider, CommandRegistry } from "@/components/kit/command-palette";
 import { AppearanceSkin } from "@/components/theme";
 import type { Answer } from "@/test-app";
 import { jsonAnswer, problemAnswer, renderApp, testDeps } from "@/test-app";
@@ -105,7 +106,9 @@ describe("the settings screen", () => {
       );
     }
     renderApp(<Harness />, deps());
-    expect(await screen.findByRole("heading", { name: "Settings" })).not.toBeNull();
+    // The section is the page title, under the Settings crumb.
+    expect(await screen.findByRole("heading", { level: 1, name: "Providers" })).not.toBeNull();
+    expect(screen.getByText("Settings")).not.toBeNull();
     expect(await screen.findByRole("heading", { name: "Text" })).not.toBeNull();
     expect(screen.queryByLabelText("Silence between segments")).toBeNull();
     const nav = screen.getByRole("navigation", { name: "Settings sections" });
@@ -129,12 +132,61 @@ describe("the settings screen", () => {
     ]);
     expect(
       within(nav).getByRole("button", { name: "Providers" }).getAttribute("aria-current"),
-    ).toBe("page");
+    ).toBe("true");
     await user.click(within(nav).getByRole("button", { name: "Voices" }));
     expect(picked).toEqual(["voices"]);
+    expect(screen.getByRole("heading", { level: 1, name: "Voices" })).not.toBeNull();
     await user.click(within(nav).getByRole("button", { name: "Playback & appearance" }));
     expect(await screen.findByLabelText("Silence between segments")).not.toBeNull();
     expect(screen.queryByRole("heading", { name: "Text" })).toBeNull();
+    expect(
+      within(nav).getByRole("button", { name: "Providers" }).hasAttribute("aria-current"),
+    ).toBe(false);
+  });
+
+  it("keeps Download diagnostics a download link on every section, and Check all on Providers", async () => {
+    const user = userEvent.setup();
+    function Harness() {
+      const [section, setSection] = useState<SettingsSection>("providers");
+      return <SettingsRoute section={section} onSection={setSection} />;
+    }
+    renderApp(<Harness />, deps());
+    const link = await screen.findByRole("link", { name: "Download diagnostics" });
+    expect(link.getAttribute("href")).toBe("http://slopify.test/api/diagnostics");
+    expect(link.getAttribute("download")).toBe("slopify-diagnostics.json");
+    expect(screen.getByRole("button", { name: "Check all" })).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "About" }));
+    expect(screen.queryByRole("button", { name: "Check all" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Download diagnostics" })).not.toBeNull();
+  });
+
+  it("runs Check all from the page header and lists the report under the providers", async () => {
+    const user = userEvent.setup();
+    let checks = 0;
+    renderApp(
+      <SettingsRoute section="providers" />,
+      deps({
+        "POST /api/providers/health": (request) => {
+          checks += 1;
+          return jsonAnswer({
+            checkedAt: "2026-09-27T10:00:00.000Z",
+            providers: [
+              {
+                id: "codex",
+                displayName: "Codex CLI",
+                family: "llm",
+                state: "ok",
+                checks: [{ label: "Signed in", state: "ok", detail: "Signed in as you." }],
+              },
+            ],
+          })(request);
+        },
+      }),
+    );
+    expect(await screen.findByText("Not checked yet.")).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "Check all" }));
+    expect(await screen.findByText("Signed in as you.")).not.toBeNull();
+    expect(checks).toBe(1);
   });
 
   it("holds Save while the gap is not a number a run would take", async () => {
@@ -383,7 +435,9 @@ describe("the appearance switch", () => {
       </>,
       deps(),
     );
-    expect(await screen.findByRole("radio", { name: "System" })).not.toBeNull();
+    expect(
+      (await screen.findByRole("button", { name: "System" })).getAttribute("aria-pressed"),
+    ).toBe("true");
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
   });
 
@@ -399,7 +453,7 @@ describe("the appearance switch", () => {
       deps({ "PUT /api/settings": () => new Promise<Response>(() => {}) }),
     );
 
-    await user.click(await screen.findByRole("radio", { name: "Light" }));
+    await user.click(await screen.findByRole("button", { name: "Light" }));
     await waitFor(() => {
       expect(document.documentElement.getAttribute("data-theme")).toBe("light");
     });
@@ -421,7 +475,7 @@ describe("the appearance switch", () => {
       }),
     );
 
-    await user.click(await screen.findByRole("radio", { name: "Dark" }));
+    await user.click(await screen.findByRole("button", { name: "Dark" }));
     await waitFor(() => {
       expect(sent).toEqual({ silenceGapSeconds: 3, appearance: "dark" });
     });
@@ -440,10 +494,78 @@ describe("the appearance switch", () => {
       deps({ "PUT /api/settings": problemAnswer("The database is locked.", 500) }),
     );
 
-    await user.click(await screen.findByRole("radio", { name: "Light" }));
+    await user.click(await screen.findByRole("button", { name: "Light" }));
     expect(await screen.findByText("The database is locked.")).not.toBeNull();
     await waitFor(() => {
       expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
+    });
+  });
+});
+
+describe("the settings commands", () => {
+  it("offers Check all providers, Back up now and Download diagnostics under Settings", async () => {
+    const registry = new CommandRegistry();
+    const picked: string[] = [];
+    let checks = 0;
+    let backups = 0;
+    renderApp(
+      <CommandPaletteProvider registry={registry}>
+        <SettingsRoute section="about" onSection={(next) => picked.push(next)} />
+      </CommandPaletteProvider>,
+      deps({
+        "POST /api/providers/health": (request) => {
+          checks += 1;
+          return jsonAnswer({ checkedAt: "2026-09-27T10:00:00.000Z", providers: [] })(request);
+        },
+        "POST /api/backups/run": (request) => {
+          backups += 1;
+          return jsonAnswer({})(request);
+        },
+      }),
+    );
+    await waitFor(() => {
+      expect(registry.list().map((command) => command.title)).toEqual([
+        "Check all providers",
+        "Back up now",
+        "Download diagnostics",
+      ]);
+    });
+    expect(new Set(registry.list().map((command) => command.group))).toEqual(new Set(["Settings"]));
+    const run = (title: string) =>
+      registry
+        .list()
+        .find((command) => command.title === title)
+        ?.run();
+
+    await run("Check all providers");
+    await waitFor(() => expect(checks).toBe(1));
+    await run("Back up now");
+    await waitFor(() => expect(backups).toBe(1));
+    expect(picked).toEqual(["providers", "backups"]);
+
+    const clicked: string[] = [];
+    const click = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+      clicked.push(`${this.href} ${this.download}`);
+    };
+    try {
+      await run("Download diagnostics");
+    } finally {
+      HTMLAnchorElement.prototype.click = click;
+    }
+    expect(clicked).toEqual(["http://slopify.test/api/diagnostics slopify-diagnostics.json"]);
+  });
+
+  it("adds Export everything while Backup & storage is showing", async () => {
+    const registry = new CommandRegistry();
+    renderApp(
+      <CommandPaletteProvider registry={registry}>
+        <SettingsRoute section="storage" />
+      </CommandPaletteProvider>,
+      deps(),
+    );
+    await waitFor(() => {
+      expect(registry.list().map((command) => command.title)).toContain("Export everything");
     });
   });
 });

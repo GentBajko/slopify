@@ -45,33 +45,37 @@ export function AboutSettings({
   readonly donation?: string;
 }): ReactElement {
   return (
-    <div>
+    <div className="max-w-prose">
       <SectionHead title="About" />
-      <p className="mb-4 max-w-prose text-ink2">
+      <p className="m-0 mb-3 text-ink-2">
         Slopify is free and open source, and runs on your machine with your own keys. If it saves
         you time, you can support it here.
       </p>
-      <p className="mb-4 max-w-prose text-small text-ink2">
+      <p className="m-0 mb-4 text-small text-ink-2">
         Made by Gent Bajko. Apache License 2.0: anyone who redistributes Slopify or builds on it
         keeps this credit.
       </p>
-      <ul className="grid max-w-prose divide-y divide-line border-y border-line">
+      <ul aria-label="Links" className="sl-list m-0 list-none p-0">
         {aboutLinks(donation).map((link) => (
-          <li key={link.label} className="flex items-center gap-3 py-3">
-            {link.glyph === undefined ? (
-              <span aria-hidden="true" className="size-[14px] shrink-0" />
-            ) : (
-              <SupportGlyph name={link.glyph} className="text-ink2" />
-            )}
-            <a
-              href={link.href}
-              target="_blank"
-              rel="noreferrer"
-              className="font-semibold text-ink underline underline-offset-3"
-            >
-              {link.label}
-            </a>
-            <span className="text-small text-ink2">{link.detail}</span>
+          <li key={link.label} className="sl-row">
+            <div className="sl-row__lead">
+              {link.glyph === undefined ? (
+                <span aria-hidden="true" className="size-[14px] shrink-0" />
+              ) : (
+                <SupportGlyph name={link.glyph} className="shrink-0 text-ink-2" />
+              )}
+              <div className="sl-row__text">
+                <a
+                  href={link.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-semibold text-ink underline underline-offset-3"
+                >
+                  {link.label}
+                </a>
+                <span className="sl-row__meta">{link.detail}</span>
+              </div>
+            </div>
           </li>
         ))}
       </ul>

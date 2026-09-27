@@ -217,6 +217,23 @@ export function projectChannelId(db: DatabaseSync, projectId: string): string {
   return resolveChannelId(db, typeof row?.channel_id === "string" ? row.channel_id : null);
 }
 
+// Every project's channel in one read, for the lists that show or filter by it. A project
+// with no row, or naming a channel this install doesn't have, is in the default channel.
+export function projectChannels(db: DatabaseSync): ReadonlyMap<string, string> {
+  const known = new Set(
+    db
+      .prepare("SELECT id FROM channels")
+      .all()
+      .map((row) => String(row.id)),
+  );
+  const result = new Map<string, string>();
+  for (const row of db.prepare("SELECT project_id, channel_id FROM project_channels").all()) {
+    const channel = String(row.channel_id);
+    result.set(String(row.project_id), known.has(channel) ? channel : defaultChannelId);
+  }
+  return result;
+}
+
 export function setProjectChannel(db: DatabaseSync, projectId: string, channelId: string): void {
   db.prepare(
     "INSERT INTO project_channels(project_id,channel_id) VALUES (?,?) ON CONFLICT(project_id) DO UPDATE SET channel_id=excluded.channel_id",

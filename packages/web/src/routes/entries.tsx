@@ -1,33 +1,29 @@
-import type { Entry, EntryCategory, EntryMode } from "@app/slices/library/model.js";
+import type { Entry, EntryCategory } from "@app/slices/library/model.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { CopyIcon, PencilIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { removeEntry } from "@/api";
 import { useApp } from "@/app-context";
-import { ConfirmDialog } from "@/components/confirm";
-import { RailGroup } from "@/components/rail";
-import { SlotChip } from "@/components/slot-chip";
-import { Button } from "@/components/ui/button";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { categoryOptions, modeLabel } from "@/lib/entry-options";
+import { Button } from "@/components/kit/button";
+import { Callout } from "@/components/kit/callout";
+import { ConfirmDialog } from "@/components/kit/dialog";
+import { EmptyState } from "@/components/kit/empty-state";
+import { Input } from "@/components/kit/field";
+import { ListDetail } from "@/components/kit/layout";
+import { List, ListRow } from "@/components/kit/list-row";
+import { Segmented } from "@/components/kit/switch";
+import { categoryLabel, categoryOptions, modeLabel } from "@/lib/entry-options";
 import { HistoryDrawer } from "@/library/history-drawer";
+import { LibraryItemDetail, plural, updatedOn } from "@/library/item-detail";
+import { ListSkeleton, LoadError, libraryListDetail, libraryRow } from "@/library/list-states";
 import { LibraryRowActions } from "@/library/row-actions";
 import { entriesQuery, keys } from "@/queries";
 import { LibraryToolbar } from "@/routes/library";
 
-// One row of the rundown, and the same shape for a skeleton. Mode sits in its own 70 px
-// column beside the name; the Slots column collapses under both below 768 px.
-const row =
-  "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-[14px] gap-y-[6px] border-b border-line px-4 py-[10px] last:border-b-0 md:grid-cols-[220px_70px_minmax(0,1fr)_auto]";
-const slotsCell =
-  "col-span-2 col-start-1 row-start-2 flex flex-wrap gap-[6px] md:col-span-1 md:col-start-3 md:row-start-1";
-const actionsCell =
-  "col-span-2 col-start-1 row-start-3 md:col-span-1 md:col-start-4 md:row-start-1";
-
-// Every saved entry of one category, sorted by name by the list endpoint. The tab switch has to
-// rewrite the URL it is already on, so it is handed up to router.tsx rather than reaching for a
-// router here - the same division 04 Prompts makes.
+// Every saved entry of one category, sorted by name by the list endpoint, beside the selected
+// one's text, what uses it and its latest change. The category lives in the URL, so switching
+// it is handed up to router.tsx rather than reaching for a router here - the same division
+// Prompts makes.
 export function EntriesRoute({
   category,
   onCategory,
@@ -43,6 +39,8 @@ export function EntriesRoute({
   const { api } = useApp();
   const queryClient = useQueryClient();
   const entries = useQuery(entriesQuery(api));
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const [deleting, setDeleting] = useState<Entry | undefined>(undefined);
   const [history, setHistory] = useState<Entry | undefined>(undefined);
 
@@ -54,113 +52,143 @@ export function EntriesRoute({
     },
   });
 
-  const listed = entries.data?.entries.filter((entry) => entry.category === category);
+  const ofCategory = entries.data?.entries.filter((entry) => entry.category === category);
+  const needle = query.trim().toLowerCase();
+  const listed =
+    needle === ""
+      ? ofCategory
+      : ofCategory?.filter(
+          (entry) =>
+            entry.name.toLowerCase().includes(needle) || entry.body.toLowerCase().includes(needle),
+        );
+  const selected = listed?.find((entry) => entry.id === selectedId) ?? listed?.[0];
 
   return (
     <div>
       <LibraryToolbar
         action={
-          <Button asChild>
+          <Button asChild variant="primary">
             <Link to="/entries/new" search={{ category }}>
-              <PlusIcon aria-hidden="true" className="size-[14px]" />
-              New entry
+              New intro or outro
             </Link>
           </Button>
         }
       >
-        <ToggleGroup
-          type="single"
+        <Input
+          type="search"
+          aria-label="Search intros and outros"
+          placeholder="Search intros and outros"
+          value={query}
+          className="w-full min-w-0 sm:w-64"
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        <Segmented
+          label="Entry category"
           value={category}
-          aria-label="Entry category"
-          onValueChange={(next) => {
-            const picked = categoryOptions.find((option) => option.value === next);
-            if (picked !== undefined) {
-              onCategory(picked.value);
-            }
-          }}
-        >
-          {categoryOptions.map((option) => (
-            <ToggleGroupItem key={option.value} value={option.value}>
-              {option.label}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+          options={categoryOptions.map((option) => ({ ...option, label: `${option.label}s` }))}
+          onChange={onCategory}
+        />
       </LibraryToolbar>
 
       {entries.error === null ? null : (
-        <RailGroup>
-          <p className="px-4 py-[14px] text-body text-red">{entries.error.message}</p>
-        </RailGroup>
+        <LoadError
+          what="intros and outros"
+          message={entries.error.message}
+          onRetry={() => void entries.refetch()}
+        />
       )}
 
-      {listed === undefined ? (
+      {listed === undefined || ofCategory === undefined ? (
         entries.error === null ? (
-          <SkeletonRows />
+          <ListSkeleton label="Intros and outros" />
         ) : null
-      ) : listed.length === 0 ? (
+      ) : ofCategory.length === 0 ? (
         <EmptyCategory category={category} />
       ) : (
-        <RailGroup>
-          {listed.map((entry) => (
-            <div key={entry.id} className={row}>
-              <Link
-                to="/entries/$entryId"
-                params={{ entryId: entry.id }}
-                className="col-start-1 row-start-1 min-w-0 truncate font-semibold hover:underline"
-              >
-                {entry.name}
-              </Link>
-              <ModeChip mode={entry.mode} />
-              <span className={slotsCell}>
-                {entry.slots.map((slot) => (
-                  <SlotChip key={slot} name={slot} />
+        <ListDetail
+          className={libraryListDetail}
+          list={
+            listed.length === 0 ? (
+              <p className="m-0 py-3 text-small text-ink-2">{`No ${category}s match "${query.trim()}".`}</p>
+            ) : (
+              <List label={`${categoryLabel(category)}s`}>
+                {listed.map((entry) => (
+                  <ListRow
+                    key={entry.id}
+                    className={libraryRow}
+                    title={entry.name}
+                    meta={entryMeta(entry)}
+                    selected={entry.id === selected?.id}
+                    onSelect={() => setSelectedId(entry.id)}
+                    actions={
+                      <LibraryRowActions
+                        name={entry.name}
+                        edit={
+                          <Button asChild variant="quiet" size="small">
+                            <Link
+                              to="/entries/$entryId"
+                              params={{ entryId: entry.id }}
+                              aria-label={`Edit ${entry.name}`}
+                            >
+                              Edit
+                            </Link>
+                          </Button>
+                        }
+                        // The copy is named "<name> copy" and opened for editing, so a name
+                        // that is already taken is renamed before it is ever saved.
+                        duplicate={
+                          <Button asChild variant="quiet" size="small">
+                            <Link
+                              to="/entries/new"
+                              search={{ category: entry.category, from: entry.id }}
+                              aria-label={`Duplicate ${entry.name}`}
+                            >
+                              Duplicate
+                            </Link>
+                          </Button>
+                        }
+                        play={{
+                          run: onUseInPlay === undefined ? undefined : () => onUseInPlay(entry),
+                          blocked: playBlocked,
+                        }}
+                        onHistory={() => setHistory(entry)}
+                        onDelete={() => setDeleting(entry)}
+                      />
+                    }
+                  />
                 ))}
-              </span>
-              <LibraryRowActions
-                className={actionsCell}
-                name={entry.name}
-                edit={
-                  <Button asChild variant="ghost">
-                    <Link
-                      to="/entries/$entryId"
-                      params={{ entryId: entry.id }}
-                      aria-label={`Edit ${entry.name}`}
-                    >
-                      <PencilIcon aria-hidden="true" className="size-[14px]" />
-                      Edit
+              </List>
+            )
+          }
+          detail={
+            selected === undefined ? null : (
+              <LibraryItemDetail
+                key={selected.id}
+                item="entry"
+                id={selected.id}
+                name={selected.name}
+                kicker={`${categoryLabel(selected.category)} · ${modeLabel(selected.mode)}`}
+                meta={`Updated ${updatedOn(selected.updatedAt)}`}
+                body={selected.body}
+                slots={selected.slots}
+                actions={
+                  <Button asChild size="small">
+                    <Link to="/entries/$entryId" params={{ entryId: selected.id }}>
+                      {`Edit ${selected.category}`}
                     </Link>
                   </Button>
                 }
-                // The copy is named "<name> copy" and opened for editing, so a name that is
-                // already taken is renamed before it is ever saved.
-                duplicate={
-                  <Button asChild variant="ghost">
-                    <Link
-                      to="/entries/new"
-                      search={{ category: entry.category, from: entry.id }}
-                      aria-label={`Duplicate ${entry.name}`}
-                    >
-                      <CopyIcon aria-hidden="true" className="size-[14px]" />
-                      Duplicate
-                    </Link>
-                  </Button>
-                }
-                onUseInPlay={onUseInPlay === undefined ? undefined : () => onUseInPlay(entry)}
-                playBlocked={playBlocked}
-                onHistory={() => {
-                  setHistory(entry);
-                }}
-                onDelete={() => {
-                  setDeleting(entry);
-                }}
+                onOpenHistory={() => setHistory(selected)}
               />
-            </div>
-          ))}
-        </RailGroup>
+            )
+          }
+        />
       )}
 
       {remove.error === null ? null : (
-        <p className="mt-[10px] text-label text-red">{remove.error.message}</p>
+        <Callout tone="danger" title={`The ${category} wasn't deleted.`} className="mt-4">
+          {remove.error.message}
+        </Callout>
       )}
 
       {history === undefined ? null : (
@@ -169,72 +197,39 @@ export function EntriesRoute({
           item="entry"
           id={history.id}
           name={history.name}
-          onClose={() => {
-            setHistory(undefined);
-          }}
+          onClose={() => setHistory(undefined)}
         />
       )}
 
       <ConfirmDialog
         open={deleting !== undefined}
         title={deleting === undefined ? "" : `Delete "${deleting.name}"?`}
-        // A project holds its own rendered text, so nothing it made is
-        // touched. It goes on showing the name it was run with, marked "(deleted)".
+        // A project holds its own rendered text, so nothing it made is touched. It goes on
+        // showing the name it was run with, marked "(deleted)".
         consequence="Moves it to the trash for 30 days (Settings → Trash). Projects that used it keep their text."
-        verb="Delete"
+        confirmLabel={`Delete ${deleting?.category ?? category}`}
         pending={remove.isPending}
         onConfirm={() => {
-          if (deleting !== undefined) {
-            remove.mutate(deleting.id);
-          }
+          if (deleting !== undefined) remove.mutate(deleting.id);
         }}
-        onCancel={() => {
-          setDeleting(undefined);
-        }}
+        onCancel={() => setDeleting(undefined)}
       />
     </div>
   );
 }
 
-// TEXT or LLM, engraved, in the darker fill of the reference sheet. It is not a
-// `SlotChip`: a slot chip names a `{{name}}` the body holds and fades in as it is typed,
-// while this names what the row does with its body and is as still as the name beside it.
-function ModeChip({ mode }: { readonly mode: EntryMode }) {
-  return (
-    <span
-      data-entry-mode={mode}
-      className="engraved col-start-2 row-start-1 justify-self-start rounded-control border border-line2 bg-panel2 px-[7px] py-[2px] font-bold text-ink"
-    >
-      {modeLabel(mode)}
-    </span>
-  );
+// Mode first: it says what the row does with its body (narrated as written, or an
+// instruction whose answer is narrated).
+function entryMeta(entry: Entry): string {
+  return `${modeLabel(entry.mode)} · ${plural(entry.slots.length, "keyword")} · updated ${updatedOn(entry.updatedAt)}`;
 }
 
 // An empty category teaches what the thing is and where it lands in the run.
 function EmptyCategory({ category }: { readonly category: EntryCategory }) {
   const where = category === "intro" ? "before" : "after";
   return (
-    <RailGroup>
-      <p className="max-w-[75ch] px-4 py-6 text-ink2">
-        {`No ${category}s yet. An ${category} is narrated ${where} the body in the run's voice.`}
-      </p>
-    </RailGroup>
-  );
-}
-
-function SkeletonRows() {
-  return (
-    <RailGroup>
-      {[0, 1, 2].map((index) => (
-        <div key={index} className={row}>
-          <span className="col-start-1 row-start-1 h-3 w-40 rounded-control bg-panel2" />
-          <span className="col-start-2 row-start-1 h-[18px] w-10 rounded-control bg-panel2" />
-          <span className={slotsCell}>
-            <span className="h-[18px] w-14 rounded-control bg-panel2" />
-          </span>
-          <span className={`${actionsCell} h-7 w-48 rounded-control bg-panel2`} />
-        </div>
-      ))}
-    </RailGroup>
+    <EmptyState title={`No ${category}s yet`}>
+      {`An ${category} is narrated ${where} the body in the run's voice.`}
+    </EmptyState>
   );
 }

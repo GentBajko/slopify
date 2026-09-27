@@ -54,7 +54,7 @@ export function VideosTab({ channelId }: { readonly channelId: string }): ReactE
   const error = read.error ?? add.error ?? remove.error;
   return (
     <div>
-      <p className="mb-3 text-small text-ink2">
+      <p className="mb-3 text-small text-ink-2">
         Topic suggestions and duplicate checks skip these titles, as they skip the videos made here.
       </p>
       <Field

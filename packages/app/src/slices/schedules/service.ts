@@ -22,6 +22,7 @@ import {
   scheduleUpdateSchema,
   topicStateIdle,
 } from "./schema.js";
+import { type TopicRow, templateKeywords, topicRowProblems } from "./topic-list.js";
 
 export function listSchedules(deps: ScheduleDeps): readonly ScheduleSummary[] {
   return scheduleRows(deps.db);
@@ -59,6 +60,8 @@ export function createSchedule(
     }
     const checked = checkTemplate(deps, parsed.data.templateId, parsed.data.templateVersion);
     if (!checked.ok) return checked;
+    const topics = checkTopics(deps, parsed.data, []);
+    if (!topics.ok) return topics;
     const now = deps.clock.now();
     const next = nextOccurrence(parsed.data.cadence, parsed.data.timezone, now);
     if (next === null) return { ok: false, reason: "not-due" };
@@ -96,6 +99,8 @@ export function updateSchedule(
       return { ok: false, reason: "conflict" };
     const checked = checkTemplate(deps, parsed.data.templateId, parsed.data.templateVersion);
     if (!checked.ok) return checked;
+    const topics = checkTopics(deps, parsed.data, previous.items);
+    if (!topics.ok) return topics;
     const now = deps.clock.now();
     const next =
       previous.status === "active"
@@ -226,6 +231,41 @@ function checkTemplate(
   )
     return { ok: false, reason: "unsupported-media" };
   return { ok: true, value: true };
+}
+
+// The queue's keywords must be the template's: a topic (or an every-run value) naming a keyword
+// the template doesn't use would silently do nothing. Topics saved before, unchanged, are left
+// alone, so a queue from before this check still saves.
+function checkTopics(
+  deps: ScheduleDeps,
+  input: ScheduleCreate,
+  kept: readonly TopicRow[],
+): ScheduleResult<ScheduleSummary> | { readonly ok: true; readonly value: true } {
+  const template = deps.template(input.templateId, input.templateVersion);
+  if (!template) return { ok: false, reason: "missing-template" };
+  const keywords = templateKeywords(template.document.form);
+  const named = keywords.length === 0 ? "none" : keywords.map((one) => `“${one}”`).join(", ");
+  const problems: string[] = [];
+  if (input.topicKeyword !== null && !keywords.includes(input.topicKeyword))
+    problems.push(
+      `The topic keyword “${input.topicKeyword}” is not in this template (its keywords are ${named}). Pick another under Each topic fills.`,
+    );
+  for (const keyword of Object.keys(input.values))
+    if (!keywords.includes(keyword))
+      problems.push(
+        `“${keyword}” (for every run) is not a keyword of this template (its keywords are ${named}). Remove it, or pick the template that uses it.`,
+      );
+  problems.push(
+    ...topicRowProblems(input.items, { keywords, topicKeyword: input.topicKeyword, kept }),
+  );
+  if (problems.length === 0) return { ok: true, value: true };
+  const shown = problems.slice(0, 5);
+  const more = problems.length - shown.length;
+  return {
+    ok: false,
+    reason: "invalid-topics",
+    message: `The schedule wasn't saved. ${shown.join(" ")}${more > 0 ? ` And ${String(more)} more like these.` : ""}`,
+  };
 }
 
 function summary(

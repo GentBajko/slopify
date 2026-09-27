@@ -6,6 +6,44 @@ import { templateById } from "../../slices/project-templates/repo.js";
 import { createTemplate } from "../../slices/project-templates/service.js";
 import { scheduleRoutes } from "./schedules.js";
 
+it("refuses a topic naming a keyword the template doesn't use with a 400 naming it", async () => {
+  const h = startFixture();
+  try {
+    const templateId = randomUUID();
+    const document = {
+      ...h.document,
+      form: { ...h.document.form, title: "Lore: {{Topic}}", values: { Topic: "" } },
+    };
+    expect(createTemplate(h.deps, { id: templateId, name: "Lore", document }).ok).toBe(true);
+    const deps = {
+      ...h.deps,
+      template: (id: string, version: number) => templateById(h.deps.db, id, version),
+    };
+    const response = await scheduleRoutes(deps).request("/", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        id: randomUUID(),
+        name: "Nightly lore",
+        templateId,
+        templateVersion: 1,
+        cadence: { kind: "daily", time: "09:00" },
+        timezone: "UTC",
+        items: [{ title: "Vecna", values: { Colour: "red" } }],
+        topicKeyword: "Topic",
+      }),
+    });
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as { detail: string; reason: string };
+    expect(body.reason).toBe("invalid-topics");
+    expect(body.detail).toBe(
+      "The schedule wasn't saved. Topic 1 (Vecna): “Colour” is not a keyword of this template (its keywords are “Topic”). Rename it to one of them or remove it.",
+    );
+  } finally {
+    h.close();
+  }
+});
+
 it("creates, reads and pauses a schedule through the HTTP contract", async () => {
   const h = startFixture();
   try {

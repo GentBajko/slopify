@@ -1,4 +1,3 @@
-import { detectSlots, render } from "@app/slices/admission/substitute.js";
 import { type Cadence, validTimeZone } from "@app/slices/schedules/calendar.js";
 import type {
   ScheduleCreate,
@@ -11,17 +10,20 @@ import {
   type TopicGeneration,
   topicGenerationOff,
 } from "@app/slices/schedules/schema.js";
+import { templateKeywords } from "@app/slices/schedules/topic-list.js";
 import { useQuery } from "@tanstack/react-query";
 import { type FormEvent, type ReactElement, useRef, useState } from "react";
 import { useApp } from "@/app-context";
+import { Button } from "@/components/kit/button";
+import { Callout } from "@/components/kit/callout";
+import { Field, Input, Select, Textarea } from "@/components/kit/field";
 import { InfoTip } from "@/components/kit/info-tip";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ModelPicker, ProviderPicker } from "@/play/pickers";
 import { providersQuery } from "@/queries";
 import { readProjectTemplate } from "@/templates/api";
 import { createSchedule, updateSchedule } from "./api";
 import { localScheduleTime, scheduleInstant } from "./time";
+import { initialQueue, type QueueContext, queueResult, TopicFields } from "./topic-queue";
 
 const dayOptions = [
   [1, "Mon"],
@@ -76,9 +78,7 @@ export function ScheduleForm({
     editing?.missedPolicy ?? "skip",
   );
   const [spendLimit, setSpendLimit] = useState(editing?.spendLimitCents?.toString() ?? "");
-  const [topics, setTopics] = useState(() =>
-    (editing?.items ?? []).map((item) => item.title).join("\n"),
-  );
+  const [queue, setQueue] = useState(() => initialQueue(editing?.items ?? []));
   const [topicKeyword, setTopicKeyword] = useState<string | null>(editing?.topicKeyword ?? null);
   const [fixed, setFixed] = useState<Readonly<Record<string, string>>>(editing?.values ?? {});
   const [brief, setBrief] = useState(editing?.brief ?? "");
@@ -114,16 +114,25 @@ export function ScheduleForm({
   const form = template.data?.document.form;
   // The stored values, plus any keyword the project title names: a template saved without a
   // value for its title's keyword still offers it here.
-  const keywords =
-    form === undefined
-      ? []
-      : [...new Set([...detectSlots(form.title).names, ...Object.keys(form.values)])];
+  const keywords = form === undefined ? [] : templateKeywords(form);
   // Until the person picks one: the keyword the project title uses, else the first.
   const chosenKeyword =
     topicKeyword !== null && keywords.includes(topicKeyword)
       ? topicKeyword
       : (keywords.find((name) => form?.title.includes(`{{${name}}}`)) ?? keywords[0] ?? null);
-  const queue = topicLines(topics);
+  const everyRun: Record<string, string> = Object.fromEntries(
+    keywords
+      .filter((name) => name !== chosenKeyword)
+      .map((name) => [name, fixed[name] ?? form?.values[name] ?? ""]),
+  );
+  const context: QueueContext = {
+    keywords,
+    topicKeyword: chosenKeyword,
+    everyRun,
+    form,
+    kept: editing?.items ?? [],
+  };
+  const topics = queueResult(queue, context);
 
   async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -132,12 +141,12 @@ export function ScheduleForm({
       onError("Choose a template before saving the schedule.");
       return;
     }
-    if (queue.length > queueMax) {
-      onError(`Keep the list to ${String(queueMax)} topics or fewer.`);
+    if (!attempt.current && topics.problems.length > 0) {
+      onError(`Fix the topics first. ${topics.problems.slice(0, 3).join(" ")}`);
       return;
     }
-    if (queue.some((line) => line.length > 200)) {
-      onError("Each topic can be at most 200 characters.");
+    if (topics.rows.length > queueMax) {
+      onError(`Keep the list to ${String(queueMax)} topics or fewer.`);
       return;
     }
     if (brief.trim().length > briefMax) {
@@ -188,17 +197,10 @@ export function ScheduleForm({
           missedPolicy,
           overlapPolicy: "skip",
           spendLimitCents: limit,
-          items: queue.map((title) => ({
-            title,
-            // A topic kept from an older schedule keeps the values it was saved with.
-            values: editing?.items.find((item) => item.title === title)?.values ?? {},
-          })),
+          // A topic's own values override the every-run ones for its run.
+          items: topics.rows,
           topicKeyword: chosenKeyword,
-          values: Object.fromEntries(
-            keywords
-              .filter((name) => name !== chosenKeyword)
-              .map((name) => [name, fixed[name] ?? form?.values[name] ?? ""]),
-          ),
+          values: everyRun,
           brief: brief.trim() === "" ? null : brief.trim(),
           topicGeneration: generation,
         };
@@ -225,7 +227,7 @@ export function ScheduleForm({
       attempt.current = null;
       setUncertain(false);
       setName("");
-      setTopics("");
+      setQueue(initialQueue([]));
       onCreated();
     } catch (error) {
       setUncertain(attempt.current !== null);
@@ -240,30 +242,28 @@ export function ScheduleForm({
   return (
     <section aria-label={editing ? "Edit schedule" : "New schedule"}>
       {error ? (
-        <p role="alert" className="mb-3 text-small text-red">
+        <Callout tone="danger" title="The schedule wasn't saved." className="mb-4">
           {error}
-        </p>
+        </Callout>
       ) : null}
       <form onSubmit={(event) => void submit(event)}>
-        <fieldset disabled={saving || uncertain || pending} className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-1" htmlFor="schedule-name">
-            <span>Name</span>
+        <fieldset
+          disabled={saving || uncertain || pending}
+          className="m-0 grid min-w-0 gap-4 border-0 p-0 min-[700px]:grid-cols-2"
+        >
+          <Field label="Name" id="schedule-name">
             <Input
-              id="schedule-name"
               required
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Monday morning stories"
             />
-          </label>
-          <label className="space-y-1" htmlFor="schedule-template">
-            <span>Template</span>
-            <select
-              id="schedule-template"
+          </Field>
+          <Field label="Template" id="schedule-template">
+            <Select
               required
               value={templateId}
               onChange={(event) => setTemplateId(event.target.value)}
-              className="h-8 w-full rounded-control border border-line2 bg-panel2 px-2 text-small"
               disabled={options.length === 0}
             >
               <option value="">Choose a template</option>
@@ -272,12 +272,10 @@ export function ScheduleForm({
                   {template.name} · v{template.version}
                 </option>
               ))}
-            </select>
-          </label>
-          <label className="space-y-1" htmlFor="schedule-cadence">
-            <span>Cadence</span>
-            <select
-              id="schedule-cadence"
+            </Select>
+          </Field>
+          <Field label="Cadence" id="schedule-cadence">
+            <Select
               value={kind}
               onChange={(event) =>
                 setKind(
@@ -288,40 +286,35 @@ export function ScheduleForm({
                       : "daily",
                 )
               }
-              className="h-8 w-full rounded-control border border-line2 bg-panel2 px-2 text-small"
             >
               <option value="daily">Every day</option>
               <option value="weekly">Selected weekdays</option>
               <option value="once">One time</option>
-            </select>
-          </label>
+            </Select>
+          </Field>
           {kind === "once" ? (
-            <label className="space-y-1" htmlFor="schedule-once">
-              <span>Run at</span>
+            <Field label="Run at" id="schedule-once">
               <Input
-                id="schedule-once"
                 required
                 type="datetime-local"
                 value={onceAt}
                 onChange={(event) => setOnceAt(event.target.value)}
               />
-            </label>
+            </Field>
           ) : (
-            <label className="space-y-1" htmlFor="schedule-time">
-              <span>Local time</span>
+            <Field label="Local time" id="schedule-time">
               <Input
-                id="schedule-time"
                 required
                 type="time"
                 value={time}
                 onChange={(event) => setTime(event.target.value)}
               />
-            </label>
+            </Field>
           )}
           {kind === "weekly" ? (
-            <fieldset className="space-y-2">
-              <legend>Weekdays</legend>
-              <div className="flex flex-wrap gap-2">
+            <fieldset className="m-0 min-w-0 border-0 p-0">
+              <legend className="sl-field__label mb-2">Weekdays</legend>
+              <div className="flex flex-wrap gap-3">
                 {dayOptions.map(([value, label]) => (
                   <label key={value} className="inline-flex items-center gap-1 text-small">
                     <input
@@ -343,9 +336,11 @@ export function ScheduleForm({
           ) : (
             <div />
           )}
-          <div className="space-y-1">
+          <div className="sl-field">
             <span className="flex items-center gap-1">
-              <label htmlFor="schedule-timezone">Timezone</label>
+              <label className="sl-field__label" htmlFor="schedule-timezone">
+                Timezone
+              </label>
               <InfoTip label="Timezone">
                 <p>
                   {kind === "once"
@@ -361,43 +356,33 @@ export function ScheduleForm({
               placeholder="Europe/Tirane"
             />
           </div>
-          <label className="space-y-1" htmlFor="schedule-missed">
-            <span>Missed run</span>
-            <select
-              id="schedule-missed"
+          <Field label="Missed run" id="schedule-missed">
+            <Select
               value={missedPolicy}
               onChange={(event) =>
                 setMissedPolicy(event.target.value === "run-once" ? "run-once" : "skip")
               }
-              className="h-8 w-full rounded-control border border-line2 bg-panel2 px-2 text-small"
             >
               <option value="skip">Skip if Slopify was closed</option>
               <option value="run-once">Run once when Slopify reopens</option>
-            </select>
-          </label>
-          <label className="space-y-1" htmlFor="schedule-spend">
-            <span>Spend ceiling (cents, optional)</span>
+            </Select>
+          </Field>
+          <Field label="Spend ceiling (cents, optional)" id="schedule-spend">
             <Input
-              id="schedule-spend"
               inputMode="numeric"
               value={spendLimit}
               onChange={(event) => setSpendLimit(event.target.value)}
               placeholder="1000"
             />
-          </label>
+          </Field>
           <TopicFields
-            topics={topics}
-            onTopics={setTopics}
             queue={queue}
-            keywords={keywords}
-            keyword={chosenKeyword}
+            onQueue={setQueue}
+            context={context}
             onKeyword={setTopicKeyword}
-            values={Object.fromEntries(
-              keywords.map((name) => [name, fixed[name] ?? form?.values[name] ?? ""]),
-            )}
             onValue={(name, value) => setFixed((current) => ({ ...current, [name]: value }))}
-            title={form?.title}
             loading={templateId !== "" && template.isPending}
+            exportName={name}
           />
           <GenerationFields
             brief={brief}
@@ -407,7 +392,7 @@ export function ScheduleForm({
             templateLlm={form?.llm}
           />
         </fieldset>
-        <div className="sticky bottom-[-16px] -mx-4 mt-4 flex gap-2 border-t border-line bg-panel px-4 py-3">
+        <div className="sticky bottom-0 z-10 mt-6 flex flex-wrap gap-2 border-t border-line bg-ground py-3 max-md:bottom-[68px]">
           <Button
             type="submit"
             variant="primary"
@@ -421,136 +406,12 @@ export function ScheduleForm({
                   ? "Save changes"
                   : "Save schedule"}
           </Button>
-          <Button type="button" disabled={saving || uncertain} onClick={onCancel}>
+          <Button variant="quiet" disabled={saving || uncertain} onClick={onCancel}>
             {editing ? "Cancel editing" : "Cancel"}
           </Button>
         </div>
       </form>
     </section>
-  );
-}
-
-// One topic per line; blank lines and surrounding spaces do not count.
-function topicLines(text: string): readonly string[] {
-  return text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line !== "");
-}
-
-function TopicFields({
-  topics,
-  onTopics,
-  queue,
-  keywords,
-  keyword,
-  onKeyword,
-  values,
-  onValue,
-  title,
-  loading,
-}: {
-  readonly topics: string;
-  readonly onTopics: (text: string) => void;
-  readonly queue: readonly string[];
-  readonly keywords: readonly string[];
-  readonly keyword: string | null;
-  readonly onKeyword: (name: string) => void;
-  readonly values: Readonly<Record<string, string>>;
-  readonly onValue: (name: string, value: string) => void;
-  readonly title: string | undefined;
-  readonly loading: boolean;
-}): ReactElement {
-  const fieldClass =
-    "min-h-8 w-full rounded-control border border-line2 bg-panel2 px-[10px] py-[5px] text-small";
-  const next = queue[0];
-  const preview =
-    title === undefined
-      ? undefined
-      : render(title, {
-          ...values,
-          ...(keyword !== null && next !== undefined ? { [keyword]: next } : {}),
-        });
-  const titleUsesTopic = keyword !== null && title?.includes(`{{${keyword}}}`) === true;
-  return (
-    <fieldset className="space-y-3 sm:col-span-2">
-      <legend className="flex items-center gap-1">
-        Topics (optional)
-        <InfoTip label="Topics">
-          <p>
-            One topic per line. Each run starts one project with the first topic and removes it from
-            the list; the schedule completes when the list is empty, unless topic generation below
-            is on. With no topics and generation off, every run uses the template as saved.
-          </p>
-        </InfoTip>
-      </legend>
-      <label className="block space-y-1" htmlFor="schedule-topics">
-        <span className="text-small text-ink2">
-          {queue.length === 0
-            ? "One per line"
-            : `${String(queue.length)} ${queue.length === 1 ? "topic" : "topics"} · next: ${next ?? ""}`}
-        </span>
-        <textarea
-          id="schedule-topics"
-          rows={6}
-          className={fieldClass}
-          value={topics}
-          onChange={(event) => onTopics(event.target.value)}
-          placeholder={"Owlbears\nGelatinous Cubes\nMimics"}
-        />
-      </label>
-      {loading ? (
-        <p className="text-small text-ink3">Reading the template's keywords…</p>
-      ) : keywords.length === 0 ? (
-        <p className="text-small text-ink3">
-          This template has no keywords such as {"{{Topic}}"}, so each topic becomes the project's
-          title.
-        </p>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block space-y-1" htmlFor="schedule-topic-keyword">
-            <span className="text-small text-ink2">Each topic fills</span>
-            <select
-              id="schedule-topic-keyword"
-              value={keyword ?? ""}
-              onChange={(event) => onKeyword(event.target.value)}
-              className="h-8 w-full rounded-control border border-line2 bg-panel2 px-2 text-small"
-            >
-              {keywords.map((name) => (
-                <option key={name} value={name}>
-                  {`{{${name}}}`}
-                </option>
-              ))}
-            </select>
-          </label>
-          {keywords
-            .filter((name) => name !== keyword)
-            .map((name) => (
-              <label key={name} className="block space-y-1">
-                <span className="text-small text-ink2">{name} (every run)</span>
-                <input
-                  maxLength={10000}
-                  aria-label={`${name} for every run`}
-                  className={fieldClass}
-                  value={values[name] ?? ""}
-                  onChange={(event) => onValue(name, event.target.value)}
-                />
-              </label>
-            ))}
-        </div>
-      )}
-      {preview !== undefined && next !== undefined ? (
-        <p className="text-small text-ink2">
-          Next project: <span className="font-semibold text-ink">{preview}</span>
-          {titleUsesTopic ? null : (
-            <span className="block text-ink3">
-              The template's project title does not use {`{{${keyword ?? "keyword"}}}`}, so every
-              project gets this title. Edit the template's title to include it.
-            </span>
-          )}
-        </p>
-      ) : null}
-    </fieldset>
   );
 }
 
@@ -570,12 +431,10 @@ function GenerationFields({
 }): ReactElement {
   const { api } = useApp();
   const providers = useQuery({ ...providersQuery(api), enabled: generation.mode !== "off" });
-  const fieldClass =
-    "min-h-8 w-full rounded-control border border-line2 bg-panel2 px-[10px] py-[5px] text-small";
   const own = generation.llm;
   return (
-    <fieldset className="space-y-3 sm:col-span-2">
-      <legend className="flex items-center gap-1">
+    <fieldset className="m-0 flex min-w-0 flex-col gap-3 border-0 border-t border-line p-0 pt-5 min-[700px]:col-span-2">
+      <legend className="float-left mb-1 flex w-full items-center gap-1 text-title-3 font-semibold">
         Topic generation
         <InfoTip label="Topic generation">
           <p>
@@ -586,23 +445,18 @@ function GenerationFields({
           </p>
         </InfoTip>
       </legend>
-      <label className="block space-y-1" htmlFor="schedule-brief">
-        <span className="text-small text-ink2">Series brief (optional)</span>
-        <textarea
-          id="schedule-brief"
+      <Field label="Series brief (optional)" id="schedule-brief">
+        <Textarea
           rows={3}
           maxLength={briefMax}
-          className={fieldClass}
           value={brief}
           onChange={(event) => onBrief(event.target.value)}
           placeholder="D&D lore, documentary style. Famous villains and places first."
         />
-      </label>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block space-y-1" htmlFor="schedule-generation">
-          <span className="text-small text-ink2">New topics</span>
-          <select
-            id="schedule-generation"
+      </Field>
+      <div className="grid gap-4 min-[700px]:grid-cols-2">
+        <Field label="New topics" id="schedule-generation">
+          <Select
             value={generation.mode}
             onChange={(event) => {
               const mode = event.target.value;
@@ -611,18 +465,15 @@ function GenerationFields({
                 mode: mode === "queue" || mode === "hold" ? mode : "off",
               });
             }}
-            className="h-8 w-full rounded-control border border-line2 bg-panel2 px-2 text-small"
           >
             <option value="off">Off: I add topics myself</option>
             <option value="queue">Generate and queue directly</option>
             <option value="hold">Generate and hold for approval</option>
-          </select>
-        </label>
+          </Select>
+        </Field>
         {generation.mode === "off" ? null : (
-          <label className="block space-y-1" htmlFor="schedule-keep">
-            <span className="text-small text-ink2">Keep at least this many queued</span>
+          <Field label="Keep at least this many queued" id="schedule-keep">
             <Input
-              id="schedule-keep"
               type="number"
               min={1}
               max={100}
@@ -635,11 +486,11 @@ function GenerationFields({
                 });
               }}
             />
-          </label>
+          </Field>
         )}
       </div>
       {generation.mode === "off" ? null : (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           <label className="inline-flex items-center gap-2 text-small">
             <input
               type="checkbox"
@@ -662,7 +513,7 @@ function GenerationFields({
               : ""}
           </label>
           {own === null ? null : (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-4 min-[700px]:grid-cols-2">
               <ProviderPicker
                 label="Provider"
                 family="llm"

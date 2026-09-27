@@ -104,7 +104,7 @@ export function ImageScaleControl({
       {line === undefined ? null : (
         <p
           id={`${id}-line`}
-          className={line.problem ? "m-0 text-label text-red" : "m-0 text-label text-ink3"}
+          className={line.problem ? "m-0 text-label text-danger" : "m-0 text-label text-ink-3"}
         >
           {line.text}
         </p>

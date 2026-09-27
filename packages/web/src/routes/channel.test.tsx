@@ -1,8 +1,9 @@
 import type { CastMember, Channel, ChannelSummary } from "@app/slices/channels/model.js";
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
+import { CommandPaletteProvider, CommandRegistry } from "@/components/kit/command-palette";
 import { type Answer, jsonAnswer, renderRouted, testDeps } from "@/test-app";
 import { ChannelRoute, type ChannelTab } from "./channel.js";
 import { ChannelsRoute } from "./channels.js";
@@ -73,7 +74,96 @@ describe("Channels", () => {
     );
     expect(await screen.findByText("My channel")).not.toBeNull();
     expect(screen.getByText("Default · 2 templates · 1 in the cast")).not.toBeNull();
-    expect(screen.getByRole("button", { name: "Open My channel" })).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Open My channel" }).getAttribute("href")).toBe(
+      `/channels/${id}`,
+    );
+    expect(screen.getByRole("button", { name: "Rename My channel" })).not.toBeNull();
+    // The default channel holds everything made before channels; it has no Delete.
+    expect(screen.queryByRole("button", { name: "Delete My channel" })).toBeNull();
+  });
+
+  it("renames a channel from its row, keeping its brand kit", async () => {
+    const user = userEvent.setup();
+    const seen: unknown[] = [];
+    const summary: ChannelSummary = { ...channel, templates: 0, cast: 0 };
+    renderRouted(
+      <ChannelsRoute />,
+      testDeps({
+        "GET /api/channels": jsonAnswer({ channels: [summary] }),
+        [`PUT /api/channels/${id}`]: recording(jsonAnswer({ ...channel, name: "Lore" }), seen),
+      }),
+    );
+    await user.click(await screen.findByRole("button", { name: "Rename My channel" }));
+    const name = screen.getByLabelText("Channel name");
+    await user.clear(name);
+    await user.type(name, "Lore");
+    await user.click(screen.getByRole("button", { name: "Rename channel" }));
+    await waitFor(() => expect(seen).toHaveLength(1));
+    expect(seen[0]).toEqual({
+      name: "Lore",
+      brand: { endScreenText: "Subscribe" },
+      seriesBrief: "",
+      baseVersion: 3,
+    });
+  });
+
+  it("deletes a channel from its row after confirming", async () => {
+    const user = userEvent.setup();
+    const other = "00000000-0000-4000-8000-000000000002";
+    const deleted: string[] = [];
+    const side: ChannelSummary = {
+      ...channel,
+      id: other,
+      name: "Side",
+      isDefault: false,
+      templates: 0,
+      cast: 0,
+    };
+    renderRouted(
+      <ChannelsRoute />,
+      testDeps({
+        "GET /api/channels": jsonAnswer({ channels: [side] }),
+        [`DELETE /api/channels/${other}`]: (request) => {
+          deleted.push(request.method);
+          return new Response(null, { status: 204 });
+        },
+      }),
+    );
+    await user.click(await screen.findByRole("button", { name: "Delete Side" }));
+    expect(deleted).toEqual([]);
+    await user.click(screen.getByRole("button", { name: "Delete channel" }));
+    await waitFor(() => expect(deleted).toEqual(["DELETE"]));
+  });
+
+  it("offers New channel and, on a channel, Add to cast in the command palette", async () => {
+    const registry = new CommandRegistry();
+    const summary: ChannelSummary = { ...channel, templates: 0, cast: 0 };
+    renderRouted(
+      <CommandPaletteProvider registry={registry}>
+        <ChannelsRoute />
+        <Page />
+      </CommandPaletteProvider>,
+      testDeps({ ...common, "GET /api/channels": jsonAnswer({ channels: [summary] }) }),
+    );
+    await screen.findByRole("tab", { name: "Brand" });
+    const titles = () => registry.list().map((command) => [command.title, command.group]);
+    await waitFor(() =>
+      expect(titles()).toEqual(
+        expect.arrayContaining([
+          ["New channel", "Channels"],
+          ["Add to cast", "Channel"],
+        ]),
+      ),
+    );
+    // Add to cast switches to the Cast tab and opens an empty editor beside the gallery.
+    act(() =>
+      registry
+        .list()
+        .find((command) => command.title === "Add to cast")
+        ?.run(),
+    );
+    expect(screen.getByRole("tab", { name: /Cast/ }).getAttribute("aria-selected")).toBe("true");
+    expect(await screen.findByRole("form", { name: "Cast member" })).not.toBeNull();
   });
 
   it("saves the brand kit with blank fields left out", async () => {
@@ -137,17 +227,21 @@ describe("Channels", () => {
         ),
       }),
     );
-    const list = await screen.findByRole("list", { name: "Cast" });
-    expect(within(list).getByText("Tiamat")).not.toBeNull();
-    expect(within(list).getByText("Creature · 1 picture · also the Dragon Queen")).not.toBeNull();
-    await user.click(screen.getByRole("button", { name: "Add to the cast" }));
+    const grid = await screen.findByRole("region", { name: "Cast" });
+    expect(within(grid).getByText("Tiamat")).not.toBeNull();
+    expect(within(grid).getByText("Creature · 1 picture")).not.toBeNull();
+    // Edit opens the member beside the gallery, with its aliases.
+    await user.click(within(grid).getByRole("button", { name: "Edit Tiamat" }));
+    expect(screen.getByRole("button", { name: "Remove alias the Dragon Queen" })).not.toBeNull();
+    // The page header's primary action on the Cast tab.
+    await user.click(screen.getAllByRole("button", { name: "Add to cast" })[0] as HTMLElement);
     await user.selectOptions(screen.getByLabelText("Kind"), "place");
     await user.type(screen.getByLabelText("Name"), "Waterdeep");
     await user.type(screen.getByLabelText("Aliases"), "City of Splendors{Enter}");
     expect(screen.getByRole("button", { name: "Remove alias City of Splendors" })).not.toBeNull();
-    // The drawer's own submit button, after the tab's opener.
+    // The editor's own submit button, after the header's opener.
     const submit = screen
-      .getAllByRole("button", { name: "Add to the cast" })
+      .getAllByRole("button", { name: "Add to cast" })
       .find((button) => button.getAttribute("form") === "cast-member-form");
     if (submit === undefined) throw new Error("No submit button");
     await user.click(submit);

@@ -251,8 +251,8 @@ it("preserves saved unavailable choices, content references and frozen templates
   );
   expect((screen.getByLabelText("intro") as HTMLSelectElement).value).toBe("Deleted intro");
   await user.type(screen.getByLabelText("Project title"), " updated");
-  await user.clear(screen.getByLabelText("Keyword topic"));
-  await user.type(screen.getByLabelText("Keyword topic"), "new");
+  await user.clear(screen.getByLabelText("topic"));
+  await user.type(screen.getByLabelText("topic"), "new");
   expect(latest.config.rendered.article).toBe("Frozen old");
   expect(latest.content.provided.audio).toBe("retained-asset");
   expect(latest.config.llm).toEqual(view.revision.config.llm);
@@ -317,7 +317,7 @@ it("copies an explicitly selected entry and ignores subsequent library changes",
   );
   await screen.findByRole("option", { name: "Greeting" });
   await user.selectOptions(screen.getByLabelText("intro"), "Greeting");
-  await user.type(screen.getByLabelText("Keyword topic"), "world");
+  await user.type(screen.getByLabelText("topic"), "world");
   expect(latest.config.intro).toEqual({ name: "Greeting", mode: "text" });
   expect(latest.config.rendered.intro).toBe("Hello world");
   await user.click(screen.getByRole("button", { name: "Update library" }));

@@ -7,147 +7,147 @@ import type {
   UsageTotals,
 } from "@app/slices/run-cost/panel.js";
 import { useQuery } from "@tanstack/react-query";
-import type { ReactElement, ReactNode } from "react";
+import type { ReactElement } from "react";
 import { useApp } from "@/app-context";
+import { Callout } from "@/components/kit/callout";
 import { SectionHead } from "@/components/kit/section-head";
+import { type Column, DataTable, Meter, Stat, Stats } from "@/components/kit/stats";
 import { runCostQuery } from "@/queries";
 import { stageNames } from "./summary.js";
 
 // The Run cost tab: what the run's provider calls actually cost, per stage and per model,
 // what its CLI calls would have cost through the API, the usage behind both, and the share of
 // each CLI plan's windows the run took. Everything comes from `GET /projects/:id/run-cost`.
+// A row of big numbers first (paid, via API, plan meters, end-to-end time), then the tables.
 export function RunCostPanel({ projectId }: { readonly projectId: string }): ReactElement {
   const { api } = useApp();
   const cost = useQuery(runCostQuery(api, projectId));
   if (cost.error !== null)
     return (
-      <p role="alert" className="text-body text-red">
-        {`The run cost could not be loaded: ${cost.error.message} Reload the page to try again.`}
-      </p>
+      <Callout tone="danger" title="The run cost could not be loaded.">
+        {`${cost.error.message} Reload the page to try again.`}
+      </Callout>
     );
   if (cost.data === undefined)
     return (
-      <div role="status" aria-label="Loading run cost" className="flex flex-col gap-3">
-        <span className="h-5 w-64 rounded-control bg-panel2" />
-        <span className="h-40 rounded-panel border border-line bg-panel" />
+      <div role="status" aria-label="Loading run cost" className="flex flex-col gap-8">
+        <span className="h-16 max-w-3xl rounded-control bg-sunken" />
+        <span className="h-40 rounded-control bg-sunken" />
       </div>
     );
   return <Panel cost={cost.data} />;
 }
 
+const stageColumns: readonly Column<StageCost>[] = [
+  { id: "stage", header: "Stage", cell: (row) => <strong>{stageNames[row.stage]}</strong> },
+  { id: "cost", header: "Cost", numeric: true, cell: lineCost },
+  { id: "api", header: "Via API", numeric: true, cell: apiCost },
+  { id: "usage", header: "Usage", numeric: true, cell: (row) => usage(row) || "—" },
+  {
+    id: "time",
+    header: "Time",
+    numeric: true,
+    cell: (row) => (row.wallMs === null ? "—" : duration(row.wallMs)),
+  },
+];
+
+const modelColumns: readonly Column<ModelCost>[] = [
+  { id: "model", header: "Provider · model", cell: (row) => <strong>{modelName(row)}</strong> },
+  { id: "cost", header: "Cost", numeric: true, cell: lineCost },
+  { id: "api", header: "Via API", numeric: true, cell: apiCost },
+  { id: "usage", header: "Usage", numeric: true, cell: (row) => usage(row) || "—" },
+  { id: "calls", header: "Calls", numeric: true, cell: (row) => whole.format(row.calls) },
+];
+
+function windowName(kind: PlanUse["windows"][number]["kind"]): string {
+  return kind === "five_hour" ? "5-hour" : kind === "weekly" ? "weekly" : "current";
+}
+
 function Panel({ cost }: { readonly cost: RunCost }): ReactElement {
   if (cost.calls === 0 && cost.byStage.length === 0)
     return (
-      <p className="text-body text-ink2">
+      <p className="m-0 text-body text-ink-2">
         Nothing has been spent yet. The cost of each provider call appears here as the run makes it.
       </p>
     );
   const onPlan = cost.byModel.some((row) => row.onPlan);
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <p className="text-title font-bold">
-          {`${cost.unpriced > 0 ? "Known cost" : "Cost"}: ${money(cost.cost)}`}
-        </p>
-        {cost.unpriced > 0 ? (
-          <p className="text-body text-ink2">
-            {`Plus ${count(cost.unpriced, "call")} the model catalogue has no price for.`}
-          </p>
-        ) : null}
-        {onPlan ? <p className="text-body text-ink2">{planLine(cost)}</p> : null}
-        {cost.plans.map((plan) => (
-          <p key={plan.account} className="text-body text-ink2">
-            {planUse(plan)}
-          </p>
-        ))}
-      </div>
-
-      <section>
-        <SectionHead title="By stage" />
-        <Table
-          label="Run cost by stage"
-          head={["Stage", "Cost", "Via API", "Usage", "Time"]}
-          rows={cost.byStage.map((row) => ({
-            key: row.stage,
-            cells: [
-              stageNames[row.stage],
-              lineCost(row),
-              apiCost(row),
-              usage(row) || "—",
-              row.wallMs === null ? "—" : duration(row.wallMs),
-            ],
-          }))}
-        />
-      </section>
-
-      <section>
-        <SectionHead title="By model" />
-        <Table
-          label="Run cost by model"
-          head={["Provider · model", "Cost", "Via API", "Usage", "Calls"]}
-          rows={cost.byModel.map((row) => ({
-            key: `${row.provider}/${row.model}/${row.kind}`,
-            cells: [
-              modelName(row),
-              lineCost(row),
-              apiCost(row),
-              usage(row) || "—",
-              whole.format(row.calls),
-            ],
-          }))}
-        />
-      </section>
-
-      <p className="text-small text-ink2">
-        {`In total: ${usage(cost.totals) || "no reported usage"} · ${duration(cost.totals.wallMs)} of stage time.`}
-      </p>
-      <p className="text-small text-ink3">
-        {`Priced from the model catalogue${cost.catalogueDate === null ? "" : ` of ${cost.catalogueDate}`} when each call finished. Retries that failed are not charged here; taxes and included credits are not counted.`}
-      </p>
-    </div>
+  const meters = cost.plans.flatMap((plan) =>
+    plan.reported ? plan.windows.map((window) => ({ plan, window })) : [],
   );
-}
-
-function Table({
-  label,
-  head,
-  rows,
-}: {
-  readonly label: string;
-  readonly head: readonly string[];
-  readonly rows: readonly { readonly key: string; readonly cells: readonly ReactNode[] }[];
-}): ReactElement {
   return (
-    <div className="overflow-x-auto rounded-panel border border-line bg-panel">
-      <table aria-label={label} className="w-full border-collapse">
-        <thead>
-          <tr className="border-b border-line">
-            {head.map((title, index) => (
-              <th
-                key={title}
-                className={`engraved px-4 py-3 text-ink3 ${index === 0 ? "text-left" : "text-right"}`}
-              >
-                {title}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.key} className="border-b border-line last:border-b-0">
-              {row.cells.map((cell, index) => (
-                <td
-                  // biome-ignore lint/suspicious/noArrayIndexKey: the columns are fixed.
-                  key={index}
-                  className={`px-4 py-3 align-top text-small ${index === 0 ? "font-semibold" : "text-right tabular-nums"}`}
-                >
-                  {cell}
-                </td>
-              ))}
-            </tr>
+    <div className="flex flex-col gap-8">
+      <section aria-label="Run cost summary" className="flex flex-col gap-3">
+        <Stats>
+          <Stat
+            value={money(cost.cost)}
+            label={cost.unpriced > 0 ? "known cost, paid to providers" : "paid to providers"}
+          />
+          {cost.apiEquivalent === null ? null : (
+            <Stat value={`~${money(cost.apiEquivalent)}`} label="same work via API" />
+          )}
+          {meters.map(({ plan, window }) => {
+            const name = `${windowName(window.kind)} ${plan.name} limit`;
+            const used = window.usedPercent < 1 ? "<1%" : `${percent.format(window.usedPercent)}%`;
+            return (
+              <Stat key={`${plan.account}/${window.kind}`} value={used} label={`of ${name}`}>
+                <Meter
+                  value={window.usedPercent / 100}
+                  label={`Share of the ${name} this run used`}
+                  valueText={`${used} of your ${name}; now at ${percent.format(window.nowPercent)}%`}
+                  tone={window.nowPercent >= 80 ? "waiting" : "accent"}
+                />
+              </Stat>
+            );
+          })}
+          <Stat value={duration(cost.totals.wallMs)} label="end to end" />
+        </Stats>
+        <div className="flex flex-col gap-1 text-small text-ink-2">
+          {cost.unpriced > 0 ? (
+            <p className="m-0">
+              {`Plus ${count(cost.unpriced, "call")} the model catalogue has no price for.`}
+            </p>
+          ) : null}
+          {onPlan ? <p className="m-0">{planLine(cost)}</p> : null}
+          {cost.plans.map((plan) => (
+            <p key={plan.account} className="m-0">
+              {planUse(plan)}
+            </p>
           ))}
-        </tbody>
-      </table>
+        </div>
+      </section>
+
+      <section aria-label="By stage">
+        <SectionHead title="By stage" className="mb-3" />
+        <div className="overflow-x-auto">
+          <DataTable
+            caption="Run cost by stage"
+            columns={stageColumns}
+            rows={cost.byStage}
+            rowKey={(row) => row.stage}
+          />
+        </div>
+      </section>
+
+      <section aria-label="By model">
+        <SectionHead title="By model" className="mb-3" />
+        <div className="overflow-x-auto">
+          <DataTable
+            caption="Run cost by model"
+            columns={modelColumns}
+            rows={cost.byModel}
+            rowKey={(row) => `${row.provider}/${row.model}/${row.kind}`}
+          />
+        </div>
+      </section>
+
+      <div className="flex flex-col gap-1">
+        <p className="m-0 text-small text-ink-2">
+          {`In total: ${usage(cost.totals) || "no reported usage"} · ${duration(cost.totals.wallMs)} of stage time.`}
+        </p>
+        <p className="m-0 text-small text-ink-3">
+          {`Priced from the model catalogue${cost.catalogueDate === null ? "" : ` of ${cost.catalogueDate}`} when each call finished. Retries that failed are not charged here; taxes and included credits are not counted.`}
+        </p>
+      </div>
     </div>
   );
 }
@@ -181,8 +181,7 @@ export function planUse(plan: PlanUse): string {
   if (plan.windows.length === 0) return `${plan.name} reported no limit windows for this run.`;
   return plan.windows
     .map((window) => {
-      const name =
-        window.kind === "five_hour" ? "5-hour" : window.kind === "weekly" ? "weekly" : "current";
+      const name = windowName(window.kind);
       const used =
         // Codex reports whole percents, so a short run can read as no change at all.
         window.usedPercent < 1 ? "under 1%" : `~${percent.format(window.usedPercent)}%`;

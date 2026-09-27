@@ -175,7 +175,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
       aria-labelledby={`${id}-title`}
       className="flex min-w-0 flex-col gap-3 border-t border-line pt-4"
     >
-      <h3 id={`${id}-title`} className="engraved text-ink3">
+      <h3 id={`${id}-title`} className="engraved text-ink-3">
         YouTube
       </h3>
       {/* The description reads best at a paragraph's width; the tags take the room beside
@@ -196,12 +196,12 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
           {field("summary")}
           {field("chapters", () =>
             fitted.text === "" ? (
-              <span className="text-ink3">Left out; see the note below.</span>
+              <span className="text-ink-3">Left out; see the note below.</span>
             ) : (
               <Filled text={fitted.text} links={links} />
             ),
           )}
-          {adjusted === undefined ? null : <p className="text-small text-amber">{adjusted}</p>}
+          {adjusted === undefined ? null : <p className="text-small text-waiting">{adjusted}</p>}
           {field("hashtags")}
         </div>
         <div className="flex min-w-0 flex-col gap-3">
@@ -222,7 +222,7 @@ export function YoutubeBlock({ stage, project, outputs }: Omit<BodyProps, "actio
         </div>
       </div>
       {unknown.length === 0 ? null : (
-        <p className="text-small text-amber">
+        <p className="text-small text-waiting">
           {`No link is saved for ${unknown.map((name) => `{{${name}}}`).join(", ")}, so it stays as typed. Add it in Settings → Channel links${unknown.some((name) => linkKey(name) === linkKey(previousVideoLink)) ? ", or set this project's Previous video below" : ""}.`}
         </p>
       )}
@@ -256,11 +256,11 @@ function PartHead({
 }): ReactElement {
   return (
     <div className="flex min-h-8 flex-wrap items-center gap-3">
-      <h4 id={id} className="text-small font-semibold text-ink2">
+      <h4 id={id} className="text-small font-semibold text-ink-2">
         {label}
       </h4>
       {count === undefined ? null : (
-        <span className={cn("text-small tabular-nums", over ? "text-red" : "text-ink3")}>
+        <span className={cn("text-small tabular-nums", over ? "text-danger" : "text-ink-3")}>
           {over ? `${count}, over YouTube's limit` : count}
         </span>
       )}
@@ -313,10 +313,10 @@ function EditableField({
   return (
     <div className="flex min-w-0 flex-col gap-1">
       <div className="flex min-h-8 flex-wrap items-center gap-2">
-        <h5 id={`${id}-label`} className="engraved text-ink3">
+        <h5 id={`${id}-label`} className="engraved text-ink-3">
           {label}
         </h5>
-        {value.edited ? <span className="text-small text-ink2">Your edit</span> : null}
+        {value.edited ? <span className="text-small text-ink-2">Your edit</span> : null}
         <span className="flex-1" />
         {value.edited && !editing ? (
           <Button
@@ -341,7 +341,7 @@ function EditableField({
         </Button>
       </div>
       {value.pending === undefined ? null : (
-        <div className="flex flex-col gap-2 border-l-2 border-amber pl-3">
+        <div className="flex flex-col gap-2 border-l-2 border-waiting pl-3">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-small text-ink">New generated version available.</p>
             <Button
@@ -421,7 +421,7 @@ function EditableField({
           aria-labelledby={`${id}-label`}
           className={cn(
             "min-w-0 whitespace-pre-wrap break-words text-small",
-            value.text === "" ? "text-ink3" : "text-ink",
+            value.text === "" ? "text-ink-3" : "text-ink",
           )}
         >
           {value.text === "" ? (
@@ -457,7 +457,7 @@ function Filled({
           <mark
             key={key}
             title={`No link named ${part.name}`}
-            className="rounded-[2px] bg-amber/25 px-[2px] text-ink"
+            className="rounded-[2px] bg-waiting/25 px-[2px] text-ink"
           >
             {part.raw}
           </mark>
@@ -497,7 +497,7 @@ function TagChips({
         <li
           // biome-ignore lint/suspicious/noArrayIndexKey: a tag can repeat, and the list never reorders
           key={index}
-          className="rounded-full border border-line bg-panel2 px-[9px] py-[2px] text-small text-ink"
+          className="rounded-full border border-line bg-raised px-[9px] py-[2px] text-small text-ink"
         >
           <Filled text={tag} links={links} />
         </li>

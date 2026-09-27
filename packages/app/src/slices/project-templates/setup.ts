@@ -3,6 +3,7 @@ import type { LibrarySnapshot } from "../library/snapshot.js";
 import { snapshotEntry, snapshotPrompt } from "../library/snapshot.js";
 import type { PlayDraftDocument } from "../play-drafts/model.js";
 import type { TemplateDeps, TemplateResult } from "./model.js";
+import { templateDocument } from "./one-off.js";
 
 export function templateSetup(
   deps: TemplateDeps,
@@ -46,7 +47,8 @@ export function templateSetup(
     if (!row) return { ok: false, reason: "missing-prompt" };
     entries.push(row);
   }
-  const { templateSource: _source, channelId: _channel, ...document } = input;
+  // Only the settings are kept: the topic typed for one video is left empty (`one-off.ts`).
+  const { templateSource: _source, channelId: _channel, ...document } = templateDocument(input);
   return {
     ok: true,
     value: { ...document, fontUpload: null, librarySnapshot: { prompts, entries } },

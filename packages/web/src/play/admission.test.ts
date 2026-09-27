@@ -467,7 +467,7 @@ it("labels origins from every active template with the shared slot grammar", () 
     sources: { ...generated.sources, thumbnail: "from_prompt" as const },
     thumbnailPrompt: "Title card",
   };
-  const origins = keywordOrigins({ form, prompts, entries, silenceGapSeconds: 3 });
+  const origins = keywordOrigins({ form, prompts, entries });
   expect(origins.get("topic")).toEqual(["Article", "Image: Oils", "Thumbnail", "Intro"]);
   expect(origins.get("style")).toEqual(["Image: Oils"]);
   const hidden = keywordOrigins({
@@ -483,7 +483,6 @@ it("labels origins from every active template with the shared slot grammar", () 
     },
     prompts,
     entries,
-    silenceGapSeconds: 3,
   });
   expect(hidden.size).toBe(0);
 });

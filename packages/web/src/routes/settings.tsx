@@ -1,7 +1,7 @@
 import type { Appearance, AppSettings } from "@app/slices/settings/model.js";
 import type { ItemCounts } from "@app/slices/storage/backup-import.js";
 import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   type BackupImportSummary,
   readBackupExportSummary,
@@ -10,20 +10,23 @@ import {
 } from "@/api";
 import { useApp } from "@/app-context";
 import { CatalogueSettings } from "@/components/catalogue";
-import { PageBar } from "@/components/kit/page-bar";
+import { Button, buttonClass } from "@/components/kit/button";
+import { useCommand } from "@/components/kit/command-palette";
+import { Field, Input } from "@/components/kit/field";
+import { PageHeader, Workspace } from "@/components/kit/layout";
+import { Rail, RailButton } from "@/components/kit/rail";
 import { SectionHead } from "@/components/kit/section-head";
+import { Meter } from "@/components/kit/stats";
+import { Segmented } from "@/components/kit/switch";
 import { useToast } from "@/components/kit/toast";
-import { ProviderHealthCheck } from "@/components/provider-health";
+import { ProviderHealthCheck, useProviderHealth } from "@/components/provider-health";
 import { ProviderKeys } from "@/components/provider-keys";
-import { Rail, RailGroup, RailMeter } from "@/components/rail";
 import { SavedTick, savedTickMs } from "@/components/saved-tick";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Voices } from "@/components/voices";
 import { Welcome } from "@/components/welcome";
 import { cn } from "@/lib/utils";
 import { NotificationSettings } from "@/notifications/settings-panel";
+import { SampleSettings } from "@/onboarding/sample-settings";
 import { keys, settingsQuery } from "@/queries";
 import { schedulesKey } from "@/schedules/api";
 import { StudioSettings } from "@/studio/settings-panel";
@@ -32,7 +35,7 @@ import { templatesKey } from "@/templates/api";
 import { TrashSettings } from "@/trash/trash-settings";
 import { ChannelLinksSettings } from "@/youtube/channel-links";
 import { AboutSettings } from "./settings-about";
-import { BackupSettings } from "./settings-backups";
+import { BackupSettings, useBackUpNow } from "./settings-backups";
 import { formatBytes, ProjectStorageList } from "./settings-storage";
 import { UsageBoard } from "./usage";
 
@@ -84,19 +87,68 @@ export function gapProblem(value: string): string | undefined {
     : `The silence gap is a whole number of seconds between 0 and ${String(silenceGapSecondsMax)}.`;
 }
 
+// Each section's title is the page title, and its one line of meta sits under it.
 export const settingsSections = [
-  { id: "providers", label: "Providers" },
-  { id: "voices", label: "Voices" },
-  { id: "models", label: "Models" },
-  { id: "playback", label: "Playback & appearance" },
-  { id: "notifications", label: "Notifications" },
-  { id: "channel-links", label: "Channel links" },
-  { id: "studio", label: "YouTube Studio" },
-  { id: "storage", label: "Backup & storage" },
-  { id: "backups", label: "Backups" },
-  { id: "trash", label: "Trash" },
-  { id: "usage", label: "Usage" },
-  { id: "about", label: "About" },
+  {
+    id: "providers",
+    label: "Providers",
+    meta: "Keys stay on this machine and go only to their provider. Readiness is checked again before each run.",
+  },
+  {
+    id: "voices",
+    label: "Voices",
+    meta: "A wrong voice ID shows up when the audio stage uses it.",
+  },
+  {
+    id: "models",
+    label: "Models",
+    meta: "New models, prices and retirements, checked once a day.",
+  },
+  {
+    id: "playback",
+    label: "Playback & appearance",
+    meta: "How narration is paced and how Slopify looks.",
+  },
+  {
+    id: "notifications",
+    label: "Notifications",
+    meta: "When a run finishes, fails, or waits for you.",
+  },
+  {
+    id: "channel-links",
+    label: "Channel links",
+    meta: "The links a YouTube description's {{Name}} placeholders fill from.",
+  },
+  {
+    id: "studio",
+    label: "YouTube Studio",
+    meta: "The playlist upload packs name, and the Studio extension's pairing.",
+  },
+  {
+    id: "storage",
+    label: "Backup & storage",
+    meta: "Export everything, import a backup, and see what uses disk space.",
+  },
+  {
+    id: "backups",
+    label: "Backups",
+    meta: "A daily copy of everything, in a folder you choose.",
+  },
+  {
+    id: "trash",
+    label: "Trash",
+    meta: "Deleted projects, prompts, templates and schedules, kept for 30 days.",
+  },
+  {
+    id: "usage",
+    label: "Usage",
+    meta: "This machine only. The same counters, anonymised, feed slopify.stream.",
+  },
+  {
+    id: "about",
+    label: "About",
+    meta: "Free and open source, running on your machine with your own keys.",
+  },
 ] as const;
 
 export type SettingsSection = (typeof settingsSections)[number]["id"];
@@ -105,8 +157,19 @@ export function settingsSectionOf(value: unknown): SettingsSection {
   return settingsSections.find((section) => section.id === value)?.id ?? "providers";
 }
 
-// One section on screen at a time, picked from the list on the left. Each section is a dense
-// list; explanations sit behind the info buttons beside what they explain.
+// The browser's own download of the diagnostics file, the same one the header's link saves.
+function downloadDiagnostics(origin: string): void {
+  const link = document.createElement("a");
+  link.href = `${origin}/api/diagnostics`;
+  link.download = "slopify-diagnostics.json";
+  document.body.append(link);
+  link.click();
+  link.remove();
+}
+
+// A settings rail beside one section at a time. The rail is the `section` search parameter,
+// not a route, so the page title follows it; on phones the rail is a row of tabs that scrolls
+// sideways on its own. Explanations sit behind the info buttons beside what they explain.
 export function SettingsRoute({
   section = "providers",
   onSection = () => {},
@@ -115,77 +178,109 @@ export function SettingsRoute({
   readonly onSection?: (section: SettingsSection) => void;
 }) {
   const { api } = useApp();
+  const notify = useToast();
+  const health = useProviderHealth();
+  const backUp = useBackUpNow();
   const current = settingsSections.find((item) => item.id === section) ?? settingsSections[0];
+
+  useCommand({
+    id: "settings.check-providers",
+    title: "Check all providers",
+    group: "Settings",
+    keywords: ["health", "keys", "signed in"],
+    run: () => {
+      onSection("providers");
+      health.mutate();
+    },
+  });
+  useCommand({
+    id: "settings.back-up-now",
+    title: "Back up now",
+    group: "Settings",
+    keywords: ["backup"],
+    run: () => {
+      onSection("backups");
+      backUp.mutate(undefined, {
+        onError: (error) => {
+          notify(
+            `The backup didn't start: ${error.message} Open Settings → Backups to see its state.`,
+            "error",
+          );
+        },
+      });
+    },
+  });
+  useCommand({
+    id: "settings.download-diagnostics",
+    title: "Download diagnostics",
+    group: "Settings",
+    keywords: ["support", "bug report"],
+    run: () => {
+      downloadDiagnostics(api.origin);
+    },
+  });
+
   return (
     <div>
-      <PageBar
-        title="Settings"
+      <PageHeader
+        crumb="Settings"
+        title={current.label}
+        meta={current.meta}
         actions={
-          <Button asChild variant="ghost">
-            <a href={`${api.origin}/api/diagnostics`} download="slopify-diagnostics.json">
+          <>
+            {section === "providers" ? (
+              <Button disabled={health.isPending} onClick={() => health.mutate()}>
+                {health.isPending ? "Checking…" : "Check all"}
+              </Button>
+            ) : null}
+            <a
+              className={buttonClass({ variant: "quiet" })}
+              href={`${api.origin}/api/diagnostics`}
+              download="slopify-diagnostics.json"
+            >
               Download diagnostics
             </a>
-          </Button>
+          </>
         }
       />
-      <div className="grid min-w-0 gap-6 md:grid-cols-[200px_minmax(0,1fr)]">
-        <nav aria-label="Settings sections" className="min-w-0">
-          <ul className="flex gap-1 overflow-x-auto border-b border-line pb-2 [scrollbar-width:none] md:flex-col md:border-b-0 md:pb-0">
+      <Workspace
+        sections={
+          <Rail label="Settings sections">
             {settingsSections.map((item) => (
-              <li key={item.id} className="shrink-0">
-                <button
-                  type="button"
-                  aria-current={item.id === section ? "page" : undefined}
-                  onClick={() => onSection(item.id)}
-                  className={cn(
-                    "flex min-h-9 w-full items-center rounded-control px-3 text-left whitespace-nowrap",
-                    item.id === section
-                      ? "bg-panel2 font-semibold text-ink shadow-[inset_2px_0_0_var(--color-lamp-run)]"
-                      : "text-ink2 hover:bg-panel2 hover:text-ink",
-                  )}
-                >
-                  {item.label}
-                </button>
-              </li>
+              <RailButton
+                key={item.id}
+                current={item.id === section}
+                onClick={() => onSection(item.id)}
+                className="whitespace-nowrap max-md:w-auto"
+              >
+                {item.label}
+              </RailButton>
             ))}
-          </ul>
-        </nav>
-        <section aria-label={current.label} className="min-w-0">
+          </Rail>
+        }
+      >
+        <section aria-label={current.label} className="flex min-w-0 flex-col gap-10">
           {section === "providers" ? (
-            <SectionHead
-              title="Providers"
-              info="Provider readiness is checked again before each run. Keys stay on this machine and go only to the provider they belong to."
-            />
-          ) : null}
-          {section === "providers" ? <Welcome /> : null}
-          {section === "providers" ? <ProviderKeys /> : null}
-          {section === "providers" ? <ProviderHealthCheck /> : null}
-          {section === "voices" ? (
-            <SectionHead
-              title="Voices"
-              info="A wrong voice ID is discovered when the audio stage uses it."
-            />
+            <>
+              <Welcome />
+              <ProviderKeys />
+              <ProviderHealthCheck run={health} />
+            </>
           ) : null}
           {section === "voices" ? <Voices /> : null}
           {section === "models" ? <CatalogueSettings /> : null}
-          {section === "playback" ? <SectionHead title="Playback & appearance" /> : null}
           {section === "playback" ? <Playback /> : null}
           {section === "notifications" ? <NotificationSettings /> : null}
           {section === "channel-links" ? <ChannelLinksSettings /> : null}
           {section === "studio" ? <StudioSettings /> : null}
           {section === "storage" ? <StorageTools /> : null}
+          {section === "storage" ? <SampleSettings /> : null}
           {section === "backups" ? <BackupSettings /> : null}
           {section === "trash" ? <TrashSettings /> : null}
-          {section === "usage" ? (
-            <SectionHead
-              title="Usage"
-              info="This machine only. The same counters, anonymised, feed slopify.stream."
-            />
-          ) : null}
           {section === "usage" ? <UsageBoard /> : null}
           {section === "about" ? <AboutSettings /> : null}
         </section>
-      </div>
+      </Workspace>
     </div>
   );
 }
@@ -327,101 +422,126 @@ function StorageTools() {
     }
   }
 
+  useCommand({
+    id: "settings.export-everything",
+    title: "Export everything",
+    group: "Settings",
+    context: "Backup & storage",
+    keywords: ["backup", "download"],
+    run: () => {
+      if (!busy && exporting.phase !== "preparing") void exportEverything();
+    },
+  });
+
   const working = busy || exporting.phase === "preparing";
   return (
-    <div>
-      <SectionHead
-        title="Backup & storage"
-        info="Export everything saves every project with its files and history, your prompts, intros and outros, document themes, templates, schedules, Play drafts, uploaded fonts, settings and usage history in one .tar file. Importing adds to this install and never replaces anything: projects already here are skipped, items whose name is taken arrive as “(imported)”, and schedules arrive paused. Projects that are being made must finish or be paused before exporting."
-      >
-        <Button type="button" disabled={working} onClick={() => void exportEverything()}>
-          Export everything
-        </Button>
-        <label className="inline-flex h-8 cursor-pointer items-center rounded-control border border-line2 bg-panel2 px-3 text-body hover:border-ink3">
-          Import a backup
-          <input
-            className="sr-only"
-            type="file"
-            accept=".tar,application/x-tar,.zip,application/zip"
-            disabled={working}
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) void importBackup(file);
-              event.target.value = "";
-            }}
-          />
-        </label>
-        <Button type="button" variant="ghost" disabled={working} onClick={() => void cleanup()}>
-          Clean orphan files
-        </Button>
-      </SectionHead>
-      <RailGroup className="mb-4">
-        <Rail className="text-small text-ink2">
-          Provider keys are never included in a backup. After importing, enter them again in
-          Settings → Providers.
-        </Rail>
-        {exporting.phase === "preparing" ? (
-          <Rail className="text-small">
-            <span role="status">Preparing the backup…</span>
-          </Rail>
-        ) : null}
-        {exporting.phase === "downloading" ? (
-          <Rail className="flex-wrap justify-between gap-y-1 text-small">
-            <span role="status">
-              Downloading {formatBytes(exporting.bytes)} ({exporting.projects} project
-              {exporting.projects === 1 ? "" : "s"}). Your browser's downloads show its progress;
-              keep Slopify running until it finishes.
-            </span>
-            <Button type="button" variant="ghost" onClick={() => setExporting({ phase: "idle" })}>
-              Dismiss
-            </Button>
-          </Rail>
-        ) : null}
-        {importing.phase === "uploading" ? (
-          <Rail className="text-small">
-            <span role="status" className="tabular-nums">
-              Uploading the backup: {formatBytes(importing.sent)} of {formatBytes(importing.total)}
-            </span>
-            <RailMeter current={importing.sent} total={importing.total} />
-          </Rail>
-        ) : null}
-        {importing.phase === "importing" ? (
-          <Rail className="text-small">
-            <span role="status">
+    <>
+      <div>
+        <SectionHead
+          title="Export and import"
+          info="Export everything saves every project with its files and history, your prompts, intros and outros, document themes, templates, schedules, Play drafts, uploaded fonts, settings and usage history in one .tar file. Importing adds to this install and never replaces anything: projects already here are skipped, items whose name is taken arrive as “(imported)”, and schedules arrive paused. Projects that are being made must finish or be paused before exporting."
+        >
+          <Button disabled={working} onClick={() => void exportEverything()}>
+            Export everything
+          </Button>
+          <label
+            className={cn(
+              buttonClass({ variant: "secondary" }),
+              "cursor-pointer focus-within:outline-2 focus-within:outline-focus",
+              working && "pointer-events-none opacity-50",
+            )}
+          >
+            Import a backup
+            <input
+              className="sr-only"
+              type="file"
+              accept=".tar,application/x-tar,.zip,application/zip"
+              disabled={working}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void importBackup(file);
+                event.target.value = "";
+              }}
+            />
+          </label>
+          <Button variant="quiet" disabled={working} onClick={() => void cleanup()}>
+            Clean orphan files
+          </Button>
+        </SectionHead>
+        <div className="flex flex-col gap-2 text-small text-ink-2">
+          <p className="m-0">
+            Provider keys are never included in a backup. After importing, enter them again in
+            Settings → Providers.
+          </p>
+          {exporting.phase === "preparing" ? (
+            <p role="status" className="m-0 text-ink">
+              Preparing the backup…
+            </p>
+          ) : null}
+          {exporting.phase === "downloading" ? (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p role="status" className="m-0 min-w-0 flex-1 text-ink">
+                Downloading {formatBytes(exporting.bytes)} ({exporting.projects} project
+                {exporting.projects === 1 ? "" : "s"}). Your browser's downloads show its progress;
+                keep Slopify running until it finishes.
+              </p>
+              <Button variant="quiet" size="small" onClick={() => setExporting({ phase: "idle" })}>
+                Dismiss
+              </Button>
+            </div>
+          ) : null}
+          {importing.phase === "uploading" ? (
+            <div className="flex flex-col gap-2">
+              <p role="status" className="m-0 text-ink tabular-nums">
+                Uploading the backup: {formatBytes(importing.sent)} of{" "}
+                {formatBytes(importing.total)}
+              </p>
+              <Meter
+                label="Backup upload"
+                value={importing.total === 0 ? 0 : importing.sent / importing.total}
+              />
+            </div>
+          ) : null}
+          {importing.phase === "importing" ? (
+            <p role="status" className="m-0 text-ink">
               Checking and importing the backup… large projects can take a minute.
-            </span>
-          </Rail>
-        ) : null}
-      </RailGroup>
+            </p>
+          ) : null}
+          {error ? (
+            <p role="alert" className="m-0 text-danger">
+              {error}
+            </p>
+          ) : null}
+        </div>
+      </div>
       {result ? <ImportResult result={result} onDismiss={() => setResult(null)} /> : null}
-      <RailGroup>
-        {usage.data ? (
-          <>
-            <Rail className="flex-wrap justify-between gap-y-1 text-small text-ink2">
-              <span className="font-semibold text-ink">{formatBytes(usage.data.data)} stored</span>
-              <span className="tabular-nums">
-                {formatBytes(usage.data.projects)} project files · {formatBytes(usage.data.staging)}{" "}
-                staged files
-              </span>
-            </Rail>
-            {usage.data.byProject.length > 0 ? (
-              <ProjectStorageList projects={usage.data.byProject} queryKey={[...storageQueryKey]} />
-            ) : null}
-          </>
-        ) : usage.error ? (
-          <Rail className="text-small text-ink2">Storage usage is unavailable.</Rail>
-        ) : (
-          <Rail>
-            <span className="h-4 w-48 rounded-control bg-panel2" />
-          </Rail>
-        )}
-      </RailGroup>
-      {error ? (
-        <p role="alert" className="mt-2 text-small text-red">
-          {error}
-        </p>
-      ) : null}
-    </div>
+      <div>
+        <SectionHead
+          title="Disk space"
+          meta={
+            usage.data ? (
+              <>
+                <span className="font-semibold text-ink">
+                  {formatBytes(usage.data.data)} stored
+                </span>
+                <span className="tabular-nums">
+                  {" "}
+                  · {formatBytes(usage.data.projects)} project files ·{" "}
+                  {formatBytes(usage.data.staging)} staged files
+                </span>
+              </>
+            ) : usage.error ? (
+              "Storage usage is unavailable. Reload the page to try again."
+            ) : (
+              <span className="inline-block h-4 w-48 rounded-control bg-raised" />
+            )
+          }
+        />
+        {usage.data && usage.data.byProject.length > 0 ? (
+          <ProjectStorageList projects={usage.data.byProject} queryKey={[...storageQueryKey]} />
+        ) : null}
+      </div>
+    </>
   );
 }
 
@@ -473,16 +593,16 @@ export function ImportResult({
     "Provider keys are not in backups: enter them in Settings → Providers.",
   ].filter((line) => line !== null);
   return (
-    <RailGroup className="mb-4">
-      <Rail className="flex-wrap justify-between gap-y-1">
-        <span className="font-semibold">
-          Imported the backup from {result.backup.createdAt.slice(0, 10)}
-        </span>
-        <Button type="button" variant="ghost" onClick={onDismiss}>
+    <div>
+      <SectionHead
+        as="h3"
+        title={`Imported the backup from ${result.backup.createdAt.slice(0, 10)}`}
+      >
+        <Button variant="quiet" size="small" onClick={onDismiss}>
           Dismiss
         </Button>
-      </Rail>
-      <ul aria-label="Import result" className="px-4 py-2 text-small text-ink2">
+      </SectionHead>
+      <ul aria-label="Import result" className="m-0 list-disc pl-5 text-small text-ink-2">
         {lines.map((line) => (
           <li key={line} className="py-0.5">
             {line}
@@ -494,7 +614,7 @@ export function ImportResult({
           </li>
         ))}
       </ul>
-    </RailGroup>
+    </div>
   );
 }
 
@@ -502,9 +622,6 @@ function Playback() {
   const { api } = useApp();
   const queryClient = useQueryClient();
   const settings = useQuery(settingsQuery(api));
-  const gapId = useId();
-  const gapErrorId = useId();
-  const appearanceLabelId = useId();
 
   const [typed, setTyped] = useState<string | undefined>(undefined);
   const [saved, setSaved] = useState(false);
@@ -543,21 +660,17 @@ function Playback() {
 
   if (settings.error !== null) {
     return (
-      <RailGroup>
-        <Rail>
-          <p className="text-body text-red">{settings.error.message}</p>
-        </Rail>
-      </RailGroup>
+      <p role="alert" className="m-0 text-body text-danger">
+        {settings.error.message}
+      </p>
     );
   }
   if (settings.data === undefined) {
     return (
-      <RailGroup>
-        <Rail>
-          <span className="h-4 w-48 rounded-control bg-panel2" />
-          <span className="h-8 w-[72px] rounded-control bg-panel2" />
-        </Rail>
-      </RailGroup>
+      <div className="grid gap-6 md:grid-cols-2" role="status" aria-label="Loading settings">
+        <span className="h-16 rounded-control bg-raised" />
+        <span className="h-16 rounded-control bg-raised" />
+      </div>
     );
   }
 
@@ -566,30 +679,29 @@ function Playback() {
   const problem = gapProblem(gap);
 
   return (
-    <RailGroup>
-      <div className="grid sm:grid-cols-[240px_1fr] items-center gap-[14px] border-b border-line px-4 py-[14px]">
-        <label htmlFor={gapId} className="font-semibold">
-          Silence between segments
-        </label>
-        <div className="flex flex-wrap items-center gap-[10px]">
+    <div className="grid items-start gap-6 md:grid-cols-2">
+      <Field
+        label="Silence between segments"
+        help="Seconds of quiet between narrated segments."
+        error={problem ?? save.error?.message}
+      >
+        <div className="flex flex-wrap items-center gap-2">
           <Input
-            id={gapId}
             type="number"
             inputMode="numeric"
             min={0}
             max={silenceGapSecondsMax}
             step={1}
-            className="w-[72px] tabular-nums"
+            className="w-[88px] tabular-nums"
             value={gap}
             aria-invalid={problem !== undefined}
-            aria-describedby={problem === undefined ? undefined : gapErrorId}
             onChange={(event) => {
               setTyped(event.target.value);
             }}
           />
-          <span className="text-small text-ink2">seconds</span>
+          <span className="text-small text-ink-2">seconds</span>
           <Button
-            className="ml-[6px]"
+            variant="primary"
             disabled={problem !== undefined || save.isPending}
             onClick={() => {
               setSaved(false);
@@ -607,43 +719,21 @@ function Playback() {
             Save
           </Button>
           <span className="inline-flex w-[52px]">{saved ? <SavedTick /> : null}</span>
-          {problem === undefined ? null : (
-            <p id={gapErrorId} className="basis-full text-label text-red">
-              {problem}
-            </p>
-          )}
-          {save.error === null ? null : (
-            <p className="basis-full text-label text-red">{save.error.message}</p>
-          )}
         </div>
-      </div>
+      </Field>
 
-      <div className="grid items-center gap-[14px] px-4 py-[14px] sm:grid-cols-[240px_1fr]">
-        <span id={appearanceLabelId} className="font-semibold">
-          Appearance
-        </span>
-        <ToggleGroup
-          type="single"
+      <div className="sl-field">
+        <span className="sl-field__label">Appearance</span>
+        <Segmented
+          label="Appearance"
           value={current.appearance}
-          aria-labelledby={appearanceLabelId}
-          className="justify-self-start"
-          onValueChange={(next) => {
-            const picked = appearances.find((option) => option.value === next);
-            if (picked !== undefined) {
-              save.mutate({
-                silenceGapSeconds: current.silenceGapSeconds,
-                appearance: picked.value,
-              });
-            }
+          options={appearances}
+          className="self-start"
+          onChange={(next) => {
+            save.mutate({ silenceGapSeconds: current.silenceGapSeconds, appearance: next });
           }}
-        >
-          {appearances.map((option) => (
-            <ToggleGroupItem key={option.value} value={option.value}>
-              {option.label}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+        />
       </div>
-    </RailGroup>
+    </div>
   );
 }

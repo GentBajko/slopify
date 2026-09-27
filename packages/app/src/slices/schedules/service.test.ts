@@ -22,7 +22,7 @@ function scheduleInput(
     missedPolicy: "skip" as const,
     overlapPolicy: "skip" as const,
     spendLimitCents: null,
-    items: [{ title: "Arda", values: { topic: "Arda" } }],
+    items: [{ title: "Arda", values: {} }],
   };
 }
 

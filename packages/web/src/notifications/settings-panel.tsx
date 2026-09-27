@@ -3,12 +3,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState, useSyncExternalStore } from "react";
 import { readNotificationUrl, saveNotificationUrl, sendTestNotification } from "@/api";
 import { useApp } from "@/app-context";
+import { Button } from "@/components/kit/button";
+import { Field, Input } from "@/components/kit/field";
 import { SectionHead } from "@/components/kit/section-head";
+import { Switch } from "@/components/kit/switch";
 import { useToast } from "@/components/kit/toast";
-import { RailGroup } from "@/components/rail";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   browserNotificationsOn,
   notificationPermission,
@@ -30,19 +29,18 @@ export function NotificationSettings() {
   return (
     <div>
       <SectionHead
-        title="Notifications"
+        title="Browser and phone"
         info="Slopify tells you when a run finishes, fails, or stops to wait for your review or Resume. Browser notifications work while any Slopify tab is open. A Notification URL works with no tab open: Slopify POSTs a short plain-text message (the project title and what happened, never your keys) to it. For your phone, install the ntfy app, subscribe to a topic with a long random name, and paste https://ntfy.sh/that-topic here. Any address that accepts a POST works too."
       />
-      <RailGroup>
+      <div className="flex flex-col gap-8">
         <BrowserNotifications />
         <NotificationUrl />
-      </RailGroup>
+      </div>
     </div>
   );
 }
 
 function BrowserNotifications() {
-  const labelId = useId();
   const on = useSyncExternalStore(
     onBrowserNotificationsChange,
     browserNotificationsOn,
@@ -82,27 +80,18 @@ function BrowserNotifications() {
   }
 
   return (
-    <div className="grid items-center gap-[14px] border-b border-line px-4 py-[14px] sm:grid-cols-[240px_1fr]">
-      <span id={labelId} className="font-semibold">
-        Browser notifications
-      </span>
-      <div className="flex flex-wrap items-center gap-[10px]">
-        <ToggleGroup
-          type="single"
-          value={active ? "on" : "off"}
-          aria-labelledby={labelId}
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+        <Switch
+          label="Browser notifications"
+          checked={active}
           disabled={asking}
-          onValueChange={(next) => {
-            if (next === "on" || next === "off") void turn(next === "on");
-          }}
-        >
-          <ToggleGroupItem value="off">Off</ToggleGroupItem>
-          <ToggleGroupItem value="on">On</ToggleGroupItem>
-        </ToggleGroup>
+          onChange={(next) => void turn(next)}
+        />
         <Button
-          type="button"
-          variant="ghost"
+          variant="quiet"
           disabled={!active}
+          disabledReason="Turn Browser notifications on first."
           onClick={() => {
             setProblem(undefined);
             try {
@@ -115,12 +104,13 @@ function BrowserNotifications() {
         >
           Send test notification
         </Button>
-        {problem === undefined ? null : (
-          <p role="alert" className="basis-full text-label text-red">
-            {problem}
-          </p>
-        )}
       </div>
+      <p className="m-0 text-small text-ink-2">Works while any Slopify tab is open.</p>
+      {problem === undefined ? null : (
+        <p role="alert" className="m-0 text-small text-danger">
+          {problem}
+        </p>
+      )}
     </div>
   );
 }
@@ -129,7 +119,6 @@ function NotificationUrl() {
   const { api } = useApp();
   const queryClient = useQueryClient();
   const notify = useToast();
-  const inputId = useId();
   const errorId = useId();
   const saved = useQuery({
     queryKey: notificationUrlQueryKey,
@@ -163,19 +152,18 @@ function NotificationUrl() {
   const error = problem ?? save.error?.message ?? test.error?.message;
   const busy = save.isPending || test.isPending || saved.data === undefined;
   return (
-    <div className="grid items-center gap-[14px] px-4 py-[14px] sm:grid-cols-[240px_1fr]">
-      <label htmlFor={inputId} className="font-semibold">
-        Notification URL
-      </label>
-      <div className="flex flex-wrap items-center gap-[10px]">
+    <Field
+      label="Notification URL"
+      help="Works with no tab open, for example an ntfy topic on your phone."
+    >
+      <div className="flex flex-wrap items-center gap-2">
         <Input
-          id={inputId}
           type="url"
           inputMode="url"
           autoComplete="off"
           spellCheck={false}
           placeholder="https://ntfy.sh/your-topic"
-          className="min-w-[220px] flex-1"
+          className="min-w-0 flex-1 basis-[220px]"
           value={value}
           disabled={saved.data === undefined}
           aria-invalid={problem !== undefined}
@@ -187,31 +175,30 @@ function NotificationUrl() {
           }}
         />
         <Button
-          type="button"
+          variant="primary"
           disabled={busy || problem !== undefined || typed === undefined}
           onClick={() => save.mutate(value)}
         >
           Save
         </Button>
         <Button
-          type="button"
-          variant="ghost"
+          variant="quiet"
           disabled={busy || problem !== undefined || value.trim() === ""}
           onClick={() => test.mutate(value)}
         >
           Send test notification
         </Button>
-        {saved.error === null ? null : (
-          <p role="alert" className="basis-full text-label text-red">
-            The saved Notification URL couldn't be read: {saved.error.message}
-          </p>
-        )}
-        {error === undefined ? null : (
-          <p id={errorId} role="alert" className="basis-full text-label text-red">
-            {error}
-          </p>
-        )}
       </div>
-    </div>
+      {saved.error === null ? null : (
+        <p role="alert" className="m-0 text-small text-danger">
+          The saved Notification URL couldn't be read: {saved.error.message}
+        </p>
+      )}
+      {error === undefined ? null : (
+        <p id={errorId} role="alert" className="m-0 text-small text-danger">
+          {error}
+        </p>
+      )}
+    </Field>
   );
 }

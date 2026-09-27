@@ -4,6 +4,7 @@ import type { ProjectBody } from "@/api";
 import { eventsUrl } from "@/api";
 import { useApp } from "@/app-context";
 import { subscribeProject } from "@/events";
+import { peaksKey } from "@/onboarding/api";
 import { keys } from "@/queries";
 import { checkpointKey } from "./checkpoint-api.js";
 import { coalesce, patchProject } from "./live.js";
@@ -50,6 +51,9 @@ export function useLiveProject(projectId: string, revisionId: string | null = nu
           writingKey(projectId, currentRevision()),
           (seen) => appendWriting(seen ?? [], event),
         );
+      },
+      narrationPiece: () => {
+        void queryClient.invalidateQueries({ queryKey: peaksKey(projectId, currentRevision()) });
       },
       appendArticle: (text) => {
         queryClient.setQueryData<string>(

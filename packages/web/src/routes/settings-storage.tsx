@@ -2,9 +2,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { keepOutputsOnly, type StorageUsage } from "@/api";
 import { useApp } from "@/app-context";
-import { ConfirmDialog } from "@/components/confirm";
+import { Button } from "@/components/kit/button";
+import { ConfirmDialog } from "@/components/kit/dialog";
+import { List, ListRow } from "@/components/kit/list-row";
 import { useToast } from "@/components/kit/toast";
-import { Button } from "@/components/ui/button";
 
 type ProjectUsage = StorageUsage["byProject"][number];
 
@@ -40,39 +41,41 @@ export function ProjectStorageList({
   const sorted = projects.toSorted((a, b) => b.bytes - a.bytes);
   return (
     <>
-      <ul aria-label="Storage by project">
+      <List label="Storage by project">
         {sorted.map((project) => (
-          <li
+          <ListRow
             key={project.id}
-            className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-line px-4 py-2 text-small text-ink2 last:border-b-0"
-          >
-            <span className="min-w-0 flex-1 truncate text-ink">{project.title}</span>
-            <span className="shrink-0 tabular-nums">
-              {formatBytes(project.bytes)} · outputs {formatBytes(project.outputsBytes)} · working
-              files {formatBytes(project.workingBytes)}
-            </span>
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={!project.finished || project.removableBytes === 0 || trim.isPending}
-              title={
-                !project.finished
-                  ? "Available once the project has finished."
-                  : project.removableBytes === 0
-                    ? "No working files left to remove."
-                    : `Frees ${formatBytes(project.removableBytes)}.`
-              }
-              onClick={() => setAsking(project)}
-            >
-              {trim.isPending && trim.variables?.id === project.id
-                ? "Removing…"
-                : "Keep outputs only"}
-            </Button>
-          </li>
+            title={project.title}
+            meta={
+              <span className="tabular-nums">
+                {formatBytes(project.bytes)} · outputs {formatBytes(project.outputsBytes)} · working
+                files {formatBytes(project.workingBytes)}
+              </span>
+            }
+            actions={
+              <Button
+                variant="quiet"
+                size="small"
+                disabled={!project.finished || project.removableBytes === 0 || trim.isPending}
+                title={
+                  !project.finished
+                    ? "Available once the project has finished."
+                    : project.removableBytes === 0
+                      ? "No working files left to remove."
+                      : `Frees ${formatBytes(project.removableBytes)}.`
+                }
+                onClick={() => setAsking(project)}
+              >
+                {trim.isPending && trim.variables?.id === project.id
+                  ? "Removing…"
+                  : "Keep outputs only"}
+              </Button>
+            }
+          />
         ))}
-      </ul>
+      </List>
       {error === undefined ? null : (
-        <p role="alert" className="mt-2 px-4 text-small text-red">
+        <p role="alert" className="m-0 mt-2 text-small text-danger">
           {error}
         </p>
       )}
@@ -80,7 +83,7 @@ export function ProjectStorageList({
         open={asking !== undefined}
         title={`Keep only the outputs of "${asking?.title ?? ""}"?`}
         consequence={`This removes ${String(asking?.removableFiles ?? 0)} working file(s) and frees ${formatBytes(asking?.removableBytes ?? 0)}: the images, narration parts, subtitle timing and render settings the project was made from. The video, shorts, thumbnail, article, description and document stay, and so does anything you uploaded. If you change this project later (edit an image, a caption style or the narration, or re-render), Slopify has to make those files again first, which takes time and uses provider credits.`}
-        verb="Keep outputs only"
+        confirmLabel="Keep outputs only"
         pending={trim.isPending}
         onConfirm={() => {
           const project = asking;

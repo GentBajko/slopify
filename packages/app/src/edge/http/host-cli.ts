@@ -247,7 +247,8 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
             clearTimeout(timer);
             timer = setTimeout(() => controller.abort(), 120_000);
             // The bridge frame keeps its shape across versions: the cached-token count, the
-            // answering model and the plan windows stay on this side of it.
+            // answering model and the plan windows stay on this side of it. Typed-ahead text
+            // stays here too: the bridge carries the committed answer only.
             const parsed = hostFrameSchema.parse(
               event.type === "done"
                 ? {
@@ -261,7 +262,9 @@ export function hostCliRoutes(options: HostRouteOptions): Hono<HostEnv> {
                           },
                     finishReason: event.finishReason,
                   }
-                : event,
+                : event.type === "partial"
+                  ? { type: "activity" }
+                  : event,
             );
             if (done || parsed.type === "error")
               throw new Error(

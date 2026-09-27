@@ -83,8 +83,23 @@ function testRouter(ui: ReactNode) {
   const nowhere = () => null;
   return createRouter({
     routeTree: rootRoute.addChildren({
-      projects: createRoute({ getParentRoute: () => rootRoute, path: "/", component: nowhere }),
+      home: createRoute({ getParentRoute: () => rootRoute, path: "/", component: nowhere }),
+      projects: createRoute({
+        getParentRoute: () => rootRoute,
+        path: "projects",
+        component: nowhere,
+      }),
+      calendar: createRoute({
+        getParentRoute: () => rootRoute,
+        path: "calendar",
+        component: nowhere,
+      }),
       play: createRoute({ getParentRoute: () => rootRoute, path: "play", component: nowhere }),
+      welcome: createRoute({
+        getParentRoute: () => rootRoute,
+        path: "welcome",
+        component: nowhere,
+      }),
       schedules: createRoute({
         getParentRoute: () => rootRoute,
         path: "schedules",

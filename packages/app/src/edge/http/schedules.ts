@@ -72,11 +72,13 @@ function refused(c: Context, result: Extract<ScheduleResult<never>, { ok: false 
     "topic-not-found":
       "This topic was already approved, turned down or used. Reload the page to see the topics waiting now.",
     busy: "Slopify is already generating topics for this schedule. Wait for it to finish, then try again.",
+    "invalid-topics":
+      "Some topics name keywords this template does not use. Check each topic under Schedules → Edit and save again.",
   };
   return problem(c, {
     status,
     title: titleOf(status),
-    detail: detail[result.reason],
+    detail: result.message ?? detail[result.reason],
     extensions: { reason: result.reason },
   });
 }

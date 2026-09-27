@@ -1,12 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactElement, type ReactNode, useId, useState } from "react";
+import { type ReactElement, useState } from "react";
 import { useApp } from "@/app-context";
 import { ActionBar, StatusSlot } from "@/components/kit/action-bar";
+import { Button } from "@/components/kit/button";
+import { Field, Input, Select, Textarea } from "@/components/kit/field";
+import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
-import { Button } from "@/components/ui/button";
-import { Input, Textarea } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Picker } from "@/components/ui/picker";
 import { documentThemesQuery, entriesQuery } from "@/queries";
 import { fontsKey, listFonts } from "@/subtitles/api";
 import { ChannelAmbientBed, channelBedForm, channelBedOf } from "./ambient-bed-kit";
@@ -90,33 +89,29 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
     >
       <div className="grid max-w-3xl grid-cols-1 gap-5">
         <Field label="Channel name">
-          {(id) => (
-            <Input
-              id={id}
-              value={name}
-              maxLength={200}
-              required
-              onChange={(event) => setName(event.target.value)}
-            />
-          )}
+          <Input
+            value={name}
+            maxLength={200}
+            required
+            onChange={(event) => setName(event.target.value)}
+          />
         </Field>
         <Field
           label="Series brief"
           help="What the channel covers, its style and what makes a topic worth a video."
         >
-          {(id) => (
-            <Textarea
-              id={id}
-              rows={4}
-              value={brief}
-              maxLength={10000}
-              onChange={(event) => setBrief(event.target.value)}
-            />
-          )}
+          <Textarea
+            rows={4}
+            value={brief}
+            maxLength={10000}
+            onChange={(event) => setBrief(event.target.value)}
+          />
         </Field>
-        <p className="text-small text-ink2">
-          The brand kit fills what a template leaves at its default. Blank fields add nothing.
-        </p>
+        <SectionHead
+          title="Brand kit"
+          meta="Fills what a template leaves at its default. Blank fields add nothing."
+          className="mt-2 border-t border-line pt-6"
+        />
         <section aria-label="Captions" className="grid grid-cols-1 gap-4 min-[700px]:grid-cols-3">
           <Choice
             label="Caption font"
@@ -143,15 +138,12 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
           />
           <Colour label="Title colour" value={kit.titleColor} onChange={set("titleColor")} />
           <Field label="End screen text" help="Shown over the last 5 seconds.">
-            {(id) => (
-              <Input
-                id={id}
-                value={kit.endScreenText}
-                maxLength={200}
-                placeholder="Subscribe for more"
-                onChange={(event) => set("endScreenText")(event.target.value)}
-              />
-            )}
+            <Input
+              value={kit.endScreenText}
+              maxLength={200}
+              placeholder="Subscribe for more"
+              onChange={(event) => set("endScreenText")(event.target.value)}
+            />
           </Field>
         </section>
         <section
@@ -190,32 +182,14 @@ export function BrandTab({ channel }: { readonly channel: Channel }): ReactEleme
           type="submit"
           variant="primary"
           disabled={save.isPending || name.trim() === "" || bedSave.blocked}
+          disabledReason={
+            name.trim() === "" ? "Give the channel a name" : "Fix the ambient sound settings above"
+          }
         >
           Save channel
         </Button>
       </ActionBar>
     </form>
-  );
-}
-
-function Field({
-  label,
-  help,
-  children,
-}: {
-  readonly label: string;
-  readonly help?: string;
-  readonly children: (id: string) => ReactNode;
-}): ReactElement {
-  const id = useId();
-  return (
-    <div className="min-w-0 [&>span]:w-full">
-      <Label htmlFor={id} className="mb-[5px]">
-        {label}
-      </Label>
-      {children(id)}
-      {help === undefined ? null : <p className="mt-1 text-small text-ink3">{help}</p>}
-    </div>
   );
 }
 
@@ -232,19 +206,17 @@ function Choice({
 }): ReactElement {
   return (
     <Field label={label}>
-      {(id) => (
-        <Picker id={id} value={value} onChange={(event) => onPick(event.target.value)}>
-          <option value="">Not set</option>
-          {value !== "" && !options.some((option) => option.value === value) ? (
-            <option value={value}>{value} (no longer in the library)</option>
-          ) : null}
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </Picker>
-      )}
+      <Select value={value} onChange={(event) => onPick(event.target.value)}>
+        <option value="">Not set</option>
+        {value !== "" && !options.some((option) => option.value === value) ? (
+          <option value={value}>{value} (no longer in the library)</option>
+        ) : null}
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </Select>
     </Field>
   );
 }
@@ -261,24 +233,23 @@ function Colour({
 }): ReactElement {
   const valid = /^#[0-9a-fA-F]{6}$/.test(value);
   return (
-    <Field label={label}>
-      {(id) => (
-        <span className="flex items-center gap-2">
-          <span
-            aria-hidden="true"
-            className="size-6 shrink-0 rounded-control border border-line2"
-            style={{ background: valid ? value : "transparent" }}
-          />
-          <Input
-            id={id}
-            value={value}
-            placeholder="#FFFFFF"
-            maxLength={7}
-            aria-invalid={value !== "" && !valid}
-            onChange={(event) => onChange(event.target.value)}
-          />
-        </span>
-      )}
+    <Field
+      label={label}
+      {...(value !== "" && !valid ? { error: "Write the colour as # and six hex digits." } : {})}
+    >
+      <span className="flex items-center gap-2">
+        <span
+          aria-hidden="true"
+          className="size-6 shrink-0 rounded-control border border-line-strong"
+          style={{ background: valid ? value : "transparent" }}
+        />
+        <Input
+          value={value}
+          placeholder="#FFFFFF"
+          maxLength={7}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </span>
     </Field>
   );
 }

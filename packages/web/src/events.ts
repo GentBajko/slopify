@@ -1,4 +1,9 @@
-import type { GlobalEvent, ProjectEvent, ProjectStateEvent } from "@app/edge/events/hub.js";
+import type {
+  GlobalEvent,
+  ProjectEvent,
+  ProjectStateEvent,
+  ScheduleTopicsEvent,
+} from "@app/edge/events/hub.js";
 import type { LlmPreviewEvent } from "@app/kernel/events.js";
 import type { PatchEvent } from "@/project/live";
 
@@ -25,6 +30,8 @@ export interface ProjectSink {
   // the server for the whole project per token would be absurd.
   readonly appendArticle: (text: string) => void;
   readonly previewWriting?: (event: LlmPreviewEvent) => void;
+  // A narration piece landed: the live view's waveform asks for its peaks.
+  readonly narrationPiece?: () => void;
   // The three events that carry their whole change. Patching them puts the lamp, the state word
   // and the meter on the page in the frame the event arrived in, which is the signature
   // interaction, and it is what keeps a meter ticking from asking the server sixty times.
@@ -38,7 +45,7 @@ export interface GlobalSink {
   // Every project's state change, for run notifications (`notifications/watcher.ts`).
   readonly projectState?: (event: ProjectStateEvent) => void;
   // A schedule held new generated topics for approval.
-  readonly scheduleTopics?: () => void;
+  readonly scheduleTopics?: (event: ScheduleTopicsEvent) => void;
 }
 
 const projectEventNames = [
@@ -47,6 +54,7 @@ const projectEventNames = [
   "article.delta",
   "llm.preview",
   "image.landed",
+  "narration.piece",
   "project.state",
   "project.updated",
 ] as const;
@@ -65,6 +73,10 @@ export function subscribeProject(open: OpenEvents, url: string, sink: ProjectSin
     if (sink.accept?.(event) === false) return;
     if (event.type === "llm.preview") {
       sink.previewWriting?.(event);
+      return;
+    }
+    if (event.type === "narration.piece") {
+      sink.narrationPiece?.();
       return;
     }
     if (event.type === "article.delta") {
@@ -98,7 +110,7 @@ export function subscribeGlobal(open: OpenEvents, url: string, sink: GlobalSink)
       return;
     }
     if (event.type === "schedule.topics") {
-      sink.scheduleTopics?.();
+      sink.scheduleTopics?.(event);
       return;
     }
     sink.stagingChanged();

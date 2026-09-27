@@ -137,6 +137,15 @@ export async function executeProviderRecipe(
         },
         asset,
       );
+      context.emit({
+        type: "narration.piece",
+        projectId: context.work.projectId,
+        key: piece.key,
+        durationMs: durationMs ?? null,
+        revisionId: context.work.revisionId,
+        workId: context.work.workId,
+        workPieceId: piece.id,
+      });
       deps.count?.("stage.completed", {
         stage: "audio",
         segment: input.segment,

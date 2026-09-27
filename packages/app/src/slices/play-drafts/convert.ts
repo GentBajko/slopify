@@ -316,7 +316,12 @@ export function toAdmissionDraft(input: {
             mode,
             fontSize: number(form.subtitles.fontSize, "subtitles.fontSize", 120, 16),
           },
-    silenceGapSeconds: input.silenceGapSeconds,
+    // This run's own gap when one was typed, else the one Settings has. Text that is not a
+    // number is NaN, which admission refuses at silenceGapSeconds.
+    silenceGapSeconds:
+      form.silenceGapSeconds === undefined || form.silenceGapSeconds.trim() === ""
+        ? input.silenceGapSeconds
+        : Number(form.silenceGapSeconds),
     imageSeconds: measure(
       "imageSeconds",
       sources.video === "generate" || shortsOn,

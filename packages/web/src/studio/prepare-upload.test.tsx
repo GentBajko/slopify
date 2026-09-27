@@ -84,7 +84,23 @@ describe("Prepare upload", () => {
     expect(within(drawer).getByText("Yes")).not.toBeNull();
     expect(within(drawer).getByText("Yes because an AI voice narrates it.")).not.toBeNull();
     expect(within(drawer).getByText(/moved the first, "Intro", from 0:04 to 0:00/)).not.toBeNull();
-    await user.click(within(drawer).getByRole("radio", { name: "Short 1" }));
+    // Each row carries its own small action: Copy for text, Download for files.
+    expect(within(drawer).getByRole("button", { name: "Copy title" })).not.toBeNull();
+    expect(
+      within(drawer).getByRole("link", { name: "Download the-fox-video.mp4" }).getAttribute("href"),
+    ).toBe("http://slopify.test/files/p1/video");
+    // The thumbnails sit under the list, lettered for Test & compare.
+    const thumbnails = within(drawer).getByRole("region", { name: "Thumbnails to upload" });
+    expect(
+      within(thumbnails)
+        .getAllByRole("img")
+        .map((img) => img.getAttribute("alt")),
+    ).toEqual(["Thumbnail A", "Thumbnail B"]);
+    const short = within(drawer).getByRole("button", { name: "Short 1" });
+    expect(short.getAttribute("aria-pressed")).toBe("false");
+    await user.click(short);
+    expect(short.getAttribute("aria-pressed")).toBe("true");
+    // The short's own answer: its channel is set to Always No.
     expect(within(drawer).getByText("No")).not.toBeNull();
     expect(within(drawer).getByText("This channel is set to Always No.")).not.toBeNull();
     // A short has no thumbnail step.

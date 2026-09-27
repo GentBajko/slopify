@@ -50,7 +50,7 @@ export function EpisodesTab({ channelId }: { readonly channelId: string }): Reac
         label="Episode memory"
         describedBy={`${channelId}-memory-help`}
       />
-      <p id={`${channelId}-memory-help`} className="mt-1 mb-3 text-small text-ink2">
+      <p id={`${channelId}-memory-help`} className="mt-1 mb-3 text-small text-ink-2">
         Each finished episode leaves a short summary here, and new episodes about the same cast or
         topic are written knowing them. Videos already made are never changed.
       </p>
