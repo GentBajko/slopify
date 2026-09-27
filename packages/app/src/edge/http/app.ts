@@ -40,7 +40,7 @@ import { pronunciationRoutes } from "./pronunciations.js";
 import { providerRoutes } from "./providers.js";
 import { revisionFileRoutes, revisionFolderRoutes } from "./revision-files.js";
 import { revisionRoutes } from "./revisions.js";
-import { scheduleRoutes } from "./schedules.js";
+import { calendarRoutes, scheduleRoutes } from "./schedules.js";
 import { settingsRoutes } from "./settings.js";
 import { stagingRoutes } from "./staging.js";
 import { storageRoutes } from "./storage.js";
@@ -117,6 +117,7 @@ function apiRoutes(deps: AppDeps, startedAt: number) {
       .route("/diagnostics", diagnosticsRoutes(deps))
       .route("/project-templates", projectTemplateRoutes(deps.drafts))
       .route("/schedules", scheduleRoutes(deps.schedules))
+      .route("/calendar", calendarRoutes(deps.schedules))
       .route("/projects", planningRoutes(deps))
       .route("/projects", projectRoutes(deps))
       .route("/projects", checkpointRoutes(deps))

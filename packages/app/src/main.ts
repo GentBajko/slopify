@@ -399,11 +399,32 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         flusher.soon();
       },
     };
-    const scheduleDeps: ScheduleDeps = {
+    const scheduleRunnerDeps: ScheduleDeps = {
       ...draftDeps,
       template: (id, templateVersion) => templateById(runtimeDb, id, templateVersion),
+      // Topic generation asks the provider directly: it belongs to no project, so there is
+      // no stage attempt to record it under.
+      topicLlm: async (call) => {
+        let text = "";
+        for await (const event of registry.llm(call.provider).complete({
+          model: call.model,
+          messages: call.messages,
+          ...(call.thinking === undefined ? {} : { thinking: call.thinking }),
+          signal: call.signal,
+        }))
+          if (event.type === "delta") text += event.text;
+        return text;
+      },
+      topicsWaiting: (event) => {
+        hub.emitGlobal(event);
+        notifier.observeTopics(event);
+      },
     };
-    const scheduleRunner = createScheduleRunner(scheduleDeps);
+    const scheduleRunner = createScheduleRunner(scheduleRunnerDeps);
+    const scheduleDeps: ScheduleDeps = {
+      ...scheduleRunnerDeps,
+      requestTopics: scheduleRunner.requestTopics,
+    };
     scheduleRunner.recover(clock.now());
     const scheduleTicks = createScheduleTickLifecycle({
       beginMutation: updater.beginMutation,
@@ -511,6 +532,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
         clearInterval(backupTimer);
         const mutationDrain = mutations.stop();
         const scheduleDrain = scheduleTicks.stop();
+        const topicDrain = scheduleRunner.stop();
         // A backup being written is stopped and its partial file removed, not waited for.
         const backupDrain = backups.stop();
         const serverClose = beginServerClose(server);
@@ -526,6 +548,7 @@ export async function boot(config: Config, options: BootOptions = {}): Promise<B
             mutationDrainTimeoutMs,
           );
           await scheduleDrain;
+          await topicDrain;
           await backupDrain;
           await runner.abortAll();
         } finally {
