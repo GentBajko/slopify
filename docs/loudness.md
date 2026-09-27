@@ -8,24 +8,26 @@ volume** fixes that in two steps, both on this computer with the bundled ffmpeg,
    intro and outro part, and each speaker's turn of a multi-voice script is measured with the
    first pass of ffmpeg's `loudnorm` (integrated loudness, range, true peak, threshold) and
    brought to one common loudness, −20 LUFS, by the one fixed gain `loudnorm`'s linear mode
-   would apply, so the voice keeps its own dynamics. The gain is applied with ffmpeg's `volume`
-   filter rather than `loudnorm`'s own second pass, which cannot stay linear on a piece shorter
-   than its 3-second window (a line like "said the Mole." is 1.3 s) and would leave it a few LU
-   off. A piece whose peaks the gain would push over −2 dBTP has just those peaks held by a
-   limiter; if that leaves it more than 0.2 LU under the level, the gain is corrected once. A
-   piece too short or quiet to measure (under about 0.4 s, or below −70 LUFS) is left as it is.
-   −20 LUFS leaves room for a voice's peaks, which run 14 to 18 dB over its loudness; the
-   master lifts the whole afterwards.
-2. **Every finished file is mastered to a target** with the full two-pass `loudnorm` (linear
-   where the peaks allow, its true-peak limiter where they do not). The long video and the
-   shorts are brought to the video volume (default −14 LUFS, peaks under −1.5 dBTP: the
-   loudness YouTube and Spotify play everything at). The audio files (the audio-only WAV when
-   Video is off, and a multi-voice run's MP3 and M4B) are brought to the audio files volume
-   (default −18 LUFS, peaks under −3 dBTP, what audiobook shops ask for). The limiter aims half
-   a dB under each ceiling, because the lossy encode after it (AAC, MP3) lifts the peaks by
-   about that much, and what is reported is measured on the finished file. The ambient bed and
-   the shorts' music are mixed first and ducked by the levelled voice, so they keep their place
-   under it; the master then sets the whole mix.
+   would apply, so the voice keeps its own dynamics. A piece too short or quiet to measure (under
+   about 0.4 s, or below −70 LUFS) is left as it is. −20 LUFS leaves room for a voice's peaks,
+   which run 14 to 18 dB over its loudness; the master lifts the whole afterwards.
+2. **Every finished file is mastered to a target** the same way. The long video and the shorts
+   are brought to the video volume (default −14 LUFS, peaks under −1.5 dBTP: the loudness
+   YouTube and Spotify play everything at). The audio files (the audio-only WAV when Video is
+   off, and a multi-voice run's MP3 and M4B) are brought to the audio files volume (default
+   −18 LUFS, peaks under −3 dBTP, what audiobook shops ask for). The ambient bed and the shorts'
+   music are mixed first and ducked by the levelled voice, so they keep their place under it;
+   the master then sets the whole mix.
+
+**How the gain and the peaks are handled.** Where the gain would push the peaks over the
+ceiling, a limiter running at 192 kHz (four times the usual rate, so it sees the peaks between
+the samples) holds just those peaks. `loudnorm`'s own second pass is not used: it cannot stay
+linear on anything shorter than its 3-second window (a line like "said the Mole." is 1.3 s),
+and wherever the peaks do not allow one gain it rides the whole level down, landing a piece or a
+video 1 to 2 LU short. A file the limiter trimmed more than 0.2 LU under the level gets its gain
+corrected once. The master aims 1 dB under each ceiling, because the lossy encode after it (AAC,
+MP3) lifts the peaks by up to about 0.7 dB, and what is reported is measured on the finished
+file.
 
 LUFS is how loud a file sounds on average, measured the way ears hear it (EBU R128). The style
 preview is silent, so it has nothing to level.

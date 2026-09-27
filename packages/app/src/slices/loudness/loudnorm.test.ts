@@ -8,14 +8,7 @@ import { joinNarration } from "../narration/concat.js";
 import { joinTurns } from "../rebuild/runtime-local.js";
 import { resolveFfmpeg } from "../video/ffmpeg.js";
 import { levelPieces } from "./level-pieces.js";
-import {
-  gainFilter,
-  levelFilter,
-  masterFile,
-  masterReport,
-  measureFile,
-  parseMeasured,
-} from "./loudnorm.js";
+import { gainFilter, masterFile, masterReport, measureFile, parseMeasured } from "./loudnorm.js";
 import { pieceLufs, pieceTruePeak, videoTruePeak } from "./model.js";
 
 // Level the volume with the bundled ffmpeg: pieces made at very different loudness (a quiet
@@ -86,16 +79,7 @@ describe("parseMeasured", () => {
       threshold: -70,
       offset: 0,
     };
-    expect(levelFilter(eighteen, silent, 44100)).toBe("aresample=44100");
-    expect(
-      levelFilter(
-        eighteen,
-        { integrated: -30, truePeak: -12, range: 3, threshold: -40, offset: 0.1 },
-        44100,
-      ),
-    ).toBe(
-      "loudnorm=I=-18.0:TP=-2.0:LRA=7:measured_I=-30.00:measured_TP=-12.00:measured_LRA=3.00:measured_thresh=-40.00:offset=0.10:linear=true:print_format=summary,aresample=44100",
-    );
+    expect(gainFilter(eighteen, silent, 44100)).toBe("aresample=44100");
   });
 });
 
@@ -108,7 +92,7 @@ describe("gainFilter", () => {
   });
   it("holds the peaks under the ceiling when the gain would push them over", () => {
     expect(gainFilter(eighteen, { ...measured, truePeak: -5 }, 44100)).toBe(
-      "volume=12.00dB,alimiter=limit=0.7943:attack=5:release=50:level=false,aresample=44100",
+      "volume=12.00dB,aresample=192000,alimiter=limit=0.7943:attack=5:release=50:level=false,aresample=44100",
     );
   });
 });
@@ -208,6 +192,19 @@ describe.skipIf(!present)("levelling with the bundled ffmpeg", () => {
       expect(Math.abs(after.integrated - pieceLufs)).toBeLessThanOrEqual(0.5);
     }
     expect(levelled.report.spreadAfter).toBeLessThanOrEqual(0.5);
+  }, 60_000);
+
+  it("holds the ceiling when a stereo file is mastered to mono", async () => {
+    // A mixdown keeps the loudness, so each sample is louder: measured before, it would slip
+    // about 3 dB over the ceiling.
+    const stereo = join(scratch, "stereo.wav");
+    execFileSync(bin, ["-v", "error", "-y", "-i", piece("wide.mp3", 8), "-ac", "2", stereo]);
+    const goal = { lufs: -18, truePeak: -3 };
+    const mono = join(scratch, "mono.wav");
+    await masterFile(run, stereo, mono, goal, { sampleRate: 44100, channels: 1 });
+    const report = await masterReport(run, mono, goal);
+    expect(report.truePeak).toBeLessThanOrEqual(-2.9);
+    expect(Math.abs(report.integrated - -18)).toBeLessThanOrEqual(1);
   }, 60_000);
 
   it("keeps a piece too quiet to measure as it is, and says so", async () => {

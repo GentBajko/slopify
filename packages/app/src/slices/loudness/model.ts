@@ -43,9 +43,9 @@ export const videoTruePeak = -1.5;
 export const audioFilesTruePeak = -3;
 
 // The master aims this far under the ceiling: a lossy encode (the video's AAC, the MP3 and
-// M4B) lifts the peaks by about half a dB at the bitrates Slopify writes, and what is measured
-// is the finished file.
-export const encodeHeadroom = 0.5;
+// M4B) lifts the peaks by up to about 0.7 dB at the bitrates Slopify writes, and what is
+// measured is the finished file.
+export const encodeHeadroom = 1;
 
 // The common level every narration piece is brought to before the join. Fixed, so changing the
 // Volume only masters the finished files again and never re-joins the narration. ceiling: a

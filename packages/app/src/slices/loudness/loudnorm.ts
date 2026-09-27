@@ -1,14 +1,19 @@
+import { renameSync } from "node:fs";
 import { z } from "zod";
 import type { Log } from "../../kernel/log.js";
 import { runFfmpeg } from "../video/ffmpeg.js";
 import type { LoudnessGoal, MasterReport } from "./model.js";
 
-// ffmpeg's loudnorm filter (EBU R128), two-pass: the first pass measures a file's integrated
-// loudness (I), loudness range (LRA), true peak (TP) and gate threshold and prints them as
-// JSON; the second pass gives those back as `measured_*`, so the filter can apply one fixed
-// gain (`linear=true`) instead of riding the level through the file. Linear keeps the voice's
-// own dynamics; loudnorm falls back to its dynamic mode by itself only when one gain would
-// push the peaks over the ceiling. Hand-rolled argument lists, like every ffmpeg call here.
+// Loudness in two passes. The first is ffmpeg's loudnorm filter (EBU R128) measuring a file:
+// integrated loudness (I), loudness range (LRA), true peak (TP) and gate threshold, printed as
+// JSON. The second applies the one fixed gain loudnorm's linear mode would, from those numbers,
+// with ffmpeg's volume filter, so the voice keeps its own dynamics. Where that gain would push
+// the peaks over the ceiling, a limiter running at 192 kHz (four times the usual rate, so it
+// sees the peaks between the samples too) holds just those peaks. loudnorm's own second pass
+// falls back to riding the whole level down in that case, and on anything shorter than its 3 s
+// window, and lands a piece or a video 1 to 2 LU short; the gain lands on the level. A file that
+// the limiter trimmed more than a fifth of a LU is corrected once (`levelFile`). Hand-rolled
+// argument lists, like every ffmpeg call here.
 
 export type { LoudnessGoal } from "./model.js";
 
@@ -38,17 +43,8 @@ const measuredJson = z.object({
   target_offset: z.string(),
 });
 
-// The loudness range the second pass allows. loudnorm cannot stay linear when the file's own
-// range is wider than its target, so the target follows the file, within the filter's bounds.
-function rangeFor(measured: Measured | undefined): number {
-  if (measured === undefined || !Number.isFinite(measured.range)) return 11;
-  return Math.min(20, Math.max(7, Math.ceil(measured.range) + 1));
-}
-
-function goalFilter(goal: LoudnessGoal, measured?: Measured): string {
-  const base = `loudnorm=I=${goal.lufs.toFixed(1)}:TP=${goal.truePeak.toFixed(1)}:LRA=${String(rangeFor(measured))}`;
-  if (measured === undefined) return `${base}:print_format=json`;
-  return `${base}:measured_I=${measured.integrated.toFixed(2)}:measured_TP=${measured.truePeak.toFixed(2)}:measured_LRA=${measured.range.toFixed(2)}:measured_thresh=${measured.threshold.toFixed(2)}:offset=${measured.offset.toFixed(2)}:linear=true:print_format=summary`;
+function measureFilter(goal: LoudnessGoal): string {
+  return `loudnorm=I=${goal.lufs.toFixed(1)}:TP=${goal.truePeak.toFixed(1)}:LRA=11:print_format=json`;
 }
 
 // The first pass: decode, measure, write nothing. `input` is ffmpeg input arguments, so a
@@ -63,31 +59,16 @@ export function measureArgs(input: readonly string[], goal: LoudnessGoal, chain 
     "-nostats",
     ...input,
     "-af",
-    `${chain === "" ? "" : `${chain},`}${goalFilter(goal)}`,
+    `${chain === "" ? "" : `${chain},`}${measureFilter(goal)}`,
     "-f",
     "null",
     "-",
   ];
 }
 
-// The second pass's filter, and the resample loudnorm needs after it: it works, and writes,
-// at 192 kHz. Unity for a piece there was nothing to measure in.
-export function levelFilter(
-  goal: LoudnessGoal,
-  measured: Measured | undefined,
-  sampleRate: number,
-): string {
-  const resample = `aresample=${String(sampleRate)}`;
-  if (measured === undefined || !measurable(measured)) return resample;
-  return `${goalFilter(goal, measured)},${resample}`;
-}
-
-// A piece's second pass: the one fixed gain loudnorm's linear mode would apply, from its first
-// pass, done with ffmpeg's volume filter. loudnorm itself cannot stay linear on a piece shorter
-// than its 3 s window and falls back to riding the level, which leaves a line of dialogue a few
-// LU off; a plain gain lands every piece on the level whatever its length. A piece whose peaks
-// the gain would push over the ceiling is held under it by a limiter, which touches only those
-// peaks. Unity for a piece there was nothing to measure in.
+// The second pass: the gain that lands the file on the level, the peak limiter where the gain
+// would push the peaks over the ceiling, and the file's sample rate. Unity for a file there was
+// nothing to measure in.
 export function gainFilter(
   goal: LoudnessGoal,
   measured: Measured | undefined,
@@ -98,7 +79,7 @@ export function gainFilter(
   const gain = goal.lufs - measured.integrated;
   const limit =
     Number.isFinite(measured.truePeak) && measured.truePeak + gain > goal.truePeak
-      ? `,alimiter=limit=${(10 ** (goal.truePeak / 20)).toFixed(4)}:attack=5:release=50:level=false`
+      ? `,aresample=192000,alimiter=limit=${(10 ** (goal.truePeak / 20)).toFixed(4)}:attack=5:release=50:level=false`
       : "";
   return `volume=${gain.toFixed(2)}dB${limit},${resample}`;
 }
@@ -176,10 +157,12 @@ export async function normalizeFile(
   output: string,
   goal: LoudnessGoal,
   format: { readonly sampleRate: number; readonly channels: number },
-  // "gain" for a narration piece (`gainFilter`), "loudnorm" for a finished file.
-  mode: "gain" | "loudnorm" = "loudnorm",
 ): Promise<Measured> {
-  const measured = await measureFile(run, input, goal);
+  // The channels are set before anything is measured: a stereo file mixed down to mono is
+  // louder per channel (the mix keeps its loudness, so each sample is about 3 dB higher), and
+  // the gain and the peak ceiling have to hold for what is written.
+  const channels = `aformat=channel_layouts=${format.channels === 1 ? "mono" : "stereo"}`;
+  const measured = await measure(run, ["-i", input], goal, channels);
   await runFfmpeg({
     bin: run.bin,
     args: [
@@ -194,11 +177,7 @@ export async function normalizeFile(
       "-map",
       "0:a:0",
       "-af",
-      mode === "gain"
-        ? gainFilter(goal, measured, format.sampleRate)
-        : levelFilter(goal, measured, format.sampleRate),
-      "-ac",
-      String(format.channels),
+      `${channels},${gainFilter(goal, measured, format.sampleRate)}`,
       "-c:a",
       "pcm_f32le",
       "-f",
@@ -212,6 +191,30 @@ export async function normalizeFile(
   return measured;
 }
 
+// ceiling: within a fifth of a LU of the level no one hears the difference.
+const correctAbove = 0.2;
+
+// One file brought to `goal` (`normalizeFile`), measured again, and corrected once when the
+// limiter left it more than a fifth of a LU under the level. Returns the first measurement and
+// the last.
+export async function levelFile(
+  run: FfmpegRun,
+  input: string,
+  output: string,
+  goal: LoudnessGoal,
+  format: { readonly sampleRate: number; readonly channels: number },
+): Promise<{ readonly before: Measured; readonly after: Measured }> {
+  const before = await normalizeFile(run, input, output, goal, format);
+  let after = await measureFile(run, output, goal);
+  if (measurable(after) && Math.abs(after.integrated - goal.lufs) > correctAbove) {
+    const corrected = `${output}.corrected.wav`;
+    await normalizeFile(run, output, corrected, goal, format);
+    renameSync(corrected, output);
+    after = await measureFile(run, output, goal);
+  }
+  return { before, after };
+}
+
 // A finished file's sound brought to its master target.
 export async function masterFile(
   run: FfmpegRun,
@@ -220,7 +223,7 @@ export async function masterFile(
   goal: LoudnessGoal,
   format: { readonly sampleRate: number; readonly channels: number },
 ): Promise<void> {
-  await normalizeFile(run, input, output, goal, format);
+  await levelFile(run, input, output, goal, format);
 }
 
 // What a finished file measures, for its output (`MasterReport`).
