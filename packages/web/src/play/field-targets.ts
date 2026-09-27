@@ -113,6 +113,9 @@ export function playFieldTarget(
             "shorts",
             "videoEdit",
             "ambientBed",
+            "loudness",
+            "sentencePauseSeconds",
+            "paragraphPauseSeconds",
           ])
         ? "outputs"
         : "review";

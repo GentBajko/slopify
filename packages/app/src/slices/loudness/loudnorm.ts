@@ -133,7 +133,7 @@ export async function measure(
   const measured = parseMeasured(stderr);
   if (measured === undefined)
     throw new Error(
-      "Slopify couldn't measure the loudness of the narration (ffmpeg printed no measurement). Try again; if it happens again, turn off Level the volume in Edit project → Volume, then use Download diagnostics in Settings and report it.",
+      "Slopify couldn't measure the loudness of the narration (ffmpeg printed no measurement). Try again; if it happens again, turn off Level the volume in Edit project → Pauses and volume, then use Download diagnostics in Settings and report it.",
     );
   return measured;
 }

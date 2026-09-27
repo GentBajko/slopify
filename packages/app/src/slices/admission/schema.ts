@@ -202,6 +202,9 @@ export const runDraftSchema = z.object({
   ambientBed: ambientBedSchema.optional(),
   // Level the volume (`loudness/model.ts`); the range is checked by admission.
   loudness: z.object({ videoLufs: z.number(), audioFilesLufs: z.number() }).strict().optional(),
+  // Pauses between sentences and paragraphs (`narration/pauses-model.ts`); checked by admission.
+  sentencePauseSeconds: z.number().optional(),
+  paragraphPauseSeconds: z.number().optional(),
   // Absent is English (`kernel/ports/languages.ts`).
   language: languageSchema.optional(),
 });

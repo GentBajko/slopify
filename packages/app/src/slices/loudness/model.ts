@@ -120,7 +120,7 @@ export function loudnessProblem(lufs: number, target: LoudnessTarget): string | 
     db >= loudnessDbMin - 1e-9 &&
     db <= loudnessDbMax + 1e-9
     ? undefined
-    : `The volume must be between ${String(loudnessDbMin)} dB and +${String(loudnessDbMax)} dB of the recommended level, in steps of ${String(loudnessDbStep)} dB. Change it under Level the volume (Play's Export row, Edit project → Volume, or Settings → General).`;
+    : `The volume must be between ${String(loudnessDbMin)} dB and +${String(loudnessDbMax)} dB of the recommended level, in steps of ${String(loudnessDbStep)} dB. Change it under Level the volume (Play → Outputs → Export, Edit project → Pauses and volume, or Settings → General).`;
 }
 
 export function loudnessFields(

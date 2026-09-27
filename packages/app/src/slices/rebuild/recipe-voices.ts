@@ -22,6 +22,7 @@ import {
   recipe,
   resourceIdentity,
 } from "./recipe-model.js";
+import { pauseValues } from "./recipe-pauses.js";
 import {
   preparationForGroup,
   preparationFuture,
@@ -58,6 +59,8 @@ export function voiceBodyRecipes(
   const parts: ResolvedWorkRecipe[] = [];
   const preparations: ResolvedWorkRecipe[] = [];
   const layout: [number, number][] = [];
+  // Which parts end a turn, for the pauses between sentences (a turn gap of 0 is still a turn).
+  const turnEnds = new Set<number>();
   let transcript: FingerprintValue = script.fingerprint ?? script.text ?? null;
   const parsed = script.text === null ? undefined : parseScript(script.text, voices.speakers);
   const prepare = voices.speakers.some((speaker) => preparesTurns(context.config, speaker));
@@ -126,6 +129,7 @@ export function voiceBodyRecipes(
       if (made.length === 0) pending = true;
       made.forEach((part, index) => {
         parts.push(part);
+        if (index === made.length - 1) turnEnds.add(layout.length);
         layout.push([speakerPace(speaker), index === made.length - 1 ? voices.turnGapSeconds : 0]);
       });
     }
@@ -135,6 +139,7 @@ export function voiceBodyRecipes(
     if (pending) {
       parts.length = 0;
       layout.length = 0;
+      turnEnds.clear();
       parts.push(future());
     }
   }
@@ -146,7 +151,17 @@ export function voiceBodyRecipes(
       kind: "local",
       version: 1,
       operation: "concat-turns-v1",
-      values: [parts.map((part) => resourceIdentity(context, part)), layout],
+      values: [
+        parts.map((part) => resourceIdentity(context, part)),
+        layout,
+        // Pauses between sentences inside a turn; the turn gap stays the layout's.
+        ...pauseValues(
+          context.config,
+          layout.map(([, gap], at) =>
+            at === layout.length - 1 ? "end" : gap > 0 || turnEnds.has(at) ? "turn" : "sentence",
+          ),
+        ),
+      ],
     },
     parts.map((part) => part.key),
     { unresolved: parsed?.ok !== true || pending },

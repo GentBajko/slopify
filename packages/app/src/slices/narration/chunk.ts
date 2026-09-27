@@ -88,7 +88,7 @@ function sentenceRuns(
 // for every language: "。", "！", "।", "؟" and "¿…?" end or open sentences whatever the
 // locale, so the project language needs no locale here, and "en" keeps it the same on every
 // machine (the default locale varies).
-function* sentences(text: string): Generator<string> {
+export function* sentences(text: string): Generator<string> {
   // Built per call rather than held at module scope: the standards forbid a module-level
   // singleton, and constructing one costs microseconds against a call that just read an
   // article off disk.

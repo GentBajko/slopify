@@ -237,6 +237,11 @@ export interface RunDraft {
   // finished files mastered to these targets (`loudness/model.ts`). Absent is off, which is what
   // every project saved before it was; a new run gets Settings → General's default.
   readonly loudness?: import("../loudness/model.js").LoudnessSettings | undefined;
+  // Pauses between sentences and between paragraphs, the minimum quiet in seconds the narration
+  // join makes there (`narration/pauses-model.ts`). Absent (or 0) is no minimum, which is what
+  // every project saved before them was; a new run gets the sentence default.
+  readonly sentencePauseSeconds?: number | undefined;
+  readonly paragraphPauseSeconds?: number | undefined;
   // The language the project is made in (`kernel/ports/languages.ts`). Absent is English, which is
   // what every project saved before it was; English is never stored.
   readonly language?: import("../../kernel/ports/languages.js").LanguageCode | undefined;

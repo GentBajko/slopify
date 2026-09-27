@@ -159,6 +159,13 @@ export function validateProposedCues(
     if (recipe === undefined) return undefined;
     if (recipe.input.kind === "provided" && recipe.input.assetId !== null)
       return durations.get(recipe.input.assetId);
+    // Pauses between sentences lengthen the join by what only the join measures.
+    if (
+      recipe.input.kind === "local" &&
+      Array.isArray(recipe.input.values) &&
+      recipe.input.values[2] !== undefined
+    )
+      return undefined;
     if (recipe.input.kind === "local" && recipe.input.operation === "concat-narration") {
       const parts = recipe.dependsOn.map(durationFor);
       return parts.some((one) => one === undefined)

@@ -35,6 +35,14 @@ export const projectHelp = {
     title: "Animate images",
     body: "Turns some images into 5-second moving clips with an image-to-video model on your image provider (fal.ai or Replicate). Chapter openers animates the first image of each chapter; Every Nth image animates every 2nd to 10th. Each clip is one paid call, shown in the estimate. An image that cannot be animated stays still. Default: Off.",
   },
+  "project.pause.sentence": {
+    title: "Pause between sentences",
+    body: "The least quiet after each sentence, in seconds. Some voices barely breathe between sentences; this adds silence where the pause is shorter, never shortening one or cutting a word, and the captions follow. About 0.25 s is brisk, 0.35 to 0.45 natural or documentary, 0.5 to 0.8 an audiobook's relaxed pace, 0.8 and up sleep content. Default: 0.4; 0 keeps the voice's own.",
+  },
+  "project.pause.paragraph": {
+    title: "Pause between paragraphs",
+    body: "The least quiet at the end of a paragraph, in seconds, when you want more than between sentences. Usually the narration prompt and the voice pace paragraphs well already, so it is 0 by default: paragraphs get the sentence pause. Try 0.8 to 1.2 for a slower read. A speaker's turn gap is set under Speakers instead. Runs on this computer.",
+  },
   "project.loudness": {
     title: "Level the volume",
     body: "Brings every narration piece (each chunk, and each speaker's turn) to one loudness before they are joined, so the voice stops jumping between quiet and loud. Then the video, the shorts and the audio files are each set to a finished loudness. Runs on this computer, no API calls; turning it on remakes the levelled narration and the exports, never the speech. Default: on for new runs.",

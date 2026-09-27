@@ -162,6 +162,10 @@ const readingOrder: readonly string[] = [
   "videoEdit.animateEvery",
   "videoEdit.animateModel",
   "ambientBed",
+  "sentencePauseSeconds",
+  "paragraphPauseSeconds",
+  "loudness.videoLufs",
+  "loudness.audioFilesLufs",
 ];
 
 export function firstBlocker(form: PlayFormState, result: AdmissionResult): Blocker | undefined {

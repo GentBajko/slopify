@@ -9,6 +9,8 @@ import { plainText } from "../article/plain.js";
 import { splitEndMatter } from "../article/split.js";
 import { levelPieces } from "../loudness/level-pieces.js";
 import { joinNarration } from "../narration/concat.js";
+import { applyPauses, type PiecePauses, planPieces } from "../narration/pauses.js";
+import type { PauseSettings } from "../narration/pauses-model.js";
 import type { PreparedAsset } from "../storage/assets.js";
 import { allocateAsset, discardPreparedAssets, sealAsset } from "../storage/assets.js";
 import { outputPath } from "../storage/layout.js";
@@ -16,6 +18,7 @@ import type { OutputRole } from "../storage/model.js";
 import { probeDurationMs, runFfmpeg } from "../video/ffmpeg.js";
 import { turnJoinArgs } from "../voices/join.js";
 import { levelOperation } from "./recipe-loudness.js";
+import type { PieceNext } from "./recipe-pauses.js";
 import { publishNarrationText } from "./runtime-narration-text.js";
 import { executionPlan, executionView, savedCatalogue } from "./runtime-plan.js";
 import type { ProviderExecutionDeps } from "./runtime-provider.js";
@@ -192,7 +195,29 @@ async function concatenate(
   try {
     const run = { bin: deps.ffmpeg, log: deps.log, signal: context.signal };
     const levelled = level ? await levelPieces(run, files, piecesDirectory) : undefined;
-    const joined = levelled?.files ?? files;
+    // Pauses between sentences: planned from the pieces as spoken, made in what is joined.
+    const pauses = pausesIn(values);
+    const paced =
+      pauses === undefined
+        ? undefined
+        : await applyPauses(
+            run,
+            levelled?.files ?? files,
+            paceScaled(
+              await planPieces(
+                run,
+                files.map((file, at) => ({
+                  file,
+                  text: pieceText(plan.recipes.find((one) => one.key === recipe.dependsOn[at])),
+                  next: pauses.next[at] ?? "end",
+                })),
+                pauses.settings,
+              ),
+              operation === "concat-turns-v1" ? values : undefined,
+            ),
+            join(piecesDirectory, "paced"),
+          );
+    const joined = paced?.files ?? levelled?.files ?? files;
     const durationMs =
       operation === "concat-turns-v1"
         ? await joinTurns(run, joined, values, pending.absolutePath)
@@ -203,7 +228,7 @@ async function concatenate(
               output: pending.absolutePath,
               listPath: join(dirname(pending.absolutePath), "parts.txt"),
               signal: context.signal,
-              reencode: level,
+              reencode: level || paced !== undefined,
             },
           );
     rmSync(piecesDirectory, { recursive: true, force: true });
@@ -267,6 +292,62 @@ async function concatenate(
   }
 }
 
+// The pauses a join's values ask for (`recipe-pauses.ts`): its third value, when there is one.
+function pausesIn(
+  values: unknown,
+): { readonly settings: PauseSettings; readonly next: readonly PieceNext[] } | undefined {
+  const value = Array.isArray(values) ? values[2] : undefined;
+  const parsed = z
+    .tuple([
+      z.literal("pauses-v1"),
+      z.number(),
+      z.number(),
+      z.array(z.enum(["end", "turn", "sentence", "paragraph"])),
+    ])
+    .safeParse(value);
+  if (!parsed.success) return undefined;
+  const [, sentenceSeconds, paragraphSeconds, next] = parsed.data;
+  return { settings: { sentenceSeconds, paragraphSeconds }, next };
+}
+
+// A speaker's pace plays their turn faster or slower, pauses included, so a turn's added
+// silence is scaled by it to come out at the minimum.
+function paceScaled<T extends { readonly pauses: PiecePauses; readonly padEnd: number }>(
+  plans: readonly T[],
+  turnValues: unknown,
+): readonly T[] {
+  const layout = Array.isArray(turnValues) ? turnValues[1] : undefined;
+  if (!Array.isArray(layout)) return plans;
+  return plans.map((plan, at) => {
+    const pace = z.tuple([z.number().positive(), z.number()]).safeParse(layout[at]);
+    const factor = pace.success ? pace.data[0] : 1;
+    if (factor === 1) return plan;
+    return {
+      ...plan,
+      padEnd: plan.padEnd * factor,
+      pauses: {
+        ...plan.pauses,
+        inserts: plan.pauses.inserts.map((one) => ({ ...one, seconds: one.seconds * factor })),
+      },
+    };
+  });
+}
+
+// The words a narration piece speaks, where its sentences end: the clean text of a request, or
+// of a piece supplied as a file.
+function pieceText(recipe: { readonly input: WorkPiece["input"] } | undefined): string {
+  if (recipe === undefined) return "";
+  const input = recipe.input;
+  if (input.kind === "tts") return input.text;
+  if (
+    input.kind === "provided" &&
+    Array.isArray(input.semantic) &&
+    typeof input.semantic[0] === "string"
+  )
+    return input.semantic[0];
+  return "";
+}
+
 // A multi-voice narration: every turn at its speaker's pace with the gap between turns, as the
 // recipe laid it out (`recipe-voices.ts`), measured off the file that was written. `values` is
 // the concat-turns-v1 recipe's own values.
@@ -278,6 +359,8 @@ export async function joinTurns(
 ): Promise<number> {
   const layout = z
     .tuple([z.unknown(), z.array(z.tuple([z.number().positive(), z.number().nonnegative()]))])
+    // The pauses between sentences may follow (`recipe-pauses.ts`); they were made already.
+    .rest(z.unknown())
     .parse(values)[1];
   if (layout.length !== files.length || files.length === 0)
     throw new Error(

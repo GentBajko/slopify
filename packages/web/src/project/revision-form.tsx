@@ -31,7 +31,7 @@ import { useVideoEditControls } from "@/video/edit-controls";
 import { StylePreview } from "@/video/style-preview";
 import { EditChannel } from "./edit-channel.js";
 import { editPreviewImageOf } from "./edit-preview-image.js";
-import { EditAmbientBed, EditLoudness } from "./edit-sound-and-scale.js";
+import { EditAmbientBed, EditLoudness, EditPauses } from "./edit-sound-and-scale.js";
 import { changeSource, editOfForm } from "./revision-form-state.js";
 import { RevisionNarration } from "./revision-narration.js";
 import { RevisionPrompts } from "./revision-prompts.js";
@@ -431,7 +431,8 @@ export function RevisionForm(
           {config.sources.audio === "off" ? null : (
             <>
               <Rule />
-              <Group title="Volume" columns={false}>
+              <Group title="Pauses and volume" columns={false}>
+                <EditPauses edit={edit} problem={problem} onChange={onChange} />
                 <EditLoudness edit={edit} problem={problem} onChange={onChange} />
               </Group>
             </>

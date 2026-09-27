@@ -20,6 +20,7 @@ import {
   selectedReference,
 } from "./recipe-model.js";
 import { narrationFileRecipe } from "./recipe-narration-text.js";
+import { pauseValues } from "./recipe-pauses.js";
 import { preparationFuture, preparationTemplate } from "./recipe-preparation.js";
 import type { TextRecipes } from "./recipe-text.js";
 import { voiceBodyRecipes } from "./recipe-voices.js";
@@ -160,6 +161,17 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
         values: [
           parts.map((part) => resourceIdentity(context, part)),
           parts.length === 1 ? "copy-single-file" : concatArgs("$parts", "$output"),
+          // Pauses between sentences; a paragraph's between pieces cut at paragraphs.
+          ...pauseValues(
+            config,
+            parts.map((_part, at) =>
+              at === parts.length - 1
+                ? "end"
+                : (config.chunking ?? defaultChunking).mode === "paragraph"
+                  ? "paragraph"
+                  : "sentence",
+            ),
+          ),
         ],
       },
       parts.map((part) => part.key),
@@ -251,6 +263,10 @@ export function audioRecipes(context: RecipeContext, text: TextRecipes): AudioRe
         values: [
           parts.map((part) => resourceIdentity(context, part)),
           parts.length === 1 ? "copy-single-file" : concatArgs("$parts", "$output"),
+          ...pauseValues(
+            config,
+            parts.map((_part, at) => (at === parts.length - 1 ? "end" : "sentence")),
+          ),
         ],
       },
       parts.map((part) => part.key),

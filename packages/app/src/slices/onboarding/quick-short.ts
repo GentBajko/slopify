@@ -2,6 +2,7 @@ import type { ModelInfo, ProviderFamily } from "../../kernel/ports/model.js";
 import type { ProviderChoice, RunDraft, VoiceChoice } from "../admission/model.js";
 import { titleMax } from "../admission/rules.js";
 import type { LoudnessSettings } from "../loudness/model.js";
+import { defaultSentencePauseSeconds } from "../narration/pauses-model.js";
 import type { ProviderStatus, Voice } from "../settings/model.js";
 import type { PackPromptKey, StarterPack } from "./packs.js";
 
@@ -168,6 +169,7 @@ export function shortDraft(input: {
     motionStyle: style.motionStyle,
     edgeSilenceSeconds: 0.5,
     ...(input.loudness === undefined ? {} : { loudness: input.loudness }),
+    sentencePauseSeconds: defaultSentencePauseSeconds,
     subtitles: {
       mode: "off",
       language: "en",

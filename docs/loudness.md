@@ -29,7 +29,7 @@ preview is silent, so it has nothing to level.
   draft start from it.
 - **Play → Outputs → Export → Level the volume**: this run's own choice. A draft that never
   touched it follows Settings.
-- **Edit project → Volume**: turn it on or off for a project, or change the volumes.
+- **Edit project → Pauses and volume**: turn it on or off for a project, or change the volumes.
 
 Each volume is typed in **dB from the recommended level** (0 dB is −14 LUFS for the video,
 −18 LUFS for the audio files) or as a **percentage** of it: −6 dB is about 50%, +4 dB about 158%.

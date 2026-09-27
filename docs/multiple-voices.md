@@ -109,3 +109,6 @@ loudness before the turns are joined, so a quiet host and a loud guest sit at th
 and the MP3 and M4B are mastered to the audio files volume (−18 LUFS by default). The turn gap
 and each speaker's pace are applied exactly as before, and the word timing still reads the plain
 join, so the captions and chapter marks do not move.
+
+**Pause between sentences** ([pauses.md](pauses.md)) lengthens the quiet between sentences
+inside a speaker's turn; the gap between turns stays the Turn gap.

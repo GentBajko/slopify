@@ -79,7 +79,8 @@ Prompts and Templates → Keywords, each keyword with everything it feeds.
 | Title style, end screen | from the brand kit only | from the brand kit only | none | neither side sets them directly |
 | Voice formats and speakers (multiple voices) | Narration | Providers | `SpeakersEditor` | same: Add from the cast (the project's channel) and voices filtered by the project language on both |
 | Ambient sound | Video and style | Inputs › Ambient sound | `AmbientBedControls` | **closed in 3.0**: built-in beds or None; a project's own uploaded bed stays offered |
-| Level the volume (loudness) | Video and style (Export) | Inputs › Volume | `LoudnessControls` | same; Settings → General holds the default for new runs ([loudness.md](loudness.md)) |
+| Level the volume (loudness) | Video and style (Export) | Inputs › Pauses and volume | `LoudnessControls` | same; Settings → General holds the default for new runs ([loudness.md](loudness.md)) |
+| Pauses between sentences and paragraphs | Video and style (Export) | Inputs › Pauses and volume | `PauseControls` | same ([pauses.md](pauses.md)) |
 | More images for long videos | Images | Images | none (the same rate control) | **closed in 3.0**: saving plans the extra images, keeping every existing one |
 | Narration aliases | on cast members (Channels), used by both | on cast members | none | same |
 

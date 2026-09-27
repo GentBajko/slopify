@@ -247,6 +247,13 @@ function documentFromProject(deps: TemplateDeps, revision: ProjectRevision): Pla
               audioFilesLufs: config.loudness.audioFilesLufs,
             },
           }),
+      // The project's pauses; a project without them leaves the template to the defaults.
+      ...(config.sentencePauseSeconds === undefined
+        ? {}
+        : { sentencePause: String(config.sentencePauseSeconds) }),
+      ...(config.paragraphPauseSeconds === undefined
+        ? {}
+        : { paragraphPause: String(config.paragraphPauseSeconds) }),
       imagePrompts,
       ...(config.imageScale === undefined ? {} : { imageScale: imageScaleForm(config.imageScale) }),
       thumbnailPrompt: config.thumbnailPrompt ?? "",

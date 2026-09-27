@@ -191,6 +191,16 @@ function inputChanges(parent: RevisionView, view: RevisionView): Review["inputCh
     after.audio?.useNarrationAliases === true ? aliasLines(after.narrationAliases) : "Off",
   );
   add(
+    "Pause between sentences (seconds)",
+    before.sentencePauseSeconds ?? 0,
+    after.sentencePauseSeconds ?? 0,
+  );
+  add(
+    "Pause between paragraphs (seconds)",
+    before.paragraphPauseSeconds ?? 0,
+    after.paragraphPauseSeconds ?? 0,
+  );
+  add(
     "Level the volume",
     before.loudness === undefined ? "Off" : loudnessSummary(before.loudness),
     after.loudness === undefined ? "Off" : loudnessSummary(after.loudness),

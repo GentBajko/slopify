@@ -11,6 +11,7 @@ import {
   wordCount,
 } from "@app/slices/images/scale.js";
 import { defaultLoudness } from "@app/slices/loudness/model.js";
+import { pauseProblem } from "@app/slices/narration/pauses-model.js";
 import type { RevisionEdit } from "@app/slices/revisions/model.js";
 import {
   type AmbientBedField,
@@ -26,6 +27,7 @@ import { helpScope } from "@/components/kit/info-tip";
 import { Segmented, Switch } from "@/components/kit/switch";
 import { AmbientBedControls } from "@/video/ambient-bed-controls";
 import { LoudnessControls, type LoudnessValue } from "@/video/loudness-controls";
+import { PauseControls, type PauseField, typedSeconds } from "@/video/pause-controls";
 
 // Edit project's ambient sound, Level the volume and More images for long videos: the channel essentials Play
 // sets, changeable after the run. A setting left alone leaves the config exactly as it was, so
@@ -100,6 +102,46 @@ export function EditLoudness({
               }
             : config,
         });
+      }}
+    />
+  );
+}
+
+// Pauses between sentences and paragraphs. Absent on every project made before them; setting
+// one joins the narration again from the pieces it already has, with the pauses made, and
+// times it again: no speech is made again.
+export function EditPauses({
+  edit,
+  problem,
+  onChange,
+}: {
+  readonly edit: RevisionEdit;
+  readonly problem: (field: string) => string | undefined;
+  readonly onChange: (next: RevisionEdit) => void;
+}): ReactElement | null {
+  const [typed, setTyped] = useState<Readonly<Record<PauseField, string>>>(() => ({
+    sentencePauseSeconds: String(edit.config.sentencePauseSeconds ?? 0),
+    paragraphPauseSeconds: String(edit.config.paragraphPauseSeconds ?? 0),
+  }));
+  if (edit.config.sources.audio !== "generate") return null;
+  const local = (field: PauseField): string | undefined => {
+    const value = typedSeconds(typed[field]);
+    return value === undefined
+      ? "Enter a number of seconds."
+      : pauseProblem(value, field === "sentencePauseSeconds" ? "sentences" : "paragraphs");
+  };
+  return (
+    <PauseControls
+      sentence={typed.sentencePauseSeconds}
+      paragraph={typed.paragraphPauseSeconds}
+      problem={(field) => local(field) ?? problem(field)}
+      onChange={(field, text) => {
+        setTyped({ ...typed, [field]: text });
+        const value = typedSeconds(text);
+        // A pause still being typed keeps the last good one; the line says what to fix.
+        if (value === undefined) return;
+        const { [field]: _old, ...config } = edit.config;
+        onChange({ ...edit, config: value === 0 ? config : { ...config, [field]: value } });
       }}
     />
   );

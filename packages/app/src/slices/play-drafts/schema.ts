@@ -85,6 +85,11 @@ export const playDraftFormSchema = z
       .strict()
       .readonly()
       .optional(),
+    // Pauses between sentences and paragraphs in seconds, raw text like every number on Play.
+    // Absent on drafts and templates nobody changed them in: the sentence default and no
+    // paragraph minimum (`narration/pauses-model.ts`).
+    sentencePause: text.optional(),
+    paragraphPause: text.optional(),
     // Absent on drafts and templates saved before the YouTube description: off, built-in prompt.
     youtubeDescription: z.boolean().optional(),
     descriptionPrompt: text.optional(),
