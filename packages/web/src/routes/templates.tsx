@@ -14,9 +14,11 @@ import { Drawer } from "@/components/kit/drawer";
 import { EmptyState } from "@/components/kit/empty-state";
 import { Field, Input, Select } from "@/components/kit/field";
 import { helpScope, InfoTip } from "@/components/kit/info-tip";
+import { ListDetail } from "@/components/kit/layout";
 import { List, ListRow } from "@/components/kit/list-row";
+import { SectionHead } from "@/components/kit/section-head";
 import { useToast } from "@/components/kit/toast";
-import { ListSkeleton } from "@/library/list-states";
+import { ListSkeleton, libraryListDetail } from "@/library/list-states";
 import { PacksDrawer } from "@/onboarding/packs-drawer";
 import { listPlayDrafts, readPlayDraft } from "@/play/draft-api";
 import {
@@ -73,7 +75,7 @@ export function TemplatesRoute({
   const [saving, setSaving] = useState(false);
   const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState<TemplateSummary | null>(null);
-  // The template whose keywords are shown under its row.
+  // The template whose keywords are shown beside the list.
   const [keywordsOf, setKeywordsOf] = useState<string | null>(null);
   const active = useRef(false);
   const saveIdentity = useRef<{ readonly key: string; readonly id: string } | null>(null);
@@ -274,68 +276,71 @@ export function TemplatesRoute({
       ) : null}
       {templates.isPending && !templates.error ? <ListSkeleton label="Project templates" /> : null}
       {shown?.length ? (
-        <List label="Project templates">
-          {shown.map((template) => (
-            <Fragment key={template.id}>
-              <ListRow
-                className="max-md:grid-cols-1"
-                title={template.name}
-                meta={
-                  <>
-                    {channelName(template) === undefined ? "" : `${channelName(template)} · `}
-                    Version {template.version} · updated{" "}
-                    <time dateTime={template.updatedAt}>{template.updatedAt.slice(0, 10)}</time>
-                  </>
-                }
-                actions={
-                  // biome-ignore lint/a11y/useSemanticElements: a group of buttons, not a fieldset of inputs.
-                  <div
-                    role="group"
-                    aria-label={`Actions for ${template.name}`}
-                    className="flex flex-wrap items-center gap-0.5"
-                  >
-                    <Button
-                      variant="quiet"
-                      size="small"
-                      aria-label={`Apply ${template.name}`}
-                      disabled={pending || blocked}
-                      onClick={() => void execute(() => apply(template))}
-                    >
-                      Apply to Play
-                    </Button>
-                    <Button
-                      variant="quiet"
-                      size="small"
-                      aria-expanded={keywordsOf === template.id}
-                      aria-label={`Keywords of ${template.name}`}
-                      onClick={() =>
-                        setKeywordsOf((current) => (current === template.id ? null : template.id))
-                      }
-                    >
-                      Keywords
-                    </Button>
-                    <IconButton
-                      size="small"
-                      label={`Delete ${template.name}`}
-                      disabled={pending}
-                      onClick={() => {
-                        setDeleting(template);
-                        setError(null);
-                      }}
-                    >
-                      <Trash2Icon aria-hidden="true" />
-                    </IconButton>
-                  </div>
-                }
-              />
-              {keywordsOf === template.id ? (
-                <li className="px-3 pb-3">
-                  <TemplateKeywords template={template} />
-                </li>
-              ) : null}
-            </Fragment>
-          ))}
-        </List>
+        <ListDetail
+          className={libraryListDetail}
+          list={
+            <List label="Project templates">
+              {shown.map((template) => (
+                <Fragment key={template.id}>
+                  <ListRow
+                    className="max-md:grid-cols-1"
+                    title={template.name}
+                    meta={
+                      <>
+                        {channelName(template) === undefined ? "" : `${channelName(template)} · `}
+                        Version {template.version} · updated{" "}
+                        <time dateTime={template.updatedAt}>{template.updatedAt.slice(0, 10)}</time>
+                      </>
+                    }
+                    actions={
+                      // biome-ignore lint/a11y/useSemanticElements: a group of buttons, not a fieldset of inputs.
+                      <div
+                        role="group"
+                        aria-label={`Actions for ${template.name}`}
+                        className="flex flex-wrap items-center gap-0.5"
+                      >
+                        <Button
+                          variant="quiet"
+                          size="small"
+                          aria-label={`Apply ${template.name}`}
+                          disabled={pending || blocked}
+                          onClick={() => void execute(() => apply(template))}
+                        >
+                          Apply to Play
+                        </Button>
+                        <Button
+                          variant="quiet"
+                          size="small"
+                          aria-expanded={keywordsOf === template.id}
+                          aria-label={`Keywords of ${template.name}`}
+                          onClick={() =>
+                            setKeywordsOf((current) =>
+                              current === template.id ? null : template.id,
+                            )
+                          }
+                        >
+                          Keywords
+                        </Button>
+                        <IconButton
+                          size="small"
+                          label={`Delete ${template.name}`}
+                          disabled={pending}
+                          onClick={() => {
+                            setDeleting(template);
+                            setError(null);
+                          }}
+                        >
+                          <Trash2Icon aria-hidden="true" />
+                        </IconButton>
+                      </div>
+                    }
+                  />
+                </Fragment>
+              ))}
+            </List>
+          }
+          detail={<KeywordsColumn template={shown.find((one) => one.id === keywordsOf)} />}
+        />
       ) : null}
       <Drawer
         open={saving}
@@ -457,5 +462,25 @@ export function TemplatesRoute({
         }}
       />
     </div>
+  );
+}
+
+// Beside the list: the keywords of the template whose Keywords button is pressed.
+function KeywordsColumn({
+  template,
+}: {
+  readonly template: TemplateSummary | undefined;
+}): ReactElement {
+  if (template === undefined)
+    return (
+      <p className="m-0 py-3 text-small text-ink-2">
+        Press Keywords on a template to see and edit the words that pick it for a topic.
+      </p>
+    );
+  return (
+    <section aria-label={`Keywords of ${template.name}`}>
+      <SectionHead title={template.name} as="h3" />
+      <TemplateKeywords template={template} />
+    </section>
   );
 }

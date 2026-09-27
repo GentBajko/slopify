@@ -1,6 +1,7 @@
 import type { StageTokens, Usage } from "@app/slices/telemetry/usage.js";
 import { useQuery } from "@tanstack/react-query";
 import { useApp } from "@/app-context";
+import { Board, BoardColumn } from "@/components/kit/board";
 import { type Column, DataTable, Stat, Stats } from "@/components/kit/stats";
 import { stageNames } from "@/project/summary";
 import { usageQuery } from "@/queries";
@@ -34,7 +35,7 @@ export function UsageBoard() {
           </>
         ) : null
       ) : (
-        <Board usage={usage.data} />
+        <Numbers usage={usage.data} />
       )}
     </div>
   );
@@ -47,38 +48,42 @@ const stageColumns: readonly Column<StageTokens>[] = [
   { id: "out", header: "Tokens out", numeric: true, cell: (row) => whole.format(row.tokensOut) },
 ];
 
-function Board({ usage }: { readonly usage: Usage }) {
+// The counters and the table side by side on a wide screen, stacked on a narrow one.
+function Numbers({ usage }: { readonly usage: Usage }) {
   // Fresh install: counters at 0 with the teaching line. Nothing has been counted, which is
   // different from a run whose stages reported no tokens.
   const fresh = Object.values(usage.counters).every((count) => count === 0);
   return (
-    <>
-      <div>
-        <Stats>
-          {countersOf(usage).map((counter) => (
-            <Stat key={counter.label} label={counter.label} value={counter.value} />
-          ))}
-        </Stats>
-        {fresh ? (
-          <p className="m-0 mt-3 text-body text-ink-2">Numbers appear after your first run.</p>
-        ) : null}
-      </div>
+    <Board split="even">
+      <BoardColumn>
+        <div>
+          <Stats>
+            {countersOf(usage).map((counter) => (
+              <Stat key={counter.label} label={counter.label} value={counter.value} />
+            ))}
+          </Stats>
+          {fresh ? (
+            <p className="m-0 mt-3 text-body text-ink-2">Numbers appear after your first run.</p>
+          ) : null}
+        </div>
+        <p className="m-0 text-small text-ink-3">
+          {`Machine ID ${usage.machineId ?? "not made yet"} · Slopify ${usage.appVersion}`}
+        </p>
+      </BoardColumn>
 
-      <div className="min-w-0 overflow-x-auto">
-        <DataTable
-          caption="Tokens by stage"
-          columns={stageColumns}
-          rows={usage.byStage}
-          rowKey={(row) => `${row.stage}/${row.provider}/${row.model ?? ""}`}
-          empty="No stages have run yet."
-          className="min-w-[480px] [&_td]:pr-4 [&_th]:pr-4"
-        />
-      </div>
-
-      <p className="m-0 text-small text-ink-3">
-        {`Machine ID ${usage.machineId ?? "not made yet"} · Slopify ${usage.appVersion}`}
-      </p>
-    </>
+      <BoardColumn>
+        <div className="min-w-0 overflow-x-auto">
+          <DataTable
+            caption="Tokens by stage"
+            columns={stageColumns}
+            rows={usage.byStage}
+            rowKey={(row) => `${row.stage}/${row.provider}/${row.model ?? ""}`}
+            empty="No stages have run yet."
+            className="min-w-[480px] [&_td]:pr-4 [&_th]:pr-4"
+          />
+        </div>
+      </BoardColumn>
+    </Board>
   );
 }
 
@@ -118,8 +123,8 @@ function StatsSkeleton({ cells }: { readonly cells: number }) {
     <div className="sl-stats">
       {Array.from({ length: cells }, (_, index) => index).map((index) => (
         <div key={index} className="flex flex-col gap-2">
-          <span className="h-8 w-20 rounded-control bg-raised" />
-          <span className="h-3 w-24 rounded-control bg-raised" />
+          <span className="h-8 w-20 rounded-control bg-sunken" />
+          <span className="h-3 w-24 rounded-control bg-sunken" />
         </div>
       ))}
     </div>
@@ -131,10 +136,10 @@ function TableSkeleton() {
     <div className="border-t border-line">
       {[0, 1, 2, 3].map((index) => (
         <div key={index} className="flex items-center gap-4 border-b border-line py-3">
-          <span className="h-3 w-24 rounded-control bg-raised" />
-          <span className="h-3 w-56 max-w-[40%] rounded-control bg-raised" />
-          <span className="ml-auto h-3 w-20 rounded-control bg-raised" />
-          <span className="h-3 w-20 rounded-control bg-raised" />
+          <span className="h-3 w-24 rounded-control bg-sunken" />
+          <span className="h-3 w-56 max-w-[40%] rounded-control bg-sunken" />
+          <span className="ml-auto h-3 w-20 rounded-control bg-sunken" />
+          <span className="h-3 w-20 rounded-control bg-sunken" />
         </div>
       ))}
     </div>
