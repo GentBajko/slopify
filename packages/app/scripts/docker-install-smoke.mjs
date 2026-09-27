@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -89,7 +89,9 @@ async function verify(expected) {
       "node",
       "--input-type=module",
       "-e",
-      "import {DatabaseSync} from 'node:sqlite'; const db=new DatabaseSync('/data/slopify.db'); console.log(JSON.stringify({attempts:db.prepare('SELECT count(*) AS n FROM attempts').get().n,paused:db.prepare('SELECT paused FROM project_controls').get().paused,state:db.prepare(\"SELECT state FROM stages WHERE kind='article'\").get().state})); db.close();",
+      // Only the seeded project counts: 3.0 adds bundled sample projects, which arrive with
+      // their own recorded build history.
+      `import {DatabaseSync} from 'node:sqlite'; const p=${JSON.stringify(expected.project)}; const db=new DatabaseSync('/data/slopify.db'); console.log(JSON.stringify({attempts:db.prepare('SELECT count(*) AS n FROM attempts a JOIN stages s ON s.id=a.stage_id WHERE s.project_id=?').get(p).n,paused:db.prepare('SELECT paused FROM project_controls WHERE project_id=?').get(p).paused,state:db.prepare("SELECT state FROM stages WHERE kind='article' AND project_id=?").get(p).state})); db.close();`,
     ]),
   );
   assert.deepEqual(proof, { attempts: 0, paused: 1, state: "failed" });
@@ -135,7 +137,14 @@ try {
     },
   );
   const expected = JSON.parse(await readFile(join(seed, "expected.json"), "utf8"));
-  const before = await treeDigest(join(seed, "projects"));
+  // The user's own project folders, each compared on its own: 3.0 adds the bundled sample
+  // projects beside them on first start, which is new content, not a change to theirs.
+  const originals = await readdir(join(seed, "projects"));
+  const digestsOf = async (root) =>
+    Object.fromEntries(
+      await Promise.all(originals.map(async (entry) => [entry, await treeDigest(join(root, entry))])),
+    );
+  const ownBefore = await digestsOf(join(seed, "projects"));
 
   // An old-style install: plain docker run, project files inside the volume, image's own user.
   await docker(["volume", "create", "--label", `io.slopify.test=${id}`, volume]);
@@ -203,7 +212,7 @@ try {
   assert.equal(installed.HostConfig.RestartPolicy.Name, "unless-stopped");
   assert.equal(installed.Mounts.find((m) => m.Destination === "/data").Name, volume);
   assert.equal(installed.Mounts.find((m) => m.Destination === "/data/projects").Source, projects);
-  assert.deepEqual(await treeDigest(projects), before);
+  assert.deepEqual(await digestsOf(projects), ownBefore);
   await verify(expected);
   const mode = JSON.parse(await docker(["info", "--format", "{{json .SecurityOptions}}"]));
   assert.equal(
@@ -229,7 +238,7 @@ try {
   await docker(["rm", "-f", name]);
   await launch({ SLOPIFY_DOCKER_PROJECTS_DIR: "" });
   await verify(expected);
-  assert.deepEqual(await treeDigest(projects), before);
+  assert.deepEqual(await digestsOf(projects), ownBefore);
   succeeded = true;
   console.log(
     `Disposable Docker install smoke passed (${mode.includes("name=rootless") ? "rootless" : "rootful"}, host UID ${process.getuid()}). No provider attempts.`,
