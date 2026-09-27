@@ -97,7 +97,7 @@ export function useNextAction({
     clock: clockTime,
   });
   const copy = useMutation({
-    mutationFn: () => copySample(api),
+    mutationFn: () => copySample(api, project.id),
     onSuccess: async ({ projectId: copied }) => {
       await client.invalidateQueries({ queryKey: keys.projects });
       await navigate({ to: "/projects/$projectId", params: { projectId: copied } });
